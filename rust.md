@@ -11,44 +11,71 @@ targets;
 Note that both targets can be used with the Fuchsia toolchain and with the host
 toolchain.
 
-These GN targets should be complemented by a
-[`Cargo.toml` manifest file][manifest] very similar to that of a regular Rust
-crate except for how dependencies are handled.
+These GN targets must be complemented by a
+[`Cargo.toml` manifest file][manifest] just like that of a regular Rust
+crate.
 
-### Dependencies
+## Workspace
 
-There are two types of dependencies:
-- in-tree dependencies (e.g. FIDL, other rust_library targets);
-- third-party dependencies.
+`garnet/Cargo.toml` establishes a workspace for all the crates in the garnet
+subtree of Fuchsia. All crates in garnet that are part of the build must be listed
+in the members array of the workspace. All crates in Garnet that appear in the
+dependencies section of any crate in Garnet should have a matching patch
+statement in the workspace file. Refer to the workspace file for examples.
 
-Third-party dependencies should be added to the manifest file just like in the
-normal Rust development workflow - see the next section for how third-party
-dependencies are inserted into the build.
-All dependencies should be added to the build file as target dependencies.
-Third-party dependencies are all defined under `//third_party/rust-crates`.
+When adding a new crate to Garnet it is important to add it to both sections
+of the workspace file.
 
-Here's an example of a library depending on the third-party crate `bitflags`
-and on a FIDL library at `//apps/framework/services`:
+## FIDL Facade Crates
+
+A Cargo workspace requires that all crates in the workspace live in the same file
+system subtree as the workspace file. Fuchsia build system rules do not allow generated
+files to live in the source tree. To resolve this conflict there are facade crates
+in the garnet tree that locate the generated code at compile time and include it with
+`include!()`. See `garnet/public/rust/fidl_crates/garnet_examples_fidl_services` for
+an example.
+
+## Non-Rust Dependencies
+
+If a Garnet Rust crate depends on something that cannot be expressed in Cargo it
+must specify that dependency in BUILD.gn. The most common case of this is when
+a Rust crate depends on one of the FIDL facade crates.
+
+This is true for transitive dependencies, so if crate A depends on crate B which
+depends on a non-Rust dependency, there must be a gn dependency between A and B as
+well as B and C.
+
+Here's an example of a library depending on a FIDL library
+at `//garnet/examples/fidl/services`:
+
 ```
 BUILD.gn
 --------
-rust_library("my-library") {
+import("//build/rust/rust_library.gni")
+
+rust_library("garnet_examples_fidl_services") {
   deps = [
-    "//apps/framework/services:services_rust_library",
-    "//third_party/rust-crates:bitflags-0.7.0",
+    "//garnet/examples/fidl/services:services_rust",
   ]
 }
 
 Cargo.toml
 ----------
 [package]
-name = "my-library"
+name = "garnet_examples_fidl_services"
 version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Rob Tsuk <robtsuk@google.com>"]
+description = "Generated interface"
+repository = "https://fuchsia.googlesource.com/garnet/"
 
 [dependencies]
-bitflags = "0.7.0"
+fidl = "0.1.0"
+fuchsia-zircon = "0.3"
+futures = "0.1.15"
+tokio-core = "0.1"
+tokio-fuchsia = "0.1.0"
 ```
-
 
 ## Testing
 
@@ -58,7 +85,6 @@ alongside the target and packaged in a test executable.
 
 Integration tests are currently not supported.
 
-
 ## Managing third-party dependencies
 
 Third-party crates are stored in [`//third-party/rust-crates/vendor`][3p-crates]
@@ -67,8 +93,7 @@ by the build system.
 
 In addition, we maintain some local mirrors of projects with Fuchsia-specific
 changes which haven't made it to *crates.io*. These mirrors are located in
-`//third_party/rust-mirrors` and their build rules in
-`//third_party/rust-crates`.
+`//third_party/rust-mirrors`.
 
 To be able to run the script updating third-party crates, you first need to
 build the `cargo-vendor` utility:
@@ -81,35 +106,22 @@ To update these crates, run the following command:
 scripts/rust/update_rust_crates.py
 ```
 
-The configurations used as a reference to generate the set of required crates
-are listed in the [`update_rust_crates.py`][update-script] script.
-
 ### Adding a new vendored dependency
 
 If a crate is not available in the vendor directory, it needs to be added with
 the following steps.
 
-1. Create your crate's manifest file and reference the crates you need;
-1. Add your crate root to `CONFIGS` in the [update script][update-script];
+1. Reference the crates you need in your manifest file;
 1. Run the commands listed above.
 
-If a crate needs to link against a native library, the library needs to be
-present in the `NATIVE_LIBS` parameter in the [update script][update-script].
+Linking to a native library is not currently supported.
 
 ### Adding a new mirror
 
 1. Request the addition of a mirror on *fuchsia.googlesource.com*;
 1. Add the mirror to the [Jiri manifest][jiri-manifest] for the Rust runtime;
-1. Reference the new project in the [build configuration file][local-crates];
+1. Add a patch section for the crate to the workspace;
 1. Run the update script.
-
-
-## Published crates
-
-Some Fuchsia crates are already available on *crates.io*. These crates need to
-be referenced in the [build configuration file][local-crates] so that the local
-version is used instead of the published copy.
-
 
 ## GN build strategy
 
@@ -134,11 +146,6 @@ source tree, the Cargo-based approach made more sense:
 - maintenance of the build system is straightforward;
 - familiar workflow for existing Rust developers.
 
-Note that while Cargo knows how to use the vendor directory to build a single
-crate, some GN glue had to be added in order to properly integrate with native
-libraries built independently from the crate.
-
-
 [target-library]: https://fuchsia.googlesource.com/build/+/master/rust/rust_library.gni "Rust library"
 [target-binary]: https://fuchsia.googlesource.com/build/+/master/rust/rust_binary.gni "Rust binary"
 [manifest]: http://doc.crates.io/manifest.html "Manifest file"
@@ -146,7 +153,6 @@ libraries built independently from the crate.
 [source-replacement]: http://doc.crates.io/source-replacement.html "Source replacement"
 [update-script]: https://fuchsia.googlesource.com/scripts/+/master/rust/update_rust_crates.py "Update script"
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
-[local-crates]: https://fuchsia.googlesource.com/build/+/master/rust/local_crates.py "Local crates"
 [build-integration]: https://github.com/rust-lang/rust-roadmap/issues/12 "Build integration"
 [cargo]: https://github.com/rust-lang/cargo "Cargo"
 [cargo-vendor]: https://github.com/alexcrichton/cargo-vendor "cargo-vendor"
