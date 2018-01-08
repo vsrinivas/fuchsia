@@ -205,13 +205,26 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
         suspended_thread = thread;
 
         zx_signals_t observed = 0u;
-        // Try to be robust and don't wait forever.
-        auto deadline = zx_deadline_after(ZX_MSEC(10 * 1000));
-        status = zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, deadline, &observed);
+        // Try to be robust and don't wait forever. The timeout is a little
+        // high as we want to work well in really loaded systems.
+        auto deadline = zx_deadline_after(ZX_SEC(5));
+        // Currently, asking to wait for suspended means only waiting for the
+        // thread to suspend. If the thread terminates instead this will wait
+        // forever (or until the timeout). Thus we need to explicitly wait for
+        // ZX_THREAD_TERMINATED too.
+        zx_signals_t signals = ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED;
+        status = zx_object_wait_one(thread, signals, deadline, &observed);
         if (status == ZX_OK) {
-            dump_thread(process, dso_list, tid, thread);
+            if (observed & ZX_THREAD_TERMINATED) {
+                printf("Unable to print backtrace of thread %" PRIu64 ".%" PRIu64 ": terminated\n",
+                       pid, tid);
+            } else {
+                dump_thread(process, dso_list, tid, thread);
+            }
         } else {
-            print_zx_error(status, "failure waiting for thread to suspend, skipping");
+            print_zx_error(status,
+                           "failure waiting for thread %" PRIu64 ".%" PRIu64 " to suspend, skipping",
+                           pid, tid);
         }
 
         resume_thread(thread);
