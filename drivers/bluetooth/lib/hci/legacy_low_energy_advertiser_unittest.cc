@@ -359,7 +359,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   EXPECT_EQ(0u, test_device()->le_advertising_state().scan_rsp_view().size());
 }
 
-// - Rejects StartAdvertising when Advertising already
+// - Rejects StartAdvertising for a different address when Advertising already
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
@@ -383,6 +383,34 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   EXPECT_EQ(kPeerAddress, test_device()->le_random_address());
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
+}
+
+// - Updates data and params for the same address when advertising already
+TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
+  common::DynamicByteBuffer ad = GetExampleData();
+  common::DynamicByteBuffer scan_data;
+
+  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
+                                 false, GetSuccessCallback());
+  RunMessageLoop();
+
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_TRUE(ContainersEqual(
+      test_device()->le_advertising_state().advertised_view(), ad));
+
+  ad[0] = 0xff;
+  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 2500,
+                                 false, GetSuccessCallback());
+  RunMessageLoop();
+
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(kPeerAddress, test_device()->le_random_address());
+  EXPECT_TRUE(ContainersEqual(
+      test_device()->le_advertising_state().advertised_view(), ad));
+  // 2500 ms = 4000 timeslices
+  EXPECT_EQ(4000, test_device()->le_advertising_state().interval);
 }
 
 // - Rejects anonymous advertisement (unsupported)

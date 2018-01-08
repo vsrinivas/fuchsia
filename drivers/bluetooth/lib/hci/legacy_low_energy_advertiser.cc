@@ -149,9 +149,13 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   }
 
   if (advertising()) {
-    FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already advertising";
-    callback(0, kConnectionLimitExceeded);
-    return;
+    if (address != advertised_) {
+      FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: already advertising";
+      callback(0, kConnectionLimitExceeded);
+      return;
+    }
+    FXL_VLOG(1)
+        << "gap: LegacyLowEnergyAdvertiser: updating existing advertisement";
   }
 
   if (data.size() > GetSizeLimit()) {
@@ -182,13 +186,20 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 
   starting_ = true;
 
+  if (advertising()) {
+    // Temporarily disable advertising so we can tweak the parameters.
+    hci_cmd_runner_->QueueCommand(
+        BuildEnablePacket(GenericEnableParam::kDisable));
+  }
+
   // Set advertising and scan response data. If either data is empty then it
   // will be cleared accordingly.
   hci_cmd_runner_->QueueCommand(BuildSetAdvertisingData(data));
   hci_cmd_runner_->QueueCommand(BuildSetScanResponse(scan_rsp));
 
   // Set random address
-  if (address.type() != common::DeviceAddress::Type::kLEPublic) {
+  if (!advertising() &&
+      (address.type() != common::DeviceAddress::Type::kLEPublic)) {
     hci_cmd_runner_->QueueCommand(BuildSetRandomAddress(address));
   }
 
