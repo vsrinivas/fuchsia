@@ -340,7 +340,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
     exception_return ZX_OK
 
-// void arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr);
+// zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
     hvc #3
     ret
@@ -350,14 +350,19 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
 
     // Invalidate IPA. Based on ARM DEN 0024A, page 12-5.
     dsb ishst
+    cbnz x2, .Lterminal
     tlbi ipas2e1is, x1
+    b .Lsync
+.Lterminal:
+    tlbi ipas2le1is, x1
+.Lsync:
     dsb ish
     isb
 
     switch_to_host
     exception_return ZX_OK
 
-// void arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
+// zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
     hvc #4
     ret

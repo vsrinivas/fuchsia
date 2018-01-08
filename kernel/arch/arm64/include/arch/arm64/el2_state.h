@@ -170,7 +170,7 @@ __BEGIN_CDECLS
 
 extern zx_status_t arm64_el2_on(zx_paddr_t ttbr0, zx_paddr_t stack_top);
 extern zx_status_t arm64_el2_off();
-extern zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr);
+extern zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 extern zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 extern zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 
