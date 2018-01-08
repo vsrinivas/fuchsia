@@ -237,6 +237,13 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rdx = 0;
             break;
         case X86_CPUID_EXTENDED_FEATURE_FLAGS:
+            // It's possible when running under KVM in nVMX mode, that host
+            // CPUID indicates that invpcid is supported but VMX doesn't allow
+            // to enable INVPCID bit in secondary processor based controls.
+            // Therefore explicitly clear INVPCID bit in CPUID if the VMX flag
+            // wasn't set.
+            if ((vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2Invpcid) == 0)
+                guest_state->rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
             // Disable the Processor Trace bit.
             guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
             break;

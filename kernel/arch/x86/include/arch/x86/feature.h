@@ -138,6 +138,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_AVX2         X86_CPUID_BIT(0x7, 1, 5)
 #define X86_FEATURE_SMEP         X86_CPUID_BIT(0x7, 1, 7)
 #define X86_FEATURE_ERMS         X86_CPUID_BIT(0x7, 1, 9)
+#define X86_FEATURE_INVPCID      X86_CPUID_BIT(0x7, 1, 10)
 #define X86_FEATURE_RDSEED       X86_CPUID_BIT(0x7, 1, 18)
 #define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
 #define X86_FEATURE_CLFLUSHOPT   X86_CPUID_BIT(0x7, 1, 23)

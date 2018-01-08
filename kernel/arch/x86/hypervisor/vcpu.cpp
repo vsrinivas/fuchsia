@@ -285,12 +285,17 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  kProcbasedCtls2Rdtscp |
                                  // Associate cached translations of linear
                                  // addresses with a virtual processor ID.
-                                 kProcbasedCtls2Vpid |
-                                 // Enable use of INVPCID instruction.
-                                 kProcbasedCtls2Invpcid,
+                                 kProcbasedCtls2Vpid,
                              0);
     if (status != ZX_OK)
         return status;
+
+    // Enable use of INVPCID instruction if available.
+    vmcs.SetControl(VmcsField32::PROCBASED_CTLS2,
+                    read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
+                    vmcs.Read(VmcsField32::PROCBASED_CTLS2),
+                    kProcbasedCtls2Invpcid,
+                    0);
 
     // Setup pin-based VMCS controls.
     status = vmcs.SetControl(VmcsField32::PINBASED_CTLS,
