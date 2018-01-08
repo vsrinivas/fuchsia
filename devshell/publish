@@ -65,7 +65,7 @@ function main {
     return -1
   fi
 
-  ${fuchsia_dir}/scripts/publish-package.py "${argz[@]}"
+  (cd "${FUCHSIA_BUILD_DIR}" && ${fuchsia_dir}/scripts/publish-package.py "${argz[@]}")
   local rc=$?
   if [[ $rc -ne 0 ]]; then
     usage

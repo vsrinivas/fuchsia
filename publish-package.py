@@ -78,7 +78,7 @@ def assemble_manifest(manifests_dir, output_stream):
 
     No returns, but may raise an exception if writing to output_stream fails.
     """
-    inputs = ["system_manifest", "boot_manifest"]
+    inputs = ["final_archive_manifest"]
     for input in inputs:
         manifest = os.path.join(manifests_dir, input)
         if os.path.exists(manifest) and os.stat(manifest).st_size > 0:
