@@ -70,13 +70,13 @@ shared_library("machina") {
     "//zircon/system/ulib/async:loop",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hypervisor",
     "//zircon/system/ulib/zxcpp",
   ]
 
   libs = [
     "fdio",
     "hid",
-    "hypervisor",
     "sync",
     "virtio",
   ]
