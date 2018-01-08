@@ -8,6 +8,7 @@
 
 #include <bits.h>
 #include <trace.h>
+#include <platform.h>
 
 #include <arch/arm64/el2_state.h>
 #include <arch/hypervisor.h>
@@ -69,10 +70,6 @@ static void next_pc(GuestState* guest_state) {
 }
 
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
-    bool masked = ARM64_READ_SYSREG(cntv_ctl_el0) & TimerControl::IMASK;
-    if (masked)
-        return INT_NO_RESCHEDULE;
-
     GichState* gich_state = static_cast<GichState*>(arg);
     bool signaled;
     zx_status_t status = gich_state->interrupt_tracker.Signal(kTimerVector, false, &signaled);
@@ -87,16 +84,19 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     const WaitInstruction wi(iss);
     if (wi.is_wfe)
         return ZX_ERR_NOT_SUPPORTED;
+    next_pc(guest_state);
 
     timer_cancel(&gich_state->timer);
-    bool has_timer = ARM64_READ_SYSREG(cntv_ctl_el0) & TimerControl::ENABLE;
-    if (has_timer) {
-        uint64_t cntpct_deadline = ARM64_READ_SYSREG(cntv_cval_el0);
+    bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
+    bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
+    if (enabled && !masked) {
+        uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
         zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
+        if (deadline <= current_time())
+            return gich_state->interrupt_tracker.Track(kTimerVector);
         timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
     }
 
-    next_pc(guest_state);
     return gich_state->interrupt_tracker.Wait(nullptr);
 }
 

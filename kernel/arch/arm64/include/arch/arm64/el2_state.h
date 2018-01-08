@@ -62,18 +62,22 @@
 
 #define ES_RESUME           0
 
-#define HS_X18              (ES_RESUME + 8)
-#define HS_X(num)           (HS_X18 + ((num) * 8))
-#define HS_NUM_REGS         13
-#define HS_SYSTEM_STATE     HS_X(HS_NUM_REGS)
-
-#define GS_X0               (HS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
+#define GS_X0               (ES_RESUME + 8)
 #define GS_X(num)           (GS_X0 + ((num) * 8))
 #define GS_NUM_REGS         31
 #define GS_SYSTEM_STATE     GS_X(GS_NUM_REGS)
-#define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
+#define GS_CNTV_CTL_EL0     (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
+#define GS_CNTV_CVAL_EL0    (GS_CNTV_CTL_EL0 + 8)
+#define GS_ESR_EL2          (GS_CNTV_CVAL_EL0 + 8)
 #define GS_FAR_EL2          (GS_ESR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
+
+#define HS_X18              (GS_HPFAR_EL2 + 8)
+// NOTE(abdulla): This differs from GS_X in that it calculates a value relative
+// to host_state.x, and not relative to El2State.
+#define HS_X(num)           ((num) * 8)
+#define HS_NUM_REGS         13
+#define HS_SYSTEM_STATE     (HS_X18 + HS_X(HS_NUM_REGS))
 
 // clang-format on
 
@@ -109,6 +113,18 @@ struct SystemState {
     algn32_t spsr_el2;
 };
 
+struct GuestState {
+    uint64_t x[GS_NUM_REGS];
+    SystemState system_state;
+
+    // Exit state.
+    algn32_t cntv_ctl_el0;
+    uint64_t cntv_cval_el0;
+    algn32_t esr_el2;
+    uint64_t far_el2;
+    uint64_t hpfar_el2;
+};
+
 struct HostState {
     // We only save X18 to X30 from the host, as the host is making an explicit
     // call into the hypervisor, and therefore is saving the rest of its state.
@@ -116,20 +132,10 @@ struct HostState {
     SystemState system_state;
 };
 
-struct GuestState {
-    uint64_t x[GS_NUM_REGS];
-    SystemState system_state;
-
-    // Exit state.
-    algn32_t esr_el2;
-    uint64_t far_el2;
-    uint64_t hpfar_el2;
-};
-
 struct El2State {
     bool resume;
-    HostState host_state;
     GuestState guest_state;
+    HostState host_state;
 };
 
 static_assert(__offsetof(SystemState, sp_el0) == SS_SP_EL0, "");
@@ -155,16 +161,18 @@ static_assert(__offsetof(SystemState, spsr_el2) == SS_SPSR_EL2, "");
 
 static_assert(__offsetof(El2State, resume) == ES_RESUME, "");
 
-static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
-static_assert(__offsetof(El2State, host_state.x[12]) == HS_X(12), "");
-static_assert(__offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE, "");
-
 static_assert(__offsetof(El2State, guest_state.x) == GS_X0, "");
 static_assert(__offsetof(El2State, guest_state.x[30]) == GS_X(30), "");
 static_assert(__offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE, "");
+static_assert(__offsetof(El2State, guest_state.cntv_ctl_el0) == GS_CNTV_CTL_EL0, "");
+static_assert(__offsetof(El2State, guest_state.cntv_cval_el0) == GS_CNTV_CVAL_EL0, "");
 static_assert(__offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2, "");
 static_assert(__offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2, "");
 static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");
+
+static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
+static_assert(__offsetof(El2State, host_state.x[12]) == HS_X18 + HS_X(12), "");
+static_assert(__offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE, "");
 
 __BEGIN_CDECLS
 

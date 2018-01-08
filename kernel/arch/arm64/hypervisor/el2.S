@@ -62,17 +62,19 @@
 .endm
 
 .macro host_state inst
+    // We pre-add HS_X18 due to limits on the range of immediate offsets.
+    add x10, x9, #HS_X18
 .ifc "\inst", "ldp"
-    ldr x18, [x9, #HS_X(0)]
+    ldr x18, [x10, #HS_X(0)]
 .else
-    str x18, [x9, #HS_X(0)]
+    str x18, [x10, #HS_X(0)]
 .endif
-    \inst x19, x20, [x9, #HS_X(1)]
-    \inst x21, x22, [x9, #HS_X(3)]
-    \inst x23, x24, [x9, #HS_X(5)]
-    \inst x25, x26, [x9, #HS_X(7)]
-    \inst x27, x28, [x9, #HS_X(9)]
-    \inst x29, x30, [x9, #HS_X(11)]
+    \inst x19, x20, [x10, #HS_X(1)]
+    \inst x21, x22, [x10, #HS_X(3)]
+    \inst x23, x24, [x10, #HS_X(5)]
+    \inst x25, x26, [x10, #HS_X(7)]
+    \inst x27, x28, [x10, #HS_X(9)]
+    \inst x29, x30, [x10, #HS_X(11)]
 .endm
 
 .macro guest_state inst
@@ -102,6 +104,10 @@
 .endm
 
 .macro guest_exit_state
+    mrs x10, cntv_ctl_el0
+    str x10, [x9, #GS_CNTV_CTL_EL0]
+    mrs x10, cntv_cval_el0
+    str x10, [x9, #GS_CNTV_CVAL_EL0]
     mrs x10, esr_el2
     str x10, [x9, #GS_ESR_EL2]
     mrs x10, far_el2

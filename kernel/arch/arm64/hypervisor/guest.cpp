@@ -32,6 +32,8 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     zx_status_t status = alloc_vmid(&vmid);
     if (status != ZX_OK)
         return status;
+    // TODO(abdulla): Invalidate (TLBI + IC) after allocating VMID, in case it
+    // was previously used.
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
