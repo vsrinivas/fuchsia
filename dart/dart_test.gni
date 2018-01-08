@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_package.gni")
+import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
 
 # Defines a Dart test suite
@@ -13,7 +13,7 @@ import("//build/dart/toolchain.gni")
 #     Directory containing the test sources. Defaults to "test".
 #
 #   deps (optional)
-#     List of labels for Dart packages this package depends on.
+#     List of labels for Dart libraries this suite depends on.
 #
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
@@ -29,14 +29,14 @@ import("//build/dart/toolchain.gni")
 #   }
 template("dart_test") {
   main_target_name = target_name
-  package_target_name = "${target_name}_package"
+  library_target_name = "${target_name}_library"
 
   sources_dir = "test"
   if (defined(invoker.source_dir)) {
     sources_dir = invoker.source_dir
   }
 
-  dart_package(package_target_name) {
+  dart_library(library_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -49,7 +49,7 @@ template("dart_test") {
   }
 
   dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
-  dot_packages_file = "$dart_target_gen_dir/$package_target_name.packages"
+  dot_packages_file = "$dart_target_gen_dir/$library_target_name.packages"
 
   fuchsia_tester_label =
       "//third_party/dart-pkg/git/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
@@ -85,7 +85,7 @@ template("dart_test") {
     ]
 
     deps = [
-      ":$package_target_name",
+      ":$library_target_name",
       flutter_shell_label,
       fuchsia_tester_label,
     ]

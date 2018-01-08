@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_package.gni")
+import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
@@ -31,9 +31,9 @@ import("//build/toolchain/clang_toolchain.gni")
 template("dart_tool") {
   assert(defined(invoker.main_dart), "Must specify main_dart file")
 
-  dart_package_target_name = target_name + "_dart_package"
+  dart_library_target_name = target_name + "_dart_library"
 
-  dart_package(dart_package_target_name) {
+  dart_library(dart_library_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -59,7 +59,7 @@ template("dart_tool") {
   depfile_path = "${snapshot_path}.d"
   dart_target_gen_dir =
       get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
-  packages_path = "$dart_target_gen_dir/$dart_package_target_name.packages"
+  packages_path = "$dart_target_gen_dir/$dart_library_target_name.packages"
 
   snapshot_target_name = target_name + "_snapshot"
 
@@ -98,7 +98,7 @@ template("dart_tool") {
     ]
 
     deps = [
-      ":$dart_package_target_name",
+      ":$dart_library_target_name",
       dart_sdk_label,
     ]
   }
