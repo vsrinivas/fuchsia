@@ -24,13 +24,14 @@ usage() {
   exit 1
 }
 
-while getopts "Agp:" FLAG; do
+while getopts "Agp:q" FLAG; do
   case "${FLAG}" in
   A) GN_ASAN="--variant=asan";;
   g) $HOME/goma/goma_ctl.py ensure_start;
      GN_GOMA="--goma";
      NINJA_GOMA="-j1024";;
   p) PACKAGE="${OPTARG}";;
+  q) FLAG_QEMU=true;;
   *) usage;;
   esac
 done
@@ -66,14 +67,32 @@ garnet/bin/guest/scripts/mkbootfs.sh \
 
 case "${1}" in
 arm64)
-  zircon/scripts/flash-hikey \
-    -u \
-    -n \
-    -b out/build-zircon/build-$PLATFORM \
-    -d out/debug-$ARCH/host-bootdata.bin;;
+  if [[ $FLAG_QEMU ]]; then
+    zircon/scripts/run-zircon-arm64 \
+      -k \
+      -V \
+      -g \
+      -x out/debug-$ARCH/host-bootdata.bin \
+      -o out/build-zircon/build-$PLATFORM/
+  else
+    zircon/scripts/flash-hikey \
+      -u \
+      -n \
+      -b out/build-zircon/build-$PLATFORM \
+      -d out/debug-$ARCH/host-bootdata.bin
+  fi;;
 x86)
-  out/build-zircon/tools/bootserver \
-    -1 \
-    out/build-zircon/build-$PLATFORM/zircon.bin \
-    out/debug-$ARCH/host-bootdata.bin;;
+  if [[ $FLAG_QEMU ]]; then
+    zircon/scripts/run-zircon-x86-64 \
+      -k \
+      -V \
+      -g \
+      -x out/debug-$ARCH/host-bootdata.bin \
+      -o out/build-zircon/build-$PLATFORM/
+  else
+    out/build-zircon/tools/bootserver \
+      -1 \
+      out/build-zircon/build-$PLATFORM/zircon.bin \
+      out/debug-$ARCH/host-bootdata.bin
+  fi;;
 esac
