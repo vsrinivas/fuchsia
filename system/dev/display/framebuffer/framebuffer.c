@@ -103,6 +103,9 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
     fbi_t* fbi = ctx;
     fb_t* fb = fbi->fb;
     zx_status_t r;
+    if (!fb->zxdev) {
+        return ZX_ERR_PEER_CLOSED;
+    }
 
     switch (op) {
     case IOCTL_DISPLAY_SET_FULLSCREEN:
@@ -253,6 +256,9 @@ zx_protocol_device_t fbi_ops = {
 
 static zx_status_t fb_open_at(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
     fb_t* fb = ctx;
+    if (!fb->zxdev) {
+        return ZX_ERR_PEER_CLOSED;
+    }
 
     uint32_t group;
     if (!strcmp(path, "virtcon")) {
@@ -308,6 +314,13 @@ static zx_status_t fb_open(void* ctx, zx_device_t** out, uint32_t flags) {
     return fb_open_at(ctx, out, "", flags);
 }
 
+static void fb_unbind(void* ctx) {
+    fb_t* fb = ctx;
+    zx_device_t* dev = fb->zxdev;
+    fb->zxdev = NULL;
+    device_remove(dev);
+}
+
 static void fb_release(void* ctx) {
     fb_t* fb = ctx;
     zx_handle_close(fb->event);
@@ -318,6 +331,7 @@ static zx_protocol_device_t fb_ops = {
     .version = DEVICE_OPS_VERSION,
     .open = fb_open,
     .open_at = fb_open_at,
+    .unbind = fb_unbind,
     .release = fb_release,
 };
 
