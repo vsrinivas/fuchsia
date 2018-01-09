@@ -2082,10 +2082,6 @@ failed:
 
 int dladdr(const void* addr, Dl_info* info) {
     struct dso* p;
-    Sym *sym, *bestsym;
-    uint32_t nsym;
-    char* strings;
-    void* best = 0;
 
     pthread_rwlock_rdlock(&lock);
     p = addr2dso((size_t)addr);
@@ -2094,10 +2090,11 @@ int dladdr(const void* addr, Dl_info* info) {
     if (!p)
         return 0;
 
-    sym = p->syms;
-    strings = p->strings;
-    nsym = count_syms(p);
+    Sym* bestsym = NULL;
+    void* best = 0;
 
+    Sym* sym = p->syms;
+    uint32_t nsym = count_syms(p);
     for (; nsym; nsym--, sym++) {
         if (sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES) &&
             (1 << (sym->st_info >> 4) & OK_BINDS)) {
@@ -2111,13 +2108,10 @@ int dladdr(const void* addr, Dl_info* info) {
         }
     }
 
-    if (!best)
-        return 0;
-
     info->dli_fname = p->l_map.l_name;
     info->dli_fbase = (void*)p->l_map.l_addr;
-    info->dli_sname = strings + bestsym->st_name;
-    info->dli_saddr = best;
+    info->dli_sname = bestsym == NULL ? NULL : p->strings + bestsym->st_name;
+    info->dli_saddr = bestsym == NULL ? NULL : best;
 
     return 1;
 }
