@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
+#include <libgen.h>
 #include <limits.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -101,6 +103,37 @@ static bool match_test_names(const char* dirent_name, const char** test_names,
     return false;
 }
 
+// Ensures a directory exists by creating it and its parents if it doesn't.
+static int mkdir_all(const char* dirn) {
+    char dir[PATH_MAX];
+    size_t bytes_to_copy = strlcpy(dir, dirn, sizeof(dir));
+    if (bytes_to_copy >= sizeof(dir)) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    // Fast path: check if the directory already exists.
+    struct stat s;
+    if (!stat(dir, &s)) {
+        return 0;
+    }
+
+    // Slow path: create the directory and its parents.
+    for (size_t slash = 0u; dir[slash]; slash++) {
+        if (slash != 0u && dir[slash] == '/') {
+            dir[slash] = '\0';
+            if (mkdir(dir, 0755) && errno != EEXIST) {
+                return -1;
+            }
+            dir[slash] = '/';
+        }
+    }
+    if (mkdir(dir, 0755) && errno != EEXIST) {
+        return -1;
+    }
+    return 0;
+}
+
 static bool run_tests(const char* dirn, const char** test_names, const int num_test_names,
                       const char* output_dir, FILE* summary_json) {
     DIR* dir = opendir(dirn);
@@ -143,21 +176,33 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
         launchpad_load_from_file(lp, argv[0]);
         launchpad_clone(lp, LP_CLONE_ALL);
         if (output_dir != NULL) {
-            // Copy name and replace '/' with '_' to get a unique test output
-            // name.
-            char output_name[64 + NAME_MAX];
-            char output_path[64 + NAME_MAX];
-            strncpy(output_name, name, 64 + NAME_MAX);
-            char* p = strchr(output_name, '/');
-            while (p) {
-                *p = '_';
-                p = strchr(p+1, '/');
+            // Create a path to the output.
+            char output_path[PATH_MAX];
+            size_t path_len = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, dirn);
+            if (path_len >= sizeof(output_path)) {
+                printf("FAILURE: Output path is too long %s/%s\n", output_dir, dirn);
+                continue;
             }
-            // Generate output path and open file.
-            snprintf(output_path, sizeof(output_path), "%s/%s.out", output_dir, output_name);
+            if (mkdir_all(output_path)) {
+                printf("FAILURE: Failed to create output directory %s: %s\n",
+                       output_path, strerror(errno));
+                continue;
+            }
+
+            // Generate output file name.
+            strlcat(output_path, "/", sizeof(output_path));
+            strlcat(output_path, de->d_name, sizeof(output_path));
+            path_len = strlcat(output_path, ".out", sizeof(output_path));
+            if (path_len >= sizeof(output_path)) {
+                printf("FAILURE: Output path is too long %s/%s\n", output_dir, dirn);
+                continue;
+            }
+
+            // Open output file.
             int outfd = open(output_path, O_CREAT | O_WRONLY | O_APPEND, 0664);
             if (outfd < 0) {
-                printf("FAILURE: Failed to open output file %s\n", output_path);
+                printf("FAILURE: Failed to open output file %s: %s\n", output_path,
+                       strerror(errno));
                 continue;
             }
             // Set the file as the subprocess's stdout and stderr.
