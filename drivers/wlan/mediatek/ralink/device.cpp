@@ -335,9 +335,18 @@ zx_status_t Device::ValidateEeprom() {
         errorf("unsupported value for EEPROM_NIC_CONF1=%#x\n", enc1.val());
         return ZX_ERR_NOT_SUPPORTED;
     }
-    debugf("NIC CONF1=%#x\n", enc1.val());
-    debugf("has HW radio? %s\n", enc1.hw_radio() ? "Y" : "N");
-    debugf("has BT coexist? %s\n", enc1.bt_coexist() ? "Y" : "N");
+
+    debugf("EEPROM NIC Conf0: val %u rxpath %x txpath %x rf_type %x\n", enc0.val(), enc0.rxpath(),
+           enc0.txpath(), enc0.rf_type());
+    debugf(
+        "EEPROM NIC Conf1: val %u hw_radio %u ext_tx_alc %u ext_lna_2g %u ext_lna_5g %u "
+        "cardbus_accel %u bw40m_sb_2g %u bw40m_sb_5g %u wps_pbc %u bw40m_2g %u bw40m_5g %u "
+        "broadband_ext_lna %u ant_diversity %u int_tx_alc %u bt_coexist %u dac_test %u\n",
+        enc1.val(), enc1.hw_radio(), enc1.external_tx_alc(), enc1.external_lna_2g(),
+        enc1.external_lna_5g(), enc1.cardbus_accel(), enc1.bw40m_sb_2g(), enc1.bw40m_sb_5g(),
+        enc1.wps_pbc(), enc1.bw40m_2g(), enc1.bw40m_5g(), enc1.broadband_ext_lna(),
+        enc1.ant_diversity(), enc1.internal_tx_alc(), enc1.bt_coexist(), enc1.dac_test());
+
     has_external_lna_2g_ = enc1.external_lna_2g();
     has_external_lna_5g_ = enc1.external_lna_5g();
     antenna_diversity_ = enc1.ant_diversity();
