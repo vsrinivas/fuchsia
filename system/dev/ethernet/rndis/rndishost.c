@@ -260,11 +260,16 @@ static void rndishost_release(void* ctx) {
     rndishost_free(eth);
 }
 
+static zx_status_t rndishost_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = rndishost_query,
     .stop = rndishost_stop,
     .start = rndishost_start,
     .queue_tx = rndishost_queue_tx,
+    .set_param = rndishost_set_param,
 };
 
 static zx_protocol_device_t rndishost_device_proto = {

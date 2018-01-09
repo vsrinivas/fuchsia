@@ -282,11 +282,16 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     return ZX_OK;
 }
 
+static zx_status_t rtl8111_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = rtl8111_query,
     .stop = rtl8111_stop,
     .start = rtl8111_start,
     .queue_tx = rtl8111_queue_tx,
+    .set_param = rtl8111_set_param,
 };
 
 static void rtl8111_release(void* ctx) {

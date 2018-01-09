@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <inet6/inet6.h>
+#include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <pretty/hexdump.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -17,8 +17,8 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 

@@ -347,11 +347,16 @@ static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf
     return status;
 }
 
+static zx_status_t ethmac_set_param(void *cookie, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = ethmac_query,
     .stop = ethmac_stop,
     .start = ethmac_start,
     .queue_tx = ethmac_queue_tx,
+    .set_param = ethmac_set_param,
 };
 
 static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {

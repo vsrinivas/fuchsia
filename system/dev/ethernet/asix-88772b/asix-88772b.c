@@ -392,11 +392,16 @@ static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
+static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88772b_query,
     .stop = ax88772b_stop,
     .start = ax88772b_start,
     .queue_tx = ax88772b_queue_tx,
+    .set_param = ax88772b_set_param,
 };
 
 static int ax88772b_start_thread(void* arg) {

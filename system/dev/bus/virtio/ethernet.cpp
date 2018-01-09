@@ -104,8 +104,16 @@ zx_status_t virtio_net_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* ne
     return eth->QueueTx(options, netbuf);
 }
 
+static zx_status_t virtio_set_param(void* ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 ethmac_protocol_ops_t kProtoOps = {
-    virtio_net_query, virtio_net_stop, virtio_net_start, virtio_net_queue_tx,
+    virtio_net_query,
+    virtio_net_stop,
+    virtio_net_start,
+    virtio_net_queue_tx,
+    virtio_set_param,
 };
 
 // I/O buffer helpers

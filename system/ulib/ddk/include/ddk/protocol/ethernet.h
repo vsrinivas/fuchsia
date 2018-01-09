@@ -5,9 +5,9 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-#include <zircon/device/ethernet.h>
 
 __BEGIN_CDECLS;
 
@@ -70,6 +70,13 @@ typedef struct ethmac_ifc_virt {
 // driver to batch tx to hardware if possible.
 #define ETHMAC_TX_OPT_MORE (1u)
 
+// SETPARAM_ values identify the parameter to set. Each call to set_param()
+// takes an int32_t |value| and void* |data| which have meaning specific to
+// the parameter being set.
+
+// |value| param = bool. |data| param = unused.
+#define ETHMAC_SETPARAM_PROMISC (1u)
+
 // The ethernet midlayer will never call ethermac_protocol
 // methods from multiple threads simultaneously, but it
 // can call send() methods at the same time as non-send
@@ -99,6 +106,17 @@ typedef struct ethmac_protocol_ops {
     // queue_tx() may be called at any time after start() is called including from multiple threads
     // simultaneously.
     zx_status_t (*queue_tx)(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf);
+
+    // Request a settings change for the driver. Return status indicates disposition:
+    //   ZX_OK: Request has been handled.
+    //   ZX_ERR_NOT_SUPPORTED: Driver does not support this setting.
+    //   Other: Error trying to support this request.
+    //
+    // |value| and |data| usage are defined for each |param|; see comments above.
+    //
+    // set_param() may be called at any time after start() is called including from multiple threads
+    // simultaneously.
+    zx_status_t (*set_param)(void* ctx, uint32_t param, int32_t value, void* data);
 } ethmac_protocol_ops_t;
 
 typedef struct ethmac_protocol {

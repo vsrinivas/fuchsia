@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 
+#include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
@@ -112,6 +113,14 @@ typedef struct ethdev {
 } ethdev_t;
 
 #define FAIL_REPORT_RATE 50
+
+static inline ssize_t eth_set_promisc_locked(ethdev0_t* edev0, const void* buf, size_t len) {
+    if (len != sizeof(bool) || buf == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, *(bool*)buf, NULL);
+}
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
     eth_fifo_entry_t e;
@@ -604,6 +613,9 @@ static zx_status_t eth_ioctl(void* ctx, uint32_t op,
     case IOCTL_ETHERNET_GET_STATUS:
         status = eth_get_status_locked(edev, out_buf, out_len, out_actual);
         break;
+    case IOCTL_ETHERNET_SET_PROMISC:
+        status = eth_set_promisc_locked(edev->edev0, in_buf, in_len);
+        break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
         status = device_ioctl(edev->edev0->macdev, op, in_buf, in_len, out_buf, out_len, out_actual);
@@ -773,6 +785,16 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         zxlogf(ERROR, "eth: bind: no ethermac protocol\n");
         status = ZX_ERR_INTERNAL;
         goto fail;
+    }
+
+    ethmac_protocol_ops_t* ops = edev0->mac.ops;
+    if (ops->query == NULL || ops->stop == NULL || ops->start == NULL || ops->queue_tx == NULL ||
+        ops->set_param == NULL) {
+        zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol\n",
+               device_get_name(dev));
+// TODO(cphoenix): turn these back on after wifi is updated with set_param()
+//        status = ZX_ERR_NOT_SUPPORTED;
+//        goto fail;
     }
 
     if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {

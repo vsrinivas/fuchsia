@@ -572,11 +572,16 @@ static zx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
+static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88179_query,
     .stop = ax88179_stop,
     .start = ax88179_start,
     .queue_tx = ax88179_queue_tx,
+    .set_param = ax88179_set_param,
 };
 
 

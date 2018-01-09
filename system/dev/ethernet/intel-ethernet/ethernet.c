@@ -138,11 +138,16 @@ static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* ne
     return eth_tx(&edev->eth, netbuf->data, netbuf->len);
 }
 
+static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = eth_query,
     .stop = eth_stop,
     .start = eth_start,
     .queue_tx = eth_queue_tx,
+    .set_param = eth_set_param,
 };
 
 static zx_status_t eth_suspend(void* ctx, uint32_t flags) {
