@@ -54,6 +54,12 @@ class Array {
     return *this;
   }
 
+  // Allows brace-syntax container initialization.
+  template <typename ...U>
+  Array(U&&...t) : vec_{std::forward<T>(t)...} {
+    is_null_ = false;
+  }
+
   // Creates a non-null array of the specified size. The elements will be
   // value-initialized (meaning that they will be initialized by their default
   // constructor, if any, or else zero-initialized).

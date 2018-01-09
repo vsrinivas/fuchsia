@@ -36,6 +36,26 @@ TEST(ArrayTest, Basic) {
   EXPECT_EQ(4u, *(array.data() + 2));
 }
 
+TEST(ArrayTest, BraceConstructor) {
+  // An empty brace initializer seems to call the default constructor.
+  Array<uint8_t> empty{};
+  EXPECT_FALSE(empty);
+  EXPECT_TRUE(empty.is_null());
+
+  Array<uint8_t> ints{1,2,3};
+  EXPECT_FALSE(ints.is_null());
+  EXPECT_EQ(3lu, ints.size());
+  EXPECT_EQ(1, ints[0]);
+  EXPECT_EQ(2, ints[1]);
+  EXPECT_EQ(3, ints[2]);
+
+  Array<String> strings{"one", "two"};
+  EXPECT_FALSE(strings.is_null());
+  EXPECT_EQ(2lu, strings.size());
+  EXPECT_EQ("one", strings[0]);
+  EXPECT_EQ("two", strings[1]);
+}
+
 TEST(ArrayTest, Testability) {
   Array<int32_t> array;
   EXPECT_FALSE(array);
