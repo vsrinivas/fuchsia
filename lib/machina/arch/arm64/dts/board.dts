@@ -44,6 +44,7 @@
 
   timer {
     compatible = "arm,armv8-timer";
+    always-on;
     interrupts = <1 13 4>, // PHYS-SECURE-PPI     29 HIGH/CPU-0
                  <1 14 4>, // PHYS-NON-SECURE-PPI 30 HIGH/CPU-0
                  <1 11 4>, // VIRT-PPI            27 HIGH/CPU-0
