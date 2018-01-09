@@ -170,11 +170,11 @@ class EthmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D, bool HasSetParam=true>
+template <typename D>
 class EthmacProtocol : public internal::base_protocol {
   public:
     EthmacProtocol() {
-        internal::CheckEthmacProtocolSubclass<D, HasSetParam>();
+        internal::CheckEthmacProtocolSubclass<D>();
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
@@ -205,12 +205,6 @@ class EthmacProtocol : public internal::base_protocol {
         return static_cast<D*>(ctx)->EthmacQueueTx(options, netbuf);
     }
 
-    DDKTL_DEPRECATED(HasSetParam)
-    static zx_status_t SetParam(void* ctx, uint32_t param, int32_t value, void* data) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    DDKTL_NOTREADY(HasSetParam)
     static zx_status_t SetParam(void* ctx, uint32_t param, int32_t value, void* data) {
         return static_cast<D*>(ctx)->EthmacSetParam(param, value, data);
     }
