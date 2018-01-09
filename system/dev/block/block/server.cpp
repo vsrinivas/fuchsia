@@ -364,7 +364,7 @@ zx_status_t BlockServer::Serve() {
                     // If the final message in this transaction group
                     // is split across multiple sub-messages, then only sync on
                     // the final sub-message.
-                    flags |= ~IOTXN_SYNC_AFTER;
+                    flags &= ~IOTXN_SYNC_AFTER;
                 } else {
                     msg->len_remaining = 0;
                 }
