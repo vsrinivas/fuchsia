@@ -222,10 +222,7 @@ static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags) {
         return -1;
     }
 
-    bool wait = true;
-    if (argc >= 3 && !strcmp(argv[2].str, "nowait"))
-        wait = false;
-    thread_kill(argv[1].p, wait);
+    thread_kill(argv[1].p, false);
 
     return 0;
 }
