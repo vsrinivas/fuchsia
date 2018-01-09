@@ -51,8 +51,9 @@ DECLARE_HAS_MEMBER_FN(has_ethmac_query, EthmacQuery);
 DECLARE_HAS_MEMBER_FN(has_ethmac_stop, EthmacStop);
 DECLARE_HAS_MEMBER_FN(has_ethmac_start, EthmacStart);
 DECLARE_HAS_MEMBER_FN(has_ethmac_queue_tx, EthmacQueueTx);
+DECLARE_HAS_MEMBER_FN(has_ethmac_set_param, EthmacSetParam);
 
-template <typename D>
+template <typename D, bool HasSetParam=false>
 constexpr void CheckEthmacProtocolSubclass() {
     static_assert(internal::has_ethmac_query<D>::value,
                   "EthmacProtocol subclasses must implement EthmacQuery");
@@ -85,6 +86,14 @@ constexpr void CheckEthmacProtocolSubclass() {
                   "'zx_status_t EthmacQueueTx(uint32_t, ethmac_netbuf_t*)', and be visible to "
                   "ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
+    static_assert(!HasSetParam || internal::has_ethmac_set_param<D>::value,
+                  "EthmacProtocol subclasses must implement EthmacSetParam");
+    //static_assert(!HasSetParam || fbl::is_same<decltype(&D::EthmacSetParam),
+    //                            zx_status_t (D::*)(uint32_t, int32_t, void*)>::value,
+    //              "EthmacSetParam must be a non-static member function with signature "
+    //              "'zx_status_t EthmacSetParam(uint32_t, int32_t, void*)', and be visible to "
+    //              "ddk::EthmacProtocol<D> (either because they are public, or because of "
+    //              "friendship).");
 }
 
 }  // namespace internal

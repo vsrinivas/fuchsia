@@ -105,6 +105,12 @@
 //
 //     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
 //         // Send the data
+//         return ZX_OK;
+//     }
+//
+//     zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data) {
+//         // Set the parameter
+//         return ZX_OK;
 //     }
 //
 //   private:
@@ -164,15 +170,16 @@ class EthmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D>
+template <typename D, bool HasSetParam=false>
 class EthmacProtocol : public internal::base_protocol {
   public:
     EthmacProtocol() {
-        internal::CheckEthmacProtocolSubclass<D>();
+        internal::CheckEthmacProtocolSubclass<D, HasSetParam>();
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
         ops_.queue_tx = QueueTx;
+        ops_.set_param = SetParam;
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -196,6 +203,16 @@ class EthmacProtocol : public internal::base_protocol {
 
     static zx_status_t QueueTx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
         return static_cast<D*>(ctx)->EthmacQueueTx(options, netbuf);
+    }
+
+    DDKTL_DEPRECATED(HasSetParam)
+    static zx_status_t SetParam(void* ctx, uint32_t param, int32_t value, void* data) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    DDKTL_NOTREADY(HasSetParam)
+    static zx_status_t SetParam(void* ctx, uint32_t param, int32_t value, void* data) {
+        return static_cast<D*>(ctx)->EthmacSetParam(param, value, data);
     }
 
     ethmac_protocol_ops_t ops_ = {};
@@ -223,6 +240,10 @@ class EthmacProtocolProxy {
 
     zx_status_t QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
         return ops_->queue_tx(ctx_, options, netbuf);
+    }
+
+    zx_status_t SetParam(uint32_t param, int32_t value, void* data) {
+        return ops_->set_param(ctx_, param, value, data);
     }
 
   private:

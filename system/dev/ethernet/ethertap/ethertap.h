@@ -29,7 +29,7 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Ioctlable> {
 };
 
 class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
-                  public ddk::EthmacProtocol<TapDevice> {
+                  public ddk::EthmacProtocol<TapDevice, true> {
   public:
     TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, zx::socket data);
 
@@ -40,6 +40,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     void EthmacStop();
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
+    zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
 
     int Thread();
 

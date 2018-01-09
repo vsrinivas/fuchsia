@@ -67,7 +67,7 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
 };
 
 class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>,
-                           public ddk::EthmacProtocol<TestEthmacProtocol> {
+                           public ddk::EthmacProtocol<TestEthmacProtocol, true> {
   public:
     TestEthmacProtocol()
       : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr) {
@@ -108,16 +108,24 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         return ZX_OK;
     }
 
+    zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data) {
+        set_param_this_ = get_this();
+        set_param_called_ = true;
+        return ZX_OK;
+    }
+
     bool VerifyCalls() const {
         BEGIN_HELPER;
         EXPECT_EQ(this_, query_this_, "");
         EXPECT_EQ(this_, start_this_, "");
         EXPECT_EQ(this_, stop_this_, "");
         EXPECT_EQ(this_, queue_tx_this_, "");
+        EXPECT_EQ(this_, set_param_this_, "");
         EXPECT_TRUE(query_called_, "");
         EXPECT_TRUE(start_called_, "");
         EXPECT_TRUE(stop_called_, "");
         EXPECT_TRUE(queue_tx_called_, "");
+        EXPECT_TRUE(set_param_called_, "");
         END_HELPER;
     }
 
@@ -136,10 +144,12 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     uintptr_t stop_this_ = 0u;
     uintptr_t start_this_ = 0u;
     uintptr_t queue_tx_this_ = 0u;
+    uintptr_t set_param_this_ = 0u;
     bool query_called_ = false;
     bool stop_called_ = false;
     bool start_called_ = false;
     bool queue_tx_called_ = false;
+    bool set_param_called_ = false;
 
     fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
 };
@@ -192,7 +202,8 @@ static bool test_ethmac_protocol() {
     proto.ops->stop(proto.ctx);
     EXPECT_EQ(ZX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
     ethmac_netbuf_t netbuf = {};
-    proto.ops->queue_tx(proto.ctx, 0, &netbuf);
+    EXPECT_EQ(ZX_OK, proto.ops->queue_tx(proto.ctx, 0, &netbuf), "");
+    EXPECT_EQ(ZX_OK, proto.ops->set_param(proto.ctx, 0, 0, nullptr), "");
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -219,7 +230,8 @@ static bool test_ethmac_protocol_proxy() {
     proxy.Stop();
     EXPECT_EQ(ZX_OK, proxy.Start(&ifc_dev), "");
     ethmac_netbuf_t netbuf = {};
-    proxy.QueueTx(0, &netbuf);
+    EXPECT_EQ(ZX_OK, proxy.QueueTx(0, &netbuf), "");
+    EXPECT_EQ(ZX_OK, proxy.SetParam(0, 0, nullptr));
 
     EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
 

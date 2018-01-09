@@ -145,6 +145,10 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
     return status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status;
 }
 
+zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 int TapDevice::Thread() {
     ethertap_trace("starting main thread\n");
     zx_signals_t pending;
