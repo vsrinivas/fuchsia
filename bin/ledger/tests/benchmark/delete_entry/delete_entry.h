@@ -11,6 +11,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 
 namespace test {
 namespace benchmark {
@@ -34,15 +35,13 @@ class DeleteEntryBenchmark {
 
  private:
   void Populate();
-  void PutEntry(fidl::Array<uint8_t> key,
-                fidl::Array<uint8_t> value,
-                std::function<void(ledger::Status)> put_callback);
   void RunSingle(size_t i);
   void CommitAndRunNext(size_t i);
   void ShutDown();
 
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   const size_t entry_count_;
   const size_t transaction_size_;

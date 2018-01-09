@@ -69,68 +69,35 @@ void DeleteEntryBenchmark::Run() {
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "Page initialization");
 
-  page_->StartTransaction([this](ledger::Status status) {
-    if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
-      return;
-    }
-    Populate();
-  });
+  Populate();
 }
 
 void DeleteEntryBenchmark::Populate() {
-  auto waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
-
+  auto keys = generator_.MakeKeys(entry_count_, key_size_, entry_count_);
   for (size_t i = 0; i < entry_count_; i++) {
-    fidl::Array<uint8_t> key = generator_.MakeKey(i, key_size_);
-    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
-    keys_.push_back(key.Clone());
-
-    PutEntry(std::move(key), std::move(value), waiter->NewCallback());
+    keys_.push_back(keys[i].Clone());
   }
 
-  waiter->Finalize([this](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      benchmark::QuitOnError(status, "Page::Put");
-      return;
-    }
-    page_->Commit([this](ledger::Status status) {
-      if (benchmark::QuitOnError(status, "Page::Commit")) {
-        return;
-      }
-      if (transaction_size_ > 0) {
-        page_->StartTransaction([this](ledger::Status status) {
-          if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
-            return;
-          }
-          TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-          RunSingle(0);
-        });
-      } else {
-        RunSingle(0);
-      }
-    });
-  });
-}
-
-void DeleteEntryBenchmark::PutEntry(
-    fidl::Array<uint8_t> key,
-    fidl::Array<uint8_t> value,
-    std::function<void(ledger::Status)> put_callback) {
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
-  page_->CreateReferenceFromVmo(
-      std::move(vmo).ToTransport(),
-      fxl::MakeCopyable(
-          [this, key = std::move(key), put_callback = std::move(put_callback)](
-              ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (benchmark::QuitOnError(status,
-                                       "Page::CreateReferenceFromVmo")) {
+  page_data_generator_.Populate(
+      &page_, std::move(keys), value_size_, entry_count_,
+      test::benchmark::PageDataGenerator::ReferenceStrategy::ON,
+      ledger::Priority::EAGER, [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          benchmark::QuitOnError(status, "PageGenerator::Populate");
+          return;
+        }
+        if (transaction_size_ > 0) {
+          page_->StartTransaction([this](ledger::Status status) {
+            if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
               return;
             }
-            page_->PutReference(std::move(key), std::move(reference),
-                                ledger::Priority::EAGER, put_callback);
-          }));
+            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+            RunSingle(0);
+          });
+        } else {
+          RunSingle(0);
+        }
+      });
 }
 
 void DeleteEntryBenchmark::RunSingle(size_t i) {

@@ -1,0 +1,84 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef PERIDOT_BIN_LEDGER_TESTING_PAGE_DATA_GENERATOR_H_
+#define PERIDOT_BIN_LEDGER_TESTING_PAGE_DATA_GENERATOR_H_
+
+#include <vector>
+
+#include "lib/fxl/strings/string_view.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/testing/data_generator.h"
+
+namespace test {
+namespace benchmark {
+
+// Helper class for filling a ledger page with random data.
+class PageDataGenerator {
+ public:
+  // Strategy on how to put values: inline or as references.
+  // ON: always put as references
+  // OFF: always put inline
+  // AUTO: put inline or as reference based on whether or not the value fits
+  // into a fidl message.
+  enum class ReferenceStrategy {
+    OFF,
+    ON,
+    AUTO,
+  };
+
+  PageDataGenerator();
+
+  // Put an entry (|key|, |value|) to the given page |page|, inline or as
+  // reference depending on |ref_strategy| and with priority specified by
+  // |priority|.
+  void PutEntry(ledger::PagePtr* page,
+                fidl::Array<uint8_t> key,
+                fidl::Array<uint8_t> value,
+                ReferenceStrategy ref_strategy,
+                ledger::Priority priority,
+                std::function<void(ledger::Status)> callback);
+
+  // Fill the page |page| with entries with keys |keys| and random values of
+  // size |value_size|, performing at maximum
+  // |transaction_size| Put operations per commit.
+  void Populate(ledger::PagePtr* page,
+                std::vector<fidl::Array<uint8_t>> keys,
+                size_t value_size,
+                size_t transaction_size,
+                ReferenceStrategy ref_strategy,
+                ledger::Priority priority,
+                std::function<void(ledger::Status)>);
+
+ private:
+  // Run PutEntry |transaction_size| times on provided keys |keys| with random
+  // values of size |value_size|. in transaction starting with key
+  // number |curent_key_index|. After commiting a transaction, run a next one
+  // recursively. Call |callback| with Status::OK once all keys have been put,
+  // or with a first encountered status that is different from Status::OK.
+  void PutInTransaction(ledger::PagePtr* page,
+                        std::vector<fidl::Array<uint8_t>> keys,
+                        size_t current_key_index,
+                        size_t value_size,
+                        size_t transaction_size,
+                        ReferenceStrategy ref_strategy,
+                        ledger::Priority priority,
+                        std::function<void(ledger::Status)> callback);
+
+  // Run PutEntry on all the provided keys in |keys| with random value of size
+  // |value_size|.
+  void PutMultipleEntries(ledger::PagePtr* page,
+                          std::vector<fidl::Array<uint8_t>> keys,
+                          size_t value_size,
+                          ReferenceStrategy ref_strategy,
+                          ledger::Priority priority,
+                          std::function<void(ledger::Status)>);
+
+  DataGenerator generator_;
+};
+
+}  // namespace benchmark
+}  // namespace test
+
+#endif  // PERIDOT_BIN_LEDGER_TESTING_PAGE_DATA_GENERATOR_H_

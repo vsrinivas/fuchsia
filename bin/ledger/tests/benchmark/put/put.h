@@ -13,6 +13,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 
 namespace test {
 namespace benchmark {
@@ -34,18 +35,12 @@ namespace benchmark {
 //   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark : public ledger::PageWatcher {
  public:
-  enum class ReferenceStrategy {
-    ON,
-    OFF,
-    AUTO,
-  };
-
   PutBenchmark(int entry_count,
                int transaction_size,
                int key_size,
                int value_size,
                bool update,
-               ReferenceStrategy reference_strategy,
+               PageDataGenerator::ReferenceStrategy reference_strategy,
                uint64_t seed);
 
   void Run();
@@ -61,17 +56,6 @@ class PutBenchmark : public ledger::PageWatcher {
   // initial values.
   void InitializeKeys(
       std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
-  // Inserts the key-value pair. Value will be added as a FIDL array or a
-  // reference, depending on the chosen reference strategy.
-  void PutEntry(fidl::Array<uint8_t> key,
-                fidl::Array<uint8_t> value,
-                std::function<void(ledger::Status)> put_callback);
-  // Recursively adds entries using all given keys and random values, which are
-  // to be updated later in the benchmark.
-  void AddInitialEntries(
-      int i,
-      std::vector<fidl::Array<uint8_t>> keys,
-      std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
 
   void BindWatcher(std::vector<fidl::Array<uint8_t>> keys);
   void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
@@ -82,6 +66,7 @@ class PutBenchmark : public ledger::PageWatcher {
   void ShutDown();
 
   test::DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -92,7 +77,7 @@ class PutBenchmark : public ledger::PageWatcher {
   const bool update_;
 
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-  std::function<bool(size_t)> should_put_as_reference_;
+  const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
   app::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;

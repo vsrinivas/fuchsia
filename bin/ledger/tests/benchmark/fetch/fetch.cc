@@ -96,44 +96,22 @@ void FetchBenchmark::Run() {
   Populate();
 }
 
-void FetchBenchmark::PutEntry(
-    fidl::Array<uint8_t> key,
-    fidl::Array<uint8_t> value,
-    std::function<void(ledger::Status)> put_callback) {
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
-  writer_page_->CreateReferenceFromVmo(
-      std::move(vmo).ToTransport(),
-      fxl::MakeCopyable(
-          [this, key = std::move(key), put_callback = std::move(put_callback)](
-              ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (benchmark::QuitOnError(status,
-                                       "Page::CreateReferenceFromVmo")) {
-              return;
-            }
-            writer_page_->PutReference(std::move(key), std::move(reference),
-                                       ledger::Priority::LAZY, put_callback);
-          }));
-}
-
 void FetchBenchmark::Populate() {
-  auto waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+  auto keys = generator_.MakeKeys(entry_count_, kKeySize, entry_count_);
   for (size_t i = 0; i < entry_count_; i++) {
-    fidl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
-    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
-    keys_.push_back(key.Clone());
-
-    PutEntry(std::move(key), std::move(value), waiter->NewCallback());
+    keys_.push_back(keys[i].Clone());
   }
 
-  waiter->Finalize([this](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      benchmark::QuitOnError(status, "Page::Put");
-      return;
-    }
-    WaitForWriterUpload();
-  });
+  page_data_generator_.Populate(
+      &writer_page_, std::move(keys), value_size_, entry_count_,
+      test::benchmark::PageDataGenerator::ReferenceStrategy::ON,
+      ledger::Priority::LAZY, [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          benchmark::QuitOnError(status, "PageGenerator::Populate");
+          return;
+        }
+        WaitForWriterUpload();
+      });
 }
 
 void FetchBenchmark::WaitForWriterUpload() {

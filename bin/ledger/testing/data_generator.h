@@ -7,6 +7,7 @@
 
 #include <climits>
 #include <random>
+#include <vector>
 
 #include "lib/fidl/cpp/bindings/array.h"
 
@@ -30,6 +31,12 @@ class DataGenerator {
 
   // Builds a random value of the given length.
   fidl::Array<uint8_t> MakeValue(size_t size);
+
+  // Builds a vector of length |key_count| containing keys of size |key_size|,
+  // |unique_key_count| of which are unique.
+  std::vector<fidl::Array<uint8_t>> MakeKeys(size_t key_count,
+                                             size_t key_size,
+                                             size_t unique_key_count);
 
  private:
   std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>

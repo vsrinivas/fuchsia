@@ -75,13 +75,13 @@ int main(int argc, const char** argv) {
     PrintUsage(argv[0]);
     return -1;
   }
-  test::benchmark::PutBenchmark::ReferenceStrategy ref_strategy;
+  test::benchmark::PageDataGenerator::ReferenceStrategy ref_strategy;
   if (ref_strategy_str == kRefsOnFlag) {
-    ref_strategy = test::benchmark::PutBenchmark::ReferenceStrategy::ON;
+    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::ON;
   } else if (ref_strategy_str == kRefsOffFlag) {
-    ref_strategy = test::benchmark::PutBenchmark::ReferenceStrategy::OFF;
+    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::OFF;
   } else if (ref_strategy_str == kRefsAutoFlag) {
-    ref_strategy = test::benchmark::PutBenchmark::ReferenceStrategy::AUTO;
+    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::AUTO;
   } else {
     std::cerr << "Unknown option " << ref_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;

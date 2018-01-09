@@ -18,20 +18,19 @@ namespace {
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
-constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
-
 }  // namespace
 
 namespace test {
 namespace benchmark {
 
-PutBenchmark::PutBenchmark(int entry_count,
-                           int transaction_size,
-                           int key_size,
-                           int value_size,
-                           bool update,
-                           ReferenceStrategy reference_strategy,
-                           uint64_t seed)
+PutBenchmark::PutBenchmark(
+    int entry_count,
+    int transaction_size,
+    int key_size,
+    int value_size,
+    bool update,
+    PageDataGenerator::ReferenceStrategy reference_strategy,
+    uint64_t seed)
     : generator_(seed),
       tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -40,24 +39,12 @@ PutBenchmark::PutBenchmark(int entry_count,
       key_size_(key_size),
       value_size_(value_size),
       update_(update),
-      page_watcher_binding_(this) {
+      page_watcher_binding_(this),
+      reference_strategy_(reference_strategy) {
   FXL_DCHECK(entry_count > 0);
   FXL_DCHECK(transaction_size >= 0);
   FXL_DCHECK(key_size > 0);
   FXL_DCHECK(value_size > 0);
-  switch (reference_strategy) {
-    case ReferenceStrategy::ON:
-      should_put_as_reference_ = [](size_t value_size) { return true; };
-      break;
-    case ReferenceStrategy::OFF:
-      should_put_as_reference_ = [](size_t value_size) { return false; };
-      break;
-    case ReferenceStrategy::AUTO:
-      should_put_as_reference_ = [](size_t value_size) {
-        return value_size > kMaxInlineDataSize;
-      };
-      break;
-  }
 }
 
 void PutBenchmark::Run() {
@@ -113,13 +100,14 @@ void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
 
 void PutBenchmark::InitializeKeys(
     std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done) {
-  std::vector<fidl::Array<uint8_t>> keys;
-  keys.reserve(entry_count_);
+  std::vector<fidl::Array<uint8_t>> keys =
+      generator_.MakeKeys(entry_count_, key_size_, entry_count_);
+  std::vector<fidl::Array<uint8_t>> keys_cloned;
   for (int i = 0; i < entry_count_; ++i) {
-    keys.push_back(generator_.MakeKey(i, key_size_));
+    keys_cloned.push_back(keys[i].Clone());
     if (transaction_size_ == 0 ||
         i % transaction_size_ == transaction_size_ - 1) {
-      keys_to_receive_.insert(std::stoul(convert::ToString(keys.back())));
+      keys_to_receive_.insert(std::stoul(convert::ToString(keys[i])));
     }
   }
   // Last key should always be recorded so the last transaction is not lost.
@@ -129,50 +117,16 @@ void PutBenchmark::InitializeKeys(
     on_done(std::move(keys));
     return;
   }
-  AddInitialEntries(0, std::move(keys), std::move(on_done));
-}
-
-void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
-                            fidl::Array<uint8_t> value,
-                            std::function<void(ledger::Status)> put_callback) {
-  if (!should_put_as_reference_(value.size())) {
-    page_->Put(std::move(key), std::move(value), put_callback);
-    return;
-  }
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
-  page_->CreateReferenceFromVmo(
-      std::move(vmo).ToTransport(),
-      fxl::MakeCopyable(
-          [this, key = std::move(key), put_callback = std::move(put_callback)](
-              ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (benchmark::QuitOnError(status,
-                                       "Page::CreateReferenceFromVmo")) {
-              return;
-            }
-            page_->PutReference(std::move(key), std::move(reference),
-                                ledger::Priority::EAGER, put_callback);
-          }));
-}
-
-void PutBenchmark::AddInitialEntries(
-    int i,
-    std::vector<fidl::Array<uint8_t>> keys,
-    std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done) {
-  if (i == entry_count_) {
-    on_done(std::move(keys));
-    return;
-  }
-  fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
-  PutEntry(keys[i].Clone(), std::move(value),
-           fxl::MakeCopyable(
-               [this, i, keys = std::move(keys),
-                on_done = std::move(on_done)](ledger::Status status) mutable {
-                 if (benchmark::QuitOnError(status, "Page::Put")) {
-                   return;
-                 }
-                 AddInitialEntries(i + 1, std::move(keys), std::move(on_done));
-               }));
+  page_data_generator_.Populate(
+      &page_, std::move(keys_cloned), value_size_, keys_cloned.size(),
+      reference_strategy_, ledger::Priority::EAGER,
+      fxl::MakeCopyable([keys = std::move(keys), on_done = std::move(on_done)](
+                            ledger::Status status) mutable {
+        if (QuitOnError(status, "PageDataGenerator::Populate")) {
+          return;
+        }
+        on_done(std::move(keys));
+      }));
 }
 
 void PutBenchmark::BindWatcher(std::vector<fidl::Array<uint8_t>> keys) {
@@ -200,21 +154,23 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   }
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  PutEntry(std::move(keys[i]), std::move(value),
-           fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
-                                 ledger::Status status) mutable {
-             if (benchmark::QuitOnError(status, "Page::Put")) {
-               return;
-             }
-             TRACE_ASYNC_END("benchmark", "put", i);
-             if (transaction_size_ > 0 &&
-                 (i % transaction_size_ == transaction_size_ - 1 ||
-                  i + 1 == entry_count_)) {
-               CommitAndRunNext(i, key_number, std::move(keys));
-             } else {
-               RunSingle(i + 1, std::move(keys));
-             }
-           }));
+  page_data_generator_.PutEntry(
+      &page_, std::move(keys[i]), std::move(value), reference_strategy_,
+      ledger::Priority::EAGER,
+      fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
+                            ledger::Status status) mutable {
+        if (benchmark::QuitOnError(status, "Page::Put")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "put", i);
+        if (transaction_size_ > 0 &&
+            (i % transaction_size_ == transaction_size_ - 1 ||
+             i + 1 == entry_count_)) {
+          CommitAndRunNext(i, key_number, std::move(keys));
+        } else {
+          RunSingle(i + 1, std::move(keys));
+        }
+      }));
 }
 
 void PutBenchmark::CommitAndRunNext(int i,

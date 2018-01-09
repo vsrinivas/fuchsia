@@ -33,7 +33,6 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 constexpr size_t kKeySize = 100;
-constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -47,10 +46,11 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-SyncBenchmark::SyncBenchmark(size_t entry_count,
-                             size_t value_size,
-                             ReferenceStrategy reference_strategy,
-                             std::string server_id)
+SyncBenchmark::SyncBenchmark(
+    size_t entry_count,
+    size_t value_size,
+    PageDataGenerator::ReferenceStrategy reference_strategy,
+    std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
@@ -135,30 +135,14 @@ void SyncBenchmark::RunSingle(size_t i) {
   fidl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
   fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
-  if (reference_strategy_ != ReferenceStrategy::OFF &&
-      (reference_strategy_ == ReferenceStrategy::ON ||
-       value_size_ > kMaxInlineDataSize)) {
-    fsl::SizedVmo vmo;
-    if (!fsl::VmoFromString(convert::ToStringView(value), &vmo)) {
-      benchmark::QuitOnError(ledger::Status::IO_ERROR, "fsl::VmoFromString");
-      return;
-    }
-    alpha_page_->CreateReferenceFromVmo(
-        std::move(vmo).ToTransport(),
-        fxl::MakeCopyable([this, key = std::move(key)](
-                              ledger::Status status,
-                              ledger::ReferencePtr reference) mutable {
-          if (benchmark::QuitOnError(status, "Page::CreateReferenceFromVmo")) {
-            return;
-          }
-          alpha_page_->PutReference(
-              std::move(key), std::move(reference), ledger::Priority::EAGER,
-              benchmark::QuitOnErrorCallback("PutReference"));
-        }));
-    return;
-  }
-  alpha_page_->Put(std::move(key), std::move(value),
-                   benchmark::QuitOnErrorCallback("Put"));
+
+  page_data_generator_.PutEntry(
+      &alpha_page_, std::move(key), std::move(value), reference_strategy_,
+      ledger::Priority::EAGER, [](ledger::Status status) {
+        if (benchmark::QuitOnError(status, "PageDataGenerator::PutEntry")) {
+          return;
+        }
+      });
 }
 
 void SyncBenchmark::Backlog() {
@@ -247,14 +231,16 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  test::benchmark::SyncBenchmark::ReferenceStrategy reference_strategy;
+  test::benchmark::PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
-    reference_strategy = test::benchmark::SyncBenchmark::ReferenceStrategy::ON;
+    reference_strategy =
+        test::benchmark::PageDataGenerator::ReferenceStrategy::ON;
   } else if (reference_strategy_str == kRefsOffFlag) {
-    reference_strategy = test::benchmark::SyncBenchmark::ReferenceStrategy::OFF;
+    reference_strategy =
+        test::benchmark::PageDataGenerator::ReferenceStrategy::OFF;
   } else if (reference_strategy_str == kRefsAutoFlag) {
     reference_strategy =
-        test::benchmark::SyncBenchmark::ReferenceStrategy::AUTO;
+        test::benchmark::PageDataGenerator::ReferenceStrategy::AUTO;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;

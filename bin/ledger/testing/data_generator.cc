@@ -44,4 +44,19 @@ fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
   return data;
 }
 
+std::vector<fidl::Array<uint8_t>> DataGenerator::MakeKeys(
+    size_t key_count,
+    size_t key_size,
+    size_t unique_key_count) {
+  FXL_DCHECK(unique_key_count <= key_count);
+  std::vector<fidl::Array<uint8_t>> keys(key_count);
+  for (size_t i = 0; i < unique_key_count; i++) {
+    keys[i] = MakeKey(i, key_size);
+  }
+  for (size_t i = unique_key_count; i < key_count; i++) {
+    keys[i] = keys[i - unique_key_count].Clone();
+  }
+  return keys;
+}
+
 }  // namespace test

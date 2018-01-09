@@ -17,6 +17,8 @@ source_set("lib") {
     "data_generator.h",
     "get_ledger.cc",
     "get_ledger.h",
+    "page_data_generator.cc",
+    "page_data_generator.h",
     "quit_on_error.cc",
     "quit_on_error.h",
     "run_with_tracing.cc",

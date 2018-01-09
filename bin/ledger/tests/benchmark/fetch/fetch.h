@@ -13,6 +13,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 namespace test {
@@ -60,6 +61,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   void ShutDown();
 
   test::DataGenerator generator_;
+  test::benchmark::PageDataGenerator page_data_generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;

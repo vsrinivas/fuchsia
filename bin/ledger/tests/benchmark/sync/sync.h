@@ -12,6 +12,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
+#include "peridot/bin/ledger/testing/page_data_generator.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
 namespace test {
@@ -30,15 +31,9 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:
-  enum class ReferenceStrategy {
-    ON,
-    OFF,
-    AUTO,
-  };
-
   SyncBenchmark(size_t entry_count,
                 size_t value_size,
-                ReferenceStrategy reference_strategy,
+                PageDataGenerator::ReferenceStrategy reference_strategy,
                 std::string server_id);
 
   void Run();
@@ -58,11 +53,12 @@ class SyncBenchmark : public ledger::PageWatcher {
   void ShutDown();
 
   test::DataGenerator generator_;
+  PageDataGenerator page_data_generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const size_t entry_count_;
   const size_t value_size_;
-  ReferenceStrategy reference_strategy_;
+  const PageDataGenerator::ReferenceStrategy reference_strategy_;
   std::string server_id_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
