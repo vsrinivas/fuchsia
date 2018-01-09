@@ -529,7 +529,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     zxlogf(TRACE, "i915: mapping gtt\n");
-    gtt_.Init(mmio_space_.get(), gtt_size);
+    if ((status = gtt_.Init(mmio_space_.get(), gtt_size)) != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to init gtt %d\n", status);
+        return status;
+    }
 
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {

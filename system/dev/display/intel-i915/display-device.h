@@ -7,9 +7,11 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display.h>
 #include <hwreg/mmio.h>
+#include <region-alloc/region-alloc.h>
 #include <zx/vmo.h>
 
 #include "edid.h"
+#include "gtt.h"
 #include "registers-ddi.h"
 #include "registers-pipe.h"
 
@@ -64,6 +66,7 @@ private:
     uintptr_t framebuffer_;
     uint32_t framebuffer_size_;
     zx::vmo framebuffer_vmo_;
+    fbl::unique_ptr<const GttRegion> fb_gfx_addr_;
 
     zx_display_info_t info_;
 };

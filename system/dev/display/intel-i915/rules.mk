@@ -25,6 +25,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/hwreg \
+    system/ulib/region-alloc \
     system/ulib/zx \
     system/ulib/zxcpp \
 

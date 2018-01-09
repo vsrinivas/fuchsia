@@ -4,18 +4,25 @@
 
 #pragma once
 
+#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
+#include <region-alloc/region-alloc.h>
 #include <zx/vmo.h>
 
 namespace i915 {
 
 class Device;
+using GttRegion = RegionAllocator::Region;
 
 class Gtt {
 public:
-    void Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size);
-    bool Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
-                uint32_t length, uint32_t pte_padding, uint32_t* gm_addr_out);
+    Gtt();
+    zx_status_t Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size);
+    fbl::unique_ptr<const GttRegion> Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
+                                            uint32_t length, uint32_t align_pow2,
+                                            uint32_t pte_padding);
+private:
+    RegionAllocator region_allocator_;
 };
 
 } // namespace i915

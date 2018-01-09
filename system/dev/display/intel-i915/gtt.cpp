@@ -6,6 +6,7 @@
 #include <ddk/protocol/pci.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/limits.h>
 #include <limits.h>
 #include <stdlib.h>
 
@@ -30,7 +31,10 @@ inline uint32_t get_pte_offset(uint32_t idx) {
 
 namespace i915 {
 
-void Gtt::Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size) {
+Gtt::Gtt() :
+    region_allocator_(RegionAllocator::RegionPool::Create(fbl::numeric_limits<size_t>::max())) {}
+
+zx_status_t Gtt::Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size) {
     zxlogf(SPEW, "i915: Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
 
     uint64_t pte = gen_pte_encode(0, false);
@@ -39,25 +43,32 @@ void Gtt::Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size) {
         mmio_space->Write<uint64_t>(get_pte_offset(i), pte);
     }
     mmio_space->Read<uint32_t>(get_pte_offset(i)); // Posting read
+
+    uint32_t gfx_mem_size = static_cast<uint32_t>(gtt_size / sizeof(uint64_t) * PAGE_SIZE);
+    return region_allocator_.AddRegion({ .base = 0, .size = gfx_mem_size });
 }
 
-bool Gtt::Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
-                 uint32_t length, uint32_t pte_padding, uint32_t* gm_addr_out) {
-    // TODO(ZX-1413): Do actual allocation management
-    uint32_t gfx_addr = 0;
+fbl::unique_ptr<const GttRegion> Gtt::Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
+                                             uint32_t length, uint32_t align_pow2,
+                                             uint32_t pte_padding) {
+    uint32_t region_length = ROUNDUP(length, PAGE_SIZE) + (pte_padding * PAGE_SIZE);
+    fbl::unique_ptr<const GttRegion> r;
+    if (region_allocator_.GetRegion(region_length, align_pow2, r) != ZX_OK) {
+        return nullptr;
+    }
 
     unsigned num_entries = PAGE_SIZE / sizeof(zx_paddr_t);
     zx_paddr_t paddrs[num_entries];
     unsigned i = 0;
     zx_status_t status;
-    uint32_t pte_idx = gfx_addr / PAGE_SIZE;
+    uint32_t pte_idx = static_cast<uint32_t>(r->base / PAGE_SIZE);
 
     while (i < length / PAGE_SIZE) {
         uint32_t cur_len = fbl::min(length - (i * PAGE_SIZE), num_entries * PAGE_SIZE);
         status = buffer->op_range(ZX_VMO_OP_LOOKUP, i * PAGE_SIZE, cur_len, paddrs, PAGE_SIZE);
         if (status != ZX_OK) {
             zxlogf(SPEW, "i915: Failed to get paddrs (%d)\n", status);
-            return false;
+            return nullptr;
         }
         for (unsigned j = 0; j < num_entries && i < length / PAGE_SIZE; i++, j++) {
             uint64_t pte = gen_pte_encode(paddrs[j], true);
@@ -70,9 +81,7 @@ bool Gtt::Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
     }
     mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
 
-    *gm_addr_out = gfx_addr;
-
-    return true;
+    return r;
 }
 
 } // namespace i915
