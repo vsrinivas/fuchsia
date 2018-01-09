@@ -56,6 +56,8 @@ zx_status_t vc_init_gfx(gfx_surface* test) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    g_status_width = vc_gfx->width / font->width;
+
     return ZX_OK;
 }
 
@@ -148,6 +150,8 @@ zx_status_t vc_init_gfx(int fd) {
                                      fb.info.stride, fb.info.format, 0)) == NULL) {
         goto fail;
     }
+
+    g_status_width = vc_gfx->width / font->width;
 
     return ZX_OK;
 

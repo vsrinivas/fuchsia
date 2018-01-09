@@ -555,11 +555,11 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
 }
 
 void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
-             uint8_t fg, uint8_t bg) {
+             uint8_t fg, uint8_t bg, int cursor_x, int cursor_y) {
     tc->w = w;
     tc->h = h;
-    tc->x = 0;
-    tc->y = 0;
+    tc->x = cursor_x;
+    tc->y = cursor_y;
     tc->data = data;
     tc->scroll_y0 = 0;
     tc->scroll_y1 = h;

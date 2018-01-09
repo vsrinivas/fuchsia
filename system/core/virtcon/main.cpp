@@ -35,20 +35,29 @@ static port_handler_t ownership_ph;
 static port_handler_t log_ph;
 static port_handler_t new_vc_ph;
 static port_handler_t input_ph;
+static port_handler_t fb_ph;
 
 static int input_dir_fd;
+static int fb_dir_fd;
 
 static vc_t* log_vc;
 static zx_koid_t proc_koid;
 
 static int g_fb_fd = -1;
+#define FB_NAME_LEN 32
+static char g_fb_name[FB_NAME_LEN + 1];
+
+static zx_status_t fb_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+static zx_status_t ownership_ph_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = true;
 
 void vc_toggle_framebuffer() {
-    uint32_t n = g_vc_owns_display ? 1 : 0;
-    ioctl_display_set_owner(g_fb_fd, &n);
+    if (g_fb_fd != -1) {
+        uint32_t n = g_vc_owns_display ? 1 : 0;
+        ioctl_display_set_owner(g_fb_fd, &n);
+    }
 }
 
 static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
@@ -268,9 +277,96 @@ static void input_dir_event(unsigned evt, const char* name) {
     new_input_device(fd, handle_key_press);
 }
 
-static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+static void setup_dir_watcher(const char* dir,
+                              zx_status_t (*cb)(port_handler_t*, zx_signals_t, uint32_t),
+                              port_handler_t* ph,
+                              int* fd_out) {
+    if ((*fd_out = open(dir, O_DIRECTORY | O_RDONLY)) >= 0) {
+        vfs_watch_dir_t wd;
+        wd.mask = VFS_WATCH_MASK_ALL;
+        wd.options = 0;
+        if (zx_channel_create(0, &wd.channel, &ph->handle) == ZX_OK) {
+            if ((ioctl_vfs_watch_dir(*fd_out, &wd)) == ZX_OK) {
+                ph->waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+                ph->func = cb;
+                port_wait(&port, ph);
+            } else {
+                zx_handle_close(wd.channel);
+                zx_handle_close(ph->handle);
+                close(*fd_out);
+                *fd_out = -1;
+            }
+        } else {
+            close(*fd_out);
+            *fd_out = -1;
+        }
+    }
+}
+
+static void fb_dir_event(unsigned evt, const char* name) {
+    if (strlen(name) > FB_NAME_LEN) {
+        printf("vc: truncating long framebuffer name (\"%s\")\n", name);
+    }
+
+    // If we're already connected to a display, ignore events on other displays
+    if (g_fb_fd != -1 && strncmp(g_fb_name, name, FB_NAME_LEN)) {
+        return;
+    }
+
+    if (evt == VFS_WATCH_EVT_ADDED || evt == VFS_WATCH_EVT_EXISTING) {
+        strncpy(g_fb_name, name, FB_NAME_LEN);
+        g_fb_name[FB_NAME_LEN] = '\0';
+
+        int fd;
+        char file_name[sizeof("/dev/class/framebuffer//virtcon") + FB_NAME_LEN];
+        snprintf(file_name, sizeof(file_name), "/dev/class/framebuffer/%s/virtcon", g_fb_name);
+        if ((fd = open(file_name, O_RDWR)) < 0) {
+            printf("vc: failed to open display \"%s\": %d\n", file_name, fd);
+            return;
+        }
+
+        if (vc_init_gfx(fd) < 0) {
+            printf("vc: failed to initialize graphics for new display\n");
+            return;
+        }
+
+        g_fb_fd = fd;
+
+        zx_handle_t e = ZX_HANDLE_INVALID;
+        ioctl_display_get_ownership_change_event(fd, &e);
+
+        if (e != ZX_HANDLE_INVALID) {
+            ownership_ph.func = ownership_ph_cb;
+            ownership_ph.handle = e;
+            ownership_ph.waitfor = ZX_USER_SIGNAL_1;
+            port_wait(&port, &ownership_ph);
+        }
+
+        // Only listen for logs when we have somewhere to print them. Also,
+        // use a repeating wait so that we don't add/remove observers for each
+        // log message (which is helpful when tracing the addition/removal of
+        // observers).
+        port_wait_repeating(&port, &log_ph);
+        vc_show_active();
+    } else if (evt == VFS_WATCH_EVT_REMOVED) {
+        close(g_fb_fd);
+        g_fb_fd = -1;
+
+        port_cancel(&port, &log_ph);
+        vc_free_gfx();
+
+        // Remove and re-add the framebuffer watcher to handle the case where
+        // a second display was already attached (with the EXISTING event).
+        port_cancel(&port, &fb_ph);
+        close(fb_dir_fd);
+        setup_dir_watcher("/dev/class/framebuffer", fb_cb, &fb_ph, &fb_dir_fd);
+    }
+}
+
+static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
+                             void (*event_handler)(unsigned event, const char* msg)) {
     if (!(signals & ZX_CHANNEL_READABLE)) {
-        return ZX_ERR_STOP;
+        return false;
     }
 
     // Buffer contains events { Opcode, Len, Name[Len] }
@@ -279,7 +375,7 @@ static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t e
     uint8_t buf[VFS_WATCH_MSG_MAX + 1];
     uint32_t len;
     if (zx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
-        return ZX_ERR_STOP;
+        return false;
     }
 
     uint8_t* msg = buf;
@@ -287,15 +383,29 @@ static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t e
         uint8_t event = *msg++;
         uint8_t namelen = *msg++;
         if (len < (namelen + 2u)) {
-            break;
+            return false;
         }
         // add temporary nul
         uint8_t tmp = msg[namelen];
         msg[namelen] = 0;
-        input_dir_event(event, (char*) msg);
+        event_handler(event, (char*) msg);
         msg[namelen] = tmp;
         msg += namelen;
         len -= (namelen + 2u);
+    }
+    return true;
+}
+
+static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    if (!handle_dir_event(ph, signals, input_dir_event)) {
+        return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+}
+
+static zx_status_t fb_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    if (!handle_dir_event(ph, signals, fb_dir_event)) {
+        return ZX_ERR_STOP;
     }
     return ZX_OK;
 }
@@ -309,7 +419,7 @@ static zx_status_t ownership_ph_cb(port_handler_t* ph, zx_signals_t signals, uin
     if (g_vc_owns_display) {
         ph->waitfor = ZX_USER_SIGNAL_1;
         if (g_active_vc) {
-            vc_gfx_invalidate_all(g_active_vc);
+            vc_flush_all(g_active_vc);
         }
     } else {
         ph->waitfor = ZX_USER_SIGNAL_0;
@@ -350,24 +460,10 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    int fd;
-    for (;;) {
-        if ((fd = open("/dev/class/framebuffer/000/virtcon", O_RDWR)) >= 0) {
-            break;
-        }
-        usleep(100000);
-    }
-    if (vc_init_gfx(fd) < 0) {
-        return -1;
-    }
-
-    g_fb_fd = fd;
-
     // create initial console for debug log
     if (vc_create(&log_vc, false) != ZX_OK) {
         return -1;
     }
-    g_status_width = log_vc->columns;
     snprintf(log_vc->title, sizeof(log_vc->title), "debuglog");
 
     // Get our process koid so the log reader can
@@ -386,10 +482,6 @@ int main(int argc, char** argv) {
 
     log_ph.func = log_reader_cb;
     log_ph.waitfor = ZX_LOG_READABLE;
-    // Use a repeating wait so that we don't add/remove observers for each
-    // log message (which is helpful when tracing the addition/removal of
-    // observers).
-    port_wait_repeating(&port, &log_ph);
 
     if ((new_vc_ph.handle = zx_get_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
         new_vc_ph.func = new_vc_cb;
@@ -397,40 +489,14 @@ int main(int argc, char** argv) {
         port_wait(&port, &new_vc_ph);
     }
 
-    if ((input_dir_fd = open("/dev/class/input", O_DIRECTORY | O_RDONLY)) >= 0) {
-        vfs_watch_dir_t wd;
-        wd.mask = VFS_WATCH_MASK_ALL;
-        wd.options = 0;
-        if (zx_channel_create(0, &wd.channel, &input_ph.handle) == ZX_OK) {
-            if ((ioctl_vfs_watch_dir(input_dir_fd, &wd)) == ZX_OK) {
-                input_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-                input_ph.func = input_cb;
-                port_wait(&port, &input_ph);
-            } else {
-                zx_handle_close(wd.channel);
-                zx_handle_close(input_ph.handle);
-                close(input_dir_fd);
-            }
-        } else {
-            close(input_dir_fd);
-        }
-    }
+    setup_dir_watcher("/dev/class/input", input_cb, &input_ph, &input_dir_fd);
+    setup_dir_watcher("/dev/class/framebuffer", fb_cb, &fb_ph, &fb_dir_fd);
 
     setenv("TERM", "xterm", 1);
 
     start_shell(keep_log ? false : true, cmd);
     start_shell(false, NULL);
     start_shell(false, NULL);
-
-    zx_handle_t e = ZX_HANDLE_INVALID;
-    ioctl_display_get_ownership_change_event(fd, &e);
-
-    if (e != ZX_HANDLE_INVALID) {
-        ownership_ph.func = ownership_ph_cb;
-        ownership_ph.handle = e;
-        ownership_ph.waitfor = ZX_USER_SIGNAL_1;
-        port_wait(&port, &ownership_ph);
-    }
 
     zx_status_t r = port_dispatch(&port, ZX_TIME_INFINITE, false);
     printf("vc: port failure: %d\n", r);

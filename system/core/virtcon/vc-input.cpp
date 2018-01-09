@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <hid/usages.h>
+#include <zircon/device/pty.h>
 
 #include "keyboard-vt100.h"
 #include "keyboard.h"
@@ -148,6 +149,24 @@ zx_status_t vc_set_active(int num, vc_t* to_vc) {
     return ZX_ERR_NOT_FOUND;
 }
 
+void vc_show_active() {
+    vc_t* vc = NULL;
+    list_for_every_entry (&g_vc_list, vc, vc_t, node) {
+        vc_attach_gfx(vc);
+        if (vc->fd) {
+            pty_window_size_t wsz = {
+                .width = vc->columns,
+                .height = vc->rows,
+            };
+            ioctl_pty_set_window_size(vc->fd, &wsz);
+        }
+        if (vc == g_active_vc) {
+            vc_full_repaint(vc);
+            vc_render(vc);
+        }
+    }
+}
+
 void vc_status_update() {
     vc_t* vc = NULL;
     unsigned i = 0;
@@ -216,19 +235,10 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off) {
     for (size_t i = 0; i < count; i++) {
         vc->textcon.putc(&vc->textcon, str[i]);
     }
-    if (vc->invy1 >= 0) {
-        int rows = vc_rows(vc);
-        // Adjust for the current viewport position.  Convert
-        // console-relative row numbers to screen-relative row numbers.
-        int invalidate_y0 = MIN(vc->invy0 - vc->viewport_y, rows);
-        int invalidate_y1 = MIN(vc->invy1 - vc->viewport_y, rows);
-        vc_gfx_invalidate(vc, 0, invalidate_y0,
-                          vc->columns, invalidate_y1 - invalidate_y0);
-    }
+    vc_flush(vc);
     if (!(vc->flags & VC_FLAG_HASOUTPUT) && !vc->active) {
         vc->flags |= VC_FLAG_HASOUTPUT;
         vc_status_update();
-        vc_gfx_invalidate_status();
     }
     return count;
 }

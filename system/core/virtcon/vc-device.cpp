@@ -43,6 +43,10 @@ static uint32_t default_palette[] = {
 #define SPECIAL_FRONT_COLOR 0xf // white
 #define SPECIAL_BACK_COLOR 0x4  // blue
 
+// Default height/width (in px) of console before any displays are
+// attached, since we need somewhere to put any data that is recieved.
+#define DEFAULT_HEIGHT 480
+#define DEFAULT_WIDTH 640
 #define SCROLLBACK_ROWS 1024 // TODO make configurable
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
@@ -54,8 +58,8 @@ extern const gfx_font* vc_font;
 
 static zx_status_t vc_setup(vc_t* vc, bool special) {
     // calculate how many rows/columns we have
-    vc->rows = vc_gfx->height / vc->charh;
-    vc->columns = vc_gfx->width / vc->charw;
+    vc->rows = DEFAULT_HEIGHT / vc->charh;
+    vc->columns = DEFAULT_WIDTH / vc->charw;
     vc->scrollback_rows_max = SCROLLBACK_ROWS;
     vc->scrollback_rows_count = 0;
     vc->scrollback_offset = 0;
@@ -90,7 +94,7 @@ static zx_status_t vc_setup(vc_t* vc, bool special) {
 static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
 
-    if (!vc->active) {
+    if (!vc->active || !vc_gfx) {
         return;
     }
 
@@ -170,9 +174,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     }
 }
 
-static void vc_tc_push_scrollback_line(void* cookie, int y) {
-    vc_t* vc = reinterpret_cast<vc_t*>(cookie);
-
+static void vc_tc_scrollback_buffer_push(vc_t* vc, vc_char_t* src) {
     unsigned dest_row;
     assert(vc->scrollback_rows_count <= vc->scrollback_rows_max);
     if (vc->scrollback_rows_count < vc->scrollback_rows_max) {
@@ -187,8 +189,13 @@ static void vc_tc_push_scrollback_line(void* cookie, int y) {
             vc->scrollback_offset = 0;
     }
     vc_char_t* dst = &vc->scrollback_buf[dest_row * vc->columns];
-    vc_char_t* src = &vc->text_buf[y * vc->columns];
     memcpy(dst, src, vc->columns * sizeof(vc_char_t));
+}
+
+static void vc_tc_push_scrollback_line(void* cookie, int y) {
+    vc_t* vc = reinterpret_cast<vc_t*>(cookie);
+    vc_char_t* src = &vc->text_buf[y * vc->columns];
+    vc_tc_scrollback_buffer_push(vc, src);
 
     // If we're displaying only the main console region (and no
     // scrollback), then keep displaying that (i.e. don't modify
@@ -253,7 +260,7 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count
     // The next two calls can be done in any order.
     tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
 
-    if (vc->active) {
+    if (vc->active && vc_gfx) {
         gfx_copyrect(vc_gfx, 0, y_src * vc->charh,
                      vc_gfx->width, line_count * vc->charh,
                      0, y_dest * vc->charh);
@@ -274,7 +281,9 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
         strncpy(vc->title, (char*)arg, sizeof(vc->title));
         vc->title[sizeof(vc->title) - 1] = '\0';
         vc_status_update();
-        vc_gfx_invalidate_status();
+        if (vc_gfx) {
+            vc_gfx_invalidate_status();
+        }
         break;
     case TC_SHOW_CURSOR:
         vc_set_cursor_hidden(vc, false);
@@ -288,7 +297,7 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
 
 static void vc_clear_gfx(vc_t* vc) {
     // Fill display with background color
-    if (vc->active) {
+    if (vc->active && vc_gfx) {
         gfx_fillrect(vc_gfx, 0, 0, vc_gfx->width, vc_gfx->height,
                      palette_to_color(vc, vc->back_color));
     }
@@ -301,7 +310,8 @@ static void vc_reset(vc_t* vc) {
     // reset the viewport position
     vc->viewport_y = 0;
 
-    tc_init(&vc->textcon, vc->columns, vc_rows(vc), vc->text_buf, vc->front_color, vc->back_color);
+    tc_init(&vc->textcon, vc->columns, vc_rows(vc), vc->text_buf,
+            vc->front_color, vc->back_color, vc->cursor_x, vc->cursor_y);
     vc->textcon.cookie = vc;
     vc->textcon.invalidate = vc_tc_invalidate;
     vc->textcon.movecursor = vc_tc_movecursor;
@@ -317,14 +327,17 @@ static void vc_reset(vc_t* vc) {
     }
 
     vc_clear_gfx(vc);
-    vc_gfx_invalidate_all(vc);
+    if (vc_gfx) {
+        vc_gfx_invalidate_all(vc);
+    }
 }
 
-
 void vc_status_clear() {
-    gfx_fillrect(vc_tb_gfx, 0, 0,
-                 vc_tb_gfx->width, vc_tb_gfx->height,
-                 default_palette[STATUS_COLOR_BG]);
+    if (vc_gfx) {
+        gfx_fillrect(vc_tb_gfx, 0, 0,
+                     vc_tb_gfx->width, vc_tb_gfx->height,
+                     default_palette[STATUS_COLOR_BG]);
+    }
 }
 
 void vc_status_write(int x, unsigned color, const char* text) {
@@ -332,25 +345,30 @@ void vc_status_write(int x, unsigned color, const char* text) {
     unsigned fg = default_palette[color];
     unsigned bg = default_palette[STATUS_COLOR_BG];
 
-    x *= vc_font->width;
-    while ((c = *text++) != 0) {
-        gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
-        x += vc_font->width;
+    if (vc_gfx) {
+        x *= vc_font->width;
+        while ((c = *text++) != 0) {
+            gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
+            x += vc_font->width;
+        }
+        vc_gfx_invalidate_status();
     }
 }
 
 void vc_render(vc_t* vc) {
-    if (vc->active) {
+    if (vc->active && vc_gfx) {
         vc_status_update();
         vc_gfx_invalidate_all(vc);
     }
 }
 
 void vc_full_repaint(vc_t* vc) {
-    vc_clear_gfx(vc);
-    int scrollback_lines = vc_get_scrollback_lines(vc);
-    vc_invalidate(vc, 0, -scrollback_lines,
-                         vc->columns, scrollback_lines + vc->rows);
+    if (vc_gfx) {
+        vc_clear_gfx(vc);
+        int scrollback_lines = vc_get_scrollback_lines(vc);
+        vc_invalidate(vc, 0, -scrollback_lines,
+                             vc->columns, scrollback_lines + vc->rows);
+    }
 }
 
 int vc_get_scrollback_lines(vc_t* vc) {
@@ -374,7 +392,7 @@ static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
     int diff_abs = ABS(diff);
     vc->viewport_y = vpy;
     int rows = vc_rows(vc);
-    if (!vc->active) {
+    if (!vc->active || !vc_gfx) {
         return;
     }
     if (diff_abs >= rows) {
@@ -437,6 +455,96 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
+void vc_attach_gfx(vc_t* vc) {
+    // If the size of the new gfx console doesn't match what we had been
+    // attached to, we need to allocate new memory and copy the existing
+    // data over.
+    unsigned rows = vc_gfx->height / vc->charh;
+    unsigned columns = vc_gfx->width / vc->charw;
+    if (rows == vc->rows && columns == vc->columns) {
+        return;
+    }
+
+    // allocate the new buffers
+    vc_char_t* text_buf = reinterpret_cast<vc_char_t*>(
+        calloc(1, rows * columns * sizeof(vc_char_t)));
+    vc_char_t* scrollback_buf = reinterpret_cast<vc_char_t*>(
+        calloc(1, vc->scrollback_rows_max * columns * sizeof(vc_char_t)));
+    if (text_buf && scrollback_buf) {
+        // fill new text buffer with blank characters
+        size_t count = rows * columns;
+        vc_char_t* ptr = text_buf;
+        while (count--) {
+            *ptr++ = vc_char_make(' ', vc->front_color, vc->back_color);
+        }
+
+        // Copy the most recent data from the old console to the new one. There are
+        // (vc->cursor_y + 1) rows available, and we want (rows - (vc->rows - vc_rows(vc))
+        // rows. Subtract to get the first row index to copy.
+        unsigned old_i = MAX(
+                static_cast<int>((vc->cursor_y + 1) - (rows - (vc->rows - vc_rows(vc)))), 0);
+        unsigned old_data_start = old_i;
+        unsigned new_i = 0;
+        size_t len = (vc->columns < columns ? vc->columns : columns) * sizeof(vc_char_t);
+        while (new_i < rows && old_i <= vc->cursor_y) {
+            memcpy(text_buf + columns * (new_i++), vc->text_buf + vc->columns * (old_i++), len);
+        }
+
+        // copy the old scrollback buffer
+        for (int i = 0; i < SCROLLBACK_ROWS; i++) {
+            memcpy(scrollback_buf + columns * i, vc->scrollback_buf + vc->columns * i, len);
+        }
+
+        vc_char_t* old_text_buf = vc->text_buf;
+        unsigned old_columns = vc->columns;
+        free(vc->scrollback_buf);
+
+        vc->text_buf = text_buf;
+        vc->scrollback_buf = scrollback_buf;
+        vc->rows = rows;
+        vc->columns = columns;
+
+        // Push any data that fell off of text_buf. Use a temporary buffer of the
+        // right length to handle going to a wider console. Set it to ' 's before
+        // pushing, so we don't merge data from old rows.
+        if (old_data_start) {
+            vc_char_t buf[columns];
+            for (unsigned i = 0; i < old_data_start; i++) {
+                vc_char_t* ptr = buf;
+                while (ptr < buf + columns) {
+                    *ptr++ = vc_char_make(' ', vc->front_color, vc->back_color);
+                }
+                ptr = old_text_buf + i * old_columns;
+                memcpy(buf, ptr, len);
+
+                vc_tc_scrollback_buffer_push(vc, buf);
+            }
+        }
+
+        free(old_text_buf);
+    } else {
+        // If we failed to allocate new buffers, use the old ones as best we can
+        free(text_buf);
+        free(scrollback_buf);
+
+        vc->rows = MIN(vc->rows, rows);
+        vc->columns = MIN(vc->columns, columns);
+
+        printf("vc: buffer resize failed, reusing old buffers (%dx%d)\n", vc->rows, vc->columns);
+    }
+
+    vc->viewport_y = 0;
+    if (vc->cursor_x >= vc->columns) {
+        vc->cursor_x = vc->columns - 1;
+    }
+    if (static_cast<int>(vc->cursor_y) >= vc_rows(vc)) {
+        vc->cursor_y = vc_rows(vc) - 1;
+    }
+
+    tc_init(&vc->textcon, vc->columns, vc_rows(vc), vc->text_buf,
+            vc->front_color, vc->back_color, vc->cursor_x, vc->cursor_y);
+}
+
 zx_status_t vc_alloc(vc_t** out, bool special) {
     vc_t* vc =
         reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
@@ -462,6 +570,9 @@ zx_status_t vc_alloc(vc_t** out, bool special) {
     vc->charh = vc->font->height;
 
     vc_setup(vc, special);
+    if (vc_gfx) {
+        vc_attach_gfx(vc);
+    }
     vc_reset(vc);
 
     *out = vc;
@@ -477,3 +588,20 @@ void vc_free(vc_t* vc) {
     free(vc);
 }
 
+void vc_flush(vc_t* vc) {
+    if (vc_gfx && vc->invy1 >= 0) {
+        int rows = vc_rows(vc);
+        // Adjust for the current viewport position.  Convert
+        // console-relative row numbers to screen-relative row numbers.
+        int invalidate_y0 = MIN(vc->invy0 - vc->viewport_y, rows);
+        int invalidate_y1 = MIN(vc->invy1 - vc->viewport_y, rows);
+        vc_gfx_invalidate(vc, 0, invalidate_y0,
+                          vc->columns, invalidate_y1 - invalidate_y0);
+    }
+}
+
+void vc_flush_all(vc_t* vc) {
+    if (vc_gfx) {
+        vc_gfx_invalidate_all(vc);
+    }
+}

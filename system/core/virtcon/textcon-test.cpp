@@ -52,7 +52,7 @@ public:
         textcon.push_scrollback_line = push_scrollback_line_callback;
         textcon.copy_lines = copy_lines_callback;
         textcon.setparam = setparam_callback;
-        tc_init(&textcon, size_x, size_y, textbuf, 0, 0);
+        tc_init(&textcon, size_x, size_y, textbuf, 0, 0, 0, 0);
         // Initialize buffer contents, since this is currently done
         // outside of textcon.cpp in vc-device.cpp.
         for (size_t i = 0; i < size_x * size_y; ++i)

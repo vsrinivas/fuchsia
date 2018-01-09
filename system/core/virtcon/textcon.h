@@ -81,7 +81,7 @@ struct textcon {
 };
 
 void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
-             uint8_t fg, uint8_t bg);
+             uint8_t fg, uint8_t bg, int cursor_x, int cursor_y);
 
 void tc_copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count);
 
