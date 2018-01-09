@@ -93,14 +93,14 @@ static void discard_handles(zx_handle_t* handles, unsigned count) {
     }
 }
 
-zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, void* cookie) {
+static zx_status_t zxrio_read_msg(zx_handle_t h, zxrio_msg_t* msg) {
     zx_status_t r;
-
     // NOTE: hcount intentionally received out-of-bound from the message to
     // avoid letting "client-supplied" bytes override the REAL hcount value.
     uint32_t hcount = 0;
     uint32_t dsz = sizeof(zxrio_msg_t);
-    if ((r = zx_channel_read(h, 0, msg, msg->handle, dsz, FDIO_MAX_HANDLES, &dsz, &hcount)) < 0) {
+    if ((r = zx_channel_read(h, 0, msg, msg->handle, dsz, FDIO_MAX_HANDLES,
+                             &dsz, &hcount)) != ZX_OK) {
         return r;
     }
     // Now, "msg->hcount" can be trusted once again.
@@ -110,16 +110,32 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
         discard_handles(msg->handle, msg->hcount);
         return ZX_ERR_INVALID_ARGS;
     }
+    return r;
+}
 
+zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, void* cookie) {
+    zx_status_t r = zxrio_read_msg(h, msg);
+    if (r != ZX_OK) {
+        return r;
+    }
     bool is_close = (ZXRIO_OP(msg->op) == ZXRIO_CLOSE);
-
-    xprintf("handle_rio: op=%s arg=%d", fdio_opname(msg->op), msg->arg);
 
     if ((msg->arg = cb(msg, cookie)) == ERR_DISPATCHER_INDIRECT) {
         // callback is handling the reply itself
         // and took ownership of the reply handle
         return ZX_OK;
     }
+
+    r = zxrio_respond(h, msg);
+    if (is_close) {
+        // signals to not perform a close callback
+        return ERR_DISPATCHER_DONE;
+    } else {
+        return r;
+    }
+}
+
+zx_status_t zxrio_respond(zx_handle_t h, zxrio_msg_t* msg) {
     if ((msg->arg < 0) || !is_message_valid(msg)) {
         // in the event of an error response or bad message
         // release all the handles and data payload
@@ -132,17 +148,13 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
         // TODO(ZX-974): consider a better error code
         msg->arg = (msg->arg < 0) ? msg->arg : ZX_ERR_INTERNAL;
     }
-
+    zx_status_t s;
     msg->op = ZXRIO_STATUS;
-    if ((r = zx_channel_write(h, 0, msg, ZXRIO_HDR_SZ + msg->datalen, msg->handle, msg->hcount)) < 0) {
+    if ((s = zx_channel_write(h, 0, msg, ZXRIO_HDR_SZ + msg->datalen,
+                              msg->handle, msg->hcount)) != ZX_OK) {
         discard_handles(msg->handle, msg->hcount);
     }
-    if (is_close) {
-        // signals to not perform a close callback
-        return ERR_DISPATCHER_DONE;
-    } else {
-        return r;
-    }
+    return s;
 }
 
 zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {

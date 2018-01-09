@@ -88,7 +88,6 @@ const char* fdio_opname(uint32_t op);
 
 typedef struct zxrio_msg zxrio_msg_t;
 
-typedef zx_status_t (*zxrio_cb_t)(zxrio_msg_t* msg, void* cookie);
 // callback to process a zxrio_msg
 // - on entry datalen indicates how much valid data is in msg.data[]
 // - return value of ERR_DISPATCHER_INDIRECT indicates that the
@@ -97,6 +96,7 @@ typedef zx_status_t (*zxrio_cb_t)(zxrio_msg_t* msg, void* cookie);
 // - otherwise, the return value is treated as the status to send
 //   in the rpc response, and msg.len indicates how much valid data
 //   to send.  On error return msg.len will be set to 0.
+typedef zx_status_t (*zxrio_cb_t)(zxrio_msg_t* msg, void* cookie);
 
 // a fdio_dispatcher_handler suitable for use with a fdio_dispatcher
 zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie);
@@ -109,7 +109,14 @@ zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie);
 // event (eg, channel was remotely closed), and neither function
 // should be callaed again after handle_close().
 zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, void* cookie);
+
+// Invokes the callback with a "fake" close message. Useful when the
+// client abruptly closes a handle without an explicit close message;
+// this function allows the server to react the same way as a "clean" close.
 zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie);
+
+// Transmits a response message |msg| back to the client on the peer end of |h|.
+zx_status_t zxrio_respond(zx_handle_t h, zxrio_msg_t* msg);
 
 // OPEN and CLOSE messages, can be forwarded to another remoteio server,
 // without any need to wait for a reply.  The reply channel from the initial
