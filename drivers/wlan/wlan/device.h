@@ -35,7 +35,7 @@ class Device;
 using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
 class Device : public WlanBaseDevice,
-               public ddk::EthmacProtocol<Device>,
+               public ddk::EthmacProtocol<Device, true>,
                public ddk::WlanmacIfc<Device>,
                public DeviceInterface {
    public:
@@ -60,6 +60,7 @@ class Device : public WlanBaseDevice,
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
+    zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
 
     // DeviceInterface methods
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;

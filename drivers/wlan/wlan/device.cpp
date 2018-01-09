@@ -186,6 +186,11 @@ zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     return status;
 }
 
+zx_status_t Device::EthmacSetParam(uint32_t param, int32_t value, void* data) {
+    debugfn();
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 void Device::WlanmacStatus(uint32_t status) {
     debugf("WlanmacStatus %u\n", status);
 
