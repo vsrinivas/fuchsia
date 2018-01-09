@@ -230,3 +230,74 @@ template("bootdata_ramdisk") {
            ] + rebase_path(invoker.inputs)
   }
 }
+
+# Template for writing a Zircon `bootdata.bin` file containing Platform ID.
+#
+# Parameters
+#
+#   vid (required)
+#       VID for Platform ID record.
+#   pid (required)
+#       PID for Platform ID record.
+#   board (required)
+#       Board name for Platform ID record.
+#
+#   output_name (optional, default: target_name)
+#   output_extension (optional, default: "bin")
+#   visibility (optional)
+#   testonly (optional)
+#       Same as for `bootdata`.
+#
+template("bootdata_platform") {
+  assert(defined(invoker.vid), "vid required for $target_name")
+  assert(defined(invoker.pid), "pid required for $target_name")
+  assert(defined(invoker.board), "board required for $target_name")
+
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".bin"
+  }
+
+  output_file = "$root_out_dir/$output_file"
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+
+    script = "//build/gn_run_binary.sh"
+    inputs = [
+      _mkbootfs,
+    ]
+    script_args = [
+      clang_prefix,
+      rebase_path(_mkbootfs, root_build_dir),
+    ]
+
+    outputs = [
+      output_file,
+    ]
+
+    args = script_args + [
+             "-o",
+             rebase_path(output_file, root_build_dir),
+             "--vid",
+             invoker.vid,
+             "--pid",
+             invoker.pid,
+             "--board",
+             invoker.board
+           ]
+  }
+}
