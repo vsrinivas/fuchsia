@@ -87,26 +87,53 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-zx::process Launch(const zx::job& job,
-                   const std::string& label,
-                   uint32_t what,
-                   const std::vector<const char*>& argv,
-                   fdio_flat_namespace_t* flat,
-                   zx::channel app_services,
-                   zx::channel service_request,
-                   fsl::SizedVmo data) {
+void PushFileDescriptor(app::FileDescriptorPtr fd,
+                        std::vector<uint32_t>* ids,
+                        std::vector<zx_handle_t>* handles) {
+  if (!fd)
+    return;
+  if (fd->type0) {
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), STDOUT_FILENO));
+    handles->push_back(fd->handle0.release());
+  }
+  if (fd->type1) {
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type1), STDOUT_FILENO));
+    handles->push_back(fd->handle1.release());
+  }
+  if (fd->type2) {
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type2), STDOUT_FILENO));
+    handles->push_back(fd->handle2.release());
+  }
+}
+
+zx::process CreateProcess(const zx::job& job,
+                          fsl::SizedVmo data,
+                          const std::string& argv0,
+                          ApplicationLaunchInfoPtr launch_info,
+                          fdio_flat_namespace_t* flat) {
+  if (!data)
+    return zx::process();
+
+  std::string label = GetLabelFromURL(launch_info->url);
+  std::vector<const char*> argv = GetArgv(argv0, launch_info);
+
   std::vector<uint32_t> ids;
   std::vector<zx_handle_t> handles;
 
+  zx::channel app_services = TakeAppServices(launch_info);
   if (app_services) {
     ids.push_back(PA_APP_SERVICES);
     handles.push_back(app_services.release());
   }
 
+  zx::channel service_request = std::move(launch_info->service_request);
   if (service_request) {
     ids.push_back(PA_SERVICE_REQUEST);
     handles.push_back(service_request.release());
   }
+
+  PushFileDescriptor(std::move(launch_info->out), &ids, &handles);
+  PushFileDescriptor(std::move(launch_info->err), &ids, &handles);
 
   for (size_t i = 0; i < flat->count; ++i) {
     ids.push_back(flat->type[i]);
@@ -121,7 +148,12 @@ zx::process Launch(const zx::job& job,
   launchpad_t* lp = nullptr;
   launchpad_create(job.get(), label.c_str(), &lp);
 
-  launchpad_clone(lp, what);
+  launchpad_clone(lp, LP_CLONE_ENVIRON);
+  launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
+  if (!launch_info->out)
+    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+  if (!launch_info->err)
+    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_nametable(lp, flat->count, flat->path);
   launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
@@ -137,20 +169,6 @@ zx::process Launch(const zx::job& job,
     return zx::process();
   }
   return zx::process(proc);
-}
-
-zx::process CreateProcess(const zx::job& job,
-                          fsl::SizedVmo data,
-                          const std::string& argv0,
-                          ApplicationLaunchInfoPtr launch_info,
-                          fdio_flat_namespace_t* flat) {
-  if (!data)
-    return zx::process();
-  return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
-                GetArgv(argv0, launch_info), flat,
-                TakeAppServices(launch_info),
-                std::move(launch_info->service_request), std::move(data));
 }
 
 LaunchType Classify(const zx::vmo& data, std::string* runner) {

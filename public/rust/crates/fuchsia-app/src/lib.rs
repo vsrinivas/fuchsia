@@ -121,6 +121,8 @@ pub mod client {
             let launch_info = ApplicationLaunchInfo {
                 url,
                 arguments,
+                out: None,
+                err: None,
                 service_request: None,
                 flat_namespace: None,
                 services: Some(service_provider_server_end),
