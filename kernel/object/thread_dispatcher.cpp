@@ -345,7 +345,7 @@ void ThreadDispatcher::Kill() {
         case State::RUNNING:
         case State::SUSPENDED:
             // deliver a kernel kill signal to the thread
-            thread_kill(&thread_, false);
+            thread_kill(&thread_);
 
             // enter the dying state
             SetStateLocked(State::DYING);

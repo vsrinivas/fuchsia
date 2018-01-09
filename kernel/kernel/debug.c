@@ -222,7 +222,7 @@ static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags) {
         return -1;
     }
 
-    thread_kill(argv[1].p, false);
+    thread_kill(argv[1].p);
 
     return 0;
 }

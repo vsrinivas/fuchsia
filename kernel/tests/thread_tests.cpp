@@ -180,7 +180,7 @@ static void event_test(void) {
     thread_sleep_relative(ZX_SEC(2));
 
     for (uint i = 0; i < countof(threads); i++) {
-        thread_kill(threads[i], false);
+        thread_kill(threads[i]);
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
@@ -504,7 +504,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it wakes up.\n");
@@ -512,14 +512,14 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it is unsuspended.\n");
     t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
     t->user_thread = t;
     thread_set_user_callback(t, &sleeper_thread_exit);
-    thread_kill(t, false); // kill it before it is resumed
+    thread_kill(t); // kill it before it is resumed
     thread_resume(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
 
@@ -532,7 +532,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -542,7 +542,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -553,7 +553,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -563,7 +563,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_kill(t, false);
+    thread_kill(t);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 }

@@ -560,8 +560,8 @@ void thread_exit(int retcode) {
     thread_exit_locked(current_thread, retcode);
 }
 
-/* kill a thread, optionally waiting for it to die */
-void thread_kill(thread_t* t, bool block) {
+/* kill a thread */
+void thread_kill(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
@@ -623,10 +623,7 @@ void thread_kill(thread_t* t, bool block) {
         goto done;
     }
 
-    /* wait for the thread to exit */
-    if (block && !(t->flags & THREAD_FLAG_DETACHED)) {
-        wait_queue_block(&t->retcode_wait_queue, ZX_TIME_INFINITE);
-    } else if (local_resched) {
+    if (local_resched) {
         /* reschedule if the local cpu run queue was modified */
         sched_reschedule();
     }

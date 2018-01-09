@@ -243,7 +243,7 @@ zx_status_t thread_sleep_relative(zx_duration_t delay);
 zx_duration_t thread_runtime(const thread_t* t);
 
 /* deliver a kill signal to a thread */
-void thread_kill(thread_t* t, bool block);
+void thread_kill(thread_t* t);
 
 /* return true if thread has been signaled */
 static inline bool thread_is_signaled(thread_t* t) {
