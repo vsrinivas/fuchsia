@@ -114,6 +114,8 @@
 #define AX88179_PHYSR_SPEED  (3 << 14)
 #define AX88179_PHYSR_DUPLEX (1 << 13)
 
+#define AX88179_RCR_PROMISC  (1 << 0)
+
 // Headers
 #define AX88179_RX_DROPPKT   0x80000000
 #define AX88179_RX_MIIER     0x40000000

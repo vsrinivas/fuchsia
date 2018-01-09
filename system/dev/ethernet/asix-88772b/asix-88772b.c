@@ -63,6 +63,11 @@ static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t
                        request, value, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
 }
 
+static zx_status_t ax88772b_get_value(ax88772b_t* eth, uint8_t request, uint16_t* value_addr) {
+    return usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         request, 0, 0, value_addr, sizeof(uint16_t), ZX_TIME_INFINITE, NULL);
+}
+
 static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
 
     zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
@@ -97,7 +102,7 @@ static zx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
                          ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
                          &value, sizeof(value), ZX_TIME_INFINITE, NULL);
     if (status < 0) {
-        zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_READ failed: %d\n", status);
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_WRITE failed: %d\n", status);
         return status;
     }
     status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
@@ -392,8 +397,42 @@ static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
+static zx_status_t ax88772b_set_promisc(ax88772b_t *eth, bool on) {
+    uint16_t rx_bits;
+    zx_status_t status = ax88772b_get_value(eth, ASIX_REQ_RX_CONTROL_READ, &rx_bits);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_RX_CONTROL_READ failed; set_promisc() will fail.\n");
+        return status;
+    }
+    if (on) {
+        rx_bits |= ASIX_RX_CTRL_PRO;
+    } else {
+        rx_bits &= ~ASIX_RX_CTRL_PRO;
+    }
+    status = ax88772b_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, rx_bits);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ax88772b: ASIX_REQ_RX_CONTROL_WRITE failed\n");
+    }
+
+    return status;
+}
+
 static zx_status_t ax88772b_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
-    return ZX_ERR_NOT_SUPPORTED;
+    ax88772b_t* eth = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&eth->mutex);
+
+    switch (param) {
+    case ETHMAC_SETPARAM_PROMISC:
+        status = ax88772b_set_promisc(eth, (bool)value);
+        break;
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+
+    mtx_unlock(&eth->mutex);
+    return status;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {

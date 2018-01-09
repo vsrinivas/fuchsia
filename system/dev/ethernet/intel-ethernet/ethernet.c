@@ -139,7 +139,26 @@ static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* ne
 }
 
 static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
-    return ZX_ERR_NOT_SUPPORTED;
+    ethernet_device_t* edev = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&edev->lock);
+
+    switch (param) {
+    case ETHMAC_SETPARAM_PROMISC:
+        if ((bool)value) {
+            eth_start_promisc(&edev->eth);
+        } else {
+            eth_stop_promisc(&edev->eth);
+        }
+        status = ZX_OK;
+        break;
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+    mtx_unlock(&edev->lock);
+
+    return status;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {

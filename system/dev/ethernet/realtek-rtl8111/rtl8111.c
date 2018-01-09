@@ -282,8 +282,32 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     return ZX_OK;
 }
 
+static zx_status_t rtl8111_set_promisc(ethernet_device_t* edev, bool on) {
+    if (on) {
+        writew(RTL_RCR, readw(RTL_RCR | RTL_RCR_AAP));
+    } else {
+        writew(RTL_RCR, readw(RTL_RCR & ~RTL_RCR_AAP));
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t rtl8111_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
-    return ZX_ERR_NOT_SUPPORTED;
+    ethernet_device_t* edev = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&edev->lock);
+
+    switch (param) {
+    case ETHMAC_SETPARAM_PROMISC:
+        status = rtl8111_set_promisc(edev, (bool)value);
+        break;
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+    mtx_unlock(&edev->lock);
+
+    return status;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {

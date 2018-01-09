@@ -106,8 +106,8 @@ int main(int argc, const char** argv) {
             fprintf(stderr, "ethtool: failed to set promiscuous mode to %s: %zd\n",
                     options.promisc_on ? "on" : "off", r);
         } else {
-            fprintf(stderr, "ethtool: set %s promiscuous mode to %s: %zd\n",
-                    options.device, options.promisc_on ? "on" : "off", r);
+            fprintf(stderr, "ethtool: set %s promiscuous mode to %s\n",
+                    options.device, options.promisc_on ? "on" : "off");
         }
     }
 

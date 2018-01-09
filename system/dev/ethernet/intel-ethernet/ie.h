@@ -78,6 +78,9 @@ size_t eth_tx_queued(ethdev_t* eth);
 void eth_enable_tx(ethdev_t* eth);
 void eth_disable_tx(ethdev_t* eth);
 
+void eth_start_promisc(ethdev_t* eth);
+void eth_stop_promisc(ethdev_t* eth);
+
 zx_status_t eth_enable_phy(ethdev_t* eth);
 zx_status_t eth_disable_phy(ethdev_t* eth);
 

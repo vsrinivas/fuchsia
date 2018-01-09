@@ -118,7 +118,8 @@ static inline ssize_t eth_set_promisc_locked(ethdev0_t* edev0, const void* buf, 
     if (len != sizeof(bool) || buf == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
-
+    // TODO(cphoenix): Track per-device refcount, to turn off only when no one wants it;
+    // and per-client bool, to ignore repeated commands on one device.
     return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, *(bool*)buf, NULL);
 }
 

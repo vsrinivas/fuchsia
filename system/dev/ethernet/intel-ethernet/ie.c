@@ -156,6 +156,16 @@ void eth_disable_tx(ethdev_t* eth) {
     writel(tctl & ~IE_TCTL_EN, IE_TCTL);
 }
 
+void eth_start_promisc(ethdev_t* eth) {
+    uint32_t rctl = readl(IE_RCTL);
+    writel(rctl | IE_RCTL_UPE, IE_RCTL);
+}
+
+void eth_stop_promisc(ethdev_t* eth) {
+    uint32_t rctl = readl(IE_RCTL);
+    writel(rctl & ~IE_RCTL_UPE, IE_RCTL);
+}
+
 static zx_status_t wait_for_mdic(ethdev_t* eth, uint32_t* reg_value) {
     uint32_t mdic;
     uint32_t iterations = 0;

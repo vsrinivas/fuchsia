@@ -572,8 +572,41 @@ static zx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
+static zx_status_t ax88179_set_promisc(ax88179_t* eth, bool on) {
+    uint16_t rcr_bits;
+    zx_status_t status = ax88179_read_mac(eth, AX88179_MAC_RCR, 2, &rcr_bits);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ax88179_read_mac from %#x failed: %d\n", AX88179_MAC_RCR, status);
+        return status;
+    }
+    if (on) {
+        rcr_bits |= AX88179_RCR_PROMISC;
+    } else {
+        rcr_bits &= ~AX88179_RCR_PROMISC;
+    }
+    ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &rcr_bits);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+    }
+    return status;
+}
+
 static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
-    return ZX_ERR_NOT_SUPPORTED;
+    ax88179_t* eth = ctx;
+    zx_status_t status = ZX_OK;
+
+    mtx_lock(&eth->mutex);
+
+    switch (param) {
+    case ETHMAC_SETPARAM_PROMISC:
+        status = ax88179_set_promisc(eth, (bool)value);
+        break;
+    default:
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+    mtx_unlock(&eth->mutex);
+
+    return status;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
