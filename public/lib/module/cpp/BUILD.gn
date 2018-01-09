@@ -2,15 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/sdk/sdk_group.gni")
+import("//build/cpp/sdk_source_set.gni")
 import("//garnet/public/lib/fidl/fidl.gni")
 
-group("cpp") {
+sdk_group("cpp") {
   public_deps = [
     ":module_impl",
   ]
 }
 
-source_set("module_impl") {
+sdk_source_set("module_impl") {
   sources = [
     "module_impl.cc",
     "module_impl.h",
