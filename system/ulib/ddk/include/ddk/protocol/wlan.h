@@ -58,6 +58,14 @@ enum {
     WLAN_BSS_TYPE_IBSS = 2,
 };
 
+typedef struct wlan_bss_config {
+    uint8_t bssid[6];
+    // Whether this BSS is an infrastructure or independent BSS.
+    uint8_t bss_type;
+    // If 'remote' is 'true', the BSS is *not* managed by this device.
+    bool remote;
+} wlan_bss_config_t;
+
 enum {
     // Device or driver implements scanning. TODO(tkilbourn): define the interface between drivers
     // for passing scan request and response.
@@ -212,30 +220,38 @@ typedef struct wlan_tx_info {
     uint8_t mcs;
 } wlan_tx_info_t;
 
-// TODO(hahnr): use explicit enum values
 enum {
-    WLAN_PROTECTION_NONE,
-    WLAN_PROTECTION_RX,
-    WLAN_PROTECTION_TX,
-    WLAN_PROTECTION_RX_TX,
+    WLAN_PROTECTION_NONE = 0,
+    WLAN_PROTECTION_RX = 1,
+    WLAN_PROTECTION_TX = 2,
+    WLAN_PROTECTION_RX_TX = 3,
 };
 
-// TODO(hahnr): use explicit enum values
 enum {
-    WLAN_KEY_TYPE_PAIRWISE,
-    WLAN_KEY_TYPE_GROUP,
-    WLAN_KEY_TYPE_IGTK,
-    WLAN_KEY_TYPE_PEER,
+    WLAN_KEY_TYPE_PAIRWISE = 1,
+    WLAN_KEY_TYPE_GROUP = 2,
+    WLAN_KEY_TYPE_IGTK = 3,
+    WLAN_KEY_TYPE_PEER = 4,
 };
 
 typedef struct wlan_key_config {
+    // The BSSID for which this key is relevant.
+    uint8_t bssid;
+    // Which path to protect: None, TX, RX, or TX and RX.
     uint8_t protection;
+    // IEEE Cipher suite selector.
+    // See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
     uint8_t cipher_oui[3];
     uint8_t cipher_type;
-    uint8_t peer_addr[6];
+    // Whether this key is a pairwise, group or peer key.
     uint8_t key_type;
-    uint8_t key_len;
+    // The peer address for pairwise keys.
+    uint8_t peer_addr[6];
+    // Index for rotating group keys.
     uint8_t key_idx;
+    // Length of the supplied key.
+    uint8_t key_len;
+    // They key's actual bytes.
     uint8_t key[32];
 } wlan_key_config_t;
 
@@ -295,6 +311,7 @@ typedef struct wlanmac_protocol_ops {
     zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
 
     // Sets the BSS the station is joining
+    // TODO(hahnr): Replace with ConfigureBss(...).
     zx_status_t (*set_bss)(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type);
 
     // Specify a key for frame protection.

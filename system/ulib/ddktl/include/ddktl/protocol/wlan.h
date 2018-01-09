@@ -265,6 +265,8 @@ public:
         return ops_->set_channel(ctx_, options, chan);
     }
 
+    // Deprecated.
+    // TODO(hahnr): Replace with ConfigureBss(...).
     zx_status_t SetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
         return ops_->set_bss(ctx_, options, mac, type);
     }
