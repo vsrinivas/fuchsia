@@ -35,7 +35,7 @@ class Device;
 using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
 class Device : public WlanBaseDevice,
-               public ddk::EthmacProtocol<Device, true>,
+               public ddk::EthmacProtocol<Device>,
                public ddk::WlanmacIfc<Device>,
                public DeviceInterface {
    public:
