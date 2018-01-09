@@ -43,7 +43,7 @@ public:
             default:
                 bit = -1;
         }
-        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<SdeInterruptBase>(offset); }
@@ -52,21 +52,14 @@ public:
 // SHOTPLUG_CTL + SHOTPLUG_CTL2
 class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
 public:
-    static constexpr uint32_t kOffset = 0xc4030;
-    static constexpr uint32_t kOffset2 = 0xc403c;
-
-    static constexpr uint32_t kShortPulseBitSubOffset = 0;
-    static constexpr uint32_t kLongPulseBitSubOffset = 1;
-    static constexpr uint32_t kHpdEnableBitSubOffset = 4;
-
     hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
         uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
-        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    hwreg::BitfieldRef<uint32_t> long_pulse_detected(Ddi ddi) {
-        uint32_t bit = ddi_to_first_bit(ddi) + kLongPulseBitSubOffset;
-        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 1, bit);
+    hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
+        uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
     static auto Get(Ddi ddi) {
@@ -74,6 +67,12 @@ public:
     }
 
 private:
+    static constexpr uint32_t kOffset = 0xc4030;
+    static constexpr uint32_t kOffset2 = 0xc403c;
+
+    static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
+    static constexpr uint32_t kHpdEnableBitSubOffset = 4;
+
     static uint32_t ddi_to_first_bit(Ddi ddi) {
         switch (ddi) {
             case DDI_A:

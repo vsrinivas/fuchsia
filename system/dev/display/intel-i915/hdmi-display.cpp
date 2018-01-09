@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 
+#include "intel-i915.h"
 #include "hdmi-display.h"
 #include "macros.h"
 #include "pci-ids.h"
@@ -128,9 +129,8 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 
 namespace i915 {
 
-HdmiDisplay::HdmiDisplay(Controller* controller, uint16_t device_id,
-                         registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, device_id, ddi, pipe) { }
+HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDevice(controller, ddi, pipe) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -588,7 +588,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
 
     // TODO(ZX-1416): Check if the VBT overrides the recommended index into the values table
-    if (is_skl_y(device_id()) || is_kbl_y(device_id())) {
+    if (is_skl_y(controller()->device_id()) || is_kbl_y(controller()->device_id())) {
         ddi_buf_trans_hi.set_reg_value(0x000000c0);
     } else {
         ddi_buf_trans_hi.set_reg_value(0x000000cd);

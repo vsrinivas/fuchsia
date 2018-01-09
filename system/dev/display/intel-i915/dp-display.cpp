@@ -11,6 +11,7 @@
 
 #include "dp-display.h"
 #include "edid.h"
+#include "intel-i915.h"
 #include "macros.h"
 #include "pci-ids.h"
 #include "registers.h"
@@ -544,7 +545,7 @@ bool DpDisplay::LinkTrainingSetup() {
     unsigned count;
     uint8_t i_boost;
     const ddi_buf_trans_entry* entries;
-    get_dp_ddi_buf_trans_entries(device_id(), &entries, &i_boost, &count);
+    get_dp_ddi_buf_trans_entries(controller()->device_id(), &entries, &i_boost, &count);
 
     for (unsigned i = 0; i < count; i++) {
         auto ddi_buf_trans_high = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());
@@ -758,9 +759,8 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, uint16_t device_id,
-                     registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, device_id, ddi, pipe) { }
+DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDevice(controller, ddi, pipe) { }
 
 bool DpDisplay::Init(zx_display_info* info) {
     if (!ResetPipe() || !ResetDdi()) {

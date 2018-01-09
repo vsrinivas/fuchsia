@@ -17,14 +17,19 @@
 #include "registers-dpll.h"
 #include "registers-transcoder.h"
 
+#define USE_FB_TEST_PATTERN 0
+
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, uint16_t device_id,
-                             registers::Ddi ddi, registers::Pipe pipe)
+DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDeviceType(controller->zxdev()), controller_(controller)
-        , device_id_(device_id), ddi_(ddi), pipe_(pipe) {}
+        , ddi_(ddi), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
+    if (inited_) {
+        ResetPipe();
+        ResetDdi();
+    }
     if (framebuffer_) {
         zx::vmar::root_self().unmap(framebuffer_, framebuffer_size_);
     }
@@ -108,6 +113,7 @@ bool DisplayDevice::Init() {
     if (!Init(&info_)) {
         return false;
     }
+    inited_ = true;
 
     framebuffer_size_ = info_.stride * info_.height * info_.pixelsize;
     zx_status_t status = zx::vmo::create(framebuffer_size_, 0, &framebuffer_vmo_);
@@ -139,6 +145,23 @@ bool DisplayDevice::Init() {
     }
 
     registers::PipeRegs pipe_regs(pipe());
+
+#if USE_FB_TEST_PATTERN
+    // Fill the framebuffer with a r/g/b/white checkered pattern. Note that the pattern
+    // will be overwritten as soon as any client draws to the framebuffer.
+    uint32_t* fb = reinterpret_cast<uint32_t*>(framebuffer_);
+    for (unsigned y = 0; y < info_.height; y++) {
+        for (unsigned x = 0; x < info_.width; x++) {
+            uint32_t colors[4] = { 0xffff0000, 0xff00ff00, 0xff0000ff, 0xffffffff };
+            uint32_t y_offset = (y / 12) % fbl::count_of(colors);
+            uint32_t color = colors[(y_offset + (x / 24)) % fbl::count_of(colors)];
+            *(fb + (y * info_.stride) + x) = color;
+        }
+    }
+#else
+    memset(reinterpret_cast<void*>(framebuffer_), 0xff, framebuffer_size_);
+#endif // USE_FB_TEST_PATTERN
+    Flush();
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
     plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);

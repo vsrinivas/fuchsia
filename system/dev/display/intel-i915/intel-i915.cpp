@@ -54,7 +54,16 @@ namespace {
 static int irq_handler(void* arg) {
     return static_cast<i915::Controller*>(arg)->IrqLoop();
 }
+
+bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::Pipe pipe) {
+    for (size_t i = 0; i < displays.size(); i++) {
+        if (displays[i]->pipe() == pipe) {
+            return true;
+        }
+    }
+    return false;
 }
+} // namespace
 
 namespace i915 {
 
@@ -73,16 +82,21 @@ int Controller::IrqLoop() {
 
         if (interrupt_ctrl.sde_int_pending()) {
             auto sde_int_identity = registers::SdeInterruptBase::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
+            auto hp_ctrl1 = registers::HotplugCtrl
+                    ::Get(registers::DDI_A).ReadFrom(mmio_space_.get());
+            auto hp_ctrl2 = registers::HotplugCtrl
+                    ::Get(registers::DDI_E).ReadFrom(mmio_space_.get());
             for (uint32_t i = 0; i < registers::kDdiCount; i++) {
                 registers::Ddi ddi = registers::kDdis[i];
                 bool hp_detected = sde_int_identity.ddi_bit(ddi).get();
-                bool long_pulse_detected = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get()).long_pulse_detected(ddi).get();
-                if (hp_detected && long_pulse_detected) {
-                    // TODO(ZX-1414): Actually handle these events
-                    zxlogf(TRACE, "i915: hotplug detected %d\n", ddi);
+                auto hp_ctrl = ddi < registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
+                if (hp_detected && hp_ctrl.hpd_long_pulse(ddi).get()) {
+                    HandleHotplug(ddi);
                 }
             }
             // Write back the register to clear the bits
+            hp_ctrl1.WriteTo(mmio_space_.get());
+            hp_ctrl2.WriteTo(mmio_space_.get());
             sde_int_identity.WriteTo(mmio_space_.get());
         }
 
@@ -160,6 +174,42 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     }
 
     return ZX_OK;
+}
+
+void Controller::HandleHotplug(registers::Ddi ddi) {
+    zxlogf(TRACE, "i915: hotplug detected %d\n", ddi);
+    DisplayDevice* device = nullptr;
+    bool was_kernel_framebuffer = false;
+    for (size_t i = 0; i < display_devices_.size(); i++) {
+        if (display_devices_[i]->ddi() == ddi) {
+            device = display_devices_.erase(i);
+            was_kernel_framebuffer = i == 0;
+            break;
+        }
+    }
+    if (device) { // Existing device was unplugged
+        if (was_kernel_framebuffer) {
+            if (display_devices_.is_empty()) {
+                zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+            } else {
+                DisplayDevice* new_device = display_devices_[0];
+                zx_set_framebuffer_vmo(get_root_resource(),
+                                       new_device->framebuffer_vmo().get(),
+                                       static_cast<uint32_t>(new_device->framebuffer_size()),
+                                       new_device->info().format, new_device->info().width,
+                                       new_device->info().height, new_device->info().stride);
+            }
+        }
+        device->DdkRemove();
+    } else { // New device was plugged in
+        fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
+        if (!device) {
+            zxlogf(INFO, "i915: failed to init hotplug display\n");
+            return;
+        }
+
+        AddDisplay(fbl::move(device));
+    }
 }
 
 bool Controller::BringUpDisplayEngine() {
@@ -401,10 +451,36 @@ void Controller::AllocDisplayBuffers() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
 }
 
-zx_status_t Controller::InitDisplays(uint16_t device_id) {
+fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
+    registers::Pipe pipe;
+    if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
+        pipe = registers::PIPE_A;
+    } else if (!pipe_in_use(display_devices_, registers::PIPE_B)
+            && !registers::HdportState::Get().ReadFrom(mmio_space_.get()).dpll2_used()) {
+        pipe = registers::PIPE_B;
+    } else if (!pipe_in_use(display_devices_, registers::PIPE_C)) {
+        pipe = registers::PIPE_C;
+    } else {
+        zxlogf(INFO, "i915: Could not allocate pipe for ddi %d\n", ddi);
+        return nullptr;
+    }
+
     fbl::AllocChecker ac;
-    fbl::unique_ptr<DisplayDevice> disp_device(nullptr);
-    if (ENABLE_MODESETTING && is_gen9(device_id)) {
+    zxlogf(TRACE, "i915: Trying to init display %d\n", ddi);
+    auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
+    if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
+        return hdmi_disp;
+    }
+
+    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, ddi, pipe);
+    if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
+        return dp_disp;
+    }
+    return nullptr;
+}
+
+zx_status_t Controller::InitDisplays() {
+    if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         BringUpDisplayEngine();
 
         for (unsigned i = 0; i < registers::kPipeCount; i++) {
@@ -417,56 +493,59 @@ zx_status_t Controller::InitDisplays(uint16_t device_id) {
 
         AllocDisplayBuffers();
 
-        for (uint32_t i = 0; i < registers::kDdiCount && !disp_device; i++) {
-            zxlogf(TRACE, "Trying to init display %d\n", registers::kDdis[i]);
-            fbl::unique_ptr<DisplayDevice> hdmi_disp(
-                new (&ac) HdmiDisplay(this, device_id, registers::kDdis[i], registers::PIPE_A));
-            if (ac.check() && hdmi_disp->Init()) {
-                disp_device = fbl::move(hdmi_disp);
-            }
-
-            if (!disp_device) {
-                fbl::unique_ptr<DisplayDevice> dp_disp(
-                    new (&ac) DpDisplay(this, device_id, registers::kDdis[i], registers::PIPE_A));
-                if (ac.check() && dp_disp->Init()) {
-                    disp_device = fbl::move(dp_disp);
+        for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+            auto disp_device = InitDisplay(registers::kDdis[i]);
+            if (disp_device) {
+                if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
+                    return ZX_ERR_INTERNAL;
                 }
             }
         }
-
-        if (!disp_device) {
-            zxlogf(INFO, "Did not find any displays\n");
-            return ZX_OK;
-        }
+        return ZX_OK;
     } else {
+        fbl::AllocChecker ac;
         // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
-        disp_device.reset(new (&ac) BootloaderDisplay(this, device_id,
-                                                      registers::DDI_A, registers::PIPE_A));
+        auto disp_device = fbl::make_unique_checked<BootloaderDisplay>(
+                &ac, this, registers::DDI_A, registers::PIPE_A);
         if (!ac.check()) {
             zxlogf(ERROR, "i915: failed to alloc disp_device\n");
             return ZX_ERR_NO_MEMORY;
         }
 
-        if (!disp_device->Init()) {
+        if (!reinterpret_cast<DisplayDevice*>(disp_device.get())->Init()) {
             zxlogf(ERROR, "i915: failed to init display\n");
             return ZX_ERR_INTERNAL;
         }
+        return AddDisplay(fbl::move(disp_device));
+    }
+}
+
+zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
+    zx_status_t status = display->DdkAdd("intel_i915_disp");
+    fbl::AllocChecker ac;
+    display_devices_.reserve(display_devices_.size() + 1, &ac);
+
+    if (ac.check() && status == ZX_OK) {
+        display_devices_.push_back(display.release(), &ac);
+        assert(ac.check());
+    } else {
+        zxlogf(ERROR, "i915: failed to add display device %d\n", status);
+        return status == ZX_OK ? ZX_ERR_NO_MEMORY : status;
     }
 
-    zx_status_t status = disp_device->DdkAdd("intel_i915_disp");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to add display device\n");
-        return status;
+    if (display_devices_.size() == 1) {
+        DisplayDevice* new_device = display_devices_[0];
+        zx_set_framebuffer_vmo(get_root_resource(), new_device->framebuffer_vmo().get(),
+                               static_cast<uint32_t>(new_device->framebuffer_size()),
+                               new_device->info().format, new_device->info().width,
+                               new_device->info().height, new_device->info().stride);
     }
-
-    display_device_ = disp_device.release();
     return ZX_OK;
 }
 
 void Controller::DdkUnbind() {
-    if (display_device_) {
-        device_remove(display_device_->zxdev());
-        display_device_ = nullptr;
+    while (!display_devices_.is_empty()) {
+        device_remove(display_devices_.erase(0)->zxdev());
     }
     device_remove(zxdev());
 }
@@ -483,10 +562,9 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    uint16_t device_id;
-    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
-    zxlogf(TRACE, "i915: device id %x\n", device_id);
-    if (device_id == INTEL_I915_BROADWELL_DID) {
+    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id_);
+    zxlogf(TRACE, "i915: device id %x\n", device_id_);
+    if (device_id_ == INTEL_I915_BROADWELL_DID) {
         // TODO: this should be based on the specific target
         flags_ |= FLAGS_BACKLIGHT;
     }
@@ -519,7 +597,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
     mmio_space_ = fbl::move(mmio_space);
 
-    if (is_gen9(device_id)) {
+    if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");
         status = InitHotplug(&pci);
         if (status != ZX_OK) {
@@ -542,13 +620,13 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     controller_ptr->release();
 
     zxlogf(TRACE, "i915: initializing displays\n");
-    status = InitDisplays(device_id);
+    status = InitDisplays();
     if (status != ZX_OK) {
         device_remove(zxdev());
         return status;
     }
 
-    if (is_gen9(device_id)) {
+    if (is_gen9(device_id_)) {
         auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
         interrupt_ctrl.set_enable_mask(1);
         interrupt_ctrl.WriteTo(mmio_space_.get());
@@ -556,12 +634,6 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     // TODO remove when the gfxconsole moves to user space
     EnableBacklight(true);
-    if (display_device_) {
-        zx_set_framebuffer_vmo(get_root_resource(), display_device_->framebuffer_vmo().get(),
-                               static_cast<uint32_t>(display_device_->framebuffer_size()),
-                               display_device_->info().format, display_device_->info().width,
-                               display_device_->info().height, display_device_->info().stride);
-    }
 
     zxlogf(TRACE, "i915: initialization done\n");
 
