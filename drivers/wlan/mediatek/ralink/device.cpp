@@ -2813,29 +2813,29 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
 #if RALINK_DUMP_RX
     uint8_t* data;
     usb_request_mmap(request, reinterpret_cast<void**>(&data));
-    debugf("dumping received packet\n");
-    debugf("rx len=%" PRIu64 "\n", request->response.actual);
-    debugf("rxinfo usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
-    debugf("rxdesc ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n", rx_desc.ba(),
-           rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(), rx_desc.unicast_to_me(),
-           rx_desc.multicast());
-    debugf("broadcast=%u my_bss=%u crc_error=%u cipher_error=%u amsdu=%u htc=%u rssi=%u\n",
-           rx_desc.broadcast(), rx_desc.my_bss(), rx_desc.crc_error(), rx_desc.cipher_error(),
-           rx_desc.amsdu(), rx_desc.htc(), rx_desc.rssi());
-    debugf("l2pad=%u ampdu=%u decrypted=%u plcp_rssi=%u cipher_alg=%u last_amsdu=%u\n",
-           rx_desc.l2pad(), rx_desc.ampdu(), rx_desc.decrypted(), rx_desc.plcp_rssi(),
-           rx_desc.cipher_alg(), rx_desc.last_amsdu());
-    debugf("plcp_signal=0x%04x\n", rx_desc.plcp_signal());
-
+    debugf("# Rxed packet: rx_len=%" PRIu64 "\n", request->response.actual);
+    debugf("  rxinfo: usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
+    debugf("  rxdesc: ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n",
+           rx_desc.ba(), rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(),
+           rx_desc.unicast_to_me(), rx_desc.multicast());
     debugf(
-        "rxwi0 wcid=0x%02x key_idx=%u bss_idx=%u udf=0x%02x "
+        "          broadcast=%u my_bss=%u crc_error=%u cipher_error=%u amsdu=%u htc=%u rssi=%u\n",
+        rx_desc.broadcast(), rx_desc.my_bss(), rx_desc.crc_error(), rx_desc.cipher_error(),
+        rx_desc.amsdu(), rx_desc.htc(), rx_desc.rssi());
+    debugf(
+        "          l2pad=%u ampdu=%u decrypted=%u plcp_rssi=%u cipher_alg=%u last_amsdu=%u "
+        "plcp_signal=0x%04x\n",
+        rx_desc.l2pad(), rx_desc.ampdu(), rx_desc.decrypted(), rx_desc.plcp_rssi(),
+        rx_desc.cipher_alg(), rx_desc.last_amsdu(), rx_desc.plcp_signal());
+    debugf(
+        "  rxwi0 : wcid=0x%02x key_idx=%u bss_idx=%u udf=0x%02x "
         "mpdu_total_byte_count=%u tid=0x%02x\n",
         rxwi0.wcid(), rxwi0.key_idx(), rxwi0.bss_idx(), rxwi0.udf(), rxwi0.mpdu_total_byte_count(),
         rxwi0.tid());
-    debugf("rxwi1 frag=%u seq=%u mcs=0x%02x bw=%u sgi=%u stbc=%u phy_mode=%u\n", rxwi1.frag(),
+    debugf("  rxwi1 : frag=%u seq=%u mcs=0x%02x bw=%u sgi=%u stbc=%u phy_mode=%u\n", rxwi1.frag(),
            rxwi1.seq(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi(), rxwi1.stbc(), rxwi1.phy_mode());
-    debugf("rxwi2 rssi0=%u rssi1=%u rssi2=%u\n", rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
-    debugf("rxwi3 snr0=%u snr1=%u\n", rxwi3.snr0(), rxwi3.snr1());
+    debugf("  rxwi2 : rssi0=%u rssi1=%u rssi2=%u\n", rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
+    debugf("  rxwi3 : snr0=%u snr1=%u\n", rxwi3.snr0(), rxwi3.snr1());
 
     size_t i = 0;
     for (; i < request->response.actual; i++) {
@@ -2843,7 +2843,7 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
         if (i % 8 == 7) std::printf("\n");
     }
     if (i % 8) { std::printf("\n"); }
-#endif
+#endif  // RALINK_DUMP_RX
 }
 
 static const uint8_t kDataRates[4][8] = {
