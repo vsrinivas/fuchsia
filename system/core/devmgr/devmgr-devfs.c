@@ -366,17 +366,6 @@ static void _devfs_remove(devnode_t* dn) {
         list_delete(&dn->node);
     }
 
-    // disconnect from device
-    if (dn->device != NULL) {
-        if (dn->device->self == dn) {
-            dn->device->self = NULL;
-        }
-        if (dn->device->link == dn) {
-            dn->device->link = NULL;
-        }
-        dn->device = NULL;
-    }
-
     // detach all connected iostates
     iostate_t* ios;
     list_for_every_entry(&dn->iostate, ios, iostate_t, node) {
@@ -385,9 +374,30 @@ static void _devfs_remove(devnode_t* dn) {
         ios->ph.handle = ZX_HANDLE_INVALID;
     }
 
+    // notify own file watcher
     if ((dn->device == NULL) ||
         !(dn->device->flags & DEV_CTX_INVISIBLE)) {
         devfs_notify(dn, "", VFS_WATCH_EVT_DELETED);
+    }
+
+    // disconnect from device and notify parent/link directory watchers
+    if (dn->device != NULL) {
+        if (dn->device->self == dn) {
+            dn->device->self = NULL;
+
+            if (dn->device->parent != NULL && !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+                devfs_notify(dn->device->parent->self, dn->name, VFS_WATCH_EVT_REMOVED);
+            }
+        }
+        if (dn->device->link == dn) {
+            dn->device->link = NULL;
+
+            if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
+                devnode_t* dir = proto_dir(dn->device->protocol_id);
+                devfs_notify(dir, dn->name, VFS_WATCH_EVT_REMOVED);
+            }
+        }
+        dn->device = NULL;
     }
 
     // destroy all watchers
