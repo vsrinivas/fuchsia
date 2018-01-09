@@ -444,6 +444,12 @@ def EncodeMethod(kind, variable, offset, bit):
   params = AppendEncodeParams([ variable, str(offset) ], kind, bit)
   return '%s(%s)' % (methodName, ', '.join(params))
 
+def IntOrNone(v):
+  try:
+    return int(v)
+  except ValueError:
+    return None
+
 def TranslateConstants(token):
   if isinstance(token, mojom.BuiltinValue):
     if token.value == "double.INFINITY" or token.value == "float.INFINITY":
@@ -457,6 +463,12 @@ def TranslateConstants(token):
   # Strip leading '+'.
   if token[0] == '+':
     token = token[1:]
+
+  maybe_int = IntOrNone(token)
+  if maybe_int != None:
+    maxint64 = (1 << 63) - 1
+    if maybe_int > maxint64:
+      return format(maybe_int, '#016x')
 
   return token
 
