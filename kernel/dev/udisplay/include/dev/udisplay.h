@@ -26,5 +26,6 @@ __END_CDECLS
 
 class VmObject;
 zx_status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo);
+void udisplay_clear_framebuffer_vmo(void);
 
 #endif

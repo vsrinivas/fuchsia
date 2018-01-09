@@ -230,6 +230,11 @@ zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, u
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0)
         return status;
 
+    if (vmo_handle == ZX_HANDLE_INVALID) {
+        udisplay_clear_framebuffer_vmo();
+        return ZX_OK;
+    }
+
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle

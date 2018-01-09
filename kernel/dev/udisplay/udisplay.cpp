@@ -47,9 +47,10 @@ struct udisplay_info {
     void* framebuffer_virt;
     size_t framebuffer_size;
     struct display_info info;
+    fbl::RefPtr<VmMapping> framebuffer_vmo_mapping;
 };
 
-static struct udisplay_info g_udisplay;
+static struct udisplay_info g_udisplay = {};
 
 zx_status_t udisplay_init(void) {
     return ZX_OK;
@@ -117,9 +118,17 @@ zx_status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
     return ZX_OK;
 }
 
+void udisplay_clear_framebuffer_vmo() {
+    if (g_udisplay.framebuffer_vmo_mapping) {
+        g_udisplay.framebuffer_size = 0;
+        g_udisplay.framebuffer_virt = 0;
+        g_udisplay.framebuffer_vmo_mapping->Destroy();
+        g_udisplay.framebuffer_vmo_mapping = nullptr;
+    }
+}
+
 zx_status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo) {
-    g_udisplay.framebuffer_size = 0;
-    g_udisplay.framebuffer_virt = 0;
+    udisplay_clear_framebuffer_vmo();
 
     const size_t size = vmo->size();
     fbl::RefPtr<VmMapping> mapping;
@@ -137,6 +146,7 @@ zx_status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo) {
 
     g_udisplay.framebuffer_virt = reinterpret_cast<void*>(mapping->base());
     g_udisplay.framebuffer_size = size;
+    g_udisplay.framebuffer_vmo_mapping = mapping;
     return ZX_OK;
 }
 
