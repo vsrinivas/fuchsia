@@ -175,7 +175,7 @@ zx_status_t Connection::Serve() {
 }
 
 zx_status_t Connection::CallHandler() {
-    return zxrio_handler(channel_.get(), (void*)&Connection::HandleMessageThunk, this);
+    return zxrio_handler(channel_.get(), &Connection::HandleMessageThunk, this);
 }
 
 zx_status_t Connection::HandleMessageThunk(zxrio_msg_t* msg, void* cookie) {

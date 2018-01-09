@@ -159,9 +159,7 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {
     return ZX_OK;
 }
 
-zx_status_t zxrio_handler(zx_handle_t h, void* _cb, void* cookie) {
-    zxrio_cb_t cb = _cb;
-
+zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie) {
     if (h == ZX_HANDLE_INVALID) {
         return zxrio_handle_close(cb, cookie);
     } else {

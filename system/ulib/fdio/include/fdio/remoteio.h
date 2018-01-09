@@ -94,7 +94,7 @@ typedef zx_status_t (*zxrio_cb_t)(zxrio_msg_t* msg, void* cookie);
 //   to send.  On error return msg.len will be set to 0.
 
 // a fdio_dispatcher_handler suitable for use with a fdio_dispatcher
-zx_status_t zxrio_handler(zx_handle_t h, void* cb, void* cookie);
+zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie);
 
 // the underlying handling for regular rpc or for a synthetic close,
 // called by zxrio_handler.  handle_rpc() processes a single message
