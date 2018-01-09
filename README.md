@@ -50,5 +50,5 @@ This repository contains documentation for Fuchsia.
 [build_system]: build_system.md "Build system"
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md "Intel NUC"
-[flutter_module]: https://fuchsia.googlesource.com/modular/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
+[flutter_module]: https://fuchsia.googlesource.com/peridot/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [contributing]: /CONTRIBUTING.md "Contributing changes"
