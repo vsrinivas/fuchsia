@@ -36,7 +36,6 @@ class Amalgamation:
     def __init__(self, build_root):
         self.packages = []
         self.deps = []
-        self.labels = []
         self.config_paths = []
         self.component_urls = []
         self.build_root = build_root
@@ -55,8 +54,6 @@ class Amalgamation:
         # TODO(jamesr): Everything below here is deprecated and no longer needed
         # when all package configurations are written in GN template. Migrate
         # and remove.
-        for label in config.get("labels", []):
-            self.deps.append(label)
         for r in config.get("resources", []):
             file = {}
             source_path = os.path.join(paths.FUCHSIA_ROOT, r["file"])

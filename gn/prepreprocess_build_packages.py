@@ -11,8 +11,11 @@ from package_imports_resolver import PackageImportsResolver
 class PackageLangageObserver:
     def __init__(self):
         self.languages = set()
+        self.labels = []
 
     def import_resolved(self, config, config_path):
+        for label in config.get("labels", []):
+            self.labels.append(label)
         if config.get("languages"):
             self.languages.update(config.get("languages"))
 
@@ -33,6 +36,7 @@ def main():
     imports_resolver = PackageImportsResolver(language_observer)
     imported = imports_resolver.resolve_imports(args.packages.split(","))
     languages = language_observer.languages
+    labels = language_observer.labels
 
     if languages is None:
         return -1
@@ -42,6 +46,8 @@ def main():
                          (language, str(language in languages).lower()))
     sys.stdout.write("imported = [%s]\n" %
                      ",".join(map(get_dep_from_package_name, imported)))
+    sys.stdout.write("labels = [%s]\n" %
+                     ",".join(['"%s"' % label for label in labels]))
     return 0
 
 if __name__ == "__main__":

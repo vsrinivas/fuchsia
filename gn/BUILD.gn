@@ -940,6 +940,15 @@ bootdata("mkbootfs") {
   }
 }
 
+group("bootfs") {
+  deps = [
+    ":mkbootfs",
+  ]
+  foreach(platform, zircon_platforms) {
+    deps += [ ":bootdata-${platform}" ]
+  }
+}
+
 if (generate_zircon_gn_files) {
   zircon_files =
       exec_script("//build/zircon/list_source_files.py", [], "list lines")
@@ -956,16 +965,9 @@ if (generate_zircon_gn_files) {
 }
 
 group("default") {
-  deps = [ ":images" ]
+  deps = [ ":images" ] + packages_labels
 
   if (build_ramdisk) {
-    # TODO(mcgrathr): Remove dep when deprecated user.bootfs is gone.
-    deps += [
-      ":mkbootfs",
-      ":system_bootfs",
-    ]
-    foreach(platform, zircon_platforms) {
-      deps += [ ":bootdata-${platform}" ]
-    }
+    deps += [ ":bootfs" ]
   }
 }

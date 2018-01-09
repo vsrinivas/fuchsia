@@ -7,16 +7,17 @@ declare_args() {
   fuchsia_packages = ""
 }
 
-_languages = exec_script("determine_languages_of_packages.py",
-                         [
-                           "--packages",
-                           fuchsia_packages,
-                         ],
-                         "scope",
-                         ["package_imports_resolver.py"])
+_preprocessed_packages = exec_script("prepreprocess_build_packages.py",
+                                     [
+                                       "--packages",
+                                       fuchsia_packages,
+                                     ],
+                                     "scope",
+                                     ["package_imports_resolver.py"])
 
-packages_have_cpp = _languages.have_cpp
-packages_have_dart = _languages.have_dart
-packages_have_go = _languages.have_go
-packages_have_rust = _languages.have_rust
-packages_imported = _languages.imported
+packages_have_cpp = _preprocessed_packages.have_cpp
+packages_have_dart = _preprocessed_packages.have_dart
+packages_have_go = _preprocessed_packages.have_go
+packages_have_rust = _preprocessed_packages.have_rust
+packages_imported = _preprocessed_packages.imported
+packages_labels = _preprocessed_packages.labels
