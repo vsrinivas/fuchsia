@@ -180,7 +180,7 @@ static void event_test(void) {
     thread_sleep_relative(ZX_SEC(2));
 
     for (uint i = 0; i < countof(threads); i++) {
-        thread_kill(threads[i], true);
+        thread_kill(threads[i], false);
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
@@ -504,7 +504,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it wakes up.\n");
@@ -512,7 +512,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it is unsuspended.\n");
@@ -532,7 +532,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -542,7 +542,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -553,7 +553,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
@@ -563,7 +563,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_kill(t, true);
+    thread_kill(t, false);
     thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 }
