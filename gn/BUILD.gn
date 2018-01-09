@@ -268,7 +268,7 @@ action("finalize_manifests") {
 action("system.pkg") {
   visibility = [ ":*" ]
   pm_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
-  pkgsvr_label = "//garnet/go/src/pm:pkgsvr_bin"
+  pkgsvr_label = "//garnet/go/src/pmd:pkgsvr_bin"
   deps = [
     ":finalize_manifests",
     pkgsvr_label,
