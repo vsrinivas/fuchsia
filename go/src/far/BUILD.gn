@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+
+go_test("go_far_test") {
+  gopackage = "fuchsia.googlesource.com/far"
+
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/far"
+    },
+  ]
+}
+
+package("go_far_tests") {
+  system_image = true
+
+  deps = [
+    ":go_far_test",
+  ]
+
+  tests = [ {
+        name = "go_far_test"
+      } ]
+}

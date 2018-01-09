@@ -1,13 +1,13 @@
 {
     "packages": {
-        "pmd": "//garnet/go/src/pm:pmd",
-        "pkgsvr": "//garnet/go/src/pm:pkgsvr",
-        "installblob": "//garnet/go/src/pm:installblob"
+        "pmd": "//garnet/go/src/pmd",
+        "pkgsvr": "//garnet/go/src/pmd:pkgsvr",
+        "installblob": "//garnet/go/src/pmd:installblob"
     },
     "resources": [
         {
             "bootfs_path": "data/bootstrap/pmd.config",
-            "file": "garnet/go/src/pm/startup.config"
+            "file": "garnet/go/src/pmd/startup.config"
         }
     ]
 }

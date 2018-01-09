@@ -16,7 +16,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 
-	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/merkle"
 )
 
 // Manager wraps operations for reading and writing to blobstore, and will later

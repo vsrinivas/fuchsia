@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/pkg"
 
 	"golang.org/x/crypto/ed25519"

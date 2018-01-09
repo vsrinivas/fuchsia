@@ -1,5 +1,5 @@
 {
     "packages": {
-        "pkgfs_test": "//garnet/go/src/pm:pkgfs_test"
+        "pkgfs_test": "//garnet/go/src/pmd:pkgfs_test"
     }
 }

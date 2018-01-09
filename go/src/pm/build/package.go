@@ -19,8 +19,8 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"fuchsia.googlesource.com/pm/far"
-	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/far"
+	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/pkg"
 )
 

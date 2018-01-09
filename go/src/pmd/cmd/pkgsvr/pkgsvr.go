@@ -13,7 +13,7 @@ import (
 
 	"syscall/zx"
 
-	"fuchsia.googlesource.com/pm/pkgfs"
+	"fuchsia.googlesource.com/pmd/pkgfs"
 )
 
 var (

@@ -17,9 +17,9 @@ import (
 	"strings"
 	"testing"
 
+	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/merkle"
-	"fuchsia.googlesource.com/pm/ramdisk"
+	"fuchsia.googlesource.com/pmd/ramdisk"
 )
 
 // Adding a file to /in writes the file to the blobstore

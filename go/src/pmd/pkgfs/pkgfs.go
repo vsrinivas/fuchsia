@@ -23,10 +23,10 @@ import (
 
 	"thinfs/fs"
 
-	"fuchsia.googlesource.com/pm/blobstore"
-	"fuchsia.googlesource.com/pm/far"
-	"fuchsia.googlesource.com/pm/index"
+	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pmd/blobstore"
+	"fuchsia.googlesource.com/pmd/index"
 )
 
 // Filesystem is the top level container for a pkgfs server

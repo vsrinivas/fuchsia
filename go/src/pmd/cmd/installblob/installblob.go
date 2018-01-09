@@ -13,7 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/merkle"
 )
 
 var (

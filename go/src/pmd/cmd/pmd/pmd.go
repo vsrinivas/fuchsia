@@ -8,7 +8,7 @@ import (
 	"flag"
 	"log"
 
-	"fuchsia.googlesource.com/pm/pkgfs"
+	"fuchsia.googlesource.com/pmd/pkgfs"
 )
 
 var (

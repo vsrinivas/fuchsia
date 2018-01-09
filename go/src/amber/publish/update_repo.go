@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/merkle"
 
 	tuf "github.com/flynn/go-tuf"
 )
