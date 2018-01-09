@@ -295,6 +295,14 @@ bool Controller::ResetPipe(registers::Pipe pipe) {
     pipe_regs.PlaneControl().FromValue(0).WriteTo(mmio_space());
     pipe_regs.PlaneSurface().FromValue(0).WriteTo(mmio_space());
 
+    // Disable the scalers (double buffered on PipeScalerWinSize)
+    pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
+    pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
+    if (pipe != registers::PIPE_C) {
+        pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
+        pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
+    }
+
     // Disable transcoder and wait it to stop
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
     trans_conf.set_transcoder_enable(0);

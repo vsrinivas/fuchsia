@@ -120,6 +120,23 @@ public:
     DEF_FIELD(9, 0, blocks);
 };
 
+// PS_CTRL
+class PipeScalerCtrl : public hwreg::RegisterBase<PipeScalerCtrl, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68180;
+
+    DEF_BIT(31, enable);
+};
+
+// PS_WIN_SIZE
+class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68174;
+
+    DEF_FIELD(28, 16, x_size);
+    DEF_FIELD(11, 0, y_size);
+};
+
 // An instance of PipeRegs represents the registers for a particular pipe.
 class PipeRegs {
 public:
@@ -150,6 +167,16 @@ public:
 
     hwreg::RegisterAddr<registers::PlaneWm>PlaneWatermark(int wm_num) {
         return hwreg::RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 4 * wm_num);
+    }
+
+    hwreg::RegisterAddr<registers::PipeScalerCtrl> PipeScalerCtrl(int num) {
+        return hwreg::RegisterAddr<registers::PipeScalerCtrl>(
+                PipeScalerCtrl::kBaseAddr + 0x800 * pipe_ + num * 0x100);
+    }
+
+    hwreg::RegisterAddr<registers::PipeScalerWinSize> PipeScalerWinSize(int num) {
+        return hwreg::RegisterAddr<registers::PipeScalerWinSize>(
+                PipeScalerWinSize::kBaseAddr + 0x800 * pipe_ + num * 0x100);
     }
 
 private:
