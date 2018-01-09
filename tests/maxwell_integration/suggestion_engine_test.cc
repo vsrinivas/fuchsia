@@ -121,8 +121,8 @@ class AskProposinator : public Proposinator, public QueryHandler {
   fidl::String query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(
-      const std::string& id,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+      const std::string& id) {
+    auto actions = fidl::Array<ActionPtr>::New(0);
     ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
