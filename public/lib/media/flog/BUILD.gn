@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
+
 declare_args() {
   # Controls whether flog is turned on.
   enable_flog = false
@@ -11,7 +13,7 @@ config("enable_flog") {
   defines = [ "FLOG_ENABLED" ]
 }
 
-source_set("flog") {
+sdk_source_set("flog") {
   sources = [
     "flog.cc",
     "flog.h",

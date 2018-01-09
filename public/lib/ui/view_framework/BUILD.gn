@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("view_framework") {
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("view_framework") {
   sources = [
     "base_view.cc",
     "base_view.h",
@@ -25,7 +27,7 @@ source_set("view_framework") {
   ]
 }
 
-source_set("view_provider") {
+sdk_source_set("view_provider") {
   sources = [
     "view_provider_app.cc",
     "view_provider_app.h",

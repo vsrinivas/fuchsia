@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//garnet/public/lib/ui/config.gni")
 
 group("scenic") {
@@ -11,7 +12,7 @@ group("scenic") {
   ]
 }
 
-source_set("fidl_helpers") {
+sdk_source_set("fidl_helpers") {
   sources = [
     "fidl_helpers.cc",
     "fidl_helpers.h",
@@ -22,7 +23,7 @@ source_set("fidl_helpers") {
   ]
 }
 
-source_set("client") {
+sdk_source_set("client") {
   sources = [
     "client/host_image_cycler.cc",
     "client/host_image_cycler.h",
