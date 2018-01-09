@@ -14,8 +14,8 @@ namespace {
 
 class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
-  void Reset() {
-    impl_.reset(new ChainImpl);
+  void Reset(fidl::Array<fidl::String> path) {
+    impl_.reset(new ChainImpl(std::move(path)));
     impl_->Connect(chain_.NewRequest());
   }
 
@@ -25,7 +25,7 @@ class ChainImplTest : public gtest::TestWithMessageLoop {
 };
 
 TEST_F(ChainImplTest, All) {
-  Reset();
+  Reset({"one", "two"});
 
   bool done{false};
   chain_->GetKeys([&done](const fidl::Array<fidl::String>& keys) {

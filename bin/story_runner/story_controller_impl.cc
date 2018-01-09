@@ -24,6 +24,7 @@
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/story_marker.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/module_context_impl.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
@@ -250,6 +251,20 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
       connection.embed_module_watcher.Bind(std::move(embed_module_watcher_));
     }
 
+    // Ensure that the Module's Chain is available before we launch it.
+    // TODO(thatguy): Set up the ChainImpl based on information in ModuleData.
+    auto i = std::remove_if(
+        story_controller_impl_->chains_.begin(),
+        story_controller_impl_->chains_.end(),
+        [this](const std::unique_ptr<ChainImpl>& ptr) {
+          return ptr->chain_path().Equals(module_data_->module_path);
+        });
+    // If the Chain already exists, remove it and re-create it appropriately.
+    story_controller_impl_->chains_.erase(i, story_controller_impl_->chains_.end());
+    story_controller_impl_->chains_.emplace_back(
+        new ChainImpl(module_data_->module_path.Clone()));
+
+    // ModuleControllerImpl's constructor launches the child application.
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
@@ -414,7 +429,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       link_path_->module_path = ParentModulePath(module_path_);
       link_path_->link_name = link_name_;
       Cont1(flow);
-
     } else {
       // If the link name is null, this module receives the default link of its
       // parent module. We need to retrieve which one it is from story storage.
@@ -1434,6 +1448,20 @@ const fidl::String& StoryControllerImpl::GetStoryId() const {
 
 void StoryControllerImpl::RequestStoryFocus() {
   story_provider_impl_->RequestStoryFocus(story_id_);
+}
+
+void StoryControllerImpl::ConnectChainPath(
+    fidl::Array<fidl::String> chain_path,
+    fidl::InterfaceRequest<Chain> request) {
+  auto i = std::find_if(chains_.begin(),
+                        chains_.end(),
+                        [&chain_path](const std::unique_ptr<ChainImpl>& ptr) {
+                          return ptr->chain_path().Equals(chain_path);
+                        });
+  // We expect a Chain for each Module to have been created during Module
+  // initialization.
+  FXL_CHECK(i != chains_.end()) << fxl::JoinStrings(chain_path, ",");
+  (*i)->Connect(std::move(request));
 }
 
 void StoryControllerImpl::ConnectLinkPath(

@@ -7,6 +7,7 @@ module modular;
 import "lib/app/fidl/service_provider.fidl";
 import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/component/fidl/component_context.fidl";
+import "lib/story/fidl/chain.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/surface/fidl/surface.fidl";
 import "lib/module/fidl/module_controller.fidl";
@@ -15,8 +16,13 @@ import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
+//
+// Next ordinal: 13
 [ServiceName="modular.ModuleContext"]
 interface ModuleContext {
+  // Gets the Chain instance for this Module.
+  GetChain@12(Chain& chain);
+
   // Gets a Link instance with the given name.
   //
   // The link instance has a name so that it can be recognized when

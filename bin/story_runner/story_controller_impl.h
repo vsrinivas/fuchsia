@@ -48,6 +48,7 @@
 
 namespace modular {
 
+class ChainImpl;
 class LinkImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
@@ -132,6 +133,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by ModuleContextImpl.
   void RequestStoryFocus();
+
+  // Called by ModuleContextImpl.
+  void ConnectChainPath(fidl::Array<fidl::String> chain_path,
+                        fidl::InterfaceRequest<Chain> request);
 
   // Called by ModuleContextImpl.
   void ConnectLinkPath(LinkPathPtr link_path,
@@ -292,6 +297,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // module path. May return null if there is no module running that is
   // embedding the module at module_path.
   Connection* FindEmbedder(const fidl::Array<fidl::String>& module_path);
+
+  // The magic ingredient of a story: Chains. They group Links.
+  std::vector<std::unique_ptr<ChainImpl>> chains_;
 
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;

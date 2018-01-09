@@ -16,8 +16,12 @@ namespace modular {
 
 class ChainImpl : Chain {
  public:
-  ChainImpl();
+  ChainImpl(fidl::Array<fidl::String> path);
   ~ChainImpl() override;
+
+  const fidl::Array<fidl::String>& chain_path() const {
+    return path_;
+  }
 
   void Connect(fidl::InterfaceRequest<Chain> request);
 
@@ -26,6 +30,8 @@ class ChainImpl : Chain {
   void GetLink(const fidl::String& key, fidl::InterfaceRequest<Link> request) override;
 
   fidl::BindingSet<Chain> bindings_;
+
+  const fidl::Array<fidl::String> path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChainImpl);
 };

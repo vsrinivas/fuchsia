@@ -6,7 +6,7 @@
 
 namespace modular {
 
-ChainImpl::ChainImpl() = default;
+ChainImpl::ChainImpl(fidl::Array<fidl::String> path) : path_(std::move(path)) {}
 ChainImpl::~ChainImpl() = default;
 
 void ChainImpl::Connect(fidl::InterfaceRequest<Chain> request) {
@@ -18,7 +18,8 @@ void ChainImpl::GetKeys(const GetKeysCallback& done) {
   done(std::move(keys));
 }
 
-void ChainImpl::GetLink(const fidl::String& key, fidl::InterfaceRequest<Link> request) {
+void ChainImpl::GetLink(const fidl::String& key,
+                        fidl::InterfaceRequest<Link> request) {
   // |request| closes when out of scope.
 }
 

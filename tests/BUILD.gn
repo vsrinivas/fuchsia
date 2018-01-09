@@ -43,6 +43,7 @@ package("modular_tests") {
 
   deps = [
     ":modular_tests.json",
+    "chain",
     "clipboard",
     "common",
     "component_context",
@@ -71,6 +72,10 @@ package("modular_tests") {
   ]
 
   tests = [
+    {
+      name = "chain_test_module"
+      dest = "modular_tests/chain_test_module"
+    },
     {
       name = "clipboard_test_module"
       dest = "modular_tests/clipboard_test_module"

@@ -57,6 +57,11 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
+void ModuleContextImpl::GetChain(fidl::InterfaceRequest<Chain> request) {
+  story_controller_impl_->ConnectChainPath(module_data_->module_path.Clone(),
+                                           std::move(request));
+}
+
 void ModuleContextImpl::GetLink(const fidl::String& name,
                                 fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
