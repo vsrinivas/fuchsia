@@ -30,8 +30,8 @@ void PrintUsage(const char* executable_name) {
             << "=<int> --" << kTransactionSizeFlag << "=<int> --"
             << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> --"
             << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << "|"
-            << kRefsAutoFlag << ") [" << kSeedFlag << "=<int>] [" << kUpdateFlag
-            << "]" << std::endl;
+            << kRefsAutoFlag << ") [" << kSeedFlag << "=<int>] [--"
+            << kUpdateFlag << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const fxl::CommandLine& command_line,

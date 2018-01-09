@@ -64,20 +64,22 @@ void PutBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
-                << " --value-size=" << value_size_ << (update_ ? "update" : "");
+                << " --value-size=" << value_size_
+                << (update_ ? " --update" : "");
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError(status, "GetLedger");
 
+  fidl::Array<uint8_t> id;
+  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
+                                          &ledger, nullptr, &page_, &id);
+  QuitOnError(status, "GetPageEnsureInitialized");
+
   InitializeKeys(
       fxl::MakeCopyable([this, ledger = std::move(ledger)](
                             std::vector<fidl::Array<uint8_t>> keys) mutable {
-        fidl::Array<uint8_t> id;
-        ledger::Status status = test::GetPageEnsureInitialized(
-            fsl::MessageLoop::GetCurrent(), &ledger, nullptr, &page_, &id);
-        QuitOnError(status, "GetPageEnsureInitialized");
         if (transaction_size_ > 0) {
           page_->StartTransaction(fxl::MakeCopyable(
               [this, keys = std::move(keys)](ledger::Status status) mutable {
