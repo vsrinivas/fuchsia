@@ -753,6 +753,7 @@ zedboot_binary_patterns = [
   "bin/lsdev",
   "bin/lsusb",
   "bin/mkfs*",
+  "bin/netdump",
   "bin/ping",
   "bin/ps",
   "bin/sh",
