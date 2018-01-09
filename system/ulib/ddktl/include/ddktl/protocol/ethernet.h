@@ -170,7 +170,7 @@ class EthmacIfcProxy {
     void* cookie_;
 };
 
-template <typename D, bool HasSetParam=false>
+template <typename D, bool HasSetParam=true>
 class EthmacProtocol : public internal::base_protocol {
   public:
     EthmacProtocol() {

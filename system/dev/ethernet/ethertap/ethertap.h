@@ -29,7 +29,7 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Ioctlable> {
 };
 
 class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
-                  public ddk::EthmacProtocol<TapDevice, true> {
+                  public ddk::EthmacProtocol<TapDevice> {
   public:
     TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, zx::socket data);
 
