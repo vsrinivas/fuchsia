@@ -104,20 +104,3 @@ package("tests") {
     },
   ]
 }
-
-# This package adds an empty file at path that audio_server tests to decide
-# whether the mixer should own all of the audio inputs in the system, or if they
-# should be left alone to be picked up by the media service.
-#
-# If this package is included, the audio capturer interface provided by the
-# mixer will be functional. If it is left out, the (legacy) audio input paths
-# provided by the media service will be functional.
-package("media_mixer_audio_input_config") {
-  system_image = true
-  resources = [
-    {
-        path = rebase_path("data/mixer_owns_audio_input")
-        dest = "media/mixer_owns_audio_input"
-    }
-  ]
-}

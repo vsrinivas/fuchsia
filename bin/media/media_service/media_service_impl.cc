@@ -6,7 +6,6 @@
 
 #include <zircon/syscalls.h>
 
-#include "garnet/bin/media/media_service/audio_capturer_impl.h"
 #include "garnet/bin/media/media_service/file_reader_impl.h"
 #include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
 #include "garnet/bin/media/media_service/media_decoder_impl.h"
@@ -133,11 +132,6 @@ void MediaServiceImpl::CreateVideoRenderer(
     return VideoRendererImpl::Create(std::move(video_renderer_request),
                                      std::move(media_renderer_request), this);
   }));
-}
-
-void MediaServiceImpl::CreateAudioCapturer(
-    fidl::InterfaceRequest<MediaCapturer> request) {
-  AddProduct(AudioCapturerImpl::Create(std::move(request), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(

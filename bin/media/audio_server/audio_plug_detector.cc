@@ -26,33 +26,6 @@
 namespace media {
 namespace audio {
 
-// TODO(johngro): Remove this as part of the process of resolving MTWN-55
-namespace {
-bool MixerOwnsInputs() {
-  constexpr bool kMixerOwnsInputsDefault = false;
-  if (kMixerOwnsInputsDefault) {
-    FXL_LOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
-                     "to hardcoded constexpr.";
-    return true;
-  }
-
-  static const char* kMixerOwnsInputsTestFile =
-      "/system/data/media/mixer_owns_audio_input";
-  struct stat junk;
-  if (::stat(kMixerOwnsInputsTestFile, &junk) >= 0) {
-    FXL_LOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
-                     "to presence of \""
-                  << kMixerOwnsInputsTestFile << "\".";
-    return true;
-  }
-
-  FXL_LOG(INFO) << "Audio Mixer does not own inputs.  Constexpr is false and \""
-                << kMixerOwnsInputsTestFile << "\" was not detected.";
-  return false;
-}
-}  // namespace
-// TODO(johngro): End of MTWN-55 TODO
-
 static const struct {
   const char* path;
   bool is_input;
@@ -66,7 +39,6 @@ AudioPlugDetector::~AudioPlugDetector() {
 }
 
 MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
-  bool mixer_owns_inputs = MixerOwnsInputs();
   FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
@@ -86,11 +58,6 @@ MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
 
   // Create our watchers.
   for (const auto& devnode : AUDIO_DEVNODES) {
-    // TODO(johngro): Remove this as part of the process of resolving MTWN-55
-    if (!mixer_owns_inputs && devnode.is_input) {
-      continue;
-    }
-
     auto watcher = fsl::DeviceWatcher::Create(
         devnode.path,
         [this, is_input = devnode.is_input](int dir_fd, std::string filename) {

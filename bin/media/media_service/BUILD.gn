@@ -21,8 +21,6 @@ executable("media_service_bin") {
   output_name = "media_service"
 
   sources = [
-    "audio_capturer_impl.cc",
-    "audio_capturer_impl.h",
     "conversion_pipeline_builder.cc",
     "conversion_pipeline_builder.h",
     "file_reader_impl.cc",

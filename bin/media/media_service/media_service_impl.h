@@ -79,9 +79,6 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       fidl::InterfaceRequest<VideoRenderer> video_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
 
-  void CreateAudioCapturer(
-      fidl::InterfaceRequest<MediaCapturer> media_capturer) override;
-
   void CreateTimelineController(fidl::InterfaceRequest<MediaTimelineController>
                                     timeline_controller) override;
 

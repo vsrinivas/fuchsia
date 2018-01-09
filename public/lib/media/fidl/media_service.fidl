@@ -56,9 +56,6 @@ interface MediaService {
   CreateVideoRenderer@8(VideoRenderer& video_renderer,
                         MediaRenderer& media_renderer);
 
-  // Creates an audio capturer.
-  CreateAudioCapturer@9(MediaCapturer& media_capturer);
-
   // Creates a timeline controller reader.
   CreateTimelineController@10(MediaTimelineController& timeline_controller);
 
