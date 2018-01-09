@@ -15,7 +15,6 @@
 #define OPCODE_ACK 4
 #define OPCODE_ERROR 5
 #define OPCODE_OACK 6
-#define OPCODE_OERROR 8
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +24,12 @@ typedef struct tftp_msg_t {
     uint16_t opcode;
     char data[0];
 } tftp_msg;
+
+typedef struct tftp_err_msg_t {
+    uint16_t opcode;
+    uint16_t err_code;
+    char msg[0];
+} tftp_err_msg;
 
 typedef struct tftp_data_msg_t {
     uint16_t opcode;
@@ -253,7 +258,7 @@ tftp_status tftp_handle_ack(tftp_session* session,
                             uint32_t* timeout_ms,
                             void* cookie);
 tftp_status tftp_handle_error(tftp_session* session,
-                              tftp_msg* err,
+                              tftp_err_msg* err,
                               size_t err_len,
                               tftp_msg* resp,
                               size_t* resp_len,

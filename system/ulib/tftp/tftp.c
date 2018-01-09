@@ -65,6 +65,7 @@ static const size_t kMaxRequestSize = 512;
 
 #if defined(TFTP_HOSTLIB)
 // Host (e.g., netcp, bootserver)
+#include <time.h>
 #define DEBUG 0
 #elif defined(TFTP_USERLIB)
 // Fuchsia (e.g., netsvc)
@@ -153,9 +154,28 @@ static size_t next_option(char* buffer, size_t len, char** option, char** value)
     return len - left;
 }
 
-static void set_error(tftp_session* session, uint16_t opcode, tftp_msg* resp, size_t* resp_len) {
-    OPCODE(session, resp, opcode);
-    *resp_len = sizeof(*resp);
+/* Build an err packet in resp_buf and set session state to ERROR
+
+     2 bytes        2 bytes    string   1 byte
+   +--------------+----------+---------+------+
+   | OPCODE_ERROR | ERR_CODE | ERR_MSG |   0  |
+   +--------------+----------+---------+------+
+*/
+static void set_error(tftp_session* session, uint16_t err_code, void* resp_buf,
+                      size_t* resp_len, const char* err_msg) {
+    tftp_err_msg* resp = resp_buf;
+    OPCODE(session, resp, OPCODE_ERROR);
+    resp->err_code = htons(err_code);
+    size_t err_msg_len = strlen(err_msg);
+    size_t max_msg_sz = *resp_len - (sizeof(tftp_err_msg) + 1);
+    if (err_msg_len >= max_msg_sz) {
+        memcpy(resp->msg, err_msg, max_msg_sz);
+        resp->msg[max_msg_sz] = '\0';
+        // *resp_len is unchanged - the whole buffer was used
+    } else {
+        strcpy(resp->msg, err_msg);
+        *resp_len = sizeof(tftp_err_msg) + err_msg_len + 1;
+    }
     session->state = ERROR;
 }
 
@@ -403,14 +423,14 @@ tftp_status tftp_handle_request(tftp_session* session,
     // We could be in REQ_RECEIVED if our OACK was dropped.
     if (session->state != NONE && session->state != REQ_RECEIVED) {
         xprintf("Invalid state transition %d -> %d\n", session->state, REQ_RECEIVED);
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "invalid state transition");
         return TFTP_ERR_BAD_STATE;
     }
     // opcode, filename, 0, mode, 0, opt1, 0, value1 ... optN, 0, valueN, 0
     // Max length is 512 no matter
     if (req_len > kMaxRequestSize) {
         xprintf("Write request is too large\n");
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "write request is too large");
         return TFTP_ERR_INTERNAL;
     }
     // Skip opcode
@@ -421,7 +441,7 @@ tftp_status tftp_handle_request(tftp_session* session,
     size_t offset = next_option(cur, left, &option, &value);
     if (!offset) {
         xprintf("No options\n");
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no options");
         return TFTP_ERR_INTERNAL;
     }
     left -= offset;
@@ -438,7 +458,7 @@ tftp_status tftp_handle_request(tftp_session* session,
         session->mode = MODE_MAIL;
     } else {
         xprintf("Unknown write request mode\n");
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "unknown write request mode");
         return TFTP_ERR_INTERNAL;
     }
 
@@ -457,7 +477,7 @@ tftp_status tftp_handle_request(tftp_session* session,
         offset = next_option(cur, left, &option, &value);
         if (!offset) {
             xprintf("No more options\n");
-            set_error(session, OPCODE_ERROR, resp, resp_len);
+            set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no more options");
             return TFTP_ERR_INTERNAL;
         }
 
@@ -466,7 +486,8 @@ tftp_status tftp_handle_request(tftp_session* session,
                 long val = atol(value);
                 if (val < 0) {
                     xprintf("invalid file size\n");
-                    set_error(session, OPCODE_OERROR, resp, resp_len);
+                    set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len,
+                              "invalid file size");
                     return TFTP_ERR_INTERNAL;
                 }
                 session->file_size = val;
@@ -479,7 +500,7 @@ tftp_status tftp_handle_request(tftp_session* session,
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             if (val < 8 || val > 65464) {
                 xprintf("invalid block size\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "invalid block size");
                 return TFTP_ERR_INTERNAL;
             }
             requested_options.block_size = val;
@@ -495,7 +516,7 @@ tftp_status tftp_handle_request(tftp_session* session,
             long val = atol(value);
             if (val < 1 || val > 255) {
                 xprintf("invalid timeout\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "invalid timeout");
                 return TFTP_ERR_INTERNAL;
             }
             requested_options.timeout = val;
@@ -511,7 +532,8 @@ tftp_status tftp_handle_request(tftp_session* session,
             long val = atol(value);
             if (val < 1 || val > 65535) {
                 xprintf("invalid window size\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len,
+                          "invalid window size");
                 return TFTP_ERR_INTERNAL;
             }
             requested_options.window_size = val;
@@ -539,19 +561,51 @@ tftp_status tftp_handle_request(tftp_session* session,
     // Open file, if we haven't already
     if (session->state == NONE) {
         if (direction == RECV_FILE) {
-            if (!session->file_interface.open_write ||
-                session->file_interface.open_write(session->filename, session->file_size,
-                                                   cookie)) {
+            if (!session->file_interface.open_write) {
+                xprintf("Unable to service write request: no open_write implementation\n");
+                set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error");
+                return TFTP_ERR_BAD_STATE;
+            }
+            switch(session->file_interface.open_write(session->filename, session->file_size,
+                                                      cookie)) {
+            case TFTP_ERR_SHOULD_WAIT:
+                // The open_write() callback can return an ERR_SHOULD_WAIT response if it isn't
+                // prepared to service another requst at the moment and the client should retry
+                // later.
+                xprintf("Denying write request received when not ready\n");
+                set_error(session, TFTP_ERR_CODE_BUSY, resp, resp_len, "not ready to receive");
+                session->state = NONE;
+                return TFTP_ERR_SHOULD_WAIT;
+            case TFTP_NO_ERROR:
+                break;
+            default:
                 xprintf("Could not open file on write request\n");
-                set_error(session, OPCODE_ERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_ACCESS_VIOLATION, resp, resp_len,
+                          "could not open file for writing");
                 return TFTP_ERR_BAD_STATE;
             }
         } else {
             ssize_t file_size;
-            if (!session->file_interface.open_read ||
-                (file_size = session->file_interface.open_read(session->filename, cookie)) < 0) {
+            if (!session->file_interface.open_read) {
+                xprintf("Unable to service read request: no open_read implementation\n");
+                set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error");
+                return TFTP_ERR_BAD_STATE;
+            }
+
+            file_size = session->file_interface.open_read(session->filename, cookie);
+            if (file_size == TFTP_ERR_SHOULD_WAIT) {
+                // The open_read() callback can return an ERR_SHOULD_WAIT response if it isn't
+                // prepared to service another requst at the moment and the client should retry
+                // later.
+                xprintf("Denying read request received when not ready\n");
+                set_error(session, TFTP_ERR_CODE_BUSY, resp, resp_len, "not ready to send");
+                session->state = NONE;
+                return TFTP_ERR_SHOULD_WAIT;
+            }
+            if (file_size < 0) {
                 xprintf("Unable to open file %s for reading\n", session->filename);
-                set_error(session, OPCODE_ERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_FILE_NOT_FOUND, resp, resp_len,
+                          "could not open file for reading");
                 return TFTP_ERR_BAD_STATE;
             }
             session->file_size = file_size;
@@ -562,7 +616,7 @@ tftp_status tftp_handle_request(tftp_session* session,
         append_option(&body, &left, kTsize, false, "%zu", session->file_size);
     } else {
         xprintf("No TSIZE option specified\n");
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no TSIZE option");
         if (session->file_interface.close) {
             session->file_interface.close(cookie);
         }
@@ -654,7 +708,7 @@ tftp_status tftp_handle_data(tftp_session* session,
          (session->state == RECEIVING_DATA))) {
         session->state = RECEIVING_DATA;
     } else {
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error: bad state");
         return TFTP_ERR_INTERNAL;
     }
 
@@ -731,7 +785,7 @@ tftp_status tftp_handle_ack(tftp_session* session,
         ((session->state != FIRST_DATA) &&
          (session->state != REQ_RECEIVED) &&
          (session->state != SENDING_DATA))) {
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error: bad state");
         return TFTP_ERR_INTERNAL;
     }
     // Need to move forward in data and send it
@@ -774,19 +828,29 @@ tftp_status tftp_handle_ack(tftp_session* session,
 
     tftp_status ret = tx_data(session, resp_data, resp_len, cookie);
     if (ret < 0) {
-        set_error(session, OPCODE_ERROR, resp, resp_len);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "could not transmit data");
     }
     return ret;
 }
 
 tftp_status tftp_handle_error(tftp_session* session,
-                              tftp_msg* err,
+                              tftp_err_msg* err,
                               size_t err_len,
                               tftp_msg* resp,
                               size_t* resp_len,
                               uint32_t* timeout_ms,
                               void* cookie) {
-    xprintf("Transfer Error\n");
+    uint16_t err_code = ntohs(err->err_code);
+
+    // There's no need to respond to an error
+    *resp_len = 0;
+
+    if (err_code == TFTP_ERR_CODE_BUSY) {
+        xprintf("Target busy\n");
+        session->state = NONE;
+        return TFTP_ERR_SHOULD_WAIT;
+    }
+    xprintf("Target sent error %d\n", err_code);
     session->state = ERROR;
     return TFTP_ERR_INTERNAL;
 }
@@ -811,7 +875,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
     while (left > 0) {
         offset = next_option(cur, left, &option, &value);
         if (!offset) {
-            set_error(session, OPCODE_ERROR, resp, resp_len);
+            set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "invalid option format");
             return TFTP_ERR_INTERNAL;
         }
 
@@ -823,14 +887,14 @@ tftp_status tftp_handle_oack(tftp_session* session,
         } else if (!strncasecmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
             if (!(session->client_sent_opts.mask & BLOCKSIZE_OPTION)) {
                 xprintf("block size not requested\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no block size");
                 return TFTP_ERR_INTERNAL;
             }
             // Valid values range between "8" and "65464" octets, inclusive
             long val = atol(value);
             if (val < 8 || val > 65464) {
                 xprintf("invalid block size\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "invalid block size");
                 return TFTP_ERR_INTERNAL;
             }
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
@@ -838,28 +902,29 @@ tftp_status tftp_handle_oack(tftp_session* session,
         } else if (!strncasecmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
             if (!(session->client_sent_opts.mask & TIMEOUT_OPTION)) {
                 xprintf("timeout not requested\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no timeout");
                 return TFTP_ERR_INTERNAL;
             }
             // Valid values range between "1" and "255" seconds inclusive.
             long val = atol(value);
             if (val < 1 || val > 255) {
                 xprintf("invalid timeout\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "invalid timeout");
                 return TFTP_ERR_INTERNAL;
             }
             session->timeout = val;
         } else if (!strncasecmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
             if (!(session->client_sent_opts.mask & WINDOWSIZE_OPTION)) {
                 xprintf("window size not requested\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len, "no window size");
                 return TFTP_ERR_INTERNAL;
             }
             // The valid values range MUST be between 1 and 65535 blocks, inclusive.
             long val = atol(value);
             if (val < 1 || val > 65535) {
                 xprintf("invalid window size\n");
-                set_error(session, OPCODE_OERROR, resp, resp_len);
+                set_error(session, TFTP_ERR_CODE_BAD_OPTIONS, resp, resp_len,
+                          "invalid window size");
                 return TFTP_ERR_INTERNAL;
             }
             session->window_size = val;
@@ -887,7 +952,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
         tftp_data_msg* resp_data = (void*)resp;
         tftp_status ret = tx_data(session, resp_data, resp_len, cookie);
         if (ret < 0) {
-            set_error(session, OPCODE_ERROR, resp, resp_len);
+            set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "failure to transmit data");
         }
         return ret;
     } else {
@@ -895,24 +960,12 @@ tftp_status tftp_handle_oack(tftp_session* session,
             session->file_interface.open_write(session->filename, session->file_size,
                                                cookie)) {
             xprintf("Could not open file on write request\n");
-            set_error(session, OPCODE_ERROR, resp, resp_len);
+            set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "could not open file for writing");
             return TFTP_ERR_BAD_STATE;
         }
         tftp_prepare_ack(session, resp, resp_len);
         return TFTP_NO_ERROR;
     }
-}
-
-tftp_status tftp_handle_oerror(tftp_session* session,
-                               tftp_msg* oerr,
-                               size_t oerr_len,
-                               tftp_msg* resp,
-                               size_t* resp_len,
-                               uint32_t* timeout_ms,
-                               void* cookie) {
-    xprintf("Option Error\n");
-    session->state = ERROR;
-    return TFTP_ERR_INTERNAL;
 }
 
 tftp_status tftp_process_msg(tftp_session* session,
@@ -937,19 +990,17 @@ tftp_status tftp_process_msg(tftp_session* session,
 
     switch (opcode) {
     case OPCODE_RRQ:
-        return tftp_handle_rrq(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_rrq(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     case OPCODE_WRQ:
-        return tftp_handle_wrq(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_wrq(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     case OPCODE_DATA:
-        return tftp_handle_data(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_data(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     case OPCODE_ACK:
-        return tftp_handle_ack(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_ack(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     case OPCODE_ERROR:
-        return tftp_handle_error(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_error(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     case OPCODE_OACK:
-        return tftp_handle_oack(session, msg, inlen, resp, outlen, timeout_ms, cookie);
-    case OPCODE_OERROR:
-        return tftp_handle_oerror(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+        return tftp_handle_oack(session, incoming, inlen, resp, outlen, timeout_ms, cookie);
     default:
         xprintf("Unknown opcode\n");
         session->state = ERROR;
@@ -971,7 +1022,7 @@ tftp_status tftp_prepare_data(tftp_session* session,
 
     tftp_status ret = tx_data(session, resp_data, outlen, cookie);
     if (ret < 0) {
-        set_error(session, OPCODE_ERROR, outgoing, outlen);
+        set_error(session, TFTP_ERR_CODE_UNDEF, outgoing, outlen, "failure to transmit data");
     }
     return ret;
 }
@@ -1264,7 +1315,9 @@ tftp_status tftp_handle_msg(tftp_session* session,
             return send_status;
         }
     }
-    if (ret < 0) {
+    if (ret == TFTP_ERR_SHOULD_WAIT) {
+        REPORT_ERR(opts, "request received, host is busy");
+    } else if (ret < 0) {
         REPORT_ERR(opts, "failed to parse request");
     } else if (ret == TFTP_TRANSFER_COMPLETED) {
         if (session->file_interface.close) {

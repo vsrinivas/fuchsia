@@ -50,10 +50,31 @@ enum {
     TFTP_ERR_NOT_SUPPORTED = -2,
     TFTP_ERR_NOT_FOUND = -3,
     TFTP_ERR_INVALID_ARGS = -10,
-    TFTP_ERR_BUFFER_TOO_SMALL = -14,
+    TFTP_ERR_BUFFER_TOO_SMALL = -15,
     TFTP_ERR_BAD_STATE = -20,
-    TFTP_ERR_TIMED_OUT = -23,
+    TFTP_ERR_TIMED_OUT = -21,
+    TFTP_ERR_SHOULD_WAIT = -22,
     TFTP_ERR_IO = -40,
+};
+
+enum {
+    TFTP_ERR_CODE_UNDEF = 0,
+    TFTP_ERR_CODE_FILE_NOT_FOUND = 1,
+    TFTP_ERR_CODE_ACCESS_VIOLATION = 2,
+    TFTP_ERR_CODE_DISK_FULL = 3,
+    TFTP_ERR_CODE_ILLEGAL_OP = 4,
+    TFTP_ERR_CODE_UNKNOWN_ID = 5,
+    TFTP_ERR_CODE_FILE_EXISTS = 6,
+    TFTP_ERR_CODE_NO_USER = 7,
+    TFTP_ERR_CODE_BAD_OPTIONS = 8,
+
+    // Fuchsia-specific error code
+    // BUSY is sent by a server as a response to a RRQ or WRQ, and indicates
+    // that the server is unavailable to process the request at the moment
+    // (but expects to be able to handle it at some time in the future).
+    // A server will send an ERR_CODE_BUSY response if its open callback
+    // (open_read or open_write) returns TFTP_ERR_SHOULD_WAIT.
+    TFTP_ERR_CODE_BUSY = 0x143, /* 'B' + 'U' + 'S' + 'Y' */
 };
 
 #ifdef __cplusplus

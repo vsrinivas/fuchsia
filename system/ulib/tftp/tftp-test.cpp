@@ -1818,6 +1818,162 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     END_TEST;
 }
 
+static ssize_t open_read_should_wait(const char* filename, void* cookie) {
+    return TFTP_ERR_SHOULD_WAIT;
+}
+
+static tftp_status open_write_should_wait(const char* filename, size_t size, void* cookie) {
+    return TFTP_ERR_SHOULD_WAIT;
+}
+
+/* Verify behavior when one of our open_file interface functions returns TFTP_ERR_SHOULD_WAIT. */
+static bool test_tftp_open_should_wait(tftp_file_direction dir) {
+    BEGIN_TEST;
+
+    const uint16_t block_size = 456;
+    const uint8_t timeout = 3;
+    const uint16_t window_size = 128;
+
+    test_state ts;
+    ts.reset(1024, 1024, 1500);
+    tftp_file_interface ifc = {open_read_should_wait, open_write_should_wait, NULL, NULL, NULL};
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    // Construct a RRQ or WRQ packet
+    size_t req_file_size = (dir == SEND_FILE) ? 1024 : 0;
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = (dir == SEND_FILE) ? OPCODE_WRQ : OPCODE_RRQ;
+    size_t buf_sz = 2;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz,
+                       "%s%cOCTET%cTSIZE%c%zu%cBLKSIZE%c%d%cTIMEOUT%c%d%cWINDOWSIZE%c%d",
+                       kRemoteFilename, '\0',
+                       '\0',
+                       '\0', req_file_size, '\0',
+                       '\0', block_size, '\0',
+                       '\0', timeout, '\0',
+                       '\0', window_size) + 1;
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for request");
+
+    tftp_status status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout,
+                                          nullptr);
+
+    // Check API return value
+    EXPECT_EQ(TFTP_ERR_SHOULD_WAIT, status, "expected SHOULD_WAIT status");
+
+    // tftp_process_msg should have generated an error packet response - verify its fields
+    ASSERT_GT(ts.outlen, 0);
+    auto msg = reinterpret_cast<tftp_err_msg*>(ts.out);
+    EXPECT_EQ(msg->opcode, htons(OPCODE_ERROR));
+    EXPECT_EQ(msg->err_code, htons(TFTP_ERR_CODE_BUSY));
+    if (dir == SEND_FILE) {
+        const char expected_err[] = "not ready to receive";
+        EXPECT_STR_EQ(expected_err, msg->msg, strlen(expected_err), "bad error message");
+    } else {
+        const char expected_err[] = "not ready to send";
+        EXPECT_STR_EQ(expected_err, msg->msg, strlen(expected_err), "bad error message");
+    }
+
+    END_TEST;
+}
+
+static bool test_tftp_open_read_should_wait(void) {
+   // RECV is from the perspective of the client, not the server
+   return test_tftp_open_should_wait(RECV_FILE);
+}
+
+static bool test_tftp_open_write_should_wait(void) {
+   // SEND is from the perspective of the client, not the server
+   return test_tftp_open_should_wait(SEND_FILE);
+}
+
+static bool test_tftp_recv_busy(tftp_file_direction dir) {
+    BEGIN_TEST;
+
+    test_state ts;
+    ts.reset(1024, 1024, 1500);
+
+    auto status = tftp_generate_request(ts.session, dir, kLocalFilename, kRemoteFilename,
+                                        MODE_OCTET, dir == SEND_FILE ? ts.msg_size : 0,
+                                        NULL, NULL, NULL, ts.out, &ts.outlen, &ts.timeout);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating request");
+    if (dir == SEND_FILE) {
+        ASSERT_TRUE(verify_write_request(ts), "bad write request");
+    } else {
+        ASSERT_TRUE(verify_read_request(ts), "bad read request");
+    }
+
+    // Simulate a BUSY error response
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = OPCODE_ERROR;
+    buf[2] = (TFTP_ERR_CODE_BUSY & 0xff00) >> 8;
+    buf[3] = TFTP_ERR_CODE_BUSY & 0xff;
+    size_t buf_sz = 4;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz, "not ready") + 1;
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for request");
+
+    status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
+
+    // Check API return value
+    EXPECT_EQ(TFTP_ERR_SHOULD_WAIT, status, "expected SHOULD_WAIT status");
+
+    // tftp_process_msg should not have generated a response
+    EXPECT_EQ(ts.outlen, 0);
+
+    // Verify session state
+    EXPECT_EQ(NONE, ts.session->state, "bad session: state");
+
+    END_TEST;
+}
+
+/* Verify handling of a BUSY error packet when we send a WRQ. */
+static bool test_tftp_recv_busy_from_wrq(void) {
+    return test_tftp_recv_busy(SEND_FILE);
+}
+
+/* Verify handling of a BUSY error packet when we send a RRQ. */
+static bool test_tftp_recv_busy_from_rrq(void) {
+    return test_tftp_recv_busy(RECV_FILE);
+}
+
+/* Verify that receiving an error other than BUSY puts the session into an error state. */
+static bool test_tftp_recv_other_err(void) {
+    BEGIN_TEST;
+
+    test_state ts;
+    ts.reset(1024, 1024, 1500);
+
+    auto status = tftp_generate_request(ts.session, SEND_FILE, kLocalFilename, kRemoteFilename,
+                                        MODE_OCTET, ts.msg_size, NULL, NULL, NULL, ts.out,
+                                        &ts.outlen, &ts.timeout);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "error generating request");
+    ASSERT_TRUE(verify_write_request(ts), "bad write request");
+
+    // Simulate a BUSY error response
+    char buf[256];
+    buf[0] = 0x00;
+    buf[1] = OPCODE_ERROR;
+    buf[2] = (TFTP_ERR_CODE_DISK_FULL & 0xff00) >> 8;
+    buf[3] = TFTP_ERR_CODE_DISK_FULL & 0xff;
+    size_t buf_sz = 4;
+    buf_sz += snprintf(&buf[buf_sz], sizeof(buf) - buf_sz, "disk full") + 1;
+    ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for request");
+
+    status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
+
+    // Check API return value
+    EXPECT_EQ(TFTP_ERR_INTERNAL, status, "expected TFTP_ERR_INTERNAL status");
+
+    // tftp_process_msg should not have generated a response
+    EXPECT_EQ(ts.outlen, 0);
+
+    // Verify session state
+    EXPECT_EQ(ERROR, ts.session->state, "bad session: state");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(tftp_setup)
 RUN_TEST(test_tftp_init)
 RUN_TEST(test_tftp_session_options)
@@ -1895,6 +2051,17 @@ RUN_TEST(test_tftp_send_data_receive_ack_window_size)
 RUN_TEST(test_tftp_send_data_receive_ack_block_wrapping)
 RUN_TEST(test_tftp_send_data_receive_ack_skip_block_wrap)
 END_TEST_CASE(tftp_send_data)
+
+BEGIN_TEST_CASE(tftp_send_err)
+RUN_TEST(test_tftp_open_read_should_wait)
+RUN_TEST(test_tftp_open_write_should_wait)
+END_TEST_CASE(tftp_send_err)
+
+BEGIN_TEST_CASE(tftp_recv_err)
+RUN_TEST(test_tftp_recv_busy_from_rrq)
+RUN_TEST(test_tftp_recv_busy_from_wrq)
+RUN_TEST(test_tftp_recv_other_err)
+END_TEST_CASE(tftp_recv_err)
 
 int main(int argc, char* argv[]) {
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
