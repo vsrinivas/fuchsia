@@ -24,6 +24,7 @@
 
 #define RALINK_DUMP_EEPROM 0
 #define RALINK_DUMP_RX 0
+#define RALINK_DUMP_TX 0
 
 #define CHECK_REG(reg, op, status)                                      \
     do {                                                                \
@@ -3344,6 +3345,12 @@ void WritePayload(uint8_t* dest, wlan_tx_packet_t* pkt) {
     }
 }
 
+void DumpWlanTxInfo(const wlan_tx_info_t& txinfo) {
+    debugf("txinfo: tx_flags 0x%04x valid_fields 0x%04x phy %u cbw %u data_rate %u mcs %u\n",
+           txinfo.tx_flags, txinfo.valid_fields, txinfo.phy, txinfo.cbw, txinfo.data_rate,
+           txinfo.mcs);
+}
+
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
 
@@ -3472,6 +3479,11 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     // Send the whole thing
     req->header.length = req_len;
     usb_request_queue(&usb_, req);
+
+#if RALINK_DUMP_TX
+    DumpWlanTxInfo(pkt->info);
+#endif  // RALINK_DUMP_TX
+
     return ZX_OK;
 }
 
