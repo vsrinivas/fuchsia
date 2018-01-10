@@ -113,6 +113,14 @@ optimized for Fuchsia and is used by many system components. Flutter also runs o
 a variety of other platform, including Android and iOS. Fuchsia itself does not
 require you to use any particular language or user interface framework.
 
+#### **FVM**
+
+Fuchsia Volume Manager is a partition manager providing dynamically allocated
+groups of blocks known as slices into a virtual block address space. The
+FVM partitions provide a block interface enabling filesystems to interact
+with it in a manner largely consistent with a regular block device.
+- [Filesystems](filesystems.md)
+
 #### **Garnet**
 
 Garnet is one of the four layers of the Fuchsia codebase.
