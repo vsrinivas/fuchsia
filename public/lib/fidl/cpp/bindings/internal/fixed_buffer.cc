@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
 
 #include <stdlib.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 
@@ -28,7 +29,7 @@ void* FixedBuffer::Allocate(size_t delta) {
   delta = internal::Align(delta);
 
   if (delta == 0 || delta > size_ - cursor_) {
-    FXL_DCHECK(false) << "Not reached";
+    ZX_DEBUG_ASSERT(false);
     return nullptr;
   }
 

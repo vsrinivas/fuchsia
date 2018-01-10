@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
 
+#include <zircon/assert.h>
+
 #include <limits>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
@@ -23,14 +25,14 @@ BoundsChecker::BoundsChecker(const void* data,
     // The calculation of |data_end_| overflowed.
     // It shouldn't happen but if it does, set the range to empty so
     // IsValidRange() and ClaimMemory() always fail.
-    FXL_DCHECK(false) << "Not reached";
+    ZX_DEBUG_ASSERT(false);
     data_end_ = data_begin_;
   }
   if (handle_end_ < num_handles ||
       num_handles > std::numeric_limits<int32_t>::max()) {
     // Assigning |num_handles| to |handle_end_| overflowed.
     // It shouldn't happen but if it does, set the handle index range to empty.
-    FXL_DCHECK(false) << "Not reached";
+    ZX_DEBUG_ASSERT(false);
     handle_end_ = 0;
   }
 }

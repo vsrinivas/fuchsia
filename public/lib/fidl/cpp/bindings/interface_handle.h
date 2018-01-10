@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERFACE_HANDLE_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERFACE_HANDLE_H_
 
+#include <zircon/assert.h>
 #include <zx/channel.h>
 
 #include <cstddef>
@@ -67,7 +68,7 @@ class InterfaceHandle {
   // InterfaceHandle<> should be passed to whatever will construct a proxy to
   // the implementation (presumably using an InterfacePtr<> or equivalent).
   InterfaceRequest<Interface> NewRequest() {
-    FXL_DCHECK(!is_valid()) << "An existing handle is already bound.";
+    ZX_DEBUG_ASSERT(!is_valid());
 
     zx::channel request_endpoint;
     zx::channel::create(0, &handle_, &request_endpoint);

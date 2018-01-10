@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_STRING_H_
 #define LIB_FIDL_CPP_BINDINGS_STRING_H_
 
+#include <zircon/assert.h>
+
 #include <iosfwd>
 #include <string>
 
@@ -165,7 +167,7 @@ struct TypeConverter<std::string, String> {
 template <size_t N>
 struct TypeConverter<String, char[N]> {
   static String Convert(const char input[N]) {
-    FXL_DCHECK(input);
+    ZX_DEBUG_ASSERT(input);
     return String(input, N - 1);
   }
 };
@@ -174,7 +176,7 @@ struct TypeConverter<String, char[N]> {
 template <size_t N>
 struct TypeConverter<String, const char[N]> {
   static String Convert(const char input[N]) {
-    FXL_DCHECK(input);
+    ZX_DEBUG_ASSERT(input);
     return String(input, N - 1);
   }
 };

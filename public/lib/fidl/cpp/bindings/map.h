@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_MAP_H_
 #define LIB_FIDL_CPP_BINDINGS_MAP_H_
 
+#include <zircon/assert.h>
+
 #include <map>
 #include <type_traits>
 
@@ -47,7 +49,7 @@ class Map {
   // corresponding |values|.
   Map(fidl::Array<KeyType> keys, fidl::Array<ValueType> values)
       : is_null_(false) {
-    FXL_DCHECK(keys.size() == values.size());
+    ZX_DEBUG_ASSERT(keys.size() == values.size());
     for (size_t i = 0; i < keys.size(); ++i)
       Traits::Insert(&map_, keys[i], values[i]);
   }

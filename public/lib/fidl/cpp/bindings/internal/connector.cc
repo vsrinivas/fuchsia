@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/bindings/internal/connector.h"
 
 #include <async/default.h>
+#include <zircon/assert.h>
 #include <zx/time.h>
 
 #include "lib/fxl/compiler_specific.h"
@@ -76,7 +77,7 @@ bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
     return (rv == ZX_OK);
   }
 
-  FXL_DCHECK(pending & ZX_CHANNEL_PEER_CLOSED);
+  ZX_DEBUG_ASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
   NotifyError();
   return false;
 }
@@ -114,7 +115,7 @@ async_wait_result_t Connector::OnHandleReady(
     NotifyError();
     return ASYNC_WAIT_FINISHED;
   }
-  FXL_DCHECK(!error_);
+  ZX_DEBUG_ASSERT(!error_);
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     // Return immediately if |this| was destroyed. Do not touch any members!
@@ -125,14 +126,14 @@ async_wait_result_t Connector::OnHandleReady(
 
       // If we get ZX_ERR_PEER_CLOSED (or another error), we'll already have
       // notified the error and likely been destroyed.
-      FXL_DCHECK(rv == ZX_OK || rv == ZX_ERR_SHOULD_WAIT);
+      ZX_DEBUG_ASSERT(rv == ZX_OK || rv == ZX_ERR_SHOULD_WAIT);
       if (rv != ZX_OK)
         break;
     }
     return channel_ ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
   }
 
-  FXL_DCHECK(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+  ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
   // Notice that we don't notify an error until we've drained all the messages
   // out of the channel.
   NotifyError();

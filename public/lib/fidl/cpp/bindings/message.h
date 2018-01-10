@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_MESSAGE_H_
 #define LIB_FIDL_CPP_BINDINGS_MESSAGE_H_
 
+#include <zircon/assert.h>
+
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
@@ -47,13 +49,13 @@ class Message {
   // Access the request_id field (if present).
   bool has_request_id() const { return data_->header.version >= 1; }
   uint64_t request_id() const {
-    FXL_DCHECK(has_request_id());
+    ZX_DEBUG_ASSERT(has_request_id());
     return static_cast<const internal::MessageHeaderWithRequestID*>(
                &data_->header)
         ->request_id;
   }
   void set_request_id(uint64_t request_id) {
-    FXL_DCHECK(has_request_id());
+    ZX_DEBUG_ASSERT(has_request_id());
     static_cast<internal::MessageHeaderWithRequestID*>(&data_->header)
         ->request_id = request_id;
   }
@@ -66,7 +68,7 @@ class Message {
     return reinterpret_cast<uint8_t*>(data_) + data_->header.num_bytes;
   }
   uint32_t payload_num_bytes() const {
-    FXL_DCHECK(data_num_bytes_ >= data_->header.num_bytes);
+    ZX_DEBUG_ASSERT(data_num_bytes_ >= data_->header.num_bytes);
     return data_num_bytes_ - data_->header.num_bytes;
   }
 

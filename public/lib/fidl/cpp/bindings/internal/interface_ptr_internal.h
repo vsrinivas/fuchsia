@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_INTERFACE_PTR_INTERNAL_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_INTERFACE_PTR_INTERNAL_H_
 
+#include <zircon/assert.h>
+
 #include <algorithm>  // For |std::swap()|.
 #include <memory>
 #include <utility>
@@ -54,10 +56,10 @@ class InterfacePtrState {
   }
 
   void Bind(InterfaceHandle<Interface> info) {
-    FXL_DCHECK(!proxy_);
-    FXL_DCHECK(!router_);
-    FXL_DCHECK(!(bool)handle_);
-    FXL_DCHECK(info.is_valid());
+    ZX_DEBUG_ASSERT(!proxy_);
+    ZX_DEBUG_ASSERT(!router_);
+    ZX_DEBUG_ASSERT(!(bool)handle_);
+    ZX_DEBUG_ASSERT(info.is_valid());
 
     handle_ = info.PassHandle();
   }
@@ -65,7 +67,7 @@ class InterfacePtrState {
   bool WaitForIncomingResponse(fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
     ConfigureProxyIfNecessary();
 
-    FXL_DCHECK(router_);
+    ZX_DEBUG_ASSERT(router_);
     return router_->WaitForIncomingMessage(timeout);
   }
 
@@ -85,7 +87,7 @@ class InterfacePtrState {
   void set_connection_error_handler(fxl::Closure error_handler) {
     ConfigureProxyIfNecessary();
 
-    FXL_DCHECK(router_);
+    ZX_DEBUG_ASSERT(router_);
     router_->set_connection_error_handler(std::move(error_handler));
   }
 
@@ -100,7 +102,7 @@ class InterfacePtrState {
   void ConfigureProxyIfNecessary() {
     // The proxy has been configured.
     if (proxy_) {
-      FXL_DCHECK(router_);
+      ZX_DEBUG_ASSERT(router_);
       return;
     }
     // The object hasn't been bound.

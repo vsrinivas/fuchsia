@@ -10,6 +10,7 @@
 #include <functional>
 #include <utility>
 
+#include <zircon/assert.h>
 #include <zx/channel.h>
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -93,7 +94,7 @@ class InterfacePtr {
   // Upon return from .NewRequest(), |table| is ready to have methods called
   // on it.
   InterfaceRequest<Interface> NewRequest() {
-    FXL_DCHECK(!is_bound()) << "An existing handle is already bound.";
+    ZX_DEBUG_ASSERT(!is_bound());
 
     zx::channel endpoint0;
     zx::channel endpoint1;

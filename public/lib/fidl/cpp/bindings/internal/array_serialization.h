@@ -13,6 +13,8 @@
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_SERIALIZATION_H_
 
 #include <string.h>  // For |memcpy()|.
+#include <zircon/assert.h>
+
 #include <type_traits>
 #include <vector>
 
@@ -77,10 +79,10 @@ struct ArraySerializer<
       Buffer* buf,
       Array_Data<F>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_is_nullable)
-        << "Primitive type should be non-nullable";
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Primitive type should not have array validate params";
+    // Primitive type should be non-nullable
+    ZX_DEBUG_ASSERT(!validate_params->element_is_nullable);
+    // Primitive type should not have array validate params
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
     for (size_t i = 0; i < num_elements; ++i, ++it)
       output->at(i) = static_cast<F>(*it);
 
@@ -95,10 +97,10 @@ struct ArraySerializer<
       Buffer* buf,
       Array_Data<F>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_is_nullable)
-        << "Primitive type should be non-nullable";
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Primitive type should not have array validate params";
+    // Primitive type should be non-nullable.
+    ZX_DEBUG_ASSERT(!validate_params->element_is_nullable);
+    // Primitive type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
     if (num_elements)
       memcpy(output->storage(), &(*it), num_elements * sizeof(E));
 
@@ -127,10 +129,10 @@ struct ArraySerializer<bool, bool, false> {
       Buffer* buf,
       Array_Data<bool>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_is_nullable)
-        << "Primitive type should be non-nullable";
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Primitive type should not have array validate params";
+    // Primitive type should be non-nullable.
+    ZX_DEBUG_ASSERT(!validate_params->element_is_nullable);
+    // Primitive type should not have array validate params
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
 
     // TODO(darin): Can this be a memcpy somehow instead of a bit-by-bit copy?
     for (size_t i = 0; i < num_elements; ++i, ++it)
@@ -167,8 +169,8 @@ struct ArraySerializer<H,
       Buffer* buf,
       Array_Data<WrappedHandle>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Handle type should not have array validate params";
+    // Handle type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the handle.
@@ -211,8 +213,8 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
       Buffer* buf,
       Array_Data<WrappedHandle>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Handle type should not have array validate params";
+    // Handle type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the WrappedHandle.
@@ -257,8 +259,8 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
       Buffer* buf,
       Array_Data<Interface_Data>* output,
       const ArrayValidateParams* validate_params) {
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Interface type should not have array validate params";
+    // Interface type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the handle.
@@ -360,8 +362,8 @@ struct ArraySerializer<
                                Buffer* buf,
                                typename WrapperTraits<T>::DataType* output,
                                const ArrayValidateParams* validate_params) {
-      FXL_DCHECK(!validate_params)
-          << "Struct type should not have array validate params";
+      // Struct type should not have array validate params.
+      ZX_DEBUG_ASSERT(!validate_params);
       return Serialize_(UnwrapStructPtr<T>::value(*input), buf, output);
     }
 
@@ -369,10 +371,10 @@ struct ArraySerializer<
                                Buffer* buf,
                                String_Data** output,
                                const ArrayValidateParams* validate_params) {
-      FXL_DCHECK(validate_params && !validate_params->element_validate_params &&
+      // String type has unexpected array validate params.
+      ZX_DEBUG_ASSERT(validate_params && !validate_params->element_validate_params &&
                  !validate_params->element_is_nullable &&
-                 validate_params->expected_num_elements == 0)
-          << "String type has unexpected array validate params";
+                 validate_params->expected_num_elements == 0);
       SerializeString_(*input, buf, output);
       return ValidationError::NONE;
     }
@@ -497,7 +499,7 @@ inline internal::ValidationError SerializeArray_(
     internal::Buffer* buf,
     internal::Array_Data<F>** output,
     const internal::ArrayValidateParams* validate_params) {
-  FXL_DCHECK(input);
+  ZX_DEBUG_ASSERT(input);
   if (!*input) {
     // It is up to the caller to make sure the given |Array| is not null if it
     // is not nullable.

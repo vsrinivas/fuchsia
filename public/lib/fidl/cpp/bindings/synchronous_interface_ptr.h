@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_SYNCHRONOUS_INTERFACE_PTR_H_
 #define LIB_FIDL_CPP_BINDINGS_SYNCHRONOUS_INTERFACE_PTR_H_
 
+#include <zircon/assert.h>
+
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -60,7 +62,7 @@ class SynchronousInterfacePtr {
   typename Interface::Synchronous_* get() { return proxy_.get(); }
 
   typename Interface::Synchronous_* operator->() {
-    FXL_DCHECK(proxy_);
+    ZX_DEBUG_ASSERT(proxy_);
     return proxy_.get();
   }
   typename Interface::Synchronous_& operator*() { return *operator->(); }

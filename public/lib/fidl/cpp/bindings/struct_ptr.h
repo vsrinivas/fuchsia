@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_STRUCT_PTR_H_
 #define LIB_FIDL_CPP_BINDINGS_STRUCT_PTR_H_
 
+#include <zircon/assert.h>
+
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -61,11 +63,11 @@ class StructPtr {
   bool is_null() const { return !ptr_; }
 
   Struct& operator*() const {
-    FXL_DCHECK(ptr_);
+    ZX_DEBUG_ASSERT(ptr_);
     return *ptr_;
   }
   Struct* operator->() const {
-    FXL_DCHECK(ptr_);
+    ZX_DEBUG_ASSERT(ptr_);
     return ptr_.get();
   }
   Struct* get() const { return ptr_.get(); }
@@ -86,7 +88,7 @@ class StructPtr {
  private:
   friend class internal::StructHelper<Struct>;
   void Initialize() {
-    FXL_DCHECK(!ptr_);
+    ZX_DEBUG_ASSERT(!ptr_);
     ptr_.reset(new Struct());
   }
 
@@ -138,11 +140,11 @@ class InlinedStructPtr {
   bool is_null() const { return is_null_; }
 
   Struct& operator*() const {
-    FXL_DCHECK(!is_null_);
+    ZX_DEBUG_ASSERT(!is_null_);
     return value_;
   }
   Struct* operator->() const {
-    FXL_DCHECK(!is_null_);
+    ZX_DEBUG_ASSERT(!is_null_);
     return &value_;
   }
   Struct* get() const { return is_null() ? nullptr : &value_; }

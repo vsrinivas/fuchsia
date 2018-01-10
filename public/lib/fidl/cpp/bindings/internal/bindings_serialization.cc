@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 
+#include <zircon/assert.h>
+
 #include "lib/fxl/logging.h"
 
 namespace fidl {
@@ -40,7 +42,7 @@ void EncodePointer(const void* ptr, uint64_t* offset) {
 
   const char* p_obj = reinterpret_cast<const char*>(ptr);
   const char* p_slot = reinterpret_cast<const char*>(offset);
-  FXL_DCHECK(p_obj > p_slot);
+  ZX_DEBUG_ASSERT(p_obj > p_slot);
 
   *offset = static_cast<uint64_t>(p_obj - p_slot);
 }
@@ -69,7 +71,7 @@ void DecodeHandle(WrappedHandle* handle, std::vector<zx_handle_t>* handles) {
     handle->value = ZX_HANDLE_INVALID;
     return;
   }
-  FXL_DCHECK(static_cast<size_t>(handle->value) < handles->size());
+  ZX_DEBUG_ASSERT(static_cast<size_t>(handle->value) < handles->size());
   // Just leave holes in the vector so we don't screw up other indices.
   handle->value = FetchAndReset(&handles->at(handle->value));
 }

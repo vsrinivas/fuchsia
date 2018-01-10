@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_BINDINGS_BINDING_H_
 
 #include <zx/channel.h>
+#include <zircon/assert.h>
 
 #include <memory>
 #include <utility>
@@ -99,7 +100,7 @@ class Binding {
   // implementation. Takes ownership of |handle| and binds it to the previously
   // specified implementation.
   void Bind(zx::channel handle) {
-    FXL_DCHECK(!internal_router_);
+    ZX_DEBUG_ASSERT(!internal_router_);
 
     internal::MessageValidatorList validators;
     validators.push_back(std::unique_ptr<internal::MessageValidator>(
@@ -141,14 +142,14 @@ class Binding {
   // true if a method was successfully read and dispatched.
   bool WaitForIncomingMethodCall(
       fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
-    FXL_DCHECK(internal_router_);
+    ZX_DEBUG_ASSERT(internal_router_);
     return internal_router_->WaitForIncomingMessage(timeout);
   }
 
   // Closes the channel that was previously bound. Put this object into a
   // state where it can be rebound to a new channel.
   void Close() {
-    FXL_DCHECK(internal_router_);
+    ZX_DEBUG_ASSERT(internal_router_);
     internal_router_.reset();
   }
 
@@ -181,7 +182,7 @@ class Binding {
   // bound. Ownership of the handle is retained by the Binding, it is not
   // transferred to the caller.
   zx_handle_t handle() const {
-    FXL_DCHECK(is_bound());
+    ZX_DEBUG_ASSERT(is_bound());
     return internal_router_->handle();
   }
 

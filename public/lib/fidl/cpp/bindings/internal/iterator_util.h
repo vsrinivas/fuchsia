@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_ITERATOR_UTIL_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_ITERATOR_UTIL_H_
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 
 #include "lib/fidl/cpp/bindings/array.h"
@@ -69,7 +71,7 @@ class MapKeyIterator {
     typename Map<K, V>::MapIterator it_;
   };
 
-  explicit MapKeyIterator(Map<K, V>* map) : map_(map) { FXL_DCHECK(map); }
+  explicit MapKeyIterator(Map<K, V>* map) : map_(map) { ZX_DEBUG_ASSERT(map); }
 
   size_t size() const { return map_->size(); }
   Iterator begin() const { return Iterator{map_->begin()}; }
@@ -114,7 +116,7 @@ class MapValueIterator {
     typename Map<K, V>::MapIterator it_;
   };
 
-  explicit MapValueIterator(Map<K, V>* map) : map_(map) { FXL_DCHECK(map); }
+  explicit MapValueIterator(Map<K, V>* map) : map_(map) { ZX_DEBUG_ASSERT(map); }
   size_t size() const { return map_->size(); }
   Iterator begin() const { return Iterator{map_->begin()}; }
   Iterator end() const { return Iterator{map_->end()}; }

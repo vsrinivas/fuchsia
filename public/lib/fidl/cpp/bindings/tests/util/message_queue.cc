@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 
+#include <zircon/assert.h>
+
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fxl/logging.h"
 
@@ -29,13 +31,13 @@ void MessageQueue::Push(Message* message) {
 }
 
 void MessageQueue::Pop(AllocMessage* message) {
-  FXL_DCHECK(!queue_.empty());
+  ZX_DEBUG_ASSERT(!queue_.empty());
   message->MoveFrom(queue_.front());
   Pop();
 }
 
 void MessageQueue::Pop() {
-  FXL_DCHECK(!queue_.empty());
+  ZX_DEBUG_ASSERT(!queue_.empty());
   delete queue_.front();
   queue_.pop();
 }

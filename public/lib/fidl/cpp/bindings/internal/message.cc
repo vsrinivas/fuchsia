@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/bindings/message.h"
 
 #include <stdlib.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 
@@ -53,13 +54,13 @@ void AllocMessage::Reset() {
 }
 
 void AllocMessage::AllocData(uint32_t num_bytes) {
-  FXL_DCHECK(!data_);
+  ZX_DEBUG_ASSERT(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(calloc(num_bytes, 1));
 }
 
 void AllocMessage::AllocUninitializedData(uint32_t num_bytes) {
-  FXL_DCHECK(!data_);
+  ZX_DEBUG_ASSERT(!data_);
   data_num_bytes_ = num_bytes;
   data_ = static_cast<internal::MessageData*>(malloc(num_bytes));
 }
@@ -70,7 +71,7 @@ void AllocMessage::CopyDataFrom(Message* source) {
 }
 
 void AllocMessage::MoveFrom(AllocMessage* source) {
-  FXL_DCHECK(this != source);
+  ZX_DEBUG_ASSERT(this != source);
 
   // Move the data.  No copying is needed.
   free(data_);
@@ -89,7 +90,7 @@ PreallocMessage::~PreallocMessage() {
 }
 
 void PreallocMessage::AllocUninitializedData(uint32_t num_bytes) {
-  FXL_DCHECK(!data_);
+  ZX_DEBUG_ASSERT(!data_);
   if (num_bytes <= sizeof(prealloc_buf_)) {
     data_ = reinterpret_cast<internal::MessageData*>(prealloc_buf_);
   } else {
@@ -99,10 +100,10 @@ void PreallocMessage::AllocUninitializedData(uint32_t num_bytes) {
 }
 
 zx_status_t PreallocMessage::ReadMessage(const zx::channel& channel) {
-  FXL_DCHECK(channel);
-  FXL_DCHECK(handles()->empty());
-  FXL_DCHECK(!data());
-  FXL_DCHECK(data_num_bytes() == 0);
+  ZX_DEBUG_ASSERT(channel);
+  ZX_DEBUG_ASSERT(handles()->empty());
+  ZX_DEBUG_ASSERT(!data());
+  ZX_DEBUG_ASSERT(data_num_bytes() == 0);
 
   // If the message fits into prealloc_buf_ and contains no handles, we
   // will only need one call to channel.read().  Otherwise, we will need
@@ -115,7 +116,7 @@ zx_status_t PreallocMessage::ReadMessage(const zx::channel& channel) {
   if (rv == ZX_OK) {
     data_ = reinterpret_cast<internal::MessageData*>(prealloc_buf_);
     data_num_bytes_ = num_bytes;
-    FXL_DCHECK(num_handles == 0);
+    ZX_DEBUG_ASSERT(num_handles == 0);
     return ZX_OK;
   }
   if (rv != ZX_ERR_BUFFER_TOO_SMALL)
@@ -133,8 +134,8 @@ zx_status_t PreallocMessage::ReadMessage(const zx::channel& channel) {
                              &mutable_handles()->front()),
                    num_handles, &num_handles_actual);
 
-  FXL_DCHECK(num_bytes == num_bytes_actual);
-  FXL_DCHECK(num_handles == num_handles_actual);
+  ZX_DEBUG_ASSERT(num_bytes == num_bytes_actual);
+  ZX_DEBUG_ASSERT(num_handles == num_handles_actual);
 
   return rv;
 }
@@ -151,8 +152,8 @@ zx_status_t ReadAndDispatchMessage(const zx::channel& channel,
 }
 
 zx_status_t WriteMessage(const zx::channel& channel, Message* message) {
-  FXL_DCHECK(channel);
-  FXL_DCHECK(message);
+  ZX_DEBUG_ASSERT(channel);
+  ZX_DEBUG_ASSERT(message);
 
   zx_status_t status = channel.write(
       0, message->data(), message->data_num_bytes(),
@@ -176,7 +177,7 @@ zx_status_t CallMessage(const zx::channel& channel, Message* message,
   // TODO(abarth): Once we convert to the FIDL2 wire format, switch this code
   // to use zx_channel_call.
 
-  FXL_DCHECK(response);
+  ZX_DEBUG_ASSERT(response);
   zx_status_t status = WriteMessage(channel, message);
   if (status != ZX_OK)
     return status;
@@ -191,7 +192,7 @@ zx_status_t CallMessage(const zx::channel& channel, Message* message,
   if (observed & ZX_CHANNEL_READABLE)
     return response->ReadMessage(channel);
 
-  FXL_DCHECK(observed & ZX_CHANNEL_PEER_CLOSED);
+  ZX_DEBUG_ASSERT(observed & ZX_CHANNEL_PEER_CLOSED);
   return ZX_ERR_PEER_CLOSED;
 }
 

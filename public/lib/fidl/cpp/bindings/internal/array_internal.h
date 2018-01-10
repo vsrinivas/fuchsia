@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_INTERNAL_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_INTERNAL_H_
 
+#include <zircon/assert.h>
+
 #include <new>
 #include <string>
 #include <type_traits>
@@ -50,7 +52,7 @@ struct ArrayDataTraits {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FXL_DCHECK(num_elements <= kMaxNumElements);
+    ZX_DEBUG_ASSERT(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -85,7 +87,7 @@ struct ArrayDataTraits<P*> {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FXL_DCHECK(num_elements <= kMaxNumElements);
+    ZX_DEBUG_ASSERT(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -106,7 +108,7 @@ struct ArrayDataTraits<Array_Data<T>*> {
       (kMaxUint32 - sizeof(ArrayHeader)) / sizeof(StorageType);
 
   static uint32_t GetStorageSize(uint32_t num_elements) {
-    FXL_DCHECK(num_elements <= kMaxNumElements);
+    ZX_DEBUG_ASSERT(num_elements <= kMaxNumElements);
     return sizeof(ArrayHeader) + sizeof(StorageType) * num_elements;
   }
   static Ref ToRef(StorageType* storage, size_t offset) {
@@ -187,10 +189,10 @@ struct ArraySerializationHelper<T, false, false> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FXL_DCHECK(!validate_params->element_is_nullable)
-        << "Primitive type should be non-nullable";
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Primitive type should not have array validate params";
+    // Primitive type should be non-nullable
+    ZX_DEBUG_ASSERT(!validate_params->element_is_nullable);
+    // Primitive type should not have array validate params
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
     return ValidationError::NONE;
   }
 };
@@ -213,8 +215,8 @@ struct ArraySerializationHelper<WrappedHandle, true, false> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Handle type should not have array validate params";
+    // Handle type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
 
     for (uint32_t i = 0; i < header->num_elements; ++i) {
       if (!validate_params->element_is_nullable &&
@@ -320,8 +322,8 @@ struct ArraySerializationHelper<P*, false, false> {
                                BoundsChecker* bounds_checker,
                                const ArrayValidateParams* validate_params,
                                std::string* err) {
-      FXL_DCHECK(!validate_params)
-          << "Struct type should not have array validate params";
+      // Struct type should not have array validate params.
+      ZX_DEBUG_ASSERT(!validate_params);
 
       return T::Validate(data, bounds_checker, err);
     }
@@ -375,8 +377,8 @@ struct ArraySerializationHelper<P, false, true> {
       BoundsChecker* bounds_checker,
       const ArrayValidateParams* validate_params,
       std::string* err) {
-    FXL_DCHECK(!validate_params->element_validate_params)
-        << "Union type should not have array validate params";
+    // Union type should not have array validate params.
+    ZX_DEBUG_ASSERT(!validate_params->element_validate_params);
     for (uint32_t i = 0; i < header->num_elements; ++i) {
       if (!validate_params->element_is_nullable && elements[i].is_null()) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
@@ -464,12 +466,12 @@ class Array_Data {
   size_t size() const { return header_.num_elements; }
 
   Ref at(size_t offset) {
-    FXL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
+    ZX_DEBUG_ASSERT(offset < static_cast<size_t>(header_.num_elements));
     return Traits::ToRef(storage(), offset);
   }
 
   ConstRef at(size_t offset) const {
-    FXL_DCHECK(offset < static_cast<size_t>(header_.num_elements));
+    ZX_DEBUG_ASSERT(offset < static_cast<size_t>(header_.num_elements));
     return Traits::ToConstRef(storage(), offset);
   }
 

@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/internal/router.h"
 
+#include <zircon/assert.h>
+
 #include <string>
 #include <utility>
 
@@ -37,7 +39,7 @@ class ResponderThunk : public MessageReceiverWithStatus {
   // MessageReceiver implementation:
   bool Accept(Message* message) override {
     accept_was_invoked_ = true;
-    FXL_DCHECK(message->has_flag(kMessageIsResponse));
+    ZX_DEBUG_ASSERT(message->has_flag(kMessageIsResponse));
 
     bool result = false;
 
@@ -94,12 +96,12 @@ Router::~Router() {
 }
 
 bool Router::Accept(Message* message) {
-  FXL_DCHECK(!message->has_flag(kMessageExpectsResponse));
+  ZX_DEBUG_ASSERT(!message->has_flag(kMessageExpectsResponse));
   return connector_.Accept(message);
 }
 
 bool Router::AcceptWithResponder(Message* message, MessageReceiver* responder) {
-  FXL_DCHECK(message->has_flag(kMessageExpectsResponse));
+  ZX_DEBUG_ASSERT(message->has_flag(kMessageExpectsResponse));
 
   // Reserve 0 in case we want it to convey special meaning in the future.
   uint64_t request_id = next_request_id_++;
@@ -147,7 +149,7 @@ bool Router::HandleIncomingMessage(Message* message) {
     uint64_t request_id = message->request_id();
     ResponderMap::iterator it = responders_.find(request_id);
     if (it == responders_.end()) {
-      FXL_DCHECK(testing_mode_);
+      ZX_DEBUG_ASSERT(testing_mode_);
       return false;
     }
     MessageReceiver* responder = it->second;

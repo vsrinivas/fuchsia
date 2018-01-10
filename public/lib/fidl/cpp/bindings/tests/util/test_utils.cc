@@ -4,9 +4,10 @@
 
 #include "lib/fidl/cpp/bindings/tests/util/test_utils.h"
 
-#include <string>
-
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
+
+#include <string>
 
 #include "lib/fxl/logging.h"
 
@@ -31,7 +32,7 @@ bool ReadTextMessage(const zx::channel& handle, std::string* text) {
     rv = handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
     if (rv == ZX_ERR_SHOULD_WAIT) {
       if (did_wait) {
-        FXL_DCHECK(false);  // Looping endlessly!?
+        ZX_DEBUG_ASSERT(false);  // Looping endlessly!?
         return false;
       }
       rv = zx_object_wait_one(handle.get(),
@@ -41,7 +42,7 @@ bool ReadTextMessage(const zx::channel& handle, std::string* text) {
         return false;
       did_wait = true;
     } else {
-      FXL_DCHECK(!num_handles);
+      ZX_DEBUG_ASSERT(!num_handles);
       break;
     }
   }

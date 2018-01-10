@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
+#include <zircon/assert.h>
+
 #include <string>
 
 #include "lib/fxl/logging.h"
@@ -68,12 +70,12 @@ void ReportValidationError(ValidationError error, std::string* description) {
 
 ValidationErrorObserverForTesting::ValidationErrorObserverForTesting()
     : last_error_(ValidationError::NONE) {
-  FXL_DCHECK(!g_validation_error_observer);
+  ZX_DEBUG_ASSERT(!g_validation_error_observer);
   g_validation_error_observer = this;
 }
 
 ValidationErrorObserverForTesting::~ValidationErrorObserverForTesting() {
-  FXL_DCHECK(g_validation_error_observer == this);
+  ZX_DEBUG_ASSERT(g_validation_error_observer == this);
   g_validation_error_observer = nullptr;
 }
 
