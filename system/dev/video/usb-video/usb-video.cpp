@@ -19,6 +19,9 @@
 
 namespace {
 
+// 8 bits for each RGB.
+static constexpr uint32_t MJPEG_BITS_PER_PIXEL = 24;
+
 camera::camera_proto::PixelFormat guid_to_pixel_format(uint8_t guid[GUID_LENGTH]) {
     struct {
         uint8_t guid[GUID_LENGTH];
@@ -63,6 +66,21 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
         out_format->default_frame_index = uncompressed_desc->bDefaultFrameIndex;
         break;
     }
+    case USB_VIDEO_VS_FORMAT_MJPEG: {
+        usb_video_vs_mjpeg_format_desc* mjpeg_desc =
+            (usb_video_vs_mjpeg_format_desc *)format_desc;
+        zxlogf(TRACE,
+               "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d\n",
+               mjpeg_desc->bNumFrameDescriptors, mjpeg_desc->bmFlags);
+
+        want_frame_type = USB_VIDEO_VS_FRAME_MJPEG;
+        out_format->index = mjpeg_desc->bFormatIndex;
+        out_format->pixel_format = MJPEG;
+        out_format->bits_per_pixel = MJPEG_BITS_PER_PIXEL;
+        want_num_frame_descs = mjpeg_desc->bNumFrameDescriptors;
+        out_format->default_frame_index = mjpeg_desc->bDefaultFrameIndex;
+        break;
+    }
     // TODO(jocelyndang): handle other formats.
     default:
         zxlogf(ERROR, "unsupported format bDescriptorSubtype %u\n",
@@ -88,13 +106,15 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
         }
 
         switch (format_desc->bDescriptorSubtype) {
-        case USB_VIDEO_VS_FRAME_UNCOMPRESSED: {
-            usb_video_vs_uncompressed_video_frame_desc* desc =
-                (usb_video_vs_uncompressed_video_frame_desc *)header;
+        case USB_VIDEO_VS_FRAME_UNCOMPRESSED:
+        case USB_VIDEO_VS_FRAME_MJPEG: {
+            usb_video_vs_frame_desc* desc = (usb_video_vs_frame_desc *)header;
 
             // Intervals are specified in 100 ns units.
             double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
-            zxlogf(TRACE, "USB_VIDEO_VS_FRAME_UNCOMPRESSED (%u x %u) %.2f frames / sec\n",
+            zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec\n",
+                   format_desc->bDescriptorSubtype == USB_VIDEO_VS_FRAME_UNCOMPRESSED ?
+                   "USB_VIDEO_VS_FRAME_UNCOMPRESSED" : "USB_VIDEO_VS_FRAME_MJPEG",
                    desc->wWidth, desc->wHeight, framesPerSec);
 
             video::usb::UsbVideoFrameDesc frame_desc = {

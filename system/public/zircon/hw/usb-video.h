@@ -209,10 +209,26 @@ typedef struct {
     uint8_t bCopyProtect;
 } __PACKED usb_video_vs_uncompressed_format_desc;
 
+// USB Video Payload MJPEG
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;         // USB_VIDEO_CS_INTERFACE
-    uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FRAME_UNCOMPRESSED
+    uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FORMAT_MJPEG
+    uint8_t bFormatIndex;
+    uint8_t bNumFrameDescriptors;
+    uint8_t bmFlags;
+    uint8_t bDefaultFrameIndex;
+    uint8_t bAspectRatioX;
+    uint8_t bAspectRatioY;
+    uint8_t bmInterfaceFlags;
+    uint8_t bCopyProtect;
+} __PACKED usb_video_vs_mjpeg_format_desc;
+
+// Uncompressed and MJPEG formats have the same frame descriptor structure.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;         // USB_VIDEO_CS_INTERFACE
+    uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FRAME_UNCOMPRESSED / USB_VIDEO_VS_FRAME_MJPEG
     uint8_t bFrameIndex;
     uint8_t bmCapabilities;
     uint16_t wWidth;
@@ -223,7 +239,7 @@ typedef struct {
     uint32_t dwDefaultFrameInterval;
     uint8_t bFrameIntervalType;
     uint32_t dwFrameInterval[];
-} __PACKED usb_video_vs_uncompressed_video_frame_desc;
+} __PACKED usb_video_vs_frame_desc;
 
 // Stream negotiation
 #define USB_VIDEO_BM_HINT_FRAME_INTERVAL        (1 << 0)
