@@ -121,6 +121,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
     usb_descriptor_header_t* header;
     // Most recent USB interface descriptor.
     usb_interface_descriptor_t* intf = NULL;
+    // Most recent video control header.
+    usb_video_vc_header_desc* control_header = NULL;
     // Most recent video streaming input header.
     usb_video_vs_input_header_desc* input_header = NULL;
 
@@ -148,7 +150,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
                         // Create a video source if we've successfully parsed a VS interface.
                         if (formats.size() > 0) {
                             status = video::usb::UsbVideoStream::Create(
-                                device, &usb, video_source_index++, intf,
+                                device, &usb, video_source_index++, intf, control_header,
                                 input_header, &formats, &streaming_settings);
                             if (status != ZX_OK) {
                                 zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
@@ -174,9 +176,12 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
             usb_video_vc_desc_header* vc_header = (usb_video_vc_desc_header *)header;
             if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_CONTROL) {
                 switch (vc_header->bDescriptorSubtype) {
-                case USB_VIDEO_VC_HEADER:
-                    zxlogf(TRACE, "USB_VIDEO_VC_HEADER\n");
+                case USB_VIDEO_VC_HEADER: {
+                    control_header = (usb_video_vc_header_desc *)header;
+                    zxlogf(TRACE, "USB_VIDEO_VC_HEADER dwClockFrequency: %u\n",
+                           control_header->dwClockFrequency);
                     break;
+                }
                 case USB_VIDEO_VC_INPUT_TERMINAL: {
                     usb_video_vc_input_terminal_desc* desc =
                         (usb_video_vc_input_terminal_desc *)header;
@@ -290,8 +295,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
         }
     }
     if (formats.size() > 0) {
-        status = video::usb::UsbVideoStream::Create(device, &usb,
-            video_source_index++, intf, input_header, &formats, &streaming_settings);
+        status = video::usb::UsbVideoStream::Create(device, &usb, video_source_index++,
+            intf, control_header, input_header, &formats, &streaming_settings);
         if (status != ZX_OK) {
             zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
         }

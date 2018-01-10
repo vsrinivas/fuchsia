@@ -39,6 +39,7 @@ public:
                               usb_protocol_t* usb,
                               int index,
                               usb_interface_descriptor_t* intf,
+                              usb_video_vc_header_desc* control_header,
                               usb_video_vs_input_header_desc* input_header,
                               fbl::Vector<UsbVideoFormat>* formats,
                               fbl::Vector<UsbVideoStreamingSetting>* settings);
@@ -80,6 +81,7 @@ private:
 
     zx_status_t Bind(const char* devname,
                      usb_interface_descriptor_t* intf,
+                     usb_video_vc_header_desc* control_header,
                      usb_video_vs_input_header_desc* input_header);
 
     // Deferred initialization of the device via a thread.  Once complete, this
@@ -124,6 +126,8 @@ private:
     // Queues a usb request against the underlying device.
     void QueueRequestLocked() __TA_REQUIRES(lock_);
     void RequestComplete(usb_request_t* req);
+
+    void ParseHeaderTimestamps(usb_request_t* req);
     // Extracts the payload data from the usb request response,
     // and stores it in the ring buffer.
     void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
@@ -147,11 +151,17 @@ private:
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
+    uint32_t clock_frequency_hz_ = 0;
+
     // Statistics for frame based formats.
     uint32_t max_frame_size_;
     // FID is a bit that is toggled when a new frame begins.
     // Initialized to -1 so that the first frame will be counted as a new frame.
     uint8_t cur_fid_ = -1;
+    // Presentation timestamp for the current frame.
+    uint32_t cur_frame_pts_ = 0;
+    // Source time clock value for the current frame.
+    uint32_t cur_frame_stc_ = 0;
     // Number of frames encountered.
     uint32_t num_frames_ = 0;
     // Bytes received so far for the current frame.

@@ -229,5 +229,14 @@ typedef struct {
 
 } __PACKED usb_video_vs_payload_header;
 
+typedef struct {
+    uint8_t bHeaderLength;
+    uint8_t bmHeaderInfo;
+    uint32_t dwPresentationTime;
+    uint32_t scrSourceTimeClock;
+    // Frame number when the source clock was sampled.
+    uint16_t scrSourceClockSOFCounter;
+} __PACKED usb_video_vs_uncompressed_payload_header;
+
 __END_CDECLS;
 

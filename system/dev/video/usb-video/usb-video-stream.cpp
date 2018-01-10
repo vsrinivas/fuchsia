@@ -40,10 +40,12 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
                                    usb_protocol_t* usb,
                                    int index,
                                    usb_interface_descriptor_t* intf,
+                                   usb_video_vc_header_desc* control_header,
                                    usb_video_vs_input_header_desc* input_header,
                                    fbl::Vector<UsbVideoFormat>* formats,
                                    fbl::Vector<UsbVideoStreamingSetting>* settings) {
-    if (!usb || !intf || !input_header || !formats || formats->size() == 0 || !settings) {
+    if (!usb || !intf || !control_header || !input_header ||
+        !formats || formats->size() == 0 || !settings) {
         return ZX_ERR_INVALID_ARGS;
     }
     auto domain = dispatcher::ExecutionDomain::Create();
@@ -55,7 +57,7 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
     char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-video-source-%d", index);
 
-    auto status = dev->Bind(name, intf, input_header);
+    auto status = dev->Bind(name, intf, control_header, input_header);
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
         dev.release();
@@ -65,8 +67,10 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
 
 zx_status_t UsbVideoStream::Bind(const char* devname,
                                  usb_interface_descriptor_t* intf,
+                                 usb_video_vc_header_desc* control_header,
                                  usb_video_vs_input_header_desc* input_header) {
     iface_num_ = intf->bInterfaceNumber;
+    clock_frequency_hz_ = control_header->dwClockFrequency;
     usb_ep_addr_ = input_header->bEndpointAddress;
 
     uint32_t max_bandwidth = 0;
@@ -182,6 +186,12 @@ zx_status_t UsbVideoStream::SetFormat() {
     max_frame_size_ = negotiation_result_.dwMaxVideoFrameSize;
     cur_format_ = format;
     cur_frame_desc_ = try_frame;
+
+    if (negotiation_result_.dwClockFrequency != 0) {
+        // This field is optional. If it isn't present, we instead
+        // would use the default value provided in the video control header.
+        clock_frequency_hz_ = negotiation_result_.dwClockFrequency;
+    }
 
     zxlogf(INFO, "configured video: format index %u frame index %u\n",
            cur_format_->index, cur_frame_desc_->index);
@@ -439,6 +449,36 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
     QueueRequestLocked();
 }
 
+void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
+    // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
+    usb_video_vs_uncompressed_payload_header header = {};
+    usb_request_copyfrom(req, &header,
+                         sizeof(usb_video_vs_uncompressed_payload_header), 0);
+
+    // PTS and STC should stay the same for payloads of the same frame,
+    // but it's probably not a critical error if they're different.
+
+    if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_PTS) {
+        uint32_t new_pts = header.dwPresentationTime;
+
+        if (cur_frame_pts_ != 0 && new_pts != cur_frame_pts_) {
+            zxlogf(ERROR, "#%u: PTS changed between payloads, from %u to %u\n",
+            num_frames_, cur_frame_pts_, new_pts);
+        }
+        cur_frame_pts_ = new_pts;
+    }
+
+    if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_SCR) {
+        uint32_t new_stc = header.scrSourceTimeClock;
+
+        if (cur_frame_stc_ != 0 && new_stc != cur_frame_stc_) {
+            zxlogf(ERROR, "#%u: STC changed between payloads, from %u to %u\n",
+            num_frames_, cur_frame_stc_, new_stc);
+        }
+        cur_frame_stc_ = new_stc;
+    }
+}
+
 void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     if (req->response.status != ZX_OK) {
         zxlogf(ERROR, "usb request failed: %d\n", req->response.status);
@@ -473,10 +513,20 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
                 ZX_DEBUG_ASSERT(data_ring_buffer_.offset < data_ring_buffer_.size);
             }
         }
+
+        if (clock_frequency_hz_ != 0) {
+            zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs\n",
+                   num_frames_,
+                   cur_frame_pts_ / static_cast<double>(clock_frequency_hz_),
+                   cur_frame_stc_ / static_cast<double>(clock_frequency_hz_));
+        }
+
         num_frames_++;
         cur_frame_bytes_ = 0;
         cur_frame_error_ = false;
         cur_fid_ = fid;
+        cur_frame_pts_ = 0;
+        cur_frame_stc_ = 0;
     }
     if (cur_frame_error_) {
         zxlogf(ERROR, "skipping payload of invalid frame #%u\n", num_frames_);
@@ -487,6 +537,9 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         cur_frame_error_ = true;
         return;
     }
+
+    ParseHeaderTimestamps(req);
+
     // Copy the data into the ring buffer;
     uint32_t offset = header.bHeaderLength;
     uint32_t data_size = static_cast<uint32_t>(req->response.actual) - offset;
