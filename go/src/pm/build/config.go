@@ -87,7 +87,8 @@ func (c *Config) Manifest() (*Manifest, error) {
 			sources = append(sources, c.ManifestPath)
 		}
 
-		if c.OutputDir != "" {
+		// Only use outputdir as a source if no manifest was supplied.
+		if c.ManifestPath == "" && c.OutputDir != "" {
 			sources = append(sources, c.OutputDir)
 		}
 
