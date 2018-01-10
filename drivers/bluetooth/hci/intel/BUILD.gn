@@ -39,10 +39,12 @@ driver_module("btintel_driver") {
 
 copy("btintel-firmware") {
   sources = [
+    "firmware/ibt-11-5.sfi",
     "firmware/ibt-12-16.sfi",
+    "firmware/ibt-18-2.sfi",
   ]
   outputs = [
-    "$root_out_dir/firmware/ibt-12-16.sfi",
+    "$root_out_dir/firmware/{{source_file_part}}",
   ]
 }
 
@@ -62,7 +64,15 @@ package("btintel") {
         name = "btintel.so"
       } ]
 
-  libraries = [ {
+  libraries = [
+    {
+        name = "firmware/ibt-11-5.sfi"
+    },
+    {
         name = "firmware/ibt-12-16.sfi"
-      } ]
+    },
+    {
+        name = "firmware/ibt-18-2.sfi"
+    },
+  ]
 }
