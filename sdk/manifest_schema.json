@@ -50,6 +50,10 @@
           "description": "The atom's unique identifier",
           "$ref": "#/definitions/atomId"
         },
+        "gn-label": {
+          "description": "Label of the GN target which generated the atom.",
+          "type": "string"
+        },
         "files": {
           "description": "The files making up the atom",
           "type": "object",
@@ -68,15 +72,6 @@
         "tags": {
           "description": "A collection of potentially domain-specific metadata",
           "type": "object",
-          "properties": {
-            "gn-label": {
-              "description": "Label of the GN target that generated this atom",
-              "type": "string"
-            }
-          },
-          "required": [
-            "gn-label"
-          ],
           "additionalProperties": true
         }
       },

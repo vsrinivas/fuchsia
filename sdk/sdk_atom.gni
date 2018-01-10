@@ -134,8 +134,8 @@ template("sdk_atom") {
   if (defined(invoker.tags)) {
     tags = invoker.tags
   }
+
   full_label = get_label_info(":$target_name", "label_with_toolchain")
-  tags += [ "gn-label:$full_label" ]
 
   # Builds a manifest representing this element.
   action(target_name) {
@@ -160,6 +160,8 @@ template("sdk_atom") {
       rebase_path(manifest),
       "--base",
       rebase_path(source_dir),
+      "--gn-label",
+      full_label,
       "--deps",
     ] + dep_manifests + [
       "--files",

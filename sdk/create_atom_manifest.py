@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import collections
 import json
 import os
 import sys
@@ -17,7 +18,7 @@ class AtomId(object):
      self.key = (json['domain'], json['name'])
 
     def __str__(self):
-        return '%s(%s)' % (self.json['name'], self.json['domain'])
+        return '%s{%s}' % (self.json['name'], self.json['domain'])
 
     def __hash__(self):
         return hash(self.key)
@@ -38,15 +39,16 @@ class Atom(object):
     def __init__(self, json):
         self.json = json
         self.id = AtomId(json['id'])
+        self.label = json['gn-label']
 
     def __str__(self):
         return str(self.id)
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.label)
 
     def __eq__(self, other):
-        return self.id == other.id
+        return self.label == other.label
 
     def __ne__(self, other):
         return not __eq__(self, other)
@@ -67,6 +69,23 @@ def gather_dependencies(manifests):
             direct_deps.update(map(lambda i: AtomId(i), dep_manifest['ids']))
             atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
     return (direct_deps, atoms)
+
+
+def detect_collisions(atoms):
+    '''Detects name collisions in a given atom list.'''
+    mappings = collections.defaultdict(lambda: [])
+    for atom in atoms:
+        mappings[atom.id].append(atom)
+    has_collisions = False
+    for id, group in mappings.iteritems():
+        if len(group) == 1:
+            continue
+        has_collisions = True
+        labels = [a.label for a in group]
+        print('Targets sharing the SDK id %s:' % id)
+        for label in labels:
+            print(' - %s' % label)
+    return has_collisions
 
 
 def main():
@@ -97,6 +116,9 @@ def main():
     parser.add_argument('--tags',
                         help='List of tags for the included elements',
                         nargs='*')
+    parser.add_argument('--gn-label',
+                        help='GN label of the atom',
+                        required=True)
     args = parser.parse_args()
 
     if (args.name):
@@ -136,10 +158,15 @@ def main():
     }
     atoms.update([Atom({
         'id': id,
+        'gn-label': args.gn_label,
         'tags': args.tags,
         'deps': map(lambda i: i.json, sorted(list(deps))),
         'files': files,
     })])
+    if detect_collisions(atoms):
+        print('Name collisions detected!')
+        return 1
+
     manifest = {
         'ids': [id],
         'atoms': map(lambda a: a.json, sorted(list(atoms))),

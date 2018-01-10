@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-from create_atom_manifest import gather_dependencies
+from create_atom_manifest import detect_collisions, gather_dependencies
 
 
 def main():
@@ -25,6 +25,9 @@ def main():
     args = parser.parse_args()
 
     (direct_deps, atoms) = gather_dependencies(args.deps)
+    if detect_collisions(atoms):
+        print('Name collisions detected!')
+        return 1
     ids = []
     if args.is_group:
         ids = map(lambda i: i.json, sorted(list(direct_deps)))
