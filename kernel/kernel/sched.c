@@ -550,7 +550,7 @@ void sched_migrate(thread_t* t) {
 }
 
 /* preemption timer that is set whenever a thread is scheduled */
-static enum handler_return sched_timer_tick(struct timer* t, zx_time_t now, void* arg) {
+static enum handler_return sched_timer_tick(timer_t* t, zx_time_t now, void* arg) {
     /* if the preemption timer went off on the idle or a real time thread, ignore it */
     thread_t* current_thread = get_current_thread();
     if (unlikely(thread_is_real_time_or_idle(current_thread)))

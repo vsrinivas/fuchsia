@@ -18,7 +18,7 @@
 
 #include <zircon/types.h>
 
-static enum handler_return timer_cb(struct timer* timer, zx_time_t now, void* arg) {
+static enum handler_return timer_cb(timer_t* timer, zx_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, false);
 
@@ -70,7 +70,7 @@ static void timer_test_all_cpus(void) {
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static enum handler_return timer_cb2(struct timer* timer, zx_time_t now, void* arg) {
+static enum handler_return timer_cb2(timer_t* timer, zx_time_t now, void* arg) {
     int* timer_count = (int*)arg;
     atomic_add(timer_count, 1);
     return INT_RESCHEDULE;

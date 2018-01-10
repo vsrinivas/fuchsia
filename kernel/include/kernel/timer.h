@@ -82,7 +82,7 @@ void timer_init(timer_t*);
  * arg: the argument to pass to the callback
  *
  * The timer function is declared as:
- *   enum handler_return callback(struct timer *, zx_time_t now, void *arg) { ... }
+ *   enum handler_return callback(timer_t *, zx_time_t now, void *arg) { ... }
  *
  * The |slack| parameter defines an interval depending on the |mode| in which
  * is acceptable to fire the timer:

@@ -136,7 +136,7 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
-static enum handler_return threadload(struct timer* t, zx_time_t now, void* arg) {
+static enum handler_return threadload(timer_t* t, zx_time_t now, void* arg) {
     static struct cpu_stats old_stats[SMP_MAX_CPUS];
     static zx_duration_t last_idle_time[SMP_MAX_CPUS];
 
