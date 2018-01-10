@@ -5,16 +5,22 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"amber/publish"
-
-	"fuchsia.googlesource.com/pm/build"
 )
+
+type manifestEntry struct {
+	localPath string
+	remotePath string
+}
 
 var fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
 
@@ -103,12 +109,13 @@ func main() {
 	} else {
 		if err = publishManifest(*filePath, repo); err != nil {
 			fmt.Printf("Error processing manifest: %s\n", err)
+			os.Exit(1)
 		}
 	}
 }
 
 func publishManifest(manifestPath string, repo *publish.UpdateRepo) error {
-	manifest, err := build.NewManifest([]string{manifestPath})
+	manifest, err := readManifest(manifestPath)
 	if err != nil {
 		return err
 	}
@@ -125,11 +132,11 @@ func publishManifest(manifestPath string, repo *publish.UpdateRepo) error {
 	}
 
 	fmt.Printf("Blobs\n  examined: %d\n  added: %d\n  duplicates: %d\n",
-		len(manifest.Content()), len(addedBlobs), len(manifest.Content())-len(dupes))
+		len(manifest), len(addedBlobs), len(manifest)-len(dupes))
 	return nil
 }
 
-func publishPkgUpdates(repo *publish.UpdateRepo, manifest *build.Manifest) ([]string, map[string]string, error) {
+func publishPkgUpdates(repo *publish.UpdateRepo, manifest []manifestEntry) ([]string, map[string]string, error) {
 	// if we encounter an error, remove any added blobs
 	addedBlobs := []string{}
 	defer func() {
@@ -140,14 +147,14 @@ func publishPkgUpdates(repo *publish.UpdateRepo, manifest *build.Manifest) ([]st
 
 	blobIndex := make(map[string]string)
 	// read the manifest content
-	for _, local := range manifest.Content() {
-		merkle, err := repo.AddContentBlob(local)
+	for _, entry := range manifest {
+		merkle, err := repo.AddContentBlob(entry.localPath)
 		if err == nil {
 			addedBlobs = append(addedBlobs, merkle)
 		} else if !os.IsExist(err) {
 			return nil, nil, fmt.Errorf("publish: error adding blob %s", err)
 		}
-		blobIndex[local] = merkle
+		blobIndex[entry.localPath] = merkle
 	}
 
 	// no error so we don't want to remove any of the blobs we just added
@@ -156,4 +163,41 @@ func publishPkgUpdates(repo *publish.UpdateRepo, manifest *build.Manifest) ([]st
 	}()
 
 	return addedBlobs, blobIndex, nil
+}
+
+func readManifest(manifestPath string) ([]manifestEntry, error) {
+	f, err := os.Open(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("publish: couldn't read manifest: %s", err)
+	}
+
+	defer f.Close()
+	entries := []manifestEntry{}
+	rdr := bufio.NewReader(f)
+
+	for {
+		l, err := rdr.ReadString('\n')
+		if err == io.EOF {
+			if len(strings.TrimSpace(l)) == 0 {
+				return entries, nil
+			}
+			err = nil
+		}
+
+		if err != nil {
+			return entries, err
+		}
+
+		l = strings.TrimSpace(l)
+		parts := strings.SplitN(l, "=", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		entries = append(entries,
+			manifestEntry {remotePath: parts[0], localPath: parts[1]})
+	}
+
+
+	return entries, nil
 }
