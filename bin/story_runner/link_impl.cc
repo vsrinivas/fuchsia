@@ -584,6 +584,14 @@ void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
   }
 }
 
+void LinkImpl::GetEntity(fidl::InterfaceRequest<modular::Entity> request) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void LinkImpl::SetEntity(const fidl::String& entity_reference) {
+  FXL_NOTIMPLEMENTED();
+}
+
 void LinkImpl::Sync(const std::function<void()>& callback) {
   new SyncCall(&operation_queue_, callback);
 }
@@ -793,6 +801,14 @@ void LinkConnection::Set(fidl::Array<fidl::String> path,
 
 void LinkConnection::Erase(fidl::Array<fidl::String> path) {
   impl_->Erase(std::move(path), id_);
+}
+
+void LinkConnection::GetEntity(fidl::InterfaceRequest<modular::Entity> request) {
+  impl_->GetEntity(std::move(request));
+}
+
+void LinkConnection::SetEntity(const fidl::String& entity_reference) {
+  impl_->SetEntity(entity_reference);
 }
 
 void LinkConnection::Get(fidl::Array<fidl::String> path,

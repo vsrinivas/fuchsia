@@ -7,12 +7,17 @@
 
 module modular;
 
+import "lib/entity/fidl/entity.fidl";
+
 // This interface is implemented by the story runner. The Story
 // service instance acts as a factory for it.
 //
-// An instance of Link holds a JSON string that can be modified incrementally
-// or completely overwritten, depending on the use of Set() and Update().
-// A Link contains a JSON string, which is "null" when the Link is created.
+// An instance of Link holds one of two types of values:
+// (1) a JSON string that can be modified incrementally or completely
+//     overwritten, depending on the use of Set() and Update(). The JSON string
+//     is set to "null" when the Link is created.
+// (2) an entity reference that can be set or retrieved with SetEntity() and
+//     GetEntity().
 //
 // Each module receives a handle to one Link instance in its ModuleContext which
 // it receives in Module.Initialize(). It can access it by calling
@@ -106,6 +111,16 @@ interface Link {
   // zero length because the root is a value, not a key. This call notifies
   // Watchers, although this may be skipped if nothing changed.
   Erase@4(array<string> path);
+
+  // If this is an Entity Link, return the entity. Otherwise the handle
+  // is closed.
+  GetEntity@8(Entity& request);
+
+  // Set this to be an Entity Link with the given |entity_reference|. The
+  // existing value of the link is overwritten. If |entity_reference| is null,
+  // then any existing value in the link is overwritten with the JSON string
+  // "null".
+  SetEntity@9(string? entity_reference);
 
   // Registers a watcher, which is notified whenever the document changes. This
   // watcher will not be invoked for changes caused by calls made on this

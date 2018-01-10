@@ -92,7 +92,7 @@ class LinkImpl : PageClient {
            LedgerPageId page_id,
            LinkPathPtr link_path);
 
-  ~LinkImpl();
+  ~LinkImpl() override;
 
   // Creates a new LinkConnection for the given request. LinkConnection
   // instances are deleted when their connections close, and they are all
@@ -109,6 +109,8 @@ class LinkImpl : PageClient {
            uint32_t src);
   void Get(fidl::Array<fidl::String> path,
            const std::function<void(fidl::String)>& callback);
+  void GetEntity(fidl::InterfaceRequest<modular::Entity> request);
+  void SetEntity(const fidl::String& entity_reference);
   void Erase(fidl::Array<fidl::String> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
@@ -260,6 +262,8 @@ class LinkConnection : Link {
   void Get(fidl::Array<fidl::String> path,
            const GetCallback& callback) override;
   void Erase(fidl::Array<fidl::String> path) override;
+  void GetEntity(fidl::InterfaceRequest<modular::Entity> request) override;
+  void SetEntity(const fidl::String& entity_reference) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Sync(const SyncCallback& callback) override;

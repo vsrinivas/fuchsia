@@ -24,6 +24,7 @@ fidl("fidl") {
     "//garnet/public/lib/app/fidl:service_provider",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl:module_controller",
     "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/surface/fidl",
