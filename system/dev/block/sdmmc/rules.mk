@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mmc.c \
+    $(LOCAL_DIR)/ops.c \
     $(LOCAL_DIR)/sd.c \
     $(LOCAL_DIR)/sdmmc.c \
 

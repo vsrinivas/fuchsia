@@ -22,26 +22,18 @@
 #define CSD_STRUCT_V1 0x0
 #define CSD_STRUCT_V2 0x1
 
-zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
-    zx_status_t st;
-
-    // Get the protocol data from the iotxn. We use this to pass the command
-    // type and command arguments to the EMMC driver.
-    sdmmc_protocol_data_t* pdata =
-        iotxn_pdata(setup_txn, sdmmc_protocol_data_t);
-
+zx_status_t sdmmc_probe_sd(sdmmc_device_t* dev) {
+    // TODO comment ths out for now, we do not have SD card support
+    return ZX_ERR_NOT_SUPPORTED;
+#if 0
     // Issue the SEND_IF_COND command, this will tell us that we can talk to
     // the card correctly and it will also tell us if the voltage range that we
     // have supplied has been accepted.
-    if ((st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_SEND_IF_COND, 0x1aa, setup_txn)) != ZX_OK) {
-        zxlogf(TRACE, "sd: SDMMC_SEND_IF_COND failed, retcode = %d\n", st);
-        goto err;
-    }
-    if ((pdata->response[0] & 0xFFF) != 0x1aa) {
-        // The card should have replied with the pattern that we sent.
-        zxlogf(ERROR, "sd: SDMMC_SEND_IF_COND got bad reply = %"PRIu32"\n",
-                pdata->response[0]);
-        goto err;
+    zx_status_t st = sd_send_if_cond(dev);
+    if (st != ZX_OK) {
+        return st;
+    } else {
+        return ZX_OK;
     }
 
     // Get the operating conditions from the card.
@@ -88,9 +80,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
 
-    uint32_t new_bus_frequency = 25000000;
-    st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
-                      sizeof(new_bus_frequency), NULL, 0, NULL);
+    st = sdmmc_set_bus_freq(&sdmmc->host, 25000000);
     if (st != ZX_OK) {
         // This is non-fatal but the card will run slowly.
         zxlogf(ERROR, "sd: failed to increase bus frequency.\n");
@@ -104,9 +94,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
             goto err;
         }
 
-        const uint32_t new_voltage = SDMMC_SIGNAL_VOLTAGE_180;
-        st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_SIGNAL_VOLTAGE, &new_voltage,
-                          sizeof(new_voltage), NULL, 0, NULL);
+        st = sdmmc_set_signal_voltage(&sdmmc->host, SDMMC_VOLTAGE_180);
         if (st != ZX_OK) {
             zxlogf(ERROR, "sd: Card supports 1.8v signalling but was unable to "
                     "switch to 1.8v mode, retcode = %d\n", st);
@@ -193,17 +181,12 @@ zx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
                 zxlogf(ERROR, "sd: failed to set card bus width, retcode = %d\n", st);
                 break;
             }
-            const uint32_t new_bus_width = SDMMC_BUS_WIDTH_4;
-            // FIXME(yky) use #define
-            st = device_ioctl(sdmmc->host_zxdev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
-                              sizeof(new_bus_width), NULL, 0, NULL);
+            st = sdmmc_set_bus_width(&sdmmc->host, SDMMC_BUS_WIDTH_4);
             if (st != ZX_OK) {
                 zxlogf(ERROR, "sd: failed to set host bus width, retcode = %d\n", st);
             }
         } while (false);
     }
-
-err:
-    return st;
+#endif
 }
 

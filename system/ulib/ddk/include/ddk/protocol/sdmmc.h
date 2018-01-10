@@ -4,57 +4,138 @@
 
 #pragma once
 
-#include <ddk/iotxn.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
+
+#include <ddk/protocol/block.h>
 
 __BEGIN_CDECLS;
 
-// protocol data for iotxns
-typedef struct sdmmc_protocol_data {
-    uint32_t cmd;  // Command to issue to the underlying device.
-    uint32_t arg;  // Argument to accompany the command.
+typedef enum sdmmc_voltage {
+    SDMMC_VOLTAGE_330,
+    SDMMC_VOLTAGE_180,
+    SDMMC_VOLTAGE_MAX,
+} sdmmc_voltage_t;
 
-    uint16_t blockcount;   // For IOps, number of blocks to read/write.
-    uint16_t blocksize;    // For IOps, size of blocks to read/write.
+typedef enum sdmmc_bus_width {
+    SDMMC_BUS_WIDTH_1,
+    SDMMC_BUS_WIDTH_4,
+    SDMMC_BUS_WIDTH_8,
+    SDMMC_BUS_WIDTH_MAX,
+} sdmmc_bus_width_t;
 
-    uint16_t blockid;      // Current block to transfer in PIO
-    uint32_t response[4];  // Response data.
-} sdmmc_protocol_data_t;
+typedef enum sdmmc_timing {
+    SDMMC_TIMING_LEGACY,
+    SDMMC_TIMING_HS,
+    SDMMC_TIMING_HSDDR,
+    SDMMC_TIMING_HS200,
+    SDMMC_TIMING_HS400,
+    SDMMC_TIMING_MAX,
+} sdmmc_timing_t;
 
-static_assert(sizeof(sdmmc_protocol_data_t) <= sizeof(iotxn_proto_data_t), "sdmmc protocol data too large\n");
+// block io transactions. one per client request
+typedef struct sdmmc_txn {
+    block_op_t bop;
+    list_node_t node;
+} sdmmc_txn_t;
 
-#define SDMMC_SIGNAL_VOLTAGE_330   0
-#define SDMMC_SIGNAL_VOLTAGE_180   1
+typedef struct sdmmc_req sdmmc_req_t;
 
-#define IOCTL_SDMMC_SET_SIGNAL_VOLTAGE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 0)
+// number of pages per request - 2M per request
+// matches DMA_DESC_COUNT in dev/block/sdhci
+#define SDMMC_PAGES_COUNT  (PAGE_SIZE / sizeof(zx_paddr_t))
 
-#define SDMMC_BUS_WIDTH_1   0
-#define SDMMC_BUS_WIDTH_4   1
-#define SDMMC_BUS_WIDTH_8   2
+// sdmmc requests. one per command
+struct sdmmc_req {
+    uint32_t cmd;
+    uint32_t arg;
 
-#define IOCTL_SDMMC_SET_BUS_WIDTH \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 1)
+    // (optional) related txn
+    sdmmc_txn_t* txn;
 
-#define IOCTL_SDMMC_SET_BUS_FREQ \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 2)
+    // data command parameters
 
-#define SDMMC_TIMING_LEGACY 0
-#define SDMMC_TIMING_HS     1
-#define SDMMC_TIMING_HSDDR  2
-#define SDMMC_TIMING_HS200  3
-#define SDMMC_TIMING_HS400  4
+    uint16_t blockcount;
+    uint16_t blocksize;
 
-#define IOCTL_SDMMC_SET_TIMING \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 3)
+    bool use_dma;
+    void* virt;
+    zx_paddr_t phys[SDMMC_PAGES_COUNT];
 
-#define IOCTL_SDMMC_HW_RESET \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 4)
+    // response data
+    uint32_t response[4];
 
-#define IOCTL_SDMMC_MMC_TUNING \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 5)
+    // status
+    zx_status_t status;
+};
 
-#define IOCTL_SDMMC_GET_MAX_TRANSFER_SIZE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 6)
+typedef struct sdmmc_host_info {
+    // Controller capabilities
+    uint64_t caps;
+#define SDMMC_HOST_CAP_BUS_WIDTH_8   (1 << 0)
+#define SDMMC_HOST_CAP_ADMA2         (1 << 1)
+#define SDMMC_HOST_CAP_64BIT         (1 << 2)
+#define SDMMC_HOST_CAP_VOLTAGE_330   (1 << 3)
+    // Maximum data request size
+    uint64_t max_transfer_size;
+} sdmmc_host_info_t;
+
+typedef struct sdmmc_protocol_ops {
+    // get host info
+    zx_status_t (*host_info)(void* ctx, sdmmc_host_info_t* info);
+    // set signal voltage
+    zx_status_t (*set_signal_voltage)(void* ctx, sdmmc_voltage_t voltage);
+    // set bus width
+    zx_status_t (*set_bus_width)(void* ctx, sdmmc_bus_width_t bus_width);
+    // set bus frequency
+    zx_status_t (*set_bus_freq)(void* ctx, uint32_t bus_freq);
+    // set mmc timing
+    zx_status_t (*set_timing)(void* ctx, sdmmc_timing_t timing);
+    // issue a hw reset
+    void (*hw_reset)(void* ctx);
+    // perform tuning
+    zx_status_t (*perform_tuning)(void* ctx);
+    // issue a request
+    zx_status_t (*request)(void* ctx, sdmmc_req_t* req);
+} sdmmc_protocol_ops_t;
+
+typedef struct sdmmc_protocol {
+    sdmmc_protocol_ops_t* ops;
+    void* ctx;
+} sdmmc_protocol_t;
+
+static inline zx_status_t sdmmc_host_info(sdmmc_protocol_t* sdmmc, sdmmc_host_info_t* info) {
+    return sdmmc->ops->host_info(sdmmc->ctx, info);
+}
+
+static inline zx_status_t sdmmc_set_signal_voltage(sdmmc_protocol_t* sdmmc,
+                                                   sdmmc_voltage_t voltage) {
+    return sdmmc->ops->set_signal_voltage(sdmmc->ctx, voltage);
+}
+
+static inline zx_status_t sdmmc_set_bus_width(sdmmc_protocol_t* sdmmc,
+                                              sdmmc_bus_width_t bus_width) {
+    return sdmmc->ops->set_bus_width(sdmmc->ctx, bus_width);
+}
+
+static inline zx_status_t sdmmc_set_bus_freq(sdmmc_protocol_t* sdmmc, uint32_t bus_freq) {
+    return sdmmc->ops->set_bus_freq(sdmmc->ctx, bus_freq);
+}
+
+static inline zx_status_t sdmmc_set_timing(sdmmc_protocol_t* sdmmc, sdmmc_timing_t timing) {
+    return sdmmc->ops->set_timing(sdmmc->ctx, timing);
+}
+
+static inline void sdmmc_hw_reset(sdmmc_protocol_t* sdmmc) {
+    sdmmc->ops->hw_reset(sdmmc->ctx);
+}
+
+static inline zx_status_t sdmmc_perform_tuning(sdmmc_protocol_t* sdmmc) {
+    return sdmmc->ops->perform_tuning(sdmmc->ctx);
+}
+
+static inline zx_status_t sdmmc_request(sdmmc_protocol_t* sdmmc, sdmmc_req_t* req) {
+    return sdmmc->ops->request(sdmmc->ctx, req);
+}
 
 __END_CDECLS;
