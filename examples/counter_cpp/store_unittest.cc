@@ -44,11 +44,12 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   void Erase(fidl::Array<fidl::String> /*path*/) override { ++counts["Erase"]; }
 
-  void GetEntity(fidl::InterfaceRequest<modular::Entity> request) override {
+  void GetEntity(const Link::GetEntityCallback& callback) override {
     ++counts["GetEntity"];
+    callback("");
   }
 
-  void SetEntity(const fidl::String& entity_reference) override {
+  void SetEntity(const fidl::String& /*entity_reference*/) override {
     ++counts["SetEntity"];
   }
 

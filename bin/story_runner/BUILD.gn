@@ -67,6 +67,7 @@ source_set("story_runner") {
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl:private",
@@ -141,6 +142,7 @@ source_set("link_impl_unittest") {
   deps = [
     ":story_runner",
     "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/entity/cpp:json",
     "//third_party/gtest",
   ]
 }

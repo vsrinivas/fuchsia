@@ -109,8 +109,8 @@ class LinkImpl : PageClient {
            uint32_t src);
   void Get(fidl::Array<fidl::String> path,
            const std::function<void(fidl::String)>& callback);
-  void GetEntity(fidl::InterfaceRequest<modular::Entity> request);
-  void SetEntity(const fidl::String& entity_reference);
+  void GetEntity(const Link::GetEntityCallback& callback);
+  void SetEntity(const fidl::String& entity_reference, const uint32_t src);
   void Erase(fidl::Array<fidl::String> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
@@ -223,6 +223,7 @@ class LinkImpl : PageClient {
   class SetSchemaCall;
   class UpdateObjectCall;
   class EraseCall;
+  class GetEntityCall;
   class WatchCall;
   class ChangeCall;
   // Calls below are for incremental links, which can be found in
@@ -262,7 +263,7 @@ class LinkConnection : Link {
   void Get(fidl::Array<fidl::String> path,
            const GetCallback& callback) override;
   void Erase(fidl::Array<fidl::String> path) override;
-  void GetEntity(fidl::InterfaceRequest<modular::Entity> request) override;
+  void GetEntity(const GetEntityCallback& callback) override;
   void SetEntity(const fidl::String& entity_reference) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;

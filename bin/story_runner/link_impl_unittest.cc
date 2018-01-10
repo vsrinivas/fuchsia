@@ -14,6 +14,7 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
 
@@ -220,6 +221,28 @@ TEST_F(LinkImplTest, Erase) {
   EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
   EXPECT_TRUE(last_change()->json.is_null());
   EXPECT_EQ("{}", last_json_notify_);
+}
+
+TEST_F(LinkImplTest, SetEntity) {
+  continue_ = [this] { EXPECT_TRUE(step_ <= 4); };
+
+  const char entity_ref[] = "entertaining-entity";
+  const std::string entity_ref_json = EntityReferenceToJson(entity_ref);
+
+  link_->WatchAll(watcher_binding_.NewBinding());
+  link_->SetEntity(entity_ref);
+
+  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 1; }));
+  // SetEntity() delegates to Set(), which was tested above, so don't
+  // repeat those tests here.
+  EXPECT_EQ(entity_ref_json, last_json_notify_);
+
+  bool done{};
+  link_->GetEntity([entity_ref, &done](const fidl::String value) {
+    EXPECT_EQ(entity_ref, value);
+    done = true;
+  });
+  EXPECT_TRUE(RunLoopUntil([&done] { return done; }));
 }
 
 // TODO(jimbe) Still many tests to be written, including:

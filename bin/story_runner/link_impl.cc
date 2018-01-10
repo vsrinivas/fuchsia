@@ -15,6 +15,7 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/util/debug.h"
+#include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
 
@@ -409,6 +410,42 @@ class LinkImpl::EraseCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(EraseCall);
 };
 
+class LinkImpl::GetEntityCall : Operation<fidl::String> {
+ public:
+  GetEntityCall(OperationContainer* const container,
+          LinkImpl* const impl,
+          ResultCall result_call)
+      : Operation("LinkImpl::GetEntityCall", container, std::move(result_call)),
+        impl_(impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &result_};
+    new GetCall(&operation_queue_, impl_, fidl::Array<fidl::String>::New(0),
+                [this, flow](const fidl::String& value) {
+      Cont(std::move(flow), value);
+    });
+  }
+
+  void Cont(FlowToken flow, const fidl::String& json) {
+    std::string entity_reference;
+    result_.reset();
+    if (EntityReferenceFromJson(json, &entity_reference)) {
+      result_.Swap(&entity_reference);
+    }
+  }
+
+  LinkImpl* const impl_;  // not owned
+  fidl::String result_;
+
+  // GetCall is executed here.
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetEntityCall);
+};
+
 class LinkImpl::WatchCall : Operation<> {
  public:
   WatchCall(OperationContainer* const container,
@@ -584,12 +621,15 @@ void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
   }
 }
 
-void LinkImpl::GetEntity(fidl::InterfaceRequest<modular::Entity> request) {
-  FXL_NOTIMPLEMENTED();
+void LinkImpl::GetEntity(const Link::GetEntityCallback& callback) {
+  new GetEntityCall(&operation_queue_, this, callback);
 }
 
-void LinkImpl::SetEntity(const fidl::String& entity_reference) {
-  FXL_NOTIMPLEMENTED();
+void LinkImpl::SetEntity(const fidl::String& entity_reference,
+                         const uint32_t src) {
+  // SetEntity() is just a variation on Set(), so delegate to Set().
+  Set(fidl::Array<fidl::String>::New(0),
+      EntityReferenceToJson(entity_reference), src);
 }
 
 void LinkImpl::Sync(const std::function<void()>& callback) {
@@ -803,12 +843,12 @@ void LinkConnection::Erase(fidl::Array<fidl::String> path) {
   impl_->Erase(std::move(path), id_);
 }
 
-void LinkConnection::GetEntity(fidl::InterfaceRequest<modular::Entity> request) {
-  impl_->GetEntity(std::move(request));
+void LinkConnection::GetEntity(const GetEntityCallback& callback) {
+  impl_->GetEntity(std::move(callback));
 }
 
 void LinkConnection::SetEntity(const fidl::String& entity_reference) {
-  impl_->SetEntity(entity_reference);
+  impl_->SetEntity(entity_reference, id_);
 }
 
 void LinkConnection::Get(fidl::Array<fidl::String> path,

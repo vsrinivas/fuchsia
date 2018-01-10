@@ -112,11 +112,11 @@ interface Link {
   // Watchers, although this may be skipped if nothing changed.
   Erase@4(array<string> path);
 
-  // If this is an Entity Link, return the entity. Otherwise the handle
-  // is closed.
-  GetEntity@8(Entity& request);
+  // Returns the entity reference in this link. If no entity reference is
+  // present, returns a null fidl string.
+  GetEntity@8() => (string? entity_reference);
 
-  // Set this to be an Entity Link with the given |entity_reference|. The
+  // Sets this to be an Entity Link with the given |entity_reference|. The
   // existing value of the link is overwritten. If |entity_reference| is null,
   // then any existing value in the link is overwritten with the JSON string
   // "null".
