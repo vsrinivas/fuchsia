@@ -88,20 +88,21 @@ std::string GetLabelFromURL(const std::string& url) {
 }
 
 void PushFileDescriptor(app::FileDescriptorPtr fd,
+                        int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
   if (!fd)
     return;
   if (fd->type0) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), STDOUT_FILENO));
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), new_fd));
     handles->push_back(fd->handle0.release());
   }
   if (fd->type1) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type1), STDOUT_FILENO));
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type1), new_fd));
     handles->push_back(fd->handle1.release());
   }
   if (fd->type2) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type2), STDOUT_FILENO));
+    ids->push_back(PA_HND(PA_HND_TYPE(fd->type2), new_fd));
     handles->push_back(fd->handle2.release());
   }
 }
@@ -132,8 +133,10 @@ zx::process CreateProcess(const zx::job& job,
     handles.push_back(service_request.release());
   }
 
-  PushFileDescriptor(std::move(launch_info->out), &ids, &handles);
-  PushFileDescriptor(std::move(launch_info->err), &ids, &handles);
+  PushFileDescriptor(std::move(launch_info->out), STDOUT_FILENO, &ids,
+                     &handles);
+  PushFileDescriptor(std::move(launch_info->err), STDERR_FILENO, &ids,
+                     &handles);
 
   for (size_t i = 0; i < flat->count; ++i) {
     ids.push_back(flat->type[i]);
