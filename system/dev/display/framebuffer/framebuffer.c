@@ -129,6 +129,10 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
         }
         uint32_t linesize = fb->info.stride * fb->info.pixelsize;
         mtx_lock(&fb->lock);
+        if (!fb->zxdev) {
+            mtx_unlock(&fb->lock);
+            return ZX_ERR_PEER_CLOSED;
+        }
         if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
             memcpy(fb->buffer + y * linesize, fbi->buffer + y * linesize, h * linesize);
             FB_FLUSH(fb);
@@ -138,6 +142,10 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
     }
     case IOCTL_DISPLAY_FLUSH_FB:
         mtx_lock(&fb->lock);
+        if (!fb->zxdev) {
+            mtx_unlock(&fb->lock);
+            return ZX_ERR_PEER_CLOSED;
+        }
         if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
             memcpy(fb->buffer, fbi->buffer, fb->bufsz);
             FB_FLUSH(fb);
@@ -177,6 +185,11 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return ZX_ERR_ACCESS_DENIED;
         }
         const uint32_t* n = (const uint32_t*) in_buf;
+        mtx_lock(&fb->lock);
+        if (!fb->zxdev) {
+            mtx_unlock(&fb->lock);
+            return ZX_ERR_PEER_CLOSED;
+        }
         if (FB_HAS_GPU(fb)) {
             if (*n != fb->active) {
                 if (*n == GROUP_VIRTCON) {
@@ -185,9 +198,9 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
                     FB_RELEASE(fb);
                 }
             }
+            mtx_unlock(&fb->lock);
             return ZX_OK;
         }
-        mtx_lock(&fb->lock);
         if ((*n == GROUP_VIRTCON) || (fb->fullscreen == NULL)) {
             fb->active = GROUP_VIRTCON;
             zx_object_signal(fb->event, ZX_USER_SIGNAL_1, ZX_USER_SIGNAL_0);
@@ -288,6 +301,10 @@ static zx_status_t fb_open_at(void* ctx, zx_device_t** out, const char* path, ui
     // otherwise the fullscreen client becomes active
     if (!FB_HAS_GPU(fb)) {
         mtx_lock(&fb->lock);
+        if (!fb->zxdev) {
+            mtx_unlock(&fb->lock);
+            return ZX_ERR_PEER_CLOSED;
+        }
         if (fbi->group == GROUP_FULLSCREEN) {
             if (fb->fullscreen != NULL) {
                 mtx_unlock(&fb->lock);
@@ -317,7 +334,9 @@ static zx_status_t fb_open(void* ctx, zx_device_t** out, uint32_t flags) {
 static void fb_unbind(void* ctx) {
     fb_t* fb = ctx;
     zx_device_t* dev = fb->zxdev;
+    mtx_lock(&fb->lock);
     fb->zxdev = NULL;
+    mtx_unlock(&fb->lock);
     device_remove(dev);
 }
 
