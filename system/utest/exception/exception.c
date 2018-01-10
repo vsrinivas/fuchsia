@@ -35,6 +35,7 @@ static char* program_path;
 static const uint64_t EXCEPTION_PORT_KEY = 0x6b6579; // "key"
 
 static const char test_child_name[] = "test-child";
+static const char exit_closing_excp_handle_child_name[] = "exit-closing-excp-handle";
 
 enum message {
     // Make the type of this enum signed so that we don't get a compile failure
@@ -1536,6 +1537,51 @@ static bool multiple_threads_registered_death_test(void)
     END_TEST;
 }
 
+static void __NO_RETURN test_child_exit_closing_excp_handle(void)
+{
+    unittest_printf("Exit closing excp handle starting.\n");
+
+    // Test ZX-1544. Process termination closing the last handle of the eport
+    // should not cause a panic.
+    zx_handle_t eport = tu_io_port_create();
+    tu_set_exception_port(zx_process_self(), eport, EXCEPTION_PORT_KEY, 0);
+    exit(0);
+
+    /* NOTREACHED */
+}
+
+static bool exit_closing_excp_handle_test(void)
+{
+    BEGIN_TEST;
+
+    unittest_printf("Starting test child.\n");
+
+    const char* test_child_path = program_path;
+    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char* const argv[] = {
+        test_child_path,
+        exit_closing_excp_handle_child_name,
+        verbosity_string,
+    };
+    int argc = countof(argv);
+
+    launchpad_t* lp = tu_launch_fdio_init(zx_job_default(),
+                                          exit_closing_excp_handle_child_name,
+                                          argc, argv,
+                                          NULL, 0, NULL, NULL);
+    zx_handle_t child = tu_launch_fdio_fini(lp);
+
+    zx_signals_t signals = ZX_PROCESS_TERMINATED;
+    zx_signals_t pending;
+    zx_status_t result = tu_wait(1, &child, &signals, &pending, ZX_TIME_INFINITE);
+    EXPECT_EQ(result, ZX_OK, "");
+    EXPECT_TRUE(pending & ZX_PROCESS_TERMINATED, "");
+
+    EXPECT_EQ(tu_process_get_return_code(child), 0, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(job_set_close_set_test);
 RUN_TEST(process_set_close_set_test);
@@ -1567,6 +1613,7 @@ RUN_TEST(kill_while_stopped_at_start_test);
 RUN_TEST(death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
+RUN_TEST(exit_closing_excp_handle_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)
@@ -1607,6 +1654,10 @@ int main(int argc, char **argv)
         if (strcmp(argv[1], test_child_name) == 0) {
             test_child();
             return 0;
+        }
+        if (strcmp(argv[1], exit_closing_excp_handle_child_name) == 0) {
+            test_child_exit_closing_excp_handle();
+            /* NOTREACHED */
         }
     }
 

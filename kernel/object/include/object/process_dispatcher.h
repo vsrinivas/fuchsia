@@ -279,6 +279,7 @@ private:
     void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(state_lock_);
+    void FinishDeadTransition();
 
     // Kill all threads
     void KillAllThreadsLocked() TA_REQ(state_lock_);
@@ -314,6 +315,10 @@ private:
     // our state
     State state_ TA_GUARDED(state_lock_) = State::INITIAL;
     mutable fbl::Mutex state_lock_;
+
+    // True if FinishDeadTransition has been called.
+    // This is used as a sanity check only.
+    bool completely_dead_ = false;
 
     // process return code
     int retcode_ = 0;

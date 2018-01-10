@@ -211,7 +211,7 @@ void ProcessDispatcher::Kill() {
     }
 
     if (became_dead)
-        job_->RemoveChildProcess(this);
+        FinishDeadTransition();
 }
 
 void ProcessDispatcher::KillAllThreadsLocked() {
@@ -275,7 +275,7 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
     }
 
     if (became_dead)
-        job_->RemoveChildProcess(this);
+        FinishDeadTransition();
 }
 
 zx_koid_t ProcessDispatcher::get_related_koid() const {
@@ -311,47 +311,60 @@ void ProcessDispatcher::SetStateLocked(State s) {
     if (s == State::DYING) {
         // send kill to all of our threads
         KillAllThreadsLocked();
-    } else if (s == State::DEAD) {
-        // clean up the handle table
-        LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
-        fbl::DoublyLinkedList<Handle*> to_clean;
-        {
-            AutoLock lock(&handle_table_lock_);
-            for (auto& handle : handles_) {
-                handle.set_process_id(0u);
-            }
-            to_clean.swap(handles_);
-        }
-
-        while (!to_clean.is_empty()) {
-            // Delete handle via HandleOwner dtor.
-            HandleOwner ho(to_clean.pop_front());
-        }
-
-        LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
-
-        // tear down the address space
-        aspace_->Destroy();
-
-        // signal waiter
-        LTRACEF_LEVEL(2, "signaling waiters\n");
-        UpdateState(0u, ZX_TASK_TERMINATED);
-
-        // IWBN to call job_->RemoveChildProcess(this) here, but that risks
-        // a deadlock as we have |state_lock_| and RemoveChildProcess grabs the
-        // job's |lock_|, whereas JobDispatcher::EnumerateChildren obtains the
-        // locks in the opposite order. We want to keep lock acquisition order
-        // consistent, and JobDispatcher::EnumerateChildren's order makes
-        // sense. We don't need |state_lock_| when calling RemoveChildProcess
-        // here, so we leave that to the caller after it has released
-        // |state_lock_|. ZX-880
-        // The caller should call RemoveChildProcess soon so that the semantics
-        // of signaling ZX_JOB_NO_PROCESSES match that of ZX_TASK_TERMINATED.
-
-        // The PROC_CREATE record currently emits a uint32_t.
-        uint32_t koid = static_cast<uint32_t>(get_koid());
-        ktrace(TAG_PROC_EXIT, koid, 0, 0, 0);
     }
+}
+
+// Finish processing of the transition to State::DEAD.
+// Some things need to be done outside of holding |state_lock_|.
+void ProcessDispatcher::FinishDeadTransition() {
+    DEBUG_ASSERT(!completely_dead_);
+    completely_dead_ = true;
+
+    // clean up the handle table
+    LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
+
+    fbl::DoublyLinkedList<Handle*> to_clean;
+    {
+        AutoLock lock(&handle_table_lock_);
+        for (auto& handle : handles_) {
+            handle.set_process_id(0u);
+        }
+        to_clean.swap(handles_);
+    }
+
+    // zx-1544: Here is where if we're the last holder of a handle of one of
+    // our exception ports then ResetExceptionPort will get called (by
+    // ExceptionPort::OnPortZeroHandles) and will need to grab |state_lock_|.
+    // This needs to be done outside of |state_lock_|.
+    while (!to_clean.is_empty()) {
+        // Delete handle via HandleOwner dtor.
+        HandleOwner ho(to_clean.pop_front());
+    }
+
+    LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
+
+    // tear down the address space
+    aspace_->Destroy();
+
+    // signal waiter
+    LTRACEF_LEVEL(2, "signaling waiters\n");
+    UpdateState(0u, ZX_TASK_TERMINATED);
+
+    // The PROC_CREATE record currently emits a uint32_t koid.
+    uint32_t koid = static_cast<uint32_t>(get_koid());
+    ktrace(TAG_PROC_EXIT, koid, 0, 0, 0);
+
+    // Call job_->RemoveChildProcess(this) outside of |state_lock_|. Otherwise
+    // we risk a deadlock as we have |state_lock_| and RemoveChildProcess grabs
+    // the job's |lock_|, whereas JobDispatcher::EnumerateChildren obtains the
+    // locks in the opposite order. We want to keep lock acquisition order
+    // consistent, and JobDispatcher::EnumerateChildren's order makes
+    // sense. We don't need |state_lock_| when calling RemoveChildProcess
+    // here. ZX-880
+    // RemoveChildProcess is called soon after releasing |state_lock_| so that
+    // the semantics of signaling ZX_JOB_NO_PROCESSES match that of
+    // ZX_TASK_TERMINATED.
+    job_->RemoveChildProcess(this);
 }
 
 // process handle manipulation routines
