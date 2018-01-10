@@ -85,7 +85,7 @@ done:
 
 // Recursive helper function for cp_dir.
 int cp_dir_(char* src, char* dst) {
-    if (DirWrapper::Make(dst, 0777)) {
+    if (DirWrapper::Make(dst, 0777) && errno != EEXIST) {
         fprintf(stderr, "minfs: could not create directory\n");
         return -1;
     }
