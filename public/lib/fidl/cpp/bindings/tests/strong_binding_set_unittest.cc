@@ -20,6 +20,9 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
       : deleted_flag_(deleted_flag) {}
   ~MinimalInterfaceImpl() override { *deleted_flag_ = true; }
 
+  MinimalInterfaceImpl(const MinimalInterfaceImpl&) = delete;
+  MinimalInterfaceImpl& operator=(const MinimalInterfaceImpl&) = delete;
+
   void Message() override { call_count_++; }
 
   int call_count() const { return call_count_; }
@@ -27,8 +30,6 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
  private:
   bool* deleted_flag_;
   int call_count_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
 };
 
 // Tests all of the functionality of StrongBindingSet.

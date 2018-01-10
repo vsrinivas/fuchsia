@@ -25,6 +25,9 @@ class BoundsChecker {
 
   ~BoundsChecker();
 
+  BoundsChecker(const BoundsChecker&) = delete;
+  BoundsChecker& operator=(const BoundsChecker&) = delete;
+
   // Claims the specified memory range.
   // The method succeeds if the range is valid to claim. (Please see
   // the comments for IsValidRange().)
@@ -53,8 +56,6 @@ class BoundsChecker {
   // [handle_begin_, handle_end_) is the valid handle index range.
   uint32_t handle_begin_;
   uint32_t handle_end_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BoundsChecker);
 };
 
 }  // namespace internal

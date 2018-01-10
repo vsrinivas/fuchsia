@@ -21,6 +21,9 @@ class MessageQueue {
   MessageQueue();
   ~MessageQueue();
 
+  MessageQueue(const MessageQueue&) = delete;
+  MessageQueue& operator=(const MessageQueue&) = delete;
+
   bool IsEmpty() const;
 
   // This method copies the message data and steals ownership of its handles.
@@ -34,8 +37,6 @@ class MessageQueue {
   void Pop();
 
   std::queue<AllocMessage*> queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageQueue);
 };
 
 }  // namespace test

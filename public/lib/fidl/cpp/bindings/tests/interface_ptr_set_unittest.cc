@@ -20,6 +20,9 @@ class MinimalInterfaceImpl : public MinimalInterface {
       InterfaceRequest<MinimalInterface> request)
       : binding_(this, std::move(request)) {}
 
+  MinimalInterfaceImpl(const MinimalInterfaceImpl&) = delete;
+  MinimalInterfaceImpl& operator=(const MinimalInterfaceImpl&) = delete;
+
   void Message() override { call_count_++; }
 
   void CloseMessagePipe() { binding_.Close(); }
@@ -29,8 +32,6 @@ class MinimalInterfaceImpl : public MinimalInterface {
  private:
   Binding<MinimalInterface> binding_;
   int call_count_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
 };
 
 // Tests all of the functionality of InterfacePtrSet.

@@ -46,7 +46,6 @@ sdk_source_set("serialization") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fxl:fxl_logging",
     "//zircon/system/ulib/zx",
   ]

@@ -22,11 +22,11 @@ class PingServiceImpl : public test::PingService {
   explicit PingServiceImpl() {}
   ~PingServiceImpl() override {}
 
+  PingServiceImpl(const PingServiceImpl&) = delete;
+  PingServiceImpl& operator=(const PingServiceImpl&) = delete;
+
   // |PingService| methods:
   void Ping(const Callback<void()>& callback) override;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PingServiceImpl);
 };
 
 void PingServiceImpl::Ping(const Callback<void()>& callback) {
@@ -37,6 +37,9 @@ class PingPongTest {
  public:
   explicit PingPongTest(test::PingServicePtr service);
 
+  PingPongTest(const PingPongTest&) = delete;
+  PingPongTest& operator=(const PingPongTest&) = delete;
+
   void Run(unsigned int iterations);
 
  private:
@@ -45,8 +48,6 @@ class PingPongTest {
   test::PingServicePtr service_;
   unsigned int iterations_to_run_;
   unsigned int current_iterations_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PingPongTest);
 };
 
 PingPongTest::PingPongTest(test::PingServicePtr service)

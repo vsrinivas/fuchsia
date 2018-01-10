@@ -36,6 +36,9 @@ class InterfacePtrState {
     delete router_;
   }
 
+  InterfacePtrState(const InterfacePtrState&) = delete;
+  InterfacePtrState& operator=(const InterfacePtrState&) = delete;
+
   Interface* instance() {
     ConfigureProxyIfNecessary();
 
@@ -122,8 +125,6 @@ class InterfacePtrState {
   // channel handle is needed. |handle_| is valid between the Bind() call
   // and the initialization of |proxy_| and |router_|.
   zx::channel handle_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InterfacePtrState);
 };
 
 }  // namespace internal

@@ -19,6 +19,9 @@ class MinimalInterfaceImpl : public MinimalInterface {
  public:
   MinimalInterfaceImpl() {}
 
+  MinimalInterfaceImpl(const MinimalInterfaceImpl&) = delete;
+  MinimalInterfaceImpl& operator=(const MinimalInterfaceImpl&) = delete;
+
   // |MinimalInterface|
   void Message() override { call_count_++; }
 
@@ -26,8 +29,6 @@ class MinimalInterfaceImpl : public MinimalInterface {
 
  private:
   int call_count_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
 };
 
 // Tests all of the functionality of BindingSet.

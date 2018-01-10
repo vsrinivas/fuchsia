@@ -35,6 +35,9 @@ class BindingSet {
   BindingSet() {}
   ~BindingSet() { CloseAllBindings(); }
 
+  BindingSet(const BindingSet&) = delete;
+  BindingSet& operator=(const BindingSet&) = delete;
+
   // Adds a binding to the list and arranges for it to be removed when
   // a connection error occurs.  Does not take ownership of |impl|, which
   // must outlive the binding set.
@@ -100,8 +103,6 @@ class BindingSet {
 
   StorageType bindings_;
   fxl::Closure on_empty_set_handler_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
 };
 
 }  // namespace fidl

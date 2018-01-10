@@ -30,6 +30,9 @@ class Connector : public MessageReceiver {
   explicit Connector(zx::channel channel);
   ~Connector() override;
 
+  Connector(const Connector&) = delete;
+  Connector& operator=(const Connector&) = delete;
+
   // Sets the receiver to handle messages read from the channel.  The
   // Connector will read messages from the channel regardless of whether or not
   // an incoming receiver has been set.
@@ -106,8 +109,6 @@ class Connector : public MessageReceiver {
   // use this flag to allow for the Connector to be destroyed as a side-effect
   // of dispatching an incoming message.
   bool* destroyed_flag_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Connector);
 };
 
 }  // namespace internal

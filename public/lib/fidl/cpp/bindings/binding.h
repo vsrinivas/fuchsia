@@ -84,6 +84,9 @@ class Binding {
   // implementation unbound.
   ~Binding() {}
 
+  Binding(const Binding&) = delete;
+  Binding& operator=(const Binding&) = delete;
+
   // Completes a binding by creating a new pair of channels, binding one end to
   // the previously specified implementation and returning the other end.
   InterfaceHandle<Interface> NewBinding() {
@@ -190,8 +193,6 @@ class Binding {
   typename Interface::Stub_ stub_;
   ImplPtr impl_;
   fxl::Closure connection_error_handler_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Binding);
 };
 
 }  // namespace fidl

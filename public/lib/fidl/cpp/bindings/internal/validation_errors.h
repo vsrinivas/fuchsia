@@ -74,13 +74,14 @@ class ValidationErrorObserverForTesting {
   ValidationErrorObserverForTesting();
   ~ValidationErrorObserverForTesting();
 
+  ValidationErrorObserverForTesting(const ValidationErrorObserverForTesting&) = delete;
+  ValidationErrorObserverForTesting& operator=(const ValidationErrorObserverForTesting&) = delete;
+
   ValidationError last_error() const { return last_error_; }
   void set_last_error(ValidationError error) { last_error_ = error; }
 
  private:
   ValidationError last_error_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorObserverForTesting);
 };
 
 // This takes in a string pointer, and provides a string stream which you can
@@ -90,13 +91,15 @@ class ValidationErrorStringStream {
  public:
   explicit ValidationErrorStringStream(std::string* err_msg);
   ~ValidationErrorStringStream();
+
+  ValidationErrorStringStream(const ValidationErrorStringStream&) = delete;
+  ValidationErrorStringStream& operator=(const ValidationErrorStringStream&) = delete;
+
   std::ostringstream& stream() { return stream_; }
 
  private:
   std::string* err_msg_;
   std::ostringstream stream_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ValidationErrorStringStream);
 };
 
 }  // namespace internal

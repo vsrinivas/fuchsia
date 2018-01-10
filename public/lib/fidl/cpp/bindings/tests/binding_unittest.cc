@@ -21,12 +21,12 @@ class BindingTestBase : public testing::Test {
   BindingTestBase() {}
   ~BindingTestBase() override {}
 
+  BindingTestBase(const BindingTestBase&) = delete;
+  BindingTestBase& operator=(const BindingTestBase&) = delete;
+
   void TearDown() override { ClearAsyncWaiter(); }
 
   void PumpMessages() { WaitForAsyncWaiter(); }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(BindingTestBase);
 };
 
 class ServiceImpl : public sample::Service {
@@ -37,6 +37,9 @@ class ServiceImpl : public sample::Service {
     if (was_deleted_)
       *was_deleted_ = true;
   }
+
+  ServiceImpl(const ServiceImpl&) = delete;
+  ServiceImpl& operator=(const ServiceImpl&) = delete;
 
  private:
   // sample::Service implementation
@@ -49,8 +52,6 @@ class ServiceImpl : public sample::Service {
   void GetPort(InterfaceRequest<sample::Port> port) override {}
 
   bool* const was_deleted_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 // BindingTest -----------------------------------------------------------------
@@ -148,10 +149,11 @@ class ServiceImplWithBinding : public ServiceImpl {
     binding_.set_connection_error_handler([this]() { delete this; });
   }
 
+  ServiceImplWithBinding(const ServiceImplWithBinding&) = delete;
+  ServiceImplWithBinding& operator=(const ServiceImplWithBinding&) = delete;
+
  private:
   Binding<sample::Service> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImplWithBinding);
 };
 
 // Tests that the binding may be deleted in the connection error handler.

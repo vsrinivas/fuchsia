@@ -39,6 +39,9 @@ class FixedBuffer : public Buffer {
  public:
   FixedBuffer();
 
+  FixedBuffer(const FixedBuffer&) = delete;
+  FixedBuffer& operator=(const FixedBuffer&) = delete;
+
   // |size| should be aligned using internal::Align.
   void Initialize(void* memory, size_t size);
 
@@ -61,8 +64,6 @@ class FixedBuffer : public Buffer {
   char* ptr_;
   size_t cursor_;
   size_t size_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FixedBuffer);
 };
 
 class FixedBufferForTesting : public FixedBuffer {
@@ -70,14 +71,14 @@ class FixedBufferForTesting : public FixedBuffer {
   explicit FixedBufferForTesting(size_t size);
   ~FixedBufferForTesting() override;
 
+  FixedBufferForTesting(const FixedBufferForTesting&) = delete;
+  FixedBufferForTesting& operator=(const FixedBufferForTesting&) = delete;
+
   // Returns the internal memory owned by the Buffer to the caller. The Buffer
   // relinquishes its pointer, effectively resetting the state of the Buffer
   // and leaving the caller responsible for freeing the returned memory address
   // when no longer needed.
   void* Leak();
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FixedBufferForTesting);
 };
 
 }  // namespace internal

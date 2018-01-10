@@ -27,6 +27,9 @@ class Message {
   Message();
   ~Message();
 
+  Message(const Message&) = delete;
+  Message& operator=(const Message&) = delete;
+
   uint32_t data_num_bytes() const { return data_num_bytes_; }
 
   // Access the raw bytes of the message.
@@ -79,9 +82,6 @@ class Message {
   uint32_t data_num_bytes_ = 0;
   internal::MessageData* data_ = nullptr;
   std::vector<zx_handle_t> handles_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Message);
 };
 
 // AllocMessage is like Message, except that it owns the data buffer.
@@ -93,6 +93,9 @@ class AllocMessage : public Message {
   AllocMessage();
   ~AllocMessage();
 
+  AllocMessage(const AllocMessage&) = delete;
+  AllocMessage& operator=(const AllocMessage&) = delete;
+
   void Reset();
 
   void AllocData(uint32_t num_bytes);
@@ -101,9 +104,6 @@ class AllocMessage : public Message {
 
   // Transfers data and handles from |source|.
   void MoveFrom(AllocMessage* source);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AllocMessage);
 };
 
 // PreallocMessage is similar to AllocMessage, except that it uses a
@@ -117,6 +117,9 @@ class PreallocMessage : public Message {
   PreallocMessage() {}
   ~PreallocMessage();
 
+  PreallocMessage(const PreallocMessage&) = delete;
+  PreallocMessage& operator=(const PreallocMessage&) = delete;
+
   void AllocUninitializedData(uint32_t num_bytes);
 
   // Read a single message from the channel into this message object.  This
@@ -128,8 +131,6 @@ class PreallocMessage : public Message {
 
  private:
   uint8_t prealloc_buf_[128];
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PreallocMessage);
 };
 
 class MessageReceiver {

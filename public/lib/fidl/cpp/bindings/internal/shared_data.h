@@ -53,6 +53,9 @@ class SharedData {
     Holder() : value(), ref_count_(1) {}
     Holder(const T& value) : value(value), ref_count_(1) {}
 
+    Holder(const Holder&) = delete;
+    Holder& operator=(const Holder&) = delete;
+
     void Retain() { ++ref_count_; }
     void Release() {
       if (--ref_count_ == 0)
@@ -63,7 +66,6 @@ class SharedData {
 
    private:
     int ref_count_;
-    FXL_DISALLOW_COPY_AND_ASSIGN(Holder);
   };
 
   Holder* holder_;

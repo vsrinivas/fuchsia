@@ -16,6 +16,9 @@ class VersioningApplicationTest : public ApplicationTestBase {
   VersioningApplicationTest() : ApplicationTestBase() {}
   ~VersioningApplicationTest() override {}
 
+  VersioningApplicationTest(const VersioningApplicationTest&) = delete;
+  VersioningApplicationTest& operator=(const VersioningApplicationTest&) = delete;
+
  protected:
   // ApplicationTestBase overrides.
   void SetUp() override {
@@ -26,9 +29,6 @@ class VersioningApplicationTest : public ApplicationTestBase {
   }
 
   HumanResourceDatabasePtr database_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(VersioningApplicationTest);
 };
 
 TEST_F(VersioningApplicationTest, Struct) {

@@ -31,6 +31,9 @@ class MessageBuilder {
   MessageBuilder(uint32_t name, size_t payload_size);
   ~MessageBuilder();
 
+  MessageBuilder(const MessageBuilder&) = delete;
+  MessageBuilder& operator=(const MessageBuilder&) = delete;
+
   AllocMessage* message() { return &message_; }
 
   // TODO(vardhan): |buffer()| is internal and only consumed by internal classes
@@ -43,8 +46,6 @@ class MessageBuilder {
 
   AllocMessage message_;
   internal::FixedBuffer buf_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageBuilder);
 };
 
 namespace internal {

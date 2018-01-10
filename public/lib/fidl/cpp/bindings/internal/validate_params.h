@@ -25,6 +25,9 @@ class ArrayValidateParams {
       delete element_validate_params;
   }
 
+  ArrayValidateParams(const ArrayValidateParams&) = delete;
+  ArrayValidateParams& operator=(const ArrayValidateParams&) = delete;
+
   // TODO(vtl): The members of this class shouldn't be public.
 
   // If |expected_num_elements| is not 0, the array is expected to have exactly
@@ -38,9 +41,6 @@ class ArrayValidateParams {
   // instance of ArrayValidateParams (if elements are arrays or maps), or
   // nullptr. In the case of maps, this is used to validate the value array.
   ArrayValidateParams* element_validate_params;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ArrayValidateParams);
 };
 
 }  // namespace internal

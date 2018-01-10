@@ -24,6 +24,9 @@ class ConnectorTest : public testing::Test {
  public:
   ConnectorTest() {}
 
+  ConnectorTest(const ConnectorTest&) = delete;
+  ConnectorTest& operator=(const ConnectorTest&) = delete;
+
   void SetUp() override { zx::channel::create(0, &handle0_, &handle1_); }
 
   void TearDown() override { ClearAsyncWaiter(); }
@@ -41,14 +44,14 @@ class ConnectorTest : public testing::Test {
  protected:
   zx::channel handle0_;
   zx::channel handle1_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectorTest);
 };
 
 class MessageAccumulator : public MessageReceiver {
  public:
   MessageAccumulator() {}
+
+  MessageAccumulator(const MessageAccumulator&) = delete;
+  MessageAccumulator& operator=(const MessageAccumulator&) = delete;
 
   bool Accept(Message* message) override {
     queue_.Push(message);
@@ -61,8 +64,6 @@ class MessageAccumulator : public MessageReceiver {
 
  private:
   MessageQueue queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageAccumulator);
 };
 
 TEST_F(ConnectorTest, Basic) {
@@ -274,6 +275,9 @@ class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
   explicit ConnectorDeletingMessageAccumulator(internal::Connector** connector)
       : connector_(connector) {}
 
+  ConnectorDeletingMessageAccumulator(const ConnectorDeletingMessageAccumulator&) = delete;
+  ConnectorDeletingMessageAccumulator& operator=(const ConnectorDeletingMessageAccumulator&) = delete;
+
   bool Accept(Message* message) override {
     delete *connector_;
     *connector_ = 0;
@@ -282,8 +286,6 @@ class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
 
  private:
   internal::Connector** connector_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectorDeletingMessageAccumulator);
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
@@ -318,6 +320,9 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
   explicit ReentrantMessageAccumulator(internal::Connector* connector)
       : connector_(connector), number_of_calls_(0) {}
 
+  ReentrantMessageAccumulator(const ReentrantMessageAccumulator&) = delete;
+  ReentrantMessageAccumulator& operator=(const ReentrantMessageAccumulator&) = delete;
+
   bool Accept(Message* message) override {
     if (!MessageAccumulator::Accept(message))
       return false;
@@ -333,8 +338,6 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
  private:
   internal::Connector* connector_;
   int number_of_calls_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReentrantMessageAccumulator);
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
@@ -378,6 +381,9 @@ class NoTaskStarvationReplier : public MessageReceiver {
     FXL_CHECK(reply_to_ != this);
   }
 
+  NoTaskStarvationReplier(const NoTaskStarvationReplier&) = delete;
+  NoTaskStarvationReplier& operator=(const NoTaskStarvationReplier&) = delete;
+
   bool Accept(Message* message) override {
     num_accepted_++;
 
@@ -408,8 +414,6 @@ class NoTaskStarvationReplier : public MessageReceiver {
  private:
   MessageReceiver* const reply_to_;
   unsigned num_accepted_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(NoTaskStarvationReplier);
 };
 
 // TODO(vtl): This test currently fails. See the discussion on issue #604

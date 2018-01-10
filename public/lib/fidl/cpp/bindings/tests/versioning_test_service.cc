@@ -22,11 +22,11 @@ struct EmployeeInfo {
  public:
   EmployeeInfo() {}
 
+  EmployeeInfo(const EmployeeInfo&) = delete;
+  EmployeeInfo& operator=(const EmployeeInfo&) = delete;
+
   EmployeePtr employee;
   Array<uint8_t> finger_print;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(EmployeeInfo);
 };
 
 class HumanResourceDatabaseImpl : public HumanResourceDatabase {
@@ -54,6 +54,9 @@ class HumanResourceDatabaseImpl : public HumanResourceDatabase {
     for (auto iter = employees_.begin(); iter != employees_.end(); ++iter)
       delete iter->second;
   }
+
+  HumanResourceDatabaseImpl(const HumanResourceDatabaseImpl&) = delete;
+  HumanResourceDatabaseImpl& operator=(const HumanResourceDatabaseImpl&) = delete;
 
   void AddEmployee(EmployeePtr employee,
                    const AddEmployeeCallback& callback) override {
@@ -91,14 +94,15 @@ class HumanResourceDatabaseImpl : public HumanResourceDatabase {
   std::map<uint64_t, EmployeeInfo*> employees_;
 
   StrongBinding<HumanResourceDatabase> strong_binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HumanResourceDatabaseImpl);
 };
 
 class HumanResourceSystemServer : public ApplicationImplBase {
  public:
   HumanResourceSystemServer() {}
   ~HumanResourceSystemServer() override {}
+
+  HumanResourceSystemServer(const HumanResourceSystemServer&) = delete;
+  HumanResourceSystemServer& operator=(const HumanResourceSystemServer&) = delete;
 
   // |ApplicationImplBase| overrides:
   bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
@@ -111,9 +115,6 @@ class HumanResourceSystemServer : public ApplicationImplBase {
         });
     return true;
   }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(HumanResourceSystemServer);
 };
 
 }  // namespace versioning
