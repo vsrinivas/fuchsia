@@ -106,10 +106,10 @@ enum KeyType : uint8_t {
     kPairwiseKey = 1,
 };
 
-class WcidAttrEntry: public BitField<uint32_t> {
+class WcidAttrEntry : public BitField<uint32_t> {
    public:
-    WLAN_BIT_FIELD(keyType, 0, 1); // KeyType
-    WLAN_BIT_FIELD(keyMode, 1, 3); // KeyMode
+    WLAN_BIT_FIELD(keyType, 0, 1);
+    WLAN_BIT_FIELD(keyMode, 1, 3);
     WLAN_BIT_FIELD(bssIdx, 4, 3);
     WLAN_BIT_FIELD(rxUsrDef, 7, 3);
     WLAN_BIT_FIELD(keyModeExt, 10, 1);
@@ -260,6 +260,7 @@ class BcnOffset1 : public Register<0x0430> {
     WLAN_BIT_FIELD(bcn7_offset, 24, 8);
 };
 
+// CSR: Control / Status Register
 class RfCsrCfg : public Register<0x0500> {
    public:
     WLAN_BIT_FIELD(rf_csr_data, 0, 8);
@@ -545,9 +546,13 @@ class TxPinCfg : public Register<0x1328> {
 
 class TxBandCfg : public Register<0x132c> {
    public:
+    // For CBW40
+    // 0x0: Use lower 20MHz (or "use lower 40MHz band in 20MHz tx")
+    // 0x1: Use upper 20MHz (or "use upper 40MHz band in 20MHz tx")
     WLAN_BIT_FIELD(tx_band_sel, 0, 1);
-    WLAN_BIT_FIELD(a, 1, 1);
-    WLAN_BIT_FIELD(bg, 2, 1);
+
+    WLAN_BIT_FIELD(a, 1, 1);   // or denoted as 5g_band_sel_p
+    WLAN_BIT_FIELD(bg, 2, 1);  // or denoted as 5g_band_sel_n
 };
 
 class TxSwCfg0 : public Register<0x1330> {
@@ -716,8 +721,8 @@ class AutoRspCfg : public Register<0x1404> {
    public:
     WLAN_BIT_FIELD(auto_rsp_en, 0, 1);
     WLAN_BIT_FIELD(bac_ackpolicy_en, 1, 1);
-    WLAN_BIT_FIELD(cts_40m_mode, 2, 1);
-    WLAN_BIT_FIELD(cts_40m_ref, 3, 1);
+    WLAN_BIT_FIELD(cts_40m_mode, 2, 1);  // CBW40
+    WLAN_BIT_FIELD(cts_40m_ref, 3, 1);   // CBW40
     WLAN_BIT_FIELD(cck_short_en, 4, 1);
     WLAN_BIT_FIELD(ctrl_wrap_en, 5, 1);
     WLAN_BIT_FIELD(bac_ack_policy, 6, 1);
@@ -747,7 +752,7 @@ class HtBasicRate : public Register<0x140c> {
 class TxopHldrEt : public Register<0x1608> {
    public:
     WLAN_BIT_FIELD(per_rx_rst_en, 0, 1);
-    WLAN_BIT_FIELD(tx40m_blk_en, 1, 1);
+    WLAN_BIT_FIELD(tx40m_blk_en, 1, 1);  // CBW40
     WLAN_BIT_FIELD(tx_bcn_hipri_dis, 2, 1);
     WLAN_BIT_FIELD(pape_map1s_en, 3, 1);
     WLAN_BIT_FIELD(pape_map, 4, 1);
@@ -847,11 +852,11 @@ class EepromNicConf1 : public EepromField<0x001b> {
     WLAN_BIT_FIELD(external_lna_2g, 2, 1);
     WLAN_BIT_FIELD(external_lna_5g, 3, 1);
     WLAN_BIT_FIELD(cardbus_accel, 4, 1);
-    WLAN_BIT_FIELD(bw40m_sb_2g, 5, 1);
-    WLAN_BIT_FIELD(bw40m_sb_5g, 6, 1);
+    WLAN_BIT_FIELD(bw40m_sb_2g, 5, 1);  // CBW40
+    WLAN_BIT_FIELD(bw40m_sb_5g, 6, 1);  // CBW40
     WLAN_BIT_FIELD(wps_pbc, 7, 1);
-    WLAN_BIT_FIELD(bw40m_2g, 8, 1);
-    WLAN_BIT_FIELD(bw40m_5g, 9, 1);
+    WLAN_BIT_FIELD(bw40m_2g, 8, 1);  // CBW40
+    WLAN_BIT_FIELD(bw40m_5g, 9, 1);  // CBW40
     WLAN_BIT_FIELD(broadband_ext_lna, 10, 1);
     WLAN_BIT_FIELD(ant_diversity, 11, 2);
     WLAN_BIT_FIELD(internal_tx_alc, 13, 1);
@@ -937,7 +942,7 @@ class Bbp3 : public BbpRegister<3> {
    public:
     WLAN_BIT_FIELD(rx_adc, 0, 2);
     WLAN_BIT_FIELD(rx_antenna, 3, 2);
-    WLAN_BIT_FIELD(ht40_minus, 5, 1);
+    WLAN_BIT_FIELD(ht40_minus, 5, 1);  // CBW40BELOW
     WLAN_BIT_FIELD(adc_mode_switch, 6, 1);
     WLAN_BIT_FIELD(adc_init_mode, 7, 1);
 };
@@ -945,6 +950,9 @@ class Bbp3 : public BbpRegister<3> {
 class Bbp4 : public BbpRegister<4> {
    public:
     WLAN_BIT_FIELD(tx_bf, 0, 1);
+
+    // 0x0: CBW20
+    // 0x2: CBW40ABOVE, CBW40BELOW
     WLAN_BIT_FIELD(bandwidth, 3, 2);
     WLAN_BIT_FIELD(mac_if_ctrl, 6, 1);
 };
@@ -1030,8 +1038,8 @@ class Rfcsr17 : public RfcsrRegister<17> {
 
 class Rfcsr30 : public RfcsrRegister<30> {
    public:
-    WLAN_BIT_FIELD(tx_h20m, 1, 1);
-    WLAN_BIT_FIELD(rx_h20m, 2, 1);
+    WLAN_BIT_FIELD(tx_h20m, 1, 1);  // 0x1 for CBW40*?
+    WLAN_BIT_FIELD(rx_h20m, 2, 1);  // 0x1 for CBW40*?
     WLAN_BIT_FIELD(rx_vcm, 3, 2);
     WLAN_BIT_FIELD(rf_calibration, 7, 1);
 };

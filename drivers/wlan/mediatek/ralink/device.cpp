@@ -1444,7 +1444,7 @@ zx_status_t Device::InitRfcsr() {
                 RegInitValue(58, 0x7f),
                 RegInitValue(59, 0x8f),
                 RegInitValue(60, 0x45),
-                RegInitValue(61, 0xd1),
+                RegInitValue(61, 0xd1), // 0xd5 for non-USB
                 RegInitValue(62, 0x00),
                 RegInitValue(63, 0x00),
                 // clang-format on
@@ -1507,7 +1507,7 @@ zx_status_t Device::InitRfcsr() {
                 RegInitValue(58, 0x7f),
                 RegInitValue(59, 0x8f),
                 RegInitValue(60, 0x45),
-                RegInitValue(61, 0xdd),
+                RegInitValue(61, 0xdd), // 0xb5 for non-USB
                 RegInitValue(62, 0x00),
                 RegInitValue(63, 0x00),
                 // clang-format on
@@ -2265,8 +2265,21 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     Rfcsr30 r30;
     status = ReadRfcsr(&r30);
     CHECK_READ(RF30, status);
-    r30.set_tx_h20m(0);
-    r30.set_rx_h20m(0);
+    switch (chan.cbw) {
+    case CBW20:
+        r30.set_tx_h20m(0);
+        r30.set_rx_h20m(0);
+        break;
+    case CBW40ABOVE:
+    case CBW40BELOW:
+        r30.set_tx_h20m(1);
+        r30.set_rx_h20m(1);
+        break;
+    default:
+        // Unreachable
+        ZX_DEBUG_ASSERT(0);
+        break;
+    }
     status = WriteRfcsr(r30);
     CHECK_WRITE(RF30, status);
 
@@ -2472,6 +2485,8 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
 
     status = WriteRfcsr(6, 0xe4);
     CHECK_WRITE(RF6, status);
+
+    // Support CBW40*
     status = WriteRfcsr(30, 0x10);
     CHECK_WRITE(RF30, status);
     status = WriteRfcsr(31, 0x80);
@@ -2532,10 +2547,11 @@ zx_status_t Device::LookupRfVal(const wlan_channel_t& chan, RfVal* rf_val) {
 }
 
 zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
+    // TODO(porce): Factor out antenna calibration
     EepromLna lna;
     zx_status_t status = ReadEepromField(&lna);
     CHECK_READ(EEPROM_LNA, status);
-    lna_gain_ = lna.bg();
+    lna_gain_ = (chan.primary <= 14) ? lna.bg() : lna.a0();
 
     switch (rt_type_) {
     case RT5390:
@@ -2569,7 +2585,23 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     TxBandCfg tbc;
     status = ReadRegister(&tbc);
     CHECK_READ(TX_BAND_CFG, status);
-    tbc.set_tx_band_sel(0);
+
+    switch (chan.cbw) {
+    case CBW20:
+        tbc.set_tx_band_sel(0);
+        break;
+    case CBW40ABOVE:
+        tbc.set_tx_band_sel(0);
+        break;
+    case CBW40BELOW:
+        tbc.set_tx_band_sel(1);
+        break;
+    default:
+        // Unreachable
+        ZX_DEBUG_ASSERT(0);
+        break;
+    }
+
     if (chan.primary <= 14) {
         tbc.set_a(0);
         tbc.set_bg(1);
@@ -2580,6 +2612,7 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     status = WriteRegister(tbc);
     CHECK_WRITE(TX_BAND_CFG, status);
 
+    // TODO(porce): Support tx_path_ >= 3
     TxPinCfg tpc;
     status = ReadRegister(&tpc);
     CHECK_READ(TX_PIN_CFG, status);
@@ -2651,14 +2684,42 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     Bbp4 b4;
     status = ReadBbp(&b4);
     CHECK_READ(BBP4, status);
-    b4.set_bandwidth(0);
+    switch (chan.cbw) {
+    case CBW20:
+        b4.set_bandwidth(0);
+        break;
+    case CBW40ABOVE:
+        b4.set_bandwidth(0x2);
+        break;
+    case CBW40BELOW:
+        b4.set_bandwidth(0x2);
+        break;
+    default:
+        // Unreachable
+        ZX_DEBUG_ASSERT(0);
+        break;
+    }
     status = WriteBbp(b4);
     CHECK_WRITE(BBP4, status);
 
     Bbp3 b3;
     status = ReadBbp(&b3);
     CHECK_READ(BBP3, status);
-    b3.set_ht40_minus(0);
+    switch (chan.cbw) {
+    case CBW20:
+        b3.set_ht40_minus(0);
+        break;
+    case CBW40ABOVE:
+        b3.set_ht40_minus(0);
+        break;
+    case CBW40BELOW:
+        b3.set_ht40_minus(1);
+        break;
+    default:
+        // Unreachable
+        ZX_DEBUG_ASSERT(0);
+        break;
+    }
     status = WriteBbp(b3);
     CHECK_WRITE(BBP3, status);
 
@@ -3440,7 +3501,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
         // TODO(porce): Investigate how to configure txwi differently
         // for CBW40ABOVE and CBW40BELOW
     }
-    txwi0.set_bw(cbw == CBW20 ? 0 : 1);
+    txwi0.set_bw(cbw == CBW20 ? k20MHz : k40MHz);
 
     txwi0.set_sgi(1);
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
@@ -3506,8 +3567,20 @@ uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     // Beware the multiple different return paths with different recovery requirements.
 
+    ZX_DEBUG_ASSERT(chan != nullptr);
     debugf("channel change: from %s to %s attempting..\n", wlan::common::ChanStr(cfg_chan_).c_str(),
            wlan::common::ChanStr(*chan).c_str());
+
+    switch (chan->cbw) {  // parameter sanity check
+    case CBW20:
+    case CBW40ABOVE:
+    case CBW40BELOW:
+        break;
+    default:
+        errorf("%s: unsupported CBW %u\n", __FUNCTION__, chan->cbw);
+        return ZX_ERR_NOT_SUPPORTED;
+        break;
+    }
 
     zx_status_t status;
     if (options != 0) {
