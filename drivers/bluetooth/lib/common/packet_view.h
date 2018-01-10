@@ -102,6 +102,15 @@ class PacketView {
     return buffer_ && size_ >= sizeof(HeaderType);
   }
 
+  // Adjusts the size of this PacketView to match the given |payload_size|. This
+  // is useful when the exact packet size is not known during construction.
+  //
+  // This performs runtime checks to make sure that the underlying buffer is
+  // approriately sized.
+  void Resize(size_t payload_size) {
+    this->set_size(sizeof(HeaderType) + payload_size);
+  }
+
  protected:
   void set_size(size_t size) {
     FXL_CHECK(buffer_);
@@ -149,10 +158,6 @@ class MutablePacketView : public PacketView<HeaderType> {
   PayloadType* mutable_payload() {
     FXL_CHECK(sizeof(PayloadType) <= this->payload_size());
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
-  }
-
-  void Resize(size_t payload_size) {
-    this->set_size(sizeof(HeaderType) + payload_size);
   }
 
  private:

@@ -9,6 +9,8 @@
 
 namespace bt_intel {
 
+constexpr ::btlib::hci::OpCode kLoadPatch = ::btlib::hci::VendorOpCode(0x008e);
+
 constexpr ::btlib::hci::OpCode kReadVersion =
     ::btlib::hci::VendorOpCode(0x0005);
 

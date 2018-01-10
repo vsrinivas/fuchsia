@@ -25,9 +25,26 @@
 
 #include "bt_intel.h"
 
+#include "lib/fxl/strings/string_printf.h"
+
+using ::btlib::common::BufferView;
+using ::btlib::common::PacketView;
+
 namespace bt_intel {
 
 namespace {
+
+std::string HexDump(const BufferView& buffer) {
+  std::string str = "[ ";
+
+  for (auto byte : buffer) {
+    str += fxl::StringPrintf("%02x ", byte);
+  }
+
+  str += "]";
+
+  return str;
+}
 
 // A file mapped into memory that we can grab chunks from.
 class MemoryFile {
@@ -52,7 +69,7 @@ class MemoryFile {
       mapped = nullptr;
     }
 
-    view_ = ::btlib::common::BufferView(mapped, size);
+    view_ = BufferView(mapped, size);
   };
 
   ~MemoryFile() {
@@ -67,11 +84,10 @@ class MemoryFile {
 
   const uint8_t* at(size_t offset) const { return view_.data() + offset; }
 
-  ::btlib::common::BufferView view(
-      size_t offset,
-      size_t length = std::numeric_limits<size_t>::max()) const {
+  BufferView view(size_t offset,
+                  size_t length = std::numeric_limits<size_t>::max()) const {
     if (!is_valid()) {
-      return ::btlib::common::BufferView();
+      return BufferView();
     }
     return view_.view(offset, length);
   }
@@ -81,14 +97,14 @@ class MemoryFile {
   fbl::unique_fd fd_;
 
   // The view of the whole memory mapped file.
-  ::btlib::common::BufferView view_;
+  BufferView view_;
 };
 
 constexpr size_t kMaxSecureSendArgLen = 252;
 
 bool SecureSend(CommandChannel* channel,
                 uint8_t type,
-                const ::btlib::common::BufferView& bytes) {
+                const BufferView& bytes) {
   size_t left = bytes.size();
   bool abort = false;
   while (left > 0 && !abort) {
@@ -159,6 +175,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
   // A bseq file consists of a sequence of:
   // - [0x01] [command w/params]
   // - [0x02] [expected event w/params]
+  bool patched = false;
   while (file.size() - ptr > sizeof(::btlib::hci::CommandHeader)) {
     // Parse the next items
     if (*file.at(ptr) != 0x01) {
@@ -167,29 +184,36 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
                 << std::endl;
       return LoadStatus::kError;
     }
+
+    // Read the next command.
     ptr++;
-    ::btlib::common::BufferView command_view = file.view(ptr);
-    ::btlib::common::PacketView<::btlib::hci::CommandHeader> command(
-        &command_view);
-    command = ::btlib::common::PacketView<::btlib::hci::CommandHeader>(
-        &command_view, command.header().parameter_total_size);
+    auto command_view = file.view(ptr);
+    PacketView<::btlib::hci::CommandHeader> command(&command_view);
+    command.Resize(command.header().parameter_total_size);
     ptr += command.size();
-    if ((file.size() <= ptr) || (*file.at(ptr) != 0x02)) {
+
+    if (le16toh(command.header().opcode) == kLoadPatch) {
+      patched = true;
+    }
+
+    if ((file.size() - ptr <= sizeof(::btlib::hci::EventHeader)) ||
+        (*file.at(ptr) != 0x02)) {
       std::cerr << "IntelFirmwareLoader: Error: malformed file, expected Event "
                    "Packet marker"
                 << std::endl;
       return LoadStatus::kError;
     }
-    std::deque<::btlib::common::BufferView> events;
-    while ((file.size() <= ptr) || (*file.at(ptr) == 0x02)) {
+
+    // Assemble the expected events.
+    std::deque<BufferView> events;
+    while ((file.size() - ptr > sizeof(::btlib::hci::EventHeader)) &&
+           (*file.at(ptr) == 0x02)) {
       ptr++;
-      auto event = ::btlib::hci::EventPacket::New(0u);
-      memcpy(event->mutable_view()->mutable_header(), file.at(ptr),
-             sizeof(::btlib::hci::EventHeader));
-      event->InitializeFromBuffer();
-      size_t event_size = event->view().size();
-      events.emplace_back(file.view(ptr, event_size));
-      ptr += event_size;
+      auto view = file.view(ptr);
+      PacketView<::btlib::hci::EventHeader> event(&view);
+      event.Resize(event.header().parameter_total_size);
+      events.emplace_back(event.data());
+      ptr += event.size();
     }
 
     if (!RunCommandAndExpect(command, events)) {
@@ -197,7 +221,10 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
     }
   }
 
-  return LoadStatus::kComplete;
+  // If the firmware file contained a command that sent a firmware patch to the
+  // controller and the operation was successful, we use kPatched to signal that
+  // manifacturer mode should be exited with the patch enabled.
+  return patched ? LoadStatus::kPatched : LoadStatus::kComplete;
 }
 
 bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
@@ -239,7 +266,7 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   // param size can be a multiple of 4 bytes]
   while (ptr < file.size()) {
     auto next_cmd = file.view(ptr + frag_len);
-    ::btlib::common::PacketView<::btlib::hci::CommandHeader> header(&next_cmd);
+    PacketView<::btlib::hci::CommandHeader> header(&next_cmd);
     size_t cmd_size = sizeof(::btlib::hci::CommandHeader) +
                       header.header().parameter_total_size;
     frag_len += cmd_size;
@@ -257,18 +284,25 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
 }
 
 bool IntelFirmwareLoader::RunCommandAndExpect(
-    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
-    std::deque<::btlib::common::BufferView>& events) {
+    const PacketView<::btlib::hci::CommandHeader>& command,
+    std::deque<BufferView>& events) {
   bool failed = false;
   auto event_cb = [&events,
                    &failed](const ::btlib::hci::EventPacket& evt_packet) {
     auto expected = events.front();
     if (evt_packet.view().size() != expected.size()) {
+      std::cerr << "IntelFirmwareLoader: event size mismatch! "
+                << "(expected: " << expected.size()
+                << ", got: " << evt_packet.view().size() << ")" << std::endl;
       failed = true;
       return;
     }
     if (memcmp(evt_packet.view().data().data(), expected.data(),
                expected.size()) != 0) {
+      std::cerr << "IntelFirmwareLoader: event data mismatch! "
+                << "(expected: " << HexDump(expected)
+                << ", got: " << HexDump(evt_packet.view().data()) << ")"
+                << std::endl;
       failed = true;
       return;
     }
@@ -276,33 +310,42 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
   };
 
   channel_->SetEventCallback(event_cb);
-
   channel_->SendCommand(command);
 
   zx::timer timeout;
   zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timeout);
-  zx_status_t status = ZX_OK;
+
+  // We use a 5 second timeout for each event.
+  zx_duration_t evt_timeout = ZX_SEC(5);
+  timeout.set(zx::deadline_after(evt_timeout), ZX_TIMER_SLACK_CENTER);
+
   while (!failed && events.size() > 0) {
-    async_loop_run(async_get_default(), zx::deadline_after(ZX_MSEC(10)), true);
-    status = timeout.wait_one(ZX_TIMER_SIGNALED, 0u, nullptr);
-    if (status != ZX_ERR_TIMED_OUT) {
-      if (status == ZX_OK)
-        status = ZX_ERR_TIMED_OUT;
-      break;
+    size_t remaining_evt_count = events.size();
+    async_loop_run(async_get_default(), zx::deadline_after(ZX_SEC(1)), true);
+
+    if (events.size() < remaining_evt_count) {
+      // The expected event was received. Clear the old timeout and set up a new
+      // one for the next event.
+      timeout.cancel();
+      if (events.size() > 0u) {
+        timeout.set(zx::deadline_after(evt_timeout), ZX_TIMER_SLACK_CENTER);
+      }
+      continue;
+    }
+
+    // The expected event was not received in this iteration of the loop. Check
+    // to see if this was due to a timeout.
+    zx_status_t status = timeout.wait_one(ZX_TIMER_SIGNALED, 0u, nullptr);
+    if (status == ZX_OK) {
+      std::cerr << "Timed out while waiting for event" << std::endl;
+      return false;
     }
   }
 
   channel_->SetEventCallback(nullptr);
 
   if (failed) {
-    std::cerr << "IntelFirmwareLoader: unexpected event received"
-              << zx_status_get_string(status) << std::endl;
-    return false;
-  }
-
-  if (status != ZX_OK) {
-    std::cerr << "IntelFirmwareLoader: error waiting for events"
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "IntelFirmwareLoader: unexpected event received" << std::endl;
     return false;
   }
 

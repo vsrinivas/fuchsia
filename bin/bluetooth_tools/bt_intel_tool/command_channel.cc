@@ -18,6 +18,8 @@
 
 #include "bt_intel.h"
 
+#include "lib/fxl/strings/string_printf.h"
+
 #include "garnet/drivers/bluetooth/lib/hci/slab_allocators.h"
 
 namespace {
@@ -212,8 +214,10 @@ async_wait_result_t CommandChannel::HandleChannelReady(
     if (event_callback_) {
       event_callback_(*packet);
     } else {
-      std::cerr << "CommandChannel: Event received with no handler:"
-                << packet->event_code() << std::endl;
+      std::cerr << fxl::StringPrintf(
+                       "CommandChannel: Event received with no handler: 0x%02x",
+                       packet->event_code())
+                << std::endl;
     }
   }
   return ASYNC_WAIT_AGAIN;

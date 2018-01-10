@@ -39,16 +39,28 @@ class MfgModeEnabler {
   MfgModeEnabler(CommandChannel* channel)
       : channel_(channel), patch_reset_needed_(false) {
     auto packet = MakeMfgModePacket(true);
-    channel_->SendCommand(packet->view());
+    channel_->SendCommandSync(packet->view(), [](const auto& evt) {
+      std::cout << fxl::StringPrintf(
+                       "Mfg mode enable complete (status: 0x%02x)",
+                       evt.event_code())
+                << std::endl;
+    });
   }
 
   ~MfgModeEnabler() {
     MfgDisableMode disable_mode = MfgDisableMode::kNoPatches;
-    if (patch_reset_needed_)
+    if (patch_reset_needed_) {
+      std::cout << "Patches will be enabled" << std::endl;
       disable_mode = MfgDisableMode::kPatchesEnabled;
+    }
 
     auto packet = MakeMfgModePacket(false, disable_mode);
-    channel_->SendCommand(packet->view());
+    channel_->SendCommandSync(packet->view(), [](const auto& evt) {
+      std::cout << fxl::StringPrintf(
+                       "Mfg mode disable complete (status: 0x%02x)",
+                       evt.event_code())
+                << std::endl;
+    });
   }
 
   void set_patch_reset(bool patch) { patch_reset_needed_ = patch; }
