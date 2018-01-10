@@ -13,6 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/block.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/io-buffer.h>
 
@@ -33,10 +34,20 @@
 // info is queried (lsblk will provoke this)
 #define WITH_STATS 1
 
+#define TXN_FLAG_FAILED 1
+
+typedef struct {
+    block_op_t op;
+    list_node_t node;
+    uint16_t pending_utxns;
+    uint8_t opcode;
+    uint8_t flags;
+} nvme_txn_t;
+
 typedef struct {
     zx_paddr_t phys;    // io buffer phys base (1 page)
     void* virt;         // io buffer virt base
-    iotxn_t* txn;       // related iotxn
+    nvme_txn_t* txn;    // related txn
     uint16_t id;
     uint16_t reserved0;
     uint32_t reserved1;
@@ -86,24 +97,23 @@ typedef struct {
 
     uint64_t utxn_avail;   // bitmask of available utxns
 
-    // The pending list is iotxns that have been received
-    // via nvme_iotxn_queue() and are waiting for io to start.
+    // The pending list is txns that have been received
+    // via nvme_queue() and are waiting for io to start.
     // The exception is the head of the pending list which may
     // be partially started, waiting for more utxns to become
     // available.
-    // The active list consists of iotxns where all utxns have
+    // The active list consists of txns where all utxns have
     // been created and we're waiting for them to complete or
     // error out.
-    list_node_t pending_iotxns;    // inbound iotxns to process
-    list_node_t active_iotxns;     // iotxns in flight
+    list_node_t pending_txns;      // inbound txns to process
+    list_node_t active_txns;       // txns in flight
 
-    // The io signal completion is signaled from queue_iotxn()
+    // The io signal completion is signaled from nvme_queue()
     // or from the irq thread, notifying the io thread that
     // it has work to do.
     completion_t io_signal;
 
     uint32_t max_xfer;
-    uint32_t block_mask;
     block_info_t info;
 
     // admin queue doorbell registers
@@ -142,7 +152,7 @@ typedef struct {
     size_t stat_max_concur;
     size_t stat_max_pending;
     size_t stat_total_ops;
-    size_t stat_total_bytes;
+    size_t stat_total_blocks;
 #endif
 
     // pool of utxns
@@ -171,7 +181,7 @@ typedef struct {
 // based on the transfer limits of the controller, etc.  Each utxn has an
 // id associated with it, which is used as the command id for the command
 // queued to the NVME device.  This id is the same as its index into the
-// pool of utxns and the bitmask of free iotxns, to simplify management.
+// pool of utxns and the bitmask of free txns, to simplify management.
 //
 // We maintain a pool of 63 of these, which is the number of commands
 // that can be submitted to NVME via a single page submit queue.
@@ -317,99 +327,91 @@ done:
     return r;
 }
 
-#define TI_FLAG_FAILED 1
+static inline void txn_complete(nvme_txn_t* txn, zx_status_t status) {
+    txn->op.completion_cb(&txn->op, status);
+}
 
-typedef struct {
-    uint64_t offset_dev;
-    uint64_t offset_vmo;
-    uint32_t remain;
-    uint16_t pending_utxns;
-    uint8_t opcode;
-    uint8_t flags;
-} nvme_txn_info_t;
-
-
-// Attempt to generate utxns and queue nvme commands for an iotxn
+// Attempt to generate utxns and queue nvme commands for a txn
 // Returns true if this could not be completed due to temporary
 // lack of resources or false if either it succeeded or errored out.
-static bool io_process_txn(nvme_device_t* nvme, iotxn_t* txn) {
-    nvme_txn_info_t* ti = (void*) &txn->protocol_data;
-    zx_handle_t vmo = txn->vmo_handle;
+static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
+    zx_handle_t vmo = txn->op.rw.vmo;
     nvme_utxn_t* utxn;
     zx_status_t r;
 
     for (;;) {
         // If there are no available utxns, we can't proceed
-        // and we tell the caller to retain the iotxn (true)
+        // and we tell the caller to retain the txn (true)
         if ((utxn = utxn_get(nvme)) == NULL) {
             return true;
         }
 
-        uint32_t xfer = ti->remain;
-        if (xfer > nvme->max_xfer) {
-            xfer = nvme->max_xfer;
+        uint32_t blocks = txn->op.rw.length;
+        if (blocks > nvme->max_xfer) {
+            blocks = nvme->max_xfer;
         }
 
-        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, ti->offset_vmo, xfer, NULL, 0)) != ZX_OK) {
+        size_t bytes = ((size_t) blocks) * ((size_t) nvme->info.block_size);
+
+        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
+                                 txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
             zxlogf(ERROR, "nvme: could not commit pages\n");
             break;
         }
 
         zx_paddr_t* pages = utxn->virt;
-        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, ti->offset_vmo, xfer, pages, PAGE_SIZE)) != ZX_OK) {
+        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
+                                 txn->op.rw.offset_vmo, bytes, pages, PAGE_SIZE)) != ZX_OK) {
             zxlogf(ERROR, "nvme: could not lookup pages\n");
             break;
         }
 
         // Take the starting byte into the initial page plus total bytes
         // transferred, convert to page count (rounded up)
-        size_t pagecount = ((ti->offset_vmo & PAGE_MASK) + xfer + PAGE_MASK) / PAGE_SIZE;
+        size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
 
         nvme_cmd_t cmd;
         memset(&cmd, 0, sizeof(cmd));
-        cmd.cmd = NVME_CMD_CID(utxn->id) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(ti->opcode);
+        cmd.cmd = NVME_CMD_CID(utxn->id) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(txn->opcode);
         cmd.nsid = 1;
-        cmd.u.rw.start_lba = ti->offset_dev / nvme->info.block_size;
-        // xfer must be an exact block multiple due to constraints of block
-        // alignment and block multiples applied to the transaction and the
-        // max transfer size
-        cmd.u.rw.block_count = xfer / nvme->info.block_size - 1;
+        cmd.u.rw.start_lba = txn->op.rw.offset_dev;
+        cmd.u.rw.block_count = blocks - 1;
         // The NVME command has room for two data pointers inline.
         // The first is always the pointer to the first page where data is.
         // The second is the second page if pagecount is 2.
         // The second is the address of an array of page 2..n if pagecount > 2
-        cmd.dptr.prp[0] = pages[0] | (ti->offset_vmo & PAGE_MASK);
+        cmd.dptr.prp[0] = pages[0] | (txn->op.rw.offset_vmo & PAGE_MASK);
         if (pagecount == 2) {
             cmd.dptr.prp[1] = pages[1];
         } else if (pagecount > 2) {
             cmd.dptr.prp[1] = utxn->phys + sizeof(uint64_t);
         }
 
-        zxlogf(TRACE, "nvme: iotxn=%p utxn id=%u pages=%zu op=%s\n", txn, utxn->id, pagecount,
-               ti->opcode == NVME_OP_WRITE ? "WR" : "RD");
+        zxlogf(TRACE, "nvme: txn=%p utxn id=%u pages=%zu op=%s\n", txn, utxn->id, pagecount,
+               txn->opcode == NVME_OP_WRITE ? "WR" : "RD");
         zxlogf(SPEW, "nvme: prp[0]=%016zx prp[1]=%016zx\n", cmd.dptr.prp[0], cmd.dptr.prp[1]);
         zxlogf(SPEW, "nvme: pages[] = { %016zx, %016zx, %016zx, %016zx, ... }\n",
                pages[0], pages[1], pages[2], pages[3]);
 
         if ((r = nvme_io_sq_put(nvme, &cmd)) != ZX_OK) {
-            zxlogf(ERROR, "nvme: could not submit cmd (iotxn=%p id=%u)\n", txn, utxn->id);
+            zxlogf(ERROR, "nvme: could not submit cmd (txn=%p id=%u)\n", txn, utxn->id);
             break;
         }
 
         utxn->txn = txn;
 
         // keep track of where we are
-        ti->offset_dev += xfer;
-        ti->offset_vmo += xfer;
-        ti->remain -= xfer;
-        ti->pending_utxns++;
+        txn->op.rw.offset_dev += blocks;
+        txn->op.rw.offset_vmo += bytes;
+        txn->op.rw.length -= blocks;
+        txn->pending_utxns++;
 
         // If there's no more remaining, we're done, and we
-        // move this iotxn to the active list and tell the
-        // caller not to retain the iotxn (false)
-        if (ti->remain == 0) {
+        // move this txn to the active list and tell the
+        // caller not to retain the txn (false)
+        if (txn->op.rw.length == 0) {
             mtx_lock(&nvme->lock);
-            list_add_tail(&nvme->active_iotxns, &txn->node);
+            list_add_tail(&nvme->active_txns, &txn->node);
             mtx_unlock(&nvme->lock);
             return false;
         }
@@ -419,29 +421,29 @@ static bool io_process_txn(nvme_device_t* nvme, iotxn_t* txn) {
     utxn_put(nvme, utxn);
 
     mtx_lock(&nvme->lock);
-    ti->flags |= TI_FLAG_FAILED;
-    if (ti->pending_utxns) {
+    txn->flags |= TXN_FLAG_FAILED;
+    if (txn->pending_utxns) {
         // if there are earlier uncompleted IOs we become active now
         // and will finish erroring out when they complete
-        list_add_tail(&nvme->active_iotxns, &txn->node);
+        list_add_tail(&nvme->active_txns, &txn->node);
         txn = NULL;
     }
     mtx_unlock(&nvme->lock);
 
     if (txn != NULL) {
-        iotxn_complete(txn, ZX_ERR_INTERNAL, 0);
+        txn_complete(txn, ZX_ERR_INTERNAL);
     }
 
-    // Either way we tell the caller not to retain the iotxn (false)
+    // Either way we tell the caller not to retain the txn (false)
     return false;
 }
 
 static void io_process_txns(nvme_device_t* nvme) {
-    iotxn_t* txn;
+    nvme_txn_t* txn;
 
     for (;;) {
         mtx_lock(&nvme->lock);
-        txn = list_remove_head_type(&nvme->pending_iotxns, iotxn_t, node);
+        txn = list_remove_head_type(&nvme->pending_txns, nvme_txn_t, node);
         STAT_DEC_IF(pending, txn != NULL);
         mtx_unlock(&nvme->lock);
 
@@ -452,7 +454,7 @@ static void io_process_txns(nvme_device_t* nvme) {
         if (io_process_txn(nvme, txn)) {
             // put txn back at front of queue for further processing later
             mtx_lock(&nvme->lock);
-            list_add_head(&nvme->pending_iotxns, &txn->node);
+            list_add_head(&nvme->pending_txns, &txn->node);
             STAT_INC_MAX(pending);
             mtx_unlock(&nvme->lock);
             return;
@@ -472,8 +474,7 @@ static void io_process_cpls(nvme_device_t* nvme) {
             continue;
         }
         nvme_utxn_t* utxn = nvme->utxn + cpl.cmd_id;
-        iotxn_t* txn = utxn->txn;
-        nvme_txn_info_t* ti = (void*) &txn->protocol_data;
+        nvme_txn_t* txn = utxn->txn;
 
         if (txn == NULL) {
             zxlogf(ERROR, "nvme: inactive utxn #%u completed?!\n", cpl.cmd_id);
@@ -482,32 +483,28 @@ static void io_process_cpls(nvme_device_t* nvme) {
 
         uint32_t code = NVME_CPL_STATUS_CODE(cpl.status);
         if (code != 0) {
-            zxlogf(ERROR, "nvme: utxn #%u iotxn %p failed: status=%03x\n",
+            zxlogf(ERROR, "nvme: utxn #%u txn %p failed: status=%03x\n",
                    cpl.cmd_id, txn, code);
-            ti->flags |= TI_FLAG_FAILED;
+            txn->flags |= TXN_FLAG_FAILED;
             // discard any remaining bytes -- no reason to keep creating
             // further utxns once one has failed
-            ti->remain = 0;
+            txn->op.rw.length = 0;
         } else {
-            zxlogf(SPEW, "nvme: utxn #%u iotxn %p OKAY\n", cpl.cmd_id, txn);
+            zxlogf(SPEW, "nvme: utxn #%u txn %p OKAY\n", cpl.cmd_id, txn);
         }
 
         // release the microtransaction
         utxn->txn = NULL;
         utxn_put(nvme, utxn);
 
-        ti->pending_utxns--;
-        if ((ti->pending_utxns == 0) && (ti->remain == 0)) {
+        txn->pending_utxns--;
+        if ((txn->pending_utxns == 0) && (txn->op.rw.length == 0)) {
             // remove from either pending or active list
             mtx_lock(&nvme->lock);
             list_delete(&txn->node);
             mtx_unlock(&nvme->lock);
-            zxlogf(TRACE, "nvme: txn %p %s\n", txn, ti->flags & TI_FLAG_FAILED ? "error" : "okay");
-            if (ti->flags & TI_FLAG_FAILED) {
-                iotxn_complete(txn, ZX_ERR_IO, 0);
-            } else {
-                iotxn_complete(txn, ZX_OK, txn->length);
-            }
+            zxlogf(TRACE, "nvme: txn %p %s\n", txn, txn->flags & TXN_FLAG_FAILED ? "error" : "okay");
+            txn_complete(txn, txn->flags & TXN_FLAG_FAILED ? ZX_ERR_IO : ZX_OK);
         }
     }
 
@@ -540,43 +537,62 @@ static int io_thread(void* arg) {
     return 0;
 }
 
-static void nvme_iotxn_queue(void* ctx, iotxn_t* txn) {
+static void nvme_queue(void* ctx, block_op_t* op) {
     nvme_device_t* nvme = ctx;
+    nvme_txn_t* txn = containerof(op, nvme_txn_t, op);
 
-    zxlogf(SPEW, "nvme: io: %s: %zu @ %zu\n",
-           txn->opcode == IOTXN_OP_WRITE ? "wr" : "rd",
-           txn->length, txn->offset);
-
-    if ((txn->offset & nvme->block_mask) ||
-        (txn->length & nvme->block_mask) ||
-        (txn->length > 0xFFFFFFFF)) {
-        zxlogf(ERROR, "nvme: io: invalid args\n");
-        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+    switch (txn->op.command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+        txn->opcode = NVME_OP_READ;
+        break;
+    case BLOCK_OP_WRITE:
+        txn->opcode = NVME_OP_WRITE;
+        break;
+    case BLOCK_OP_FLUSH:
+        // TODO
+        txn_complete(txn, ZX_OK);
+        return;
+    default:
+        txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
         return;
     }
-    if (txn->length == 0) {
-        zxlogf(ERROR, "nvme: io: zero length!\n");
-        iotxn_complete(txn, ZX_OK, 0);
+
+    if (txn->op.rw.length == 0) {
+        txn_complete(txn, ZX_ERR_INVALID_ARGS);
         return;
     }
 
-    nvme_txn_info_t* ti = (void*) &txn->protocol_data;
-    ti->offset_dev = txn->offset;
-    ti->offset_vmo = txn->vmo_offset;
-    ti->remain = txn->length;
-    ti->pending_utxns = 0;
-    ti->opcode = (txn->opcode == IOTXN_OP_WRITE) ? NVME_OP_WRITE : NVME_OP_READ;
-    ti->flags = 0;
+    // convert vmo offset to a byte offset
+    txn->op.rw.offset_vmo *= nvme->info.block_size;
+
+    txn->pending_utxns = 0;
+    txn->flags = 0;
+
+    zxlogf(SPEW, "nvme: io: %s: %ublks @ blk#%zu\n",
+           txn->opcode == NVME_OP_WRITE ? "wr" : "rd",
+           txn->op.rw.length + 1U, txn->op.rw.offset_dev);
 
     STAT_INC(total_ops);
-    STAT_ADD(total_bytes, txn->length);
+    STAT_ADD(total_blocks, txn->op.rw.length);
 
     mtx_lock(&nvme->lock);
-    list_add_tail(&nvme->pending_iotxns, &txn->node);
+    list_add_tail(&nvme->pending_txns, &txn->node);
     STAT_INC_MAX(pending);
     mtx_unlock(&nvme->lock);
 
     completion_signal(&nvme->io_signal);
+}
+
+static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
+    nvme_device_t* nvme = ctx;
+    *info_out = nvme->info;
+    *block_op_size_out = sizeof(nvme_txn_t);
+#if WITH_STATS
+    zxlogf(INFO, "nvme: stats: max concurrent utxns:   %zu\n", nvme->stat_max_concur);
+    zxlogf(INFO, "nvme: stats: max pending txns:       %zu\n", nvme->stat_max_pending);
+    zxlogf(INFO, "nvme: stats: total submitted txns:   %zu\n", nvme->stat_total_ops);
+    zxlogf(INFO, "nvme: stats: total submitted blocks:  %zu\n", nvme->stat_total_blocks);
+#endif
 }
 
 static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
@@ -587,14 +603,9 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         if (max < sizeof(block_info_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        memcpy(reply, &nvme->info, sizeof(block_info_t));
+        size_t sz;
+        nvme_query(nvme, reply, &sz);
         *out_actual = sizeof(block_info_t);
-#if WITH_STATS
-        zxlogf(INFO, "nvme: stats: max concurrent utxns:   %zu\n", nvme->stat_max_concur);
-        zxlogf(INFO, "nvme: stats: max pending iotxns:     %zu\n", nvme->stat_max_pending);
-        zxlogf(INFO, "nvme: stats: total submitted iotxns: %zu\n", nvme->stat_total_ops);
-        zxlogf(INFO, "nvme: stats: total submitted bytes:  %zu\n", nvme->stat_total_bytes);
-#endif
         return ZX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
@@ -602,7 +613,6 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         return device_rebind(nvme->zxdev);
     }
     case IOCTL_DEVICE_SYNC: {
-        // TODO: will be implemented as part of the new block protocol
         return ZX_OK;
     }
     default:
@@ -644,14 +654,14 @@ static void nvme_release(void* ctx) {
         thrd_join(nvme->iothread, &r);
     }
 
-    // error out any pending iotxns
+    // error out any pending txns
     mtx_lock(&nvme->lock);
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&nvme->active_iotxns, iotxn_t, node)) != NULL) {
-        iotxn_complete(txn, ZX_ERR_PEER_CLOSED, 0);
+    nvme_txn_t* txn;
+    while ((txn = list_remove_head_type(&nvme->active_txns, nvme_txn_t, node)) != NULL) {
+        txn_complete(txn, ZX_ERR_PEER_CLOSED);
     }
-    while ((txn = list_remove_head_type(&nvme->pending_iotxns, iotxn_t, node)) != NULL) {
-        iotxn_complete(txn, ZX_ERR_PEER_CLOSED, 0);
+    while ((txn = list_remove_head_type(&nvme->pending_txns, nvme_txn_t, node)) != NULL) {
+        txn_complete(txn, ZX_ERR_PEER_CLOSED);
     }
     mtx_unlock(&nvme->lock);
 
@@ -663,7 +673,6 @@ static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
 
     .ioctl = nvme_ioctl,
-    .iotxn_queue = nvme_iotxn_queue,
     .get_size = nvme_get_size,
 
     .suspend = nvme_suspend,
@@ -882,12 +891,6 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
     zxlogf(INFO, "nvme: max data transfer: %u bytes\n", nvme->max_xfer);
     zxlogf(INFO, "nvme: sanitize caps: %u\n", ci->SANICAP & 3);
 
-    // The device may allow transfers larger than we are prepared
-    // to handle.  Clip to our limit.
-    if (nvme->max_xfer > MAX_XFER) {
-        nvme->max_xfer = MAX_XFER;
-    }
-
     zxlogf(INFO, "nvme: abort command limit (ACL): %u\n", ci->ACL + 1);
     zxlogf(INFO, "nvme: asynch event req limit (AERL): %u\n", ci->AERL + 1);
     zxlogf(INFO, "nvme: firmware: slots: %u reset: %c slot1ro: %c\n", (ci->FRMW >> 1) & 3,
@@ -1005,19 +1008,40 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    nvme->block_mask = nvme->info.block_size - 1;
+    // NVME r/w commands operate in block units, maximum of 64K:
+    size_t max_bytes_per_cmd = ((size_t) nvme->info.block_size) * ((size_t) 65536);
+
+    if (nvme->max_xfer > max_bytes_per_cmd) {
+        nvme->max_xfer = max_bytes_per_cmd;
+    }
+
+    // The device may allow transfers larger than we are prepared
+    // to handle.  Clip to our limit.
+    if (nvme->max_xfer > MAX_XFER) {
+        nvme->max_xfer = MAX_XFER;
+    }
+
+    // convert to block units
+    nvme->max_xfer /= nvme->info.block_size;
+    zxlogf(INFO, "nvme: max transfer per r/w op: %u blocks (%u bytes)\n",
+           nvme->max_xfer, nvme->max_xfer * nvme->info.block_size);
 
     device_make_visible(nvme->zxdev);
     return ZX_OK;
 }
+
+block_protocol_ops_t block_ops = {
+    .query = nvme_query,
+    .queue = nvme_queue,
+};
 
 static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     nvme_device_t* nvme;
     if ((nvme = calloc(1, sizeof(nvme_device_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
-    list_initialize(&nvme->pending_iotxns);
-    list_initialize(&nvme->active_iotxns);
+    list_initialize(&nvme->pending_txns);
+    list_initialize(&nvme->active_txns);
     mtx_init(&nvme->lock, mtx_plain);
     mtx_init(&nvme->admin_lock, mtx_plain);
 
@@ -1062,6 +1086,7 @@ irq_configured:
         .ops = &device_ops,
         .flags = DEVICE_ADD_INVISIBLE,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &block_ops,
     };
 
     if (device_add(dev, &args, &nvme->zxdev)) {
