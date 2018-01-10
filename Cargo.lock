@@ -107,6 +107,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "eapol"
+version = "0.1.0"
+
+[[package]]
 name = "echo_client_rust"
 version = "0.1.0"
 dependencies = [

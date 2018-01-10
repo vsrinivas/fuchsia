@@ -7,6 +7,7 @@ members =  [
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
+  "lib/rust/crates/eapol",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/fidl_crates/garnet_lib_wlan_fidl",
   "public/lib/fidl/rust/fidl",
@@ -38,6 +39,7 @@ members =  [
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
 ddk-rs = { path = "public/rust/crates/ddk-rs" }
+eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
