@@ -82,28 +82,6 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
     // Actually send the operations to the underlying block device.
     zx_status_t status = bc_->Txn(blk_reqs, count_);
 
-    // Decommit the pages that we used in the buffer to store the outgoing data
-    size_t decommit_offset = 0;
-    size_t decommit_length = 0;
-    for (size_t i = 0; i < count_; i++) {
-        if (i == 0 || blk_reqs[i].vmo_offset != decommit_offset + blk_reqs[i - 1].length) {
-            // Reset case, either because we're initializing or because we have
-            // found a request at a noncontiguous offset (it wrapped around).
-            if (decommit_length != 0) {
-                ZX_ASSERT(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, decommit_offset,
-                                          decommit_length, nullptr, 0) == ZX_OK);
-            }
-            decommit_offset = blk_reqs[i].vmo_offset;
-            decommit_length = blk_reqs[i].length;
-        } else {
-            decommit_length += blk_reqs[i].length;
-        }
-    }
-    if (decommit_length != 0) {
-        ZX_ASSERT(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length,
-                                  nullptr, 0) == ZX_OK);
-    }
-
     count_ = 0;
     return status;
 }
