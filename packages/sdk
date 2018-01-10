@@ -1,5 +1,6 @@
 {
     "imports": [
+        "build/packages/bootfs",
         "garnet/packages/media_audio",
         "garnet/packages/media_mixer_audio_input_config",
         "garnet/packages/netstack",
