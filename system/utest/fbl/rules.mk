@@ -44,6 +44,11 @@ fbl_device_tests += \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \
 
+# These tests need zircon VMO and VMARs which are not currently supported on the
+# host.
+fbl_device_tests += \
+    $(LOCAL_DIR)/vmo_vmar_tests.cpp \
+
 fbl_host_tests := $(fbl_common_tests)
 
 # Userspace tests.
@@ -59,6 +64,7 @@ MODULE_SRCS := $(fbl_device_tests)
 MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/zx \
 
 MODULE_LIBS := \
     system/ulib/c \

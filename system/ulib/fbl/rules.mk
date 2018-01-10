@@ -18,6 +18,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/string_piece.cpp \
     $(LOCAL_DIR)/string_printf.cpp \
     $(LOCAL_DIR)/string.cpp \
+    $(LOCAL_DIR)/vmar_manager.cpp \
+    $(LOCAL_DIR)/vmo_mapper.cpp \
+
+MODULE_LIBS := system/ulib/zx
 
 MODULE_PACKAGE := src
 
