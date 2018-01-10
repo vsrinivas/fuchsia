@@ -4,6 +4,12 @@
 
 import("//build/toolchain/clang_toolchain.gni")
 
+# TODO(raggi): discuss how we want to handle the keys and then re-organize.
+# This value is shared with //build/gn/BUILD.gn.
+declare_args() {
+  package_signing_key = "//build/development.key"
+}
+
 # Defines a package
 #
 # The package template is used to define a unit of related code and data.
@@ -15,6 +21,13 @@ import("//build/toolchain/clang_toolchain.gni")
 #   app (bool, optional)
 #     If true, changes the default location of binaries from
 #     |"bin/" + binary.name| to |"apps/" + binary.name|.
+#
+#   fuchsia_package (bool, optional)
+#     If true, the package is constructed and signed ready for distribution and
+#     inclusion in /pkgfs. system_image supersedes fuchsia_package. Eventually all
+#     packages should be fuchsia_package.
+#
+#     Defaults to false.
 #
 #   system_image (bool, optional)
 #     If true, the package is stored in the system boot image rather than in a
@@ -138,12 +151,14 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
       app = false
+      fuchsia_package = false
       system_image = false
       binaries = []
       drivers = []
       libraries = []
       meta = []
       package_name = target_name
+      package_version = 0 # placeholder
       resources = []
       tests = []
       forward_variables_from(invoker, "*")
@@ -257,10 +272,12 @@ template("package") {
 
       system_manifest = "$pkg_out_dir/system_manifest"
       archive_manifest = "$pkg_out_dir/archive_manifest"
+      package_manifest = "$pkg_out_dir/package_manifest"
 
       if (pkg.system_image) {
         write_file(system_manifest, package_manifest_contents)
         write_file(archive_manifest, [])
+        write_file(package_manifest, [])
 
         # We have to do something in our action
         script = "/usr/bin/touch"
@@ -269,8 +286,57 @@ template("package") {
           output,
         ]
         args = [ rebase_path(output) ]
+      } else if (pkg.fuchsia_package) {
+        # If the caller doesn't supply a package.json, we'll generate one
+        need_package_json = true
+        foreach(meta, pkg.meta) {
+          if (meta == "package.json") {
+            need_package_json = false
+          }
+        }
+
+        if (need_package_json) {
+          package_json_file = rebase_path("$pkg_out_dir/package.json")
+          write_file(package_json_file, "{\"name\": \"${pkg.package_name}\", \"version\": \"${pkg.package_version}\"}")
+          package_manifest_contents += [ "meta/package.json=${package_json_file}" ]
+        }
+
+        write_file(package_manifest, package_manifest_contents)
+        write_file(archive_manifest, [])
+        write_file(system_manifest, [])
+
+        pm_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
+        deps += [ pm_label ]
+
+        pm_out_dir = get_label_info(pm_label, "root_out_dir")
+        pm_path = "$pm_out_dir/pm"
+
+        output = "$pkg_out_dir/meta.far"
+
+        script = "//build/gn_run_binary.sh"
+        inputs = [
+          pm_path,
+          package_signing_key,
+        ]
+        outputs = [
+          output,
+        ]
+        args = [
+          clang_prefix,
+          rebase_path(pm_path, root_build_dir),
+          "-k",
+          rebase_path(package_signing_key),
+          "-m",
+          rebase_path(package_manifest),
+          "-o",
+          rebase_path(pkg_out_dir),
+          "build",
+        ]
+
+        # Add the meta.far to the list of fuchsia packages
       } else {
         assert(package_manifest_contents != [])
+        write_file(package_manifest, [])
 
         write_file(archive_manifest, package_manifest_contents)
 

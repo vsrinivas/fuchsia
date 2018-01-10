@@ -73,14 +73,25 @@ def main():
             subprocess.check_call(
                 [args.pm, "-k", args.system_package_key, "genkey"])
 
-        # Init prepares a package_dir/meta directory with a package.json, a
-        # required input for build.
-        subprocess.check_call([args.pm, "-o", args.system_package_dir, "init"])
+        # Create a package.json as required for all packages.
+        pkgjson_path = os.path.join(args.system_package_dir, "package.json")
+        with open(pkgjson_path, "w") as pkgjson:
+            pkgjson.write('{"name": "system.pkg", "version": "0"}')
+
+        # Create a package manifest that includes a copy of all the contents
+        # from args.system_manifest, plus meta/package.json.
+        package_manifest = os.path.join(args.system_package_dir, "package_manifest")
+        with open(package_manifest, "w") as manifest:
+            manifest.write("meta/package.json=%s\n" % pkgjson_path)
+            with open(args.system_manifest, "r") as sys_manifest:
+                for line in sys_manifest:
+                    manifest.write(line)
+
 
         # Build produces meta/contents, meta/pubkey, meta/signature based on the
         # inputs, and then constructs the package meta.far.
         subprocess.check_call([args.pm, "-k", args.system_package_key, "-o",
-                            args.system_package_dir, "-m", args.system_manifest, "build"])
+                            args.system_package_dir, "-m", package_manifest, "build"])
 
         system_package_meta_far = os.path.join(args.system_package_dir, "meta.far")
         pkgsvr_merkle = get_merkleroot(args.pkgsvr, args.merkleroot)
@@ -99,7 +110,7 @@ def main():
         if os.path.exists(args.system_package_dir):
             shutil.rmtree(args.system_package_dir)
         if os.path.exists(args.commandline):
-            shutil.rmtree(args.commandline)
+            os.remove(args.commandline)
         raise
 
     return 0
