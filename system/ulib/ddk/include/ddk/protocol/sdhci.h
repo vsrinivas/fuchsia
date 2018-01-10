@@ -15,8 +15,6 @@ typedef struct sdhci_protocol_ops {
     zx_status_t (*get_interrupt)(void* ctx, zx_handle_t* handle_out);
     zx_status_t (*get_mmio)(void* ctx, volatile sdhci_regs_t** out);
     uint32_t (*get_base_clock)(void* ctx);
-    // TODO: replace this function with iotxn_phys(txn, ctx)
-    zx_paddr_t (*get_dma_offset)(void* ctx);
 
     // returns device quirks
     uint64_t (*get_quirks)(void* ctx);

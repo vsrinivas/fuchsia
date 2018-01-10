@@ -68,10 +68,6 @@ static uint32_t pci_sdhci_get_base_clock(void* ctx) {
     return 0;
 }
 
-static zx_paddr_t pci_sdhci_get_dma_offset(void* ctx) {
-    return 0;
-}
-
 static uint64_t pci_sdhci_get_quirks(void* ctx) {
     return 0;
 }
@@ -96,7 +92,6 @@ static sdhci_protocol_ops_t pci_sdhci_sdhci_proto = {
     .get_interrupt = pci_sdhci_get_interrupt,
     .get_mmio = pci_sdhci_get_mmio,
     .get_base_clock = pci_sdhci_get_base_clock,
-    .get_dma_offset = pci_sdhci_get_dma_offset,
     .get_quirks = pci_sdhci_get_quirks,
     .hw_reset = pci_sdhci_hw_reset,
 };

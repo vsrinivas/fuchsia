@@ -100,9 +100,6 @@ typedef struct sdhci_device {
 
     // Cached base clock rate that the pi is running at.
     uint32_t base_clock;
-    // Offset to DMA address
-    // XXX temporary (see ddk/protocol/sdhci.h)
-    zx_paddr_t dma_offset;
 } sdhci_device_t;
 
 // If any of these interrupts is asserted in the SDHCI irq register, it means
@@ -466,7 +463,7 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
 
         } else {
             ZX_DEBUG_ASSERT(txn->phys_count == 1);
-            regs->arg2 = iotxn_phys(txn) + dev->dma_offset;
+            regs->arg2 = iotxn_phys(txn);
         }
 
         if (cmd & SDMMC_CMD_MULTI_BLK) {
@@ -971,7 +968,6 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
         status = ZX_ERR_INTERNAL;
         goto fail;
     }
-    dev->dma_offset = dev->sdhci.ops->get_dma_offset(dev->sdhci.ctx);
     dev->quirks = dev->sdhci.ops->get_quirks(dev->sdhci.ctx);
 
     // initialize the controller
