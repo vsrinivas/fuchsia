@@ -10,16 +10,20 @@
 #include <arch/arm64/exceptions.h>
 #include <arch/exception.h>
 #include <arch/user_copy.h>
+
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
-#include <kernel/stats.h>
+
 #include <kernel/thread.h>
+
 #include <platform.h>
 #include <stdio.h>
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
+
+#include <lib/counters.h>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -41,6 +45,14 @@ static void dump_iframe(const struct arm64_iframe_long* iframe) {
     printf("elr  %#18" PRIx64 "\n", iframe->elr);
     printf("spsr %#18" PRIx64 "\n", iframe->spsr);
 }
+
+KCOUNTER(exceptions_brkpt, "kernel.exceptions.breakpoint");
+KCOUNTER(exceptions_fpu, "kernel.exceptions.fpu");
+KCOUNTER(exceptions_page, "kernel.exceptions.page_fault");
+KCOUNTER(exceptions_irq, "kernel.exceptions.irq");
+KCOUNTER(exceptions_unhandled, "kernel.exceptions.unhandled");
+KCOUNTER(exceptions_user, "kernel.exceptions.user");
+KCOUNTER(exceptions_unknown, "kernel.exceptions.unknown");
 
 static zx_status_t try_dispatch_user_data_fault_exception(
     zx_excp_type_t type, struct arm64_iframe_long* iframe,
@@ -120,8 +132,6 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);
 
-    CPU_STATS_INC(page_faults);
-
     uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
     pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
     /* Check if this was not permission fault */
@@ -134,6 +144,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
             iframe->elr, is_user, far, esr, iss);
 
     arch_enable_ints();
+    kcounter_add(exceptions_page, 1u);
     zx_status_t err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0)
@@ -142,7 +153,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
     // If this is from user space, let the user exception handler
     // get a shot at it.
     if (is_user) {
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_user, 1u);
         if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == ZX_OK)
             return;
     }
@@ -177,8 +188,8 @@ static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exce
 
     uint32_t dfsc = BITS(iss, 5, 0);
     if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
-        CPU_STATS_INC(page_faults);
         arch_enable_ints();
+        kcounter_add(exceptions_page, 1u);
         zx_status_t err = vmm_page_fault_handler(far, pf_flags);
         arch_disable_ints();
         if (err >= 0) {
@@ -197,7 +208,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exce
     // If this is from user space, let the user exception handler
     // get a shot at it.
     if (is_user) {
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_user, 1u);
         zx_excp_type_t excp_type = ZX_EXCP_FATAL_PAGE_FAULT;
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
             excp_type = ZX_EXCP_UNALIGNED_ACCESS;
@@ -236,16 +247,16 @@ extern "C" void arm64_sync_exception(
 
     switch (ec) {
     case 0b000000: /* unknown reason */
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_unknown, 1u);
         arm64_unknown_handler(iframe, exception_flags, esr);
         break;
     case 0b111000: /* BRK from arm32 */
     case 0b111100: /* BRK from arm64 */
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_brkpt, 1u);
         arm64_brk_handler(iframe, exception_flags, esr);
         break;
     case 0b000111: /* floating point */
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_fpu, 1u);
         arm64_fpu_handler(iframe, exception_flags, esr);
         break;
     case 0b010001: /* syscall from arm32 */
@@ -262,7 +273,6 @@ extern "C" void arm64_sync_exception(
         arm64_data_abort_handler(iframe, exception_flags, esr);
         break;
     default: {
-        CPU_STATS_INC(exceptions);
         /* TODO: properly decode more of these */
         if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
             /* trapped inside the kernel, this is bad */
@@ -270,6 +280,7 @@ extern "C" void arm64_sync_exception(
             exception_die(iframe, esr);
         }
         /* let the user exception handler get a shot at it */
+        kcounter_add(exceptions_unhandled, 1u);
         if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
             break;
         printf("unhandled synchronous exception\n");
@@ -302,6 +313,7 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
 
     arch_set_in_int_handler(true);
 
+    kcounter_add(exceptions_irq, 1u);
     enum handler_return ret = platform_irq(iframe);
 
     arch_set_in_int_handler(false);

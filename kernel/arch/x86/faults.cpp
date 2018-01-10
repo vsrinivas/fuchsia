@@ -14,19 +14,23 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/perf_mon.h>
+
 #include <debug.h>
-#include <kernel/stats.h>
+
 #include <kernel/thread.h>
+
 #include <platform.h>
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
 
 #include <fbl/auto_call.h>
+
+#include <lib/counters.h>
+#include <lib/ktrace.h>
+
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-
-#include <lib/ktrace.h>
 
 static void dump_fault_frame(x86_iframe_t* frame) {
     dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
@@ -50,6 +54,21 @@ static void dump_fault_frame(x86_iframe_t* frame) {
         hexdump(stack, 128);
     }
 }
+
+KCOUNTER(exceptions_debug, "kernel.exceptions.debug");
+KCOUNTER(exceptions_nmi, "kernel.exceptions.nmi");
+KCOUNTER(exceptions_brkpt, "kernel.exceptions.breakpoint");
+KCOUNTER(exceptions_invop, "kernel.exceptions.inv_opcode");
+KCOUNTER(exceptions_dev_na, "kernel.exceptions.dev_na");
+KCOUNTER(exceptions_dfault, "kernel.exceptions.double_fault");
+KCOUNTER(exceptions_fpu, "kernel.exceptions.fpu");
+KCOUNTER(exceptions_simd, "kernel.exceptions.simd");
+KCOUNTER(exceptions_gpf, "kernel.exceptions.gpf");
+KCOUNTER(exceptions_page, "kernel.exceptions.page_fault");
+KCOUNTER(exceptions_apic_err, "kernel.exceptions.apic_error");
+KCOUNTER(exceptions_irq, "kernel.exceptions.irq");
+KCOUNTER(exceptions_unhandled, "kernel.exceptions.unhandled");
+KCOUNTER(exceptions_user, "kernel.exceptions.user");
 
 __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
     platform_panic_start();
@@ -272,7 +291,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     /* let high level code deal with this */
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_user, 1u);
         struct arch_exception_context context = {true, frame, va};
         return call_dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT,
                                             &context, frame);
@@ -310,25 +329,25 @@ void x86_exception_handler(x86_iframe_t* frame) {
 
     switch (frame->vector) {
     case X86_INT_DEBUG:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_debug, 1u);
         x86_debug_handler(frame);
         break;
     case X86_INT_NMI:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_nmi, 1u);
         x86_nmi_handler(frame);
         break;
     case X86_INT_BREAKPOINT:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_brkpt, 1u);
         x86_breakpoint_handler(frame);
         break;
 
     case X86_INT_INVALID_OP:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_invop, 1u);
         x86_invop_handler(frame);
         break;
 
     case X86_INT_DEVICE_NA:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_dev_na, 1u);
         exception_die(frame, "device na fault\n");
         break;
 
@@ -336,7 +355,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
         x86_df_handler(frame);
         break;
     case X86_INT_FPU_FP_ERROR: {
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_fpu, 1u);
         uint16_t fsw;
         __asm__ __volatile__("fnstsw %0"
                              : "=m"(fsw));
@@ -345,7 +364,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
         break;
     }
     case X86_INT_SIMD_FP_ERROR: {
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_simd, 1u);
         uint32_t mxcsr;
         __asm__ __volatile__("stmxcsr %0"
                              : "=m"(mxcsr));
@@ -354,12 +373,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
         break;
     }
     case X86_INT_GP_FAULT:
-        CPU_STATS_INC(exceptions);
+        kcounter_add(exceptions_gpf, 1u);
         x86_gpf_handler(frame);
         break;
 
     case X86_INT_PAGE_FAULT:
-        CPU_STATS_INC(page_faults);
+        kcounter_add(exceptions_page, 1u);
         if (x86_pfe_handler(frame) != ZX_OK)
             x86_fatal_pfe_handler(frame, x86_get_cr2());
         break;
@@ -368,6 +387,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
     case X86_INT_APIC_SPURIOUS:
         break;
     case X86_INT_APIC_ERROR: {
+        kcounter_add(exceptions_apic_err, 1u);
         ret = apic_error_interrupt_handler();
         apic_issue_eoi();
         break;
@@ -399,11 +419,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
     }
     /* pass all other non-Intel defined irq vectors to the platform */
     case X86_INT_PLATFORM_BASE... X86_INT_PLATFORM_MAX: {
-        CPU_STATS_INC(interrupts);
+        kcounter_add(exceptions_irq, 1u);
         ret = platform_irq(frame);
         break;
     }
     default:
+        kcounter_add(exceptions_unhandled, 1u);
         x86_unhandled_exception(frame);
         break;
     }

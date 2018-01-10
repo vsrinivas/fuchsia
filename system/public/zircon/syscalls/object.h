@@ -280,6 +280,7 @@ typedef struct zx_info_vmo {
 } zx_info_vmo_t;
 
 // kernel statistics per cpu
+// TODO(cpu), expose the deprecated stats via a new syscall.
 typedef struct zx_info_cpu_stats {
     uint32_t cpu_number;
     uint32_t flags;
@@ -297,8 +298,8 @@ typedef struct zx_info_cpu_stats {
     uint64_t ints;          // hardware interrupts, minus timer interrupts or inter-processor interrupts
     uint64_t timer_ints;    // timer interrupts
     uint64_t timers;        // timer callbacks
-    uint64_t page_faults;   // page faults
-    uint64_t exceptions;    // exceptions such as undefined opcode
+    uint64_t page_faults;   // (deprecated, returns 0) page faults
+    uint64_t exceptions;    // (deprecated, returns 0) exceptions such as undefined opcode
     uint64_t syscalls;
 
     // inter-processor interrupts
