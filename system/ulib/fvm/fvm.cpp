@@ -143,6 +143,10 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup,
 #ifdef __Fuchsia__
 zx_status_t fvm_init(int fd, size_t slice_size) {
     if (slice_size % FVM_BLOCK_SIZE != 0) {
+        // Alignment
+        return ZX_ERR_INVALID_ARGS;
+    } else if ((slice_size * VSLICE_MAX) / VSLICE_MAX != slice_size) {
+        // Overflow
         return ZX_ERR_INVALID_ARGS;
     }
 

@@ -7,6 +7,11 @@
 #include <stdio.h>
 #include <string.h>
 
+static zx_off_t ums_block_get_size(void* ctx) {
+    ums_block_t* dev = ctx;
+    return dev->block_size * dev->total_blocks;
+}
+
 static void ums_block_queue(void* ctx, iotxn_t* txn) {
     ums_block_t* dev = ctx;
 
@@ -18,6 +23,12 @@ static void ums_block_queue(void* ctx, iotxn_t* txn) {
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
+    const uint64_t device_size = ums_block_get_size(ctx);
+    if ((txn->offset >= device_size) || (device_size - txn->offset < txn->length)) {
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
+
     txn->context = dev;
 
     ums_t* ums = block_to_ums(dev);
@@ -77,11 +88,6 @@ static zx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
-}
-
-static zx_off_t ums_block_get_size(void* ctx) {
-    ums_block_t* dev = ctx;
-    return dev->block_size * dev->total_blocks;
 }
 
 static zx_protocol_device_t ums_block_proto = {

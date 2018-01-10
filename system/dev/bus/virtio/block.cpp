@@ -270,13 +270,19 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
         return;
     }
 
-    // trim length to a multiple of the block size
     if (txn->length % config_.blk_size) {
-        txn->length = ROUNDDOWN(txn->length, config_.blk_size);
+        LTRACEF("length %#" PRIx64 " is not aligned to sector size %u!\n", txn->length, config_.blk_size);
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+        return;
     }
 
-    // constrain to device capacity
-    txn->length = fbl::min(txn->length, GetSize() - txn->offset);
+    // transaction must fit within device
+    if ((txn->offset >= GetSize()) || (GetSize() - txn->offset < txn->length)) {
+        LTRACEF("request beyond the end of the device!\n");
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
+
     if (txn->length == 0) {
         iotxn_complete(txn, ZX_OK, 0);
         return;

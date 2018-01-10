@@ -182,8 +182,11 @@ static void sata_iotxn_queue(void* ctx, iotxn_t* txn) {
         return;
     }
 
-    // constrain to device capacity
-    txn->length = MIN(txn->length, device->capacity - txn->offset);
+    // transaction must fit within device
+    if ((txn->offset >= device->capacity) || (device->capacity - txn->offset < txn->length)) {
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
 
     // transfer must be smaller than max size
     if (txn->length > device->info.max_transfer_size) {

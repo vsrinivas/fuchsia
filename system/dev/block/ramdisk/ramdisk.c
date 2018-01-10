@@ -83,19 +83,20 @@ static uint64_t sizebytes(ramdisk_device_t* rdev) {
     return rdev->blk_size * rdev->blk_count;
 }
 
-static zx_status_t constrain_args(ramdisk_device_t* ramdev,
-                                  zx_off_t* offset, zx_off_t* length) {
+static zx_status_t validate_args(ramdisk_device_t* ramdev, zx_off_t offset, zx_off_t length) {
     // Offset must be aligned
-    if (*offset % ramdev->blk_size != 0) {
+    if (offset % ramdev->blk_size != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Constrain to device capacity
-    *length = MIN(*length, sizebytes(ramdev) - *offset);
-
     // Length must be aligned
-    if (*length % ramdev->blk_size != 0) {
+    if (length % ramdev->blk_size != 0) {
         return ZX_ERR_INVALID_ARGS;
+    }
+
+    // transaction must fit within device
+    if ((offset >= sizebytes(ramdev)) || (sizebytes(ramdev) - offset < length)) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     return ZX_OK;
@@ -175,7 +176,7 @@ static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
         iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
         return;
     }
-    zx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
+    zx_status_t status = validate_args(ramdev, txn->offset, txn->length);
     if (status != ZX_OK) {
         iotxn_complete(txn, status, 0);
         return;

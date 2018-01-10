@@ -160,17 +160,16 @@ static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
-    if (txn->offset > getsize(device)) {
-        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
-        return;
-    }
     if (txn->length % device->info.block_size) {
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
+    if ((txn->offset >= getsize(device)) || (getsize(device) - txn->offset < txn->length)) {
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
 
     // transactions from read()/write() may be truncated
-    txn->length = MIN(txn->length, getsize(device) - txn->offset);
     txn->offset = to_parent_offset(device, txn->offset);
     if (txn->length == 0) {
         iotxn_complete(txn, ZX_OK, 0);

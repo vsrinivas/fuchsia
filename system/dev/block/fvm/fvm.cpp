@@ -140,7 +140,10 @@ zx_status_t VPartitionManager::Load() {
 
     // Validate the superblock, confirm the slice size
     slice_size_ = sb.slice_size;
-    if (info_.block_size == 0 || SliceSize() % info_.block_size) {
+    if ((slice_size_ * VSliceMax()) / VSliceMax() != slice_size_) {
+        fprintf(stderr, "fvm: Slice Size, VSliceMax overflow block address space\n");
+        return ZX_ERR_BAD_STATE;
+    } else if (info_.block_size == 0 || SliceSize() % info_.block_size) {
         fprintf(stderr, "fvm: Bad block (%u) or slice size (%zu)\n",
                 info_.block_size, SliceSize());
         return ZX_ERR_BAD_STATE;
@@ -873,12 +876,15 @@ static void multi_iotxn_completion(iotxn_t* txn, void* cookie) {
 }
 
 void VPartition::DdkIotxnQueue(iotxn_t* txn) {
-    if (txn->offset % BlockSize()) {
+    if ((txn->offset % BlockSize()) || (txn->length % BlockSize())) {
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
-    // transactions from read()/write() may be truncated
-    txn->length = ROUNDDOWN(txn->length, BlockSize());
+    const uint64_t device_capacity = DdkGetSize();
+    if ((txn->offset >= device_capacity) || (device_capacity - txn->offset < txn->length)) {
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
     if (txn->length == 0) {
         iotxn_complete(txn, ZX_OK, 0);
         return;
@@ -988,11 +994,10 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
 }
 
 zx_off_t VPartition::DdkGetSize() {
-    const zx_off_t size = mgr_->DiskSize() * mgr_->SliceSize();
-    if (size / mgr_->SliceSize() != size) {
-        return fbl::numeric_limits<zx_off_t>::max();
-    }
-    return size;
+    const zx_off_t sz = mgr_->VSliceMax() * mgr_->SliceSize();
+    // Check for overflow; enforced when loading driver
+    ZX_DEBUG_ASSERT(sz / mgr_->VSliceMax() == mgr_->SliceSize());
+    return sz;
 }
 
 void VPartition::DdkUnbind() {

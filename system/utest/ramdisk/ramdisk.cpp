@@ -23,6 +23,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -220,11 +221,11 @@ bool ramdisk_test_bad_requests(void) {
     ASSERT_EQ(read(fd, buf, PAGE_SIZE), -1);
     ASSERT_EQ(errno, EINVAL);
 
-    // Read / write from beyond end of device
-    off_t dev_size = PAGE_SIZE * 512;
-    ASSERT_EQ(lseek(fd, dev_size, SEEK_SET), dev_size);
-    ASSERT_EQ(write(fd, buf, PAGE_SIZE), 0);
-    ASSERT_EQ(read(fd, buf, PAGE_SIZE), 0);
+    // Read / write at end of device
+    off_t offset = PAGE_SIZE * 512;
+    ASSERT_EQ(lseek(fd, offset, SEEK_SET), offset);
+    ASSERT_EQ(write(fd, buf, PAGE_SIZE), -1);
+    ASSERT_EQ(read(fd, buf, PAGE_SIZE), -1);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
@@ -1001,6 +1002,72 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     END_TEST;
 }
 
+bool ramdisk_test_fifo_bad_client_overflow(void) {
+    // Try to flex the server's error handling by sending 'malicious' client requests.
+    BEGIN_TEST;
+    // Set up the ramdisk
+    const uint64_t kBlockSize = PAGE_SIZE;
+    const uint64_t kBlockCount = 1 << 18;
+    const uint64_t kDeviceSize = kBlockSize * kBlockCount;
+    int fd = get_ramdisk(kBlockSize, kBlockCount);
+
+    // Create a connection to the ramdisk
+    zx_handle_t fifo;
+    ssize_t expected = sizeof(fifo);
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
+    txnid_t txnid;
+    expected = sizeof(txnid_t);
+    ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
+
+    // Create a vmo of at least size "kBlockSize * 2", since we'll
+    // be reading "kBlockSize" bytes from an offset below, and we want it
+    // to fit within the bounds of the VMO.
+    test_vmo_object_t obj;
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize * 2));
+
+    block_fifo_request_t request;
+    request.txnid      = txnid;
+    request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
+    request.opcode     = BLOCKIO_WRITE;
+
+    // Send a request that is barely out-of-bounds for the device
+    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.vmo_offset = 0;
+    request.dev_offset = kDeviceSize;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
+
+    // Send a request that is half out-of-bounds for the device
+    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
+    request.vmo_offset = 0;
+    request.dev_offset = kDeviceSize - kBlockSize;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
+
+    // Send a request that is very out-of-bounds for the device
+    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.vmo_offset = 0;
+    request.dev_offset = kDeviceSize + kBlockSize;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
+
+    // Send a request that tries to overflow the VMO
+    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
+    request.vmo_offset = fbl::round_down(fbl::numeric_limits<uint64_t>::max(), kBlockSize);
+    request.dev_offset = 0;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
+
+    // Send a request that tries to overflow the device
+    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
+    request.vmo_offset = 0;
+    request.dev_offset = fbl::round_down(fbl::numeric_limits<uint64_t>::max(), kBlockSize);
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
+
+    block_fifo_release_client(client);
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_EQ(close(fd), 0);
+    END_TEST;
+}
+
 bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
@@ -1052,7 +1119,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     request.length     = static_cast<uint32_t>(kBlockSize - 1);
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS);
     request.length     = static_cast<uint32_t>(kBlockSize + 1);
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
@@ -1080,6 +1147,7 @@ RUN_TEST_SMALL(ramdisk_test_fifo_too_many_ops)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_vmoid)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_txnid)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_unaligned_request)
+RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_overflow)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_bad_vmo)
 END_TEST_CASE(ramdisk_tests)
 

@@ -169,8 +169,8 @@ zx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
     zx_status_t status;
     if ((status = io_vmo_.get_size(&vmo_size)) != ZX_OK) {
         return status;
-    } else if (length + vmo_offset > vmo_size) {
-        return ZX_ERR_INVALID_ARGS;
+    } else if ((vmo_offset > vmo_size) || (vmo_size - vmo_offset < length)) {
+        return ZX_ERR_OUT_OF_RANGE;
     }
     return ZX_OK;
 }

@@ -75,13 +75,16 @@ static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
 
 #define VPART_BITS 16
 #define VPART_MAX ((1UL << VPART_BITS) - 1)
-#define VSLICE_BITS 48
+#define VSLICE_BITS 32
 #define VSLICE_MAX ((1UL << VSLICE_BITS) - 1)
+#define RESERVED_BITS 16
+
 #define PSLICE_UNALLOCATED 0
 
 typedef struct slice_entry {
     size_t vpart : VPART_BITS; // '0' if unallocated
     size_t vslice : VSLICE_BITS;
+    size_t reserved : RESERVED_BITS;
 } __attribute__((packed)) slice_entry_t;
 
 static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart adress space too small");

@@ -170,6 +170,13 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         return;
     }
 
+    if ((txn->offset >= sdmmc_get_size(ctx)) || (sdmmc_get_size(ctx) - txn->offset < txn->length)) {
+        zxlogf(ERROR, "sdmmc: iotxn beyond boundary off device "
+                "device size =%" PRIu64 "\n", sdmmc_get_size(ctx));
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
+
     sdmmc_t* sdmmc = ctx;
 
     mtx_lock(&sdmmc->lock);
