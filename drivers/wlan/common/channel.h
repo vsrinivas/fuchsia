@@ -9,6 +9,12 @@
 
 #include <ddk/protocol/wlan.h>
 
+// TODO(porce): Replace all channel > 14 test throughout the codes
+bool Is5Ghz(uint8_t channel_number);
+bool Is2Ghz(uint8_t channel_number);
+bool Is5Ghz(wlan_channel_t& chan);
+bool Is2Ghz(wlan_channel_t& chan);
+
 namespace wlan {
 namespace common {
 

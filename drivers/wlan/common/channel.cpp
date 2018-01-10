@@ -7,6 +7,23 @@
 // TODO(porce): Look up constants from the operating class table.
 // No need to use constexpr in this prototype.
 
+bool Is5Ghz(uint8_t channel_number) {
+    // TODO(porce): Improve this humble function
+    return (channel_number > 14);
+}
+
+bool Is2Ghz(uint8_t channel_number) {
+    return !Is5Ghz(channel_number);
+}
+
+bool Is5Ghz(wlan_channel_t& chan) {
+    return Is5Ghz(chan.primary);
+}
+
+bool Is2Ghz(wlan_channel_t& chan) {
+    return !Is5Ghz(chan.primary);
+}
+
 namespace wlan {
 namespace common {
 
