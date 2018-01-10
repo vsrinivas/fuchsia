@@ -185,11 +185,6 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return ZX_ERR_ACCESS_DENIED;
         }
         const uint32_t* n = (const uint32_t*) in_buf;
-        mtx_lock(&fb->lock);
-        if (!fb->zxdev) {
-            mtx_unlock(&fb->lock);
-            return ZX_ERR_PEER_CLOSED;
-        }
         if (FB_HAS_GPU(fb)) {
             if (*n != fb->active) {
                 if (*n == GROUP_VIRTCON) {
@@ -198,8 +193,12 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
                     FB_RELEASE(fb);
                 }
             }
-            mtx_unlock(&fb->lock);
             return ZX_OK;
+        }
+        mtx_lock(&fb->lock);
+        if (!fb->zxdev) {
+            mtx_unlock(&fb->lock);
+            return ZX_ERR_PEER_CLOSED;
         }
         if ((*n == GROUP_VIRTCON) || (fb->fullscreen == NULL)) {
             fb->active = GROUP_VIRTCON;
