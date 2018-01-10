@@ -46,6 +46,8 @@ typedef struct ethdev0 {
     list_node_t list_active;
     list_node_t list_idle;
 
+    int promisc_requesters;
+
     ethmac_info_t info;
     uint32_t status;
     zx_device_t* zxdev;
@@ -70,7 +72,10 @@ typedef struct tx_info {
 #define ETHDEV_TX_LOOPBACK (8u)
 
 // This client wants to observe loopback tx packets
-#define ETHDEV_TX_LISTEN (16u)
+#define ETHDEV_TX_LISTEN (0x10u)
+
+// This client has requested promisc mode
+#define ETHDEV_PROMISC (0x20u)
 
 // indicates the device is busy although its lock is released
 #define ETHDEV0_BUSY (1u)
@@ -114,13 +119,34 @@ typedef struct ethdev {
 
 #define FAIL_REPORT_RATE 50
 
-static inline ssize_t eth_set_promisc_locked(ethdev0_t* edev0, const void* buf, size_t len) {
-    if (len != sizeof(bool) || buf == NULL) {
-        return ZX_ERR_INVALID_ARGS;
+static inline ssize_t eth_set_promisc_locked(ethdev_t* edev, bool req_on) {
+    if (!req_on == !(edev->state & ETHDEV_PROMISC)) {
+        return ZX_OK; // Duplicate request
     }
-    // TODO(cphoenix): Track per-device refcount, to turn off only when no one wants it;
-    // and per-client bool, to ignore repeated commands on one device.
-    return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, *(bool*)buf, NULL);
+    ethdev0_t* edev0 = edev->edev0;
+    zx_status_t status = ZX_OK;
+    if (req_on) {
+        edev0->promisc_requesters++;
+        if (edev0->promisc_requesters == 1) {
+            status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, true, NULL);
+            if (status == ZX_OK) {
+                edev->state |= ETHDEV_PROMISC;
+            } else {
+                edev0->promisc_requesters--;
+            }
+        }
+    } else {
+        edev0->promisc_requesters--;
+        if (edev0->promisc_requesters == 0) {
+            status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, false, NULL);
+            if (status == ZX_OK) {
+                edev->state &= ~ETHDEV_PROMISC;
+            } else {
+                edev0->promisc_requesters++;
+            }
+        }
+    }
+    return status;
 }
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
@@ -615,7 +641,11 @@ static zx_status_t eth_ioctl(void* ctx, uint32_t op,
         status = eth_get_status_locked(edev, out_buf, out_len, out_actual);
         break;
     case IOCTL_ETHERNET_SET_PROMISC:
-        status = eth_set_promisc_locked(edev->edev0, in_buf, in_len);
+        if (in_len != sizeof(bool) || in_buf == NULL) {
+            status = ZX_ERR_INVALID_ARGS;
+            goto done;
+        }
+        status = eth_set_promisc_locked(edev, *(bool*)in_buf);
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
@@ -638,6 +668,7 @@ static void eth_kill_locked(ethdev_t* edev) {
 
     zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n",
             edev->name, (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
+    eth_set_promisc_locked(edev, false);
 
     // make sure any future ioctls or other ops will fail
     edev->state |= ETHDEV_DEAD;
@@ -793,9 +824,8 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         ops->set_param == NULL) {
         zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol\n",
                device_get_name(dev));
-// TODO(cphoenix): turn these back on after wifi is updated with set_param()
-//        status = ZX_ERR_NOT_SUPPORTED;
-//        goto fail;
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
     }
 
     if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {

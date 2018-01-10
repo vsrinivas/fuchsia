@@ -29,6 +29,7 @@ typedef struct {
     const char* device;
     bool raw;
     bool link_level;
+    bool promisc;
     size_t packet_count;
     size_t verbose_level;
     int dumpfile;
@@ -329,6 +330,7 @@ int usage(void) {
     fprintf(stderr, " -w file : Write packet output to file in pcapng format\n");
     fprintf(stderr, " -c count: Exit after receiving count packets\n");
     fprintf(stderr, " -e      : Print link-level header information\n");
+    fprintf(stderr, " -p      : Use promiscuous mode\n");
     fprintf(stderr, " -v      : Print verbose output\n");
     fprintf(stderr, " -vv     : Print extra verbose output\n");
     fprintf(stderr, " --raw   : Print raw bytes of all incoming packets\n");
@@ -355,6 +357,10 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
             argv++;
             argc--;
             options->link_level = true;
+        } else if (!strcmp(argv[0], "-p")) {
+            argv++;
+            argc--;
+            options->promisc = true;
         } else if (!strcmp(argv[0], "-w")) {
             argv++;
             argc--;
@@ -440,6 +446,13 @@ int main(int argc, const char** argv) {
 
     if ((r = ioctl_ethernet_set_client_name(fd, "netdump", 7)) < 0) {
         fprintf(stderr, "netdump: failed to set client name %zd\n", r);
+    }
+
+    if (options.promisc) {
+        bool yes = true;
+        if ((r = ioctl_ethernet_set_promisc(fd, &yes)) < 0) {
+            fprintf(stderr, "netdump: failed to set promisc mode: %zd\n", r);
+        }
     }
 
     // assign data chunks to ethbufs
