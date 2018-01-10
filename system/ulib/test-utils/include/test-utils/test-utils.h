@@ -85,6 +85,16 @@ zx_handle_t tu_launch_fdio_fini(launchpad_t* lp);
 void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
                           const char* name);
 
+// A wrapper on zx_object_wait_many that can be easier to call.
+// |num_objects| is the number of elements in |handles,signals,pending|.
+// Also, this applies |timeout_scale| to |timeout|.
+
+zx_status_t tu_wait(uint32_t num_objects,
+                    const zx_handle_t* handles,
+                    const zx_signals_t* signals,
+                    zx_signals_t* pending,
+                    zx_time_t timeout);
+
 // A wrapper on zx_channel_create.
 
 void tu_channel_create(zx_handle_t* handle0, zx_handle_t* handle1);

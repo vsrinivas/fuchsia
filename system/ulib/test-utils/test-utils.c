@@ -118,19 +118,20 @@ void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg,
     }
 }
 
-static zx_status_t tu_wait(const zx_handle_t* handles, const zx_signals_t* signals,
-                           uint32_t num_handles, uint32_t* result_index,
-                           zx_time_t timeout,
-                           zx_signals_t* pending)
+zx_status_t tu_wait(uint32_t num_objects,
+                    const zx_handle_t* handles,
+                    const zx_signals_t* signals,
+                    zx_signals_t* pending,
+                    zx_time_t timeout)
 {
-    zx_wait_item_t items[num_handles];
-    for (uint32_t n = 0; n < num_handles; n++) {
+    zx_wait_item_t items[num_objects];
+    for (uint32_t n = 0; n < num_objects; n++) {
         items[n].handle = handles[n];
         items[n].waitfor = signals[n];
     }
-    zx_time_t deadline = zx_deadline_after(timeout);
-    zx_status_t status = zx_object_wait_many(items, num_handles, deadline);
-    for (uint32_t n = 0; n < num_handles; n++) {
+    zx_time_t deadline = zx_deadline_after(timeout * timeout_scale);
+    zx_status_t status = zx_object_wait_many(items, num_objects, deadline);
+    for (uint32_t n = 0; n < num_objects; n++) {
         pending[n] = items[n].pending;
     }
     return status;
@@ -168,8 +169,8 @@ bool tu_channel_wait_readable(zx_handle_t channel)
 {
     zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     zx_signals_t pending;
-    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS * timeout_scale;
-    zx_status_t result = tu_wait(&channel, &signals, 1, NULL, timeout, &pending);
+    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS;
+    zx_status_t result = tu_wait(1, &channel, &signals, &pending, timeout);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_CHANNEL_READABLE) == 0) {
@@ -238,8 +239,8 @@ void tu_process_wait_signaled(zx_handle_t process)
 {
     zx_signals_t signals = ZX_PROCESS_TERMINATED;
     zx_signals_t pending;
-    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS * timeout_scale;
-    zx_status_t result = tu_wait(&process, &signals, 1, NULL, timeout, &pending);
+    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS;
+    zx_status_t result = tu_wait(1, &process, &signals, &pending, timeout);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_PROCESS_TERMINATED) == 0) {
