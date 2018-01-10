@@ -12,10 +12,10 @@
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>
 #include <threads.h>
-#include <zx/vmo.h>
 
 #include "display-device.h"
 #include "gtt.h"
+#include "igd.h"
 
 namespace i915 {
 
@@ -51,6 +51,7 @@ private:
     void HandleHotplug(registers::Ddi ddi);
 
     Gtt gtt_;
+    IgdOpRegion igd_opregion_;
 
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
     zx_handle_t regs_handle_;

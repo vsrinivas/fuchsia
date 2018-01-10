@@ -151,8 +151,6 @@ zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
     auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_.get());
     for (uint32_t i = 0; i < registers::kDdiCount; i++) {
         registers::Ddi ddi = registers::kDdis[i];
-        // TODO(stevensd): gen9 doesn't have any registers to detect if ddi A or E are present.
-        // For now just assume that they are, but we should eventually read from the VBT.
         bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) || (ddi == registers::DDI_B && sfuse_strap.port_b_present()) || (ddi == registers::DDI_C && sfuse_strap.port_c_present()) || (ddi == registers::DDI_D && sfuse_strap.port_d_present());
 
         auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get());
@@ -465,16 +463,22 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     }
 
     fbl::AllocChecker ac;
-    zxlogf(TRACE, "i915: Trying to init display %d\n", ddi);
-    auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
-    if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
-        return hdmi_disp;
+    if (igd_opregion_.IsHdmi(ddi) || igd_opregion_.IsDvi(ddi)) {
+        zxlogf(SPEW, "Checking for hdmi monitor\n");
+        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
+        if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
+            return hdmi_disp;
+        }
+    } else if (igd_opregion_.IsDp(ddi)) {
+        zxlogf(SPEW, "Checking for displayport monitor\n");
+        auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, ddi, pipe);
+        if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
+            return dp_disp;
+        }
+    } else {
+        zxlogf(SPEW, "Skipping ddi\n");
     }
 
-    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, ddi, pipe);
-    if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
-        return dp_disp;
-    }
     return nullptr;
 }
 
@@ -568,8 +572,17 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         flags_ |= FLAGS_BACKLIGHT;
     }
 
+    zx_status_t status;
+    if (is_gen9(device_id_) && ENABLE_MODESETTING) {
+        status = igd_opregion_.Init(&pci);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
+            return status;
+        }
+    }
+
     uint16_t gmch_ctrl;
-    zx_status_t status = pci_config_read16(&pci, registers::GmchGfxControl::kAddr, &gmch_ctrl);
+    status = pci_config_read16(&pci, registers::GmchGfxControl::kAddr, &gmch_ctrl);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to read GfxControl\n");
         return status;

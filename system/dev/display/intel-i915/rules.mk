@@ -18,6 +18,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/edid.cpp \
     $(LOCAL_DIR)/gtt.cpp \
     $(LOCAL_DIR)/hdmi-display.cpp \
+    $(LOCAL_DIR)/igd.cpp \
     $(LOCAL_DIR)/intel-i915.cpp \
 
 MODULE_STATIC_LIBS := \
