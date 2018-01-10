@@ -56,6 +56,7 @@ bool use_net186_workaround = false;
 static bool use_tftp = true;
 static bool use_color = true;
 static size_t total_file_size;
+static bool file_info_printed;
 static int progress_reported;
 static int packets_sent;
 static struct timeval start_time, end_time;
@@ -81,11 +82,7 @@ char* sockaddr_str(struct sockaddr_in6* addr) {
     return buf;
 }
 
-void initialize_status(const char* name, size_t size) {
-    total_file_size = size;
-    progress_reported = 0;
-    packets_sent = 0;
-
+static void print_file_info(const char* name, size_t size) {
     size_t prefix_len = strlen(NB_FILENAME_PREFIX);
     const char* base_name;
     if (!strncmp(name, NB_FILENAME_PREFIX, prefix_len)) {
@@ -102,6 +99,17 @@ void initialize_status(const char* name, size_t size) {
     log("Transfer starts   [%5.1f MB]   %s/%s%s%s (%zu bytes)",
         (float)size / 1024.0 / 1024.0,
         dirname(path1), ANSI(GREEN), basename(path2), ANSI(RESET), size);
+}
+
+void initialize_status(const char* name, size_t size) {
+    total_file_size = size;
+    progress_reported = 0;
+    packets_sent = 0;
+
+    if (!file_info_printed) {
+        print_file_info(name, size);
+        file_info_printed = true;
+    }
 }
 
 void update_status(size_t bytes_so_far) {
@@ -151,8 +159,19 @@ static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* r
     int result;
     is_redirected = !isatty(fileno(stdout));
     gettimeofday(&start_time, NULL);
+    file_info_printed = false;
     if (use_tftp) {
-        result = tftp_xfer(addr, local_name, remote_name);
+        bool first = true;
+        while ((result = tftp_xfer(addr, local_name, remote_name)) == -EAGAIN) {
+            if (first) {
+                fprintf(stderr, "Target busy, waiting.");
+                first = false;
+            } else {
+                fprintf(stderr, ".");
+            }
+            sleep(1);
+            gettimeofday(&start_time, NULL);
+        }
     } else {
         result = netboot_xfer(addr, local_name, remote_name);
     }

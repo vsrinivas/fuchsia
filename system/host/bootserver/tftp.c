@@ -264,14 +264,17 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     opts.block_size = tftp_block_size;
     opts.window_size = tftp_window_size;
 
-    tftp_status status = tftp_push_file(session, &ts, &xd, fn, name, &opts);
-
-    if (status < 0) {
-        fprintf(stderr, "%s: %s (status = %d)\n", appname, opts.err_msg, (int)status);
-        goto done;
+    tftp_status status;
+    if ((status = tftp_push_file(session, &ts, &xd, fn, name, &opts)) < 0) {
+        if (status == TFTP_ERR_SHOULD_WAIT) {
+            result = -EAGAIN;
+        } else {
+            fprintf(stderr, "%s: %s (status = %d)\n", appname, opts.err_msg, (int)status);
+            result = -1;
+        }
+    } else {
+        result = 0;
     }
-
-    result = 0;
 
 done:
     if (session_data) {
