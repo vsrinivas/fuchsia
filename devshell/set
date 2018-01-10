@@ -7,6 +7,7 @@
 
 ## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2|vim|vim2
 ##               [--release] [--packages P1,P2,...]
+##               [--netboot] [--bootfs]
 ##               [--build-dir DIR]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--goma|--no-goma] [--no-ensure-goma]
@@ -103,6 +104,7 @@ function main {
 
   local variant=debug
   local packages=
+  local extra_packages=
   local build_dir=
   local use_goma
   local goma_dir
@@ -125,6 +127,12 @@ function main {
           packages="${packages},$2"
         fi
         shift
+        ;;
+      --netboot)
+        extra_packages="${extra_packages},build/packages/netboot"
+        ;;
+      --bootfs)
+        extra_packages="${extra_packages},build/packages/bootfs"
         ;;
       --build-dir)
         if [[ $# -lt 2 ]]; then
@@ -192,7 +200,7 @@ function main {
   done
 
   if [[ -n "${packages}" ]]; then
-    gen_args="${gen_args} --packages ${packages}"
+    gen_args="${gen_args} --packages ${packages}${extra_packages}"
   else
     local -r jiri_manifest="${FUCHSIA_DIR}/.jiri_manifest"
 
@@ -214,20 +222,20 @@ function main {
     # conflicting version requirements of importing 2+ layers at the same time.
 
     if grep -q "manifest/garnet" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages garnet/packages/default --ignore-skia"
+      gen_args="${gen_args} --packages garnet/packages/default${extra_packages} --ignore-skia"
     fi
 
     if grep -q "manifest/peridot" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages peridot/packages/default --ignore-skia"
+      gen_args="${gen_args} --packages peridot/packages/default${extra_packages} --ignore-skia"
     fi
 
     if grep -q "manifest/topaz" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages topaz/packages/default"
+      gen_args="${gen_args} --packages topaz/packages/default${extra_packages}"
     fi
 
     if [[ `cat ${jiri_manifest}` =~ vendor/([a-zA-Z0-9_-]+) ]]; then
       local -r name="${BASH_REMATCH[1]}"
-      gen_args="${gen_args} --packages vendor/${name}/packages/default"
+      gen_args="${gen_args} --packages vendor/${name}/packages/default${extra_packages}"
     fi
   fi
 
