@@ -417,21 +417,17 @@ static void __NO_RETURN test_child(void)
 static launchpad_t* setup_test_child(zx_handle_t job, const char* arg,
                                      zx_handle_t* out_channel)
 {
-    if (arg)
-        unittest_printf("Starting test child %s.\n", arg);
-    else
-        unittest_printf("Starting test child.\n");
+    unittest_printf("Starting test child %s.\n", arg);
     zx_handle_t our_channel, their_channel;
     tu_channel_create(&our_channel, &their_channel);
     const char* test_child_path = program_path;
     const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
     const char* const argv[] = {
         test_child_path,
-        test_child_name,
-        verbosity_string,
         arg,
+        verbosity_string,
     };
-    int argc = countof(argv) - (arg == NULL);
+    int argc = countof(argv);
     zx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { PA_USER0 };
     *out_channel = our_channel;
@@ -634,7 +630,7 @@ static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
 
     // Start a new process.
     zx_handle_t child, our_channel;
-    start_test_child(zx_job_default(), NULL, &child, &our_channel);
+    start_test_child(zx_job_default(), test_child_name, &child, &our_channel);
 
     // Possibly bind an eport to it.
     zx_handle_t eport = ZX_HANDLE_INVALID;
@@ -800,7 +796,7 @@ static bool job_handler_test(void)
 
     zx_handle_t job = tu_job_create(zx_job_default());
     zx_handle_t child, our_channel;
-    start_test_child(job, NULL, &child, &our_channel);
+    start_test_child(job, test_child_name, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(job, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
@@ -818,7 +814,7 @@ static bool grandparent_job_handler_test(void)
     zx_handle_t parent_job = tu_job_create(grandparent_job);
     zx_handle_t job = tu_job_create(parent_job);
     zx_handle_t child, our_channel;
-    start_test_child(job, NULL, &child, &our_channel);
+    start_test_child(job, test_child_name, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(grandparent_job, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
@@ -836,7 +832,7 @@ static bool process_handler_test(void)
     unittest_printf("process exception handler basic test\n");
 
     zx_handle_t child, our_channel;
-    start_test_child(zx_job_default(), NULL, &child, &our_channel);
+    start_test_child(zx_job_default(), test_child_name, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
@@ -851,7 +847,7 @@ static bool thread_handler_test(void)
     unittest_printf("thread exception handler basic test\n");
 
     zx_handle_t child, our_channel;
-    start_test_child(zx_job_default(), NULL, &child, &our_channel);
+    start_test_child(zx_job_default(), test_child_name, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
     send_msg(our_channel, MSG_CREATE_AUX_THREAD);
     zx_handle_t thread;
@@ -875,7 +871,7 @@ static bool debugger_handler_test(void)
     unittest_printf("debugger exception handler basic test\n");
 
     zx_handle_t child, our_channel;
-    start_test_child(zx_job_default(), NULL, &child, &our_channel);
+    start_test_child(zx_job_default(), test_child_name, &child, &our_channel);
 
     // We're binding to the debugger exception port so make sure the
     // child is running first so that we don't have to process
@@ -894,7 +890,8 @@ static bool packet_pid_test(void)
     BEGIN_TEST;
 
     zx_handle_t child, eport, our_channel;
-    start_test_child_with_eport(zx_job_default(), NULL, &child, &eport, &our_channel);
+    start_test_child_with_eport(zx_job_default(), test_child_name,
+                                &child, &eport, &our_channel);
 
     zx_info_handle_basic_t child_info;
     tu_handle_get_basic_info(child, &child_info);
@@ -925,7 +922,8 @@ static bool process_start_test(void)
     unittest_printf("process start test\n");
 
     zx_handle_t child, eport, our_channel;
-    start_test_child_with_eport(zx_job_default(), NULL, &child, &eport, &our_channel);
+    start_test_child_with_eport(zx_job_default(), test_child_name,
+                                &child, &eport, &our_channel);
 
     zx_koid_t tid;
     if (read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &tid)) {
@@ -950,7 +948,7 @@ static bool process_exit_notification_test(void)
     unittest_printf("process exit notification test\n");
 
     zx_handle_t child, our_channel;
-    start_test_child(zx_job_default(), NULL, &child, &our_channel);
+    start_test_child(zx_job_default(), test_child_name, &child, &our_channel);
 
     zx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, 0);
@@ -1200,7 +1198,8 @@ static bool walkthrough_setup(walkthrough_state_t* state)
     state->thread_eport = tu_io_port_create();
     state->debugger_eport = tu_io_port_create();
 
-    start_test_child(state->job, NULL, &state->child, &state->our_channel);
+    start_test_child(state->job, test_child_name,
+                     &state->child, &state->our_channel);
 
     send_msg(state->our_channel, MSG_CREATE_AUX_THREAD);
     recv_msg_new_thread_handle(state->our_channel, &state->thread);
@@ -1336,8 +1335,7 @@ static bool unbind_while_stopped_test(void)
     unittest_printf("unbind_while_stopped tests\n");
 
     zx_handle_t child, eport, our_channel;
-    const char* arg = "";
-    start_test_child_with_eport(zx_job_default(), arg,
+    start_test_child_with_eport(zx_job_default(), test_child_name,
                                 &child, &eport, &our_channel);
 
     {
@@ -1365,8 +1363,7 @@ static bool unbind_rebind_while_stopped_test(void)
     unittest_printf("unbind_rebind_while_stopped tests\n");
 
     zx_handle_t child, eport, our_channel;
-    const char* arg = "";
-    start_test_child_with_eport(zx_job_default(), arg,
+    start_test_child_with_eport(zx_job_default(), test_child_name,
                                 &child, &eport, &our_channel);
 
     zx_port_packet_t start_packet;
@@ -1438,8 +1435,7 @@ static bool kill_while_stopped_at_start_test(void)
     unittest_printf("kill_while_stopped_at_start tests\n");
 
     zx_handle_t child, eport, our_channel;
-    const char* arg = "";
-    start_test_child_with_eport(zx_job_default(), arg,
+    start_test_child_with_eport(zx_job_default(), test_child_name,
                                 &child, &eport, &our_channel);
 
     zx_koid_t tid;
@@ -1602,13 +1598,16 @@ int main(int argc, char **argv)
     program_path = argv[0];
     scan_argv(argc, argv);
 
-    if (argc >= 2 && strcmp(argv[1], test_child_name) == 0) {
+    if (argc >= 2) {
         const char* excp_name = check_trigger(argc, argv);
-        if (excp_name)
+        if (excp_name) {
             test_child_trigger(excp_name);
-        else
+            return 0;
+        }
+        if (strcmp(argv[1], test_child_name) == 0) {
             test_child();
-        return 0;
+            return 0;
+        }
     }
 
     tu_watchdog_start();
