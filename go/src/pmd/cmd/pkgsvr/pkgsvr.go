@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// pkgsvr provides a single-package filesystem mount, given a blobstore path,
-// a package meta.far blob path, and a mount path.
 package main
 
 import (
@@ -17,34 +15,54 @@ import (
 )
 
 var (
-	blobstore = flag.String("blobstore", "/blobstore", "Path of the blobstore root to read blobs from")
-	path      = flag.String("path", "/system", "Path at which the filesystem will be served")
+	sysPath   = flag.String("system", "/system", "Path at which the filesystem will be served")
+	pkgfsPath = flag.String("pkgfs", "/pkgfs", "Path at which the package filesystem will be served")
+	blobstore = flag.String("blobstore", "/blobstore", "Path of blobstore to use")
+	index     = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
 	pkg       = flag.String("package", "", "path into blobstore for the system meta.far")
 )
 
-func main() {
-	flag.Parse()
-
-	if *pkg == "" && len(flag.Args()) == 1 {
-		*pkg = filepath.Join(*blobstore, flag.Arg(0))
-	}
-
-	log.Printf("pkgsvr mounting %s at %s", *pkg, *path)
+func mountSystem() {
+	log.Printf("system: mounting %s at %s", *pkg, *sysPath)
 
 	fs, err := pkgfs.NewSinglePackage(*pkg, *blobstore)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := fs.Mount(*path); err != nil {
+	if err := fs.Mount(*sysPath); err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("pkgsvr mounted at %s", *path)
+	log.Printf("system: package %s mounted at %s", *pkg, *sysPath)
 
 	if err := zx.ProcHandle.Signal(zx.SignalNone, zx.SignalUser0); err != nil {
-		log.Printf("pkgsvr: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
+		log.Printf("system: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
 	}
+}
+
+func main() {
+	log.SetPrefix("pkgsvr: ")
+	flag.Parse()
+
+	if *pkg == "" && len(flag.Args()) == 1 {
+		*pkg = filepath.Join(*blobstore, flag.Arg(0))
+	}
+	if *pkg != "" {
+		mountSystem()
+	}
+
+	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
+	fs, err := pkgfs.New(*index, *blobstore)
+	if err != nil {
+		log.Fatalf("pkgfs: initialization failed: %s", err)
+	}
+
+	if err := fs.Mount(*pkgfsPath); err != nil {
+		log.Fatalf("pkgfs: mount failed: %s", err)
+	}
+
+	log.Printf("pkgfs mounted at %s serving index %s from blobstore %s", *pkgfsPath, *index, *blobstore)
 
 	select {}
 }
