@@ -20,6 +20,7 @@ namespace i915 {
 // Various definitions from IGD OpRegion/Software SCI documentation.
 
 // Offsets into the PCI configuration space of IGD registers
+constexpr uint16_t kIgdSwSciReg = 0xe8;
 constexpr uint16_t kIgdOpRegionAddrReg = 0xfc;
 
 // Length of the igd opregion
@@ -55,6 +56,15 @@ typedef struct igd_opregion {
 
 static_assert(sizeof(igd_opregion_t) == 0x2000, "Bad igd opregion len");
 static_assert(offsetof(igd_opregion_t, mailbox4) == 1024, "Bad mailbox4 offset");
+
+typedef struct sci_interface {
+    uint32_t entry_and_exit_params;
+    uint32_t additional_params;
+    uint32_t driver_sleep_timeout;
+    uint8_t rsvd[240];
+} sci_interface_t;
+
+static_assert(sizeof(sci_interface_t) == 252, "Bad sci_interface_t size");
 
 // Header for each bios data block.
 typedef struct block_header {
@@ -124,15 +134,57 @@ typedef struct ddi_config {
     uint8_t unused1[2];
     // See DdiFlags class
     uint16_t ddi_flags;
-    uint8_t unused2[12];
+    uint8_t unused2[3];
+
+    uint8_t hdmi_cfg;
+    // Index into the recommended buffer translation table to use when
+    // configuring DDI_BUF_TRANS[9] for HDMI/DVI.
+    DEF_SUBFIELD(hdmi_cfg, 3, 0, ddi_buf_trans_idx);
+
+    uint8_t unused3[8];
     // Specifies the DDI this config this corresponds to as well as type of DDI.
     uint8_t port_type;
-    uint8_t unused3[21];
+    uint8_t unused4[6];
+
+    uint8_t flags;
+    // Flag that indicates that there is an iboost override. An override enables
+    // iboost for all DDI_BUF_TRANS values and overrides the recommended iboost.
+    DEF_SUBBIT(flags, 3, has_iboost_override);
+
+    uint8_t unused5[13];
+
+    uint8_t iboost_levels;
+    // The iboost override level, if has_iboost_override is set.
+    DEF_SUBFIELD(iboost_levels, 7, 4, hdmi_iboost_override);
+    DEF_SUBFIELD(iboost_levels, 3, 0, dp_iboost_override);
 } ddi_config_t;
 
 static_assert(offsetof(ddi_config_t, ddi_flags) == 2, "Bad ddi_flags offset");
+static_assert(offsetof(ddi_config_t, hdmi_cfg) == 7, "Bad hdmi_cfg offset");
 static_assert(offsetof(ddi_config_t, port_type) == 16, "Bad port_type offset");
+static_assert(offsetof(ddi_config_t, flags) == 23, "Bad flags offset");
+static_assert(offsetof(ddi_config_t, iboost_levels) == 37, "Bad iboost_levels offset");
 static_assert(sizeof(ddi_config_t) == 38, "Bad ddi_config_t size");
+
+typedef struct edp_config {
+    static constexpr uint32_t kBlockType = 27;
+
+    uint8_t unused[188];
+    // Contains 16 nibbles, one for each panel type 0x0-0xf. If the value
+    // is 0, then the panel is a low voltage panel.
+    uint8_t vswing_preemphasis[8];
+    // A bunch of other unused stuff
+} edp_config_t;
+static_assert(offsetof(edp_config_t, vswing_preemphasis) == 188, "Bad vswing_preemphasis offset");
+
+typedef struct lvds_config {
+    static constexpr uint32_t kBlockType = 40;
+
+    // The default panel type for the hardware. Can be overridden by the IGD
+    // SCI panel details function.
+    uint8_t panel_type;
+    // A bunch of other unused stuff
+} lvds_config_t;
 
 class IgdOpRegion {
 public:
@@ -149,10 +201,31 @@ public:
     bool IsDp(registers::Ddi ddi) const {
         return ddi_type_[ddi] == kDp || ddi_type_[ddi] == kEdp;
     }
+
+    bool IsLowVoltageEdp(registers::Ddi ddi) const {
+        ZX_DEBUG_ASSERT(IsDp(ddi));
+        // TODO(stevensd): Support the case where more than one type of edp panel is present.
+        return ddi_type_[ddi] == kEdp && edp_is_low_voltage_;
+    }
+
+    uint8_t GetIBoost(registers::Ddi ddi) const {
+        return iboosts_[ddi];
+    }
+
+    static constexpr uint8_t kUseDefaultIdx = 0xff;
+    uint8_t GetHdmiBufferTranslationIndex(registers::Ddi ddi) const {
+        ZX_DEBUG_ASSERT(IsHdmi(ddi) || IsDvi(ddi));
+        return hdmi_buffer_translation_idx_[ddi];
+    }
+
 private:
     template<typename T> T* GetSection(uint16_t* size);
     uint8_t* GetSection(uint8_t tag, uint16_t* size);
     bool ProcessDdiConfigs();
+    bool CheckForLowVoltageEdp(pci_protocol_t* pci);
+    bool GetPanelType(pci_protocol_t* pci, uint8_t* type);
+    bool Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunction,
+               uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res);
 
     zx::vmo igd_opregion_pages_;
     uintptr_t igd_opregion_pages_base_;
@@ -166,6 +239,11 @@ private:
     constexpr static uint8_t kDvi = 2;
     constexpr static uint8_t kDp = 3;
     constexpr static uint8_t kEdp = 4;
+
+    bool edp_is_low_voltage_;
+
+    uint8_t iboosts_[registers::kDdiCount];
+    uint8_t hdmi_buffer_translation_idx_[registers::kDdiCount];
 };
 
 } // namespace i915

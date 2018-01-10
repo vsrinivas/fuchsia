@@ -116,15 +116,15 @@ public:
 // High byte of DDI_BUF_TRANS
 class DdiBufTransHi : public hwreg::RegisterBase<DdiBufTransHi, uint32_t> {
 public:
-    DEF_BIT(31, balance_leg_enable);
-    DEF_FIELD(17, 0, deemphasis_level);
+    DEF_FIELD(20, 16, vref);
+    DEF_FIELD(10, 0, vswing);
 };
 
 // Low byte of DDI_BUF_TRANS
 class DdiBufTransLo : public hwreg::RegisterBase<DdiBufTransLo, uint32_t> {
 public:
-    DEF_FIELD(20, 16, vref);
-    DEF_FIELD(10, 0, vswing);
+    DEF_BIT(31, balance_leg_enable);
+    DEF_FIELD(17, 0, deemphasis_level);
 };
 
 // DISPIO_CR_TX_BMU_CR0

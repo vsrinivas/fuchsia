@@ -103,6 +103,45 @@ const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_u[9] = {
     { 0x000000c0, 0x80005012 },
 };
 
+const ddi_buf_trans_entry edp_ddi_buf_trans_skl_hs[10] = {
+    { 0x000000a8, 0x00000018 },
+    { 0x000000a9, 0x00004013 },
+    { 0x000000a2, 0x00007011 },
+    { 0x0000009c, 0x00009010 },
+    { 0x000000a9, 0x00000018 },
+    { 0x000000a2, 0x00006013 },
+    { 0x000000a6, 0x00007011 },
+    { 0x000000ab, 0x00000018 },
+    { 0x0000009f, 0x00007013 },
+    { 0x000000df, 0x00000018 },
+};
+
+const ddi_buf_trans_entry edp_ddi_buf_trans_skl_y[10] = {
+    { 0x000000a8, 0x00000018 },
+    { 0x000000ab, 0x00004013 },
+    { 0x000000a4, 0x00007011 },
+    { 0x000000df, 0x00009010 },
+    { 0x000000aa, 0x00000018 },
+    { 0x000000a4, 0x00006013 },
+    { 0x0000009d, 0x00007011 },
+    { 0x000000a0, 0x00000018 },
+    { 0x000000df, 0x00006012 },
+    { 0x0000008a, 0x00000018 },
+};
+
+const ddi_buf_trans_entry edp_ddi_buf_trans_skl_u[10] = {
+    { 0x000000a8, 0x00000018 },
+    { 0x000000a9, 0x00004013 },
+    { 0x000000a2, 0x00007011 },
+    { 0x0000009c, 0x00009010 },
+    { 0x000000a9, 0x00000018 },
+    { 0x000000a2, 0x00006013 },
+    { 0x000000a6, 0x00007011 },
+    { 0x000000ab, 0x00002016 },
+    { 0x0000009f, 0x00005013 },
+    { 0x000000df, 0x00000018 },
+};
+
 void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry** entries,
                                   uint8_t* i_boost, unsigned* count) {
     if (is_skl(device_id)) {
@@ -134,6 +173,20 @@ void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry*
             *i_boost = 0x3;
             *count = fbl::count_of(dp_ddi_buf_trans_kbl_hs);
         }
+    }
+}
+
+void get_edp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry** entries,
+                                   unsigned* count) {
+    if (is_skl_u(device_id) || is_kbl_u(device_id)) {
+        *entries = edp_ddi_buf_trans_skl_u;
+        *count = fbl::count_of(edp_ddi_buf_trans_skl_u);
+    } else if (is_skl_y(device_id) || is_kbl_y(device_id)) {
+        *entries = edp_ddi_buf_trans_skl_y;
+        *count = fbl::count_of(edp_ddi_buf_trans_skl_y);
+    } else {
+        *entries = edp_ddi_buf_trans_skl_hs;
+        *count = fbl::count_of(edp_ddi_buf_trans_skl_hs);
     }
 }
 
@@ -476,23 +529,22 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
     }
 
     // In the Recommended buffer translation programming for DisplayPort from the intel display
-    // doc, the max voltage swing is 2 and the max (voltage swing + pre-emphasis) is 3. According
-    // to the v1.1a of the DP docs, if v + pe is too large then v should be reduced to the highest
-    // supported value for the pe level (section 3.5.1.3)
+    // doc, the max voltage swing is 2/3 for DP/eDP and the max (voltage swing + pre-emphasis) is
+    // 3. According to the v1.1a of the DP docs, if v + pe is too large then v should be reduced
+    // to the highest supported value for the pe level (section 3.5.1.3)
     static constexpr uint32_t kMaxVPlusPe = 3;
-    // TODO(ZX-1416): If we're eDP, read the VBT to determine if we support low voltage swings
-    static constexpr uint32_t kMaxV = 2;
+    uint8_t max_v = controller()->igd_opregion().IsLowVoltageEdp(ddi()) ? 3 : 2;
     if (v + pe > kMaxVPlusPe) {
         v = static_cast<uint8_t>(kMaxVPlusPe - pe);
     }
-    if (v > kMaxV) {
-        v = kMaxV;
+    if (v > max_v) {
+        v = max_v;
     }
 
     for (unsigned i = 0; i < dp_lane_count_; i++) {
         voltage_change |= (training[i].voltage_swing_set() != v);
         training[i].set_voltage_swing_set(v);
-        training[i].set_max_swing_reached(v == kMaxV);
+        training[i].set_max_swing_reached(v == max_v);
         training[i].set_pre_emphasis_set(pe);
         training[i].set_max_pre_emphasis_set(pe + v == kMaxVPlusPe);
     }
@@ -540,24 +592,32 @@ bool DpDisplay::LinkTrainingSetup() {
     dp_tp.WriteTo(mmio_space());
 
     // Configure ddi voltage swing
-    // TODO(ZX-1416): Read the VBT to check for low voltage eDP
     // TODO(ZX-1416): Read the VBT to handle unique motherboard configs for kaby lake
     unsigned count;
     uint8_t i_boost;
     const ddi_buf_trans_entry* entries;
-    get_dp_ddi_buf_trans_entries(controller()->device_id(), &entries, &i_boost, &count);
+    if (controller()->igd_opregion().IsLowVoltageEdp(ddi())) {
+        i_boost = 0;
+        get_edp_ddi_buf_trans_entries(controller()->device_id(), &entries, &count);
+    } else {
+        get_dp_ddi_buf_trans_entries(controller()->device_id(), &entries, &i_boost, &count);
+    }
+    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi());
 
     for (unsigned i = 0; i < count; i++) {
         auto ddi_buf_trans_high = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());
         auto ddi_buf_trans_low = ddi_regs.DdiBufTransLo(i).ReadFrom(mmio_space());
         ddi_buf_trans_high.set_reg_value(entries[i].high_dword);
         ddi_buf_trans_low.set_reg_value(entries[i].low_dword);
+        if (i_boost_override) {
+            ddi_buf_trans_low.set_balance_leg_enable(1);
+        }
         ddi_buf_trans_high.WriteTo(mmio_space());
         ddi_buf_trans_low.WriteTo(mmio_space());
     }
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
-    disio_cr_tx_bmu.set_disable_balance_leg(0);
-    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost);
+    disio_cr_tx_bmu.set_disable_balance_leg(!i_boost && !i_boost_override);
+    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_override ? i_boost_override : i_boost);
     disio_cr_tx_bmu.WriteTo(mmio_space());
 
     // Enable and wait for DDI_BUF_CTL

@@ -18,6 +18,40 @@
 // I2c functions
 
 namespace {
+// Recommended DDI buffer translation programming values
+
+struct ddi_buf_trans_entry {
+    uint32_t high_dword;
+    uint32_t low_dword;
+};
+
+const ddi_buf_trans_entry hdmi_ddi_buf_trans_skl_uhs[11] {
+    { 0x000000ac, 0x00000018 },
+    { 0x0000009d, 0x00005012 },
+    { 0x00000088, 0x00007011 },
+    { 0x000000a1, 0x00000018 },
+    { 0x00000098, 0x00000018 },
+    { 0x00000088, 0x00004013 },
+    { 0x000000cd, 0x80006012 },
+    { 0x000000df, 0x00000018 },
+    { 0x000000cd, 0x80003015 },
+    { 0x000000c0, 0x80003015 },
+    { 0x000000c0, 0x80000018 },
+};
+
+const ddi_buf_trans_entry hdmi_ddi_buf_trans_skl_y[11] {
+    { 0x000000a1, 0x00000018 },
+    { 0x000000df, 0x00005012 },
+    { 0x000000cb, 0x80007011 },
+    { 0x000000a4, 0x00000018 },
+    { 0x0000009d, 0x00000018 },
+    { 0x00000080, 0x00004013 },
+    { 0x000000c0, 0x80006012 },
+    { 0x0000008a, 0x00000018 },
+    { 0x000000c0, 0x80003015 },
+    { 0x000000c0, 0x80003015 },
+    { 0x000000c0, 0x80000018 },
+};
 
 int ddi_to_pin(registers::Ddi ddi) {
     if (ddi == registers::DDI_B) {
@@ -587,15 +621,34 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     auto ddi_buf_trans_lo = ddi_regs.DdiBufTransLo(9).ReadFrom(mmio_space());
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
 
-    // TODO(ZX-1416): Check if the VBT overrides the recommended index into the values table
+    // kUseDefaultIdx always fails the idx-in-bounds check, so no additional handling is needed
+    uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi());
+    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi());
+
+    const ddi_buf_trans_entry* entries;
+    uint8_t default_iboost;
     if (is_skl_y(controller()->device_id()) || is_kbl_y(controller()->device_id())) {
-        ddi_buf_trans_hi.set_reg_value(0x000000c0);
+        entries = hdmi_ddi_buf_trans_skl_y;
+        if (idx >= fbl::count_of(hdmi_ddi_buf_trans_skl_y)) {
+            idx = 8; // Default index
+        }
+        default_iboost = 3;
     } else {
-        ddi_buf_trans_hi.set_reg_value(0x000000cd);
+        entries = hdmi_ddi_buf_trans_skl_uhs;
+        if (idx >= fbl::count_of(hdmi_ddi_buf_trans_skl_uhs)) {
+            idx = 8; // Default index
+        }
+        default_iboost = 1;
     }
-    ddi_buf_trans_lo.set_reg_value(0x80003015);
+
+    ddi_buf_trans_hi.set_reg_value(entries[idx].high_dword);
+    ddi_buf_trans_lo.set_reg_value(entries[idx].low_dword);
+    if (i_boost_override) {
+        ddi_buf_trans_lo.set_balance_leg_enable(1);
+    }
     disio_cr_tx_bmu.set_disable_balance_leg(0);
-    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(1);
+    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(
+            i_boost_override ? i_boost_override : default_iboost);
 
     ddi_buf_trans_hi.WriteTo(mmio_space());
     ddi_buf_trans_lo.WriteTo(mmio_space());

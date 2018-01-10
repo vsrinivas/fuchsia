@@ -34,6 +34,7 @@ public:
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
     uint16_t device_id() const { return device_id_; }
+    const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
 
     int IrqLoop();
 
