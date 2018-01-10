@@ -134,11 +134,96 @@ static int mkdir_all(const char* dirn) {
     return 0;
 }
 
+// Invokes a test binary and prints results.
+//
+// |path| specifies the path to the binary.
+// |name| is the human-friendly name of the test, for output.
+// |outfd| is a file descriptor and if non-negative, will be used as the
+//         stdout and stderr of the test binary.
+//
+// Returns true if the test binary successfully executes and has a return code of zero.
+static bool run_test(const char* path, const char* name, const int outfd) {
+    char verbose_opt[] = {'v','=', verbosity + '0', 0};
+    const char* argv[] = {path, verbose_opt};
+    int argc = verbosity >= 0 ? 2 : 1;
+
+    launchpad_t* lp;
+    launchpad_create(0, path, &lp);
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_clone(lp, LP_CLONE_ALL);
+    if (outfd >= 0) {
+        launchpad_clone_fd(lp, outfd, STDOUT_FILENO);
+        launchpad_transfer_fd(lp, outfd, STDERR_FILENO);
+    }
+    launchpad_set_args(lp, argc, argv);
+    const char* errmsg;
+    zx_handle_t handle;
+    zx_status_t status = launchpad_go(lp, &handle, &errmsg);
+    if (status < 0) {
+        printf("FAILURE: Failed to launch %s: %d: %s\n", name, status, errmsg);
+        fail_test(&failures, name, FAILED_TO_LAUNCH, 0);
+        return false;
+    }
+
+    status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
+                                ZX_TIME_INFINITE, NULL);
+    if (status != ZX_OK) {
+        printf("FAILURE: Failed to wait for process exiting %s: %d\n", name, status);
+        fail_test(&failures, name, FAILED_TO_WAIT, 0);
+        return false;
+    }
+
+    // read the return code
+    zx_info_process_t proc_info;
+    status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
+    zx_handle_close(handle);
+
+    if (status < 0) {
+        printf("FAILURE: Failed to get process return code %s: %d\n", name, status);
+        fail_test(&failures, name, FAILED_TO_RETURN_CODE, 0);
+        return false;
+    }
+
+    if (proc_info.return_code != 0) {
+        printf("FAILED: %s exited with nonzero status: %d\n", name, proc_info.return_code);
+        fail_test(&failures, name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
+        return false;
+    }
+
+    printf("PASSED: %s passed\n", name);
+    return true;
+}
+
 static bool run_tests(const char* dirn, const char** test_names, const int num_test_names,
                       const char* output_dir, FILE* summary_json) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         return false;
+    }
+
+    char abs_dirn[PATH_MAX];
+    if (realpath(dirn, abs_dirn) == NULL) {
+        printf("FAILURE: Could not resolve path %s: %s\n", dirn, strerror(errno));
+        return false;
+    }
+
+    char test_output_dir[PATH_MAX];
+    if (output_dir != NULL) {
+        // Resolve an absolute path to the test directory to ensure output
+        // directory names will never collide.
+        size_t path_len = snprintf(test_output_dir, sizeof(test_output_dir), "%s/%s",
+                                   output_dir, abs_dirn);
+        if (path_len >= sizeof(test_output_dir)) {
+            printf("FAILURE: Output path is too long %s/%s\n", output_dir, dirn);
+            return false;
+        }
+        if (mkdir_all(test_output_dir)) {
+            printf("FAILURE: Failed to create output directory %s: %s\n",
+                   test_output_dir, strerror(errno));
+            return false;
+        }
+    } else {
+        test_output_dir[0] = '\0';
     }
 
     int init_failed_count = failed_count;
@@ -147,7 +232,7 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
     struct stat stat_buf;
     while ((de = readdir(dir)) != NULL) {
         char name[64 + NAME_MAX];
-        snprintf(name, sizeof(name), "%s/%s", dirn, de->d_name);
+        snprintf(name, sizeof(name), "%s/%s", abs_dirn, de->d_name);
         if (stat(name, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
             continue;
         }
@@ -167,93 +252,37 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
                 de->d_name);
         }
 
-        char verbose_opt[] = {'v','=', verbosity + '0', 0};
-        const char* argv[] = {name, verbose_opt};
-        int argc = verbosity >= 0 ? 2 : 1;
-
-        launchpad_t* lp;
-        launchpad_create(0, name, &lp);
-        launchpad_load_from_file(lp, argv[0]);
-        launchpad_clone(lp, LP_CLONE_ALL);
+        int outfd = -1;
         if (output_dir != NULL) {
-            // Create a path to the output.
             char output_path[PATH_MAX];
-            size_t path_len = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, dirn);
-            if (path_len >= sizeof(output_path)) {
-                printf("FAILURE: Output path is too long %s/%s\n", output_dir, dirn);
-                continue;
-            }
-            if (mkdir_all(output_path)) {
-                printf("FAILURE: Failed to create output directory %s: %s\n",
-                       output_path, strerror(errno));
-                continue;
-            }
 
             // Generate output file name.
-            strlcat(output_path, "/", sizeof(output_path));
-            strlcat(output_path, de->d_name, sizeof(output_path));
-            path_len = strlcat(output_path, ".out", sizeof(output_path));
+            size_t path_len = snprintf(output_path, sizeof(output_path), "%s/%s.out",
+                                       test_output_dir, de->d_name);
             if (path_len >= sizeof(output_path)) {
                 printf("FAILURE: Output path is too long %s/%s\n", output_dir, dirn);
                 continue;
             }
 
             // Open output file.
-            int outfd = open(output_path, O_CREAT | O_WRONLY | O_APPEND, 0664);
+            outfd = open(output_path, O_CREAT | O_WRONLY | O_APPEND, 0664);
             if (outfd < 0) {
                 printf("FAILURE: Failed to open output file %s: %s\n", output_path,
                        strerror(errno));
                 continue;
             }
-            // Set the file as the subprocess's stdout and stderr.
-            launchpad_clone_fd(lp, outfd, STDOUT_FILENO);
-            launchpad_transfer_fd(lp, outfd, STDERR_FILENO);
         }
-        launchpad_set_args(lp, argc, argv);
-        const char* errmsg;
-        zx_handle_t handle;
-        zx_status_t status = launchpad_go(lp, &handle, &errmsg);
-        if (status < 0) {
-            printf("FAILURE: Failed to launch %s: %d: %s\n", de->d_name, status, errmsg);
-            fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
-            goto failure;
-        }
+        bool success = run_test(name, de->d_name, outfd);
 
-        status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
-                                    ZX_TIME_INFINITE, NULL);
-        if (status != ZX_OK) {
-            printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
-            fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
-            goto failure;
-        }
-
-        // read the return code
-        zx_info_process_t proc_info;
-        status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
-        zx_handle_close(handle);
-
-        if (status < 0) {
-            printf("FAILURE: Failed to get process return code %s: %d\n", de->d_name, status);
-            fail_test(&failures, de->d_name, FAILED_TO_RETURN_CODE, 0);
-            goto failure;
-        }
-
-        if (proc_info.return_code != 0) {
-            printf("FAILED: %s exited with nonzero status: %d\n", de->d_name, proc_info.return_code);
-            fail_test(&failures, de->d_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
-            goto failure;
-        }
-
-        printf("PASSED: %s passed\n", de->d_name);
         if (summary_json != NULL) {
-            fprintf(summary_json, "{\"name\": \"%s\", \"result\": \"PASS\"}", name);
+            fprintf(summary_json, "{"
+                    "\"name\": \"%s\","
+                    "\"result\": \"%s\""
+                    "}", name, success ? "PASS" : "FAIL");
         }
-        continue;
 
-    failure:
-        failed_count++;
-        if (summary_json != NULL) {
-            fprintf(summary_json, "{\"name\": \"%s\", \"result\": \"FAIL\"}", name);
+        if (!success) {
+            failed_count++;
         }
     }
 
