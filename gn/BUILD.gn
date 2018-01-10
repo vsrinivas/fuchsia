@@ -35,9 +35,6 @@ declare_args() {
     zircon_platforms = [ target_cpu ]
   }
 
-  # Build a large ramdisk image based on `system.manifest` into `user.bootfs`.
-  build_ramdisk = true
-
   # The package key to use for signing the system package. New keys can be
   # generated with the `pm` host command.
   system_package_key = "//build/development.key"
@@ -966,8 +963,4 @@ if (generate_zircon_gn_files) {
 
 group("default") {
   deps = [ ":images" ] + packages_labels
-
-  if (build_ramdisk) {
-    deps += [ ":bootfs" ]
-  }
 }
