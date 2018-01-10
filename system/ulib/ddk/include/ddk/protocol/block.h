@@ -4,42 +4,59 @@
 
 #pragma once
 
+#include <assert.h>
+#include <stdint.h>
 #include <zircon/device/block.h>
 
 // block_op_t's are submitted for processing via the queue() method
 // of the block_protocol.  Once submitted, the contents of the block_op_t
 // may be modified while it's being processed and/or as it is passed down
-// the stack to lower layered drivers.  The completion_cb() must eventually
-// be called on success or failure and at that point the cookie field must
-// contain whatever value was in it when the block_op_t was originally queued.
+// the stack to lower layered drivers.
 //
-// The pages field may be modified but the *contents* of the array it points
+// The contents may be mutated along the way -- for example, a partition
+// driver would, after validation, adjust offset_dev to reflect the position
+// of the partition.
+//
+// The completion_cb() must eventually be called upon success or failure and
+// at that point the cookie field must contain whatever value was in it when
+// the block_op_t was originally queued.
+//
+// The rw.pages field may be modified but the *contents* of the array it points
 // to may not be modified.
 
 typedef struct block_op block_op_t;
 
 struct block_op {
     union {
-        uint16_t command;
+        // All Commands
+        uint32_t command;                // command and flags
+
+        // BLOCK_OP_READ, BLOCK_OP_WRITE
         struct {
-            uint16_t command;            // command and flags
-            uint16_t length;             // transfer length in blocks - 1
+            uint32_t command;            // command and flags
+            uint32_t extra;              // available for temporary use
             zx_handle_t vmo;             // vmo of data to read or write
+            uint32_t length;             // transfer length in blocks (0 is invalid)
             uint64_t offset_dev;         // device offset in blocks
             uint64_t offset_vmo;         // vmo offset in blocks
             uint64_t* pages;             // optional physical page list
         } rw;
+
+        // BLOCK_OP_TRIM
         struct {
-            uint16_t command;
+            uint32_t command;            // command and flags
             // ???
         } trim;
-    } u;
+    };
 
-    // Completion_cb() will be called when the block operation
-    // succeeds or fails.
+    // The completion_cb() will be called when the block operation
+    // succeeds or fails, and cookie will be whatever was set when
+    // the block_op was initially queue()'d.
     void (*completion_cb)(block_op_t* block, zx_status_t status);
-    void* cookie;                        // for use of original submitter
+    void* cookie;
 };
+
+static_assert(sizeof(block_op_t) == 56, "");
 
 typedef struct block_protocol_ops {
     // Obtain the parameters of the block device (block_info_t) and
@@ -67,38 +84,35 @@ typedef struct block_protocol {
 //
 // The number of entries in this array is always
 // ((u.rw.length + 1U * block_size + PAGE_SIZE - 1) / PAGE_SIZE)
-#define BLOCK_OP_READ                0x0001
-#define BLOCK_OP_WRITE               0x0002
+#define BLOCK_OP_READ                0x00000001
+#define BLOCK_OP_WRITE               0x00000002
 
 // Write any controller or device cached data to nonvolatile storage.
 // This operation always implies BARRIER_BEFORE and BARRIER_AFTER,
 // meaning that previous operations will complete before it starts
 // and later operations will not start until it is done.
-#define BLOCK_OP_FLUSH               0x0003
+#define BLOCK_OP_FLUSH               0x00000003
 
 // TBD
-#define BLOCK_OP_TRIM                0x0004
+#define BLOCK_OP_TRIM                0x00000004
 
-#define BLOCK_OP_MASK                0x000F
+#define BLOCK_OP_MASK                0x000000FF
 
 
 // Mark this operation as "Force Unit Access" (FUA), indicating that
 // it should not complete until the data is written to the non-volatile
 // medium (write), and that reads should bypass any on-device caches.
-#define BLOCK_FL_FORCE_ACCESS        0x0100
+#define BLOCK_FL_FORCE_ACCESS        0x00001000
 
 // Require that this operation will not begin until all previous
 // operations have completed.
 //
 // Prevents earlier operations from being reordered after this one.
-#define BLOCK_FL_BARRIER_BEFORE      0x0010
+#define BLOCK_FL_BARRIER_BEFORE      0x00000100
 
 // Require that this operation complete before any subsequent
 // operations are started.
 //
 // Prevents later operations from being reordered before this one.
-#define BLOCK_FL_BARRIER_AFTER       0x0020
+#define BLOCK_FL_BARRIER_AFTER       0x00000200
 
-
-// Maximum blocks allowed in one transfer
-#define BLOCK_XFER_MAX_BLOCKS        65536

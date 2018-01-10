@@ -28,11 +28,6 @@ bool TestCreate(Superblock::Version version, bool fvm) {
     ASSERT_OK(device.GenerateKey(version));
     // These expected failures aren't possible on FVM, because fvm_init checks for them and fails.
     if (!fvm) {
-        // Unsupported device (block size is relatively prime to page size)
-        ASSERT_OK(device.Create(kDeviceSize, 3, fvm));
-        EXPECT_ZX(Superblock::Create(fbl::move(device.parent()), device.key()),
-                  ZX_ERR_NOT_SUPPORTED);
-
         // Small device
         ASSERT_OK(device.Create(kBlockSize, kBlockSize, fvm));
         EXPECT_ZX(Superblock::Create(fbl::move(device.parent()), device.key()), ZX_ERR_NO_SPACE);

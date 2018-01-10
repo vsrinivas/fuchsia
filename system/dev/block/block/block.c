@@ -26,6 +26,11 @@ typedef struct blkdev {
 
     mtx_t lock;
     uint32_t threadcount;
+
+    block_protocol_t bp;
+    block_info_t info;
+    size_t block_op_size;
+
     BlockServer* bs;
     bool dead; // Release has been called; we should free memory and leave.
 } blkdev_t;
@@ -76,7 +81,7 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(bdev->parent, out_buf, &bs)) != ZX_OK) {
+    if ((status = blockserver_create(bdev->parent, &bdev->bp, out_buf, &bs)) != ZX_OK) {
         goto done;
     }
 
@@ -204,9 +209,52 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
+static void block_completion_cb(block_op_t* bop, zx_status_t status) {
+    iotxn_t* txn = bop->cookie;
+    iotxn_complete(txn, status, (status == ZX_OK) ? txn->length : 0);
+    free(bop);
+}
+
 static void blkdev_iotxn_queue(void* ctx, iotxn_t* txn) {
     blkdev_t* blkdev = ctx;
-    iotxn_queue(blkdev->parent, txn);
+    if (blkdev->bp.ops == NULL) {
+        iotxn_queue(blkdev->parent, txn);
+    } else {
+        if (txn->length == 0) {
+            iotxn_complete(txn, ZX_OK, 0);
+            return;
+        }
+
+        size_t bsz = blkdev->info.block_size;
+        size_t bmask = bsz - 1;
+        size_t blocks = txn->length / bsz;
+
+        if ((txn->offset & bmask) ||
+            (txn->length & bmask) ||
+            (txn->vmo_offset & bmask) ||
+            (blocks < 1) ||
+            (txn->vmo_handle == ZX_HANDLE_INVALID)) {
+            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+            return;
+        }
+
+        block_op_t* bop = malloc(blkdev->block_op_size);
+        if (bop == NULL) {
+            iotxn_complete(txn, ZX_ERR_NO_MEMORY, 0);
+            return;
+        }
+
+        bop->command = (txn->opcode == IOTXN_OP_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
+        bop->rw.length = blocks;
+        bop->rw.vmo = txn->vmo_handle;
+        bop->rw.offset_dev = txn->offset / bsz;
+        bop->rw.offset_vmo = txn->vmo_offset / bsz;
+        bop->rw.pages = NULL;
+        bop->completion_cb = block_completion_cb;
+        bop->cookie = txn;
+
+        blkdev->bp.ops->queue(blkdev->bp.ctx, bop);
+    }
 }
 
 static zx_off_t blkdev_get_size(void* ctx) {
@@ -236,6 +284,22 @@ static void blkdev_release(void* ctx) {
     }
 }
 
+static void block_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+    blkdev_t* bdev = ctx;
+    memcpy(bi, &bdev->info, sizeof(block_info_t));
+    *bopsz = bdev->block_op_size;
+}
+
+static void block_queue(void* ctx, block_op_t* bop) {
+    blkdev_t* bdev = ctx;
+    bdev->bp.ops->queue(bdev->bp.ctx, bop);
+}
+
+static block_protocol_ops_t block_ops = {
+    .query = block_query,
+    .queue = block_queue,
+};
+
 static zx_protocol_device_t blkdev_ops = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = blkdev_ioctl,
@@ -254,12 +318,33 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
-   device_add_args_t args = {
+    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_CORE, &bdev->bp) != ZX_OK) {
+        printf("WARNING: block device '%s': does not support new protocol\n",
+               device_get_name(dev));
+        size_t actual;
+        if (device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &bdev->info,
+                         sizeof(block_info_t), &actual) != ZX_OK) {
+            printf("block: failed to get block info.\n");
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+    } else {
+        bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
+    }
+
+    size_t bsz = bdev->info.block_size;
+    if ((bsz < 512) || (bsz & (bsz - 1))){
+        printf("block: device '%s': invalid block size: %zu\n",
+               device_get_name(dev), bsz);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "block",
         .ctx = bdev,
         .ops = &blkdev_ops,
         .proto_id = ZX_PROTOCOL_BLOCK,
+        .proto_ops = (bdev->bp.ops == NULL) ? NULL : &block_ops,
     };
 
     zx_status_t status = device_add(dev, &args, &bdev->zxdev);

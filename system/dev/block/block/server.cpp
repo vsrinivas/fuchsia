@@ -65,24 +65,47 @@ void BlockCompleteIotxn(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-void IotxnQueue(zx_device_t* dev, uint32_t flags, zx_handle_t vmo, uint64_t length,
-                uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
-    iotxn_t* txn;
-    zx_status_t status;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo,
-                                  vmo_offset, length)) != ZX_OK) {
-        BlockComplete(msg, status);
-        return;
-    }
-    txn->flags = flags;
-    txn->opcode = msg->opcode;
-    txn->offset = dev_offset;
-    txn->cookie = msg;
-    txn->complete_cb = BlockCompleteIotxn;
-    iotxn_queue(dev, txn);
+void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
+    BlockComplete(bop->cookie, status);
+    free(bop);
 }
 
 }  // namespace
+
+void BlockServer::Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
+                        uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
+    if (bp_.ops == NULL) {
+        iotxn_t* txn;
+        zx_status_t status;
+        if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo,
+                                      vmo_offset, length)) != ZX_OK) {
+            BlockComplete(msg, status);
+            return;
+        }
+        txn->flags = flags;
+        txn->opcode = msg->opcode;
+        txn->offset = dev_offset;
+        txn->cookie = msg;
+        txn->complete_cb = BlockCompleteIotxn;
+        iotxn_queue(dev_, txn);
+    } else {
+        size_t bsz = info_.block_size;
+        block_op_t* bop = (block_op_t*) malloc(block_op_size_);
+        if (bop == nullptr) {
+            BlockComplete(msg, ZX_ERR_NO_MEMORY);
+            return;
+        }
+        bop->command = (msg->opcode == BLOCKIO_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
+        bop->rw.length = (uint32_t) (length / bsz);
+        bop->rw.vmo = vmo;
+        bop->rw.offset_dev = dev_offset / bsz;
+        bop->rw.offset_vmo = vmo_offset / bsz;
+        bop->rw.pages = NULL;
+        bop->completion_cb = BlockCompleteCb;
+        bop->cookie = msg;
+        bp_.ops->queue(bp_.ctx, bop);
+    }
+}
 
 BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid) :
     fifo_(fifo), flags_(0), ctr_(0) {
@@ -258,9 +281,10 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     txns_[txnid] = nullptr;
 }
 
-zx_status_t BlockServer::Create(zx_device_t* dev, zx::fifo* fifo_out, BlockServer** out) {
+zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
+                                zx::fifo* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
-    BlockServer* bs = new (&ac) BlockServer(dev);
+    BlockServer* bs = new (&ac) BlockServer(dev, bp);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -270,6 +294,10 @@ zx_status_t BlockServer::Create(zx_device_t* dev, zx::fifo* fifo_out, BlockServe
                                    fifo_out, &bs->fifo_)) != ZX_OK) {
         delete bs;
         return status;
+    }
+
+    if (bp->ops != NULL) {
+        bp->ops->query(bp->ctx, &bs->info_, &bs->block_op_size_);
     }
 
     *out = bs;
@@ -318,6 +346,19 @@ zx_status_t BlockServer::Serve() {
                     continue;
                 }
 
+                // Transaction bytes values must be in multiples of block size
+                // Transaction transfer length must fit in a uint16 n+1 field
+                size_t bsmask = info_.block_size - 1;
+                if ((requests[i].length & bsmask) ||
+                    (requests[i].dev_offset & bsmask) ||
+                    (requests[i].vmo_offset & bsmask) ||
+                    ((requests[i].length / info_.block_size) < 1)) {
+                    if (wants_reply) {
+                        OutOfBandErrorRespond(fifo_, ZX_ERR_INVALID_ARGS, txnid);
+                    }
+                    continue;
+                }
+
                 block_msg_t* msg;
                 status = txns_[txnid]->Enqueue(wants_reply, &msg);
                 if (status != ZX_OK) {
@@ -356,16 +397,15 @@ zx_status_t BlockServer::Serve() {
                         flags &= ~(i == sub_txns - 1 ? 0 : IOTXN_SYNC_AFTER);
                         // Only allow IOTXN_SYNC_BEFORE to be set on the first sub-txn.
                         flags &= ~(i == 0 ? 0 : IOTXN_SYNC_BEFORE);
-                        IotxnQueue(dev_, flags, iobuf->vmo(), length,
-                                   vmo_offset, dev_offset, msg);
+                        Queue(flags, iobuf->vmo(), length,
+                              vmo_offset, dev_offset, msg);
                         vmo_offset += length;
                         dev_offset += length;
                     }
                     ZX_DEBUG_ASSERT(len_remaining == 0);
                 } else {
-                    IotxnQueue(dev_, msg->flags, iobuf->vmo(), requests[i].length,
-                               requests[i].vmo_offset, requests[i].dev_offset,
-                               msg);
+                    Queue(msg->flags, iobuf->vmo(), requests[i].length,
+                          requests[i].vmo_offset, requests[i].dev_offset, msg);
                 }
 
                 break;
@@ -391,7 +431,8 @@ zx_status_t BlockServer::Serve() {
     }
 }
 
-BlockServer::BlockServer(zx_device_t* dev) : dev_(dev), last_id_(VMOID_INVALID + 1) {
+BlockServer::BlockServer(zx_device_t* dev, block_protocol_t* bp) :
+    dev_(dev), bp_(*bp), block_op_size_(0), last_id_(VMOID_INVALID + 1) {
     size_t actual;
     device_ioctl(dev_, IOCTL_BLOCK_GET_INFO, nullptr, 0, &info_, sizeof(info_), &actual);
 }
@@ -407,9 +448,10 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(zx_device_t* dev, zx_handle_t* fifo_out, BlockServer** out) {
+zx_status_t blockserver_create(zx_device_t* dev, block_protocol_t* bp,
+                               zx_handle_t* fifo_out, BlockServer** out) {
     zx::fifo fifo;
-    zx_status_t status = BlockServer::Create(dev, &fifo, out);
+    zx_status_t status = BlockServer::Create(dev, bp, &fifo, out);
     *fifo_out = fifo.release();
     return status;
 }

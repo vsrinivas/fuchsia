@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include <zircon/device/block.h>
+#include <ddk/protocol/block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -87,7 +88,7 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer
-    static zx_status_t Create(zx_device_t* dev, zx::fifo* fifo_out, BlockServer** out);
+    static zx_status_t Create(zx_device_t* dev, block_protocol_t* bp, zx::fifo* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
     zx_status_t Serve();
@@ -100,14 +101,19 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer(zx_device_t* dev);
+    BlockServer(zx_device_t* dev, block_protocol_t* bp);
 
     zx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
     zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
+    void Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
+               uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg);
+
     zx::fifo fifo_;
     zx_device_t* dev_;
     block_info_t info_;
+    block_protocol_t bp_;
+    size_t block_op_size_;
 
     fbl::Mutex server_lock_;
     fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
@@ -125,7 +131,7 @@ typedef struct BlockServer BlockServer;
 __BEGIN_CDECLS
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(zx_device_t* dev, zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(zx_device_t* dev, block_protocol_t* bp, zx_handle_t* fifo_out, BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);
