@@ -12,7 +12,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_DEPS := \
 	kernel/lib/counters \
 	kernel/lib/debug \
-	kernel/lib/dpc \
 	kernel/lib/explicit-memory \
 	kernel/lib/heap \
 	kernel/lib/libc \
@@ -22,6 +21,7 @@ MODULE_DEPS := \
 MODULE_SRCS := \
 	$(LOCAL_DIR)/cmdline.c \
 	$(LOCAL_DIR)/debug.c \
+	$(LOCAL_DIR)/dpc.c \
 	$(LOCAL_DIR)/event.c \
 	$(LOCAL_DIR)/init.c \
 	$(LOCAL_DIR)/mp.c \

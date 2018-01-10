@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include <kernel/dpc.h>
 #include <kernel/timer.h>
-#include <lib/dpc.h>
 #include <zircon/types.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>

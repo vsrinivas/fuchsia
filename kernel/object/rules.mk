@@ -50,7 +50,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/state_tracker_tests.cpp \
 
 MODULE_DEPS := \
-    kernel/lib/dpc \
     kernel/lib/hypervisor \
     kernel/lib/fbl \
     kernel/lib/oom \

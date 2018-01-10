@@ -13,6 +13,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
@@ -20,7 +21,6 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
-#include <lib/dpc.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <stdlib.h>

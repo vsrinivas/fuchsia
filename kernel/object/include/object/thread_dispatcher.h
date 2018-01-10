@@ -9,10 +9,10 @@
 #include <sys/types.h>
 
 #include <arch/exception.h>
+#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <vm/vm_address_region.h>
-#include <lib/dpc.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
 #include <object/excp_port.h>

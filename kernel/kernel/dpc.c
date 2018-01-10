@@ -4,13 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/dpc.h>
-
 #include <assert.h>
 #include <err.h>
 #include <list.h>
 #include <trace.h>
 
+#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
@@ -18,8 +17,7 @@
 
 static spin_lock_t dpc_locks[SMP_MAX_CPUS];
 
-zx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
-{
+zx_status_t dpc_queue(dpc_t* dpc, bool reschedule) {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
 
@@ -45,8 +43,7 @@ zx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
     return ZX_OK;
 }
 
-zx_status_t dpc_queue_thread_locked(dpc_t *dpc)
-{
+zx_status_t dpc_queue_thread_locked(dpc_t* dpc) {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
 
@@ -68,8 +65,7 @@ zx_status_t dpc_queue_thread_locked(dpc_t *dpc)
     return ZX_OK;
 }
 
-void dpc_transition_off_cpu(uint cpu_id)
-{
+void dpc_transition_off_cpu(uint cpu_id) {
     DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
     list_node_t temp_list = LIST_INITIAL_VALUE(temp_list);
@@ -91,7 +87,7 @@ void dpc_transition_off_cpu(uint cpu_id)
 
     spin_lock(lock);
 
-    dpc_t *dpc;
+    dpc_t* dpc;
     while ((dpc = list_remove_head_type(&temp_list, dpc_t, node))) {
         list_add_tail(dst_list, &dpc->node);
     }
@@ -101,8 +97,7 @@ void dpc_transition_off_cpu(uint cpu_id)
     event_signal(&percpu[cur_cpu].dpc_event, false);
 }
 
-static int dpc_thread(void *arg)
-{
+static int dpc_thread(void* arg) {
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, SPIN_LOCK_FLAG_INTERRUPTS);
 
@@ -121,7 +116,7 @@ static int dpc_thread(void *arg)
         spin_lock_irqsave(lock, state);
 
         // pop a dpc off the list
-        dpc_t *dpc = list_remove_head_type(list, dpc_t, node);
+        dpc_t* dpc = list_remove_head_type(list, dpc_t, node);
 
         // if the list is now empty, unsignal the event so we block until it is
         if (!dpc)
@@ -137,8 +132,7 @@ static int dpc_thread(void *arg)
     return 0;
 }
 
-void dpc_init_for_cpu(void)
-{
+void dpc_init_for_cpu(void) {
     struct percpu* cpu = get_local_percpu();
     uint cpu_num = arch_curr_cpu_num();
 
@@ -148,13 +142,12 @@ void dpc_init_for_cpu(void)
 
     char name[10];
     snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-    thread_t *t = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t* t = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY, DEFAULT_STACK_SIZE);
     thread_set_cpu_affinity(t, cpu_num_to_mask(cpu_num));
     thread_detach_and_resume(t);
 }
 
-static void dpc_init(unsigned int level)
-{
+static void dpc_init(unsigned int level) {
     // initialize dpc for the main CPU
     dpc_init_for_cpu();
 }

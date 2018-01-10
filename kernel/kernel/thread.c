@@ -23,6 +23,7 @@
 #include <inttypes.h>
 
 #include <kernel/atomic.h>
+#include <kernel/dpc.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/sched.h>
@@ -31,7 +32,6 @@
 #include <kernel/timer.h>
 
 #include <lib/counters.h>
-#include <lib/dpc.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 

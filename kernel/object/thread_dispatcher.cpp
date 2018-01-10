@@ -16,8 +16,6 @@
 #include <arch/debugger.h>
 #include <arch/exception.h>
 
-#include <lib/dpc.h>
-
 #include <kernel/thread.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
