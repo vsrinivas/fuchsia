@@ -84,7 +84,7 @@ class InterfacePtrState {
     return router_ ? router_->encountered_error() : false;
   }
 
-  void set_connection_error_handler(fxl::Closure error_handler) {
+  void set_connection_error_handler(std::function<void()> error_handler) {
     ConfigureProxyIfNecessary();
 
     ZX_DEBUG_ASSERT(router_);

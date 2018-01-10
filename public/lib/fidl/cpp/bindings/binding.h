@@ -165,7 +165,7 @@ class Binding {
 
   // Sets an error handler that will be called if a connection error occurs on
   // the bound channel.
-  void set_connection_error_handler(fxl::Closure error_handler) {
+  void set_connection_error_handler(std::function<void()> error_handler) {
     connection_error_handler_ = std::move(error_handler);
   }
 
@@ -193,7 +193,7 @@ class Binding {
   std::unique_ptr<internal::Router> internal_router_;
   typename Interface::Stub_ stub_;
   ImplPtr impl_;
-  fxl::Closure connection_error_handler_;
+  std::function<void()> connection_error_handler_;
 };
 
 }  // namespace fidl

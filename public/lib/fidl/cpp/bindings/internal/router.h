@@ -33,7 +33,7 @@ class Router : public MessageReceiverWithResponder {
   // Sets the error handler to receive notifications when an error is
   // encountered while reading from the channel or waiting to read from the
   // channel.
-  void set_connection_error_handler(fxl::Closure error_handler) {
+  void set_connection_error_handler(std::function<void()> error_handler) {
     connector_.set_connection_error_handler(std::move(error_handler));
   }
 

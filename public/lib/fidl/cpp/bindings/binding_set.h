@@ -71,7 +71,7 @@ class BindingSet {
 
   size_t size() const { return bindings_.size(); }
 
-  void set_on_empty_set_handler(fxl::Closure on_empty_set_handler) {
+  void set_on_empty_set_handler(std::function<void()> on_empty_set_handler) {
     on_empty_set_handler_ = std::move(on_empty_set_handler);
   }
 
@@ -102,7 +102,7 @@ class BindingSet {
   }
 
   StorageType bindings_;
-  fxl::Closure on_empty_set_handler_;
+  std::function<void()> on_empty_set_handler_;
 };
 
 }  // namespace fidl

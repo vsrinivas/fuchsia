@@ -50,7 +50,7 @@ class Connector : public MessageReceiver {
   // Sets the error handler to receive notifications when an error is
   // encountered while reading from the channel or waiting to read from the
   // channel.
-  void set_connection_error_handler(fxl::Closure error_handler) {
+  void set_connection_error_handler(std::function<void()> error_handler) {
     connection_error_handler_ = std::move(error_handler);
   }
 
@@ -96,7 +96,7 @@ class Connector : public MessageReceiver {
   // Cancels any calls made to |waiter_|.
   void CancelWait();
 
-  fxl::Closure connection_error_handler_;
+  std::function<void()> connection_error_handler_;
   zx::channel channel_;
   async::AutoWait wait_;
   MessageReceiver* incoming_receiver_;
