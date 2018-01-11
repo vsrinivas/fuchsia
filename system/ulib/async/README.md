@@ -205,6 +205,9 @@ See [async/default.h](include/async/default.h) for details.
 the C API with a more convenient fbl::Function<> callback based interface
 for use in C++.
 
+`WaitMethod` is similar to `Wait` but more efficient, because it avoids the
+overhead of using fbl::Function<>.
+
 `AutoWait` in [async/auto_wait.h](include/async/auto_wait.h) is an RAII helper
 which cancels the wait when it goes out of scope.
 

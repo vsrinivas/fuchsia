@@ -89,10 +89,8 @@ void TraceProviderImpl::Stop() {
 TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
                                           zx::channel channel)
     : impl_(impl), channel_(fbl::move(channel)),
-      wait_(channel_.get(),
+      wait_(this, channel_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
-    wait_.set_handler(fbl::BindMember(this, &Connection::Handle));
-
     zx_status_t status = wait_.Begin(impl_->async_);
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_BAD_STATE);
 }

@@ -40,7 +40,7 @@ private:
 
         TraceProviderImpl* const impl_;
         zx::channel channel_;
-        async::Wait wait_;
+        async::WaitMethod<Connection, &Connection::Handle> wait_;
     };
 
     void Start(zx::vmo buffer, zx::eventpair fence,

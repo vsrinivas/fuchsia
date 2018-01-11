@@ -9,7 +9,6 @@
 namespace trace {
 
 TraceObserver::TraceObserver() {
-    wait_.set_handler(fbl::BindMember(this, &TraceObserver::Handle));
 }
 
 TraceObserver::~TraceObserver() {

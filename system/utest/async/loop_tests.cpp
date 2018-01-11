@@ -56,6 +56,23 @@ private:
     zx_packet_signal_t last_signal_storage_;
 };
 
+class TestWaitMethod {
+public:
+    TestWaitMethod(zx_handle_t object, zx_signals_t trigger)
+        : op(this, object, trigger) {
+    }
+
+    uint32_t run_count = 0u;
+
+    async_wait_result_t Handle(async_t* async, zx_status_t status,
+                               const zx_packet_signal_t* signal) {
+        run_count++;
+        return ASYNC_WAIT_FINISHED;
+    }
+
+    async::WaitMethod<TestWaitMethod, &TestWaitMethod::Handle> op;
+};
+
 class CascadeWait : public TestWait {
 public:
     CascadeWait(zx_handle_t object, zx_signals_t trigger,
@@ -450,6 +467,29 @@ bool wait_shutdown_test() {
     EXPECT_EQ(ZX_ERR_BAD_STATE, wait5.op.Begin(loop.async()), "begin after shutdown");
     EXPECT_EQ(ZX_ERR_NOT_FOUND, wait5.op.Cancel(loop.async()), "cancel after shutdown");
     EXPECT_EQ(0u, wait5.run_count, "run count 5");
+
+    END_TEST;
+}
+
+// Do a basic test that async::WaitMethod works and is able to call its
+// callback.
+bool wait_method_test() {
+    BEGIN_TEST;
+
+    async::Loop loop;
+    zx::event event;
+    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
+    TestWaitMethod wait(event.get(), ZX_USER_SIGNAL_1);
+    EXPECT_EQ(ZX_OK, wait.op.Begin(loop.async()));
+
+    // Initially nothing is signaled.
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(0u, wait.run_count);
+
+    // Signaling the event should run the callback.
+    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1), "signal 1");
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(1u, wait.run_count);
 
     END_TEST;
 }
@@ -911,6 +951,7 @@ RUN_TEST(quit_test)
 RUN_TEST(wait_test)
 RUN_TEST(wait_invalid_handle_test)
 RUN_TEST(wait_shutdown_test)
+RUN_TEST(wait_method_test)
 RUN_TEST(task_test)
 RUN_TEST(task_shutdown_test)
 RUN_TEST(receiver_test)

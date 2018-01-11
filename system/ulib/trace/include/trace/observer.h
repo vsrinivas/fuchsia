@@ -47,7 +47,7 @@ private:
     async_t* async_ = nullptr;
     fbl::Closure callback_;
     zx::event event_;
-    async::Wait wait_;
+    async::WaitMethod<TraceObserver, &TraceObserver::Handle> wait_{this};
 };
 
 } // namespace trace
