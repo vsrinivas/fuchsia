@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/block.h>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -42,9 +43,12 @@ typedef struct gptpart_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
 
+    block_protocol_t bp;
+
     gpt_entry_t gpt_entry;
 
     block_info_t info;
+    size_t block_op_size;
 
     atomic_int writercount;
 } gptpart_device_t;
@@ -75,6 +79,11 @@ static uint64_t getsize(gptpart_device_t* dev) {
     // last LBA is inclusive
     uint64_t lbacount = dev->gpt_entry.last - dev->gpt_entry.first + 1;
     return lbacount * dev->info.block_size;
+}
+
+static uint64_t get_lba_count(gptpart_device_t* dev) {
+    // last LBA is inclusive
+    return dev->gpt_entry.last - dev->gpt_entry.first + 1;
 }
 
 static zx_off_t to_parent_offset(gptpart_device_t* dev, zx_off_t offset) {
@@ -154,6 +163,42 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
     }
 }
 
+static void gpt_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+    gptpart_device_t* gpt = ctx;
+    memcpy(bi, &gpt->info, sizeof(block_info_t));
+    *bopsz = gpt->block_op_size;
+}
+
+static void gpt_queue(void* ctx, block_op_t* bop) {
+    gptpart_device_t* gpt = ctx;
+
+    switch (bop->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE: {
+        size_t blocks = bop->rw.length;
+        size_t max = get_lba_count(gpt);
+
+        // Ensure that the request is in-bounds
+        if ((bop->rw.offset_dev >= max) ||
+            ((max - bop->rw.offset_dev) < blocks)) {
+            bop->completion_cb(bop, ZX_ERR_INVALID_ARGS);
+            return;
+        }
+
+        // Adjust for partition starting block
+        bop->rw.offset_dev += gpt->gpt_entry.first;
+        break;
+    }
+    case BLOCK_OP_FLUSH:
+        break;
+    default:
+        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        return;
+    }
+
+    gpt->bp.ops->queue(gpt->bp.ctx, bop);
+}
+
 static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
     gptpart_device_t* device = ctx;
     if (txn->offset % device->info.block_size) {
@@ -226,6 +271,11 @@ static zx_protocol_device_t gpt_proto = {
     .close = gpt_close,
 };
 
+static block_protocol_ops_t block_ops = {
+    .query = gpt_query,
+    .queue = gpt_queue,
+};
+
 static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
@@ -234,15 +284,25 @@ static int gpt_bind_thread(void* arg) {
     gptpart_device_t* first_dev = (gptpart_device_t*)arg;
     zx_device_t* dev = first_dev->parent;
 
+    block_protocol_t bp;
+    memcpy(&bp, &first_dev->bp, sizeof(bp));
+
+    block_info_t block_info;
+    size_t block_op_size = sizeof(block_op_t);
+
     iotxn_t* txn = NULL;
     unsigned partitions = 0; // used to keep track of number of partitions found
-    block_info_t block_info;
-    size_t actual = 0;
-    ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                              &block_info, sizeof(block_info), &actual);
-    if (rc < 0 || actual != sizeof(block_info)) {
-        xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, device_get_name(dev));
-        goto unbind;
+
+    if (bp.ops == NULL) {
+        size_t actual = 0;
+        ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
+                                  &block_info, sizeof(block_info), &actual);
+        if (rc < 0 || actual != sizeof(block_info)) {
+            xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, device_get_name(dev));
+            goto unbind;
+        }
+    } else {
+        bp.ops->query(bp.ctx, &block_info, &block_op_size);
     }
 
     // sanity check the default txn size with the block size
@@ -345,11 +405,13 @@ static int gpt_bind_thread(void* arg) {
                 goto unbind;
             }
             device->parent = dev;
+            memcpy(&device->bp, &bp, sizeof(bp));
         }
 
         memcpy(&device->gpt_entry, entry, sizeof(gpt_entry_t));
         block_info.block_count = device->gpt_entry.last - device->gpt_entry.first + 1;
         memcpy(&device->info, &block_info, sizeof(block_info));
+        device->block_op_size = block_op_size;
 
         char type_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(type_guid, device->gpt_entry.type);
@@ -376,6 +438,7 @@ static int gpt_bind_thread(void* arg) {
                 .ctx = device,
                 .ops = &gpt_proto,
                 .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+                .proto_ops = (bp.ops == NULL) ? NULL : &block_ops,
             };
 
             if (device_add(dev, &args, &device->zxdev) != ZX_OK) {
@@ -408,6 +471,11 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     }
     device->parent = parent;
 
+    if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->bp) != ZX_OK) {
+        printf("WARNING: block device '%s': does not support new protocol\n",
+               device_get_name(parent));
+    }
+
     char name[128];
     snprintf(name, sizeof(name), "part-%03u", 0);
 
@@ -417,6 +485,7 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
         .ctx = device,
         .ops = &gpt_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = (device->bp.ops == NULL) ? NULL : &block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 
