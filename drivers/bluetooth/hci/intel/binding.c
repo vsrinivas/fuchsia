@@ -16,8 +16,10 @@ static zx_driver_ops_t btintel_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(btintel, btintel_driver_ops, "fuchsia", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(btintel, btintel_driver_ops, "fuchsia", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_HCI_TRANSPORT),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x8087), // Intel Corp.
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2b), // Bluetooth
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0025),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2a),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2b),
 ZIRCON_DRIVER_END(btintel)
