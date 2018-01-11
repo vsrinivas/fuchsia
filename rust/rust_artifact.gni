@@ -69,14 +69,17 @@ template("rust_artifact") {
 
   group_deps = []
 
+  base_out_dir = "$root_build_dir/rust_targets"
+  specific_out_dir = "$base_out_dir/$target_triple/$build_type"
+
   if (type == "bin") {
     output_file =
-        "$target_out_dir/$target_name.rust/$target_triple/$build_type/$name"
+        "$specific_out_dir/$name"
     output_depfile = "$output_file.d"
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base =
-        "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
+        "$specific_out_dir/lib$name"
     output_file = "$output_base.rmeta"
     output_depfile = "$output_base.d"
     build_target_name = "${target_name}_lib"
@@ -110,7 +113,7 @@ template("rust_artifact") {
 
   if (defined(invoker.with_tests) && invoker.with_tests) {
     copy("${target_name}_test") {
-      base_out_dir = "$target_out_dir/$main_target_name.rust"
+      base_out_dir = "$root_build_dir/rust_targets"
       sources = [
         "$base_out_dir/$name-$type-test",
       ]
@@ -132,7 +135,7 @@ template("rust_artifact") {
 
     depfile = output_depfile
 
-    base_out_dir = "$target_out_dir/$main_target_name.rust"
+    base_out_dir = "$root_build_dir/rust_targets"
     base_gen_dir = "$target_gen_dir/$main_target_name.rust"
 
     inputs = [
