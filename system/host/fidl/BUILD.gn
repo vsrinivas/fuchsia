@@ -11,6 +11,8 @@ source_set("compiler") {
   public_configs = [ ":fidl_config" ]
   sources = [
     "lib/ast.h",
+    "lib/error_reporter.cpp",
+    "lib/error_reporter.h",
     "lib/identifier_table.cpp",
     "lib/identifier_table.h",
     "lib/lexer.cpp",
