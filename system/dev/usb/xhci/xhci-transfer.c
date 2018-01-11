@@ -84,12 +84,16 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t ep_inde
         uint32_t control = (slot_id << TRB_SLOT_ID_START) |
                             ((ep_index + 1) << TRB_ENDPOINT_ID_START);
         xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
+        // Release the lock before waiting for the command. The command may not complete,
+        // if there is another transfer event on the completer thread waiting for the lock
+        // on the same endpoint.
+        mtx_unlock(&ep->lock);
         int cc = xhci_sync_command_wait(&command);
         if (cc != TRB_CC_SUCCESS) {
             zxlogf(ERROR, "xhci_reset_endpoint: TRB_CMD_RESET_ENDPOINT failed cc: %d\n", cc);
-            mtx_unlock(&ep->lock);
             return ZX_ERR_INTERNAL;
         }
+        mtx_lock(&ep->lock);
     }
 
     // resetting the dequeue pointer gets us out of ERROR state, and is also necessary
@@ -524,6 +528,13 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
 
     mtx_lock(&ep->lock);
 
+    if (ep->state == EP_STATE_HALTED) {
+      // xhci_reset_endpoint will be issued, when the transaction
+      // that caused the STALL is completed. Let xhci_reset_endpoint
+      // take care of resetting the endpoint to a running state.
+      mtx_unlock(&ep->lock);
+      return status;
+    }
     if (!list_is_empty(&ep->pending_reqs)) {
         // stop the endpoint and remove transactions that have already been queued
         // in the transfer ring
