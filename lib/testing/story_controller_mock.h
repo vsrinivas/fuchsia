@@ -31,7 +31,9 @@ class StoryControllerMock : public StoryController {
   // |StoryController|
   void SetInfoExtra(const fidl::String& name,
                     const fidl::String& value,
-                    const SetInfoExtraCallback& callback) override {}
+                    const SetInfoExtraCallback& callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
   void AddModule(fidl::Array<fidl::String> module_path,
@@ -43,34 +45,50 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override {}
+  void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
-  void Stop(const StopCallback& done) override {}
+  void Stop(const StopCallback& done) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
-  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {}
+  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
   void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
-                        const GetActiveModulesCallback& callback) override {}
+                        const GetActiveModulesCallback& callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
-  void GetModules(const GetModulesCallback& callback) override {}
+  void GetModules(const GetModulesCallback& callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
   void GetModuleController(
       fidl::Array<fidl::String> module_path,
-      fidl::InterfaceRequest<ModuleController> request) override {}
+      fidl::InterfaceRequest<ModuleController> request) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
   void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
-                      const GetActiveLinksCallback& callback) override {}
+                      const GetActiveLinksCallback& callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   // |StoryController|
   void GetLink(fidl::Array<fidl::String> module_path,
                const fidl::String& name,
-               fidl::InterfaceRequest<Link> request) override {}
+               fidl::InterfaceRequest<Link> request) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
   std::string last_added_module_;
 };

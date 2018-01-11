@@ -62,6 +62,22 @@ source_set("entity_resolver_fake") {
   ]
 }
 
+source_set("story_controller_mock") {
+  testonly = true
+
+  sources = [
+    "story_controller_mock.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/story/fidl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
 source_set("story_provider_mock") {
   testonly = true
 
@@ -74,6 +90,7 @@ source_set("story_provider_mock") {
   ]
 
   deps = [
+    ":story_controller_mock",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
