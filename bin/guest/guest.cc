@@ -4,8 +4,6 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <iostream>
-#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +19,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "garnet/bin/guest/guest_config.h"
 #include "garnet/bin/guest/guest_view.h"
 #include "garnet/bin/guest/linux.h"
 #include "garnet/bin/guest/zircon.h"
@@ -35,6 +34,7 @@
 #include "garnet/lib/machina/virtio_block.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
+#include "lib/fxl/files/file.h"
 
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
@@ -64,29 +64,8 @@ static const uint64_t kUartBases[kNumUarts] = {
 static const uint64_t kVmoSize = 1u << 30;
 static const size_t kInputQueueDepth = 64;
 
-// Unused memory above this threshold may be reclaimed by the balloon.
-static uint32_t balloon_threshold_pages = 1024;
-
-static zx_status_t usage(const char* cmd) {
-  // clang-format off
-  std::cerr << "usage: " << cmd << " [OPTIONS] kernel.bin\n";
-  std::cerr << "\n";
-  std::cerr << "OPTIONS:\n";
-  std::cerr << "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device\n";
-  std::cerr << "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk\n";
-  std::cerr << "\t-c [cmdline]       Use string 'cmdline' as the kernel command line\n";
-  std::cerr << "\t-m [seconds]       Poll the virtio-balloon device every 'seconds' seconds\n";
-  std::cerr << "\t                   and adjust the balloon size based on the amount of\n";
-  std::cerr << "\t                   unused guest memory\n";
-  std::cerr << "\t-p [pages]         Number of unused pages to allow the guest to\n";
-  std::cerr << "\t                   retain. Has no effect unless -m is also used\n";
-  std::cerr << "\t-d                 Demand-page balloon deflate requests\n";
-  std::cerr << "\n";
-  // clang-format on
-  return ZX_ERR_INVALID_ARGS;
-}
-
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
+                                  uint32_t threshold,
                                   const virtio_balloon_stat_t* stats,
                                   size_t len) {
   for (size_t i = 0; i < len; ++i) {
@@ -98,7 +77,7 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
     uint32_t available_pages =
         static_cast<uint32_t>(stats[i].val / machina::VirtioBalloon::kPageSize);
     uint32_t target_pages =
-        current_pages + (available_pages - balloon_threshold_pages);
+        current_pages + (available_pages - threshold);
     if (current_pages == target_pages) {
       return;
     }
@@ -115,27 +94,29 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
 
 typedef struct balloon_task_args {
   machina::VirtioBalloon* balloon;
-  zx_duration_t interval;
+  const GuestConfig* config;
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
   fbl::unique_ptr<balloon_task_args_t> args(
       static_cast<balloon_task_args_t*>(ctx));
   machina::VirtioBalloon* balloon = args->balloon;
+  zx_duration_t interval = args->config->balloon_interval();
+  uint32_t threshold = args->config->balloon_pages_threshold();
   while (true) {
-    zx_nanosleep(zx_deadline_after(args->interval));
+    zx_nanosleep(zx_deadline_after(interval));
     args->balloon->RequestStats(
-        [balloon](const virtio_balloon_stat_t* stats, size_t len) {
-          balloon_stats_handler(balloon, stats, len);
+        [balloon, threshold](const virtio_balloon_stat_t* stats, size_t len) {
+          balloon_stats_handler(balloon, threshold, stats, len);
         });
   }
   return ZX_OK;
 }
 
 static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
-                                      zx_duration_t interval) {
+                                      const GuestConfig* config) {
   thrd_t thread;
-  auto args = new balloon_task_args_t{balloon, interval};
+  auto args = new balloon_task_args_t{balloon, config};
 
   int ret = thrd_create(&thread, balloon_stats_task, args);
   if (ret != thrd_success) {
@@ -153,26 +134,14 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   return ZX_OK;
 }
 
-static const char* zircon_cmdline(const char* cmdline) {
-  static fbl::StringBuffer<LINE_MAX> buffer;
-  buffer.AppendPrintf("TERM=uart %s", cmdline);
-  return buffer.c_str();
-}
-
-static const char* linux_cmdline(const char* cmdline,
-                                 uintptr_t uart_addr,
-                                 uintptr_t acpi_addr) {
-  static fbl::StringBuffer<LINE_MAX> buffer;
+static const char* linux_cmdline(const char* cmdline, uintptr_t acpi_addr) {
 #if __aarch64__
-  buffer.AppendPrintf("earlycon=pl011,%#lx console=ttyAMA0 %s",
-                      uart_addr, cmdline);
+  return cmdline;
 #elif __x86_64__
-  buffer.AppendPrintf(
-      "earlycon=uart,io,%#lx console=ttyS0 console=tty0 io_delay=none "
-      "clocksource=tsc acpi_rsdp=%#lx %s",
-      uart_addr, acpi_addr, cmdline);
-#endif
+  static fbl::StringBuffer<LINE_MAX> buffer;
+  buffer.AppendPrintf("acpi_rsdp=%#lx %s", acpi_addr, cmdline);
   return buffer.c_str();
+#endif
 }
 
 zx_status_t setup_zircon_framebuffer(
@@ -191,56 +160,31 @@ zx_status_t setup_scenic_framebuffer(
   return GuestView::Start(gpu, input_dispatcher);
 }
 
-int main(int argc, char** argv) {
-  const char* cmd = basename(argv[0]);
-  const char* block_path = nullptr;
-  const char* kernel_path = "/pkg/data/kernel";
-  const char* ramdisk_path = "/pkg/data/ramdisk";
-  const char* cmdline = "";
-  zx_duration_t balloon_poll_interval = 0;
-  bool balloon_deflate_on_demand = false;
-  int opt;
-  while ((opt = getopt(argc, argv, "b:r:c:m:dp:")) != -1) {
-    switch (opt) {
-      case 'b':
-        block_path = optarg;
-        break;
-      case 'r':
-        ramdisk_path = optarg;
-        break;
-      case 'c':
-        cmdline = optarg;
-        break;
-      case 'm':
-        balloon_poll_interval = ZX_SEC(strtoul(optarg, nullptr, 10));
-        if (balloon_poll_interval <= 0) {
-          FXL_LOG(ERROR) << "Invalid balloon interval " << optarg << "."
-                         << "Must be an integer greater than 0.";
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      case 'd':
-        balloon_deflate_on_demand = true;
-        break;
-      case 'p':
-        balloon_threshold_pages =
-            static_cast<uint32_t>(strtoul(optarg, nullptr, 10));
-        if (balloon_threshold_pages <= 0) {
-          FXL_LOG(ERROR) << "Invalid balloon threshold " << optarg << "."
-                         << "Must be an integer greater than 0.";
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      default:
-        return usage(cmd);
+zx_status_t read_guest_config(GuestConfig* options,
+                              const char* config_path,
+                              int argc,
+                              char** argv) {
+  GuestConfigParser parser(options);
+  std::string config;
+  if (files::ReadFileToString(config_path, &config)) {
+    zx_status_t status = parser.ParseConfig(config);
+    if (status != ZX_OK) {
+      return status;
     }
   }
-  if (optind < argc) {
-    kernel_path = argv[optind];
+  return parser.ParseArgcArgv(argc, argv);
+}
+
+int main(int argc, char** argv) {
+  GuestConfig options;
+  zx_status_t status =
+      read_guest_config(&options, "/pkg/data/guest.cfg", argc, argv);
+  if (status != ZX_OK) {
+    return status;
   }
 
   Guest guest;
-  zx_status_t status = guest.Init(kVmoSize);
+  status = guest.Init(kVmoSize);
   if (status != ZX_OK)
     return status;
 
@@ -251,7 +195,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
   status = machina::create_page_table(physmem_addr, physmem_size, &pt_end_off);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create page table.";
+    FXL_LOG(ERROR) << "Failed to create page table";
     return status;
   }
 
@@ -264,15 +208,15 @@ int main(int argc, char** argv) {
   status =
       create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create ACPI table.";
+    FXL_LOG(ERROR) << "Failed to create ACPI table";
     return status;
   }
 #endif  // __x86_64__
 
   // Open the kernel image.
-  fbl::unique_fd fd(open(kernel_path, O_RDONLY));
+  fbl::unique_fd fd(open(options.kernel_path().c_str(), O_RDONLY));
   if (!fd) {
-    FXL_LOG(ERROR) << "Failed to open kernel image \"" << kernel_path << "\".";
+    FXL_LOG(ERROR) << "Failed to open kernel image \"" << options.kernel_path();
     return ZX_ERR_IO;
   }
 
@@ -280,28 +224,28 @@ int main(int argc, char** argv) {
   uintptr_t first_page = physmem_addr + physmem_size - PAGE_SIZE;
   ssize_t ret = read(fd.get(), (void*)first_page, PAGE_SIZE);
   if (ret != PAGE_SIZE) {
-    FXL_LOG(ERROR) << "Failed to read first page of kernel.";
+    FXL_LOG(ERROR) << "Failed to read first page of kernel";
     return ZX_ERR_IO;
   }
 
   uintptr_t guest_ip = 0;
   uintptr_t boot_ptr = 0;
-  status =
-      setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off, fd.get(),
-                   ramdisk_path, zircon_cmdline(cmdline), &guest_ip, &boot_ptr);
+  status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off,
+                        fd.get(), options.ramdisk_path().c_str(),
+                        options.cmdline().c_str(), &guest_ip, &boot_ptr);
   if (status == ZX_ERR_NOT_SUPPORTED) {
     ret = lseek(fd.get(), 0, SEEK_SET);
     if (ret < 0) {
-      FXL_LOG(ERROR) << "Failed to seek to start of kernel.";
+      FXL_LOG(ERROR) << "Failed to seek to start of kernel";
       return ZX_ERR_IO;
     }
     status = setup_linux(physmem_addr, physmem_size, first_page, fd.get(),
-                         ramdisk_path,
-                         linux_cmdline(cmdline, kUartBases[0], pt_end_off),
+                         options.ramdisk_path().c_str(),
+                         linux_cmdline(options.cmdline().c_str(), pt_end_off),
                          &guest_ip, &boot_ptr);
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel.";
+    FXL_LOG(ERROR) << "Failed to load kernel";
     return status;
   }
 
@@ -314,7 +258,7 @@ int main(int argc, char** argv) {
   Vcpu vcpu;
   status = vcpu.Create(&guest, &args);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create VCPU.";
+    FXL_LOG(ERROR) << "Failed to create VCPU";
     return status;
   }
 
@@ -323,8 +267,8 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < kNumUarts; i++) {
     status = uart[i].Init(&guest, kUartBases[i]);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex << kUartBases[i]
-                     << ".";
+      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex
+                     << kUartBases[i];
       return status;
     }
   }
@@ -332,20 +276,20 @@ int main(int argc, char** argv) {
   machina::InterruptController interrupt_controller;
   status = interrupt_controller.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create interrupt controller.";
+    FXL_LOG(ERROR) << "Failed to create interrupt controller";
     return status;
   }
 
 #if __aarch64__
   status = interrupt_controller.RegisterVcpu(0, &vcpu);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to register VCPU with GIC distributor.";
+    FXL_LOG(ERROR) << "Failed to register VCPU with GIC distributor";
     return status;
   }
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PL031 RTC.";
+    FXL_LOG(ERROR) << "Failed to create PL031 RTC";
     return status;
   }
 #elif __x86_64__
@@ -359,14 +303,14 @@ int main(int argc, char** argv) {
   machina::IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create IO ports.";
+    FXL_LOG(ERROR) << "Failed to create IO ports";
     return status;
   }
   // Setup TPM
   machina::Tpm tpm;
   status = tpm.Init(&guest);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create TPM.";
+    FXL_LOG(ERROR) << "Failed to create TPM";
     return status;
   }
 #endif
@@ -375,26 +319,26 @@ int main(int argc, char** argv) {
   machina::PciBus bus(&guest, &interrupt_controller);
   status = bus.Init();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create PCI bus.";
+    FXL_LOG(ERROR) << "Failed to create PCI bus";
     return status;
   }
 
   // Setup balloon device.
   machina::VirtioBalloon balloon(physmem_addr, physmem_size,
                                  guest.phys_mem().vmo());
-  balloon.set_deflate_on_demand(balloon_deflate_on_demand);
+  balloon.set_deflate_on_demand(options.balloon_demand_page());
   status = bus.Connect(balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
   if (status != ZX_OK) {
     return status;
   }
-  if (balloon_poll_interval > 0) {
-    poll_balloon_stats(&balloon, balloon_poll_interval);
+  if (options.balloon_interval() > 0) {
+    poll_balloon_stats(&balloon, &options);
   }
 
   // Setup block device.
   machina::VirtioBlock block(physmem_addr, physmem_size);
-  if (block_path != nullptr) {
-    status = block.Init(block_path, guest.phys_mem());
+  if (!options.block_path().empty()) {
+    status = block.Init(options.block_path().c_str(), guest.phys_mem());
     if (status != ZX_OK) {
       return status;
     }

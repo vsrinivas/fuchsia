@@ -43,3 +43,37 @@ $ ./bin/guest/scripts/build.sh -p "topaz/packages/default,garnet/packages/linux-
 
 After netbooting the guest packages can be launched from the system launcher as
 `linux-guest` and `zircon-guest`.
+
+# Guest Configuration
+
+Guest systems can be configured by including a config file inside the guest
+package:
+
+```
+{
+    "type": "object",
+    "properties": {
+        "kernel": {
+            "type": "string"
+        },
+        "ramdisk": {
+            "type": "string"
+        },
+        "block": {
+            "type": "string"
+        },
+        "cmdline": {
+            "type": "string"
+        },
+        "balloon-demand-page": {
+            "type": "string"
+        },
+        "balloon-interval": {
+            "type": "string"
+        },
+        "balloon-threshold": {
+            "type": "string"
+        },
+    }
+}
+```

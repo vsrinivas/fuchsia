@@ -78,4 +78,5 @@ guest_app("zircon-guest") {
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
   kernel = "//out/build-zircon/build-${zircon_platforms[0]}/zircon.bin"
+  guest_config = rebase_path("guest.cfg")
 }

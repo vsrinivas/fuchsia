@@ -4,24 +4,67 @@
 
 import("//build/package.gni")
 
-executable("bin") {
-  output_name = "guest"
+source_set("lib") {
+  visibility = [ ":*" ]
 
   sources = [
     "efi.cc",
-    "guest.cc",
+    "guest_config.cc",
+    "guest_config.h",
     "guest_view.cc",
     "guest_view.h",
     "linux.cc",
     "zircon.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/lib/machina",
     "//garnet/public/lib/ui/view_framework:view_provider",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/fbl",
     "//zircon/third_party/lib/fdt",
   ]
 
   libs = [ "hypervisor" ]
+}
+
+executable("bin") {
+  output_name = "guest"
+
+  sources = [
+    "guest.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+executable("guest_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "guest_config-unittest.cc",
+    "run_all_unittests.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//third_party/gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+package("guest_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":guest_unittests",
+  ]
+
+  tests = [ {
+        name = "guest_unittests"
+      } ]
 }

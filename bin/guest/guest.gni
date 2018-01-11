@@ -11,6 +11,8 @@ import("//build/package.gni")
 #     Path to the guest kernel.
 #   ramdisk (string, optional)
 #     Path to a ramdisk file to be loaded into the guest.
+#   guest_config (string, optional)
+#     Path to a config file to use for the guest.
 #
 template("guest_app") {
   if (defined(invoker.cli) && invoker.cli) {
@@ -49,7 +51,6 @@ template("guest_app") {
       ]
     }
 
-
     # Add kernel resource.
     if (defined(invoker.kernel)) {
       resources += [ {
@@ -63,6 +64,14 @@ template("guest_app") {
       resources += [ {
             path = rebase_path(invoker.ramdisk)
             dest = "ramdisk"
+          } ]
+    }
+
+    # Add config file resource.
+    if (defined(invoker.guest_config)) {
+      resources += [ {
+            path = rebase_path(invoker.guest_config)
+            dest = "guest.cfg"
           } ]
     }
   }
