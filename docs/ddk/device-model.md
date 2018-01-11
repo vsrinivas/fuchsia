@@ -189,8 +189,15 @@ If a device is opened by a remote process via the Device Filesystem, a reference
 is acquired there as well.  When a device's parent is removed, its `unbind()`
 method is invoked.  This signals to the driver that it should start shutting
 the device down and remove and child devices it has created by calling `device_remove()`
-on them.  The driver must never again call any methods on the parent device of the
-device being unbound after the `unbind()` method returns.
+on them.
+
+Since a child device may have work in progress when its `unbind()` method is
+called, it's possible that the parent device which just called `device_remove()`
+on the child could continue to receive device method calls or protocol method
+calls on behalf of that child.  It is advisable that before removing its children,
+the parent device should arrange for these methods to return errors, so that
+calls from a child before the child removal is completed do not start more
+work or cause unexpected interactions.
 
 From the moment that `device_add()` is called without the **DEVICE_ADD_INVSIBLE**
 flag, or `device_make_visible()` is called on an invisible device, other device
@@ -201,4 +208,6 @@ The `release()` method is only called after the creating driver has called
 closed, and all children of that device have been removed and released.  This
 is the last opportunity for the driver to destroy or free any resources associated
 with the device.  It is not valid to refer to the `zx_device_t` for that device
-after `release()` returns.
+after `release()` returns.  Calling any device methods or protocol methods for
+protocols obtained from the parent device past this point is illegal and will
+likely result in a crash.

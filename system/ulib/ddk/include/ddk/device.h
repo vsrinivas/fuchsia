@@ -98,6 +98,10 @@ typedef struct zx_protocol_device {
     // possible for further open or open_at calls to occur, but io operations, etc
     // may continue until those client connections are closed.
     //
+    // The driver should avoid further method calls to its parent device or any
+    // protocols obtained from that device, and expect that any further such calls
+    // will return with an error.
+    //
     // The driver should adjust its state to encourage its client connections to close
     // (cause IO to error out, etc), and call **device_remove()** on itself when ready.
     //
@@ -112,8 +116,8 @@ typedef struct zx_protocol_device {
     // removed and released.
     //
     // At the point release is invoked, the driver will not receive any further calls
-    // and absolutely must not use the underlying **zx_device_t** once this method
-    // returns.
+    // and absolutely must not use the underlying **zx_device_t** or any protocols obtained
+    // from that device once this method returns.
     //
     // The driver must free all memory and release all resources related to this device
     // before returning.
