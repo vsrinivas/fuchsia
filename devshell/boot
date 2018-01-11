@@ -19,10 +19,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 declare -a disks=()
 ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
 
-machine_type="$1"
-# passing no arguments is valid, but shift will terminate with set -e
-if [[ $# -ge 1 ]]; then
-  shift
+if [[ "$1" =~ ^- ]]; then
+  machine_type=""
+else
+  machine_type="$1"
+  # passing no arguments is valid, but shift will terminate with set -e
+  if [[ $# -ge 1 ]]; then
+    shift
+  fi
 fi
 
 case "${machine_type}" in
@@ -43,7 +47,7 @@ case "${machine_type}" in
     disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
   ;;
   *)
-    if [[ $# == 0 ]] && [[ "$FUCHSIA_ARCH" == "x86-64" ]]; then
+    if [[ -z "${machine_type}" ]] && [[ "$FUCHSIA_ARCH" == "x86-64" ]]; then
       machine_type="x86"
       disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}" \
         --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
