@@ -5,7 +5,6 @@
 
 from collections import namedtuple
 import argparse
-import json
 import os
 import paths
 import subprocess
