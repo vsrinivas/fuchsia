@@ -79,24 +79,24 @@ class InterfaceImpl : public sample::Provider {
 
   void EchoString(const String& a,
                   const std::function<void(String)>& callback) override {
-    FXL_CHECK(false) << "Not implemented.";
+    ZX_PANIC("Not implemented.\n");
   }
 
   void EchoStrings(const String& a,
                    const String& b,
                    const std::function<void(String, String)>& callback) override {
-    FXL_CHECK(false) << "Not implemented.";
+    ZX_PANIC("Not implemented.\n");
   }
 
   void EchoMessagePipeHandle(
       zx::channel a,
       const std::function<void(zx::channel)>& callback) override {
-    FXL_CHECK(false) << "Not implemented.";
+    ZX_PANIC("Not implemented.\n");
   }
 
   void EchoEnum(sample::Enum a,
                 const std::function<void(sample::Enum)>& callback) override {
-    FXL_CHECK(false) << "Not implemented.";
+    ZX_PANIC("Not implemented.\n");
   }
 
   void resetLastServerValueSeen() { last_server_value_seen_ = 0; }

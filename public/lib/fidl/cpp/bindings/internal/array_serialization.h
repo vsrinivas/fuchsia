@@ -181,7 +181,7 @@ struct ArraySerializer<H,
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
-                i));
+                i).c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -225,7 +225,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid channel handle in array expecting valid handles",
-                num_elements, i));
+                num_elements, i).c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -271,7 +271,7 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
-                i));
+                i).c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -329,7 +329,7 @@ struct ArraySerializer<
         FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid pointers",
-                                      num_elements, i));
+                                      num_elements, i).c_str());
         return ValidationError::UNEXPECTED_NULL_POINTER;
       }
     }
@@ -457,7 +457,7 @@ struct ArraySerializer<U, U_Data, true> {
 
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid unions",
-                                      num_elements, i));
+                                      num_elements, i).c_str());
         return ValidationError::UNEXPECTED_NULL_POINTER;
       }
     }
@@ -513,7 +513,7 @@ inline internal::ValidationError SerializeArray_(
         internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
         internal::MakeMessageWithExpectedArraySize(
             "fixed-size array has wrong number of elements", input->size(),
-            validate_params->expected_num_elements));
+            validate_params->expected_num_elements).c_str());
     return internal::ValidationError::UNEXPECTED_ARRAY_HEADER;
   }
 

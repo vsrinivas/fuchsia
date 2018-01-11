@@ -102,30 +102,39 @@ class ValidationErrorStringStream {
   std::ostringstream stream_;
 };
 
+class LogMessageVoidify {
+ public:
+  void operator&(std::ostream&) {}
+};
+
 }  // namespace internal
 }  // namespace fidl
-
-// In a debug build, logs a serialization warning and aborts.
-// TODO(vardhan): Make this work like an ostream.
-#define FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(error, description) \
-  FXL_DLOG(FATAL) << "Could not validate serialization: "            \
-                  << ValidationErrorToString(error)                  \
-                  << " (" << description << ")."
 
 // In a debug build, this will use |ValidationErrorStringStream::stream()| and
 // write to the supplied string if it is not null. In a non-debug + optimized
 // build it should do nothing, while also discarding away operator<<() calls.
 #ifdef NDEBUG
+
+#define FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(error, description)
+
 // The compiler will reduce the |true ? (void)0 : ...| expression to |(void)0|,
 // thereby discarding the |ValidationErrorStringStream()| while still keeping
 // this macro's use semantically valid.
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
   true ? (void)0                                   \
-       : ::fxl::LogMessageVoidify() &              \
+       : ::fidl::internal::LogMessageVoidify() &              \
              ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
+
 #else
+
+// In a debug build, logs a serialization warning and aborts.
+#define FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(error, description) \
+  ZX_PANIC("Could not validate serialization: %s (%s)\n", \
+    ValidationErrorToString(error), description)
+
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
   ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
+
 #endif  // NDEBUG
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATION_ERRORS_H_

@@ -35,7 +35,7 @@ Connector::Connector(zx::channel channel)
   // Even though we don't have an incoming receiver, we still want to monitor
   // the channel to know if is closed or encounters an error.
   zx_status_t status = wait_.Begin();
-  FXL_CHECK(status == ZX_OK);
+  ZX_ASSERT(status == ZX_OK);
 }
 
 Connector::~Connector() {
@@ -72,9 +72,8 @@ bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
     return false;
   }
   if (pending & ZX_CHANNEL_READABLE) {
-    bool ok = ReadSingleMessage(&rv);
-    FXL_ALLOW_UNUSED_LOCAL(ok);
-    return (rv == ZX_OK);
+    ReadSingleMessage(&rv);
+    return rv == ZX_OK;
   }
 
   ZX_DEBUG_ASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
@@ -86,7 +85,7 @@ bool Connector::Accept(Message* message) {
   if (error_)
     return false;
 
-  FXL_CHECK(channel_);
+  ZX_ASSERT(channel_);
   if (drop_writes_)
     return true;
 

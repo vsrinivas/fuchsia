@@ -4,11 +4,10 @@
 
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <string>
-
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -61,10 +60,9 @@ void ReportValidationError(ValidationError error, std::string* description) {
   if (g_validation_error_observer) {
     g_validation_error_observer->set_last_error(error);
   } else if (description) {
-    FXL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error)
-                   << " (" << *description << ")";
+    fprintf(stderr, "Invalid message: %s (%s)\n", ValidationErrorToString(error), description->c_str());
   } else {
-    FXL_LOG(ERROR) << "Invalid message: " << ValidationErrorToString(error);
+    fprintf(stderr, "Invalid message: %s\n", ValidationErrorToString(error));
   }
 }
 

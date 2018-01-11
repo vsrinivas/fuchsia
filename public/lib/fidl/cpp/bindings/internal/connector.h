@@ -89,7 +89,7 @@ class Connector : public MessageReceiver {
                                     const zx_packet_signal_t* signal);
 
   // Returns false if |this| was destroyed during message dispatch.
-  FXL_WARN_UNUSED_RESULT bool ReadSingleMessage(zx_status_t* read_result);
+  bool ReadSingleMessage(zx_status_t* read_result);
 
   void NotifyError();
 

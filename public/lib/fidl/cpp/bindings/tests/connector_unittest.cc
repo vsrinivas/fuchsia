@@ -378,7 +378,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
  public:
   explicit NoTaskStarvationReplier(MessageReceiver* reply_to)
       : reply_to_(reply_to) {
-    FXL_CHECK(reply_to_ != this);
+    ZX_ASSERT(reply_to_ != this);
   }
 
   NoTaskStarvationReplier(const NoTaskStarvationReplier&) = delete;
@@ -404,7 +404,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
       return true;
 
     MessageBuilder builder(name + 1u, 0u);
-    FXL_CHECK(reply_to_->Accept(builder.message()));
+    ZX_ASSERT(reply_to_->Accept(builder.message()));
 
     return true;
   }

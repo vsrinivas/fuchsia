@@ -142,7 +142,7 @@ class MessageReceiver {
   // The receiver may mutate the given message.  Returns true if the message
   // was accepted and false otherwise, indicating that the message was invalid
   // or malformed.
-  virtual bool Accept(Message* message) FXL_WARN_UNUSED_RESULT = 0;
+  virtual bool Accept(Message* message) __WARN_UNUSED_RESULT = 0;
 };
 
 class MessageReceiverWithResponder : public MessageReceiver {
@@ -159,7 +159,7 @@ class MessageReceiverWithResponder : public MessageReceiver {
   // its own destruction.
   //
   virtual bool AcceptWithResponder(Message* message, MessageReceiver* responder)
-      FXL_WARN_UNUSED_RESULT = 0;
+      __WARN_UNUSED_RESULT = 0;
 };
 
 // A MessageReceiver that is also able to provide status about the state
@@ -193,7 +193,7 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
   //
   virtual bool AcceptWithResponder(Message* message,
                                    MessageReceiverWithStatus* responder)
-      FXL_WARN_UNUSED_RESULT = 0;
+      __WARN_UNUSED_RESULT = 0;
 };
 
 // Read a single message from the channel and dispatch to the given receiver.
