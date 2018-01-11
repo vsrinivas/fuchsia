@@ -15,6 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/block.h>
 
 #include <gpt/gpt.h>
 #include <sync/completion.h>
@@ -65,8 +66,14 @@ typedef struct __PACKED mbr {
 typedef struct mbrpart_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
+
+    block_protocol_t bp;
+
     mbr_partition_entry_t partition;
+
     block_info_t info;
+    size_t block_op_size;
+
     atomic_int writercount;
 } mbrpart_device_t;
 
@@ -138,6 +145,43 @@ static zx_off_t to_parent_offset(mbrpart_device_t* dev, zx_off_t offset) {
            (uint64_t)dev->info.block_size;
 }
 
+
+static void mbr_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+    mbrpart_device_t* mbr = ctx;
+    memcpy(bi, &mbr->info, sizeof(block_info_t));
+    *bopsz = mbr->block_op_size;
+}
+
+static void mbr_queue(void* ctx, block_op_t* bop) {
+    mbrpart_device_t* mbr = ctx;
+
+    switch (bop->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE: {
+        size_t blocks = bop->rw.length;
+        size_t max = mbr->partition.sector_partition_length;
+
+        // Ensure that the request is in-bounds
+        if ((bop->rw.offset_dev >= max) ||
+            ((max - bop->rw.offset_dev) < blocks)) {
+            bop->completion_cb(bop, ZX_ERR_INVALID_ARGS);
+            return;
+        }
+
+        // Adjust for partition starting block
+        bop->rw.offset_dev += mbr->partition.start_sector_lba;
+        break;
+    }
+    case BLOCK_OP_FLUSH:
+        break;
+    default:
+        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        return;
+    }
+
+    mbr->bp.ops->queue(mbr->bp.ctx, bop);
+}
+
 static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
     mbrpart_device_t* dev = ctx;
     if (txn->offset % dev->info.block_size) {
@@ -205,22 +249,37 @@ static zx_protocol_device_t mbr_proto = {
     .close = mbr_close,
 };
 
+static block_protocol_ops_t block_ops = {
+    .query = mbr_query,
+    .queue = mbr_queue,
+};
+
 static int mbr_bind_thread(void* arg) {
     mbrpart_device_t* first_dev = (mbrpart_device_t*)arg;
     zx_device_t* dev = first_dev->parent;
 
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
-    iotxn_t* txn = NULL;
+
+    block_protocol_t bp;
+    memcpy(&bp, &first_dev->bp, sizeof(bp));
 
     block_info_t block_info;
-    size_t actual;
-    ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                              &block_info, sizeof(block_info), &actual);
-    if (rc < 0 || actual != sizeof(block_info)) {
-        xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
-                dev->name, rc);
-        goto unbind;
+    size_t block_op_size = sizeof(block_op_t);
+
+    iotxn_t* txn = NULL;
+
+    if (bp.ops == NULL) {
+        size_t actual;
+        ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
+                                  &block_info, sizeof(block_info), &actual);
+        if (rc < 0 || actual != sizeof(block_info)) {
+            xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
+                    dev->name, rc);
+            goto unbind;
+        }
+    } else {
+        bp.ops->query(bp.ctx, &block_info, &block_op_size);
     }
 
     // We need to read at least 512B to parse the MBR. Determine if we should
@@ -297,11 +356,13 @@ static int mbr_bind_thread(void* arg) {
                 goto unbind;
             }
             pdev->parent = dev;
+            memcpy(&pdev->bp, &bp, sizeof(bp));
         }
 
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));
+        pdev->block_op_size = block_op_size;
 
         if (first_dev) {
             // make our initial device visible and use if for partition zero
@@ -317,6 +378,7 @@ static int mbr_bind_thread(void* arg) {
                 .ctx = pdev,
                 .ops = &mbr_proto,
                 .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+                .proto_ops = (bp.ops == NULL) ? NULL : &block_ops,
             };
 
             if ((st = device_add(dev, &args, &pdev->zxdev)) != ZX_OK) {
@@ -355,6 +417,11 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
     }
     device->parent = parent;
 
+    if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->bp) != ZX_OK) {
+        printf("WARNING: block device '%s': does not support new protocol\n",
+               device_get_name(parent));
+    }
+
     char name[128];
     snprintf(name, sizeof(name), "part-%03u", 0);
 
@@ -364,6 +431,7 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
         .ctx = device,
         .ops = &mbr_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = (device->bp.ops == NULL) ? NULL : &block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };
 
