@@ -21,7 +21,7 @@ source_set("compiler") {
     "lib/source_manager.h",
     "lib/string_view.h",
     "lib/token.h",
-    "lib/token_definitions.h",
+    "lib/token_definitions.inc",
   ]
 }
 
