@@ -7,6 +7,9 @@ members =  [
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
   "public/lib/fidl/rust/fidl",
+  "public/rust/crates/ddk-rs",
+  "public/rust/crates/ddk-rs/examples/ddk_toy",
+  "public/rust/crates/ddk-rs/examples/microorb",
   "public/rust/crates/fdio",
   "public/rust/crates/fuchsia-app",
   "public/rust/crates/fuchsia-vfs",
@@ -29,6 +32,7 @@ members =  [
 # workspace must have a patch statement here and the version of the crate
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
+ddk-rs = { path = "public/rust/crates/ddk-rs" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
