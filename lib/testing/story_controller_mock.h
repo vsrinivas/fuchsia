@@ -16,7 +16,15 @@ namespace modular {
 
 class StoryControllerMock : public StoryController {
  public:
+  StoryControllerMock() {}
+
   std::string last_added_module() const { return last_added_module_; }
+
+  struct GetLinkCall {
+    fidl::Array<fidl::String> module_path;
+    fidl::String name;
+  };
+  std::vector<GetLinkCall> get_link_calls;
 
  private:
   // |StoryController|
@@ -87,10 +95,13 @@ class StoryControllerMock : public StoryController {
   void GetLink(fidl::Array<fidl::String> module_path,
                const fidl::String& name,
                fidl::InterfaceRequest<Link> request) override {
-    FXL_NOTIMPLEMENTED();
+    GetLinkCall call{std::move(module_path), name};
+    get_link_calls.push_back(std::move(call));
   }
 
   std::string last_added_module_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerMock);
 };
 
 }  // namespace modular

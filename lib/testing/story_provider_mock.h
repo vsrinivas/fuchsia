@@ -25,7 +25,7 @@ class StoryProviderMock : public StoryProvider {
         });
   }
 
-  modular::StoryControllerMock story_controller() const {
+  const modular::StoryControllerMock& story_controller() const {
     return controller_mock_;
   }
   std::string last_created_story() const { return last_created_story_; }

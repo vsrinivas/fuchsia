@@ -61,6 +61,15 @@ void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
+void XdrChainKeyToLinkData(XdrContext* const xdr, ChainKeyToLinkData* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("link_path", &data->link_path, XdrLinkPath);
+}
+
+void XdrChainData(XdrContext* const xdr, ChainData* const data) {
+  xdr->Field("key_to_link_map", &data->key_to_link_map, XdrChainKeyToLinkData);
+}
+
 void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
   xdr->Field("arrangement", &data->arrangement);
   xdr->Field("dependency", &data->dependency);
@@ -75,6 +84,11 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
+
+  xdr->ReadErrorHandler([data] {
+    data->chain_data = ChainData::New();
+    data->chain_data->key_to_link_map.resize(0);
+  })->Field("chain_data", &data->chain_data, XdrChainData);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
@@ -264,7 +278,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     story_controller_impl_->chains_.erase(
         i, story_controller_impl_->chains_.end());
     story_controller_impl_->chains_.emplace_back(
-        new ChainImpl(module_data_->module_path.Clone()));
+        new ChainImpl(module_data_->module_path.Clone(),
+                      module_data_->chain_data.Clone(), story_controller_impl_));
 
     // ModuleControllerImpl's constructor launches the child application.
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
@@ -450,6 +465,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
+    module_data_->chain_data = ChainData::New();
+    // TODO(thatguy): Populate ChainData correctly.
+    module_data_->chain_data->key_to_link_map.resize(0);
     module_data_->link_path = link_path_.Clone();
     module_data_->module_source = module_source_;
     module_data_->surface_relation = surface_relation_.Clone();
@@ -663,6 +681,9 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
+    module_data_->chain_data = ChainData::New();
+    // TODO(thatguy): Populate ChainData correctly.
+    module_data_->chain_data->key_to_link_map.resize(0);
     module_data_->link_path = link_path_.Clone();
     module_data_->module_source = ModuleSource::EXTERNAL;
     module_data_->surface_relation = surface_relation_.Clone();

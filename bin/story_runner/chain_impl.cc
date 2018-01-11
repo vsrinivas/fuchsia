@@ -4,9 +4,18 @@
 
 #include "peridot/bin/story_runner/chain_impl.h"
 
+#include "peridot/bin/story_runner/story_controller_impl.h"
+
 namespace modular {
 
-ChainImpl::ChainImpl(fidl::Array<fidl::String> path) : path_(std::move(path)) {}
+ChainImpl::ChainImpl(fidl::Array<fidl::String> path,
+                     ChainDataPtr chain_data,
+                     StoryController* const story_controller)
+    : path_(std::move(path)),
+      chain_data_(std::move(chain_data)),
+      story_controller_(story_controller) {
+  FXL_DCHECK(story_controller_ != nullptr);
+}
 ChainImpl::~ChainImpl() = default;
 
 void ChainImpl::Connect(fidl::InterfaceRequest<Chain> request) {
@@ -14,13 +23,25 @@ void ChainImpl::Connect(fidl::InterfaceRequest<Chain> request) {
 }
 
 void ChainImpl::GetKeys(const GetKeysCallback& done) {
-  fidl::Array<fidl::String> keys = fidl::Array<fidl::String>::New(0);
+  fidl::Array<fidl::String> keys =
+      fidl::Array<fidl::String>::New(chain_data_->key_to_link_map.size());
+  auto it = chain_data_->key_to_link_map.begin();
+  for (int i = 0; it != chain_data_->key_to_link_map.end(); ++i, ++it) {
+    keys[i] = (*it)->key;
+  }
   done(std::move(keys));
 }
 
 void ChainImpl::GetLink(const fidl::String& key,
                         fidl::InterfaceRequest<Link> request) {
-  // |request| closes when out of scope.
+  auto it = std::find_if(
+      chain_data_->key_to_link_map.begin(), chain_data_->key_to_link_map.end(),
+      [&key](const ChainKeyToLinkDataPtr& data) { return data->key == key; });
+  if (it == chain_data_->key_to_link_map.end())
+    return;
+
+  story_controller_->GetLink((*it)->link_path->module_path.Clone(),
+                             (*it)->link_path->link_name, std::move(request));
 }
 
 }  // namespace modular

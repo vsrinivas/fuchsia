@@ -16,6 +16,9 @@ struct ModuleData {
   // this module's name.
   array<string> module_path;
 
+  // Contains instructions for how to build a Chain at runtime.
+  ChainData chain_data;
+
   // The name of the link the module was started with.
   LinkPath link_path;
 
@@ -42,4 +45,14 @@ enum ModuleSource {
   // StoryController.AddModule() or StoryController.CreateStory() as first
   // module.
   EXTERNAL,
+};
+
+struct ChainData {
+  // For each key in the Chain, what Link does it point to?
+  array<ChainKeyToLinkData> key_to_link_map;
+};
+
+struct ChainKeyToLinkData {
+  string key;
+  LinkPath link_path;
 };
