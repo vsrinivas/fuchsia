@@ -17,22 +17,29 @@ namespace socket {
 // available.
 constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
 
-SocketWriter::SocketWriter(Client* client, const FidlAsyncWaiter* waiter)
-    : client_(client), waiter_(waiter) {}
-
-SocketWriter::~SocketWriter() {
-  if (wait_id_) {
-    waiter_->CancelWait(wait_id_);
-  }
+SocketWriter::SocketWriter(Client* client, async_t* async)
+    : client_(client), wait_(async) {
+  wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
+  wait_.set_handler([this](async_t* async,
+                           zx_status_t status,
+                           const zx_packet_signal_t* signal) {
+    WriteData(data_view_);
+    return ASYNC_WAIT_FINISHED;
+  });
 }
+
+SocketWriter::~SocketWriter() = default;
 
 void SocketWriter::Start(zx::socket destination) {
   destination_ = std::move(destination);
+  wait_.Cancel();
+  wait_.set_object(destination_.get());
   GetData();
 }
 
 void SocketWriter::GetData() {
   FXL_DCHECK(data_.empty());
+  wait_.Cancel();
   client_->GetNext(offset_, kDefaultSocketBufferSize,
                    [this](fxl::StringView data) {
                      if (data.empty()) {
@@ -76,35 +83,21 @@ void SocketWriter::WriteData(fxl::StringView data) {
     } else {
       data_view_ = data;
     }
-    WaitForSocket();
+    if (!wait_.is_pending())
+      wait_.Begin();
     return;
   }
   FXL_DCHECK(false) << "Unhandled zx_status_t: " << status;
 }
 
-void SocketWriter::WaitForSocket() {
-  wait_id_ = waiter_->AsyncWait(destination_.get(),
-                                ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                                ZX_TIME_INFINITE, &WaitComplete, this);
-}
-
-// static
-void SocketWriter::WaitComplete(zx_status_t /*result*/,
-                                zx_signals_t /*pending*/,
-                                uint64_t /*count*/,
-                                void* context) {
-  SocketWriter* writer = static_cast<SocketWriter*>(context);
-  writer->wait_id_ = 0;
-  writer->WriteData(writer->data_view_);
-}
-
 void SocketWriter::Done() {
+  wait_.Cancel();
   destination_.reset();
   client_->OnDataComplete();
 }
 
-StringSocketWriter::StringSocketWriter(const FidlAsyncWaiter* waiter)
-    : socket_writer_(this, waiter) {}
+StringSocketWriter::StringSocketWriter(async_t* async)
+    : socket_writer_(this, async) {}
 
 void StringSocketWriter::Start(std::string data, zx::socket destination) {
   data_ = std::move(data);

@@ -5,12 +5,13 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 
+#include <async/auto_wait.h>
+#include <async/default.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 
-#include "lib/fidl/c/waiter/async_waiter.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "zx/socket.h"
@@ -34,7 +35,7 @@ class SocketWriter {
 
   explicit SocketWriter(
       Client* client,
-      const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
+      async_t* async = async_get_default());
   ~SocketWriter();
 
   void Start(zx::socket destination);
@@ -42,11 +43,6 @@ class SocketWriter {
  private:
   void GetData();
   void WriteData(fxl::StringView data);
-  void WaitForSocket();
-  static void WaitComplete(zx_status_t result,
-                           zx_signals_t pending,
-                           uint64_t count,
-                           void* context);
   void Done();
 
   Client* client_;
@@ -57,8 +53,7 @@ class SocketWriter {
   // Data left to send.
   fxl::StringView data_view_;
   zx::socket destination_;
-  const FidlAsyncWaiter* waiter_;
-  FidlAsyncWaitID wait_id_ = 0;
+  async::AutoWait wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketWriter);
 };
@@ -66,8 +61,7 @@ class SocketWriter {
 // Writes the content of a string to a socket. Deletes itself when done.
 class StringSocketWriter : public SocketWriter::Client {
  public:
-  explicit StringSocketWriter(
-      const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
+  explicit StringSocketWriter(async_t* async = async_get_default());
 
   void Start(std::string data, zx::socket destination);
 
