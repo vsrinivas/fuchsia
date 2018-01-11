@@ -59,7 +59,7 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
         // we will make sure the range ends on a page boundary so we don't need to worry about
         // alignment for subsequent iterations.
         *out_paddr = phys + align_adjust;
-        return_length = PAGE_SIZE - align_adjust;
+        return_length = MIN(PAGE_SIZE - align_adjust, remaining);
         remaining -= return_length;
         iter->page = 1;
 
