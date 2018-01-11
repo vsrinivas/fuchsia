@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_static_library.gni")
+
+config("bitmap_config") {
+  include_dirs = [ "include" ]
+}
+
+sdk_static_library("bitmap") {
+  # Don't forget to update rules.mk as well for the Zircon build.
+  sources = [
+    "include/bitmap/bitmap.h",
+    "include/bitmap/raw-bitmap.h",
+    "include/bitmap/rle-bitmap.h",
+    "include/bitmap/storage.h",
+    "raw-bitmap.cpp",
+    "rle-bitmap.cpp",
+  ]
+
+  deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  public_configs = [ ":bitmap_config" ]
+}
