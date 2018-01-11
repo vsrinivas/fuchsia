@@ -49,11 +49,3 @@ install_host_tools("host") {
     "pm",
   ]
 }
-
-# The following group is temporary until the change that split pmd and pm makes
-# it through the layer rollers. This target is referenced by //build, and can
-# be removed once (https://fuchsia-review.googlesource.com/c/build/+/109635) is
-# submitted.
-group("pkgsvr_bin") {
-  public_deps = [ "//garnet/go/src/pmd:pkgsvr_bin" ]
-}
