@@ -7,7 +7,7 @@
 
 case "$(uname)" in
 Darwin)
-  disks=$(diskutil list | grep '^/dev/' | grep -v 'internal' | grep -v 'virtual' | cut -d ' ' -f 1)
+  disks=$(diskutil list | grep '^/dev/' | grep -v 'internal\|synthesized' | grep -v 'virtual' | cut -d ' ' -f 1)
   for disk in $disks; do
     details="$(diskutil info "${disk}" | grep 'Media Name' | cut -d : -f 2-)"
     echo "${disk} - ${details}"
