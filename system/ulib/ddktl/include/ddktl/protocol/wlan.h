@@ -185,17 +185,18 @@ private:
     void* cookie_;
 };
 
-template <typename D>
+template <typename D, bool HasConfigureBss = false>
 class WlanmacProtocol : public internal::base_protocol {
 public:
     WlanmacProtocol() {
-        internal::CheckWlanmacProtocolSubclass<D>();
+        internal::CheckWlanmacProtocolSubclass<D, HasConfigureBss>();
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
         ops_.queue_tx = QueueTx;
         ops_.set_channel = SetChannel;
         ops_.set_bss = SetBss;
+        ops_.configure_bss = ConfigureBss;
         ops_.set_key = SetKey;
 
         // Can only inherit from one base_protocol implemenation
@@ -228,6 +229,16 @@ private:
 
     static zx_status_t SetBss(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type) {
         return static_cast<D*>(ctx)->WlanmacSetBss(options, mac, type);
+    }
+
+    DDKTL_DEPRECATED(HasConfigureBss)
+    static zx_status_t ConfigureBss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    DDKTL_NOTREADY(HasConfigureBss)
+    static zx_status_t ConfigureBss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
+        return static_cast<D*>(ctx)->WlanmacConfigureBss(options, config);
     }
 
     static zx_status_t SetKey(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
@@ -266,9 +277,13 @@ public:
     }
 
     // Deprecated.
-    // TODO(hahnr): Replace with ConfigureBss(...).
+    // TODO(hahnr): Remove.
     zx_status_t SetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
         return ops_->set_bss(ctx_, options, mac, type);
+    }
+
+    zx_status_t ConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+        return ops_->configure_bss(ctx_, options, config);
     }
 
     zx_status_t SetKey(uint32_t options, wlan_key_config_t* key_config) {
