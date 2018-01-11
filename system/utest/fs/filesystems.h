@@ -17,7 +17,7 @@ __BEGIN_CDECLS;
 
 typedef struct fs_info {
     const char* name;
-    bool (*exists)(void);
+    bool (*should_test)(void);
     int (*mkfs)(const char* disk_path);
     int (*mount)(const char* disk_path, const char* mount_path);
     int (*unmount)(const char* mount_path);
@@ -40,6 +40,8 @@ extern const char* test_root_path;
 extern char test_disk_path[];
 // Is the disk path a REAL disk, or is it be a generated ramdisk?
 extern bool use_real_disk;
+// A filter of the filesystems; indicates which one should be tested.
+extern const char* filesystem_name_filter;
 
 // Current filesystem's info
 extern fs_info_t* test_info;
@@ -63,9 +65,9 @@ void teardown_fs_test(fs_test_type_t test_class);
 inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
     switch (t) {
     case FS_TEST_NORMAL:
-        return info->exists();
+        return info->should_test();
     case FS_TEST_FVM:
-        return info->exists() && info->supports_resize;
+        return info->should_test() && info->supports_resize;
     }
     return false;
 }

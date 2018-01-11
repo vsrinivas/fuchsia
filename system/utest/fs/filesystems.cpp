@@ -28,6 +28,10 @@ fs_info_t* test_info;
 
 static char fvm_disk_path[PATH_MAX];
 
+constexpr const char minfs_name[] = "minfs";
+constexpr const char memfs_name[] = "memfs";
+constexpr const char thinfs_name[] = "thinfs";
+
 const fsck_options_t test_fsck_options = {
     .verbose = false,
     .never_modify = true,
@@ -163,7 +167,10 @@ void teardown_fs_test(fs_test_type_t test_class) {
 
 // FS-specific functionality:
 
-bool always_exists(void) { return true; }
+template <const char* fs_name>
+bool should_test_filesystem(void) {
+    return !strcmp(filesystem_name_filter, "") || !strcmp(fs_name, filesystem_name_filter);
+}
 
 int mkfs_memfs(const char* disk_path) {
     return 0;
@@ -278,9 +285,9 @@ int unmount_minfs(const char* mount_path) {
     return 0;
 }
 
-bool thinfs_exists(void) {
+bool should_test_thinfs(void) {
     struct stat buf;
-    return stat("/system/bin/thinfs", &buf) == 0;
+    return (stat("/system/bin/thinfs", &buf) == 0) && should_test_filesystem<thinfs_name>();
 }
 
 int mkfs_thinfs(const char* disk_path) {
@@ -331,8 +338,8 @@ int unmount_thinfs(const char* mount_path) {
 }
 
 fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
-    {"memfs",
-        always_exists, mkfs_memfs, mount_memfs, unmount_memfs, fsck_memfs,
+    {memfs_name,
+        should_test_filesystem<memfs_name>, mkfs_memfs, mount_memfs, unmount_memfs, fsck_memfs,
         .can_be_mounted = false,
         .can_mount_sub_filesystems = true,
         .supports_hardlinks = true,
@@ -342,8 +349,8 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_resize = false,
         .nsec_granularity = 1,
     },
-    {"minfs",
-        always_exists, mkfs_minfs, mount_minfs, unmount_minfs, fsck_minfs,
+    {minfs_name,
+        should_test_filesystem<minfs_name>, mkfs_minfs, mount_minfs, unmount_minfs, fsck_minfs,
         .can_be_mounted = true,
         .can_mount_sub_filesystems = true,
         .supports_hardlinks = true,
@@ -353,8 +360,8 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_resize = true,
         .nsec_granularity = 1,
     },
-    {"FAT",
-        thinfs_exists, mkfs_thinfs, mount_thinfs, unmount_thinfs, fsck_thinfs,
+    {thinfs_name,
+        should_test_thinfs, mkfs_thinfs, mount_thinfs, unmount_thinfs, fsck_thinfs,
         .can_be_mounted = true,
         .can_mount_sub_filesystems = false,
         .supports_hardlinks = false,
