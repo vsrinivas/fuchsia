@@ -10,6 +10,7 @@ authors = ["Taylor Cramer <cramertj@google.com>"]
 description = "Example of an echo server Fuchsia app in Rust"
 
 [dependencies]
+failure = "0.1.1"
 fidl = "0.1"
 fuchsia-app = "0.1"
 futures = "0.1.15"

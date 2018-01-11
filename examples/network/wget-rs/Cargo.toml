@@ -10,6 +10,7 @@ authors = ["Tim Kilbourn <tkilbourn@google.com>"]
 description = "Example client for the Fuchsia Network Service"
 
 [dependencies]
+failure = "0.1.1"
 fidl = "0.1"
 fuchsia-app = "0.1"
 futures = "0.1"

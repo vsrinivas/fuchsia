@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 
+extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app;
 extern crate fuchsia_zircon as zx;
@@ -14,9 +15,10 @@ extern crate tokio_core;
 extern crate tokio_fuchsia;
 extern crate fdio;
 
+use failure::{Error, ResultExt};
 use fuchsia_app::server::bootstrap_server;
 use fidl::{InterfacePtr, ClientEnd};
-use futures::future;
+use futures::future::ok as fok;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -51,14 +53,15 @@ impl DeviceSettingsManagerServer {
             m.retain(|w| {
                 if let Err(e) = w.on_change_settings(t) {
                     match e {
-                        fidl::Error::IoError(ref ie)
-                            if ie.kind() == io::ErrorKind::ConnectionAborted => {
-                            return false;
+                        fidl::Error::ClientRead(ref ie) |
+                        fidl::Error::ClientWrite(ref ie) => {
+                            if ie.kind() == io::ErrorKind::ConnectionAborted {
+                                return false;
+                            }
                         }
-                        e => {
-                            eprintln!("Error call watcher: {:?}", e);
-                        }
-                    }
+                        _ => {}
+                    };
+                    eprintln!("Error call watcher: {:?}", e);
                 }
                 return true;
             });
@@ -66,16 +69,11 @@ impl DeviceSettingsManagerServer {
     }
 
     fn set_key(&mut self, key: &str, buf: &[u8], t: ValueType) -> io::Result<bool> {
-        {
-            let file = if let Some(f) = self.setting_file_map.get(key) {
-                f
-            } else {
-                return Ok(false);
-            };
-            if let Err(e) = write_to_file(file, buf) {
-                return Err(e);
-            }
-        }
+        match self.setting_file_map.get(key) {
+            Some(file) => write_to_file(file, buf)?,
+            None => return Ok(false),
+        };
+
         self.run_watchers(&key, t);
         Ok(true)
     }
@@ -104,20 +102,20 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         let file = if let Some(f) = self.setting_file_map.get(&key) {
             f
         } else {
-            return future::ok((0, Status::ErrInvalidSetting));
+            return fok((0, Status::ErrInvalidSetting));
         };
         match read_file(file) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::NotFound {
-                    return future::ok((0, Status::ErrNotSet));
+                    return fok((0, Status::ErrNotSet));
                 }
                 eprintln!("DeviceSetting: Error reading integer: {:?}", e);
-                return future::ok((0, Status::ErrRead));
+                return fok((0, Status::ErrRead));
             }
             Ok(str) => {
                 match str.parse::<i64>() {
-                    Err(_e) => future::ok((0, Status::ErrIncorrectType)),
-                    Ok(i) => future::ok((i, Status::Ok)),
+                    Err(_e) => fok((0, Status::ErrIncorrectType)),
+                    Ok(i) => fok((i, Status::Ok)),
                 }
             }
         }
@@ -127,10 +125,10 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
 
     fn set_integer(&mut self, key: String, val: i64) -> Self::SetInteger {
         match self.set_key(&key, val.to_string().as_bytes(), ValueType::Int) {
-            Ok(r) => return future::ok(r),
+            Ok(r) => return fok(r),
             Err(e) => {
                 eprintln!("DeviceSetting: Error setting integer: {:?}", e);
-                return future::ok(false);
+                return fok(false);
             }
         }
     }
@@ -141,17 +139,17 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         let file = if let Some(f) = self.setting_file_map.get(&key) {
             f
         } else {
-            return future::ok(("".to_string(), Status::ErrInvalidSetting));
+            return fok(("".to_string(), Status::ErrInvalidSetting));
         };
         match read_file(file) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::NotFound {
-                    return future::ok(("".to_string(), Status::ErrNotSet));
+                    return fok(("".to_string(), Status::ErrNotSet));
                 }
                 eprintln!("DeviceSetting: Error reading string: {:?}", e);
-                return future::ok(("".to_string(), Status::ErrRead));
+                return fok(("".to_string(), Status::ErrRead));
             }
-            Ok(s) => future::ok((s, Status::Ok)),
+            Ok(s) => fok((s, Status::Ok)),
         }
     }
 
@@ -159,10 +157,10 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
 
     fn set_string(&mut self, key: String, val: String) -> Self::SetString {
         match self.set_key(&key, val.as_bytes(), ValueType::String) {
-            Ok(r) => return future::ok(r),
+            Ok(r) => return fok(r),
             Err(e) => {
                 eprintln!("DeviceSetting: Error setting string: {:?}", e);
-                return future::ok(false);
+                return fok(false);
             }
         }
 
@@ -175,18 +173,18 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
         watcher: InterfacePtr<ClientEnd<DeviceSettingsWatcher::Service>>,
     ) -> Self::Watch {
         if !self.setting_file_map.contains_key(&key) {
-            return future::ok(Status::ErrInvalidSetting);
+            return fok(Status::ErrInvalidSetting);
         }
         match DeviceSettingsWatcher::new_proxy(watcher.inner, &self.handle) {
             Err(e) => {
                 eprintln!("DeviceSetting: Error getting watcher proxy: {:?}", e);
-                return future::ok(Status::ErrUnknown);
+                return fok(Status::ErrUnknown);
             }
             Ok(w) => {
                 let mut map = self.watchers.borrow_mut();
                 let mv = map.entry(key).or_insert(Vec::new());
                 mv.push(w);
-                future::ok(Status::Ok)
+                fok(Status::Ok)
             }
         }
 
@@ -200,17 +198,13 @@ fn main() {
 }
 
 // TODO(anmittal): Use log crate and use that for logging
-fn main_ds() -> Result<(), String> {
-    let mut core = reactor::Core::new().map_err(|e| {
-        format!("unable to create core: {:?}", e)
-    })?;
+fn main_ds() -> Result<(), Error> {
+    let mut core = reactor::Core::new().context("unable to create core")?;
     let handle = core.handle();
 
     let watchers = Rc::new(RefCell::new(HashMap::new()));
     // Attempt to create data directory
-    fs::create_dir_all(DATA_DIR).map_err(|e| {
-        format!("creating directory: {:?}", e)
-    })?;
+    fs::create_dir_all(DATA_DIR).context("creating directory")?;
     let server = bootstrap_server(handle.clone(), move || {
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
@@ -221,10 +215,9 @@ fn main_ds() -> Result<(), String> {
         d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
 
         DeviceSettingsManager::Dispatcher(d)
-    }).map_err(|e| format!("running server: {:?}", e))?;
-    core.run(server).map_err({
-        |e| format!("running server: {:?}", e)
-    })
+    }).context("running server")?;
+
+    Ok(core.run(server).context("running server")?)
 }
 
 #[cfg(test)]

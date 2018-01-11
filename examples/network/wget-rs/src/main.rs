@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 
+extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app;
 extern crate futures;
@@ -12,14 +13,14 @@ extern crate tokio_core;
 extern crate tokio_fuchsia;
 extern crate tokio_io;
 
+use failure::Error;
 use fidl::FidlService;
 use fuchsia_app::client::ApplicationContext;
-use futures::{Async, Future, IntoFuture, Poll};
+use futures::{Future, IntoFuture};
 use garnet_public_lib_network_fidl as netsvc;
 use std::io;
 use tokio_core::reactor;
-use tokio_io::AsyncWrite;
-use tokio_io::io::copy;
+use tokio_io::io::{AllowStdIo, copy};
 
 fn print_headers(resp: &netsvc::URLResponse) {
     println!(">>> Headers <<<");
@@ -33,24 +34,6 @@ fn print_headers(resp: &netsvc::URLResponse) {
     }
 }
 
-struct AssertAsyncWrite<T>(T);
-
-impl<T> io::Write for AssertAsyncWrite<T> where T: io::Write {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.0.write(buf)
-    }
-    fn flush(&mut self) -> io::Result<()> {
-        self.0.flush()
-    }
-}
-
-// IT'S A LIE! A DIRTY LIE!
-impl<T> AsyncWrite for AssertAsyncWrite<T> where T: io::Write {
-    fn shutdown(&mut self) -> Poll<(), io::Error> {
-        Ok(Async::Ready(()))
-    }
-}
-
 fn main() {
     if let Err(e) = main_res() {
         println!("Error: {:?}", e);
@@ -58,7 +41,7 @@ fn main() {
 }
 
 /// Connects to the network service, sends a url request, and prints the response.
-fn main_res() -> Result<(), fidl::Error> {
+fn main_res() -> Result<(), Error> {
     let url = match std::env::args().nth(1) {
         Some(url) => {
             if url.find("://").is_none() {
@@ -74,7 +57,7 @@ fn main_res() -> Result<(), fidl::Error> {
     };
 
     // Set up tokio reactor
-    let mut core = reactor::Core::new().unwrap();
+    let mut core = reactor::Core::new()?;
     let handle = core.handle();
 
     // Connect to the network service
@@ -98,7 +81,7 @@ fn main_res() -> Result<(), fidl::Error> {
         response_body_mode: netsvc::URLRequestResponseBodyMode::Stream,
     };
 
-    let fut = loader_proxy.start(req).and_then(|resp| {
+    let fut = loader_proxy.start(req).map_err(Error::from).and_then(|resp| {
         if let Some(e) = resp.error {
             let code = e.code;
             println!("Got error: {} ({})",
@@ -111,7 +94,7 @@ fn main_res() -> Result<(), fidl::Error> {
         match resp.body.map(|x| *x) {
             Some(netsvc::URLBody::Stream(s)) => {
                 Some(tokio_fuchsia::Socket::from_socket(s, &handle)
-                        .map_err(fidl::Error::from)
+                        .map_err(Error::from)
                         .into_future())
             }
             Some(netsvc::URLBody::Buffer(_)) |
@@ -124,7 +107,7 @@ fn main_res() -> Result<(), fidl::Error> {
             println!(">>> Body <<<");
 
             // Copy the bytes from the socket to stdout
-            copy(socket, AssertAsyncWrite(io::stdout()))
+            copy(socket, AllowStdIo::new(io::stdout()))
                 .map(|_| ())
                 .or_else(|e| if e.kind() == io::ErrorKind::ConnectionAborted {
                     println!("\n>>> EOF <<<");
@@ -132,7 +115,7 @@ fn main_res() -> Result<(), fidl::Error> {
                 } else {
                     Err(e)
                 })
-                .map_err(fidl::Error::from)
+                .map_err(Error::from)
         })
     }).map(|_| ());
 

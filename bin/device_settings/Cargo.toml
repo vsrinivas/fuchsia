@@ -8,6 +8,7 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
+failure = "0.1.1"
 fidl = "0.1"
 fuchsia-app = "0.1"
 fuchsia-zircon = "0.3"

@@ -9,7 +9,7 @@
 
 #[macro_use]
 extern crate bitflags;
-
+extern crate failure;
 pub extern crate fuchsia_zircon_sys as sys;
 
 #[deprecated(note="use fuchsia_zircon::sys::ZX_CPRNG_DRAW_MAX_LEN instead")]

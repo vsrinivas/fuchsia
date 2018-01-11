@@ -103,7 +103,7 @@ pub enum DispatchResponseFuture <
             {{- $message.TyName}}({{- $message.TyName}}),
         {{end}}
     {{end}}
-    FidlError(fidl::Error),
+    FidlError(fidl::ErrorOrClose),
 }
 
 impl<
@@ -124,8 +124,8 @@ Future for DispatchResponseFuture<
 >
 {
     type Item = EncodeBuf;
-    type Error = fidl::Error;
-    fn poll(&mut self) -> Poll<EncodeBuf, fidl::Error> {
+    type Error = fidl::ErrorOrClose;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match *self {
             {{range $message := $interface.Messages}}
                 {{if ne $message.ResponseStruct.Name ""}}
@@ -152,7 +152,7 @@ Future for DispatchResponseFuture<
                 {{end}}
             {{end}}
             DispatchResponseFuture::FidlError(ref mut err) =>
-                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion)),
+                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion.into())),
         }
     }
 }
@@ -170,7 +170,7 @@ pub enum DispatchFuture <
             {{- $message.TyName}}({{- $message.TyName}}),
         {{end}}
     {{end}}
-    FidlError(fidl::Error),
+    FidlError(fidl::ErrorOrClose),
 }
 
 impl<
@@ -187,18 +187,18 @@ impl<
     {{end}}
 > {
     type Item = ();
-    type Error = fidl::Error;
-    fn poll(&mut self) -> Poll<(), fidl::Error> {
+    type Error = fidl::ErrorOrClose;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match *self {
             {{range $message := $interface.Messages}}
                 {{if eq $message.ResponseStruct.Name ""}}
                     DispatchFuture::{{- $message.TyName}}(ref mut inner) => {
-                        inner.poll().map_err(Into::into)
+                        inner.poll().map_err(fidl::CloseChannel::into)
                     }
                 {{end}}
             {{end}}
             DispatchFuture::FidlError(ref mut err) =>
-                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion)),
+                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion.into())),
         }
     }
 }
@@ -226,7 +226,7 @@ impl<T: Server> Stub for Dispatcher<T> {
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture {
         let name: u32 = match fidl::Decodable::decode(request, 0, 8) {
             Ok(x) => x,
-            Err(e) => return DispatchResponseFuture::FidlError(e),
+            Err(e) => return DispatchResponseFuture::FidlError(e.into()),
         };
 
         match name {
@@ -235,7 +235,7 @@ impl<T: Server> Stub for Dispatcher<T> {
                     {{$message.MessageOrdinal}} => {
                         let request: {{$message.RequestStruct.Name}} = match fidl::DecodablePtr::decode_obj(request, 24) {
                             Ok(request) => request,
-                            Err(e) => return DispatchResponseFuture::FidlError(e),
+                            Err(e) => return DispatchResponseFuture::FidlError(e.into()),
                         };
                         DispatchResponseFuture::{{- $message.TyName}}(
                             Server::{{$message.Name}}(&mut self.0
@@ -247,7 +247,10 @@ impl<T: Server> Stub for Dispatcher<T> {
                     }
                 {{end}}
             {{end}}
-            _ => DispatchResponseFuture::FidlError(fidl::Error::UnknownOrdinal),
+            ordinal => DispatchResponseFuture::FidlError(fidl::Error::UnknownOrdinal {
+              ordinal,
+              service_name: NAME
+            }.into()),
         }
     }
 
@@ -255,7 +258,7 @@ impl<T: Server> Stub for Dispatcher<T> {
     fn dispatch(&mut self, request: &mut ::fidl::DecodeBuf) -> Self::DispatchFuture {
         let name: u32 = match fidl::Decodable::decode(request, 0, 8) {
             Ok(x) => x,
-            Err(e) => return DispatchFuture::FidlError(e),
+            Err(e) => return DispatchFuture::FidlError(e.into()),
         };
         match name {
             {{range $message := $interface.Messages}}
@@ -263,7 +266,7 @@ impl<T: Server> Stub for Dispatcher<T> {
                     {{$message.MessageOrdinal}} => {
                         let request: {{$message.RequestStruct.Name}} = match fidl::DecodablePtr::decode_obj(request, 16) {
                             Ok(request) => request,
-                            Err(e) => return DispatchFuture::FidlError(e),
+                            Err(e) => return DispatchFuture::FidlError(e.into()),
                         };
                         DispatchFuture::{{- $message.TyName}}(
                             Server::{{$message.Name}}(&mut self.0
@@ -275,7 +278,10 @@ impl<T: Server> Stub for Dispatcher<T> {
                     }
                 {{end}}
             {{end}}
-            _ => DispatchFuture::FidlError(::fidl::Error::UnknownOrdinal)
+            ordinal => DispatchFuture::FidlError(::fidl::Error::UnknownOrdinal {
+              ordinal,
+              service_name: NAME,
+            }.into())
         }
     }
 }
@@ -357,13 +363,14 @@ impl fidl::FidlService for Service {
 
     #[inline]
     fn new_proxy(client_end: fidl::ClientEnd<Self>, handle: &reactor::Handle) -> Result<Self::Proxy, fidl::Error> {
-        let channel = ::tokio_fuchsia::Channel::from_channel(client_end.into_channel(), handle)?;
+        let channel = ::tokio_fuchsia::Channel::from_channel(client_end.into_channel(), handle)
+                        .map_err(fidl::Error::AsyncChannel)?;
         Ok(Proxy(fidl::Client::new(channel, handle)))
     }
 
     #[inline]
     fn new_pair(handle: &reactor::Handle) -> Result<(Self::Proxy, fidl::ServerEnd<Self>), fidl::Error> {
-        let (s1, s2) = zircon::Channel::create().unwrap();
+        let (s1, s2) = zircon::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         let client_end = fidl::ClientEnd::new(s1);
         let server_end = fidl::ServerEnd::new(s2);
         Ok((Self::new_proxy(client_end, handle)?, server_end))

@@ -10,6 +10,7 @@ authors = ["Taylor Cramer <cramertj@google.com>"]
 description = "Library for managing Fuchsia applications and services"
 
 [dependencies]
+failure = "0.1.1"
 fdio = "0.2"
 fidl = "0.1"
 fuchsia-zircon = "0.3"

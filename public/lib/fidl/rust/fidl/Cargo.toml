@@ -8,6 +8,7 @@ repository = "https://fuchsia.googlesource.com/fidl/"
 
 [dependencies]
 byteorder = "1.1.0"
+failure = "0.1.1"
 fuchsia-zircon = "0.3"
 futures = "0.1"
 slab = "0.4"

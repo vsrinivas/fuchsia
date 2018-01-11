@@ -4,10 +4,15 @@
 
 #![deny(warnings)]
 
+extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app;
 extern crate futures;
 extern crate tokio_core;
+
+// The `failure` crate provides an error trait called `Fail`,
+// as well as a standard dynamically-dispatched `Error` type.
+use failure::{Error, ResultExt};
 
 // Include the generated FIDL bindings for the `Echo` service.
 extern crate garnet_examples_fidl_services;
@@ -31,8 +36,14 @@ impl Echo::Server for EchoServer {
 }
 
 fn main() {
+    if let Err(e) = main_res() {
+        eprintln!("Error running Rust echo server: {:?}", e);
+    }
+}
+
+fn main_res() -> Result<(), Error> {
     // Create a new reactor core for handling IO events.
-    let mut core = reactor::Core::new().expect("Unable to create core");
+    let mut core = reactor::Core::new().context("Unable to create core")?;
     let handle = core.handle();
 
     // Create a service provider which will provide a new EchoServer
@@ -42,11 +53,9 @@ fn main() {
             .add_service(|| Echo::Dispatcher(EchoServer));
 
     let server = Server::new_outgoing(service_provider, &handle)
-                    .expect("Unable to create FIDL service");
+                    .context("Unable to create FIDL service")?;
 
     // Run the server on the reactor core.
     // The server is an empty `Future` that can return `fidl::Error`.
-    if let Err(e) = core.run(server) {
-        println!("Error running server: {:?}", e);
-    }
+    Ok(core.run(server).context("Error running server")?)
 }

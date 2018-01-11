@@ -4,7 +4,7 @@
 
 //! An implementation of a server for a fidl interface.
 
-use {DecodeBuf, EncodeBuf, Error, FidlService, MsgType};
+use {DecodeBuf, EncodeBuf, Error, ErrorOrClose, FidlService, MsgType};
 
 use std::io;
 
@@ -20,22 +20,16 @@ use tokio_fuchsia;
 #[derive(Debug)]
 pub struct CloseChannel;
 
-impl From<CloseChannel> for Error {
-    fn from(_: CloseChannel) -> Error {
-        Error::ServerExecution
-    }
-}
-
 /// The "stub" which handles raw FIDL buffer requests.
 pub trait Stub {
     /// The FIDL service type that the stub provides.
     type Service: FidlService;
 
     /// The type of the future that is resolved to a response.
-    type DispatchResponseFuture: Future<Item = EncodeBuf, Error = Error>;
+    type DispatchResponseFuture: Future<Item = EncodeBuf, Error = ErrorOrClose>;
 
     /// The type of the future that dispatches a message with no response.
-    type DispatchFuture: Future<Item = (), Error = Error>;
+    type DispatchFuture: Future<Item = (), Error = ErrorOrClose>;
 
     /// Dispatches a request and returns a future for the response.
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture;
@@ -52,7 +46,7 @@ struct DispatchResponseFutureWithId<S: Stub> {
 
 impl<S: Stub> Future for DispatchResponseFutureWithId<S> {
     type Item = (u64, EncodeBuf);
-    type Error = Error;
+    type Error = ErrorOrClose;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.future.poll() {
@@ -97,17 +91,24 @@ impl<S: Stub> Future for Server<S> {
             let mut made_progress_this_loop_iter = false;
 
             // Handle one dispatch_future at a time if any are available
-            if let Async::Ready(Some(())) = self.dispatch_futures.poll()? {
-                made_progress_this_loop_iter = true;
+            match self.dispatch_futures.poll() {
+                Ok(Async::Ready(Some(()))) => made_progress_this_loop_iter = true,
+                Ok(_) => {},
+                Err(ErrorOrClose::CloseChannel) => return Ok(Async::Ready(())),
+                Err(ErrorOrClose::Error(e)) => return Err(e),
             }
 
             // Handle one dispatch_response_future at a time if any are available
-            let item = self.dispatch_response_futures.poll()?;
-            if let Async::Ready(Some((id, mut encode_buf))) = item {
-                encode_buf.set_message_id(id);
-                let (out_buf, handles) = encode_buf.get_mut_content();
-                self.channel.write(out_buf, handles)?;
-                made_progress_this_loop_iter = true;
+            match self.dispatch_response_futures.poll() {
+                Ok(Async::Ready(Some((id, mut encode_buf)))) => {
+                    encode_buf.set_message_id(id);
+                    let (out_buf, handles) = encode_buf.get_mut_content();
+                    self.channel.write(out_buf, handles).map_err(Error::ServerResponseWrite)?;
+                    made_progress_this_loop_iter = true;
+                },
+                Ok(_) => {},
+                Err(ErrorOrClose::CloseChannel) => return Ok(Async::Ready(())),
+                Err(ErrorOrClose::Error(e)) => return Err(e),
             }
 
             // Now process incoming requests
@@ -133,7 +134,10 @@ impl<S: Stub> Future for Server<S> {
                         return Ok(Async::NotReady);
                     }
                 }
-                Err(e) => Err(e)?,
+                Err(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => {
+                    return Ok(Async::Ready(()));
+                }
+                Err(e) => return Err(Error::ServerRequestRead(e)),
             }
         }
     }

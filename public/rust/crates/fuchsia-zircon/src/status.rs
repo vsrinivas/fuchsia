@@ -1,6 +1,8 @@
+use failure;
 use std::ffi::NulError;
 use std::io;
 use sys;
+use std::fmt;
 
 /// Status type indicating the result of a Fuchsia syscall.
 ///
@@ -143,6 +145,17 @@ impl From<Status> for io::ErrorKind {
         }
     }
 }
+
+impl fmt::Display for Status {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.assoc_const_name() {
+            Some(name) => name.fmt(f),
+            None => write!(f, "Unknown zircon status code: {}", self.0)
+        }
+    }
+}
+
+impl failure::Fail for Status {}
 
 impl From<io::Error> for Status {
     fn from(err: io::Error) -> Status {

@@ -118,7 +118,7 @@ impl ClientInner {
                 Ok(()) => {},
                 Err(e) => {
                     if e.kind() != io::ErrorKind::WouldBlock {
-                        return Err(e.into())
+                        return Err(Error::ClientRead(e));
                     }
 
                     let mut message_interests = self.message_interests.lock().unwrap();
@@ -209,7 +209,7 @@ impl Client {
     /// Send a message without expecting a response.
     pub fn send_msg(&self, buf: &mut EncodeBuf) -> Result<(), Error> {
         let (out_buf, handles) = buf.get_mut_content();
-        Ok(self.inner.channel.write(out_buf, handles)?)
+        Ok(self.inner.channel.write(out_buf, handles).map_err(Error::ClientWrite)?)
     }
 
     /// Send a message and receive a response future.
@@ -220,7 +220,7 @@ impl Client {
         buf.set_message_id(id as u64);
         let (out_buf, handles) = buf.get_mut_content();
         if let Err(e) = self.inner.channel.write(out_buf, handles) {
-            return future::Either::A(future::err(e.into()));
+            return future::Either::A(future::err(Error::ClientWrite(e)));
         }
 
         future::Either::B(MessageResponse {

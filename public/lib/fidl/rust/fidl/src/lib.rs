@@ -9,6 +9,7 @@
 
 extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
+#[macro_use] extern crate failure;
 extern crate futures;
 extern crate slab;
 extern crate tokio_core;
@@ -27,7 +28,7 @@ pub use encoding::{Encodable, Decodable, EncodablePtr, DecodablePtr, EncodableTy
 pub use encoding::{CodableUnion, EncodableNullable, DecodableNullable};
 pub use encoding::{encode_handle, decode_handle};
 pub use message::{EncodeBuf, DecodeBuf, MsgType};
-pub use error::{Error, Result};
+pub use error::{Error, Result, ErrorOrClose};
 pub use server::{CloseChannel, Stub, Server};
 pub use interface::InterfacePtr;
 pub use client::{Client, FidlService};
