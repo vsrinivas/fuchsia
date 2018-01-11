@@ -16,6 +16,9 @@ public:
     virtual zx_status_t Init() = 0;
     const char* tag() { return tag_; }
 
+    zx_status_t InterruptValid() override;
+    zx_status_t WaitForInterrupt() override;
+
 protected:
     pci_protocol_t pci_ = {nullptr, nullptr};
     zx_pcie_device_info_t info_;

@@ -37,7 +37,6 @@ void Device::Unbind() {
 }
 
 void Device::Release() {
-    irq_handle_.reset();
     backend_.reset();
 }
 
@@ -45,9 +44,8 @@ void Device::IrqWorker() {
     zx_status_t rc;
     zxlogf(TRACE, "%s: starting irq worker\n", tag());
 
-    while (backend_->irq_handle()) {
-        uint64_t slots;
-        if ((rc = zx_interrupt_wait(backend_->irq_handle(), &slots)) != ZX_OK) {
+    while (backend_->InterruptValid() == ZX_OK) {
+        if ((rc = backend_->WaitForInterrupt()) != ZX_OK) {
             zxlogf(SPEW, "%s: error while waiting for interrupt: %s\n",
                    tag(), zx_status_get_string(rc));
             continue;

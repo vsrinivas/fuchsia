@@ -56,7 +56,8 @@ public:
     // Expected to read the interrupt status out of the config based on the offset/address
     // specified by the isr capability.
     virtual uint32_t IsrStatus() = 0;
-    zx_handle_t irq_handle() const { return irq_handle_.get(); }
+    virtual zx_status_t InterruptValid() = 0;
+    virtual zx_status_t WaitForInterrupt() = 0;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Backend);
 
