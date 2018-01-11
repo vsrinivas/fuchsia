@@ -63,7 +63,7 @@ scripts/build-zircon.sh \
 build/gn/gen.py \
   --target_cpu=$ARCH \
   --platforms=$PLATFORM \
-  --packages="${PACKAGE:-${DEFAULT_GN_PACKAGES}}" \
+  --packages="${PACKAGE:-${DEFAULT_GN_PACKAGES}},build/packages/bootfs" \
   $GN_ASAN \
   $GN_GOMA
 
