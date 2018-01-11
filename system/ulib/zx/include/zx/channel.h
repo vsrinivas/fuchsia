@@ -6,6 +6,7 @@
 
 #include <zx/handle.h>
 #include <zx/object.h>
+#include <zx/time.h>
 
 namespace zx {
 
@@ -42,11 +43,20 @@ public:
                                 num_handles);
     }
 
+    // TODO(abarth): Remove.
     zx_status_t call(uint32_t flags, zx_time_t deadline,
                      const zx_channel_call_args_t* args,
                      uint32_t* actual_bytes, uint32_t* actual_handles,
                      zx_status_t* read_status) const {
         return zx_channel_call(get(), flags, deadline, args, actual_bytes,
+                               actual_handles, read_status);
+    }
+
+    zx_status_t call(uint32_t flags, zx::time deadline,
+                     const zx_channel_call_args_t* args,
+                     uint32_t* actual_bytes, uint32_t* actual_handles,
+                     zx_status_t* read_status) const {
+        return zx_channel_call(get(), flags, deadline.value(), args, actual_bytes,
                                actual_handles, read_status);
     }
 };
