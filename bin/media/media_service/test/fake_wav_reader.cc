@@ -55,7 +55,7 @@ void FakeWavReader::Describe(const DescribeCallback& callback) {
 void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   if (socket_) {
     if (wait_id_ != 0) {
-      fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+      GetDefaultAsyncWaiter()->CancelWait(wait_id_);
       wait_id_ = 0;
     }
     socket_.reset();
@@ -84,7 +84,7 @@ void FakeWavReader::WriteToSocket() {
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
+      wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
           ZX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
       return;

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {

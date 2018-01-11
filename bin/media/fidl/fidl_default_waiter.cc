@@ -1,16 +1,16 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/waiter/default.h"
+#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace fsl {
+namespace media {
 namespace {
 
-class HandleWatcher : public MessageLoopHandler {
+class HandleWatcher : public fsl::MessageLoopHandler {
  public:
   HandleWatcher(zx_handle_t handle,
                 FidlAsyncWaitCallback callback,
@@ -19,11 +19,11 @@ class HandleWatcher : public MessageLoopHandler {
 
   ~HandleWatcher() {
     if (key_)
-      MessageLoop::GetCurrent()->RemoveHandler(key_);
+      fsl::MessageLoop::GetCurrent()->RemoveHandler(key_);
   }
 
   void Start(zx_signals_t signals, zx_time_t timeout) {
-    MessageLoop* message_loop = MessageLoop::GetCurrent();
+    fsl::MessageLoop* message_loop = fsl::MessageLoop::GetCurrent();
     FXL_DCHECK(message_loop) << "DefaultAsyncWaiter requires a MessageLoop";
     fxl::TimeDelta timeout_delta;
     if (timeout == ZX_TIME_INFINITE)
@@ -52,7 +52,7 @@ class HandleWatcher : public MessageLoopHandler {
     callback(status, pending, count, context);
   }
 
-  MessageLoop::HandlerKey key_;
+  fsl::MessageLoop::HandlerKey key_;
   zx_handle_t handle_;
   FidlAsyncWaitCallback callback_;
   void* context_;
@@ -78,12 +78,9 @@ void CancelWait(FidlAsyncWaitID wait_id) {
 constexpr FidlAsyncWaiter kDefaultAsyncWaiter = {AsyncWait, CancelWait};
 
 }  // namespace
-}  // namespace fsl
 
-namespace fidl {
-
-FXL_EXPORT const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
-  return &fsl::kDefaultAsyncWaiter;
+const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
+  return &kDefaultAsyncWaiter;
 }
 
-}  // namespace fidl
+}  // namespace media

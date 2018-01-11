@@ -25,7 +25,6 @@ sdk_shared_library("fsl_lib") {
     "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fsl/threading",
     "//garnet/public/lib/fsl/vmo",
-    "//garnet/public/lib/fsl/waiter",
   ]
 }
 

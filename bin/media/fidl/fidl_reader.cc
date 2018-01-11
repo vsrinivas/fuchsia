@@ -33,7 +33,7 @@ FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
 
 FidlReader::~FidlReader() {
   if (wait_id_ != 0) {
-    fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+    GetDefaultAsyncWaiter()->CancelWait(wait_id_);
   }
 }
 
@@ -117,7 +117,7 @@ void FidlReader::ReadFromSocket() {
                                       read_at_bytes_remaining_, &byte_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
+      wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
           ZX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
       break;

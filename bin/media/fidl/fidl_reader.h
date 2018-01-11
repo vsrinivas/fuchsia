@@ -10,8 +10,8 @@
 #include <zx/socket.h>
 
 #include "garnet/bin/media/demux/reader.h"
+#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
 

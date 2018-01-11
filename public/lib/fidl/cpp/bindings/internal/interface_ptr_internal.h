@@ -19,8 +19,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-struct FidlAsyncWaiter;
-
 namespace fidl {
 namespace internal {
 
