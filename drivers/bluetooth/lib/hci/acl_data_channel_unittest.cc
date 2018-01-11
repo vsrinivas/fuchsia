@@ -205,8 +205,8 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   RunMessageLoop(10);
 
   // The controller can buffer 3 packets. Since BR/EDR packets should have
-  // failed to go out, the controller should have received 3 packets on handle0
-  // and none on handle1. kHandle1
+  // failed to go out, the controller should have received 3 packets on handle 0
+  // and none on handle 1.
   EXPECT_EQ(kTotalExpected / 2u, handle0_packet_count);
   EXPECT_EQ(0u, handle1_packet_count);
 
@@ -218,7 +218,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunMessageLoop(1);
+  RunMessageLoop(10);
 
   EXPECT_EQ(kTotalExpected, handle0_packet_count);
   EXPECT_EQ(0u, handle1_packet_count);
