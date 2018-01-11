@@ -355,12 +355,14 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     EXPECT_EQ(ledger::Status::OK, status);
   }
 
+  auto commit_waiter =
+      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   for (int i = 0; i < num_ledgers_; i++) {
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    pages_[i]->Commit(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(ledger::Status::OK, status);
+    pages_[i]->Commit(commit_waiter->NewCallback());
   }
+  commit_waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   // Function to verify if the visible Ledger state has not changed since last
   // call and all values are identical.
