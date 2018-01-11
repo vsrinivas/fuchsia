@@ -4,6 +4,8 @@
 
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
+#include "peridot/bin/agents/clipboard/clipboard_storage.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
 
 namespace modular {
 
@@ -11,9 +13,27 @@ namespace modular {
 class ClipboardAgent {
  public:
   ClipboardAgent(AgentHost* const agent_host) {
+    ComponentContextPtr component_context;
+    agent_host->agent_context()->GetComponentContext(
+        component_context.NewRequest());
+
+    ledger::LedgerPtr ledger;
+    component_context->GetLedger(
+        ledger.NewRequest(), [](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << "Could not connect to Ledger.";
+          }
+        });
+    ledger.set_connection_error_handler(
+        [] { FXL_LOG(ERROR) << "Ledger connection died."; });
+
+    ledger_client_.reset(new LedgerClient(std::move(ledger)));
+
+    clipboard_.reset(new ClipboardImpl(ledger_client_.get()));
+
     services_.AddService<Clipboard>(
         [this](fidl::InterfaceRequest<Clipboard> request) {
-          clipboard_.Connect(std::move(request));
+          clipboard_->Connect(std::move(request));
         });
   }
 
@@ -28,8 +48,10 @@ class ClipboardAgent {
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  // The clipboard implementation.
-  ClipboardImpl clipboard_;
+  // The ledger client that is provided to the ClipboardImpl.
+  std::unique_ptr<LedgerClient> ledger_client_;
+
+  std::unique_ptr<ClipboardImpl> clipboard_;
 
   // The service namespace that the Clipboard is added to.
   app::ServiceNamespace services_;

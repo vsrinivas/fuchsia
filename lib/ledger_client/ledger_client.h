@@ -30,6 +30,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
   LedgerClient(ledger::LedgerRepository* ledger_repository,
                const std::string& name,
                std::function<void()> error);
+  LedgerClient(ledger::LedgerPtr ledger);
   ~LedgerClient() override;
 
   ledger::Ledger* ledger() const { return ledger_.get(); }

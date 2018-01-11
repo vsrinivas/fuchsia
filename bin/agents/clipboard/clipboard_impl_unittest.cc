@@ -6,19 +6,34 @@
 #include <string>
 
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
+#include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 
-class ClipboardImplTest : public gtest::TestWithMessageLoop {
- protected:
-  void Push(const std::string& text) { clipboard_.Push(text); }
+class ClipboardImplTest : public testing::TestWithLedger {
+ public:
+  ClipboardImplTest() = default;
 
-  void Peek(const Clipboard::PeekCallback& callback) {
-    clipboard_.Peek(callback);
+  void SetUp() override {
+    TestWithLedger::SetUp();
+
+    clipboard_.reset(new ClipboardImpl(ledger_client()));
   }
 
-  ClipboardImpl clipboard_;
+  void TearDown() override {
+    clipboard_.reset();
+
+    TestWithLedger::TearDown();
+  }
+
+ protected:
+  void Push(const std::string& text) { clipboard_->Push(text); }
+
+  void Peek(const Clipboard::PeekCallback& callback) {
+    clipboard_->Peek(callback);
+  }
+
+  std::unique_ptr<ClipboardImpl> clipboard_;
 };
 
 namespace {
@@ -29,7 +44,8 @@ TEST_F(ClipboardImplTest, FirstPeek) {
     EXPECT_EQ("", text);
     callback_called = true;
   });
-  EXPECT_TRUE(callback_called);
+
+  RunLoopUntil([&callback_called] { return callback_called; });
 }
 
 TEST_F(ClipboardImplTest, PushAndPeek) {
@@ -40,7 +56,24 @@ TEST_F(ClipboardImplTest, PushAndPeek) {
     EXPECT_EQ(expected_value, text);
     callback_called = true;
   });
-  EXPECT_TRUE(callback_called);
+
+  RunLoopUntil([&callback_called] { return callback_called; });
+}
+
+TEST_F(ClipboardImplTest, PushAndPeekTwice) {
+  int callback_called = 0;
+  std::string expected_value = "a test string";
+  Push(expected_value);
+  Peek([&callback_called, expected_value](const fidl::String& text) {
+    EXPECT_EQ(expected_value, text);
+    callback_called++;
+  });
+  Peek([&callback_called, expected_value](const fidl::String& text) {
+    EXPECT_EQ(expected_value, text);
+    callback_called++;
+  });
+
+  RunLoopUntil([&callback_called] { return callback_called == 2; });
 }
 
 }  // namespace

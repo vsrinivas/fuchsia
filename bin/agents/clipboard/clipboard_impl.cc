@@ -2,22 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 
-namespace modular {
+#include <string>
 
-ClipboardImpl::ClipboardImpl() = default;
+#include "peridot/lib/fidl/array_to_string.h"
+
+namespace modular {
+namespace {
+constexpr char kClipboardImplPageId[] = "ClipboardPage___";  // 16 chars
+}  // namespace
+
+ClipboardImpl::ClipboardImpl(LedgerClient* ledger_client)
+    : storage_(ledger_client, to_array(kClipboardImplPageId)) {}
 
 ClipboardImpl::~ClipboardImpl() = default;
 
 void ClipboardImpl::Push(const fidl::String& text) {
-  current_item_ = text;
+  storage_.Push(text);
 }
 
 void ClipboardImpl::Peek(const PeekCallback& callback) {
-  callback(current_item_);
+  storage_.Peek(callback);
 }
 
 void ClipboardImpl::Connect(fidl::InterfaceRequest<Clipboard> request) {

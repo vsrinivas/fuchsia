@@ -8,15 +8,16 @@
 #include <string>
 
 #include "lib/clipboard/fidl/clipboard.fidl.h"
-#include "lib/fxl/macros.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fxl/macros.h"
+#include "peridot/bin/agents/clipboard/clipboard_storage.h"
 
 namespace modular {
 
 // An agent responsible for providing the Clipboard service.
 class ClipboardImpl : Clipboard {
  public:
-  ClipboardImpl();
+  explicit ClipboardImpl(LedgerClient* ledger_client);
   ~ClipboardImpl();
 
   void Connect(fidl::InterfaceRequest<Clipboard> request);
@@ -28,8 +29,8 @@ class ClipboardImpl : Clipboard {
   // |Clipboard|
   void Peek(const PeekCallback& callback) override;
 
-  // The current clipboard text.
-  std::string current_item_;
+  // The storage instance that manages interactions with the Ledger.
+  ClipboardStorage storage_;
 
   // The bindings set containing the outgoing services request from the agent
   // driver.

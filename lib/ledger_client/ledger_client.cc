@@ -55,29 +55,27 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       std::map<std::string, PageClient::Conflict>* conflicts,
                       LedgerPageKey token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable(
-      [result, conflicts, callback = std::move(callback)](
-          ledger::Status status, fidl::Array<ledger::DiffEntryPtr> change_delta,
-          LedgerPageKey token) mutable {
-        if (status != ledger::Status::OK &&
-            status != ledger::Status::PARTIAL_RESULT) {
-          callback(status);
-          return;
-        }
+  auto cont = fxl::MakeCopyable([
+    result, conflicts, callback = std::move(callback)
+  ](ledger::Status status, fidl::Array<ledger::DiffEntryPtr> change_delta,
+    LedgerPageKey token) mutable {
+    if (status != ledger::Status::OK &&
+        status != ledger::Status::PARTIAL_RESULT) {
+      callback(status);
+      return;
+    }
 
-        for (auto& diff_entry : change_delta) {
-          (*conflicts)[to_string(diff_entry->key)] =
-              ToConflict(diff_entry.get());
-        }
+    for (auto& diff_entry : change_delta) {
+      (*conflicts)[to_string(diff_entry->key)] = ToConflict(diff_entry.get());
+    }
 
-        if (status == ledger::Status::OK) {
-          callback(ledger::Status::OK);
-          return;
-        }
+    if (status == ledger::Status::OK) {
+      callback(ledger::Status::OK);
+      return;
+    }
 
-        GetDiffRecursive(result, conflicts, std::move(token),
-                         std::move(callback));
-      });
+    GetDiffRecursive(result, conflicts, std::move(token), std::move(callback));
+  });
 
   result->GetConflictingDiff(std::move(token), cont);
 }
@@ -255,6 +253,17 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveCall);
 };
+
+LedgerClient::LedgerClient(ledger::LedgerPtr ledger)
+    : ledger_(std::move(ledger)) {
+  ledger_->SetConflictResolverFactory(
+      bindings_.AddBinding(this), [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
+                         << LedgerStatusToString(status);
+        }
+      });
+}
 
 LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
                            const std::string& name,
