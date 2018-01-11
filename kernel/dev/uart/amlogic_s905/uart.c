@@ -98,7 +98,7 @@ static enum handler_return uart_irq(void *arg)
         cbuf_write_char(&uart_rx_buf, c, false);
     }
 
-    return true;
+    return INT_RESCHEDULE;
 }
 
 static void s905_uart_init(mdi_node_ref_t* node, uint level)
