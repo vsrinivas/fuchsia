@@ -75,7 +75,7 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
 #endif
         }
         if (setrlimit(RLIMIT_NOFILE, &rlp) != 0) {
-            fprintf(stderr, "setrlimit failed, can't set open file limits to %llu\n", rlp.rlim_cur);
+            perror("setrlimit failed, can't set open file limits");
             return -1;
         }
     }
