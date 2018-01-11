@@ -264,7 +264,7 @@ TEST_F(ScannerTest, ScanResponse) {
 
     auto hdr = reinterpret_cast<const MgmtFrameHeader*>(kBeacon);
     auto bcn = reinterpret_cast<const Beacon*>(kBeacon + hdr->len());
-    auto beacon = MgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
+    auto beacon = ImmutableMgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
 
     EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
     clock_.Set(1);

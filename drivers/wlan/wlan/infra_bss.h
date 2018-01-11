@@ -39,9 +39,9 @@ class InfraBss : public FrameHandler {
 
    private:
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
+    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
+    zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t SendAuthentication(const common::MacAddr& dst, status_code::StatusCode);
     zx_status_t SendAssociationResponse(const common::MacAddr& dst, status_code::StatusCode);

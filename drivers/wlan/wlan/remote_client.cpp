@@ -12,7 +12,7 @@ InitState::InitState(fsm::StateMachine<BaseState>* client) : BaseState(client) {
 AuthenticatedState::AuthenticatedState(fsm::StateMachine<BaseState>* client) : BaseState(client) {}
 
 zx_status_t AuthenticatedState::HandleAssociationResponse(
-    const MgmtFrame<AssociationResponse>& frame, const wlan_rx_info_t& rxinfo) {
+    const ImmutableMgmtFrame<AssociationResponse>& frame, const wlan_rx_info_t& rxinfo) {
     uint16_t aid;
 
     // ...

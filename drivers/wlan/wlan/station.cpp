@@ -343,7 +343,8 @@ zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
 }
 
 // TODO(hahnr): Support ProbeResponses.
-zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
+                                  const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(!bss_.is_null());
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kBeacon);
@@ -385,7 +386,7 @@ done_iter:
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame,
+zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAuthentication);
@@ -428,7 +429,7 @@ zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
+zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
                                             const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
@@ -449,7 +450,7 @@ zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& f
     return SendDeauthIndication(deauth->reason_code);
 }
 
-zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
+zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,
                                                const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
@@ -499,7 +500,7 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame,
+zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDisassociation);
@@ -525,7 +526,7 @@ zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame
     return SendDisassociateIndication(disassoc->reason_code);
 }
 
-zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
+zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame,
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
@@ -602,7 +603,7 @@ zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
+zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& frame,
                                          const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == DataSubtype::kNull);
@@ -620,7 +621,7 @@ zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
+zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
                                      const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(bssid() != nullptr);
@@ -684,7 +685,7 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
     return status;
 }
 
-zx_status_t Station::HandleEthFrame(const BaseFrame<EthernetII>& frame) {
+zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
     debugfn();
 
     // Drop Ethernet frames when not associated.

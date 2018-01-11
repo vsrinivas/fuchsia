@@ -26,24 +26,24 @@
         return methodName(msg);                                                         \
     }
 
-#define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType)                                      \
-    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##mgmtFrameType, const MgmtFrame<mgmtFrameType>&, \
+#define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType)                                               \
+    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##mgmtFrameType, const ImmutableMgmtFrame<mgmtFrameType>&, \
                                const wlan_rx_info_t&)
 
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(mgmtFrameType)                     \
-    zx_status_t HandleMgmtFrameInternal(const MgmtFrame<mgmtFrameType>& frame, \
-                                        const wlan_rx_info_t& info) {          \
-        return Handle##mgmtFrameType(frame, info);                             \
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(mgmtFrameType)                              \
+    zx_status_t HandleMgmtFrameInternal(const ImmutableMgmtFrame<mgmtFrameType>& frame, \
+                                        const wlan_rx_info_t& info) {                   \
+        return Handle##mgmtFrameType(frame, info);                                      \
     }
 
-#define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, BodyType)                  \
-    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##methodName, const DataFrame<BodyType>&, \
+#define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, BodyType)                           \
+    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##methodName, const ImmutableDataFrame<BodyType>&, \
                                const wlan_rx_info_t&)
 
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(methodName, BodyType)         \
-    zx_status_t HandleDataFrameInternal(const DataFrame<BodyType>& frame, \
-                                        const wlan_rx_info_t& rxinfo) {   \
-        return Handle##methodName(frame, rxinfo);                         \
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(methodName, BodyType)                  \
+    zx_status_t HandleDataFrameInternal(const ImmutableDataFrame<BodyType>& frame, \
+                                        const wlan_rx_info_t& rxinfo) {            \
+        return Handle##methodName(frame, rxinfo);                                  \
     }
 
 namespace wlan {
@@ -128,7 +128,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     virtual zx_status_t HandleAnyFrame() { return ZX_OK; }
 
     // Ethernet frame handlers.
-    virtual zx_status_t HandleEthFrame(const BaseFrame<EthernetII>& frame) { return ZX_OK; }
+    virtual zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+        return ZX_OK;
+    }
 
     // Service Message handlers.
     virtual zx_status_t HandleMlmeMessage(const Method& method) { return ZX_OK; }
@@ -182,7 +184,8 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     // Internal Management frame handlers.
     template <typename Body>
-    zx_status_t HandleFrameInternal(const MgmtFrame<Body>& frame, const wlan_rx_info_t& info) {
+    zx_status_t HandleFrameInternal(const ImmutableMgmtFrame<Body>& frame,
+                                    const wlan_rx_info_t& info) {
         auto status = HandleMgmtFrame(*frame.hdr);
         if (status != ZX_OK) { return status; }
 
@@ -198,13 +201,14 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaRequestFrame)
 
     // Internal Ethernet frame handlers.
-    zx_status_t HandleFrameInternal(const BaseFrame<EthernetII>& frame) {
+    zx_status_t HandleFrameInternal(const ImmutableBaseFrame<EthernetII>& frame) {
         return HandleEthFrame(frame);
     }
 
     // Internal Data frame handlers.
     template <typename Body>
-    zx_status_t HandleFrameInternal(const DataFrame<Body>& frame, const wlan_rx_info_t& info) {
+    zx_status_t HandleFrameInternal(const ImmutableDataFrame<Body>& frame,
+                                    const wlan_rx_info_t& info) {
         auto status = HandleDataFrame(*frame.hdr);
         if (status != ZX_OK) { return status; }
 

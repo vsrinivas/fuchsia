@@ -24,7 +24,7 @@ zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame,
+zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                            const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -72,8 +72,8 @@ zx_status_t InfraBss::SendAuthentication(const common::MacAddr& dst,
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
-                                                 const wlan_rx_info_t& rxinfo) {
+zx_status_t InfraBss::HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
+                                               const wlan_rx_info_t& rxinfo) {
     debugfn();
 
     auto& client_addr = frame.hdr->addr2;

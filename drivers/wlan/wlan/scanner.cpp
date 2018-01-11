@@ -116,7 +116,8 @@ zx_status_t Scanner::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     return IsRunning() ? ZX_OK : ZX_ERR_STOP;
 }
 
-zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
+zx_status_t Scanner::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
+                                  const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
@@ -170,7 +171,7 @@ void Scanner::RemoveStaleBss() {
         [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry >= now); });
 }
 
-zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
+zx_status_t Scanner::HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>& frame,
                                          const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -180,7 +181,7 @@ zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
     // future. For now, stick with this kind of unification.
     // TODO(hahnr): The should probably moved somehow into the Dispatcher.
     auto bcn = reinterpret_cast<const Beacon*>(frame.body);
-    auto mgmt_frame = MgmtFrame<Beacon>(frame.hdr, bcn, frame.body_len);
+    auto mgmt_frame = ImmutableMgmtFrame<Beacon>(frame.hdr, bcn, frame.body_len);
 
     HandleBeacon(mgmt_frame, rxinfo);
     return ZX_OK;

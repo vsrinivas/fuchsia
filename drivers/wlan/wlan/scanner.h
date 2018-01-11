@@ -43,8 +43,9 @@ class Scanner : public FrameHandler {
     zx_status_t HandleMlmeScanReq(const ScanRequest& req) override;
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
+    zx_status_t HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
+                             const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>& frame,
                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleTimeout();
     zx_status_t HandleError(zx_status_t error_code);

@@ -34,7 +34,7 @@ class AuthenticatedState : public BaseState {
    public:
     AuthenticatedState(fsm::StateMachine<BaseState>* client);
 
-    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
+    zx_status_t HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,
                                           const wlan_rx_info_t& rxinfo) override;
 
     // ...

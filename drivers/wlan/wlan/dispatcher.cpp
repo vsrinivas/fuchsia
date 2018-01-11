@@ -194,7 +194,7 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
 
     switch (hdr->fc.subtype()) {
     case DataSubtype::kNull: {
-        auto frame = DataFrame<NilHeader>(hdr, nullptr, 0);
+        auto frame = ImmutableDataFrame<NilHeader>(hdr, nullptr, 0);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case DataSubtype::kDataSubtype:
@@ -221,7 +221,7 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
         return ZX_ERR_IO;
     }
     size_t llc_len = packet->len() - llc_offset;
-    auto frame = DataFrame<LlcHeader>(hdr, llc, llc_len);
+    auto frame = ImmutableDataFrame<LlcHeader>(hdr, llc, llc_len);
     return mlme_->HandleFrame(frame, *rxinfo);
 }
 
@@ -254,7 +254,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("beacon packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Beacon>(hdr, beacon, payload_len);
+        auto frame = ImmutableMgmtFrame<Beacon>(hdr, beacon, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kProbeResponse: {
@@ -263,7 +263,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("probe response packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<ProbeResponse>(hdr, proberesp, payload_len);
+        auto frame = ImmutableMgmtFrame<ProbeResponse>(hdr, proberesp, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAuthentication: {
@@ -272,7 +272,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("authentication packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Authentication>(hdr, auth, payload_len);
+        auto frame = ImmutableMgmtFrame<Authentication>(hdr, auth, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kDeauthentication: {
@@ -281,7 +281,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("deauthentication packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Deauthentication>(hdr, deauth, payload_len);
+        auto frame = ImmutableMgmtFrame<Deauthentication>(hdr, deauth, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAssociationRequest: {
@@ -290,7 +290,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("assocation request packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<AssociationRequest>(hdr, authreq, payload_len);
+        auto frame = ImmutableMgmtFrame<AssociationRequest>(hdr, authreq, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAssociationResponse: {
@@ -299,7 +299,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("assocation response packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<AssociationResponse>(hdr, authresp, payload_len);
+        auto frame = ImmutableMgmtFrame<AssociationResponse>(hdr, authresp, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kDisassociation: {
@@ -308,7 +308,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("disassociation packet too small (len=%zd)\n", payload_len);
             return ZX_ERR_IO;
         }
-        auto frame = MgmtFrame<Disassociation>(hdr, disassoc, payload_len);
+        auto frame = ImmutableMgmtFrame<Disassociation>(hdr, disassoc, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     case ManagementSubtype::kAction: {
@@ -359,7 +359,7 @@ zx_status_t Dispatcher::HandleActionPacket(const Packet* packet, const MgmtFrame
         // TODO(porce): Support AddBar. Work with lower mac.
         // TODO(porce): Make this conditional depending on the hardware capability.
 
-        auto frame = MgmtFrame<AddBaRequestFrame>(hdr, addbar, payload_len);
+        auto frame = ImmutableMgmtFrame<AddBaRequestFrame>(hdr, addbar, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
         break;
     }
@@ -385,7 +385,7 @@ zx_status_t Dispatcher::HandleEthPacket(const Packet* packet) {
 
     auto payload = packet->field<uint8_t>(sizeof(hdr));
     size_t payload_len = packet->len() - sizeof(hdr);
-    auto frame = BaseFrame<EthernetII>(hdr, payload, payload_len);
+    auto frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
     return mlme_->HandleFrame(frame);
 }
 
