@@ -5,6 +5,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/block.h>
+
 #include <zircon/device/ramdisk.h>
 #include <sync/completion.h>
 
@@ -28,54 +30,78 @@ typedef struct {
 
 typedef struct ramdisk_device {
     zx_device_t* zxdev;
+    uintptr_t mapped_addr;
     uint64_t blk_size;
     uint64_t blk_count;
-    uint32_t flags;
-    zx_handle_t vmo;
-    uintptr_t mapped_addr;
-    char name[NAME_MAX];
 
     mtx_t lock;
-    bool dead;
-    thrd_t worker;
-    cnd_t work_cvar;
+    completion_t signal;
     list_node_t txn_list;
+    bool dead;
+
+    uint32_t flags;
+    zx_handle_t vmo;
+    thrd_t worker;
+    char name[NAME_MAX];
 } ramdisk_device_t;
+
+typedef struct {
+    block_op_t op;
+    list_node_t node;
+} ramdisk_txn_t;
 
 // The worker thread processes messages from iotxns in the background
 static int worker_thread(void* arg) {
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
-    iotxn_t* txn;
+    ramdisk_txn_t* txn;
+    bool dead;
 
-    mtx_lock(&dev->lock);
-    while (true) {
-        while ((txn = list_remove_head_type(&dev->txn_list, iotxn_t, node)) == NULL) {
-            if (dev->dead) {
-                goto done;
+    for (;;) {
+        for (;;) {
+            mtx_lock(&dev->lock);
+            dead = dev->dead;
+            txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+            mtx_unlock(&dev->lock);
+            if (dead) {
+                goto goodbye;
             }
-            cnd_wait(&dev->work_cvar, &dev->lock);
-        }
-
-        mtx_unlock(&dev->lock);
-        switch (txn->opcode) {
-            case IOTXN_OP_READ: {
-                iotxn_copyto(txn, (void*) dev->mapped_addr + txn->offset, txn->length, 0);
-                iotxn_complete(txn, ZX_OK, txn->length);
+            if (txn == NULL) {
+                completion_wait(&dev->signal, ZX_TIME_INFINITE);
+            } else {
+                completion_reset(&dev->signal);
                 break;
             }
-            case IOTXN_OP_WRITE: {
-                iotxn_copyfrom(txn, (void*) dev->mapped_addr + txn->offset, txn->length, 0);
-                iotxn_complete(txn, ZX_OK, txn->length);
-                break;
+        }
+
+        zx_status_t status = ZX_OK;
+        void* addr = (void*) dev->mapped_addr + txn->op.rw.offset_dev;
+        size_t len = txn->op.rw.length * dev->blk_size;
+        size_t actual;
+
+        if (txn->op.command == BLOCK_OP_READ) {
+            if ((zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+                              len, &actual) != ZX_OK) ||
+                (actual != len)) {
+                status = ZX_ERR_IO;
             }
-            default: {
-                iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+        } else {
+            if ((zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+                             len, &actual) != ZX_OK) ||
+                (actual != len)) {
+                status = ZX_ERR_IO;
             }
         }
-        mtx_lock(&dev->lock);
+
+        txn->op.completion_cb(&txn->op, status);
     }
-done:
-    mtx_unlock(&dev->lock);
+
+goodbye:
+    while (txn != NULL) {
+        txn->op.completion_cb(&txn->op, ZX_ERR_BAD_STATE);
+        mtx_lock(&dev->lock);
+        txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+        mtx_unlock(&dev->lock);
+    }
     return 0;
 }
 
@@ -83,30 +109,11 @@ static uint64_t sizebytes(ramdisk_device_t* rdev) {
     return rdev->blk_size * rdev->blk_count;
 }
 
-static zx_status_t validate_args(ramdisk_device_t* ramdev, zx_off_t offset, zx_off_t length) {
-    // Offset must be aligned
-    if (offset % ramdev->blk_size != 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Length must be aligned
-    if (length % ramdev->blk_size != 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // transaction must fit within device
-    if ((offset >= sizebytes(ramdev)) || (sizebytes(ramdev) - offset < length)) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return ZX_OK;
-}
-
 static void ramdisk_get_info(void* ctx, block_info_t* info) {
     ramdisk_device_t* ramdev = ctx;
     memset(info, 0, sizeof(*info));
     info->block_size = ramdev->blk_size;
-    info->block_count = sizebytes(ramdev) / ramdev->blk_size;
+    info->block_count = ramdev->blk_count;
     // Arbitrarily set, but matches the SATA driver for testing
     info->max_transfer_size = (1 << 25);
     info->flags = ramdev->flags;
@@ -119,6 +126,7 @@ static void ramdisk_unbind(void* ctx) {
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
     mtx_unlock(&ramdev->lock);
+    completion_signal(&ramdev->signal);
     device_remove(ramdev->zxdev);
 }
 
@@ -170,22 +178,45 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
     }
 }
 
-static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
+static void ramdisk_queue(void* ctx, block_op_t* bop) {
     ramdisk_device_t* ramdev = ctx;
-    if (ramdev->dead) {
-        iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
-        return;
-    }
-    zx_status_t status = validate_args(ramdev, txn->offset, txn->length);
-    if (status != ZX_OK) {
-        iotxn_complete(txn, status, 0);
-        return;
-    }
+    ramdisk_txn_t* txn = containerof(bop, ramdisk_txn_t, op);
+    bool dead;
 
-    mtx_lock(&ramdev->lock);
-    list_add_tail(&ramdev->txn_list, &txn->node);
-    cnd_signal(&ramdev->work_cvar);
-    mtx_unlock(&ramdev->lock);
+    switch ((txn->op.command &= BLOCK_OP_MASK)) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+        if ((txn->op.rw.offset_dev >= ramdev->blk_count) ||
+            ((ramdev->blk_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
+            bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
+            return;
+        }
+        txn->op.rw.offset_dev *= ramdev->blk_size;
+        txn->op.rw.offset_vmo *= ramdev->blk_size;
+
+        mtx_lock(&ramdev->lock);
+        if (!(dead = ramdev->dead)) {
+            list_add_tail(&ramdev->txn_list, &txn->node);
+        }
+        mtx_unlock(&ramdev->lock);
+        if (dead) {
+            bop->completion_cb(bop, ZX_ERR_BAD_STATE);
+        } else {
+            completion_signal(&ramdev->signal);
+        }
+        break;
+    case BLOCK_OP_FLUSH:
+        bop->completion_cb(bop, ZX_OK);
+        break;
+    default:
+        bop->completion_cb(bop, ZX_ERR_NOT_SUPPORTED);
+        break;
+    }
+}
+
+static void ramdisk_query(void* ctx, block_info_t* bi, size_t* bopsz) {
+    ramdisk_get_info(ctx, bi);
+    *bopsz = sizeof(ramdisk_txn_t);
 }
 
 static zx_off_t ramdisk_getsize(void* ctx) {
@@ -198,8 +229,8 @@ static void ramdisk_release(void* ctx) {
     // Wake up the worker thread, in case it is sleeping
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
-    cnd_signal(&ramdev->work_cvar);
     mtx_unlock(&ramdev->lock);
+    completion_signal(&ramdev->signal);
 
     int r;
     thrd_join(ramdev->worker, &r);
@@ -210,10 +241,14 @@ static void ramdisk_release(void* ctx) {
     free(ramdev);
 }
 
+static block_protocol_ops_t block_ops = {
+    .query = ramdisk_query,
+    .queue = ramdisk_queue,
+};
+
 static zx_protocol_device_t ramdisk_instance_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = ramdisk_ioctl,
-    .iotxn_queue = ramdisk_iotxn_queue,
     .get_size = ramdisk_getsize,
     .unbind = ramdisk_unbind,
     .release = ramdisk_release,
@@ -240,20 +275,17 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
     if (mtx_init(&ramdev->lock, mtx_plain) != thrd_success) {
         goto fail_free;
     }
-    if (cnd_init(&ramdev->work_cvar) != thrd_success) {
-        goto fail_mtx;
-    }
     ramdev->vmo = vmo;
     ramdev->blk_size = blk_size;
     ramdev->blk_count = blk_count;
     snprintf(ramdev->name, sizeof(ramdev->name),
              "ramdisk-%" PRIu64, ramdisk_count++);
 
-    status = zx_vmar_map(
-        zx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ramdev->mapped_addr);
+    status = zx_vmar_map(zx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                         &ramdev->mapped_addr);
     if (status != ZX_OK) {
-        goto fail_cnd;
+        goto fail_mtx;
     }
     list_initialize(&ramdev->txn_list);
     if (thrd_create(&ramdev->worker, worker_thread, ramdev) != thrd_success) {
@@ -266,6 +298,7 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
         .ctx = ramdev,
         .ops = &ramdisk_instance_proto,
         .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &block_ops,
     };
 
     if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
@@ -278,8 +311,6 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
 
 fail_unmap:
     zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
-fail_cnd:
-    cnd_destroy(&ramdev->work_cvar);
 fail_mtx:
     mtx_destroy(&ramdev->lock);
 fail_free:
