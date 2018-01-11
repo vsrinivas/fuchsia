@@ -10,6 +10,11 @@
 #include <asm.h>
 #include <zircon/errors.h>
 
+#define CPTR_EL2_TFP_SHIFT              10
+#define CPTR_EL2_TFP                    BIT_32(CPTR_EL2_TFP_SHIFT)
+#define CPTR_EL2_RES1                   0x33ff
+
+#define ESR_EL2_EC_FP                   0x07
 #define ESR_EL2_EC_HVC                  0x16
 #define ESR_EL2_EC_SHIFT                26
 #define ESR_EL2_ISS_MASK                0x01ffffff
@@ -24,99 +29,130 @@
 .section .text.el2,"ax",@progbits
 .align 12
 
+.macro fp_state inst, off
+    add x9, x9, \off
+    \inst q0, q1, [x9, FS_Q(0)]
+    \inst q2, q3, [x9, FS_Q(2)]
+    \inst q4, q5, [x9, FS_Q(4)]
+    \inst q6, q7, [x9, FS_Q(6)]
+    \inst q8, q9, [x9, FS_Q(8)]
+    \inst q10, q11, [x9, FS_Q(10)]
+    \inst q12, q13, [x9, FS_Q(12)]
+    \inst q14, q15, [x9, FS_Q(14)]
+    \inst q16, q17, [x9, FS_Q(16)]
+    \inst q18, q19, [x9, FS_Q(18)]
+    \inst q20, q21, [x9, FS_Q(20)]
+    \inst q22, q23, [x9, FS_Q(22)]
+    \inst q24, q25, [x9, FS_Q(24)]
+    \inst q26, q27, [x9, FS_Q(26)]
+    \inst q28, q29, [x9, FS_Q(28)]
+    \inst q30, q31, [x9, FS_Q(30)]
+.ifc "\inst", "ldp"
+    ldr x10, [x9, FS_FPSR]
+    msr fpsr, x10
+    ldr x10, [x9, FS_FPCR]
+    msr fpcr, x10
+.else
+    mrs x10, fpsr
+    str x10, [x9, FS_FPSR]
+    mrs x10, fpcr
+    str x10, [x9, FS_FPCR]
+.endif
+    sub x9, x9, \off
+.endm
+
 .macro system_register inst, off, sysreg
 .ifc "\inst", "ldr"
-    mov x11, \off
-    ldr x10, [x9, x11]
-    msr \sysreg, x10
+    ldr x11, [x10, \off]
+    msr \sysreg, x11
 .else
-    mrs x10, \sysreg
-    mov x11, \off
-    str x10, [x9, x11]
+    mrs x11, \sysreg
+    str x11, [x10, \off]
 .endif
 .endm
 
 .macro system_state inst, off
-    system_register \inst, \off + SS_SP_EL0, sp_el0
-    system_register \inst, \off + SS_TPIDR_EL0, tpidr_el0
-    system_register \inst, \off + SS_TPIDRRO_EL0, tpidrro_el0
+    add x10, x9, \off
+    system_register \inst, SS_SP_EL0, sp_el0
+    system_register \inst, SS_TPIDR_EL0, tpidr_el0
+    system_register \inst, SS_TPIDRRO_EL0, tpidrro_el0
 
-    system_register \inst, \off + SS_CNTKCTL_EL1, cntkctl_el1
-    system_register \inst, \off + SS_CONTEXTIDR_EL1, contextidr_el1
-    system_register \inst, \off + SS_CPACR_EL1, cpacr_el1
-    system_register \inst, \off + SS_CSSELR_EL1, csselr_el1
-    system_register \inst, \off + SS_ESR_EL1, esr_el1
-    system_register \inst, \off + SS_FAR_EL1, far_el1
-    system_register \inst, \off + SS_MAIR_EL1, mair_el1
-    system_register \inst, \off + SS_MDSCR_EL1, mdscr_el1
-    system_register \inst, \off + SS_SCTLR_EL1, sctlr_el1
-    system_register \inst, \off + SS_SP_EL1, sp_el1
-    system_register \inst, \off + SS_TCR_EL1, tcr_el1
-    system_register \inst, \off + SS_TPIDR_EL1, tpidr_el1
-    system_register \inst, \off + SS_TTBR0_EL1, ttbr0_el1
-    system_register \inst, \off + SS_TTBR1_EL1, ttbr1_el1
-    system_register \inst, \off + SS_VBAR_EL1, vbar_el1
+    system_register \inst, SS_CNTKCTL_EL1, cntkctl_el1
+    system_register \inst, SS_CONTEXTIDR_EL1, contextidr_el1
+    system_register \inst, SS_CPACR_EL1, cpacr_el1
+    system_register \inst, SS_CSSELR_EL1, csselr_el1
+    system_register \inst, SS_ESR_EL1, esr_el1
+    system_register \inst, SS_FAR_EL1, far_el1
+    system_register \inst, SS_MAIR_EL1, mair_el1
+    system_register \inst, SS_MDSCR_EL1, mdscr_el1
+    system_register \inst, SS_PAR_EL1, par_el1
+    system_register \inst, SS_SCTLR_EL1, sctlr_el1
+    system_register \inst, SS_SP_EL1, sp_el1
+    system_register \inst, SS_TCR_EL1, tcr_el1
+    system_register \inst, SS_TPIDR_EL1, tpidr_el1
+    system_register \inst, SS_TTBR0_EL1, ttbr0_el1
+    system_register \inst, SS_TTBR1_EL1, ttbr1_el1
+    system_register \inst, SS_VBAR_EL1, vbar_el1
 
-    system_register \inst, \off + SS_ELR_EL2, elr_el2
-    system_register \inst, \off + SS_SPSR_EL2, spsr_el2
+    system_register \inst, SS_ELR_EL2, elr_el2
+    system_register \inst, SS_SPSR_EL2, spsr_el2
 .endm
 
-.macro host_state inst
-    // We pre-add HS_X18 due to limits on the range of immediate offsets.
-    add x10, x9, #HS_X18
+.macro host_state inst, off
+    add x10, x9, \off
 .ifc "\inst", "ldp"
-    ldr x18, [x10, #HS_X(0)]
+    ldr x18, [x10, HS_X(0)]
 .else
-    str x18, [x10, #HS_X(0)]
+    str x18, [x10, HS_X(0)]
 .endif
-    \inst x19, x20, [x10, #HS_X(1)]
-    \inst x21, x22, [x10, #HS_X(3)]
-    \inst x23, x24, [x10, #HS_X(5)]
-    \inst x25, x26, [x10, #HS_X(7)]
-    \inst x27, x28, [x10, #HS_X(9)]
-    \inst x29, x30, [x10, #HS_X(11)]
+    \inst x19, x20, [x10, HS_X(1)]
+    \inst x21, x22, [x10, HS_X(3)]
+    \inst x23, x24, [x10, HS_X(5)]
+    \inst x25, x26, [x10, HS_X(7)]
+    \inst x27, x28, [x10, HS_X(9)]
+    \inst x29, x30, [x10, HS_X(11)]
 .endm
 
 .macro guest_state inst
-    \inst x0, x1, [x9, #GS_X(0)]
-    \inst x2, x3, [x9, #GS_X(2)]
-    \inst x4, x5, [x9, #GS_X(4)]
-    \inst x6, x7, [x9, #GS_X(6)]
-    \inst x10, x11, [x9, #GS_X(10)]
-    \inst x12, x13, [x9, #GS_X(12)]
-    \inst x14, x15, [x9, #GS_X(14)]
-    \inst x16, x17, [x9, #GS_X(16)]
-    \inst x18, x19, [x9, #GS_X(18)]
-    \inst x20, x21, [x9, #GS_X(20)]
-    \inst x22, x23, [x9, #GS_X(22)]
-    \inst x24, x25, [x9, #GS_X(24)]
-    \inst x26, x27, [x9, #GS_X(26)]
-    \inst x28, x29, [x9, #GS_X(28)]
+    \inst x0, x1, [x9, GS_X(0)]
+    \inst x2, x3, [x9, GS_X(2)]
+    \inst x4, x5, [x9, GS_X(4)]
+    \inst x6, x7, [x9, GS_X(6)]
+    \inst x10, x11, [x9, GS_X(10)]
+    \inst x12, x13, [x9, GS_X(12)]
+    \inst x14, x15, [x9, GS_X(14)]
+    \inst x16, x17, [x9, GS_X(16)]
+    \inst x18, x19, [x9, GS_X(18)]
+    \inst x20, x21, [x9, GS_X(20)]
+    \inst x22, x23, [x9, GS_X(22)]
+    \inst x24, x25, [x9, GS_X(24)]
+    \inst x26, x27, [x9, GS_X(26)]
+    \inst x28, x29, [x9, GS_X(28)]
 .ifc "\inst", "ldp"
-    ldr x30, [x9, #GS_X(30)]
+    ldr x30, [x9, GS_X(30)]
 .else
-    str x30, [x9, #GS_X(30)]
+    str x30, [x9, GS_X(30)]
 .endif
 .endm
 
 .macro guest_x9_state inst, reg
-    \inst x8, \reg, [x9, #GS_X(8)]
+    \inst x8, \reg, [x9, GS_X(8)]
 .endm
 
 .macro guest_exit_state
     mrs x10, cntv_ctl_el0
-    str x10, [x9, #GS_CNTV_CTL_EL0]
+    str x10, [x9, GS_CNTV_CTL_EL0]
     mrs x10, cntv_cval_el0
-    str x10, [x9, #GS_CNTV_CVAL_EL0]
+    str x10, [x9, GS_CNTV_CVAL_EL0]
     mrs x10, esr_el2
-    str x10, [x9, #GS_ESR_EL2]
+    str x10, [x9, GS_ESR_EL2]
     mrs x10, far_el2
-    str x10, [x9, #GS_FAR_EL2]
+    str x10, [x9, GS_FAR_EL2]
     mrs x10, hpfar_el2
     // This is not described well in the manual, but HPFAR_EL2 does not contain
     // the lower 8 bits of the IPA, so it must be shifted.
-    lsl x10, x10, #8
-    str x10, [x9, #GS_HPFAR_EL2]
+    lsl x10, x10, 8
+    str x10, [x9, GS_HPFAR_EL2]
 .endm
 
 .macro switch_to_guest
@@ -135,25 +171,25 @@
 .endm
 
 .macro pop_stack
-    add sp, sp, #16
+    add sp, sp, 16
 .endm
 
 .macro hvc_jump table size
     mrs x9, esr_el2
 
     // Check ESR_EL2.EC to determine what caused the exception.
-    lsr x10, x9, #ESR_EL2_EC_SHIFT
-    cmp x10, #ESR_EL2_EC_HVC
+    lsr x10, x9, ESR_EL2_EC_SHIFT
+    cmp x10, ESR_EL2_EC_HVC
     b.ne .Linvalid_args_for_\table
 
     // Check ESR_EL2.ICC to determine whether the HVC index is in range.
-    and x10, x9, #ESR_EL2_ISS_MASK
+    and x10, x9, ESR_EL2_ISS_MASK
     cmp x10, \size
     b.ge .Linvalid_args_for_\table
 
     // Branch to the jump table.
     adr x9, \table
-    add x9, x9, x10, lsl #2
+    add x9, x9, x10, lsl 2
     br x9
 
 .Linvalid_args_for_\table:
@@ -175,9 +211,16 @@
 .align 7
     // We push X9 onto the stack so we have one scratch register. We only use
     // X9 here, so that we don't accidentally trample the guest state.
-    str x9, [sp, #-16]!
+    str x9, [sp, -16]!
     mov x9, \return_code
-    str x9, [sp, #8]
+    str x9, [sp, 8]
+
+    // Check ESR_EL2.EC to determine whether the exception was due to a
+    // floating-point trap.
+    mrs x9, esr_el2
+    lsr x9, x9, ESR_EL2_EC_SHIFT
+    cmp x9, ESR_EL2_EC_FP
+    b.eq el2_fp_resume
 
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
@@ -202,7 +245,7 @@
 .align 7
     // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
     // VMID was not 0, terminate guest.
-    hlt #0
+    hlt 0
 .endm
 
 // We have two vector tables that we switch between, init and exec. The reason
@@ -266,14 +309,14 @@ FUNCTION_LABEL(arm64_el2_exec_table)
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
-    hvc #2
+    hvc 2
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
     // Load PARange from ID_AA64MMFR0_EL1.
     mrs x10, id_aa64mmfr0_el1
-    and x10, x10, #ID_AA64MMFR0_EL1_PARANGE_MASK
-    lsl x10, x10, #XTCR_EL2_PS_SHIFT
+    and x10, x10, ID_AA64MMFR0_EL1_PARANGE_MASK
+    lsl x10, x10, XTCR_EL2_PS_SHIFT
 
     // Setup the virtualisation translation control.
     movlit x9, MMU_VTCR_EL2_FLAGS
@@ -310,14 +353,14 @@ FUNCTION_LABEL(el2_hvc_on)
 
     // Setup the exec vector table for EL2.
     mrs x9, vbar_el2
-    add x9, x9, #VECTOR_TABLE_SIZE
+    add x9, x9, VECTOR_TABLE_SIZE
     msr vbar_el2, x9
     isb
 
     exception_return ZX_OK
 
 FUNCTION_LABEL(el2_hvc_psci)
-    smc #0
+    smc 0
     eret
 
 FUNCTION_LABEL(el2_mexec)
@@ -325,7 +368,7 @@ FUNCTION_LABEL(el2_mexec)
 
 // zx_status_t arm64_el2_off();
 FUNCTION(arm64_el2_off)
-    hvc #2
+    hvc 2
     ret
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
@@ -340,7 +383,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
     // Setup the init vector table for EL2.
     mrs x9, vbar_el2
-    sub x9, x9, #VECTOR_TABLE_SIZE
+    sub x9, x9, VECTOR_TABLE_SIZE
     msr vbar_el2, x9
     isb
 
@@ -348,7 +391,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
 // zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
-    hvc #3
+    hvc 3
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 FUNCTION_LABEL(el2_hvc_tlbi_ipa)
@@ -370,7 +413,7 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
 
 // zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
-    hvc #4
+    hvc 4
     ret
 END_FUNCTION(arm64_el2_tlbi_vmid)
 FUNCTION_LABEL(el2_hvc_tlbi_vmid)
@@ -387,7 +430,7 @@ FUNCTION_LABEL(el2_hvc_tlbi_vmid)
 
 // zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
-    hvc #5
+    hvc 5
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
@@ -403,16 +446,20 @@ FUNCTION_LABEL(el2_hvc_resume)
     cbnz x10, .Lresume
     tlbi vmalle1
     isb
-    mov x10, #1
+    mov x10, 1
     str x10, [x9, ES_RESUME]
     dsb ishst
 
 .Lresume:
+    // Enable floating-point traps.
+    movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
+    msr cptr_el2, x10
+
     // Set the hypervisor control register.
     msr hcr_el2, x2
     isb
 
-    host_state stp
+    host_state stp, HS_X18
     system_state str, HS_SYSTEM_STATE
     system_state ldr, GS_SYSTEM_STATE
     guest_state ldp
@@ -432,17 +479,52 @@ FUNCTION_LABEL(el2_guest_exit)
     system_state str, GS_SYSTEM_STATE
     guest_exit_state
     system_state ldr, HS_SYSTEM_STATE
-    host_state ldp
+    host_state ldp, HS_X18
 
+    mrs x10, cptr_el2
+    tbnz x10, CPTR_EL2_TFP_SHIFT, .Lfp_trap_off
+
+    // Restore floating-point state if it was modified.
+    fp_state stp, GS_FP_STATE
+    fp_state ldp, HS_FP_STATE
+    b .Ltrap_off
+
+.Lfp_trap_off:
+    // Disable floating-point traps.
+    mov x10, CPTR_EL2_RES1
+    msr cptr_el2, x10
+
+.Ltrap_off:
     // Set the hypervisor control register.
     // Disable guest traps, and ensure EL1 is arm64.
-    mov x10, #HCR_EL2_RW
+    mov x10, HCR_EL2_RW
     msr hcr_el2, x10
     isb
 
     switch_to_host
 
     // Return to host.
-    ldr x0, [sp, #8]
+    ldr x0, [sp, 8]
+    pop_stack
+    eret
+
+FUNCTION_LABEL(el2_fp_resume)
+    // Load El2State from tpidr_el2.
+    mrs x9, tpidr_el2
+
+    // Save x10 so we have an extra register for floating-point state swapping.
+    // We're returning to the guest so we don't need the return code in [sp, 8].
+    str x10, [sp, 8]
+
+    // Disable floating-point traps.
+    mov x10, CPTR_EL2_RES1
+    msr cptr_el2, x10
+    isb
+
+    fp_state stp, HS_FP_STATE
+    fp_state ldp, GS_FP_STATE
+
+    // Return to guest.
+    ldp x9, x10, [sp]
     pop_stack
     eret
