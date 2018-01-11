@@ -147,6 +147,52 @@ typedef struct {
     uint8_t bmaControls[];
 } __PACKED usb_video_vs_input_header_desc;
 
+#define GUID_LENGTH 16
+
+// A GUID consists of a:
+//  - four-byte integer
+//  - two-byte integer
+//  - two-byte integer
+//  - eight-byte array
+//
+// The string representation uses big endian format, so to convert it
+// to a byte array we need to reverse the byte order of the three integers.
+//
+// See USB Video Class revision 1.5, FAQ section 2.9
+// for GUID Data Structure Layout.
+
+#define USB_VIDEO_GUID_YUY2_STRING "32595559-0000-0010-8000-00AA00389B71"
+#define USB_VIDEO_GUID_YUY2_VALUE { \
+    0x59, 0x55, 0x59, 0x32, \
+    0x00, 0x00, \
+    0x10, 0x00, \
+    0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 \
+}
+
+#define USB_VIDEO_GUID_NV12_STRING "3231564E-0000-0010-8000-00AA00389B71"
+#define USB_VIDEO_GUID_NV12_VALUE { \
+    0x4e, 0x56, 0x31, 0x32, \
+    0x00, 0x00, \
+    0x10, 0x00, \
+    0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 \
+}
+
+#define USB_VIDEO_GUID_M420_STRING "3032344D-0000-0010-8000-00AA00389B71"
+#define USB_VIDEO_GUID_M420_VALUE { \
+    0x4d, 0x34, 0x32, 0x30, \
+    0x00, 0x00, \
+    0x10, 0x00, \
+    0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 \
+}
+
+#define USB_VIDEO_GUID_I420_STRING "30323449-0000-0010-8000-00AA00389B71"
+#define USB_VIDEO_GUID_I420_VALUE { \
+    0x49, 0x34, 0x32, 0x30, \
+    0x00, 0x00, \
+    0x10, 0x00, \
+    0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 \
+}
+
 // USB Video Payload Uncompressed
 typedef struct {
     uint8_t bLength;
@@ -154,7 +200,7 @@ typedef struct {
     uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FORMAT_UNCOMPRESSED
     uint8_t bFormatIndex;
     uint8_t bNumFrameDescriptors;
-    unsigned char guidFormat[16];
+    uint8_t guidFormat[GUID_LENGTH];
     uint8_t bBitsPerPixel;
     uint8_t bDefaultFrameIndex;
     uint8_t bAspectRatioX;

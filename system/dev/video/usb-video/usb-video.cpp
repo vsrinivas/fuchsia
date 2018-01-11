@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <camera-proto/camera-proto.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -17,6 +18,25 @@
 #include "usb-video-stream.h"
 
 namespace {
+
+camera::camera_proto::PixelFormat guid_to_pixel_format(uint8_t guid[GUID_LENGTH]) {
+    struct {
+        uint8_t guid[GUID_LENGTH];
+        camera::camera_proto::PixelFormat pixel_format;
+    } GUID_LUT[] = {
+        { USB_VIDEO_GUID_YUY2_VALUE, YUY2 },
+        { USB_VIDEO_GUID_NV12_VALUE, NV12 },
+        { USB_VIDEO_GUID_M420_VALUE, M420 },
+        { USB_VIDEO_GUID_I420_VALUE, I420 },
+    };
+
+    for (const auto& g : GUID_LUT) {
+        if (memcmp(g.guid, guid, GUID_LENGTH) == 0) {
+            return g.pixel_format;
+        }
+    }
+    return INVALID;
+}
 
 // Parses the payload format descriptor and any corresponding frame descriptors.
 // The result is stored in out_format.
@@ -36,6 +56,8 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
 
         want_frame_type = USB_VIDEO_VS_FRAME_UNCOMPRESSED;
         out_format->index = uncompressed_desc->bFormatIndex;
+        out_format->pixel_format =
+            guid_to_pixel_format(uncompressed_desc->guidFormat);
         out_format->bits_per_pixel = uncompressed_desc->bBitsPerPixel;
         want_num_frame_descs = uncompressed_desc->bNumFrameDescriptors;
         out_format->default_frame_index = uncompressed_desc->bDefaultFrameIndex;

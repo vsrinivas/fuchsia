@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <camera-proto/camera-proto.h>
 #include <ddk/device.h>
 #include <driver/usb.h>
 #include <fbl/vector.h>
@@ -25,6 +26,7 @@ struct UsbVideoFrameDesc {
 
 struct UsbVideoFormat {
     uint8_t index;
+    camera::camera_proto::PixelFormat pixel_format;
     uint8_t bits_per_pixel;
 
     fbl::Vector<UsbVideoFrameDesc> frame_descs;
