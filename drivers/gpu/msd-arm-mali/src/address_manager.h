@@ -35,7 +35,8 @@ public:
     std::shared_ptr<AddressSlotMapping> GetMappingForSlot(uint32_t slot);
 
     // AddressSpaceObserver implementation.
-    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length) override;
+    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length,
+                                  bool synchronous) override;
     void ReleaseSpaceMappings(AddressSpace* address_space) override;
 
 private:
@@ -52,7 +53,7 @@ private:
     struct HardwareSlot {
         HardwareSlot(uint32_t slot) : registers(slot) {}
 
-        void FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length)
+        void FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
             FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
         // Wait for the MMU to finish processing any existing commands.
         void WaitForMmuIdle(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);

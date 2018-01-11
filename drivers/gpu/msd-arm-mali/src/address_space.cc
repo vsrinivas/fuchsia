@@ -92,6 +92,10 @@ bool AddressSpace::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t
         mali_pte_t pte = bus_addr_array[i] | get_mmu_flags(flags) | kLpaeEntryTypeAte;
         page_table->WritePte(page_index, pte);
     }
+
+    // No one should be using the (lack of) mapping, so asynchronous flush is
+    // fine.
+    owner_->GetAddressSpaceObserver()->FlushAddressMappingRange(this, addr, length, false);
     return true;
 }
 
@@ -123,7 +127,7 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length)
         }
     }
 
-    owner_->GetAddressSpaceObserver()->FlushAddressMappingRange(this, start, length);
+    owner_->GetAddressSpaceObserver()->FlushAddressMappingRange(this, start, length, true);
 
     return true;
 }

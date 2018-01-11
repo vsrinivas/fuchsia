@@ -84,7 +84,7 @@ AddressManager::GetMappingForAddressSpaceUnlocked(AddressSpace* address_space)
 }
 
 void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
-                                              uint64_t length)
+                                              uint64_t length, bool synchronous)
 {
     HardwareSlot* slot;
     std::shared_ptr<AddressSlotMapping> mapping;
@@ -100,7 +100,7 @@ void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint6
         // thread-safety analysis
         slot->lock.lock();
     }
-    slot->FlushMmuRange(owner_->register_io(), start, length);
+    slot->FlushMmuRange(owner_->register_io(), start, length, synchronous);
 
     // The mapping will be released before the hardware lock, so that we
     // can be sure that the mapping will be expired after ReleaseSpaceMappings
@@ -182,7 +182,7 @@ void AddressManager::HardwareSlot::InvalidateSlot(RegisterIo* io)
 {
     WaitForMmuIdle(io);
     constexpr uint64_t kFullAddressSpaceSize = 1ul << AddressSpace::kVirtualAddressSize;
-    FlushMmuRange(io, 0, kFullAddressSpaceSize);
+    FlushMmuRange(io, 0, kFullAddressSpaceSize, true);
 
     registers.TranslationTable().FromValue(0).WriteTo(io);
     registers.MemoryAttributes().FromValue(kMemoryAttributes).WriteTo(io);
@@ -206,7 +206,8 @@ void AddressManager::HardwareSlot::WaitForMmuIdle(RegisterIo* io)
                    registers.address_space(), status);
 }
 
-void AddressManager::HardwareSlot::FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length)
+void AddressManager::HardwareSlot::FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length,
+                                                 bool synchronous)
 {
     DASSERT(magma::is_page_aligned(start));
     uint64_t region = start;
@@ -230,9 +231,13 @@ void AddressManager::HardwareSlot::FlushMmuRange(RegisterIo* io, uint64_t start,
     registers.LockAddress().FromValue(region).WriteTo(io);
     registers.Command().FromValue(registers::AsCommand::kCmdLock).WriteTo(io);
     WaitForMmuIdle(io);
-    // Both invalidate the TLB entries and throw away data in the L2 cache
-    // corresponding to them, or otherwise the cache may be written back to
-    // memory after the memory's started being used for something else.
-    registers.Command().FromValue(registers::AsCommand::kCmdFlushMem).WriteTo(io);
+    if (synchronous) {
+        // Both invalidate the TLB entries and throw away data in the L2 cache
+        // corresponding to them, or otherwise the cache may be written back to
+        // memory after the memory's started being used for something else.
+        registers.Command().FromValue(registers::AsCommand::kCmdFlushMem).WriteTo(io);
+    } else {
+        registers.Command().FromValue(registers::AsCommand::kCmdFlushPageTable).WriteTo(io);
+    }
     WaitForMmuIdle(io);
 }

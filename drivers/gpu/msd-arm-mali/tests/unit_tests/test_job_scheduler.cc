@@ -40,7 +40,10 @@ private:
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
 public:
-    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length) override {}
+    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length,
+                                  bool synchronous) override
+    {
+    }
     void ReleaseSpaceMappings(AddressSpace* address_space) override {}
 };
 

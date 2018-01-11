@@ -44,7 +44,7 @@ private:
 class AddressSpaceObserver {
 public:
     virtual void FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
-                                          uint64_t length) = 0;
+                                          uint64_t length, bool synchronous) = 0;
 
     virtual void ReleaseSpaceMappings(AddressSpace* address_space) = 0;
 };

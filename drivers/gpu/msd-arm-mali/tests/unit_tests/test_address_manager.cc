@@ -161,12 +161,16 @@ TEST(AddressManager, FlushAddressRange)
 
     EXPECT_TRUE(connection->address_space()->Insert(addr, buffer.get(), 0, buffer->size(),
                                                     kAccessFlagRead | kAccessFlagNoExecute));
-    EXPECT_TRUE(connection->address_space()->Clear(addr, buffer->size()));
-
-    registers::AsRegisters as_regs(0);
     // 3 pages should be cleared, so it should be rounded up to 4 (and log
     // base 2 is 2).
     constexpr uint64_t kLockOffset = 13;
+    registers::AsRegisters as_regs(0);
+    EXPECT_EQ(addr | kLockOffset, as_regs.LockAddress().ReadFrom(reg_io.get()).reg_value());
+    EXPECT_EQ(registers::AsCommand::kCmdFlushPageTable,
+              as_regs.Command().ReadFrom(reg_io.get()).reg_value());
+
+    EXPECT_TRUE(connection->address_space()->Clear(addr, buffer->size()));
+
     EXPECT_EQ(addr | kLockOffset, as_regs.LockAddress().ReadFrom(reg_io.get()).reg_value());
     EXPECT_EQ(registers::AsCommand::kCmdFlushMem,
               as_regs.Command().ReadFrom(reg_io.get()).reg_value());
