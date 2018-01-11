@@ -14,6 +14,8 @@ use std::fmt::{Display, Formatter};
 use std::mem::size_of;
 use std::str::FromStr;
 
+const IOCTL_GETSERIAL: u32 = 1;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 enum OrbCapabilityFlags {      // Does the orb ...
@@ -192,8 +194,16 @@ impl DeviceOps for MicroOrb {
         Ok(buf.len())
     }
 
-    fn ioctl(&mut self, _op: u32, _in_buf: &[u8], _out_buf: &mut [u8]) -> Result<usize, Status> {
-        Err(Status::NOT_SUPPORTED)
+    fn ioctl(&mut self, op: u32, in_buf: &[u8], out_buf: &mut [u8]) -> Result<usize, Status> {
+        match op {
+            IOCTL_GETSERIAL => {
+                let serial = self.get_cached_serial()?;
+                let size = cmp::min(out_buf.len(), serial.len());
+                out_buf[0..size].copy_from_slice(&serial.as_bytes()[0..size]);
+                Ok(size)
+            },
+            _ => Err(Status::NOT_SUPPORTED)
+        }
     }
 }
 
