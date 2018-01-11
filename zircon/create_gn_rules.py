@@ -303,6 +303,10 @@ def main():
         name = package['package']['name']
         type = package['package']['type']
         arch = package['package']['arch']
+        if name == 'c':
+            generate_sysroot(package, context)
+            print('Generated sysroot')
+            continue
         if name in SYSROOT_PACKAGES:
             print('Ignoring sysroot part: %s' % name)
             continue
@@ -313,9 +317,6 @@ def main():
         if arch == 'src':
             type = 'source'
             generate_source_library(package, context)
-        elif name == 'c':
-            type = 'sysroot'
-            generate_sysroot(package, context)
         else:
             type = 'prebuilt'
             generate_compiled_library(package, context)
