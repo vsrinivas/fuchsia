@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <iostream>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -79,19 +80,19 @@ static uint32_t balloon_threshold_pages = 1024;
 
 static zx_status_t usage(const char* cmd) {
   // clang-format off
-  fprintf(stderr, "usage: %s [OPTIONS] kernel.bin\n", cmd);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "OPTIONS:\n");
-  fprintf(stderr, "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device\n");
-  fprintf(stderr, "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk\n");
-  fprintf(stderr, "\t-c [cmdline]       Use string 'cmdline' as the kernel command line\n");
-  fprintf(stderr, "\t-m [seconds]       Poll the virtio-balloon device every 'seconds' seconds\n"
-                  "\t                   and adjust the balloon size based on the amount of\n"
-                  "\t                   unused guest memory\n");
-  fprintf(stderr, "\t-p [pages]         Number of unused pages to allow the guest to\n"
-                  "\t                   retain. Has no effect unless -m is also used\n");
-  fprintf(stderr, "\t-d                 Demand-page balloon deflate requests\n");
-  fprintf(stderr, "\n");
+  std::cerr << "usage: " << cmd << " [OPTIONS] kernel.bin\n";
+  std::cerr << "\n";
+  std::cerr << "OPTIONS:\n";
+  std::cerr << "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device\n";
+  std::cerr << "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk\n";
+  std::cerr << "\t-c [cmdline]       Use string 'cmdline' as the kernel command line\n";
+  std::cerr << "\t-m [seconds]       Poll the virtio-balloon device every 'seconds' seconds\n";
+  std::cerr << "\t                   and adjust the balloon size based on the amount of\n";
+  std::cerr << "\t                   unused guest memory\n";
+  std::cerr << "\t-p [pages]         Number of unused pages to allow the guest to\n";
+  std::cerr << "\t                   retain. Has no effect unless -m is also used\n";
+  std::cerr << "\t-d                 Demand-page balloon deflate requests\n";
+  std::cerr << "\n";
   // clang-format on
   return ZX_ERR_INVALID_ARGS;
 }
@@ -100,22 +101,25 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                                   const virtio_balloon_stat_t* stats,
                                   size_t len) {
   for (size_t i = 0; i < len; ++i) {
-    if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL)
+    if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL) {
       continue;
+    }
 
     uint32_t current_pages = balloon->num_pages();
     uint32_t available_pages =
         static_cast<uint32_t>(stats[i].val / machina::VirtioBalloon::kPageSize);
     uint32_t target_pages =
         current_pages + (available_pages - balloon_threshold_pages);
-    if (current_pages == target_pages)
+    if (current_pages == target_pages) {
       return;
+    }
 
-    printf("virtio-balloon: adjusting target pages %#x -> %#x\n", current_pages,
-           target_pages);
+    FXL_LOG(INFO) << "adjusting target pages " << std::hex << current_pages
+                  << " -> " << std::hex << target_pages;
     zx_status_t status = balloon->UpdateNumPages(target_pages);
-    if (status != ZX_OK)
-      fprintf(stderr, "Error %d updating balloon size\n", status);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Error " << status << " updating balloon size.";
+    }
     return;
   }
 }
@@ -146,14 +150,14 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 
   int ret = thrd_create(&thread, balloon_stats_task, args);
   if (ret != thrd_success) {
-    fprintf(stderr, "Failed to create balloon thread %d\n", ret);
+    FXL_LOG(ERROR) << "Failed to create balloon thread " << ret << ".";
     delete args;
     return ZX_ERR_INTERNAL;
   }
 
   ret = thrd_detach(thread);
   if (ret != thrd_success) {
-    fprintf(stderr, "Failed to detach balloon thread %d\n", ret);
+    FXL_LOG(ERROR) << "Failed to detach balloon thread " << ret << ".";
     return ZX_ERR_INTERNAL;
   }
 
@@ -221,10 +225,8 @@ int main(int argc, char** argv) {
       case 'm':
         balloon_poll_interval = ZX_SEC(strtoul(optarg, nullptr, 10));
         if (balloon_poll_interval <= 0) {
-          fprintf(stderr,
-                  "Invalid balloon interval %s. Must be an integer greater "
-                  "than 0\n",
-                  optarg);
+          FXL_LOG(ERROR) << "Invalid balloon interval " << optarg << "."
+                         << "Must be an integer greater than 0.";
           return ZX_ERR_INVALID_ARGS;
         }
         break;
@@ -235,10 +237,8 @@ int main(int argc, char** argv) {
         balloon_threshold_pages =
             static_cast<uint32_t>(strtoul(optarg, nullptr, 10));
         if (balloon_threshold_pages <= 0) {
-          fprintf(stderr,
-                  "Invalid balloon threshold %s. Must be an integer greater "
-                  "than 0\n",
-                  optarg);
+          FXL_LOG(ERROR) << "Invalid balloon threshold " << optarg << "."
+                         << "Must be an integer greater than 0.";
           return ZX_ERR_INVALID_ARGS;
         }
         break;
@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
   status = machina::create_page_table(physmem_addr, physmem_size, &pt_end_off);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create page table\n");
+    FXL_LOG(ERROR) << "Failed to create page table.";
     return status;
   }
 
@@ -275,7 +275,7 @@ int main(int argc, char** argv) {
   status =
       create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create ACPI table\n");
+    FXL_LOG(ERROR) << "Failed to create ACPI table.";
     return status;
   }
 #endif  // __x86_64__
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
   // Open the kernel image.
   fbl::unique_fd fd(open(kernel_path, O_RDONLY));
   if (!fd) {
-    fprintf(stderr, "Failed to open kernel image \"%s\"\n", kernel_path);
+    FXL_LOG(ERROR) << "Failed to open kernel image \"" << kernel_path << "\".";
     return ZX_ERR_IO;
   }
 
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
   uintptr_t first_page = physmem_addr + physmem_size - PAGE_SIZE;
   ssize_t ret = read(fd.get(), (void*)first_page, PAGE_SIZE);
   if (ret != PAGE_SIZE) {
-    fprintf(stderr, "Failed to read first page of kernel\n");
+    FXL_LOG(ERROR) << "Failed to read first page of kernel.";
     return ZX_ERR_IO;
   }
 
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
   if (status == ZX_ERR_NOT_SUPPORTED) {
     ret = lseek(fd.get(), 0, SEEK_SET);
     if (ret < 0) {
-      fprintf(stderr, "Failed to seek to start of kernel\n");
+      FXL_LOG(ERROR) << "Failed to seek to start of kernel.";
       return ZX_ERR_IO;
     }
     status = setup_linux(physmem_addr, physmem_size, first_page, fd.get(),
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
                          &guest_ip, &boot_ptr);
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to load kernel\n");
+    FXL_LOG(ERROR) << "Failed to load kernel.";
     return status;
   }
 
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
   zx_handle_t apic_vmo;
   status = create_vmo(PAGE_SIZE, &apic_addr, &apic_vmo);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create VCPU local APIC memory\n");
+    FXL_LOG(ERROR) << "Failed to create VCPU local APIC memory.";
     return status;
   }
 #endif  // __x86_64__
@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
   Vcpu vcpu;
   status = vcpu.Create(&guest, &args);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create VCPU\n");
+    FXL_LOG(ERROR) << "Failed to create VCPU.";
     return status;
   }
 
@@ -345,7 +345,8 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < kNumUarts; i++) {
     status = uart[i].Init(&guest, kUartBases[i]);
     if (status != ZX_OK) {
-      fprintf(stderr, "Failed to create UART at %#lx\n", kUartBases[i]);
+      FXL_LOG(ERROR) << "Failed to create UART at " << std::hex << kUartBases[i]
+                     << ".";
       return status;
     }
   }
@@ -353,20 +354,20 @@ int main(int argc, char** argv) {
   machina::InterruptController interrupt_controller;
   status = interrupt_controller.Init(&guest);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create interrupt controller\n");
+    FXL_LOG(ERROR) << "Failed to create interrupt controller.";
     return status;
   }
 
 #if __aarch64__
   status = interrupt_controller.RegisterVcpu(0, &vcpu);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to register VCPU with GIC distributor\n");
+    FXL_LOG(ERROR) << "Failed to register VCPU with GIC distributor.";
     return status;
   }
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create PL031 RTC\n");
+    FXL_LOG(ERROR) << "Failed to create PL031 RTC.";
     return status;
   }
 #elif __x86_64__
@@ -374,26 +375,26 @@ int main(int argc, char** argv) {
   LocalApic local_apic(&vcpu, apic_addr);
   status = local_apic.Init(&guest);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create local APIC\n");
+    FXL_LOG(ERROR) << "Failed to create local APIC.";
     return status;
   }
   status = interrupt_controller.RegisterLocalApic(0, &local_apic);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to register local APIC with IO APIC\n");
+    FXL_LOG(ERROR) << "Failed to register local APIC with IO APIC.";
     return status;
   }
   // Setup IO ports.
   machina::IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create IO ports\n");
+    FXL_LOG(ERROR) << "Failed to create IO ports.";
     return status;
   }
   // Setup TPM
   machina::Tpm tpm;
   status = tpm.Init(&guest);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create TPM\n");
+    FXL_LOG(ERROR) << "Failed to create TPM.";
     return status;
   }
 #endif
@@ -402,7 +403,7 @@ int main(int argc, char** argv) {
   machina::PciBus bus(&guest, &interrupt_controller);
   status = bus.Init();
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create PCI bus\n");
+    FXL_LOG(ERROR) << "Failed to create PCI bus.";
     return status;
   }
 
@@ -411,23 +412,28 @@ int main(int argc, char** argv) {
                                  guest.phys_mem().vmo());
   balloon.set_deflate_on_demand(balloon_deflate_on_demand);
   status = bus.Connect(&balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
-  if (balloon_poll_interval > 0)
+  }
+  if (balloon_poll_interval > 0) {
     poll_balloon_stats(&balloon, balloon_poll_interval);
+  }
 
   // Setup block device.
   machina::VirtioBlock block(physmem_addr, physmem_size);
-  if (block_path != NULL) {
+  if (block_path != nullptr) {
     status = block.Init(block_path, guest.phys_mem());
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
     status = block.Start();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
     status = bus.Connect(&block.pci_device(), PCI_DEVICE_VIRTIO_BLOCK);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
   }
 
   // Setup input device.
@@ -436,11 +442,13 @@ int main(int argc, char** argv) {
   machina::VirtioInput input(&input_dispatcher, physmem_addr, physmem_size,
                              "machina-input", "serial-number");
   status = input.Start();
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = bus.Connect(&input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup GPU device.
   machina::VirtioGpu gpu(physmem_addr, physmem_size);
@@ -463,11 +471,13 @@ int main(int argc, char** argv) {
     }
   }
   status = gpu.Init();
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup initial VCPU state.
   zx_vcpu_state_t vcpu_state = {};
@@ -478,8 +488,9 @@ int main(int argc, char** argv) {
 #endif
   // Begin VCPU execution.
   status = vcpu.Start(&vcpu_state);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return vcpu.Join();
 }
