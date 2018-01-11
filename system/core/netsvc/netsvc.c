@@ -160,8 +160,10 @@ int main(int argc, char** argv) {
 
             update_timeouts();
 
-            if (netifc_poll())
+            if (netifc_poll()) {
+                printf("netsvc: netifc_poll() failed - terminating\n");
                 break;
+            }
             zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
             if (now > debuglog_next_timeout) {
                 debuglog_timeout_expired();
