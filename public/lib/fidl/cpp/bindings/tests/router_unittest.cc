@@ -194,8 +194,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router1.WaitForIncomingMessageUntil(zx::time::infinite());
+  router0.WaitForIncomingMessageUntil(zx::time::infinite());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -212,8 +212,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router1.WaitForIncomingMessageUntil(zx::time::infinite());
+  router0.WaitForIncomingMessageUntil(zx::time::infinite());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -233,21 +233,21 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   AllocMessage request;
   AllocRequestMessage(1, "hello", &request);
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(router1.WaitForIncomingMessageUntil(zx::time()));
+  EXPECT_FALSE(router0.WaitForIncomingMessageUntil(zx::time()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router1.WaitForIncomingMessageUntil(zx::time::infinite());
+  router0.WaitForIncomingMessageUntil(zx::time::infinite());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(router1.WaitForIncomingMessageUntil(zx::time()));
+  EXPECT_FALSE(router0.WaitForIncomingMessageUntil(zx::time()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
@@ -264,8 +264,8 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(fxl::TimeDelta::Max());
-  router0.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  router1.WaitForIncomingMessageUntil(zx::time::infinite());
+  router0.WaitForIncomingMessageUntil(zx::time::infinite());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -419,7 +419,7 @@ TEST_F(RouterTest, MissingResponses_Timeout) {
   // Check that no response was received.
   EXPECT_TRUE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router0.WaitForIncomingMessage(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessageUntil(zx::time()));
   EXPECT_TRUE(router0.encountered_error());
 
   PumpMessages();

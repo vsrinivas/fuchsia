@@ -140,10 +140,9 @@ class Binding {
   // Blocks the calling thread until either a call arrives on the previously
   // bound channel, the timeout is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
-  bool WaitForIncomingMethodCall(
-      fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
+  bool WaitForIncomingMethodCall() {
     ZX_DEBUG_ASSERT(internal_router_);
-    return internal_router_->WaitForIncomingMessage(timeout);
+    return internal_router_->WaitForIncomingMessageUntil(zx::time::infinite());
   }
 
   // Closes the channel that was previously bound. Put this object into a

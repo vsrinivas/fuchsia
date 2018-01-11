@@ -70,13 +70,13 @@ class Connector : public MessageReceiver {
   bool is_valid() const { return !!channel_; }
 
   // Waits for the next message on the channel, blocking until one arrives,
-  // |timeout| elapses, or an error happens. Returns |true| if a message has
+  // |deadline| is exceeded, or an error happens. Returns |true| if a message has
   // been delivered, |false| otherwise.
   // When returning |false| closes the channel, unless the reason for
   // for returning |false| was |ZX_ERR_SHOULD_WAIT| or
   // |ZX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
-  bool WaitForIncomingMessage(fxl::TimeDelta timeout);
+  bool WaitForIncomingMessageUntil(zx::time deadline);
 
   // MessageReceiver implementation:
   bool Accept(Message* message) override;

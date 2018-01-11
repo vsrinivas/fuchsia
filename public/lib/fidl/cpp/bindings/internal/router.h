@@ -59,8 +59,8 @@ class Router : public MessageReceiverWithResponder {
   // for returning |false| was |ZX_ERR_SHOULD_WAIT| or
   // |ZX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
-  bool WaitForIncomingMessage(fxl::TimeDelta timeout) {
-    return connector_.WaitForIncomingMessage(timeout);
+  bool WaitForIncomingMessageUntil(zx::time deadline) {
+    return connector_.WaitForIncomingMessageUntil(deadline);
   }
 
   // Sets this object to testing mode.

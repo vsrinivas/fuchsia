@@ -156,7 +156,7 @@ class InterfacePtr {
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
   bool WaitForIncomingResponse() {
-    return internal_state_.WaitForIncomingResponse(fxl::TimeDelta::Max());
+    return WaitForIncomingResponseUntil(zx::time::infinite());
   }
 
   // Blocks the current thread until the next incoming response callback
@@ -167,7 +167,21 @@ class InterfacePtr {
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
   bool WaitForIncomingResponseWithTimeout(fxl::TimeDelta timeout) {
-    return internal_state_.WaitForIncomingResponse(timeout);
+    zx::time deadline = timeout == fxl::TimeDelta::Max()
+        ? zx::time::infinite() :
+          zx::deadline_after(zx::duration(timeout.ToNanoseconds()));
+    return WaitForIncomingResponseUntil(deadline);
+  }
+
+  // Blocks the current thread until the next incoming response callback
+  // arrives, an error occurs, or the deadline is exceeded. Returns |true| if a
+  // response arrived, or |false| otherwise. Use |encountered_error| to know
+  // if an error occurred, of if the timeout exceeded.
+  //
+  // This method may only be called after the InterfacePtr has been bound to a
+  // channel.
+  bool WaitForIncomingResponseUntil(zx::time deadline) {
+    return internal_state_.WaitForIncomingResponseUntil(deadline);
   }
 
   // Indicates whether the channel has encountered an error. If true,

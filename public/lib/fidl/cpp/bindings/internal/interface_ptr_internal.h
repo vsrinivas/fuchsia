@@ -62,11 +62,11 @@ class InterfacePtrState {
     handle_ = info.PassHandle();
   }
 
-  bool WaitForIncomingResponse(fxl::TimeDelta timeout = fxl::TimeDelta::Max()) {
+  bool WaitForIncomingResponseUntil(zx::time deadline) {
     ConfigureProxyIfNecessary();
 
     ZX_DEBUG_ASSERT(router_);
-    return router_->WaitForIncomingMessage(timeout);
+    return router_->WaitForIncomingMessageUntil(deadline);
   }
 
   // After this method is called, the object is in an invalid state and

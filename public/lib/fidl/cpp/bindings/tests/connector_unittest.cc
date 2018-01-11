@@ -106,7 +106,7 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  connector1.WaitForIncomingMessageUntil(zx::time::infinite());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -190,7 +190,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(fxl::TimeDelta::Max());
+  connector1.WaitForIncomingMessageUntil(zx::time::infinite());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -267,7 +267,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithError) {
   internal::Connector connector0(std::move(handle0_));
   // Close the other end of the pipe.
   handle1_.reset();
-  ASSERT_FALSE(connector0.WaitForIncomingMessage(fxl::TimeDelta::Max()));
+  ASSERT_FALSE(connector0.WaitForIncomingMessageUntil(zx::time::infinite()));
 }
 
 class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
@@ -302,7 +302,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
   ConnectorDeletingMessageAccumulator accumulator(&connector1);
   connector1->set_incoming_receiver(&accumulator);
 
-  connector1->WaitForIncomingMessage(fxl::TimeDelta::Max());
+  connector1->WaitForIncomingMessageUntil(zx::time::infinite());
 
   ASSERT_FALSE(connector1);
   ASSERT_FALSE(accumulator.IsEmpty());
@@ -328,7 +328,7 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
       return false;
     number_of_calls_++;
     if (number_of_calls_ == 1) {
-      return connector_->WaitForIncomingMessage(fxl::TimeDelta::Max());
+      return connector_->WaitForIncomingMessageUntil(zx::time::infinite());
     }
     return true;
   }

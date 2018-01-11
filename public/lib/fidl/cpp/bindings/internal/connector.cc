@@ -55,16 +55,12 @@ zx::channel Connector::PassChannel() {
   return std::move(channel_);
 }
 
-bool Connector::WaitForIncomingMessage(fxl::TimeDelta timeout) {
+bool Connector::WaitForIncomingMessageUntil(zx::time deadline) {
   if (error_)
     return false;
 
   zx_signals_t pending = ZX_SIGNAL_NONE;
-  zx_status_t rv = channel_.wait_one(kSignals,
-                                     timeout == fxl::TimeDelta::Max()
-                                         ? ZX_TIME_INFINITE
-                                         : zx::deadline_after(timeout.ToNanoseconds()),
-                                     &pending);
+  zx_status_t rv = channel_.wait_one(kSignals, deadline, &pending);
   if (rv == ZX_ERR_SHOULD_WAIT || rv == ZX_ERR_TIMED_OUT)
     return false;
   if (rv != ZX_OK) {

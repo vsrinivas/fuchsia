@@ -184,7 +184,7 @@ zx_status_t CallMessage(const zx::channel& channel, Message* message,
 
   zx_signals_t observed;
   status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                            ZX_TIME_INFINITE, &observed);
+                            zx::time::infinite(), &observed);
 
   if (status != ZX_OK)
     return status;

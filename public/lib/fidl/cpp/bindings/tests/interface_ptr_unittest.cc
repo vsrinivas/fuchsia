@@ -62,8 +62,8 @@ class MathCalculatorUI {
     return calculator_.WaitForIncomingResponse();
   }
 
-  bool WaitForIncomingResponseWithTimeout(fxl::TimeDelta timeout) {
-    return calculator_.WaitForIncomingResponseWithTimeout(timeout);
+  bool WaitForIncomingResponseUntil(zx::time deadline) {
+    return calculator_.WaitForIncomingResponseUntil(deadline);
   }
 
   bool encountered_error() const { return calculator_.encountered_error(); }
@@ -225,11 +225,11 @@ TEST_F(InterfacePtrTest, EndToEnd_Synchronous) {
   calculator_ui.WaitForIncomingResponse();
   EXPECT_EQ(10.0, calculator_ui.GetOutput());
 
-  EXPECT_FALSE(calculator_ui.WaitForIncomingResponseWithTimeout(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(calculator_ui.WaitForIncomingResponseUntil(zx::time()));
   EXPECT_FALSE(calculator_ui.encountered_error());
   calculator_ui.Multiply(3.0);
   EXPECT_TRUE(calc_impl.WaitForIncomingMethodCall());
-  EXPECT_TRUE(calculator_ui.WaitForIncomingResponseWithTimeout(fxl::TimeDelta::Max()));
+  EXPECT_TRUE(calculator_ui.WaitForIncomingResponseUntil(zx::time::infinite()));
   EXPECT_EQ(30.0, calculator_ui.GetOutput());
 }
 
