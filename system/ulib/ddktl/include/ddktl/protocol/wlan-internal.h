@@ -57,7 +57,7 @@ DECLARE_HAS_MEMBER_FN(has_wlanmac_set_bss, WlanmacSetBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_configure_bss, WlanmacConfigureBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_key, WlanmacSetKey);
 
-template <typename D, bool HasConfigureBss = false>
+template <typename D, bool HasConfigureBss = true>
 constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_query<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery");

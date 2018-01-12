@@ -191,7 +191,7 @@ private:
     void* cookie_;
 };
 
-template <typename D, bool HasConfigureBss = false>
+template <typename D, bool HasConfigureBss = true>
 class WlanmacProtocol : public internal::base_protocol {
 public:
     WlanmacProtocol() {
