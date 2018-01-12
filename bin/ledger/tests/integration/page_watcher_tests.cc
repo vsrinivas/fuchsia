@@ -77,7 +77,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
 
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -107,7 +107,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   // Make a change on the page and verify that it was received.
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher->changes_seen);
@@ -138,7 +138,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
     for (int i = 0; i < 1000; i++) {
       page->Put(
           convert::ToArray("name"), convert::ToArray(std::to_string(i)),
-          [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+          [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
     }
   }
   // Page is out of scope now, but watcher is not. Verify that we don't crash
@@ -152,7 +152,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(
       convert::ToArray("foo"), convert::ToArray("bar"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   ledger::PageWatcherPtr watcher_ptr;
@@ -166,7 +166,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->Delete(convert::ToArray("foo"), [](ledger::Status status) {
-    EXPECT_EQ(status, ledger::Status::OK);
+    EXPECT_EQ(ledger::Status::OK, status);
   });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -208,12 +208,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   for (size_t i = 0; i < entry_count; ++i) {
     page->Put(
         convert::ToArray(key_generator(i)), convert::ToArray("value"),
-        [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+        [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
 
@@ -221,7 +221,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   // Get the first OnChagne call.
@@ -266,12 +266,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   for (size_t i = 0; i < entry_count; ++i) {
     page->Put(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)),
               convert::ToArray("value"), [](ledger::Status status) {
-                EXPECT_EQ(status, ledger::Status::OK);
+                EXPECT_EQ(ledger::Status::OK, status);
               });
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
@@ -280,7 +280,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   // Get the first OnChagne call.
@@ -326,7 +326,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
 
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -354,18 +354,18 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -407,24 +407,24 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   page1->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   page1->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   page2->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   page2->Put(
       convert::ToArray("name"), convert::ToArray("Bob"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   // Verify that each change is seen by the right watcher.
   page1->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   fsl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(1u, watcher1.changes_seen);
@@ -435,7 +435,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 
   page2->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   fsl::MessageLoop::GetCurrent()->Run();
 
@@ -475,11 +475,11 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(0u, watcher.changes_seen);
@@ -516,7 +516,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
   page1->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -586,7 +586,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -594,7 +594,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 
   page->Put(
       convert::ToArray("foo"), convert::ToArray("bar"),
-      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   bool start_transaction_callback_called = false;

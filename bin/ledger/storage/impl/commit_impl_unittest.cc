@@ -40,7 +40,7 @@ class CommitImplTest : public StorageTest {
     Status status = CommitImpl::FromStorageBytes(
         &page_storage_, commit->GetId(), commit->GetStorageBytes().ToString(),
         &copy);
-    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(Status::OK, status);
 
     return CheckCommitEquals(*commit, *copy);
   }

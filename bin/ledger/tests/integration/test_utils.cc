@@ -164,7 +164,7 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
   (*snapshot)->FetchPartial(
       std::move(key), offset, max_size,
       [&result](ledger::Status status, fsl::SizedVmoTransportPtr buffer) {
-        EXPECT_EQ(status, ledger::Status::OK);
+        EXPECT_EQ(ledger::Status::OK, status);
         EXPECT_TRUE(fsl::StringFromVmo(buffer, &result));
       });
   EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
