@@ -4,26 +4,10 @@
 
 #include "channel.h"
 
+#include <garnet/drivers/wlan/wlan/logging.h>
+
 // TODO(porce): Look up constants from the operating class table.
 // No need to use constexpr in this prototype.
-
-bool Is5Ghz(uint8_t channel_number) {
-    // TODO(porce): Improve this humble function
-    return (channel_number > 14);
-}
-
-bool Is2Ghz(uint8_t channel_number) {
-    return !Is5Ghz(channel_number);
-}
-
-bool Is5Ghz(wlan_channel_t& chan) {
-    return Is5Ghz(chan.primary);
-}
-
-bool Is2Ghz(wlan_channel_t& chan) {
-    return !Is5Ghz(chan.primary);
-}
-
 namespace wlan {
 namespace common {
 
@@ -39,6 +23,58 @@ const char* kCbwSuffix[] = {
     "P",  // VHT Wave2 80Plus80 (not often obvious, but P is the first alphabet)
     "!",  // Invalid
 };
+
+bool Is5Ghz(uint8_t channel_number) {
+    // TODO(porce): Improve this humble function
+    return (channel_number > 14);
+}
+
+bool Is2Ghz(uint8_t channel_number) {
+    return !Is5Ghz(channel_number);
+}
+
+bool Is5Ghz(const wlan_channel_t& chan) {
+    return Is5Ghz(chan.primary);
+}
+
+bool Is2Ghz(const wlan_channel_t& chan) {
+    return !Is5Ghz(chan.primary);
+}
+
+// TODO(porce): Implement
+// bool IsChanValid(const wlan_channel_t& chan) { }
+
+Mhz GetCenterFreq(const wlan_channel_t& chan) {
+    // ZX_DEBUG_ASSERT(IsChanValid(chan));
+
+    Mhz spacing = 5;
+    Mhz channel_starting_frequency;
+    if (Is2Ghz(chan)) {
+        channel_starting_frequency = 2407;
+    } else {
+        // 5Ghz
+        channel_starting_frequency = 5000;
+    }
+
+    // IEEE Std 802.11-2016, 21.3.14
+    return channel_starting_frequency + spacing * chan.primary;
+}
+
+uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
+    // ZX_DEBUG_ASSERT(IsChanValid(chan));
+
+    switch (chan.cbw) {
+    case CBW20:
+        return chan.primary;
+    case CBW40ABOVE:
+        return chan.primary + 2;
+    case CBW40BELOW:
+        return chan.primary - 2;
+    default:
+        // TODO(porce): Support CBW80 and beyond
+        return chan.primary;
+    }
+}
 
 std::string ChanStr(const wlan_channel_t& chan) {
     char buf[7 + 1];

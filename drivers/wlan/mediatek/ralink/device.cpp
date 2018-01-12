@@ -2535,7 +2535,8 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
 }
 
 zx_status_t Device::LookupRfVal(const wlan_channel_t& chan, RfVal* rf_val) {
-    auto entry = rf_vals_.find(chan.primary);
+    auto center_chan_idx = wlan::common::GetCenterChanIdx(chan);
+    auto entry = rf_vals_.find(center_chan_idx);
     if (entry == rf_vals_.end()) {
         errorf("Radio hardware does not support the requested channel %s\n",
                wlan::common::ChanStr(chan).c_str());

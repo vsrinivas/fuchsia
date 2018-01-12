@@ -9,14 +9,21 @@
 
 #include <ddk/protocol/wlan.h>
 
+namespace wlan {
+namespace common {
+
+typedef uint16_t Mhz;
+
 // TODO(porce): Replace all channel > 14 test throughout the codes
 bool Is5Ghz(uint8_t channel_number);
 bool Is2Ghz(uint8_t channel_number);
-bool Is5Ghz(wlan_channel_t& chan);
-bool Is2Ghz(wlan_channel_t& chan);
+bool Is5Ghz(const wlan_channel_t& chan);
+bool Is2Ghz(const wlan_channel_t& chan);
 
-namespace wlan {
-namespace common {
+// TODO(porce): Implement
+// bool IsChanValid(const wlan_channel_t& chan);
+Mhz GetCenterFreq(const wlan_channel_t& chan);
+uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
 
 std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
