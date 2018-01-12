@@ -57,7 +57,7 @@ DECLARE_HAS_MEMBER_FN(has_wlanmac_set_bss, WlanmacSetBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_configure_bss, WlanmacConfigureBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_key, WlanmacSetKey);
 
-template <typename D, bool HasConfigureBss = true>
+template <typename D>
 constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_query<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery");
@@ -106,14 +106,14 @@ constexpr void CheckWlanmacProtocolSubclass() {
                   "'zx_status_t WlanmacSetBss(uint32_t, const uint8_t[6], uint8_t)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
-    static_assert(!HasConfigureBss || internal::has_wlanmac_configure_bss<D>::value,
+    static_assert(internal::has_wlanmac_configure_bss<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacConfigureBss");
-    //    static_assert(fbl::is_same<decltype(&D::WlanmacConfigureBss),
-    //                               zx_status_t (D::*)(uint32_t, wlan_bss_config_t*)>::value,
-    //            "WlanmacSetBss must be a non-static member function with signature "
-    //            "'zx_status_t WlanmacconfigureBss(uint32_t, wlan_bss_config_t*)', and be visible to "
-    //            "ddk::WlanmacProtocol<D> (either because they are public, or because of "
-    //            "friendship).");
+    static_assert(fbl::is_same<decltype(&D::WlanmacConfigureBss),
+                               zx_status_t (D::*)(uint32_t, wlan_bss_config_t*)>::value,
+                  "WlanmacSetBss must be a non-static member function with signature "
+                  "'zx_status_t WlanmacconfigureBss(uint32_t, wlan_bss_config_t*)', and be visible to "
+                  "ddk::WlanmacProtocol<D> (either because they are public, or because of "
+                  "friendship).");
     static_assert(internal::has_wlanmac_set_key<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacSetKey");
     static_assert(fbl::is_same<decltype(&D::WlanmacSetKey),

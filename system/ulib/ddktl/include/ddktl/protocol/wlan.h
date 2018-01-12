@@ -191,11 +191,11 @@ private:
     void* cookie_;
 };
 
-template <typename D, bool HasConfigureBss = true>
+template <typename D>
 class WlanmacProtocol : public internal::base_protocol {
 public:
     WlanmacProtocol() {
-        internal::CheckWlanmacProtocolSubclass<D, HasConfigureBss>();
+        internal::CheckWlanmacProtocolSubclass<D>();
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
@@ -237,12 +237,6 @@ private:
         return static_cast<D*>(ctx)->WlanmacSetBss(options, mac, type);
     }
 
-    DDKTL_DEPRECATED(HasConfigureBss)
-    static zx_status_t ConfigureBss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    DDKTL_NOTREADY(HasConfigureBss)
     static zx_status_t ConfigureBss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
         return static_cast<D*>(ctx)->WlanmacConfigureBss(options, config);
     }
