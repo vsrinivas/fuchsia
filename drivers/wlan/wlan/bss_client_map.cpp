@@ -7,79 +7,57 @@
 namespace wlan {
 
 bool BssClientMap::HasAidAvailable() {
-    return next_aid_ < kMaxClients;
+    return !aid_bitmap_.Get(0, kMaxClients - 1);
 }
 
 bool BssClientMap::Has(const common::MacAddr& addr) {
-    return clients_map_.find(addr) != clients_map_.end();
+    return clients_.find(addr) != clients_.end();
 }
 
 zx_status_t BssClientMap::Add(const common::MacAddr& addr) {
     if (Has(addr)) { return ZX_ERR_ALREADY_EXISTS; }
-
-    // Insert client in list with an unkown AID.
-    auto client = RemoteClient{
-        .aid = kUnknownAid, .state = RemoteClientState::kAuthenticated,
-    };
-    clients_.push_back(std::move(client));
-    clients_map_.emplace(addr, std::prev(clients_.end()));
-
+    clients_.emplace(addr, RemoteClient{});
     return ZX_OK;
 }
 
 zx_status_t BssClientMap::Remove(const common::MacAddr& addr) {
     ZX_DEBUG_ASSERT(Has(addr));
-
     if (!Has(addr)) { return ZX_ERR_NOT_FOUND; }
 
-    // Remove client from map and list.
-    auto map_pos = clients_map_.find(addr);
-    auto list_pos = map_pos->second;
-    auto client = *list_pos;
-    clients_.erase(list_pos);
-    clients_map_.erase(map_pos);
-
-    // Update next_aid_.
-    if (client.aid < next_aid_) { next_aid_ = client.aid; }
+    // Remove client and release AID.
+    auto iter = clients_.find(addr);
+    auto aid = iter->second.aid;
+    aid_bitmap_.ClearOne(aid);
+    clients_.erase(iter);
 
     return ZX_OK;
 }
 
 zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid) {
     ZX_DEBUG_ASSERT(Has(addr));
-
     *out_aid = kUnknownAid;
     if (!Has(addr)) {
         return ZX_ERR_NOT_FOUND;
     }
 
     // Update the client's state and its AID.
-    auto map_pos = clients_map_.find(addr);
-    auto list_pos = map_pos->second;
-    auto client = *list_pos;
+    auto iter = clients_.find(addr);
+    auto& client = iter->second;
     client.state = RemoteClientState::kAssociated;
     // Do not assign a new AID to the client if the client has already one assigned.
     if (client.aid != kUnknownAid) {
         *out_aid = client.aid;
         return ZX_OK;
     }
-    client.aid = next_aid_;
+
+    // Retrieve next available AID. Return if all AIDs are already taken.
+    aid_t available_aid;
+    if (aid_bitmap_.Get(0, kMaxClients - 1, &available_aid)) { return ZX_ERR_NO_RESOURCES; }
+
+    auto status = aid_bitmap_.SetOne(available_aid);
+    if (status != ZX_OK) { return status; }
+    client.aid = available_aid;
     *out_aid = client.aid;
-
-    // Move client to correct in order position in list and update map.
-    auto insert_pos = std::lower_bound(clients_.begin(), clients_.end(), client.aid,
-                                       [](RemoteClient& c, aid_t aid) { return c.aid < aid; });
-    if (insert_pos != list_pos) {
-        clients_.splice(insert_pos, clients_, list_pos, std::next(list_pos));
-        map_pos->second = insert_pos;
-    }
-    auto iter = map_pos->second;
-
-    // Update next_aid_.
-    do {
-        next_aid_++;
-        iter++;
-    } while (next_aid_ < kMaxClients && iter != clients_.end() && iter->aid == next_aid_);
     return ZX_OK;
 }
 

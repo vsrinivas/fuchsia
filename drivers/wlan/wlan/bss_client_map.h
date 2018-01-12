@@ -9,6 +9,8 @@
 
 #include "garnet/drivers/wlan/common/macaddr.h"
 
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
@@ -16,21 +18,21 @@
 
 namespace wlan {
 
-using aid_t = uint16_t;
+using aid_t = size_t;
 static constexpr aid_t kUnknownAid = 2009;
 
+// TODO(hahnr): Remove and replace with RemoteClient state machine.
 enum class RemoteClientState {
     kAuthenticated,
     kAssociated,
-    // TODO(hahnr): Add RSNA support.
 };
 
 // Map which tracks clients and assigns AIDs.
 class BssClientMap {
    public:
     struct RemoteClient {
-        aid_t aid;
-        RemoteClientState state;
+        aid_t aid = kUnknownAid;
+        RemoteClientState state = RemoteClientState::kAuthenticated;
     };
     static constexpr aid_t kMaxClients = 2008;
 
@@ -43,16 +45,10 @@ class BssClientMap {
     zx_status_t AssignAid(const common::MacAddr& addr, aid_t* out_aid);
 
    private:
-    using ClientList = std::list<RemoteClient>;
-    using ClientMap =
-        std::unordered_map<common::MacAddr, ClientList::iterator, common::MacAddrHasher>;
+    using ClientMap = std::unordered_map<common::MacAddr, RemoteClient, common::MacAddrHasher>;
 
-    // The next available AID. Automatically updated when clients get an AID assigned or get
-    // removed.
-    aid_t next_aid_ = 0;
     // Map to lookup clients by their address.
-    ClientMap clients_map_;
-    // List of clients sorted by their AID.
-    ClientList clients_;
+    ClientMap clients_;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxClients>> aid_bitmap_;
 };
 }  // namespace wlan
