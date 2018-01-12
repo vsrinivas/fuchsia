@@ -83,7 +83,8 @@ class DebugInfoCache {
     fbl::Array<way> ways_;
 };
 
-// Note: We take ownership of |dso_list|.
+// Note: We *do not* take ownership of |dso_list|.
+// Its lifetime must survive ours.
 
 DebugInfoCache::DebugInfoCache(inspector_dsoinfo_t* dso_list, size_t nr_ways)
     : dso_list_(dso_list) {
@@ -103,8 +104,6 @@ DebugInfoCache::~DebugInfoCache() {
             backtrace_destroy_state(ways_[i].bt_state, bt_error_callback, nullptr);
         }
     }
-
-    inspector_dso_free_list(dso_list_);
 }
 
 // Find the DSO and debug info (backtrace_state) for PC.

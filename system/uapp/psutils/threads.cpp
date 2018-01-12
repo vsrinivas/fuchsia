@@ -182,6 +182,9 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
     inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
     inspector_dso_print_list(stdout, dso_list);
 
+    // TODO(dje): Move inspector's DebugInfoCache here, so that we can use it
+    // across all threads.
+
     for (size_t i = 0; i < num_threads; ++i) {
         zx_koid_t tid = threads[i];
         zx_handle_t thread;
@@ -231,6 +234,8 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
         suspended_thread = ZX_HANDLE_INVALID;
         zx_handle_close(thread);
     }
+
+    inspector_dso_free_list(dso_list);
 }
 
 // To pass data from main to self_dump_func.
