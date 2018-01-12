@@ -4,12 +4,14 @@
 
 import("//build/package.gni")
 
-package("mdns") {
+package("tool") {
   deps = [
     ":bin",
   ]
 
   binary = "mdns"
+
+  package_name = "mdns"
 }
 
 executable("bin") {

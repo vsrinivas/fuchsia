@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mdns/mdns_params.h"
+#include "garnet/bin/mdns/tool/mdns_params.h"
 
 #include <iostream>
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mdns/mdns_impl.h"
+#include "garnet/bin/mdns/tool/mdns_impl.h"
 
 #include <iostream>
 #include <unordered_set>
 
-#include "garnet/bin/mdns/formatting.h"
-#include "garnet/bin/mdns/mdns_params.h"
+#include "garnet/bin/mdns/tool/formatting.h"
+#include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/netconnector/fidl/mdns.fidl.h"

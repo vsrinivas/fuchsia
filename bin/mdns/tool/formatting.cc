@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "garnet/bin/mdns/formatting.h"
+#include "garnet/bin/mdns/tool/formatting.h"
 
 namespace mdns {
 namespace {

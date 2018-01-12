@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "mdns": "//garnet/bin/mdns"
+        "mdns": "//garnet/bin/mdns/tool"
     }
 }

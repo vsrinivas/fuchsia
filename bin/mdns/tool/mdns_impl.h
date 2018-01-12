@@ -6,7 +6,7 @@
 
 #include <zx/channel.h>
 
-#include "garnet/bin/mdns/mdns_params.h"
+#include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
