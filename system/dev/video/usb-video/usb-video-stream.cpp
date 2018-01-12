@@ -452,7 +452,39 @@ zx_status_t UsbVideoStream::ProcessChannel(dispatcher::Channel* channel) {
 
 zx_status_t UsbVideoStream::GetFormatsLocked(dispatcher::Channel* channel,
                                              const camera::camera_proto::GetFormatsReq& req) {
-    return ZX_ERR_NOT_SUPPORTED;
+    camera::camera_proto::GetFormatsResp resp = { };
+    resp.hdr = req.hdr;
+    resp.total_format_count = static_cast<uint16_t>(format_mappings_.size());
+
+    // Each channel message is limited in the number of formats it can hold,
+    // so we may have to send several messages.
+    size_t cur_send_count = fbl::min<size_t>(
+        format_mappings_.size(),
+        CAMERA_STREAM_CMD_GET_FORMATS_MAX_FORMATS_PER_RESPONSE);
+
+    size_t copied_count = 0;
+    for (const auto& mapping : format_mappings_) {
+        memcpy(&resp.formats[copied_count], &mapping.proto,
+               sizeof(camera::camera_proto::VideoFormat));
+        copied_count++;
+
+        // We've filled up the messages' formats array, time to send the message.
+        if (copied_count == cur_send_count) {
+           zx_status_t res = channel->Write(&resp, sizeof(resp));
+           if (res != ZX_OK) {
+               zxlogf(ERROR, "writing formats to channel failed, err: %d\n", res);
+               return res;
+           }
+
+           resp.already_sent_count =
+               static_cast<uint16_t>(resp.already_sent_count + cur_send_count);
+           cur_send_count = fbl::min<size_t>(
+               format_mappings_.size() - resp.already_sent_count,
+               CAMERA_STREAM_CMD_GET_FORMATS_MAX_FORMATS_PER_RESPONSE);
+           copied_count = 0;
+        }
+    }
+    return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::SetFormatLocked(dispatcher::Channel* channel,
