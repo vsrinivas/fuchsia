@@ -80,6 +80,7 @@ constexpr fxl::StringView JournalEntryRow::kPrefix;
 constexpr fxl::StringView JournalEntryRow::kJournalEntry;
 constexpr fxl::StringView JournalEntryRow::kDeletePrefix;
 constexpr const char JournalEntryRow::kImplicitPrefix;
+constexpr const char JournalEntryRow::kExplicitPrefix;
 constexpr const char JournalEntryRow::kAddPrefix;
 
 std::string JournalEntryRow::NewJournalId(JournalType journal_type) {

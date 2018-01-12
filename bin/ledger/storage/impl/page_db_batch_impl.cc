@@ -71,7 +71,7 @@ Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
 Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
   static std::string kExplicitJournalPrefix =
       fxl::Concatenate({JournalEntryRow::kPrefix,
-                        fxl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});
+                        fxl::StringView(&JournalEntryRow::kExplicitPrefix, 1)});
   return batch_->DeleteByPrefix(handler, kExplicitJournalPrefix);
 }
 
