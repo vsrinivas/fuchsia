@@ -10,7 +10,6 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/vcpu.h>
-#include <hypervisor/x86/local_apic.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -49,15 +48,12 @@ zx_status_t IoApic::Init(Guest* guest) {
                               0, this);
 }
 
-zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id,
-                                      LocalApic* local_apic) {
-  if (local_apic_id >= kMaxLocalApics)
+zx_status_t IoApic::RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu) {
+  if (local_apic_id >= kMaxVcpus)
     return ZX_ERR_OUT_OF_RANGE;
-  if (local_apics_[local_apic_id] != nullptr)
+  if (vcpus_[local_apic_id] != nullptr)
     return ZX_ERR_ALREADY_EXISTS;
-
-  local_apic->set_id(local_apic_id);
-  local_apics_[local_apic_id] = local_apic;
+  vcpus_[local_apic_id] = vcpu;
   return ZX_OK;
 }
 
@@ -88,45 +84,34 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   // of the target APIC to receive the interrupt.
   //
   // With a 'logical' mode, the target depends on the 'logical destination
-  // register' and the 'destination format register' in the connected local
-  // APICs.
+  // register'. In x2APIC mode this register is read-only and is derived from
+  // the local APIC ID.
   //
-  // See 82093AA (IOAPIC) Section 2.3.4.
-  // See Intel Volume 3, Section 10.6.2.
+  // See 82093AA (IOAPIC) Section 3.2.4.
+  // See Intel Volume 3, Section 10.12.10
   uint32_t destmod = bit_shift(entry.lower, 11);
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
-    LocalApic* local_apic = dest < kMaxLocalApics ? local_apics_[dest] : nullptr;
-    if (local_apic == nullptr)
+    Vcpu* vcpu = dest < kMaxVcpus ? vcpus_[dest] : nullptr;
+    if (vcpu == nullptr)
       return ZX_ERR_NOT_FOUND;
-    return local_apic->Interrupt(vector);
+    return vcpu->Interrupt(vector);
   }
 
   // Logical DESTMOD.
-  uint32_t dest = bits_shift(entry.upper, 31, 24);
-  for (uint8_t local_apic_id = 0; local_apic_id < kMaxLocalApics;
-       ++local_apic_id) {
-    LocalApic* local_apic = local_apics_[local_apic_id];
-    if (local_apic == nullptr)
+  uint16_t dest = bits_shift(entry.upper, 31, 24);
+  for (uint8_t local_apic_id = 0; local_apic_id < kMaxVcpus; ++local_apic_id) {
+    // See Intel Volume 3, Section 10.12.10.2: logical ID = 1 << x2APIC ID[3:0].
+    uint16_t logical_id = 1 << local_apic_id;
+    if (!(logical_id & dest))
       continue;
-
-    // Intel Volume 3, Section 10.6.2.2: Each local APIC performs a
-    // bit-wise AND of the MDA and its logical APIC ID.
-    uint32_t logical_apic_id = bits_shift(local_apic->ldr(), 31, 24);
-    if (!(logical_apic_id & dest))
+    Vcpu* vcpu = vcpus_[local_apic_id];
+    if (vcpu == nullptr)
       continue;
-
-    // There also exists a 'cluster' model that is not implemented.
-    uint32_t model = bits_shift(local_apic->dfr(), 31, 28);
-    if (model != LOCAL_APIC_DFR_FLAT_MODEL) {
-      FXL_LOG(ERROR) << "APIC only supports the flat model.";
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-
     // Note we're not currently respecting the DELMODE field and
     // instead are only delivering to the fist local APIC that is
     // targeted.
-    return local_apic->Interrupt(vector);
+    return vcpu->Interrupt(vector);
   }
   return ZX_ERR_NOT_FOUND;
 }

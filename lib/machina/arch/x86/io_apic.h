@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 
 class Guest;
-class LocalApic;
+class Vcpu;
 
 namespace machina {
 
@@ -32,8 +32,8 @@ class IoApic : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  // Associate a local APIC with an IO APIC.
-  zx_status_t RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_apic);
+  // Associate a VCPU with an IO APIC.
+  zx_status_t RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu);
 
   // Writes the redirect entry for a global IRQ.
   zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);
@@ -42,7 +42,7 @@ class IoApic : public IoHandler {
   zx_status_t Interrupt(uint32_t global_irq);
 
  private:
-  static constexpr size_t kMaxLocalApics = 16u;
+  static constexpr size_t kMaxVcpus = 16u;
 
   mutable fbl::Mutex mutex_;
   // IO register-select register.
@@ -51,8 +51,8 @@ class IoApic : public IoHandler {
   uint32_t id_ __TA_GUARDED(mutex_) = 0;
   // IO redirection table.
   RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
-  // Connected local APICs.
-  LocalApic* local_apics_[kMaxLocalApics] = {};
+  // Connected VCPUs.
+  Vcpu* vcpus_[kMaxVcpus] = {};
 
   zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
   zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);

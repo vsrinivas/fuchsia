@@ -46,7 +46,6 @@ static const uint64_t kUartBases[kNumUarts] = {
 };
 #elif __x86_64__
 #include <hypervisor/x86/acpi.h>
-#include <hypervisor/x86/local_apic.h>
 #include "garnet/lib/machina/arch/x86/io_port.h"
 #include "garnet/lib/machina/arch/x86/page_table.h"
 #include "garnet/lib/machina/arch/x86/tpm.h"
@@ -60,16 +59,6 @@ static const uint64_t kUartBases[kNumUarts] = {
     machina::kI8250Base2,
     machina::kI8250Base3,
 };
-
-static zx_status_t create_vmo(uint64_t size,
-                              uintptr_t* addr,
-                              zx_handle_t* vmo) {
-  zx_status_t status = zx_vmo_create(size, 0, vmo);
-  if (status != ZX_OK)
-    return status;
-  return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size,
-                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, addr);
-}
 #endif
 
 static const uint64_t kVmoSize = 1u << 30;
@@ -316,21 +305,11 @@ int main(int argc, char** argv) {
     return status;
   }
 
-#if __x86_64__
-  uintptr_t apic_addr;
-  zx_handle_t apic_vmo;
-  status = create_vmo(PAGE_SIZE, &apic_addr, &apic_vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create VCPU local APIC memory.";
-    return status;
-  }
-#endif  // __x86_64__
-
   zx_vcpu_create_args_t args = {
     guest_ip,
 #if __x86_64__
     0 /* cr3 */,
-    apic_vmo,
+    0 /* apic_vmo */,
 #endif  // __x86_64__
   };
   Vcpu vcpu;
@@ -371,16 +350,10 @@ int main(int argc, char** argv) {
     return status;
   }
 #elif __x86_64__
-  // Setup local APIC.
-  LocalApic local_apic(&vcpu, apic_addr);
-  status = local_apic.Init(&guest);
+  // Register VCPU with local APIC ID 0.
+  status = interrupt_controller.RegisterVcpu(0, &vcpu);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create local APIC.";
-    return status;
-  }
-  status = interrupt_controller.RegisterLocalApic(0, &local_apic);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to register local APIC with IO APIC.";
+    FXL_LOG(ERROR) << "Failed to register VCPU with IO APIC.";
     return status;
   }
   // Setup IO ports.
