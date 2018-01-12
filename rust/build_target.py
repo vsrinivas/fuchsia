@@ -15,8 +15,6 @@ ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
 
-import local_crates
-
 # Creates the directory containing the given file.
 def create_base_directory(file):
     path = os.path.dirname(file)
