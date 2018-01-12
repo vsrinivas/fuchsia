@@ -14,7 +14,6 @@ namespace escher {
 class Semaphore;
 typedef fxl::RefPtr<Semaphore> SemaphorePtr;
 
-// TODO: rename file.
 // TODO: perhaps return semaphores to a pool instead of destroying them.
 // TODO: make this a subclass of Reffable.
 class Semaphore : public fxl::RefCountedThreadSafe<Semaphore> {

@@ -8,7 +8,7 @@
 #include <zx/vmo.h>
 
 #include "lib/escher/escher.h"
-#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/semaphore.h"
 
 namespace escher {
 

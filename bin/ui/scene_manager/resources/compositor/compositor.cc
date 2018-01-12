@@ -8,7 +8,7 @@
 
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/escher/scene/model.h"

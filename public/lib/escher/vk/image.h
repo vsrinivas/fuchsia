@@ -5,7 +5,7 @@
 #pragma once
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/resources/waitable_resource.h"
 #include "lib/escher/util/debug_print.h"
 

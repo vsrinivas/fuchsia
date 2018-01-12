@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 #include "lib/fxl/macros.h"

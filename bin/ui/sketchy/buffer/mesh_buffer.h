@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "lib/escher/geometry/bounding_box.h"
-#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/scene/shape_modifier.h"
 #include "lib/escher/vk/buffer.h"
 #include "zircon/system/ulib/zx/include/zx/event.h"
