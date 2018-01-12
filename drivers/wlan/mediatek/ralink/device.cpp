@@ -3412,6 +3412,22 @@ void DumpWlanTxInfo(const wlan_tx_info_t& txinfo) {
            txinfo.mcs);
 }
 
+void DumpTxwi(TxPacket* packet) {
+    if (packet == nullptr) return;
+
+    Txwi0& txwi0 = packet->txwi0;
+    Txwi1& txwi1 = packet->txwi1;
+
+    debugf("txwi: frag %u mmps %u cfack %u ts %u ampdu %u mpdu_density %u txop %u mcs 0x%02x\n",
+           txwi0.frag(), txwi0.mmps(), txwi0.cfack(), txwi0.ts(), txwi0.ampdu(),
+           txwi0.mpdu_density(), txwi0.txop(), txwi0.mcs());
+    debugf("      bw %u sgi %u stbc %u phy_mode %u ack %u nseq %u ba_win_size %u wcid 0x%02x\n",
+           txwi0.bw(), txwi0.sgi(), txwi0.stbc(), txwi0.phy_mode(), txwi1.ack(), txwi1.nseq(),
+           txwi1.ba_win_size(), txwi1.wcid());
+    debugf("      mpdu_total_byte_count %u tx_packet_id 0x%x\n", txwi1.mpdu_total_byte_count(),
+           txwi1.tx_packet_id());
+}
+
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
 
@@ -3543,6 +3559,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
 
 #if RALINK_DUMP_TX
     DumpWlanTxInfo(pkt->info);
+    DumpTxwi(packet);
 #endif  // RALINK_DUMP_TX
 
     return ZX_OK;
