@@ -19,7 +19,8 @@ questions.
 
 * Include [tags] in the commit subject flagging which module, library,
 app, etc, is affected by the change.  The style here is somewhat informal.
-Look at past changes to get a feel for how these are used.
+Look at past changes to get a feel for how these are used.  Gerrit will flag
+your change with `Needs Label: Commit-Message-has-tags` if these are missing.
 
 * [Googlers only] Commit messages may reference issue IDs, which will be
 turned into links in the Gerrit UI. Issues may also be automatically closed
