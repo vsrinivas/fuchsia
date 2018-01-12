@@ -119,6 +119,10 @@
              path="third_party/golibs/github.com/golang/protobuf"
              remote="https://fuchsia.googlesource.com/third_party/golang/protobuf"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/googletest"
+             path="third_party/googletest"
+             remote="https://fuchsia.googlesource.com/third_party/googletest"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <!-- gRPC contact: rudominer. -->
     <project name="third_party/grpc"
              path="third_party/grpc"
