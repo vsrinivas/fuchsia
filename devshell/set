@@ -5,7 +5,7 @@
 
 ### set build configuration
 
-## usage: fx set x86|x86-64|arm64|aarch64|gauss|hikey960|odroidc2|vim|vim2
+## usage: fx set TARGET
 ##               [--release] [--packages P1,P2,...]
 ##               [--netboot] [--bootfs]
 ##               [--build-dir DIR]
@@ -14,6 +14,7 @@
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
 ##
+## where TARGET is x86-64, aarch64 (ARM qemu emulator), or another ARM platform supported by zircon.
 ## x86 is accepted as an alias for x86-64.
 ## arm64 is accepted as an alias for aarch64.
 ##
@@ -74,29 +75,17 @@ function main {
       arch=aarch64
       zircon_project=arm64
       ;;
-    gauss)
-      arch=aarch64
-      zircon_project=gauss
-      ;;
-    hikey960)
-      arch=aarch64
-      zircon_project=hikey960
-      ;;
-    odroidc2)
-      arch=aarch64
-      zircon_project=odroidc2
-      ;;
-    vim)
-      arch=aarch64
-      zircon_project=vim
-      ;;
-    vim2)
-      arch=aarch64
-      zircon_project=vim2
-      ;;
     *)
-      fx-command-help
-      return 1
+      # assume any other target is aarch64
+      arch=aarch64
+      if [ -f "${FUCHSIA_DIR}/zircon/kernel/project/$1.mk" ]; then
+        zircon_project=$1
+      else
+        echo Unknown zircon project \"$1\"
+        fx-command-help
+        return 1
+      fi
+      ;;
   esac
 
   local gen_args="${gen_args} --target_cpu ${arch} --platforms ${zircon_project}"
