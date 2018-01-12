@@ -31,10 +31,10 @@ interface PageDebug {
 
   // Returns OK and creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page.
-  GetSnapshot(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
+  GetSnapshot@1(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
 
   // Returns OK and the Commit struct filled for the given |commit_id|.
-  GetCommit(array<uint8> commit_id) => (Status status, Commit? commit);
+  GetCommit@2(array<uint8> commit_id) => (Status status, Commit? commit);
 };
 
 struct Commit {
