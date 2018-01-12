@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/abi_tests.cpp \
+    $(LOCAL_DIR)/cpp_types_tests.cpp \
     $(LOCAL_DIR)/decoding_tests.cpp \
     $(LOCAL_DIR)/encoding_tests.cpp \
     $(LOCAL_DIR)/fidl_coded_types.cpp \
@@ -20,6 +21,7 @@ MODULE_NAME := fidl-test
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/c \

@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/builder.cpp \
     $(LOCAL_DIR)/decoding.cpp \
     $(LOCAL_DIR)/encoding.cpp \
 
