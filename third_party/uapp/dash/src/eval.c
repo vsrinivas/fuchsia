@@ -32,6 +32,7 @@
  * SUCH DAMAGE.
  */
 
+#include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <stdlib.h>
@@ -485,7 +486,7 @@ evalsubshell(union node *n, int flags)
 		n->type = NSUBSHELL;
 
 	const char* errmsg = NULL;
-	zx_status_t exec_result = process_subshell(n, envp, &process, NULL, &errmsg);
+	zx_status_t exec_result = process_subshell(n, envp, &process, jp->zx_job_hndl, NULL, &errmsg);
         if (exec_result == ZX_OK) {
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
@@ -495,7 +496,7 @@ evalsubshell(union node *n, int flags)
 	}
 	status = 0;
 	if (! backgnd) {
-		status = process_await_termination(process, true);
+		status = process_await_termination(process, jp->zx_job_hndl, true);
 		zx_handle_close(process);
 	}
 	INTON;
@@ -576,7 +577,7 @@ evalpipe(union node *n, int flags)
 		zx_handle_t process;
 		const char* errmsg = NULL;
 		const char* const* envp = (const char* const*)environment();
-		zx_status_t status = process_subshell (lp->n, envp, &process, fds, &errmsg);
+		zx_status_t status = process_subshell (lp->n, envp, &process, jp->zx_job_hndl, fds, &errmsg);
 		if (fds[0] != STDIN_FILENO)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
@@ -629,7 +630,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	const char* errmsg = NULL;
 	const char* const* envp = (const char* const*)environment();
 	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
-	zx_status_t status = process_subshell(n, envp, &process, &fds[0], &errmsg);
+	zx_status_t status = process_subshell(n, envp, &process, jp->zx_job_hndl, &fds[0], &errmsg);
         close(pip[1]);
 	if (status != ZX_OK) {
 		freejob(jp);
@@ -815,7 +816,7 @@ evalcommand(union node *cmd, int flags)
 			if (cmdentry.cmdtype != CMDBUILTIN)
 				break;
 			if (spclbltin < 0)
-				spclbltin = 
+				spclbltin =
 					cmdentry.u.cmd->flags &
 					BUILTIN_SPECIAL
 				;
@@ -849,18 +850,25 @@ bail:
 	switch (cmdentry.cmdtype) {
 	default: {
 		zx_handle_t process = ZX_HANDLE_INVALID;
-		zx_status_t zx_status = ZX_OK;
+		zx_handle_t zx_job_hndl;
+		zx_status_t zx_status = zx_job_create(zx_job_default(), 0, &zx_job_hndl);
+		if (zx_status != ZX_OK) {
+			sh_error("Cannot create child process: %d: %s: %s", zx_status,
+		                 zx_status_get_string(zx_status), errmsg);
+			break;
+		}
 		const char* errmsg = NULL;
 		status = process_launch(argc, (const char* const*)argv, path,
-		                        cmdentry.u.index, &process, &zx_status, &errmsg);
+		                        cmdentry.u.index, &process, zx_job_hndl, &zx_status, &errmsg);
 		if (status) {
 			sh_error("Cannot create child process: %d: %s: %s", zx_status,
 		                 zx_status_get_string(zx_status), errmsg);
 			break;
 		}
 		settitle(argv[0]);
-		status = process_await_termination(process, true);
+		status = process_await_termination(process, zx_job_hndl, true);
 		zx_handle_close(process);
+		zx_handle_close(zx_job_hndl);
 		settitle("sh");
 		break;
 	}
