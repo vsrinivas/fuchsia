@@ -183,8 +183,22 @@ void UserRunnerImpl::InitializeLedger() {
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
+
+  app::ServiceListPtr service_list = nullptr;
+  if (account_) {
+    service_list = app::ServiceList::New();
+    service_list->names.push_back(auth::TokenProvider::Name_);
+    ledger_service_provider_.AddService<auth::TokenProvider>(
+        [this](fidl::InterfaceRequest<auth::TokenProvider> request) {
+          token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
+                                                    std::move(request));
+        });
+    ledger_service_provider_.AddBinding(service_list->provider.NewRequest());
+  }
+
   ledger_app_ = std::make_unique<AppClient<ledger::LedgerController>>(
-      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
+      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER",
+      std::move(service_list));
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";

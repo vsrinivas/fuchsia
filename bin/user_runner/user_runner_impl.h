@@ -168,6 +168,8 @@ class UserRunnerImpl : UserRunner,
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
+  // Provides services to the Ledger
+  app::ServiceProviderImpl ledger_service_provider_;
 
   std::unique_ptr<Scope> user_scope_;
 

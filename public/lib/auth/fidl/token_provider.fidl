@@ -42,6 +42,7 @@ struct FirebaseToken {
 
 // This interface provides tokens for the currently logged-in user.
 // This service can be obtained by agents via AgentContext.GetTokenProvider().
+[ServiceName="modular.auth.TokenProvider"]
 interface TokenProvider {
   // Gets the access token (with pre-defined scopes) for this user. Access token
   // is returned from cache if not expired, otherwise refreshed from the server.
