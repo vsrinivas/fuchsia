@@ -111,12 +111,20 @@ update `garnet/Cargo.lock` to include any new or updated dependencies.
 
 If you are adding a third-party dependency to an existing crate or creating
 a new crate, you'll need to either run `update_rust_crates.sh` or temporarily
-comment out the `--frozen` line in `build/rust/build_target.py`.
+pass use_frozen_with_cargo=false to gn. If you are using the fx scripts,
+you can do so as follows:
+
+    ./scripts/fx set x86 --release --packages garnet/packages/default --args "use_frozen_with_cargo=false"
+
 Running `update_rust_crates.sh` to solve this problem will have the side effect
-of updating `third_party/rust-crates`, which may or may not be desired.
-If you want to avoid this, comment out `--frozen` and build once to update
-`garnet/Cargo.lock`. When you're done adding dependencies, uncomment `--frozen`
-and do a fresh re-build to make sure that Garnet still builds successfully.
+of updating all the existing crates in `third_party/rust-crates`, which may not be desired.
+If you want to avoid this, set `use_frozen_with_cargo` to false and build once to update
+`garnet/Cargo.lock`. When you're done adding dependencies, set `use_frozen_with_cargo` back to true.
+
+The approach of avoiding running `update_rust_crates.sh` will only work if you're adding a
+dependency on a crate that is already depended on by another crate in the tree, and thus already
+appears in the lock file. If the new dependency is not already in the lock file you must run
+`update_rust_crates.sh`.
 
 ### Adding a new vendored dependency
 
