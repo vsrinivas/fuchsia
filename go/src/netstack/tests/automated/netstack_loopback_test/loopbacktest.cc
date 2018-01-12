@@ -19,6 +19,8 @@
 namespace netstack {
 namespace {
 
+const int32_t kTimeout = 10000; // 10 seconds
+
 const uint8_t kNotifySuccess = 1;
 const uint8_t kNotifyFail = 2;
 
@@ -118,7 +120,7 @@ TEST_F(NetStreamTest, LoopbackStream) {
   ASSERT_EQ(write(connfd, msg, strlen(msg)), (ssize_t)strlen(msg));
   ASSERT_EQ(close(connfd), 0);
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_STREQ(msg, out.c_str());
@@ -161,7 +163,7 @@ TEST_F(NetStreamTest, NonBlockingConnectWrite) {
     ASSERT_EQ(EINPROGRESS, errno) << "connect failed: " << errno;
 
     struct pollfd pfd = {connfd, POLLOUT, 0};
-    ASSERT_EQ(poll(&pfd, 1, 1000), 1);
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -173,7 +175,7 @@ TEST_F(NetStreamTest, NonBlockingConnectWrite) {
   ASSERT_EQ(write(connfd, msg, strlen(msg)), (ssize_t)strlen(msg));
   ASSERT_EQ(close(connfd), 0);
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_STREQ(msg, out.c_str());
@@ -214,7 +216,7 @@ TEST_F(NetStreamTest, NonBlockingConnectRead) {
     // Note: the success of connection can be detected with POLLOUT, but
     // we use POLLIN here to wait until some data is written by the peer.
     struct pollfd pfd = {connfd, POLLIN, 0};
-    ASSERT_EQ(poll(&pfd, 1, 1000), 1);
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -230,7 +232,7 @@ TEST_F(NetStreamTest, NonBlockingConnectRead) {
   }
   ASSERT_EQ(close(connfd), 0);
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_STREQ(msg, out.c_str());
@@ -252,7 +254,7 @@ TEST_F(NetStreamTest, DISABLED_NonBlockingConnectRefused) {
     ASSERT_EQ(EINPROGRESS, errno) << "connect failed: " << errno;
 
     struct pollfd pfd = {connfd, POLLOUT, 0};
-    ASSERT_EQ(poll(&pfd, 1, 1000), 1);
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1);
 
     int val;
     socklen_t vallen = sizeof(val);
@@ -277,7 +279,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
 
   struct pollfd fds = { connfd, events, 0 };
 
-  int n = poll(&fds, 1, 1000); // timeout: 1000ms
+  int n = poll(&fds, 1, kTimeout);
   EXPECT_GT(n, 0) << "poll failed: " << errno;
   if (n <= 0) {
     NotifyFail(ntfyfd);
@@ -320,7 +322,7 @@ TEST_F(NetStreamTest, Shutdown) {
   ret = shutdown(connfd, SHUT_WR);
   ASSERT_EQ(0, ret) << "shutdown failed: " << errno;
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_EQ(POLLRDHUP, revents);
@@ -389,7 +391,7 @@ void DatagramRead(int recvfd, std::string* out,
 TEST_F(NetDatagramTest, LoopbackDatagramSendto) {
   std::string out;
   std::thread thrd(DatagramRead, recvfd_,
-                   &out, &addr_, &addrlen_, ntfyfd_[1], 1000);
+                   &out, &addr_, &addrlen_, ntfyfd_[1], kTimeout);
 
   const char* msg = "hello";
 
@@ -400,7 +402,7 @@ TEST_F(NetDatagramTest, LoopbackDatagramSendto) {
                                                       << errno;
   ASSERT_EQ(close(sendfd), 0);
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_STREQ(msg, out.c_str());
@@ -409,7 +411,7 @@ TEST_F(NetDatagramTest, LoopbackDatagramSendto) {
 TEST_F(NetDatagramTest, LoopbackDatagramConnectWrite) {
   std::string out;
   std::thread thrd(DatagramRead, recvfd_,
-                   &out, &addr_, &addrlen_, ntfyfd_[1], 1000);
+                   &out, &addr_, &addrlen_, ntfyfd_[1], kTimeout);
 
   const char* msg = "hello";
 
@@ -419,7 +421,7 @@ TEST_F(NetDatagramTest, LoopbackDatagramConnectWrite) {
   ASSERT_EQ(write(sendfd, msg, strlen(msg)), (ssize_t)strlen(msg));
   ASSERT_EQ(close(sendfd), 0);
 
-  ASSERT_EQ(WaitSuccess(ntfyfd_[0], 1000), true);
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
   thrd.join();
 
   EXPECT_STREQ(msg, out.c_str());
