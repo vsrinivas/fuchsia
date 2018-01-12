@@ -519,7 +519,6 @@ FUNCTION_LABEL(el2_fp_resume)
     // Disable floating-point traps.
     mov x10, CPTR_EL2_RES1
     msr cptr_el2, x10
-    isb
 
     fp_state stp, HS_FP_STATE
     fp_state ldp, GS_FP_STATE
