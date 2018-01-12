@@ -212,6 +212,15 @@ If you would like to use a text shell inside a terminal emulator from within the
 you can launch [moterm](https://fuchsia.googlesource.com/topaz/+/master/app/moterm) by selecting the
 "Ask Anything" box and typing `moterm`.
 
+### Running tests
+
+Compiled test binaries are installed in `/system/test/`.
+You can run a test by invoking it in the terminal. E.g.
+
+```
+/system/test/ledger_unittests
+```
+
 ## Contribute changes
 
 * See [CONTRIBUTING.md](CONTRIBUTING.md).
