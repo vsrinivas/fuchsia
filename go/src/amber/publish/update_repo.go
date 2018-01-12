@@ -127,7 +127,7 @@ func (u *UpdateRepo) createTUFMeta(path string, name string) error {
 	// compute merkle root
 	root, err := computeMerkle(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("merkle computation failed: %s", err)
 	}
 
 	// add merkle root as custom JSON
@@ -135,7 +135,10 @@ func (u *UpdateRepo) createTUFMeta(path string, name string) error {
 	json := json.RawMessage(jsonStr)
 
 	// add file with custom JSON to repository
-	return u.repo.AddTarget(name, json)
+	if err := u.repo.AddTarget(name, json); err != nil {
+		return fmt.Errorf("failed adding target to TUF repo: %s", err)
+	}
+	return nil
 }
 
 func (u *UpdateRepo) stagedFilesPath() string {
@@ -171,9 +174,11 @@ func copyFile(dst string, src string) error {
 	return err
 }
 
+// populateKeys copies the keys necessary for publishing from a source path.
+// Note that we don't copy a root key anywhere. The root key is only needed for
+// signing these keys and we assume it is maintained outside the repo somewhere.
 func populateKeys(destPath string, srcPath string) error {
 	for _, k := range keySet {
-
 		if err := copyFile(filepath.Join(destPath, k), filepath.Join(srcPath, k)); err != nil {
 			return err
 		}

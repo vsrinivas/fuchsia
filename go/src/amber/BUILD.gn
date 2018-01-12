@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
 import("//build/package.gni")
 
 go_binary("amber_bin") {
@@ -251,8 +252,8 @@ go_test("amber_daemon_test") {
 }
 
 package("amber_test") {
-  testonly = true
   system_image = true
+  testonly = true
 
   deps = [
     ":amber_daemon_test",
@@ -260,6 +261,54 @@ package("amber_test") {
 
   tests = [ {
         name = "amber_daemon_test"
+      } ]
+}
+
+go_test("amber_publish_test_bin") {
+  gopackage = "amber/publish"
+  output_name = "amber_publish_test"
+  go_dependencies = [
+    {
+      package = "amber"
+      source = "//garnet/go/src/amber"
+    },
+    {
+      package = "fuchsia.googlesource.com/merkle"
+      source = "//garnet/go/src/merkle"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    },
+    {
+      package = "github.com/flynn/go-tuf"
+      source = "//third_party/golibs/github.com/flynn/go-tuf"
+    },
+    {
+      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
+      package = "github.com/syndtr/goleveldb/leveldb"
+    },
+    {
+      source = "//third_party/golibs/github.com/tent/canonical-json-go"
+      package = "github.com/tent/canonical-json-go"
+    },
+    {
+      source = "//third_party/golibs/github.com/golang/snappy"
+      package = "github.com/golang/snappy"
+    },
+  ]
+}
+
+package("amber_pub_test") {
+  system_image = true
+  testonly = true
+
+  deps = [
+    ":amber_publish_test_bin",
+  ]
+
+  tests = [ {
+        name = "amber_publish_test"
       } ]
 }
 

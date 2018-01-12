@@ -5,10 +5,12 @@
     "labels": [
         "//garnet/go/src/amber:amber-srv-keys",
         "//garnet/go/src/amber:amber-publish(//build/toolchain:host_x64)",
-        "//garnet/go/src/amber:amber-srv(//build/toolchain:host_x64)"
+        "//garnet/go/src/amber:amber-srv(//build/toolchain:host_x64)",
+        "//garnet/go/src/amber:amber_publish_test_bin(//build/toolchain:host_x64)"
     ],
     "packages": {
         "amber": "//garnet/go/src/amber",
-        "amber_tools": "//garnet/go/src/amber:amber_tools"
+        "amber_tools": "//garnet/go/src/amber:amber_tools",
+        "amber_pub_test": "//garnet/go/src/amber:amber_pub_test"
     }
 }

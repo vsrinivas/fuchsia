@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package publish
 
 import (
 	"bytes"
@@ -134,7 +134,7 @@ func TestInitRepo(t *testing.T) {
 		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
 	}
 
-	_, err = initRepo(repoDir, srcDir)
+	_, err = InitRepo(repoDir, srcDir)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -148,43 +148,77 @@ func TestInitRepo(t *testing.T) {
 }
 
 func TestAddTUFFile(t *testing.T) {
+	// use the TUF library directly to create a set of keys and empty root
+	// manifest
 	storePath, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
 		t.Fatalf("Couldn't creating test directory %v", err)
 	}
 
 	store := tuf.FileSystemStore(storePath, func(role string, confirm bool) ([]byte, error) { return []byte(""), nil })
-	repo, err := tuf.NewRepo(store, "sha512")
+	tufRepo, err := tuf.NewRepo(store, "sha512")
 	if err != nil {
 		t.Fatalf("Repository couldn't be created")
 	}
 
-	err = repo.Init(true)
+	err = tufRepo.Init(true)
 	if err != nil {
 		t.Fatalf("Error initializing repository %v", err)
 	}
 	defer os.RemoveAll(storePath)
 
-	keys := []string{"root", "timestamp", "snapshot", "targets"}
-
-	for _, key := range keys {
-		_, err = repo.GenKey(key)
+	// create all the keys
+	for _, k := range []string{"root", "timestamp", "targets", "snapshot"} {
+		_, err = tufRepo.GenKey(k)
 		if err != nil {
-			t.Fatalf("Error generating key '%s' %v", key, err)
+			fmt.Printf("Error creating key %s: %s\n", k, err)
 		}
+	}
+
+	keysSrc := filepath.Join(storePath, "keys")
+
+	// copy the root.json, which is the manifest for the empty repo into the keys
+	// directory. The InitRepo method will want to ingest this.
+	err = copyFile(filepath.Join(keysSrc, rootJSONName),
+	   filepath.Join(storePath, "staged", "root.json"))
+
+	if err != nil {
+		t.Fatalf("Couldn't copy root json manifest %v", err)
+	}
+
+
+	// Now that we've created the keys, start testing our code.
+	repoDir, err := ioutil.TempDir("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	defer os.RemoveAll(repoDir)
+
+	checkPaths := []string{filepath.Join(repoDir, "repository", "root.json")}
+	for _, k := range keySet {
+		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
+	}
+
+	amberRepo, err := InitRepo(repoDir, keysSrc)
+	if err != nil {
+		t.Fatalf("Repo init returned error %v", err)
 	}
 
 	rf, _ := writeRandFile(t, 8193)
 	defer os.Remove(rf)
 
 	targetName := "test-test"
-	err = addTUFFile(repo, storePath, rf, "test-test")
+	err = amberRepo.AddPackageFile(rf, "test-test")
 
 	if err != nil {
 		t.Fatalf("Problem adding repo file %v", err)
 	}
 
-	contents, err := os.Open(filepath.Join(storePath, "repository", "targets"))
+	if err = amberRepo.CommitUpdates(); err != nil {
+		t.Fatalf("Failure commiting update %s", err)
+	}
+
+	contents, err := os.Open(filepath.Join(repoDir, "repository", "targets"))
 	if err != nil {
 		t.Fatalf("Unable to read targets directory %v", err)
 	}
@@ -209,7 +243,7 @@ func TestAddTUFFile(t *testing.T) {
 
 	// do a basic sanity check that a merkle element is included in the
 	// targets field
-	targs, err := os.Open(filepath.Join(storePath, "repository", "targets.json"))
+	targs, err := os.Open(filepath.Join(repoDir, "repository", "targets.json"))
 	if err != nil {
 		t.Fatalf("Couldn't open targets metadata %v", err)
 	}
@@ -230,28 +264,37 @@ func TestAddTUFFile(t *testing.T) {
 }
 
 func TestAddBlob(t *testing.T) {
-	storePath, err := ioutil.TempDir("", "publish-test-repo")
+	srcDir := createFakeKeys(t)
+	defer os.RemoveAll(srcDir)
+
+	f, err := os.Create(filepath.Join(srcDir, rootJSONName))
 	if err != nil {
-		t.Fatalf("Couldn't creating test directory %v", err)
+		t.Fatalf("Couldn't create fake root json manifest %v", err)
+	}
+	f.Close()
+
+	repoDir, err := ioutil.TempDir("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	defer os.RemoveAll(repoDir)
+
+	checkPaths := []string{filepath.Join(repoDir, "repository", "root.json")}
+	for _, k := range keySet {
+		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
 	}
 
-	store := tuf.FileSystemStore(storePath, func(role string, confirm bool) ([]byte, error) { return []byte(""), nil })
-	repo, err := tuf.NewRepo(store, "sha512")
+	repo, err := InitRepo(repoDir, srcDir)
 	if err != nil {
-		t.Fatalf("Repository couldn't be created")
+		t.Fatalf("Repo init returned error %v", err)
 	}
+	defer os.RemoveAll(repoDir)
 
-	err = repo.Init(true)
-	if err != nil {
-		t.Fatalf("Error initializing repository %v", err)
-	}
-
-	defer os.RemoveAll(storePath)
 	rf, _ := writeRandFile(t, 8193)
 	defer os.Remove(rf)
 
-	addRegFile(rf, storePath)
-	blobs, err := os.Open(filepath.Join(storePath, "repository", "blobs"))
+	repo.AddContentBlob(rf)
+	blobs, err := os.Open(filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatalf("Couldn't open blobs directory for reading %v", err)
 	}

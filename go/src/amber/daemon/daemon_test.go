@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"amber/pkg"
 )
 
 var letters = []rune("1234567890abcdef")
@@ -28,22 +30,22 @@ func randSeq(n int) string {
 type testSrc struct {
 	mu         sync.Mutex
 	UpdateReqs map[string]int
-	getReqs    map[Package]*struct{}
+	getReqs    map[pkg.Package]*struct{}
 	interval   time.Duration
 	pkgs       map[string]struct{}
 	replyDelay time.Duration
 }
 
-func (t *testSrc) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
+func (t *testSrc) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	t.mu.Lock()
 	time.Sleep(t.replyDelay)
-	updates := make(map[Package]Package)
+	updates := make(map[pkg.Package]pkg.Package)
 	for _, p := range pkgs {
 		if _, ok := t.pkgs[p.Name]; !ok {
 			continue
 		}
 		t.UpdateReqs[p.Name] = t.UpdateReqs[p.Name] + 1
-		up := Package{Name: p.Name, Version: randSeq(6)}
+		up := pkg.Package{Name: p.Name, Version: randSeq(6)}
 		t.getReqs[up] = &struct{}{}
 		updates[*p] = up
 	}
@@ -52,7 +54,7 @@ func (t *testSrc) AvailableUpdates(pkgs []*Package) (map[Package]Package, error)
 	return updates, nil
 }
 
-func (t *testSrc) FetchPkg(pkg *Package) (*os.File, error) {
+func (t *testSrc) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if _, ok := t.getReqs[*pkg]; !ok {
@@ -101,7 +103,7 @@ func (t *testTicker) makeTick() {
 	t.C <- t.last
 }
 
-func processPackage(r *GetResult, pkgs *PackageSet) error {
+func processPackage(r *GetResult, pkgs *pkg.PackageSet) error {
 	if r.Err != nil {
 		return r.Err
 	}
@@ -153,9 +155,9 @@ func TestDaemon(t *testing.T) {
 }
 
 func TestGetRequest(t *testing.T) {
-	emailPkg := Package{Name: "email", Version: "23af90ee"}
-	videoPkg := Package{Name: "video", Version: "f2b8006c"}
-	srchPkg := Package{Name: "search", Version: "fa08207e"}
+	emailPkg := pkg.Package{Name: "email", Version: "23af90ee"}
+	videoPkg := pkg.Package{Name: "video", Version: "f2b8006c"}
+	srchPkg := pkg.Package{Name: "search", Version: "fa08207e"}
 
 	// create some test sources where neither has the full pkg set and
 	// they overlap
@@ -164,7 +166,7 @@ func TestGetRequest(t *testing.T) {
 	pkgs[videoPkg.Name] = struct{}{}
 	srcRateLimit := time.Millisecond * 1
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
+		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
 		pkgs:     pkgs}
 
@@ -172,7 +174,7 @@ func TestGetRequest(t *testing.T) {
 	pkgs[videoPkg.Name] = struct{}{}
 	pkgs[srchPkg.Name] = struct{}{}
 	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
+		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
 		pkgs:     pkgs}
 	sources := []*testSrc{&tSrc, &tSrc2}
@@ -215,11 +217,11 @@ func TestGetRequest(t *testing.T) {
 func TestRateLimit(t *testing.T) {
 	srcRateLimit := 20 * time.Millisecond
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
+		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
 		pkgs:     make(map[string]struct{})}
 	wrapped := NewSourceKeeper(&tSrc)
-	dummy := []*Package{&Package{Name: "None", Version: "aaaaaa"}}
+	dummy := []*pkg.Package{&pkg.Package{Name: "None", Version: "aaaaaa"}}
 
 	if _, err := wrapped.AvailableUpdates(dummy); err == ErrRateExceeded {
 		t.Errorf("Initial request was rate limited unexpectedly.\n")
