@@ -177,14 +177,12 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 
 static zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        printf("devmgr: block watch waiting...\n");
         return ZX_OK;
     }
 
     char device_path[PATH_MAX];
     sprintf(device_path, "%s/%s", PATH_DEV_BLOCK, name);
 
-    printf("devmgr: new block device: %s\n", device_path);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
         return ZX_OK;
