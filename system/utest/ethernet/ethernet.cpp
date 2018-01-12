@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/protocol/ethernet.h>
+#include <fbl/auto_call.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <fdio/watcher.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ethernet.h>
@@ -13,13 +21,6 @@
 #include <zx/time.h>
 #include <zx/vmar.h>
 #include <zx/vmo.h>
-#include <fdio/watcher.h>
-#include <fbl/auto_call.h>
-#include <fbl/intrusive_single_list.h>
-#include <fbl/type_support.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <unittest/unittest.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -30,9 +31,18 @@
 #include <string.h>
 #include <unistd.h>
 
+// Delay for data to work through the system. The test will pause this long, so it's best
+// to keep it fairly short. If it's too short, the test will occasionally be flaky,
+// especially on qemu.
+#define PROPAGATE_MSEC (50)
+#define PROPAGATE_TIME (zx::deadline_after(ZX_MSEC(PROPAGATE_MSEC)))
+// We expect something to happen prior to timeout, and the test will fail if it doesn't. So
+// wait longer to further reduce the likelihood of test flakiness.
+#define FAIL_TIMEOUT (zx::deadline_after(ZX_MSEC(3 * PROPAGATE_MSEC)))
+
 // Because of test flakiness if a previous test case's ethertap device isn't cleaned up, we put a
 // delay at the end of each test to give devmgr time to clean up the ethertap devices.
-#define ETHTEST_CLEANUP_DELAY zx::nanosleep(zx::deadline_after(ZX_MSEC(25)))
+#define ETHTEST_CLEANUP_DELAY zx::nanosleep(PROPAGATE_TIME)
 
 namespace {
 
@@ -44,7 +54,8 @@ const char* mxstrerror(zx_status_t status) {
     return zx_status_get_string(status);
 }
 
-zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
+zx_status_t CreateEthertapWithOption(uint32_t mtu, const char* name, zx::socket* sock,
+                                 uint32_t options) {
     if (sock == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -58,11 +69,11 @@ zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
 
     ethertap_ioctl_config_t config = {};
     strlcpy(config.name, name, ETHERTAP_MAX_NAME_LEN);
+    config.options = options;
     // Uncomment this to trace ETHERTAP events
-    //config.options = ETHERTAP_OPT_TRACE;
+    //config.options |= ETHERTAP_OPT_TRACE;
     config.mtu = mtu;
     memcpy(config.mac, kTapMac, 6);
-
     ssize_t rc = ioctl_ethertap_config(ctlfd, &config, sock->reset_and_get_address());
     if (rc < 0) {
         zx_status_t status = static_cast<zx_status_t>(rc);
@@ -70,6 +81,10 @@ zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
         return status;
     }
     return ZX_OK;
+}
+
+zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
+    return CreateEthertapWithOption(mtu, name, sock, 0);
 }
 
 zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
@@ -236,6 +251,11 @@ class EthernetClient {
         return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
     }
 
+    zx_status_t SetPromisc(bool on) {
+        ssize_t rc = ioctl_ethernet_set_promisc(fd_, &on);
+        return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
+    }
+
     zx::fifo* tx_fifo() { return &tx_; }
     zx::fifo* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
@@ -315,7 +335,7 @@ static bool EthernetStartTest() {
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
 
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(100)), &obs));
+            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -339,7 +359,7 @@ static bool EthernetLinkStatusTest() {
     // Set the link status to online
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
     // Sleep for just long enough to let the signal propagate
-    zx::nanosleep(zx::deadline_after(ZX_MSEC(50)));
+    zx::nanosleep(PROPAGATE_TIME);
 
     // Open the ethernet device
     int devfd = -1;
@@ -364,7 +384,7 @@ static bool EthernetLinkStatusTest() {
     // Verify the link status
     zx_signals_t obs;
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(100)), &obs));
+            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -374,6 +394,125 @@ static bool EthernetLinkStatusTest() {
     EXPECT_EQ(ZX_OK, client.Stop());
 
     // Clean up the ethertap device
+    sock.reset();
+
+    ETHTEST_CLEANUP_DELAY;
+    return true;
+}
+
+static bool EthernetSetPromiscMultiClientTest() {
+    // Create the ethertap device
+    zx::socket sock;
+    ASSERT_EQ(ZX_OK, CreateEthertapWithOption(1500, __func__, &sock, ETHERTAP_OPT_REPORT_PARAM));
+
+    // Open the ethernet devices
+    int devfdA = -1;
+    ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfdA));
+    ASSERT_GE(devfdA, 0);
+    int devfdB = -1;
+    ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfdB));
+    ASSERT_GE(devfdB, 0);
+
+    // Set up ethernet clients
+    EthernetClient clientA(devfdA);
+    ASSERT_EQ(ZX_OK, clientA.Register(__func__, 32, 2048));
+    EthernetClient clientB(devfdB);
+    ASSERT_EQ(ZX_OK, clientB.Register(__func__, 32, 2048));
+
+    // Start the ethernet clients
+    EXPECT_EQ(ZX_OK, clientA.Start());
+    EXPECT_EQ(ZX_OK, clientB.Start());
+
+    zx_signals_t obs;
+    // Ensure sock is empty before starting test - should be unnecessary
+    EXPECT_EQ(ZX_ERR_TIMED_OUT, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, PROPAGATE_TIME, &obs));
+
+    // This should send an ethertap_setparam_report up the control channel,
+    // saying param ETHMAC_SETPARAM_PROMISC, value true.
+    clientA.SetPromisc(true);
+
+    ethertap_setparam_report_t report;
+    size_t actual;
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
+    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
+    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
+    EXPECT_EQ(sizeof(report), actual);
+    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
+    EXPECT_EQ(true, static_cast<bool>(report.value));
+
+    // None of these should cause a change in promisc commands to ethermac.
+    clientA.SetPromisc(true); // It was already requested by A.
+    clientB.SetPromisc(true);
+    clientA.SetPromisc(false); // A should now not want it, but B still does.
+    EXPECT_EQ(ZX_ERR_TIMED_OUT, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, PROPAGATE_TIME, &obs));
+
+    // After the next line, no one wants promisc, so I should get a command to turn it off.
+    clientB.SetPromisc(false);
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
+    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
+    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
+    EXPECT_EQ(sizeof(report), actual);
+    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
+    EXPECT_EQ(false, static_cast<bool>(report.value));
+
+    // Shutdown the ethernet clients
+    EXPECT_EQ(ZX_OK, clientA.Stop());
+    EXPECT_EQ(ZX_OK, clientB.Stop());
+
+    // Clean up the ethertap device
+    sock.reset();
+
+    ETHTEST_CLEANUP_DELAY;
+    return true;
+}
+
+static bool EthernetSetPromiscClearOnCloseTest() {
+    // Create the ethertap device
+    zx::socket sock;
+    ASSERT_EQ(ZX_OK, CreateEthertapWithOption(1500, __func__, &sock, ETHERTAP_OPT_REPORT_PARAM));
+
+    // Open the ethernet device
+    int devfd = -1;
+    ASSERT_EQ(ZX_OK, OpenEthertapDev(&devfd));
+    ASSERT_GE(devfd, 0);
+
+    // Set up ethernet client
+    auto pClient = fbl::make_unique<EthernetClient>(devfd);
+    ASSERT_EQ(ZX_OK, pClient->Register(__func__, 32, 2048));
+
+    // Start the ethernet client
+    EXPECT_EQ(ZX_OK, pClient->Start());
+
+    zx_signals_t obs;
+    // Ensure sock is empty before starting test - should be unnecessary
+    EXPECT_EQ(ZX_ERR_TIMED_OUT, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, PROPAGATE_TIME, &obs));
+
+    // This should send an ethertap_setparam_report up the control channel,
+    // saying param ETHMAC_SETPARAM_PROMISC, value true.
+    pClient->SetPromisc(true);
+
+    ethertap_setparam_report_t report;
+    size_t actual;
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
+    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
+    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
+    EXPECT_EQ(sizeof(report), actual);
+    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
+    EXPECT_EQ(true, static_cast<bool>(report.value));
+
+    // Shutdown the ethernet client.
+    EXPECT_EQ(ZX_OK, pClient->Stop());
+    pClient.reset(); // This will free devfd
+
+    // That should have caused promisc to turn off.
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
+    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
+    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
+    EXPECT_EQ(sizeof(report), actual);
+    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
+    EXPECT_EQ(false, static_cast<bool>(report.value));
+
+    // Clean up the ethertap device.
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
@@ -417,7 +556,7 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(1u, actual);
 
     // The socket should be readable
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_SOCKET_READABLE);
 
     // Read the data from the socket, which should match what was written to the fifo
@@ -429,7 +568,7 @@ static bool EthernetDataTest_Send() {
 
     // Now the TX completion entry should be available to read from the TX fifo
     EXPECT_EQ(ZX_OK,
-            client.tx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
+            client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     eth_fifo_entry_t return_entry;
@@ -488,7 +627,7 @@ static bool EthernetDataTest_Recv() {
 
     // The fifo should be readable
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
+            client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
@@ -521,6 +660,11 @@ BEGIN_TEST_CASE(EthernetSetupTests)
 RUN_TEST_MEDIUM(EthernetStartTest)
 RUN_TEST_MEDIUM(EthernetLinkStatusTest)
 END_TEST_CASE(EthernetSetupTests)
+
+BEGIN_TEST_CASE(EthernetConfigTests)
+RUN_TEST_MEDIUM(EthernetSetPromiscMultiClientTest)
+RUN_TEST_MEDIUM(EthernetSetPromiscClearOnCloseTest)
+END_TEST_CASE(EthernetConfigTests)
 
 BEGIN_TEST_CASE(EthernetDataTests)
 RUN_TEST_MEDIUM(EthernetDataTest_Send)

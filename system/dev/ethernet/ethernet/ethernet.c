@@ -127,22 +127,22 @@ static inline ssize_t eth_set_promisc_locked(ethdev_t* edev, bool req_on) {
     zx_status_t status = ZX_OK;
     if (req_on) {
         edev0->promisc_requesters++;
+        edev->state |= ETHDEV_PROMISC;
         if (edev0->promisc_requesters == 1) {
             status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, true, NULL);
-            if (status == ZX_OK) {
-                edev->state |= ETHDEV_PROMISC;
-            } else {
+            if (status != ZX_OK) {
                 edev0->promisc_requesters--;
+                edev->state &= ~ETHDEV_PROMISC;
             }
         }
     } else {
         edev0->promisc_requesters--;
+        edev->state &= ~ETHDEV_PROMISC;
         if (edev0->promisc_requesters == 0) {
             status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, false, NULL);
-            if (status == ZX_OK) {
-                edev->state &= ~ETHDEV_PROMISC;
-            } else {
+            if (status != ZX_OK) {
                 edev0->promisc_requesters++;
+                edev->state |= ETHDEV_PROMISC;
             }
         }
     }

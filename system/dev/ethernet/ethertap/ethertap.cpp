@@ -5,10 +5,10 @@
 #include "ethertap.h"
 
 #include <ddk/debug.h>
-#include <zircon/compiler.h>
 #include <fbl/auto_lock.h>
 #include <fbl/type_support.h>
 #include <pretty/hexdump.h>
+#include <zircon/compiler.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -35,14 +35,17 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             return ZX_ERR_INVALID_ARGS;
         }
 
+        ethertap_ioctl_config_t config;
+        memcpy(&config, in_buf, in_len);
+
         zx::socket local, remote;
-        zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote);
+        uint32_t sockopt = ZX_SOCKET_DATAGRAM |
+                           ((config.options & ETHERTAP_OPT_REPORT_PARAM) ? ZX_SOCKET_HAS_CONTROL : 0);
+        zx_status_t status = zx::socket::create(sockopt, &local, &remote);
         if (status != ZX_OK) {
             return status;
         }
 
-        ethertap_ioctl_config_t config;
-        memcpy(&config, in_buf, in_len);
         config.name[ETHERTAP_MAX_NAME_LEN] = '\0';
 
         auto tap = fbl::unique_ptr<eth::TapDevice>(
@@ -146,7 +149,21 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
 }
 
 zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (!(options_ & ETHERTAP_OPT_REPORT_PARAM)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ethertap_setparam_report_t report = {};
+    report.param = param;
+    report.value = value;
+    report.data_length = 0;
+    zx_status_t status = data_.write(ZX_SOCKET_CONTROL, &report, sizeof(report), nullptr);
+    if (status != ZX_OK) {
+        ethertap_trace("error writing to control: %d\n", status);
+    }
+    // A failure of data_.write is not a simulated failure of hardware under test, so log it but
+    // don't report failure on the SetParam attempt.
+    return ZX_OK;
 }
 
 int TapDevice::Thread() {
