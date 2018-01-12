@@ -329,6 +329,11 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
         nb_file->offset = offset + *length;
         return TFTP_NO_ERROR;
     } else if (file_info->type == paver) {
+        if (!atomic_load(&paving_in_progress)) {
+          printf("netsvc: paver exited prematurely\n");
+          return TFTP_ERR_IO;
+        }
+
         if (((size_t)offset > file_info->paver.size)
             || (offset + *length) > file_info->paver.size) {
             return TFTP_ERR_INVALID_ARGS;
