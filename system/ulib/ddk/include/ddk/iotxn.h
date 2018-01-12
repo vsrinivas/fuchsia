@@ -29,7 +29,7 @@ typedef struct iotxn iotxn_t;
 //
 // Terminology: iotxns are queued against a processor by a requestor
 
-// new device protcol hook
+// new device protocol hook
 // The driver *must* complete the txn (success or failure) by
 // calling iotxn_complete(txn);
 //
