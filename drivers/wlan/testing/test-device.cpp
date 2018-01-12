@@ -122,6 +122,10 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+    return ZX_OK;
+}
+
 zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
     return ZX_OK;
 }

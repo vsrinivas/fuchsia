@@ -3675,6 +3675,10 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+    return WlanmacSetBss(options, config->bssid, config->bss_type);
+}
+
 // Maps IEEE cipher suites to vendor specific cipher representations, called KeyMode.
 // The word 'KeyMode' is intentionally used to prevent mixing this vendor specific cipher
 // representation with IEEE's vendor specific cipher suites as specified in the last row of
