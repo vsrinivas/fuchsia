@@ -1,6 +1,6 @@
 # Testing
 
-Modular has two types of tests.
+Modular has two types of tests, unit tests and integration tests.
 
 ## Unit tests
 
@@ -12,8 +12,8 @@ Unit tests are regular [Google Test] tests, although most of them use our own
 [TestWithMessageLoop] base class to conveniently run delayed tasks with a
 timeout, ensuring that a failing test does not hang forever.
 
-All unit tests in the Modular tree are built into a single `modular_unittests`
-binary, that by default can be executed on Fuchsia by running
+All Modular unit tests in the peridot tree are built into a single
+`modular_unittests` binary, which can be executed on fuchsia by running
 `/system/test/modular_unittests`.
 
 ## Integration tests
@@ -39,7 +39,7 @@ under fuchsia. In order to start `test_runner`, you can:
   workstation, do:
 
 ```
-fx set --packages build/gn/boot_test_modular
+fx set x86 --packages peridot/packages/boot_test_modular
 
 ```
 
