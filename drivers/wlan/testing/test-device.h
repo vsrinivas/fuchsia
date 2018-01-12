@@ -20,7 +20,7 @@ namespace testing {
 class Device;
 using TestBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
-class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device, true> {
+class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device> {
    public:
     Device(zx_device_t* device, test_protocol_t* test_proto);
 
