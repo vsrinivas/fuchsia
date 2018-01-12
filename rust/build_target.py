@@ -94,6 +94,10 @@ def main():
     parser.add_argument("--release",
                         help="Build in release mode",
                         action="store_true")
+    parser.add_argument("--frozen",
+                        help="Pass --frozen to cargo when building",
+                        default = False,
+                        action="store_true")
     parser.add_argument("--label",
                         help="Label of the target to build",
                         required=True)
@@ -141,20 +145,15 @@ def main():
     else:
         build_command = "build"
 
-    # Remove any existing Cargo.lock file since it may need to be generated
-    # again if third-party crates have been updated.
-    try:
-        os.remove(os.path.join(args.gen_dir, "Cargo.lock"))
-    except OSError:
-        pass
-
     call_args = [
         args.cargo,
         build_command,
         "--target=%s" % args.target_triple,
-        "--frozen",  # Require Cargo.lock and cache are up to date.
         "--verbose",
     ]
+
+    if args.frozen:
+        call_args.append("--frozen")
     if args.release:
         call_args.append("--release")
     if args.type == "lib":

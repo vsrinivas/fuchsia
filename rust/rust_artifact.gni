@@ -5,6 +5,10 @@
 import("//build/config/sysroot.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
+declare_args() {
+  use_frozen_with_cargo = true
+}
+
 # Defines a Rust artifact
 #
 # Only for internal use, supporting rust_library and rust_binary.
@@ -191,6 +195,10 @@ template("rust_artifact") {
       args += [ "--with-tests" ]
 
       outputs += [ "$base_out_dir/$name-$type-test" ]
+    }
+
+    if (use_frozen_with_cargo) {
+      args += [ "--frozen" ]
     }
 
     if (!is_debug) {
