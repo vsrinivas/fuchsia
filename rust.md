@@ -103,8 +103,20 @@ scripts/rust/build_cargo_vendor.sh
 
 To update these crates, run the following command:
 ```
-scripts/rust/update_rust_crates.py
+build/rust/update_rust_crates.sh
 ```
+
+This script will update the `third_party/rust-crates` repository, and will
+update `garnet/Cargo.lock` to include any new or updated dependencies.
+
+If you are adding a third-party dependency to an existing crate or creating
+a new crate, you'll need to either run `update_rust_crates.sh` or temporarily
+comment out the `--frozen` line in `build/rust/build_target.py`.
+Running `update_rust_crates.sh` to solve this problem will have the side effect
+of updating `third_party/rust-crates`, which may or may not be desired.
+If you want to avoid this, comment out `--frozen` and build once to update
+`garnet/Cargo.lock`. When you're done adding dependencies, uncomment `--frozen`
+and do a fresh re-build to make sure that Garnet still builds successfully.
 
 ### Adding a new vendored dependency
 
