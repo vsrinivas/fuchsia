@@ -122,6 +122,12 @@
 //         return ZX_OK;
 //     }
 //
+//
+//     zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t config) {
+//         // Configure the bss
+//         return ZX_OK;
+//     }
+//
 //     zx_status_t WlnamacSetKey(uint32_t options, wlan_key_config_t* key_config) {
 //         // Set the key and free the memory.
 //         free(key_config);

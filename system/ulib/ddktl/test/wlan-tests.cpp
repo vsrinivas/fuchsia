@@ -68,7 +68,7 @@ private:
 };
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
-                            public ddk::WlanmacProtocol<TestWlanmacProtocol> {
+                            public ddk::WlanmacProtocol<TestWlanmacProtocol, true> {
 public:
     TestWlanmacProtocol()
         : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {
@@ -122,6 +122,12 @@ public:
         return ZX_OK;
     }
 
+    zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+        configure_bss_this_ = get_this();
+        configure_bss_called_ = true;
+        return ZX_OK;
+    }
+
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
         set_key_this_ = get_this();
         set_key_called_ = true;
@@ -136,6 +142,7 @@ public:
         EXPECT_EQ(this_, queue_tx_this_, "");
         EXPECT_EQ(this_, set_channel_this_, "");
         EXPECT_EQ(this_, set_bss_this_, "");
+        EXPECT_EQ(this_, configure_bss_this_, "");
         EXPECT_EQ(this_, set_key_this_, "");
         EXPECT_TRUE(query_called_, "");
         EXPECT_TRUE(start_called_, "");
@@ -143,6 +150,7 @@ public:
         EXPECT_TRUE(queue_tx_called_, "");
         EXPECT_TRUE(set_channel_called_, "");
         EXPECT_TRUE(set_bss_called_, "");
+        EXPECT_TRUE(configure_bss_called_, "");
         EXPECT_TRUE(set_key_called_, "");
         END_HELPER;
     }
@@ -165,6 +173,7 @@ private:
     uintptr_t queue_tx_this_ = 0u;
     uintptr_t set_channel_this_ = 0u;
     uintptr_t set_bss_this_ = 0u;
+    uintptr_t configure_bss_this_ = 0u;
     uintptr_t set_key_this_ = 0u;
     bool query_called_ = false;
     bool stop_called_ = false;
@@ -172,6 +181,7 @@ private:
     bool queue_tx_called_ = false;
     bool set_channel_called_ = false;
     bool set_bss_called_ = false;
+    bool configure_bss_called_ = false;
     bool set_key_called_ = false;
 
     fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
@@ -226,6 +236,7 @@ static bool test_wlanmac_protocol() {
     proto.ops->queue_tx(proto.ctx, 0, nullptr);
     EXPECT_EQ(ZX_OK, proto.ops->set_channel(proto.ctx, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, proto.ops->set_bss(proto.ctx, 0, nullptr, 0), "");
+    EXPECT_EQ(ZX_OK, proto.ops->configure_bss(proto.ctx, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, proto.ops->set_key(proto.ctx, 0, nullptr), "");
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
@@ -255,6 +266,7 @@ static bool test_wlanmac_protocol_proxy() {
     proxy.QueueTx(0, nullptr);
     proxy.SetChannel(0, nullptr);
     proxy.SetBss(0, nullptr, 0);
+    proxy.ConfigureBss(0, nullptr);
     proxy.SetKey(0, nullptr);
 
     EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
