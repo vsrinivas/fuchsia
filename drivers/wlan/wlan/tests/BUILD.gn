@@ -36,6 +36,7 @@ executable("mac_tests") {
     "element_unittest.cpp",
     "mac_frame_unittest.cpp",
     "macaddr_unittest.cpp",
+    "channel_unittest.cpp",
   ]
 
   deps = [

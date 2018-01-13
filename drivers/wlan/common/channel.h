@@ -20,8 +20,10 @@ bool Is2Ghz(uint8_t channel_number);
 bool Is5Ghz(const wlan_channel_t& chan);
 bool Is2Ghz(const wlan_channel_t& chan);
 
-// TODO(porce): Implement
-// bool IsChanValid(const wlan_channel_t& chan);
+bool IsValidChan2Ghz(const wlan_channel_t& chan);
+bool IsValidChan5Ghz(const wlan_channel_t& chan);
+bool IsValidChan(const wlan_channel_t& chan);
+
 Mhz GetCenterFreq(const wlan_channel_t& chan);
 uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
 

@@ -5,6 +5,7 @@
 #include "channel.h"
 
 #include <garnet/drivers/wlan/wlan/logging.h>
+#include <zircon/assert.h>
 
 // TODO(porce): Look up constants from the operating class table.
 // No need to use constexpr in this prototype.
@@ -41,11 +42,59 @@ bool Is2Ghz(const wlan_channel_t& chan) {
     return !Is5Ghz(chan.primary);
 }
 
-// TODO(porce): Implement
-// bool IsChanValid(const wlan_channel_t& chan) { }
+bool IsValidChan2Ghz(const wlan_channel_t& chan) {
+    uint8_t p = chan.primary;
+
+    if (p < 1 || p > 11) { return false; }
+
+    switch (chan.cbw) {
+    case CBW20:
+        return true;
+    case CBW40ABOVE:
+        return (p <= 7);
+    case CBW40BELOW:
+        return (p >= 5);
+    default:
+        return false;
+    }
+}
+
+bool IsValidChan5Ghz(const wlan_channel_t& chan) {
+    uint8_t p = chan.primary;
+
+    if (p < 36 || p > 165) { return false; }
+    if (p > 64 && p < 100) { return false; }
+    if (p > 144 && p < 149) { return false; }
+    if (p <= 144 && (p % 4 != 0)) { return false; }
+    if (p >= 149 && (p % 4 != 1)) { return false; }
+
+    switch (chan.cbw) {
+    case CBW20:
+        break;
+    case CBW40ABOVE:
+        if (p <= 144 && (p % 8 != 4)) { return false; }
+        if (p >= 149 && (p % 8 != 5)) { return false; }
+        break;
+    case CBW40BELOW:
+        if (p <= 144 && (p % 8 != 0)) { return false; }
+        if (p >= 149 && (p % 8 != 1)) { return false; }
+        break;
+    default:
+        return false;
+    }
+
+    return true;
+}
+
+bool IsValidChan(const wlan_channel_t& chan) {
+    bool result = Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
+
+    if (result == false) { errorf("invalid channel value: %s\n", ChanStr(chan).c_str()); }
+    return result;
+}
 
 Mhz GetCenterFreq(const wlan_channel_t& chan) {
-    // ZX_DEBUG_ASSERT(IsChanValid(chan));
+    ZX_DEBUG_ASSERT(IsValidChan(chan));
 
     Mhz spacing = 5;
     Mhz channel_starting_frequency;
@@ -61,7 +110,7 @@ Mhz GetCenterFreq(const wlan_channel_t& chan) {
 }
 
 uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
-    // ZX_DEBUG_ASSERT(IsChanValid(chan));
+    ZX_DEBUG_ASSERT(IsValidChan(chan));
 
     switch (chan.cbw) {
     case CBW20:
