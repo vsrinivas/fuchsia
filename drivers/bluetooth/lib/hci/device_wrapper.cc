@@ -13,12 +13,12 @@
 namespace btlib {
 namespace hci {
 
-ZirconDeviceWrapper::ZirconDeviceWrapper(fxl::UniqueFD device_fd)
+IoctlDeviceWrapper::IoctlDeviceWrapper(fxl::UniqueFD device_fd)
     : device_fd_(std::move(device_fd)) {
   FXL_DCHECK(device_fd_.is_valid());
 }
 
-zx::channel ZirconDeviceWrapper::GetCommandChannel() {
+zx::channel IoctlDeviceWrapper::GetCommandChannel() {
   zx::channel channel;
   ssize_t status = ioctl_bt_hci_get_command_channel(
       device_fd_.get(), channel.reset_and_get_address());
@@ -31,7 +31,7 @@ zx::channel ZirconDeviceWrapper::GetCommandChannel() {
   return channel;
 }
 
-zx::channel ZirconDeviceWrapper::GetACLDataChannel() {
+zx::channel IoctlDeviceWrapper::GetACLDataChannel() {
   zx::channel channel;
   ssize_t status = ioctl_bt_hci_get_acl_data_channel(
       device_fd_.get(), channel.reset_and_get_address());
@@ -39,6 +39,35 @@ zx::channel ZirconDeviceWrapper::GetACLDataChannel() {
     FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
                    << zx_status_get_string(status);
     FXL_DCHECK(!channel.is_valid());
+  }
+
+  return channel;
+}
+
+// ================= DdkDeviceWrappper =================
+
+DdkDeviceWrapper::DdkDeviceWrapper(const bt_hci_protocol_t& hci)
+    : hci_proto_(hci) {}
+
+zx::channel DdkDeviceWrapper::GetCommandChannel() {
+  zx::channel channel;
+  zx_status_t status =
+      bt_hci_open_command_channel(&hci_proto_, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
+                   << zx_status_get_string(status);
+  }
+
+  return channel;
+}
+
+zx::channel DdkDeviceWrapper::GetACLDataChannel() {
+  zx::channel channel;
+  zx_status_t status = bt_hci_open_acl_data_channel(
+      &hci_proto_, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
+                   << zx_status_get_string(status);
   }
 
   return channel;

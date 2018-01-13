@@ -62,8 +62,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto hci_dev = std::make_unique<::btlib::hci::ZirconDeviceWrapper>(
-      std::move(hci_dev_fd));
+  auto hci_dev =
+      std::make_unique<::btlib::hci::IoctlDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
   fsl::MessageLoop message_loop;

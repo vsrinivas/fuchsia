@@ -107,8 +107,8 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
     return;
   }
 
-  auto hci_dev = std::make_unique<::btlib::hci::ZirconDeviceWrapper>(
-      std::move(hci_dev_fd));
+  auto hci_dev =
+      std::make_unique<::btlib::hci::IoctlDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
   auto adapter = std::make_unique<::btlib::gap::Adapter>(std::move(hci));
 

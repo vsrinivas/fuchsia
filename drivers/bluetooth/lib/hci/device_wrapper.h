@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <zircon/status.h>
+#include <zircon/types.h>
+
+#include <ddk/protocol/bt-hci.h>
 #include <zx/channel.h>
 
 #include "lib/fxl/files/unique_fd.h"
@@ -26,12 +30,13 @@ class DeviceWrapper {
   virtual zx::channel GetACLDataChannel() = 0;
 };
 
-// A DeviceWrapper that works over a Zircon bt-hci device.
-class ZirconDeviceWrapper : public DeviceWrapper {
+// A DeviceWrapper that obtains channels by invoking bt-hci ioctls on a devfs
+// file descriptor.
+class IoctlDeviceWrapper : public DeviceWrapper {
  public:
   // |device_fd| must be a valid file descriptor to a Bluetooth HCI device.
-  explicit ZirconDeviceWrapper(fxl::UniqueFD device_fd);
-  ~ZirconDeviceWrapper() override = default;
+  explicit IoctlDeviceWrapper(fxl::UniqueFD device_fd);
+  ~IoctlDeviceWrapper() override = default;
 
   // DeviceWrapper overrides. These methods directly return the handle obtained
   // via the corresponding ioctl.
@@ -41,7 +46,24 @@ class ZirconDeviceWrapper : public DeviceWrapper {
  private:
   fxl::UniqueFD device_fd_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ZirconDeviceWrapper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(IoctlDeviceWrapper);
+};
+
+// A DeviceWrapper that obtains channels by calling bt-hci protocol ops.
+class DdkDeviceWrapper : public DeviceWrapper {
+ public:
+  // The contents of |hci| must remain valid while this object is in use.
+  explicit DdkDeviceWrapper(const bt_hci_protocol_t& hci);
+  ~DdkDeviceWrapper() override = default;
+
+  // DeviceWrapper overrides:
+  zx::channel GetCommandChannel() override;
+  zx::channel GetACLDataChannel() override;
+
+ private:
+  bt_hci_protocol_t hci_proto_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DdkDeviceWrapper);
 };
 
 // A pass-through DeviceWrapper that returns the channel endpoints that it is
