@@ -10,17 +10,17 @@
 #include <thread>
 #include <utility>
 
+#include "garnet/bin/cobalt/config.h"
+#include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/cobalt/fidl/cobalt_controller.fidl.h"
-#include "garnet/bin/cobalt/config.h"
-#include "grpc++/grpc++.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/cobalt/config/metric_config.h"
 #include "third_party/cobalt/config/report_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
@@ -36,7 +36,9 @@ using cobalt::CobaltController;
 using cobalt::CobaltEncoder;
 using cobalt::CobaltEncoderFactory;
 using cobalt::EncryptedMessage;
+using cobalt::ObservationValuePtr;
 using cobalt::Status;
+using cobalt::Value;
 using cobalt::config::EncodingRegistry;
 using cobalt::config::MetricRegistry;
 using cobalt::encoder::ClientSecret;
@@ -110,17 +112,37 @@ class CobaltEncoderImpl : public CobaltEncoder {
                     ShippingManager* shipping_manager);
 
  private:
-  void AddStringObservation(uint32_t metric_id,
+  template <class CB>
+  void AddEncodedObservation(Encoder::Result* result, CB callback);
+
+  void AddStringObservation(
+      uint32_t metric_id,
+      uint32_t encoding_id,
+      const fidl::String& observation,
+      const AddStringObservationCallback& callback) override;
+
+  void AddIntObservation(uint32_t metric_id,
+                         uint32_t encoding_id,
+                         const int64_t observation,
+                         const AddIntObservationCallback& callback) override;
+
+  void AddDoubleObservation(uint32_t metric_id,
                             uint32_t encoding_id,
-                            const fidl::String& observation,
-                            const AddStringObservationCallback& callback);
+                            const double observation,
+                            const AddIntObservationCallback& callback) override;
 
-  void AddIndexObservation(uint32_t metric_id,
-                           uint32_t encoding_id,
-                           uint32_t index,
-                           const AddIndexObservationCallback& callback);
+  void AddIndexObservation(
+      uint32_t metric_id,
+      uint32_t encoding_id,
+      uint32_t index,
+      const AddIndexObservationCallback& callback) override;
 
-  void SendObservations(const SendObservationsCallback& callback);
+  void AddMultipartObservation(
+      uint32_t metric_id,
+      fidl::Array<ObservationValuePtr> observation,
+      const AddMultipartObservationCallback& callback) override;
+
+  void SendObservations(const SendObservationsCallback& callback) override;
 
   Encoder encoder_;
   ShippingManager* shipping_manager_;  // not owned
@@ -135,13 +157,10 @@ CobaltEncoderImpl::CobaltEncoderImpl(
     : encoder_(std::move(project_context), std::move(client_secret)),
       shipping_manager_(shipping_manager) {}
 
-void CobaltEncoderImpl::AddStringObservation(
-    uint32_t metric_id,
-    uint32_t encoding_id,
-    const fidl::String& observation,
-    const AddStringObservationCallback& callback) {
-  auto result = encoder_.EncodeString(metric_id, encoding_id, observation);
-  switch (result.status) {
+template <class CB>
+void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
+                                              CB callback) {
+  switch (result->status) {
     case Encoder::kOK:
       break;
     case Encoder::kInvalidArguments:
@@ -150,13 +169,39 @@ void CobaltEncoderImpl::AddStringObservation(
     case Encoder::kInvalidConfig:
     case Encoder::kEncodingFailed:
       callback(Status::INTERNAL_ERROR);
-      FXL_LOG(WARNING) << "Cobalt internal error: " << result.status;
+      FXL_LOG(WARNING) << "Cobalt internal error: " << result->status;
       return;
   }
 
   Status status = ToCobaltStatus(shipping_manager_->AddObservation(
-      *result.observation, std::move(result.metadata)));
+      *(result->observation), std::move(result->metadata)));
   callback(status);
+}
+void CobaltEncoderImpl::AddStringObservation(
+    uint32_t metric_id,
+    uint32_t encoding_id,
+    const fidl::String& observation,
+    const AddStringObservationCallback& callback) {
+  auto result = encoder_.EncodeString(metric_id, encoding_id, observation);
+  AddEncodedObservation(&result, callback);
+}
+
+void CobaltEncoderImpl::AddIntObservation(
+    uint32_t metric_id,
+    uint32_t encoding_id,
+    const int64_t observation,
+    const AddIntObservationCallback& callback) {
+  auto result = encoder_.EncodeInt(metric_id, encoding_id, observation);
+  AddEncodedObservation(&result, callback);
+}
+
+void CobaltEncoderImpl::AddDoubleObservation(
+    uint32_t metric_id,
+    uint32_t encoding_id,
+    const double observation,
+    const AddIntObservationCallback& callback) {
+  auto result = encoder_.EncodeDouble(metric_id, encoding_id, observation);
+  AddEncodedObservation(&result, callback);
 }
 
 void CobaltEncoderImpl::AddIndexObservation(
@@ -165,22 +210,46 @@ void CobaltEncoderImpl::AddIndexObservation(
     uint32_t index,
     const AddIndexObservationCallback& callback) {
   auto result = encoder_.EncodeIndex(metric_id, encoding_id, index);
-  switch (result.status) {
-    case Encoder::kOK:
-      break;
-    case Encoder::kInvalidArguments:
-      callback(Status::INVALID_ARGUMENTS);
-      return;
-    case Encoder::kInvalidConfig:
-    case Encoder::kEncodingFailed:
-      callback(Status::INTERNAL_ERROR);
-      FXL_LOG(WARNING) << "Cobalt internal error: " << result.status;
-      return;
-  }
+  AddEncodedObservation(&result, callback);
+}
 
-  Status status = ToCobaltStatus(shipping_manager_->AddObservation(
-      *result.observation, std::move(result.metadata)));
-  callback(status);
+void CobaltEncoderImpl::AddMultipartObservation(
+    uint32_t metric_id,
+    fidl::Array<ObservationValuePtr> observation,
+    const AddMultipartObservationCallback& callback) {
+  Encoder::Value value;
+  for (const auto& obs_val : observation) {
+    switch (obs_val->value->which()) {
+      case Value::Tag::STRING_VALUE: {
+        value.AddStringPart(obs_val->encoding_id, obs_val->name,
+                            obs_val->value->get_string_value());
+        break;
+      }
+      case Value::Tag::INT_VALUE: {
+        value.AddIntPart(obs_val->encoding_id, obs_val->name,
+                         obs_val->value->get_int_value());
+        break;
+      }
+      case Value::Tag::DOUBLE_VALUE: {
+        value.AddDoublePart(obs_val->encoding_id, obs_val->name,
+                            obs_val->value->get_double_value());
+        break;
+      }
+      case Value::Tag::INDEX_VALUE: {
+        value.AddIndexPart(obs_val->encoding_id, obs_val->name,
+                           obs_val->value->get_index_value());
+        break;
+      }
+      default:
+        callback(Status::INVALID_ARGUMENTS);
+        FXL_LOG(ERROR)
+            << "Cobalt: Unrecognized value type for observation part "
+            << obs_val->name;
+        return;
+    }
+  }
+  auto result = encoder_.Encode(metric_id, value);
+  AddEncodedObservation(&result, callback);
 }
 
 void CobaltEncoderImpl::SendObservations(
@@ -389,8 +458,8 @@ ClientSecret CobaltApp::getClientSecret() {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  setenv(
-      "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem", 1);
+  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem",
+         1);
 
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

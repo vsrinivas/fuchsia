@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_BIN_COBALT_CONFIG_H_
+#define GARNET_BIN_COBALT_CONFIG_H_
+
 // This file contains copies of the contents of the config registration
 // files that are located in the Cobalt repo. The Cobalt client and
 // server need to share common configuration files and this constitutes
@@ -69,7 +72,7 @@ element {
     key: "event-index"
     value {
       description: "The index of the rare event that occurred."
-       data_type: INDEX
+      data_type: INDEX
     }
   }
 }
@@ -99,6 +102,35 @@ element {
   }
 }
 
+#####################################################################
+# Metric (1, 101, 2)
+# Name:  Module pairs in story
+# Description: Records pairs of modules (a, b) such that |a| was already part
+#              of a story at the time that |b| was added to that story.
+# Parts: This metric has two parts: one for the existing module and one
+#
+# Notes: We will use the no-op encoding with both parts.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 101
+  id: 2
+  name: "Module pairs in story"
+  description: "Records pairs of modules (a, b) such that |a| was already part of a story at the time that |b| was added to that story."
+  time_zone_policy: UTC
+  parts {
+    key: "existing_module"
+    value {
+      description: "The URL of a module that was already in the story"
+    }
+  }
+  parts {
+    key: "added_module"
+    value {
+      description: "The URL of the module that was addded to a story"
+    }
+  }
+}
 
 
 ################################################################################
@@ -217,6 +249,82 @@ element {
   }
 }
 
+#####################################################################
+# Metric (1, 2, 4)
+# Name:  Module pairs in story
+# Description: Records pairs of modules (a, b) such that |a| was already part
+#              of a story at the time that |b| was added to that story.
+# Parts: This metric has two parts: one for the existing module and one
+#
+# Notes: We will use the no-op encoding with both parts.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 4
+  name: "Module pairs in story"
+  description: "Records pairs of modules (a, b) such that |a| was already part of a story at the time that |b| was added to that story."
+  time_zone_policy: UTC
+  parts {
+    key: "existing_module"
+    value {
+      description: "The URL of a module that was already in the story"
+    }
+  }
+  parts {
+    key: "added_module"
+    value {
+      description: "The URL of the module that was addded to a story"
+    }
+  }
+}
+
+#####################################################################
+# Metric (1, 2, 5)
+# Name:  Num_stars_in_sky
+# Description: Records the number of stars in the sky each time we count.
+# Parts: This metric has one part.
+# Notes: We will use the no-op encoding.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 5
+  name: "Num_stars_in_sky"
+  description: "Records the number of stars in the sky each time we count."
+  time_zone_policy: UTC
+  parts {
+    key: "num_stars"
+    value {
+      description: "The number of stars."
+      data_type: INT
+    }
+  }
+}
+
+#####################################################################
+# Metric (1, 2, 6)
+# Name:  Average frob read time
+# Description: Records the average time in seconds of all frob reads in the last hour.
+# Parts: This metric has one part.
+# Notes: We will use the no-op encoding.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 6
+  name: "Average frob read time"
+  description: "Records the average time in seconds of all frob reads in the last hour."
+  time_zone_policy: UTC
+  parts {
+    key: "avg_time_s"
+    value {
+      description: "Average time in seconds."
+      data_type: DOUBLE
+    }
+  }
+}
+
 )";
 
 // This must be kept in sync with registered_encodings.txt in the Cobalt repo.
@@ -296,6 +404,18 @@ element {
   }
 }
 
+#####################################################################
+# EncodingConfig(1, 101, 2)
+# Name:  NoOp encoding
+# Description:  Observations are sent unencoded.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 101
+  id: 2
+  no_op_encoding {
+  }
+}
 
 ################################################################################
 #      ***  NOTICE: Below this line are testing-only projects. ***
@@ -396,6 +516,21 @@ element {
   }
 }
 
+#####################################################################
+# EncodingConfig(1, 2, 4)
+# Name:  NoOp encoding
+# Description:  Observations are sent unencoded.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 4
+  no_op_encoding {
+  }
+}
+
 )";
 
 }  // namespace cobalt
+
+#endif  // GARNET_BIN_COBALT_CONFIG_H_

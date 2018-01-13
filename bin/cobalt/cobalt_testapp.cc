@@ -28,6 +28,10 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
 
+using cobalt::ObservationValue;
+using cobalt::ObservationValuePtr;
+using fidl::Array;
+
 // Command-line flags
 
 // Don't use the network. Default=false (i.e. do use the network.)
@@ -61,6 +65,20 @@ const std::string kAModuleUri = "www.cobalt_test_app.com";
 const uint32_t kRareEventIndexMetricId = 3;
 const uint32_t kRareEventIndexEncodingId = 3;
 constexpr uint32_t kRareEventIndicesToUse[] = {0, 1, 2, 6};
+
+// For the module pairs test
+const uint32_t kModulePairsMetricId = 4;
+const uint32_t kModulePairsEncodingId = 4;
+const std::string kExistingModulePartName = "existing_module";
+const std::string kAddedModulePartName = "added_module";
+
+// For the num-stars-in-sky test
+const uint32_t kNumStarsMetricId = 5;
+const uint32_t kNumStarsEncodingId = 4;
+
+// For the average-read-time test
+const uint32_t kAvgReadTimeMetricId = 6;
+const uint32_t kAvgReadTimeEncodingId = 4;
 
 std::string StatusToString(cobalt::Status status) {
   switch (status) {
@@ -131,6 +149,12 @@ class CobaltTestApp {
 
   bool TestModuleUris();
 
+  bool TestNumStarsInSky();
+
+  bool TestAvgReadTime();
+
+  bool TestModulePairs();
+
   bool TestRareEventWithStringsUsingBlockUntilEmpty();
 
   bool TestRareEventWithIndicesUsingServiceFromEnvironment();
@@ -138,47 +162,58 @@ class CobaltTestApp {
   bool RequestSendSoonTests();
 
   // Synchronously invokes AddStringObservation() |num_observations_per_batch_|
-  // times using the given parameters. Invokes SendObservations() if
-  // |use_network_| is true. Returns true just in case everything succeeds.
-  // |use_request_send_soon| specifies the strategy used to determine whether
-  // or not the send succeeded. If |use_request_send_soon| is true then we
-  // use the method RequestSendSoon(). Otherwise we use the method
-  // BlockUntilEmpty() and then we query NumSendAttempts() and
-  // FailedSendAttempts().
+  // times using the given parameters. Then invokes CheckForSuccessfulSend().
   bool EncodeStringAndSend(uint32_t metric_id,
                            uint32_t encoding_config_id,
                            std::string val,
                            bool use_request_send_soon);
 
+  // Synchronously invokes AddIntObservation() |num_observations_per_batch_|
+  // times using the given parameters.Then invokes CheckForSuccessfulSend().
+  bool EncodeIntAndSend(uint32_t metric_id,
+                        uint32_t encoding_config_id,
+                        int32_t val,
+                        bool use_request_send_soon);
+
+  // Synchronously invokes AddDoubleObservation() |num_observations_per_batch_|
+  // times using the given parameters.Then invokes CheckForSuccessfulSend().
+  bool EncodeDoubleAndSend(uint32_t metric_id,
+                           uint32_t encoding_config_id,
+                           double val,
+                           bool use_request_send_soon);
+
   // Synchronously invokes AddIndexObservation() |num_observations_per_batch_|
-  // times using the given parameters. Invokes SendObservations() if
-  // |use_network_| is true. Returns true just in case everything succeeds.
-  // |use_request_send_soon| specifies the strategy used to determine whether
-  // or not the send succeeded. If |use_request_send_soon| is true then we
-  // use the method RequestSendSoon(). Otherwise we use the method
-  // BlockUntilEmpty() and then we query NumSendAttempts() and
-  // FailedSendAttempts().
+  // times using the given parameters. Then invokes CheckForSuccessfulSend().
   bool EncodeIndexAndSend(uint32_t metric_id,
                           uint32_t encoding_config_id,
                           uint32_t index,
                           bool use_request_send_soon);
 
-  // Synchronously invokes either AddStringObservation() or
-  // AddIndexObservation() (depending on the parameter |use_index|)
-  // |num_observations_per_batch_| times using the given parameters. Invokes
-  // SendObservations() if |use_network_| is true. Returns true just in case
-  // everything succeeds.
-  // |use_request_send_soon| specifies the strategy used to determine whether
-  // or not the send succeeded. If |use_request_send_soon| is true then we
-  // use the method RequestSendSoon(). Otherwise we use the method
-  // BlockUntilEmpty() and then we query NumSendAttempts() and
+  // Synchronously invokes AddMultipartObservation() for an observation with
+  // two string parts, |num_observations_per_batch_| times, using the given
+  // parameters. Then invokes CheckForSuccessfulSend().
+  bool EncodeStringPairAndSend(uint32_t metric_id,
+                               std::string part0,
+                               uint32_t encoding_id0,
+                               std::string val0,
+                               std::string part1,
+                               uint32_t encoding_id1,
+                               std::string val1,
+                               bool use_request_send_soon);
+
+  // If |use_network_| is false this method returns true immediately.
+  // Otherwise, uses one of two strategies to cause the Observations that
+  // have already been given to the Cobalt Client to be sent to the Shuffler
+  // and then checks the status of the send. Returns true just in case the
+  // send succeeds.
+  //
+  // |use_request_send_soon| specifies the strategy. If true then we
+  // use the method RequestSendSoon() to ask the Cobalt Client to send the
+  // Observations soon and return the status. Otherwise we use the method
+  // BlockUntilEmpty() to wait for the CobaltClient to have sent all the
+  // Observations it is holding and then we query NumSendAttempts() and
   // FailedSendAttempts().
-  bool EncodeAndSend(uint32_t metric_id,
-                     uint32_t encoding_config_id,
-                     bool use_index,
-                     std::string val,
-                     uint32_t index,
-                     bool use_request_send_soon);
+  bool CheckForSuccessfulSend(bool use_request_send_soon);
 
   bool use_network_;
   bool do_environment_test_;
@@ -309,6 +344,15 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestModuleUris()) {
     return false;
   }
+  if (!TestNumStarsInSky()) {
+    return false;
+  }
+  if (!TestAvgReadTime()) {
+    return false;
+  }
+  if (!TestModulePairs()) {
+    return false;
+  }
   return true;
 }
 
@@ -349,6 +393,39 @@ bool CobaltTestApp::TestModuleUris() {
   return success;
 }
 
+bool CobaltTestApp::TestNumStarsInSky() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestNumStarsInSky";
+  bool use_request_send_soon = true;
+  bool success = EncodeIntAndSend(kNumStarsMetricId, kNumStarsEncodingId, 42,
+                                  use_request_send_soon);
+  FXL_LOG(INFO) << "TestNumStarsInSky : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestAvgReadTime() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestAvgReadTime";
+  bool use_request_send_soon = true;
+  bool success =
+      EncodeDoubleAndSend(kAvgReadTimeMetricId, kAvgReadTimeEncodingId, 3.14159,
+                          use_request_send_soon);
+  FXL_LOG(INFO) << "TestAvgReadTime : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestModulePairs() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestModuleUriPairs";
+  bool use_request_send_soon = true;
+  bool success = EncodeStringPairAndSend(
+      kModulePairsMetricId, kExistingModulePartName, kModulePairsEncodingId,
+      "ModA", kAddedModulePartName, kModulePairsEncodingId, "ModB",
+      use_request_send_soon);
+  FXL_LOG(INFO) << "TestModuleUriPairs : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
 bool CobaltTestApp::TestRareEventWithStringsUsingBlockUntilEmpty() {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "TestRareEventWithStringsUsingBlockUntilEmpty";
@@ -386,49 +463,114 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
                                         uint32_t encoding_config_id,
                                         std::string val,
                                         bool use_request_send_soon) {
-  return EncodeAndSend(metric_id, encoding_config_id, false, val, 0,
-                       use_request_send_soon);
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    encoder_->AddStringObservation(metric_id, encoding_config_id, val, &status);
+    FXL_VLOG(1) << "AddStringObservation(" << val << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddStringObservation() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
+                                     uint32_t encoding_config_id,
+                                     int32_t val,
+                                     bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    encoder_->AddIntObservation(metric_id, encoding_config_id, val, &status);
+    FXL_VLOG(1) << "AddIntObservation(" << val << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddIntObservation() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
+                                        uint32_t encoding_config_id,
+                                        double val,
+                                        bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    encoder_->AddDoubleObservation(metric_id, encoding_config_id, val, &status);
+    FXL_VLOG(1) << "AddDoubleObservation(" << val << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddDoubleObservation() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
 }
 
 bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
                                        uint32_t encoding_config_id,
                                        uint32_t index,
                                        bool use_request_send_soon) {
-  return EncodeAndSend(metric_id, encoding_config_id, true, "", index,
-                       use_request_send_soon);
-}
-
-bool CobaltTestApp::EncodeAndSend(uint32_t metric_id,
-                                  uint32_t encoding_config_id,
-                                  bool use_index,
-                                  std::string val,
-                                  uint32_t index,
-                                  bool use_request_send_soon) {
-  // Invoke Add*Observation() multiple times.
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    if (use_index) {
-      encoder_->AddIndexObservation(metric_id, encoding_config_id, index,
-                                    &status);
-      FXL_VLOG(1) << "AddIndex(" << index << ") => " << StatusToString(status);
-    } else {
-      encoder_->AddStringObservation(metric_id, encoding_config_id, val,
-                                     &status);
-      FXL_VLOG(1) << "AddString(" << val << ") => " << StatusToString(status);
-    }
+    encoder_->AddIndexObservation(metric_id, encoding_config_id, index,
+                                  &status);
+    FXL_VLOG(1) << "AddIndexObservation(" << index << ") => "
+                << StatusToString(status);
     if (status != cobalt::Status::OK) {
-      FXL_LOG(ERROR) << "Add*Observation() => " << StatusToString(status);
+      FXL_LOG(ERROR) << "AddIndexObservation() => " << StatusToString(status);
       return false;
     }
   }
 
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
+                                            std::string part0,
+                                            uint32_t encoding_id0,
+                                            std::string val0,
+                                            std::string part1,
+                                            uint32_t encoding_id1,
+                                            std::string val1,
+                                            bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    auto parts = Array<ObservationValuePtr>::New(2);
+    parts[0] = ObservationValue::New();
+    parts[0]->name = part0;
+    parts[0]->encoding_id = encoding_id0;
+    parts[0]->value = cobalt::Value::New();
+    parts[0]->value->set_string_value(val0);
+    parts[1] = ObservationValue::New();
+    parts[1]->name = part1;
+    parts[1]->encoding_id = encoding_id1;
+    parts[1]->value = cobalt::Value::New();
+    parts[1]->value->set_string_value(val1);
+    encoder_->AddMultipartObservation(metric_id, std::move(parts), &status);
+    FXL_VLOG(1) << "AddMultipartObservation(" << val0 << ", " << val1 << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddIndexObservation() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::CheckForSuccessfulSend(bool use_request_send_soon) {
   if (!use_network_) {
     FXL_LOG(INFO) << "Not using the network because --no_network_for_testing "
                      "was passed.";
     return true;
   }
-
-  // Send the observations.
 
   if (use_request_send_soon) {
     // Use the request-send-soon strategy to check the result of the send.
