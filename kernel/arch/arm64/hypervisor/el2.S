@@ -201,7 +201,7 @@
     hvc_jump .Linit_table 5
 .Linit_table:
     b el2_hvc_psci
-    b el2_mexec
+    b el2_hvc_mexec
     b el2_hvc_on
     b el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
@@ -215,13 +215,6 @@
     mov x9, \return_code
     str x9, [sp, 8]
 
-    // Check ESR_EL2.EC to determine whether the exception was due to a
-    // floating-point trap.
-    mrs x9, esr_el2
-    lsr x9, x9, ESR_EL2_EC_SHIFT
-    cmp x9, ESR_EL2_EC_FP
-    b.eq el2_fp_resume
-
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
     mrs x9, vttbr_el2
@@ -234,7 +227,7 @@
     hvc_jump .L\name\()_exec_table 6
 .L\name\()_exec_table:
     b el2_hvc_psci
-    b el2_mexec
+    b el2_hvc_mexec
     b el2_hvc_off
     b el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
@@ -363,7 +356,7 @@ FUNCTION_LABEL(el2_hvc_psci)
     smc 0
     eret
 
-FUNCTION_LABEL(el2_mexec)
+FUNCTION_LABEL(el2_hvc_mexec)
     br x0
 
 // zx_status_t arm64_el2_off();
@@ -469,6 +462,13 @@ FUNCTION_LABEL(el2_hvc_resume)
     eret
 
 FUNCTION_LABEL(el2_guest_exit)
+    // Check ESR_EL2.EC to determine whether the exception was due to a
+    // floating-point trap.
+    mrs x9, esr_el2
+    lsr x9, x9, ESR_EL2_EC_SHIFT
+    cmp x9, ESR_EL2_EC_FP
+    b.eq el2_fp_resume
+
     // Load El2State from tpidr_el2.
     mrs x9, tpidr_el2
 
@@ -482,19 +482,19 @@ FUNCTION_LABEL(el2_guest_exit)
     host_state ldp, HS_X18
 
     mrs x10, cptr_el2
-    tbnz x10, CPTR_EL2_TFP_SHIFT, .Lfp_trap_off
+    tbz x10, CPTR_EL2_TFP_SHIFT, .Lfp_restore
 
-    // Restore floating-point state if it was modified.
-    fp_state stp, GS_FP_STATE
-    fp_state ldp, HS_FP_STATE
-    b .Ltrap_off
-
-.Lfp_trap_off:
     // Disable floating-point traps.
     mov x10, CPTR_EL2_RES1
     msr cptr_el2, x10
+    b .Lfp_skip
 
-.Ltrap_off:
+.Lfp_restore:
+    // Restore floating-point state if it was modified.
+    fp_state stp, GS_FP_STATE
+    fp_state ldp, HS_FP_STATE
+
+.Lfp_skip:
     // Set the hypervisor control register.
     // Disable guest traps, and ensure EL1 is arm64.
     mov x10, HCR_EL2_RW
