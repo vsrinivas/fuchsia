@@ -8,7 +8,6 @@
 #include <queue>
 
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 class Message;

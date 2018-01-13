@@ -6,8 +6,6 @@
 
 #include <zircon/assert.h>
 
-#include "lib/fxl/logging.h"
-
 namespace fidl {
 namespace internal {
 

@@ -16,10 +16,6 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 

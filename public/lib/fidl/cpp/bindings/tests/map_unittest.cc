@@ -13,7 +13,6 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
-#include "lib/fxl/arraysize.h"
 
 namespace fidl {
 namespace test {
@@ -330,10 +329,8 @@ TEST(MapTest, Serialization_MapWithScopedEnumKeys) {
   };
   static const uint32_t TEST_VALS[] = {17, 29, 5, 61};
 
-  ASSERT_EQ(arraysize(TEST_KEYS), arraysize(TEST_VALS));
-
   Map<TestEnum, uint32_t> test_map;
-  for (size_t i = 0; i < arraysize(TEST_KEYS); ++i) {
+  for (size_t i = 0; i < 4; ++i) {
     test_map[TEST_KEYS[i]] = TEST_VALS[i];
   }
 
@@ -372,10 +369,8 @@ TEST(MapTest, Serialization_MapWithScopedEnumVals) {
       TestEnum::E0, TestEnum::E2, TestEnum::E1, TestEnum::E3,
   };
 
-  ASSERT_EQ(arraysize(TEST_KEYS), arraysize(TEST_VALS));
-
   Map<uint32_t, TestEnum> test_map;
-  for (size_t i = 0; i < arraysize(TEST_KEYS); ++i) {
+  for (size_t i = 0; i < 4; ++i) {
     test_map[TEST_KEYS[i]] = TEST_VALS[i];
   }
 

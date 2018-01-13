@@ -7,6 +7,8 @@
 
 #include "lib/ui/scenic/client/session.h"
 
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace scenic_lib {

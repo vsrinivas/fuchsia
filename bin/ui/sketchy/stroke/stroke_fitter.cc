@@ -4,6 +4,8 @@
 
 #include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
 
+#include "lib/fxl/logging.h"
+
 namespace {
 
 constexpr float kEpsilon = 6e-6;

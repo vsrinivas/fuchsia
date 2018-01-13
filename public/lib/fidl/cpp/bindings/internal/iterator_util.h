@@ -11,7 +11,6 @@
 
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/map.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {

@@ -9,6 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/service_namespace.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 

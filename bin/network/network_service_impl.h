@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include "lib/network/fidl/network_service.fidl.h"
+#include <zx/channel.h>
 
 #include <list>
 #include <queue>
@@ -13,7 +13,8 @@
 #include "garnet/bin/network/url_loader_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "zx/channel.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace network {
 

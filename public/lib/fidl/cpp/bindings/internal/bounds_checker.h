@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {

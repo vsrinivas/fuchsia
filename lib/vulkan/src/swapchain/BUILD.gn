@@ -25,5 +25,6 @@ shared_library("swapchain") {
     "$loader_build_root/layers:layer_common",
     "$magma_build_root/src/display_pipe",
     "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/fxl",
   ]
 }

@@ -11,7 +11,6 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/strong_binding.h"
-#include "lib/fxl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/versioning_test_service.fidl.h"
 
 namespace fidl {

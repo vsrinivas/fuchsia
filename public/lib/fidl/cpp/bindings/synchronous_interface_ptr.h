@@ -15,8 +15,6 @@
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 

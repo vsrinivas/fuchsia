@@ -10,7 +10,6 @@
 #include <algorithm>
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {

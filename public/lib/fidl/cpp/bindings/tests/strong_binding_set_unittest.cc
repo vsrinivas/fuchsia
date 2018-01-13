@@ -7,7 +7,6 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fxl/macros.h"
 #include "mojo/public/cpp/utility/run_loop.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 

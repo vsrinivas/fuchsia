@@ -20,7 +20,6 @@
 #include "lib/fidl/cpp/bindings/internal/map_data_internal.h"
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 template <typename T>

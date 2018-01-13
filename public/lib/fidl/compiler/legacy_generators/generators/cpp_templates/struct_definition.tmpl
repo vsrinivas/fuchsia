@@ -41,7 +41,7 @@
       {{kind.value_kind|get_map_validate_params_ctor_args|indent(6)}});
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
               ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
-              bounds_checker, &{{name}}_validate_params, {{err_string}}); 
+              bounds_checker, &{{name}}_validate_params, {{err_string}});
   if (validate_retval != ::fidl::internal::ValidationError::NONE) {
 {%-   elif kind|is_struct_kind %}
   auto validate_retval = {{kind|get_name_for_kind}}::Data_::Validate(
@@ -55,7 +55,7 @@
 {%-   else %}
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
           ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
-          bounds_checker, {{err_string}}); 
+          bounds_checker, {{err_string}});
   if (validate_retval != ::fidl::internal::ValidationError::NONE) {
 {%-   endif %}
     return validate_retval;
@@ -97,7 +97,7 @@
     ::fidl::internal::BoundsChecker* bounds_checker,
     std::string* err) {
   ::fidl::internal::ValidationError retval;
-  
+
   if (!data)
     return ::fidl::internal::ValidationError::NONE;
 
@@ -166,7 +166,7 @@
 
 void {{class_name}}::EncodePointersAndHandles(
     std::vector<zx_handle_t>* handles) {
-  FXL_CHECK(header_.version == {{struct.versions[-1].version}});
+  ZX_ASSERT(header_.version == {{struct.versions[-1].version}});
 {%- for pf in struct.packed.packed_fields_in_ordinal_order %}
 {%-   if pf.field.kind|is_union_kind %}
   {{pf.field.name}}.EncodePointersAndHandles(handles);

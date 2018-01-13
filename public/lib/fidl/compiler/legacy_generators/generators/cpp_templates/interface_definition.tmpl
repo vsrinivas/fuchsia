@@ -39,13 +39,14 @@ class {{class_name}}_{{method.name}}_ForwardToCallback
   {{class_name}}_{{method.name}}_ForwardToCallback(
       const {{class_name}}::{{method.name}}Callback& callback)
       : callback_(callback) {
-    FXL_DCHECK(callback_) << "Supplied response callback handler must not be "
-                             " empty for {{class_name}}.{{method.name}}";
+    ZX_DEBUG_ASSERT_MSG(callback_, "Supplied response callback handler must not be "
+                             " empty for {{class_name}}.{{method.name}}");
   }
   bool Accept(::fidl::Message* message) override;
  private:
   {{class_name}}::{{method.name}}Callback callback_;
-  FXL_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ForwardToCallback);
+  {{class_name}}_{{method.name}}_ForwardToCallback(const {{class_name}}_{{method.name}}_ForwardToCallback&) = delete;
+  {{class_name}}_{{method.name}}_ForwardToCallback& operator=(const {{class_name}}_{{method.name}}_ForwardToCallback&) = delete;
 };
 bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
     ::fidl::Message* message) {
@@ -64,7 +65,7 @@ bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
 {{proxy_name}}::{{proxy_name}}(::fidl::MessageReceiverWithResponder* receiver)
     : receiver_(receiver) {
 {# receiver_ is unused when there are no generated methods. Silence warnings. #}
-  (void)receiver_;      
+  (void)receiver_;
 }
 
 {#--- Proxy definitions #}
@@ -98,7 +99,7 @@ void {{proxy_name}}::{{method.name}}(
   bool ok = receiver_->Accept(builder.message());
   // This return value may be ignored as !ok implies the Connector has
   // encountered an error, which will be visible through other means.
-  FXL_ALLOW_UNUSED_LOCAL(ok);
+  (void) ok;
 {%- endif %}
 }
 {%- endfor %}
@@ -132,9 +133,9 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
     // the pipe so the calling application knows to stop waiting for a reply.
     if (callback_was_dropped) {
       delete responder_;
-      FXL_DCHECK(false) << "The callback passed to "
+      ZX_DEBUG_ASSERT_MSG(false, "The callback passed to "
           "{{class_name}}::{{method.name}}({%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback) "
-          "was never run.";
+          "was never run.");
     }
   }
 
@@ -152,7 +153,8 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
   uint64_t request_id_;
   mutable ::fidl::MessageReceiverWithStatus* responder_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ProxyToResponder);
+  {{class_name}}_{{method.name}}_ProxyToResponder(const {{class_name}}_{{method.name}}_ProxyToResponder&) = delete;
+  {{class_name}}_{{method.name}}_ProxyToResponder& operator=(const {{class_name}}_{{method.name}}_ProxyToResponder&) = delete;
 };
 
 void {{class_name}}_{{method.name}}_ProxyToResponder::operator()(
@@ -162,7 +164,7 @@ void {{class_name}}_{{method.name}}_ProxyToResponder::operator()(
       static_cast<uint32_t>({{message_name}}), size, request_id_);
   {{build_message(response_params_struct, params_description)}}
   bool ok = responder_->Accept(builder.message());
-  FXL_ALLOW_UNUSED_LOCAL(ok);
+  (void) ok;
   // TODO(darin): !ok returned here indicates a malformed message, and that may
   // be good reason to close the connection. However, we don't have a way to do
   // that from here. We should add a way.
@@ -195,7 +197,7 @@ bool {{class_name}}Stub::Accept(::fidl::Message* message) {
       params->DecodePointersAndHandles(message->mutable_handles());
       {{alloc_params(method.param_struct)|indent(4)}}
       // A null |sink_| means no implementation was bound.
-      FXL_DCHECK(sink_);
+      ZX_DEBUG_ASSERT(sink_);
       sink_->{{method.name}}({{pass_params(method.parameters)}});
       return true;
 {%-     else %}
@@ -227,7 +229,7 @@ bool {{class_name}}Stub::AcceptWithResponder(
               message->request_id(), responder));
       {{alloc_params(method.param_struct)|indent(4)}}
       // A null |sink_| means no implementation was bound.
-      FXL_DCHECK(sink_);
+      ZX_DEBUG_ASSERT(sink_);
       sink_->{{method.name}}(
 {%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback);
       return true;

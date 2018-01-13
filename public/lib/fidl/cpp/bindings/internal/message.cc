@@ -9,8 +9,6 @@
 
 #include <algorithm>
 
-#include "lib/fxl/logging.h"
-
 namespace fidl {
 
 Message::Message() {

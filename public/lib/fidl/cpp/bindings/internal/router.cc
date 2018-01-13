@@ -10,7 +10,6 @@
 #include <utility>
 
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace internal {

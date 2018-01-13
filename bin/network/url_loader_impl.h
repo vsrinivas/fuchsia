@@ -7,6 +7,7 @@
 
 #include "lib/network/fidl/url_loader.fidl.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/url/gurl.h"
 

@@ -8,10 +8,6 @@
 #include <zircon/assert.h>
 #include <zx/time.h>
 
-#include "lib/fxl/compiler_specific.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-
 namespace fidl {
 namespace internal {
 namespace {

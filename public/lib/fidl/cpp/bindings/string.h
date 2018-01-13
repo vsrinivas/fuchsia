@@ -12,7 +12,6 @@
 
 #include "lib/fidl/cpp/bindings/internal/array_internal.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 

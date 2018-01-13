@@ -16,5 +16,6 @@ class {{interface.name}}Proxy
   // Not owned.
   ::fidl::MessageReceiverWithResponder* receiver_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN({{interface.name}}Proxy);
+  {{interface.name}}Proxy(const {{interface.name}}Proxy&) = delete;
+  {{interface.name}}Proxy& operator=(const {{interface.name}}Proxy&) = delete;
 };

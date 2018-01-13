@@ -10,8 +10,6 @@
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
-#include "lib/fxl/compiler_specific.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 

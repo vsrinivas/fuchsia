@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fxl/logging.h"
 #include "lib/images/fidl/image_pipe.fidl.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"

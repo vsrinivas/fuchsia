@@ -10,8 +10,6 @@
 #include "lib/fidl/cpp/bindings/internal/router.h"
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 namespace test {

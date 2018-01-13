@@ -13,8 +13,6 @@
 
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {

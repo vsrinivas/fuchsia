@@ -7,7 +7,6 @@
 #include <zircon/assert.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {

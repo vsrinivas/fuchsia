@@ -16,9 +16,6 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
 #include "lib/fidl/cpp/bindings/macros.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 
@@ -157,20 +154,6 @@ class InterfacePtr {
   // channel.
   bool WaitForIncomingResponse() {
     return WaitForIncomingResponseUntil(zx::time::infinite());
-  }
-
-  // Blocks the current thread until the next incoming response callback
-  // arrives, an error occurs, or the timeout exceeded. Returns |true| if a
-  // response arrived, or |false| otherwise. Use |encountered_error| to know
-  // if an error occurred, of if the timeout exceeded.
-  //
-  // This method may only be called after the InterfacePtr has been bound to a
-  // channel.
-  bool WaitForIncomingResponseWithTimeout(fxl::TimeDelta timeout) {
-    zx::time deadline = timeout == fxl::TimeDelta::Max()
-        ? zx::time::infinite() :
-          zx::deadline_after(zx::duration(timeout.ToNanoseconds()));
-    return WaitForIncomingResponseUntil(deadline);
   }
 
   // Blocks the current thread until the next incoming response callback

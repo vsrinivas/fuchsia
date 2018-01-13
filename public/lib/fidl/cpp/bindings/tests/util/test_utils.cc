@@ -9,8 +9,6 @@
 
 #include <string>
 
-#include "lib/fxl/logging.h"
-
 namespace fidl {
 namespace test {
 

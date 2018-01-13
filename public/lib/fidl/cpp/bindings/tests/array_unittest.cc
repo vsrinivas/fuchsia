@@ -11,7 +11,6 @@
 #include "lib/fidl/cpp/bindings/tests/util/iterator_test_util.h"
 #include "lib/fidl/compiler/interfaces/tests/test_arrays.fidl.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
-#include "lib/fxl/arraysize.h"
 
 namespace fidl {
 namespace test {
@@ -104,7 +103,7 @@ TEST(ArrayTest, Handle) {
   zx::channel handle0;
   zx::channel handle1;
   zx::channel::create(0, &handle0, &handle1);
-  
+
   auto handles = Array<zx::channel>::New(2);
   handles[0] = std::move(handle0);
   handles[1].reset(handle1.release());
@@ -285,12 +284,12 @@ TEST(ArrayTest, Serialization_ArrayOfScopedEnum) {
       TestEnum::E2, TestEnum::E2, TestEnum::E2, TestEnum::E0,
   };
 
-  auto array = Array<TestEnum>::New(arraysize(TEST_VALS));
+  auto array = Array<TestEnum>::New(8u);
   for (size_t i = 0; i < array.size(); ++i)
     array[i] = TEST_VALS[i];
 
   size_t size = GetSerializedSize_(array);
-  EXPECT_EQ(8U + (arraysize(TEST_VALS) * sizeof(int32_t)), size);
+  EXPECT_EQ(8U + (8u * sizeof(int32_t)), size);
 
   FixedBufferForTesting buf(size);
   Array_Data<int32_t>* data = nullptr;
@@ -300,7 +299,7 @@ TEST(ArrayTest, Serialization_ArrayOfScopedEnum) {
   Array<TestEnum> array2;
   Deserialize_(data, &array2);
 
-  EXPECT_EQ(arraysize(TEST_VALS), array2.size());
+  EXPECT_EQ(8u, array2.size());
   for (size_t i = 0; i < array2.size(); ++i)
     EXPECT_EQ(TEST_VALS[i], array2[i]);
 }

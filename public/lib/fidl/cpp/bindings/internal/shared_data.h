@@ -5,8 +5,6 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 
-#include "lib/fxl/macros.h"
-
 namespace fidl {
 namespace internal {
 

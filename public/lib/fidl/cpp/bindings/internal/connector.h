@@ -8,11 +8,9 @@
 #include <async/auto_wait.h>
 #include <zx/channel.h>
 
+#include <functional>
+
 #include "lib/fidl/cpp/bindings/message.h"
-#include "lib/fxl/compiler_specific.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 namespace internal {

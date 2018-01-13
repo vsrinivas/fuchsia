@@ -87,14 +87,11 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
   if (::fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
                                                &response_err)
         != ::fidl::internal::ValidationError::NONE) {
-    FXL_LOG(WARNING) << response_err;
     return false;
   }
 
 {#- TODO(vardhan): Add support for synchronous control messages. #}
   if (response_msg.name() != msg_name) {
-    FXL_LOG(ERROR) << "Expecting response for message = " << msg_name <<
-                       ", but received message = " << response_msg.name();
     return false;
   }
 

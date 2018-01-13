@@ -8,7 +8,6 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/fxl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
 namespace fidl {

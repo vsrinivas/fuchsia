@@ -11,8 +11,6 @@
 #include "lib/fidl/cpp/bindings/internal/shared_data.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace fidl {
 namespace internal {

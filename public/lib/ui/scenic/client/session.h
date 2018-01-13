@@ -5,15 +5,15 @@
 #ifndef LIB_UI_SCENIC_CLIENT_SESSION_H_
 #define LIB_UI_SCENIC_CLIENT_SESSION_H_
 
-#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <zx/event.h>
 
 #include <functional>
 
-#include <zx/event.h>
-
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scenic_lib {
 

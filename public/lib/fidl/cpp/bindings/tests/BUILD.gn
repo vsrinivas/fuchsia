@@ -13,6 +13,7 @@ executable("lib_fidl_cpp_tests") {
 
   deps = [
     ":test_sources",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 }
@@ -56,10 +57,6 @@ source_set("test_sources") {
     "util/test_utils.h",
     "util/test_waiter.cc",
     "util/test_waiter.h",
-
-    # TODO(vardhan): Fix the following unittests:
-    # "validation_unittest.cc",
-    # "synchronous_interface_ptr_unittest.cc",
   ]
 
   public_deps = [

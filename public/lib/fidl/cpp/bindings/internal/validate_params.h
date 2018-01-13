@@ -5,8 +5,6 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 
-#include "lib/fxl/macros.h"
-
 namespace fidl {
 namespace internal {
 

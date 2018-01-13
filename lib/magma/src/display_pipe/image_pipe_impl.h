@@ -9,6 +9,7 @@
 
 #include "lib/images/fidl/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fxl/macros.h"
 #include "garnet/lib/magma/src/display_pipe/image.h"
 
 namespace display_pipe {

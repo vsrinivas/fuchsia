@@ -10,7 +10,6 @@
 #include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace test {

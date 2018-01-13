@@ -12,9 +12,6 @@
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
 #include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace test {
@@ -150,7 +147,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < arraysize(kText); ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     AllocMessage message;
     AllocateMessage(kText[i], &message);
 
@@ -162,7 +159,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
 
   PumpMessages();
 
-  for (size_t i = 0; i < arraysize(kText); ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
     AllocMessage message_received;
@@ -180,7 +177,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < arraysize(kText); ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     AllocMessage message;
     AllocateMessage(kText[i], &message);
 
@@ -346,7 +343,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < arraysize(kText); ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     AllocMessage message;
     AllocateMessage(kText[i], &message);
 
@@ -358,7 +355,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
 
   PumpMessages();
 
-  for (size_t i = 0; i < arraysize(kText); ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
     AllocMessage message_received;

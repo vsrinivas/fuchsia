@@ -12,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include "lib/fxl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace fidl {

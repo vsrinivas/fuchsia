@@ -7,6 +7,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "garnet/bin/media/audio_server/gain.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {

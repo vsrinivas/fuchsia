@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 
+#include "lib/fxl/logging.h"
 #include "logging.h"
 
 namespace bluetoothcli {

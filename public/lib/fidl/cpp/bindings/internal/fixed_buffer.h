@@ -6,7 +6,6 @@
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_FIXED_BUFFER_H_
 
 #include "lib/fidl/cpp/bindings/internal/buffer.h"
-#include "lib/fxl/macros.h"
 
 namespace fidl {
 namespace internal {
