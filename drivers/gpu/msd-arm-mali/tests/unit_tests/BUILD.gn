@@ -13,7 +13,7 @@ executable("msd_arm_mali_nonhardware_tests") {
 
   public_deps = [
     ":tests_not_requiring_hardware",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]
 }
@@ -61,6 +61,6 @@ group("test_deps") {
     "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//garnet/lib/magma/tests/mock:mmio",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

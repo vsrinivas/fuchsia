@@ -14,7 +14,7 @@ executable("vkloop") {
 
   public_deps = [
     "//garnet/lib/magma/src/magma_util",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   if (use_vulkan_loader_for_tests) {

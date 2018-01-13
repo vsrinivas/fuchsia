@@ -12,7 +12,7 @@ source_set("test_base") {
   ]
 
   public_deps = [
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -41,6 +41,6 @@ source_set("testing") {
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
 
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

@@ -138,7 +138,7 @@ executable("machina_unittests") {
 
   deps = [
     ":machina",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
   ]

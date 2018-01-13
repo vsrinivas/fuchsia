@@ -79,7 +79,7 @@ source_set("test_sources") {
     ":cpp",
     ":test_support",
     "//garnet/public/lib/fidl/cpp/test",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   public_configs = [ "//garnet/public:config" ]
@@ -96,7 +96,7 @@ executable("fidl_cpp_unittests") {
     ":test_sources",
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/fbl",
   ]

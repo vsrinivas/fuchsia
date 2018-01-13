@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/build/test.gni")
+import("//build/test.gni")
 
 source_set("audio") {
   sources = [
@@ -54,5 +54,6 @@ test("tests") {
     ":audio",
     "//garnet/bin/media/framework_create",
     "//garnet/public/lib/media/timeline",
+    "//third_party/googletest:gtest_main",
   ]
 }

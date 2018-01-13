@@ -67,6 +67,6 @@ source_set("tests") {
 
   deps = [
     ":common",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

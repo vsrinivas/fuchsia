@@ -53,7 +53,7 @@ executable("guest_unittests") {
 
   deps = [
     ":lib",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
 }

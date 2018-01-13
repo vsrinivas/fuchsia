@@ -69,7 +69,7 @@ executable("unittests") {
     # This target also runs these debug_ipc tests.
     "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

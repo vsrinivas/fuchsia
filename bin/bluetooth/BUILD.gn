@@ -47,7 +47,7 @@ executable("bluetooth_unittests") {
   deps = [
     "//garnet/drivers/bluetooth/lib:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

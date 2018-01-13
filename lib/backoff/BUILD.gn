@@ -34,6 +34,6 @@ source_set("unittests") {
 
   deps = [
     ":backoff",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

@@ -24,7 +24,7 @@ executable("e2e_dev") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp/reporting",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -48,6 +48,6 @@ executable("e2e_google_local") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp/reporting",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

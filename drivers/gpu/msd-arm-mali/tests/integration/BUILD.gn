@@ -26,7 +26,7 @@ executable("magma_arm_integration_tests") {
     "//garnet/lib/magma/include:magma_abi",
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   deps = [

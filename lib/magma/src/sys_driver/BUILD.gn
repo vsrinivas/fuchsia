@@ -61,7 +61,7 @@ source_set("pci_driver_gtest") {
 
   deps = [
     "//garnet/lib/magma/src/magma_util/platform:device",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]
 }
@@ -87,7 +87,7 @@ source_set("test_entry_pci") {
   deps += [
     "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
   ]
@@ -116,7 +116,7 @@ source_set("test_entry_pdev") {
   deps += [
     "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
   ]

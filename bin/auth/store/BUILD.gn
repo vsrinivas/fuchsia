@@ -35,7 +35,7 @@ source_set("unittests") {
     ":credentials",
     ":lib",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

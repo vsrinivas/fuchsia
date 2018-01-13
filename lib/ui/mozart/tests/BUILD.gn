@@ -16,7 +16,7 @@ source_set("testing_deps") {
     "//garnet/bin/ui/tests:main",
     "//garnet/lib/ui/mozart",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

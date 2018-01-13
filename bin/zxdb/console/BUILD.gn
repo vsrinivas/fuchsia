@@ -39,7 +39,7 @@ source_set("tests") {
 
   deps = [
     ":console",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

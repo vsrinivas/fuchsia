@@ -28,6 +28,6 @@ source_set("gtest_main") {
   ]
 
   public_deps = [
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

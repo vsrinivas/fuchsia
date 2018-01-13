@@ -12,6 +12,6 @@ source_set("base_unittests") {
 
   deps = [
     "//garnet/public/lib/escher/base:escher_base",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

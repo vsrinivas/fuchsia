@@ -26,7 +26,7 @@ executable("input_apptests") {
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/tests",
     "//garnet/public/lib/ui/tests/mocks",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/hid",
   ]
 }

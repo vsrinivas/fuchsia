@@ -65,6 +65,6 @@ source_set("unittests") {
   deps = [
     ":callback",
     "//garnet/lib/gtest",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

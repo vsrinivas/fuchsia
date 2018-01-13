@@ -46,7 +46,7 @@ source_set("testing") {
     "//garnet/drivers/bluetooth/lib/testing:test_base",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -67,6 +67,6 @@ source_set("tests") {
     ":testing",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/testing",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

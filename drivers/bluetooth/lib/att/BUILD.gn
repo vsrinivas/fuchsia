@@ -39,6 +39,6 @@ source_set("tests") {
     ":att",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/public/lib/fsl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

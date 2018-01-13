@@ -27,6 +27,6 @@ executable("magma_integration_tests") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",  # this is weird
     "$magma_build_root/tests/helper:platform_device_helper",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

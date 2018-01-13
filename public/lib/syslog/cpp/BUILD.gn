@@ -26,7 +26,7 @@ executable("syslog_cpp_unittests") {
   ]
   deps = [
     ":cpp",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
   ]

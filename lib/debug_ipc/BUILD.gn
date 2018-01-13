@@ -54,6 +54,6 @@ source_set("tests") {
   deps = [
     ":agent",
     ":client",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

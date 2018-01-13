@@ -17,7 +17,7 @@ source_set("testing_deps") {
 
   public_deps = [
     "//garnet/bin/ui/ime:common",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

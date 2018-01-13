@@ -21,7 +21,7 @@ source_set("test_main") {
   ]
 
   deps = [
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
@@ -42,7 +42,7 @@ executable("mac_tests") {
   deps = [
     ":test_main",
     "//garnet/lib/wlan/mlme",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
@@ -60,7 +60,7 @@ executable("scanner_tests") {
   deps = [
     ":test_main",
     "//garnet/lib/wlan/mlme",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
@@ -78,7 +78,7 @@ executable("common_tests") {
   deps = [
     ":test_main",
     "//garnet/lib/wlan/common",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]

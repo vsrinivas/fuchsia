@@ -62,7 +62,7 @@ source_set("gtest_vulkan") {
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   public_deps = [
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   if (is_fuchsia) {

@@ -16,7 +16,7 @@ executable("vkext") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:semaphore",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   if (use_vulkan_loader_for_tests) {

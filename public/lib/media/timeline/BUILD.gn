@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/build/test.gni")
+import("//build/test.gni")
 
 source_set("timeline") {
   sources = [
@@ -45,5 +45,6 @@ test("tests") {
   deps = [
     ":timeline",
     "//garnet/public/lib/fsl",
+    "//third_party/googletest:gtest_main",
   ]
 }

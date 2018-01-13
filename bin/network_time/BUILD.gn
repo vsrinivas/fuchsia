@@ -90,7 +90,7 @@ executable("tests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//third_party/boringssl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//third_party/roughtime:client_lib",
   ]
 }

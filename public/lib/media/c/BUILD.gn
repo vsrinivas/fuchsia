@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/build/test.gni")
+import("//build/test.gni")
 import("//build/package.gni")
 
 shared_library("c") {
@@ -28,5 +28,6 @@ test("tests") {
 
   deps = [
     ":c",
+    "//third_party/googletest:gtest_main",
   ]
 }

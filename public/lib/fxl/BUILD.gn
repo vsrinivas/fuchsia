@@ -276,7 +276,7 @@ executable("fxl_unittests") {
     ":fxl_printers",
     "test",
     "test:gtest_main",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
