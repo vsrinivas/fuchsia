@@ -37,6 +37,7 @@
 #include <arch/mp.h>
 
 #include <vm/vm_aspace.h>
+#include <vm/bootreserve.h>
 
 #include <lib/console.h>
 #include <lib/memory_limit.h>
@@ -73,10 +74,6 @@ struct mem_bank {
     uint64_t base_virt;
     uint64_t length;
 };
-
-// save a list of reserved bootloader regions
-const size_t MAX_BOOT_RESERVE_BANKS = 8;
-static mem_bank boot_reserve_banks[MAX_BOOT_RESERVE_BANKS];
 
 // save a list of peripheral memory banks
 const size_t MAX_PERIPH_BANKS = 4;
@@ -206,28 +203,6 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
             //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
             *mem_size = fdt64_to_cpu(*((const uint64_t*)prop_ptr + 1));
         }
-    }
-}
-
-static void platform_preserve_ramdisk(void) {
-    if (!ramdisk_start_phys || !ramdisk_end_phys) {
-        return;
-    }
-
-    dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
-            ramdisk_start_phys, ramdisk_end_phys - 1);
-
-    struct list_node list = LIST_INITIAL_VALUE(list);
-    size_t pages = (ramdisk_end_phys - ramdisk_start_phys + PAGE_SIZE - 1) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(ramdisk_start_phys, pages, &list);
-    if (actual != pages) {
-        panic("unable to reserve ramdisk memory range\n");
-    }
-
-    // mark all of the pages we allocated as WIRED
-    vm_page_t* p;
-    list_for_every_entry (&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_WIRED;
     }
 }
 
@@ -477,9 +452,8 @@ static void platform_mdi_init(const bootdata_t* section) {
         process_mdi_banks(mem_map, [](const auto& b) {
             dprintf(INFO, "boot reserve mem range %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
                     b.num, b.base_phys, b.base_virt, b.length);
-            // only can handle so many reserve banks
-            ASSERT(b.num < fbl::count_of(boot_reserve_banks));
-            boot_reserve_banks[b.num] = b;
+
+            boot_reserve_add_range(b.base_phys, b.length);
         });
     }
     if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
@@ -562,6 +536,9 @@ void platform_early_init(void) {
         panic("no bootdata structure!\n");
     }
 
+    // initialize the boot memory reservation system
+    boot_reserve_init();
+
     // The previous environment passes us a boot structure. It may be a
     // device tree or a bootdata container. We attempt to detect the type of the
     // container and handle it appropriately.
@@ -590,6 +567,12 @@ void platform_early_init(void) {
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
     }
+
+    // add the ramdisk to the boot reserve memory list
+    dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
+            ramdisk_start_phys, ramdisk_end_phys - 1);
+
+    boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
 
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
     // Read cmdline after processing bootdata, which may contain cmdline data.
@@ -622,17 +605,8 @@ void platform_early_init(void) {
         pmm_add_arena(&mem_arena);
     }
 
-    // Allocate memory regions reserved by bootloaders for other functions
-    for (const auto& b : boot_reserve_banks) {
-        if (b.length == 0)
-            break;
-
-        dprintf(INFO, "reserving phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
-                b.base_phys, b.base_phys + b.length - 1);
-        pmm_alloc_range(b.base_phys, b.length / PAGE_SIZE, nullptr);
-    }
-
-    platform_preserve_ramdisk();
+    // tell the boot allocator to mark ranges we've reserved as off limits
+    boot_reserve_wire();
 }
 
 void platform_init(void) {

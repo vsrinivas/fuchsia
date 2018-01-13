@@ -32,6 +32,7 @@
 #include <platform/pc/memory.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootreserve.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
@@ -256,21 +257,13 @@ static void platform_preserve_ramdisk(void) {
     if (bootloader.ramdisk_base == 0) {
         return;
     }
-    struct list_node list = LIST_INITIAL_VALUE(list);
+
     size_t pages = ROUNDUP_PAGE_SIZE(bootloader.ramdisk_size) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(bootloader.ramdisk_base, pages, &list);
-    if (actual != pages) {
-        panic("unable to reserve ramdisk memory range\n");
-    }
-
-    // mark all of the pages we allocated as WIRED
-    vm_page_t* p;
-    list_for_every_entry (&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_WIRED;
-    }
-
     ramdisk_base = paddr_to_physmap(bootloader.ramdisk_base);
     ramdisk_size = pages * PAGE_SIZE;
+
+    // add the ramdisk to the boot reserve list
+    boot_reserve_add_range(bootloader.ramdisk_base, ramdisk_size);
 }
 
 void* platform_get_ramdisk(size_t* size) {
@@ -777,10 +770,17 @@ void platform_early_init(void) {
     platform_save_bootloader_data(true);
 #endif
 
+    /* initialize the boot memory reservation system */
+    boot_reserve_init();
+
+    /* add the ramdisk to the boot reserve list */
+    platform_preserve_ramdisk();
+
     /* initialize physical memory arenas */
     pc_mem_init();
 
-    platform_preserve_ramdisk();
+    /* wire all of the reserved boot sections */
+    boot_reserve_wire();
 }
 
 static void platform_init_smp(void) {

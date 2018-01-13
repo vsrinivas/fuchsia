@@ -49,7 +49,9 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
     list_node list = LIST_INITIAL_VALUE(list);
 
     auto allocated = pmm_alloc_range(pa, len / PAGE_SIZE, &list);
-    ASSERT(allocated == len / PAGE_SIZE);
+    ASSERT_MSG(allocated == len / PAGE_SIZE,
+            "failed to reserve memory range [%#" PRIxPTR ", %#" PRIxPTR "]\n",
+            pa, pa + len - 1);
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
@@ -75,11 +77,6 @@ void vm_init_preheap() {
 
     // allow the vmm a shot at initializing some of its data structures
     VmAspace::KernelAspaceInitPreHeap();
-
-    // mark all of the kernel pages in use
-    dprintf(INFO, "VM: kernel physical range [%#" PRIxPTR ", %#" PRIxPTR ")\n", get_kernel_base_phys(),
-            get_kernel_base_phys() + get_kernel_size());
-    MarkPagesInUsePhys(get_kernel_base_phys(), get_kernel_size());
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
