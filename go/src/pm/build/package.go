@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -284,12 +285,25 @@ func Seal(cfg *Config) (string, error) {
 		return "", err
 	}
 
-	farPath := filepath.Join(cfg.OutputDir, "meta.far")
-	archive, err := os.Create(farPath)
+	archive, err := os.Create(cfg.MetaFAR())
 	if err != nil {
 		return "", err
 	}
 
-	far.Write(archive, manifest.Meta())
-	return farPath, archive.Close()
+	if err := far.Write(archive, manifest.Meta()); err != nil {
+		return "", err
+	}
+
+	if _, err := archive.Seek(0, io.SeekStart); err != nil {
+		return "", err
+	}
+
+	var tree merkle.Tree
+	if _, err := tree.ReadFrom(archive); err != nil {
+		return "", err
+	}
+	if err := ioutil.WriteFile(cfg.MetaFARMerkle(), tree.Root(), os.ModePerm); err != nil {
+		return "", err
+	}
+	return cfg.MetaFAR(), archive.Close()
 }

@@ -5,6 +5,7 @@
 package build
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -308,8 +309,27 @@ func TestSeal(t *testing.T) {
 	// TODO(raggi): until we have far reader support this test only verifies that
 	// the package meta data was correctly updated, it doesn't actually verify
 	// that the contents of the far are correct.
-
-	if _, err := os.Stat(filepath.Join(cfg.OutputDir, "meta.far")); err != nil {
+	metafar := filepath.Join(cfg.OutputDir, "meta.far")
+	if _, err := os.Stat(metafar); err != nil {
 		t.Errorf("meta.far was not created")
+	}
+
+	merklefile := filepath.Join(cfg.OutputDir, "meta.far.merkle")
+	if _, err := os.Stat(merklefile); err != nil {
+		t.Errorf("meta.far.merkle was not created")
+	}
+
+	m, err := ioutil.ReadFile(merklefile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tree merkle.Tree
+	f, err := os.Open(metafar)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree.ReadFrom(f)
+	if fromFile, fromFar := m, tree.Root(); !bytes.Equal(fromFile, fromFar) {
+		t.Errorf("meta.far.merkle != merkle(meta.far)\n%x\n%x", fromFile, fromFar)
 	}
 }

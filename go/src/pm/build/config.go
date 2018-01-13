@@ -99,3 +99,13 @@ func (c *Config) Manifest() (*Manifest, error) {
 	}
 	return c.manifest, err
 }
+
+// MetaFAR returns the path to the meta.far that build.Seal generates
+func (c *Config) MetaFAR() string {
+	return filepath.Join(c.OutputDir, "meta.far")
+}
+
+// MetaFARMerkle returns the path to the meta.far.merkle that build.Seal generates
+func (c *Config) MetaFARMerkle() string {
+	return filepath.Join(c.OutputDir, "meta.far.merkle")
+}
