@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <inet6/inet6.h>
@@ -368,6 +369,10 @@ static void bootloader_recv(void* data, size_t len,
         break;
     case NB_BOOT:
         do_boot = true;
+        // Wait for the paver to complete
+        while (atomic_load(&paving_in_progress)) {
+            thrd_yield();
+        }
         printf("netboot: Boot Kernel...\n");
         break;
     default:
