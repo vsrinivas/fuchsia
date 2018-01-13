@@ -483,6 +483,9 @@ typedef struct {
 #define CLI_RECV_HANDLE   0x0200
 #define CLI_SEND_HANDLE   0x0400
 
+#define TEST_SHORT_WAIT_MS    250
+#define TEST_LONG_WAIT_MS   10000
+
 static int call_client(void* _args) {
     ccargs_t* ccargs = _args;
     zx_channel_call_args_t args;
@@ -491,7 +494,7 @@ static int call_client(void* _args) {
     zx_handle_t txhandle = 0;
     zx_handle_t rxhandle = 0;
 
-    zx_status_t r;
+    zx_status_t r = ZX_OK;
     if (ccargs->action & CLI_SEND_HANDLE) {
         if ((r = zx_event_create(0, &txhandle)) != ZX_OK) {
             ccargs->err = "failed to create event";
@@ -511,8 +514,10 @@ static int call_client(void* _args) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    zx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ? zx_deadline_after(ZX_MSEC(250)) :
-            ZX_TIME_INFINITE;
+    zx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ?
+        zx_deadline_after(ZX_MSEC(TEST_SHORT_WAIT_MS)) :
+        zx_deadline_after(ZX_MSEC(TEST_LONG_WAIT_MS));
+
     zx_status_t rs = ZX_OK;
     if ((r = zx_channel_call(ccargs->h, 0, deadline, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
         ccargs->err = "channel call returned";
@@ -528,9 +533,10 @@ static int call_client(void* _args) {
         if (ccargs->expect_rs && (ccargs->expect_rs != rs)) {
             ccargs->err = "read_status not what was expected";
             ccargs->val = ccargs->expect_rs;
+        } else {
+            r = ZX_OK;
         }
-    }
-    if (r == ZX_OK) {
+    } else if (r == ZX_OK) {
         if (act_bytes != sizeof(data)) {
             ccargs->err = "expected 8 bytes";
             ccargs->val = act_bytes;
@@ -543,6 +549,9 @@ static int call_client(void* _args) {
         } else if ((ccargs->action & CLI_RECV_HANDLE) && (act_handles != 1)) {
             ccargs->err = "recv handle missing";
         }
+    } else if ((r == ZX_ERR_TIMED_OUT) && (ccargs->action & CLI_SHORT_WAIT)) {
+        // We expect CLI_SHORT_WAIT calls to time-out.
+        r = ZX_OK;
     }
 
 done:
@@ -550,7 +559,7 @@ done:
     call_test_done |= ccargs->bit;
     cnd_broadcast(&call_test_cvar);
     mtx_unlock(&call_test_lock);
-    return 0;
+    return (int) r;
 }
 
 static ccargs_t ccargs[] = {
@@ -561,7 +570,7 @@ static ccargs_t ccargs[] = {
         .expect_rs = ZX_ERR_BUFFER_TOO_SMALL,
     },
     {
-        .name = "no reply",
+        .name = "no reply (short wait)",
         .action = SRV_DISCARD | CLI_SHORT_WAIT,
         .expect = ZX_ERR_TIMED_OUT,
     },
@@ -603,6 +612,8 @@ static int call_server(void* ptr) {
     ccargs_t msg[countof(ccargs)];
     memset(msg, 0, sizeof(msg));
 
+    zx_status_t status;
+
     // received the expected number of messages
     for (unsigned n = 0; n < countof(ccargs); n++) {
         zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
@@ -610,12 +621,15 @@ static int call_server(void* ptr) {
         uint32_t bytes = sizeof(msg[0]);
         uint32_t handles = 1;
         zx_handle_t handle = 0;
-        if (zx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != ZX_OK) {
+        status = zx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles);
+        if (status != ZX_OK) {
             fprintf(stderr, "call_server() read failed\n");
-            break;
+            return (int) status;
         }
         if (handle) {
-            zx_handle_close(handle);
+            status = zx_handle_close(handle);
+            if (status != ZX_OK)
+                return (int) status;
         }
     }
 
@@ -639,9 +653,10 @@ static int call_server(void* ptr) {
         if (handles) {
             zx_event_create(0, &handle);
         }
-        if (zx_channel_write(h, 0, data, bytes, &handle, handles) != ZX_OK) {
+        status = zx_channel_write(h, 0, data, bytes, &handle, handles);
+        if (status != ZX_OK) {
             fprintf(stderr, "call_server() write failed\n");
-            break;
+            return (int) status;
         }
     }
     return 0;
@@ -650,8 +665,8 @@ static int call_server(void* ptr) {
 static bool channel_call(void) {
     BEGIN_TEST;
 
-    mtx_init(&call_test_lock, mtx_plain);
-    cnd_init(&call_test_cvar);
+    ASSERT_EQ(mtx_init(&call_test_lock, mtx_plain), thrd_success, "");
+    ASSERT_EQ(cnd_init(&call_test_cvar), thrd_success, "");
 
     zx_handle_t cli, srv;
     ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
@@ -682,6 +697,7 @@ static bool channel_call(void) {
             r = -1;
         } else {
             r = cnd_timedwait(&call_test_cvar, &call_test_lock, &until);
+            EXPECT_EQ(r, thrd_success, "wait failed");
         }
         mtx_unlock(&call_test_lock);
     }
@@ -701,8 +717,18 @@ static bool channel_call(void) {
     }
     mtx_unlock(&call_test_lock);
 
+    int retv = 0;
+    EXPECT_EQ(thrd_join(srvt, &retv), thrd_success, "");
+    EXPECT_EQ(retv, 0, "");
+
+    for (unsigned n = 0; n < countof(ccargs); n++) {
+        EXPECT_EQ(thrd_join(ccargs[n].t, &retv), thrd_success, "");
+        EXPECT_EQ(retv, 0, "");
+    }
+
     zx_handle_close(cli);
     zx_handle_close(srv);
+
     END_TEST;
 }
 
