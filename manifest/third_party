@@ -168,7 +168,7 @@
     <project name="third_party/protobuf"
              path="third_party/protobuf"
              remote="https://fuchsia.googlesource.com/third_party/protobuf"
-             revision="60d83472b81e28379cce600bde19d7530a69681b"
+             revision="c313f26117c367ebbdca66f82164ed798bfc2c20"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/rapidjson"
              path="third_party/rapidjson"
