@@ -120,6 +120,12 @@ bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
     zx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
     return status == ZX_OK && test_result == TEST_CRASHED;
 }
+
+bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg) {
+    test_result_t test_result;
+    zx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
+    return status == ZX_OK && test_result != TEST_CRASHED;
+}
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
 void unittest_run_named_test(const char* name, bool (*test)(void),

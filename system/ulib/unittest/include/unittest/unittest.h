@@ -565,6 +565,7 @@ int unittest_set_verbosity_level(int new_level);
  * }
  */
 #define ASSERT_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_death_fn(fn, arg), msg)
+#define ASSERT_NO_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_no_death_fn(fn, arg), msg)
 
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
@@ -627,6 +628,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
 void unittest_register_crash(struct test_info* current_test_info, zx_handle_t handle);
 bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
+bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg);
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
 __END_CDECLS
