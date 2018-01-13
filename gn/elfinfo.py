@@ -303,7 +303,7 @@ class elf_info(
 
             # Create the new file with the same mode as the original.
             with os.fdopen(os.open(stripped_filename,
-                                   os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+                                   os.O_WRONLY | os.O_CREAT | os.O_EXCL,
                                    os.fstat(fd).st_mode & 0777),
                            'wb') as stripped_file:
                 stripped_file.write(self.elf.Ehdr.pack(stripped_ehdr))

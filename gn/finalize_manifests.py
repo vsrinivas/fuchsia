@@ -289,6 +289,8 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
+        if os.path.exists(stripped):
+          os.remove(stripped)
         info.strip(stripped)
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %
