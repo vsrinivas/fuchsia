@@ -172,9 +172,12 @@ package("fidl_tests") {
 
   deps = [
     ":lib_fidl_cpp_tests",
+    "//garnet/public/lib/fidl/cpp/bindings2:fidl_bindings2_unittests",
   ]
 
-  tests = [ {
+  tests = [{
+        name = "fidl_bindings2_unittests"
+      }, {
         name = "lib_fidl_cpp_tests"
       } ]
 }

@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("bindings2") {
+  sources = [
+    "put.h",
+    "string.cc",
+    "string.h",
+    "take.h",
+    "traits.h",
+    "vector.h",
+  ]
+
+  public_deps = [
+    "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+executable("fidl_bindings2_unittests") {
+  testonly = true
+
+  sources = [
+    "put_unittest.cc",
+    "string_unittest.cc",
+    "take_unittest.cc",
+    "vector_unittest.cc",
+  ]
+
+  deps = [
+    ":bindings2",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/gtest",
+  ]
+}
+
