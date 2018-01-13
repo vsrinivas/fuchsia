@@ -31,7 +31,6 @@
     })
 
 static const uint16_t kSmcPsci = 0;
-static const uint32_t kTimerVector = 27;
 
 enum TimerControl : uint64_t {
     ENABLE = 1u << 0,
@@ -72,18 +71,19 @@ static void next_pc(GuestState* guest_state) {
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     GichState* gich_state = static_cast<GichState*>(arg);
     bool signaled;
-    zx_status_t status = gich_state->interrupt_tracker.Signal(kTimerVector, false, &signaled);
-    if (status != ZX_OK)
+    zx_status_t status = gich_state->interrupt_tracker.Signal(false, &signaled);
+    if (status != ZX_OK || !signaled) {
         return INT_NO_RESCHEDULE;
-
-    return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    }
+    return INT_RESCHEDULE;
 }
 
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
                                               GichState* gich_state) {
     const WaitInstruction wi(iss);
-    if (wi.is_wfe)
+    if (wi.is_wfe) {
         return ZX_ERR_NOT_SUPPORTED;
+    }
     next_pc(guest_state);
 
     timer_cancel(&gich_state->timer);
@@ -92,8 +92,9 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     if (enabled && !masked) {
         uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
         zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
-        if (deadline <= current_time())
-            return gich_state->interrupt_tracker.Track(kTimerVector);
+        if (deadline <= current_time()) {
+            return ZX_OK;
+        }
         timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
     }
 

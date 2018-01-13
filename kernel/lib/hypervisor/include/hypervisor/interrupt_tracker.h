@@ -55,10 +55,15 @@ public:
     }
 
     // Tracks the given interrupt, and signals any waiters.
-    zx_status_t Signal(uint32_t vector, bool reschedule, bool* signaled) {
+    zx_status_t Interrupt(uint32_t vector, bool reschedule, bool* signaled) {
         zx_status_t status = Track(vector);
         if (status != ZX_OK)
             return status;
+        return Signal(reschedule, signaled);
+    }
+
+    // Signals any waiters.
+    zx_status_t Signal(bool reschedule, bool* signaled) {
         *signaled = event_signal(&event_, reschedule) > 0;
         return ZX_OK;
     }

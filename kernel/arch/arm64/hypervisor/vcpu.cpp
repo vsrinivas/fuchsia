@@ -151,7 +151,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     bool signaled;
-    zx_status_t status = gich_state_.interrupt_tracker.Signal(vector, true, &signaled);
+    zx_status_t status = gich_state_.interrupt_tracker.Interrupt(vector, true, &signaled);
     if (status != ZX_OK)
         return status;
 

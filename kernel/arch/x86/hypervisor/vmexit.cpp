@@ -428,11 +428,11 @@ static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg
     }
     uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
     bool signaled;
-    zx_status_t status = local_apic_state->interrupt_tracker.Signal(vector, false, &signaled);
-    if (status != ZX_OK) {
+    zx_status_t status = local_apic_state->interrupt_tracker.Interrupt(vector, false, &signaled);
+    if (status != ZX_OK || !signaled) {
         return INT_NO_RESCHEDULE;
     }
-    return signaled ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_RESCHEDULE;
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
