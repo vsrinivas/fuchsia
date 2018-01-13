@@ -615,7 +615,8 @@ void fshost_start(void) {
     launchpad_set_vdso_vmo(vmo);
 
     const char* argv[] = { "/boot/bin/fshost", "--netboot" };
-    int argc = getenv_bool("netsvc.netboot", false) ? 2 : 1;
+    int argc = (getenv_bool("netsvc.netboot", false) ||
+                getenv_bool("zircon.system.disable-automount", false)) ? 2 : 1;
 
     // Pass zircon.system.* options to the fshost as environment variables
     const char* envp[16];

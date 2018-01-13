@@ -257,6 +257,12 @@ ramdisk is present. blobstore init will take precendence over a minfs
 partition with the system GUID, and the minfs partition will not be mounted
 if `zircon.system.blobstore-init` is set.
 
+## zircon.system.disable-automount=<\bool>
+
+This option prevents the fshost from auto-mounting any disk filesystems
+(/system, /data, etc), which can be useful for certain low level test setups.
+It is false by default.  It is implied by **netsvc.netboot=true**
+
 ## zircon.system.writable=\<bool>
 
 This option requests that if a minfs partition with the system type GUID is
@@ -282,6 +288,8 @@ booting.
 More specifically, zircon will fetch a new zircon system from a bootserver on
 the local link and attempt to kexec into the new image, thereby replacing the
 currently running instance of zircon.
+
+This setting implies **zircon.system.disable-automount=true**
 
 ## userboot=\<path>
 
