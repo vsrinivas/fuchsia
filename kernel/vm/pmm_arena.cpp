@@ -13,14 +13,11 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/bootalloc.h>
+#include <vm/bootreserve.h>
+#include <vm/physmap.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
-
-PmmArena::PmmArena(const pmm_arena_info_t* info)
-    : info_(*info) {}
-
-PmmArena::~PmmArena() {}
 
 #if PMM_ENABLE_FREE_FILL
 void PmmArena::EnforceFill() {
@@ -49,27 +46,62 @@ void PmmArena::CheckFreeFill(vm_page_t* page) {
 }
 #endif // PMM_ENABLE_FREE_FILL
 
-void PmmArena::BootAllocArray() {
+zx_status_t PmmArena::Init(const pmm_arena_info_t* info) {
+    // TODO: validate that info is sane (page aligned, etc)
+    info_ = *info;
+
     /* allocate an array of pages to back this one */
     size_t page_count = size() / PAGE_SIZE;
-    size_t size = page_count * VM_PAGE_STRUCT_SIZE;
-    void* raw_page_array = boot_alloc_mem(size);
+    size_t page_array_size = ROUNDUP_PAGE_SIZE(page_count * VM_PAGE_STRUCT_SIZE);
 
-    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %zu\n", info_.base, info_.size,
-            raw_page_array, size);
+    // if the arena is too small to be useful, bail
+    if (page_array_size >= size()) {
+        printf("PMM: arena too small to be useful (size %zu)\n", size());
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
 
-    memset(raw_page_array, 0, size);
+    /* allocate a chunk to back the page array out of the arena itself, near the top of memory */
+    reserve_range_t range;
+    auto status = boot_reserve_range_search(base(), size(), page_array_size, &range);
+    if (status != ZX_OK) {
+        printf("PMM: arena intersects with reserved memory in unresovable way\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    DEBUG_ASSERT(range.pa >= base() && range.len <= page_array_size);
+
+    /* get the kernel pointer */
+    void* raw_page_array = paddr_to_physmap(range.pa);
+    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %#zx\n", base(), size(),
+            raw_page_array, page_array_size);
+
+    memset(raw_page_array, 0, page_array_size);
 
     page_array_ = (vm_page_t*)raw_page_array;
 
-    /* add them to the free list */
+    /* compute the range of the array that backs the array itself */
+    size_t array_start_index = (PAGE_ALIGN(range.pa) - info_.base) / PAGE_SIZE;
+    size_t array_end_index = array_start_index + page_array_size / PAGE_SIZE;
+    LTRACEF("array_start_index %zu, array_end_index %zu, page_count %zu\n",
+            array_start_index, array_end_index, page_count);
+
+    DEBUG_ASSERT(array_start_index < page_count && array_end_index <= page_count);
+
+    /* add all pages that aren't part of the page array to the free list */
+    /* pages part of the free array go to the WIRED state */
     for (size_t i = 0; i < page_count; i++) {
         auto& p = page_array_[i];
 
-        list_add_tail(&free_list_, &p.free.node);
+        if (i >= array_start_index && i < array_end_index) {
+            p.state = VM_PAGE_STATE_WIRED;
+        } else {
+            p.state = VM_PAGE_STATE_FREE;
+            list_add_tail(&free_list_, &p.free.node);
+            free_count_++;
+        }
     }
 
-    free_count_ += page_count;
+    return ZX_OK;
 }
 
 vm_page_t* PmmArena::AllocPage(paddr_t* pa) {

@@ -88,10 +88,19 @@ zx_status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANAL
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(info->base));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(info->size));
-    DEBUG_ASSERT(info->size > 0);
+    DEBUG_ASSERT((info->base + info->size) > info->base);
 
     // allocate a c++ arena object
-    PmmArena* arena = new (boot_alloc_mem(sizeof(PmmArena))) PmmArena(info);
+    PmmArena* arena = new (boot_alloc_mem(sizeof(PmmArena))) PmmArena();
+
+    // initialize the object
+    auto status = arena->Init(info);
+    if (status != ZX_OK) {
+        // leaks boot allocator memory
+        arena->~PmmArena();
+        printf("PMM: pmm_add_arena failed to initialize arena\n");
+        return status;
+    }
 
     // walk the arena list and add arena based on priority order
     for (auto& a : arena_list) {
@@ -105,9 +114,6 @@ zx_status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANAL
     arena_list.push_back(arena);
 
 done_add:
-    // tell the arena to allocate a page array
-    arena->BootAllocArray();
-
     arena_cumulative_size += info->size;
 
     return ZX_OK;

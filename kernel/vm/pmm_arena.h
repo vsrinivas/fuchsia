@@ -17,13 +17,13 @@
 
 class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
 public:
-    PmmArena(const pmm_arena_info_t* info);
-    ~PmmArena();
+    constexpr PmmArena() = default;
+    ~PmmArena() = default;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(PmmArena);
 
-    // set up the per page structures, allocated out of the boot time allocator
-    void BootAllocArray();
+    // initialize the arena and allocate memory for internal data structures
+    zx_status_t Init(const pmm_arena_info_t* info);
 
 #if PMM_ENABLE_FREE_FILL
     void EnforceFill();
@@ -80,7 +80,7 @@ private:
     void CheckFreeFill(vm_page_t* page);
 #endif
 
-    const pmm_arena_info_t info_;
+    pmm_arena_info_t info_ = {};
     vm_page_t* page_array_ = nullptr;
 
     size_t free_count_ = 0;
