@@ -16,9 +16,7 @@
 namespace btintel {
 
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
-    : ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>(device),
-      hci_(hci),
-      firmware_loaded_(false) {}
+    : DeviceType(device), hci_(*hci), firmware_loaded_(false) {}
 
 zx_status_t Device::Bind(bool secure) {
   zx_status_t status;
@@ -26,7 +24,7 @@ zx_status_t Device::Bind(bool secure) {
 
   // Get the channels
   status =
-      bt_hci_open_command_channel(hci_, cmd_channel.reset_and_get_address());
+      bt_hci_open_command_channel(&hci_, cmd_channel.reset_and_get_address());
   if (status != ZX_OK) {
     errorf("couldn't open command channel: %s\n", zx_status_get_string(status));
     return status;
@@ -85,7 +83,7 @@ zx_status_t Device::Bind(bool secure) {
   }
 
   status =
-      bt_hci_open_acl_data_channel(hci_, acl_channel.reset_and_get_address());
+      bt_hci_open_acl_data_channel(&hci_, acl_channel.reset_and_get_address());
   if (status != ZX_OK) {
     errorf("couldn't open ACL channel: %s\n", zx_status_get_string(status));
     return status;
@@ -160,6 +158,20 @@ void Device::DdkRelease() {
   delete this;
 }
 
+zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
+  if (proto_id != ZX_PROTOCOL_BT_HCI) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  bt_hci_protocol_t* hci_proto = static_cast<bt_hci_protocol_t*>(out_proto);
+
+  // Forward the underlying bt-transport ops.
+  hci_proto->ops = hci_.ops;
+  hci_proto->ctx = hci_.ctx;
+
+  return ZX_OK;
+}
+
 zx_status_t Device::DdkIoctl(uint32_t op,
                              const void* in_buf,
                              size_t in_len,
@@ -176,11 +188,11 @@ zx_status_t Device::DdkIoctl(uint32_t op,
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = bt_hci_open_command_channel(hci_, reply);
+    status = bt_hci_open_command_channel(&hci_, reply);
   } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = bt_hci_open_acl_data_channel(hci_, reply);
+    status = bt_hci_open_acl_data_channel(&hci_, reply);
   } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = bt_hci_open_snoop_channel(hci_, reply);
+    status = bt_hci_open_snoop_channel(&hci_, reply);
   }
 
   if (status != ZX_OK) {

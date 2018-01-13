@@ -13,8 +13,12 @@
 
 namespace btintel {
 
-class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>,
-               public ddk::BtHciProtocol<Device> {
+class Device;
+
+using DeviceType =
+    ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Ioctlable>;
+
+class Device : public DeviceType, public ddk::BtHciProtocol<Device> {
  public:
   Device(zx_device_t* device, bt_hci_protocol_t* hci);
 
@@ -27,7 +31,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>,
   // ddk::Device methods
   void DdkUnbind();
   void DdkRelease();
-
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
   zx_status_t DdkIoctl(uint32_t op,
                        const void* in_buf,
                        size_t in_len,
@@ -50,7 +54,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>,
                           uintptr_t* fw_addr,
                           size_t* fw_size);
 
-  bt_hci_protocol_t* hci_;
+  bt_hci_protocol_t hci_;
   bool firmware_loaded_;
 };
 
