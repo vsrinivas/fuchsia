@@ -144,7 +144,10 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 
 void Adapter::ShutDown() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FXL_DCHECK(IsInitialized());
+  if (IsInitializing()) {
+    FXL_DCHECK(!init_seq_runner_->IsReady());
+    init_seq_runner_->Cancel();
+  }
 
   CleanUp();
 

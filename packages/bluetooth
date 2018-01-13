@@ -7,6 +7,7 @@
         "bluetooth_tools": "//garnet/bin/bluetooth_tools",
         "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests",
         "bthci_passthrough": "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
+        "bthost": "//garnet/drivers/bluetooth/host:bthost",
         "btintel": "//garnet/drivers/bluetooth/hci/intel:btintel"
     }
 }
