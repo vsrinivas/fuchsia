@@ -68,6 +68,7 @@
 #define IOCTL_FAMILY_POWER          0x30
 #define IOCTL_FAMILY_THERMAL        0x31
 #define IOCTL_FAMILY_CAMERA         0x32
+#define IOCTL_FAMILY_BT_HOST        0x33
 
 // IOCTL constructor
 // --K-FFNN

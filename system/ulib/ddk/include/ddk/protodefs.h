@@ -39,6 +39,7 @@ DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)  // Host Controller Inter
 DDK_PROTOCOL_DEF(USB_MODE_SWITCH,'pUMS', "usb-mode-switch", 0)
 DDK_PROTOCOL_DEF(BT_HCI,         'pBHC', "bt-hci", 0)
 DDK_PROTOCOL_DEF(BT_HCI_TRANSPORT,'pBTR', "bt-hci-transport", 0)
+DDK_PROTOCOL_DEF(BT_HOST,        'pBTH', "bt-host", 0)
 DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio", 0)
 DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi", 0)
 DDK_PROTOCOL_DEF(SDHCI,          'pSDH', "sdhci", 0)
