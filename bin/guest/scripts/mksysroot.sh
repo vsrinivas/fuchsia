@@ -93,7 +93,7 @@ generate_init() {
 #!/bin/sh
 mount -t proc none /proc
 mount -t sysfs none /sys
-echo Launched sysroot
+echo Launched init
 exec /bin/sh
 _EOF
 

@@ -164,7 +164,7 @@ static const char* linux_cmdline(const char* cmdline,
                                  uintptr_t acpi_addr) {
   static fbl::StringBuffer<LINE_MAX> buffer;
 #if __aarch64__
-  buffer.AppendPrintf("earlycon=pl011,%#lx console=ttyAMA0 console=tty0 %s",
+  buffer.AppendPrintf("earlycon=pl011,%#lx console=ttyAMA0 %s",
                       uart_addr, cmdline);
 #elif __x86_64__
   buffer.AppendPrintf(
