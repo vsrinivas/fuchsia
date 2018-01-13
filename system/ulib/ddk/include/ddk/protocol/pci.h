@@ -144,11 +144,11 @@ static inline zx_status_t pci_config_read32(pci_protocol_t* pci, uint16_t offset
     return st;
 }
 
-static uint8_t pci_get_next_capability(pci_protocol_t* pci, uint8_t type, uint8_t offset) {
+static inline uint8_t pci_get_next_capability(pci_protocol_t* pci, uint8_t type, uint8_t offset) {
     return pci->ops->get_next_capability(pci->ctx, type, offset);
 }
 
-static uint8_t pci_get_first_capability(pci_protocol_t* pci, uint8_t type) {
+static inline uint8_t pci_get_first_capability(pci_protocol_t* pci, uint8_t type) {
     // the next_capability method will always look at the second byte next
     // pointer to fetch the next capability. By offsetting the CapPtr field
     // by -1 we can pretend we're working with a normal capability entry
