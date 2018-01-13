@@ -251,12 +251,23 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_CPUID_HYP_VENDOR: {
         // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
         static const uint32_t* regs = reinterpret_cast<const uint32_t*>(kHypVendorId);
-        guest_state->rax = 0;
+        // Since Zircon hypervisor disguises itself as KVM, it needs to return
+        // in EAX max CPUID function supported by hypervisor. Zero in EAX
+        // should be interpreted as 0x40000001. Details are available in the
+        // Linux kernel documentation (Documentation/virtual/kvm/cpuid.txt).
+        guest_state->rax = X86_CPUID_KVM_FEATURES;
         guest_state->rbx = regs[0];
         guest_state->rcx = regs[1];
         guest_state->rdx = regs[2];
         return ZX_OK;
     }
+    case X86_CPUID_KVM_FEATURES:
+        // We do not support KVM paravitualization interface yet.
+        guest_state->rax = 0;
+        guest_state->rbx = 0;
+        guest_state->rcx = 0;
+        guest_state->rdx = 0;
+        return ZX_OK;
     // From Volume 2A, CPUID instruction reference. If the EAX value is outside
     // the range recognized by CPUID then the information for the highest
     // supported base information leaf is returned. Any value in ECX is
