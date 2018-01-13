@@ -240,7 +240,7 @@ static bool run_tests(const char* dirn, const char** test_names, const int num_t
             continue;
         }
 
-        if (summary_json != NULL && test_count != 0) {
+        if (summary_json != NULL && (test_count != 0 || total_count != 0)) {
             fprintf(summary_json, ",\n");
         }
 
