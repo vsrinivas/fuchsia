@@ -1,0 +1,14 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+template("test") {
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
+  }
+}
+
+set_defaults("test") {
+  configs = default_executable_configs
+}
