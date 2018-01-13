@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
@@ -196,15 +197,12 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
 }
 
 TEST_F(LedgerManagerTest, OnEmptyCalled) {
-  bool on_empty_called = false;
-  ledger_manager_->set_on_empty([&] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  bool on_empty_called;
+  ledger_manager_->set_on_empty(SetWhenCalled(&on_empty_called));
 
   ledger_.reset();
   ledger_debug_.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -215,19 +213,16 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
 
   uint8_t calls = 0;
   ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
-                   [this, &calls](Status) {
+                   [&calls](Status) {
                      calls++;
-                     message_loop_.PostQuitTask();
                    });
   page.reset();
   ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
-                   [this, &calls](Status) {
+                   [&calls](Status) {
                      calls++;
-                     message_loop_.PostQuitTask();
                    });
   page.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -241,13 +236,14 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   Status status;
 
   PagePtr page;
-
+  bool called;
   // Get the root page.
   storage_ptr->ClearCalls();
   page.reset();
   ledger_->GetRootPage(page.NewRequest(),
-                       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                       callback::Capture(SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
   EXPECT_FALSE(sync_ptr->called);
 
@@ -255,8 +251,9 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
   page.reset();
   ledger_->GetPage(convert::ToArray(RandomId()), page.NewRequest(),
-                   callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                   callback::Capture(SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
   EXPECT_FALSE(sync_ptr->called);
 
@@ -264,8 +261,9 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
   page.reset();
   ledger_->GetPage(nullptr, page.NewRequest(),
-                   callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                   callback::Capture(SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
   EXPECT_FALSE(sync_ptr->called);
 }
@@ -290,14 +288,17 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
                      waiter->NewCallback());
   }
 
-  waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  bool called;
+  waiter->Finalize(callback::Capture(SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_debug_->GetPagesList(
-      callback::Capture(MakeQuitTask(), &actual_pages_list));
+      callback::Capture(SetWhenCalled(&called), &actual_pages_list));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(pages.size(), actual_pages_list.size());
 
   std::sort(ids.begin(), ids.end());
