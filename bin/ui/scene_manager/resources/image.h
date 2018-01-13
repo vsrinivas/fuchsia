@@ -37,52 +37,19 @@ class Image : public ImageBase {
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
-  static ImagePtr NewForTesting(Session* session,
-                                scenic::ResourceId id,
-                                escher::ResourceManager* image_owner,
-                                MemoryPtr host_memory);
-
-  void Accept(class ResourceVisitor* visitor) override;
-
-  // For images backed by host memory, re-upload to GPU memory. No-op for images
-  // backed by GPU memory.
-  // Returns true if contents were updated.
-  bool UpdatePixels();
+  // Updates pixels before rendering, if needed. Returns true if contents were
+  // updated.
+  virtual bool UpdatePixels() = 0;
 
   const escher::ImagePtr& GetEscherImage() override { return image_; }
 
- private:
-  // Create an Image object from a VkImage.
-  // |session| is the Session that this image can be referenced from.
-  // |image_info| specifies size, format, and other properties.
-  // |vk_image| is the VkImage, whose lifetime is now controlled by this
-  // object. |memory| is the GPU memory that is associated with this image.
+ protected:
   Image(Session* session,
         scenic::ResourceId id,
-        GpuMemoryPtr memory,
-        escher::ImageInfo image_info,
-        vk::Image vk_image_);
+        const ResourceTypeInfo& type_info);
 
-  // Create an Image object from a escher::Image.
-  // |session| is the Session that this image can be referenced from.
-  // |image| is the escher::Image that is being wrapped.
-  // |memory| is the host memory that is associated with this image.
-  //
-  // TODO: We might not want to hold on to the memory since we're uploading
-  // its contents to the GPU and using the uploaded copy.
-  Image(Session* session,
-        scenic::ResourceId id,
-        MemoryPtr memory,
-        escher::ImagePtr image,
-        uint64_t host_memory_offset);
-
-  MemoryPtr memory_;
-  // GPU memory-backed image. If |memory_| is of type HOST_MEMORY, this image's
-  // memory is separate.
+  // GPU memory-backed image.
   escher::ImagePtr image_;
-  // If |memory_| is of type HOST_MEMORY, the offset into |memory_| where the
-  // image is stored.
-  uint64_t host_memory_offset_;
 };
 
 }  // namespace scene_manager

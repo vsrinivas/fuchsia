@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/escher/util/image_utils.h"
 
+#include "garnet/bin/ui/scene_manager/resources/host_image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
@@ -83,7 +84,8 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
                        const scenic::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
-    return Image::NewForTesting(session, 0u, dummy_resource_manager_, memory);
+    return HostImage::NewForTesting(session, 0u, dummy_resource_manager_,
+                                    memory->As<HostMemory>());
   }
   escher::ResourceManager* dummy_resource_manager_;
 };

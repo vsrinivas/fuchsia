@@ -10,9 +10,10 @@
 #include "garnet/bin/ui/scene_manager/resources/compositor/display_compositor.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
+#include "garnet/bin/ui/scene_manager/resources/gpu_image.h"
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
+#include "garnet/bin/ui/scene_manager/resources/host_image.h"
 #include "garnet/bin/ui/scene_manager/resources/host_memory.h"
-#include "garnet/bin/ui/scene_manager/resources/image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 #include "garnet/bin/ui/scene_manager/resources/lights/ambient_light.h"
@@ -40,7 +41,11 @@ void HostMemory::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Image::Accept(ResourceVisitor* visitor) {
+void GpuImage::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void HostImage::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

@@ -5,7 +5,9 @@
 #include "garnet/bin/ui/scene_manager/resources/image.h"
 
 #include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/resources/gpu_image.h"
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
+#include "garnet/bin/ui/scene_manager/resources/host_image.h"
 #include "garnet/bin/ui/scene_manager/resources/host_memory.h"
 #include "lib/escher/util/image_utils.h"
 
@@ -16,24 +18,9 @@ const ResourceTypeInfo Image::kTypeInfo = {
 
 Image::Image(Session* session,
              scenic::ResourceId id,
-             MemoryPtr memory,
-             escher::ImagePtr image,
-             uint64_t host_memory_offset)
-    : ImageBase(session, id, Image::kTypeInfo),
-      memory_(std::move(memory)),
-      image_(std::move(image)),
-      host_memory_offset_(host_memory_offset) {}
-
-Image::Image(Session* session,
-             scenic::ResourceId id,
-             GpuMemoryPtr memory,
-             escher::ImageInfo image_info,
-             vk::Image vk_image)
-    : ImageBase(session, id, Image::kTypeInfo), memory_(std::move(memory)) {
-  image_ = escher::Image::New(
-      session->engine()->escher_resource_recycler(), image_info, vk_image,
-      static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem());
-  FXL_CHECK(image_);
+             const ResourceTypeInfo& type_info)
+    : ImageBase(session, id, Image::kTypeInfo) {
+  FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
 
 ImagePtr Image::New(Session* session,
@@ -42,158 +29,19 @@ ImagePtr Image::New(Session* session,
                     const scenic::ImageInfoPtr& image_info,
                     uint64_t memory_offset,
                     ErrorReporter* error_reporter) {
-  vk::Format pixel_format = vk::Format::eUndefined;
-  size_t bytes_per_pixel;
-  size_t pixel_alignment;
-  switch (image_info->pixel_format) {
-    case scenic::ImageInfo::PixelFormat::BGRA_8:
-      pixel_format = vk::Format::eB8G8R8A8Unorm;
-      bytes_per_pixel = 4u;
-      pixel_alignment = 4u;
-      break;
-  }
-
-  if (image_info->width <= 0) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): width must be greater than 0.";
-    return nullptr;
-  }
-  if (image_info->height <= 0) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): height must be greater than 0.";
-    return nullptr;
-  }
-
-  auto& caps = session->engine()->escher()->device()->caps();
-  if (image_info->width > caps.max_image_width) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): image width exceeds maximum ("
-        << image_info->width << " vs. " << caps.max_image_width << ").";
-    return nullptr;
-  }
-  if (image_info->height > caps.max_image_height) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): image height exceeds maximum ("
-        << image_info->height << " vs. " << caps.max_image_height << ").";
-    return nullptr;
-  }
-
   // Create from host memory.
   if (memory->IsKindOf<HostMemory>()) {
-    auto host_memory = memory->As<HostMemory>();
-
-    if (image_info->stride < image_info->width * bytes_per_pixel) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): stride too small for width.";
-      return nullptr;
-    }
-    if (image_info->stride % pixel_alignment != 0) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
-      return nullptr;
-    }
-    if (image_info->tiling != scenic::ImageInfo::Tiling::LINEAR) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): tiling must be LINEAR for images "
-          << "created using host memory.";
-      return nullptr;
-    }
-
-    size_t image_size = image_info->height * image_info->stride;
-    if (memory_offset >= host_memory->size()) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the offset of the Image must be "
-          << "within the range of the Memory";
-      return nullptr;
-    }
-
-    if (memory_offset + image_size > host_memory->size()) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the Image must fit within the size "
-          << "of the Memory";
-      return nullptr;
-    }
-
-    // TODO(MZ-141): Support non-minimal strides.
-    if (image_info->stride != image_info->width * bytes_per_pixel) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the stride must be minimal (MZ-141)";
-      return nullptr;
-    }
-
-    auto escher_image = escher::image_utils::NewImageFromPixels(
-        session->engine()->escher_image_factory(),
-        session->engine()->escher_gpu_uploader(),
-        static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset,
-        pixel_format, image_info->width, image_info->height);
-
-    return fxl::AdoptRef(new Image(session, id, std::move(host_memory),
-                                   std::move(escher_image), memory_offset));
+    return HostImage::New(session, id, memory->As<HostMemory>(), image_info,
+                          memory_offset, error_reporter);
 
     // Create from GPU memory.
   } else if (memory->IsKindOf<GpuMemory>()) {
-    auto gpu_memory = memory->As<GpuMemory>();
-
-    escher::ImageInfo escher_image_info;
-    escher_image_info.format = pixel_format;
-    escher_image_info.width = image_info->width;
-    escher_image_info.height = image_info->height;
-    escher_image_info.sample_count = 1;
-    escher_image_info.usage =
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-    escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
-
-    vk::Device vk_device = session->engine()->vk_device();
-    vk::Image vk_image =
-        escher::image_utils::CreateVkImage(vk_device, escher_image_info);
-
-    // Make sure that the image is within range of its associated memory.
-    vk::MemoryRequirements memory_reqs;
-    vk_device.getImageMemoryRequirements(vk_image, &memory_reqs);
-
-    if (memory_offset >= gpu_memory->size()) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the offset of the Image must be "
-          << "within the range of the Memory";
-      return nullptr;
-    }
-
-    if (memory_offset + memory_reqs.size > gpu_memory->size()) {
-      error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the Image must fit within the size "
-          << "of the Memory";
-      return nullptr;
-    }
-
-    return fxl::AdoptRef(new Image(session, id, std::move(gpu_memory),
-                                   escher_image_info, vk_image));
+    return GpuImage::New(session, id, memory->As<GpuMemory>(), image_info,
+                         memory_offset, error_reporter);
   } else {
     FXL_CHECK(false);
     return nullptr;
   }
-}
-
-bool Image::UpdatePixels() {
-  if (memory_->IsKindOf<HostMemory>() &&
-      session()->engine()->escher_gpu_uploader()) {
-    auto host_memory = memory_->As<HostMemory>();
-    escher::image_utils::WritePixelsToImage(
-        session()->engine()->escher_gpu_uploader(),
-        static_cast<uint8_t*>(host_memory->memory_base()) + host_memory_offset_,
-        image_);
-    return true;
-  }
-  return false;
-}
-
-ImagePtr Image::NewForTesting(Session* session,
-                              scenic::ResourceId id,
-                              escher::ResourceManager* image_owner,
-                              MemoryPtr host_memory) {
-  escher::ImagePtr escher_image = escher::Image::New(
-      image_owner, escher::ImageInfo(), vk::Image(), nullptr);
-  FXL_CHECK(escher_image);
-  return fxl::AdoptRef(new Image(session, id, host_memory, escher_image, 0));
 }
 
 }  // namespace scene_manager

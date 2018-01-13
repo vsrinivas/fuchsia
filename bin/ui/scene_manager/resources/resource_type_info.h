@@ -20,41 +20,43 @@ enum ResourceType {
   kGpuMemory = 1 << 3,
   kImageBase = 1 << 4,
   kImage = 1 << 5,
-  kImagePipe = 1 << 6,
-  kBuffer = 1 << 7,
+  kHostImage = 1 << 6,
+  kGpuImage = 1 << 7,
+  kImagePipe = 1 << 8,
+  kBuffer = 1 << 9,
 
   // Shapes.
-  kShape = 1 << 8,
-  kRectangle = 1 << 9,
-  kRoundedRectangle = 1 << 10,
-  kCircle = 1 << 11,
-  kMesh = 1 << 12,
+  kShape = 1 << 10,
+  kRectangle = 1 << 11,
+  kRoundedRectangle = 1 << 12,
+  kCircle = 1 << 13,
+  kMesh = 1 << 14,
 
   // Materials.
-  kMaterial = 1 << 13,
+  kMaterial = 1 << 15,
 
   // Nodes.
-  kNode = 1 << 15,
-  kClipNode = 1 << 16,
-  kEntityNode = 1 << 17,
-  kShapeNode = 1 << 18,
+  kNode = 1 << 16,
+  kClipNode = 1 << 17,
+  kEntityNode = 1 << 18,
+  kShapeNode = 1 << 19,
 
   // Compositor, layers.
-  kCompositor = 1 << 19,
-  kDisplayCompositor = 1 << 20,
-  kLayer = 1 << 21,
-  kLayerStack = 1 << 22,
+  kCompositor = 1 << 20,
+  kDisplayCompositor = 1 << 21,
+  kLayer = 1 << 22,
+  kLayerStack = 1 << 23,
 
   // Scene, camera, lighting.
-  kScene = 1 << 23,
-  kCamera = 1 << 24,
-  kLight = 1 << 25,
-  kAmbientLight = 1 << 26,
-  kDirectionalLight = 1 << 27,
-  kRenderer = 1 << 28,
+  kScene = 1 << 24,
+  kCamera = 1 << 25,
+  kLight = 1 << 26,
+  kAmbientLight = 1 << 27,
+  kDirectionalLight = 1 << 28,
+  kRenderer = 1 << 29,
 
   // Animation
-  kVariable = 1 << 29,
+  kVariable = 1 << 30,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be
