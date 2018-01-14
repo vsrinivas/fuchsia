@@ -29,9 +29,6 @@ typedef struct zx_vcpu_create_args {
     zx_vaddr_t ip;
 #if __x86_64__
     zx_vaddr_t cr3;
-    // TODO(alexlegg): Remove apic_vmo once the x2apic change propagates to
-    // Garnet.
-    zx_handle_t apic_vmo;
 #endif
 } zx_vcpu_create_args_t;
 

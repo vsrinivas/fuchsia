@@ -42,17 +42,10 @@ typedef struct test {
 
     zx_handle_t vcpu = ZX_HANDLE_INVALID;
     Guest guest;
-#if __x86_64__
-    zx_handle_t vcpu_apicmem = ZX_HANDLE_INVALID;
-#endif // __x86_64__
 } test_t;
 
 static bool teardown(test_t* test) {
     ASSERT_EQ(zx_handle_close(test->vcpu), ZX_OK);
-#if __x86_64__
-    ASSERT_EQ(zx_handle_close(test->vcpu_apicmem), ZX_OK);
-#endif // __x86_64__
-
     return true;
 }
 
@@ -81,7 +74,6 @@ static bool setup(test_t* test, const char* start, const char* end) {
     pte_off = reinterpret_cast<uint64_t*>(phys_addr + PAGE_SIZE);
     *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_RW;
     guest_ip = GUEST_IP;
-    ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
     memcpy((void*)(phys_addr + guest_ip), start, end - start);
 
@@ -89,7 +81,6 @@ static bool setup(test_t* test, const char* start, const char* end) {
         guest_ip,
 #if __x86_64__
         0 /* cr3 */,
-        test->vcpu_apicmem,
 #endif // __x86_64__
     };
     status = zx_vcpu_create(test->guest.handle(), 0, &args, &test->vcpu);
