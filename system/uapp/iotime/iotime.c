@@ -107,6 +107,12 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
         return ZX_TIME_INFINITE;
     }
 
+    block_info_t info;
+    if (ioctl_block_get_info(fd, &info) < 0) {
+        fprintf(stderr, "error: cannot get info for '%s'\n", dev);
+        return ZX_TIME_INFINITE;
+    }
+
     zx_handle_t fifo;
     if (ioctl_block_get_fifos(fd, &fifo) != sizeof(fifo)) {
         fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
@@ -145,9 +151,9 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
             .txnid = txnid,
             .vmoid = vmoid,
             .opcode = is_read ? BLOCKIO_READ : BLOCKIO_WRITE,
-            .length = xfer,
+            .length = xfer / info.block_size,
             .vmo_offset = 0,
-            .dev_offset = total - n,
+            .dev_offset = (total - n) / info.block_size,
         };
         if ((r = block_fifo_txn(client, &request, 1)) != ZX_OK) {
             fprintf(stderr, "error: block_fifo_txn error %d\n", r);

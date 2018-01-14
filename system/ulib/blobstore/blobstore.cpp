@@ -856,7 +856,11 @@ zx_status_t Blobstore::Create(fbl::unique_fd fd, const blobstore_info_t* info,
 
     zx_handle_t fifo;
     ssize_t r;
-    if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
+    if ((r = ioctl_block_get_info(fs->Fd(), &fs->block_info_)) < 0) {
+        return static_cast<zx_status_t>(r);
+    } else if (kBlobstoreBlockSize % fs->block_info_.block_size != 0) {
+        return ZX_ERR_IO;
+    } else if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
     } else if ((r = ioctl_block_alloc_txn(fs->Fd(), &fs->txnid_)) < 0) {
         zx_handle_close(fifo);

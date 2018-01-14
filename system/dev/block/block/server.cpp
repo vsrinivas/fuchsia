@@ -75,31 +75,31 @@ void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
 void BlockServer::Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
                         uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
     if (bp_.ops == NULL) {
+        size_t bsz = info_.block_size;
         iotxn_t* txn;
         zx_status_t status;
         if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo,
-                                      vmo_offset, length)) != ZX_OK) {
+                                      vmo_offset * bsz, length * bsz)) != ZX_OK) {
             BlockComplete(msg, status);
             return;
         }
         txn->flags = flags;
         txn->opcode = msg->opcode;
-        txn->offset = dev_offset;
+        txn->offset = dev_offset * bsz;
         txn->cookie = msg;
         txn->complete_cb = BlockCompleteIotxn;
         iotxn_queue(dev_, txn);
     } else {
-        size_t bsz = info_.block_size;
         block_op_t* bop = (block_op_t*) malloc(block_op_size_);
         if (bop == nullptr) {
             BlockComplete(msg, ZX_ERR_NO_MEMORY);
             return;
         }
         bop->command = (msg->opcode == BLOCKIO_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
-        bop->rw.length = (uint32_t) (length / bsz);
+        bop->rw.length = (uint32_t) length;
         bop->rw.vmo = vmo;
-        bop->rw.offset_dev = dev_offset / bsz;
-        bop->rw.offset_vmo = vmo_offset / bsz;
+        bop->rw.offset_dev = dev_offset;
+        bop->rw.offset_vmo = vmo_offset;
         bop->rw.pages = NULL;
         bop->completion_cb = BlockCompleteCb;
         bop->cookie = msg;
@@ -338,21 +338,9 @@ zx_status_t BlockServer::Serve() {
             switch (requests[i].opcode & BLOCKIO_OP_MASK) {
             case BLOCKIO_READ:
             case BLOCKIO_WRITE: {
-                if (requests[i].length > fbl::numeric_limits<uint32_t>::max()) {
-                    // Operation which is too large
-                    if (wants_reply) {
-                        OutOfBandErrorRespond(fifo_, ZX_ERR_INVALID_ARGS, txnid);
-                    }
-                    continue;
-                }
-
-                // Transaction bytes values must be in multiples of block size
-                // Transaction transfer length must fit in a uint16 n+1 field
-                size_t bsmask = info_.block_size - 1;
-                if ((requests[i].length & bsmask) ||
-                    (requests[i].dev_offset & bsmask) ||
-                    (requests[i].vmo_offset & bsmask) ||
-                    ((requests[i].length / info_.block_size) < 1)) {
+                if ((requests[i].length < 1) ||
+                    (requests[i].length > fbl::numeric_limits<uint32_t>::max())) {
+                    // Operation which is too small or too large
                     if (wants_reply) {
                         OutOfBandErrorRespond(fifo_, ZX_ERR_INVALID_ARGS, txnid);
                     }
@@ -372,7 +360,9 @@ zx_status_t BlockServer::Serve() {
                 // Hack to ensure that the vmo is valid.
                 // In the future, this code will be responsible for pinning VMO pages,
                 // and the completion will be responsible for un-pinning those same pages.
-                status = iobuf->ValidateVmoHack(requests[i].length, requests[i].vmo_offset);
+                size_t bsz = info_.block_size;
+                status = iobuf->ValidateVmoHack(bsz * requests[i].length,
+                                                bsz * requests[i].vmo_offset);
                 if (status != ZX_OK) {
                     BlockComplete(msg, status);
                     break;
@@ -380,7 +370,7 @@ zx_status_t BlockServer::Serve() {
 
                 msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
 
-                const uint64_t max_xfer = info_.max_transfer_size;
+                const uint64_t max_xfer = info_.max_transfer_size / bsz;
                 if (max_xfer != 0 && max_xfer < requests[i].length) {
                     uint64_t len_remaining = requests[i].length;
                     uint64_t vmo_offset = requests[i].vmo_offset;

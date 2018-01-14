@@ -69,9 +69,9 @@ static int fill_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start,
             .txnid = *txnid,
             .vmoid = vmoid,
             .opcode = BLOCKIO_WRITE,
-            .length = len,
+            .length = len / info.block_size,
             .vmo_offset = 0,
-            .dev_offset = blk_idx * block_size,
+            .dev_offset = (blk_idx * block_size) / info.block_size,
         };
         if ((st = block_fifo_txn(client, &request, 1)) != ZX_OK) {
             fprintf(stderr, "error: write block_fifo_txn error %d\n", st);
@@ -118,9 +118,9 @@ static zx_status_t check_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start
             .txnid = *txnid,
             .vmoid = vmoid,
             .opcode = BLOCKIO_READ,
-            .length = len,
+            .length = len / info.block_size,
             .vmo_offset = 0,
-            .dev_offset = blk_idx * block_size,
+            .dev_offset = (blk_idx * block_size) / info.block_size,
         };
         if ((st = block_fifo_txn(client, &request, 1)) != ZX_OK) {
             fprintf(stderr, "error: read block_fifo_txn error %d\n", st);

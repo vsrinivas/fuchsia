@@ -248,6 +248,7 @@ public:
 private:
     int fd_;
     txnid_t txnid_;
+    block_info_t info_;
     fifo_client_t* client_;
 };
 
@@ -311,6 +312,7 @@ bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     ASSERT_TRUE(ac.check());
     zx_handle_t fifo;
     ASSERT_GT(ioctl_block_get_fifos(fd, &fifo), 0, "Failed to get FIFO");
+    ASSERT_GT(ioctl_block_get_info(fd, &vc->info_), 0, "Failed to get block info");
     ASSERT_GT(ioctl_block_alloc_txn(fd, &vc->txnid_), 0, "Failed to alloc txn");
     ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), ZX_OK);
     vc->fd_ = fd;
@@ -334,9 +336,12 @@ bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
     request.txnid = txnid_;
     request.vmoid = vbuf->vmoid_;
     request.opcode = BLOCKIO_WRITE;
-    request.length = len;
-    request.vmo_offset = buf_off;
-    request.dev_offset = dev_off;
+    ASSERT_EQ(len % info_.block_size, 0);
+    ASSERT_EQ(buf_off % info_.block_size, 0);
+    ASSERT_EQ(dev_off % info_.block_size, 0);
+    request.length = len / info_.block_size;
+    request.vmo_offset = buf_off / info_.block_size;
+    request.dev_offset = dev_off / info_.block_size;
     ASSERT_TRUE(Txn(&request, 1));
     END_HELPER;
 }
@@ -355,9 +360,12 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     request.txnid = txnid_;
     request.vmoid = vbuf->vmoid_;
     request.opcode = BLOCKIO_READ;
-    request.length = len;
-    request.vmo_offset = buf_off;
-    request.dev_offset = dev_off;
+    ASSERT_EQ(len % info_.block_size, 0);
+    ASSERT_EQ(buf_off % info_.block_size, 0);
+    ASSERT_EQ(dev_off % info_.block_size, 0);
+    request.length = len / info_.block_size;
+    request.vmo_offset = buf_off / info_.block_size;
+    request.dev_offset = dev_off / info_.block_size;
     ASSERT_TRUE(Txn(&request, 1));
 
     // Read from the registered VMO

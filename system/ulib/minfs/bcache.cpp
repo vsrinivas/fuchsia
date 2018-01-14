@@ -68,11 +68,15 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
     zx_handle_t fifo;
     ssize_t r;
 
-    if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
+    if ((r = ioctl_block_get_info(bc->fd_.get(), &bc->info_)) < 0) {
+        return static_cast<zx_status_t>(r);
+    } else if (kMinfsBlockSize % bc->info_.block_size != 0) {
+        return ZX_ERR_IO;
+    } else if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
     } else if (bc->TxnId() == TXNID_INVALID) {
         zx_handle_close(fifo);
-        return static_cast<zx_status_t>(ZX_ERR_NO_RESOURCES);
+        return ZX_ERR_NO_RESOURCES;
     } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != ZX_OK) {
         bc->FreeTxnId();
         zx_handle_close(fifo);

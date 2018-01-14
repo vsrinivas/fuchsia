@@ -257,6 +257,8 @@ public:
         TRACE_DURATION("blobstore", "Blobstore::Txn", "count", count);
         return block_fifo_txn(fifo_client_, requests, count);
     }
+    uint32_t BlockSize() const { return block_info_.block_size; }
+
     txnid_t TxnId() const { return txnid_; }
 
     // If possible, attempt to resize the blobstore partition.
@@ -314,6 +316,7 @@ private:
     WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
 
     fbl::unique_fd blockfd_;
+    block_info_t block_info_{};
     fifo_client_t* fifo_client_{};
     txnid_t txnid_{};
     RawBitmap block_map_{};

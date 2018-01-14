@@ -47,6 +47,9 @@ public:
     uint32_t Maxblk() const { return blockmax_; };
 
 #ifdef __Fuchsia__
+    // Return the block size of the underlying block device.
+    uint32_t BlockSize() const { return info_.block_size; }
+
     ssize_t GetDevicePath(char* out, size_t out_len);
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
@@ -133,6 +136,7 @@ private:
 
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_{}; // Fast path to interact with block device
+    block_info_t info_{};
 #else
     off_t offset_{};
 #endif

@@ -110,7 +110,7 @@ zx_status_t register_fast_block_io(const fbl::unique_fd& fd, zx_handle_t vmo,
 
 // Stream an FVM partition to disk.
 zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
-                                 fifo_client_t* client, size_t slice_size,
+                                 fifo_client_t* client, size_t slice_size, size_t block_size,
                                  block_fifo_request_t* request, const fbl::unique_fd& src_fd) {
     const size_t vmo_cap = mvmo->GetSize();
     for (size_t e = 0; e < part->pd->extent_count; e++) {
@@ -134,22 +134,24 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
             if (vmo_sz == 0) {
                 ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
                 return ZX_ERR_IO;
-            }
-            if (r < 0) {
+            } else if (vmo_sz % block_size != 0) {
+                ERROR("Cannot write non-block size multiple: %zu\n", vmo_sz);
+                return ZX_ERR_IO;
+            } else if (r < 0) {
                 ERROR("Error reading partition data\n");
                 return static_cast<zx_status_t>(r);
             }
 
-            request->length = vmo_sz;
+            request->length = vmo_sz / block_size;
             request->vmo_offset = 0;
-            request->dev_offset = offset;
+            request->dev_offset = offset / block_size;
 
             if ((r = block_fifo_txn(client, request, 1)) != ZX_OK) {
                 ERROR("Error writing partition data\n");
                 return static_cast<zx_status_t>(r);
             }
 
-            offset += request->length;
+            offset += vmo_sz;
         }
 
         // Write trailing zeroes (which are implied, but were omitted from
@@ -160,9 +162,9 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
             memset(mvmo->GetData(), 0, vmo_cap);
         }
         while (bytes_left > 0) {
-            request->length = fbl::min(bytes_left, vmo_cap);
+            request->length = fbl::min(bytes_left, vmo_cap) / block_size;
             request->vmo_offset = 0;
-            request->dev_offset = offset;
+            request->dev_offset = offset / block_size;
 
             zx_status_t status;
             if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
@@ -170,8 +172,8 @@ zx_status_t stream_fvm_partition(partition_info* part, MappedVmo* mvmo,
                 return status;
             }
 
-            offset += request->length;
-            bytes_left -= request->length;
+            offset += request->length * block_size;
+            bytes_left -= request->length * block_size;
         }
     }
     return ZX_OK;
@@ -213,9 +215,9 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
             vmo_sz = rounded_length;
         }
 
-        request->length = vmo_sz;
+        request->length = vmo_sz / info.block_size;
         request->vmo_offset = 0;
-        request->dev_offset = offset;
+        request->dev_offset = offset / info.block_size;
 
         zx_status_t status;
         if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
@@ -228,7 +230,7 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
             return ZX_OK;
         }
 
-        offset += request->length;
+        offset += vmo_sz;
     }
 }
 
@@ -344,6 +346,8 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
 
     // TODO(smklein): In this case, we could actually unbind the FVM driver,
     // create a new FVM with the updated slice size, and rebind.
+
+    size_t block_size = 0;
     fvm_info_t info;
     if (ioctl_block_fvm_query(fvm_fd.get(), &info) < 0) {
         ERROR("Couldn't query underlying FVM\n");
@@ -432,6 +436,14 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             ERROR("Couldn't allocate partition\n");
             return ZX_ERR_BAD_STATE;
         }
+        block_info_t binfo;
+        if (block_size == 0) {
+            if ((ioctl_block_get_info(parts[p].new_part.get(), &binfo)) < 0) {
+                ERROR("Couldn't get partition block info\n");
+                return ZX_ERR_IO;
+            }
+            block_size = binfo.block_size;
+        }
 
         for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
             ext = get_extent(parts[p].pd, e);
@@ -490,7 +502,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
 
         LOG("Streaming partition %zu\n", p);
         status = stream_fvm_partition(&parts[p], mvmo.get(), client,
-                                      hdr.slice_size, &request, src_fd);
+                                      hdr.slice_size, block_size, &request, src_fd);
         LOG("Done streaming partition %zu\n", p);
         block_fifo_release_client(client);
         if (status != ZX_OK) {

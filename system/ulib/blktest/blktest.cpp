@@ -196,16 +196,16 @@ bool blkdev_test_fifo_basic(void) {
     requests[0].txnid      = txnid;
     requests[0].vmoid      = vmoid;
     requests[0].opcode     = BLOCKIO_WRITE;
-    requests[0].length     = blk_size;
+    requests[0].length     = 1;
     requests[0].vmo_offset = 0;
     requests[0].dev_offset = 0;
 
     requests[1].txnid      = txnid;
     requests[1].vmoid      = vmoid;
     requests[1].opcode     = BLOCKIO_WRITE;
-    requests[1].length     = blk_size * 2;
-    requests[1].vmo_offset = blk_size;
-    requests[1].dev_offset = blk_size * 100;
+    requests[1].length     = 2;
+    requests[1].vmo_offset = 1;
+    requests[1].dev_offset = 100;
 
     fifo_client_t* client;
     ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK, "");
@@ -271,7 +271,7 @@ bool blkdev_test_fifo_whole_disk(void) {
     request.txnid      = txnid;
     request.vmoid      = vmoid;
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = vmo_size;
+    request.length     = blk_count;
     request.vmo_offset = 0;
     request.dev_offset = 0;
 
@@ -345,9 +345,9 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj->vmoid;
         requests[b].opcode     = BLOCKIO_WRITE;
-        requests[b].length     = static_cast<uint32_t>(kBlockSize);
-        requests[b].vmo_offset = b * kBlockSize;
-        requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
+        requests[b].length     = 1;
+        requests[b].vmo_offset = b;
+        requests[b].dev_offset = i + b * objs;
     }
     // Write entire vmos at once
     ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ZX_OK, "");
@@ -373,9 +373,9 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj->vmoid;
         requests[b].opcode     = BLOCKIO_READ;
-        requests[b].length     = static_cast<uint32_t>(kBlockSize);
-        requests[b].vmo_offset = b * kBlockSize;
-        requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
+        requests[b].length     = 1;
+        requests[b].vmo_offset = b;
+        requests[b].dev_offset = i + b * objs;
     }
     // Read entire vmos at once
     ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ZX_OK, "");
@@ -619,7 +619,7 @@ bool blkdev_test_fifo_large_ops_count(void) {
             requests[b].txnid      = txnid;
             requests[b].vmoid      = obj.vmoid;
             requests[b].opcode     = BLOCKIO_WRITE;
-            requests[b].length     = static_cast<uint32_t>(kBlockSize);
+            requests[b].length     = 1;
             requests[b].vmo_offset = 0;
             requests[b].dev_offset = 0;
         }
@@ -664,7 +664,7 @@ bool blkdev_test_fifo_too_many_ops(void) {
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj.vmoid;
         requests[b].opcode     = BLOCKIO_WRITE;
-        requests[b].length     = static_cast<uint32_t>(kBlockSize);
+        requests[b].length     = 1;
         requests[b].vmo_offset = 0;
         requests[b].dev_offset = 0;
     }
@@ -735,7 +735,7 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
     request.txnid      = txnid;
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid + 5);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = 1;
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_IO, "Expected IO error with bad vmoid");
@@ -770,7 +770,7 @@ bool blkdev_test_fifo_bad_client_txnid(void) {
     request.txnid      = static_cast<txnid_t>(5);
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = 1;
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_IO, "Expected IO error with bad txnid");
@@ -809,27 +809,9 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
 
-    // Send a request that has a non-block aligned length (-1)
-    request.length     = static_cast<uint32_t>(kBlockSize - 1);
+    // Send a request that has zero length
+    request.length     = 0;
     request.vmo_offset = 0;
-    request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
-
-    // Send a request that has a non-block aligned length (+1)
-    request.length     = static_cast<uint32_t>(kBlockSize + 1);
-    request.vmo_offset = 0;
-    request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
-
-    // Send a request that has a non-block aligned device offset
-    request.length     = static_cast<uint32_t>(kBlockSize);
-    request.vmo_offset = 0;
-    request.dev_offset = 1;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
-
-    // Send a request that has a non-block aligned vmo offset
-    request.length     = static_cast<uint32_t>(kBlockSize);
-    request.vmo_offset = 1;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
 
@@ -845,7 +827,6 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
     // Set up the blkdev
     uint64_t kBlockSize, blk_count;
     int fd = get_testdev(&kBlockSize, &blk_count);
-    uint64_t kDeviceSize = kBlockSize * blk_count;
 
     // Create a connection to the blkdev
     zx_handle_t fifo;
@@ -869,33 +850,33 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
     request.opcode     = BLOCKIO_WRITE;
 
     // Send a request that is barely out-of-bounds for the device
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = 1;
     request.vmo_offset = 0;
-    request.dev_offset = kDeviceSize;
+    request.dev_offset = blk_count;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     // Send a request that is half out-of-bounds for the device
-    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
+    request.length     = 2;
     request.vmo_offset = 0;
-    request.dev_offset = kDeviceSize - kBlockSize;
+    request.dev_offset = blk_count - 1;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     // Send a request that is very out-of-bounds for the device
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = 1;
     request.vmo_offset = 0;
-    request.dev_offset = kDeviceSize + kBlockSize;
+    request.dev_offset = blk_count + 1;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     // Send a request that tries to overflow the VMO
-    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
-    request.vmo_offset = fbl::round_down(fbl::numeric_limits<uint64_t>::max(), kBlockSize);
+    request.length     = 2;
+    request.vmo_offset = fbl::numeric_limits<uint64_t>::max();
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     // Send a request that tries to overflow the device
-    request.length     = static_cast<uint32_t>(kBlockSize) * 2;
+    request.length     = 2;
     request.vmo_offset = 0;
-    request.dev_offset = fbl::round_down(fbl::numeric_limits<uint64_t>::max(), kBlockSize);
+    request.dev_offset = fbl::numeric_limits<uint64_t>::max();
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     block_fifo_release_client(client);
@@ -941,12 +922,12 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &obj.vmoid), expected,
               "Failed to attach vmo");
 
-    // Send a request to write to write a block -- even though that's smaller than the VMO
+    // Send a request to write to write a block -- even though that's larger than the VMO
     block_fifo_request_t request;
     request.txnid      = txnid;
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = 1;
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE, "");

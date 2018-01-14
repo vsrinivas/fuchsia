@@ -66,15 +66,17 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
     ZX_DEBUG_ASSERT(vmo != ZX_HANDLE_INVALID);
     ZX_DEBUG_ASSERT(vmoid != VMOID_INVALID);
 
-    // Update all the outgoing transactions to be in "bytes", not blocks
+    // Update all the outgoing transactions to be in "disk blocks",
+    // not "Minfs blocks".
     block_fifo_request_t blk_reqs[MAX_TXN_MESSAGES];
+    const uint32_t kDiskBlocksPerMinfsBlock = kMinfsBlockSize / bc_->BlockSize();
     for (size_t i = 0; i < count_; i++) {
         blk_reqs[i].txnid = bc_->TxnId();
         blk_reqs[i].vmoid = vmoid;
         blk_reqs[i].opcode = BLOCKIO_WRITE;
-        blk_reqs[i].vmo_offset = requests_[i].vmo_offset * kMinfsBlockSize;
-        blk_reqs[i].dev_offset = requests_[i].dev_offset * kMinfsBlockSize;
-        blk_reqs[i].length = requests_[i].length * kMinfsBlockSize;
+        blk_reqs[i].vmo_offset = requests_[i].vmo_offset * kDiskBlocksPerMinfsBlock;
+        blk_reqs[i].dev_offset = requests_[i].dev_offset * kDiskBlocksPerMinfsBlock;
+        blk_reqs[i].length = requests_[i].length * kDiskBlocksPerMinfsBlock;
     }
 
     // Actually send the operations to the underlying block device.

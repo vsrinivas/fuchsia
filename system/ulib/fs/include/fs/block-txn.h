@@ -93,11 +93,13 @@ private:
 
 template <bool Write, size_t BlockSize, typename TxnHandler>
 inline zx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
+    // Convert 'filesystem block' units to 'disk block' units.
+    const size_t kBlockFactor = BlockSize / handler_->BlockSize();
     for (size_t i = 0; i < count_; i++) {
         requests_[i].opcode = Write ? BLOCKIO_WRITE : BLOCKIO_READ;
-        requests_[i].vmo_offset *= BlockSize;
-        requests_[i].dev_offset *= BlockSize;
-        requests_[i].length *= BlockSize;
+        requests_[i].vmo_offset *= kBlockFactor;
+        requests_[i].dev_offset *= kBlockFactor;
+        requests_[i].length *= kBlockFactor;
     }
     zx_status_t status = ZX_OK;
     if (count_ != 0) {
