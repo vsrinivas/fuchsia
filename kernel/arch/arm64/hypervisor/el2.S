@@ -10,6 +10,9 @@
 #include <asm.h>
 #include <zircon/errors.h>
 
+#define CNTHCTL_EL2_EL1PCTEN            BIT_32(0)
+#define CNTHCTL_EL2_EL1PCEN             BIT_32(1)
+
 #define CPTR_EL2_TFP_SHIFT              10
 #define CPTR_EL2_TFP                    BIT_32(CPTR_EL2_TFP_SHIFT)
 #define CPTR_EL2_RES1                   0x33ff
@@ -444,12 +447,16 @@ FUNCTION_LABEL(el2_hvc_resume)
     dsb ishst
 
 .Lresume:
+    // Set the hypervisor control register.
+    msr hcr_el2, x2
+
+    // Disable access to physical timer.
+    mov x10, CNTHCTL_EL2_EL1PCTEN
+    msr cnthctl_el2, x10
+
     // Enable floating-point traps.
     movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
     msr cptr_el2, x10
-
-    // Set the hypervisor control register.
-    msr hcr_el2, x2
     isb
 
     host_state stp, HS_X18
@@ -495,7 +502,11 @@ FUNCTION_LABEL(el2_guest_exit)
     fp_state ldp, HS_FP_STATE
 
 .Lfp_skip:
-    // Set the hypervisor control register.
+    // Disable virtual timer set by guest, and enable access to physical timer.
+    msr cntv_ctl_el0, xzr
+    mov x10, CNTHCTL_EL2_EL1PCTEN | CNTHCTL_EL2_EL1PCEN
+    msr cnthctl_el2, x10
+
     // Disable guest traps, and ensure EL1 is arm64.
     mov x10, HCR_EL2_RW
     msr hcr_el2, x10
