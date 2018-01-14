@@ -309,7 +309,6 @@ int main(int argc, char** argv) {
     guest_ip,
 #if __x86_64__
     0 /* cr3 */,
-    0 /* apic_vmo */,
 #endif  // __x86_64__
   };
   Vcpu vcpu;
