@@ -76,7 +76,7 @@ class VirtioDevice {
     return (features_ & features) == features;
   }
 
-  PciDevice& pci_device() { return pci_; }
+  PciDevice* pci_device() { return &pci_; }
 
  protected:
   VirtioDevice(uint8_t device_id,
