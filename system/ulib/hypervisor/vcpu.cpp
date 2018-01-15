@@ -258,9 +258,9 @@ static zx_status_t handle_packet(Vcpu* vcpu, zx_port_packet_t* packet) {
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
         return handle_io(vcpu, &packet->guest_io, packet->key);
+#endif // __x86_64__
     case ZX_PKT_TYPE_GUEST_VCPU:
         return handle_vcpu(vcpu, &packet->guest_vcpu, packet->key);
-#endif // __x86_64__
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
         return ZX_ERR_NOT_SUPPORTED;
