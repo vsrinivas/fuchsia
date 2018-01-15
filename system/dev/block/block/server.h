@@ -35,7 +35,6 @@ public:
     // The units of length and vmo_offset is bytes.
     zx_status_t ValidateVmoHack(uint64_t length, uint64_t vmo_offset);
 
-
     zx_handle_t vmo() const { return io_vmo_.get(); }
 
     IoBuffer(zx::vmo vmo, vmoid_t vmoid);
@@ -72,10 +71,24 @@ public:
     // received before the transaction is identified as successful.
     zx_status_t Enqueue(bool do_respond, block_msg_t** msg_out);
 
+    // |status| sets the response's error to a "sticky" value -- if this method
+    // is called twice, the response will be set to the first non |ZX_OK| value.
+    //
+    // |ready_to_send| identifies that once all txns in the group complete, a
+    // response should be transmitted to the client.
+    //
+    // If all txns in a group have already completed, transmits a respose
+    // immediately.
+    void SetResponse(zx_status_t status, bool ready_to_send);
+
     // Called once the transaction has completed successfully.
+    // This function may respond on the fifo, resetting |response_|.
     void Complete(block_msg_t* msg, zx_status_t status);
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockTransaction);
+
+    void SetResponseReadyLocked() TA_REQ(lock_);
+    void RespondLocked() TA_REQ(lock_);
 
     const zx_handle_t fifo_;
 
