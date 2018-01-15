@@ -5,9 +5,11 @@
 #pragma once
 
 #include <fbl/intrusive_single_list.h>
+#include <fbl/function.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/io.h>
 #include <hypervisor/phys_mem.h>
+#include <hypervisor/vcpu.h>
 #include <zircon/types.h>
 #include <zx/port.h>
 
@@ -25,6 +27,9 @@ enum class TrapType {
 
 class Guest {
 public:
+    using VcpuFactory = fbl::Function<zx_status_t(Guest* guest, uintptr_t guest_ip, uint64_t id,
+                                                  Vcpu* vcpu)>;
+
     ~Guest();
 
     zx_status_t Init(size_t mem_size);
@@ -36,7 +41,15 @@ public:
     zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
                               IoHandler* handler);
 
+    // Setup a handler function to run when an additional VCPU is brought up.
+    void RegisterVcpuFactory(VcpuFactory factory);
+
+    zx_status_t StartVcpu(uintptr_t guest_ip, uint64_t id);
+
 private:
+    // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
+    static constexpr size_t kMaxVcpus = 16u;
+
     zx_status_t IoThread();
 
     zx_handle_t guest_ = ZX_HANDLE_INVALID;
@@ -44,4 +57,9 @@ private:
 
     zx::port port_;
     fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>> mappings_;
+
+    VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t guest_ip, uint64_t id, Vcpu* vcpu) {
+        return ZX_ERR_BAD_STATE;
+    };
+    fbl::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
 };

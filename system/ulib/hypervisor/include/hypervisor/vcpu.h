@@ -49,11 +49,17 @@ public:
         ERROR_ABORTED = 7,
     };
 
+    Vcpu() { cnd_init(&state_cnd_); }
+    ~Vcpu() { cnd_destroy(&state_cnd_); }
+
     // Create a new VCPU for a given guest.
     //
     // Upon successful completion the VCPU will be in the state
     // |WAITING_TO_START|.
-    zx_status_t Create(const Guest* guest, zx_vcpu_create_args_t* args);
+    zx_status_t Create(Guest* guest, zx_vcpu_create_args_t* args, uint64_t id);
+
+    // TODO(alexlegg): Remove this once the above is used in Garnet.
+    zx_status_t Create(Guest* guest, zx_vcpu_create_args_t* args) { return Create(guest, args, 0); }
 
     // Begins VCPU execution.
     //
@@ -64,9 +70,6 @@ public:
     // Waits for the VCPU to transition to a terminal state.
     zx_status_t Join();
 
-    // TODO(tjdetwiler): Delete this once machina has migrated to use |Create|.
-    zx_status_t Init(const Guest& guest, zx_vcpu_create_args_t* args);
-
     // TODO(tjdetwiler): These should be made private as they're not thread-
     // safe.
     zx_status_t Loop();
@@ -74,6 +77,8 @@ public:
 
     zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
+
+    Guest* guest() const { return guest_; }
 
 private:
     // Entry point for the VCPU on the dedicated VCPU thread. This thread will
@@ -88,6 +93,8 @@ private:
     // Block until |state_| != |initial_state|.
     void WaitForStateChangeLocked(State initial_state) __TA_REQUIRES(mutex_);
 
+    Guest* guest_;
+    uint64_t id_;
     thrd_t thread_;
     zx_handle_t vcpu_ = ZX_HANDLE_INVALID;
     State state_ __TA_GUARDED(mutex_) = State::UNINITIALIZED;

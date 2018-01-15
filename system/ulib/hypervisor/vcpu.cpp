@@ -169,25 +169,26 @@ static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_
 
 static zx_status_t handle_vcpu(Vcpu* vcpu, const zx_packet_guest_vcpu_t* packet,
                                uint64_t trap_key) {
-    // TODO: Start up a new VCPU.
     fprintf(stderr, "Got VCPU packet with addr = %lx, apic_id = %ld\n", packet->addr, packet->id);
-    return ZX_ERR_NOT_SUPPORTED;
+    return vcpu->guest()->StartVcpu(packet->addr, packet->id);
 }
 
 struct Vcpu::ThreadEntryArgs {
-    const Guest* guest;
+    Guest* guest;
     Vcpu* vcpu;
     zx_vcpu_create_args_t* vcpu_create_args;
 };
 
-zx_status_t Vcpu::Create(const Guest* guest, zx_vcpu_create_args_t* vcpu_create_args) {
+zx_status_t Vcpu::Create(Guest* guest, zx_vcpu_create_args_t* vcpu_create_args, uint64_t id) {
+    guest_ = guest;
+    id_ = id;
     ThreadEntryArgs args = {
         .guest = guest,
         .vcpu = this,
         .vcpu_create_args = vcpu_create_args,
     };
     fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
-    name_buffer.AppendPrintf("vcpu-%d", 0);
+    name_buffer.AppendPrintf("vcpu-%lu", id);
     auto thread_entry = [](void* arg) {
         ThreadEntryArgs* thread_args = reinterpret_cast<ThreadEntryArgs*>(arg);
         return thread_args->vcpu->ThreadEntry(thread_args);
@@ -236,10 +237,6 @@ zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
     return Loop();
 }
 
-zx_status_t Vcpu::Init(const Guest& guest, zx_vcpu_create_args_t* args) {
-    return zx_vcpu_create(guest.handle(), 0, args, &vcpu_);
-}
-
 void Vcpu::SetStateLocked(State new_state) {
     state_ = new_state;
     cnd_signal(&state_cnd_);
@@ -272,7 +269,7 @@ zx_status_t Vcpu::Loop() {
     while (true) {
         zx_status_t status = zx_vcpu_resume(vcpu_, &packet);
         if (status != ZX_OK) {
-            fprintf(stderr, "Failed to resume VCPU %d\n", status);
+            fprintf(stderr, "Failed to resume VCPU-%lu: %d\n", id_, status);
             fbl::AutoLock lock(&mutex_);
             SetStateLocked(State::ERROR_FAILED_TO_RESUME);
             return status;
