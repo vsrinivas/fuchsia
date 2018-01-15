@@ -609,6 +609,16 @@ name = "wlan-rsn"
 version = "0.1.0"
 
 [[package]]
+name = "wlanstack2"
+version = "0.1.0"
+dependencies = [
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fuchsia-vfs-watcher 0.1.0",
+ "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-core 0.1.12",
+]
+
+[[package]]
 name = "ws2_32-sys"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

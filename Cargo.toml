@@ -3,6 +3,7 @@
 # workspace.
 members =  [
   "bin/device_settings",
+  "bin/wlanstack",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
