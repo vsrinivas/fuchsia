@@ -14,10 +14,12 @@ members =  [
   "public/rust/crates/fdio",
   "public/rust/crates/fuchsia-app",
   "public/rust/crates/fuchsia-vfs",
+  "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
   "public/rust/crates/fuchsia-zircon",
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
+  "public/rust/crates/tokio-fuchsia",
   "public/rust/fidl_crates/garnet_examples_fidl_services",
   "public/rust/fidl_crates/garnet_public_lib_app_fidl",
   "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
@@ -37,6 +39,7 @@ ddk-rs = { path = "public/rust/crates/ddk-rs" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
+fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
 garnet_examples_fidl_services = { path = "public/rust/fidl_crates/garnet_examples_fidl_services" }

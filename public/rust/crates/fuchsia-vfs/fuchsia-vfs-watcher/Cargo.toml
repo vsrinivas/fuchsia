@@ -1,0 +1,14 @@
+[package]
+name = "fuchsia-vfs-watcher"
+version = "0.1.0"
+license = "BSD-3-Clause"
+
+[dependencies]
+fdio = "0.2"
+fuchsia-zircon = "0.3"
+futures = "0.1"
+tokio-core = "0.1"
+tokio-fuchsia = "0.1"
+
+[dev-dependencies]
+tempdir = "0.3"
