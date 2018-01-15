@@ -251,19 +251,6 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  zx_vcpu_create_args_t args = {
-    guest_ip,
-#if __x86_64__
-    0 /* cr3 */,
-#endif  // __x86_64__
-  };
-  Vcpu vcpu;
-  status = vcpu.Create(&guest, &args);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create VCPU";
-    return status;
-  }
-
   // Setup UARTs.
   machina::Uart uart[kNumUarts];
   for (size_t i = 0; i < kNumUarts; i++) {
@@ -282,6 +269,40 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  auto initialize_vcpu = [boot_ptr, &interrupt_controller](Guest* guest,
+                                                           uintptr_t guest_ip,
+                                                           uint64_t id, Vcpu* vcpu) {
+    zx_vcpu_create_args_t vcpu_args = {
+      guest_ip,
+#if __x86_64__
+      0 /* cr3 */,
+#endif  // __x86_64__
+    };
+    zx_status_t status = vcpu->Create(guest, &vcpu_args, id);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create VCPU.";
+      return status;
+    }
+    // Register VCPU with ID 0.
+    status = interrupt_controller.RegisterVcpu(id, vcpu);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller.";
+      return status;
+    }
+    // Setup initial VCPU state.
+    zx_vcpu_state_t vcpu_state = {};
+#if __aarch64__
+    vcpu_state.x[0] = boot_ptr;
+#elif __x86_64__
+    vcpu_state.rsi = boot_ptr;
+#endif
+    // Begin VCPU execution.
+    return vcpu->Start(&vcpu_state);
+  };
+
+  guest.RegisterVcpuFactory(initialize_vcpu);
+
+
 #if __aarch64__
   status = interrupt_controller.RegisterVcpu(0, &vcpu);
   if (status != ZX_OK) {
@@ -295,12 +316,6 @@ int main(int argc, char** argv) {
     return status;
   }
 #elif __x86_64__
-  // Register VCPU with local APIC ID 0.
-  status = interrupt_controller.RegisterVcpu(0, &vcpu);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to register VCPU with IO APIC.";
-    return status;
-  }
   // Setup IO ports.
   machina::IoPort io_port;
   status = io_port.Init(&guest);
@@ -433,15 +448,8 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Setup initial VCPU state.
-  zx_vcpu_state_t vcpu_state = {};
-#if __aarch64__
-  vcpu_state.x[0] = boot_ptr;
-#elif __x86_64__
-  vcpu_state.rsi = boot_ptr;
-#endif
-  // Begin VCPU execution.
-  status = vcpu.Start(&vcpu_state);
+  Vcpu vcpu;
+  status = initialize_vcpu(&guest, guest_ip, 0 /* id */, &vcpu);
   if (status != ZX_OK) {
     return status;
   }
