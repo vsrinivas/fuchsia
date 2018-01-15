@@ -22,7 +22,7 @@ action("guest-mdi") {
 
   mdi_inputs = [
     "//zircon/system/public/zircon/mdi/zircon.mdi",
-    "//garnet/lib/machina/arch/arm64/mdi/board.mdi"
+    "//garnet/lib/machina/arch/arm64/mdi/board.mdi",
   ]
 
   inputs = [ _mdigen ] + mdi_inputs
@@ -32,7 +32,7 @@ action("guest-mdi") {
     rebase_path(_mdigen, root_build_dir),
   ]
 
-  output_file = "$target_out_dir/mdi.bin"
+  output_file = "$target_out_dir/guest-mdi.bin"
   outputs = [
     output_file,
   ]
@@ -58,16 +58,16 @@ bootdata("guest-bootdata") {
   visibility = [ ":*" ]
   boot = true
   inputs = [
-    "//out/build-zircon/build-${zircon_platform}/kernel-bootdata.bin",
-    "//out/build-zircon/build-user-${zircon_cpu}/bootfs.manifest"
+    "//out/build-zircon/build-user-${zircon_cpu}/bootfs.manifest",
   ]
 
   if (current_cpu == "arm64") {
     deps = [
       ":guest-mdi",
-      ":guest-platform-id"
+      ":guest-platform-id",
     ]
-    inputs += get_target_outputs(":guest-platform-id")
+    inputs += get_target_outputs(":guest-mdi") +
+              get_target_outputs(":guest-platform-id")
   }
 }
 
