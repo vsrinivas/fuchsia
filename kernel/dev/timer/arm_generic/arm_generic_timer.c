@@ -320,7 +320,7 @@ static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
     dprintf(SPEW, "ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }
 
-void arm_generic_timer_init(int irq, uint32_t freq_override)
+static void arm_generic_timer_init(uint32_t freq_override)
 {
     uint32_t cntfrq;
 
@@ -349,12 +349,10 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
     arm_generic_timer_init_conversion_factors(cntfrq);
     test_time_conversions(cntfrq);
 
-    LTRACEF("register irq %d on cpu %u\n", irq, arch_curr_cpu_num());
-    zx_status_t status = register_int_handler(irq, &platform_tick, NULL);
+    LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
+    zx_status_t status = register_int_handler(timer_irq, &platform_tick, NULL);
     DEBUG_ASSERT(status == ZX_OK);
-    unmask_interrupt(irq);
-
-    timer_irq = irq;
+    unmask_interrupt(timer_irq);
 }
 
 static void arm_generic_timer_init_secondary_cpu(uint level)
@@ -380,7 +378,9 @@ LK_INIT_HOOK_FLAGS(arm_generic_timer_resume_cpu, arm_generic_timer_resume_cpu,
 
 #if WITH_DEV_PDEV
 static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
-    uint32_t irq;
+    uint32_t irq_phys;
+    uint32_t irq_virt;
+    uint32_t irq_sphys;
     bool got_irq_phys = false;
     bool got_irq_virt = false;
     bool got_irq_sphys = false;
@@ -390,13 +390,13 @@ static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
         case MDI_ARM_TIMER_IRQ_PHYS:
-            got_irq_phys = !mdi_node_uint32(&child, &irq);
+            got_irq_phys = !mdi_node_uint32(&child, &irq_phys);
             break;
         case MDI_ARM_TIMER_IRQ_VIRT:
-            got_irq_virt = !mdi_node_uint32(&child, &irq);
+            got_irq_virt = !mdi_node_uint32(&child, &irq_virt);
             break;
         case MDI_ARM_TIMER_IRQ_SPHYS:
-            got_irq_sphys = !mdi_node_uint32(&child, &irq);
+            got_irq_sphys = !mdi_node_uint32(&child, &irq_sphys);
             break;
         case MDI_ARM_TIMER_FREQ_OVERRIDE:
             // freq_override is optional
@@ -405,21 +405,25 @@ static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
         }
     }
 
-    if (got_irq_phys && got_irq_virt) {
-        panic("both irq-phys and irq-virt set in arm_generic_timer_pdev_init\n");
+    if (got_irq_phys && got_irq_virt && arm64_get_boot_el() < 2) {
+        // If we did not boot at EL2 or above, prefer the virtual timer.
+        got_irq_phys = false;
     }
     if (got_irq_phys) {
+        timer_irq = irq_phys;
         reg_procs = &cntp_procs;
     } else if (got_irq_virt) {
+        timer_irq = irq_virt;
         reg_procs = &cntv_procs;
     } else if (got_irq_sphys) {
+        timer_irq = irq_sphys;
         reg_procs = &cntps_procs;
     } else {
         panic("neither irq-phys nor irq-virt set in arm_generic_timer_pdev_init\n");
     }
     smp_mb();
 
-    arm_generic_timer_init(irq, freq_override);
+    arm_generic_timer_init(freq_override);
 }
 
 LK_PDEV_INIT(arm_generic_timer_pdev_init, MDI_ARM_TIMER, arm_generic_timer_pdev_init, LK_INIT_LEVEL_PLATFORM_EARLY);
