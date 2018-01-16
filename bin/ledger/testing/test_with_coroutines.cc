@@ -50,7 +50,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
 TestWithCoroutines::TestWithCoroutines() {}
 
-bool TestWithCoroutines::RunInCoroutine(
+void TestWithCoroutines::RunInCoroutine(
     std::function<void(coroutine::CoroutineHandler*)> run_test) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
@@ -59,12 +59,10 @@ bool TestWithCoroutines::RunInCoroutine(
     run_test(test_handler.get());
     ended = true;
   });
-  return RunLoopUntil([&] {
-    if (!ended) {
-      test_handler->ContinueIfNeeded();
-    }
-    return ended;
-  });
+  while (!ended) {
+    test_handler->ContinueIfNeeded();
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace test

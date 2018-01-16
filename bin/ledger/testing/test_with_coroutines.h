@@ -17,9 +17,8 @@ class TestWithCoroutines : public gtest::TestWithMessageLoop {
   TestWithCoroutines();
 
  protected:
-  // Runs the given the given test code in a coroutine. Returns |true| if the
-  // test has successfully termitated.
-  bool RunInCoroutine(
+  // Runs the given the given test code in a coroutine.
+  void RunInCoroutine(
       std::function<void(coroutine::CoroutineHandler*)> run_test);
 
   coroutine::CoroutineServiceImpl coroutine_service_;

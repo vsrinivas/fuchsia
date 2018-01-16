@@ -71,7 +71,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
 };
 
 TEST_F(PageDbTest, HeadCommits) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<CommitId> heads;
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
@@ -86,11 +86,11 @@ TEST_F(PageDbTest, HeadCommits) {
     EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
-  }));
+  });
 }
 
 TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<int64_t> timestamps = {std::numeric_limits<int64_t>::min(),
                                        std::numeric_limits<int64_t>::max(), 0};
 
@@ -123,11 +123,11 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     for (size_t i = 0; i < heads.size(); ++i) {
       EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
     }
-  }));
+  });
 }
 
 TEST_F(PageDbTest, Commits) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::unique_ptr<const Commit>> parents;
     parents.emplace_back(new test::CommitRandomImpl());
 
@@ -148,11 +148,11 @@ TEST_F(PageDbTest, Commits) {
     EXPECT_EQ(Status::OK, page_db_.RemoveCommit(handler, commit->GetId()));
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
                                      handler, commit->GetId(), &storage_bytes));
-  }));
+  });
 }
 
 TEST_F(PageDbTest, Journals) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
     JournalId implicit_journal_id;
@@ -184,11 +184,11 @@ TEST_F(PageDbTest, Journals) {
     EXPECT_EQ(Status::OK,
               page_db_.GetImplicitJournalIds(handler, &journal_ids));
     EXPECT_EQ(0u, journal_ids.size());
-  }));
+  });
 }
 
 TEST_F(PageDbTest, JournalEntries) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
     JournalId journal_id;
@@ -222,11 +222,11 @@ TEST_F(PageDbTest, JournalEntries) {
     }
     EXPECT_FALSE(entries->Valid());
     EXPECT_EQ(Status::OK, entries->GetStatus());
-  }));
+  });
 }
 
 TEST_F(PageDbTest, ObjectStorage) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectIdentifier object_identifier = RandomObjectIdentifier();
     std::string content = RandomString(32 * 1024);
     std::unique_ptr<const Object> object;
@@ -250,11 +250,11 @@ TEST_F(PageDbTest, ObjectStorage) {
               page_db_.DeleteObject(handler, object_identifier.object_digest));
     EXPECT_EQ(Status::NOT_FOUND,
               page_db_.ReadObject(handler, object_identifier, &object));
-  }));
+  });
 }
 
 TEST_F(PageDbTest, UnsyncedCommits) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
     std::vector<CommitId> commit_ids;
     EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
@@ -275,11 +275,11 @@ TEST_F(PageDbTest, UnsyncedCommits) {
     EXPECT_EQ(Status::OK,
               page_db_.IsCommitSynced(handler, commit_id, &is_synced));
     EXPECT_TRUE(is_synced);
-  }));
+  });
 }
 
 TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     CommitId commit_ids[] = {RandomCommitId(), RandomCommitId(),
                              RandomCommitId()};
     // Add three unsynced commits with timestamps 200, 300 and 100.
@@ -297,11 +297,11 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
     EXPECT_EQ(found_ids[0], commit_ids[2]);
     EXPECT_EQ(found_ids[1], commit_ids[0]);
     EXPECT_EQ(found_ids[2], commit_ids[1]);
-  }));
+  });
 }
 
 TEST_F(PageDbTest, UnsyncedPieces) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectDigest object_digest = RandomObjectDigest();
     std::vector<ObjectIdentifier> object_identifiers;
     EXPECT_EQ(Status::OK,
@@ -331,11 +331,11 @@ TEST_F(PageDbTest, UnsyncedPieces) {
     EXPECT_EQ(Status::OK,
               page_db_.GetObjectStatus(handler, object_digest, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
-  }));
+  });
 }
 
 TEST_F(PageDbTest, Batch) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     std::unique_ptr<PageDb::Batch> batch;
     ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
     ASSERT_TRUE(batch);
@@ -356,11 +356,11 @@ TEST_F(PageDbTest, Batch) {
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_EQ(1u, object_identifiers.size());
     EXPECT_EQ(object_digest, object_identifiers[0].object_digest);
-  }));
+  });
 }
 
 TEST_F(PageDbTest, PageDbObjectStatus) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectDigest object_digest = RandomObjectDigest();
     PageDbObjectStatus object_status;
 
@@ -393,11 +393,11 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
         EXPECT_EQ(expected_status, object_status);
       }
     }
-  }));
+  });
 }
 
 TEST_F(PageDbTest, SyncMetadata) {
-  EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {
         {"foo1", "foo2"}, {"bar1", " bar2 "}};
     for (auto key_and_value : keys_and_values) {
@@ -412,7 +412,7 @@ TEST_F(PageDbTest, SyncMetadata) {
                 page_db_.GetSyncMetadata(handler, key, &returned_value));
       EXPECT_EQ(value, returned_value);
     }
-  }));
+  });
 }
 
 }  // namespace
