@@ -651,7 +651,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path->link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
                                                 fidl::Array<uint8_t>::New(16),
-                                                std::move(link_path));
+                                                std::move(link_path),
+                                                nullptr);
   user_shell_link_->Connect(std::move(request));
 }
 

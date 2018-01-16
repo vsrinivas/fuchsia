@@ -21,6 +21,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/story_marker.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
@@ -260,7 +261,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
           return ptr->chain_path().Equals(module_data_->module_path);
         });
     // If the Chain already exists, remove it and re-create it appropriately.
-    story_controller_impl_->chains_.erase(i, story_controller_impl_->chains_.end());
+    story_controller_impl_->chains_.erase(
+        i, story_controller_impl_->chains_.end());
     story_controller_impl_->chains_.emplace_back(
         new ChainImpl(module_data_->module_path.Clone()));
 
@@ -700,6 +702,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
   ConnectLinkCall(OperationContainer* const container,
                   StoryControllerImpl* const story_controller_impl,
                   LinkPathPtr link_path,
+                  CreateLinkInfoPtr create_link_info,
                   fidl::InterfaceRequest<Link> request,
                   ResultCall done)
       : Operation("StoryControllerImpl::ConnectLinkCall",
@@ -707,6 +710,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                   std::move(done)),
         story_controller_impl_(story_controller_impl),
         link_path_(std::move(link_path)),
+        create_link_info_(std::move(create_link_info)),
         request_(std::move(request)) {
     Ready();
   }
@@ -726,7 +730,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
     link_impl_ = new LinkImpl(story_controller_impl_->ledger_client_,
                               story_controller_impl_->story_page_id_.Clone(),
-                              std::move(link_path_));
+                              std::move(link_path_), nullptr);
     link_impl_->Connect(std::move(request_));
     story_controller_impl_->links_.emplace_back(link_impl_);
     // This orphaned handler will be called after this operation has been
@@ -750,6 +754,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   LinkPathPtr link_path_;
+  CreateLinkInfoPtr create_link_info_;
   fidl::InterfaceRequest<Link> request_;
 
   LinkImpl* link_impl_;
@@ -766,7 +771,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
                    const fidl::String& module_name,
                    const fidl::String& module_url,
                    const fidl::String& link_name,
-                   const fidl::String& link_json,
+                   CreateLinkInfoPtr create_link_info,
                    const ResultCall& done)
       : Operation("StoryControllerImpl::AddForCreateCall",
                   container,
@@ -776,7 +781,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
         module_name_(module_name),
         module_url_(module_url),
         link_name_(link_name),
-        link_json_(link_json) {
+        create_link_info_(std::move(create_link_info)) {
     Ready();
   }
 
@@ -791,18 +796,15 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
     //
     // just calls Done() when the last copy of it completes.
 
-    if (!link_json_.is_null()) {
+    if (!create_link_info_.is_null()) {
       // There is no module path; this link exists outside the scope of a
       // module.
       LinkPathPtr link_path = LinkPath::New();
       link_path->module_path = fidl::Array<fidl::String>::New(0);
       link_path->link_name = link_name_;
       new ConnectLinkCall(&operation_queue_, story_controller_impl_,
-                          std::move(link_path), link_.NewRequest(),
-                          [this, flow] {
-                            link_->UpdateObject(nullptr, link_json_);
-                            link_->Sync([flow] {});
-                          });
+                          std::move(link_path), std::move(create_link_info_),
+                          link_.NewRequest(), [flow] {});
     }
 
     auto module_path = fidl::Array<fidl::String>::New(0);
@@ -819,7 +821,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
   const fidl::String module_name_;
   const fidl::String module_url_;
   const fidl::String link_name_;
-  const fidl::String link_json_;
+  CreateLinkInfoPtr create_link_info_;
 
   LinkPtr link_;
 
@@ -1386,10 +1388,10 @@ void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
 void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
                                        const fidl::String& module_url,
                                        const fidl::String& link_name,
-                                       const fidl::String& link_json,
+                                       CreateLinkInfoPtr create_link_info,
                                        const std::function<void()>& done) {
   new AddForCreateCall(&operation_queue_, this, module_name, module_url,
-                       link_name, link_json, done);
+                       link_name, std::move(create_link_info), done);
 }
 
 StoryState StoryControllerImpl::GetStoryState() const {
@@ -1453,8 +1455,7 @@ void StoryControllerImpl::RequestStoryFocus() {
 void StoryControllerImpl::ConnectChainPath(
     fidl::Array<fidl::String> chain_path,
     fidl::InterfaceRequest<Chain> request) {
-  auto i = std::find_if(chains_.begin(),
-                        chains_.end(),
+  auto i = std::find_if(chains_.begin(), chains_.end(),
                         [&chain_path](const std::unique_ptr<ChainImpl>& ptr) {
                           return ptr->chain_path().Equals(chain_path);
                         });
@@ -1467,7 +1468,7 @@ void StoryControllerImpl::ConnectChainPath(
 void StoryControllerImpl::ConnectLinkPath(
     LinkPathPtr link_path,
     fidl::InterfaceRequest<Link> request) {
-  new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
+  new ConnectLinkCall(&operation_queue_, this, std::move(link_path), nullptr,
                       std::move(request), [] {});
 }
 

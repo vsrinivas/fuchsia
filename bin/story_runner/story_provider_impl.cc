@@ -184,7 +184,11 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
     controller_ = std::make_unique<StoryControllerImpl>(
         story_id_, story_provider_impl_->ledger_client_,
         std::move(story_page_id_), story_provider_impl_);
-    controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
+    auto create_link_info = CreateLinkInfo::New();
+    create_link_info->initial_data = std::move(root_json_);
+
+    controller_->AddForCreate(kRootModuleName, url_, kRootLink,
+                              std::move(create_link_info),
                               [this, flow] { Cont2(flow); });
   }
 
@@ -489,7 +493,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
 
     link_peer->link = std::make_unique<LinkImpl>(
         link_peer->ledger.get(), story_data_->story_page_id.Clone(),
-        std::move(link_path));
+        std::move(link_path), nullptr);
 
     link_peer->link->Connect(std::move(request_));
 

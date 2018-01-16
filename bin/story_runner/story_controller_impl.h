@@ -32,6 +32,7 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/per_device_story_info.fidl.h"
 #include "lib/story/fidl/story_controller.fidl.h"
 #include "lib/story/fidl/story_data.fidl.h"
@@ -99,7 +100,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void AddForCreate(const fidl::String& module_name,
                     const fidl::String& module_url,
                     const fidl::String& link_name,
-                    const fidl::String& link_json,
+                    CreateLinkInfoPtr create_link_info,
                     const std::function<void()>& done);
 
   // Called by StoryProviderImpl.

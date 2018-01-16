@@ -15,6 +15,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/key_generator.h"
@@ -88,9 +89,12 @@ class LinkImpl : PageClient {
  public:
   // The |link_path| contains the series of module names (where the last element
   // is the module that created this Link) that this Link is namespaced under.
+  // If |create_link_info| is null, then this is a request to connect to an
+  // existing link.
   LinkImpl(LedgerClient* ledger_client,
            LedgerPageId page_id,
-           LinkPathPtr link_path);
+           LinkPathPtr link_path,
+           CreateLinkInfoPtr create_link_info);
 
   ~LinkImpl() override;
 
@@ -190,6 +194,9 @@ class LinkImpl : PageClient {
 
   // The hierarchical identifier of this Link instance within its Story.
   const LinkPathPtr link_path_;
+
+  // The attributes passed by the link creator to initialize the link.
+  const CreateLinkInfoPtr create_link_info_;
 
   // When the Link instance loses all its Link connections, this callback is
   // invoked. It will cause the Link instance to be deleted. Remaining

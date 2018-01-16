@@ -9,6 +9,7 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
+#include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
@@ -413,8 +414,8 @@ class LinkImpl::EraseCall : Operation<> {
 class LinkImpl::GetEntityCall : Operation<fidl::String> {
  public:
   GetEntityCall(OperationContainer* const container,
-          LinkImpl* const impl,
-          ResultCall result_call)
+                LinkImpl* const impl,
+                ResultCall result_call)
       : Operation("LinkImpl::GetEntityCall", container, std::move(result_call)),
         impl_(impl) {
     Ready();
@@ -425,8 +426,8 @@ class LinkImpl::GetEntityCall : Operation<fidl::String> {
     FlowToken flow{this, &result_};
     new GetCall(&operation_queue_, impl_, fidl::Array<fidl::String>::New(0),
                 [this, flow](const fidl::String& value) {
-      Cont(std::move(flow), value);
-    });
+                  Cont(std::move(flow), value);
+                });
   }
 
   void Cont(FlowToken flow, const fidl::String& json) {
@@ -526,12 +527,14 @@ class LinkImpl::ChangeCall : Operation<> {
 
 LinkImpl::LinkImpl(LedgerClient* const ledger_client,
                    LedgerPageId page_id,
-                   LinkPathPtr link_path)
+                   LinkPathPtr link_path,
+                   CreateLinkInfoPtr create_link_info)
     : PageClient(MakeLinkKey(link_path),
                  ledger_client,
                  std::move(page_id),
                  MakeLinkKey(link_path)),
-      link_path_(std::move(link_path)) {
+      link_path_(std::move(link_path)),
+      create_link_info_(std::move(create_link_info)) {
   MakeReloadCall([this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));

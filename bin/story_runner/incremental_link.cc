@@ -49,14 +49,7 @@ class LinkImpl::ReloadCall : Operation<> {
   }
 
  private:
-  void Run() {
-    FlowToken flow{this};
-    new ReadAllDataCall<LinkChange>(
-        &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
-        XdrLinkChange, [this, flow](fidl::Array<LinkChangePtr> changes) {
-          impl_->Replay(std::move(changes));
-        });
-  }
+  void Run();
 
   LinkImpl* const impl_;  // not owned
   OperationQueue operation_queue_;
@@ -102,8 +95,11 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
   IncrementalChangeCall(OperationContainer* const container,
                         LinkImpl* const impl,
                         LinkChangePtr data,
-                        uint32_t src)
-      : Operation("LinkImpl::IncrementalChangeCall", container, [] {}),
+                        uint32_t src,
+                        ResultCall result_call)
+      : Operation("LinkImpl::IncrementalChangeCall",
+                  container,
+                  std::move(result_call)),
         impl_(impl),
         data_(std::move(data)),
         src_(src) {
@@ -160,8 +156,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
         impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                               data_->json);
       } else {
-        FXL_LOG(WARNING) << trace_name() << " "
-                         << "ApplyChange() failed ";
+        FXL_LOG(WARNING) << trace_name() << " " << "ApplyChange() failed ";
       }
       impl_->latest_key_ = data_->key;
       Cont1(flow, src_);
@@ -184,6 +179,36 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalChangeCall);
 };
+
+// This function is factored out of ReloadCall because of the circular reference
+// caused by |new IncrementalChangeCall|. Although it's possible that this Run()
+// function gets called recursively, it will stop recursing because of the
+// following sequence of events:
+// (1) the SET operation will be applied to the Link
+// (2) |changes| will no longer be empty
+// (3) the |Replay()| path will be taken in any recursive call
+void LinkImpl::ReloadCall::Run() {
+  FlowToken flow{this};
+  new ReadAllDataCall<LinkChange>(
+      &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
+      XdrLinkChange, [this, flow](fidl::Array<LinkChangePtr> changes) {
+        if (changes.empty()) {
+          if (!impl_->create_link_info_.is_null() &&
+              !impl_->create_link_info_->initial_data.is_null() &&
+              !impl_->create_link_info_->initial_data.empty()) {
+            LinkChangePtr data = LinkChange::New();
+            // Leave data->key null to signify a new entry
+            data->op = LinkChangeOp::SET;
+            data->pointer = fidl::Array<fidl::String>::New(0);
+            data->json = std::move(impl_->create_link_info_->initial_data);
+            new IncrementalChangeCall(&operation_queue_, impl_, std::move(data),
+                                      kWatchAllConnectionId, [flow] {});
+          }
+        } else {
+          impl_->Replay(std::move(changes));
+        }
+      });
+}
 
 void LinkImpl::Replay(fidl::Array<LinkChangePtr> changes) {
   doc_ = CrtJsonDoc();
@@ -265,7 +290,8 @@ void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data,
 }
 
 void LinkImpl::MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src) {
-  new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+  new IncrementalChangeCall(&operation_queue_, this, std::move(data), src,
+                            [] {});
 }
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {

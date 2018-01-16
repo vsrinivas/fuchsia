@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/array.h"
+#include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -17,6 +18,10 @@
 #include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
+
+namespace {
+const std::string kInitialLinkValue = "{}";
+}  // namespace
 
 // Defined in incremental_link.cc.
 void XdrLinkChange(XdrContext* const xdr, LinkChange* const data);
@@ -79,14 +84,18 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
 
     OperationBase::set_observer([this](const char* const operation_name) {
       FXL_LOG(INFO) << "Operation " << operation_name;
-      operations_[operation_name]++;
+      ++operations_[operation_name];
     });
 
     auto page_id = to_array("0123456789123456");
     auto link_path = GetTestLinkPath();
 
+    auto create_link_info = CreateLinkInfo::New();
+    create_link_info->initial_data = kInitialLinkValue;
+
     link_impl_ = std::make_unique<LinkImpl>(ledger_client(), page_id.Clone(),
-                                            link_path->Clone());
+                                            link_path->Clone(),
+                                            std::move(create_link_info));
 
     link_impl_->Connect(link_.NewRequest());
 
@@ -116,7 +125,23 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
   LinkChangePtr& last_change() { return page_client_peer_->last_change; }
 
   void ExpectOneCall(const std::string& operation_name) {
-    EXPECT_EQ(1u, operations_.count(operation_name)) << operation_name;
+    EXPECT_EQ(1u, operations_.count(operation_name))
+        << operation_name << " was not called.";
+    EXPECT_EQ(1, operations_[operation_name]) << operation_name;
+    operations_.erase(operation_name);
+  }
+
+  void ExpectAtLeastCalls(const std::string& operation_name, int n) {
+    EXPECT_EQ(1u, operations_.count(operation_name))
+        << operation_name << " was not called.";
+    EXPECT_LE(n, operations_[operation_name]) << operation_name;
+    operations_.erase(operation_name);
+  }
+
+  void ExpectCalls(const std::string& operation_name, int n) {
+    EXPECT_EQ(1u, operations_.count(operation_name))
+        << operation_name << " was not called.";
+    EXPECT_EQ(n, operations_[operation_name]) << operation_name;
     operations_.erase(operation_name);
   }
 
@@ -150,16 +175,30 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
 };
 
 TEST_F(LinkImplTest, Constructor) {
-  bool finished{};
-  continue_ = [this, &finished] { finished = true; };
+  continue_ = [this] { EXPECT_TRUE(step_ <= 1); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
-  EXPECT_TRUE(RunLoopUntil([&finished] { return finished; }));
-  EXPECT_EQ("null", last_json_notify_);
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(1, ledger_change_count());
+
+  EXPECT_EQ(kInitialLinkValue, last_json_notify_);
   ExpectOneCall("LinkImpl::ReloadCall");
   ExpectOneCall("ReadAllDataCall");
+  // All numbers for |IncrementalChangeCall| are "at least" because PageClient
+  // will make a callback once per write, effectively doubling the number of
+  // calls. However, |LinkImpl::OnPageChange| puts those requests on an
+  // OperationQueue, so each request may or may not have run by the time Sync()
+  // returns.
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
   ExpectOneCall("LinkImpl::WatchCall");
+  ExpectOneCall("SyncCall");
   ExpectNoOtherCalls();
 }
 
@@ -169,15 +208,22 @@ TEST_F(LinkImplTest, Set) {
   link_->WatchAll(watcher_binding_.NewBinding());
   link_->Set(nullptr, "{ \"value\": 7 }");
 
-  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 1; }));
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(2, ledger_change_count());
+
   // Calls from constructor and setup.
   ExpectOneCall("LinkImpl::ReloadCall");
   ExpectOneCall("ReadAllDataCall");
   ExpectOneCall("LinkImpl::WatchCall");
   // Calls from Set().
-  ExpectOneCall("LinkImpl::IncrementalChangeCall");
-  ExpectOneCall("LinkImpl::IncrementalWriteCall");
-  ExpectOneCall("WriteDataCall");
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
+  ExpectOneCall("SyncCall");
   ExpectNoOtherCalls();
   EXPECT_EQ("{\"value\":7}", last_json_notify_);
 }
@@ -190,7 +236,17 @@ TEST_F(LinkImplTest, Update) {
   link_->Set(nullptr, "{ \"value\": 8 }");
   link_->UpdateObject(nullptr, "{ \"value\": 50 }");
 
-  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(3, ledger_change_count());
+
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
+
   EXPECT_EQ("{\"value\":50}", last_change()->json);
   EXPECT_EQ("{\"value\":50}", last_json_notify_);
 }
@@ -203,7 +259,17 @@ TEST_F(LinkImplTest, UpdateNewKey) {
   link_->Set(nullptr, "{ \"value\": 9 }");
   link_->UpdateObject(nullptr, "{ \"century\": 100 }");
 
-  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(3, ledger_change_count());
+
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
+
   EXPECT_EQ("{\"century\":100}", last_change()->json);
   EXPECT_EQ("{\"value\":9,\"century\":100}", last_json_notify_);
 }
@@ -218,7 +284,17 @@ TEST_F(LinkImplTest, Erase) {
   std::vector<std::string> segments{"value"};
   link_->Erase(fidl::Array<fidl::String>::From(segments));
 
-  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(3, ledger_change_count());
+
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
+
   EXPECT_TRUE(last_change()->json.is_null());
   EXPECT_EQ("{}", last_json_notify_);
 }
@@ -232,7 +308,17 @@ TEST_F(LinkImplTest, SetEntity) {
   link_->WatchAll(watcher_binding_.NewBinding());
   link_->SetEntity(entity_ref);
 
-  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 1; }));
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(2, ledger_change_count());
+
+  ExpectAtLeastCalls("LinkImpl::IncrementalChangeCall", ledger_change_count());
+  ExpectCalls("LinkImpl::IncrementalWriteCall", ledger_change_count());
+  ExpectCalls("WriteDataCall", ledger_change_count());
+
   // SetEntity() delegates to Set(), which was tested above, so don't
   // repeat those tests here.
   EXPECT_EQ(entity_ref_json, last_json_notify_);
