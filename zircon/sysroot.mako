@@ -1,5 +1,7 @@
 <%include file="header.mako" />
 
+import("//build/sdk/sdk_atom.gni")
+
 _out_dir = get_label_info(":bogus", "target_out_dir")
 
 <%def name="copy_target(path)">${"copy_%s" % path.replace('/', '_').replace('.', '_')}</%def>
@@ -26,3 +28,15 @@ group("sysroot") {
   ]
 }
 
+sdk_atom("sysroot_sdk") {
+  name = "sysroot"
+
+  files = [
+    % for path, file in sorted(data.files.iteritems()):
+    {
+      source = "${file}"
+      dest = "${path}"
+    },
+    % endfor
+  ]
+}

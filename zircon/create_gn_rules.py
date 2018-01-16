@@ -157,6 +157,7 @@ class CompiledLibrary(object):
 
     def __init__(self, name):
         self.name = name
+        self.includes = {}
         self.include_dirs = set()
         self.deps = []
         self.lib_name = ''
@@ -175,6 +176,7 @@ def generate_compiled_library(package, context):
     # Includes.
     for name, path in package.get('includes', {}).iteritems():
         (file, folder) = extract_file(name, path, context)
+        data.includes[name] = '//%s' % file
         data.include_dirs.add('//%s' % folder)
 
     # Lib.

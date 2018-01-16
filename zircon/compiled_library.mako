@@ -1,5 +1,7 @@
 <%include file="header.mako" />
 
+import("//build/sdk/sdk_atom.gni")
+
 % if data.is_shared:
 _dest_dir = "root_out_dir"
 % else:
@@ -29,11 +31,22 @@ copy("${data.name}_copy_unstripped_lib") {
 }
 % endif
 
+linked_lib = "$_out_dir/${data.lib_name}"
+% if data.is_shared:
+if (is_debug) {
+  linked_lib = "$_out_dir/lib.unstripped/${data.lib_name}"
+}
+% endif
+
 config("${data.name}_config") {
   include_dirs = [
     % for include in sorted(data.include_dirs):
     "${include}",
     % endfor
+  ]
+
+  libs = [
+    linked_lib,
   ]
 }
 
@@ -51,5 +64,33 @@ group("${data.name}") {
 
   public_configs = [
     ":${data.name}_config",
+  ]
+}
+
+sdk_atom("${data.name}_sdk") {
+  % if data.is_shared:
+  prefix = "shared"
+  % else:
+  prefix = "static"
+  % endif
+  name = "cpp:compiled_$prefix:${data.name}"
+
+  files = [
+    % for dest, source in sorted(data.includes.iteritems()):
+    {
+      source = "${source}"
+      dest = "${dest}"
+    },
+    % endfor
+    {
+      source = "${data.prebuilt}"
+      dest = "${data.lib_name}"
+    },
+    % if data.is_shared:
+    {
+      source = "${data.debug_prebuilt}"
+      dest = "debug/${data.lib_name}"
+    },
+    % endif
   ]
 }

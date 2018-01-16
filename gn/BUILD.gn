@@ -950,6 +950,13 @@ if (generate_zircon_gn_files) {
   zircon_files =
       exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
+  supporting_templates = [
+    "//build/zircon/compiled_library.mako",
+    "//build/zircon/header.mako",
+    "//build/zircon/source_library.mako",
+    "//build/zircon/sysroot.mako",
+  ]
+
   exec_script("//build/zircon/create_gn_rules.py",
               [
                 "--out",
@@ -958,7 +965,7 @@ if (generate_zircon_gn_files) {
                 rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
               ],
               "",
-              zircon_files)
+              zircon_files + supporting_templates)
 }
 
 group("default") {
