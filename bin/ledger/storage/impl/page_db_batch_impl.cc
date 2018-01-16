@@ -59,7 +59,7 @@ Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
 
   Status status = Status::OK;
   if (journal_type == JournalType::IMPLICIT) {
-    status = batch_->Put(handler, JournalEntryRow::GetKeyFor(id), base);
+    status = batch_->Put(handler, ImplicitJournalMetaRow::GetKeyFor(id), base);
   }
 
   if (status == Status::OK) {
@@ -69,17 +69,17 @@ Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
 }
 
 Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
-  static std::string kExplicitJournalPrefix = fxl::Concatenate(
-      {JournalEntryRow::kExplicitJournalPrefix,
-       fxl::StringView(&JournalEntryRow::kExplicitIdPrefix, 1)});
+  static std::string kExplicitJournalPrefix =
+      fxl::Concatenate({JournalEntryRow::kPrefix,
+                        fxl::StringView(&JournalEntryRow::kExplicitPrefix, 1)});
   return batch_->DeleteByPrefix(handler, kExplicitJournalPrefix);
 }
 
 Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
                                       const JournalId& journal_id) {
-  if (journal_id[0] == JournalEntryRow::kImplicitIdPrefix) {
+  if (journal_id[0] == JournalEntryRow::kImplicitPrefix) {
     RETURN_ON_ERROR(
-        batch_->Delete(handler, JournalEntryRow::GetKeyFor(journal_id)));
+        batch_->Delete(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id)));
   }
   return batch_->DeleteByPrefix(handler,
                                 JournalEntryRow::GetPrefixFor(journal_id));

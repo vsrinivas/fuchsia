@@ -86,8 +86,7 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
     const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
         key_value = **it_;
     change_->entry.key =
-        key_value.first.substr(JournalEntryRow::kExplicitJournalEntryPrefixSize)
-            .ToString();
+        key_value.first.substr(JournalEntryRow::kPrefixSize).ToString();
 
     if (key_value.second[0] == JournalEntryRow::kAddPrefix) {
       change_->deleted = false;
@@ -148,16 +147,15 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
 Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* handler,
                                          std::vector<JournalId>* journal_ids) {
   return db_.GetByPrefix(
-      handler, convert::ToSlice(JournalEntryRow::kImplicitJournalPrefix),
-      journal_ids);
+      handler, convert::ToSlice(ImplicitJournalMetaRow::kPrefix), journal_ids);
 }
 
 Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
                                            const JournalId& journal_id,
                                            CommitId* base) {
   FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
-  FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitIdPrefix);
-  return db_.Get(handler, JournalEntryRow::GetKeyFor(journal_id), base);
+  FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
+  return db_.Get(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
 }
 
 Status PageDbImpl::GetJournalEntries(
