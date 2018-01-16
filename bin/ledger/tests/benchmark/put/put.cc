@@ -157,24 +157,62 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
   if (transaction_size_ == 0) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   }
-  TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_data_generator_.PutEntry(
-      &page_, std::move(keys[i]), std::move(value), reference_strategy_,
-      ledger::Priority::EAGER,
-      fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
-                            ledger::Status status) mutable {
-        if (benchmark::QuitOnError(status, "Page::Put")) {
-          return;
-        }
-        TRACE_ASYNC_END("benchmark", "put", i);
-        if (transaction_size_ > 0 &&
-            (i % transaction_size_ == transaction_size_ - 1 ||
-             i + 1 == entry_count_)) {
-          CommitAndRunNext(i, key_number, std::move(keys));
-        } else {
-          RunSingle(i + 1, std::move(keys));
-        }
-      }));
+  PutEntry(std::move(keys[i]), std::move(value),
+           fxl::MakeCopyable(
+               [this, i, key_number, keys = std::move(keys)]() mutable {
+                 if (transaction_size_ > 0 &&
+                     (i % transaction_size_ == transaction_size_ - 1 ||
+                      i + 1 == entry_count_)) {
+                   CommitAndRunNext(i, key_number, std::move(keys));
+                 } else {
+                   RunSingle(i + 1, std::move(keys));
+                 }
+               }));
+}
+
+void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
+                            fidl::Array<uint8_t> value,
+                            std::function<void()> on_done) {
+  auto trace_event_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
+  if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
+    page_->Put(
+        std::move(key), std::move(value),
+        [trace_event_id, on_done = std::move(on_done)](ledger::Status status) {
+          if (QuitOnError(status, "Page::Put")) {
+            return;
+          }
+          TRACE_ASYNC_END("benchmark", "put", trace_event_id);
+          on_done();
+        });
+    return;
+  }
+  fsl::SizedVmo vmo;
+  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
+  TRACE_ASYNC_BEGIN("benchmark", "create reference", trace_event_id);
+  page_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      fxl::MakeCopyable(
+          [this, trace_event_id, key = std::move(key),
+           on_done = std::move(on_done)](
+              ledger::Status status, ledger::ReferencePtr reference) mutable {
+            if (QuitOnError(status, "Page::CreateReferenceFromVmo")) {
+              return;
+            }
+            TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
+            TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
+            page_->PutReference(
+                std::move(key), std::move(reference), ledger::Priority::EAGER,
+                [trace_event_id,
+                 on_done = std::move(on_done)](ledger::Status status) {
+                  if (QuitOnError(status, "Page::PutReference")) {
+                    return;
+                  }
+                  TRACE_ASYNC_END("benchmark", "put reference", trace_event_id);
+                  TRACE_ASYNC_END("benchmark", "put", trace_event_id);
+                  on_done();
+                });
+          }));
 }
 
 void PutBenchmark::CommitAndRunNext(int i,

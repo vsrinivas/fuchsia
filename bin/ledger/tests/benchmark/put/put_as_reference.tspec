@@ -16,6 +16,18 @@
     },
     {
       "type": "duration",
+      "event_name": "create reference",
+      "event_category": "benchmark",
+      "split_samples_at": [1, 50]
+    },
+    {
+      "type": "duration",
+      "event_name": "put reference",
+      "event_category": "benchmark",
+      "split_samples_at": [1, 50]
+    },
+    {
+      "type": "duration",
       "event_name": "local_change_notification",
       "event_category": "benchmark",
       "split_samples_at": [1, 50]

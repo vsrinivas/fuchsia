@@ -60,6 +60,9 @@ class PutBenchmark : public ledger::PageWatcher {
   void CommitAndRunNext(int i,
                         size_t key_number,
                         std::vector<fidl::Array<uint8_t>> keys);
+  void PutEntry(fidl::Array<uint8_t> key,
+                fidl::Array<uint8_t> value,
+                std::function<void()> on_done);
 
   void ShutDown();
 
