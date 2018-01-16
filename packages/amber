@@ -11,6 +11,7 @@
     "packages": {
         "amber": "//garnet/go/src/amber",
         "amber_tools": "//garnet/go/src/amber:amber_tools",
-        "amber_pub_test": "//garnet/go/src/amber:amber_pub_test"
+        "amber_pub_test": "//garnet/go/src/amber:amber_pub_test",
+        "amber_cmd_publish_test": "//garnet/go/src/amber:amber_cmd_publish_test"
     }
 }

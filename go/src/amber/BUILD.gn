@@ -312,6 +312,63 @@ package("amber_pub_test") {
       } ]
 }
 
+go_test("amber_cmd_publish_test_bin") {
+  gopackage = "amber/cmd/publish"
+  go_dependencies = [
+    {
+      package = "amber"
+      source = "//garnet/go/src/amber"
+    },
+    {
+      package = "fuchsia.googlesource.com/far"
+      source = "//garnet/go/src/far"
+    },
+    {
+      package = "fuchsia.googlesource.com/merkle"
+      source = "//garnet/go/src/merkle"
+    },
+    {
+      package = "github.com/flynn/go-tuf"
+      source = "//third_party/golibs/github.com/flynn/go-tuf"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    },
+    {
+      package = "github.com/syndtr/goleveldb/leveldb"
+      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
+    },
+    {
+      package = "github.com/tent/canonical-json-go"
+      source = "//third_party/golibs/github.com/tent/canonical-json-go"
+    },
+    {
+      package = "github.com/golang/snappy"
+      source = "//third_party/golibs/github.com/golang/snappy"
+    },
+    {
+      package = "github.com/google/go-cmp/cmp"
+      source = "//third_party/golibs/github.com/google/go-cmp/cmp"
+    }
+
+  ]
+}
+
+package("amber_cmd_publish_test") {
+  system_image = true
+  testonly = true
+
+  deps = [
+    ":amber_cmd_publish_test_bin"
+  ]
+
+  tests = [ {
+        name = "amber_cmd_publish_test_bin"
+  }
+  ]
+}
+
 copy("amber-srv-keys") {
   sources = [
     "keys/root.json",
