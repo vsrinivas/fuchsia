@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <string>
 
+#include "lib/fxl/logging.h"
+
 namespace maxwell {
 
 MatchPredicate GetSuggestionMatcher(const std::string& component_url,

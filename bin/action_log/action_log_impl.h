@@ -12,11 +12,11 @@
 #include "lib/action_log/fidl/component.fidl.h"
 #include "lib/action_log/fidl/listener.fidl.h"
 #include "lib/action_log/fidl/user.fidl.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
-#include "peridot/bin/action_log/action_log_data.h"
-
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fxl/macros.h"
+#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
+#include "peridot/bin/action_log/action_log_data.h"
 
 namespace maxwell {
 

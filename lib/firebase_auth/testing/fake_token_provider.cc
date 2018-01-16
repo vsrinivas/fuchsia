@@ -4,6 +4,7 @@
 
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
+#include "lib/fxl/logging.h"
 #include "lib/fxl/random/uuid.h"
 
 namespace firebase_auth {

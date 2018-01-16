@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 

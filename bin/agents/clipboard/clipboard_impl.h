@@ -8,6 +8,7 @@
 #include <string>
 
 #include "lib/clipboard/fidl/clipboard.fidl.h"
+#include "lib/fxl/macros.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace modular {

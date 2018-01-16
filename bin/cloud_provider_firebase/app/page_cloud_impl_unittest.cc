@@ -8,6 +8,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 #include "peridot/lib/callback/capture.h"

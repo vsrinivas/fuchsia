@@ -4,6 +4,7 @@
 
 #include "peridot/lib/testing/testing.h"
 
+#include "lib/fxl/logging.h"
 #include "lib/test_runner/fidl/test_runner.fidl.h"
 
 namespace modular {

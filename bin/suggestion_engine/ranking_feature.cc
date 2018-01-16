@@ -4,6 +4,8 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
+#include "lib/fxl/logging.h"
+
 namespace maxwell {
 
 RankingFeature::RankingFeature() = default;

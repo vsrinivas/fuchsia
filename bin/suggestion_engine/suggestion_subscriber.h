@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_SUBSCRIBER_H_
 
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 

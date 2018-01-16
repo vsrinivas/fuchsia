@@ -6,6 +6,7 @@
 #define APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_
 
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/macros.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 
 namespace modular {

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/user/agent_launcher.h"
 
+#include "lib/fxl/logging.h"
+
 namespace maxwell {
 namespace {
 

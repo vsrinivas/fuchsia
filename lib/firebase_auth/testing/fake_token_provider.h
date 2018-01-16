@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/fxl/macros.h"
 
 namespace firebase_auth {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be

@@ -4,6 +4,8 @@
 
 #include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
 
+#include "lib/fxl/logging.h"
+
 namespace cloud_provider {
 
 namespace {

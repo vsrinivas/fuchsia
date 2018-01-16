@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "lib/fxl/logging.h"
 #include "peridot/bin/context_engine/index.h"
 
 namespace maxwell {

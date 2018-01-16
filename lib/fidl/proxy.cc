@@ -4,6 +4,8 @@
 
 #include "peridot/lib/fidl/proxy.h"
 
+#include "lib/fxl/logging.h"
+
 namespace modular {
 
 ProxySet::ProxySet() = default;
