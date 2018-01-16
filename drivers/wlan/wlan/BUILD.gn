@@ -23,6 +23,8 @@ source_set("mlme") {
     "client_mlme.cpp",
     "client_mlme.h",
     "clock.h",
+    "debug.cpp",
+    "debug.h",
     "device_interface.cpp",
     "device_interface.h",
     "dispatcher.cpp",

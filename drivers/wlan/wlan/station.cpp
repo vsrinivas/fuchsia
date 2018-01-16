@@ -6,6 +6,7 @@
 
 #include "garnet/drivers/wlan/common/channel.h"
 
+#include "debug.h"
 #include "device_interface.h"
 #include "logging.h"
 #include "mac_frame.h"
@@ -728,12 +729,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     hdr->addr3 = eth->dest;
 
     hdr->sc.set_seq(next_seq());
-    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
-             hdr->sc.seq(), hdr->sc.frag());
-
-    // TODO(porce): Fix this inconsistency. See how addr1,2,3 are assigned.
-    debughdr("dest: %s source: %s bssid: %s\n", MACSTR(hdr->addr1), MACSTR(hdr->addr2),
-             MACSTR(hdr->addr3));
+    debugf("header: %s\n", debug::Describe(*hdr).c_str());
 
     auto llc = wlan_packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
     llc->dsap = kLlcSnapExtension;
