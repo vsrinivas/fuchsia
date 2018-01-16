@@ -147,6 +147,9 @@ declare_args() {
 #       dest (path, required)
 #         Location the resource will be placed within "data/"
 #
+#   extra (optional)
+#     A potentially build-time generated file containing extra entries in the
+#     package, formatted as a manifest.
 template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
@@ -176,6 +179,43 @@ template("package") {
 
     mkfs_target = target_name + "_mkfs"
 
+    package_manifest = "$pkg_out_dir/package_manifest"
+    system_manifest = "$pkg_out_dir/system_manifest"
+    archive_manifest = "$pkg_out_dir/archive_manifest"
+
+    # If there are extra build-time entries to put into the package, then
+    # collect GN-time entries in partial_package_manifest, and concatenate them
+    # with the build-time entries into package_manifest.
+    if (defined(pkg.extra)) {
+      if (pkg.fuchsia_package) {
+        partial_archive_manifest = archive_manifest
+        partial_package_manifest = "$pkg_out_dir/partial_package_manifest"
+        partial = partial_package_manifest
+        output = package_manifest
+      } else {
+        partial_archive_manifest = "$pkg_out_dir/partial_archive_manifest"
+        partial_package_manifest = package_manifest
+        partial = partial_archive_manifest
+        output = archive_manifest
+      }
+      action("${mkfs_target}_extra") {
+        deps = invoker.deps
+        inputs = [ partial, pkg.extra ]
+        outputs = [ output ]
+        script = "/bin/sh"
+        rebased_partial = rebase_path(partial)
+        rebased_extra = rebase_path(pkg.extra)
+        rebased_output = rebase_path(output)
+        args = [
+          "-c",
+          "/bin/cat $rebased_partial $rebased_extra > $rebased_output",
+        ]
+      }
+    } else {
+      partial_package_manifest = package_manifest
+      partial_archive_manifest = archive_manifest
+    }
+
     # This action assembles an image containing all binaries, tests, drivers,
     # libraries, and resources defined in the package.
     action(mkfs_target) {
@@ -188,6 +228,10 @@ template("package") {
       package_manifest_contents = []
 
       sources = []
+
+      if (defined(pkg.extra)) {
+        deps += [ ":${target_name}_extra" ]
+      }
 
       foreach(entry, pkg.meta) {
         assert(!pkg.system_image, "Metadata cannot be used in system packages.")
@@ -273,14 +317,10 @@ template("package") {
         package_manifest_contents += [ "$dest=$source" ]
       }
 
-      system_manifest = "$pkg_out_dir/system_manifest"
-      archive_manifest = "$pkg_out_dir/archive_manifest"
-      package_manifest = "$pkg_out_dir/package_manifest"
-
       if (pkg.system_image) {
         write_file(system_manifest, package_manifest_contents)
-        write_file(archive_manifest, [])
-        write_file(package_manifest, [])
+        write_file(partial_archive_manifest, [])
+        write_file(partial_package_manifest, [])
 
         # We have to do something in our action
         script = "/usr/bin/touch"
@@ -308,15 +348,15 @@ template("package") {
         outputs = [package_json_file]
         args = [ rebase_path(outputs[0]) ]
 
-        write_file(package_manifest, package_manifest_contents)
-        write_file(archive_manifest, [])
+        write_file(partial_package_manifest, package_manifest_contents)
+        write_file(partial_archive_manifest, [])
         write_file(system_manifest, [])
 
       } else {
         assert(package_manifest_contents != [])
-        write_file(package_manifest, [])
+        write_file(partial_package_manifest, [])
 
-        write_file(archive_manifest, package_manifest_contents)
+        write_file(partial_archive_manifest, package_manifest_contents)
 
         archiver_label = "//garnet/bin/far:bin($host_toolchain)"
         deps += [ archiver_label ]
