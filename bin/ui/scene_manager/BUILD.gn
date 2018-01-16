@@ -16,7 +16,7 @@ executable("scene_manager") {
   deps = [
     ":common",
     "//garnet/examples/escher/common",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 
@@ -171,6 +171,6 @@ source_set("common") {
   deps = [
     "//garnet/lib/magma:libmagma",
     "//garnet/public/lib/vulkan",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 }

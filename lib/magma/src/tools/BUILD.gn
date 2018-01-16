@@ -18,11 +18,12 @@ executable("magma_info") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/ddk",
+    "$zircon_build_root/public/lib/driver",
+    "$zircon_build_root/public/lib/fdio",
   ]
 
   libs = [
-    "driver",
-    "ddk",
     "zircon",
   ]
 }

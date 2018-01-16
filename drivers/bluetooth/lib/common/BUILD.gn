@@ -34,8 +34,9 @@ source_set("common") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 }
 

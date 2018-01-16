@@ -23,7 +23,7 @@ sdk_source_set("view_framework") {
   ]
 
   deps = [
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 }
 

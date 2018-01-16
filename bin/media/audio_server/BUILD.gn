@@ -51,9 +51,9 @@ executable("audio_server") {
         "//garnet/public/lib/media/fidl",
         "//garnet/public/lib/media/timeline",
         "//garnet/public/lib/media/transport",
-        "//zircon/system/ulib/audio-proto-utils",
-        "//zircon/system/ulib/dispatcher-pool",
-        "//zircon/system/ulib/fbl",
-        "//zircon/system/ulib/zx",
+        "//zircon/public/lib/audio-proto-utils",
+        "//zircon/public/lib/dispatcher-pool",
+        "//zircon/public/lib/fbl",
+        "//zircon/public/lib/zx",
       ]
 }

@@ -11,7 +11,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/async:loop_cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   public_configs = [ "//garnet/public:config" ]

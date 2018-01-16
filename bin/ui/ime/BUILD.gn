@@ -15,6 +15,7 @@ executable("ime") {
 
   deps = [
     ":common",
+    "//zircon/public/lib/hid",
   ]
 }
 

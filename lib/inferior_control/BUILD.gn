@@ -52,7 +52,11 @@ static_library("inferior_control") {
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/launchpad",
   ]
 
   include_dirs = [ ".." ]

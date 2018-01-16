@@ -23,7 +23,7 @@ executable("client") {
     "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   include_dirs = [

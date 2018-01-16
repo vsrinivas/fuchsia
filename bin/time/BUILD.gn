@@ -11,8 +11,11 @@ executable("bin") {
     "time.cc",
   ]
 
+  deps = [
+    "//zircon/public/lib/launchpad",
+  ]
+
   libs = [
-    "launchpad",
     "zircon",
   ]
 }

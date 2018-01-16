@@ -27,7 +27,7 @@ sdk_source_set("flog") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl/flog",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   if (enable_flog) {

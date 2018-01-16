@@ -4,6 +4,25 @@
 
 import("//build/sdk/sdk.gni")
 
+sdk("zircon_sysroot") {
+
+  export = true
+
+  old_school = true
+
+  domains = [
+    "c-pp",
+  ]
+
+  deps = [
+    "//zircon/public/lib/backtrace:backtrace_sdk",
+    "//zircon/public/lib/fdio:fdio_sdk",
+    "//zircon/public/lib/fs-management:fs-management_sdk",
+    "//zircon/public/lib/launchpad:launchpad_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+  ]
+}
+
 sdk("minimal") {
 
   deps = [

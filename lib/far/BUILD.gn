@@ -33,5 +33,6 @@ source_set("far_vmo") {
   deps = [
     ":far",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fdio",
   ]
 }

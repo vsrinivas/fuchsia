@@ -51,6 +51,7 @@ source_set("lib") {
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
+    "//zircon/public/lib/fdio",
   ]
 }
 

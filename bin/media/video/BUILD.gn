@@ -23,7 +23,7 @@ source_set("video") {
     "//garnet/public/lib/media/transport",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/view_framework",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 }
 
@@ -42,7 +42,7 @@ source_set("video_converter") {
     "//garnet/bin/media/framework",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   configs += [ ":optimize_video_converter" ]

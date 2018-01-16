@@ -15,12 +15,12 @@ source_set("input_reader") {
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/zx",
   ]
 
-  libs = [
-    "fdio",
-    "hid",
+  public_deps = [
+    "//zircon/public/lib/hid",
   ]
 }

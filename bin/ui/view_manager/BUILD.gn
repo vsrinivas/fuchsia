@@ -11,7 +11,7 @@ executable("view_manager") {
 
   deps = [
     ":lib",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 

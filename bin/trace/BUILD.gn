@@ -48,7 +48,7 @@ source_set("trace_app") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/tracing/fidl",
-    "//zircon/system/ulib/trace-reader",
+    "//zircon/public/lib/trace-reader",
   ]
 
   deps = [

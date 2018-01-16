@@ -15,7 +15,7 @@ source_set("cpp") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/svc/cpp",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

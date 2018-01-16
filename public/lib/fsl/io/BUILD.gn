@@ -21,6 +21,7 @@ sdk_source_set("io") {
   public_deps = [
     "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
   ]
 }

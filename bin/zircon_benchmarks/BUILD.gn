@@ -58,16 +58,16 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/trace-provider",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
     ":fidl_interface",
   ]
   public_deps = [
     "//third_party/benchmark",
   ]
   libs = [
-    "launchpad",
     "zircon",
   ]
 }

@@ -53,7 +53,7 @@ executable("bin") {
     "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/fun/sketchy/fidl",
     "//garnet/public/lib/ui/scenic:client",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   include_dirs = [

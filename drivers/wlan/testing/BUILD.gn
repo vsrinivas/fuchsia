@@ -24,11 +24,12 @@ driver_module("wlanphy-testdev") {
   deps = [
     "//garnet/lib/wlan/fidl:fidl_data_only",
     "//garnet/lib/wlan/protocol",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
-  libs = [ "driver" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
-

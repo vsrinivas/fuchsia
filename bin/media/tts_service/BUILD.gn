@@ -13,6 +13,6 @@ executable("tts_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/media/fidl",
     "//third_party/flite",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 }

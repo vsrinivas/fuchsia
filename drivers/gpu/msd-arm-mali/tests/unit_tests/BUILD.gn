@@ -14,6 +14,7 @@ executable("msd_arm_mali_nonhardware_tests") {
   public_deps = [
     ":tests_not_requiring_hardware",
     "//third_party/gtest",
+    "//zircon/public/lib/ddk",
   ]
 }
 

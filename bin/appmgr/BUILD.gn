@@ -42,13 +42,12 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
-
-  libs = [ "launchpad" ]
 }
 
 executable("bin") {

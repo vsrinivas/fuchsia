@@ -19,8 +19,8 @@ sdk_source_set("cpp") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [

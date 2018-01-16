@@ -15,6 +15,7 @@ executable("vkreadback") {
   public_deps = [
     "$magma_build_root/src/magma_util",
     "//third_party/gtest",
+    "//zircon/public/lib/fdio",
   ]
 
   if (use_vulkan_loader_for_tests) {

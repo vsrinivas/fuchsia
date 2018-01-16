@@ -27,5 +27,6 @@ executable("input_apptests") {
     "//garnet/public/lib/ui/tests",
     "//garnet/public/lib/ui/tests/mocks",
     "//third_party/gtest",
+    "//zircon/public/lib/hid",
   ]
 }

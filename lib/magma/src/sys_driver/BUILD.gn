@@ -43,12 +43,12 @@ source_set("entry") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
   ]
 
   libs = [
-    "driver",
-    "ddk",
     "zircon",
   ]
 }
@@ -67,7 +67,7 @@ source_set("test_entry_pci") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   defines = [ "MAGMA_TEST_DRIVER=1" ]
@@ -75,11 +75,11 @@ source_set("test_entry_pci") {
     "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
     "//third_party/gtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
   ]
 
   libs = [
-    "driver",
-    "ddk",
     "zircon",
   ]
 }

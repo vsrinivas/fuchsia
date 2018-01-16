@@ -31,11 +31,11 @@ executable("bin") {
     "//garnet/lib/inferior_control",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/zx",
   ]
 
   libs = [
-    "launchpad",
     "zircon",
   ]
 }

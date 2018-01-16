@@ -14,7 +14,6 @@ source_set("input") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/fidl",
+    "//zircon/public/lib/hid",
   ]
-
-  libs = [ "hid" ]
 }

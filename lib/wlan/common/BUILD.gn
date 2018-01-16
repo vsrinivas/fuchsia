@@ -25,10 +25,14 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   public_configs = [ ":wlan_common_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
+  deps = [
+    "//zircon/public/lib/ddk",
+  ]
 }

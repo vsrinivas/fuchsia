@@ -19,15 +19,12 @@ driver_module("ralink_driver") {
 
   deps = [
     "//garnet/lib/wlan/common",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
     "//zircon/system/ulib/ddktl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-
-  libs = [
-    "ddk",
-    "driver",
-    "sync",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

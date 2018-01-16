@@ -13,6 +13,7 @@ source_set("wav_writer") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fbl",
   ]
 }

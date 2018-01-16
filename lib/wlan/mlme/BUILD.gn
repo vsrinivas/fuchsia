@@ -52,8 +52,9 @@ source_set("mlme") {
     "//garnet/lib/wlan/common",
     "//garnet/public/lib/wlan/fidl:mlme_data_only",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   public_configs = [ ":wlan_mlme_config" ]

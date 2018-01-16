@@ -60,6 +60,8 @@ template("magma_pci_entry") {
       deps = []
     }
 
+    deps += [ "//zircon/public/lib/ddk" ]
+
     if (!test_entry) {
       deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
     } else {

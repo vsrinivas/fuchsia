@@ -47,7 +47,7 @@ executable("bin") {
     "//garnet/public/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 }
 

@@ -33,8 +33,8 @@ source_set("audio") {
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
     "//garnet/public/lib/media/timeline",
-    "//zircon/system/ulib/audio-proto-utils",
-    "//zircon/system/ulib/audio-utils",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/audio-utils",
   ]
 }
 

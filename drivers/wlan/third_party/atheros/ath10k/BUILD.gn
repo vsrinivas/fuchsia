@@ -25,9 +25,10 @@ driver_module("ath10k_driver") {
     "pci.h",
   ]
 
-  libs = [
-    "ddk",
-    "driver",
+  deps = [
+    "//zircon/system/ulib/ddktl",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

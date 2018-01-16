@@ -37,7 +37,7 @@ executable("service") {
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/vulkan",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   include_dirs = [

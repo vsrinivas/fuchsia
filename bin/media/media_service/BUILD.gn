@@ -70,7 +70,7 @@ executable("media_service_bin") {
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 

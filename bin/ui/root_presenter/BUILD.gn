@@ -34,10 +34,9 @@ executable("root_presenter") {
     "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/trace-provider",
   ]
-
-  libs = [ "hid" ]
 
   include_dirs = [ "//third_party/glm" ]
 

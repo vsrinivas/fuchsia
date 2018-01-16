@@ -40,7 +40,7 @@ source_set("ffmpeg") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
     "//third_party/ffmpeg",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   defines = [

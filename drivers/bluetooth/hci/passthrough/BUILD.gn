@@ -13,12 +13,9 @@ driver_module("passthrough_driver") {
   ]
 
   deps = [
-    "//zircon/system/ulib/zx",
-  ]
-
-  libs = [
-    "ddk",
-    "driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

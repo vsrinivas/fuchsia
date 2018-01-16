@@ -12,12 +12,12 @@ executable("bin") {
   ]
 
   libs = [
-    "launchpad",
     "zircon",
   ]
 
   deps = [
     "//garnet/public/lib/netstack/c",
+    "//zircon/public/lib/launchpad",
   ]
 }
 

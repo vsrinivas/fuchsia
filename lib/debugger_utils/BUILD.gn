@@ -45,7 +45,7 @@ static_library("debugger_utils") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//zircon/system/ulib/zx" ]
+    deps += [ "//zircon/public/lib/zx" ]
   } else {
     deps += [ "//zircon/system/public" ]
   }

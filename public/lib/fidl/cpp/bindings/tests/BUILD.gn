@@ -63,7 +63,7 @@ source_set("test_sources") {
     "//garnet/public/lib/fidl/compiler/interfaces/tests:test_interfaces",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//third_party/gtest",
-    "//zircon/system/ulib/async:loop_cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

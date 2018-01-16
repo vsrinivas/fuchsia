@@ -33,10 +33,10 @@ source_set("bindings2") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/async:cpp",
-    "//zircon/system/ulib/async:default",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
     "//zircon/system/ulib/fidl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]
@@ -67,5 +67,6 @@ executable("fidl_bindings2_unittests") {
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
+    "//zircon/public/lib/async-loop",
   ]
 }

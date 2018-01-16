@@ -34,12 +34,12 @@ executable("display_pipe_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/images/fidl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
   ]
 
   libs = [
-    "driver",
-    "ddk",
     "zircon",
   ]
 }

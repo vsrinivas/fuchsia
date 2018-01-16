@@ -21,13 +21,12 @@ source_set("lib") {
     "//garnet/lib/machina",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/fbl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hypervisor",
     "//zircon/third_party/lib/fdt",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
-
-  libs = [ "hypervisor" ]
 }
 
 executable("bin") {
@@ -56,7 +55,7 @@ executable("guest_unittests") {
   deps = [
     ":lib",
     "//third_party/gtest",
-    "//zircon/system/ulib/fbl",
+    "//zircon/public/lib/fbl",
   ]
 }
 
