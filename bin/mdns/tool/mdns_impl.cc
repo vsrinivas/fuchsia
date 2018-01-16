@@ -11,101 +11,9 @@
 #include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/netconnector/fidl/mdns.fidl.h"
+#include "lib/mdns/fidl/mdns.fidl.h"
 
 namespace mdns {
-namespace {
-
-template <typename T>
-bool operator==(const fidl::Array<T>& array_a, const fidl::Array<T>& array_b) {
-  if (array_a.size() != array_b.size()) {
-    return false;
-  }
-
-  auto iter_a = array_a.begin();
-  for (auto& item_b : array_b) {
-    FXL_DCHECK(iter_a != array_a.end());
-    if (*iter_a != item_b) {
-      return false;
-    }
-
-    ++iter_a;
-  }
-
-  return true;
-}
-
-template <typename T>
-bool operator!=(const fidl::Array<T>& array_a, const fidl::Array<T>& array_b) {
-  return !(array_a == array_b);
-}
-
-bool operator==(const netstack::NetAddressPtr& addr_a,
-                const netstack::NetAddressPtr& addr_b) {
-  return (addr_a.get() == addr_b.get()) ||
-         (addr_a && addr_a->family == addr_b->family &&
-          addr_a->ipv4 == addr_b->ipv4 && addr_a->ipv6 == addr_b->ipv6);
-}
-
-bool operator==(const netstack::SocketAddressPtr& addr_a,
-                const netstack::SocketAddressPtr& addr_b) {
-  return (addr_a.get() == addr_b.get()) ||
-         (addr_a && addr_a->port == addr_b->port &&
-          addr_a->addr == addr_b->addr);
-}
-
-bool operator!=(const netstack::SocketAddressPtr& addr_a,
-                const netstack::SocketAddressPtr& addr_b) {
-  return !(addr_a == addr_b);
-}
-
-// Prints the differences between |new_array| and |old_array| to |std::cout|.
-void ShowDiff(
-    const fidl::Array<netconnector::MdnsServiceInstancePtr>& new_array,
-    const fidl::Array<netconnector::MdnsServiceInstancePtr>& old_array) {
-  for (auto& new_instance : new_array) {
-    bool found = false;
-
-    for (auto& old_instance : old_array) {
-      if (new_instance->service_name == old_instance->service_name &&
-          new_instance->instance_name == old_instance->instance_name) {
-        if (new_instance->v4_address != old_instance->v4_address ||
-            new_instance->v6_address != old_instance->v6_address ||
-            new_instance->text != old_instance->text) {
-          std::cout << "changed:\n"
-                    << indent << begl << *new_instance << outdent << "\n";
-        }
-
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      std::cout << "added:\n"
-                << indent << begl << *new_instance << outdent << "\n";
-    }
-  }
-
-  for (auto& old_instance : old_array) {
-    bool found = false;
-
-    for (auto& new_instance : new_array) {
-      if (new_instance->service_name == old_instance->service_name &&
-          new_instance->instance_name == old_instance->instance_name) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      std::cout << "removed:\n"
-                << indent << begl << *old_instance << outdent << "\n";
-    }
-  }
-}
-
-}  // namespace
 
 MdnsImpl::MdnsImpl(app::ApplicationContext* application_context,
                    MdnsParams* params)
@@ -114,12 +22,12 @@ MdnsImpl::MdnsImpl(app::ApplicationContext* application_context,
   FXL_DCHECK(params);
 
   mdns_service_ =
-      application_context
-          ->ConnectToEnvironmentService<netconnector::MdnsService>();
+      application_context->ConnectToEnvironmentService<MdnsService>();
 
   mdns_service_.set_connection_error_handler([this]() {
     mdns_service_.set_connection_error_handler(nullptr);
     mdns_service_.reset();
+    subscriber_.Reset();
     std::cout << "mDNS service disconnected unexpectedly\n";
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
@@ -200,9 +108,22 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
 void MdnsImpl::Subscribe(const std::string& service_name) {
   std::cout << "subscribing to service " << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  netconnector::MdnsServiceSubscriptionPtr subscription;
-  mdns_service_->SubscribeToService(service_name, subscription_.NewRequest());
-  HandleSubscriptionInstances();
+  MdnsServiceSubscriptionPtr subscription;
+  mdns_service_->SubscribeToService(service_name, subscription.NewRequest());
+  subscriber_.Init(
+      std::move(subscription),
+      [this](mdns::MdnsServiceInstance* from, mdns::MdnsServiceInstance* to) {
+        if (from == nullptr) {
+          FXL_DCHECK(to != nullptr);
+          std::cout << "added:\n" << indent << begl << *to << outdent << "\n";
+        } else if (to == nullptr) {
+          std::cout << "removed:\n"
+                    << indent << begl << *from << outdent << "\n";
+        } else {
+          std::cout << "changed:\n" << indent << begl << *to << outdent << "\n";
+        }
+      });
+
   WaitForKeystroke();
 }
 
@@ -214,7 +135,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   mdns_service_->PublishServiceInstance(
       service_name, instance_name, port, fidl::Array<fidl::String>::From(text),
-      [this](netconnector::MdnsResult result) {
+      [this](MdnsResult result) {
         UpdateStatus(result);
         fsl::MessageLoop::GetCurrent()->PostQuitTask();
       });
@@ -236,7 +157,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   std::cout << "responding as instance " << instance_name << " of service "
             << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  fidl::InterfaceHandle<netconnector::MdnsResponder> responder_handle;
+  fidl::InterfaceHandle<MdnsResponder> responder_handle;
 
   binding_.Bind(&responder_handle);
   binding_.set_connection_error_handler([this]() {
@@ -260,37 +181,21 @@ void MdnsImpl::Respond(const std::string& service_name,
   WaitForKeystroke();
 }
 
-void MdnsImpl::HandleSubscriptionInstances(
-    uint64_t version,
-    fidl::Array<netconnector::MdnsServiceInstancePtr> instances) {
-  if (instances) {
-    ShowDiff(instances, prev_instances_);
-    prev_instances_ = std::move(instances);
-  }
-
-  subscription_->GetInstances(
-      version,
-      [this](uint64_t version,
-             fidl::Array<netconnector::MdnsServiceInstancePtr> instances) {
-        HandleSubscriptionInstances(version, std::move(instances));
-      });
-}
-
-void MdnsImpl::UpdateStatus(netconnector::MdnsResult result) {
+void MdnsImpl::UpdateStatus(MdnsResult result) {
   switch (result) {
-    case netconnector::MdnsResult::OK:
+    case MdnsResult::OK:
       std::cout << "instance successfully published\n";
       return;
-    case netconnector::MdnsResult::INVALID_SERVICE_NAME:
+    case MdnsResult::INVALID_SERVICE_NAME:
       std::cout << "ERROR: service name is invalid\n";
       break;
-    case netconnector::MdnsResult::INVALID_INSTANCE_NAME:
+    case MdnsResult::INVALID_INSTANCE_NAME:
       std::cout << "ERROR: instance name is invalid\n";
       break;
-    case netconnector::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
+    case MdnsResult::ALREADY_PUBLISHED_LOCALLY:
       std::cout << "ERROR: instance was already published by this host\n";
       break;
-    case netconnector::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
+    case MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
       std::cout << "ERROR: instance was already published by another "
                    "host on the subnet\n";
       break;
@@ -311,7 +216,7 @@ void MdnsImpl::GetPublication(bool query,
 
   std::cout << "\n";
 
-  auto publication = netconnector::MdnsPublication::New();
+  auto publication = MdnsPublication::New();
   publication->port = publication_port_;
   publication->text = fidl::Array<fidl::String>::From(publication_text_);
 

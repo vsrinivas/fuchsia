@@ -10,11 +10,12 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
-#include "lib/netconnector/fidl/mdns.fidl.h"
+#include "lib/mdns/cpp/service_subscriber.h"
+#include "lib/mdns/fidl/mdns.fidl.h"
 
 namespace mdns {
 
-class MdnsImpl : public netconnector::MdnsResponder {
+class MdnsImpl : public MdnsResponder {
  public:
   MdnsImpl(app::ApplicationContext* application_context, MdnsParams* params);
 
@@ -43,22 +44,16 @@ class MdnsImpl : public netconnector::MdnsResponder {
                const std::vector<std::string>& announce,
                const std::vector<std::string>& text);
 
-  void HandleSubscriptionInstances(
-      uint64_t version =
-          netconnector::MdnsServiceSubscription::kInitialInstances,
-      fidl::Array<netconnector::MdnsServiceInstancePtr> instances = nullptr);
-
   // MdnsResponder implementation:
-  void UpdateStatus(netconnector::MdnsResult result) override;
+  void UpdateStatus(MdnsResult result) override;
 
   void GetPublication(bool query,
                       const fidl::String& subtype,
                       const GetPublicationCallback& callback) override;
 
-  netconnector::MdnsServicePtr mdns_service_;
-  netconnector::MdnsServiceSubscriptionPtr subscription_;
-  fidl::Binding<netconnector::MdnsResponder> binding_;
-  fidl::Array<netconnector::MdnsServiceInstancePtr> prev_instances_;
+  MdnsServicePtr mdns_service_;
+  ServiceSubscriber subscriber_;
+  fidl::Binding<MdnsResponder> binding_;
   fsl::FDWaiter fd_waiter_;
 
   uint16_t publication_port_;

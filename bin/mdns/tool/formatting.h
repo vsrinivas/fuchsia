@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/netconnector/fidl/mdns.fidl.h"
+#include "lib/mdns/fidl/mdns.fidl.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 
 namespace mdns {
@@ -30,8 +30,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const netconnector::MdnsServiceInstance& value);
+std::ostream& operator<<(std::ostream& os, const MdnsServiceInstance& value);
 std::ostream& operator<<(std::ostream& os,
                          const netstack::SocketAddress& value);
 
