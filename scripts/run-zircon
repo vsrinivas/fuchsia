@@ -158,7 +158,8 @@ fi
 
 # build the project if asked for
 if (( $BUILD )); then
-    $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
+    # DIR is zircon/scripts, we need to make inside zircon.
+    $DIR/make-parallel -C "$DIR/.." $PROJECT $BUILD_ARGS || exit 1
 fi
 
 # by default use the qemu binary located in the fuchsia buildtools
