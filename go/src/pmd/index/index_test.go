@@ -5,9 +5,11 @@
 package index
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -15,14 +17,66 @@ import (
 	"fuchsia.googlesource.com/pm/pkg"
 )
 
-func TestNew(t *testing.T) {
+func TestStatic(t *testing.T) {
+	f, err := ioutil.TempFile("", t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+
+	fmt.Fprintf(f, "a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
+	f.Close()
+
+	si, err := LoadStaticIndex(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectList := []pkg.Package{{Name: "a", Version: "0"}}
+	gotList, err := si.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotList, expectList) {
+		t.Errorf("static.List() %v != %v", gotList, expectList)
+	}
+
+	if !si.HasName("a") {
+		t.Error("static.HasName(`a`) = false, want true")
+	}
+
+	if si.HasName("b") {
+		t.Error("static.HasName(`b`) = true, want false")
+	}
+
+	getPackageCases := []struct {
+		name, version string
+		result        string
+	}{
+		{"a", "0", "331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8"},
+		{"a", "1", ""},
+		{"b", "0", ""},
+	}
+	for _, tc := range getPackageCases {
+		if got := si.GetPackage(tc.name, tc.version); got != tc.result {
+			t.Errorf("static.GetPackage(%q, %q) = %q want %q", tc.name, tc.version, got, tc.result)
+		}
+	}
+
+	if got, want := si.ListVersions("a"), []string{"0"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("static.ListVersions(`a`) = %v, want %v", got, want)
+	}
+
+}
+
+func TestNewDynamic(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// assert that a pre-existing directory is fine
-	_, err = New(d)
+	_, err = NewDynamic(d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +87,7 @@ func TestNew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = New(d)
+	_, err = NewDynamic(d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +113,7 @@ func TestList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := New(d)
+	idx, err := NewDynamic(d)
 	pkgs, err := idx.List()
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +169,7 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := New(d)
+	idx, err := NewDynamic(d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +215,7 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := New(d)
+	idx, err := NewDynamic(d)
 	if err != nil {
 		t.Fatal(err)
 	}

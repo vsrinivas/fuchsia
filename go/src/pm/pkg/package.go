@@ -8,6 +8,7 @@ package pkg
 
 import (
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -47,3 +48,25 @@ func (pkg *Package) Validate() error {
 	}
 	return nil
 }
+
+// ByNameVersion is an implementation of sort.Interface around a slice of Package
+type ByNameVersion []Package
+
+func (b ByNameVersion) Len() int {
+	return len(b)
+}
+
+func (b ByNameVersion) Less(i, j int) bool {
+	v := strings.Compare(b[i].Name, b[j].Name)
+	if v == 0 {
+		return strings.Compare(b[i].Version, b[j].Version) < 0
+	}
+	return v < 0
+}
+
+func (b ByNameVersion) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+// check interface implementation
+var _ sort.Interface = ByNameVersion(nil)

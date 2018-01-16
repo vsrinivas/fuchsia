@@ -19,6 +19,7 @@ var (
 	pkgfsPath = flag.String("pkgfs", "/pkgfs", "Path at which the package filesystem will be served")
 	blobstore = flag.String("blobstore", "/blobstore", "Path of blobstore to use")
 	index     = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
+	static    = flag.String("static", "/system/data/static_packages", "Path to a static package index to serve")
 	pkg       = flag.String("package", "", "path into blobstore for the system meta.far")
 )
 
@@ -53,7 +54,7 @@ func main() {
 	}
 
 	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
-	fs, err := pkgfs.New(*index, *blobstore)
+	fs, err := pkgfs.New(*static, *index, *blobstore)
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}

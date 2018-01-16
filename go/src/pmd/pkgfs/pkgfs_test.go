@@ -42,28 +42,28 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		println("removing blobstore path")
-		os.RemoveAll(blobstorePath)
-	}()
+	defer os.RemoveAll(blobstorePath)
+
+	staticFile, err := ioutil.TempFile("", "pkgfs-test-static-index")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(staticFile, "static-package/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
+	staticFile.Close()
+	staticPath := staticFile.Name()
+	defer os.RemoveAll(staticPath)
 
 	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		println("removing index path")
-		os.RemoveAll(indexPath)
-	}()
+	defer os.RemoveAll(indexPath)
 
 	rd, err := ramdisk.New(10 * 1024 * 1024)
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		println("destroying ramdisk")
-		rd.Destroy()
-	}()
+	defer rd.Destroy()
 
 	if err := rd.MkfsBlobstore(); err != nil {
 		panic(err)
@@ -72,10 +72,7 @@ func tmain(m *testing.M) int {
 	if err := rd.MountBlobstore(blobstorePath); err != nil {
 		panic(err)
 	}
-	defer func() {
-		println("unmounting blobstore")
-		rd.Umount(blobstorePath)
-	}()
+	defer rd.Umount(blobstorePath)
 
 	fmt.Printf("blobstore mounted at %s\n", blobstorePath)
 
@@ -83,24 +80,16 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		println("removing pkgfs mount dir")
-		os.RemoveAll(d)
-	}()
+	defer os.RemoveAll(d)
 
-	pkgfs, err := New(indexPath, blobstorePath)
+	pkgfs, err := New(staticPath, indexPath, blobstorePath)
 	if err != nil {
 		panic(err)
 	}
 	if err := pkgfs.Mount(d); err != nil {
 		panic(err)
 	}
-	println("pkgfs mounted")
-	defer func() {
-		println("unmounting pkgfs")
-		pkgfs.Unmount()
-		println("unmount done")
-	}()
+	defer pkgfs.Unmount()
 	pkgfsMount = d
 
 	return m.Run()
@@ -294,7 +283,24 @@ func TestAddPackage(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}
+}
 
+func TestListContainsStatic(t *testing.T) {
+	names, err := filepath.Glob(filepath.Join(pkgfsMount, "packages", "*", "*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := ""
+	for _, path := range names {
+		if strings.Contains(path, "static-") {
+			name = path
+		}
+	}
+
+	want := "static-package/0"
+	if !strings.HasSuffix(name, want) {
+		t.Errorf("did not find %q in %v (%q)", want, names, name)
+	}
 }
 
 func TestListRoot(t *testing.T) {

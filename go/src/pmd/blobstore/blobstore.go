@@ -23,7 +23,7 @@ import (
 // tackle more complex problems such as managing reference counting and garbage
 // collection of blobs.
 type Manager struct {
-	root    string
+	Root    string
 	tmpDir  string
 	channel *zx.Channel
 }
@@ -55,7 +55,7 @@ func New(root, tmpDir string) (*Manager, error) {
 	}
 	channel := &zx.Channel{handles[0]}
 
-	return &Manager{root: root, tmpDir: tmpDir, channel: channel}, nil
+	return &Manager{Root: root, tmpDir: tmpDir, channel: channel}, nil
 }
 
 // Create makes a new io for writing to the blobstore. If the given root looks
@@ -95,7 +95,7 @@ func (m *Manager) HasBlob(root string) bool {
 }
 
 func (m *Manager) bpath(root string) string {
-	return filepath.Join(m.root, root)
+	return filepath.Join(m.Root, root)
 }
 
 type tempProxy struct {

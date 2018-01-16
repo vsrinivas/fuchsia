@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,12 +20,16 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
+	"syscall/zx"
+	"syscall/zx/fdio"
 	"time"
 
 	"application/lib/app/context"
 	"fidl/bindings"
 	"garnet/amber/api/amber"
 	"thinfs/fs"
+	"thinfs/zircon/rpc"
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/pkg"
@@ -35,7 +40,8 @@ import (
 // Filesystem is the top level container for a pkgfs server
 type Filesystem struct {
 	root      fs.Directory
-	index     *index.Index
+	static    index.StaticIndex
+	index     *index.DynamicIndex
 	blobstore *blobstore.Manager
 	mountInfo mountInfo
 	mountTime time.Time
@@ -43,8 +49,17 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(indexDir, blobstoreDir string) (*Filesystem, error) {
-	index, err := index.New(indexDir)
+func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
+	var static index.StaticIndex
+	if _, err := os.Stat(staticIndex); !os.IsNotExist(err) {
+		static, err = index.LoadStaticIndex(staticIndex)
+		if err != nil {
+			// TODO(raggi): avoid crashing the process in cases like this
+			return nil, err
+		}
+	}
+
+	index, err := index.NewDynamic(indexDir)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +70,7 @@ func New(indexDir, blobstoreDir string) (*Filesystem, error) {
 	}
 
 	f := &Filesystem{
+		static:    static,
 		index:     index,
 		blobstore: bm,
 	}
@@ -97,6 +113,7 @@ func NewSinglePackage(pkgPath, blobstoreDir string) (*Filesystem, error) {
 	}
 
 	f := &Filesystem{
+		static:    nil,
 		index:     nil,
 		blobstore: bm,
 	}
@@ -349,7 +366,7 @@ func importPackage(fs *Filesystem, root string) {
 	// TODO(raggi): this is a bit messy, the system could instead force people to
 	// write to specific paths in the incoming directory
 	if !far.IsFAR(f) {
-		log.Printf("%q is not a package, ignoring import", root)
+		log.Printf("pkgfs:importPackage: %q is not a package, ignoring import", root)
 		return
 	}
 	f.Seek(0, io.SeekStart)
@@ -534,10 +551,25 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 	debugLog("pkgfs:packagesroot:read")
 
-	names, err := filepath.Glob(pr.fs.index.PackagePath("*"))
+	var names []string
+	if pr.fs.static != nil {
+		pkgs, err := pr.fs.static.List()
+		if err != nil {
+			return nil, err
+		}
+		names = make([]string, len(pkgs))
+		for i, p := range pkgs {
+			names[i] = p.Name
+		}
+	}
+
+	dnames, err := filepath.Glob(pr.fs.index.PackagePath("*"))
 	if err != nil {
 		return nil, goErrToFSErr(err)
 	}
+
+	names = append(names, dnames...)
+
 	dirents := make([]fs.Dirent, len(names))
 	for i := range names {
 		dirents[i] = fileDirEnt(filepath.Base(names[i]))
@@ -561,15 +593,18 @@ type packageListDir struct {
 
 func newPackageListDir(name string, f *Filesystem) (*packageListDir, error) {
 	debugLog("pkgfs:newPackageListDir: %q", name)
-	_, err := os.Stat(f.index.PackagePath(name))
-	if os.IsNotExist(err) {
-		debugLog("pkgfs:newPackageListDir: %q not found", name)
-		return nil, fs.ErrNotFound
+	if !f.static.HasName(name) {
+		_, err := os.Stat(f.index.PackagePath(name))
+		if os.IsNotExist(err) {
+			debugLog("pkgfs:newPackageListDir: %q not found", name)
+			return nil, fs.ErrNotFound
+		}
+		if err != nil {
+			log.Printf("pkgfs: error opening package: %q: %s", name, err)
+			return nil, err
+		}
 	}
-	if err != nil {
-		log.Printf("pkgfs: error opening package: %q: %s", name, err)
-		return nil, err
-	}
+
 	pld := packageListDir{
 		unsupportedDirectory: unsupportedDirectory(filepath.Join("/packages", name)),
 		fs:                   f,
@@ -603,6 +638,15 @@ func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Di
 func (pld *packageListDir) Read() ([]fs.Dirent, error) {
 	debugLog("pkgfs:packageListdir:read %q", pld.packageName)
 
+	if pld.fs.static != nil && pld.fs.static.HasName(pld.packageName) {
+		versions := pld.fs.static.ListVersions(pld.packageName)
+		dirents := make([]fs.Dirent, len(versions))
+		for i := range versions {
+			dirents[i] = fileDirEnt(versions[i])
+		}
+		return dirents, nil
+	}
+
 	names, err := filepath.Glob(pld.fs.index.PackageVersionPath(pld.packageName, "*"))
 	if err != nil {
 		return nil, goErrToFSErr(err)
@@ -631,6 +675,15 @@ type packageDir struct {
 }
 
 func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
+	merkleroot := ""
+	if filesystem.static != nil {
+		merkleroot = filesystem.static.GetPackage(name, version)
+	}
+
+	if merkleroot != "" {
+		return newPackageDirFromBlob(filepath.Join(filesystem.blobstore.Root, merkleroot), filesystem)
+	}
+
 	packageIndex := filesystem.index.PackageVersionPath(name, version)
 	f, err := os.Open(packageIndex)
 	if err != nil {
@@ -956,4 +1009,108 @@ func (d *needsBlobsDir) Stat() (int64, time.Time, time.Time, error) {
 // TODO(raggi): speed this up/reduce allocation overhead.
 func clean(path string) string {
 	return filepath.Clean("/" + path)[1:]
+}
+
+// mountInfo is a platform specific type that carries platform specific mounting
+// data, such as the file descriptor or handle of the mount.
+type mountInfo struct {
+	unmountOnce  sync.Once
+	serveChannel *zx.Channel
+	parentFd     int
+}
+
+// Mount attaches the filesystem host to the given path. If an error occurs
+// during setup, this method returns that error. If an error occurs after
+// serving has started, the error causes a log.Fatal. If the given path does not
+// exist, it is created before mounting.
+func (f *Filesystem) Mount(path string) error {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	f.mountInfo.parentFd, err = syscall.Open(path, syscall.O_ADMIN|syscall.O_DIRECTORY, 0777)
+	if err != nil {
+		return err
+	}
+
+	var rpcChan *zx.Channel
+	rpcChan, f.mountInfo.serveChannel, err = zx.NewChannel(0)
+	if err != nil {
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
+		return fmt.Errorf("channel creation: %s", err)
+	}
+
+	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
+		f.mountInfo.serveChannel.Close()
+		f.mountInfo.serveChannel = nil
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
+		return fmt.Errorf("mount failure: %s", err)
+	}
+
+	vfs, err := rpc.NewServer(f, rpcChan.Handle)
+	if err != nil {
+		f.mountInfo.serveChannel.Close()
+		f.mountInfo.serveChannel = nil
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.parentFd = -1
+		return fmt.Errorf("vfs server creation: %s", err)
+	}
+
+	// TODO(raggi): handle the exit case more cleanly.
+	go func() {
+		defer f.Unmount()
+		vfs.Serve()
+	}()
+	return nil
+}
+
+// Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
+func (f *Filesystem) Unmount() {
+	f.mountInfo.unmountOnce.Do(func() {
+		// TODO(raggi): log errors?
+		syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+		f.mountInfo.serveChannel.Close()
+		syscall.Close(f.mountInfo.parentFd)
+		f.mountInfo.serveChannel = nil
+		f.mountInfo.parentFd = -1
+	})
+}
+
+func goErrToFSErr(err error) error {
+	switch e := err.(type) {
+	case nil:
+		return nil
+	case *os.PathError:
+		return goErrToFSErr(e.Err)
+	case zx.Error:
+		switch e.Status {
+		case zx.ErrNotFound:
+			return fs.ErrNotFound
+
+		default:
+			debugLog("pkgfs: unmapped os err to fs err: %T %v", err, err)
+			return err
+
+		}
+	}
+	switch err {
+	case os.ErrInvalid:
+		return fs.ErrInvalidArgs
+	case os.ErrPermission:
+		return fs.ErrPermission
+	case os.ErrExist:
+		return fs.ErrAlreadyExists
+	case os.ErrNotExist:
+		return fs.ErrNotFound
+	case os.ErrClosed:
+		return fs.ErrNotOpen
+	case io.EOF:
+		return fs.ErrEOF
+	default:
+		debugLog("pkgfs: unmapped os err to fs err: %T %v", err, err)
+		return err
+	}
 }
