@@ -46,11 +46,13 @@ macro_rules! impl_handle_based {
 // and provides a private `assoc_const_name` method and a `Debug` implementation
 // for the type based on `$name`.
 // If multiple names match, the first will be used in `name` and `Debug`.
+#[macro_export]
 macro_rules! assoc_values {
-    ($typename:ident, [$($name:ident = $value:path;)*]) => {
+    ($typename:ident, [$($(#[$attr:meta])* $name:ident = $value:path;)*]) => {
         #[allow(non_upper_case_globals)]
         impl $typename {
             $(
+                $(#[$attr])*
                 pub const $name: $typename = $typename($value);
             )*
 
