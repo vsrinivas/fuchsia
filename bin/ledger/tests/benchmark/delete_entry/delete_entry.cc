@@ -80,7 +80,7 @@ void DeleteEntryBenchmark::Populate() {
 
   page_data_generator_.Populate(
       &page_, std::move(keys), value_size_, entry_count_,
-      test::benchmark::PageDataGenerator::ReferenceStrategy::ON,
+      test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
       ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           benchmark::QuitOnError(status, "PageGenerator::Populate");

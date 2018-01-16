@@ -30,15 +30,14 @@ constexpr fxl::StringView kServerIdFlag = "server-id";
 
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
-constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 constexpr size_t kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
             << "=<int> --" << kValueSizeFlag << "=<int> --" << kRefsFlag << "=("
-            << kRefsOnFlag << "|" << kRefsOffFlag << "|" << kRefsAutoFlag
-            << ") --" << kServerIdFlag << "=<string>" << std::endl;
+            << kRefsOnFlag << "|" << kRefsOffFlag << ") --" << kServerIdFlag
+            << "=<string>" << std::endl;
 }
 
 }  // namespace
@@ -234,13 +233,10 @@ int main(int argc, const char** argv) {
   test::benchmark::PageDataGenerator::ReferenceStrategy reference_strategy;
   if (reference_strategy_str == kRefsOnFlag) {
     reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::ON;
+        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (reference_strategy_str == kRefsOffFlag) {
     reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::OFF;
-  } else if (reference_strategy_str == kRefsAutoFlag) {
-    reference_strategy =
-        test::benchmark::PageDataGenerator::ReferenceStrategy::AUTO;
+        test::benchmark::PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << reference_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;

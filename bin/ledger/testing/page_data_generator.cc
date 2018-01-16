@@ -38,9 +38,7 @@ void PageDataGenerator::PutEntry(ledger::PagePtr* page,
                                  ReferenceStrategy ref_strategy,
                                  ledger::Priority priority,
                                  std::function<void(ledger::Status)> callback) {
-  if (ref_strategy == ReferenceStrategy::OFF ||
-      (ref_strategy == ReferenceStrategy::AUTO &&
-       value.size() < kMaxInlineDataSize)) {
+  if (ref_strategy == ReferenceStrategy::INLINE) {
     if (value.size() >= kMaxInlineDataSize) {
       FXL_LOG(ERROR)
           << "Value too large (" << value.size()

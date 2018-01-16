@@ -18,14 +18,11 @@ namespace benchmark {
 class PageDataGenerator {
  public:
   // Strategy on how to put values: inline or as references.
-  // ON: always put as references
-  // OFF: always put inline
-  // AUTO: put inline or as reference based on whether or not the value fits
-  // into a fidl message.
+  // INLINE: Put entry inline (as a FIDL array).
+  // REFERENCE: Put entry as reference.
   enum class ReferenceStrategy {
-    OFF,
-    ON,
-    AUTO,
+    INLINE,
+    REFERENCE,
   };
 
   PageDataGenerator();

@@ -28,6 +28,8 @@ namespace benchmark {
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
 //   --value-size=<int> the size of a single value in bytes
+//   --refs=(on|off) reference strategy: on to put values as references, off to
+//     put them as FIDL arrays.
 //   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:

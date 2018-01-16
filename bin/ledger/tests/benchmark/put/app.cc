@@ -23,15 +23,13 @@ constexpr fxl::StringView kSeedFlag = "seed";
 
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
-constexpr fxl::StringView kRefsAutoFlag = "auto";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
             << "=<int> --" << kTransactionSizeFlag << "=<int> --"
             << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> --"
-            << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << "|"
-            << kRefsAutoFlag << ") [" << kSeedFlag << "=<int>] [--"
-            << kUpdateFlag << "]" << std::endl;
+            << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << ") ["
+            << kSeedFlag << "=<int>] [--" << kUpdateFlag << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const fxl::CommandLine& command_line,
@@ -77,11 +75,11 @@ int main(int argc, const char** argv) {
   }
   test::benchmark::PageDataGenerator::ReferenceStrategy ref_strategy;
   if (ref_strategy_str == kRefsOnFlag) {
-    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::ON;
+    ref_strategy =
+        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE;
   } else if (ref_strategy_str == kRefsOffFlag) {
-    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::OFF;
-  } else if (ref_strategy_str == kRefsAutoFlag) {
-    ref_strategy = test::benchmark::PageDataGenerator::ReferenceStrategy::AUTO;
+    ref_strategy =
+        test::benchmark::PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
     std::cerr << "Unknown option " << ref_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;

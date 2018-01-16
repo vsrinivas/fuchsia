@@ -26,10 +26,8 @@ namespace benchmark {
 //     operations. If equal to 0, no explicit transactions will be made.
 //   --key-size=<int> the size of a single key in bytes
 //   --value-size=<int> the size of a single value in bytes
-//   --refs=(on|off|auto) the reference strategy: on if every value is inserted
-//     as a reference, off if every value is inserted as a FIDL array, auto to
-//     automatically choose, depending on whether the value fits in a FIDL
-//     message as an array or not
+//   --refs=(on|off) the reference strategy: on if every value is inserted
+//     as a reference, off if every value is inserted as a FIDL array.
 //   --update whether operations will update existing entries (put with existing
 //     keys and new values)
 //   --seed=<int> (optional) the seed for key and value generation

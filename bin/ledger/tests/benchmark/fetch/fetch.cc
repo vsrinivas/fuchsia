@@ -104,7 +104,7 @@ void FetchBenchmark::Populate() {
 
   page_data_generator_.Populate(
       &writer_page_, std::move(keys), value_size_, entry_count_,
-      test::benchmark::PageDataGenerator::ReferenceStrategy::ON,
+      test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
       ledger::Priority::LAZY, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           benchmark::QuitOnError(status, "PageGenerator::Populate");

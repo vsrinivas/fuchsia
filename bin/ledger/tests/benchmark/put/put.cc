@@ -51,7 +51,11 @@ void PutBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
-                << " --value-size=" << value_size_
+                << " --value-size=" << value_size_ << " --refs="
+                << (reference_strategy_ ==
+                            PageDataGenerator::ReferenceStrategy::INLINE
+                        ? "off"
+                        : "on")
                 << (update_ ? " --update" : "");
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(

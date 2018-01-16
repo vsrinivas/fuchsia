@@ -15,7 +15,7 @@ Benchmarks can also be traced directly, as any other app would be. For example:
 ```
 trace record --categories=benchmark,ledger ledger_benchmark_put \
   --entry-count=10 --transaction-size=1 --key-size=100 --value-size=100
-  --refs=auto
+  --refs=off
 ```
 
 Some benchmarks exercise sync. To run these, pass the ID of a correctly
@@ -49,7 +49,7 @@ or by tracing it directly. For example:
 trace record --categories=benchmark,ledger launch_benchmark \
   --app=ledger_benchmark_put --test-arg=entry-count \
   --min-value=10 --max-value=100 --step=10
-  --append-args="--transaction-size=1,--key-size=64,--value-size=1000,--refs=auto"
+  --append-args="--transaction-size=1,--key-size=64,--value-size=1000,--refs=off"
 ```
 
 [configured]: /docs/ledger/user_guide.md

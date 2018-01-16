@@ -181,6 +181,12 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/put/put_as_reference.tspec")
+      dest = "ledger/benchmark/put_as_reference.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/put/transaction_size.tspec")
       dest = "ledger/benchmark/transaction_size.tspec"
     },
