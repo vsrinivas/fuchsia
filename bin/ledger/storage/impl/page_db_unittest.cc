@@ -23,6 +23,7 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/make_object_identifier.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
 namespace storage {
@@ -235,21 +236,16 @@ TEST_F(PageDbTest, ObjectStorage) {
     EXPECT_EQ(Status::NOT_FOUND,
               page_db_.ReadObject(handler, object_identifier, &object));
     ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_identifier.object_digest,
+              page_db_.WriteObject(handler, object_identifier,
                                    DataSource::DataChunk::Create(content),
                                    PageDbObjectStatus::TRANSIENT));
-    page_db_.GetObjectStatus(handler, object_identifier.object_digest,
-                             &object_status);
+    page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK,
               page_db_.ReadObject(handler, object_identifier, &object));
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
-    EXPECT_EQ(Status::OK,
-              page_db_.DeleteObject(handler, object_identifier.object_digest));
-    EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.ReadObject(handler, object_identifier, &object));
   });
 }
 
@@ -302,34 +298,34 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 
 TEST_F(PageDbTest, UnsyncedPieces) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectDigest object_digest = RandomObjectDigest();
+    auto object_identifier = RandomObjectIdentifier();
     std::vector<ObjectIdentifier> object_identifiers;
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_TRUE(object_identifiers.empty());
 
     EXPECT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_digest,
+              page_db_.WriteObject(handler, object_identifier,
                                    DataSource::DataChunk::Create(""),
                                    PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
+    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_identifier,
                                                    PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_EQ(1u, object_identifiers.size());
-    EXPECT_EQ(object_digest, object_identifiers[0].object_digest);
+    EXPECT_EQ(object_identifier, object_identifiers[0]);
     PageDbObjectStatus object_status;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_digest, &object_status));
+    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier,
+                                                   &object_status));
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
 
-    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
+    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_identifier,
                                                    PageDbObjectStatus::SYNCED));
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_TRUE(object_identifiers.empty());
-    EXPECT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_digest, &object_status));
+    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier,
+                                                   &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
   });
 }
@@ -340,8 +336,8 @@ TEST_F(PageDbTest, Batch) {
     ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
     ASSERT_TRUE(batch);
 
-    ObjectDigest object_digest = RandomObjectDigest();
-    EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_digest,
+    auto object_identifier = RandomObjectIdentifier();
+    EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_identifier,
                                              DataSource::DataChunk::Create(""),
                                              PageDbObjectStatus::LOCAL));
 
@@ -355,19 +351,12 @@ TEST_F(PageDbTest, Batch) {
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_EQ(1u, object_identifiers.size());
-    EXPECT_EQ(object_digest, object_identifiers[0].object_digest);
+    EXPECT_EQ(object_identifier, object_identifiers[0]);
   });
 }
 
 TEST_F(PageDbTest, PageDbObjectStatus) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectDigest object_digest = RandomObjectDigest();
-    PageDbObjectStatus object_status;
-
-    ASSERT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_digest, &object_status));
-    EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
-
     PageDbObjectStatus initial_statuses[] = {PageDbObjectStatus::TRANSIENT,
                                              PageDbObjectStatus::LOCAL,
                                              PageDbObjectStatus::SYNCED};
@@ -375,21 +364,25 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
                                           PageDbObjectStatus::SYNCED};
     for (auto initial_status : initial_statuses) {
       for (auto next_status : next_statuses) {
-        ASSERT_EQ(Status::OK, page_db_.DeleteObject(handler, object_digest));
+        auto object_identifier = RandomObjectIdentifier();
+        PageDbObjectStatus object_status;
+        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
+                                  handler, object_identifier, &object_status));
+        EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
         ASSERT_EQ(Status::OK,
-                  page_db_.WriteObject(handler, object_digest,
+                  page_db_.WriteObject(handler, object_identifier,
                                        DataSource::DataChunk::Create(""),
                                        initial_status));
-        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_digest,
-                                                       &object_status));
+        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
+                                  handler, object_identifier, &object_status));
         EXPECT_EQ(initial_status, object_status);
-        ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
-                                                       next_status));
+        ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(
+                                  handler, object_identifier, next_status));
 
         PageDbObjectStatus expected_status =
             std::max(initial_status, next_status);
-        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_digest,
-                                                       &object_status));
+        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
+                                  handler, object_identifier, &object_status));
         EXPECT_EQ(expected_status, object_status);
       }
     }

@@ -51,7 +51,7 @@ Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectDigestView /*object_digest*/,
+                                        ObjectIdentifier /*object_identifier*/,
                                         PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -122,17 +122,13 @@ Status PageDbEmptyImpl::RemoveJournalEntry(
 }
 Status PageDbEmptyImpl::WriteObject(
     CoroutineHandler* /*handler*/,
-    ObjectDigestView /*object_digest*/,
+    ObjectIdentifier /*object_identifier*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::DeleteObject(CoroutineHandler* /*handler*/,
-                                     ObjectDigestView /*object_digest*/) {
-  return Status::NOT_IMPLEMENTED;
-}
 Status PageDbEmptyImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectDigestView /*object_digest*/,
+                                        ObjectIdentifier /*object_identifier*/,
                                         PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }

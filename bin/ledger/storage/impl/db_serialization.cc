@@ -7,6 +7,7 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 
 namespace storage {
 
@@ -42,20 +43,32 @@ std::string UnsyncedCommitRow::GetKeyFor(const CommitId& commit_id) {
   return fxl::Concatenate({kPrefix, commit_id});
 }
 
-// TransientObjectRow.
+// ObjectStatusRow.
 
-constexpr fxl::StringView TransientObjectRow::kPrefix;
+constexpr fxl::StringView ObjectStatusRow::kTransientPrefix;
+constexpr fxl::StringView ObjectStatusRow::kLocalPrefix;
+constexpr fxl::StringView ObjectStatusRow::kSyncedPrefix;
 
-std::string TransientObjectRow::GetKeyFor(ObjectDigestView object_digest) {
-  return fxl::Concatenate({kPrefix, object_digest});
+std::string ObjectStatusRow::GetKeyFor(
+    PageDbObjectStatus object_status,
+    const ObjectIdentifier& object_identifier) {
+  return fxl::Concatenate(
+      {GetPrefixFor(object_status), EncodeObjectIdentifier(object_identifier)});
 }
 
-// LocalObjectRow.
-
-constexpr fxl::StringView LocalObjectRow::kPrefix;
-
-std::string LocalObjectRow::GetKeyFor(ObjectDigestView object_digest) {
-  return fxl::Concatenate({kPrefix, object_digest});
+fxl::StringView ObjectStatusRow::GetPrefixFor(
+    PageDbObjectStatus object_status) {
+  switch (object_status) {
+    case PageDbObjectStatus::UNKNOWN:
+      FXL_NOTREACHED();
+      return "";
+    case PageDbObjectStatus::TRANSIENT:
+      return kTransientPrefix;
+    case PageDbObjectStatus::LOCAL:
+      return kLocalPrefix;
+    case PageDbObjectStatus::SYNCED:
+      return kSyncedPrefix;
+  }
 }
 
 // ImplicitJournalMetaRow.

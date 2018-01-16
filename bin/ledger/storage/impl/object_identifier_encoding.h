@@ -20,6 +20,14 @@ flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
     flatbuffers::FlatBufferBuilder* builder,
     const ObjectIdentifier& object_identifier);
 
+// Encode an ObjectIdentifier into a string.
+std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier);
+
+// Decode an ObjectIdentifier from a string. Return |true| in case of success,
+// |false| otherwise.
+bool DecodeObjectIdentifier(fxl::StringView data,
+                            ObjectIdentifier* object_identifier);
+
 }  // namespace storage
 
 #endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IDENTIFIER_ENCODING_H_

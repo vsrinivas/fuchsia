@@ -342,7 +342,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
         auto callback =
             UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-        callback(db_->SetObjectStatus(handler, object_identifier.object_digest,
+        callback(db_->SetObjectStatus(handler, object_identifier,
                                       PageDbObjectStatus::SYNCED));
       });
 }
@@ -684,8 +684,8 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     const ObjectIdentifier& object_identifier = *(it.first);
     FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
                ObjectDigestType::INLINE);
-    Status status = batch->SetObjectStatus(
-        handler, object_identifier.object_digest, PageDbObjectStatus::LOCAL);
+    Status status = batch->SetObjectStatus(handler, object_identifier,
+                                           PageDbObjectStatus::LOCAL);
     if (status != Status::OK) {
       return status;
     }
@@ -885,8 +885,8 @@ void PageStorageImpl::ObjectIsUntracked(
         }
 
         PageDbObjectStatus object_status;
-        Status status = db_->GetObjectStatus(
-            handler, object_identifier.object_digest, &object_status);
+        Status status =
+            db_->GetObjectStatus(handler, object_identifier, &object_status);
         callback(status, object_status == PageDbObjectStatus::TRANSIENT);
       });
 }
@@ -1443,8 +1443,8 @@ Status PageStorageImpl::SynchronousAddPiece(
     PageDbObjectStatus object_status =
         (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
                                        : PageDbObjectStatus::SYNCED);
-    return db_->WriteObject(handler, object_identifier.object_digest,
-                            std::move(data), object_status);
+    return db_->WriteObject(handler, object_identifier, std::move(data),
+                            object_status);
   }
   return status;
 }

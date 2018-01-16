@@ -58,7 +58,7 @@ class PageDbImpl : public PageDb {
       coroutine::CoroutineHandler* handler,
       std::vector<ObjectIdentifier>* object_identifiers) override;
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
-                         ObjectDigestView object_digest,
+                         ObjectIdentifier object_identifier,
                          PageDbObjectStatus* object_status) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key,
@@ -90,18 +90,16 @@ class PageDbImpl : public PageDb {
                             const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
-                     ObjectDigestView object_digest,
+                     ObjectIdentifier object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,
                      PageDbObjectStatus object_status) override;
-  Status DeleteObject(coroutine::CoroutineHandler* handler,
-                      ObjectDigestView object_digest) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
                               const CommitId& commit_id,
                               uint64_t generation) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
-                         ObjectDigestView object_digest,
+                         ObjectIdentifier object_identifier,
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key,

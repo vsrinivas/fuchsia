@@ -103,75 +103,46 @@ Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,
 
 Status PageDbBatchImpl::WriteObject(
     CoroutineHandler* handler,
-    ObjectDigestView object_digest,
+    ObjectIdentifier object_identifier,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
-  auto object_key = ObjectRow::GetKeyFor(object_digest);
+  auto object_key = ObjectRow::GetKeyFor(object_identifier.object_digest);
   bool has_key;
-  RETURN_ON_ERROR(db_->HasObject(handler, object_digest, &has_key));
-  if (has_key && object_status > PageDbObjectStatus::TRANSIENT) {
-    return SetObjectStatus(handler, object_digest, object_status);
+  RETURN_ON_ERROR(db_->HasObject(handler, object_key, &has_key));
+  if (has_key) {
+    if (object_status == PageDbObjectStatus::TRANSIENT) {
+      return Status::OK;
+    }
+    return SetObjectStatus(handler, std::move(object_identifier),
+                           object_status);
   }
 
   RETURN_ON_ERROR(batch_->Put(handler, object_key, content->Get()));
-  switch (object_status) {
-    case PageDbObjectStatus::UNKNOWN:
-      FXL_NOTREACHED();
-      break;
-    case PageDbObjectStatus::TRANSIENT:
-      return batch_->Put(handler, TransientObjectRow::GetKeyFor(object_digest),
-                         "");
-    case PageDbObjectStatus::LOCAL:
-      return batch_->Put(handler, LocalObjectRow::GetKeyFor(object_digest), "");
-    case PageDbObjectStatus::SYNCED:
-      // Nothing to do.
-      break;
-  }
-  return Status::OK;
-}
-
-Status PageDbBatchImpl::DeleteObject(CoroutineHandler* handler,
-                                     ObjectDigestView object_digest) {
-  RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_digest)));
-  RETURN_ON_ERROR(
-      batch_->Delete(handler, TransientObjectRow::GetKeyFor(object_digest)));
-  return batch_->Delete(handler, LocalObjectRow::GetKeyFor(object_digest));
+  return batch_->Put(
+      handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier),
+      "");
 }
 
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
-                                        ObjectDigestView object_digest,
+                                        ObjectIdentifier object_identifier,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  RETURN_ON_ERROR(DCheckHasObject(handler, object_digest));
+  RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier.object_digest));
 
-  auto transient_key = TransientObjectRow::GetKeyFor(object_digest);
-  auto local_key = LocalObjectRow::GetKeyFor(object_digest);
-
-  switch (object_status) {
-    case PageDbObjectStatus::UNKNOWN:
-    case PageDbObjectStatus::TRANSIENT: {
-      FXL_NOTREACHED();
-      break;
-    }
-    case PageDbObjectStatus::LOCAL: {
-      PageDbObjectStatus previous_object_status;
-      RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_digest,
-                                           &previous_object_status));
-      if (previous_object_status == PageDbObjectStatus::TRANSIENT) {
-        RETURN_ON_ERROR(batch_->Delete(handler, transient_key));
-        return batch_->Put(handler, local_key, "");
-      }
-      break;
-    }
-    case PageDbObjectStatus::SYNCED: {
-      RETURN_ON_ERROR(batch_->Delete(handler, local_key));
-      return batch_->Delete(handler, transient_key);
-    }
+  PageDbObjectStatus previous_object_status;
+  RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_identifier,
+                                       &previous_object_status));
+  if (previous_object_status >= object_status) {
+    return Status::OK;
   }
-
-  return Status::OK;
+  RETURN_ON_ERROR(batch_->Delete(
+      handler,
+      ObjectStatusRow::GetKeyFor(previous_object_status, object_identifier)));
+  return batch_->Put(
+      handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier),
+      "");
 }
 
 Status PageDbBatchImpl::MarkCommitIdSynced(CoroutineHandler* handler,

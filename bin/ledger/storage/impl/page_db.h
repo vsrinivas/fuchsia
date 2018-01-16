@@ -104,20 +104,15 @@ class PageDbMutator {
   // Writes the content of the given object.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
       coroutine::CoroutineHandler* handler,
-      ObjectDigestView object_digest,
+      ObjectIdentifier object_identifier,
       std::unique_ptr<DataSource::DataChunk> content,
       PageDbObjectStatus object_status) = 0;
-
-  // Deletes the object with the given identifier.
-  FXL_WARN_UNUSED_RESULT virtual Status DeleteObject(
-      coroutine::CoroutineHandler* handler,
-      ObjectDigestView object_digest) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
   FXL_WARN_UNUSED_RESULT virtual Status SetObjectStatus(
       coroutine::CoroutineHandler* handler,
-      ObjectDigestView object_digest,
+      ObjectIdentifier object_identifier,
       PageDbObjectStatus object_status) = 0;
 
   // Commit sync metadata.
@@ -235,7 +230,7 @@ class PageDb : public PageDbMutator {
   // Returns the status of the object with the given id.
   FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatus(
       coroutine::CoroutineHandler* handler,
-      ObjectDigestView object_digest,
+      ObjectIdentifier object_identifier,
       PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.

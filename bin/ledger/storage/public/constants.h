@@ -30,7 +30,7 @@ constexpr uint32_t kDefaultDeletionScopeId =
     std::numeric_limits<uint32_t>::max() - 1;
 
 // The serialization version of the ledger.
-constexpr const fxl::StringView kSerializationVersion = "20";
+constexpr const fxl::StringView kSerializationVersion = "21";
 
 }  // namespace storage
 

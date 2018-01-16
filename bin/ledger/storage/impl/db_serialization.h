@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_DB_SERIALIZATION_H_
 
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/storage/impl/page_db.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
@@ -38,18 +39,18 @@ class UnsyncedCommitRow {
   static std::string GetKeyFor(const CommitId& commit_id);
 };
 
-class TransientObjectRow {
+class ObjectStatusRow {
  public:
-  static constexpr fxl::StringView kPrefix = "transient/object_digests/";
+  static constexpr fxl::StringView kTransientPrefix =
+      "transient/object_digests/";
+  static constexpr fxl::StringView kLocalPrefix = "local/object_digests/";
+  static constexpr fxl::StringView kSyncedPrefix = "synced/object_digests/";
 
-  static std::string GetKeyFor(ObjectDigestView object_digest);
-};
+  static std::string GetKeyFor(PageDbObjectStatus object_status,
+                               const ObjectIdentifier& object_identifier);
 
-class LocalObjectRow {
- public:
-  static constexpr fxl::StringView kPrefix = "local/object_digests/";
-
-  static std::string GetKeyFor(ObjectDigestView object_digest);
+ private:
+  static fxl::StringView GetPrefixFor(PageDbObjectStatus object_status);
 };
 
 class ImplicitJournalMetaRow {

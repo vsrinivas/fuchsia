@@ -52,8 +52,6 @@ class LevelDb : public Db {
           iterator) override;
 
  private:
-  bool MakeEmptySyncCallAndCheck(coroutine::CoroutineHandler* handler);
-
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;

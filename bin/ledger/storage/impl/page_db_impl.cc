@@ -11,6 +11,7 @@
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
@@ -187,32 +188,22 @@ Status PageDbImpl::HasObject(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
-                                   ObjectDigestView object_digest,
+                                   ObjectIdentifier object_identifier,
                                    PageDbObjectStatus* object_status) {
-  bool has_key;
-
-  RETURN_ON_ERROR(
-      db_.HasKey(handler, LocalObjectRow::GetKeyFor(object_digest), &has_key));
-  if (has_key) {
-    *object_status = PageDbObjectStatus::LOCAL;
-    return Status::OK;
+  for (PageDbObjectStatus possible_status :
+       {PageDbObjectStatus::SYNCED, PageDbObjectStatus::TRANSIENT,
+        PageDbObjectStatus::LOCAL}) {
+    bool has_key;
+    RETURN_ON_ERROR(db_.HasKey(
+        handler, ObjectStatusRow::GetKeyFor(possible_status, object_identifier),
+        &has_key));
+    if (has_key) {
+      *object_status = possible_status;
+      return Status::OK;
+    }
   }
 
-  RETURN_ON_ERROR(db_.HasKey(
-      handler, TransientObjectRow::GetKeyFor(object_digest), &has_key));
-  if (has_key) {
-    *object_status = PageDbObjectStatus::TRANSIENT;
-    return Status::OK;
-  }
-
-  RETURN_ON_ERROR(
-      db_.HasKey(handler, ObjectRow::GetKeyFor(object_digest), &has_key));
-  if (!has_key) {
-    *object_status = PageDbObjectStatus::UNKNOWN;
-    return Status::OK;
-  }
-
-  *object_status = PageDbObjectStatus::SYNCED;
+  *object_status = PageDbObjectStatus::UNKNOWN;
   return Status::OK;
 }
 
@@ -238,20 +229,21 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
 Status PageDbImpl::GetUnsyncedPieces(
     CoroutineHandler* handler,
     std::vector<ObjectIdentifier>* object_identifiers) {
-  std::vector<ObjectDigest> digests;
-  Status status = db_.GetByPrefix(
-      handler, convert::ToSlice(LocalObjectRow::kPrefix), &digests);
+  std::vector<std::string> encoded_identifiers;
+  Status status =
+      db_.GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
+                      &encoded_identifiers);
   if (status != Status::OK) {
     return status;
   }
 
-  // TODO(qsr): Store identifiers in db. DB currently only contains the digest
-  // of objects. It is necessary to store the full identifier to be able to
-  // upload the correctly encrypted object.
   object_identifiers->clear();
-  for (auto& digest : digests) {
-    object_identifiers->push_back(
-        MakeDefaultObjectIdentifier(std::move(digest)));
+  ObjectIdentifier object_identifier;
+  for (auto& encoded_identifier : encoded_identifiers) {
+    if (!DecodeObjectIdentifier(encoded_identifier, &object_identifier)) {
+      return Status::FORMAT_ERROR;
+    }
+    object_identifiers->emplace_back(std::move(object_identifier));
   }
 
   return Status::OK;
@@ -345,31 +337,23 @@ Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::WriteObject(CoroutineHandler* handler,
-                               ObjectDigestView object_digest,
+                               ObjectIdentifier object_identifier,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->WriteObject(handler, object_digest, std::move(content),
-                                     object_status));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::DeleteObject(CoroutineHandler* handler,
-                                ObjectDigestView object_digest) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->DeleteObject(handler, object_digest));
+  RETURN_ON_ERROR(batch->WriteObject(handler, object_identifier,
+                                     std::move(content), object_status));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
-                                   ObjectDigestView object_digest,
+                                   ObjectIdentifier object_identifier,
                                    PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(
-      batch->SetObjectStatus(handler, object_digest, object_status));
+      batch->SetObjectStatus(handler, object_identifier, object_status));
   return batch->Execute(handler);
 }
 
