@@ -12,6 +12,10 @@ static_library("linenoise") {
   sources = [
     "linenoise.c",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fdio",
+  ]
 }
 
 executable("linenoise_example") {

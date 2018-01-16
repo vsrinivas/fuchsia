@@ -15,13 +15,16 @@ source_set("block-client") {
 
   public_configs = [ ":block-client_config" ]
 
+  public_deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
   deps = [
-    "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/sync",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/sync",
   ]
 
   libs = [
-    "fdio",
     "zircon",
   ]
 }

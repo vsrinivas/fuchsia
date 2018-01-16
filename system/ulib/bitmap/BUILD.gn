@@ -20,8 +20,8 @@ sdk_static_library("bitmap") {
   ]
 
   deps = [
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   public_configs = [ ":bitmap_config" ]
