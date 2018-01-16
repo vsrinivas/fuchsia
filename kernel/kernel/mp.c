@@ -13,6 +13,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/align.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>

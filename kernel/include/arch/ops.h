@@ -36,9 +36,6 @@ static uint64_t arch_cycle_count(void);
 static cpu_num_t arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);
 
-/* Use to align structures on cache lines to avoid cpu aliasing. */
-#define __CPU_ALIGN __ALIGNED(MAX_CACHE_LINE)
-
 void arch_disable_cache(uint flags);
 void arch_enable_cache(uint flags);
 

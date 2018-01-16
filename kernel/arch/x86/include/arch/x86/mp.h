@@ -26,10 +26,11 @@
 #ifndef __ASSEMBLER__
 
 #include <arch/spinlock.h>
-#include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <assert.h>
+#include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/tls.h>

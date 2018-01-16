@@ -51,6 +51,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <kernel/align.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/stats.h>

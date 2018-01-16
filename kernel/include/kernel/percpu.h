@@ -6,6 +6,7 @@
 #pragma once
 
 #include <arch/ops.h>
+#include <kernel/align.h>
 #include <kernel/event.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
