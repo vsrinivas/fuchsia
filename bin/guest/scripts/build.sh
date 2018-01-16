@@ -23,34 +23,34 @@ DEFAULT_GN_PACKAGE_LIST=(
 DEFAULT_GN_PACKAGES=$(IFS=, ; echo "${DEFAULT_GN_PACKAGE_LIST[*]}")
 
 usage() {
-  echo "usage: ${0} [options] {arm64, x86}"
+  echo "usage: ${0} [options] {hikey960, vim2, x86, qemu}"
   echo
   echo "  -A            Use ASAN in GN"
   echo "  -g            Use Goma"
   echo "  -p [package]  Set package, defaults to ${DEFAULT_GN_PACKAGES}"
-  echo "  -q            Run in QEMU instead of deploying to device."
   echo
   exit 1
 }
 
-while getopts "Agp:q" FLAG; do
+while getopts "Agp:" FLAG; do
   case "${FLAG}" in
   A) GN_ASAN="--variant=asan";;
   g) $HOME/goma/goma_ctl.py ensure_start;
      GN_GOMA="--goma";
      NINJA_GOMA="-j1024";;
   p) PACKAGE="${OPTARG}";;
-  q) FLAG_QEMU=true;;
   *) usage;;
   esac
 done
 shift $((OPTIND - 1))
 
 case "${1}" in
-arm64)
+hikey960) ;&
+vim2)
   ARCH="aarch64";
-  PLATFORM="hikey960";;
-x86)
+  PLATFORM="${1}";;
+x86) ;&
+qemu)
   ARCH="x86-64";
   PLATFORM="x86";;
 *)
@@ -72,33 +72,26 @@ buildtools/ninja \
   $NINJA_GOMA
 
 case "${1}" in
-arm64)
-  if [[ $FLAG_QEMU ]]; then
-    zircon/scripts/run-zircon-arm64 \
-      -k \
-      -V \
-      -g \
-      -x out/debug-$ARCH/user.bootfs \
-      -o out/build-zircon/build-$PLATFORM/
-  else
-    zircon/scripts/flash-hikey \
-      -u \
-      -n \
-      -b out/build-zircon/build-$PLATFORM \
-      -d out/debug-$ARCH/user.bootfs
-  fi;;
+hikey960)
+  zircon/scripts/flash-hikey \
+    -u \
+    -n \
+    -b out/build-zircon/build-$PLATFORM \
+    -d out/debug-$ARCH/user.bootfs;;
+vim2)
+  zircon/scripts/flash-vim2 \
+    -b out/build-zircon/build-$PLATFORM \
+    -d out/debug-$ARCH/user.bootfs;;
 x86)
-  if [[ $FLAG_QEMU ]]; then
-    zircon/scripts/run-zircon-x86-64 \
-      -k \
-      -V \
-      -g \
-      -x out/debug-$ARCH/user.bootfs \
-      -o out/build-zircon/build-$PLATFORM/
-  else
-    out/build-zircon/tools/bootserver \
-      -1 \
-      out/build-zircon/build-$PLATFORM/zircon.bin \
-      out/debug-$ARCH/user.bootfs
-  fi;;
+  out/build-zircon/tools/bootserver \
+    -1 \
+    out/build-zircon/build-$PLATFORM/zircon.bin \
+    out/debug-$ARCH/user.bootfs;;
+qemu)
+  zircon/scripts/run-zircon-x86-64 \
+    -k \
+    -V \
+    -g \
+    -x out/debug-$ARCH/user.bootfs \
+    -o out/build-zircon/build-$PLATFORM/;;
 esac
