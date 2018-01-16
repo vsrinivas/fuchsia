@@ -7,7 +7,6 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <dev/power.h>
 
 __BEGIN_CDECLS
 
