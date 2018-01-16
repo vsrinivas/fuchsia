@@ -23,12 +23,20 @@ static size_t get_num_counters() {
     return kcountdesc_end - kcountdesc_begin;
 }
 
+static bool prefix_match(const char *pre, const char *str) {
+    return strncmp(pre, str, strlen(pre)) == 0;
+}
+
 // Binary search the sorted counter descriptors.
 // We rely on SORT_BY_NAME() in the linker script for this to work.
 static const k_counter_desc* upper_bound(
-    const char* val, const k_counter_desc* first, size_t count) {
+    const char* val, const k_counter_desc* first, const k_counter_desc* last) {
+    if (first >= last)
+        return last;
+
     const k_counter_desc* it;
     size_t step;
+    auto count = last - first;
 
     while (count > 0) {
         step = count / 2;
@@ -54,27 +62,26 @@ static void counters_init(unsigned level) {
 static void dump_counter(const k_counter_desc* desc) {
     size_t counter_index = kcounter_index(desc);
 
-    printf("[%zu] %s", counter_index, desc->name);
-
     uint64_t sum = 0;
     uint64_t values[SMP_MAX_CPUS];
     for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
         // This value is not atomically consistent, therefore is just
-        // an approximation. TOD(cpu): for ARM this might some magic.
+        // an approximation. TODO(cpu): for ARM this might need some magic.
         values[ix] = percpu[ix].counters[counter_index];
         sum += values[ix];
     }
-    if (sum == 0u) {
-        printf(" <0>\n");
-        return;
-    }
 
-    printf("\n      ");
+    printf("[%.2zu] %s = %lu\n", counter_index, desc->name, sum);
+    if (sum == 0u)
+        return;
+
+    // Print the per-core counts when the sum is not zero.
+    printf("     ");
     for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
         if (values[ix] > 0)
             printf("[%zu:%lu]", ix, values[ix]);
     }
-    printf(" = %lu\n", sum);
+    printf("\n");
 }
 
 static void dump_all_counters() {
@@ -84,24 +91,29 @@ static void dump_all_counters() {
     }
 }
 
-// TODO(cpu): this is fairly incomplete. It does the equivalent of a
-// single prefix-match using std::upper_bound() on the input string.
 static int get_counter(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc == 2) {
-        if (strcmp(argv[1].str, "all") == 0) {
+        if (strcmp(argv[1].str, "--all") == 0) {
             dump_all_counters();
         } else {
-            const k_counter_desc* desc =
-                upper_bound(argv[1].str, kcountdesc_begin, get_num_counters());
-
-            if (desc == kcountdesc_end) {
-                printf("counter not found\n");
-            } else {
+            int num_results = 0;
+            auto name = argv[1].str;
+            auto desc = upper_bound(name, kcountdesc_begin, kcountdesc_end);
+            while (desc != kcountdesc_end) {
+                if (!prefix_match(name, desc->name))
+                    break;
                 dump_counter(desc);
+                ++num_results;
+                ++desc;
+            }
+            if (num_results == 0) {
+                printf("counter '%s' not found, try --all\n", name);
+            } else {
+                printf("%d counters found\n", num_results);
             }
         }
     } else {
-        printf("only 'all' or a counter name, or counter prefix allowed\n");
+        printf("only '--all' or a counter name, or counter prefix allowed\n");
     }
     return 0;
 }
