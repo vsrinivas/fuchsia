@@ -469,8 +469,10 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
         status = ZX_ERR_IO_NOT_PRESENT;
         break;
     case EP_STATE_RUNNING:
-    case EP_STATE_PAUSED:
         status = ZX_OK;
+        break;
+    case EP_STATE_PAUSED:
+        status = ZX_ERR_BAD_STATE;
         break;
     case EP_STATE_HALTED:
         status = ZX_ERR_IO_REFUSED;
