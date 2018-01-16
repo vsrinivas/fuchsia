@@ -26,7 +26,7 @@ TOOLS_DIR=/tmp/hikey/tools
 RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
 
 UEFI_DIR=/tmp/hikey/uefi
-UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/25/hikey960/release/
+UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/48/hikey960/release/
 
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
