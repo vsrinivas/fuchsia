@@ -13,7 +13,6 @@
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/listener.h"
-#include "garnet/bin/netconnector/mdns/mdns_service_impl.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/bin/netconnector/responding_service_host.h"
@@ -23,6 +22,8 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/mdns/cpp/service_subscriber.h"
+#include "lib/mdns/fidl/mdns.fidl.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
@@ -70,12 +71,12 @@ class NetConnectorImpl : public NetConnector {
   static const std::string kFuchsiaServiceName;
   static const std::string kLocalDeviceName;
 
+  void StartListener();
+
   void AddDeviceServiceProvider(
       std::unique_ptr<DeviceServiceProvider> device_service_provider);
 
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
-
-  void StartMdns();
 
   NetConnectorParams* params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -91,7 +92,8 @@ class NetConnectorImpl : public NetConnector {
   std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
       service_agents_;
 
-  mdns::MdnsServiceImpl mdns_service_impl_;
+  mdns::MdnsServicePtr mdns_service_;
+  mdns::ServiceSubscriber mdns_subscriber_;
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 

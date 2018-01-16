@@ -8,7 +8,6 @@
 
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"
-#include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -36,8 +35,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     // Start the listener.
     NetConnectorPtr net_connector =
         application_context_->ConnectToEnvironmentService<NetConnector>();
-    MdnsServicePtr mdns_service =
-        application_context_->ConnectToEnvironmentService<MdnsService>();
+    mdns::MdnsServicePtr mdns_service =
+        application_context_->ConnectToEnvironmentService<mdns::MdnsService>();
 
     if (params_->mdns_verbose()) {
       mdns_service->SetVerbose(true);
@@ -65,7 +64,11 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     return;
   }
 
-  // Running as the listener.
+  // Running as listener.
+  application_context_->outgoing_services()->AddService<NetConnector>(
+      [this](fidl::InterfaceRequest<NetConnector> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
@@ -85,23 +88,82 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
                                                std::move(pair.second));
   }
 
+  StartListener();
+}
+
+NetConnectorImpl::~NetConnectorImpl() {}
+
+void NetConnectorImpl::StartListener() {
+  if (!NetworkIsReady()) {
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this]() { StartListener(); }, fxl::TimeDelta::FromSeconds(5));
+    return;
+  }
+
   listener_.Start(kPort, [this](fxl::UniqueFD fd) {
     AddServiceAgent(ServiceAgent::Create(std::move(fd), this));
   });
 
-  application_context_->outgoing_services()->AddService<NetConnector>(
-      [this](fidl::InterfaceRequest<NetConnector> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
-  application_context_->outgoing_services()->AddService<MdnsService>(
-      [this](fidl::InterfaceRequest<MdnsService> request) {
-        mdns_service_impl_.AddBinding(std::move(request));
+  mdns_service_ =
+      application_context_->ConnectToEnvironmentService<mdns::MdnsService>();
+
+  host_name_ = GetHostName();
+
+  mdns_service_->PublishServiceInstance(
+      kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
+      fidl::Array<fidl::String>(), [this](mdns::MdnsResult result) {
+        switch (result) {
+          case mdns::MdnsResult::OK:
+            break;
+          case mdns::MdnsResult::INVALID_SERVICE_NAME:
+            FXL_LOG(ERROR) << "mDNS service rejected service name "
+                           << kFuchsiaServiceName << ".";
+            break;
+          case mdns::MdnsResult::INVALID_INSTANCE_NAME:
+            FXL_LOG(ERROR) << "mDNS service rejected instance name "
+                           << host_name_ << ".";
+            break;
+          case mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
+            FXL_LOG(ERROR) << "mDNS service is already publishing a "
+                           << kFuchsiaServiceName << " service instance.";
+            break;
+          case mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
+            FXL_LOG(ERROR) << "Another device is already publishing a "
+                           << kFuchsiaServiceName
+                           << " service instance for this host's name ("
+                           << host_name_ << ").";
+            break;
+        }
       });
 
-  StartMdns();
+  mdns::MdnsServiceSubscriptionPtr subscription;
+  mdns_service_->SubscribeToService(kFuchsiaServiceName,
+                                    subscription.NewRequest());
+
+  mdns_subscriber_.Init(
+      std::move(subscription),
+      [this](mdns::MdnsServiceInstance* from, mdns::MdnsServiceInstance* to) {
+        if (from == nullptr && to != nullptr) {
+          if (to->v4_address) {
+            std::cerr << "netconnector: Device '" << to->instance_name
+                      << "' discovered at address "
+                      << SocketAddress(to->v4_address.get());
+            params_->RegisterDevice(to->instance_name,
+                                    IpAddress(to->v4_address->addr.get()));
+          } else if (to->v6_address) {
+            std::cerr << "netconnector: Device '" << to->instance_name
+                      << "' discovered at address "
+                      << SocketAddress(to->v6_address.get());
+            params_->RegisterDevice(to->instance_name,
+                                    IpAddress(to->v6_address->addr.get()));
+          }
+        } else if (from != nullptr && to == nullptr) {
+          std::cerr << "netconnector: Device '" << from->instance_name
+                    << "' lost";
+          params_->UnregisterDevice(from->instance_name);
+        }
+      });
 }
-
-NetConnectorImpl::~NetConnectorImpl() {}
 
 void NetConnectorImpl::ReleaseDeviceServiceProvider(
     DeviceServiceProvider* device_service_provider) {
@@ -168,44 +230,6 @@ void NetConnectorImpl::AddServiceAgent(
     std::unique_ptr<ServiceAgent> service_agent) {
   ServiceAgent* raw_ptr = service_agent.get();
   service_agents_.emplace(raw_ptr, std::move(service_agent));
-}
-
-void NetConnectorImpl::StartMdns() {
-  // TODO(NET-79): Remove this check when NET-79 is fixed.
-  if (!NetworkIsReady()) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { StartMdns(); }, fxl::TimeDelta::FromSeconds(5));
-    return;
-  }
-
-  host_name_ = GetHostName();
-
-  mdns_service_impl_.Start(host_name_, [this]() {
-    mdns_service_impl_.PublishServiceInstance(
-        kFuchsiaServiceName, mdns_service_impl_.host_name(), kPort,
-        std::vector<std::string>());
-  });
-
-  mdns_service_impl_.SubscribeToService(
-      kFuchsiaServiceName,
-      [this](const std::string& service_name, const std::string& instance_name,
-             const SocketAddress& v4_address, const SocketAddress& v6_address,
-             const std::vector<std::string>& text) {
-        if (v4_address.is_valid()) {
-          FXL_LOG(INFO) << "Device '" << instance_name
-                        << "' discovered at address " << v4_address.address();
-          params_->RegisterDevice(instance_name, v4_address.address());
-        } else if (v6_address.is_valid()) {
-          FXL_LOG(INFO) << "Device '" << instance_name
-                        << "' discovered at address " << v6_address.address();
-          params_->RegisterDevice(instance_name, v6_address.address());
-        } else {
-          FXL_LOG(INFO) << "Device '" << instance_name << "' lost";
-          params_->UnregisterDevice(instance_name);
-        }
-
-        device_names_publisher_.SendUpdates();
-      });
 }
 
 }  // namespace netconnector

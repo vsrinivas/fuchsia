@@ -6,7 +6,6 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
-    "mdns.fidl",
     "netconnector.fidl",
   ]
 

@@ -9,15 +9,11 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "garnet/bin/netconnector/ip_address.h"
-#include "garnet/bin/netconnector/ip_port.h"
+#include "garnet/bin/mdns/service/ip_address.h"
+#include "garnet/bin/mdns/service/ip_port.h"
 #include "lib/fxl/logging.h"
 
-namespace netstack {
-class SocketAddress;
-}
-
-namespace netconnector {
+namespace mdns {
 
 // Represents a V4 or V6 socket address.
 class SocketAddress {
@@ -61,9 +57,6 @@ class SocketAddress {
 
   // Creates a socket address from an sockaddr_storage struct.
   explicit SocketAddress(const sockaddr_storage& addr);
-
-  // Creates a socket address from a SocketAddress struct.
-  explicit SocketAddress(const netstack::SocketAddress* addr);
 
   bool is_valid() const { return family() != AF_UNSPEC; }
 
@@ -117,4 +110,4 @@ class SocketAddress {
 
 std::ostream& operator<<(std::ostream& os, const SocketAddress& value);
 
-}  // namespace netconnector
+}  // namespace mdns

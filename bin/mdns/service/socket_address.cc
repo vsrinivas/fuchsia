@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/bin/mdns/service/socket_address.h"
 
 #include <sstream>
 
 #include <endian.h>
 
-#include "lib/netstack/fidl/netstack.fidl.h"
-
-namespace netconnector {
+namespace mdns {
 
 // static
 const SocketAddress SocketAddress::kInvalid;
@@ -118,12 +116,6 @@ SocketAddress::SocketAddress(const sockaddr_storage& addr) {
   }
 }
 
-SocketAddress::SocketAddress(const netstack::SocketAddress* addr)
-    : SocketAddress(IpAddress(addr->addr.get()),
-                    IpPort::From_uint16_t(addr->port)) {
-  FXL_DCHECK(addr != nullptr);
-}
-
 std::string SocketAddress::ToString() const {
   std::ostringstream os;
   os << *this;
@@ -138,4 +130,4 @@ std::ostream& operator<<(std::ostream& os, const SocketAddress& value) {
   return os << value.address() << ":" << value.port();
 }
 
-}  // namespace netconnector
+}  // namespace mdns
