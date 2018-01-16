@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/convergence/convergence.h"
 
-#include <iostream>
-
 #include <trace/event.h>
+#include <zx/time.h>
+
+#include <iostream>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -167,11 +168,11 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   alpha_controller_->Kill();
-  alpha_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  alpha_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
   beta_controller_->Kill();
-  beta_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  beta_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

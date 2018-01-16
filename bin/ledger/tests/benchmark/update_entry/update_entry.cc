@@ -145,8 +145,8 @@ void UpdateEntryBenchmark::CommitAndShutDown() {
 void UpdateEntryBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
   application_controller_->Kill();
-  application_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  application_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

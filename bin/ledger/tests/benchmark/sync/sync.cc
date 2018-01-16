@@ -192,14 +192,14 @@ void SyncBenchmark::VerifyBacklog() {
 
 void SyncBenchmark::ShutDown() {
   alpha_controller_->Kill();
-  alpha_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  alpha_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
   beta_controller_->Kill();
-  beta_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  beta_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
   gamma_controller_->Kill();
-  gamma_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  gamma_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

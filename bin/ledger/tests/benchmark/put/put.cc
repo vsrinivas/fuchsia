@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/tests/benchmark/put/put.h"
 
 #include <trace/event.h>
+#include <zx/time.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -247,8 +248,8 @@ void PutBenchmark::CommitAndRunNext(int i,
 void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
   application_controller_->Kill();
-  application_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  application_controller_.WaitForIncomingResponseUntil(
+    zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

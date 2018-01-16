@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/fetch/fetch.h"
 
-#include <iostream>
-
 #include <trace/event.h>
+#include <zx/time.h>
+
+#include <iostream>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -238,11 +239,11 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
 
 void FetchBenchmark::ShutDown() {
   writer_controller_->Kill();
-  writer_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  writer_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
   reader_controller_->Kill();
-  reader_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  reader_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

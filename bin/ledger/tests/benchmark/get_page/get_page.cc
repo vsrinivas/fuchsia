@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/get_page/get_page.h"
 
-#include <iostream>
-
 #include <trace/event.h>
+#include <zx/time.h>
+
+#include <iostream>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -71,8 +72,8 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
 void GetPageBenchmark::ShutDown() {
   application_controller_->Kill();
-  application_controller_.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(5));
+  application_controller_.WaitForIncomingResponseUntil(
+      zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

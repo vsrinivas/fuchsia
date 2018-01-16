@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
+#include <zx/time.h>
+
 #include <utility>
 
 #include "lib/fsl/tasks/message_loop.h"
@@ -18,7 +20,7 @@
 
 namespace test {
 namespace {
-constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
+constexpr zx::duration kTimeout = zx::sec(10);
 }  // namespace
 
 ledger::Status GetLedger(fsl::MessageLoop* loop,
@@ -46,7 +48,8 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
   repository_factory->GetRepository(
       ledger_repository_path, std::move(cloud_provider),
       repository.NewRequest(), callback::Capture([] {}, &status));
-  if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout)) {
+  if (!repository_factory.WaitForIncomingResponseUntil(
+          zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -57,7 +60,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 
   repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
                         callback::Capture([] {}, &status));
-  if (!repository.WaitForIncomingResponseWithTimeout(kTimeout)) {
+  if (!repository.WaitForIncomingResponseUntil(zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get ledger.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -81,7 +84,7 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
   ledger::Status status;
   (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
                      callback::Capture([] {}, &status));
-  if (!ledger->WaitForIncomingResponseWithTimeout(kTimeout)) {
+  if (!ledger->WaitForIncomingResponseUntil(zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get page.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -95,7 +98,7 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
   });
 
   (*page)->GetId(callback::Capture([] {}, page_id));
-  page->WaitForIncomingResponseWithTimeout(kTimeout);
+  page->WaitForIncomingResponseUntil(zx::deadline_after(kTimeout));
   return status;
 }
 

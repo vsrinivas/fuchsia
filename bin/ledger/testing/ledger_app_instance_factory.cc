@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
+#include <zx/time.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -13,7 +15,7 @@
 
 namespace test {
 namespace {
-constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
+constexpr zx::duration kTimeout = zx::sec(10);
 }
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
@@ -36,8 +38,8 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_repository_factory_->GetRepository(
       dir_.path(), MakeCloudProvider(), repository.NewRequest(),
       [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(
-      ledger_repository_factory_.WaitForIncomingResponseWithTimeout(kTimeout));
+  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponseUntil(
+      zx::deadline_after(kTimeout)));
   EXPECT_EQ(ledger::Status::OK, status);
   return repository;
 }
@@ -49,7 +51,8 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   ledger::Status status;
   repository->GetLedger(test_ledger_name_.Clone(), ledger.NewRequest(),
                         [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(repository.WaitForIncomingResponseWithTimeout(kTimeout));
+  EXPECT_TRUE(
+      repository.WaitForIncomingResponseUntil(zx::deadline_after(kTimeout)));
   EXPECT_EQ(ledger::Status::OK, status);
   return ledger;
 }
@@ -60,8 +63,8 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->GetPage(nullptr, page.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(1)));
+  EXPECT_TRUE(
+      ledger.WaitForIncomingResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(ledger::Status::OK, status);
 
   return fidl::InterfacePtr<ledger::Page>::Create(std::move(page));
@@ -75,8 +78,8 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->GetPage(page_id.Clone(), page_ptr.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(1)));
+  EXPECT_TRUE(
+      ledger.WaitForIncomingResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -90,8 +93,8 @@ void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->DeletePage(page_id.Clone(),
                      [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(ledger.WaitForIncomingResponseWithTimeout(
-      fxl::TimeDelta::FromSeconds(1)));
+  EXPECT_TRUE(
+      ledger.WaitForIncomingResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(expected_status, status);
 }
 

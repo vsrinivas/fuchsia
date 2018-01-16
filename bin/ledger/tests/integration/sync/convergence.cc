@@ -175,12 +175,12 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
           ledger::Status merge_status;
           merge_result_provider->Merge(std::move(merged_values),
                                        callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-              fxl::TimeDelta::FromSeconds(1)));
+          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseUntil(
+              zx::deadline_after(zx::sec(1))));
           ASSERT_EQ(ledger::Status::OK, merge_status);
           merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-              fxl::TimeDelta::FromSeconds(1)));
+          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseUntil(
+              zx::deadline_after(zx::sec(1))));
           ASSERT_EQ(ledger::Status::OK, merge_status);
         }));
   }
