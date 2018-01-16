@@ -302,7 +302,7 @@ func Seal(cfg *Config) (string, error) {
 	if _, err := tree.ReadFrom(archive); err != nil {
 		return "", err
 	}
-	if err := ioutil.WriteFile(cfg.MetaFARMerkle(), tree.Root(), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(cfg.MetaFARMerkle(), []byte(fmt.Sprintf("%x", tree.Root())), os.ModePerm); err != nil {
 		return "", err
 	}
 	return cfg.MetaFAR(), archive.Close()

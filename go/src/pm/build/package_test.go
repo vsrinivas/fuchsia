@@ -5,7 +5,6 @@
 package build
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -323,13 +322,17 @@ func TestSeal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fromFile := string(m)
+
 	var tree merkle.Tree
 	f, err := os.Open(metafar)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tree.ReadFrom(f)
-	if fromFile, fromFar := m, tree.Root(); !bytes.Equal(fromFile, fromFar) {
-		t.Errorf("meta.far.merkle != merkle(meta.far)\n%x\n%x", fromFile, fromFar)
+	fromFar := fmt.Sprintf("%x", tree.Root())
+
+	if fromFile != fromFar {
+		t.Errorf("meta.far.merkle != merkle(meta.far)\n%q\n%q", fromFile, fromFar)
 	}
 }
