@@ -58,14 +58,6 @@ std::string LocalObjectRow::GetKeyFor(ObjectDigestView object_digest) {
   return fxl::Concatenate({kPrefix, object_digest});
 }
 
-// ImplicitJournalMetaRow.
-
-constexpr fxl::StringView ImplicitJournalMetaRow::kPrefix;
-
-std::string ImplicitJournalMetaRow::GetKeyFor(const JournalId& journal_id) {
-  return fxl::Concatenate({kPrefix, journal_id});
-}
-
 // SyncMetadataRow.
 
 constexpr fxl::StringView SyncMetadataRow::kPrefix;
@@ -76,24 +68,38 @@ std::string SyncMetadataRow::GetKeyFor(fxl::StringView key) {
 
 // JournalEntryRow.
 
-constexpr fxl::StringView JournalEntryRow::kPrefix;
+constexpr fxl::StringView JournalEntryRow::kExplicitJournalPrefix;
+constexpr fxl::StringView JournalEntryRow::kImplicitJournalPrefix;
 constexpr fxl::StringView JournalEntryRow::kJournalEntry;
 constexpr fxl::StringView JournalEntryRow::kDeletePrefix;
-constexpr const char JournalEntryRow::kImplicitPrefix;
-constexpr const char JournalEntryRow::kExplicitPrefix;
+constexpr const char JournalEntryRow::kImplicitIdPrefix;
+constexpr const char JournalEntryRow::kExplicitIdPrefix;
 constexpr const char JournalEntryRow::kAddPrefix;
 
 std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
   std::string id;
   id.resize(kJournalIdSize);
-  id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitPrefix
-                                                 : kExplicitPrefix);
+  id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitIdPrefix
+                                                 : kExplicitIdPrefix);
   encryption::RandBytes(&id[1], kJournalIdSize - 1);
   return id;
 }
 
+std::string JournalEntryRow::GetKeyFor(const JournalId& journal_id) {
+  FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitIdPrefix ||
+             journal_id[0] == JournalEntryRow::kExplicitIdPrefix);
+  if (journal_id[0] == JournalEntryRow::kImplicitIdPrefix) {
+    return fxl::Concatenate({kImplicitJournalPrefix, journal_id});
+  } else {
+    return fxl::Concatenate({kExplicitJournalPrefix, journal_id});
+  }
+}
+
 std::string JournalEntryRow::GetPrefixFor(const JournalId& journal_id) {
-  return fxl::Concatenate({kPrefix, journal_id, "/", kJournalEntry});
+  // TODO(jif): Implement |GetPrefixFor| using |GetKeyFor|.
+  // This involves fixing other things, see LE-390.
+  return fxl::Concatenate(
+      {kExplicitJournalPrefix, journal_id, "/", kJournalEntry});
 }
 
 std::string JournalEntryRow::GetKeyFor(const JournalId& id,

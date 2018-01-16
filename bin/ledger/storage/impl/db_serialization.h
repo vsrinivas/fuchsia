@@ -52,13 +52,6 @@ class LocalObjectRow {
   static std::string GetKeyFor(ObjectDigestView object_digest);
 };
 
-class ImplicitJournalMetaRow {
- public:
-  static constexpr fxl::StringView kPrefix = "journals/implicit/";
-
-  static std::string GetKeyFor(const JournalId& journal_id);
-};
-
 class SyncMetadataRow {
  public:
   static constexpr fxl::StringView kPrefix = "sync-metadata/";
@@ -70,13 +63,15 @@ class JournalEntryRow {
  public:
   // Journal keys
   static const size_t kJournalIdSize = 16;
-  static constexpr fxl::StringView kPrefix = "journals/";
+  static constexpr fxl::StringView kExplicitJournalPrefix = "journals/";
+  static constexpr fxl::StringView kImplicitJournalPrefix =
+      "journals/implicit/";
 
   static constexpr fxl::StringView kJournalEntry = "entry/";
-  static const char kImplicitPrefix = 'I';
-  static const char kExplicitPrefix = 'E';
-  static const size_t kPrefixSize =
-      kPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
+  static const char kImplicitIdPrefix = 'I';
+  static const char kExplicitIdPrefix = 'E';
+  static const size_t kExplicitJournalEntryPrefixSize =
+      kExplicitJournalPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
 
   // Journal values
   static const char kAddPrefix = 'A';
@@ -86,6 +81,8 @@ class JournalEntryRow {
   static const size_t kAddPrefixSize = 2;
 
   static std::string NewJournalId(JournalType journal_type);
+
+  static std::string GetKeyFor(const JournalId& journal_id);
 
   static std::string GetPrefixFor(const JournalId& journal_id);
 
