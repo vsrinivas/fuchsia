@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
+
 #include "xhci.h"
 
 zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
@@ -12,6 +14,7 @@ zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
     ring->start = io_buffer_virt(&ring->buffer);
     ring->current = ring->start;
     ring->dequeue_ptr = ring->start;
+    ring->full = false;
     ring->size = count - 1;    // subtract 1 for LINK TRB at the end
     ring->pcs = TRB_C;
 
@@ -29,6 +32,12 @@ void xhci_transfer_ring_free(xhci_transfer_ring_t* ring) {
 size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
     xhci_trb_t* current = ring->current;
     xhci_trb_t* dequeue_ptr = ring->dequeue_ptr;
+
+    if (ring->full) {
+        assert(current == dequeue_ptr);
+        return 0;
+    }
+
     int size = ring->size;
 
     if (current < dequeue_ptr) {
@@ -107,4 +116,15 @@ void xhci_increment_ring(xhci_transfer_ring_t* ring) {
         }
         ring->current = xhci_read_trb_ptr(ring, trb);
     }
+
+    if (ring->current == ring->dequeue_ptr) {
+        // We've just enqueued something, so if the pointers are equal,
+        // the ring must be full.
+        ring->full = true;
+    }
+}
+
+void xhci_set_dequeue_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* new_ptr) {
+    ring->dequeue_ptr = new_ptr;
+    ring->full = false;
 }

@@ -46,7 +46,7 @@ static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
         zxlogf(ERROR, "TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
         return ZX_ERR_INTERNAL;
     }
-    transfer_ring->dequeue_ptr = transfer_ring->current;
+    xhci_set_dequeue_ptr(transfer_ring, transfer_ring->current);
 
     return ZX_OK;
 }
@@ -816,7 +816,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     }
 
     // update dequeue_ptr to TRB following this transaction
-    ring->dequeue_ptr = req->context;
+    xhci_set_dequeue_ptr(ring, req->context);
 
     // remove request from pending_reqs
     list_delete(&req->node);

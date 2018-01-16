@@ -18,6 +18,9 @@ typedef struct xhci_transfer_ring {
     xhci_trb_t* dequeue_ptr;    // next to be processed by consumer
                                 // (not used for command ring)
     size_t size;                // number of TRBs in ring
+    bool full;                  // true if there are no available TRBs,
+                                // this is needed to differentiate between
+                                // an empty and full ring state
 } xhci_transfer_ring_t;
 
 typedef struct xhci_event_ring {
@@ -39,6 +42,7 @@ void xhci_clear_trb(xhci_trb_t* trb);
 void* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 xhci_trb_t* xhci_get_next_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 void xhci_increment_ring(xhci_transfer_ring_t* ring);
+void xhci_set_dequeue_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* new_ptr);
 
 static inline zx_paddr_t xhci_transfer_ring_start_phys(xhci_transfer_ring_t* ring) {
     return io_buffer_phys(&ring->buffer);
