@@ -161,7 +161,6 @@ int setdomainname(const char*, size_t);
 int setgroups(size_t, const gid_t*);
 char* getpass(const char*);
 int acct(const char*);
-long syscall(long, ...);
 int execvpe(const char*, char* const[], char* const[]);
 int issetugid(void);
 #endif
