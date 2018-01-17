@@ -29,10 +29,10 @@ source_set("src") {
     "gpu_mapping.h",
     "gpu_mapping_cache.cc",
     "gpu_mapping_cache.h",
-    "gtt_shim.cc",
     "gtt.h",
-    "interrupt_manager_shim.cc",
+    "gtt_shim.cc",
     "interrupt_manager.h",
+    "interrupt_manager_shim.cc",
     "modeset/displayport.cc",
     "modeset/displayport.h",
     "modeset/edid.cc",
@@ -48,8 +48,8 @@ source_set("src") {
     "msd_intel_device_dump.cc",
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
-    "msd_intel_pci_device.cc",
     "msd_intel_pci_device.h",
+    "msd_intel_pci_device_shim.cc",
     "msd_intel_semaphore.cc",
     "pagetable.h",
     "ppgtt.cc",
@@ -71,6 +71,7 @@ source_set("src") {
     "core/gtt_core.cc",
     "core/interrupt_manager_core.cc",
     "core/msd_intel_device_core.cc",
+    "core/msd_intel_pci_device_core.cc",
   ]
 
   deps = [

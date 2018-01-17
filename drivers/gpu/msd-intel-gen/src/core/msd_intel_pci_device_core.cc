@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_intel_pci_device.h"
 #include "core/msd_intel_device_core.h"
+#include "msd_intel_pci_device.h"
 
 class MsdIntelPciDeviceCore : public MsdIntelPciDevice {
 public:
@@ -50,7 +50,7 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<MsdIntelPciDevice> MsdIntelPciDevice::Create(void* platform_device_handle)
+std::unique_ptr<MsdIntelPciDevice> MsdIntelPciDevice::CreateCore(void* platform_device_handle)
 {
     auto device = MsdIntelDeviceCore::Create(platform_device_handle);
     if (!device)

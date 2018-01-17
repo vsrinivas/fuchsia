@@ -167,7 +167,7 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     DLOG("Init device_handle %p", device_handle);
 
-    platform_device_ = MsdIntelPciDevice::Create(device_handle);
+    platform_device_ = MsdIntelPciDevice::CreateCore(device_handle);
     if (!platform_device_)
         return DRETF(false, "failed to create pci device");
 

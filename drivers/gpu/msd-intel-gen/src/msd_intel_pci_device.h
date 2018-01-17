@@ -31,7 +31,8 @@ public:
                   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
                   present_buffer_callback_t callback) = 0;
 
-    static std::unique_ptr<MsdIntelPciDevice> Create(void* platform_device_handle);
+    static std::unique_ptr<MsdIntelPciDevice> CreateCore(void* platform_device_handle);
+    static std::unique_ptr<MsdIntelPciDevice> CreateShim(void* platform_device_handle);
 };
 
 #endif // MSD_INTEL_PCI_DEVICE_H
