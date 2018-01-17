@@ -16,9 +16,11 @@
 namespace btintel {
 
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
-    : ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>(device), hci_(hci), firmware_loaded_(false) {}
+    : ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>(device),
+      hci_(hci),
+      firmware_loaded_(false) {}
 
-zx_status_t Device::Bind() {
+zx_status_t Device::Bind(bool secure) {
   zx_status_t status;
   zx::channel acl_channel, cmd_channel;
 
@@ -35,26 +37,52 @@ zx_status_t Device::Bind() {
 
   ReadVersionReturnParams version = cmd_hci.SendReadVersion();
 
-  // If we're already in firmware, we're done.
-  if (version.fw_variant == kFirmwareFirmwareVariant) {
-    infof("Firmware already loaded, continuing..\n");
-    status = DdkAdd("btintel");
-    if (status != ZX_OK) {
-      errorf("add device failed: %s\n", zx_status_get_string(status));
+  zx::vmo fw_vmo;
+  uintptr_t fw_addr;
+  size_t fw_size;
+  fbl::String fw_filename;
+
+  if (secure) {
+    // If we're already in firmware, we're done.
+    if (version.fw_variant == kFirmwareFirmwareVariant) {
+      return AddDevice("already loaded");
     }
-    firmware_loaded_ = true;
-    return status;
+
+    // We only know how to load if we're in bootloader.
+    if (version.fw_variant != kBootloaderFirmwareVariant) {
+      errorf("Unknown firmware variant: 0x%x\n", version.fw_variant);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ReadBootParamsReturnParams boot_params = cmd_hci.SendReadBootParams();
+
+    fw_filename = fbl::StringPrintf("ibt-%d-%d.sfi", version.hw_variant,
+                                    boot_params.dev_revid);
+    fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
+  } else {
+    if (version.fw_patch_num > 0) {
+      return AddDevice("already patched");
+    }
+
+    fw_filename = fbl::StringPrintf(
+        "ibt-hw-%x.%x.%x-fw-%x.%x.%x.%x.%x.bseq", version.hw_platform,
+        version.hw_variant, version.hw_revision, version.fw_variant,
+        version.fw_revision, version.fw_build_num, version.fw_build_week,
+        version.fw_build_year);
+
+    fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
+    if (!fw_vmo) {
+      // Try the fallback patch file
+      fw_filename = fbl::StringPrintf("ibt-hw-%x.%x.bseq", version.hw_platform,
+                                      version.hw_variant);
+      fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
+    }
   }
 
-  // We only know how to load if we're in bootloader.
-  if (version.fw_variant != kBootloaderFirmwareVariant) {
-    errorf("Unknown firmware variant: 0x%x\n", version.fw_variant);
+  if (!fw_vmo) {
+    errorf("can't load firmware %s\n", fw_filename.c_str());
     return ZX_ERR_NOT_SUPPORTED;
   }
-
-  ReadBootParamsReturnParams boot_params = cmd_hci.SendReadBootParams();
-
-  auto filename = fbl::StringPrintf("ibt-%d-%d.sfi", version.hw_variant, boot_params.dev_revid);
 
   status =
       bt_hci_open_acl_data_channel(hci_, acl_channel.reset_and_get_address());
@@ -65,41 +93,63 @@ zx_status_t Device::Bind() {
 
   FirmwareLoader loader(&cmd_channel, &acl_channel);
 
-  size_t fw_size;
-  zx::vmo fw_vmo;
-  status = load_firmware(zxdev(), filename.c_str(),
-                         fw_vmo.reset_and_get_address(), &fw_size);
-  if (status != ZX_OK) {
-    errorf("can't find firmware file %s: %s\n", filename.c_str(),
-          zx_status_get_string(status));
-    return ZX_ERR_NOT_SUPPORTED;
+  FirmwareLoader::LoadStatus result;
+  if (secure) {
+    result = loader.LoadSfi(reinterpret_cast<void*>(fw_addr), fw_size);
+  } else {
+    cmd_hci.EnterManufacturerMode();
+    result = loader.LoadBseq(reinterpret_cast<void*>(fw_addr), fw_size);
+    cmd_hci.ExitManufacturerMode(result == FirmwareLoader::LoadStatus::kPatched
+                                     ? MfgDisableMode::kPatchesEnabled
+                                     : MfgDisableMode::kNoPatches);
   }
 
-  uintptr_t fw_addr;
+  zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
 
-  status = zx_vmar_map(zx_vmar_root_self(), 0, fw_vmo.get(), 0, fw_size,
-                       ZX_VM_FLAG_PERM_READ, &fw_addr);
-  if (status != ZX_OK) {
-    errorf("firmware file map failed: %s\n", zx_status_get_string(status));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if (!loader.LoadSfi(reinterpret_cast<void*>(fw_addr), fw_size)) {
-    errorf("firmware file loading failed!\n");
+  if (result == FirmwareLoader::LoadStatus::kError) {
+    errorf("firmware loading failed!\n");
     return ZX_ERR_BAD_STATE;
   }
 
   cmd_hci.SendReset();
+
   // TODO(jamuraa): other systems receive a post-boot event here, should we?
 
-  // TODO(jamuraa): bseq / ddc file loading, after the reset (NET-335)
+  // TODO(jamuraa): ddc file loading (NET-381)
 
-  status = DdkAdd("btintel");
+  auto note = fbl::StringPrintf("%s using %s", secure ? "loaded" : "patched",
+                                fw_filename.c_str());
+  return AddDevice(note.c_str());
+}
+
+zx_status_t Device::AddDevice(const char* success_note) {
+  zx_status_t status = DdkAdd("btintel");
   if (status != ZX_OK) {
     errorf("add device failed: %s\n", zx_status_get_string(status));
+    return status;
   }
+  infof("%s\n", success_note);
   firmware_loaded_ = true;
-  return status;
+  return ZX_OK;
+}
+
+zx_handle_t Device::MapFirmware(const char* name,
+                                uintptr_t* fw_addr,
+                                size_t* fw_size) {
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  size_t size;
+  zx_status_t status = load_firmware(zxdev(), name, &vmo, &size);
+  if (status != ZX_OK) {
+    return ZX_HANDLE_INVALID;
+  }
+  status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
+                       ZX_VM_FLAG_PERM_READ, fw_addr);
+  if (status != ZX_OK) {
+    errorf("firmware map failed: %s\n", zx_status_get_string(status));
+    return ZX_HANDLE_INVALID;
+  }
+  *fw_size = size;
+  return vmo;
 }
 
 void Device::DdkUnbind() {

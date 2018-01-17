@@ -20,7 +20,9 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>,
 
   ~Device() = default;
 
-  zx_status_t Bind();
+  // Load the firmware and add the device.
+  // If |secure| is true, use the "secure" firmware method.
+  zx_status_t Bind(bool secure);
 
   // ddk::Device methods
   void DdkUnbind();
@@ -34,6 +36,20 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>,
                        size_t* actual);
 
  private:
+  // Adds the device (or makes it visible if invisible)
+  // |success_note| is appended to a kernel log message for success
+  zx_status_t AddDevice(const char* success_note);
+
+  // Maps the firmware refrenced by |name| into memory.
+  // Returns the vmo that the firmware is loaded into or ZX_HANDLE_INVALID if it
+  // could not be loaded.
+  // Closing this handle will invalidate |fw_addr|, which
+  // receives a pointer to the memory.
+  // |fw_size| receives the size of the firmware if valid.
+  zx_handle_t MapFirmware(const char* name,
+                          uintptr_t* fw_addr,
+                          size_t* fw_size);
+
   bt_hci_protocol_t* hci_;
   bool firmware_loaded_;
 };

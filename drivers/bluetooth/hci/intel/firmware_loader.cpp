@@ -23,11 +23,21 @@
 
 namespace btintel {
 
+using ::btlib::common::BufferView;
+using ::btlib::common::PacketView;
+
 FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
                                                     const size_t& len) {
-  btlib::common::BufferView file(firmware, len);
+  BufferView file(firmware, len);
 
   size_t offset = 0;
+  bool patched = false;
+
+  if (file.size() < sizeof(btlib::hci::CommandHeader)) {
+    errorf("FirmwareLoader: Error: BSEQ too small: %zu < %zu\n", len,
+           sizeof(btlib::hci::CommandHeader));
+    return LoadStatus::kError;
+  }
 
   // A bseq file consists of a sequence of:
   // - [0x01] [command w/params]
@@ -35,28 +45,29 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
   while (file.size() - offset > sizeof(btlib::hci::CommandHeader)) {
     // Parse the next items
     if (file[offset] != 0x01) {
-      errorf(
-          "FirmwareLoader: Error: malformed file, expected Command Packet "
-          "marker");
+      errorf("FirmwareLoader: Error: expected command packet\n");
       return LoadStatus::kError;
     }
     offset++;
-    btlib::common::BufferView command_view = file.view(offset);
-    btlib::common::PacketView<btlib::hci::CommandHeader> command(&command_view);
-    command = btlib::common::PacketView<btlib::hci::CommandHeader>(
+    BufferView command_view = file.view(offset);
+    PacketView<btlib::hci::CommandHeader> command(&command_view);
+    command = PacketView<btlib::hci::CommandHeader>(
         &command_view, command.header().parameter_total_size);
     offset += command.size();
-    if ((file.size() <= offset) || (file[offset] != 0x02)) {
-      errorf(
-          "FirmwareLoader: Error: malformed file, expected Event Packet "
-          "marker");
+    if (!patched && le16toh(command.header().opcode) == kLoadPatch) {
+      patched = true;
+    }
+    if ((file.size() - offset <= sizeof(btlib::hci::EventHeader)) ||
+        (file[offset] != 0x02)) {
+      errorf("FirmwareLoader: Error: expected event packet\n");
       return LoadStatus::kError;
     }
-    std::deque<btlib::common::BufferView> events;
-    while ((file.size() <= offset) || (file[offset] == 0x02)) {
+    std::deque<BufferView> events;
+    while ((file.size() - offset > sizeof(btlib::hci::EventHeader)) &&
+           (file[offset] == 0x02)) {
       offset++;
-      btlib::common::BufferView event_view = file.view(offset);
-      btlib::common::PacketView<btlib::hci::EventHeader> event(&event_view);
+      BufferView event_view = file.view(offset);
+      PacketView<btlib::hci::EventHeader> event(&event_view);
       size_t event_size = sizeof(btlib::hci::EventHeader) + event.header().parameter_total_size;
       events.emplace_back(file.view(offset, event_size));
       offset += event_size;
@@ -67,29 +78,30 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
     }
   }
 
-  return LoadStatus::kComplete;
+  return patched ? LoadStatus::kPatched : LoadStatus::kComplete;
 }
 
-bool FirmwareLoader::LoadSfi(const void* firmware, const size_t& len) {
-  btlib::common::BufferView file(firmware, len);
+FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware,
+                                                   const size_t& len) {
+  BufferView file(firmware, len);
 
   if (file.size() < 644) {
-    errorf("FirmwareLoader: SFI file is too small: %zu < 644", file.size());
-    return false;
+    errorf("FirmwareLoader: SFI is too small: %zu < 644\n", file.size());
+    return LoadStatus::kError;
   }
 
   size_t offset = 0;
   // SFI File format:
   // [128 bytes CSS Header]
   if (!hci_acl_.SendSecureSend(0x00, file.view(offset, 128))) {
-    errorf("FirmwareLoader: Failed sending CSS Header!");
-    return false;
+    errorf("FirmwareLoader: Failed sending CSS Header!\n");
+    return LoadStatus::kError;
   }
   offset += 128;
   // [256 bytes PKI]
   if (!hci_acl_.SendSecureSend(0x03, file.view(offset, 256))) {
-    errorf("FirmwareLoader: Failed sending PKI Header!");
-    return false;
+    errorf("FirmwareLoader: Failed sending PKI Header!\n");
+    return LoadStatus::kError;
   }
   offset += 256;
   // There are 4 bytes of unknown data here, that need to be skipped
@@ -97,8 +109,8 @@ bool FirmwareLoader::LoadSfi(const void* firmware, const size_t& len) {
   offset += 4;
   // [256 bytes signature info]
   if (!hci_acl_.SendSecureSend(0x02, file.view(offset, 256))) {
-    errorf("FirmwareLoader: Failed sending signature Header!");
-    return false;
+    errorf("FirmwareLoader: Failed sending signature Header!\n");
+    return LoadStatus::kError;
   }
   offset += 256;
 
@@ -107,21 +119,21 @@ bool FirmwareLoader::LoadSfi(const void* firmware, const size_t& len) {
   // param size can be a multiple of 4 bytes]
   while (offset < file.size()) {
     auto next_cmd = file.view(offset + frag_len);
-    btlib::common::PacketView<btlib::hci::CommandHeader> header(&next_cmd);
+    PacketView<btlib::hci::CommandHeader> header(&next_cmd);
     size_t cmd_size = sizeof(btlib::hci::CommandHeader) +
                       header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!hci_acl_.SendSecureSend(0x01, file.view(offset, frag_len))) {
-        errorf("Failed sending a command chunk!");
-        return false;
+        errorf("Failed sending a command chunk!\n");
+        return LoadStatus::kError;
       }
       offset += frag_len;
       frag_len = 0;
     }
   }
 
-  return true;
+  return LoadStatus::kComplete;
 }
 
 }  // namespace btintel

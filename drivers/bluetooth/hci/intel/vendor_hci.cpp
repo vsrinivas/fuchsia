@@ -11,37 +11,47 @@
 
 namespace btintel {
 
+using ::btlib::hci::CommandPacket;
+
 namespace {
 
 constexpr size_t kMaxSecureSendArgLen = 252;
 
 }  // namespace
 
-VendorHci::VendorHci(zx::channel* channel) : channel_(channel){};
+VendorHci::VendorHci(zx::channel* channel)
+    : channel_(channel), manufacturer_(false){};
 
 ReadVersionReturnParams VendorHci::SendReadVersion() const {
-  auto packet = btlib::hci::CommandPacket::New(kReadVersion);
+  auto packet = CommandPacket::New(kReadVersion);
   SendCommand(packet->view());
   auto evt_packet = ReadEventPacket();
   if (evt_packet) {
-    return *evt_packet->return_params<ReadVersionReturnParams>();
+    auto params = evt_packet->return_params<ReadVersionReturnParams>();
+    if (params)
+      return *params;
   }
-  return ReadVersionReturnParams();
+  errorf("VendorHci: ReadVersion: Error reading response!\n");
+  return ReadVersionReturnParams{.status =
+                                     btlib::hci::Status::kUnspecifiedError};
 }
 
 ReadBootParamsReturnParams VendorHci::SendReadBootParams() const {
-  auto packet = btlib::hci::CommandPacket::New(kReadBootParams);
+  auto packet = CommandPacket::New(kReadBootParams);
   SendCommand(packet->view());
   auto evt_packet = ReadEventPacket();
   if (evt_packet) {
-    return *evt_packet->return_params<ReadBootParamsReturnParams>();
+    auto params = evt_packet->return_params<ReadBootParamsReturnParams>();
+    if (params)
+      return *params;
   }
-  return ReadBootParamsReturnParams();
+  errorf("VendorHci: ReadBootParams: Error reading response!\n");
+  return ReadBootParamsReturnParams{.status =
+                                        btlib::hci::Status::kUnspecifiedError};
 }
 
 void VendorHci::SendReset() const {
-  auto packet =
-      btlib::hci::CommandPacket::New(kReset, sizeof(ResetCommandParams));
+  auto packet = CommandPacket::New(kReset, sizeof(ResetCommandParams));
   auto params = packet->mutable_view()->mutable_payload<ResetCommandParams>();
   params->data[0] = 0x00;
   params->data[1] = 0x01;
@@ -61,7 +71,7 @@ bool VendorHci::SendSecureSend(uint8_t type,
   size_t left = bytes.size();
   while (left > 0) {
     size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
-    auto cmd = btlib::hci::CommandPacket::New(kSecureSend, frag_len + 1);
+    auto cmd = CommandPacket::New(kSecureSend, frag_len + 1);
     auto data = cmd->mutable_view()->mutable_payload_data();
     data[0] = type;
     data.Write(bytes.view(bytes.size() - left, frag_len), 1);
@@ -116,6 +126,52 @@ bool VendorHci::SendAndExpect(
       return false;
     }
     events.pop_front();
+  }
+
+  return true;
+}
+
+void VendorHci::EnterManufacturerMode() {
+  if (manufacturer_)
+    return;
+
+  auto packet =
+      CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
+  auto params =
+      packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  params->enable = btlib::hci::GenericEnableParam::kEnable;
+  params->disable_mode = MfgDisableMode::kNoPatches;
+
+  SendCommand(packet->view());
+  auto evt_packet = ReadEventPacket();
+  if (!evt_packet ||
+      evt_packet->event_code() != btlib::hci::kCommandCompleteEventCode) {
+    errorf("VendorHci: EnterManufacturerMode failed");
+    return;
+  }
+
+  manufacturer_ = true;
+}
+
+bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
+  if (!manufacturer_)
+    return false;
+
+  manufacturer_ = false;
+
+  auto packet =
+      CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
+  auto params =
+      packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  params->enable = btlib::hci::GenericEnableParam::kDisable;
+  params->disable_mode = mode;
+
+  SendCommand(packet->view());
+  auto evt_packet = ReadEventPacket();
+  if (!evt_packet ||
+      evt_packet->event_code() != btlib::hci::kCommandCompleteEventCode) {
+    errorf("VendorHci: ExitManufacturerMode failed");
+    return false;
   }
 
   return true;

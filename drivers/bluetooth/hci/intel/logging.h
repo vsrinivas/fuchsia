@@ -6,8 +6,6 @@
 
 #include <ddk/debug.h>
 
-namespace btintel {
-
 #define logf(level, args...) \
   do {                                     \
       zxlogf(level, "btintel: " args);     \
@@ -17,6 +15,3 @@ namespace btintel {
 #define infof(args...) logf(INFO, args)
 #define tracef(args...) logf(TRACE, args)
 #define spewf(args...) logf(SPEW, args)
-
-#define debugfn() debugf("%s\n", __func__)
-}  // namespace btintel

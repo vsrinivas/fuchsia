@@ -33,6 +33,8 @@ struct ReadVersionReturnParams {
 constexpr uint8_t kBootloaderFirmwareVariant = 0x06;
 constexpr uint8_t kFirmwareFirmwareVariant = 0x23;
 
+constexpr btlib::hci::OpCode kLoadPatch = btlib::hci::VendorOpCode(0x008e);
+
 constexpr btlib::hci::OpCode kSecureSend = btlib::hci::VendorOpCode(0x0009);
 
 constexpr btlib::hci::OpCode kReadBootParams = btlib::hci::VendorOpCode(0x000D);
@@ -107,9 +109,16 @@ class VendorHci {
       const btlib::common::PacketView<btlib::hci::CommandHeader>& command,
       std::deque<btlib::common::BufferView> events) const;
 
+  void EnterManufacturerMode();
+
+  bool ExitManufacturerMode(MfgDisableMode mode);
+
  private:
   // The channel to communicate on.
   zx::channel* channel_;
+
+  // True when we are in Manufacturer Mode
+  bool manufacturer_;
 
   void SendCommand(const btlib::common::PacketView<btlib::hci::CommandHeader>&
                        command) const;

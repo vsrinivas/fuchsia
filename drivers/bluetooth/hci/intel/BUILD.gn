@@ -42,6 +42,8 @@ copy("btintel-firmware") {
     "firmware/ibt-11-5.sfi",
     "firmware/ibt-12-16.sfi",
     "firmware/ibt-18-2.sfi",
+    "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
+    "firmware/ibt-hw-37.8.bseq",
   ]
   outputs = [
     "$root_out_dir/firmware/{{source_file_part}}",
@@ -73,6 +75,12 @@ package("btintel") {
     },
     {
         name = "firmware/ibt-18-2.sfi"
+    },
+    {
+        name = "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq"
+    },
+    {
+        name = "firmware/ibt-hw-37.8.bseq"
     },
   ]
 }

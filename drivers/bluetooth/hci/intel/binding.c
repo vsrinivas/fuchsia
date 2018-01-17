@@ -16,10 +16,14 @@ static zx_driver_ops_t btintel_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(btintel, btintel_driver_ops, "fuchsia", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(btintel, btintel_driver_ops, "fuchsia", "0.1", 8)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_HCI_TRANSPORT),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x8087), // Intel Corp.
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0025),
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2a),
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2b),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x07dc), // Intel 7260
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2a), // Intel 7265
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0aa7), // Sandy Peak (3168)
+    // Devices below use the "secure" method
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0025), // Thunder Peak (9160/9260)
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2b), // Snowfield Peak (8260)
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0aaa), // Jefferson Peak (9460/9560)
 ZIRCON_DRIVER_END(btintel)
