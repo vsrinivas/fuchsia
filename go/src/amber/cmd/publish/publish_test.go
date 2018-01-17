@@ -68,7 +68,7 @@ func TestReadManifest(t *testing.T) {
 	verifyEntries(entries, content, t)
 }
 
-func TestReadEmptyManifest(t *testing.T) {
+func TestReadManifestEmpty(t *testing.T) {
 	r, err := ioutil.TempFile("", "read-manifest-test")
 	if err != nil {
 		t.Fatalf("failed creating temp file: %s", err)
@@ -89,6 +89,62 @@ func TestReadEmptyManifest(t *testing.T) {
 		}
 		t.Fail()
 	}
+}
+
+func TestReadManifestWithoutNLTerminator(t *testing.T) {
+	r, err := ioutil.TempFile("", "read-manifest-test")
+	if err != nil {
+		t.Fatalf("failed creating temp file: %s", err)
+	}
+	defer os.Remove(r.Name())
+
+	content := entryMap()
+	writeManifest(r, content, t)
+	if err = r.Sync(); err != nil {
+		t.Fatalf("flushing file failed")
+	}
+
+	info, err := r.Stat()
+	if err != nil {
+		t.Fatalf("failed to get file information: %s", err)
+	}
+
+	if err = r.Truncate(info.Size() - 1); err != nil {
+		t.Fatalf("failed truncating newline terminator")
+	}
+	r.Close()
+
+	entries, err := readManifest(r.Name())
+	if err != nil {
+		t.Fatalf("manifest read failed: %s", err)
+	}
+
+	verifyEntries(entries, content, t)
+}
+
+func TestReadManifestTooManySeparators(t *testing.T) {
+	r, err := ioutil.TempFile("", "read-manifest-test")
+	if err != nil {
+		t.Fatalf("failed creating temp file: %s", err)
+	}
+	defer os.Remove(r.Name())
+
+	content := entryMap()
+	badContent := make(map[string]string, len(content)+1)
+	badContent["bad=entry"] = "path/not/seen"
+	for k, v := range content {
+		badContent[k] = v
+	}
+
+	writeManifest(r, badContent, t)
+	r.Close()
+
+	entries, err := readManifest(r.Name())
+	if err != nil {
+		t.Fatalf("manifest read failed: %s", err)
+	}
+
+	verifyEntries(entries, content, t)
 }
 
 func entryMap() map[string]string {

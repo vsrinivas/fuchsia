@@ -223,25 +223,23 @@ func readManifest(manifestPath string) ([]manifestEntry, error) {
 
 	for {
 		l, err := rdr.ReadString('\n')
-		if err == io.EOF {
-			if len(strings.TrimSpace(l)) == 0 {
-				return entries, nil
-			}
-			err = nil
-		}
-
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return entries, err
 		}
 
 		l = strings.TrimSpace(l)
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) < 2 {
-			continue
+		parts := strings.Split(l, "=")
+		if len(parts) == 2 {
+			entries = append(entries,
+				manifestEntry{remotePath: parts[0], localPath: parts[1]})
+		} else if len(parts) > 2 {
+			fmt.Printf("Line %q had unexpected token count %d, expected 2\n", l,
+				len(parts))
 		}
 
-		entries = append(entries,
-			manifestEntry{remotePath: parts[0], localPath: parts[1]})
+		if err == io.EOF {
+			break
+		}
 	}
 
 	return entries, nil
