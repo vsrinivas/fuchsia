@@ -1,3 +1,5 @@
 {
-    "dev": [ "class/audio-input" ]
+    "dev": [ "class/audio-input" ],
+    "system": [ "data" ],
+    "features": [ "persistent-storage", "system-temp" ]
 }

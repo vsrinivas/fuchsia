@@ -55,7 +55,7 @@ bool ForEachEntry(const std::string& path,
 }  // namespace
 
 // static
-const std::string FlogDirectory::kDirName = "/app_local/flog_viewer";
+const std::string FlogDirectory::kDirName = "/data/app_local/flog_viewer";
 
 FlogDirectory::FlogDirectory() {
   bool result = files::CreateDirectory(kDirName);
