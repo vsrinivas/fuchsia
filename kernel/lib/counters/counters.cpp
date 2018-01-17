@@ -9,15 +9,33 @@
 #include <string.h>
 
 #include <arch/ops.h>
+#include <platform.h>
+
+#include <kernel/auto_lock.h>
 #include <kernel/cmdline.h>
+#include <kernel/timer.h>
 #include <kernel/percpu.h>
+#include <kernel/spinlock.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/mutex.h>
 
 #include <lk/init.h>
 
 #include <lib/console.h>
 
-// The arena is allocated in kernel.ld, which see.
+// The arena is allocated in kernel.ld linker script.
 extern uint64_t kcounters_arena[];
+
+struct watched_counter_t {
+    list_node node;
+    const k_counter_desc* desc;
+    // TODO(cpu): add min, max.
+};
+
+static fbl::Mutex watcher_lock;
+static list_node watcher_list = LIST_INITIAL_VALUE(watcher_list);
+static thread_t* watcher_thread;
 
 static size_t get_num_counters() {
     return kcountdesc_end - kcountdesc_begin;
@@ -91,7 +109,26 @@ static void dump_all_counters() {
     }
 }
 
-static int get_counter(int argc, const cmd_args* argv, uint32_t flags) {
+static int watcher_thread_fn(void* arg) {
+    while (true) {
+        {
+            fbl::AutoLock lock(&watcher_lock);
+            if (list_is_empty(&watcher_list)) {
+                watcher_thread = nullptr;
+                return 0;
+            }
+
+            watched_counter_t* wc;
+            list_for_every_entry (&watcher_list, wc, watched_counter_t, node) {
+                dump_counter(wc->desc);
+            }
+        }
+
+        thread_sleep_relative(ZX_SEC(2));
+    }
+}
+
+static int view_counter(int argc, const cmd_args* argv) {
     if (argc == 2) {
         if (strcmp(argv[1].str, "--all") == 0) {
             dump_all_counters();
@@ -113,13 +150,93 @@ static int get_counter(int argc, const cmd_args* argv, uint32_t flags) {
             }
         }
     } else {
-        printf("only '--all' or a counter name, or counter prefix allowed\n");
+        printf(
+            "counters view <counter-name>\n"
+            "counters view <counter-prefix>\n"
+            "counters view --all\n"
+        );
+        return 1;
     }
+
+    return 0;
+}
+
+static int watch_counter(int argc, const cmd_args* argv) {
+    if (argc == 2) {
+        if (strcmp(argv[1].str, "--stop") == 0) {
+            fbl::AutoLock lock(&watcher_lock);
+            watched_counter_t* wc;
+            while ((wc = list_remove_head_type(
+                &watcher_list, watched_counter_t, node)) != nullptr) {
+                delete wc;
+            }
+            // The thread exits itself it there are no counters.
+            return 0;
+        }
+
+        size_t counter_id = argv[1].u;
+        auto range = get_num_counters() - 1;
+        if (counter_id > range) {
+            printf("counter id must be in the 0 to %zu range\n", range);
+            return 1;
+        } else if ((counter_id == 0) && (strlen(argv[1].str) > 1)) {
+            // Parsing a name as a number.
+            printf("counter ids are numbers\n");
+            return 1;
+        }
+
+        fbl::AllocChecker ac;
+        auto wc = new (&ac) watched_counter_t {
+            LIST_INITIAL_CLEARED_VALUE, &kcountdesc_begin[counter_id] };
+        if (!ac.check()) {
+            printf("no memory for counter\n");
+            return 1;
+        }
+
+        {
+            fbl::AutoLock lock(&watcher_lock);
+            list_add_head(&watcher_list, &wc->node);
+            if (watcher_thread == nullptr) {
+                watcher_thread = thread_create(
+                    "counter-watcher", watcher_thread_fn, nullptr, LOW_PRIORITY, 4096);
+                if (watcher_thread == nullptr) {
+                    printf("no memory for watcher thread\n");
+                    return 1;
+                }
+                thread_detach_and_resume(watcher_thread);
+            }
+        }
+
+    } else {
+        printf(
+            "counters watch <counter-id>\n"
+            "counters watch --stop\n"
+        );
+    }
+
+    return 0;
+}
+
+static int cmd_counters(int argc, const cmd_args* argv, uint32_t flags) {
+    if (argc > 1) {
+        if (strcmp(argv[1].str, "view") == 0) {
+            return view_counter(argc - 1, &argv[1]);
+        }
+        if (strcmp(argv[1].str, "watch") == 0) {
+            return watch_counter(argc - 1, &argv[1]);
+        }
+    }
+
+    printf(
+        "inspect system counters:\n"
+        "  counters view <name>\n"
+        "  counters watch <id>\n"
+    );
     return 0;
 }
 
 LK_INIT_HOOK(kcounters, counters_init, LK_INIT_LEVEL_PLATFORM_EARLY);
 
 STATIC_COMMAND_START
-STATIC_COMMAND("counters", "get counter", &get_counter)
+STATIC_COMMAND("counters", "view system counters", &cmd_counters)
 STATIC_COMMAND_END(mem_tests);
