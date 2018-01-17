@@ -6,6 +6,7 @@ members =  [
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
+  "lib/rust/crates/wlan-rsn",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/ddk-rs",
   "public/rust/crates/ddk-rs/examples/ddk_toy",
