@@ -1,7 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #pragma once
 
 #include <ddk/protocol/auxdata.h>
@@ -64,6 +63,7 @@ typedef struct pci_protocol_ops {
                                 uint32_t requested_irq_count);
     zx_status_t (*get_device_info)(void* ctx, zx_pcie_device_info_t* out_info);
     zx_status_t (*config_read)(void* ctx, uint16_t offset, size_t width, uint32_t* value);
+    zx_status_t (*config_write)(void* ctx, uint16_t offset, size_t width, uint32_t value);
     uint8_t     (*get_next_capability)(void* ctx, uint8_t type, uint8_t offset);
     zx_status_t (*get_auxdata)(void* ctx, const char* args,
                                void* data, uint32_t bytes, uint32_t* actual);
@@ -127,10 +127,19 @@ static inline zx_status_t pci_config_read16(pci_protocol_t* pci, uint16_t offset
 }
 
 static inline zx_status_t pci_config_read32(pci_protocol_t* pci, uint16_t offset, uint32_t* value) {
-    uint32_t value_;
-    zx_status_t st = pci->ops->config_read(pci->ctx, offset, sizeof(uint32_t), &value_);
-    *value = value_ & UINT32_MAX;
-    return st;
+    return pci->ops->config_read(pci->ctx, offset, sizeof(uint32_t), value);
+}
+
+static inline zx_status_t pci_config_write8(pci_protocol_t* pci, uint16_t offset, uint8_t value) {
+    return pci->ops->config_write(pci->ctx, offset, sizeof(uint8_t), value);
+}
+
+static inline zx_status_t pci_config_write16(pci_protocol_t* pci, uint16_t offset, uint16_t value) {
+    return pci->ops->config_write(pci->ctx, offset, sizeof(uint16_t), value);
+}
+
+static inline zx_status_t pci_config_write32(pci_protocol_t* pci, uint16_t offset, uint32_t value) {
+    return pci->ops->config_write(pci->ctx, offset, sizeof(uint32_t), value);
 }
 
 static inline uint8_t pci_get_next_capability(pci_protocol_t* pci, uint8_t type, uint8_t offset) {

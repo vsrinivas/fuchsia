@@ -349,14 +349,48 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
         return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
     case 4u:
         return out_val.copy_to_user(config->Read(PciReg32(offset)));
-    default:
-        return ZX_ERR_INVALID_ARGS;
     }
 
     // If we reached this point then the width was invalid.
     return ZX_ERR_INVALID_ARGS;
 }
 
+zx_status_t sys_pci_config_write(zx_handle_t handle, uint16_t offset, size_t width, uint32_t val) {
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<Dispatcher> dispatcher;
+
+    // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+                                                     &pci_device);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Writes to the PCI header or outside of the device's config space are not allowed.
+    auto device = pci_device->device();
+    auto cfg_size = device->is_pcie() ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
+    if (offset < ZX_PCI_STANDARD_CONFIG_HDR_SIZE || offset + width > cfg_size) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto config = device->config();
+    switch (width) {
+    case 1u:
+        config->Write(PciReg8(offset), static_cast<uint8_t>(val & UINT8_MAX));
+        break;
+    case 2u:
+        config->Write(PciReg16(offset), static_cast<uint16_t>(val & UINT16_MAX));
+        break;
+    case 4u:
+        config->Write(PciReg32(offset), val);
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return ZX_OK;
+}
 /* This is a transitional method to bootstrap legacy PIO access before
  * PCI moves to userspace.
  */
@@ -500,32 +534,6 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle,
     return ZX_OK;
 }
 
-zx_status_t sys_pci_io_write(zx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len,
-                             uint32_t value) {
-    /**
-     * Performs port I/O write for the PCI device associated with the handle.
-     * @param handle Handle associated with a PCI device
-     * @param bar_num BAR number
-     * @param offset Offset from the base
-     * @param len Length of the operation in bytes
-     * @param value_ptr Pointer to the value to write
-     */
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_pci_io_read(zx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len,
-                            user_out_ptr<uint32_t> out_value_ptr) {
-    /**
-     * Performs port I/O read for the PCI device associated with the handle.
-     * @param handle Handle associated with a PCI device
-     * @param bar_num BAR number
-     * @param offset Offset from the base
-     * @param len Length of the operation in bytes
-     * @param out_value_ptr Pointer to read the value into
-     */
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
                                   int32_t which_irq,
                                   user_out_handle* out_handle) {
@@ -620,6 +628,10 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t sys_pci_config_write(zx_handle_t handle, uint16_t offset, size_t width, uint32_t val) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
                                uint8_t offset, user_inout_ptr<uint32_t> val, size_t width, bool write) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -639,14 +651,6 @@ zx_status_t sys_pci_reset_device(zx_handle_t) {
 }
 
 zx_status_t sys_pci_get_bar(zx_handle_t, uint32_t, pci_resource_t**, user_out_handle*) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_pci_io_write(zx_handle_t, uint32_t, uint32_t, uint32_t, uint32_t) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_pci_io_read(zx_handle_t, uint32_t, uint32_t, uint32_t, user_out_ptr<uint32_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
