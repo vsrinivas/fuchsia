@@ -80,6 +80,13 @@ __BEGIN_CDECLS
 // used by rio remote handler for deferred reply pipe completion
 #define ERR_DISPATCHER_INDIRECT ZX_ERR_NEXT
 
+// indicates the callback is taking responsibility for the
+// channel receiving incoming messages.
+//
+// Unlike ERR_DISPATCHER_INDIRECT, this callback is propagated
+// through the zxrio_handlers.
+#define ERR_DISPATCHER_ASYNC ZX_ERR_ASYNC
+
 // indicates that this was a close message and that no further
 // callbacks should be made to the dispatcher
 #define ERR_DISPATCHER_DONE ZX_ERR_STOP
@@ -90,9 +97,13 @@ typedef struct zxrio_msg zxrio_msg_t;
 
 // callback to process a zxrio_msg
 // - on entry datalen indicates how much valid data is in msg.data[]
-// - return value of ERR_DISPATCHER_INDIRECT indicates that the
-//   reply is being handled by the callback (forwarded to another
-//   server, sent later, etc, and no reply message should be sent.
+// - return value of ERR_DISPATCHER_{INDIRECT,ASYNC} indicates that the reply is
+//   being handled by the callback (forwarded to another server, sent later,
+//   etc, and no reply message should be sent).
+// - WARNING: Once this callback returns, usage of |msg| is no longer
+//   valid. If a client transmits ERR_DISPATCHER_{INDIRECT,ASYNC}, and intends
+//   to respond asynchronously, they must copy the fields of |msg| they
+//   wish to use at a later point in time.
 // - otherwise, the return value is treated as the status to send
 //   in the rpc response, and msg.len indicates how much valid data
 //   to send.  On error return msg.len will be set to 0.

@@ -161,7 +161,7 @@ private:
     zx_status_t Truncate(size_t len) final;
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
-    zx_status_t Sync() final;
+    void Sync(SyncCallback closure) final;
 
     // Read both VMOs into memory, if we haven't already.
     //

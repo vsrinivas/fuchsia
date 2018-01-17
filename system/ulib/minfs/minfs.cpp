@@ -259,11 +259,10 @@ zx_status_t Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inod
 }
 
 #ifdef __Fuchsia__
-zx_status_t Minfs::Sync(completion_t* completion) {
+void Minfs::Sync(SyncCallback closure) {
     fbl::unique_ptr<WritebackWork> wb(new WritebackWork(bc_.get()));
-    wb->SetCompletion(completion);
+    wb->SetClosure(fbl::move(closure));
     EnqueueWork(fbl::move(wb));
-    return ZX_OK;
 }
 #endif
 

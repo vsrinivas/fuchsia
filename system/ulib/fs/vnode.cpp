@@ -104,8 +104,8 @@ zx_status_t Vnode::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Sync() {
-    return ZX_ERR_NOT_SUPPORTED;
+void Vnode::Sync(SyncCallback closure) {
+    closure(ZX_ERR_NOT_SUPPORTED);
 }
 
 #ifdef __Fuchsia__

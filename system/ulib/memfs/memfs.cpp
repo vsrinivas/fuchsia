@@ -58,10 +58,10 @@ zx_status_t VnodeMemfs::Setattr(const vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeMemfs::Sync() {
+void VnodeMemfs::Sync(SyncCallback closure) {
     // Since this filesystem is in-memory, all data is already up-to-date in
     // the underlying storage
-    return ZX_OK;
+    closure(ZX_OK);
 }
 
 constexpr const char kFsName[] = "memfs";

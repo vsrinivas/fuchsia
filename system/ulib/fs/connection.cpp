@@ -119,8 +119,11 @@ Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
         // Handle the message.
         if (status == ZX_OK && (signal->observed & ZX_CHANNEL_READABLE)) {
             status = CallHandler();
-            if (status == ZX_OK) {
+            switch (status) {
+            case ZX_OK:
                 return ASYNC_WAIT_AGAIN;
+            case ERR_DISPATCHER_ASYNC:
+                return ASYNC_WAIT_FINISHED;
             }
         }
         wait_.set_object(ZX_HANDLE_INVALID);
@@ -598,7 +601,21 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         if (IsPathOnly(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
-        return vnode_->Sync();
+        zx_txid_t txid = msg->txid;
+        Vnode::SyncCallback closure([this, txid](zx_status_t status) {
+            zxrio_msg_t msg;
+            memset(&msg, 0, ZXRIO_HDR_SZ);
+            msg.txid = txid;
+            msg.op = ZXRIO_STATUS;
+            msg.arg = status;
+            zxrio_respond(channel_.get(), &msg);
+
+            // Reset the wait object
+            ZX_ASSERT(wait_.Begin(vfs_->async()) == ZX_OK);
+        });
+
+        vnode_->Sync(fbl::move(closure));
+        return ERR_DISPATCHER_ASYNC;
     }
     case ZXRIO_UNLINK: {
         TRACE_DURATION("vfs", "ZXRIO_UNLINK");

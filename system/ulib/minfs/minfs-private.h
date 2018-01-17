@@ -82,6 +82,8 @@ constexpr uint32_t kMinfsBlockCacheSize = 64;
 class MinfsChecker;
 class VnodeMinfs;
 
+using SyncCallback = fs::Vnode::SyncCallback;
+
 class Minfs : public fbl::RefCounted<Minfs> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
@@ -138,7 +140,7 @@ public:
     // Signals the completion object as soon as...
     // (1) A sync probe has entered and exited the writeback queue, and
     // (2) The block cache has sync'd with the underlying block device.
-    zx_status_t Sync(completion_t* completion);
+    void Sync(SyncCallback closure);
 #endif
 
     // The following methods are used to read one block from the specified extent,
@@ -458,7 +460,7 @@ private:
     void Purge(WriteTxn* txn);
 
 #ifdef __Fuchsia__
-    zx_status_t Sync() final;
+    void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
     zx_status_t InitVmo();
     zx_status_t InitIndirectVmo();

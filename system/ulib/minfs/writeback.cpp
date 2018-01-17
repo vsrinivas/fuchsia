@@ -98,14 +98,14 @@ size_t WriteTxn::BlkCount() const {
 
 WritebackWork::WritebackWork(Bcache* bc) :
 #ifdef __Fuchsia__
-    completion_(nullptr),
+    closure_(nullptr),
 #endif
     txn_(bc), node_count_(0) {}
 
 void WritebackWork::Reset() {
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(txn_.Count() == 0);
-    completion_ = nullptr;
+    closure_ = nullptr;
 #endif
     while (0 < node_count_) {
         vn_[--node_count_] = nullptr;
@@ -117,17 +117,17 @@ void WritebackWork::Reset() {
 // consumed
 size_t WritebackWork::Complete(zx_handle_t vmo, vmoid_t vmoid) {
     size_t blk_count = txn_.BlkCount();
-    txn_.Flush(vmo, vmoid);
-    if (completion_ != nullptr) {
-        completion_signal(completion_);
+    zx_status_t status = txn_.Flush(vmo, vmoid);
+    if (closure_) {
+        closure_(status);
     }
     Reset();
     return blk_count;
 }
 
-void WritebackWork::SetCompletion(completion_t* completion) {
-    ZX_DEBUG_ASSERT(completion_ == nullptr);
-    completion_ = completion;
+void WritebackWork::SetClosure(SyncCallback closure) {
+    ZX_DEBUG_ASSERT(!closure_);
+    closure_ = fbl::move(closure);
 }
 #else
 void WritebackWork::Complete() {

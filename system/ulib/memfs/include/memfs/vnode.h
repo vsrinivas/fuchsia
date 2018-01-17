@@ -33,7 +33,7 @@ class Vfs;
 class VnodeMemfs : public fs::Vnode {
 public:
     virtual zx_status_t Setattr(const vnattr_t* a) final;
-    virtual zx_status_t Sync() final;
+    virtual void Sync(SyncCallback closure) final;
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) override;
     zx_status_t AttachRemote(fs::MountChannel h) final;

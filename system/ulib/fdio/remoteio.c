@@ -120,10 +120,17 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
     }
     bool is_close = (ZXRIO_OP(msg->op) == ZXRIO_CLOSE);
 
-    if ((msg->arg = cb(msg, cookie)) == ERR_DISPATCHER_INDIRECT) {
+    msg->arg = cb(msg, cookie);
+    switch (msg->arg) {
+    case ERR_DISPATCHER_INDIRECT:
         // callback is handling the reply itself
         // and took ownership of the reply handle
         return ZX_OK;
+    case ERR_DISPATCHER_ASYNC:
+        // Same as the indirect case, but also identify that
+        // the callback will asynchronously re-trigger the
+        // dispatcher.
+        return ERR_DISPATCHER_ASYNC;
     }
 
     r = zxrio_respond(h, msg);

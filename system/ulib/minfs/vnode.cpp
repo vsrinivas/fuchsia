@@ -1635,16 +1635,27 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
             *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
             return ZX_OK;
         }
+#ifdef __Fuchsia__
         case IOCTL_VFS_UNMOUNT_FS: {
-            zx_status_t status = Sync();
-            if (status != ZX_OK) {
-                FS_TRACE_ERROR("minfs unmount failed to sync; unmounting anyway: %d\n", status);
-            }
+            // TODO(ZX-1577): Avoid calling completion_wait here.
+            // Prefer to use dispatcher's async_t to be notified
+            // whenever Sync completes.
+            completion_t completion;
+            SyncCallback closure([&completion](zx_status_t status) {
+                if (status != ZX_OK) {
+                    FS_TRACE_ERROR("minfs unmount failed to sync; unmounting "
+                                   "anyway: %d\n", status);
+                }
+                completion_signal(&completion);
+            });
+
+            Sync(fbl::move(closure));
+            completion_wait(&completion, ZX_TIME_INFINITE);
+
             // 'fs_' is deleted after Unmount is called.
             *out_actual = 0;
             return fs_->Unmount();
         }
-#ifdef __Fuchsia__
         case IOCTL_VFS_GET_DEVICE_PATH: {
             ssize_t len = fs_->bc_->GetDevicePath(static_cast<char*>(out_buf), out_len);
 
@@ -1932,24 +1943,18 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 }
 
 #ifdef __Fuchsia__
-// TODO(ZX-1308): The Sync ioctl should probably not block the calling thread;
-// rather, it should pass a handle back to the client which is signalled
-// when the completion is signalled.
-zx_status_t VnodeMinfs::Sync() {
+void VnodeMinfs::Sync(SyncCallback closure) {
     TRACE_DURATION("minfs", "VnodeMinfs::Sync");
     completion_t completion;
-    zx_status_t status;
-    if ((status = fs_->Sync(&completion)) != ZX_OK) {
-        FS_TRACE_ERROR("VnodeMinfs::Sync fs sync failure: %d\n", status);
-        return status;
-    } else if ((status = completion_wait(&completion, ZX_SEC(15))) != ZX_OK) {
-        FS_TRACE_ERROR("VnodeMinfs::Sync Completion wait failure: %d\n", status);
-        return status;
-    } else if ((status = fs_->bc_->Sync()) != ZX_OK) {
-        FS_TRACE_ERROR("VnodeMinfs::Sync block device sync failure: %d\n", status);
-        return status;
-    }
-    return ZX_OK;
+    fs_->Sync([this, &closure](zx_status_t status) {
+        if (status != ZX_OK) {
+            closure(status);
+            return;
+        }
+        status = fs_->bc_->Sync();
+        closure(status);
+    });
+    return;
 }
 
 zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {

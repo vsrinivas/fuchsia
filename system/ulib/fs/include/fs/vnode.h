@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -145,8 +146,11 @@ public:
     // 2) The mapping by writing to the underlying file.
     virtual zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out);
 
-    // Syncs the vnode with its underlying storage
-    virtual zx_status_t Sync();
+    // Syncs the vnode with its underlying storage.
+    //
+    // Returns the result status through a closure.
+    using SyncCallback = fbl::Function<void(zx_status_t status)>;
+    virtual void Sync(SyncCallback closure);
 
     // Read directory entries of vn, error if not a directory.
     // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.

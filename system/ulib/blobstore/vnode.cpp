@@ -15,10 +15,11 @@
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 
-#include <zircon/syscalls.h>
+#include <fbl/ref_ptr.h>
 #include <fdio/debug.h>
 #include <fdio/vfs.h>
-#include <fbl/ref_ptr.h>
+#include <sync/completion.h>
+#include <zircon/syscalls.h>
 
 #define MXDEBUG 0
 
@@ -175,10 +176,15 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
         return ZX_OK;
     }
     case IOCTL_VFS_UNMOUNT_FS: {
-        zx_status_t status = Sync();
-        if (status != ZX_OK) {
-            FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
-        }
+        // TODO(ZX-1577): Avoid calling completion_wait here.
+        // Prefer to use dispatcher's async_t to be notified
+        // whenever Sync completes.
+        completion_t completion;
+        SyncCallback closure([&completion](zx_status_t status) {
+            completion_signal(&completion);
+        });
+        Sync(fbl::move(closure));
+        completion_wait(&completion, ZX_TIME_INFINITE);
         *out_actual = 0;
         return blobstore_->Unmount();
     }
@@ -248,10 +254,10 @@ zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out
     return CopyVmo(rights, out);
 }
 
-zx_status_t VnodeBlob::Sync() {
+void VnodeBlob::Sync(SyncCallback closure) {
     // TODO(smklein): For now, this is a no-op, but it will change
     // once the kBlobFlagSync flag is in use.
-    return ZX_OK;
+    closure(ZX_OK);
 }
 
 } // namespace blobstore
