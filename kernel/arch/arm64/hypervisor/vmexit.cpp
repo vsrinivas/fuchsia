@@ -169,7 +169,12 @@ static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddres
 
 static zx_status_t handle_instruction_abort(GuestState* guest_state,
                                             GuestPhysicalAddressSpace* gpas) {
-    return handle_page_fault(guest_state->hpfar_el2, gpas);
+    zx_status_t status = handle_page_fault(guest_state->hpfar_el2, gpas);
+    if (status != ZX_OK) {
+        dprintf(CRITICAL, "Unhandled instruction abort %#lx\n",
+                guest_state->hpfar_el2);
+    }
+    return status;
 }
 
 static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
@@ -180,7 +185,11 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
-        return handle_page_fault(guest_paddr, gpas);
+        status = handle_page_fault(guest_paddr, gpas);
+        if (status != ZX_OK) {
+            dprintf(CRITICAL, "Unhandled data abort %#lx\n", guest_paddr);
+        }
+        return status;
     case ZX_OK:
         break;
     default:

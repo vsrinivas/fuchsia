@@ -304,8 +304,11 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
 
     Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        dprintf(CRITICAL, "Unhandled IO port %s %#x\n",
+                io_info.input ? "in" : "out", io_info.port);
         return status;
+    }
     next_rip(exit_info, vmcs);
 
     memset(packet, 0, sizeof(*packet));
@@ -712,7 +715,12 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     // again if the guest requests additional permissions, and so that we can
     // avoid use of INVEPT.
     uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
-    return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
+    status = vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
+    if (status != ZX_OK) {
+        dprintf(CRITICAL, "Unhandled EPT violation %#lx\n",
+                exit_info.guest_physical_address);
+    }
+    return status;
 }
 
 static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
