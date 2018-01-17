@@ -20,7 +20,6 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -31,6 +30,8 @@ constexpr fxl::StringView kPartSizeFlag = "part-size";
 constexpr fxl::StringView kServerIdFlag = "server-id";
 
 constexpr size_t kKeySize = 100;
+
+const std::string kUserDirectory = "/fetch-user";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -56,9 +57,9 @@ FetchBenchmark::FetchBenchmark(size_t entry_count,
       server_id_(std::move(server_id)),
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath) {
-  FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(value_size > 0);
-  FXL_CHECK(part_size <= value_size);
+  FXL_DCHECK(entry_count_ > 0);
+  FXL_DCHECK(value_size_ > 0);
+  FXL_DCHECK(part_size_ <= value_size);
   cloud_provider_firebase_factory_.Init();
 }
 
@@ -75,9 +76,8 @@ void FetchBenchmark::SyncStateChanged(
 void FetchBenchmark::Run() {
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
-  std::string writer_path = writer_tmp_dir_.path() + "/fetch_user";
-  bool ret = files::CreateDirectory(writer_path);
-  FXL_DCHECK(ret);
+  std::string writer_path = writer_tmp_dir_.path() + kUserDirectory;
+  FXL_DCHECK(files::CreateDirectory(writer_path));
 
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
@@ -88,11 +88,10 @@ void FetchBenchmark::Run() {
       writer_path, &writer_);
   QuitOnError(status, "Get writer ledger");
 
-  fidl::Array<uint8_t> id;
-  status = test::GetPageEnsureInitialized(
-      fsl::MessageLoop::GetCurrent(), &writer_, nullptr, &writer_page_, &id);
+  status =
+      test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(), &writer_,
+                                     nullptr, &writer_page_, &page_id_);
   QuitOnError(status, "Writer page initialization");
-  page_id_ = id.Clone();
 
   Populate();
 }
@@ -135,9 +134,8 @@ void FetchBenchmark::WaitForWriterUpload() {
 }
 
 void FetchBenchmark::ConnectReader() {
-  std::string reader_path = reader_tmp_dir_.path() + "/fetch_user";
-  bool ret = files::CreateDirectory(reader_path);
-  FXL_DCHECK(ret);
+  std::string reader_path = reader_tmp_dir_.path() + kUserDirectory;
+  FXL_DCHECK(files::CreateDirectory(reader_path));
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
@@ -148,9 +146,7 @@ void FetchBenchmark::ConnectReader() {
       reader_path, &reader_);
   QuitOnError(status, "ConnectReader");
 
-  fidl::Array<uint8_t> id;
-  TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
-  reader_->GetPage(page_id_.Clone(), reader_page_.NewRequest(),
+  reader_->GetPage(std::move(page_id_), reader_page_.NewRequest(),
                    [this](ledger::Status status) {
                      if (benchmark::QuitOnError(status, "GetPage")) {
                        return;
@@ -217,22 +213,17 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
     return;
   }
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  // Maintain a global numbering of FetchPartial calls to distinguish between
-  // trace events.
-  size_t parts_in_value =
-      value_size_ / part_size_ + (value_size_ % part_size_ > 1);
-  size_t global_no = i * parts_in_value + part;
-  TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", global_no);
+  auto trace_event_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", trace_event_id);
   snapshot_ptr->FetchPartial(
       keys_[i].Clone(), part * part_size_, part_size_,
       fxl::MakeCopyable(
-          [this, snapshot = std::move(snapshot), i, part, global_no](
+          [this, snapshot = std::move(snapshot), i, part, trace_event_id](
               ledger::Status status, fsl::SizedVmoTransportPtr value) mutable {
-            if (status != ledger::Status::PARTIAL_RESULT &&
-                benchmark::QuitOnError(status, "PageSnapshot::FetchPartial")) {
+            if (benchmark::QuitOnError(status, "PageSnapshot::FetchPartial")) {
               return;
             }
-            TRACE_ASYNC_END("benchmark", "FetchPartial", global_no);
+            TRACE_ASYNC_END("benchmark", "FetchPartial", trace_event_id);
             FetchPart(std::move(snapshot), i, part + 1);
           }));
 }

@@ -42,18 +42,10 @@ class FetchBenchmark : public ledger::SyncWatcher {
                         const SyncStateChangedCallback& callback) override;
 
  private:
-  void PutEntry(fidl::Array<uint8_t> key,
-                fidl::Array<uint8_t> value,
-                std::function<void(ledger::Status)> put_callback);
-
   void Populate();
   void WaitForWriterUpload();
   void ConnectReader();
   void WaitForReaderDownload();
-
-  void Backlog();
-  void VerifyBacklog(ledger::PageSnapshotPtr snapshot,
-                     fidl::Array<uint8_t> token);
 
   void FetchValues(ledger::PageSnapshotPtr snapshot, size_t i);
   void FetchPart(ledger::PageSnapshotPtr snapshot, size_t i, size_t part);
