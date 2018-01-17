@@ -80,6 +80,14 @@ is_clang = true
 is_component_build = false
 is_official_build = false
 
+# This is set to allow third party projects to configure their GN build based
+# on the knowledge that they're being built in the Fuchsia tree. In the
+# subproject this can be tested with
+#   `if (defined(is_fuchsia_tree) && is_fuchsia_tree) { ... }`
+# thus allowing configuration without requiring all users of the subproject to
+# set this variable.
+is_fuchsia_tree = true
+
 if (current_os == "fuchsia") {
   is_fuchsia = true
 } else if (current_os == "linux") {
