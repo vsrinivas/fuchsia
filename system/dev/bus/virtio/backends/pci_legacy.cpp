@@ -52,12 +52,6 @@ zx_status_t PciLegacyBackend::Init() {
     }
 
     bar0_base_ = static_cast<uint16_t>(bar0.addr & 0xffff);
-    status = zx_mmap_device_io(get_root_resource(), bar0_base_, static_cast<uint32_t>(bar0.size));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to map IO window for device: %d\n", tag(), status);
-        return status;
-    }
-
     // TODO(cja): When MSI support is added we need to dynamically add
     // the extra two fields here that offset the device config.
     // Virtio 1.0 section 4.1.4.8
