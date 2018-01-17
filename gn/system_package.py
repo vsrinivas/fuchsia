@@ -35,6 +35,9 @@ def main():
         * commandline - a file containing the zircon.system.blobstore-init and
           zircon.system.blobstore-init-arg lines sufficient to mount the
           produced meta.far system package using the supplied pkgsvr binary.
+        * blobstore-manifest - a full manifest of all files that need to be
+          added to the blobstore (all system-manifest files, plus all
+          packages in the pkgsvr-index).
     """
 
     parser = argparse.ArgumentParser("Generates a /system package")
@@ -59,6 +62,12 @@ def main():
     parser.add_argument("--commandline",
                         help="Path to the command line file to output, containing the /system mount arguments.",
                         required=True)
+    parser.add_argument("--pkgsvr-index",
+                        help="Path to the static packages index",
+                        required=True)
+    parser.add_argument("--blobstore-manifest",
+                        help="Path to output the final blobstore manifest.",
+                        required=True)
     args = parser.parse_args()
 
     if os.path.exists(args.system_package_dir):
@@ -79,10 +88,11 @@ def main():
             pkgjson.write('{"name": "system.pkg", "version": "0"}')
 
         # Create a package manifest that includes a copy of all the contents
-        # from args.system_manifest, plus meta/package.json.
+        # from args.system_manifest, plus meta/package.json and pkgsvr-index.
         package_manifest = os.path.join(args.system_package_dir, "package_manifest")
         with open(package_manifest, "w") as manifest:
-            manifest.write("meta/package.json=%s\n" % pkgjson_path)
+            manifest.write("meta/package.json=%s\n" % os.path.relpath(pkgjson_path))
+            manifest.write("data/static_packages=%s\n" % os.path.relpath(args.pkgsvr_index))
             with open(args.system_manifest, "r") as sys_manifest:
                 for line in sys_manifest:
                     manifest.write(line)
@@ -106,6 +116,13 @@ def main():
                 "zircon.system.blobstore-init=/blobstore/%s\n" % pkgsvr_merkle)
             cmdline.write(
                 "zircon.system.blobstore-init-arg=%s\n" % meta_far_merkle)
+
+        with open(args.blobstore_manifest, 'w') as blobstore_manifest:
+            blobstore_manifest.write("=%s\n" % os.path.relpath(system_package_meta_far))
+            with open(package_manifest) as manifest:
+                for line in manifest:
+                    blobstore_manifest.write(line)
+
     except:
         if os.path.exists(args.system_package_dir):
             shutil.rmtree(args.system_package_dir)

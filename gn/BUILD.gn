@@ -119,6 +119,16 @@ zircon_ulib_manifest =
 final_boot_manifest = "$root_out_dir/boot.manifest"
 final_system_manifest = "$root_out_dir/system.manifest"
 
+# pkgsvr_index is the static packages index for the package server, it contains
+# all package content addresses that are added to the blobstore during the
+# build.
+pkgsvr_index = "$root_gen_dir/pkgsvr_index"
+packages_dir = "$root_build_dir/package"
+# Packages blobs manifest is all the blobs from inside all Fuchsia packages, as well as their meta.fars.
+packages_blobs_manifest = "$root_build_dir/packages_blobs.manifest"
+# Final blobstore manifest is the packages_blobs_manifest.
+final_blobstore_manifest = "$root_build_dir/blobstore.manifest"
+
 # Keep the following in sync with the values in
 #   //scripts/devshell/lib/image_build_vars.sh
 images_dir = "$root_out_dir/images"
@@ -260,6 +270,80 @@ action("finalize_manifests") {
       "--manifest=" + rebase_path(package_manifest),
     ]
   }
+
+  foreach(package, package_list) {
+    package_manifest = "$root_build_dir/package/$package/package_manifest"
+    final_manifest = "$root_build_dir/package/$package/final_package_manifest"
+
+    # GN won't let us make these sources because they're in the build
+    # directory but written implicitly at gen time rather than by a proper
+    # action.  We're relying on the depfile to notice their changes.
+    #sources += [ package_manifest ]
+
+    outputs += [ final_manifest ]
+    args += [
+      "--standalone-output=" + rebase_path(final_manifest, root_build_dir),
+      "--manifest=" + rebase_path(package_manifest),
+    ]
+  }
+}
+
+action("pkgbuilds") {
+  packages_file = "$target_gen_dir/packages"
+
+  pm_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
+
+  pm_out_dir = get_label_info(pm_label, "root_out_dir")
+  pm_path = "$pm_out_dir/pm"
+
+  merkleroot_bin = "//out/build-zircon/tools/merkleroot"
+
+  package_signing_key = system_package_key
+
+  deps = [ pm_label, ":finalize_manifests" ]
+  inputs = [
+    pm_path,
+    package_signing_key,
+    merkleroot_bin,
+  ]
+  # XXX(raggi): packages_file is an input, but it's made by gen.py
+  sources = [
+    "build_all_fuchsia_packages.py",
+  ]
+
+  outputs = [
+    packages_blobs_manifest,
+    pkgsvr_index,
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  # TODO(raggi): technically this script inputs/outputs these things
+  # inputs += [
+  #   package_json_file,
+  #   final_package_manifest,
+  # ]
+  # outputs += [
+  #   "$pkg_out_dir/meta.far",
+  #   "$pkg_out_dir/meta.far.merkle",
+  # ]
+  args = [
+    clang_prefix,
+    rebase_path(sources[0]),
+    "--package-list",
+    rebase_path(packages_file),
+    "--packages-dir",
+    rebase_path(packages_dir),
+    "--signing-key",
+    rebase_path(package_signing_key),
+    "--pm",
+    rebase_path(pm_path),
+    "--merkleroot",
+    rebase_path(merkleroot_bin),
+    "--blobstore-manifest",
+    rebase_path(packages_blobs_manifest),
+    "--pkgsvr-index",
+    rebase_path(pkgsvr_index),
+  ]
 }
 
 action("system.pkg") {
@@ -268,6 +352,7 @@ action("system.pkg") {
   pkgsvr_label = "//garnet/go/src/pmd:pkgsvr_bin"
   deps = [
     ":finalize_manifests",
+    ":pkgbuilds",
     pkgsvr_label,
     pm_label,
   ]
@@ -284,6 +369,7 @@ action("system.pkg") {
     pkgsvr_bin,
     pm_bin,
     system_package_key,
+    pkgsvr_index
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -304,14 +390,20 @@ action("system.pkg") {
     rebase_path(merkleroot_bin),
     "--commandline",
     rebase_path(system_package_cmdline),
+    "--pkgsvr-index",
+    rebase_path(pkgsvr_index),
+    "--blobstore-manifest",
+    rebase_path(final_blobstore_manifest),
   ]
   sources = [
+    "system_package.py",
     final_system_manifest,
   ]
   outputs = [
     system_package_cmdline,
     system_package_dir,
     system_package_meta_far,
+    final_blobstore_manifest,
   ]
 }
 
@@ -326,16 +418,15 @@ action("blobstore.blk") {
     rebase_path(blobstore_image_path),
     "create",
     "--manifest",
-    rebase_path(final_system_manifest),
-    "--blob",
-    rebase_path(system_package_meta_far),
-  ]
-  sources = [
-    final_system_manifest,
-    system_package_meta_far,
+    rebase_path(final_blobstore_manifest),
+    "--manifest",
+    rebase_path(packages_blobs_manifest),
   ]
   inputs = [
     blobstore_bin,
+    system_package_meta_far,
+    packages_blobs_manifest,
+    final_blobstore_manifest,
   ]
   outputs = [
     blobstore_image_path,
@@ -343,6 +434,7 @@ action("blobstore.blk") {
   deps = [
     ":finalize_manifests",
     ":system.pkg",
+    ":pkgbuilds",
   ]
 }
 

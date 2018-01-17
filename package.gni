@@ -295,45 +295,20 @@ template("package") {
           }
         }
 
+        package_json_file = "$pkg_out_dir/package.json"
         if (need_package_json) {
-          package_json_file = rebase_path("$pkg_out_dir/package.json")
           write_file(package_json_file, "{\"name\": \"${pkg.package_name}\", \"version\": \"${pkg.package_version}\"}")
-          package_manifest_contents += [ "meta/package.json=${package_json_file}" ]
+          full_pkg_json_file = rebase_path(package_json_file)
+          package_manifest_contents += [ "meta/package.json=${full_pkg_json_file}" ]
         }
+        script = "/usr/bin/touch"
+        outputs = [package_json_file]
+        args = [ rebase_path(outputs[0]) ]
 
         write_file(package_manifest, package_manifest_contents)
         write_file(archive_manifest, [])
         write_file(system_manifest, [])
 
-        pm_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
-        deps += [ pm_label ]
-
-        pm_out_dir = get_label_info(pm_label, "root_out_dir")
-        pm_path = "$pm_out_dir/pm"
-
-        output = "$pkg_out_dir/meta.far"
-
-        script = "//build/gn_run_binary.sh"
-        inputs = [
-          pm_path,
-          package_signing_key,
-        ]
-        outputs = [
-          output,
-        ]
-        args = [
-          clang_prefix,
-          rebase_path(pm_path, root_build_dir),
-          "-k",
-          rebase_path(package_signing_key),
-          "-m",
-          rebase_path(package_manifest),
-          "-o",
-          rebase_path(pkg_out_dir),
-          "build",
-        ]
-
-        # Add the meta.far to the list of fuchsia packages
       } else {
         assert(package_manifest_contents != [])
         write_file(package_manifest, [])
