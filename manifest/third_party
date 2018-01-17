@@ -117,7 +117,7 @@
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/golibs/github.com/golang/protobuf"
              path="third_party/golibs/github.com/golang/protobuf"
-             remote="https://fuchsia.googlesource.com/third_party/golang/protobuf"
+             remote="https://fuchsia.googlesource.com/third_party/github.com/golang/protobuf"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/googletest"
              path="third_party/googletest"
