@@ -70,9 +70,12 @@ Server::Server(const std::string& peer_id,
       att::kReadRequest, fbl::BindMember(this, &Server::OnReadRequest));
   write_req_id_ = att_->RegisterHandler(
       att::kWriteRequest, fbl::BindMember(this, &Server::OnWriteRequest));
+  write_cmd_id_ = att_->RegisterHandler(
+      att::kWriteCommand, fbl::BindMember(this, &Server::OnWriteCommand));
 }
 
 Server::~Server() {
+  att_->UnregisterHandler(write_cmd_id_);
   att_->UnregisterHandler(write_req_id_);
   att_->UnregisterHandler(read_req_id_);
   att_->UnregisterHandler(read_by_type_id_);
@@ -431,6 +434,44 @@ void Server::OnReadRequest(att::Bearer::TransactionId tid,
   if (!attr->ReadAsync(peer_id_, 0, callback)) {
     att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
   }
+}
+
+void Server::OnWriteCommand(att::Bearer::TransactionId tid,
+                            const att::PacketReader& packet) {
+  FXL_DCHECK(packet.opcode() == att::kWriteCommand);
+
+  if (packet.payload_size() < sizeof(att::WriteRequestParams)) {
+    // Ignore if wrong size, no response allowed
+    return;
+  }
+
+  const auto& params = packet.payload<att::WriteRequestParams>();
+  att::Handle handle = le16toh(params.handle);
+  const auto* attr = db_->FindAttribute(handle);
+
+  // Attributes can be invalid if the handle is invalid
+  if (!attr) {
+    return;
+  }
+
+  // TODO(armansito): Check against the connection security level here and
+  // succeed if it is sufficient.
+  if (!attr->write_reqs().allowed_without_security()) {
+    return;
+  }
+
+  // Attributes with a static value cannot be written.
+  if (attr->value()) {
+    return;
+  }
+
+  auto value_view = packet.payload_data().view(sizeof(params.handle));
+  if (value_view.size() > att::kMaxAttributeValueLength) {
+    return;
+  }
+
+  // No response allowed for commands, ignore the cb
+  attr->WriteAsync(peer_id_, 0, value_view, nullptr);
 }
 
 void Server::OnWriteRequest(att::Bearer::TransactionId tid,

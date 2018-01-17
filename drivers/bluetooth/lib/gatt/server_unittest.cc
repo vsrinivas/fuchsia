@@ -1359,6 +1359,39 @@ TEST_F(GATT_ServerTest, WriteRequestSuccess) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
+// TODO(bwb): Add test cases for the error conditions involved in a Write
+// Command (NET-387)
+
+TEST_F(GATT_ServerTest, WriteCommandSuccess) {
+  const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                                 AllowedNoSecurity());
+
+  attr->set_write_handler([&](const auto& peer_id, att::Handle handle,
+                              uint16_t offset, const auto& value,
+                              const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
+    EXPECT_EQ(attr->handle(), handle);
+    EXPECT_EQ(0u, offset);
+    EXPECT_TRUE(common::ContainersEqual(
+        common::CreateStaticByteBuffer('t', 'e', 's', 't'), value));
+    // validated side effect, exit loop
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kCmd = common::CreateStaticByteBuffer(
+      0x52,        // opcode: write command
+      0x02, 0x00,  // handle: 0x0002
+      't', 'e', 's', 't');
+  // clang-format on
+
+  fake_chan()->Receive(kCmd);
+  RunMessageLoop();
+}
+
 TEST_F(GATT_ServerTest, ReadRequestInvalidPDU) {
   // Just opcode
   // clang-format off

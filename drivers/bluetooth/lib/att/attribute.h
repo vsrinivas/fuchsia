@@ -122,6 +122,8 @@ class Attribute final {
     read_handler_ = read_handler;
   }
 
+  // An "ATT Write Command" will trigger WriteHandler with
+  // a null |result_callback|
   using WriteResultCallback = std::function<void(ErrorCode status)>;
   using WriteHandler =
       std::function<void(const std::string& peer_id,
