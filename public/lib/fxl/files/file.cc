@@ -104,8 +104,13 @@ std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
   if (!fd.is_valid())
     return failure_pair;
+  return ReadFileDescriptorToBytes(fd.get());
+}
+
+std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd) {
+  std::pair<uint8_t*, intptr_t> failure_pair {nullptr, -1};
   struct stat st;
-  if (fstat(fd.get(), &st) != 0) {
+  if (fstat(fd, &st) != 0) {
     return failure_pair;
   }
   intptr_t file_size = st.st_size;
@@ -114,7 +119,7 @@ std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
   size_t bytes_left = file_size;
   size_t offset = 0;
   while (bytes_left > 0) {
-    ssize_t bytes_read = HANDLE_EINTR(read(fd.get(), &ptr[offset], bytes_left));
+    ssize_t bytes_read = HANDLE_EINTR(read(fd, &ptr[offset], bytes_left));
     if (bytes_read < 0) {
       return failure_pair;
     }
