@@ -32,6 +32,12 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
+// Returns whether the register state indicates that the CPU was executing
+// userland code.
+static bool is_from_user(const x86_iframe_t* frame) {
+    return SELECTOR_PL(frame->cs) != 0;
+}
+
 static void dump_fault_frame(x86_iframe_t* frame) {
     dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
             frame->cs, frame->ip, frame->flags, x86_get_cr2());
@@ -100,8 +106,7 @@ static zx_status_t call_dispatch_user_exception(uint kind,
 }
 
 static bool try_dispatch_user_exception(x86_iframe_t* frame, uint kind) {
-    bool from_user = SELECTOR_PL(frame->cs) != 0;
-    if (from_user) {
+    if (is_from_user(frame)) {
         struct arch_exception_context context = {false, frame, 0};
         bool pending = thread_preempt_reenable();
         DEBUG_ASSERT(!pending);
@@ -141,7 +146,7 @@ static void x86_gpf_handler(x86_iframe_t* frame) {
     // Check if we were doing a GPF test, e.g. to check if an MSR exists.
     struct x86_percpu* percpu = x86_get_percpu();
     if (unlikely(percpu->gpf_return_target)) {
-        ASSERT(SELECTOR_PL(frame->cs) == 0);
+        ASSERT(!is_from_user(frame));
 
         // Set up return to new address
         frame->ip = percpu->gpf_return_target;
@@ -295,8 +300,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     }
 
     /* let high level code deal with this */
-    bool from_user = SELECTOR_PL(frame->cs) != 0;
-    if (from_user) {
+    if (is_from_user(frame)) {
         kcounter_add(exceptions_user, 1u);
         struct arch_exception_context context = {true, frame, va};
         return call_dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT,
@@ -327,7 +331,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
     thread_preempt_disable();
 
     // did we come from user or kernel space?
-    bool from_user = SELECTOR_PL(frame->cs) != 0;
+    bool from_user = is_from_user(frame);
 
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
