@@ -3,7 +3,7 @@ include "system/public/zircon/mdi/zircon.mdi"
 cpu-map = {
     clusters = {
         {
-            cpu-count = 8
+            cpu-count = 4
         }
     }
 }
