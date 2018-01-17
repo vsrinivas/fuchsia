@@ -120,17 +120,15 @@ zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue_sel) {
   return status;
 }
 
-VirtioBalloon::VirtioBalloon(uintptr_t guest_physmem_addr,
-                             size_t guest_physmem_size,
-                             zx_handle_t guest_physmem_vmo)
+VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
     : VirtioDevice(VIRTIO_ID_BALLOON,
                    &config_,
                    sizeof(config_),
                    queues_,
                    VIRTIO_BALLOON_Q_COUNT,
-                   guest_physmem_addr,
-                   guest_physmem_size),
-      vmo_(guest_physmem_vmo) {
+                   phys_mem.addr(),
+                   phys_mem.size()),
+      vmo_(phys_mem.vmo()) {
   add_device_features(VIRTIO_BALLOON_F_STATS_VQ |
                       VIRTIO_BALLOON_F_DEFLATE_ON_OOM);
 }

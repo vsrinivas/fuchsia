@@ -324,8 +324,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup balloon device.
-  machina::VirtioBalloon balloon(physmem_addr, physmem_size,
-                                 guest.phys_mem().vmo());
+  machina::VirtioBalloon balloon(guest.phys_mem());
   balloon.set_deflate_on_demand(options.balloon_demand_page());
   status = bus.Connect(balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
   if (status != ZX_OK) {
