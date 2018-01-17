@@ -49,7 +49,7 @@ fidl::Array<fidl::String> Deprecated_GetTypesFromJsonEntity(
   // EntityMetadata appropriately, overriding whatever is there.
   std::vector<std::string> types;
   if (!modular::ExtractEntityTypesFromJson(content, &types)) {
-    FXL_LOG(WARNING) << "Invalid JSON in value: " << content;
+    FXL_LOG(WARNING) << "Invalid entity metadata in JSON value: " << content;
     return {};
   }
   if (types.empty())

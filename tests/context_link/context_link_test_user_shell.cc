@@ -144,10 +144,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     start_story_exit_.Pass();
   }
 
-  TestPoint get_context_topic_1_{"GetContextTopic() value=1"};
-  int get_context_topic_1_called_{};
-  TestPoint get_context_topic_2_{"GetContextTopic() value=2"};
-  int get_context_topic_2_called_{};
+  // NOTE(mesch): We would like to test that changes of value are also picked up
+  // by the story_info agent, but we cannot right now guarantee that the
+  // story_info agent is already running when the module starts writing to the
+  // link, so trying to verify that intermediate context link values are seen by
+  // a context watcher proved to be flaky. MI4-780
+  TestPoint get_context_topic_{"GetContextTopic() value=2"};
+  int get_context_topic_called_{};
 
   void GetContextTopic(const maxwell::ContextValuePtr& value) {
     // The context link value has metadata that is derived from the story id in
@@ -158,9 +161,17 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       return;
     }
 
-    if (value->meta->story->id != story_id_ ||
-        value->meta->entity->topic != kTopic) {
-      FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
+    if (value->meta->story->id != story_id_) {
+      FXL_LOG(ERROR) << "ContextValue metadata has wrong story id. "
+                     << "Expected: " << story_id_ << ". "
+                     << "Actual: " << value;
+      return;
+    }
+
+    if (value->meta->entity->topic != kTopic) {
+      FXL_LOG(ERROR) << "ContextValue metadata has wrong topic. "
+                     << "Expected: " << kTopic << ". "
+                     << "Actual: " << value;
       return;
     }
 
@@ -232,14 +243,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       return;
     }
 
-    if (link_value == std::string{"1"}) {
-      if (++get_context_topic_1_called_ == 1) {
-        get_context_topic_1_.Pass();
-      }
-
-    } else {
-      if (++get_context_topic_2_called_ == 1) {
-        get_context_topic_2_.Pass();
+    if (link_value == std::string{"2"}) {
+      if (++get_context_topic_called_ == 1) {
+        get_context_topic_.Pass();
 
         context_listener_.Reset();
         context_listener_.Handle([this](const maxwell::ContextValuePtr&) {});
