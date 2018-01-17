@@ -843,12 +843,12 @@ static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now,
     t->blocked_status = ZX_OK;
 
     /* unblock the thread */
-    bool local_resched = sched_unblock(t);
+    if (sched_unblock(t))
+        sched_reschedule();
 
     spin_unlock(&thread_lock);
 
-    /* force a reschedule on the current cpu if the local run queue was modified in sched_unblock */
-    return local_resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 #define MIN_SLEEP_SLACK ZX_USEC(1)

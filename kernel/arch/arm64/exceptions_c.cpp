@@ -312,10 +312,13 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
     arch_set_in_int_handler(true);
+    thread_preempt_disable();
 
     kcounter_add(exceptions_irq, 1u);
     enum handler_return ret = platform_irq(iframe);
 
+    if (thread_preempt_reenable())
+        ret = INT_RESCHEDULE;
     arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */

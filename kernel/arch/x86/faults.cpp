@@ -103,11 +103,14 @@ static bool try_dispatch_user_exception(x86_iframe_t* frame, uint kind) {
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         struct arch_exception_context context = {false, frame, 0};
+        bool pending = thread_preempt_reenable();
+        DEBUG_ASSERT(!pending);
         arch_set_in_int_handler(false);
         arch_enable_ints();
         zx_status_t erc = call_dispatch_user_exception(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
+        thread_preempt_disable();
         if (erc == ZX_OK)
             return true;
     }
@@ -239,6 +242,8 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     vaddr_t va = x86_get_cr2();
 
     /* reenable interrupts */
+    bool pending = thread_preempt_reenable();
+    DEBUG_ASSERT(!pending);
     arch_set_in_int_handler(false);
     arch_enable_ints();
 
@@ -246,6 +251,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     auto ac = fbl::MakeAutoCall([]() {
         arch_disable_ints();
         arch_set_in_int_handler(true);
+        thread_preempt_disable();
     });
 
     /* check for flags we're not prepared to handle */
@@ -318,6 +324,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
     }
 
     arch_set_in_int_handler(true);
+    thread_preempt_disable();
 
     // did we come from user or kernel space?
     bool from_user = SELECTOR_PL(frame->cs) != 0;
@@ -430,6 +437,8 @@ void x86_exception_handler(x86_iframe_t* frame) {
     }
 
     /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
+    if (thread_preempt_reenable())
+        ret = INT_RESCHEDULE;
     arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */

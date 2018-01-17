@@ -415,6 +415,11 @@ void sched_reschedule(void) {
     thread_t* current_thread = get_current_thread();
     uint curr_cpu = arch_curr_cpu_num();
 
+    if (current_thread->preempt_disable) {
+        current_thread->preempt_pending = true;
+        return;
+    }
+
     DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
     DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
     LOCAL_KTRACE0("sched_reschedule");

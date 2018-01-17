@@ -145,6 +145,14 @@ typedef struct thread {
     int retcode;
     struct wait_queue retcode_wait_queue;
 
+    /* This tracks whether preemption has been disabled by
+     * thread_preempt_disable().  This should only be true while inside an
+     * interrupt handler and while interrupts are disabled. */
+    bool preempt_disable;
+    /* This tracks whether a thread reschedule is pending.  This should
+     * only be true if preempt_disable is also true. */
+    bool preempt_pending;
+
     /* thread local storage, intialized to zero */
     void* tls[THREAD_MAX_TLS_ENTRY];
 
@@ -312,6 +320,42 @@ static inline void* tls_set(uint entry, void* val) {
 /* set the callback that is issued when the thread exits */
 static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
     get_current_thread()->tls_callback[entry] = cb;
+}
+
+/* thread_preempt_disable() disables preempting the current thread until
+ * thread_preempt_reenable() is called.  During this time, any call to
+ * sched_reschedule() will only record that a reschedule is pending, and
+ * won't do a context switch.
+ *
+ * This function is for use only in interrupt handlers while interrupts are
+ * disabled.  Disabling preemption allows an interrupt to be fully handled
+ * before the current CPU switches to another thread. */
+static void thread_preempt_disable(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(arch_in_int_handler());
+    thread_t* current_thread = get_current_thread();
+    DEBUG_ASSERT(!current_thread->preempt_disable);
+
+    current_thread->preempt_disable = true;
+}
+
+/* thread_preempt_reenable() re-enables preempting the current thread,
+ * following a call to thread_preempt_disable().  It returns whether a
+ * preemption is pending -- whether sched_reschedule() was called since the
+ * call to thread_preempt_disable().
+ *
+ * Like thread_preempt_disable(), this is for use only in interrupt
+ * handlers while interrupts are disabled. */
+static bool thread_preempt_reenable(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(arch_in_int_handler());
+    thread_t* current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread->preempt_disable);
+
+    bool preempt_pending = current_thread->preempt_pending;
+    current_thread->preempt_pending = false;
+    current_thread->preempt_disable = false;
+    return preempt_pending;
 }
 
 __END_CDECLS
