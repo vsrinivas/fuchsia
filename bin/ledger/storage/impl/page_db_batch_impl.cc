@@ -59,7 +59,8 @@ Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
 
   Status status = Status::OK;
   if (journal_type == JournalType::IMPLICIT) {
-    status = batch_->Put(handler, ImplicitJournalMetaRow::GetKeyFor(id), base);
+    status =
+        batch_->Put(handler, ImplicitJournalMetadataRow::GetKeyFor(id), base);
   }
 
   if (status == Status::OK) {
@@ -78,8 +79,8 @@ Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
 Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
                                       const JournalId& journal_id) {
   if (journal_id[0] == JournalEntryRow::kImplicitPrefix) {
-    RETURN_ON_ERROR(
-        batch_->Delete(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id)));
+    RETURN_ON_ERROR(batch_->Delete(
+        handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id)));
   }
   return batch_->DeleteByPrefix(handler,
                                 JournalEntryRow::GetPrefixFor(journal_id));

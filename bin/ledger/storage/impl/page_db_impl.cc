@@ -146,8 +146,9 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
 
 Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* handler,
                                          std::vector<JournalId>* journal_ids) {
-  return db_.GetByPrefix(
-      handler, convert::ToSlice(ImplicitJournalMetaRow::kPrefix), journal_ids);
+  return db_.GetByPrefix(handler,
+                         convert::ToSlice(ImplicitJournalMetadataRow::kPrefix),
+                         journal_ids);
 }
 
 Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
@@ -155,7 +156,8 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
                                            CommitId* base) {
   FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
   FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
-  return db_.Get(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
+  return db_.Get(handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id),
+                 base);
 }
 
 Status PageDbImpl::GetJournalEntries(

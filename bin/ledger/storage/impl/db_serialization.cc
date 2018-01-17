@@ -71,11 +71,11 @@ fxl::StringView ObjectStatusRow::GetPrefixFor(
   }
 }
 
-// ImplicitJournalMetaRow.
+// ImplicitJournalMetadataRow.
 
-constexpr fxl::StringView ImplicitJournalMetaRow::kPrefix;
+constexpr fxl::StringView ImplicitJournalMetadataRow::kPrefix;
 
-std::string ImplicitJournalMetaRow::GetKeyFor(const JournalId& journal_id) {
+std::string ImplicitJournalMetadataRow::GetKeyFor(const JournalId& journal_id) {
   return fxl::Concatenate({kPrefix, journal_id});
 }
 

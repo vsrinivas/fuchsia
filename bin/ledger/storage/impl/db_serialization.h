@@ -53,7 +53,7 @@ class ObjectStatusRow {
   static fxl::StringView GetPrefixFor(PageDbObjectStatus object_status);
 };
 
-class ImplicitJournalMetaRow {
+class ImplicitJournalMetadataRow {
  public:
   static constexpr fxl::StringView kPrefix = "journals/implicit/";
 
