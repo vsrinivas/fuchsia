@@ -14,31 +14,14 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-a113/aml-i2c.h>
+#include <soc/aml-common/aml-i2c.h>
 
-typedef struct {
-    aml_i2c_port_t port;
-    zx_paddr_t     base_phys;
-    uint32_t       irqnum;
-} aml_i2c_dev_desc_t;
+#include "aml-i2c-internal.h"
 
-//These are specific to the A113, if this driver gets used with another
-// AMLogic SoC then they will most likely be different.
-static aml_i2c_dev_desc_t i2c_devs[4] = {
-    {.port = AML_I2C_A, .base_phys = 0xffd1f000, .irqnum = (21+32)},
-    {.port = AML_I2C_B, .base_phys = 0xffd1e000, .irqnum = (214+32)},
-    {.port = AML_I2C_C, .base_phys = 0xffd1d000, .irqnum = (215+32)},
-    {.port = AML_I2C_D, .base_phys = 0xffd1c000, .irqnum = (39+32)},
-};
+static zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len);
+static zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len);
 
-static inline aml_i2c_dev_desc_t* get_i2c_dev(aml_i2c_port_t portnum) {
-    for (uint32_t i = 0; i < countof(i2c_devs); i++) {
-        if (i2c_devs[i].port == portnum) return &i2c_devs[i];
-    }
-    return NULL;
-}
-
-zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t *dev, uint16_t addr) {
+static zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t *dev, uint16_t addr) {
 
     addr &= 0x7f;
     uint32_t reg = dev->virt_regs->slave_addr;
@@ -108,7 +91,7 @@ static int aml_i2c_thread(void *arg) {
     return 0;
 }
 
-zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t *dev) {
+static zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t *dev) {
 
     printf("control reg      : %08x\n",dev->virt_regs->control);
     printf("slave addr  reg  : %08x\n",dev->virt_regs->slave_addr);
@@ -122,7 +105,7 @@ zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t *dev) {
     return ZX_OK;
 }
 
-zx_status_t aml_i2c_start_xfer(aml_i2c_dev_t *dev) {
+static zx_status_t aml_i2c_start_xfer(aml_i2c_dev_t *dev) {
     //First have to clear the start bit before setting (RTFM)
     dev->virt_regs->control &= ~AML_I2C_CONTROL_REG_START;
     dev->virt_regs->control |= AML_I2C_CONTROL_REG_START;
@@ -172,22 +155,22 @@ static inline zx_status_t aml_i2c_queue_async(aml_i2c_connection_t *conn, const 
     return ZX_OK;
 }
 
-zx_status_t aml_i2c_rd_async(aml_i2c_connection_t *conn, uint32_t len, i2c_complete_cb cb,
+static zx_status_t aml_i2c_rd_async(aml_i2c_connection_t *conn, uint32_t len, i2c_complete_cb cb,
                                                             void* cookie) {
 
     return aml_i2c_queue_async(conn, NULL, 0, len, cb, cookie);
 }
 
-zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, const uint8_t *buff, uint32_t len,
+static zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, const uint8_t *buff, uint32_t len,
                                                             i2c_complete_cb cb, void* cookie) {
 
     ZX_DEBUG_ASSERT(buff);
     return aml_i2c_queue_async(conn, buff, len, 0, cb, cookie);
 }
 
-zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, const uint8_t *txbuff, uint32_t txlen,
-                                                            uint32_t rxlen, i2c_complete_cb cb,
-                                                            void* cookie) {
+static zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, const uint8_t *txbuff,
+                                       uint32_t txlen, uint32_t rxlen, i2c_complete_cb cb,
+                                       void* cookie) {
     ZX_DEBUG_ASSERT(txbuff);
     return aml_i2c_queue_async(conn, txbuff, txlen, rxlen, cb, cookie);
 }
@@ -208,7 +191,7 @@ static zx_status_t aml_i2c_wait_event(aml_i2c_dev_t* dev, uint32_t sig_mask) {
 }
 
 
-zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
+static zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
     ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
     uint32_t token_num = 0;
     uint64_t token_reg = 0;
@@ -255,7 +238,7 @@ zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
     return ZX_OK;
 }
 
-zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
+static zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
 
     ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
     uint32_t token_num = 0;
@@ -312,7 +295,7 @@ zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
     return ZX_OK;
 }
 
-zx_status_t aml_i2c_connect(aml_i2c_connection_t **connection,
+static zx_status_t aml_i2c_connect(aml_i2c_connection_t **connection,
                              aml_i2c_dev_t *dev,
                              uint32_t i2c_addr,
                              uint32_t num_addr_bits) {
@@ -349,7 +332,7 @@ zx_status_t aml_i2c_connect(aml_i2c_connection_t **connection,
     return ZX_OK;
 }
 
-void aml_i2c_release(aml_i2c_connection_t* conn) {
+static void aml_i2c_release(aml_i2c_connection_t* conn) {
     mtx_lock(&conn->dev->conn_mutex);
     list_delete(&conn->node);
     mtx_unlock(&conn->dev->conn_mutex);
@@ -359,11 +342,7 @@ void aml_i2c_release(aml_i2c_connection_t* conn) {
 /* create instance of aml_i2c_t and do basic initialization.  There will
 be one of these instances for each of the soc i2c ports.
 */
-zx_status_t aml_i2c_init(aml_i2c_dev_t **out_device, aml_i2c_port_t portnum) {
-
-    aml_i2c_dev_desc_t *dev_desc = get_i2c_dev(portnum);
-    if (!dev_desc) return ZX_ERR_INVALID_ARGS;
-
+static zx_status_t aml_i2c_dev_init(aml_i2c_dev_desc_t *dev_desc, aml_i2c_dev_t **out_device) {
     aml_i2c_dev_t* device = calloc(1, sizeof(aml_i2c_dev_t));
     if (!device) {
         return ZX_ERR_NO_MEMORY;
@@ -389,7 +368,7 @@ zx_status_t aml_i2c_init(aml_i2c_dev_t **out_device, aml_i2c_port_t portnum) {
                                         ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init: io_buffer_init_physical failed %d\n", status);
+        zxlogf(ERROR, "aml_i2c_dev_init: io_buffer_init_physical failed %d\n", status);
         goto init_fail;
     }
 
@@ -429,4 +408,94 @@ init_fail:
         free(device);
      };
     return status;
+}
+
+static zx_status_t aml_i2c_transact(void* ctx, const void* write_buf, size_t write_length,
+                                     size_t read_length, i2c_complete_cb complete_cb,
+                                     void* cookie) {
+    if (read_length > AML_I2C_MAX_TRANSFER || write_length > AML_I2C_MAX_TRANSFER) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    aml_i2c_connection_t* connection = ctx;
+    return aml_i2c_wr_rd_async(connection, write_buf, write_length, read_length, complete_cb,
+                               cookie);
+}
+
+static zx_status_t aml_i2c_set_bitrate(void* ctx, uint32_t bitrate) {
+    // TODO(hollande,voydanoff) implement this
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t aml_i2c_get_max_transfer_size(void* ctx, size_t* out_size) {
+    *out_size = AML_I2C_MAX_TRANSFER;
+    return ZX_OK;
+}
+
+static void aml_i2c_channel_release(void* ctx) {
+    aml_i2c_connection_t* connection = ctx;
+    aml_i2c_release(connection);
+}
+
+static i2c_channel_ops_t aml_i2c_channel_ops = {
+    .transact = aml_i2c_transact,
+    .set_bitrate = aml_i2c_set_bitrate,
+    .get_max_transfer_size = aml_i2c_get_max_transfer_size,
+    .channel_release = aml_i2c_channel_release,
+};
+
+static zx_status_t aml_i2c_get_channel(void* ctx, uint32_t channel_id, i2c_channel_t* channel) {
+    // i2c_get_channel is only used via by platform devices
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t aml_i2c_get_channel_by_address(void* ctx, uint32_t bus_id, uint16_t address,
+                                                   i2c_channel_t* channel) {
+    if (bus_id >= AML_I2C_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    aml_i2c_t* i2c = ctx;
+    aml_i2c_dev_t* dev = i2c->i2c_devs[bus_id];
+     if (!dev) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    aml_i2c_connection_t* connection;
+    uint32_t address_bits = 7;
+
+    if ((address & I2C_10_BIT_ADDR_MASK) == I2C_10_BIT_ADDR_MASK) {
+        address_bits = 10;
+        address &= ~I2C_10_BIT_ADDR_MASK;
+    }
+
+    zx_status_t status = aml_i2c_connect(&connection, dev, address, address_bits);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    channel->ops = &aml_i2c_channel_ops;
+    channel->ctx = connection;
+    return ZX_OK;
+}
+
+static i2c_protocol_ops_t i2c_ops = {
+    .get_channel = aml_i2c_get_channel,
+    .get_channel_by_address = aml_i2c_get_channel_by_address,
+};
+
+zx_status_t aml_i2c_init(aml_i2c_t* i2c, aml_i2c_dev_desc_t* i2c_devs, size_t i2c_dev_count) {
+    if (i2c_dev_count > countof(i2c->i2c_devs)) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    for (size_t i = 0; i < i2c_dev_count; i++) {
+        zx_status_t status = aml_i2c_dev_init(&i2c_devs[i], &i2c->i2c_devs[i]);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml_i2c_init: aml_i2c_dev_init failed %d\n", status);
+            return status;
+        }
+    }
+
+    i2c->proto.ops = &i2c_ops;
+    i2c->proto.ctx = i2c;
+    return ZX_OK;
 }

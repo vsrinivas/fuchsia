@@ -124,6 +124,16 @@ static zx_protocol_device_t gauss_bus_device_protocol = {
     .release = gauss_bus_release,
 };
 
+static aml_i2c_dev_desc_t i2c_devs[] = {
+    {.port = AML_I2C_A, .base_phys = 0xffd1f000, .irqnum = (21+32)},
+    {.port = AML_I2C_B, .base_phys = 0xffd1e000, .irqnum = (214+32)},
+    // Gauss only uses I2C_A and I2C_B
+/*
+    {.port = AML_I2C_C, .base_phys = 0xffd1d000, .irqnum = (215+32)},
+    {.port = AML_I2C_D, .base_phys = 0xffd1c000, .irqnum = (39+32)},
+*/
+};
+
 static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
@@ -163,7 +173,7 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
     gpio_config(&bus->gpio.proto, SPK_MUTEn, GPIO_DIR_OUT);
     gpio_write(&bus->gpio.proto, SPK_MUTEn, 1);
 
-    if ((status = a113_i2c_init(&bus->i2c)) != ZX_OK) {
+    if ((status = aml_i2c_init(&bus->i2c, i2c_devs, countof(i2c_devs))) != ZX_OK) {
         zxlogf(ERROR, "a113_i2c_init failed: %d\n", status);
         goto fail;
     }

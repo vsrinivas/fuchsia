@@ -10,8 +10,6 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
-#include <soc/aml-a113/aml-i2c.h>
-
 typedef struct {
     gpio_protocol_t proto;
     io_buffer_t periphs_reg;        // PMux/GPIO

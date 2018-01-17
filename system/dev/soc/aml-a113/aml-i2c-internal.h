@@ -23,13 +23,6 @@
 
 typedef struct aml_i2c_dev aml_i2c_dev_t;
 
-typedef enum {
-    AML_I2C_A,
-    AML_I2C_B,
-    AML_I2C_C,
-    AML_I2C_D,
-    AML_I2C_COUNT,
-} aml_i2c_port_t;
 
 typedef enum {
     TOKEN_END,
@@ -92,23 +85,3 @@ struct aml_i2c_dev {
     mtx_t          conn_mutex;
     mtx_t          txn_mutex;
 };
-
-zx_status_t aml_i2c_init(aml_i2c_dev_t **device, aml_i2c_port_t portnum);
-zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t *dev);
-zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len);
-zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len);
-zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t *dev, uint16_t addr);
-zx_status_t aml_i2c_start_xfer(aml_i2c_dev_t *dev);
-
-zx_status_t aml_i2c_connect(aml_i2c_connection_t ** conn,
-                             aml_i2c_dev_t *dev,
-                             uint32_t i2c_addr,
-                             uint32_t num_addr_bits);
-void aml_i2c_release(aml_i2c_connection_t* conn);
-
-zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, const uint8_t *buff, uint32_t len,
-                             i2c_complete_cb cb, void* cookie);
-zx_status_t aml_i2c_rd_async(aml_i2c_connection_t *conn, uint32_t len, i2c_complete_cb cb,
-                             void* cookie);
-zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, const uint8_t *txbuff, uint32_t txlen,
-                                uint32_t rxlen, i2c_complete_cb cb, void* cookie);

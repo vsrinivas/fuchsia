@@ -9,12 +9,14 @@
 #include <ddk/protocol/usb-mode-switch.h>
 #include <soc/aml-a113/a113-clocks.h>
 #include <soc/aml-a113/a113-gpio.h>
-#include <soc/aml-a113/a113-i2c.h>
+#include <soc/aml-common/aml-i2c.h>
+
+#include <threads.h>
 
 typedef struct {
     platform_bus_protocol_t pbus;
     a113_gpio_t gpio;
-    a113_i2c_t i2c;
+    aml_i2c_t i2c;
     usb_mode_switch_protocol_t usb_mode_switch;
     io_buffer_t usb_phy;
     zx_handle_t usb_phy_irq_handle;
