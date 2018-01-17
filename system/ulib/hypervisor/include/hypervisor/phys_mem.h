@@ -17,7 +17,7 @@ public:
     uintptr_t addr() const { return addr_; }
     size_t size() const { return vmo_size_; }
 
-private:
+protected:
     zx::vmo vmo_;
     size_t vmo_size_ = 0;
     uintptr_t addr_ = 0;
