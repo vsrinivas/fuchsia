@@ -57,6 +57,7 @@
         "garnet/packages/power_manager",
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
+        "garnet/packages/rust-crates-tests",
         "garnet/packages/sbase",
         "garnet/packages/test_runner",
         "garnet/packages/thinfs",
