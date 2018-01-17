@@ -74,8 +74,20 @@ typedef struct ethmac_ifc_virt {
 // takes an int32_t |value| and void* |data| which have meaning specific to
 // the parameter being set.
 
-// |value| param = bool. |data| param = unused.
+// |value| is bool. |data| is unused.
 #define ETHMAC_SETPARAM_PROMISC (1u)
+
+// |value| is bool. |data| is unused.
+#define ETHMAC_SETPARAM_MULTICAST_PROMISC (2u)
+
+#define ETHMAC_MULTICAST_FILTER_OVERFLOW -1
+
+// |value| is number of addresses, or ETHMAC_MULTICAST_FILTER_OVERFLOW for "too many to count."
+// |data| is |value|*6 bytes of MAC addresses. Caller retains ownership.
+// If |value| is _OVERFLOW, |data| is ignored.
+#define ETHMAC_SETPARAM_MULTICAST_FILTER (3u)
+
+#define ETHMAC_SETPARAM_DUMP_REGS (4u)
 
 // The ethernet midlayer will never call ethermac_protocol
 // methods from multiple threads simultaneously, but it

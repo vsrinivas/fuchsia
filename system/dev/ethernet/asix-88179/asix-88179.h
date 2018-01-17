@@ -114,7 +114,22 @@
 #define AX88179_PHYSR_SPEED  (3 << 14)
 #define AX88179_PHYSR_DUPLEX (1 << 13)
 
+// PROMISC = receive everything
 #define AX88179_RCR_PROMISC  (1 << 0)
+// AMALL = receive all multicast.
+#define AX88179_RCR_AMALL    (1 << 1)
+// AB = receive all broadcast.
+#define AX88179_RCR_AB       (1 << 3)
+// AM = use multicast filter (ignored if AMALL is set)
+#define AX88179_RCR_AM       (1 << 4)
+// AP = accept physical through multicast filter
+#define AX88179_RCR_AP       (1 << 5)
+// SO = start operation
+#define AX88179_RCR_SO       (1 << 7)
+// DROP_CRC_N 1 = don't drop CRC field (default 0)
+#define AX88179_RCR_DROP_CRCE_N (1 << 8)
+// IPE_N = enable IP alignment
+#define AX88179_RCR_IPE_N    (1 << 9)
 
 // Headers
 #define AX88179_RX_DROPPKT   0x80000000

@@ -57,6 +57,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     uint8_t mac_[6] = {};
 
     fbl::Mutex lock_;
+    bool dead_ = false;
     fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.

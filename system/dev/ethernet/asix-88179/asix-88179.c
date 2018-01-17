@@ -9,11 +9,12 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
+#include <lib/cksum.h>
+#include <pretty/hexdump.h>
+#include <sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
-#include <pretty/hexdump.h>
-#include <sync/completion.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -32,15 +33,18 @@
 #define RX_HEADER_SIZE 4
 #define AX88179_MTU 1500
 #define MAX_ETH_HDRS 26
+#define MAX_MULTICAST_FILTER_ADDRS 32
+#define MULTICAST_FILTER_NBYTES 8
 
 typedef struct {
     zx_device_t* device;
     zx_device_t* usb_device;
     usb_protocol_t usb;
 
-    uint8_t mac_addr[6];
+    uint8_t mac_addr[ETH_MAC_SIZE];
     uint8_t status[INTR_REQ_SIZE];
     bool online;
+    bool multicast_filter_overflow;
     uint8_t bulk_in_addr;
     uint8_t bulk_out_addr;
 
@@ -572,7 +576,7 @@ static zx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
-static zx_status_t ax88179_set_promisc(ax88179_t* eth, bool on) {
+static zx_status_t ax88179_twiddle_rcr_bit(ax88179_t* eth, uint16_t bit, bool on) {
     uint16_t rcr_bits;
     zx_status_t status = ax88179_read_mac(eth, AX88179_MAC_RCR, 2, &rcr_bits);
     if (status != ZX_OK) {
@@ -580,17 +584,59 @@ static zx_status_t ax88179_set_promisc(ax88179_t* eth, bool on) {
         return status;
     }
     if (on) {
-        rcr_bits |= AX88179_RCR_PROMISC;
+        rcr_bits |= bit;
     } else {
-        rcr_bits &= ~AX88179_RCR_PROMISC;
+        rcr_bits &= ~bit;
     }
-    ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &rcr_bits);
+    status = ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &rcr_bits);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
     }
     return status;
 }
 
+static inline zx_status_t ax88179_set_promisc(ax88179_t* eth, bool on) {
+    return ax88179_twiddle_rcr_bit(eth, AX88179_RCR_PROMISC, on);
+}
+
+static inline zx_status_t ax88179_set_multicast_promisc(ax88179_t* eth, bool on) {
+    if (eth->multicast_filter_overflow && !on) {
+        return ZX_OK;
+    }
+    return ax88179_twiddle_rcr_bit(eth, AX88179_RCR_AMALL, on);
+}
+
+static void set_filter_bit(const uint8_t* mac, uint8_t* filter) {
+    // Invert the seed (standard is ~0) and output to get usable bits.
+    uint32_t crc = ~crc32(0, mac, ETH_MAC_SIZE);
+    uint8_t reverse[8] = {0, 4, 2, 6, 1, 5, 3, 7};
+    filter[reverse[crc & 7]] |= 1 << reverse[(crc >> 3) & 7];
+}
+
+static zx_status_t ax88179_set_multicast_filter(ax88179_t* eth, int32_t n_addresses,
+                                                uint8_t* address_bytes) {
+    zx_status_t status = ZX_OK;
+    eth->multicast_filter_overflow = (n_addresses == ETHMAC_MULTICAST_FILTER_OVERFLOW) ||
+        (n_addresses > MAX_MULTICAST_FILTER_ADDRS);
+    if (eth->multicast_filter_overflow) {
+        status = ax88179_set_multicast_promisc(eth, true);
+        return status;
+    }
+
+    uint8_t filter[MULTICAST_FILTER_NBYTES];
+    memset(filter, 0, MULTICAST_FILTER_NBYTES);
+    for (int32_t i = 0; i < n_addresses; i++) {
+        set_filter_bit(address_bytes + i * ETH_MAC_SIZE, filter);
+    }
+    status = ax88179_write_mac(eth, AX88179_MAC_MFA, MULTICAST_FILTER_NBYTES, &filter);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MFA, status);
+        return status;
+    }
+    return status;
+}
+
+static void ax88179_dump_regs(ax88179_t* eth);
 static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, void* data) {
     ax88179_t* eth = ctx;
     zx_status_t status = ZX_OK;
@@ -600,6 +646,15 @@ static zx_status_t ax88179_set_param(void *ctx, uint32_t param, int32_t value, v
     switch (param) {
     case ETHMAC_SETPARAM_PROMISC:
         status = ax88179_set_promisc(eth, (bool)value);
+        break;
+    case ETHMAC_SETPARAM_MULTICAST_PROMISC:
+        status = ax88179_set_multicast_promisc(eth, (bool)value);
+        break;
+    case ETHMAC_SETPARAM_MULTICAST_FILTER:
+        status = ax88179_set_multicast_filter(eth, value, (uint8_t*)data);
+        break;
+    case ETHMAC_SETPARAM_DUMP_REGS:
+        ax88179_dump_regs(eth);
         break;
     default:
         status = ZX_ERR_NOT_SUPPORTED;
@@ -636,6 +691,7 @@ static void ax88179_dump_regs(ax88179_t* eth) {
     READ_REG(AX88179_MAC_SMSR, 1);
     READ_REG(AX88179_MAC_CSR, 1);
     READ_REG(AX88179_MAC_RCR, 2);
+    READ_REG(AX88179_MAC_MFA, MULTICAST_FILTER_NBYTES);
     READ_REG(AX88179_MAC_IPGCR, 3);
     READ_REG(AX88179_MAC_TR, 1);
     READ_REG(AX88179_MAC_MSR, 2);
@@ -750,10 +806,20 @@ static int ax88179_thread(void* arg) {
     }
 
     // Enable MAC RX
-    data = 0x039a;
+    // TODO(eventually): Once we get IGMP, turn off AMALL unless someone wants it.
+    data = AX88179_RCR_AMALL | AX88179_RCR_AB | AX88179_RCR_AM | AX88179_RCR_SO |
+        AX88179_RCR_DROP_CRCE_N | AX88179_RCR_IPE_N;
     status = ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &data);
     if (status < 0) {
         zxlogf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+        goto fail;
+    }
+
+    uint8_t filter[MULTICAST_FILTER_NBYTES];
+    memset(filter, 0, MULTICAST_FILTER_NBYTES);
+    status = ax88179_write_mac(eth, AX88179_MAC_MFA, MULTICAST_FILTER_NBYTES, &filter);
+    if (status < 0) {
+        zxlogf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MFA, status);
         goto fail;
     }
 

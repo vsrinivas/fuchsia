@@ -47,7 +47,8 @@ typedef struct ethdev0 {
     list_node_t list_active;
     list_node_t list_idle;
 
-    int promisc_requesters;
+    int32_t promisc_requesters;
+    int32_t multicast_promisc_requesters;
 
     ethmac_info_t info;
     uint32_t status;
@@ -78,11 +79,20 @@ typedef struct tx_info {
 // This client has requested promisc mode
 #define ETHDEV_PROMISC (0x20u)
 
+// This client has requested multicast promisc mode
+#define ETHDEV_MULTICAST_PROMISC (0x40u)
+
 // indicates the device is busy although its lock is released
 #define ETHDEV0_BUSY (1u)
 
 // Number of empty fifo entries to read at a time
 #define FIFO_BATCH_SZ 32
+
+// How many multicast addresses to remember before punting and turning on multicast-promiscuous
+// TODO(eventually): enable deleting addresses
+// If this value is changed, change the EthernetMulticastPromiscOnOverflow() test in
+//   zircon/system/utest/ethernet/ethernet.cpp
+#define MULTICAST_LIST_LIMIT (32)
 
 // ethernet instance device
 typedef struct ethdev {
@@ -118,6 +128,9 @@ typedef struct ethdev {
 
     zx_device_t* zxdev;
 
+    uint8_t multicast[MULTICAST_LIST_LIMIT][ETH_MAC_SIZE];
+    uint32_t n_multicast;
+
     uint32_t fail_rx_read;
     uint32_t fail_rx_write;
     uint32_t fail_tx_write;
@@ -125,34 +138,144 @@ typedef struct ethdev {
 
 #define FAIL_REPORT_RATE 50
 
-static inline ssize_t eth_set_promisc_locked(ethdev_t* edev, bool req_on) {
-    if (!req_on == !(edev->state & ETHDEV_PROMISC)) {
+static ssize_t eth_promisc_helper_logic_locked(ethdev_t* edev, bool req_on, uint32_t state_bit,
+                                               uint32_t param_id, int32_t* requesters_count) {
+    if (state_bit == 0 || state_bit & (state_bit - 1)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (!req_on == !(edev->state & state_bit)) {
         return ZX_OK; // Duplicate request
     }
     ethdev0_t* edev0 = edev->edev0;
     zx_status_t status = ZX_OK;
     if (req_on) {
-        edev0->promisc_requesters++;
-        edev->state |= ETHDEV_PROMISC;
-        if (edev0->promisc_requesters == 1) {
-            status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, true, NULL);
+        (*requesters_count)++;
+        edev->state |= state_bit;
+        if (*requesters_count == 1) {
+            status = edev0->mac.ops->set_param(edev0->mac.ctx, param_id, true, NULL);
             if (status != ZX_OK) {
-                edev0->promisc_requesters--;
-                edev->state &= ~ETHDEV_PROMISC;
+                (*requesters_count)--;
+                edev->state &= ~state_bit;
             }
         }
     } else {
-        edev0->promisc_requesters--;
-        edev->state &= ~ETHDEV_PROMISC;
-        if (edev0->promisc_requesters == 0) {
-            status = edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_PROMISC, false, NULL);
+        (*requesters_count)--;
+        edev->state &= ~state_bit;
+        if (*requesters_count == 0) {
+            status = edev0->mac.ops->set_param(edev0->mac.ctx, param_id, false, NULL);
             if (status != ZX_OK) {
-                edev0->promisc_requesters++;
-                edev->state |= ETHDEV_PROMISC;
+                (*requesters_count)++;
+                edev->state |= state_bit;
             }
         }
     }
     return status;
+}
+
+static ssize_t eth_set_promisc_locked(ethdev_t* edev, bool req_on) {
+    return eth_promisc_helper_logic_locked(edev, req_on, ETHDEV_PROMISC,
+                                           ETHMAC_SETPARAM_PROMISC,
+                                           &edev->edev0->promisc_requesters);
+}
+
+static ssize_t eth_set_multicast_promisc_locked(ethdev_t* edev, bool req_on) {
+    return eth_promisc_helper_logic_locked(edev, req_on, ETHDEV_MULTICAST_PROMISC,
+                                           ETHMAC_SETPARAM_MULTICAST_PROMISC,
+                                           &edev->edev0->multicast_promisc_requesters);
+}
+
+static ssize_t eth_rebuild_multicast_filter_locked(ethdev_t* edev) {
+    ethdev0_t* edev0 = edev->edev0;
+    uint8_t multicast[MULTICAST_LIST_LIMIT][ETH_MAC_SIZE];
+    uint32_t n_multicast = 0;
+    ethdev_t* edev_i;
+    list_for_every_entry(&edev0->list_active, edev_i, ethdev_t, node) {
+        for (uint32_t i = 0; i < edev_i->n_multicast; i++) {
+            if (n_multicast == MULTICAST_LIST_LIMIT) {
+                return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
+                                                 ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL);
+            }
+            memcpy(multicast[n_multicast], edev_i->multicast[i], ETH_MAC_SIZE);
+            n_multicast++;
+        }
+    }
+    return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
+                                     n_multicast, multicast);
+    return true;
+}
+
+static int eth_multicast_addr_index(ethdev_t* edev, uint8_t* mac) {
+    for (uint32_t i = 0; i < edev->n_multicast; i++) {
+        if (!memcmp(edev->multicast[i], mac, ETH_MAC_SIZE)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static ssize_t eth_add_multicast_address_locked(ethdev_t* edev, uint8_t* mac) {
+    if (!(mac[0] & 1)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (eth_multicast_addr_index(edev, mac) != -1) {
+        return ZX_OK;
+    }
+    if (edev->n_multicast < MULTICAST_LIST_LIMIT) {
+        memcpy(edev->multicast[edev->n_multicast], mac, ETH_MAC_SIZE);
+        edev->n_multicast++;
+        return eth_rebuild_multicast_filter_locked(edev);
+    } else {
+        ethdev0_t* edev0 = edev->edev0;
+        return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
+                                         ETHMAC_MULTICAST_FILTER_OVERFLOW, NULL);
+    }
+    return ZX_OK;
+}
+
+static ssize_t eth_del_multicast_address_locked(ethdev_t* edev, uint8_t* mac) {
+    int ix = eth_multicast_addr_index(edev, mac);
+    if (ix == -1) {
+        // We may have overflowed the list and not remember an address. Nothing will go wrong if
+        // they try to stop listening to an address they never added.
+        return ZX_OK;
+    }
+    edev->n_multicast--;
+    memcpy(&edev->multicast[ix], &edev->multicast[edev->n_multicast], ETH_MAC_SIZE);
+    return eth_rebuild_multicast_filter_locked(edev);
+}
+
+static ssize_t eth_test_clear_multicast_promisc_locked(ethdev_t* edev) {
+    zx_status_t status = ZX_OK;
+    ethdev_t* edev_i;
+    list_for_every_entry(&edev->edev0->list_active, edev_i, ethdev_t, node) {
+        if ((status = eth_set_multicast_promisc_locked(edev_i, false)) != ZX_OK) {
+            return status;
+        }
+    }
+    return status;
+}
+
+
+static ssize_t eth_config_multicast_locked(ethdev_t* edev, eth_multicast_config_t* config) {
+    switch (config->op) {
+    case ETH_MULTICAST_ADD_MAC:
+        return eth_add_multicast_address_locked(edev, config->mac);
+    case ETH_MULTICAST_DEL_MAC:
+        return eth_del_multicast_address_locked(edev, config->mac);
+    case ETH_MULTICAST_RECV_ALL:
+        return eth_set_multicast_promisc_locked(edev, true);
+    case ETH_MULTICAST_RECV_FILTER:
+        return eth_set_multicast_promisc_locked(edev, false);
+    case ETH_MULTICAST_TEST_FILTER:
+        zxlogf(INFO,
+               "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.\n");
+        return eth_test_clear_multicast_promisc_locked(edev);
+    case ETH_MULTICAST_DUMP_REGS:
+        return edev->edev0->mac.ops->set_param(edev->edev0->mac.ctx,
+                                               ETHMAC_SETPARAM_DUMP_REGS, 0, NULL);
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
 }
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
@@ -385,7 +508,6 @@ static int eth_tx_thread(void* arg) {
                 break;
             }
         }
-
         if (eth_send(edev, entries, count)) {
             break;
         }
@@ -527,6 +649,8 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         edev->state |= ETHDEV_RUNNING;
         list_delete(&edev->node);
         list_add_tail(&edev0->list_active, &edev->node);
+        // TODO - After we get IGMP, don't automatically set multicast promisc true
+        eth_set_multicast_promisc_locked(edev, true);
     } else {
         zxlogf(ERROR, "eth [%s]: failed to start mac: %d\n", edev->name, status);
     }
@@ -543,6 +667,12 @@ static zx_status_t eth_stop_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS 
         edev->state &= (~ETHDEV_RUNNING);
         list_delete(&edev->node);
         list_add_tail(&edev0->list_idle, &edev->node);
+        // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
+        // this ethdev had any state set. Ignore failures, which may come from drivers not
+        // supporting the feature. (TODO: check failure codes).
+        eth_set_promisc_locked(edev, false);
+        eth_set_multicast_promisc_locked(edev, false);
+        eth_rebuild_multicast_filter_locked(edev);
         if (list_is_empty(&edev0->list_active)) {
             if (!(edev->state & ETHDEV_DEAD)) {
                 // Release the lock to allow other device operations in callback routine.
@@ -655,6 +785,13 @@ static zx_status_t eth_ioctl(void* ctx, uint32_t op,
             goto done;
         }
         status = eth_set_promisc_locked(edev, *(bool*)in_buf);
+        break;
+    case IOCTL_ETHERNET_CONFIG_MULTICAST:
+        if (in_len != sizeof(eth_multicast_config_t) || in_buf == NULL) {
+            status = ZX_ERR_INVALID_ARGS;
+            goto done;
+        }
+        status = eth_config_multicast_locked(edev, (eth_multicast_config_t*)in_buf);
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
