@@ -48,8 +48,21 @@ source_set("entry") {
     "//zircon/public/lib/zx",
   ]
 
-  libs = [
-    "zircon",
+  libs = [ "zircon" ]
+}
+
+source_set("pci_driver_gtest") {
+  testonly = true
+
+  configs += [ "$magma_build_root:magma_tests_include_config" ]
+  sources = [
+    "pci_driver_test_gtest.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/magma/src/magma_util/platform:device",
+    "//third_party/gtest",
+    "//zircon/public/lib/ddk",
   ]
 }
 
@@ -58,8 +71,8 @@ source_set("test_entry_pci") {
 
   configs += [ "$magma_build_root:magma_tests_include_config" ]
   sources = [
-    "pci_driver_test_gtest.cc",
     "magma_entry.cc",
+    "pci_driver_test_gtest.cc",
   ]
 
   deps = [
@@ -79,7 +92,5 @@ source_set("test_entry_pci") {
     "//zircon/public/lib/driver",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }

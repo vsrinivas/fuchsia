@@ -13,8 +13,8 @@ driver_module("msd_intel") {
   output_name = "libmsd_intel"
 
   deps = [
-    "src",
     ":msd_intel_entry",
+    "src",
   ]
 
   ldflags = [ "$shared_ldflags" ]
@@ -26,25 +26,56 @@ driver_module("msd_intel_test") {
   output_name = "libmsd_intel_test"
 
   deps = [
-    "src",
     ":msd_intel_test_entry",
+    "src",
   ]
 
   ldflags = [ "$shared_ldflags" ]
 }
 
-magma_pci_entry("msd_intel_entry") {
+source_set("msd_intel_entry") {
   pci_vendor_id = INTEL_PCI_VID
+  sources = [
+    "src/driver_entry.cc",
+  ]
+  defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/sys_driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
+  ]
+  libs = [ "zircon" ]
 }
 
-magma_pci_entry("msd_intel_test_entry") {
+source_set("msd_intel_test_entry") {
   testonly = true
 
   pci_vendor_id = INTEL_PCI_VID
-  test_entry = true
+  sources = [
+    "src/driver_entry.cc",
+  ]
+  defines = [
+    "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id,
+    "MAGMA_TEST_DRIVER=1",
+  ]
 
   deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/sys_driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
+  ]
+  libs = [ "zircon" ]
+  deps += [
     ":indriver_gtest",
+    "//garnet/lib/magma/src/sys_driver:pci_driver_gtest",
   ]
 }
 
