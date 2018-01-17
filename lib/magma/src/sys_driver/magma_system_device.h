@@ -31,17 +31,10 @@ class MagmaSystemDevice {
 public:
     static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device)
     {
-        msd_connection_t* connection =
-            msd_device_open(msd_device.get(), magma::PlatformThreadId().id());
-        if (!connection)
-            return DRETP(nullptr, "couldn't open connection");
-
-        return std::make_unique<MagmaSystemDevice>(std::move(msd_device),
-                                                   MsdConnectionUniquePtr(connection));
+        return std::make_unique<MagmaSystemDevice>(std::move(msd_device));
     }
 
-    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev, msd_connection_unique_ptr_t msd_connection)
-        : msd_dev_(std::move(msd_dev)), msd_connection_(std::move(msd_connection))
+    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev))
     {
         connection_map_ = std::make_unique<std::unordered_map<std::thread::id, Connection>>();
     }
@@ -55,6 +48,17 @@ public:
 
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
+
+    using PresentBufferCallback = std::function<void(
+        std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
+        uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+        std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
+        std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)>;
+
+    void SetPresentBufferCallback(PresentBufferCallback callback)
+    {
+        present_buffer_callback_ = callback;
+    }
 
     void PageFlip(MagmaSystemConnection* connection, std::shared_ptr<MagmaSystemBuffer> buf,
                   magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
@@ -92,7 +96,7 @@ public:
 
 private:
     msd_device_unique_ptr_t msd_dev_;
-    msd_connection_unique_ptr_t msd_connection_; // for presenting buffers
+    PresentBufferCallback present_buffer_callback_;
 
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;

@@ -35,15 +35,6 @@ public:
 
     Gtt* GetGtt() override { return device_->gtt(); }
 
-    void PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                       present_buffer_callback_t callback) override
-    {
-        return device_->PresentBuffer(buffer_handle, image_desc, std::move(wait_semaphores),
-                                      std::move(signal_semaphores), callback);
-    }
-
 private:
     std::unique_ptr<MsdIntelDeviceCore> device_;
 };

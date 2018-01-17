@@ -132,14 +132,6 @@ public:
 
     Gtt* GetGtt() override { return &gtt_; }
 
-    void PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                       present_buffer_callback_t callback) override
-    {
-        DASSERT(false);
-    }
-
     zx_intel_gpu_core_protocol_ops_t* ops() override { return intel_gpu_core_->ops; }
 
     void* context() override { return intel_gpu_core_->ctx; }

@@ -41,8 +41,8 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
     std::unique_lock<std::mutex> lock(page_flip_mutex_);
     std::shared_ptr<MagmaSystemBuffer> last_buffer_copy;
 
-    msd_connection_present_buffer(msd_connection_.get(), buf->msd_buf(), image_desc, 0, 0, nullptr,
-                                  nullptr, nullptr);
+    DASSERT(present_buffer_callback_);
+    present_buffer_callback_(buf, image_desc, 0, 0, {}, nullptr);
 
     DLOG("PageFlipAndEnable enable %d", enable);
     page_flip_enable_ = enable;
@@ -80,18 +80,6 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
     }
 
     return last_buffer_copy;
-}
-
-static void page_flip_callback(magma_status_t status, uint64_t vblank_time_ns, void* data)
-{
-    if (status != MAGMA_STATUS_OK) {
-        DLOG("page_flip_callback: error status %d", status);
-        return;
-    }
-
-    auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(data);
-    semaphore->Signal();
-    delete semaphore;
 }
 
 // Called by display connection threads
@@ -137,17 +125,9 @@ void MagmaSystemDevice::PageFlip(
         return;
     }
 
-    DASSERT(wait_semaphore_count + signal_semaphore_count == semaphores.size());
-
-    std::vector<msd_semaphore_t*> msd_semaphores(semaphores.size());
-    for (uint32_t i = 0; i < semaphores.size(); i++) {
-        msd_semaphores[i] = semaphores[i]->msd_semaphore();
-    }
-
-    msd_connection_present_buffer(connection->msd_connection(), buf->msd_buf(), image_desc,
-                                  wait_semaphore_count, signal_semaphore_count,
-                                  msd_semaphores.data(), page_flip_callback,
-                                  buffer_presented_semaphore.release());
+    DASSERT(present_buffer_callback_);
+    present_buffer_callback_(buf, image_desc, wait_semaphore_count, signal_semaphore_count,
+                             std::move(semaphores), std::move(buffer_presented_semaphore));
 
     last_flipped_buffer_ = buf;
 }

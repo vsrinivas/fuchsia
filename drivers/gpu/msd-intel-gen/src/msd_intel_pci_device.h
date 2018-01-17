@@ -24,13 +24,6 @@ public:
     virtual void UnregisterInterruptCallback() = 0;
     virtual Gtt* GetGtt() = 0;
 
-    // To be removed upon display driver separation.
-    virtual void
-    PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
-                  std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                  std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
-                  present_buffer_callback_t callback) = 0;
-
     static std::unique_ptr<MsdIntelPciDevice> CreateCore(void* platform_device_handle);
     static std::unique_ptr<MsdIntelPciDevice> CreateShim(void* platform_device_handle);
 };

@@ -4,7 +4,8 @@
 
 #include "platform_device_helper.h"
 
-std::unique_ptr<magma::PlatformPciDevice> TestPlatformPciDevice::g_instance;
+magma::PlatformPciDevice* TestPlatformPciDevice::g_instance;
+void* TestPlatformPciDevice::core_device_;
 
 std::unique_ptr<magma::PlatformDevice> TestPlatformDevice::g_instance;
 

@@ -217,12 +217,34 @@ TEST(MagmaSystemConnection, PageFlip)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev =
+    auto device =
         std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+
+    device->SetPresentBufferCallback(
+        [](std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
+           uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+           std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
+           std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) {
+            static std::vector<std::shared_ptr<MagmaSystemSemaphore>> last_semaphores;
+
+            for (uint32_t i = 0; i < last_semaphores.size(); i++) {
+                last_semaphores[i]->platform_semaphore()->Signal();
+            }
+
+            last_semaphores.clear();
+
+            if (buffer_presented_semaphore)
+                buffer_presented_semaphore->Signal();
+
+            for (uint32_t i = wait_semaphore_count;
+                 i < wait_semaphore_count + signal_semaphore_count; i++) {
+                last_semaphores.push_back(semaphores[i]);
+            }
+        });
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
+    MagmaSystemConnection connection(device, MsdConnectionUniquePtr(msd_connection),
                                      MAGMA_CAPABILITY_DISPLAY);
 
     auto buf = magma::PlatformBuffer::Create(PAGE_SIZE, "test");

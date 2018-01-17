@@ -41,7 +41,7 @@ public:
         return true;
     }
 
-    void UnregisterCallback() { interrupt_manager_.reset(); }
+    void UnregisterCallback() { forwarding_mask_ = 0; }
 
     Gtt* gtt() { return gtt_.get(); }
 

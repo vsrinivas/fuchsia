@@ -35,6 +35,7 @@ driver_module("msd_intel_test") {
 
 source_set("msd_intel_entry") {
   pci_vendor_id = INTEL_PCI_VID
+  public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [
     "src/driver_entry.cc",
   ]
@@ -55,6 +56,7 @@ source_set("msd_intel_test_entry") {
   testonly = true
 
   pci_vendor_id = INTEL_PCI_VID
+  public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [
     "src/driver_entry.cc",
   ]

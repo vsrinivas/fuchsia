@@ -21,43 +21,6 @@ msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
         std::make_unique<ClientContext>(connection, connection->per_process_gtt()));
 }
 
-void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
-                                   magma_system_image_descriptor* image_desc,
-                                   uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-                                   msd_semaphore_t** semaphores,
-                                   msd_present_buffer_callback_t callback, void* callback_data)
-{
-    auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
-
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores(wait_semaphore_count);
-    uint32_t index = 0;
-    for (uint32_t i = 0; i < wait_semaphore_count; i++) {
-        wait_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
-    }
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores(
-        signal_semaphore_count);
-    for (uint32_t i = 0; i < signal_semaphore_count; i++) {
-        signal_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
-    }
-
-    // We can't use our buffer wrapper objects here because there's no thread safety.
-    uint32_t buffer_handle;
-    if (!MsdIntelAbiBuffer::cast(abi_buffer)
-             ->ptr()
-             ->platform_buffer()
-             ->duplicate_handle(&buffer_handle)) {
-        magma::log(magma::LOG_WARNING, "Failed to duplicate handle; can't present this buffer");
-        return;
-    }
-
-    connection->PresentBuffer(
-        buffer_handle, image_desc, std::move(wait_semaphores), std::move(signal_semaphores),
-        [callback, callback_data](magma_status_t status, uint64_t vblank_time_ns) {
-            if (callback)
-                callback(status, vblank_time_ns, callback_data);
-        });
-}
-
 magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();

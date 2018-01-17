@@ -9,10 +9,11 @@
 #include "gtest/gtest.h"
 #include <ddk/device.h>
 
-void magma_indriver_test(zx_device_t* device)
+void magma_indriver_test(magma::PlatformPciDevice* platform_device, void* core_device)
 {
     DLOG("running magma unit tests");
-    TestPlatformPciDevice::SetInstance(magma::PlatformPciDevice::Create(device));
+    TestPlatformPciDevice::SetInstance(platform_device);
+    TestPlatformPciDevice::SetCoreDevice(core_device);
     const int kArgc = 3;
     const char* argv[kArgc] = {"magma_indriver_test", "--gtest_output=xml:/data/test_out/",
                                "--gtest_filter=-PlatformDevice*.*"};

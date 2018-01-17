@@ -106,7 +106,6 @@ public:
                                std::shared_ptr<MsdIntelBuffer> buffer) override
             {
             }
-            magma::PlatformPciDevice* platform_device() override { return nullptr; }
 
             std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
             std::unique_ptr<magma::PlatformSemaphore> semaphore_;

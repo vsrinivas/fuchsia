@@ -2,28 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "core/msd_intel_device_core.h"
 #include "helper/platform_device_helper.h"
 #include "magma_util/semaphore_port.h"
-#include "msd_intel_device.h"
 #include "gtest/gtest.h"
-
-class TestMsdIntelDevice {
-public:
-    static MsdIntelPciDevice* pci_device(MsdIntelDevice* device)
-    {
-        return static_cast<MsdIntelPciDevice*>(device->platform_device());
-    }
-};
 
 class TestDisplay {
 public:
     static void Flip(uint32_t num_buffers, uint32_t num_frames)
     {
-        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
-        ASSERT_NE(platform_device, nullptr);
-
-        std::unique_ptr<MsdIntelDevice> device(
-            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), true));
+        auto device = reinterpret_cast<MsdIntelDeviceCore*>(TestPlatformPciDevice::GetCoreDevice());
         ASSERT_NE(device, nullptr);
 
         uint32_t buffer_size = 2160 * 1440 * 4;
@@ -59,38 +47,35 @@ public:
             uint32_t handle;
             EXPECT_TRUE(buffers[buffer_index]->platform_buffer()->duplicate_handle(&handle));
 
-            TestMsdIntelDevice::pci_device(device.get())
-                ->PresentBuffer(handle, &image_desc, {}, {signal_semaphore},
-                                [frame](magma_status_t status, uint64_t vblank_time_ns) {
-                                    static uint32_t callback_frame = 0;
-                                    static uint64_t last_time_ns = 0;
-                                    DLOG("present callback status %d frame %u ns %lu", status,
-                                         frame, vblank_time_ns);
-                                    EXPECT_EQ(status, MAGMA_STATUS_OK);
-                                    EXPECT_EQ(callback_frame++, frame);
-                                    EXPECT_GT(vblank_time_ns, last_time_ns);
-                                    last_time_ns = vblank_time_ns;
-                                });
+            device->PresentBuffer(handle, &image_desc, {}, {signal_semaphore},
+                                  [frame](magma_status_t status, uint64_t vblank_time_ns) {
+                                      static uint32_t callback_frame = 0;
+                                      static uint64_t last_time_ns = 0;
+                                      DLOG("present callback status %d frame %u ns %lu", status,
+                                           frame, vblank_time_ns);
+                                      EXPECT_EQ(status, MAGMA_STATUS_OK);
+                                      EXPECT_EQ(callback_frame++, frame);
+                                      EXPECT_GT(vblank_time_ns, last_time_ns);
+                                      last_time_ns = vblank_time_ns;
+                                  });
             if (frame > 0)
                 EXPECT_TRUE(signal_semaphore->Wait(1000));
         }
     }
 
-    TestDisplay(std::unique_ptr<MsdIntelDevice> device,
-                std::unique_ptr<magma::SemaphorePort> semaphore_port)
+    TestDisplay(MsdIntelDeviceCore* device, std::unique_ptr<magma::SemaphorePort> semaphore_port)
         : device_(std::move(device)), semaphore_port_(std::move(semaphore_port))
     {
     }
 
     static std::unique_ptr<TestDisplay> Create()
     {
-        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
-        if (!platform_device)
-            return DRETP(nullptr, "no platform_device");
+        auto core_device =
+            reinterpret_cast<MsdIntelDeviceCore*>(TestPlatformPciDevice::GetCoreDevice());
+        if (!core_device)
+            return DRETP(nullptr, "no core device");
 
-        return std::make_unique<TestDisplay>(
-            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), true),
-            magma::SemaphorePort::Create());
+        return std::make_unique<TestDisplay>(core_device, magma::SemaphorePort::Create());
     }
 
     void FlipSync(uint32_t num_buffers)
@@ -137,20 +122,17 @@ public:
             uint32_t handle;
             EXPECT_TRUE(buffers_[i]->platform_buffer()->duplicate_handle(&handle));
 
-            TestMsdIntelDevice::pci_device(device_.get())
-                ->PresentBuffer(handle, &image_desc,
-                                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{
-                                    this->wait_semaphores_[i]},
-                                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{
-                                    this->signal_semaphores_[i]},
-                                nullptr);
+            device_->PresentBuffer(
+                handle, &image_desc,
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{this->wait_semaphores_[i]},
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>>{this->signal_semaphores_[i]},
+                nullptr);
 
             // Flip another buffer to push the previous one off the display
             if (i > 0) {
                 EXPECT_TRUE(follow_on->platform_buffer()->duplicate_handle(&handle));
 
-                TestMsdIntelDevice::pci_device(device_.get())
-                    ->PresentBuffer(handle, &image_desc, {}, {}, nullptr);
+                device_->PresentBuffer(handle, &image_desc, {}, {}, nullptr);
             }
 
             // Delay must be long enough to flush out buffer that's been erroneously
@@ -167,17 +149,16 @@ public:
         EXPECT_TRUE(buffers_[0]->platform_buffer()->duplicate_handle(&handle));
 
         // Extra flip to release the last buffer
-        TestMsdIntelDevice::pci_device(device_.get())
-            ->PresentBuffer(handle, &image_desc,
-                            std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
-                            std::vector<std::shared_ptr<magma::PlatformSemaphore>>{}, nullptr);
+        device_->PresentBuffer(handle, &image_desc,
+                               std::vector<std::shared_ptr<magma::PlatformSemaphore>>{},
+                               std::vector<std::shared_ptr<magma::PlatformSemaphore>>{}, nullptr);
 
         DLOG("joining wait thread");
         wait_thread.join();
     }
 
 private:
-    std::unique_ptr<MsdIntelDevice> device_;
+    MsdIntelDeviceCore* device_;
     std::vector<std::shared_ptr<MsdIntelBuffer>> buffers_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;

@@ -12,13 +12,15 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
+#include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
 #include <atomic>
+#include <set>
+#include <thread>
 #include <zircon/process.h>
 #include <zircon/types.h>
-#include <thread>
 
 #include "magma_util/cache_flush.h"
 #include "magma_util/dlog.h"
@@ -27,8 +29,13 @@
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_buffer.h"
 
+#include "core/msd_intel_device_core.h"
+#include "msd_intel_buffer.h"
+#include "msd_intel_pci_device.h"
+#include "msd_intel_semaphore.h"
+
 #if MAGMA_TEST_DRIVER
-void magma_indriver_test(zx_device_t* device);
+void magma_indriver_test(magma::PlatformPciDevice* platform_device, void* core_device);
 #endif
 
 struct sysdrv_device_t {
@@ -44,6 +51,11 @@ struct sysdrv_device_t {
 
     zx_display_cb_t ownership_change_callback{nullptr};
     void* ownership_change_cookie{nullptr};
+
+    std::unique_ptr<MsdIntelDeviceCore> core_device;
+    zx_intel_gpu_core_protocol_t gpu_core_protocol;
+    std::set<uint64_t> client_gtt_allocations;
+    std::unordered_map<uint32_t, std::unique_ptr<magma::PlatformMmio>> client_mmio_allocations;
 
     std::unique_ptr<magma::PlatformBuffer> console_buffer;
     std::unique_ptr<magma::PlatformBuffer> placeholder_buffer;
@@ -64,6 +76,97 @@ static int magma_stop(sysdrv_device_t* dev);
 #endif
 
 sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
+
+// implement core device protocol
+static zx_status_t read_pci_config_16(void* ctx, uint64_t addr, uint16_t* value_out)
+{
+    if (!get_device(ctx)->core_device->platform_device()->ReadPciConfig16(addr, value_out))
+        return DRET_MSG(ZX_ERR_INTERNAL, "ReadPciConfig16 failed");
+    return ZX_OK;
+}
+
+static zx_status_t map_pci_mmio(void* ctx, uint32_t pci_bar, void** addr_out, uint64_t* size_out)
+{
+    std::unique_ptr<magma::PlatformMmio> platform_mmio =
+        get_device(ctx)->core_device->platform_device()->CpuMapPciMmio(
+            pci_bar, magma::PlatformMmio::CachePolicy::CACHE_POLICY_UNCACHED_DEVICE);
+    if (!platform_mmio)
+        return DRET_MSG(ZX_ERR_INTERNAL, "CpuMapPciMmio failed");
+
+    *addr_out = platform_mmio->addr();
+    *size_out = platform_mmio->size();
+    get_device(ctx)->client_mmio_allocations[pci_bar] = std::move(platform_mmio);
+
+    return ZX_OK;
+}
+
+static zx_status_t unmap_pci_mmio(void* ctx, uint32_t pci_bar)
+{
+    if (get_device(ctx)->client_mmio_allocations.erase(pci_bar) != 1)
+        return DRET_MSG(ZX_ERR_INTERNAL, "failed to erase mmio mapping for pci_bar %d", pci_bar);
+    return ZX_OK;
+}
+
+static zx_status_t register_interrupt_callback(void* ctx,
+                                               zx_intel_gpu_core_interrupt_callback_t callback,
+                                               void* data, uint32_t interrupt_mask)
+{
+    if (!get_device(ctx)->core_device->RegisterCallback(callback, data, interrupt_mask))
+        return DRET_MSG(ZX_ERR_INTERNAL, "RegisterCallback failed");
+    return ZX_OK;
+}
+
+static zx_status_t unregister_interrupt_callback(void* ctx)
+{
+    get_device(ctx)->core_device->UnregisterCallback();
+    return ZX_OK;
+}
+
+static uint64_t gtt_get_size(void* ctx) { return get_device(ctx)->core_device->gtt()->Size(); }
+
+static zx_status_t gtt_alloc(void* ctx, uint64_t size, uint64_t* addr_out)
+{
+    if (!get_device(ctx)->core_device->gtt()->Alloc(size * PAGE_SIZE, 0, addr_out))
+        return DRET_MSG(ZX_ERR_INTERNAL, "Alloc failed");
+    get_device(ctx)->client_gtt_allocations.insert(*addr_out);
+    return ZX_OK;
+}
+
+static zx_status_t gtt_free(void* ctx, uint64_t addr)
+{
+    if (!get_device(ctx)->core_device->gtt()->Free(addr))
+        return DRET_MSG(ZX_ERR_INTERNAL, "Free failed");
+    get_device(ctx)->client_gtt_allocations.erase(addr);
+    return ZX_OK;
+}
+
+static zx_status_t gtt_clear(void* ctx, uint64_t addr)
+{
+    if (!get_device(ctx)->core_device->gtt()->Clear(addr))
+        return DRET_MSG(ZX_ERR_INTERNAL, "Clear failed");
+    return ZX_OK;
+}
+
+static zx_status_t gtt_insert(void* ctx, uint64_t addr, zx_handle_t buffer, uint64_t page_offset,
+                              uint64_t page_count)
+{
+    if (!get_device(ctx)->core_device->gtt()->Insert(addr, buffer, page_offset * PAGE_SIZE,
+                                                     page_count * PAGE_SIZE, CACHING_LLC))
+        return DRET_MSG(ZX_ERR_INTERNAL, "Insert failed");
+    return ZX_OK;
+}
+
+static zx_intel_gpu_core_protocol_ops_t gpu_core_protocol_ops = {
+    .read_pci_config_16 = read_pci_config_16,
+    .map_pci_mmio = map_pci_mmio,
+    .unmap_pci_mmio = unmap_pci_mmio,
+    .register_interrupt_callback = register_interrupt_callback,
+    .unregister_interrupt_callback = unregister_interrupt_callback,
+    .gtt_get_size = gtt_get_size,
+    .gtt_alloc = gtt_alloc,
+    .gtt_free = gtt_free,
+    .gtt_clear = gtt_clear,
+    .gtt_insert = gtt_insert};
 
 // implement display protocol
 
@@ -405,6 +508,13 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     // map resources and initialize the device
     auto device = std::make_unique<sysdrv_device_t>();
 
+    device->core_device = MsdIntelDeviceCore::Create(zx_device);
+    if (!device->core_device)
+        return DRET_MSG(ZX_ERR_INTERNAL, "couldn't create core device");
+
+    device->gpu_core_protocol.ops = &gpu_core_protocol_ops;
+    device->gpu_core_protocol.ctx = device.get();
+
     zx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
     zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
@@ -471,7 +581,10 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
 
 #if MAGMA_TEST_DRIVER
     DLOG("running magma indriver test");
-    magma_indriver_test(zx_device);
+    {
+        auto platform_device = MsdIntelPciDevice::CreateShim(&device->gpu_core_protocol);
+        magma_indriver_test(platform_device.get(), device->core_device.get());
+    }
 #endif
 
     device->parent_device = zx_device;
@@ -519,11 +632,59 @@ static int magma_start(sysdrv_device_t* device)
 {
     DLOG("magma_start");
 
-    device->magma_system_device = device->magma_driver->CreateDevice(device->parent_device);
+    device->magma_system_device = device->magma_driver->CreateDevice(&device->gpu_core_protocol);
     if (!device->magma_system_device)
         return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
 
     DLOG("Created device %p", device->magma_system_device.get());
+
+    auto present_buffer_callback =
+        [device](std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
+                 uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                 std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
+                 std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) {
+            std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores(
+                wait_semaphore_count);
+            uint32_t index = 0;
+            for (uint32_t i = 0; i < wait_semaphore_count; i++) {
+                wait_semaphores[i] =
+                    MsdIntelAbiSemaphore::cast(semaphores[index++]->msd_semaphore())->ptr();
+            }
+            std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores(
+                signal_semaphore_count);
+            for (uint32_t i = 0; i < signal_semaphore_count; i++) {
+                signal_semaphores[i] =
+                    MsdIntelAbiSemaphore::cast(semaphores[index++]->msd_semaphore())->ptr();
+            }
+
+            // We can't use our buffer wrapper objects here because there's no thread safety.
+            uint32_t buffer_handle;
+            if (!buf->platform_buffer()->duplicate_handle(&buffer_handle)) {
+                magma::log(magma::LOG_WARNING,
+                           "Failed to duplicate handle; can't present this buffer");
+                return;
+            }
+
+            void* data =
+                buffer_presented_semaphore ? buffer_presented_semaphore.release() : nullptr;
+
+            device->core_device->PresentBuffer(
+                buffer_handle, image_desc, std::move(wait_semaphores), std::move(signal_semaphores),
+                [data](magma_status_t status, uint64_t vblank_time_ns) {
+                    if (status != MAGMA_STATUS_OK) {
+                        DLOG("page_flip_callback: error status %d", status);
+                        return;
+                    }
+
+                    if (data) {
+                        auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(data);
+                        semaphore->Signal();
+                        delete semaphore;
+                    }
+                });
+        };
+
+    device->magma_system_device->SetPresentBufferCallback(present_buffer_callback);
 
     DASSERT(device->console_buffer);
     DASSERT(device->placeholder_buffer);
@@ -558,6 +719,14 @@ static int magma_stop(sysdrv_device_t* device)
 
     device->magma_system_device->Shutdown();
     device->magma_system_device.reset();
+
+    // Release all client gtt allocations
+    for (auto addr : device->client_gtt_allocations) {
+        device->core_device->gtt()->Free(addr);
+    }
+    device->client_gtt_allocations.clear();
+    device->client_mmio_allocations.clear();
+    device->core_device->UnregisterCallback();
 
     return ZX_OK;
 }

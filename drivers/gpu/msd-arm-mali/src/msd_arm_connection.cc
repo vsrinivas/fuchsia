@@ -40,14 +40,6 @@ void msd_context_destroy(msd_context_t* ctx)
     delete context;
 }
 
-void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
-                                   magma_system_image_descriptor* image_desc,
-                                   uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-                                   msd_semaphore_t** semaphores,
-                                   msd_present_buffer_callback_t callback, void* callback_data)
-{
-}
-
 bool MsdArmConnection::ExecuteAtom(
     volatile magma_arm_mali_atom* atom,
     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* semaphores)

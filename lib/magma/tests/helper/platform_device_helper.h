@@ -11,12 +11,16 @@
 
 class TestPlatformPciDevice {
 public:
-    static magma::PlatformPciDevice* GetInstance() { return g_instance.get(); }
+    static magma::PlatformPciDevice* GetInstance() { return g_instance; }
 
-    static void SetInstance(std::unique_ptr<magma::PlatformPciDevice> platform_device)
+    static void SetInstance(magma::PlatformPciDevice* platform_device)
     {
-        g_instance = std::move(platform_device);
+        g_instance = platform_device;
     }
+
+    // TODO: remove when display tests removed
+    static void SetCoreDevice(void* device) { core_device_ = device; }
+    static void* GetCoreDevice() { return core_device_; }
 
     static bool is_intel_gen(uint16_t device_id)
     {
@@ -33,7 +37,8 @@ public:
         return false;
     }
 
-    static std::unique_ptr<magma::PlatformPciDevice> g_instance;
+    static magma::PlatformPciDevice* g_instance;
+    static void* core_device_;
 };
 
 class TestPlatformDevice {
