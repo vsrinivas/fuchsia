@@ -15,8 +15,13 @@
 #define GOOGLE_TPM_HID_STRING      "GOOG0005"
 #define GOOGLE_TBMC_HID_STRING     "GOOG0006"
 #define DPTF_THERMAL_HID_STRING    "INT3403"
+#define GPE_HID_STRING             "ACPI0006"
 
-#define I2C_HID_CID_STRING          "PNP0C50"
+#define I2C_HID_CID_STRING         "PNP0C50"
+#define GPE_CID_STRING             "ACPI0006"
+
+#define HID_LENGTH 8
+#define CID_LENGTH 8
 
 __BEGIN_CDECLS
 

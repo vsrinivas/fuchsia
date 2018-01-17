@@ -32,9 +32,6 @@
 
 #define MAX_NAMESPACE_DEPTH 100
 
-#define HID_LENGTH 8
-#define CID_LENGTH 8
-
 typedef struct acpi_device_resource {
     bool writeable;
     uint32_t base_address;
