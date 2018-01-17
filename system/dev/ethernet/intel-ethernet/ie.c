@@ -305,7 +305,8 @@ void eth_init_hw(ethdev_t* eth) {
     writel(eth->txd_phys, IE_TDBAL);
     writel(eth->txd_phys >> 32, IE_TDBAH);
     writel(ETH_TXBUF_COUNT * 16, IE_TDLEN);
-    writel(IE_TCTL_CT(15) | IE_TCTL_COLD_FD | IE_TCTL_EN, IE_TCTL);
+    uint32_t tctl_rsvd = readl(IE_TCTL) & IE_TCTL_RESERVED;
+    writel(tctl_rsvd | IE_TCTL_CT(15) | IE_TCTL_COLD_FD | IE_TCTL_EN, IE_TCTL);
 
     // disable all irqs (write to "clear" mask)
     writel(0xFFFF, IE_IMC);

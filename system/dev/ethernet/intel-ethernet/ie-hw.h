@@ -116,6 +116,7 @@
 #define IE_RCTL_BSEX      (1 << 25) // Buffer Size Extension (x16)
 #define IE_RCTL_SECRC     (1 << 26) // Strip CRC Field
 
+#define IE_TCTL_RESERVED  ((1 << 2) | (1 << 23) | (0xf << 25) | (1 << 31))
 #define IE_TCTL_RST       (1 << 0) // TX Reset?
 #define IE_TCTL_EN        (1 << 1) // TX Enable
 #define IE_TCTL_PSP       (1 << 3) // Pad Short Packets (to 64b)
