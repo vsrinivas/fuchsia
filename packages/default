@@ -81,6 +81,7 @@
         "garnet/packages/wlan_tests",
         "garnet/packages/wlancfg",
         "garnet/packages/wlanstack",
+        "garnet/packages/xi_core",
         "garnet/packages/zircon_benchmarks",
         "garnet/packages/zxdb"
     ]

@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "xi_core"
+version = "0.1.0"
+license = "BSD-3-Clause"
+
+[dependencies.xi-core-lib]
+version = "0.2.0"
+# disable "notify"
+default-features = false
+
+[dependencies.xi-rpc]
+version = "0.2.0"
+# disable "notify"
+default-features = false
+
+[dependencies]
+byteorder = "1.2"
+failure = "0.1"
+fidl = "0.1"
+fuchsia-app = "0.1"
+fuchsia-zircon = "0.3"
+futures = "=0.2.0-alpha"
+fuchsia-async = "0.1"
+mxruntime = "0.1"
+garnet_public_lib_xi_fidl = "0.1"

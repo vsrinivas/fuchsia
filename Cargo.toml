@@ -8,6 +8,7 @@ members =  [
   "bin/wlancfg",
   "bin/wlanstack",
   "bin/wlantool",
+  "bin/xi_core",
   "drivers/wlan/testing/util",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
@@ -45,6 +46,7 @@ members =  [
   "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address",
   "public/rust/fidl_crates/garnet_public_lib_network_fidl",
   "public/rust/fidl_crates/garnet_public_lib_power_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_xi_fidl",
 ]
 
 # Any crate in the Fuchsia tree that is a dependency of a member of this
@@ -75,6 +77,7 @@ garnet_public_lib_mdns_fidl = { path = "public/rust/fidl_crates/garnet_public_li
 garnet_public_lib_netstack_fidl_net_address = { path = "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address" }
 garnet_public_lib_network_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_network_fidl" }
 garnet_public_lib_power_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_power_fidl" }
+garnet_public_lib_xi_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_xi_fidl" }
 mio = { path = "../third_party/rust-mirrors/mio" }
 mxruntime = { path = "public/rust/crates/mxruntime" }
 mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
@@ -82,3 +85,5 @@ rand = { path = "../third_party/rust-mirrors/rand" }
 tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
 wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
 wlan-sme = { path = "lib/rust/crates/wlan-sme" }
+xi-core-lib = { path = "../third_party/rust-mirrors/xi-editor/rust/core-lib" }
+xi-rpc = { path = "../third_party/rust-mirrors/xi-editor/rust/rpc" }
