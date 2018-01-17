@@ -30,11 +30,12 @@ Scenic's responsibilities are:
 
 # Concepts
 
-## SceneManager
+## Scenic
 
 The `SceneManager` FIDL interface is Scenic's front door.  Each instance
-represents an isolated rendering context with its own content, render
-targets, and scheduling loop.
+of the interface represents a Scenic instance (we plan to rename the
+interface to `Scenic` soon). Each Scenic instance is an isolated rendering
+context with its own content, render targets, and scheduling loop.
 
 The following operations are provided:
 
@@ -46,8 +47,8 @@ The following operations are provided:
 - Obtain another Zircon channel which is bound to the same Scenic
   instance.  (Duplicate)
 
-A single Scenic instance can update, animate, and render multiple `Scenes`
-(trees of graphical objects) to multiple targets in tandem on the same
+A single Scenic instance can update, animate, and render multiple
+`Scenes` (trees of graphical objects) to multiple targets in tandem on the same
 scheduling loop.  This means that the timing model for a Scenic instance
 is _coherent_: all of its associated content belongs to the same scheduling
 domain and can be seamlessly intermixed.
@@ -124,7 +125,7 @@ internally referenced.  The underlying storage will not be released (and
 cannot be reused) until all remaining references to the resource have been
 cleared *and* until the next frame which does not require the resource has
 been presented.  This is especially important for `Memory` resources.
-See also (Fences)[#fences].
+See also [Fences](#fences).
 
 This process of addition, modification, and removal may be repeated
 indefinitely to incrementally update resources within a session.
