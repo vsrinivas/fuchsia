@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+
+config("fidl_config") {
+  include_dirs = [ "include" ]
+}
+
+sdk_source_set("fidl") {
+  # Don't forget to update rules.mk as well for the Zircon build.
+  sources = [
+    "include/fidl/builder.h",
+    "include/fidl/coding.h",
+    "include/fidl/internal.h",
+    "include/fidl/string_view.h",
+    "include/fidl/types.h",
+    "include/fidl/vector_view.h",
+    "builder.cpp",
+    "decoding.cpp",
+    "encoding.cpp",
+  ]
+
+  public_configs = [ ":fidl_config" ]
+}
