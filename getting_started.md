@@ -221,6 +221,13 @@ You can run a test by invoking it in the terminal. E.g.
 /system/test/ledger_unittests
 ```
 
+If you want to leave Fuchsia running and recompile and re-run a test, run
+Fuchsia with networking enabled in one terminal, then in another terminal, run:
+
+```
+fx run-test <test name> [<test args>]
+```
+
 ## Contribute changes
 
 * See [CONTRIBUTING.md](CONTRIBUTING.md).
