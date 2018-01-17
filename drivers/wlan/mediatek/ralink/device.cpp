@@ -2321,8 +2321,8 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     status = ReadRfcsr(&r9);
     CHECK_READ(RF9, status);
     r9.set_k(rf_val.K & 0xf);
-    r9.set_n(rf_val.N >> 8);
-    r9.set_mod((rf_val.mod - 8) >> 2);
+    r9.set_n((rf_val.N & 0x100) >> 8);
+    r9.set_mod(((rf_val.mod - 8) & 0x4) >> 2);
     status = WriteRfcsr(r9);
     CHECK_WRITE(RF9, status);
 
@@ -2509,10 +2509,10 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
         RegInitValue(62, 0x37 - lna_gain_),
         RegInitValue(63, 0x37 - lna_gain_),
         RegInitValue(64, 0x37 - lna_gain_),
-        RegInitValue(79, 0x1c),
-        RegInitValue(80, 0x0e),
-        RegInitValue(81, 0x3a),
-        RegInitValue(82, 0x62),
+        RegInitValue(79, wlan::common::Is2Ghz(chan)? 0x1c : 0x18),
+        RegInitValue(80, wlan::common::Is2Ghz(chan)? 0x0e : 0x08),
+        RegInitValue(81, wlan::common::Is2Ghz(chan)? 0x3a : 0x38),
+        RegInitValue(82, wlan::common::Is2Ghz(chan)? 0x62 : 0x92),
         // clang-format on
     };
     status = WriteBbpGroup(bbp_init_values);
@@ -2520,12 +2520,12 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
 
     std::vector<RegInitValue> glrt_init_values{
         // clang-format off
-        RegInitValue(128, 0xe0),
-        RegInitValue(129, 0x1f),
-        RegInitValue(130, 0x38),
-        RegInitValue(131, 0x32),
-        RegInitValue(133, 0x28),
-        RegInitValue(124, 0x19),
+        RegInitValue(128, wlan::common::Is2Ghz(chan)? 0xe0 : 0xf0),
+        RegInitValue(129, wlan::common::Is2Ghz(chan)? 0x1f : 0x1e),
+        RegInitValue(130, wlan::common::Is2Ghz(chan)? 0x38 : 0x28),
+        RegInitValue(131, wlan::common::Is2Ghz(chan)? 0x32 : 0x20),
+        RegInitValue(133, wlan::common::Is2Ghz(chan)? 0x28 : 0x7f),
+        RegInitValue(124, wlan::common::Is2Ghz(chan)? 0x19 : 0x7f),
         // clang-format on
     };
     status = WriteGlrtGroup(glrt_init_values);
@@ -2631,9 +2631,10 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     status = WriteRegister(tpc);
     CHECK_WRITE(TX_PIN_CFG, status);
 
-    WriteGlrt(141, 0x1a);
-
     if (rt_type_ == RT5592) {
+        WriteGlrt(141, 0x1a);
+
+        // TODO(porce) Revisit the logic for multiple antennas
         uint8_t rx_ndx;
         for (rx_ndx = 0; rx_ndx < rx_path_; rx_ndx++) {
             Bbp27 b27;
@@ -2650,6 +2651,7 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
         status = LookupRfVal(chan, &rf_val);
         if (status != ZX_OK) { return status; }
 
+        // TODO(porce): Refactor IQ calibration
         status = WriteBbp(158, 0x2c);
         CHECK_WRITE(BBP158, status);
         status = WriteBbp(159, rf_val.cal_values.gain_cal_tx0);
