@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -20,6 +21,8 @@ namespace {
 
 enum struct Behavior {
     None,
+    // TODO(kulakowski) Remove this when generation is landed.
+    GenerateDummyCFiles,
 };
 
 bool TestParser(int file_count, char** file_names, Behavior behavior) {
@@ -47,6 +50,21 @@ bool TestParser(int file_count, char** file_names, Behavior behavior) {
     return true;
 }
 
+int GenerateDummyFiles(const char* c_name, const char* h_name) {
+    printf("c name %s\n", c_name);
+    printf("h name %s\n", h_name);
+    std::fstream c_stream;
+    c_stream.open(c_name, std::ios::out);
+    c_stream << "int some_fidl_int;\n";
+
+    std::fstream h_stream;
+    h_stream.open(h_name, std::ios::out);
+    h_stream << "#pragma once\n"
+             << "extern int some_fidl_int;\n";
+
+    return 0;
+}
+
 } // namespace
 } // namespace fidl
 
@@ -60,12 +78,22 @@ int main(int argc, char* argv[]) {
 
     // Parse the behavior.
     fidl::Behavior behavior;
-    if (!strncmp(argv[0], "none", 4))
+    if (!strncmp(argv[0], "none", 4)) {
         behavior = fidl::Behavior::None;
-    else
+    } else if (!strncmp(argv[0], "dummy", 5)) {
+        behavior = fidl::Behavior::GenerateDummyCFiles;
+        if (argc != 3) {
+            return 1;
+        }
+    } else {
         return 1;
+    }
     --argc;
     ++argv;
+
+    if (behavior == fidl::Behavior::GenerateDummyCFiles) {
+        return fidl::GenerateDummyFiles(argv[0], argv[1]);
+    }
 
     return TestParser(argc, argv, behavior) ? 0 : 1;
 }
