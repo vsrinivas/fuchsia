@@ -129,7 +129,15 @@ zx_status_t tu_wait(uint32_t num_objects,
         items[n].handle = handles[n];
         items[n].waitfor = signals[n];
     }
-    zx_time_t deadline = zx_deadline_after(timeout * timeout_scale);
+    if (timeout != ZX_TIME_INFINITE) {
+        zx_time_t scaled_timeout = timeout * timeout_scale;
+        // Overflow -> infinity.
+        if (scaled_timeout < timeout)
+            timeout = ZX_TIME_INFINITE;
+        else
+            timeout = scaled_timeout;
+    }
+    zx_time_t deadline = zx_deadline_after(timeout);
     zx_status_t status = zx_object_wait_many(items, num_objects, deadline);
     for (uint32_t n = 0; n < num_objects; n++) {
         pending[n] = items[n].pending;
