@@ -18,6 +18,21 @@ package("cobalt") {
       } ]
 }
 
+package("cobalt_system_metrics") {
+  # TODO(azani): Remove when started as part of boot.
+  system_image = true
+
+  deps = [
+    ":cobalt_system_metrics_bin",
+  ]
+
+  binaries = [
+    {
+      name = "cobalt_system_metrics"
+    },
+  ]
+}
+
 package("cobalt_tests") {
   testonly = true
   system_image = true
@@ -75,6 +90,19 @@ executable("bin") {
     # TODO(rudominer) Change to protobuf_lite after we have a different way
     # of deserializing a message from a human-readable string.
     "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+executable("cobalt_system_metrics_bin") {
+  output_name = "cobalt_system_metrics"
+
+  sources = [
+    "system_metrics_main.cc"
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/cobalt/fidl:fidl",
   ]
 }
 

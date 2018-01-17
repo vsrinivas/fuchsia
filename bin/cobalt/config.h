@@ -132,6 +132,32 @@ element {
   }
 }
 
+######################### Project 102: System Metrics ##########################
+
+#####################################################################
+# Metric (1, 102, 1)
+# Name: System Uptime
+# Description: The system metrics daemon will log system uptime after 0, 1, 2, 4, 8... minutes.
+# Parts: This metric has one part named "system_uptime_minutes".
+#
+# Notes: We will use the no-op encoding.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 102
+  id: 1
+  name: "System Uptime"
+  description: "The system metrics daemon will log system uptime after 0, 1, 2, 4, 8... minutes."
+  time_zone_policy: UTC
+  parts {
+    key: "system_uptime_minutes"
+    value {
+      description: "How long since the system booted in minutes?"
+      data_type: INT
+    }
+  }
+}
+
 
 ################################################################################
 #      ***  NOTICE: Below this line are testing-only projects. ***
@@ -413,6 +439,21 @@ element {
   customer_id: 1
   project_id: 101
   id: 2
+  no_op_encoding {
+  }
+}
+
+######################### Project 102: System Metrics ##########################
+
+#####################################################################
+# EncodingConfig(1, 102, 1)
+# Name:  NoOp encoding
+# Description:  Observations are sent unencoded.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 102
+  id: 1
   no_op_encoding {
   }
 }
