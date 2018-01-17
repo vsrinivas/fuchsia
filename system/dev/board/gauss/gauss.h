@@ -8,14 +8,14 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <soc/aml-a113/a113-clocks.h>
-#include <soc/aml-a113/a113-gpio.h>
+#include <soc/aml-common/aml-gpio.h>
 #include <soc/aml-common/aml-i2c.h>
 
 #include <threads.h>
 
 typedef struct {
     platform_bus_protocol_t pbus;
-    a113_gpio_t gpio;
+    aml_gpio_t gpio;
     aml_i2c_t i2c;
     usb_mode_switch_protocol_t usb_mode_switch;
     io_buffer_t usb_phy;
@@ -26,6 +26,9 @@ typedef struct {
 
 // gauss-audio.c
 zx_status_t gauss_audio_init(gauss_bus_t* bus);
+
+// gauss-gpio.c
+zx_status_t gauss_gpio_init(aml_gpio_t* gpio);
 
 // gauss-usb.c
 zx_status_t gauss_usb_init(gauss_bus_t* bus);
