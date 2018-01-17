@@ -143,11 +143,12 @@ static int mkdir_all(const char* dirn) {
 // Invokes a test binary and prints results.
 //
 // |path| specifies the path to the binary.
-// |outfd| is a file descriptor and if non-negative, will be used as the
-//         stdout and stderr of the test binary.
+// |out| is a file stream to which the test binary's output will be written. May be
+// NULL.
 //
 // Returns true if the test binary successfully executes and has a return code of zero.
-static bool run_test(const char* path, const int outfd) {
+static bool run_test(const char* path, FILE* out) {
+    int fds[2];
     char verbose_opt[] = {'v','=', verbosity + '0', 0};
     const char* argv[] = {path, verbose_opt};
     int argc = verbosity >= 0 ? 2 : 1;
@@ -156,9 +157,13 @@ static bool run_test(const char* path, const int outfd) {
     launchpad_create(0, path, &lp);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_clone(lp, LP_CLONE_ALL);
-    if (outfd >= 0) {
-        launchpad_clone_fd(lp, outfd, STDOUT_FILENO);
-        launchpad_transfer_fd(lp, outfd, STDERR_FILENO);
+    if (out != NULL) {
+        if (pipe(fds)) {
+            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
+            return false;
+        }
+        launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
+        launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
     }
     launchpad_set_args(lp, argc, argv);
     const char* errmsg;
@@ -169,7 +174,15 @@ static bool run_test(const char* path, const int outfd) {
         record_test_result(&tests, path, FAILED_TO_LAUNCH, 0);
         return false;
     }
-
+    // Tee output.
+    if (out != NULL) {
+        char buf[1024];
+        ssize_t bytes_read = 0;
+        while ((bytes_read = read(fds[0], buf, 1024)) > 0) {
+            fwrite(buf, 1, bytes_read, out);
+            fwrite(buf, 1, bytes_read, stdout);
+        }
+    }
     status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
                                 ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
@@ -205,8 +218,8 @@ static bool run_test(const char* path, const int outfd) {
 // |test_name| is the name of the test binary.
 // |output_dir| is the location the output file should be written.
 //
-// Returns zero on success, non-zero on failure. errno will be set.
-static int open_output_file(const char* test_name, const char* output_dir) {
+// Returns NULL on failure, with errno set.
+static FILE* open_output_file(const char* test_name, const char* output_dir) {
     char output_path[PATH_MAX];
 
     // Generate output file name.
@@ -214,11 +227,11 @@ static int open_output_file(const char* test_name, const char* output_dir) {
                                output_dir, test_name);
     if (path_len >= sizeof(output_path)) {
         errno = ENAMETOOLONG;
-        return -1;
+        return NULL;
     }
 
     // Open output file.
-    return open(output_path, O_CREAT | O_WRONLY | O_TRUNC, 0664);
+    return fopen(output_path, "w");
 }
 
 // Executes all test binaries in a directory (non-recursive).
@@ -270,10 +283,10 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
 
         // If output_dir was specified, ask run_test to redirect stdout/stderr
         // to a file whose name is based on the test name.
-        int outfd = -1;
+        FILE* out = NULL;
         if (output_dir != NULL) {
-            outfd = open_output_file(test_name, output_dir);
-            if (outfd < 0) {
+            out = open_output_file(test_name, output_dir);
+            if (out == NULL) {
                 printf("Error: Could not open output file for test %s: %s\n", test_name,
                        strerror(errno));
                 return false;
@@ -281,14 +294,17 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
         }
 
         // Execute the test binary.
-        if (!run_test(test_path, outfd)) {
+        if (!run_test(test_path, out)) {
             failed_count++;
         }
 
         // Clean up the output file.
-        if (outfd >= 0) {
-            close(outfd);
+        if (out != NULL && fclose(out)) {
+            printf("FAILURE: Failed to close output file for test %s: %s\n", de->d_name,
+                   strerror(errno));
+            continue;
         }
+
         test_count++;
     }
 
