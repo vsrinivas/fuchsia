@@ -54,12 +54,14 @@ Sections will be populated over time.
 
 # Graphics
 
- - Vulkan driver
- - Physically-based renderer
- - Compositor
- - Input manager
- - View manager
- - Toolkit
+ - [Magma (vulkan driver)](https://fuchsia.googlesource.com/garnet/+/master/lib/magma/)
+ - [Escher (physically-based renderer)](
+   https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/)
+ - [Scenic (compositor)](
+   https://fuchsia.googlesource.com/garnet/+/master/docs/ui_scenic.md)
+ - [Input manager](https://fuchsia.googlesource.com/garnet/+/master/docs/ui_input.md)
+ - [View manager](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/)
+ - [Flutter (toolkit)](https://flutter.io/)
 
 # Media
 
