@@ -176,13 +176,15 @@ features that Zircon added.
 
 Services to expose ambient and task-related context, suggestions and
 infrastructure for leveraging machine intelligence.
-- [Source](https://fuchsia.googlesource.com/maxwell)
 
 #### **Module**
 
-A component with a "module” facet, which describes the module's API in a
-language in which the system can reflect and compute compatibility with user
-data and/or other modules.
+A component with a `module` metadata file which primarily describes the
+Module's data compatibility and semantic role.
+
+Modules show UI and participate in Stories at runtime.
+
+- [module metadata format](https://fuchsia.googlesource.com/peridot/+/HEAD/docs/modular/manifests/module.md)
 
 #### **Mozart**
 
