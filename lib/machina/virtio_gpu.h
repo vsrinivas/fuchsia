@@ -31,7 +31,7 @@ class VirtioGpu : public VirtioDevice {
  public:
   static constexpr uint8_t kBytesPerPixel = 4;
 
-  VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size);
+  VirtioGpu(const PhysMem& phys_mem);
   ~VirtioGpu() override;
 
   virtio_queue_t& control_queue() { return queues_[VIRTIO_GPU_Q_CONTROLQ]; }

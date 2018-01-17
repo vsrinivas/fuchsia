@@ -17,14 +17,13 @@
 
 namespace machina {
 
-VirtioGpu::VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
+VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
     : VirtioDevice(VIRTIO_ID_GPU,
                    &config_,
                    sizeof(config_),
                    queues_,
                    VIRTIO_GPU_Q_COUNT,
-                   guest_physmem_addr,
-                   guest_physmem_size) {}
+                   phys_mem) {}
 
 VirtioGpu::~VirtioGpu() = default;
 

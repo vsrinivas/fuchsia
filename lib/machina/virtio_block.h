@@ -32,14 +32,14 @@ class VirtioBlock : public VirtioDevice {
  public:
   static const size_t kSectorSize = 512;
 
-  VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size);
+  VirtioBlock(const PhysMem& phys_mem);
   ~VirtioBlock() override = default;
 
   // Opens a file to use as backing for the block device.
   //
   // Default to opening the file as read-write, but fall back to read-only
   // if that is not possible.
-  zx_status_t Init(const char* path, const PhysMem& phys_mem);
+  zx_status_t Init(const char* path);
 
   // Starts a thread to monitor the queue for incomming block requests.
   zx_status_t Start();

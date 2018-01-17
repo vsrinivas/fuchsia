@@ -214,15 +214,13 @@ class FifoBlockDispatcher : public VirtioBlockRequestDispatcher {
   fbl::Mutex fifo_mutex_;
 };
 
-VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr,
-                         size_t guest_physmem_size)
+VirtioBlock::VirtioBlock(const PhysMem& phys_mem)
     : VirtioDevice(VIRTIO_ID_BLOCK,
                    &config_,
                    sizeof(config_),
                    &queue_,
                    1,
-                   guest_physmem_addr,
-                   guest_physmem_size) {
+                   phys_mem) {
   config_.blk_size = kSectorSize;
   // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
   add_device_features(VIRTIO_BLK_F_FLUSH
@@ -230,7 +228,7 @@ VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr,
                       | VIRTIO_BLK_F_BLK_SIZE);
 }
 
-zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
+zx_status_t VirtioBlock::Init(const char* path) {
   if (dispatcher_ != nullptr) {
     FXL_LOG(ERROR) << "Block device has already been initialized.";
     return ZX_ERR_BAD_STATE;
@@ -261,7 +259,7 @@ zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
   // Prefer using the faster FIFO-based IO. If the file is not a block device
   // file then fall back to using posix IO.
   fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher;
-  zx_status_t status = FifoBlockDispatcher::Create(fd, phys_mem, &dispatcher);
+  zx_status_t status = FifoBlockDispatcher::Create(fd, phys_mem(), &dispatcher);
   if (status == ZX_OK) {
     FXL_LOG(INFO) << "Using FIFO IO for block device \"" << path << "\"";
   } else {

@@ -85,7 +85,7 @@ shared_library("machina") {
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
-executable("machina-unittests") {
+executable("machina_unittests") {
   testonly = true
 
   sources = [
@@ -118,10 +118,10 @@ package("machina_tests") {
   system_image = true
 
   deps = [
-    ":machina-unittests",
+    ":machina_unittests",
   ]
 
   tests = [{
-    name = "machina-unittests"
+    name = "machina_unittests"
   }]
 }

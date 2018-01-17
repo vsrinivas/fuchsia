@@ -43,9 +43,7 @@ class VirtioDevice {
   // specific.
   zx_status_t NotifyGuest();
 
-  uintptr_t guest_physmem_addr() { return guest_physmem_addr_; }
-  size_t guest_physmem_size() { return guest_physmem_size_; }
-
+  const PhysMem& phys_mem() { return phys_mem_; }
   uint16_t num_queues() const { return num_queues_; }
 
   // ISR flag values.
@@ -84,8 +82,7 @@ class VirtioDevice {
                size_t config_size,
                virtio_queue_t* queues,
                uint16_t num_queues,
-               uintptr_t guest_physmem_addr,
-               size_t guest_physmem_size);
+               const PhysMem& phys_mem);
 
   // Mutex for accessing device configuration fields.
   fbl::Mutex config_mutex_;
@@ -133,16 +130,14 @@ class VirtioDevice {
   // shared configuration space.
   const size_t device_config_size_ = 0;
 
-  // Size of queues array.
-  const uint16_t num_queues_ = 0;
-
   // Virtqueues for this device.
   virtio_queue_t* const queues_ = nullptr;
 
-  // Address of guest physical memory.
-  const uintptr_t guest_physmem_addr_ = 0;
-  // Size of guest physical memory.
-  const size_t guest_physmem_size_ = 0;
+  // Size of queues array.
+  const uint16_t num_queues_ = 0;
+
+  // Guest physical memory.
+  const PhysMem& phys_mem_;
 
   // Virtio PCI transport.
   VirtioPci pci_;

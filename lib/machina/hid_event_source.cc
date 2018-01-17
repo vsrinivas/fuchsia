@@ -20,7 +20,7 @@
 
 namespace machina {
 
-static const char* kInputDirPath = "/dev/class/input";
+static const char kInputDirPath[] = "/dev/class/input";
 
 zx_status_t HidInputDevice::Start() {
   thrd_t thread;

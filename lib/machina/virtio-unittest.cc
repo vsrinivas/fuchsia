@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #define QUEUE_SIZE 16
-
 #define VIRTIO_TEST_ID 30
 
 namespace machina {
@@ -17,16 +16,19 @@ namespace {
 class TestDevice : public VirtioDevice {
  public:
   TestDevice()
-      : VirtioDevice(VIRTIO_TEST_ID, nullptr, 0, &queue_, 1, 0, UINTPTR_MAX),
+      : VirtioDevice(VIRTIO_TEST_ID, nullptr, 0, &queue_, 1, phys_mem_),
         queue_fake_(&queue_) {}
 
-  zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
+  zx_status_t Init() {
+    return queue_fake_.Init(QUEUE_SIZE);
+  }
 
   virtio_queue_t& queue() { return queue_; }
   VirtioQueueFake& queue_fake() { return queue_fake_; }
 
  private:
   virtio_queue_t queue_;
+  PhysMemFake phys_mem_;
   VirtioQueueFake queue_fake_;
 };
 
@@ -36,7 +38,7 @@ TEST(VirtioQueueTest, HandleOverflow) {
   virtio_queue_t& queue = device.queue();
   VirtioQueueFake& queue_fake = device.queue_fake();
 
-  // Setup queu pointers so that the next descriptor will wrap avail->idx
+  // Setup queue pointers so that the next descriptor will wrap avail->idx
   // to 0.
   queue.avail->idx = UINT16_MAX;
   queue.index = UINT16_MAX;

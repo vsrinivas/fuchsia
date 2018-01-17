@@ -335,9 +335,9 @@ int main(int argc, char** argv) {
   }
 
   // Setup block device.
-  machina::VirtioBlock block(physmem_addr, physmem_size);
+  machina::VirtioBlock block(guest.phys_mem());
   if (!options.block_path().empty()) {
-    status = block.Init(options.block_path().c_str(), guest.phys_mem());
+    status = block.Init(options.block_path().c_str());
     if (status != ZX_OK) {
       return status;
     }
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
   // Setup input device.
   machina::InputDispatcher input_dispatcher(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher);
-  machina::VirtioInput input(&input_dispatcher, physmem_addr, physmem_size,
+  machina::VirtioInput input(&input_dispatcher, guest.phys_mem(),
                              "machina-input", "serial-number");
   status = input.Start();
   if (status != ZX_OK) {
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup GPU device.
-  machina::VirtioGpu gpu(physmem_addr, physmem_size);
+  machina::VirtioGpu gpu(guest.phys_mem());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
   status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
   if (status == ZX_OK) {

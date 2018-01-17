@@ -25,7 +25,7 @@ namespace {
 
 class VirtioBlockTest {
  public:
-  VirtioBlockTest() : block_(0, UINTPTR_MAX), queue_(&block_.queue()) {}
+  VirtioBlockTest() : block_(phys_mem_), queue_(&block_.queue()) {}
 
   ~VirtioBlockTest() {
     if (fd_ > 0)
@@ -37,8 +37,7 @@ class VirtioBlockTest {
     if (fd_ < 0)
       return ZX_ERR_IO;
 
-    PhysMem phys_mem;
-    zx_status_t status = block_.Init(block_path, phys_mem);
+    zx_status_t status = block_.Init(block_path);
     if (status != ZX_OK)
       return status;
 
@@ -82,6 +81,7 @@ class VirtioBlockTest {
   }
 
   int fd_ = 0;
+  PhysMemFake phys_mem_;
   VirtioBlock block_;
   VirtioQueueFake queue_;
 };

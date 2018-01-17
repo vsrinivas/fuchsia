@@ -170,8 +170,7 @@ const uint8_t kKeyMap[] = {
 };
 
 VirtioInput::VirtioInput(InputDispatcher* input_dispatcher,
-                         uintptr_t guest_physmem_addr,
-                         size_t guest_physmem_size,
+                         const PhysMem& phys_mem,
                          const char* device_name,
                          const char* device_serial)
     : VirtioDevice(VIRTIO_ID_INPUT,
@@ -179,8 +178,7 @@ VirtioInput::VirtioInput(InputDispatcher* input_dispatcher,
                    sizeof(config_),
                    queues_,
                    VIRTIO_INPUT_Q_COUNT,
-                   guest_physmem_addr,
-                   guest_physmem_size),
+                   phys_mem),
       input_dispatcher_(input_dispatcher),
       device_name_(device_name),
       device_serial_(device_serial) {}

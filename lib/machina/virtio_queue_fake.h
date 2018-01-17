@@ -15,6 +15,14 @@ namespace machina {
 
 class VirtioQueueFake;
 
+class PhysMemFake : public PhysMem {
+ public:
+  PhysMemFake() {
+    vmo_size_ = SIZE_MAX;
+    addr_ = 0;
+  }
+};
+
 // Helper class for building buffer made up of chained descriptors.
 //
 // When building a descriptor chain, any errors are deferred until a call to

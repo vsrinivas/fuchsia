@@ -108,7 +108,7 @@ zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue_sel) {
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  ctx.vmo = vmo_;
+  ctx.vmo = phys_mem().vmo();
   return virtio_queue_handler(&queues_[queue_sel], &queue_range_op, &ctx);
 }
 
@@ -126,9 +126,7 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                    sizeof(config_),
                    queues_,
                    VIRTIO_BALLOON_Q_COUNT,
-                   phys_mem.addr(),
-                   phys_mem.size()),
-      vmo_(phys_mem.vmo()) {
+                   phys_mem) {
   add_device_features(VIRTIO_BALLOON_F_STATS_VQ |
                       VIRTIO_BALLOON_F_DEFLATE_ON_OOM);
 }

@@ -16,8 +16,8 @@
 #define QUEUE_SIZE 128u
 
 // Convert guest-physical addresses to usable virtual addresses.
-#define guest_paddr_to_host_vaddr(device, addr) \
-  (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr()) + (addr)))
+#define guest_paddr_to_host_vaddr(device, guest_paddr) \
+  (static_cast<zx_vaddr_t>(((device)->phys_mem().addr()) + (guest_paddr)))
 
 namespace machina {
 
@@ -26,15 +26,13 @@ VirtioDevice::VirtioDevice(uint8_t device_id,
                            size_t config_size,
                            virtio_queue_t* queues,
                            uint16_t num_queues,
-                           uintptr_t guest_physmem_addr,
-                           size_t guest_physmem_size)
+                           const PhysMem& phys_mem)
     : device_id_(device_id),
       device_config_(config),
       device_config_size_(config_size),
-      num_queues_(num_queues),
       queues_(queues),
-      guest_physmem_addr_(guest_physmem_addr),
-      guest_physmem_size_(guest_physmem_size),
+      num_queues_(num_queues),
+      phys_mem_(phys_mem),
       pci_(this) {
   // Virt queue initialization.
   for (int i = 0; i < num_queues_; ++i) {
@@ -59,8 +57,8 @@ static bool ring_has_avail(virtio_queue_t* queue) {
 static bool validate_queue_range(VirtioDevice* device,
                                  zx_vaddr_t addr,
                                  size_t size) {
-  uintptr_t mem_addr = device->guest_physmem_addr();
-  size_t mem_size = device->guest_physmem_size();
+  uintptr_t mem_addr = device->phys_mem().addr();
+  size_t mem_size = device->phys_mem().size();
   zx_vaddr_t range_end = addr + size;
   zx_vaddr_t mem_end = mem_addr + mem_size;
 
@@ -232,7 +230,7 @@ zx_status_t virtio_queue_read_desc(virtio_queue_t* queue,
                                    virtio_desc_t* out) {
   VirtioDevice* device = queue->virtio_device;
   volatile struct vring_desc& desc = queue->desc[desc_index];
-  size_t mem_size = device->guest_physmem_size();
+  size_t mem_size = device->phys_mem().size();
 
   const uint64_t end = desc.addr + desc.len;
   if (end < desc.addr || end > mem_size)
@@ -269,8 +267,8 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue,
                                  void* context) {
   uint16_t head;
   uint32_t used_len = 0;
-  uintptr_t mem_addr = queue->virtio_device->guest_physmem_addr();
-  size_t mem_size = queue->virtio_device->guest_physmem_size();
+  uintptr_t mem_addr = queue->virtio_device->phys_mem().addr();
+  size_t mem_size = queue->virtio_device->phys_mem().size();
 
   // Get the next descriptor from the available ring. If none are available
   // we can just no-op.

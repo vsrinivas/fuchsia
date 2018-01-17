@@ -96,7 +96,7 @@ void GpuResource::CopyBytes(uint64_t offset, uint8_t* dest, size_t size) {
       size_t len = (entry.length + base) - offset;
       len = len > size ? size : len;
 
-      zx_vaddr_t src_vaddr = gpu_->guest_physmem_addr() + entry.addr;
+      zx_vaddr_t src_vaddr = gpu_->phys_mem().addr() + entry.addr;
       src_vaddr = src_vaddr + offset - base;
 
       memcpy(dest, reinterpret_cast<void*>(src_vaddr), len);

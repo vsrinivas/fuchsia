@@ -68,9 +68,6 @@ class VirtioBalloon : public VirtioDevice {
 
   zx_status_t HandleDescriptor(uint16_t queue_sel);
 
-  // Handle to the guest phsycial memory VMO for memory management.
-  zx_handle_t vmo_ = ZX_HANDLE_INVALID;
-
   // With on-demand deflation we won't commit memory up-front for balloon
   // deflate requests.
   bool deflate_on_demand_ = false;
