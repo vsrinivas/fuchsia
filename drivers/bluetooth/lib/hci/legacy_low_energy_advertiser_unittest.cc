@@ -303,9 +303,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   EXPECT_TRUE(advertiser()->StopAdvertising(addr));
   RunMessageLoop();
 
-  // Stop should still be in progress.
+  // The stop sequence should have started.
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
-  EXPECT_NE(0u, test_device()->le_advertising_state().data_length);
 
   // Starting now should cancel the stop sequence and succeed.
   disabling = false;
