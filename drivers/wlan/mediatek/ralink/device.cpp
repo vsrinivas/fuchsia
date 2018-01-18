@@ -2303,9 +2303,10 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     LdoCfg0 lc0;
     status = ReadRegister(&lc0);
     CHECK_READ(LDO_CFG0, status);
-    if (chan.primary > 14) {
+    if (wlan::common::Is5Ghz(chan) || chan.cbw == CBW40ABOVE || chan.cbw == CBW40BELOW) {
         lc0.set_ldo_core_vlevel(5);
     } else {
+        // TODO(porce): Investigate if extra CBW40 in 2GHz support is necessary
         lc0.set_ldo_core_vlevel(0);
     }
     status = WriteRegister(lc0);
@@ -2486,9 +2487,20 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
     status = WriteRfcsr(6, 0xe4);
     CHECK_WRITE(RF6, status);
 
-    // Support CBW40*
-    status = WriteRfcsr(30, 0x10);
+    switch (chan.cbw) {  // RFCSR30
+    case CBW20:
+        status = WriteRfcsr(30, 0x10);
+        break;
+    case CBW40ABOVE:
+    case CBW40BELOW:
+        status = WriteRfcsr(30, 0x16);
+        break;
+    default:
+        ZX_DEBUG_ASSERT(0);
+        break;
+    }
     CHECK_WRITE(RF30, status);
+
     status = WriteRfcsr(31, 0x80);
     CHECK_WRITE(RF31, status);
     status = WriteRfcsr(32, 0x80);
@@ -2632,7 +2644,18 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     CHECK_WRITE(TX_PIN_CFG, status);
 
     if (rt_type_ == RT5592) {
-        WriteGlrt(141, 0x1a);
+        switch (chan.cbw) {  // BBP 141
+        case CBW20:
+            WriteGlrt(141, 0x1a);
+            break;
+        case CBW40ABOVE:
+        case CBW40BELOW:
+            WriteGlrt(141, 0x10);
+            break;
+        default:
+            ZX_DEBUG_ASSERT(0);
+            break;
+        }
 
         // TODO(porce) Revisit the logic for multiple antennas
         uint8_t rx_ndx;
