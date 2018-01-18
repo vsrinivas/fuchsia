@@ -17,6 +17,7 @@ sys.path.append(os.path.dirname(__file__))
 import paths as fuchsia_paths
 
 fuchsia_root = os.path.realpath(fuchsia_paths.FUCHSIA_ROOT)
+os.chdir(fuchsia_root)
 fuchsia_build = subprocess.check_output(
     [os.path.join(fuchsia_paths.FUCHSIA_ROOT, 'scripts/fx'), 'get-build-dir']).strip()
 
