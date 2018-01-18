@@ -333,12 +333,20 @@ zx_status_t thread_suspend(thread_t* t) {
 
     THREAD_LOCK(state);
 
+    if (t->state == THREAD_INITIAL || t->state == THREAD_DEATH) {
+        THREAD_UNLOCK(state);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    t->signals |= THREAD_SIGNAL_SUSPEND;
+
     bool local_resched = false;
     switch (t->state) {
     case THREAD_INITIAL:
     case THREAD_DEATH:
-        THREAD_UNLOCK(state);
-        return ZX_ERR_BAD_STATE;
+        /* This should be unreachable because these two states were handled
+         * above. */
+        panic("Unexpected thread state");
     case THREAD_READY:
         /* thread is ready to run and not blocked or suspended.
              * will wake up and deal with the signal soon. */
@@ -367,8 +375,6 @@ zx_status_t thread_suspend(thread_t* t) {
         }
         break;
     }
-
-    t->signals |= THREAD_SIGNAL_SUSPEND;
 
     /* reschedule if the local cpu run queue was modified */
     if (local_resched)
