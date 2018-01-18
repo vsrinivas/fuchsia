@@ -11,7 +11,7 @@ The applications must implement the ViewProvider interface to be embedded.
 
 Specify the urls of the views to embed initially as command-line arguments.
 
-  launch tile_view <app1> <app2> ...
+  tile_view <app1> <app2> ...
 
 The following command-line options are also supported:
 
@@ -22,4 +22,4 @@ The following command-line options are also supported:
 
 Example:
 
-  launch tile_view --horizontal spinning_square_view shapes_view
+  tile_view --horizontal spinning_square_view shapes_view

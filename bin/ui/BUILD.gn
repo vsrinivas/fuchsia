@@ -97,16 +97,12 @@ package("mozart_tools") {
 
   deps = [
     "input",
-    "launch",
     "print_input",
   ]
 
   binaries = [
     {
       name = "input"
-    },
-    {
-      name = "launch"
     },
     {
       name = "print_input"
