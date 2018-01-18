@@ -30,7 +30,7 @@ Status ZirconPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
     if (packet.type == ZX_PKT_TYPE_USER) {
         // Port has been closed.
         port_.reset();
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "port was closed");
+        return MAGMA_STATUS_INTERNAL_ERROR;
     }
 
     *key_out = packet.key;

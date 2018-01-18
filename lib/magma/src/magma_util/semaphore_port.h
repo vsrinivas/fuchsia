@@ -106,7 +106,7 @@ public:
 
         Status status = port_->Wait(&id);
         if (!status)
-            return DRET_MSG(status.get(), "port wait failed");
+            return status;
 
         std::unique_lock<std::mutex> lock(map_mutex_);
 
