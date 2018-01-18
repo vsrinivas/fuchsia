@@ -166,7 +166,7 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd,
     return status;
   }
   FXL_LOG(INFO) << "Polling device " << kInputDirPath << "/" << fn
-                << " for key events.";
+                << " for key events";
 
   fbl::AutoLock lock(&mutex_);
   devices_.push_front(fbl::move(keyboard));

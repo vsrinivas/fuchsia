@@ -119,6 +119,8 @@ zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
     return ZX_ERR_INTERNAL;
   }
 
+  FXL_LOG(INFO) << "Polling device " << kEthernetDirPath << "/" << fn
+                << " for Ethernet frames";
   return ZX_ERR_STOP;
 }
 
