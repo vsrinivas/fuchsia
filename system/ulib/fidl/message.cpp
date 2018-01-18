@@ -36,9 +36,8 @@ Message& Message::operator=(Message&& other) {
 
 zx_status_t Message::Encode(const fidl_type_t* type,
                             const char** error_msg_out) {
-    auto payload = this->payload();
     uint32_t actual_handles = 0u;
-    zx_status_t status = fidl_encode(type, payload.data(), payload.actual(),
+    zx_status_t status = fidl_encode(type, bytes_.data(), bytes_.actual(),
                                      handles_.data(), handles_.capacity(),
                                      &actual_handles, error_msg_out);
     if (status == ZX_OK)
@@ -48,8 +47,7 @@ zx_status_t Message::Encode(const fidl_type_t* type,
 
 zx_status_t Message::Decode(const fidl_type_t* type,
                             const char** error_msg_out) {
-    auto payload = this->payload();
-    zx_status_t status = fidl_decode(type, payload.data(), payload.actual(),
+    zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(),
                                      handles_.data(), handles_.actual(),
                                      error_msg_out);
     if (status == ZX_OK)

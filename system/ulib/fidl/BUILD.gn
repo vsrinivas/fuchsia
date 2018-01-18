@@ -12,6 +12,7 @@ sdk_source_set("fidl") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
     "include/fidl/cpp/builder.h",
+    "include/fidl/cpp/message_builder.h",
     "include/fidl/cpp/message_part.h",
     "include/fidl/cpp/message.h",
     "include/fidl/cpp/string_view.h",
@@ -22,6 +23,7 @@ sdk_source_set("fidl") {
     "builder.cpp",
     "decoding.cpp",
     "encoding.cpp",
+    "message_builder.cpp",
     "message.cpp",
   ]
 

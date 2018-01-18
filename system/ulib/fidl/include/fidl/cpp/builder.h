@@ -77,6 +77,10 @@ public:
     // provided to this builder in its constructor.
     BytePart Finalize();
 
+protected:
+    uint8_t* buffer() const { return buffer_; }
+    uint32_t capacity() const { return capacity_; }
+
 private:
     // Returns |size| bytes of zeroed memory aligned to at least FIDL_ALIGNMENT
     void* Allocate(uint32_t size);

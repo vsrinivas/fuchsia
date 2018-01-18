@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include <fidl/coding.h>
 #include <zircon/syscalls/object.h>
 
 // All sizes here are given as uint32_t. Fidl message sizes are

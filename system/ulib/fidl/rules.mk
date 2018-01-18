@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/builder.cpp \
     $(LOCAL_DIR)/decoding.cpp \
     $(LOCAL_DIR)/encoding.cpp \
+    $(LOCAL_DIR)/message_builder.cpp \
     $(LOCAL_DIR)/message.cpp \
 
 MODULE_LIBS := system/ulib/zircon

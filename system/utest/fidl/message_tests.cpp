@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include <fidl/cpp/builder.h>
+#include <fidl/cpp/message_builder.h>
 #include <fidl/cpp/message.h>
 #include <fidl/cpp/string_view.h>
 #include <zx/channel.h>
+#include <zx/event.h>
 
 #include <unittest/unittest.h>
+
+#include "fidl_coded_types.h"
 
 namespace {
 
@@ -60,8 +64,35 @@ bool message_test() {
     END_TEST;
 }
 
+bool message_builder_test() {
+    BEGIN_TEST;
+
+    zx::event e;
+    EXPECT_EQ(zx::event::create(0, &e), ZX_OK);
+    EXPECT_NE(e.get(), ZX_HANDLE_INVALID);
+
+    fidl::MessageBuilder builder(&nonnullable_handle_message_type);
+    builder.header()->txid = 5u;
+    builder.header()->ordinal = 42u;
+
+    zx_handle_t* handle = builder.New<zx_handle_t>();
+    *handle = e.get();
+
+    fidl::Message message;
+    const char* error_msg;
+    EXPECT_EQ(builder.Encode(&message, &error_msg), ZX_OK);
+
+    EXPECT_EQ(message.txid(), 5u);
+    EXPECT_EQ(message.ordinal(), 42u);
+    EXPECT_EQ(message.handles().actual(), 1u);
+    EXPECT_EQ(message.handles().data()[0], e.get());
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(message_tests)
 RUN_NAMED_TEST("Message test", message_test)
+RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
 END_TEST_CASE(message_tests);

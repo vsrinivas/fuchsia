@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <fidl/internal.h>
+
 namespace fidl {
 
 Builder::Builder(void* buffer, uint32_t capacity)
@@ -15,13 +17,13 @@ Builder::Builder(void* buffer, uint32_t capacity)
 Builder::~Builder() = default;
 
 void* Builder::Allocate(uint32_t size) {
-    constexpr uint32_t alignment_mask = FIDL_ALIGNMENT - 1;
-    size = (size + alignment_mask) & ~alignment_mask;
-    if (capacity_ - at_ < size)
+    uint64_t base = FidlAlign(at_);
+    uint64_t limit = base + size;
+    if (limit > capacity_)
         return nullptr;
-    uint8_t* result = &buffer_[at_];
-    memset(result, 0, size);
-    at_ += size;
+    uint8_t* result = &buffer_[base];
+    memset(buffer_ + at_, 0, limit - at_);
+    at_ = static_cast<uint32_t>(limit);
     return result;
 }
 
