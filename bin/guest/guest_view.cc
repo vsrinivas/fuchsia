@@ -4,6 +4,8 @@
 
 #include "garnet/bin/guest/guest_view.h"
 
+#include <semaphore.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/ui/view_framework/view_provider_app.h"
 
@@ -24,6 +26,7 @@ void ScenicScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
 struct ViewTaskArgs {
   machina::VirtioGpu* gpu;
   machina::InputDispatcher* input_dispatcher;
+  sem_t semaphore;
 };
 
 static int view_task(void* ctx) {
@@ -34,8 +37,7 @@ static int view_task(void* ctx) {
     auto view = std::make_unique<GuestView>(
         args->gpu, args->input_dispatcher, std::move(view_context.view_manager),
         std::move(view_context.view_owner_request));
-
-    delete args;
+    sem_post(&args->semaphore);
     return view;
   });
 
@@ -46,20 +48,26 @@ static int view_task(void* ctx) {
 // static
 zx_status_t GuestView::Start(machina::VirtioGpu* gpu,
                              machina::InputDispatcher* input_dispatcher) {
-  ViewTaskArgs* args = new ViewTaskArgs;
-  args->gpu = gpu;
-  args->input_dispatcher = input_dispatcher;
-
-  thrd_t thread;
-  int ret = thrd_create(&thread, view_task, args);
-  if (ret != thrd_success) {
+  ViewTaskArgs args = {
+    .gpu = gpu,
+    .input_dispatcher = input_dispatcher,
+  };
+  int ret = sem_init(&args.semaphore, 0, 0);
+  if (ret != 0) {
     return ZX_ERR_INTERNAL;
   }
 
+  thrd_t thread;
+  ret = thrd_create_with_name(&thread, view_task, &args, "guest-view");
+  if (ret != thrd_success) {
+    return ZX_ERR_INTERNAL;
+  }
   ret = thrd_detach(thread);
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
+
+  sem_wait(&args.semaphore);
   return ZX_OK;
 }
 

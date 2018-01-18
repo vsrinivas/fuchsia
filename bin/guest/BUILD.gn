@@ -25,6 +25,8 @@ source_set("lib") {
     "//zircon/third_party/lib/fdt",
   ]
 
+  defines = [ "_ALL_SOURCE=1" ]
+
   libs = [ "hypervisor" ]
 }
 
