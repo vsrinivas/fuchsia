@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_NET_H_
-#define GARNET_LIB_MACHINA_NET_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_NET_H_
+#define GARNET_LIB_MACHINA_VIRTIO_NET_H_
 
 #include <fbl/unique_fd.h>
 #include <virtio/net.h>
@@ -24,15 +24,16 @@ class VirtioNet : public VirtioDevice {
 
   // Drains a Virtio queue, and passes data to the underlying Ethernet device.
   zx_status_t DrainQueue(virtio_queue_t* queue,
-                         uint32_t num_entries,
+                         uint32_t max_entries,
                          zx_handle_t fifo);
 
   virtio_queue_t* rx_queue() { return &queues_[0]; }
   virtio_queue_t* tx_queue() { return &queues_[1]; }
 
  private:
-  // This must be a multiple of 2 for the RX and TX queues.
   static const uint16_t kNumQueues = 2;
+  static_assert(kNumQueues % 2 == 0,
+                "There must be a queue for both RX and TX");
 
   // Queue for handling block requests.
   virtio_queue_t queues_[kNumQueues];
@@ -52,4 +53,4 @@ class VirtioNet : public VirtioDevice {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_NET_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_NET_H_

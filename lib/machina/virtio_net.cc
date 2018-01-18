@@ -90,11 +90,12 @@ zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
   }
 
   thrd_t tx_thread;
-  ret = thrd_create(&tx_thread,
-                    [](void* ctx) -> int {
-                      return static_cast<VirtioNet*>(ctx)->TransmitLoop();
-                    },
-                    this);
+  ret = thrd_create_with_name(
+      &tx_thread,
+      [](void* ctx) -> int {
+        return static_cast<VirtioNet*>(ctx)->TransmitLoop();
+      },
+      this, "virtio-net-transmit");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -104,11 +105,12 @@ zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
   }
 
   thrd_t rx_thread;
-  ret = thrd_create(&rx_thread,
-                    [](void* ctx) -> int {
-                      return static_cast<VirtioNet*>(ctx)->ReceiveLoop();
-                    },
-                    this);
+  ret = thrd_create_with_name(
+      &rx_thread,
+      [](void* ctx) -> int {
+        return static_cast<VirtioNet*>(ctx)->ReceiveLoop();
+      },
+      this, "virtio-net-receive");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -122,7 +124,7 @@ zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
 
 zx_status_t VirtioNet::Start() {
   thrd_t thread;
-  int ret = thrd_create(
+  int ret = thrd_create_with_name(
       &thread,
       [](void* ctx) -> int {
         fbl::unique_fd dir_fd(open(kEthernetDirPath, O_DIRECTORY | O_RDONLY));
@@ -135,7 +137,7 @@ zx_status_t VirtioNet::Start() {
         return fdio_watch_directory(dir_fd.get(), callback, ZX_TIME_INFINITE,
                                     ctx);
       },
-      this);
+      this, "virtio-net-watch");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -143,9 +145,9 @@ zx_status_t VirtioNet::Start() {
 }
 
 zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
-                                  uint32_t num_entries,
+                                  uint32_t max_entries,
                                   zx_handle_t fifo) {
-  eth_fifo_entry_t entries[num_entries];
+  eth_fifo_entry_t entries[max_entries];
 
   // Wait on first descriptor chain to become available.
   uint16_t head;
@@ -153,8 +155,8 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
 
   // Read all available descriptor chains from the queue.
   zx_status_t status = ZX_OK;
-  uint32_t i = 0;
-  for (; i < num_entries && status == ZX_OK; i++) {
+  uint32_t num_entries = 0;
+  for (; num_entries < max_entries && status == ZX_OK; num_entries++) {
     virtio_desc_t desc;
     status = virtio_queue_read_desc(queue, head, &desc);
     if (status != ZX_OK) {
@@ -167,7 +169,7 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
     }
 
     auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
-    entries[i] = {
+    entries[num_entries] = {
         .offset = static_cast<uint32_t>(
             reinterpret_cast<uintptr_t>(header + 1) - phys_mem().addr()),
         .length = static_cast<uint16_t>(desc.len - sizeof(*header)),
@@ -183,13 +185,13 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
 
   // Enqueue entries for the Ethernet device.
   uint32_t count;
-  status = zx_fifo_write(fifo, entries, sizeof(*entries) * i, &count);
+  status = zx_fifo_write(fifo, entries, sizeof(*entries) * num_entries, &count);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to enqueue buffer";
     return status;
   }
-  if (count != i) {
-    FXL_LOG(ERROR) << "Only wrote " << count << " of " << i
+  if (count != num_entries) {
+    FXL_LOG(ERROR) << "Only wrote " << count << " of " << num_entries
                    << " entries to Ethernet device";
     return ZX_ERR_IO_DATA_LOSS;
   }

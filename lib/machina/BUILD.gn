@@ -67,6 +67,8 @@ shared_library("machina") {
     "//zircon/system/ulib/zx",
   ]
 
+  defines = [ "_ALL_SOURCE=1" ]
+
   deps = [
     "//garnet/public/lib/fxl",
     "//zircon/system/ulib/async:loop",
