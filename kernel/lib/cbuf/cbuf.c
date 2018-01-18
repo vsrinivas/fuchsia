@@ -207,7 +207,7 @@ size_t cbuf_peek_etc(cbuf_t *cbuf, iovec_t *regions, bool writable)
     return ret;
 }
 
-size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule)
+size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule)
 {
     DEBUG_ASSERT(cbuf);
 
@@ -228,7 +228,7 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule)
 
     spin_unlock_irqrestore(&cbuf->lock, state);
 
-    if (canreschedule && (signaled > 0))
+    if (reschedule && (signaled > 0))
         thread_reschedule();
 
     return ret;

@@ -44,9 +44,9 @@ protected:
 
     void on_zero_handles() final;
 
-    int Signal(uint64_t signals, bool resched) {
+    int Signal(uint64_t signals, bool reschedule) {
         signals_.fetch_or(signals);
-        return event_signal_etc(&event_, resched, ZX_OK);
+        return event_signal_etc(&event_, reschedule, ZX_OK);
     }
 
     // slot used for canceling wait on last handle closed

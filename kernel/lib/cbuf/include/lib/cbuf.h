@@ -135,8 +135,8 @@ size_t cbuf_write_etc(cbuf_t *cbuf, const void *buf, size_t len, uint32_t flags)
  *
  * Alias which write (or zeros) len bytes to the cbuf.
  */
-static inline size_t cbuf_write(cbuf_t *cbuf, const void *buf, size_t len, bool canreschedule) {
-    return cbuf_write_etc(cbuf, buf, len, canreschedule ? CBUF_WRITE_FLAG_CANRESCHEDULE : 0);
+static inline size_t cbuf_write(cbuf_t *cbuf, const void *buf, size_t len, bool reschedule) {
+    return cbuf_write_etc(cbuf, buf, len, reschedule ? CBUF_WRITE_FLAG_CANRESCHEDULE : 0);
 }
 
 /**
@@ -147,9 +147,9 @@ static inline size_t cbuf_write(cbuf_t *cbuf, const void *buf, size_t len, bool 
  * Alias which advances the cbuf write pointer, writing nothing to the
  * underlying buffer in the process.
  */
-static inline size_t cbuf_advance_write(cbuf_t *cbuf, size_t len, bool canreschedule) {
+static inline size_t cbuf_advance_write(cbuf_t *cbuf, size_t len, bool reschedule) {
     return cbuf_write_etc(cbuf, NULL, len,
-                          canreschedule
+                          reschedule
                           ? CBUF_WRITE_FLAG_NOFILL | CBUF_WRITE_FLAG_CANRESCHEDULE
                           : CBUF_WRITE_FLAG_NOFILL);
 }
@@ -201,7 +201,7 @@ static inline void cbuf_reset(cbuf_t *cbuf)
 
 /* special cases for dealing with a single char of data */
 size_t cbuf_read_char(cbuf_t *cbuf, char *c, bool block);
-size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule);
+size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule);
 
 __END_CDECLS
 

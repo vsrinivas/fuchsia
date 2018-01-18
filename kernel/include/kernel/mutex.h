@@ -61,7 +61,7 @@ void mutex_acquire(mutex_t* m) TA_ACQ(m);
 void mutex_release(mutex_t* m) TA_REL(m);
 
 /* special version of the above with the thread lock held */
-void mutex_release_thread_locked(mutex_t* m, bool resched) TA_REL(m);
+void mutex_release_thread_locked(mutex_t* m, bool reschedule) TA_REL(m);
 
 /* does the current thread hold the mutex? */
 static inline bool is_mutex_held(const mutex_t* m) {
