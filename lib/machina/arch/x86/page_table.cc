@@ -6,6 +6,8 @@
 
 #include <limits.h>
 
+#include <hypervisor/phys_mem.h>
+
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
 
@@ -34,19 +36,19 @@ static const size_t kPtesPerPage = PAGE_SIZE / sizeof(uint64_t);
 // @param has_page     Whether this level of the page table has associated
 //                     pages.
 // @param map_flags    Flags added to any descriptors directly mapping pages.
-static uintptr_t create_page_table_level(uintptr_t addr,
-                                         size_t size,
+static uintptr_t create_page_table_level(const PhysMem& phys_mem,
                                          size_t l1_page_size,
                                          uintptr_t l1_pte_off,
                                          uint64_t* aspace_off,
                                          bool has_page,
                                          uint64_t map_flags) {
-  size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
-  bool has_l0_aspace = size % l1_page_size != 0;
-  size_t l1_pages = (l1_ptes + kPtesPerPage - 1) / kPtesPerPage;
-  uintptr_t l0_pte_off = l1_pte_off + l1_pages * PAGE_SIZE;
+  const size_t size = phys_mem.size() - *aspace_off;
+  const size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
+  const bool has_l0_aspace = size % l1_page_size != 0;
+  const size_t l1_pages = (l1_ptes + kPtesPerPage - 1) / kPtesPerPage;
 
-  uint64_t* pt = (uint64_t*)(addr + l1_pte_off);
+  uintptr_t l0_pte_off = l1_pte_off + l1_pages * PAGE_SIZE;
+  uint64_t* pt = (uint64_t*)(phys_mem.addr() + l1_pte_off);
   for (size_t i = 0; i < l1_ptes; i++) {
     if (has_page && (!has_l0_aspace || i < l1_ptes - 1)) {
       pt[i] = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;
@@ -63,24 +65,24 @@ static uintptr_t create_page_table_level(uintptr_t addr,
 
 namespace machina {
 
-zx_status_t create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
-  if (size % PAGE_SIZE != 0) {
+zx_status_t create_page_table(const PhysMem& phys_mem, uintptr_t* end_off) {
+  if (phys_mem.size() % PAGE_SIZE != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (size > kMaxSize || size < kMinSize) {
+  if (phys_mem.size() > kMaxSize || phys_mem.size() < kMinSize) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   uint64_t aspace_off = 0;
   *end_off = 0;
-  *end_off = create_page_table_level(addr, size - aspace_off, kPml4PageSize,
-                                     *end_off, &aspace_off, false, 0);
-  *end_off = create_page_table_level(addr, size - aspace_off, kPdpPageSize,
-                                     *end_off, &aspace_off, true, X86_PTE_PS);
-  *end_off = create_page_table_level(addr, size - aspace_off, kPdPageSize,
-                                     *end_off, &aspace_off, true, X86_PTE_PS);
-  *end_off = create_page_table_level(addr, size - aspace_off, kPtPageSize,
-                                     *end_off, &aspace_off, true, 0);
+  *end_off = create_page_table_level(phys_mem, kPml4PageSize, *end_off,
+                                     &aspace_off, false, 0);
+  *end_off = create_page_table_level(phys_mem, kPdpPageSize, *end_off,
+                                     &aspace_off, true, X86_PTE_PS);
+  *end_off = create_page_table_level(phys_mem, kPdPageSize, *end_off,
+                                     &aspace_off, true, X86_PTE_PS);
+  *end_off = create_page_table_level(phys_mem, kPtPageSize, *end_off,
+                                     &aspace_off, true, 0);
   return ZX_OK;
 }
 

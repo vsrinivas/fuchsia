@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <cinttypes>
 
+#include "garnet/lib/machina/phys_mem_fake.h"
 #include "gtest/gtest.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
@@ -100,7 +101,7 @@ TEST(PageTableTest, 1gb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table((uintptr_t)actual, 1 << 30, &pte_off),
+  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 1 << 30), &pte_off),
             ZX_OK);
 
   // pml4
@@ -116,7 +117,7 @@ TEST(PageTableTest, 2mb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table((uintptr_t)actual, 2 << 20, &pte_off),
+  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 2 << 20), &pte_off),
             ZX_OK);
 
   // pml4
@@ -135,7 +136,7 @@ TEST(PageTableTest, 4kb) {
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
   ASSERT_EQ(
-      machina::create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off),
+      machina::create_page_table(PhysMemFake((uintptr_t)actual, 4 * 4 << 10), &pte_off),
       ZX_OK);
 
   // pml4
@@ -158,7 +159,7 @@ TEST(PageTableTest, MixedPages) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table((uintptr_t)actual, (2 << 20) + (4 << 10),
+  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10)),
                                        &pte_off),
             ZX_OK);
 
@@ -198,7 +199,7 @@ TEST(PageTableTest, Complex) {
   //
   // PT
   // >  264 mapped pages
-  ASSERT_EQ(machina::create_page_table((uintptr_t)actual, 0x87B08000, &pte_off),
+  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 0x87B08000), &pte_off),
             ZX_OK);
 
   // pml4

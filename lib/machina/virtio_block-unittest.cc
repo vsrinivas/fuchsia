@@ -12,6 +12,7 @@
 #include <virtio/block.h>
 #include <virtio/virtio_ring.h>
 
+#include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio.h"
 #include "garnet/lib/machina/virtio_block.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"

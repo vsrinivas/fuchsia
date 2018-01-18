@@ -85,13 +85,13 @@ TEST(GuestConfigParserTest, BooleanFlag) {
   GuestConfigParser parser(&config);
 
   const char* argv_false[] = {"exe_name", "--balloon-demand-page=false"};
-  ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(argv_false), const_cast<char**>(argv_false)));
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_false),
+                                        const_cast<char**>(argv_false)));
   ASSERT_FALSE(config.balloon_demand_page());
 
   const char* argv_true[] = {"exe_name", "--balloon-demand-page=true"};
-  ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(argv_true), const_cast<char**>(argv_true)));
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_true),
+                                        const_cast<char**>(argv_true)));
   ASSERT_TRUE(config.balloon_demand_page());
 }
 

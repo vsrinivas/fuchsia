@@ -77,8 +77,7 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
     uint32_t current_pages = balloon->num_pages();
     uint32_t available_pages =
         static_cast<uint32_t>(stats[i].val / machina::VirtioBalloon::kPageSize);
-    uint32_t target_pages =
-        current_pages + (available_pages - threshold);
+    uint32_t target_pages = current_pages + (available_pages - threshold);
     if (current_pages == target_pages) {
       return;
     }
@@ -194,7 +193,7 @@ int main(int argc, char** argv) {
   uintptr_t pt_end_off = 0;
 
 #if __x86_64__
-  status = machina::create_page_table(physmem_addr, physmem_size, &pt_end_off);
+  status = machina::create_page_table(guest.phys_mem(), &pt_end_off);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create page table";
     return status;

@@ -4,6 +4,7 @@
 
 #include <zircon/device/ethernet.h>
 
+#include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio.h"
 #include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
