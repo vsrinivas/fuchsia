@@ -76,14 +76,6 @@ fail:
     return status;
 }
 
-static zx_status_t qemu_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static pbus_interface_ops_t qemu_bus_bus_ops = {
-    .get_protocol = qemu_bus_get_protocol,
-};
-
 static void qemu_bus_release(void* ctx) {
     qemu_bus_t* bus = ctx;
     free(bus);
@@ -138,11 +130,6 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         goto fail;
     }
-
-    pbus_interface_t intf;
-    intf.ops = &qemu_bus_bus_ops;
-    intf.ctx = bus;
-    pbus_set_interface(&bus->pbus, &intf);
 
     pbus_dev_t pci_dev = {
         .name = "pci",

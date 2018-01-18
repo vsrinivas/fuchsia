@@ -17,18 +17,26 @@
 
 #include "platform-bus.h"
 
-zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
-    if (!interface) {
+zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    if (!protocol) {
         return ZX_ERR_INVALID_ARGS;
     }
     platform_bus_t* bus = ctx;
-    memcpy(&bus->interface, interface, sizeof(bus->interface));
 
-    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->ums);
-    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_GPIO, &bus->gpio);
-    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_I2C, &bus->i2c);
-
-    return ZX_OK;
+    switch (proto_id) {
+    case ZX_PROTOCOL_USB_MODE_SWITCH:
+        memcpy(&bus->ums, protocol, sizeof(bus->ums));
+        return ZX_OK;
+    case ZX_PROTOCOL_GPIO:
+        memcpy(&bus->gpio, protocol, sizeof(bus->gpio));
+        return ZX_OK;
+    case ZX_PROTOCOL_I2C:
+        memcpy(&bus->i2c, protocol, sizeof(bus->i2c));
+        return ZX_OK;
+    default:
+        // TODO(voydanoff) consider having a registry of arbitrary protocols
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static zx_status_t platform_bus_device_add(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
@@ -55,7 +63,7 @@ static const char* platform_bus_get_board_name(void* ctx) {
 }
 
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
-    .set_interface = platform_bus_set_interface,
+    .set_protocol = platform_bus_set_protocol,
     .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
     .get_board_name = platform_bus_get_board_name,

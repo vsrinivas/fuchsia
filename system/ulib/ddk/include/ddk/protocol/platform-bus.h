@@ -48,23 +48,8 @@ enum {
     PDEV_ADD_DISABLED = (1 << 0),
 };
 
-// interface registered by the platform bus implementation driver
 typedef struct {
-    zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);
-} pbus_interface_ops_t;
-
-typedef struct {
-    pbus_interface_ops_t* ops;
-    void* ctx;
-} pbus_interface_t;
-
-static inline zx_status_t pbus_interface_get_protocol(pbus_interface_t* intf, uint32_t proto_id,
-                                                      void* out) {
-    return intf->ops->get_protocol(intf->ctx, proto_id, out);
-}
-
-typedef struct {
-    zx_status_t (*set_interface)(void* ctx, pbus_interface_t* interface);
+    zx_status_t (*set_protocol)(void* ctx, uint32_t proto_id, void* protocol);
     zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev, uint32_t flags);
     zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
     const char* (*get_board_name)(void* ctx);
@@ -75,9 +60,9 @@ typedef struct {
     void* ctx;
 } platform_bus_protocol_t;
 
-static inline zx_status_t pbus_set_interface(platform_bus_protocol_t* pbus,
-                                             pbus_interface_t* interface) {
-    return pbus->ops->set_interface(pbus->ctx, interface);
+static inline zx_status_t pbus_set_protocol(platform_bus_protocol_t* pbus,
+                                            uint32_t proto_id, void* protocol) {
+    return pbus->ops->set_protocol(pbus->ctx, proto_id, protocol);
 }
 
 static inline zx_status_t pbus_device_add(platform_bus_protocol_t* pbus, const pbus_dev_t* dev,

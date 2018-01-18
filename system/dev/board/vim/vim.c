@@ -48,27 +48,6 @@ static pbus_dev_t display_dev = {
     .mmio_count = countof(vim_display_mmios),
 };
 
-static zx_status_t vim_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-//    vim_bus_t* bus = ctx;
-
-    switch (proto_id) {
-/*
-    case ZX_PROTOCOL_GPIO:
-        memcpy(out, &bus->gpio.proto, sizeof(bus->gpio.proto));
-        return ZX_OK;
-    case ZX_PROTOCOL_I2C:
-        memcpy(out, &bus->i2c.proto, sizeof(bus->i2c.proto));
-        return ZX_OK;
-*/
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
-static pbus_interface_ops_t vim_bus_ops = {
-    .get_protocol = vim_bus_get_protocol,
-};
-
 static void vim_bus_release(void* ctx) {
     vim_bus_t* bus = ctx;
 
@@ -117,11 +96,6 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         goto fail;
     }
-
-    pbus_interface_t intf;
-    intf.ops = &vim_bus_ops;
-    intf.ctx = bus;
-    pbus_set_interface(&bus->pbus, &intf);
 
     if ((status = vim_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);

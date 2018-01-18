@@ -90,28 +90,6 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
     .set_mode = gauss_set_mode,
 };
 
-static zx_status_t gauss_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    gauss_bus_t* bus = ctx;
-
-    switch (proto_id) {
-    case ZX_PROTOCOL_USB_MODE_SWITCH:
-        memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
-        return ZX_OK;
-    case ZX_PROTOCOL_GPIO:
-        memcpy(out, &bus->gpio.proto, sizeof(bus->gpio.proto));
-        return ZX_OK;
-    case ZX_PROTOCOL_I2C:
-        memcpy(out, &bus->i2c.proto, sizeof(bus->i2c.proto));
-        return ZX_OK;
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
-static pbus_interface_ops_t gauss_bus_ops = {
-    .get_protocol = gauss_bus_get_protocol,
-};
-
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
 
@@ -208,10 +186,18 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    pbus_interface_t intf;
-    intf.ops = &gauss_bus_ops;
-    intf.ctx = bus;
-    pbus_set_interface(&bus->pbus, &intf);
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_GPIO, &bus->gpio.proto);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_I2C, &bus->i2c.proto);
+    if (status != ZX_OK) {
+        goto fail;
+    }
 
     if ((status = gauss_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);

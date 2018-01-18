@@ -17,7 +17,6 @@
 // context structure for the platform bus
 typedef struct {
     zx_device_t* zxdev;
-    pbus_interface_t interface;
     usb_mode_switch_protocol_t ums;
     gpio_protocol_t gpio;
     i2c_protocol_t i2c;

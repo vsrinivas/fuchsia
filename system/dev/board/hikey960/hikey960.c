@@ -65,23 +65,6 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
     .set_mode = hikey960_set_mode,
 };
 
-static zx_status_t hikey960_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    hikey960_t* hikey = ctx;
-
-    switch (proto_id) {
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        memcpy(out, &hikey->usb_mode_switch, sizeof(hikey->usb_mode_switch));
-        return ZX_OK;
-    }
-    default:
-        return hi3660_get_protocol(hikey->hi3660, proto_id, out);
-    }
-}
-
-static pbus_interface_ops_t hikey960_ops = {
-    .get_protocol = hikey960_get_protocol,
-};
-
 static void hikey960_release(void* ctx) {
     hikey960_t* hikey = ctx;
 
@@ -134,10 +117,30 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
     hikey->usb_mode_switch.ops = &usb_mode_switch_ops;
     hikey->usb_mode_switch.ctx = hikey;
 
-    pbus_interface_t intf;
-    intf.ops = &hikey960_ops;
-    intf.ctx = hikey;
-    pbus_set_interface(&hikey->pbus, &intf);
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &hikey->usb_mode_switch);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    gpio_protocol_t gpio;
+    status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &gpio);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &gpio);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    i2c_protocol_t i2c;
+    status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        goto fail;
+    }
 
     if ((status = hikey960_add_devices(hikey)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_bind: hi3660_add_devices failed!\n");;
