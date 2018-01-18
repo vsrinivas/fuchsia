@@ -69,6 +69,13 @@ class PageManager : public PageDebug {
                         fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                         std::string key_prefix);
 
+  // Create a new reference for the given object identifier.
+  ReferencePtr CreateReference(storage::ObjectIdentifier object_identifier);
+
+  // Retrieve an object identifier from a Reference.
+  Status ResolveReference(ReferencePtr reference,
+                          storage::ObjectIdentifier* object_identifier);
+
   void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
@@ -105,6 +112,9 @@ class PageManager : public PageDebug {
   SyncWatcherSet watchers_;
 
   fidl::BindingSet<PageDebug> page_debug_bindings_;
+
+  // Registered references.
+  std::map<uint64_t, storage::ObjectIdentifier> references_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;

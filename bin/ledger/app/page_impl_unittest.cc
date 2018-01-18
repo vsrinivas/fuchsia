@@ -25,6 +25,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
@@ -201,44 +202,49 @@ TEST_F(PageImplTest, PutNoTransaction) {
 }
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
-  std::string key("some_key");
   std::string object_data("some_data");
-  std::unique_ptr<const storage::Object> object = AddObject(object_data);
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
 
-  storage::ObjectDigest object_digest = object->GetIdentifier().object_digest;
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_digest);
+  Status status;
+  ReferencePtr reference;
+  page_ptr_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      callback::Capture(MakeQuitTask(), &status, &reference));
+  ASSERT_FALSE(RunLoopWithTimeout());
 
-  auto callback = [this, &key, &object_digest](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    auto objects = fake_storage_->GetObjects();
-    // No object should have been added.
-    EXPECT_EQ(1u, objects.size());
+  ASSERT_EQ(Status::OK, status);
 
-    const std::map<std::string,
-                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_->GetJournals();
-    EXPECT_EQ(1u, journals.size());
-    auto it = journals.begin();
-    EXPECT_TRUE(it->second->IsCommitted());
-    EXPECT_EQ(1u, it->second->GetData().size());
-    storage::fake::FakeJournalDelegate::Entry entry =
-        it->second->GetData().at(key);
-    EXPECT_EQ(object_digest, entry.value.object_digest);
-    EXPECT_FALSE(entry.deleted);
-    EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    message_loop_.PostQuitTask();
-  };
+  std::string key("some_key");
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
-                          Priority::LAZY, callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+                          Priority::LAZY,
+                          callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::OK, status);
+  auto objects = fake_storage_->GetObjects();
+  // No object should have been added.
+  EXPECT_EQ(1u, objects.size());
+
+  const std::map<std::string,
+                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+      journals = fake_storage_->GetJournals();
+  EXPECT_EQ(1u, journals.size());
+  auto it = journals.begin();
+  EXPECT_TRUE(it->second->IsCommitted());
+  EXPECT_EQ(1u, it->second->GetData().size());
+  storage::fake::FakeJournalDelegate::Entry entry =
+      it->second->GetData().at(key);
+  std::unique_ptr<const storage::Object> object = AddObject(object_data);
+  EXPECT_EQ(object->GetIdentifier().object_digest, entry.value.object_digest);
+  EXPECT_FALSE(entry.deleted);
+  EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
 }
 
 TEST_F(PageImplTest, PutUnknownReference) {
   std::string key("some_key");
-  storage::ObjectDigest object_digest("unknown_digest");
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_digest);
+  reference->opaque_id = convert::ToArray("12345678");
 
   auto callback = [this](Status status) {
     EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
@@ -279,34 +285,38 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
 }
 
 TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
+  std::string object_data("some_data");
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
+
+  Status status;
+  ReferencePtr reference;
+  page_ptr_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      callback::Capture(MakeQuitTask(), &status, &reference));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
-  std::string object_data("some_data");
-  std::unique_ptr<const storage::Object> object = AddObject(object_data);
 
-  storage::ObjectDigest object_digest = object->GetIdentifier().object_digest;
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_digest);
-
-  auto callback = [this](Status status) {
-    EXPECT_EQ(Status::KEY_TOO_LARGE, status);
-
-    // We manually created an object above, so there should be one object in
-    // storage.
-    auto objects = fake_storage_->GetObjects();
-    EXPECT_EQ(1u, objects.size());
-
-    // But there should be no operations pending (an attempt to put a new
-    // key-value pair failed).
-    const std::map<std::string,
-                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_->GetJournals();
-    EXPECT_EQ(0u, journals.size());
-    message_loop_.PostQuitTask();
-  };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
-                          Priority::LAZY, callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+                          Priority::LAZY,
+                          callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+
+  // We created a reference above, so there should be one object in storage.
+  auto objects = fake_storage_->GetObjects();
+  EXPECT_EQ(1u, objects.size());
+
+  // But there should be no operations pending (an attempt to put a new
+  // key-value pair failed).
+  const std::map<std::string,
+                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+      journals = fake_storage_->GetJournals();
+  EXPECT_EQ(0u, journals.size());
 }
 
 TEST_F(PageImplTest, DeleteNoTransaction) {
@@ -340,11 +350,17 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   std::string key2("some_key2");
   std::string value2("another value");
-  std::unique_ptr<const storage::Object> object2 = AddObject(value2);
-  storage::ObjectDigest object_digest2 = object2->GetIdentifier().object_digest;
 
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_digest2);
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromString(value2, &vmo));
+
+  Status status;
+  ReferencePtr reference;
+  page_ptr_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      callback::Capture(MakeQuitTask(), &status, &reference));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
 
   // Sequence of operations:
   //  - StartTransaction
@@ -352,13 +368,15 @@ TEST_F(PageImplTest, TransactionCommit) {
   //  - PutReference
   //  - Delete
   //  - Commit
-  page_ptr_->StartTransaction([this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->StartTransaction(callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
 
-  auto put_callback = [this, &key1, &value, &object_digest1](Status status) {
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value),
+                 callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(2u, objects.size());
@@ -387,13 +405,14 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(object_digest1, entry.value.object_digest);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
-    message_loop_.PostQuitTask();
-  };
+  }
 
-  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
+                          Priority::LAZY,
+                          callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
 
-  auto put_reference_callback = [this, &key2, &object_digest2](Status status) {
+  {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(2u, fake_storage_->GetObjects().size());
 
@@ -407,15 +426,11 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(2u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key2);
-    EXPECT_EQ(object_digest2, entry.value.object_digest);
+    EXPECT_EQ(AddObject(value2)->GetIdentifier().object_digest,
+              entry.value.object_digest);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    message_loop_.PostQuitTask();
-  };
-
-  page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
-                          Priority::LAZY, put_reference_callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  }
 
   auto delete_callback = [this, &key2](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -511,6 +526,8 @@ TEST_F(PageImplTest, NoTransactionRollback) {
 }
 
 TEST_F(PageImplTest, CreateReferenceFromSocket) {
+  ASSERT_EQ(0u, fake_storage_->GetObjects().size());
+
   std::string value("a small value");
   Status status;
   ReferencePtr reference;
@@ -524,14 +541,13 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
       });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  auto objects = fake_storage_->GetObjects();
-  auto it = objects.find(storage::MakeDefaultObjectIdentifier(
-      convert::ToString(reference->opaque_id)));
-  ASSERT_NE(objects.end(), it);
-  ASSERT_EQ(value, it->second);
+  ASSERT_EQ(1u, fake_storage_->GetObjects().size());
+  ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
 }
 
 TEST_F(PageImplTest, CreateReferenceFromVmo) {
+  ASSERT_EQ(0u, fake_storage_->GetObjects().size());
+
   std::string value("a small value");
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(value, &vmo));
@@ -548,11 +564,8 @@ TEST_F(PageImplTest, CreateReferenceFromVmo) {
       });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  auto objects = fake_storage_->GetObjects();
-  auto it = objects.find(storage::MakeDefaultObjectIdentifier(
-      convert::ToString(reference->opaque_id)));
-  ASSERT_NE(objects.end(), it);
-  ASSERT_EQ(value, it->second);
+  ASSERT_EQ(1u, fake_storage_->GetObjects().size());
+  ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
@@ -1138,41 +1151,40 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
   std::string value_string(fidl_serialization::kMaxInlineDataSize + 1, 'a');
-  storage::ObjectIdentifier object_identifier =
-      AddObjectToStorage(value_string);
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromString(value_string, &vmo));
+
+  Status status;
+  ReferencePtr reference;
+  page_ptr_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      callback::Capture(MakeQuitTask(), &status, &reference));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(Status::OK, status);
 
   std::string key("some_key");
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_identifier.object_digest);
-
-  auto callback_put = [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
-                          Priority::EAGER, callback_put);
+                          Priority::EAGER,
+                          callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
   PageSnapshotPtr snapshot = GetSnapshot();
 
   fsl::SizedVmoTransportPtr actual_value;
-  auto callback_get = [this, &actual_value](Status status,
-                                            fsl::SizedVmoTransportPtr value) {
-    EXPECT_EQ(Status::OK, status);
-    actual_value = std::move(value);
-    message_loop_.PostQuitTask();
-  };
-  snapshot->Get(convert::ExtendedStringView(key).ToArray(), callback_get);
+  snapshot->Get(convert::ExtendedStringView(key).ToArray(),
+                callback::Capture(MakeQuitTask(), &status, &actual_value));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
 
   EXPECT_EQ(value_string, ToString(actual_value));
 
-  auto callback_get_inline = [this](Status status, fidl::Array<uint8_t> value) {
-    EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
-    message_loop_.PostQuitTask();
-  };
-
-  snapshot->GetInline(convert::ToArray(key), callback_get_inline);
+  fidl::Array<uint8_t> array_value;
+  snapshot->GetInline(convert::ToArray(key),
+                      callback::Capture(MakeQuitTask(), &status, &array_value));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {

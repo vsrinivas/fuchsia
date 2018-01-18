@@ -170,12 +170,17 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
     callback(Status::KEY_TOO_LARGE);
     return;
   }
+  storage::ObjectIdentifier object_identifier;
+  Status status =
+      manager_->ResolveReference(std::move(reference), &object_identifier);
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
+
   auto promise = callback::
       Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::ILLEGAL_STATE);
-  storage::ObjectIdentifier object_identifier =
-      storage::MakeDefaultObjectIdentifier(
-          convert::ToString(reference->opaque_id));
 
   storage_->GetObject(object_identifier, storage::PageStorage::Location::LOCAL,
                       promise->NewCallback());
@@ -231,17 +236,15 @@ void PageDelegate::CreateReference(
     std::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
       std::move(data),
-      [callback = std::move(callback)](
+      [this, callback = std::move(callback)](
           storage::Status status, storage::ObjectIdentifier object_identifier) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
 
-        ReferencePtr reference = Reference::New();
-        reference->opaque_id =
-            convert::ToArray(object_identifier.object_digest);
-        callback(Status::OK, std::move(reference));
+        callback(Status::OK,
+                 manager_->CreateReference(std::move(object_identifier)));
       });
 }
 

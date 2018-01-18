@@ -127,10 +127,16 @@ void ConflictResolverClient::OnNextMergeResult(
                                          merged_value->new_value->get_bytes())),
                                      waiter->NewCallback());
       } else {
-        waiter->NewCallback()(
-            storage::Status::OK,
-            storage::MakeDefaultObjectIdentifier(convert::ToString(
-                merged_value->new_value->get_reference()->opaque_id)));
+        storage::ObjectIdentifier object_identifier;
+        Status status = manager_->ResolveReference(
+            std::move(merged_value->new_value->get_reference()),
+            &object_identifier);
+        if (status != Status::OK) {
+          waiter->NewCallback()(storage::Status::NOT_FOUND, {});
+          return;
+        }
+        waiter->NewCallback()(storage::Status::OK,
+                              std::move(object_identifier));
       }
       break;
     }

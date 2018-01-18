@@ -9,6 +9,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/encryption/primitives/rand.h"
+#include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
 namespace ledger {
 
@@ -91,6 +93,33 @@ void PageManager::BindPageSnapshot(
                      std::move(commit), std::move(key_prefix));
 }
 
+ReferencePtr PageManager::CreateReference(
+    storage::ObjectIdentifier object_identifier) {
+  uint64_t index;
+  encryption::RandBytes(&index, sizeof(index));
+  FXL_DCHECK(references_.find(index) == references_.end());
+  references_[index] = std::move(object_identifier);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(storage::SerializeNumber(index));
+  return reference;
+}
+
+Status PageManager::ResolveReference(
+    ReferencePtr reference,
+    storage::ObjectIdentifier* object_identifier) {
+  if (reference->opaque_id.size() != sizeof(uint64_t)) {
+    return Status::REFERENCE_NOT_FOUND;
+  }
+  uint64_t index = storage::DeserializeNumber<uint64_t>(
+      convert::ToStringView(reference->opaque_id));
+  auto iterator = references_.find(index);
+  if (iterator == references_.end()) {
+    return Status::REFERENCE_NOT_FOUND;
+  }
+  *object_identifier = iterator->second;
+  return Status::OK;
+}
+
 void PageManager::CheckEmpty() {
   if (on_empty_callback_ && pages_.empty() && snapshots_.empty() &&
       page_requests_.empty() && merge_resolver_->IsEmpty() &&
@@ -168,4 +197,5 @@ void PageManager::GetCommit(fidl::Array<uint8_t> commit_id,
                      std::move(commit_struct));
           }));
 }
+
 }  // namespace ledger
