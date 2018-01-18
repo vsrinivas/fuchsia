@@ -69,7 +69,7 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
         return;
 
     LTRACEF("entry failure: %d\n", entry_failure);
-    LTRACEF("exit reason: %#x\n", static_cast<uint32_t>(exit_reason));
+    LTRACEF("exit reason: %#x (%s)\n", static_cast<uint32_t>(exit_reason), exit_reason_name(exit_reason));
     LTRACEF("exit qualification: %#lx\n", exit_qualification);
     LTRACEF("exit instruction length: %#x\n", exit_instruction_length);
     LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
@@ -299,8 +299,10 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
                                          GuestState* guest_state, TrapMap* traps,
                                          zx_port_packet_t* packet) {
     IoInfo io_info(exit_info.exit_qualification);
-    if (io_info.string || io_info.repeat)
+    if (io_info.string || io_info.repeat) {
+        dprintf(CRITICAL, "Unsupported IO instruction\n");
         return ZX_ERR_NOT_SUPPORTED;
+    }
 
     Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
@@ -379,6 +381,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
         // Issue a general protection fault for write only and unimplemented
         // registers.
+        dprintf(INFO, "Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
@@ -421,6 +424,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kX2ApicMsrBase... kX2ApicMsrMax:
         return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
+        dprintf(INFO, "Unhandled rdmsr %#lx\n", guest_state->rcx);
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
@@ -474,8 +478,10 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
         next_rip(exit_info, vmcs);
         return ZX_OK;
     case InterruptDeliveryMode::IPI_START_UP:
-        if (icr.destination_mode != InterruptDestinationMode::PHYSICAL)
+        if (icr.destination_mode != InterruptDestinationMode::PHYSICAL) {
+            dprintf(CRITICAL, "Unsupported IPI destination mode %d\n", static_cast<bool>(icr.destination_mode));
             return ZX_ERR_NOT_SUPPORTED;
+        }
         memset(packet, 0, sizeof(*packet));
         packet->type = ZX_PKT_TYPE_GUEST_VCPU;
         packet->guest_vcpu.addr = icr.addr;
@@ -483,6 +489,7 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
         next_rip(exit_info, vmcs);
         return ZX_ERR_NEXT;
     default:
+        dprintf(CRITICAL, "Unsupported IPI delivery mode %#x\n", static_cast<uint8_t>(icr.delivery_mode));
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -539,6 +546,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
         // Issue a general protection fault for read only and unimplemented
         // registers.
+        dprintf(INFO, "Unhandled x2APIC wrmsr %#lx\n", guest_state->rcx);
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
@@ -576,6 +584,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case kX2ApicMsrBase... kX2ApicMsrMax:
         return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
     default:
+        dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
         vmcs->IssueInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
@@ -758,11 +767,6 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {
-    case ExitReason::EXCEPTION:
-        /* Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
-         * and handled by host via IDT as any other interrupt/exception.
-         */
-        return ZX_ERR_NOT_SUPPORTED;
     case ExitReason::EXTERNAL_INTERRUPT:
         return handle_external_interrupt(vmcs, local_apic_state);
     case ExitReason::INTERRUPT_WINDOW:
@@ -792,8 +796,12 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, vmcs, guest_state);
+    case ExitReason::EXCEPTION:
+        // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
+        // and handled by host via IDT as any other interrupt/exception.
     default:
-        LTRACEF("unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
+        dprintf(CRITICAL, "Unhandled VM exit %u (%s)\n", static_cast<uint32_t>(exit_info.exit_reason),
+                exit_reason_name(exit_info.exit_reason));
         return ZX_ERR_NOT_SUPPORTED;
     }
 }

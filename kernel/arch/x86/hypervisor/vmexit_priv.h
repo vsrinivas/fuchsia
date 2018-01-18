@@ -14,18 +14,137 @@
 enum class ExitReason : uint32_t {
     EXCEPTION                   = 0u,  // NMI is an exception too
     EXTERNAL_INTERRUPT          = 1u,
+    TRIPLE_FAULT                = 2u,
+    INIT_SIGNAL                 = 3u,
+    STARTUP_IPI                 = 4u,
+    IO_SMI                      = 5u,
+    OTHER_SMI                   = 6u,
     INTERRUPT_WINDOW            = 7u,
+    NMI_WINDOW                  = 8u,
+    TASK_SWITCH                 = 9u,
     CPUID                       = 10u,
+    GETSEC                      = 11u,
     HLT                         = 12u,
+    INVD                        = 13u,
+    INVLPG                      = 14u,
+    RDPMC                       = 15u,
+    RDTSC                       = 16u,
+    RSM                         = 17u,
     VMCALL                      = 18u,
+    VMCLEAR                     = 19u,
+    VMLAUNCH                    = 20u,
+    VMPTRLD                     = 21u,
+    VMPTRST                     = 22u,
+    VMREAD                      = 23u,
+    VMRESUME                    = 24u,
+    VMWRITE                     = 25u,
+    VMXOFF                      = 26u,
+    VMXON                       = 27u,
+    CONTROL_REGISTER_ACCESS     = 28u,
+    MOV_DR                      = 29u,
     IO_INSTRUCTION              = 30u,
     RDMSR                       = 31u,
     WRMSR                       = 32u,
     ENTRY_FAILURE_GUEST_STATE   = 33u,
     ENTRY_FAILURE_MSR_LOADING   = 34u,
+    MWAIT                       = 36u,
+    MONITOR_TRAP_FLAG           = 37u,
+    MONITOR                     = 39u,
+    PAUSE                       = 40u,
+    ENTRY_FAILURE_MACHINE_CHECK = 41u,
+    TPR_BELOW_THRESHOLD         = 43u,
+    APIC_ACCESS                 = 44u,
+    VIRTUALIZED_EOI             = 45u,
+    ACCESS_GDTR_OR_IDTR         = 46u,
+    ACCESS_LDTR_OR_TR           = 47u,
     EPT_VIOLATION               = 48u,
+    EPT_MISCONFIGURATION        = 49u,
+    INVEPT                      = 50u,
+    RDTSCP                      = 51u,
+    VMX_PREEMPT_TIMER_EXPIRED   = 52u,
+    INVVPID                     = 53u,
+    WBINVD                      = 54u,
     XSETBV                      = 55u,
+    APIC_WRITE                  = 56u,
+    RDRAND                      = 57u,
+    INVPCID                     = 58u,
+    VMFUNC                      = 59u,
+    ENCLS                       = 60u,
+    RDSEED                      = 61u,
+    PAGE_MODIFICATION_LOG_FULL  = 62u,
+    XSAVES                      = 63u,
+    XRSTORS                     = 64u,
 };
+
+static inline const char* exit_reason_name(ExitReason exit_reason) {
+#define EXIT_REASON_NAME(name) case ExitReason::name: return #name
+    switch (exit_reason) {
+    EXIT_REASON_NAME(EXCEPTION);
+    EXIT_REASON_NAME(EXTERNAL_INTERRUPT);
+    EXIT_REASON_NAME(TRIPLE_FAULT);
+    EXIT_REASON_NAME(INIT_SIGNAL);
+    EXIT_REASON_NAME(STARTUP_IPI);
+    EXIT_REASON_NAME(IO_SMI);
+    EXIT_REASON_NAME(OTHER_SMI);
+    EXIT_REASON_NAME(INTERRUPT_WINDOW);
+    EXIT_REASON_NAME(NMI_WINDOW);
+    EXIT_REASON_NAME(TASK_SWITCH);
+    EXIT_REASON_NAME(CPUID);
+    EXIT_REASON_NAME(GETSEC);
+    EXIT_REASON_NAME(HLT);
+    EXIT_REASON_NAME(INVD);
+    EXIT_REASON_NAME(INVLPG);
+    EXIT_REASON_NAME(RDPMC);
+    EXIT_REASON_NAME(RDTSC);
+    EXIT_REASON_NAME(RSM);
+    EXIT_REASON_NAME(VMCALL);
+    EXIT_REASON_NAME(VMCLEAR);
+    EXIT_REASON_NAME(VMLAUNCH);
+    EXIT_REASON_NAME(VMPTRLD);
+    EXIT_REASON_NAME(VMPTRST);
+    EXIT_REASON_NAME(VMREAD);
+    EXIT_REASON_NAME(VMRESUME);
+    EXIT_REASON_NAME(VMWRITE);
+    EXIT_REASON_NAME(VMXOFF);
+    EXIT_REASON_NAME(VMXON);
+    EXIT_REASON_NAME(CONTROL_REGISTER_ACCESS);
+    EXIT_REASON_NAME(MOV_DR);
+    EXIT_REASON_NAME(IO_INSTRUCTION);
+    EXIT_REASON_NAME(RDMSR);
+    EXIT_REASON_NAME(WRMSR);
+    EXIT_REASON_NAME(ENTRY_FAILURE_GUEST_STATE);
+    EXIT_REASON_NAME(ENTRY_FAILURE_MSR_LOADING);
+    EXIT_REASON_NAME(MWAIT);
+    EXIT_REASON_NAME(MONITOR_TRAP_FLAG);
+    EXIT_REASON_NAME(MONITOR);
+    EXIT_REASON_NAME(PAUSE);
+    EXIT_REASON_NAME(ENTRY_FAILURE_MACHINE_CHECK);
+    EXIT_REASON_NAME(TPR_BELOW_THRESHOLD);
+    EXIT_REASON_NAME(APIC_ACCESS);
+    EXIT_REASON_NAME(VIRTUALIZED_EOI);
+    EXIT_REASON_NAME(ACCESS_GDTR_OR_IDTR);
+    EXIT_REASON_NAME(ACCESS_LDTR_OR_TR);
+    EXIT_REASON_NAME(EPT_VIOLATION);
+    EXIT_REASON_NAME(EPT_MISCONFIGURATION);
+    EXIT_REASON_NAME(INVEPT);
+    EXIT_REASON_NAME(RDTSCP);
+    EXIT_REASON_NAME(VMX_PREEMPT_TIMER_EXPIRED);
+    EXIT_REASON_NAME(INVVPID);
+    EXIT_REASON_NAME(WBINVD);
+    EXIT_REASON_NAME(XSETBV);
+    EXIT_REASON_NAME(APIC_WRITE);
+    EXIT_REASON_NAME(RDRAND);
+    EXIT_REASON_NAME(INVPCID);
+    EXIT_REASON_NAME(VMFUNC);
+    EXIT_REASON_NAME(ENCLS);
+    EXIT_REASON_NAME(RDSEED);
+    EXIT_REASON_NAME(PAGE_MODIFICATION_LOG_FULL);
+    EXIT_REASON_NAME(XSAVES);
+    EXIT_REASON_NAME(XRSTORS);
+#undef EXIT_REASON_NAME
+    default: return "UNKNOWN";
+    }
+}
 
 // VM exit interruption type.
 enum class InterruptionType : uint8_t {
