@@ -15,12 +15,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/encoding_tests.cpp \
     $(LOCAL_DIR)/fidl_coded_types.cpp \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/message_tests.cpp \
 
 MODULE_NAME := fidl-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \

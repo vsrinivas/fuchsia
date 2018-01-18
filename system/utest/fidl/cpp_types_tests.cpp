@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/builder.h>
-#include <fidl/string_view.h>
-#include <fidl/vector_view.h>
+#include <fidl/cpp/builder.h>
+#include <fidl/cpp/string_view.h>
+#include <fidl/cpp/vector_view.h>
 
 #include <unittest/unittest.h>
 
