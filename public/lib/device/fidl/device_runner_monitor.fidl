@@ -12,11 +12,11 @@ module modular;
 //
 // Later we can use this service to send device runner remote control
 // commands from a terminal, such as asking it to change its user
-// shell. It could also be folded into application_manager or
-// bootstrap. We play with it a bit first.
+// shell. It could also be folded into appmgr or sysmgr. We play with
+// it a bit first.
 //
 // We use :: in the service name because it's more usual in
-// bootstrap/services.conf.
+// sysmgr/services.conf.
 [ServiceName="modular::DeviceRunnerMonitor"]
 interface DeviceRunnerMonitor {
   // Returns the number of connection requests the service has
