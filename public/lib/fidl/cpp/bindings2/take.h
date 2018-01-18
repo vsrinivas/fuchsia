@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS2_TAKE_H_
 #define LIB_FIDL_CPP_BINDINGS2_TAKE_H_
 
-#include <fidl/builder.h>
+#include <fidl/cpp/builder.h>
 
 #include "lib/fidl/cpp/bindings2/traits.h"
 

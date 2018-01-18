@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS2_STRING_H_
 #define LIB_FIDL_CPP_BINDINGS2_STRING_H_
 
-#include <fidl/builder.h>
-#include <fidl/string_view.h>
+#include <fidl/cpp/builder.h>
+#include <fidl/cpp/string_view.h>
 
 #include <utility>
 #include <string>
