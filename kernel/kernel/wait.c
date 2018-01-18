@@ -34,14 +34,14 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t 
         return INT_NO_RESCHEDULE;
 
     bool local_resched;
-    enum handler_return ret = INT_NO_RESCHEDULE;
-    if (wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT, &local_resched) >= ZX_OK) {
-        ret = local_resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    if (wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT, &local_resched) >= ZX_OK &&
+        local_resched) {
+        sched_reschedule();
     }
 
     spin_unlock(&thread_lock);
 
-    return ret;
+    return INT_NO_RESCHEDULE;
 }
 
 static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadline,
