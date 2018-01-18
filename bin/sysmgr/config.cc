@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/bootstrap/config.h"
+#include "garnet/bin/sysmgr/config.h"
 
 #include <utility>
 
 #include "lib/fxl/files/file.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace bootstrap {
+namespace sysmgr {
 namespace {
 
 constexpr char kAppLoaders[] = "loaders";
@@ -96,4 +96,4 @@ bool Config::Parse(const std::string& string, const std::string& config_file) {
   return true;
 }
 
-}  // namespace bootstrap
+}  // namespace sysmgr

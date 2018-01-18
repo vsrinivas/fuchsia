@@ -9,4 +9,4 @@ or
 ```
 "echo::Echo": "echo_server_cpp",
 ```
-to [//application/src/bootstrap/services.config](https://fuchsia.googlesource.com/application/+/master/src/bootstrap/services.config).
+to [//application/src/sysmgr/services.config](https://fuchsia.googlesource.com/application/+/master/src/sysmgr/services.config).

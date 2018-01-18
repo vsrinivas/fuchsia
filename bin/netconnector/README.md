@@ -22,8 +22,8 @@ Here’s the [NetConnector interface](../../public/lib/netconnector/fidl/netconn
 
 `RegisterServiceProvider` allows a running service to register its availability.
 The method specifies a service name and a `ServiceProvider`.
-Services can also be registered using a config file in the manner of bootstrap.
-Like bootstrap, NetConnector will launch services on demand.
+Services can also be registered using a config file in the manner of sysmgr.
+Like sysmgr, NetConnector will launch services on demand.
 
 `GetDeviceServiceProvider` gets a `ServiceProvider` that provides any of the
 services registered on the specified device.
@@ -79,9 +79,9 @@ The `--show-devices` option is only relevant when `netconnector` is running as
 a utility. `--config` is only relevant to the listener.
 
 The `--listen` option makes `netconnector` run as listener. Typically, this
-argument is only used in the context of `bootstrap`'s `services.config` file.
+argument is only used in the context of `sysmgr`'s `services.config` file.
 This is because applications started from the command line are always different
-instances from applications started by `bootstrap`. In other words, you can
+instances from applications started by `sysmgr`. In other words, you can
 start a listener from the command line, but it will only conflict with the
 instance that requestors will get when they connect to the service.
 
@@ -106,7 +106,7 @@ Devices are configured in this way if, for some reason, mDNS discovery isn't
 usable in a given network configuration.
 
 As mentioned previously, the `listen` option should generally only be used in
-`bootstrap`'s `services.config` file. For example:
+`sysmgr`'s `services.config` file. For example:
 
     {
       "services": {

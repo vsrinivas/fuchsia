@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
-#define GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
+#ifndef GARNET_BIN_SYSMGR_DELEGATING_APPLICATION_LOADER_H_
+#define GARNET_BIN_SYSMGR_DELEGATING_APPLICATION_LOADER_H_
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/application_loader.fidl.h"
-#include "garnet/bin/bootstrap/config.h"
+#include "garnet/bin/sysmgr/config.h"
 #include "lib/fxl/macros.h"
 
-namespace bootstrap {
+namespace sysmgr {
 
 // TODO(rosswang): Ideally this would be reusable from scopes other than
-// bootstrap, but it's tricky to wire in a fallback loader. If the need arises,
+// sysmgr, but it's tricky to wire in a fallback loader. If the need arises,
 // perhaps we might move this to modular/lib/fidl.
 
-// This loader executes in the bootstrap environment, reads a config file, and
+// This loader executes in the sysmgr environment, reads a config file, and
 // can delegate mapped URI schemes to app loaders capable of handling them,
 // falling back on the root app loader for unmapped schemes.
 class DelegatingApplicationLoader : public app::ApplicationLoader {
@@ -42,7 +42,7 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
   void StartDelegate(ApplicationLoaderRecord* record);
 
   // indexed by URL. This ignores differentiation by args but is on par with the
-  // bootstrap app implementation.
+  // sysmgr app implementation.
   std::unordered_map<std::string, ApplicationLoaderRecord> delegate_instances_;
 
   app::ApplicationLauncher* delegate_launcher_;
@@ -56,6 +56,6 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
   FXL_DISALLOW_COPY_AND_ASSIGN(DelegatingApplicationLoader);
 };
 
-}  // namespace bootstrap
+}  // namespace sysmgr
 
-#endif  // GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
+#endif  // GARNET_BIN_SYSMGR_DELEGATING_APPLICATION_LOADER_H_

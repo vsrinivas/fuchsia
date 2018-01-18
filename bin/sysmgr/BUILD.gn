@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "bootstrap"
+  output_name = "sysmgr"
 
   sources = [
     "app.cc",
@@ -28,12 +28,12 @@ executable("bin") {
   ]
 }
 
-package("bootstrap") {
+package("sysmgr") {
   deps = [
     ":bin",
   ]
 
-  binary = "bootstrap"
+  binary = "sysmgr"
 
   meta = [ {
         path = rebase_path("meta/sandbox")

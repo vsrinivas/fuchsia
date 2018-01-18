@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 
-#include "garnet/bin/bootstrap/app.h"
+#include "garnet/bin/sysmgr/app.h"
 
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -14,7 +14,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-namespace bootstrap {
+namespace sysmgr {
 namespace {
 
 // We explicitly launch netstack because netstack registers itself as
@@ -38,8 +38,8 @@ void LaunchWlanstack(app::ServiceProvider* provider) {
 
 }  // namespace
 
-constexpr char kDefaultLabel[] = "boot";
-constexpr char kConfigDir[] = "/system/data/bootstrap/";
+constexpr char kDefaultLabel[] = "sys";
+constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
 App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -151,7 +151,7 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
 }
 
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
-  FXL_VLOG(1) << "Bootstrapping application " << launch_info->url;
+  FXL_VLOG(1) << "Launching application " << launch_info->url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 
@@ -160,4 +160,4 @@ void App::GetApplicationEnvironmentServices(
   env_services_.AddBinding(std::move(environment_services));
 }
 
-}  // namespace bootstrap
+}  // namespace sysmgr

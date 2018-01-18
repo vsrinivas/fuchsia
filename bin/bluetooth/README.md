@@ -48,10 +48,10 @@ Bluetooth protocols required for the Generic Access Profile (HCI state machines,
 SDP, SM, etc).
 
 The process is launched by
-[Bootstrap](https://fuchsia.googlesource.com/garnet/+/master/bin/bootstrap/) when an application
+[sysmgr](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/) when an application
 requests one of the Bluetooth services. The service-to-binary mapping for Bluetooth services is
-currently defined in Bootstrap's
-[`services.config`](https://fuchsia.googlesource.com/garnet/+/master/bin/bootstrap/services.config)
+currently defined in sysmgr's
+[`services.config`](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/services.config)
 file.
 
 [`bluetoothcli`](https://fuchsia.googlesource.com/garnet/+/master/bin/bluetooth_tools/bluetoothcli/) and
@@ -64,7 +64,7 @@ the [Flutter examples](examples) provide examples that interact with the Bluetoo
 This is a command-line client for the
 [control](https://fuchsia.googlesource.com/garnet/+/master/public/lib/bluetooth/fidl/control.fidl) FIDL
 interfaces. The `bluetooth` process does not need to launched directly before using `bluetoothcli`
-since Bootstrap will launch a new `bluetooth` process during the service request if one isn't
+since sysmgr will launch a new `bluetooth` process during the service request if one isn't
 already running.
 
 ```

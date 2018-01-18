@@ -5,7 +5,7 @@
     "packages": {
         "appmgr": "//garnet/bin/appmgr",
         "appmgr_tests": "//garnet/bin/appmgr:appmgr_tests",
-        "bootstrap": "//garnet/bin/bootstrap",
+        "sysmgr": "//garnet/bin/sysmgr",
         "far": "//garnet/bin/far",
         "run": "//garnet/bin/run"
     },

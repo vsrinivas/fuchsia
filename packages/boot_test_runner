@@ -8,11 +8,11 @@
     ],
     "resources": [
         {
-            "bootfs_path": "data/bootstrap/apps.config",
+            "bootfs_path": "data/sysmgr/apps.config",
             "file": "garnet/bin/test_runner/config/apps.config"
         },
         {
-            "bootfs_path": "data/bootstrap/services.config",
+            "bootfs_path": "data/sysmgr/services.config",
             "file": "garnet/bin/test_runner/config/services.config"
         }
     ]

@@ -11,7 +11,7 @@ the event reports.
 
 ## HID Reports to `InputEvent`.
 
-When launching an application through the bootstrap process,
+When launching an application through the sysmgr process,
 `src/root_presenter` is launched as a singleton to create the root of the
 `Presentation`. When starting, root_presenter starts `src/input_reader` which
 will monitor the `/dev/class/input` directory for new devices and discover

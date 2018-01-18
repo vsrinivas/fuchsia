@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_BOOTSTRAP_CONFIG_H_
-#define GARNET_BIN_BOOTSTRAP_CONFIG_H_
+#ifndef GARNET_BIN_SYSMGR_CONFIG_H_
+#define GARNET_BIN_SYSMGR_CONFIG_H_
 
 #include <string>
 #include <unordered_map>
@@ -12,7 +12,7 @@
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fxl/macros.h"
 
-namespace bootstrap {
+namespace sysmgr {
 
 // Parses configuration files.  See README.md for format.
 // TODO(jeffbrown): Support chaining multiple configuration files together
@@ -42,6 +42,6 @@ class Config {
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
-}  // namespace bootstrap
+}  // namespace sysmgr
 
-#endif  // GARNET_BIN_BOOTSTRAP_CONFIG_H_
+#endif  // GARNET_BIN_SYSMGR_CONFIG_H_

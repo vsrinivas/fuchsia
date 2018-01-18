@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/bootstrap/delegating_application_loader.h"
+#include "garnet/bin/sysmgr/delegating_application_loader.h"
 
 #include "lib/svc/cpp/services.h"
 #include "lib/url/gurl.h"
 
-namespace bootstrap {
+namespace sysmgr {
 
 DelegatingApplicationLoader::DelegatingApplicationLoader(
     Config::ServiceMap delegates,
@@ -60,4 +60,4 @@ void DelegatingApplicationLoader::StartDelegate(
   });
 }
 
-}  // namespace bootstrap
+}  // namespace sysmgr

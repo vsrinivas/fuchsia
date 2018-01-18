@@ -9,17 +9,17 @@
         },
         {
             "default": "true",
-            "bootfs_path": "data/bootstrap/services.config",
-            "file": "garnet/bin/bootstrap/services.config"
+            "bootfs_path": "data/sysmgr/services.config",
+            "file": "garnet/bin/sysmgr/services.config"
         },
         {
-            "bootfs_path": "data/bootstrap/loaders.config",
-            "file": "garnet/bin/bootstrap/loaders.config"
+            "bootfs_path": "data/sysmgr/loaders.config",
+            "file": "garnet/bin/sysmgr/loaders.config"
         },
         {
             "default": "true",
-            "bootfs_path": "data/bootstrap/apps.config",
-            "file": "garnet/bin/bootstrap/apps.config"
+            "bootfs_path": "data/sysmgr/apps.config",
+            "file": "garnet/bin/sysmgr/apps.config"
         }
     ]
 }
