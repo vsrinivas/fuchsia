@@ -1189,7 +1189,7 @@ static bool msg_loop(zx_handle_t channel)
                 tu_thread_create_c11(&thread, extra_thread_func, NULL, "extra-thread");
             }
             // Wait for all threads to be started.
-            // Each will require an ZX_EXCP_STARTING exchange with the "debugger".
+            // Each will require an ZX_EXCP_THREAD_STARTING exchange with the "debugger".
             while (atomic_load(&extra_thread_count) < NUM_EXTRA_THREADS)
                 zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
             send_msg(channel, MSG_EXTRA_THREADS_STARTED);
