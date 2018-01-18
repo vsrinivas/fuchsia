@@ -22,6 +22,8 @@ template("guest_app") {
     deps = [
       "//garnet/bin/guest:bin",
     ]
+    inputs = []
+
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -53,24 +55,30 @@ template("guest_app") {
 
     # Add kernel resource.
     if (defined(invoker.kernel)) {
+      kernel = rebase_path(invoker.kernel)
+      inputs += [ kernel ]
       resources += [ {
-            path = rebase_path(invoker.kernel)
+            path = kernel
             dest = "kernel"
           } ]
     }
 
     # Add ramdisk resource.
     if (defined(invoker.ramdisk)) {
+      ramdisk = rebase_path(invoker.ramdisk)
+      inputs += [ ramdisk ]
       resources += [ {
-            path = rebase_path(invoker.ramdisk)
+            path = ramdisk
             dest = "ramdisk"
           } ]
     }
 
     # Add config file resource.
     if (defined(invoker.guest_config)) {
+      guest_config = rebase_path(invoker.guest_config)
+      inputs += [ guest_config ]
       resources += [ {
-            path = rebase_path(invoker.guest_config)
+            path = guest_config
             dest = "guest.cfg"
           } ]
     }
