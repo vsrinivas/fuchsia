@@ -4,10 +4,13 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <limits.h>
 
 __BEGIN_CDECLS;
 
@@ -88,7 +91,10 @@ static inline zx_status_t pdev_vmo_buffer_cache_flush_invalidate(pdev_vmo_buffer
 
 static inline void pdev_vmo_buffer_release(pdev_vmo_buffer_t* buffer) {
     if (buffer->vaddr) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buffer->vaddr, buffer->size);
+        uintptr_t vaddr = ROUNDDOWN((uintptr_t)buffer->vaddr, PAGE_SIZE);
+        size_t size;
+        zx_vmo_get_size(buffer->handle, &size);
+        zx_vmar_unmap(zx_vmar_root_self(), vaddr, size);
     }
     zx_handle_close(buffer->handle);
 }

@@ -87,5 +87,9 @@ typedef struct {
         usb_mode_t usb_mode;
         uint8_t gpio_value;
         pdev_i2c_resp_t i2c;
+        struct {
+            zx_off_t offset;
+            size_t length;
+        } mmio;
     };
 } pdev_resp_t;

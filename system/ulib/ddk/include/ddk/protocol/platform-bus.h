@@ -11,7 +11,8 @@ __BEGIN_CDECLS;
 
 typedef struct {
     zx_paddr_t  base;
-    size_t      length;
+    zx_off_t    offset; // MMIO offset relative to base
+    size_t      length; // MMIO length starting from base + offset
 } pbus_mmio_t;
 
 typedef struct {

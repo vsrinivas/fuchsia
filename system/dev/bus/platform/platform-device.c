@@ -43,19 +43,23 @@ static void put_i2c_txn(i2c_txn_t* txn) {
     mtx_unlock(&bus->i2c_txn_lock);
 }
 
-static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index,
-                                         zx_handle_t* out_handle, uint32_t* out_handle_count) {
+static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
+                                         size_t *out_length, zx_handle_t* out_handle,
+                                         uint32_t* out_handle_count) {
     if (index >= dev->mmio_count) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     pbus_mmio_t* mmio = &dev->mmios[index];
-    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
+    size_t vmo_size = ROUNDUP(mmio->offset + mmio->length, PAGE_SIZE);
+    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, vmo_size,
                                                 out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
+    *out_offset = mmio->offset;
+    *out_length = mmio->length;
     *out_handle_count = 1;
     return ZX_OK;
 }
@@ -281,7 +285,8 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 
     switch (req->op) {
     case PDEV_GET_MMIO:
-        resp.status = platform_dev_get_mmio(dev, req->index, &handle, &handle_count);
+        resp.status = platform_dev_get_mmio(dev, req->index, &resp.mmio.offset, &resp.mmio.length,
+                                            &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
         resp.status = platform_dev_get_interrupt(dev, req->index, &handle, &handle_count);
@@ -367,6 +372,13 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         return ZX_ERR_NO_MEMORY;
     }
     if (pdev->mmio_count) {
+        for (uint32_t i = 0; i < pdev->mmio_count; i++) {
+            if (pdev->mmios[i].offset >= PAGE_SIZE) {
+                zxlogf(ERROR, "platform_device_add: bad mmio offset %zu for mmio %u\n",
+                       pdev->mmios[i].offset, i);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        }
         size_t size = pdev->mmio_count * sizeof(*pdev->mmios);
         dev->mmios = malloc(size);
         if (!dev->mmios) {

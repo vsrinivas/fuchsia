@@ -337,16 +337,18 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
         goto fail;
     }
 
+    uintptr_t virt;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, vmo_size,
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
-                         (uintptr_t*)vaddr);
+                         &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
         goto fail;
     }
 
-    *size = vmo_size;
+    *size = resp.mmio.length;
     *out_handle = vmo_handle;
+    *vaddr = (void *)(virt + resp.mmio.offset);
     return ZX_OK;
 
 fail:
