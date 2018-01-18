@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 
+#include <zx/time.h>
+
 #include <string>
 #include <utility>
 #include <vector>

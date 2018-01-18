@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/tests/integration/sync/lib.h"
 
 #include <trace/event.h>
+#include <zx/time.h>
 
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"

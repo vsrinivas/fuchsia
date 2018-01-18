@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/sync/sync.h"
 
-#include <iostream>
-
 #include <trace/event.h>
+#include <zx/time.h>
+
+#include <iostream>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
