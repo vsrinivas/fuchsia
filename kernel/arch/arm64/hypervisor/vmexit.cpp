@@ -71,11 +71,8 @@ static void next_pc(GuestState* guest_state) {
 static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     GichState* gich_state = static_cast<GichState*>(arg);
     bool signaled;
-    zx_status_t status = gich_state->interrupt_tracker.Signal(false, &signaled);
-    if (status != ZX_OK || !signaled) {
-        return INT_NO_RESCHEDULE;
-    }
-    return INT_RESCHEDULE;
+    gich_state->interrupt_tracker.Signal(true, &signaled);
+    return INT_NO_RESCHEDULE;
 }
 
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
