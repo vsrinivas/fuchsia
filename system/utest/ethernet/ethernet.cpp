@@ -305,6 +305,7 @@ class EthernetClient {
 }  // namespace
 
 static bool EthernetStartTest() {
+    BEGIN_TEST;
     // Create the ethertap device
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
@@ -348,10 +349,11 @@ static bool EthernetStartTest() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 static bool EthernetLinkStatusTest() {
+    BEGIN_TEST;
     // Create the ethertap device
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
@@ -397,10 +399,11 @@ static bool EthernetLinkStatusTest() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 static bool EthernetSetPromiscMultiClientTest() {
+    BEGIN_TEST;
     // Create the ethertap device
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertapWithOption(1500, __func__, &sock, ETHERTAP_OPT_REPORT_PARAM));
@@ -463,10 +466,11 @@ static bool EthernetSetPromiscMultiClientTest() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 static bool EthernetSetPromiscClearOnCloseTest() {
+    BEGIN_TEST;
     // Create the ethertap device
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertapWithOption(1500, __func__, &sock, ETHERTAP_OPT_REPORT_PARAM));
@@ -516,10 +520,11 @@ static bool EthernetSetPromiscClearOnCloseTest() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 static bool EthernetDataTest_Send() {
+    BEGIN_TEST;
     // Set up the tap device and the ethernet client
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
@@ -593,10 +598,11 @@ static bool EthernetDataTest_Send() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 static bool EthernetDataTest_Recv() {
+    BEGIN_TEST;
     // Set up the tap device and the ethernet client
     zx::socket sock;
     ASSERT_EQ(ZX_OK, CreateEthertap(1500, __func__, &sock));
@@ -653,7 +659,7 @@ static bool EthernetDataTest_Recv() {
     sock.reset();
 
     ETHTEST_CLEANUP_DELAY;
-    return true;
+    END_TEST;
 }
 
 BEGIN_TEST_CASE(EthernetSetupTests)
