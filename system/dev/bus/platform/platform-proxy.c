@@ -128,6 +128,18 @@ static zx_status_t pdev_gpio_config(void* ctx, uint32_t index, gpio_config_flags
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
 }
 
+static zx_status_t pdev_gpio_set_alt_function(void* ctx, uint32_t index, uint32_t function) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_SET_ALT_FUNCTION,
+        .index = index,
+        .gpio_alt_function = function,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
+}
+
 static zx_status_t pdev_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
@@ -159,6 +171,7 @@ static zx_status_t pdev_gpio_write(void* ctx, uint32_t index, uint8_t value) {
 
 static gpio_protocol_ops_t gpio_ops = {
     .config = pdev_gpio_config,
+    .set_alt_function = pdev_gpio_set_alt_function,
     .read = pdev_gpio_read,
     .write = pdev_gpio_write,
 };

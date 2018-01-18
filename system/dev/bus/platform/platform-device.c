@@ -125,6 +125,20 @@ static zx_status_t platform_dev_gpio_config(platform_dev_t* dev, uint32_t index,
     return gpio_config(&bus->gpio, index, flags);
 }
 
+static zx_status_t platform_dev_gpio_set_alt_function(platform_dev_t* dev, uint32_t index,
+                                                      uint32_t function) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    index = dev->gpios[index].gpio;
+
+    return gpio_set_alt_function(&bus->gpio, index, function);
+}
+
 static zx_status_t platform_dev_gpio_read(platform_dev_t* dev, uint32_t index, uint8_t* out_value) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
@@ -285,6 +299,9 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GPIO_CONFIG:
         resp.status = platform_dev_gpio_config(dev, req->index, req->gpio_flags);
+        break;
+    case PDEV_GPIO_SET_ALT_FUNCTION:
+        resp.status = platform_dev_gpio_set_alt_function(dev, req->index, req->gpio_alt_function);
         break;
     case PDEV_GPIO_READ:
         resp.status = platform_dev_gpio_read(dev, req->index, &resp.gpio_value);

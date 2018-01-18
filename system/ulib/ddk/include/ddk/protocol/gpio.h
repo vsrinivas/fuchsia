@@ -35,6 +35,7 @@ typedef enum {
 
 typedef struct {
     zx_status_t (*config)(void* ctx, uint32_t index, gpio_config_flags_t flags);
+    zx_status_t (*set_alt_function)(void* ctx, uint32_t index, uint32_t function);
     zx_status_t (*read)(void* ctx, uint32_t index, uint8_t* out_value);
     zx_status_t (*write)(void* ctx, uint32_t index, uint8_t value);
 } gpio_protocol_ops_t;
@@ -48,6 +49,13 @@ typedef struct {
 static inline zx_status_t gpio_config(gpio_protocol_t* gpio, uint32_t index,
                                       gpio_config_flags_t flags) {
     return gpio->ops->config(gpio->ctx, index, flags);
+}
+
+// configures the GPIO pin for an alternate function (I2C, SPI, etc)
+// the interpretation of "function" is platform dependent
+static inline zx_status_t gpio_set_alt_function(gpio_protocol_t* gpio, uint32_t index,
+                                                uint32_t function) {
+    return gpio->ops->set_alt_function(gpio->ctx, index, function);
 }
 
 // reads the current value of a GPIO (0 or 1)
