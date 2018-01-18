@@ -5,6 +5,7 @@
 #pragma once
 
 #include "bss_client_map.h"
+#include "bss_interface.h"
 #include "device_interface.h"
 #include "frame_handler.h"
 #include "macaddr_map.h"
@@ -15,14 +16,10 @@
 
 namespace wlan {
 
-namespace bss {
-using timestamp_t = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
-}
-
 class ObjectId;
 
 // An infrastructure BSS which keeps track of its client and owned by the AP MLME.
-class InfraBss : public FrameHandler {
+class InfraBss : public BssInterface, public FrameHandler {
    public:
     InfraBss(DeviceInterface* device, const common::MacAddr& bssid)
         : bssid_(bssid), device_(device) {
@@ -32,32 +29,26 @@ class InfraBss : public FrameHandler {
 
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
-    const common::MacAddr& bssid();
-    uint16_t next_seq_no();
-    uint64_t timestamp();
+    const common::MacAddr& bssid() const override;
+    uint64_t timestamp() override;
+    zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
+    zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
    private:
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
-                                         const wlan_rx_info_t& rxinfo) override;
-    zx_status_t SendAuthentication(const common::MacAddr& dst, status_code::StatusCode);
-    zx_status_t SendAssociationResponse(const common::MacAddr& dst, status_code::StatusCode);
-    // TODO(hahnr): Handle Disassocation/Deauthentication.
-    // TODO(hahnr): Handle DataFrames.
+    // TODO(hahnr): Remove clients when:
+    // (1) the client is inactive, no traffic, for a certain duration,
+    // (2) Deauthentication frames were received,
+    // (3) the client timed out during authentication flow and is now idle.
+    // We might be able to somehow combine (2) and (3).
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
 
-    // Allocates a new Packet and fills in management header information.
-    template <typename Body>
-    Body* CreateMgmtFrame(const common::MacAddr& dst, ManagementSubtype subtype, size_t body_len,
-                          fbl::unique_ptr<Packet>* out_packet);
-
     const common::MacAddr bssid_;
     DeviceInterface* device_;
-    uint16_t last_seq_no_ = kMaxSequenceNumber;
     bss::timestamp_t started_at_;
     BssClientMap clients_;
 };

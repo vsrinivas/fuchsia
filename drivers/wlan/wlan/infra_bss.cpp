@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dispatcher.h"
 #include "infra_bss.h"
+
+#include "dispatcher.h"
 #include "packet.h"
+#include "remote_client.h"
 #include "serialize.h"
 
 namespace wlan {
@@ -18,113 +20,53 @@ zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
 
 zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames which are not targeted towards this BSS.
+    // TODO(hahnr): Need to support wildcard BSSID for ProbeRequests.
     if (bssid_ != hdr.addr1 || bssid_ != hdr.addr3) {
         return ZX_ERR_STOP;
     }
+
+    // Let the correct RemoteClient instance process the received frame.
+    auto& client_addr = hdr.addr2;
+    if (clients_.Has(client_addr)) { ForwardCurrentFrameTo(clients_.GetClient(client_addr)); }
     return ZX_OK;
 }
 
 zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                            const wlan_rx_info_t& rxinfo) {
-    debugfn();
-
+    // If the client is already known, there is no work to be done here.
     auto& client_addr = frame.hdr->addr2;
-    auto auth_alg = frame.body->auth_algorithm_number;
-    if (auth_alg != AuthAlgorithm::kOpenSystem) {
-        errorf("[infra-bss] received auth attempt with unsupported algorithm: %u\n", auth_alg);
-        SendAuthentication(client_addr, status_code::kUnsupportedAuthAlgorithm);
-        return ZX_ERR_STOP;
-    }
-
-    auto auth_txn_seq_no = frame.body->auth_txn_seq_number;
-    if (auth_txn_seq_no != 1) {
-        errorf("[infra-bss] received auth attempt with invalid tx seq no: %u\n", auth_txn_seq_no);
-        SendAuthentication(client_addr, status_code::kRefused);
-        return ZX_ERR_STOP;
-    }
-
-    // Authentication request are always responded to, no matter if the client is already known or
-    // not.
-    if (!clients_.Has(client_addr)) { clients_.Add(client_addr); }
-
-    SendAuthentication(client_addr, status_code::kSuccess);
-    return ZX_ERR_STOP;
-}
-
-zx_status_t InfraBss::SendAuthentication(const common::MacAddr& dst,
-                                         status_code::StatusCode result) {
-    debugfn();
-
-    size_t body_len = sizeof(Authentication);
-    fbl::unique_ptr<Packet> packet;
-    auto auth = CreateMgmtFrame<Authentication>(dst, kAuthentication, body_len, &packet);
-    if (auth == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auth->status_code = result;
-    auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
-    // TODO(hahnr): Evolve this to support other authentication algorithms and track seq number.
-    auth->auth_txn_seq_number = 2;
-
-    auto status = device_->SendWlan(std::move(packet));
-    if (status != ZX_OK) {
-        errorf("[infra-bss] could not send auth response packet: %d\n", status);
-        return status;
-    }
-    return ZX_OK;
-}
-
-zx_status_t InfraBss::HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
-                                               const wlan_rx_info_t& rxinfo) {
-    debugfn();
-
-    auto& client_addr = frame.hdr->addr2;
-    if (!clients_.Has(client_addr)) {
-        errorf("[infra-bss] received assoc req from unknown client: %s\n", MACSTR(client_addr));
-        return ZX_ERR_STOP;
-    }
-
-    if (!clients_.HasAidAvailable()) {
-        errorf("[infra-bss] received assoc req but reached max allowed clients: %s\n",
-               MACSTR(client_addr));
-        SendAssociationResponse(client_addr, status_code::kDeniedNoMoreStas);
-        return ZX_ERR_STOP;
-    }
-
-    // TODO(hahnr): Verify capabilities, ssid, rates, rsn, etc.
-    // For now simply send association response.
-    SendAssociationResponse(client_addr, status_code::kSuccess);
-    // TODO(hahnr): Create RemoteClient and pass timer created via CreateClientTimer(client_addr).
-    return ZX_ERR_STOP;
-}
-
-zx_status_t InfraBss::SendAssociationResponse(const common::MacAddr& dst,
-                                              status_code::StatusCode result) {
-    debugfn();
-    ZX_DEBUG_ASSERT(clients_.Has(dst));
-
-    aid_t aid = kUnknownAid;
-    auto status = clients_.AssignAid(dst, &aid);
-    if (status != ZX_OK) {
-        errorf("[infra-bss] couldn't assign AID to client: %d, %s\n", status, MACSTR(dst));
+    if (clients_.Has(client_addr)) {
         return ZX_OK;
     }
 
-    // Note: The response is also sent for already associated clients. In this case the client's
-    // already assigned AID is reused.
-    size_t body_len = sizeof(AssociationResponse);
-    fbl::unique_ptr<Packet> packet;
-    auto assoc = CreateMgmtFrame<AssociationResponse>(dst, kAssociationResponse, body_len, &packet);
-    if (assoc == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    assoc->status_code = result;
-    assoc->aid = aid;
-    assoc->cap.set_ess(1);
-    assoc->cap.set_short_preamble(1);
+    // Else, create a new remote client instance.
+    fbl::unique_ptr<Timer> timer = nullptr;
+    auto status = CreateClientTimer(client_addr, &timer);
+    if (status != ZX_OK) { return status; }
+    auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer), this, client_addr);
+    clients_.Add(client_addr, fbl::move(client));
 
-    status = device_->SendWlan(std::move(packet));
+    // Note: usually, HandleMgmtFrame(...) will forward incoming frames to the corresponding
+    // clients. However, Authentication frames will add new clients and hence, this frame must be
+    // forwarded manually to the newly added client.
+    ForwardCurrentFrameTo(clients_.GetClient(client_addr));
+    return ZX_OK;
+}
+
+zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
+    debugfn();
+    auto status = clients_.AssignAid(client, out_aid);
     if (status != ZX_OK) {
-        errorf("[infra-bss] could not send auth response packet: %d\n", status);
+        errorf("[infra-bss] couldn't assign AID to client %s: %d\n", MACSTR(client), status);
         return status;
     }
     return ZX_OK;
+}
+
+zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
+    auto status = clients_.ReleaseAid(client);
+    if (status == ZX_ERR_NOT_FOUND) { return ZX_OK; }
+    return status;
 }
 
 zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
@@ -142,36 +84,8 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
     return ZX_OK;
 }
 
-template <typename Body>
-Body* InfraBss::CreateMgmtFrame(const common::MacAddr& dst, ManagementSubtype subtype,
-                                  size_t body_len, fbl::unique_ptr<Packet>* out_packet) {
-    size_t len = sizeof(MgmtFrameHeader) + body_len;
-    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
-    if (buffer == nullptr) { return nullptr; }
-
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
-    packet->clear();
-    packet->set_peer(Packet::Peer::kWlan);
-
-    // Write header.
-    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_type(kManagement);
-    hdr->fc.set_subtype(subtype);
-    hdr->addr1 = dst;
-    hdr->addr2 = bssid_;
-    hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq_no());
-
-    *out_packet = fbl::move(packet);
-    return (*out_packet)->mut_field<Body>(hdr->len());
-}
-
-const common::MacAddr& InfraBss::bssid() {
+const common::MacAddr& InfraBss::bssid() const {
     return bssid_;
-}
-
-uint16_t InfraBss::next_seq_no() {
-    return last_seq_no_++ & kMaxSequenceNumber;
 }
 
 uint64_t InfraBss::timestamp() {

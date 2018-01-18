@@ -658,7 +658,7 @@ template <typename T> using ImmutableDataFrame = ImmutableFrame<DataFrameHeader,
 
 // TODO(porce): Replace InfraBss::CreateMgmtFrame()
 template <typename Body>
-MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payload_len,
+MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payload_len = 0,
                                bool has_ht_ctrl = false);
 
 zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr);

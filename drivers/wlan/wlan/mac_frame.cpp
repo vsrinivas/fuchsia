@@ -201,6 +201,7 @@ DECLARE_BUILD_MGMTFRAME(Beacon);
 DECLARE_BUILD_MGMTFRAME(Authentication);
 DECLARE_BUILD_MGMTFRAME(Deauthentication);
 DECLARE_BUILD_MGMTFRAME(AssociationRequest);
+DECLARE_BUILD_MGMTFRAME(AssociationResponse);
 DECLARE_BUILD_MGMTFRAME(AddBaResponseFrame);
 
 zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr) {

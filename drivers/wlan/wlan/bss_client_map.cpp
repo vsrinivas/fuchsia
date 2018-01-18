@@ -6,17 +6,13 @@
 
 namespace wlan {
 
-bool BssClientMap::HasAidAvailable() {
-    return !aid_bitmap_.Get(0, kMaxClients - 1);
-}
-
 bool BssClientMap::Has(const common::MacAddr& addr) {
     return clients_.find(addr) != clients_.end();
 }
 
-zx_status_t BssClientMap::Add(const common::MacAddr& addr) {
+zx_status_t BssClientMap::Add(const common::MacAddr& addr, fbl::unique_ptr<FrameHandler> handler) {
     if (Has(addr)) { return ZX_ERR_ALREADY_EXISTS; }
-    clients_.emplace(addr, RemoteClient{});
+    clients_.emplace(addr, RemoteClient{.handler = std::move(handler)});
     return ZX_OK;
 }
 
@@ -24,18 +20,27 @@ zx_status_t BssClientMap::Remove(const common::MacAddr& addr) {
     ZX_DEBUG_ASSERT(Has(addr));
     if (!Has(addr)) { return ZX_ERR_NOT_FOUND; }
 
-    // Remove client and release AID.
+    // Remove client and release AID if the client had one assigned.
     auto iter = clients_.find(addr);
     auto aid = iter->second.aid;
-    aid_bitmap_.ClearOne(aid);
+    if (aid != kUnknownAid) { ClearAid(aid); }
     clients_.erase(iter);
 
     return ZX_OK;
 }
 
+FrameHandler* BssClientMap::GetClient(const common::MacAddr& addr) {
+    if (!Has(addr)) { return nullptr; }
+
+    auto iter = clients_.find(addr);
+    auto& client = iter->second;
+    return client.handler.get();
+}
+
 zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid) {
     ZX_DEBUG_ASSERT(Has(addr));
     *out_aid = kUnknownAid;
+    if (!HasAidAvailable()) { return ZX_ERR_NO_RESOURCES; }
     if (!Has(addr)) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -43,7 +48,6 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
     // Update the client's state and its AID.
     auto iter = clients_.find(addr);
     auto& client = iter->second;
-    client.state = RemoteClientState::kAssociated;
     // Do not assign a new AID to the client if the client has already one assigned.
     if (client.aid != kUnknownAid) {
         *out_aid = client.aid;
@@ -59,6 +63,27 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
     client.aid = available_aid;
     *out_aid = client.aid;
     return ZX_OK;
+}
+
+zx_status_t BssClientMap::ReleaseAid(const common::MacAddr& addr) {
+    ZX_DEBUG_ASSERT(Has(addr));
+    if (!Has(addr)) { return ZX_ERR_NOT_FOUND; }
+
+    auto iter = clients_.find(addr);
+    auto& client = iter->second;
+    ClearAid(client.aid);
+    client.aid = kUnknownAid;
+
+    return ZX_OK;
+}
+
+bool BssClientMap::HasAidAvailable() {
+    return !aid_bitmap_.Get(0, kMaxClients - 1);
+}
+
+void BssClientMap::ClearAid(aid_t aid) {
+    ZX_DEBUG_ASSERT(aid < kMaxClients);
+    if (aid != kUnknownAid) { aid_bitmap_.ClearOne(aid); }
 }
 
 }  // namespace wlan

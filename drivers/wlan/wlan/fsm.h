@@ -17,6 +17,10 @@ class StateInterface {
 
 template <typename S> class StateMachine {
    public:
+    ~StateMachine() {
+        if (state_ != nullptr) { state_->OnExit(); }
+    }
+
     void MoveToState(fbl::unique_ptr<S> state) {
         state_->OnExit();
         state_ = fbl::move(state);
