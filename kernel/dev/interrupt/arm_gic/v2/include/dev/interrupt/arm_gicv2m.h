@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
-
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -18,10 +17,10 @@ __BEGIN_CDECLS
  * @see arm_gicv2m_get_frame_info
  */
 typedef struct arm_gicv2m_frame_info {
-    uint start_spi_id;  /** The first valid SPI ID in the frame */
-    uint end_spi_id;    /** The last valid SPI ID in the frame */
-    paddr_t doorbell;   /** The physical address of the doorbell register */
-    uint32_t iid;       /** The value of the Interface ID register */
+    uint start_spi_id; /** The first valid SPI ID in the frame */
+    uint end_spi_id;   /** The last valid SPI ID in the frame */
+    paddr_t doorbell;  /** The physical address of the doorbell register */
+    uint32_t iid;      /** The value of the Interface ID register */
 } arm_gicv2m_frame_info_t;
 
 /**

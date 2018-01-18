@@ -9,6 +9,7 @@
 #include <arch/arm64/el2_state.h>
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -49,32 +50,6 @@ private:
 
     explicit Guest(uint8_t vmid);
 };
-
-// Representation of GICH registers.
-struct Gich {
-    uint32_t hcr;
-    uint32_t vtr;
-    uint32_t vmcr;
-    uint32_t reserved0;
-    uint32_t misr;
-    uint32_t reserved1[3];
-    uint64_t eisr;
-    uint32_t reserved2[2];
-    uint64_t elrs;
-    uint32_t reserved3[46];
-    uint32_t apr;
-    uint32_t reserved4[3];
-    uint32_t lr[64];
-} __PACKED;
-
-static_assert(__offsetof(Gich, hcr) == 0x00, "");
-static_assert(__offsetof(Gich, vtr) == 0x04, "");
-static_assert(__offsetof(Gich, vmcr) == 0x08, "");
-static_assert(__offsetof(Gich, misr) == 0x10, "");
-static_assert(__offsetof(Gich, eisr) == 0x20, "");
-static_assert(__offsetof(Gich, elrs) == 0x30, "");
-static_assert(__offsetof(Gich, apr) == 0xf0, "");
-static_assert(__offsetof(Gich, lr) == 0x100, "");
 
 // Stores the state of the GICH across VM exits.
 struct GichState {

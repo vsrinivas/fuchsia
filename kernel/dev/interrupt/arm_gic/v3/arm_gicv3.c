@@ -6,22 +6,23 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <bits.h>
+#include <dev/interrupt.h>
+#include <dev/interrupt/arm_gic_common.h>
+#include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <err.h>
 #include <inttypes.h>
-#include <bits.h>
-#include <string.h>
-#include <dev/interrupt/arm_gic.h>
-#include <kernel/thread.h>
 #include <kernel/stats.h>
-#include <vm/vm.h>
-#include <lk/init.h>
-#include <dev/interrupt.h>
-#include <trace.h>
+#include <kernel/thread.h>
 #include <lib/ktrace.h>
+#include <lk/init.h>
+#include <string.h>
+#include <trace.h>
+#include <vm/vm.h>
 #include <zircon/types.h>
 
-#include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
+#include <mdi/mdi.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
@@ -44,13 +45,11 @@ static uint32_t ipi_base = 0;
 
 static uint gic_max_int;
 
-static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags)
-{
+static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < gic_max_int);
 }
 
-static void gic_wait_for_rwp(uint64_t reg)
-{
+static void gic_wait_for_rwp(uint64_t reg) {
     int count = 1000000;
     while (GICREG(0, reg) & (1 << 31)) {
         count -= 1;
@@ -61,10 +60,9 @@ static void gic_wait_for_rwp(uint64_t reg)
     }
 }
 
-static void gic_set_enable(uint vector, bool enable)
-{
+static void gic_set_enable(uint vector, bool enable) {
     int reg = vector / 32;
-    uint32_t mask = 1ULL << (vector % 32);
+    uint32_t mask = (uint32_t)(1ULL << (vector % 32));
 
     if (vector < 32) {
         for (uint i = 0; i < arch_max_num_cpus(); i++) {
@@ -85,21 +83,21 @@ static void gic_set_enable(uint vector, bool enable)
     }
 }
 
-static void gic_init_percpu_early(void)
-{
+static void gic_init_percpu_early(void) {
     uint cpu = arch_curr_cpu_num();
 
-    // configure sgi/ppi as non-secure group 1
+    // redistributer config: configure sgi/ppi as non-secure group 1.
     GICREG(0, GICR_IGROUPR0(cpu)) = ~0;
     gic_wait_for_rwp(GICR_CTLR(cpu));
 
-    // clear and mask sgi/ppi
+    // redistributer config: clear and mask sgi/ppi.
     GICREG(0, GICR_ICENABLER0(cpu)) = 0xffffffff;
     GICREG(0, GICR_ICPENDR0(cpu)) = ~0;
     gic_wait_for_rwp(GICR_CTLR(cpu));
 
     // TODO lpi init
 
+    // enable system register interface
     uint32_t sre = gic_read_sre();
     if (!(sre & 0x1)) {
         gic_write_sre(sre | 0x1);
@@ -107,22 +105,22 @@ static void gic_init_percpu_early(void)
         assert(sre & 0x1);
     }
 
-    // set priority threshold to max
+    // set priority threshold to max.
     gic_write_pmr(0xff);
 
-    // TODO EOI deactivates interrupt - revisit
+    // TODO EOI deactivates interrupt - revisit.
     gic_write_ctlr(0);
 
-    // enable group 1 interrupts
+    // enable group 1 interrupts.
     gic_write_igrpen(1);
 }
 
-static zx_status_t gic_init(void)
-{
+static zx_status_t gic_init(void) {
     LTRACE_ENTRY;
 
-    uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
-    if (rev != 3 && rev != 4)
+    uint pidr2 = GICREG(0, GICD_PIDR2);
+    uint rev = BITS_SHIFT(pidr2, 7, 4);
+    if (rev != GICV3 && rev != GICV4)
         return ZX_ERR_NOT_FOUND;
 
     uint32_t typer = GICREG(0, GICD_TYPER);
@@ -134,7 +132,7 @@ static zx_status_t gic_init(void)
     gic_wait_for_rwp(GICD_CTLR);
     ISB;
 
-    // mask and clear all spis, set group 1
+    // diistributer config: mask and clear all spis, set group 1.
     uint i;
     for (i = 32; i < gic_max_int; i += 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
@@ -145,11 +143,11 @@ static zx_status_t gic_init(void)
     gic_wait_for_rwp(GICD_CTLR);
 
     // enable distributor with ARE, group 1 enable
-    GICREG(0, GICD_CTLR) = (1 << 4) | (1 << 1) | (1 << 0);
+    GICREG(0, GICD_CTLR) = CTLR_ENALBE_G0 | CTLR_ENABLE_G1NS | CTLR_ARE_S;
     gic_wait_for_rwp(GICD_CTLR);
 
     // set spi to target cpu 0. must do this after ARE enable
-    uint max_cpu = (typer >> 5) & 0x7;
+    uint max_cpu = BITS_SHIFT(typer, 7, 5);
     if (max_cpu > 0) {
         for (i = 32; i < gic_max_int; i++) {
             GICREG64(0, GICD_IROUTER(i)) = 0;
@@ -164,8 +162,7 @@ static zx_status_t gic_init(void)
     return ZX_OK;
 }
 
-static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
-{
+static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
     if (flags != ARM_GIC_SGI_FLAG_NS) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -200,8 +197,7 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
     return ZX_OK;
 }
 
-static zx_status_t gic_mask_interrupt(unsigned int vector)
-{
+static zx_status_t gic_mask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
     if (vector >= gic_max_int)
@@ -212,8 +208,7 @@ static zx_status_t gic_mask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-static zx_status_t gic_unmask_interrupt(unsigned int vector)
-{
+static zx_status_t gic_unmask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
     if (vector >= gic_max_int)
@@ -226,8 +221,7 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector)
 
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
-                                           enum interrupt_polarity pol)
-{
+                                           enum interrupt_polarity pol) {
     LTRACEF("vector %u, trigger mode %u, polarity %u\n", vector, tm, pol);
 
     if (vector <= 15 || vector >= gic_max_int) {
@@ -254,15 +248,16 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
 
 static zx_status_t gic_get_interrupt_config(unsigned int vector,
                                             enum interrupt_trigger_mode* tm,
-                                            enum interrupt_polarity* pol)
-{
+                                            enum interrupt_polarity* pol) {
     LTRACEF("vector %u\n", vector);
 
     if (vector >= gic_max_int)
         return ZX_ERR_INVALID_ARGS;
 
-    if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
-    if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
+    if (tm)
+        *tm = IRQ_TRIGGER_MODE_EDGE;
+    if (pol)
+        *pol = IRQ_POLARITY_ACTIVE_HIGH;
 
     return ZX_OK;
 }
@@ -295,7 +290,7 @@ static enum handler_return gic_handle_irq(iframe* frame) {
     ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
     LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n",
-            iar, cpu, get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
+                  iar, cpu, get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
@@ -321,7 +316,7 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
     /* filter out targets outside of the range of cpus we care about */
-    target &= ((1UL << arch_max_num_cpus()) - 1);
+    target &= (cpu_mask_t)(((1UL << arch_max_num_cpus()) - 1));
     if (target != 0) {
         LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
@@ -330,23 +325,23 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static enum handler_return arm_ipi_generic_handler(void *arg) {
+static enum handler_return arm_ipi_generic_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_generic_irq();
 }
 
-static enum handler_return arm_ipi_reschedule_handler(void *arg) {
+static enum handler_return arm_ipi_reschedule_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_reschedule_irq();
 }
 
-static enum handler_return arm_ipi_halt_handler(void *arg) {
+static enum handler_return arm_ipi_halt_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     arch_disable_ints();
-    for(;;);
+    for (;;) {};
 
     return INT_NO_RESCHEDULE;
 }
@@ -413,7 +408,6 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         }
     }
 
-
     if (!got_gic_base_virt) {
         printf("arm-gic-v3: gic_base_virt not defined\n");
         return;
@@ -456,6 +450,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     DEBUG_ASSERT(status == ZX_OK);
     status = register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     DEBUG_ASSERT(status == ZX_OK);
+
+    gicv3_hw_interface_register();
 
     LTRACE_EXIT;
 }

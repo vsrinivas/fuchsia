@@ -70,7 +70,7 @@ zx_status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
     return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
 
-} // namespace {}
+} // namespace
 
 void vm_init_preheap() {
     LTRACE_ENTRY;

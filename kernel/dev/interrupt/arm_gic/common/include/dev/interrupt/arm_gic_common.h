@@ -6,12 +6,18 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
-
 #include <sys/types.h>
 
 #define GIC_BASE_SGI 0
 #define GIC_BASE_PPI 16
 #define GIC_BASE_SPI 32
+
+// GIC Revision
+enum {
+    GICV2 = 2,
+    GICV3 = 3,
+    GICV4 = 4,
+};
 
 enum {
     /* Ignore cpu_mask and forward interrupt to all CPUs other than the current cpu */

@@ -14,5 +14,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/guest.cpp \
 	$(LOCAL_DIR)/vcpu.cpp \
 	$(LOCAL_DIR)/vmexit.cpp \
+	$(LOCAL_DIR)/gic/gicv2.cpp \
+	$(LOCAL_DIR)/gic/gicv3.cpp \
 
 include make/module.mk

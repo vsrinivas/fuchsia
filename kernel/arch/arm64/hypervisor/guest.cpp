@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/hypervisor.h>
-#include <dev/interrupt/arm_gic_regs.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -14,17 +14,6 @@
 
 static const vaddr_t kGicvAddress = 0xe82b2000;
 static const size_t kGicvSize = 0x2000;
-
-static zx_status_t get_gicv(paddr_t* gicv_paddr) {
-    // Check for presence of GICv2 virtualisation extensions.
-    //
-    // TODO(abdulla): Support GICv3 virtualisation.
-    if (GICV_OFFSET == 0)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    *gicv_paddr = vaddr_to_paddr(reinterpret_cast<void*>(GICV_ADDRESS));
-    return ZX_OK;
-}
 
 // static
 zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
@@ -45,12 +34,19 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
         return status;
 
     paddr_t gicv_paddr;
-    status = get_gicv(&gicv_paddr);
-    if (status != ZX_OK)
+    status = gic_get_gicv(&gicv_paddr);
+
+    // If status == ZX_ERR_NOT_FOUND, we are running GICv3
+    // There is no need to map GICV to the guest
+    // Handle other cases below
+    if (status == ZX_OK) {
+        status = guest->gpas_->MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else if (status == ZX_ERR_NOT_SUPPORTED) {
         return status;
-    status = guest->gpas_->MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
-    if (status != ZX_OK)
-        return status;
+    }
 
     *out = fbl::move(guest);
     return ZX_OK;

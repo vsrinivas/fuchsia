@@ -6,9 +6,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <dev/interrupt/arm_gic.h>
+#include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gicv2m.h>
-#include <dev/interrupt/arm_gic_regs.h>
+#include <dev/interrupt/arm_gicv2_regs.h>
 #include <err.h>
 #include <string.h>
 #include <trace.h>

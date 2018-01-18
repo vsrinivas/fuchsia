@@ -5,27 +5,28 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/ops.h>
 #include <assert.h>
 #include <bits.h>
+#include <debug.h>
+#include <dev/interrupt.h>
+#include <dev/interrupt/arm_gic_common.h>
+#include <arch/arm64/hypervisor/gic/gicv2.h>
+#include <dev/interrupt/arm_gicv2_regs.h>
+#include <dev/interrupt/arm_gicv2m.h>
 #include <err.h>
 #include <inttypes.h>
-#include <sys/types.h>
-#include <debug.h>
-#include <dev/interrupt/arm_gic.h>
-#include <dev/interrupt/arm_gic_regs.h>
-#include <dev/interrupt/arm_gicv2m.h>
-#include <reg.h>
-#include <kernel/thread.h>
 #include <kernel/stats.h>
-#include <lk/init.h>
-#include <dev/interrupt.h>
-#include <arch/ops.h>
-#include <trace.h>
+#include <kernel/thread.h>
 #include <lib/ktrace.h>
+#include <lk/init.h>
+#include <reg.h>
+#include <sys/types.h>
+#include <trace.h>
 #include <zircon/types.h>
 
-#include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
+#include <mdi/mdi.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
@@ -54,21 +55,18 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol);
 
-static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd)
-{
+static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd) {
 }
 
-static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags)
-{
+static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < max_irqs);
 }
 
 static DEFINE_GIC_SHADOW_REG(gicd_itargetsr, 4, 0x01010101, 32);
 
-static void gic_set_enable(uint vector, bool enable)
-{
+static void gic_set_enable(uint vector, bool enable) {
     int reg = vector / 32;
-    uint32_t mask = 1ULL << (vector % 32);
+    uint32_t mask = (uint32_t)(1ULL << (vector % 32));
 
     if (enable)
         GICREG(0, GICD_ISENABLER(reg)) = mask;
@@ -76,20 +74,16 @@ static void gic_set_enable(uint vector, bool enable)
         GICREG(0, GICD_ICENABLER(reg)) = mask;
 }
 
-static void gic_init_percpu_early(void)
-{
-    GICREG(0, GICC_CTLR) = 1; // enable GIC0
+static void gic_init_percpu_early(void) {
+    GICREG(0, GICC_CTLR) = 1;   // enable GIC0
     GICREG(0, GICC_PMR) = 0xFF; // unmask interrupts at all priority levels
 }
 
-static void arm_gic_suspend_cpu(uint level)
-{
+static void arm_gic_suspend_cpu(uint level) {
     suspend_resume_fiq(false, false);
 }
 
-
-static void arm_gic_resume_cpu(uint level)
-{
+static void arm_gic_resume_cpu(uint level) {
     spin_lock_saved_state_t state;
     bool resume_gicd = false;
 
@@ -114,39 +108,38 @@ LK_INIT_HOOK_FLAGS(arm_gic_resume_cpu, arm_gic_resume_cpu,
                    LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME);
 #endif
 
-static int arm_gic_max_cpu(void)
-{
+static int arm_gic_max_cpu(void) {
     return (GICREG(0, GICD_TYPER) >> 5) & 0x7;
 }
 
-static zx_status_t arm_gic_init(void)
-{
+static zx_status_t arm_gic_init(void) {
     uint i;
-
     // see if we're gic v2
     uint rev = 0;
     uint32_t pidr2 = GICREG(0, GICD_PIDR2);
     if (pidr2 != 0) {
         uint rev = BITS_SHIFT(pidr2, 7, 4);
-        if (rev != 2) {
+        if (rev != GICV2) {
             return ZX_ERR_NOT_FOUND;
         }
     } else {
         // some v2's return a null PIDR2
         pidr2 = GICREG(0, GICD_V3_PIDR2);
         rev = BITS_SHIFT(pidr2, 7, 4);
-        if (rev >= 3) {
+        if (rev >= GICV3) {
             // looks like a gic v3
             return ZX_ERR_NOT_FOUND;
         }
         // HACK: if gicv2 and v3 pidr2 seems to be blank, assume we're v2 and continue
     }
 
-    max_irqs = ((GICREG(0, GICD_TYPER) & 0x1F) + 1) * 32;
+    uint32_t typer = GICREG(0, GICD_TYPER);
+    uint32_t it_lines_number = BITS_SHIFT(typer, 4, 0);
+    max_irqs = (it_lines_number + 1) * 32;
     LTRACEF("arm_gic_init max_irqs: %u\n", max_irqs);
     assert(max_irqs <= MAX_INT);
 
-    for (i = 0; i < max_irqs; i+= 32) {
+    for (i = 0; i < max_irqs; i += 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
         GICREG(0, GICD_ICPENDR(i / 32)) = ~0;
     }
@@ -168,8 +161,7 @@ static zx_status_t arm_gic_init(void)
     return ZX_OK;
 }
 
-static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
-{
+static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
     u_int val =
         ((flags & ARM_GIC_SGI_FLAG_TARGET_FILTER_MASK) << 24) |
         ((cpu_mask & 0xff) << 16) |
@@ -186,8 +178,7 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
     return ZX_OK;
 }
 
-static zx_status_t gic_mask_interrupt(unsigned int vector)
-{
+static zx_status_t gic_mask_interrupt(unsigned int vector) {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
 
@@ -196,8 +187,7 @@ static zx_status_t gic_mask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-static zx_status_t gic_unmask_interrupt(unsigned int vector)
-{
+static zx_status_t gic_unmask_interrupt(unsigned int vector) {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
 
@@ -208,8 +198,7 @@ static zx_status_t gic_unmask_interrupt(unsigned int vector)
 
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
-                                           enum interrupt_polarity pol)
-{
+                                           enum interrupt_polarity pol) {
     //Only configurable for SPI interrupts
     if ((vector >= max_irqs) || (vector < GIC_BASE_SPI))
         return ZX_ERR_INVALID_ARGS;
@@ -223,7 +212,6 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
     // 16 irqs encoded per ICFGR register
     uint32_t reg_ndx = vector >> 4;
     uint32_t bit_shift = ((vector & 0xf) << 1) + 1;
-
     uint32_t reg_val   = GICREG(0, GICD_ICFGR(reg_ndx));
     if (tm == IRQ_TRIGGER_MODE_EDGE) {
         reg_val |= (1 << bit_shift);
@@ -237,24 +225,23 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
 
 static zx_status_t gic_get_interrupt_config(unsigned int vector,
                                             enum interrupt_trigger_mode* tm,
-                                            enum interrupt_polarity* pol)
-{
+                                            enum interrupt_polarity* pol) {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
 
-    if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
-    if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
+    if (tm)
+        *tm = IRQ_TRIGGER_MODE_EDGE;
+    if (pol)
+        *pol = IRQ_POLARITY_ACTIVE_HIGH;
 
     return ZX_OK;
 }
 
-static unsigned int gic_remap_interrupt(unsigned int vector)
-{
+static unsigned int gic_remap_interrupt(unsigned int vector) {
     return vector;
 }
 
-static enum handler_return gic_handle_irq(struct iframe *frame)
-{
+static enum handler_return gic_handle_irq(struct iframe* frame) {
     // get the current vector
     uint32_t iar = GICREG(0, GICC_IAR);
     unsigned int vector = iar & 0x3ff;
@@ -272,8 +259,7 @@ static enum handler_return gic_handle_irq(struct iframe *frame)
 
     ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
-    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#"
-                  PRIxPTR "\n", iar, cpu,
+    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n", iar, cpu,
                   get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
     // deliver the interrupt
@@ -294,8 +280,7 @@ static enum handler_return gic_handle_irq(struct iframe *frame)
     return ret;
 }
 
-static enum handler_return gic_handle_fiq(struct iframe *frame)
-{
+static enum handler_return gic_handle_fiq(struct iframe* frame) {
     PANIC_UNIMPLEMENTED;
 }
 
@@ -312,23 +297,23 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static enum handler_return arm_ipi_generic_handler(void *arg) {
+static enum handler_return arm_ipi_generic_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_generic_irq();
 }
 
-static enum handler_return arm_ipi_reschedule_handler(void *arg) {
+static enum handler_return arm_ipi_reschedule_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_reschedule_irq();
 }
 
-static enum handler_return arm_ipi_halt_handler(void *arg) {
+static enum handler_return arm_ipi_halt_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     arch_disable_ints();
-    for(;;);
+    while(true) {}
 
     return INT_NO_RESCHEDULE;
 }
@@ -435,7 +420,7 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
             // failed to detect gic v2 but it's marked optional. continue
             return;
         }
-        printf("GICv3: failed to detect GICv2, interrupts will be broken\n");
+        printf("GICv2: failed to detect GICv2, interrupts will be broken\n");
         return;
     }
 
@@ -444,8 +429,8 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     // pass the list of physical and virtual addresses for the GICv2m register apertures
     if (msi_frame_phys && msi_frame_virt) {
         // the following arrays must be static because arm_gicv2m_init stashes the pointer
-        static paddr_t GICV2M_REG_FRAMES[] = { 0 };
-        static vaddr_t GICV2M_REG_FRAMES_VIRT[] = { 0 };
+        static paddr_t GICV2M_REG_FRAMES[] = {0};
+        static vaddr_t GICV2M_REG_FRAMES_VIRT[] = {0};
 
         GICV2M_REG_FRAMES[0] = msi_frame_phys;
         GICV2M_REG_FRAMES_VIRT[0] = msi_frame_virt;
@@ -459,6 +444,8 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     DEBUG_ASSERT(status == ZX_OK);
     status = register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     DEBUG_ASSERT(status == ZX_OK);
+
+    gicv2_hw_interface_register();
 }
 
 LK_PDEV_INIT(arm_gic_v2_init, MDI_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);

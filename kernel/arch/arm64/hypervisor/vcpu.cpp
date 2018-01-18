@@ -8,8 +8,8 @@
 
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
-#include <dev/interrupt/arm_gic_regs.h>
 #include <dev/timer/arm_generic.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -34,17 +34,6 @@ enum TimerControl : uint64_t {
     IMASK = 1u << 1,
 };
 
-static zx_status_t get_gich(volatile Gich** gich) {
-    // Check for presence of GICv2 virtualisation extensions.
-    //
-    // TODO(abdulla): Support GICv3 virtualisation.
-    if (GICH_OFFSET == 0)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    *gich = reinterpret_cast<volatile Gich*>(GICH_ADDRESS + 0x1000);
-    return ZX_OK;
-}
-
 // static
 zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                          TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
@@ -67,12 +56,11 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpa
     status = vcpu->gich_state_.interrupt_tracker.Init();
     if (status != ZX_OK)
         return status;
-    status = get_gich(&vcpu->gich_state_.gich);
-    if (status != ZX_OK)
-        return status;
 
-    vcpu->gich_state_.gich->hcr |= kGichHcrEn;
-    vcpu->gich_state_.num_lrs = (vcpu->gich_state_.gich->vtr & kGichVtrListRegs) + 1;
+    uint32_t hcr_ = gic_read_gich_hcr();
+    gic_write_gich_hcr(hcr_ | kGichHcrEn);
+
+    vcpu->gich_state_.num_lrs = (gic_read_gich_vtr() & kGichVtrListRegs) + 1;
     vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_.guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
@@ -95,25 +83,28 @@ Vcpu::~Vcpu() {
     DEBUG_ASSERT(status == ZX_OK);
 }
 
-template <typename Out, typename In>
-static void gich_copy(Out* out, const In& in, uint32_t num_lrs) {
-    out->vmcr = in.vmcr;
-    out->elrs = in.elrs;
-    for (uint32_t i = 0; i < num_lrs; i++) {
-        out->lr[i] = in.lr[i];
-    }
-}
-
 AutoGich::AutoGich(GichState* gich_state)
     : gich_state_(gich_state) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    gich_copy(gich_state_->gich, *gich_state_, gich_state_->num_lrs); // Load
+
+    // Load
+    gic_write_gich_vmcr(gich_state_->vmcr);
+    gic_write_gich_elrs(gich_state_->elrs);
+    for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
+        gic_write_gich_lr(i, gich_state->lr[i]);
+    }
 }
 
 AutoGich::~AutoGich() {
     DEBUG_ASSERT(arch_ints_disabled());
-    gich_copy(gich_state_, *gich_state_->gich, gich_state_->num_lrs); // Save
+
+    // Save
+    gich_state_->vmcr = gic_read_gich_vmcr();
+    gich_state_->elrs = gic_read_gich_elrs();
+    for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
+        gich_state_->lr[i] = gic_read_gich_lr(i);
+    }
     arch_enable_ints();
 }
 
@@ -121,7 +112,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
     if (guest_state->system_state.spsr_el2 & kSpsrIrq) {
         return false;
     }
-    uint64_t prev_elrs = gich_state->gich->elrs;
+    uint64_t prev_elrs = gic_read_gich_elrs();
     uint64_t elrs = prev_elrs;
     while (elrs != 0) {
         uint32_t vector;
@@ -130,7 +121,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
             break;
         }
         size_t i = __builtin_ctzl(elrs);
-        gich_state->gich->lr[i] = kGichLrPending | vector;
+        gic_write_gich_lr((uint32_t)i, kGichLrPending | vector);
         elrs &= ~(1u << i);
     }
     return elrs != prev_elrs;

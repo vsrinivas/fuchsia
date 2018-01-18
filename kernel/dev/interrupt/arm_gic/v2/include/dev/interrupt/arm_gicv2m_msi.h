@@ -41,17 +41,17 @@ void arm_gicv2m_free_msi_block(pcie_msi_block_t* block);
  * @see platform_register_msi_handler_t in dev/pcie/pcie_irqs.h
  */
 void arm_gicv2m_register_msi_handler(const pcie_msi_block_t* block,
-                                     uint                    msi_id,
-                                     int_handler             handler,
-                                     void*                   ctx);
+                                     uint msi_id,
+                                     int_handler handler,
+                                     void* ctx);
 
 /**
  * @see platform_mask_unmask_msi_t in dev/pcie/pcie_irqs.h
  */
 void arm_gicv2m_mask_unmask_msi(const pcie_msi_block_t* block,
-                                uint                    msi_id,
-                                bool                    mask);
+                                uint msi_id,
+                                bool mask);
 
 __END_CDECLS
-#endif  // WITH_DEV_PCIE
+#endif // WITH_DEV_PCIE
 
