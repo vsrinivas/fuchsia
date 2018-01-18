@@ -19,6 +19,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
@@ -905,6 +906,26 @@ static bool packet_pid_test(void)
     zx_koid_t packet_tid = start_packet.exception.tid;
 
     EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
+
+    // Test that zx_thread_read_state() and zx_thread_write_state() will
+    // both return ZX_ERR_NOT_SUPPORTED when a thread is paused in the
+    // ZX_EXCP_THREAD_STARTING state.
+    zx_handle_t thread;
+    ASSERT_EQ(zx_object_get_child(child, packet_tid, ZX_RIGHT_SAME_RIGHTS,
+                                  &thread), ZX_OK, "");
+    uint32_t regs_size = 0;
+    // First find the size of the register buffer.
+    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, NULL, 0,
+                                   &regs_size),
+              ZX_ERR_BUFFER_TOO_SMALL, "");
+    uint8_t regs_buffer[regs_size];
+    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0,
+                                   regs_buffer, regs_size, &regs_size),
+              ZX_ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0,
+                                    regs_buffer, regs_size),
+              ZX_ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
 
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
