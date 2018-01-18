@@ -1,0 +1,92 @@
+{
+  "description": "Schema for a build-generated SDK manifest",
+  "type": "object",
+  "properties": {
+    "atoms": {
+      "description": "The set of all atoms in the current manifest, forming a complete dependency graph",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/atom"
+      }
+    },
+    "names": {
+      "description": "Names of the main atoms in this manifest (as opposed to dependencies)",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/atomId"
+      }
+    }
+  },
+  "required": [
+      "atoms",
+      "names"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "atomId": {
+      "description": "Unique identifier for an atom",
+      "type": "object",
+      "properties": {
+        "domain": {
+          "description": "The group of atoms this atom belongs to (e.g. 'c', 'dart', etc...)",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of this atom, unique within its domain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "domain",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "atom": {
+      "description": "An SDK artifact",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The atom's unique identifier",
+          "$ref": "#/definitions/atomId"
+        },
+        "files": {
+          "description": "The files making up the atom",
+          "type": "object",
+          "additionalProperties": {
+            "description": "The property name is the path of the file relative to the destination root of the atom; the value is the path to the source file",
+            "type": "string"
+          }
+        },
+        "deps": {
+          "description": "The ids of the atoms this atom directly depends on",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomId"
+          }
+        },
+        "tags": {
+          "description": "A collection of potentially domain-specific metadata",
+          "type": "object",
+          "properties": {
+            "gn-label": {
+              "description": "Label of the GN target that generated this atom",
+              "type": "string",
+            }
+          },
+          "required": [
+            "gn-label"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "deps",
+        "files",
+        "id",
+        "tags"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

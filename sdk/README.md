@@ -64,4 +64,5 @@ SDK.
 ```
 
 The package file can now be used in a standard Fuchsia build and will produce
-the manifest at `//out/foobar/gen/my/api/api.sdk`
+the manifest at `//out/foobar/gen/my/api/api.sdk`. A JSON schema for this
+manifest is available [here](manifest_schema.json).
