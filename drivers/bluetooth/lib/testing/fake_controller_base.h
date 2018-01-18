@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <thread>
-
 #include <async/wait.h>
 #include <zx/channel.h>
 
@@ -14,7 +12,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
 namespace testing {
@@ -47,12 +44,11 @@ class FakeControllerBase {
   // Immediately closes the ACL data channel endpoint.
   void CloseACLDataChannel();
 
-  // Returns true if Start() has been called without a call to Stop().
-  bool IsStarted() const { return static_cast<bool>(task_runner_); }
+  bool IsStarted() const {
+    return cmd_channel_wait_.object() != ZX_HANDLE_INVALID;
+  }
 
  protected:
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
-
   // Getters for our channel endpoints.
   const zx::channel& command_channel() const { return cmd_channel_; }
   const zx::channel& acl_data_channel() const { return acl_channel_; }
@@ -74,18 +70,9 @@ class FakeControllerBase {
                                       zx_status_t wait_status,
                                       const zx_packet_signal_t* signal);
 
-  // Cleans up the channel handles. This must be run on |task_runner_|'s thread.
-  void CloseCommandChannelInternal();
-  void CloseACLDataChannelInternal();
-
-  // Used to assert that certain public functions are only called on the
-  // creation thread.
-  fxl::ThreadChecker thread_checker_;
-
   zx::channel cmd_channel_;
   zx::channel acl_channel_;
-  std::thread thread_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+
   async::Wait cmd_channel_wait_;
   async::Wait acl_channel_wait_;
 

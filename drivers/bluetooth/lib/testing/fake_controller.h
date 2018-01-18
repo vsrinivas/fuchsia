@@ -195,6 +195,11 @@ class FakeController : public FakeControllerBase {
   void Disconnect(const common::DeviceAddress& addr);
 
  private:
+  // Returns the current thread's task runner.
+  fxl::RefPtr<fxl::TaskRunner> task_runner() const {
+    return fsl::MessageLoop::GetCurrent()->task_runner();
+  }
+
   // Finds and returns the FakeDevice with the given parameters or nullptr if no
   // such device exists.
   FakeDevice* FindDeviceByAddress(const common::DeviceAddress& addr);

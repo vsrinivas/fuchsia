@@ -6,11 +6,8 @@
 
 #include <zircon/status.h>
 
-#include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
-#include "lib/fsl/threading/create_thread.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace btlib {
 namespace testing {
@@ -32,46 +29,30 @@ FakeControllerBase::~FakeControllerBase() {
 void FakeControllerBase::Start() {
   FXL_DCHECK(!IsStarted());
   FXL_DCHECK(cmd_channel_.is_valid());
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  thread_ = fsl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
+  cmd_channel_wait_.set_object(cmd_channel_.get());
+  cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  cmd_channel_wait_.set_handler(
+      fbl::BindMember(this, &FakeControllerBase::HandleCommandPacket));
 
-  auto setup_task = [this] {
-    cmd_channel_wait_.set_object(cmd_channel_.get());
-    cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    cmd_channel_wait_.set_handler(
-        fbl::BindMember(this, &FakeControllerBase::HandleCommandPacket));
-    zx_status_t status =
-        cmd_channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+  zx_status_t status = cmd_channel_wait_.Begin(async_get_default());
+  FXL_DCHECK(status == ZX_OK);
+
+  if (acl_channel_.is_valid()) {
+    acl_channel_wait_.set_object(acl_channel_.get());
+    acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    acl_channel_wait_.set_handler(
+        fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
+    zx_status_t status = acl_channel_wait_.Begin(async_get_default());
     FXL_DCHECK(status == ZX_OK);
-    if (acl_channel_.is_valid()) {
-      acl_channel_wait_.set_object(acl_channel_.get());
-      acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE |
-                                    ZX_CHANNEL_PEER_CLOSED);
-      acl_channel_wait_.set_handler(
-          fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
-      zx_status_t status =
-          acl_channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
-      FXL_DCHECK(status == ZX_OK);
-    }
-  };
-
-  common::RunTaskSync(setup_task, task_runner_);
+  }
 }
 
 void FakeControllerBase::Stop() {
   FXL_DCHECK(IsStarted());
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  task_runner_->PostTask([this] {
-    CloseCommandChannelInternal();
-    CloseACLDataChannelInternal();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  });
-  if (thread_.joinable())
-    thread_.join();
-
-  task_runner_ = nullptr;
+  CloseCommandChannel();
+  CloseACLDataChannel();
 }
 
 void FakeControllerBase::SendCommandChannelPacket(
@@ -97,13 +78,15 @@ void FakeControllerBase::SendACLDataChannelPacket(
 }
 
 void FakeControllerBase::CloseCommandChannel() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  common::RunTaskSync([this] { CloseCommandChannelInternal(); }, task_runner_);
+  cmd_channel_wait_.Cancel(async_get_default());
+  cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
+  cmd_channel_.reset();
 }
 
 void FakeControllerBase::CloseACLDataChannel() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  common::RunTaskSync([this] { CloseACLDataChannelInternal(); }, task_runner_);
+  acl_channel_wait_.Cancel(async_get_default());
+  acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
+  acl_channel_.reset();
 }
 
 async_wait_result_t FakeControllerBase::HandleCommandPacket(
@@ -123,7 +106,7 @@ async_wait_result_t FakeControllerBase::HandleCommandPacket(
       FXL_LOG(ERROR) << "Failed to read on cmd channel: "
                      << zx_status_get_string(status);
 
-    CloseCommandChannelInternal();
+    CloseCommandChannel();
     return ASYNC_WAIT_FINISHED;
   }
 
@@ -157,27 +140,13 @@ async_wait_result_t FakeControllerBase::HandleACLPacket(
       FXL_LOG(ERROR) << "Failed to read on ACL channel: "
                      << zx_status_get_string(status);
 
-    CloseACLDataChannelInternal();
+    CloseACLDataChannel();
     return ASYNC_WAIT_FINISHED;
   }
 
   common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
   return ASYNC_WAIT_AGAIN;
-}
-
-void FakeControllerBase::CloseCommandChannelInternal() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  cmd_channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
-  cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
-  cmd_channel_.reset();
-}
-
-void FakeControllerBase::CloseACLDataChannelInternal() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  acl_channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
-  acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
-  acl_channel_.reset();
 }
 
 }  // namespace testing
