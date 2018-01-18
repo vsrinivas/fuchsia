@@ -13,11 +13,12 @@
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-#define ASSERT_EPT_EQ(actual, expected, size, ...)  \
-  do {                                              \
-    int cmp = memcmp(actual, expected, size);       \
-    if (cmp != 0) hexdump_result(actual, expected); \
-    ASSERT_EQ(cmp, 0, ##__VA_ARGS__);               \
+#define ASSERT_EPT_EQ(actual, expected, size, ...) \
+  do {                                             \
+    int cmp = memcmp(actual, expected, size);      \
+    if (cmp != 0)                                  \
+      hexdump_result(actual, expected);            \
+    ASSERT_EQ(cmp, 0, ##__VA_ARGS__);              \
   } while (0)
 
 #define INITIALIZE_PAGE_TABLE \
@@ -133,8 +134,9 @@ TEST(PageTableTest, 4kb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off),
-            ZX_OK);
+  ASSERT_EQ(
+      machina::create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off),
+      ZX_OK);
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -157,7 +159,7 @@ TEST(PageTableTest, MixedPages) {
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
   ASSERT_EQ(machina::create_page_table((uintptr_t)actual, (2 << 20) + (4 << 10),
-                                    &pte_off),
+                                       &pte_off),
             ZX_OK);
 
   // pml4

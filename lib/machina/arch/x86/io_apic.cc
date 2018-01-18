@@ -190,7 +190,8 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register,
       return ZX_OK;
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex << select_register;
+      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex
+                     << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -217,8 +218,8 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
       // Read-only, ignore writes.
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) <<
-          "Unhandled IO APIC register write 0x" << std::hex << select_register;
+      FXL_LOG(ERROR) << "Unhandled IO APIC register write 0x" << std::hex
+                     << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

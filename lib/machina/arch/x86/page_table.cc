@@ -34,10 +34,12 @@ static const size_t kPtesPerPage = PAGE_SIZE / sizeof(uint64_t);
 // @param has_page     Whether this level of the page table has associated
 //                     pages.
 // @param map_flags    Flags added to any descriptors directly mapping pages.
-static uintptr_t create_page_table_level(uintptr_t addr, size_t size,
+static uintptr_t create_page_table_level(uintptr_t addr,
+                                         size_t size,
                                          size_t l1_page_size,
                                          uintptr_t l1_pte_off,
-                                         uint64_t* aspace_off, bool has_page,
+                                         uint64_t* aspace_off,
+                                         bool has_page,
                                          uint64_t map_flags) {
   size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
   bool has_l0_aspace = size % l1_page_size != 0;
@@ -50,7 +52,8 @@ static uintptr_t create_page_table_level(uintptr_t addr, size_t size,
       pt[i] = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;
       *aspace_off += l1_page_size;
     } else {
-      if (i > 0 && (i % kPtesPerPage == 0)) l0_pte_off += PAGE_SIZE;
+      if (i > 0 && (i % kPtesPerPage == 0))
+        l0_pte_off += PAGE_SIZE;
       pt[i] = l0_pte_off | X86_PTE_P | X86_PTE_RW;
     }
   }

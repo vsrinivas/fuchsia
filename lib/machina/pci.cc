@@ -44,8 +44,8 @@ constexpr uint8_t kPciCapNextOffset = 1;
 //
 // The device tree and DSDT define interrupts for 6 devices (IRQ 32-37). Adding
 // additional devices beyond that will require updates to both.
-constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35,
-                                                               36, 37};
+constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34,
+                                                               35, 36, 37};
 
 uint32_t PciBar::aspace() const {
   switch (trap_type) {

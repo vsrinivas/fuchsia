@@ -30,8 +30,7 @@ struct BackingPages
 
 class VirtioGpuTest {
  public:
-  VirtioGpuTest()
-      : gpu_(phys_mem_), control_queue_(&gpu_.control_queue()) {}
+  VirtioGpuTest() : gpu_(phys_mem_), control_queue_(&gpu_.control_queue()) {}
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);

@@ -19,9 +19,7 @@ class TestDevice : public VirtioDevice {
       : VirtioDevice(VIRTIO_TEST_ID, nullptr, 0, &queue_, 1, phys_mem_),
         queue_fake_(&queue_) {}
 
-  zx_status_t Init() {
-    return queue_fake_.Init(QUEUE_SIZE);
-  }
+  zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
 
   virtio_queue_t& queue() { return queue_; }
   VirtioQueueFake& queue_fake() { return queue_fake_; }

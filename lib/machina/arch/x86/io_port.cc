@@ -244,7 +244,8 @@ zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index,
       *value = 0;
       break;
     default:
-      FXL_LOG(ERROR) << "Unsupported RTC register read 0x" << std::hex << rtc_index;
+      FXL_LOG(ERROR) << "Unsupported RTC register read 0x" << std::hex
+                     << rtc_index;
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -260,7 +261,8 @@ zx_status_t RtcHandler::WriteRtcRegister(uint8_t rtc_index, uint8_t value) {
         return ZX_ERR_NOT_SUPPORTED;
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unsupported RTC register write 0x" << std::hex << rtc_index;
+      FXL_LOG(ERROR) << "Unsupported RTC register write 0x" << std::hex
+                     << rtc_index;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
