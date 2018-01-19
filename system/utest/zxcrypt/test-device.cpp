@@ -23,7 +23,7 @@
 
 #include "test-device.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace zxcrypt {
 namespace testing {
@@ -46,14 +46,14 @@ const size_t kZxcryptLibLen = strlen(kZxcryptLib);
 char* GetBlockDriver(char* path) {
     char* block = strrchr(path, '/');
     if (!block || strcmp(block, "/block") != 0 || block == path) {
-        xprintf("%s: unable to find block driver in '%s'\n", __PRETTY_FUNCTION__, path);
+        xprintf("unable to find block driver in '%s'\n", path);
         return nullptr;
     }
     *block = 0;
     char* driver = strrchr(path, '/');
     *block = '/';
     if (!driver) {
-        xprintf("%s: unable to find block driver in '%s'\n", __PRETTY_FUNCTION__, path);
+        xprintf("unable to find block driver in '%s'\n", path);
         return nullptr;
     }
     return driver + 1;
@@ -67,20 +67,18 @@ zx_status_t BlockWatcher(int dirfd, int event, const char* filename, void* cooki
     }
     fbl::unique_fd devfd(openat(dirfd, filename, O_RDWR));
     if (!devfd) {
-        xprintf("%s: openat(%d, '%s', O_RDWR) failed: %s\n", __PRETTY_FUNCTION__, dirfd, filename,
-                strerror(errno));
+        xprintf("openat(%d, '%s', O_RDWR) failed: %s\n", dirfd, filename, strerror(errno));
         return ZX_OK;
     }
 
     char path[PATH_MAX] = {0};
     ssize_t res;
     if ((res = ioctl_device_get_topo_path(devfd.get(), path, PATH_MAX - 1)) < 0) {
-        xprintf("%s: ioctl_device_get_topo_path(%d, %p, %zu) failed: %s\n", __PRETTY_FUNCTION__,
-                devfd.get(), path, sizeof(path),
-                zx_status_get_string(static_cast<zx_status_t>(res)));
+        xprintf("ioctl_device_get_topo_path(%d, %p, %zu) failed: %s\n", devfd.get(), path,
+                sizeof(path), zx_status_get_string(static_cast<zx_status_t>(res)));
         return ZX_OK;
     }
-    xprintf("%s: %s added\n", __PRETTY_FUNCTION__, path);
+    xprintf("%s added\n", path);
 
     // Trim trailing /block
     const char* driver = GetBlockDriver(path);
@@ -88,7 +86,7 @@ zx_status_t BlockWatcher(int dirfd, int event, const char* filename, void* cooki
         return ZX_ERR_INTERNAL;
     }
     if (strcmp(driver, req->driver) != 0) {
-        xprintf("%s: found '%s', want '.../%s'\n", __PRETTY_FUNCTION__, path, req->driver);
+        xprintf("found '%s', want '.../%s'\n", path, req->driver);
         return ZX_OK;
     }
 
@@ -102,8 +100,7 @@ zx_status_t WaitForBlockDevice(char* driver, fbl::unique_fd* out_fd) {
     static const char* kBlockDevPath = "/dev/class/block";
     DIR* dir = opendir(kBlockDevPath);
     if (!dir) {
-        xprintf("%s: opendir('%s') failed: %s\n", __PRETTY_FUNCTION__, kBlockDevPath,
-                strerror(errno));
+        xprintf("opendir('%s') failed: %s\n", kBlockDevPath, strerror(errno));
         return ZX_ERR_IO;
     }
     auto cleanup = fbl::MakeAutoCall([&] { closedir(dir); });
@@ -111,9 +108,8 @@ zx_status_t WaitForBlockDevice(char* driver, fbl::unique_fd* out_fd) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
     BlockDeviceRequest req(driver);
     if ((rc = fdio_watch_directory(dirfd(dir), BlockWatcher, deadline, &req)) != ZX_ERR_STOP) {
-        xprintf("%s: fdio_watch_directory(%d, %p, %" PRIu64 ", %p) failed: %s\n",
-                __PRETTY_FUNCTION__, dirfd(dir), BlockWatcher, deadline, &req,
-                zx_status_get_string(rc));
+        xprintf("fdio_watch_directory(%d, %p, %" PRIu64 ", %p) failed: %s\n", dirfd(dir),
+                BlockWatcher, deadline, &req, zx_status_get_string(rc));
         return rc;
     }
     out_fd->reset(req.out_fd);
@@ -212,7 +208,7 @@ zx_status_t TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     size_t count = fbl::round_up(device_size, block_size) / block_size;
     to_write_.reset(new (&ac) uint8_t[device_size]);
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, device_size);
+        xprintf("allocation failed: %zu bytes\n", device_size);
         return ZX_ERR_NO_MEMORY;
     }
     for (size_t i = 0; i < device_size; ++i) {
@@ -221,14 +217,13 @@ zx_status_t TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
 
     as_read_.reset(new (&ac) uint8_t[device_size]);
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, device_size);
+        xprintf("allocation failed: %zu bytes\n", device_size);
         return ZX_ERR_NO_MEMORY;
     }
     memset(as_read_.get(), 0, block_size);
 
     if (create_ramdisk(block_size, count, ramdisk_path_) < 0) {
-        xprintf("%s: create_ramdisk(%zu, %zu, %p) failed\n", __PRETTY_FUNCTION__, block_size, count,
-                ramdisk_path_);
+        xprintf("create_ramdisk(%zu, %zu, %p) failed\n", block_size, count, ramdisk_path_);
         return ZX_ERR_IO;
     }
     if ((rc = WaitForBlockDevice(GetBlockDriver(ramdisk_path_), &ramdisk_)) != ZX_OK) {
@@ -259,8 +254,8 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 
     // Format the ramdisk as FVM and bind to it
     if ((rc = fvm_init(ramdisk_.get(), FVM_BLOCK_SIZE)) != ZX_OK) {
-        xprintf("%s: fvm_init(%d, %lu) failed: %s\n", __PRETTY_FUNCTION__, ramdisk_.get(),
-                FVM_BLOCK_SIZE, zx_status_get_string(rc));
+        xprintf("fvm_init(%d, %lu) failed: %s\n", ramdisk_.get(), FVM_BLOCK_SIZE,
+                zx_status_get_string(rc));
         return rc;
     }
 
@@ -269,15 +264,14 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     ssize_t res;
     if ((res = ioctl_device_bind(ramdisk_.get(), kFvmLib, kFvmLibLen)) < 0) {
         rc = static_cast<zx_status_t>(res);
-        xprintf("%s: ioctl_device_bind(%d, %s, %zu) failed: %s\n", __PRETTY_FUNCTION__,
-                ramdisk_.get(), kFvmLib, kFvmLibLen, zx_status_get_string(rc));
+        xprintf("ioctl_device_bind(%d, %s, %zu) failed: %s\n", ramdisk_.get(), kFvmLib, kFvmLibLen,
+                zx_status_get_string(rc));
         return rc;
     }
 
     // Wait and open the target device
     if (wait_for_driver_bind(ramdisk_path_, "fvm") < 0) {
-        xprintf("%s: wait_for_driver_bind('%s', 'fvm') failed\n", __PRETTY_FUNCTION__,
-                ramdisk_path_);
+        xprintf("wait_for_driver_bind('%s', 'fvm') failed\n", ramdisk_path_);
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -285,8 +279,7 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     snprintf(fvm_path, PATH_MAX, "%s/fvm", ramdisk_path_);
     fbl::unique_fd fvm_fd(open(fvm_path, O_RDWR));
     if (!fvm_fd) {
-        xprintf("%s: open('%s', O_RDWR) failed: %s\n", __PRETTY_FUNCTION__, fvm_path,
-                strerror(errno));
+        xprintf("open('%s', O_RDWR) failed: %s\n", fvm_path, strerror(errno));
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -302,8 +295,7 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 
     fvm_part_.reset(fvm_allocate_partition(fvm_fd.get(), &req));
     if (!fvm_part_) {
-        xprintf("%s: fvm_allocate_partition(%d, %p) failed\n", __PRETTY_FUNCTION__, fvm_fd.get(),
-                &req);
+        xprintf("fvm_allocate_partition(%d, %p) failed\n", fvm_fd.get(), &req);
         return ZX_ERR_IO;
     }
 
@@ -311,8 +303,8 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     if ((res = ioctl_device_get_topo_path(fvm_part_.get(), fvm_part_path_,
                                           sizeof(fvm_part_path_))) < 0) {
         rc = static_cast<zx_status_t>(res);
-        xprintf("%s: ioctl_device_get_topo_path(%d, %p, %zu) failed: %s\n", __PRETTY_FUNCTION__,
-                fvm_part_.get(), fvm_part_path_, sizeof(fvm_part_path_), zx_status_get_string(rc));
+        xprintf("ioctl_device_get_topo_path(%d, %p, %zu) failed: %s\n", fvm_part_.get(),
+                fvm_part_path_, sizeof(fvm_part_path_), zx_status_get_string(rc));
         return rc;
     }
 
@@ -322,20 +314,19 @@ zx_status_t TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 zx_status_t TestDevice::Write(const fbl::unique_fd& fd, const uint8_t* buf, zx_off_t off,
                               size_t len) {
     if (lseek(fd.get(), off, SEEK_SET) < 0) {
-        xprintf("%s: lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", __PRETTY_FUNCTION__, fd.get(),
-                off, strerror(errno));
+        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd.get(), off, strerror(errno));
         return ZX_ERR_IO;
     }
 
     ssize_t actual;
     if ((actual = write(fd.get(), to_write_.get() + off, len)) < 0) {
-        xprintf("%s: write(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", __PRETTY_FUNCTION__,
-                fd.get(), to_write_.get(), len, off, strerror(errno));
+        xprintf("write(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", fd.get(), to_write_.get(), len,
+                off, strerror(errno));
         return ZX_ERR_IO;
     }
 
     if (static_cast<size_t>(actual) < len) {
-        xprintf("%s: short write: have %zd, need %zu\n", __PRETTY_FUNCTION__, actual, len);
+        xprintf("short write: have %zd, need %zu\n", actual, len);
         return ZX_ERR_IO;
     }
 
@@ -344,20 +335,19 @@ zx_status_t TestDevice::Write(const fbl::unique_fd& fd, const uint8_t* buf, zx_o
 
 zx_status_t TestDevice::Read(const fbl::unique_fd& fd, uint8_t* buf, zx_off_t off, size_t len) {
     if (lseek(fd.get(), off, SEEK_SET) < 0) {
-        xprintf("%s: lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", __PRETTY_FUNCTION__, fd.get(),
-                off, strerror(errno));
+        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd.get(), off, strerror(errno));
         return ZX_ERR_IO;
     }
 
     ssize_t actual;
     if ((actual = read(fd.get(), as_read_.get() + off, len)) < 0) {
-        xprintf("%s: read(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", __PRETTY_FUNCTION__,
-                fd.get(), as_read_.get(), len, off, strerror(errno));
+        xprintf("read(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", fd.get(), as_read_.get(), len,
+                off, strerror(errno));
         return ZX_ERR_IO;
     }
 
     if (static_cast<size_t>(actual) < len) {
-        xprintf("%s: short read: have %zd, need %zu\n", __PRETTY_FUNCTION__, actual, len);
+        xprintf("short read: have %zd, need %zu\n", actual, len);
         return ZX_ERR_IO;
     }
 

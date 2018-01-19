@@ -27,7 +27,7 @@
 
 #include "fvm/fvm.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace {
 

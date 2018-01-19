@@ -19,7 +19,7 @@
 #include <fs/vnode.h>
 #include <zircon/assert.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace fs {
 namespace {

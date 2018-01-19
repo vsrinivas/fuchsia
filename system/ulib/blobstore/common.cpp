@@ -24,7 +24,7 @@
 #include <fs/fvm.h>
 #endif
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #include <blobstore/common.h>
 

@@ -35,6 +35,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/gpt \
+    system/ulib/pretty \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \

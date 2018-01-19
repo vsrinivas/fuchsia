@@ -23,6 +23,7 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/uboringssl \
     system/ulib/ddk \
     system/ulib/fbl \
+    system/ulib/pretty \
     system/ulib/sync \
 
 include make/module.mk

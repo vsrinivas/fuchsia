@@ -29,7 +29,7 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace zxcrypt {
 
@@ -74,15 +74,13 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t op, void* buf, size_t off, size_t 
     ssize_t res;
 
     if (!dev || !buf || len == 0) {
-        xprintf("%s: bad parameter(s): dev=%p, buf=%p, len=%zu\n", __PRETTY_FUNCTION__, dev, buf,
-                len);
+        xprintf("bad parameter(s): dev=%p, buf=%p, len=%zu\n", dev, buf, len);
         return ZX_ERR_INVALID_ARGS;
     }
 
     iotxn_t* txn;
     if ((rc = iotxn_alloc(&txn, 0, len)) != ZX_OK) {
-        xprintf("%s: iotxn_alloc(%p, 0, %zu) failed: %s\n", __PRETTY_FUNCTION__, &txn, len,
-                zx_status_get_string(rc));
+        xprintf("iotxn_alloc(%p, 0, %zu) failed: %s\n", &txn, len, zx_status_get_string(rc));
         return rc;
     }
 
@@ -93,7 +91,7 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t op, void* buf, size_t off, size_t 
 
     if (op == IOTXN_OP_WRITE && (res = iotxn_copyto(txn, buf, len, 0)) < 0) {
         rc = static_cast<zx_status_t>(res);
-        xprintf("%s: iotxn_copyto(%p, %p, 0, %zu) failed: %s\n", __PRETTY_FUNCTION__, txn, buf, len,
+        xprintf("iotxn_copyto(%p, %p, 0, %zu) failed: %s\n", txn, buf, len,
                 zx_status_get_string(rc));
         iotxn_release(txn);
         return rc;
@@ -105,17 +103,15 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t op, void* buf, size_t off, size_t 
     completion_wait(&completion, ZX_TIME_INFINITE);
 
     if (txn->status != ZX_OK) {
-        xprintf("%s: iotxn_queue(%p, %p) failed: %s\n", __PRETTY_FUNCTION__, dev, txn,
-                zx_status_get_string(txn->status));
+        xprintf("iotxn_queue(%p, %p) failed: %s\n", dev, txn, zx_status_get_string(txn->status));
         rc = txn->status;
     } else if (txn->actual < txn->length) {
-        xprintf("%s: incomplete I/O: have %zu, need %zu\n", __PRETTY_FUNCTION__, txn->actual,
-                txn->length);
+        xprintf("incomplete I/O: have %zu, need %zu\n", txn->actual, txn->length);
         rc = ZX_ERR_IO;
     } else if (op == IOTXN_OP_READ && (res = iotxn_copyfrom(txn, buf, len, 0)) < 0) {
         rc = static_cast<zx_status_t>(res);
-        xprintf("%s: iotxn_copyfrom(%p, %p, 0, %zu) failed: %s\n", __PRETTY_FUNCTION__, txn, buf,
-                len, zx_status_get_string(rc));
+        xprintf("iotxn_copyfrom(%p, %p, 0, %zu) failed: %s\n", txn, buf, len,
+                zx_status_get_string(rc));
     } else {
         rc = ZX_OK;
     }
@@ -133,7 +129,7 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
     zx_status_t rc;
 
     if (!fd) {
-        xprintf("%s: bad parameter(s): fd=%d\n", __PRETTY_FUNCTION__, fd.get());
+        xprintf("bad parameter(s): fd=%d\n", fd.get());
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -151,15 +147,14 @@ zx_status_t Volume::Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_num_t
     zx_status_t rc;
 
     if (!fd || slot >= kNumSlots || !out) {
-        xprintf("%s: bad parameter(s): fd=%d, slot=%" PRIu64 ", out=%p\n", __PRETTY_FUNCTION__,
-                fd.get(), slot, out);
+        xprintf("bad parameter(s): fd=%d, slot=%" PRIu64 ", out=%p\n", fd.get(), slot, out);
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Volume> volume(new (&ac) Volume(fbl::move(fd)));
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Volume));
+        xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
     if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
@@ -175,11 +170,11 @@ zx_status_t Volume::Enroll(const crypto::Bytes& key, slot_num_t slot) {
     ZX_DEBUG_ASSERT(!dev_); // Cannot enroll from driver
 
     if (slot >= kNumSlots) {
-        xprintf("%s: bad parameter(s): slot=%" PRIu64 "\n", __PRETTY_FUNCTION__, slot);
+        xprintf("bad parameter(s): slot=%" PRIu64 "\n", slot);
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = SealBlock(key, slot)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
@@ -194,11 +189,11 @@ zx_status_t Volume::Revoke(slot_num_t slot) {
     ZX_DEBUG_ASSERT(!dev_); // Cannot revoke from driver
 
     if (slot >= kNumSlots) {
-        xprintf("%s: bad parameter(s): slot=%" PRIu64 "\n", __PRETTY_FUNCTION__, slot);
+        xprintf("bad parameter(s): slot=%" PRIu64 "\n", slot);
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
@@ -216,7 +211,7 @@ zx_status_t Volume::Shred() {
     ZX_DEBUG_ASSERT(!dev_); // Cannot shred from driver
 
     if (!block_.get()) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = block_.Randomize()) != ZX_OK) {
@@ -239,14 +234,13 @@ zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t 
     zx_status_t rc;
 
     if (!dev || slot >= kNumSlots || !out) {
-        xprintf("%s: bad parameter(s): dev=%p, slot=%" PRIu64 ", out=%p\n", __PRETTY_FUNCTION__,
-                dev, slot, out);
+        xprintf("bad parameter(s): dev=%p, slot=%" PRIu64 ", out=%p\n", dev, slot, out);
         return ZX_ERR_INVALID_ARGS;
     }
     fbl::AllocChecker ac;
     fbl::unique_ptr<Volume> volume(new (&ac) Volume(dev));
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Volume));
+        xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
     if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
@@ -259,7 +253,7 @@ zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t 
 
 zx_status_t Volume::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
     if (!block_.get()) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
     if (out_blk) {
@@ -277,12 +271,11 @@ zx_status_t Volume::BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out
     ZX_DEBUG_ASSERT(dev_); // Cannot bind from library
 
     if (!out_encrypt || !out_decrypt) {
-        xprintf("%s: bad parameter(s): out_encrypt=%p, out_decrypt=%p\n", __PRETTY_FUNCTION__,
-                out_encrypt, out_decrypt);
+        xprintf("bad parameter(s): out_encrypt=%p, out_decrypt=%p\n", out_encrypt, out_decrypt);
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
     uint64_t tweakable = UINT64_MAX / blk_.block_size;
@@ -314,21 +307,20 @@ zx_status_t Volume::Init() {
 
     // Get block info; align our blocks to pages
     if ((rc = Ioctl(IOCTL_BLOCK_GET_INFO, nullptr, 0, &blk_, sizeof(blk_))) < 0) {
-        xprintf("%s: failed to get block info: %s\n", __PRETTY_FUNCTION__,
-                zx_status_get_string(rc));
+        xprintf("failed to get block info: %s\n", zx_status_get_string(rc));
         return rc;
     }
     // Adjust block size and count to be page-aligned
     if (blk_.block_size < PAGE_SIZE) {
         if (PAGE_SIZE % blk_.block_size != 0) {
-            xprintf("%s: unsupported block size: %u\n", __PRETTY_FUNCTION__, blk_.block_size);
+            xprintf("unsupported block size: %u\n", blk_.block_size);
             return ZX_ERR_NOT_SUPPORTED;
         }
         blk_.block_count /= (PAGE_SIZE / blk_.block_size);
         blk_.block_size = PAGE_SIZE;
     } else {
         if (blk_.block_size % PAGE_SIZE != 0) {
-            xprintf("%s: unsupported block size: %u\n", __PRETTY_FUNCTION__, blk_.block_size);
+            xprintf("unsupported block size: %u\n", blk_.block_size);
             return ZX_ERR_NOT_SUPPORTED;
         }
     }
@@ -345,8 +337,8 @@ zx_status_t Volume::Init() {
     case ZX_OK: {
         // This *IS* an FVM partition.
         if (fvm_.slice_size < reserved_size.ValueOrDie() || fvm_.vslice_count < 2) {
-            xprintf("%s: bad device: slice_size=%zu, vslice_count=%zu\n", __PRETTY_FUNCTION__,
-                    fvm_.slice_size, fvm_.vslice_count);
+            xprintf("bad device: slice_size=%zu, vslice_count=%zu\n", fvm_.slice_size,
+                    fvm_.vslice_count);
             return ZX_ERR_NO_SPACE;
         }
 
@@ -357,12 +349,11 @@ zx_status_t Volume::Init() {
         query_response_t response;
         if ((rc = Ioctl(IOCTL_BLOCK_FVM_VSLICE_QUERY, &request, sizeof(request), &response,
                         sizeof(response))) < 0) {
-            xprintf("%s: failed to query FVM vslice: %s\n", __PRETTY_FUNCTION__,
-                    zx_status_get_string(rc));
+            xprintf("failed to query FVM vslice: %s\n", zx_status_get_string(rc));
             return rc;
         }
         if (response.count == 0 || response.vslice_range[0].count == 0) {
-            xprintf("%s: invalid response\n", __PRETTY_FUNCTION__);
+            xprintf("invalid response\n");;
             return ZX_ERR_INTERNAL;
         }
 
@@ -372,8 +363,7 @@ zx_status_t Volume::Init() {
         extend.length = 1;
         if (!response.vslice_range[0].allocated &&
             (rc = Ioctl(IOCTL_BLOCK_FVM_EXTEND, &extend, sizeof(extend), nullptr, 0)) < 0) {
-            xprintf("%s: failed to extend FVM partition: %s\n", __PRETTY_FUNCTION__,
-                    zx_status_get_string(rc));
+            xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));
             return rc;
         }
 
@@ -384,8 +374,8 @@ zx_status_t Volume::Init() {
     case ZX_ERR_NOT_SUPPORTED:
         // This is *NOT* an FVM partition.
         if ((blk_.block_count / 2) < kReservedPairs) {
-            xprintf("%s: bad device: block_size=%u, block_count=%" PRIu64 "\n", __PRETTY_FUNCTION__,
-                    blk_.block_size, blk_.block_count);
+            xprintf("bad device: block_size=%u, block_count=%" PRIu64 "\n", blk_.block_size,
+                    blk_.block_count);
             return ZX_ERR_NO_SPACE;
         }
 
@@ -418,7 +408,7 @@ zx_status_t Volume::Configure(Volume::Version version) {
         break;
 
     default:
-        xprintf("%s: unknown version: %u\n", __PRETTY_FUNCTION__, version);
+        xprintf("unknown version: %u\n", version);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -441,8 +431,8 @@ zx_status_t Volume::Configure(Volume::Version version) {
     total *= kNumSlots;
     total += kHeaderLen;
     if (blk_.block_size < total.ValueOrDie()) {
-        xprintf("%s: block size is too small; have %u, need %zu\n", __PRETTY_FUNCTION__,
-                blk_.block_size, total.ValueOrDie());
+        xprintf("block size is too small; have %u, need %zu\n", blk_.block_size,
+                total.ValueOrDie());
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -490,7 +480,7 @@ void Volume::Reset() {
 
 zx_status_t Volume::Begin() {
     if (fvm_.slice_size == 0) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");;
         return ZX_ERR_STOP;
     }
     offset_ = 0;
@@ -565,8 +555,7 @@ zx_status_t Volume::CommitBlock() {
             continue;
         }
         if ((rc = block_.Copy(block)) != ZX_OK || (rc = Write()) != ZX_OK) {
-            xprintf("%s: write failed for offset %" PRIu64 ": %s\n", __PRETTY_FUNCTION__, offset_,
-                    zx_status_get_string(rc));
+            xprintf("write failed for offset %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
         }
     }
     return ZX_OK;
@@ -596,11 +585,9 @@ zx_status_t Volume::Open(const crypto::Bytes& key, slot_num_t slot) {
 
     for (rc = Begin(); rc == ZX_ERR_NEXT; rc = Next()) {
         if ((rc = Read()) != ZX_OK) {
-            xprintf("%s: failed to read block at %" PRIu64 ": %s\n", __PRETTY_FUNCTION__, offset_,
-                    zx_status_get_string(rc));
+            xprintf("failed to read block at %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
         } else if ((rc = OpenBlock(key, slot)) != ZX_OK) {
-            xprintf("%s: failed to open block at %" PRIu64 ": %s\n", __PRETTY_FUNCTION__, offset_,
-                    zx_status_get_string(rc));
+            xprintf("failed to open block at %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
         } else {
             return CommitBlock();
         }
@@ -615,7 +602,7 @@ zx_status_t Volume::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
     // Check the type GUID matches |kTypeGuid|.
     uint8_t* in = block_.get();
     if (memcmp(in, kTypeGuid, GUID_LEN) != 0) {
-        xprintf("%s: not a zxcrypt device\n", __PRETTY_FUNCTION__);
+        xprintf("not a zxcrypt device\n");;
         return ZX_ERR_NOT_SUPPORTED;
     }
     in += GUID_LEN;
@@ -647,7 +634,7 @@ zx_status_t Volume::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
         return rc;
     }
     if (ptext.len() != 0) {
-        xprintf("%s: %zu unused bytes\n", __PRETTY_FUNCTION__, ptext.len());
+        xprintf("%zu unused bytes\n", ptext.len());
         return ZX_ERR_INTERNAL;
     }
 
@@ -680,18 +667,18 @@ zx_status_t Volume::Read() {
         return SyncIO(dev_, IOTXN_OP_READ, block_.get(), offset_, block_.len());
     } else {
         if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
-            xprintf("%s: lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", __PRETTY_FUNCTION__,
-                    fd_.get(), offset_, strerror(errno));
+            xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,
+                    strerror(errno));
             return ZX_ERR_IO;
         }
         ssize_t res;
         if ((res = read(fd_.get(), block_.get(), block_.len())) < 0) {
-            xprintf("%s: read(%d, %p, %zu) failed: %s\n", __PRETTY_FUNCTION__, fd_.get(),
-                    block_.get(), block_.len(), strerror(errno));
+            xprintf("read(%d, %p, %zu) failed: %s\n", fd_.get(), block_.get(), block_.len(),
+                    strerror(errno));
             return ZX_ERR_IO;
         }
         if (static_cast<size_t>(res) != block_.len()) {
-            xprintf("%s: short read: have %zd, need %zu\n", __PRETTY_FUNCTION__, res, block_.len());
+            xprintf("short read: have %zd, need %zu\n", res, block_.len());
             return ZX_ERR_IO;
         }
         return ZX_OK;
@@ -703,18 +690,18 @@ zx_status_t Volume::Write() {
         return SyncIO(dev_, IOTXN_OP_WRITE, block_.get(), offset_, block_.len());
     } else {
         if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
-            xprintf("%s: lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", __PRETTY_FUNCTION__,
-                    fd_.get(), offset_, strerror(errno));
+            xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,
+                    strerror(errno));
             return ZX_ERR_IO;
         }
         ssize_t res;
         if ((res = write(fd_.get(), block_.get(), block_.len())) < 0) {
-            xprintf("%s: write(%d, %p, %zu) failed: %s\n", __PRETTY_FUNCTION__, fd_.get(),
-                    block_.get(), block_.len(), strerror(errno));
+            xprintf("write(%d, %p, %zu) failed: %s\n", fd_.get(), block_.get(), block_.len(),
+                    strerror(errno));
             return ZX_ERR_IO;
         }
         if (static_cast<size_t>(res) != block_.len()) {
-            xprintf("%s: short read: have %zd, need %zu\n", __PRETTY_FUNCTION__, res, block_.len());
+            xprintf("short read: have %zd, need %zu\n", res, block_.len());
             return ZX_ERR_IO;
         }
         return ZX_OK;

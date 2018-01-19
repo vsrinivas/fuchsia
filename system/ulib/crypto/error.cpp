@@ -13,7 +13,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace crypto {
 namespace {
@@ -103,9 +103,9 @@ int xprintf_crypto_error(const char* str, size_t len, void* ctx) {
 
 } // namespace
 
-void xprintf_crypto_errors(const char* func, zx_status_t* out) {
+void xprintf_crypto_errors(zx_status_t* out) {
     uint32_t packed = ERR_peek_last_error();
-    xprintf("%s: BoringSSL error(s):\n", func);
+    xprintf("BoringSSL error(s):\n");
     ERR_print_errors_cb(xprintf_crypto_error, nullptr);
     if (!out) {
         return;

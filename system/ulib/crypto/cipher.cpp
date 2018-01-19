@@ -20,7 +20,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace crypto {
 
@@ -39,7 +39,7 @@ namespace {
 zx_status_t GetCipher(Cipher::Algorithm cipher, const EVP_CIPHER** out) {
     switch (cipher) {
     case Cipher::kUninitialized:
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");
         return ZX_ERR_INVALID_ARGS;
 
     case Cipher::kAES256_XTS:
@@ -47,7 +47,7 @@ zx_status_t GetCipher(Cipher::Algorithm cipher, const EVP_CIPHER** out) {
         return ZX_OK;
 
     default:
-        xprintf("%s: invalid cipher = %u\n", __PRETTY_FUNCTION__, cipher);
+        xprintf("invalid cipher = %u\n", cipher);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -60,7 +60,7 @@ zx_status_t Cipher::GetKeyLen(Algorithm algo, size_t* out) {
     zx_status_t rc;
 
     if (!out) {
-        xprintf("%s: missing output pointer\n", __PRETTY_FUNCTION__);
+        xprintf("missing output pointer\n");
         return ZX_ERR_INVALID_ARGS;
     }
     const EVP_CIPHER* cipher;
@@ -76,7 +76,7 @@ zx_status_t Cipher::GetIVLen(Algorithm algo, size_t* out) {
     zx_status_t rc;
 
     if (!out) {
-        xprintf("%s: missing output pointer\n", __PRETTY_FUNCTION__);
+        xprintf("missing output pointer\n");
         return ZX_ERR_INVALID_ARGS;
     }
     const EVP_CIPHER* cipher;
@@ -92,7 +92,7 @@ zx_status_t Cipher::GetBlockSize(Algorithm algo, size_t* out) {
     zx_status_t rc;
 
     if (!out) {
-        xprintf("%s: missing output pointer\n", __PRETTY_FUNCTION__);
+        xprintf("missing output pointer\n");
         return ZX_ERR_INVALID_ARGS;
     }
     const EVP_CIPHER* cipher;
@@ -120,8 +120,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
         return rc;
     }
     if (key.len() != cipher->key_len || iv.len() != cipher->iv_len) {
-        xprintf("%s: bad parameter(s): key_len=%zu, iv_len=%zu\n", __PRETTY_FUNCTION__, key.len(),
-                iv.len());
+        xprintf("bad parameter(s): key_len=%zu, iv_len=%zu\n", key.len(), iv.len());
         return ZX_ERR_INVALID_ARGS;
     }
     cipher_ = algo;
@@ -134,8 +133,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
     // Handle alignment for random access ciphers
     if (alignment != 0) {
         if ((alignment & (alignment - 1)) != 0) {
-            xprintf("%s: alignment must be a power of 2: %" PRIu64 "\n", __PRETTY_FUNCTION__,
-                    alignment);
+            xprintf("alignment must be a power of 2: %" PRIu64 "\n", alignment);
             return ZX_ERR_INVALID_ARGS;
         }
         // Test to make sure we can fully increment the given IV.
@@ -147,8 +145,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
         case kAES256_XTS:
             break;
         default:
-            xprintf("%s: Selected cipher cannot be used in random access mode\n",
-                    __PRETTY_FUNCTION__);
+            xprintf("Selected cipher cannot be used in random access mode\n");
             return ZX_ERR_INVALID_ARGS;
         }
     }
@@ -158,12 +155,12 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
     fbl::AllocChecker ac;
     ctx_.reset(new (&ac) Context());
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Context));
+        xprintf("allocation failed: %zu bytes\n", sizeof(Context));
         return ZX_ERR_NO_MEMORY;
     }
     if (EVP_CipherInit_ex(&ctx_->impl, cipher, nullptr, key.get(), iv_.get(),
                           direction == kEncrypt) < 0) {
-        xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+        xprintf_crypto_errors(&rc);
         return rc;
     }
     direction_ = direction;
@@ -178,27 +175,26 @@ zx_status_t Cipher::Transform(const uint8_t* in, zx_off_t offset, size_t length,
     zx_status_t rc;
 
     if (!ctx_ || direction != direction_) {
-        xprintf("%s: not initialized/wrong direction\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized/wrong direction\n");
         return ZX_ERR_BAD_STATE;
     }
     if (length == 0) {
         return ZX_OK;
     }
     if (!in || !out || length % block_size_ != 0) {
-        xprintf("%s: bad args: in=%p, length=%zu, out=%p, direction=%d\n", __PRETTY_FUNCTION__, in,
-                length, out, direction);
+        xprintf("bad args: in=%p, length=%zu, out=%p, direction=%d\n", in, length, out, direction);
         return ZX_ERR_INVALID_ARGS;
     }
     if (alignment_ == 0) {
         // Stream cipher; just transform without modifying the IV.
         if (EVP_Cipher(&ctx_->impl, out, in, length) <= 0) {
-            xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+            xprintf_crypto_errors(&rc);
             return rc;
         }
 
     } else {
         if (offset % alignment_ != 0) {
-            xprintf("%s: unaligned offset\n", __PRETTY_FUNCTION__);
+            xprintf("unaligned offset\n");
             return ZX_ERR_INVALID_ARGS;
         }
         if ((rc = tweaked_iv_.Copy(iv_)) != ZX_OK ||
@@ -208,13 +204,13 @@ zx_status_t Cipher::Transform(const uint8_t* in, zx_off_t offset, size_t length,
         while (length > 0) {
             if (EVP_CipherInit_ex(&ctx_->impl, nullptr, nullptr, nullptr, tweaked_iv_.get(), -1) <
                 0) {
-                xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+                xprintf_crypto_errors(&rc);
                 return rc;
             }
             size_t chunk_len = length < alignment_ ? length : alignment_;
             int res;
             if ((res = EVP_Cipher(&ctx_->impl, out, in, chunk_len)) <= 0) {
-                xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+                xprintf_crypto_errors(&rc);
                 return rc;
             }
             out += chunk_len;

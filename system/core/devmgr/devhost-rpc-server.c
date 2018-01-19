@@ -29,7 +29,7 @@
 #include <fdio/io.h>
 #include <fdio/vfs.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
 #define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)

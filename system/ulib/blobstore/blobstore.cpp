@@ -21,7 +21,7 @@
 #include <fbl/ref_ptr.h>
 #include <zx/event.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #include <blobstore/blobstore.h>
 

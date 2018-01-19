@@ -12,7 +12,7 @@
 
 #include "errors.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 /* EC commands */
 #define EC_CMD_READ 0x80

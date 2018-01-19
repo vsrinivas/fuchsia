@@ -28,7 +28,7 @@
 
 #include "private-remoteio.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to

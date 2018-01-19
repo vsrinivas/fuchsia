@@ -9,6 +9,6 @@
 namespace crypto {
 
 // Prints the crypto errors.  Use when a call to the crypto implementation indicates failure.
-void xprintf_crypto_errors(const char* func, zx_status_t *out);
+void xprintf_crypto_errors(zx_status_t* out);
 
 } // namespace crypto

@@ -12,7 +12,7 @@
 
 #include "resources.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #define PCIE_MAX_LEGACY_IRQ_PINS 4
 #define PCIE_MAX_DEVICES_PER_BUS 32

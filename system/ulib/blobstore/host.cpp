@@ -21,7 +21,7 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #include <blobstore/format.h>
 #include <blobstore/fsck.h>

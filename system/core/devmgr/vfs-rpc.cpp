@@ -26,7 +26,7 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace memfs {
 namespace {

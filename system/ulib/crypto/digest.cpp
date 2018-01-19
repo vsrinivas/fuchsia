@@ -10,7 +10,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace crypto {
 namespace digest {
@@ -21,7 +21,7 @@ zx_status_t GetDigest(Algorithm digest, uintptr_t* out) {
     const EVP_MD* md;
     switch (digest) {
     case digest::kUninitialized:
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+        xprintf("not initialized\n");
         return ZX_ERR_INVALID_ARGS;
 
     case digest::kSHA256:
@@ -29,7 +29,7 @@ zx_status_t GetDigest(Algorithm digest, uintptr_t* out) {
         break;
 
     default:
-        xprintf("%s: invalid digest = %u\n", __PRETTY_FUNCTION__, digest);
+        xprintf("invalid digest = %u\n", digest);
         return ZX_ERR_NOT_SUPPORTED;
     }
     *out = reinterpret_cast<uintptr_t>(md);

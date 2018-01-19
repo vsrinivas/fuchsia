@@ -17,13 +17,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 namespace crypto {
 namespace {
 
 const uint16_t kAllFlags = HKDF::ALLOW_WEAK_KEY;
-
 }
 // Public methods
 
@@ -35,7 +34,7 @@ zx_status_t HKDF::Init(digest::Algorithm digest, const Bytes& key, const Bytes& 
     zx_status_t rc;
 
     if ((flags & (~kAllFlags)) != 0) {
-        xprintf("%s: invalid flagsL %04x\n", __PRETTY_FUNCTION__, flags);
+        xprintf("invalid flagsL %04x\n", flags);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -49,14 +48,14 @@ zx_status_t HKDF::Init(digest::Algorithm digest, const Bytes& key, const Bytes& 
 
     // Recommended minimum length for the key is the digest output length (RFC 2104, section 2).
     if ((flags & ALLOW_WEAK_KEY) == 0 && key.len() < EVP_MD_size(md)) {
-        xprintf("%s: weak parameter(s): key_len=%zu", __PRETTY_FUNCTION__, key.len());
+        xprintf("weak parameter(s): key_len=%zu", key.len());
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Extract the PRK used to generate other keys.
     size_t prk_len;
     if (HKDF_extract(prk.get(), &prk_len, md, key.get(), key.len(), salt.get(), salt.len()) < 0) {
-        xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+        xprintf_crypto_errors(&rc);
         return rc;
     }
 
@@ -79,7 +78,7 @@ zx_status_t HKDF::Derive(const char* label, Bytes* out_key) {
     const EVP_MD* md = reinterpret_cast<const EVP_MD*>(ptr);
 
     if (!out_key || out_key->len() == 0) {
-        xprintf("%s: bad parameter(s): out_key=%p\n", __PRETTY_FUNCTION__, out_key);
+        xprintf("bad parameter(s): out_key=%p\n", out_key);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -90,7 +89,7 @@ zx_status_t HKDF::Derive(const char* label, Bytes* out_key) {
 
     // Generate the key
     if (HKDF_expand(out_key->get(), out_key->len(), md, prk_.get(), prk_.len(), info, len) < 0) {
-        xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+        xprintf_crypto_errors(&rc);
         return rc;
     }
     return ZX_OK;

@@ -21,7 +21,7 @@
 #include <sync/completion.h>
 #include <zircon/syscalls.h>
 
-#define MXDEBUG 0
+#define ZXDEBUG 0
 
 #include <blobstore/blobstore.h>
 
