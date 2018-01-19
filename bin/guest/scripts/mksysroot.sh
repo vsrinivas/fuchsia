@@ -172,6 +172,9 @@ shift $((OPTIND - 1))
 
 case "${1}" in
 arm64)
+  type aarch64-linux-gnu-gcc ||
+    { echo "Required package gcc-aarch64-linux-gnu is not installed."
+      echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
   declare -x ARCH=arm64;
   declare -x CROSS_COMPILE=aarch64-linux-gnu-;;
 x86)
