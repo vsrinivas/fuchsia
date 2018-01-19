@@ -13,6 +13,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
 #include <fs-management/ramdisk.h>
@@ -65,6 +66,7 @@ zx_status_t BlockWatcher(int dirfd, int event, const char* filename, void* cooki
     if (event != WATCH_EVENT_ADD_FILE) {
         return ZX_OK;
     }
+
     fbl::unique_fd devfd(openat(dirfd, filename, O_RDWR));
     if (!devfd) {
         xprintf("openat(%d, '%s', O_RDWR) failed: %s\n", dirfd, filename, strerror(errno));
@@ -129,7 +131,7 @@ TestDevice::~TestDevice() {
 zx_status_t TestDevice::GenerateKey(Volume::Version version) {
     zx_status_t rc;
 
-    // TODO(aarongreen): See ZX-1130. The code below should be enabled when that bug is fixed.
+// TODO(aarongreen): See ZX-1130. The code below should be enabled when that bug is fixed.
 #if 0
     crypto::digest::Algorithm digest;
     switch (version) {
@@ -165,12 +167,102 @@ zx_status_t TestDevice::Create(size_t device_size, size_t block_size, bool fvm) 
     }
 }
 
+zx_status_t TestDevice::BindZxcrypt() {
+    zx_status_t rc;
+    ssize_t res;
+
+    if (zxcrypt_) {
+        fvm_part_.reset();
+        if ((res = ioctl_block_rr_part(ramdisk_.get())) != ZX_OK) {
+            rc = static_cast<zx_status_t>(res);
+            xprintf("ioctl_block_rr_part(%d) failed: %s\n", ramdisk_.get(),
+                    zx_status_get_string(rc));
+            return rc;
+        }
+        ramdisk_.reset();
+        if ((rc = WaitForBlockDevice(GetBlockDriver(ramdisk_path_), &ramdisk_)) != ZX_OK) {
+            return rc;
+        }
+        if (strlen(fvm_part_path_) != 0 &&
+            (rc = WaitForBlockDevice(GetBlockDriver(fvm_part_path_), &fvm_part_)) != ZX_OK) {
+            return rc;
+        }
+    }
+
+    fbl::unique_fd parent = this->parent();
+    if ((res = ioctl_device_bind(parent.get(), kZxcryptLib, kZxcryptLibLen)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("ioctl_device_bind(%d, %s, %zu) failed: %s\n", parent.get(), kZxcryptLib,
+                kZxcryptLibLen, zx_status_get_string(rc));
+        return rc;
+    }
+    char zxcrypt_relpath[PATH_MAX];
+    snprintf(zxcrypt_relpath, PATH_MAX, "zxcrypt/block");
+    if ((rc = WaitForBlockDevice(zxcrypt_relpath, &zxcrypt_)) < 0) {
+        return rc;
+    }
+
+    block_info_t blk;
+    if ((res = ioctl_block_get_info(zxcrypt_.get(), &blk)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("ioctl_block_get_info(%d, %p) failed: %s\n", zxcrypt_.get(), &blk,
+                zx_status_get_string(rc));
+        return rc;
+    }
+    block_size_ = blk.block_size;
+    block_count_ = blk.block_count;
+
+    zx_handle_t fifo;
+    if ((res = ioctl_block_get_fifos(zxcrypt_.get(), &fifo)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("ioctl_block_get_fifos(%d, %p) failed: %s\n", zxcrypt_.get(), &fifo,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    if ((res = ioctl_block_alloc_txn(zxcrypt_.get(), &req_.txnid)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("ioctl_block_alloc_txn(%d, %p) failed: %s\n", zxcrypt_.get(), &req_.txnid,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    if ((rc = block_fifo_create_client(fifo, &client_)) != ZX_OK) {
+        xprintf("block_fifo_create_client(%u, %p) failed: %s\n", fifo, &client_,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    // Create the vmo and get a transferable handle to give to the block server
+    if ((rc = zx::vmo::create(size(), 0, &vmo_)) != ZX_OK) {
+        xprintf("zx::vmo::create(%zu, 0, %p) failed: %s\n", size(), &vmo_,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    zx_handle_t xfer;
+    if ((rc = zx_handle_duplicate(vmo_.get(), ZX_RIGHT_SAME_RIGHTS, &xfer)) != ZX_OK) {
+        xprintf("vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, %p) failed: %s\n", &xfer,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    if ((res = ioctl_block_attach_vmo(zxcrypt_.get(), &xfer, &req_.vmoid)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("ioctl_block_attach_vmo(%d, %p, %p) failed: %s\n", zxcrypt_.get(), &xfer,
+                &req_.vmoid, zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t TestDevice::DefaultInit(Volume::Version version, bool fvm) {
     zx_status_t rc;
 
     if ((rc = GenerateKey(version)) != ZX_OK ||
         (rc = Create(kDeviceSize, kBlockSize, fvm)) != ZX_OK ||
-        (rc = Volume::Create(parent(), key_)) != ZX_OK) {
+        (rc = Volume::Create(parent(), key_)) != ZX_OK || (rc = BindZxcrypt()) != ZX_OK) {
         return rc;
     }
 
@@ -194,6 +286,69 @@ zx_status_t TestDevice::Corrupt(zx_off_t offset) {
     }
 
     return ZX_OK;
+}
+
+// VMO I/O
+
+zx_status_t TestDevice::WriteVmo(zx_off_t off, size_t len) {
+    zx_status_t rc;
+
+    if (!vmo_.is_valid()) {
+        xprintf("invalid VMO\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    req_.opcode = BLOCKIO_WRITE;
+    req_.length = len;
+    req_.vmo_offset = 0;
+    req_.dev_offset = off;
+
+    size_t actual;
+    off *= block_size_;
+    len *= block_size_;
+    if ((rc = vmo_.write(to_write_.get() + off, 0, len, &actual)) != ZX_OK) {
+        xprintf("vmo_.write(%p, 0, %zu, %p) failed: %s\n", to_write_.get() + off, len, &actual,
+                zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = block_fifo_txn(client_, &req_, 1)) != ZX_OK) {
+        xprintf("block_fifo_txn(%p, %p, 1) failed: %s\n", client_, &req_, zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t TestDevice::ReadVmo(zx_off_t off, size_t len) {
+    zx_status_t rc;
+
+    if (!vmo_.is_valid()) {
+        xprintf("invalid VMO\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    req_.opcode = BLOCKIO_READ;
+    req_.length = len;
+    req_.vmo_offset = 0;
+    req_.dev_offset = off;
+    if ((rc = block_fifo_txn(client_, &req_, 1)) != ZX_OK) {
+        xprintf("block_fifo_txn(%p, %p, 1) failed: %s\n", client_, &req_, zx_status_get_string(rc));
+        return rc;
+    }
+
+    size_t actual;
+    off *= block_size_;
+    len *= block_size_;
+    if ((rc = vmo_.read(as_read_.get() + off, 0, len, &actual)) != ZX_OK) {
+        xprintf("vmo_.read(%p, 0, %zu, %p) failed: %s\n", as_read_.get() + off, len, &actual,
+                zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+bool TestDevice::CheckMatch(zx_off_t off, size_t len) const {
+    return memcmp(as_read_.get() + off, to_write_.get() + off, len) == 0;
 }
 
 // Private methods
@@ -227,6 +382,7 @@ zx_status_t TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
         return ZX_ERR_IO;
     }
     has_ramdisk_ = true;
+
     if ((rc = WaitForBlockDevice(GetBlockDriver(ramdisk_path_), &ramdisk_)) != ZX_OK) {
         return rc;
     }
@@ -319,15 +475,15 @@ zx_status_t TestDevice::Write(const fbl::unique_fd& fd, const uint8_t* buf, zx_o
         return ZX_ERR_IO;
     }
 
-    ssize_t actual;
-    if ((actual = write(fd.get(), to_write_.get() + off, len)) < 0) {
-        xprintf("write(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", fd.get(), to_write_.get(), len,
-                off, strerror(errno));
+    ssize_t result;
+    if ((result = write(fd.get(), to_write_.get() + off, len)) < 0) {
+        xprintf("write(%d, %p, %zu) failed (off=%" PRIu64 "): %s (%d)\n", fd.get(), to_write_.get(),
+                len, off, strerror(errno), errno);
         return ZX_ERR_IO;
     }
 
-    if (static_cast<size_t>(actual) < len) {
-        xprintf("short write: have %zd, need %zu\n", actual, len);
+    if (static_cast<size_t>(result) != len) {
+        xprintf("short write: have %zd, need %zu\n", result, len);
         return ZX_ERR_IO;
     }
 
@@ -340,15 +496,15 @@ zx_status_t TestDevice::Read(const fbl::unique_fd& fd, uint8_t* buf, zx_off_t of
         return ZX_ERR_IO;
     }
 
-    ssize_t actual;
-    if ((actual = read(fd.get(), as_read_.get() + off, len)) < 0) {
-        xprintf("read(%d, %p, %zu) failed (off=%" PRIu64 "): %s\n", fd.get(), as_read_.get(), len,
-                off, strerror(errno));
+    ssize_t result;
+    if ((result = read(fd.get(), as_read_.get() + off, len)) < 0) {
+        xprintf("read(%d, %p, %zu) failed (off=%" PRIu64 "): %s (%d)\n", fd.get(), as_read_.get(),
+                len, off, strerror(errno), errno);
         return ZX_ERR_IO;
     }
 
-    if (static_cast<size_t>(actual) < len) {
-        xprintf("short read: have %zd, need %zu\n", actual, len);
+    if (static_cast<size_t>(result) != len) {
+        xprintf("short read: have %zd, need %zu\n", result, len);
         return ZX_ERR_IO;
     }
 
@@ -356,6 +512,7 @@ zx_status_t TestDevice::Read(const fbl::unique_fd& fd, uint8_t* buf, zx_off_t of
 }
 
 void TestDevice::Reset() {
+    zxcrypt_.reset();
     fvm_part_.reset();
     ramdisk_.reset();
     if (has_ramdisk_) {

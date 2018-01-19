@@ -178,7 +178,8 @@ zx_status_t Volume::Enroll(const crypto::Bytes& key, slot_num_t slot) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = SealBlock(key, slot)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
@@ -197,7 +198,8 @@ zx_status_t Volume::Revoke(slot_num_t slot) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_BAD_STATE;
     }
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
@@ -215,7 +217,8 @@ zx_status_t Volume::Shred() {
     ZX_DEBUG_ASSERT(!dev_); // Cannot shred from driver
 
     if (!block_.get()) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = block_.Randomize()) != ZX_OK) {
@@ -257,7 +260,8 @@ zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t 
 
 zx_status_t Volume::GetBlockInfo(block_info_t* out_blk) const {
     if (!block_.get()) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_BAD_STATE;
     }
     if (out_blk) {
@@ -289,7 +293,8 @@ zx_status_t Volume::Bind(crypto::Cipher::Direction direction, crypto::Cipher* ci
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = cipher->Init(cipher_, direction, data_key_, data_iv_, blk_.block_size)) != ZX_OK) {
@@ -504,7 +509,8 @@ void Volume::Reset() {
 
 zx_status_t Volume::Begin() {
     if (fvm_.slice_size == 0) {
-        xprintf("not initialized\n");;
+        xprintf("not initialized\n");
+        ;
         return ZX_ERR_STOP;
     }
     offset_ = 0;
@@ -624,7 +630,8 @@ zx_status_t Volume::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
     // Check the type GUID matches |kTypeGuid|.
     uint8_t* in = block_.get();
     if (memcmp(in, kTypeGuid, GUID_LEN) != 0) {
-        xprintf("not a zxcrypt device\n");;
+        xprintf("not a zxcrypt device\n");
+        ;
         return ZX_ERR_NOT_SUPPORTED;
     }
     in += GUID_LEN;
