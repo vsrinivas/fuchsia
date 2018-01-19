@@ -46,6 +46,7 @@ class InputInterpreter {
     ACER12,
     PARADISE,
     SAMSUNG,
+    EGALAX
   };
 
   enum class MouseDeviceType {
@@ -73,6 +74,7 @@ class InputInterpreter {
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
   bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
+  bool ParseEGalaxTouchscreenReport(uint8_t* report, size_t len);
   template <typename ReportT>
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
 

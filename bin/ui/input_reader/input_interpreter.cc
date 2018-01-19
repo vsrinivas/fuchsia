@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <hid/acer12.h>
 #include <hid/hid.h>
+#include <hid/egalax.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
@@ -291,6 +292,35 @@ bool InputInterpreter::Initialize() {
 
       mouse_report_ = mozart::InputReport::New();
       mouse_report_->mouse = mozart::MouseReport::New();
+    } else if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
+      zx_status_t setup_res = setup_egalax_touchscreen(fd_);
+      if (setup_res != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to setup eGalax touch (res " << setup_res
+                       << ")";
+        return false;
+      }
+
+      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      has_touchscreen_ = true;
+      touchscreen_descriptor_ = mozart::TouchscreenDescriptor::New();
+      touchscreen_descriptor_->x = mozart::Axis::New();
+      touchscreen_descriptor_->x->range = mozart::Range::New();
+      touchscreen_descriptor_->x->range->min = 0;
+      touchscreen_descriptor_->x->range->max = EGALAX_X_MAX;
+      touchscreen_descriptor_->x->resolution = 1;
+
+      touchscreen_descriptor_->y = mozart::Axis::New();
+      touchscreen_descriptor_->y->range = mozart::Range::New();
+      touchscreen_descriptor_->y->range->min = 0;
+      touchscreen_descriptor_->y->range->max = EGALAX_Y_MAX;
+      touchscreen_descriptor_->y->resolution = 1;
+
+      touchscreen_descriptor_->max_finger_id = 1;
+
+      touchscreen_report_ = mozart::InputReport::New();
+      touchscreen_report_->touchscreen = mozart::TouchscreenReport::New();
+
+      touch_device_type_ = TouchDeviceType::EGALAX;
     } else {
       FXL_VLOG(2) << "Device " << name_ << " has unsupported HID device";
       return false;
@@ -418,6 +448,16 @@ bool InputInterpreter::Read(bool discard) {
         }
       }
       break;
+    case TouchDeviceType::EGALAX:
+      if (report_[0] == EGALAX_RPT_ID_TOUCH) {
+        if (ParseEGalaxTouchscreenReport(report_.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(touchscreen_report_.Clone());
+          }
+        }
+      }
+      break;
+
 
     default:
       break;
@@ -579,6 +619,34 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     touch->height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
     touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
+  }
+
+  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  return true;
+}
+
+bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t *r, size_t len) {
+  if (len != sizeof(egalax_touch_t)) {
+    FXL_LOG(INFO) << "egalax wrong size " << len << " expected " <<
+        sizeof(egalax_touch_t);
+    return false;
+  }
+
+  const auto& report = *(reinterpret_cast<egalax_touch_t*>(r));
+  touchscreen_report_->event_time = InputEventTimestampNow();
+  if (egalax_pressed_flags(report.button_pad)) {
+    mozart::TouchPtr touch = mozart::Touch::New();
+    touch->finger_id = 0;
+    touch->x = report.x;
+    touch->y = report.y;
+    touch->width = 5;
+    touch->height = 5;
+    touchscreen_report_->touchscreen->touches.resize(1);
+    touchscreen_report_->touchscreen->touches[0] = std::move(touch);
+  } else {
+    // if the button isn't pressed, send an empty report, this will terminate
+    // the finger session
+    touchscreen_report_->touchscreen->touches.resize(0);
   }
 
   FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
