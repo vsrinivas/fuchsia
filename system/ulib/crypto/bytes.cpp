@@ -162,19 +162,22 @@ zx_status_t Bytes::Split(Bytes* tail) {
     return ZX_OK;
 }
 
-zx_status_t Bytes::Increment() {
-    bool overflow = true;
+zx_status_t Bytes::Increment(uint64_t amount) {
+    bool overflow = false;
     size_t i = len_;
+    uint8_t val = 0;
     // This is intentionally branchless to be as close to constant time as possible.  Although
     // unlikely, it's conceivable that differences in timing on incrementing leak information about
     // the contents.
     while (i != 0) {
         --i;
-        uint8_t n = overflow ? 1 : 0;
-        buf_[i] = static_cast<uint8_t>(buf_[i] + n);
-        overflow &= (buf_[i] == 0);
+        amount += overflow ? 1 : 0;
+        val = static_cast<uint8_t>(amount & 0xFF);
+        buf_[i] = static_cast<uint8_t>(buf_[i] + val);
+        amount >>= 8;
+        overflow = buf_[i] < val;
     }
-    return overflow ? ZX_ERR_OUT_OF_RANGE : ZX_OK;
+    return (overflow || (amount != 0)) ? ZX_ERR_OUT_OF_RANGE : ZX_OK;
 }
 
 fbl::unique_ptr<uint8_t[]> Bytes::Release(size_t* len) {

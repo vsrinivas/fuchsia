@@ -190,6 +190,17 @@ bool TestIncrement(void) {
     EXPECT_EQ(bytes[0], 0U);
     EXPECT_EQ(bytes[1], 0U);
     EXPECT_EQ(bytes[2], 2U);
+
+    EXPECT_OK(bytes.Increment(0x0000FE)); // 000002 + 0000FE = 000100
+    EXPECT_EQ(bytes[0], 0U);
+    EXPECT_EQ(bytes[1], 1U);
+    EXPECT_EQ(bytes[2], 0U);
+    EXPECT_OK(bytes.Increment(0x010000)); // 000100 + 010000 = 010100
+    EXPECT_EQ(bytes[0], 1U);
+    EXPECT_EQ(bytes[1], 1U);
+    EXPECT_EQ(bytes[2], 0U);
+    EXPECT_ZX(bytes.Increment(0x1000000), ZX_ERR_OUT_OF_RANGE);
+
     END_TEST;
 }
 

@@ -57,8 +57,9 @@ public:
     zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0);
 
     // Treats the contents of this object as a (big-endian) arbitrary precision unsigned integer and
-    // increments it.  Returns |ZX_ERR_OUT_OF_RANGE| if incrementing would overflow.
-    zx_status_t Increment();
+    // increments it by the given |amount|.  Returns |ZX_ERR_OUT_OF_RANGE| if incrementing would
+    // overflow.
+    zx_status_t Increment(uint64_t amount = 1);
 
     // Copies the contents of |tail| to the end of this buffer.
     zx_status_t Append(const Bytes& tail);
