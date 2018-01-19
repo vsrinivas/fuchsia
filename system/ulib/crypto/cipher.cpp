@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -103,89 +104,12 @@ zx_status_t Cipher::GetBlockSize(Algorithm algo, size_t* out) {
     return ZX_OK;
 }
 
-Cipher::Cipher()
-    : ctx_(nullptr), cipher_(kUninitialized), direction_(kUnset), block_size_(0), tweakable_(0) {}
+Cipher::Cipher() : cipher_(kUninitialized), direction_(kUnset), block_size_(0), alignment_(0) {}
+
 Cipher::~Cipher() {}
 
-zx_status_t Cipher::InitEncrypt(Algorithm cipher, const Bytes& key, const Bytes& iv,
-                                uint64_t tweakable) {
-    return Init(cipher, key, iv, tweakable, kEncrypt);
-}
-
-zx_status_t Cipher::InitDecrypt(Algorithm cipher, const Bytes& key, const Bytes& iv,
-                                uint64_t tweakable) {
-    return Init(cipher, key, iv, tweakable, kDecrypt);
-}
-
-zx_status_t Cipher::GetDirection(Direction* out) const {
-    if (!ctx_) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
-        return ZX_ERR_BAD_STATE;
-    }
-    if (!out) {
-        xprintf("%s: missing output pointer\n", __PRETTY_FUNCTION__);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    *out = direction_;
-    return ZX_OK;
-}
-
-zx_status_t Cipher::Tweak(uint64_t offset) {
-    zx_status_t rc;
-
-    if (!ctx_) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
-        return ZX_ERR_BAD_STATE;
-    }
-    if (offset > tweakable_) {
-        xprintf("%s: invalid offset: have %lu, max is %lu\n", __PRETTY_FUNCTION__, offset,
-                tweakable_);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    uint64_t tweak;
-    memcpy(&tweak, iv_.get(), sizeof(tweak));
-    tweak &= ~tweakable_;
-    tweak |= offset;
-    if ((rc = iv_.Copy(&tweak, sizeof(tweak))) != ZX_OK) {
-        return rc;
-    }
-    if (EVP_CipherInit_ex(&ctx_->impl, nullptr, nullptr, nullptr, iv_.get(), -1) < 0) {
-        xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
-        return rc;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t Cipher::Encrypt(const uint8_t* in, size_t len, uint8_t* out) {
-    if (direction_ != kEncrypt) {
-        xprintf("%s: wrong direction: %u\n", __PRETTY_FUNCTION__, direction_);
-        return ZX_ERR_BAD_STATE;
-    }
-    return Transform(in, len, out);
-}
-
-zx_status_t Cipher::Decrypt(const uint8_t* in, size_t len, uint8_t* out) {
-    if (direction_ != kDecrypt) {
-        xprintf("%s: wrong direction: %u\n", __PRETTY_FUNCTION__, direction_);
-        return ZX_ERR_BAD_STATE;
-    }
-    return Transform(in, len, out);
-}
-
-void Cipher::Reset() {
-    ctx_.reset();
-    cipher_ = kUninitialized;
-    direction_ = kUnset;
-    iv_.Reset();
-    block_size_ = 0;
-    tweakable_ = 0;
-}
-
-// Private methods
-
-zx_status_t Cipher::Init(Algorithm algo, const Bytes& key, const Bytes& iv, uint64_t tweakable,
-                         Direction direction) {
+zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, const Bytes& iv,
+                         uint64_t alignment) {
     zx_status_t rc;
 
     Reset();
@@ -202,20 +126,33 @@ zx_status_t Cipher::Init(Algorithm algo, const Bytes& key, const Bytes& iv, uint
     }
     cipher_ = algo;
 
-    // Set the IV.  This may be adjusted in |Tweak| is |tweakable| is nonzero.
-    if ((rc = iv_.Copy(iv)) != ZX_OK) {
+    // Set the IV.
+    if ((rc = iv_.Copy(iv)) != ZX_OK || (rc = tweaked_iv_.Copy(iv)) != ZX_OK) {
         return rc;
     }
-    if (cipher->iv_len < sizeof(tweakable)) {
-        xprintf("%s: IV is too small: %u\n", __PRETTY_FUNCTION__, cipher->iv_len);
-        return ZX_ERR_NOT_SUPPORTED;
+
+    // Handle alignment for random access ciphers
+    if (alignment != 0) {
+        if ((alignment & (alignment - 1)) != 0) {
+            xprintf("%s: alignment must be a power of 2: %" PRIu64 "\n", __PRETTY_FUNCTION__,
+                    alignment);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        // Test to make sure we can fully increment the given IV.
+        if ((rc = tweaked_iv_.Increment(UINT64_MAX / alignment)) != ZX_OK) {
+            return rc;
+        }
+        // White-list tweaked codebook ciphers
+        switch (algo) {
+        case kAES256_XTS:
+            break;
+        default:
+            xprintf("%s: Selected cipher cannot be used in random access mode\n",
+                    __PRETTY_FUNCTION__);
+            return ZX_ERR_INVALID_ARGS;
+        }
     }
-    if (((tweakable + 1) & tweakable) != 0) {
-        xprintf("%s: tweakable bit mask must be of the form '(2^n)-1': %08lx\n",
-                __PRETTY_FUNCTION__, tweakable);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    tweakable_ = tweakable;
+    alignment_ = alignment;
 
     // Initialize cipher context
     fbl::AllocChecker ac;
@@ -236,25 +173,70 @@ zx_status_t Cipher::Init(Algorithm algo, const Bytes& key, const Bytes& iv, uint
     return ZX_OK;
 }
 
-zx_status_t Cipher::Transform(const uint8_t* in, size_t len, uint8_t* out) {
+zx_status_t Cipher::Transform(const uint8_t* in, zx_off_t offset, size_t length, uint8_t* out,
+                              Direction direction) {
     zx_status_t rc;
 
-    if (!ctx_) {
-        xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
+    if (!ctx_ || direction != direction_) {
+        xprintf("%s: not initialized/wrong direction\n", __PRETTY_FUNCTION__);
         return ZX_ERR_BAD_STATE;
     }
-    if (len == 0) {
+    if (length == 0) {
         return ZX_OK;
     }
-    if (!in || !out || len % block_size_ != 0) {
-        xprintf("%s: bad args: in=%p, len=%zu, out=%p\n", __PRETTY_FUNCTION__, in, len, out);
+    if (!in || !out || length % block_size_ != 0) {
+        xprintf("%s: bad args: in=%p, length=%zu, out=%p, direction=%d\n", __PRETTY_FUNCTION__, in,
+                length, out, direction);
         return ZX_ERR_INVALID_ARGS;
     }
-    if (EVP_Cipher(&ctx_->impl, out, in, len) <= 0) {
-        xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
-        return rc;
+    if (alignment_ == 0) {
+        // Stream cipher; just transform without modifying the IV.
+        if (EVP_Cipher(&ctx_->impl, out, in, length) <= 0) {
+            xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+            return rc;
+        }
+
+    } else {
+        if (offset % alignment_ != 0) {
+            xprintf("%s: unaligned offset\n", __PRETTY_FUNCTION__);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if ((rc = tweaked_iv_.Copy(iv_)) != ZX_OK ||
+            (rc = tweaked_iv_.Increment(offset / alignment_)) != ZX_OK) {
+            return rc;
+        }
+        while (length > 0) {
+            if (EVP_CipherInit_ex(&ctx_->impl, nullptr, nullptr, nullptr, tweaked_iv_.get(), -1) <
+                0) {
+                xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+                return rc;
+            }
+            size_t chunk_len = length < alignment_ ? length : alignment_;
+            int res;
+            if ((res = EVP_Cipher(&ctx_->impl, out, in, chunk_len)) <= 0) {
+                xprintf_crypto_errors(__PRETTY_FUNCTION__, &rc);
+                return rc;
+            }
+            out += chunk_len;
+            in += chunk_len;
+            length -= chunk_len;
+            if ((rc = tweaked_iv_.Increment()) != ZX_OK) {
+                return rc;
+            }
+        }
     }
+
     return ZX_OK;
+}
+
+void Cipher::Reset() {
+    ctx_.reset();
+    block_size_ = 0;
+    cipher_ = kUninitialized;
+    direction_ = kUnset;
+    iv_.Reset();
+    tweaked_iv_.Reset();
+    alignment_ = 0;
 }
 
 } // namespace crypto

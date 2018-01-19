@@ -73,20 +73,13 @@ bool TestInitEncrypt(Cipher::Algorithm cipher) {
     ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
     EXPECT_ZX(encrypt.InitEncrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad tweak
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv, 5), ZX_ERR_INVALID_ARGS);
+    // Bad alignment
+    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
 
-    // Valid w/o tweak
-    Cipher::Direction direction;
-    EXPECT_ZX(encrypt.GetDirection(&direction), ZX_ERR_BAD_STATE);
+    // Valid with and without alignment
     EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
+    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE));
 
-    EXPECT_ZX(encrypt.GetDirection(nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(encrypt.GetDirection(&direction));
-    EXPECT_EQ(direction, Cipher::kEncrypt);
-
-    // Valid w/ tweak
-    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, (uint64_t)-1));
     END_TEST;
 }
 DEFINE_EACH(TestInitEncrypt)
@@ -115,25 +108,18 @@ bool TestInitDecrypt(Cipher::Algorithm cipher) {
     ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
     EXPECT_ZX(decrypt.InitDecrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad tweak
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv, 5), ZX_ERR_INVALID_ARGS);
+    // Bad alignment
+    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
 
-    // Valid w/o tweak
-    Cipher::Direction direction;
-    EXPECT_ZX(decrypt.GetDirection(&direction), ZX_ERR_BAD_STATE);
+    // Valid with and without tweak
     EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
+    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE));
 
-    EXPECT_ZX(decrypt.GetDirection(nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(decrypt.GetDirection(&direction));
-    EXPECT_EQ(direction, Cipher::kDecrypt);
-
-    // Valid w/ tweak
-    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, (uint64_t)-1));
     END_TEST;
 }
 DEFINE_EACH(TestInitDecrypt)
 
-bool TestEncryptData(Cipher::Algorithm cipher) {
+bool TestEncryptStream(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
     Bytes key, iv, ptext;
@@ -143,12 +129,10 @@ bool TestEncryptData(Cipher::Algorithm cipher) {
 
     // Not initialized
     Cipher encrypt;
-    EXPECT_ZX(encrypt.Tweak(0), ZX_ERR_BAD_STATE);
     EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, 0xFFFF));
+    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
 
     // Zero length
-    EXPECT_OK(encrypt.Tweak(0));
     EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, ctext));
 
     // Bad texts
@@ -158,28 +142,55 @@ bool TestEncryptData(Cipher::Algorithm cipher) {
     // Wrong mode
     EXPECT_ZX(encrypt.Decrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 
-    // Bad tweak
-    EXPECT_ZX(encrypt.Tweak((uint64_t)-1), ZX_ERR_INVALID_ARGS);
-
     // Valid
-    EXPECT_OK(encrypt.Tweak(0xFFFF));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
-
-    // Mismatched tweak
-    EXPECT_OK(encrypt.Tweak(1));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
-
-    EXPECT_OK(encrypt.Tweak(0));
     EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
 
     // Reset
     encrypt.Reset();
     EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+
     END_TEST;
 }
-DEFINE_EACH(TestEncryptData)
+DEFINE_EACH(TestEncryptStream)
 
-bool TestDecryptData(Cipher::Algorithm cipher) {
+bool TestEncryptRandomAccess(Cipher::Algorithm cipher) {
+    BEGIN_TEST;
+    size_t len = PAGE_SIZE;
+    Bytes key, iv, ptext;
+    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+    ASSERT_OK(ptext.InitRandom(len));
+    uint8_t ctext[len];
+
+    // Not initialized
+    Cipher encrypt;
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len));
+
+    // Zero length
+    EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, 0, ctext));
+
+    // Bad texts
+    EXPECT_ZX(encrypt.Encrypt(nullptr, 0, len, ctext), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), 0, len, nullptr), ZX_ERR_INVALID_ARGS);
+
+    // Wrong mode
+    EXPECT_ZX(encrypt.Decrypt(ptext.get(), 0, len, ctext), ZX_ERR_BAD_STATE);
+
+    // Bad offset
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), 1, len, ctext), ZX_ERR_INVALID_ARGS);
+
+    // Valid
+    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
+
+    // Reset
+    encrypt.Reset();
+    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+
+    END_TEST;
+}
+DEFINE_EACH(TestEncryptRandomAccess)
+
+bool TestDecryptStream(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
     Bytes key, iv, ptext;
@@ -188,62 +199,122 @@ bool TestDecryptData(Cipher::Algorithm cipher) {
     uint8_t ctext[len];
     uint8_t result[len];
     Cipher encrypt;
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, 0xFFFF));
-    EXPECT_OK(encrypt.Tweak(0xFFFF));
+    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
     ASSERT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
 
     // Not initialized
     Cipher decrypt;
-    EXPECT_ZX(decrypt.Tweak(0), ZX_ERR_BAD_STATE);
-    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), result), ZX_ERR_BAD_STATE);
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, 0xFFFF));
+    EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
 
     // Zero length
-    EXPECT_OK(decrypt.Tweak(0));
     EXPECT_OK(decrypt.Decrypt(ctext, 0, result));
 
     // Bad texts
-    EXPECT_ZX(decrypt.Decrypt(nullptr, sizeof(ctext), result), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), nullptr), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Decrypt(nullptr, len, result), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Decrypt(ctext, len, nullptr), ZX_ERR_INVALID_ARGS);
 
     // Wrong mode
-    EXPECT_ZX(decrypt.Encrypt(ctext, sizeof(ctext), result), ZX_ERR_BAD_STATE);
-
-    // Bad tweak
-    EXPECT_ZX(decrypt.Tweak((uint64_t)-1), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Encrypt(ctext, len, result), ZX_ERR_BAD_STATE);
 
     // Valid
-    EXPECT_OK(decrypt.Tweak(0xFFFF));
-    EXPECT_OK(decrypt.Decrypt(ctext, sizeof(ctext), result));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
     EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
 
-    // Mismatched tweak
-    EXPECT_OK(encrypt.Tweak(1));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
-    EXPECT_OK(decrypt.Tweak(0));
-    EXPECT_OK(decrypt.Decrypt(ctext, sizeof(ctext), result));
+    // Mismatched key, iv
+    Bytes bad_key, bad_iv;
+    ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
+
+    ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
     EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    EXPECT_OK(encrypt.Tweak(0));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
-    EXPECT_OK(decrypt.Tweak(1));
-    EXPECT_OK(decrypt.Decrypt(ctext, sizeof(ctext), result));
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
+    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+
+    // Bad stream order
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
+    EXPECT_OK(decrypt.Decrypt(ctext, len / 2, result + (len / 2)));
+    EXPECT_OK(decrypt.Decrypt(ctext + (len / 2), len / 2, result));
     EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
     // Modified
-    EXPECT_OK(encrypt.Tweak(0));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
     ctext[0] ^= 1;
-    EXPECT_OK(decrypt.Tweak(0));
-    EXPECT_OK(decrypt.Decrypt(ctext, sizeof(ctext), result));
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
     EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
     // Reset
     decrypt.Reset();
-    EXPECT_ZX(decrypt.Decrypt(ctext, sizeof(ctext), result), ZX_ERR_BAD_STATE);
+    EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
+
     END_TEST;
 }
-DEFINE_EACH(TestDecryptData)
+DEFINE_EACH(TestDecryptStream)
+
+bool TestDecryptRandomAccess(Cipher::Algorithm cipher) {
+    BEGIN_TEST;
+    size_t len = PAGE_SIZE;
+    Bytes key, iv, ptext;
+    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+    ASSERT_OK(ptext.InitRandom(len));
+    uint8_t ctext[len];
+    uint8_t result[len];
+    Cipher encrypt;
+    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len / 4));
+    ASSERT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
+
+    // Not initialized
+    Cipher decrypt;
+    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
+
+    // Zero length
+    EXPECT_OK(decrypt.Decrypt(ctext, 0, 0, result));
+
+    // Bad texts
+    EXPECT_ZX(decrypt.Decrypt(nullptr, 0, len, result), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, nullptr), ZX_ERR_INVALID_ARGS);
+
+    // Wrong mode
+    EXPECT_ZX(decrypt.Encrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+
+    // Bad offset
+    EXPECT_ZX(decrypt.Decrypt(ctext, 1, len, result), ZX_ERR_INVALID_ARGS);
+
+    // Valid
+    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+    EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
+
+    // Mismatched key, iv and offset
+    Bytes bad_key, bad_iv;
+    ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
+
+    ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv, len / 4));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
+    EXPECT_OK(decrypt.Decrypt(ctext, 0, len, result));
+    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+
+    // Modified
+    ctext[0] ^= 1;
+    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
+    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+
+    // Reset
+    decrypt.Reset();
+    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+    END_TEST;
+}
+DEFINE_EACH(TestDecryptRandomAccess)
 
 // The following tests are taken from NIST's SP 800-38E.  The non-byte aligned tests vectors are
 // omitted; as they are not supported.  Of those remaining, every tenth is selected up to number 200
@@ -519,8 +590,10 @@ RUN_TEST(TestInitEncrypt_Uninitialized)
 RUN_EACH(TestInitEncrypt)
 RUN_TEST(TestInitDecrypt_Uninitialized)
 RUN_EACH(TestInitDecrypt)
-RUN_EACH(TestEncryptData)
-RUN_EACH(TestDecryptData)
+RUN_EACH(TestEncryptStream)
+RUN_EACH(TestEncryptRandomAccess)
+RUN_EACH(TestDecryptStream)
+RUN_EACH(TestDecryptRandomAccess)
 RUN_TEST(TestSP800_38E_TC010)
 RUN_TEST(TestSP800_38E_TC020)
 RUN_TEST(TestSP800_38E_TC030)
