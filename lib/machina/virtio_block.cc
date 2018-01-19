@@ -280,7 +280,7 @@ zx_status_t VirtioBlock::Start() {
         return static_cast<VirtioBlock*>(ctx)->HandleBlockRequest(queue, head,
                                                                   used);
       };
-  return virtio_queue_poll(&queue_, poll_func, this);
+  return virtio_queue_poll(&queue_, poll_func, this, "virtio-block");
 }
 
 zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,

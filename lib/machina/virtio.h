@@ -251,7 +251,8 @@ typedef zx_status_t (*virtio_queue_poll_fn_t)(virtio_queue_t* queue,
 // provided handler on each available buffer asyncronously.
 zx_status_t virtio_queue_poll(virtio_queue_t* queue,
                               virtio_queue_poll_fn_t handler,
-                              void* ctx);
+                              void* ctx,
+                              const char* thread_name);
 
 // A higher-level API for vring_desc.
 typedef struct virtio_desc {

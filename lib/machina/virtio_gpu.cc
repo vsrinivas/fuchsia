@@ -29,12 +29,14 @@ VirtioGpu::~VirtioGpu() = default;
 
 zx_status_t VirtioGpu::Init() {
   zx_status_t status = virtio_queue_poll(&queues_[VIRTIO_GPU_Q_CONTROLQ],
-                                         &VirtioGpu::QueueHandler, this);
+                                         &VirtioGpu::QueueHandler, this,
+                                         "virtio-gpu-control");
   if (status != ZX_OK)
     return status;
 
   status = virtio_queue_poll(&queues_[VIRTIO_GPU_Q_CURSORQ],
-                             &VirtioGpu::QueueHandler, this);
+                             &VirtioGpu::QueueHandler, this,
+                             "virtio-gpu-cursor");
   if (status != ZX_OK)
     return status;
 

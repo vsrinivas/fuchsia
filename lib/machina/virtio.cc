@@ -206,12 +206,13 @@ static int virtio_queue_poll_task(void* ctx) {
 
 zx_status_t virtio_queue_poll(virtio_queue_t* queue,
                               virtio_queue_poll_fn_t handler,
-                              void* ctx) {
+                              void* ctx,
+                              const char* thread_name) {
   auto args = fbl::make_unique<poll_task_args_t>(queue, handler, ctx);
 
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, virtio_queue_poll_task,
-                                  args.release(), "virtio-poll");
+                                  args.release(), thread_name);
   if (ret != thrd_success) {
     FXL_LOG(ERROR) << "Failed to create queue thread " << ret;
     return ZX_ERR_INTERNAL;
