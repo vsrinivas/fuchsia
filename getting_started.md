@@ -32,6 +32,8 @@ Install the Xcode Command Line Tools:
 xcode-select --install
 ```
 
+Install a recent version of Xcode.
+
 Install the other pre-reqs:
 * Using Homebrew:
 ```
