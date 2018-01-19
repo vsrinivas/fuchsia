@@ -82,3 +82,15 @@ source_set("ledger_instance_factory") {
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = []
+
+  deps = [
+    "//peridot/bin/ledger/testing/netconnector:unittests",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

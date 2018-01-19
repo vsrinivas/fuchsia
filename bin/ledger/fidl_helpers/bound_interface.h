@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_H_
 
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
@@ -37,6 +38,8 @@ class BoundInterface : public Boundable<Interface> {
   }
 
   bool is_bound() { return binding_.is_bound(); }
+
+  Impl* impl() { return &impl_; }
 
  private:
   Impl impl_;
