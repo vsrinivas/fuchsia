@@ -78,6 +78,7 @@ source_set("module_resolver_impl_unittest") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/gtest",
     "//peridot/lib/testing:entity_resolver_fake",
+    "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",
   ]

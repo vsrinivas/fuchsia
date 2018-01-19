@@ -49,22 +49,23 @@ class NounTypeInferenceHelper::GetNounTypesCall
 };
 
 void NounTypeInferenceHelper::GetNounTypes(
-    const modular::NounPtr& noun,
+    const modular::ResolverNounConstraintPtr& noun_constraint,
     const std::function<void(std::vector<std::string>)>& result_callback) {
-  if (noun->is_entity_type()) {
-    result_callback(std::vector<std::string>(noun->get_entity_type().begin(),
-                                             noun->get_entity_type().end()));
-  } else if (noun->is_json()) {
+  // TODO(thatguy): Add processing for is_link_info().
+  if (noun_constraint->is_entity_type()) {
+    result_callback(std::vector<std::string>(noun_constraint->get_entity_type().begin(),
+                                             noun_constraint->get_entity_type().end()));
+  } else if (noun_constraint->is_json()) {
     std::vector<std::string> types;
-    if (!modular::ExtractEntityTypesFromJson(noun->get_json(), &types)) {
-      FXL_LOG(WARNING) << "Mal-formed JSON in noun: " << noun->get_json();
+    if (!modular::ExtractEntityTypesFromJson(noun_constraint->get_json(), &types)) {
+      FXL_LOG(WARNING) << "Mal-formed JSON in noun: " << noun_constraint->get_json();
       result_callback({});
     } else {
       result_callback(types);
     }
-  } else if (noun->is_entity_reference()) {
+  } else if (noun_constraint->is_entity_reference()) {
     new GetNounTypesCall(&operation_collection_, entity_resolver_.get(),
-                         noun->get_entity_reference(), result_callback);
+                         noun_constraint->get_entity_reference(), result_callback);
   } else {
     FXL_NOTREACHED();
   }

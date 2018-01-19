@@ -42,7 +42,7 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   using EntryId = std::pair<std::string, std::string>;
 
   // |ModuleResolver|
-  void FindModules(modular::DaisyPtr daisy,
+  void FindModules(modular::ResolverQueryPtr query,
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
 

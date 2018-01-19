@@ -7,54 +7,74 @@
 #include "lib/fxl/files/file.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
-#include "peridot/public/lib/module_resolver/cpp/formatting.h"
+#include "lib/module_resolver/cpp/formatting.h"
+#include "lib/entity/cpp/json.h"
 
 namespace maxwell {
 namespace {
 
-class DaisyBuilder {
+class QueryBuilder {
  public:
-  DaisyBuilder() : daisy(modular::Daisy::New()) {
-    daisy->nouns.mark_non_null();
+  QueryBuilder() : query(modular::ResolverQuery::New()) {
+    query->noun_constraints.mark_non_null();
   }
-  DaisyBuilder(std::string verb) : daisy(modular::Daisy::New()) {
-    daisy->nouns.mark_non_null();
+  QueryBuilder(std::string verb) : query(modular::ResolverQuery::New()) {
+    query->noun_constraints.mark_non_null();
     SetVerb(verb);
   }
 
-  modular::DaisyPtr build() { return std::move(daisy); }
+  modular::ResolverQueryPtr build() { return std::move(query); }
 
-  DaisyBuilder& SetVerb(std::string verb) {
-    daisy->verb = verb;
+  QueryBuilder& SetVerb(std::string verb) {
+    query->verb = verb;
     return *this;
   }
 
   // Creates a noun that's just Entity types.
-  DaisyBuilder& AddNounTypes(std::string name, std::vector<std::string> types) {
-    auto noun = modular::Noun::New();
+  QueryBuilder& AddNounTypes(std::string name, std::vector<std::string> types) {
+    auto noun = modular::ResolverNounConstraint::New();
     auto types_array = fidl::Array<fidl::String>::From(types);
     noun->set_entity_type(std::move(types_array));
-    daisy->nouns.insert(name, std::move(noun));
+    query->noun_constraints.insert(name, std::move(noun));
     return *this;
   }
 
-  DaisyBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
-    auto noun = modular::Noun::New();
+  QueryBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
+    auto noun = modular::ResolverNounConstraint::New();
     noun->set_entity_reference(entity_reference);
-    daisy->nouns.insert(name, std::move(noun));
+    query->noun_constraints.insert(name, std::move(noun));
     return *this;
   }
 
   // Creates a noun that's made of JSON content.
-  DaisyBuilder& AddJsonNoun(std::string name, std::string json) {
-    auto noun = modular::Noun::New();
+  QueryBuilder& AddJsonNoun(std::string name, std::string json) {
+    auto noun = modular::ResolverNounConstraint::New();
     noun->set_json(json);
-    daisy->nouns.insert(name, std::move(noun));
+    query->noun_constraints.insert(name, std::move(noun));
+    return *this;
+  }
+
+  // |path_parts| is a pair of { module path array, link name }.
+  QueryBuilder& AddLinkInfoNoun(
+      std::string name,
+      std::pair<std::vector<std::string>, std::string> path_parts,
+      std::string entity_reference) {
+    auto link_path = modular::LinkPath::New();
+    link_path->module_path = fidl::Array<fidl::String>::From(path_parts.first);
+    link_path->link_name = path_parts.second;
+
+    auto link_info = modular::ResolverLinkInfo::New();
+    link_info->path = std::move(link_path);
+    link_info->content_snapshot = modular::EntityReferenceToJson(entity_reference);
+
+    auto noun = modular::ResolverNounConstraint::New();
+    noun->set_link_info(std::move(link_info));
+    query->noun_constraints.insert(name, std::move(noun));
     return *this;
   }
 
  private:
-  modular::DaisyPtr daisy;
+  modular::ResolverQueryPtr query;
 };
 
 class TestManifestSource : public modular::ModuleManifestSource {
@@ -80,7 +100,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     modular::EntityResolverPtr entity_resolver_ptr;
     entity_resolver_.reset(new modular::EntityResolverFake());
     entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
-    // TODO: |impl_| will fail to resolve any daisys whose nouns are entity
+    // TODO: |impl_| will fail to resolve any queries whose nouns are entity
     // references.
     impl_.reset(new ModuleResolverImpl(std::move(entity_resolver_ptr)));
     for (auto entry : test_sources_) {
@@ -103,12 +123,12 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     return entity_resolver_->AddEntity(std::move(entity_data));
   }
 
-  void FindModules(modular::DaisyPtr daisy) {
+  void FindModules(modular::ResolverQueryPtr query) {
     auto scoring_info = modular::ResolverScoringInfo::New();
 
     bool got_response = false;
     resolver_->FindModules(
-        std::move(daisy), nullptr /* scoring_info */,
+        std::move(query), nullptr /* scoring_info */,
         [this, &got_response](const modular::FindModulesResultPtr& result) {
           got_response = true;
           result_ = result.Clone();
@@ -143,9 +163,9 @@ TEST_F(ModuleResolverImplTest, Null) {
   source->add("1", entry);
   source->idle();
 
-  auto daisy = DaisyBuilder("no matchy!").build();
+  auto query = QueryBuilder("no matchy!").build();
 
-  FindModules(std::move(daisy));
+  FindModules(std::move(query));
 
   // The Resolver currently always returns a fallback Module.
   ASSERT_DEFAULT_RESULT(results());
@@ -179,8 +199,8 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   source1->idle();
   source2->idle();
 
-  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").build();
-  FindModules(std::move(daisy));
+  auto query = QueryBuilder("com.google.fuchsia.navigate.v1").build();
+  FindModules(std::move(query));
   ASSERT_EQ(2lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
   EXPECT_EQ("module2", results()[1]->module_id);
@@ -191,7 +211,7 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   source1->remove("1");
   source2->remove("1");
 
-  FindModules(DaisyBuilder("com.google.fuchsia.navigate.v1").build());
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build());
   ASSERT_DEFAULT_RESULT(results());
 }
 
@@ -226,20 +246,20 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 
   // Either 'foo' or 'tangoTown' would be acceptible types. Only 'foo' will
   // actually match.
-  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
                    .AddNounTypes("start", {"foo", "tangoTown"})
                    .build();
-  FindModules(std::move(daisy));
+  FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
 
   // This one will match one of the two noun constraints on module1, but not
   // both, so no match at all is expected.
-  daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+  query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddNounTypes("start", {"foo", "tangoTown"})
               .AddNounTypes("destination", {"notbaz"})
               .build();
-  FindModules(std::move(daisy));
+  FindModules(std::move(query));
   ASSERT_DEFAULT_RESULT(results());
 
   // Given an entity of type "frob", find a module with verb
@@ -247,10 +267,10 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
   fidl::String location_entity = AddEntity({{"frob", ""}});
   ASSERT_TRUE(!location_entity.empty());
 
-  daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+  query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddEntityNoun("start", location_entity)
               .build();
-  FindModules(std::move(daisy));
+  FindModules(std::move(query));
   ASSERT_EQ(1u, results().size());
   EXPECT_EQ("module2", results()[0]->module_id);
 }
@@ -286,7 +306,7 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
 
   // Same thing as above, but we'll use JSON with embedded type information and
   // should see the same exactly results.
-  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
                    .AddJsonNoun("start", R"({
                       "@type": [ "foo", "tangoTown" ],
                       "thecake": "is a lie"
@@ -296,7 +316,7 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
                       "really": "it is"
                     })")
                    .build();
-  FindModules(std::move(daisy));
+  FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
   // TODO(thatguy): Validate that the initial_nouns content is correct.
@@ -314,12 +334,12 @@ TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
 
   source->add("1", entry);
   source->idle();
-  FindModules(DaisyBuilder("verb1").build());
+  FindModules(QueryBuilder("verb1").build());
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("id1", results()[0]->module_id);
 
   source->add("1", entry);
-  FindModules(DaisyBuilder("verb1").build());
+  FindModules(QueryBuilder("verb1").build());
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("id1", results()[0]->module_id);
 }

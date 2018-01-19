@@ -17,10 +17,10 @@ class NounTypeInferenceHelper {
   NounTypeInferenceHelper(modular::EntityResolverPtr entity_resolver);
   ~NounTypeInferenceHelper();
 
-  // Returns a list of types represented in |noun|. Chooses the correct process
-  // for type extraction based on the type of Noun.
+  // Returns a list of types represented in |noun_constraint|. Chooses the
+  // correct process for type extraction based on the type of Noun.
   void GetNounTypes(
-      const modular::NounPtr& noun,
+      const modular::ResolverNounConstraintPtr& noun_constraint,
       const std::function<void(std::vector<std::string>)>& result_callback);
 
  private:

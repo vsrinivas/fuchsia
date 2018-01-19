@@ -69,55 +69,55 @@ class ModuleResolverImpl::FindModulesCall
  public:
   FindModulesCall(modular::OperationContainer* container,
                   ModuleResolverImpl* module_resolver_impl,
-                  modular::DaisyPtr daisy,
+                  modular::ResolverQueryPtr query,
                   modular::ResolverScoringInfoPtr scoring_info,
                   ResultCall result_call)
       : Operation("ModuleResolverImpl::FindModulesCall",
                   container,
                   std::move(result_call)),
         module_resolver_impl_(module_resolver_impl),
-        daisy_(std::move(daisy)),
+        query_(std::move(query)),
         scoring_info_(std::move(scoring_info)) {
     Ready();
   }
 
   // Given a verb, we:
-  // 1) Find all modules that can handle the verb in this daisy.
-  // 2) Find all modules that can handle any of the (noun,type)s in this daisy.
-  //    Note that this includes modules that only satisfy a subset of the daisy
+  // 1) Find all modules that can handle the verb in this query.
+  // 2) Find all modules that can handle any of the (noun,type)s in this query.
+  //    Note that this includes modules that only satisfy a subset of the query
   //    input.
-  // 3) Intersect 1) and 2) to find modules that satisfy the daisy.
+  // 3) Intersect 1) and 2) to find modules that satisfy the query.
   void Run() {
     FlowToken flow{this, &result_};
 
-    if (!daisy_->verb) {
+    if (!query_->verb) {
       // TODO(thatguy): Add no-verb resolution.
-      result_ = CreateDefaultResult(daisy_);
+      result_ = CreateDefaultResult(query_);
       return;
     }
 
-    auto verb_it = module_resolver_impl_->verb_to_entries_.find(daisy_->verb);
+    auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
     if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
-      result_ = CreateDefaultResult(daisy_);
+      result_ = CreateDefaultResult(query_);
       return;
     }
 
     candidates_ = verb_it->second;
 
-    // For each noun in the Daisy, try to find Modules that provide the types in
+    // For each noun in the ResolverQuery, try to find Modules that provide the types in
     // the noun as constraints.
-    if (daisy_->nouns.is_null() || daisy_->nouns.size() == 0) {
+    if (query_->noun_constraints.is_null() || query_->noun_constraints.size() == 0) {
       Finally(flow);
       return;
     }
 
-    num_nouns_countdown_ = daisy_->nouns.size();
-    for (const auto& noun_entry : daisy_->nouns) {
+    num_nouns_countdown_ = query_->noun_constraints.size();
+    for (const auto& noun_entry : query_->noun_constraints) {
       const auto& noun_name = noun_entry.GetKey();
-      const auto& noun_value = noun_entry.GetValue();
+      const auto& noun_constraints = noun_entry.GetValue();
 
       module_resolver_impl_->type_helper_.GetNounTypes(
-          noun_value, [noun_name, flow, this](std::vector<std::string> types) {
+          noun_constraints, [noun_name, flow, this](std::vector<std::string> types) {
             ProcessNounTypes(noun_name, std::move(types));
             if (--num_nouns_countdown_ == 0) {
               Finally(flow);
@@ -127,7 +127,7 @@ class ModuleResolverImpl::FindModulesCall
   }
 
  private:
-  // |noun_name| and |types| come from the Daisy.
+  // |noun_name| and |types| come from the ResolverQuery.
   void ProcessNounTypes(const std::string& noun_name,
                         std::vector<std::string> types) {
     noun_types_cache_[noun_name] = types;
@@ -146,7 +146,7 @@ class ModuleResolverImpl::FindModulesCall
     }
 
     // The target Module must match the types in every noun specified in the
-    // Daisy, so here we do a set intersection with our possible set of
+    // ResolverQuery, so here we do a set intersection with our possible set of
     // candidates.
     std::set<EntryId> new_result_entries;
     std::set_intersection(
@@ -158,7 +158,7 @@ class ModuleResolverImpl::FindModulesCall
 
   void Finally(FlowToken flow) {
     if (candidates_.empty()) {
-      result_ = CreateDefaultResult(daisy_);
+      result_ = CreateDefaultResult(query_);
       return;
     }
 
@@ -171,20 +171,20 @@ class ModuleResolverImpl::FindModulesCall
       auto result = modular::ModuleResolverResult::New();
       result->module_id = entry.binary;
       result->local_name = entry.local_name;
-      CopyNounsToModuleResolverResult(daisy_, &result);
+      CopyNounsToModuleResolverResult(query_, &result);
 
       result_->modules.push_back(std::move(result));
     }
   }
 
   void CopyNounsToModuleResolverResult(
-      const modular::DaisyPtr& daisy,
+      const modular::ResolverQueryPtr& query,
       modular::ModuleResolverResultPtr* result) {
     (*result)->initial_nouns.mark_non_null();
     (*result)->create_chain_info = modular::CreateChainInfo::New();
     auto& create_chain_info = (*result)->create_chain_info;  // For convenience.
     create_chain_info->property_info.mark_non_null();
-    for (auto entry : daisy->nouns) {
+    for (auto entry : query->noun_constraints) {
       const auto& name = entry.GetKey();
       const auto& noun = entry.GetValue();
 
@@ -201,16 +201,23 @@ class ModuleResolverImpl::FindModulesCall
         // TODO(thatguy): set |create_link->permissions|.
         auto property_info = modular::CreateChainPropertyInfo::New();
         property_info->set_create_link(std::move(create_link));
-
         create_chain_info->property_info[name] = std::move(property_info);
-      } else if (noun->is_link()) {
+      } else if (noun->is_link_info()) {
         auto property_info = modular::CreateChainPropertyInfo::New();
-        property_info->set_link_path(noun->get_link().Clone());
+        property_info->set_link_path(noun->get_link_info()->path.Clone());
         create_chain_info->property_info[name] = std::move(property_info);
       } else if (noun->is_json()) {
         // TODO(thatguy): Remove this once no more Modules are using the root
         // Link. MI4-736
         (*result)->initial_nouns[name] = noun->get_json();
+
+        auto create_link = modular::CreateLinkInfo::New();
+        create_link->initial_data = noun->get_json();
+        // TODO(thatguy): set |create_link->allowed_types|.
+        // TODO(thatguy): set |create_link->permissions|.
+        auto property_info = modular::CreateChainPropertyInfo::New();
+        property_info->set_create_link(std::move(create_link));
+        create_chain_info->property_info[name] = std::move(property_info);
       }
       // There's nothing to copy over from 'entity_types', since it only
       // specifies noun constraint information, and no actual content.
@@ -218,7 +225,7 @@ class ModuleResolverImpl::FindModulesCall
   }
 
   modular::FindModulesResultPtr CreateDefaultResult(
-      const modular::DaisyPtr& daisy) {
+      const modular::ResolverQueryPtr& query) {
     auto result = modular::FindModulesResult::New();
 
     result->modules.resize(0);
@@ -227,7 +234,7 @@ class ModuleResolverImpl::FindModulesCall
     print_it->module_id = "resolution_failed";
     print_it->local_name = "n/a";
 
-    CopyNounsToModuleResolverResult(daisy, &print_it);
+    CopyNounsToModuleResolverResult(query, &print_it);
 
     result->modules.push_back(std::move(print_it));
     return result;
@@ -236,10 +243,10 @@ class ModuleResolverImpl::FindModulesCall
   modular::FindModulesResultPtr result_;
 
   ModuleResolverImpl* const module_resolver_impl_;
-  modular::DaisyPtr daisy_;
+  modular::ResolverQueryPtr query_;
   modular::ResolverScoringInfoPtr scoring_info_;
 
-  // A cache of the Entity types for each noun in |daisy_|.
+  // A cache of the Entity types for each noun in |query_|.
   std::map<std::string, std::vector<std::string>> noun_types_cache_;
 
   std::set<EntryId> candidates_;
@@ -249,10 +256,10 @@ class ModuleResolverImpl::FindModulesCall
 };
 
 void ModuleResolverImpl::FindModules(
-    modular::DaisyPtr daisy,
+    modular::ResolverQueryPtr query,
     modular::ResolverScoringInfoPtr scoring_info,
     const FindModulesCallback& done) {
-  new FindModulesCall(&operations_, this, std::move(daisy),
+  new FindModulesCall(&operations_, this, std::move(query),
                       std::move(scoring_info), done);
 }
 

@@ -31,6 +31,31 @@ void CopyResolverNounsToLink(const ModuleResolverResultPtr& module_result,
   }
 }
 
+// TODO(thatguy): Consider breaking this out into a helper class (that can be
+// tested individually) if it becomes more complex.
+ResolverQueryPtr DaisyToResolverQuery(const DaisyPtr& daisy) {
+  auto query = ResolverQuery::New();
+  query->verb = daisy->verb;
+
+  for (const auto& entry : daisy->nouns) {
+    const auto& name = entry.GetKey();
+    const auto& noun = entry.GetValue();
+
+    if (noun->is_json()) {
+      query->noun_constraints[name]->set_json(noun->get_json());
+    } else if (noun->is_link_name()) {
+      // TODO(thatguy): Resolve the noun->link_name() to the absolute LinkPath,
+      // grab a content snapshot and populate the NounConstraint.
+    } else if (noun->is_entity_type()) {
+      query->noun_constraints[name]->set_entity_type(noun->get_entity_type().Clone());
+    } else if (noun->is_entity_reference()) {
+      query->noun_constraints[name]->set_entity_reference(noun->get_entity_reference());
+    }
+  }
+
+  return query;
+}
+
 }  // namespace
 
 ModuleContextImpl::ModuleContextImpl(
@@ -98,7 +123,7 @@ void ModuleContextImpl::StartDaisy(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   // TODO(alhaad): This should happen on the story controller operation queue.
   module_resolver_->FindModules(
-      std::move(daisy), nullptr,
+      DaisyToResolverQuery(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
@@ -147,7 +172,7 @@ void ModuleContextImpl::StartDaisyInShell(
     SurfaceRelationPtr surface_relation) {
   // TODO(alhaad): This should happen on the story controller operation queue.
   module_resolver_->FindModules(
-      std::move(daisy), nullptr,
+      DaisyToResolverQuery(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),

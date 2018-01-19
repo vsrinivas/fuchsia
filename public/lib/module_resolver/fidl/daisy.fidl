@@ -36,12 +36,6 @@ struct Daisy {
 // 2) Provides Entity instances, or data from which Entity instances can be
 // derived, to initialize a Module after it has been selected through Module
 // Resolution.
-//
-// TODO(thatguy): This structure is used both for the API from Modules ->
-// Framework, as well as Framework -> ModuleResolver. Modules reference Links
-// simply by their local short name, whereas the Framework references Links by
-// their full path. It's awkward to force these both into the same struct, so
-// consider splitting this into two structs explicitly (Daisy and DaisyInternal).
 union Noun {
   // Set this if you already have an Entity reference at runtime.
   // Entity.getTypes() will be used to set the constraints for this noun during
@@ -66,8 +60,7 @@ union Noun {
   // the Module for the constraint to be considered satisfied.
   array<string> entity_type;
 
-  // This allows a Noun to directly reference a Link. Modules should only set
-  // |link.name|. The Framework will resolve the referenced Link to its actual
-  // storage path.
-  LinkPath link;
+  // Set this to use an existing Link accessible from your Module as the noun's
+  // value.
+  string link_name;
 };

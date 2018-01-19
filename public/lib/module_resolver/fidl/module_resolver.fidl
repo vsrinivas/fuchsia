@@ -5,12 +5,14 @@
 module modular;
 
 import "daisy.fidl";
-import "peridot/public/lib/story/fidl/create_chain.fidl";
+import "lib/story/fidl/create_chain.fidl";
+import "lib/story/fidl/create_link.fidl";
+import "lib/module/fidl/link_path.fidl";
 
 [ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
   // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
-  // specified in |daisy|. Results are returned in order according to scoring
+  // specified in |query|. Results are returned in order according to scoring
   // configuration and signals given in |scoring_info|.
   //
   // If no results could be found, |modules| will be empty.
@@ -20,8 +22,53 @@ interface ModuleResolver {
   // For detailed information on the resolution process, see
   // docs/module_resolution.md.
   // TODO(thatguy): Make |scoring_info| required, when we do ranking.
-  FindModules@0(Daisy daisy, ResolverScoringInfo? scoring_info) =>
+  FindModules@0(ResolverQuery query, ResolverScoringInfo? scoring_info) =>
       (FindModulesResult result);
+};
+
+// Mirrors the information present in a Daisy. Where a Daisy is meant to
+// interface between Modules and the Framework, this structure is specific to
+// the interface between the Framework and the ModuleResolver.
+//
+// In that role, it has references to structures and concepts that are only
+// visible within the abstraction layer of the Framework.
+struct ResolverQuery {
+  string? verb;
+
+  map<string, ResolverNounConstraint> noun_constraints;
+};
+
+union ResolverNounConstraint {
+  // An Entity reference from which type constraints will be derived.
+  // TODO(thatguy): Have callers populate |entity_type| directly, and remove
+  // this.
+  string entity_reference;
+
+  // DEPRECATED: Use |entity_reference|.
+  string json;
+
+  // A list of Entity types.
+  array<string> entity_type;
+
+  // Information about the state of a Link at the time this query is made.
+  // TODO(thatguy): Collapse the contents of this into |entity_type| as well,
+  // and add any other fields necessary for constraint matching.
+  ResolverLinkInfo link_info;
+};
+
+struct ResolverLinkInfo {
+  LinkPath path;
+
+  // In the cases that a Link already has type constraints on it, those are
+  // used directly instead of inferring them from an Entity value on the Link.
+  LinkAllowedTypes? allowed_types;
+
+  // If |allowed_types| is not available, an Entity reference in the Link's value
+  // can be used to get type constraint information.
+  string content_snapshot;
+
+  // TODO(thatguy): May want to include LinkPermissions for further matching
+  // and constraint generation.
 };
 
 // TODO(thatguy): Placeholder to define the exact data (either directly contain
