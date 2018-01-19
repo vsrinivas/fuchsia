@@ -40,6 +40,8 @@ executable("bin") {
   deps = [
     ":lib",
   ]
+
+  defines = [ "_ALL_SOURCE=1" ]
 }
 
 executable("guest_unittests") {

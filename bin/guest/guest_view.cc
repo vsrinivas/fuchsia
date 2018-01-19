@@ -49,8 +49,8 @@ static int view_task(void* ctx) {
 zx_status_t GuestView::Start(machina::VirtioGpu* gpu,
                              machina::InputDispatcher* input_dispatcher) {
   ViewTaskArgs args = {
-    .gpu = gpu,
-    .input_dispatcher = input_dispatcher,
+      .gpu = gpu,
+      .input_dispatcher = input_dispatcher,
   };
   int ret = sem_init(&args.semaphore, 0, 0);
   if (ret != 0) {

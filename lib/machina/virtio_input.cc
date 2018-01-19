@@ -241,7 +241,7 @@ zx_status_t VirtioInput::Start() {
   auto poll_thread = [](void* arg) {
     return reinterpret_cast<VirtioInput*>(arg)->PollInputDispatcher();
   };
-  int ret = thrd_create(&thread, poll_thread, this);
+  int ret = thrd_create_with_name(&thread, poll_thread, this, "virtio-input");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }

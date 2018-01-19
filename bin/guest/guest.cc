@@ -118,7 +118,8 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   thrd_t thread;
   auto args = new balloon_task_args_t{balloon, config};
 
-  int ret = thrd_create(&thread, balloon_stats_task, args);
+  int ret = thrd_create_with_name(&thread, balloon_stats_task, args,
+                                  "virtio-balloon");
   if (ret != thrd_success) {
     FXL_LOG(ERROR) << "Failed to create balloon thread " << ret << ".";
     delete args;

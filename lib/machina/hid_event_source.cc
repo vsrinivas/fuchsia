@@ -27,7 +27,7 @@ zx_status_t HidInputDevice::Start() {
   auto hid_event_thread = [](void* arg) {
     return reinterpret_cast<HidInputDevice*>(arg)->HidEventLoop();
   };
-  int ret = thrd_create(&thread, hid_event_thread, this);
+  int ret = thrd_create_with_name(&thread, hid_event_thread, this, "hid-event");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -105,7 +105,8 @@ void HidInputDevice::SendBarrier() {
 
 zx_status_t HidEventSource::Start() {
   thrd_t thread;
-  int ret = thrd_create(&thread, &HidEventSource::WatchInputDirectory, this);
+  int ret = thrd_create_with_name(&thread, &HidEventSource::WatchInputDirectory,
+                                  this, "hid-watch");
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
