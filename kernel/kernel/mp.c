@@ -438,7 +438,10 @@ enum handler_return mp_mbx_reschedule_irq(void) {
         }
     }
 
-    return (mp.active_cpus & cpu_num_to_mask(cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    if (mp.active_cpus & cpu_num_to_mask(cpu))
+        thread_preempt_set_pending();
+
+    return INT_NO_RESCHEDULE;
 }
 
 __WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {

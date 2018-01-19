@@ -358,6 +358,23 @@ static inline bool thread_preempt_reenable(void) {
     return preempt_pending;
 }
 
+/* thread_preempt_set_pending() marks a preemption as pending for the
+ * current CPU.
+ *
+ * This is similar to thread_reschedule(), except that it may only be
+ * used inside an interrupt handler while interrupts and preemption
+ * are disabled, between thread_preempt_disable() and
+ * thread_preempt_reenable().  It is similar to sched_reschedule(),
+ * except that it does not need to be called with thread_lock held. */
+static inline void thread_preempt_set_pending(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(arch_in_int_handler());
+    thread_t* current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread->preempt_disable);
+
+    current_thread->preempt_pending = true;
+}
+
 __END_CDECLS
 
 #ifdef __cplusplus
