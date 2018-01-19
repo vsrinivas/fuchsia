@@ -13,6 +13,7 @@
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_ETHERTAP, 1)
 
 #define ETHERTAP_MAX_NAME_LEN 31
+#define ETHERTAP_MAX_MTU 2000
 
 // Ethertap signals on the socket are used to indicate link status. It is an error to assert that a
 // device is both online and offline; the device will be shutdown. A device is in the offline state
@@ -42,6 +43,17 @@ typedef struct ethertap_ioctl_config {
     uint32_t mtu;
     uint8_t mac[6];
 } ethertap_ioctl_config_t;
+
+// A header is prepended to socket communication from ethertap. This tells whether
+// the subsequent bytes are a packet, a setparam report, etc.
+
+#define ETHERTAP_MSG_PACKET (1u)
+#define ETHERTAP_MSG_PARAM_REPORT (2u)
+
+typedef struct ethertap_socket_header {
+    uint32_t type;
+    int32_t info; // Might not be used yet; also there for 64-bit alignment
+} ethertap_socket_header_t;
 
 // If EthmacSetParam() reporting is requested, this struct is written to the Control
 // channel of the ethertap socket each time the function is called.

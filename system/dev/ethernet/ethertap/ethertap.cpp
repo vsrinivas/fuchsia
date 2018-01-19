@@ -38,6 +38,10 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
         ethertap_ioctl_config_t config;
         memcpy(&config, in_buf, in_len);
 
+        if (config.mtu > ETHERTAP_MAX_MTU) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
         zx::socket local, remote;
         uint32_t sockopt = ZX_SOCKET_DATAGRAM |
                            ((config.options & ETHERTAP_OPT_REPORT_PARAM) ? ZX_SOCKET_HAS_CONTROL : 0);
@@ -85,6 +89,7 @@ TapDevice::TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, z
     data_(fbl::move(data)) {
     ZX_DEBUG_ASSERT(data_.is_valid());
     memcpy(mac_, config->mac, 6);
+
     int ret = thrd_create_with_name(&thread_, tap_device_thread, reinterpret_cast<void*>(this),
                                     "ethertap-thread");
     ZX_DEBUG_ASSERT(ret == thrd_success);
@@ -132,15 +137,21 @@ zx_status_t TapDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
 }
 
 zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
-    void* data = netbuf->data;
+    uint8_t temp_buf[ETHERTAP_MAX_MTU + sizeof(ethertap_socket_header_t)];
+    auto header = reinterpret_cast<ethertap_socket_header*>(temp_buf);
+    uint8_t* data = temp_buf + sizeof(ethertap_socket_header_t);
     size_t length = netbuf->len;
     ZX_DEBUG_ASSERT(length <= mtu_);
+    memcpy(data, netbuf->data, length);
+    header->type = ETHERTAP_MSG_PACKET;
+
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
         fbl::AutoLock lock(&lock_);
         ethertap_trace("sending %zu bytes\n", length);
         hexdump8_ex(data, length, 0);
     }
-    zx_status_t status = data_.write(0u, data, length, nullptr);
+    zx_status_t status = data_.write(0u, temp_buf, length + sizeof(ethertap_socket_header_t),
+                                     nullptr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ethertap: EthmacQueueTx error writing: %d\n", status);
     }
@@ -153,13 +164,18 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, void* data)
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    ethertap_setparam_report_t report = {};
-    report.param = param;
-    report.value = value;
-    report.data_length = 0;
-    zx_status_t status = data_.write(ZX_SOCKET_CONTROL, &report, sizeof(report), nullptr);
+    struct {
+        ethertap_socket_header_t header;
+        ethertap_setparam_report_t report;
+    } send_buf = {};
+
+    send_buf.header.type = ETHERTAP_MSG_PARAM_REPORT;
+    send_buf.report.param = param;
+    send_buf.report.value = value;
+    send_buf.report.data_length = 0;
+    zx_status_t status = data_.write(0, &send_buf, sizeof(send_buf), nullptr);
     if (status != ZX_OK) {
-        ethertap_trace("error writing to control: %d\n", status);
+        ethertap_trace("error writing SetParam info to socket: %d\n", status);
     }
     // A failure of data_.write is not a simulated failure of hardware under test, so log it but
     // don't report failure on the SetParam attempt.
@@ -181,7 +197,7 @@ int TapDevice::Thread() {
             break;
         }
 
-        if (pending & (ETHERTAP_SIGNAL_OFFLINE|ETHERTAP_SIGNAL_ONLINE)) {
+        if (pending & (ETHERTAP_SIGNAL_OFFLINE | ETHERTAP_SIGNAL_ONLINE)) {
             status = UpdateLinkStatus(pending);
             if (status != ZX_OK) {
                 break;

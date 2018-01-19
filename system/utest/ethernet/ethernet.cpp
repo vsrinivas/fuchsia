@@ -55,7 +55,7 @@ const char* mxstrerror(zx_status_t status) {
 }
 
 zx_status_t CreateEthertapWithOption(uint32_t mtu, const char* name, zx::socket* sock,
-                                 uint32_t options) {
+                                     uint32_t options) {
     if (sock == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -103,7 +103,7 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     if (rc < 0) {
         zx_status_t status = static_cast<zx_status_t>(rc);
         fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir, fn,
-                        mxstrerror(status));
+                mxstrerror(status));
         // Return ZX_OK to keep watching for devices.
         return ZX_OK;
     }
@@ -304,6 +304,47 @@ class EthernetClient {
 
 }  // namespace
 
+#define HEADER_SIZE (sizeof(ethertap_socket_header_t))
+#define READBUF_SIZE (ETHERTAP_MAX_MTU + HEADER_SIZE)
+
+static bool ExpectSockRead(zx::socket* sock, uint32_t type, size_t size, void* data,
+                           const char* msg) {
+    BEGIN_HELPER;
+    zx_signals_t obs;
+    uint8_t read_buf[READBUF_SIZE];
+    // The socket should be readable
+    EXPECT_EQ(ZX_OK, sock->wait_one(ZX_SOCKET_READABLE, FAIL_TIMEOUT, &obs), msg);
+    ASSERT_TRUE(obs & ZX_SOCKET_READABLE, msg);
+
+    // Read the data from the socket, which should match what was written to the fifo
+    size_t actual_sz = 0;
+    EXPECT_EQ(ZX_OK, sock->read(0u, static_cast<void*>(read_buf), READBUF_SIZE, &actual_sz), msg);
+    ASSERT_EQ(size, actual_sz - HEADER_SIZE, msg);
+    auto header = reinterpret_cast<ethertap_socket_header*>(read_buf);
+    EXPECT_EQ(type, header->type, msg);
+    if (size > 0) {
+        ASSERT_NONNULL(data, msg);
+        EXPECT_BYTES_EQ(static_cast<uint8_t*>(data), read_buf + HEADER_SIZE, size, msg);
+    }
+    END_HELPER;
+}
+
+static bool ExpectPacketRead(zx::socket* sock, size_t size, void* data, const char* msg) {
+    return ExpectSockRead(sock, ETHERTAP_MSG_PACKET, size, data, msg);
+}
+
+static bool ExpectSetParamRead(zx::socket* sock, uint32_t param, int32_t value,
+                               size_t data_length, uint8_t* data, const char* msg) {
+    ethertap_setparam_report_t report = {};
+    report.param = param;
+    report.value = value;
+    report.data_length = data_length;
+    if (data_length > 0 && data != nullptr) {
+        memcpy(report.data, data, data_length);
+    }
+    return ExpectSockRead(sock, ETHERTAP_MSG_PARAM_REPORT, sizeof(report), &report, msg);
+}
+
 static bool EthernetStartTest() {
     BEGIN_TEST;
     // Create the ethertap device
@@ -335,8 +376,7 @@ static bool EthernetStartTest() {
     // Set the link status to online and verify
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
 
-    EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -385,8 +425,7 @@ static bool EthernetLinkStatusTest() {
 
     // Verify the link status
     zx_signals_t obs;
-    EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, FAIL_TIMEOUT, &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -434,14 +473,7 @@ static bool EthernetSetPromiscMultiClientTest() {
     // saying param ETHMAC_SETPARAM_PROMISC, value true.
     clientA.SetPromisc(true);
 
-    ethertap_setparam_report_t report;
-    size_t actual;
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
-    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
-    EXPECT_EQ(sizeof(report), actual);
-    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
-    EXPECT_EQ(true, static_cast<bool>(report.value));
+    ExpectSetParamRead(&sock, ETHMAC_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)");
 
     // None of these should cause a change in promisc commands to ethermac.
     clientA.SetPromisc(true); // It was already requested by A.
@@ -451,12 +483,7 @@ static bool EthernetSetPromiscMultiClientTest() {
 
     // After the next line, no one wants promisc, so I should get a command to turn it off.
     clientB.SetPromisc(false);
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
-    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
-    EXPECT_EQ(sizeof(report), actual);
-    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
-    EXPECT_EQ(false, static_cast<bool>(report.value));
+    ExpectSetParamRead(&sock, ETHMAC_SETPARAM_PROMISC, 0, 0, nullptr, "Promisc should be off (2)");
 
     // Shutdown the ethernet clients
     EXPECT_EQ(ZX_OK, clientA.Stop());
@@ -495,26 +522,14 @@ static bool EthernetSetPromiscClearOnCloseTest() {
     // saying param ETHMAC_SETPARAM_PROMISC, value true.
     pClient->SetPromisc(true);
 
-    ethertap_setparam_report_t report;
-    size_t actual;
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
-    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
-    EXPECT_EQ(sizeof(report), actual);
-    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
-    EXPECT_EQ(true, static_cast<bool>(report.value));
+    ExpectSetParamRead(&sock, ETHMAC_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)");
 
     // Shutdown the ethernet client.
     EXPECT_EQ(ZX_OK, pClient->Stop());
     pClient.reset(); // This will free devfd
 
     // That should have caused promisc to turn off.
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_CONTROL_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_SOCKET_CONTROL_READABLE);
-    EXPECT_EQ(ZX_OK, sock.read(ZX_SOCKET_CONTROL, &report, sizeof(report), &actual));
-    EXPECT_EQ(sizeof(report), actual);
-    EXPECT_EQ(ETHMAC_SETPARAM_PROMISC, report.param);
-    EXPECT_EQ(false, static_cast<bool>(report.value));
+    ExpectSetParamRead(&sock, ETHMAC_SETPARAM_PROMISC, 0, 0, nullptr, "Closed: promisc off (2)");
 
     // Clean up the ethertap device.
     sock.reset();
@@ -560,20 +575,10 @@ static bool EthernetDataTest_Send() {
     ASSERT_EQ(ZX_OK, client.tx_fifo()->write(entry, sizeof(eth_fifo_entry_t), &actual));
     EXPECT_EQ(1u, actual);
 
-    // The socket should be readable
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_READABLE, FAIL_TIMEOUT, &obs));
-    ASSERT_TRUE(obs & ZX_SOCKET_READABLE);
-
-    // Read the data from the socket, which should match what was written to the fifo
-    uint8_t read_buf[32];
-    size_t actual_sz = 0;
-    EXPECT_EQ(ZX_OK, sock.read(0u, static_cast<void*>(read_buf), 32, &actual_sz));
-    ASSERT_EQ(32, actual_sz);
-    EXPECT_BYTES_EQ(buf, read_buf, 32, "");
+    ExpectPacketRead(&sock, 32, buf, "");
 
     // Now the TX completion entry should be available to read from the TX fifo
-    EXPECT_EQ(ZX_OK,
-            client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+    EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     eth_fifo_entry_t return_entry;
@@ -632,8 +637,7 @@ static bool EthernetDataTest_Recv() {
     EXPECT_EQ(32, actual);
 
     // The fifo should be readable
-    EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
