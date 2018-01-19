@@ -12,6 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
@@ -129,6 +130,9 @@ class PageDelegate {
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer operation_serializer_;
   SyncWatcherSet* watcher_set_;
+
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<PageDelegate> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };

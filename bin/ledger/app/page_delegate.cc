@@ -17,6 +17,7 @@
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/public/make_object_identifier.h"
+#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -34,7 +35,8 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
       request_(std::move(request)),
       interface_(this),
       branch_tracker_(coroutine_service, manager, storage),
-      watcher_set_(watchers) {
+      watcher_set_(watchers),
+      weak_factory_(this) {
   interface_.set_on_empty([this] {
     operation_serializer_.Serialize<Status>(
         [](Status status) {},
@@ -81,7 +83,8 @@ void PageDelegate::GetSnapshot(
                             Page::GetSnapshotCallback callback) mutable {
         storage_->GetCommit(
             GetCurrentCommitId(),
-            fxl::MakeCopyable(
+            fxl::MakeCopyable(callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
                 [this, snapshot_request = std::move(snapshot_request),
                  key_prefix = std::move(key_prefix),
                  watcher = std::move(watcher), callback = std::move(callback)](
@@ -102,7 +105,7 @@ void PageDelegate::GetSnapshot(
                                              std::move(snapshot_request),
                                              std::move(prefix));
                   callback(Status::OK);
-                }));
+                })));
       }));
 }
 
@@ -138,7 +141,8 @@ void PageDelegate::PutWithPriority(
       fxl::MakeCopyable(
           [this, promise = std::move(promise), key = std::move(key),
            priority](Page::PutWithPriorityCallback callback) mutable {
-            promise->Finalize(fxl::MakeCopyable(
+            promise->Finalize(fxl::MakeCopyable(callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
                 [this, key = std::move(key), priority,
                  callback = std::move(callback)](
                     storage::Status status,
@@ -153,7 +157,7 @@ void PageDelegate::PutWithPriority(
                                   ? storage::KeyPriority::EAGER
                                   : storage::KeyPriority::LAZY,
                               std::move(callback));
-                }));
+                })));
           }));
 }
 
@@ -191,7 +195,8 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
           [this, promise = std::move(promise), key = std::move(key),
            object_identifier = std::move(object_identifier),
            priority](Page::PutReferenceCallback callback) mutable {
-            promise->Finalize(fxl::MakeCopyable(
+            promise->Finalize(fxl::MakeCopyable(callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
                 [this, key = std::move(key),
                  object_identifier = std::move(object_identifier), priority,
                  callback = std::move(callback)](
@@ -207,7 +212,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                                   ? storage::KeyPriority::EAGER
                                   : storage::KeyPriority::LAZY,
                               std::move(callback));
-                }));
+                })));
           }));
 }
 
@@ -236,16 +241,19 @@ void PageDelegate::CreateReference(
     std::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
       std::move(data),
-      [this, callback = std::move(callback)](
-          storage::Status status, storage::ObjectIdentifier object_identifier) {
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status), nullptr);
-          return;
-        }
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, callback = std::move(callback)](
+              storage::Status status,
+              storage::ObjectIdentifier object_identifier) {
+            if (status != storage::Status::OK) {
+              callback(PageUtils::ConvertStatus(status), nullptr);
+              return;
+            }
 
-        callback(Status::OK,
-                 manager_->CreateReference(std::move(object_identifier)));
-      });
+            callback(Status::OK,
+                     manager_->CreateReference(std::move(object_identifier)));
+          }));
 }
 
 // StartTransaction() => (Status status);
@@ -258,20 +266,23 @@ void PageDelegate::StartTransaction(
           return;
         }
         storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT,
-                              [this, commit_id, callback = std::move(callback)](
-                                  storage::Status status,
-                                  std::unique_ptr<storage::Journal> journal) {
-                                journal_ = std::move(journal);
-                                if (status != storage::Status::OK) {
-                                  callback(PageUtils::ConvertStatus(status));
-                                  return;
-                                }
-                                journal_parent_commit_ = commit_id;
+        storage_->StartCommit(
+            commit_id, storage::JournalType::EXPLICIT,
+            callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
+                [this, commit_id, callback = std::move(callback)](
+                    storage::Status status,
+                    std::unique_ptr<storage::Journal> journal) {
+                  journal_ = std::move(journal);
+                  if (status != storage::Status::OK) {
+                    callback(PageUtils::ConvertStatus(status));
+                    return;
+                  }
+                  journal_parent_commit_ = commit_id;
 
-                                branch_tracker_.StartTransaction(
-                                    [callback]() { callback(Status::OK); });
-                              });
+                  branch_tracker_.StartTransaction(
+                      [callback]() { callback(Status::OK); });
+                }));
       });
 }
 
@@ -284,13 +295,15 @@ void PageDelegate::Commit(const Page::CommitCallback& callback) {
           return;
         }
         journal_parent_commit_.clear();
-        CommitJournal(
-            std::move(journal_),
-            [this, callback = std::move(callback)](
-                Status status, std::unique_ptr<const storage::Commit> commit) {
-              branch_tracker_.StopTransaction(std::move(commit));
-              callback(status);
-            });
+        CommitJournal(std::move(journal_),
+                      callback::MakeScoped(
+                          weak_factory_.GetWeakPtr(),
+                          [this, callback = std::move(callback)](
+                              Status status,
+                              std::unique_ptr<const storage::Commit> commit) {
+                            branch_tracker_.StopTransaction(std::move(commit));
+                            callback(status);
+                          }));
       });
 }
 
@@ -304,12 +317,14 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
         }
         storage_->RollbackJournal(
             std::move(journal_),
-            [this, callback = std::move(callback)](storage::Status status) {
-              journal_.reset();
-              journal_parent_commit_.clear();
-              callback(PageUtils::ConvertStatus(status));
-              branch_tracker_.StopTransaction(nullptr);
-            });
+            callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
+                [this, callback = std::move(callback)](storage::Status status) {
+                  journal_.reset();
+                  journal_parent_commit_.clear();
+                  callback(PageUtils::ConvertStatus(status));
+                  branch_tracker_.StopTransaction(nullptr);
+                }));
       });
 }
 
@@ -376,37 +391,47 @@ void PageDelegate::RunInTransaction(
   std::unique_ptr<storage::Journal> journal;
   storage_->StartCommit(
       commit_id, storage::JournalType::IMPLICIT,
-      [this, runnable = std::move(runnable), callback = std::move(callback)](
-          storage::Status status, std::unique_ptr<storage::Journal> journal) {
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status));
-          branch_tracker_.StopTransaction(nullptr);
-          return;
-        }
-        runnable(journal.get(),
-                 fxl::MakeCopyable([this, journal = std::move(journal),
-                                    callback](Status ledger_status) mutable {
-                   if (ledger_status != Status::OK) {
-                     callback(ledger_status);
-                     storage_->RollbackJournal(
-                         std::move(journal),
-                         [](storage::Status /*rollback_status*/) {});
-                     branch_tracker_.StopTransaction(nullptr);
-                     return;
-                   }
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, runnable = std::move(runnable),
+           callback = std::move(callback)](
+              storage::Status status,
+              std::unique_ptr<storage::Journal> journal) {
+            if (status != storage::Status::OK) {
+              callback(PageUtils::ConvertStatus(status));
+              branch_tracker_.StopTransaction(nullptr);
+              return;
+            }
+            runnable(journal.get(),
+                     fxl::MakeCopyable(callback::MakeScoped(
+                         weak_factory_.GetWeakPtr(),
+                         [this, journal = std::move(journal),
+                          callback](Status ledger_status) mutable {
+                           if (ledger_status != Status::OK) {
+                             callback(ledger_status);
+                             storage_->RollbackJournal(
+                                 std::move(journal),
+                                 [](storage::Status /*rollback_status*/) {});
+                             branch_tracker_.StopTransaction(nullptr);
+                             return;
+                           }
 
-                   CommitJournal(
-                       std::move(journal),
-                       [this, callback](
-                           Status status,
-                           std::unique_ptr<const storage::Commit> commit) {
-                         branch_tracker_.StopTransaction(status == Status::OK
-                                                             ? std::move(commit)
-                                                             : nullptr);
-                         callback(status);
-                       });
-                 }));
-      });
+                           CommitJournal(
+                               std::move(journal),
+                               callback::MakeScoped(
+                                   weak_factory_.GetWeakPtr(),
+                                   [this, callback](
+                                       Status status,
+                                       std::unique_ptr<const storage::Commit>
+                                           commit) {
+                                     branch_tracker_.StopTransaction(
+                                         status == Status::OK
+                                             ? std::move(commit)
+                                             : nullptr);
+                                     callback(status);
+                                   }));
+                         })));
+          }));
 }
 
 void PageDelegate::CommitJournal(
