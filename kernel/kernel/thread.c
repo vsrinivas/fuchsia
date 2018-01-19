@@ -364,7 +364,7 @@ zx_status_t thread_suspend(thread_t* t) {
     case THREAD_BLOCKED:
         /* thread is blocked on something and marked interruptable */
         if (t->interruptable)
-            wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_RETRY, &local_resched);
+            wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_RETRY);
         break;
     case THREAD_SLEEPING:
         /* thread is sleeping */
@@ -614,7 +614,7 @@ void thread_kill(thread_t* t) {
     case THREAD_BLOCKED:
         /* thread is blocked on something and marked interruptable */
         if (t->interruptable)
-            wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_KILLED, &local_resched);
+            wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_KILLED);
         break;
     case THREAD_SLEEPING:
         /* thread is sleeping */

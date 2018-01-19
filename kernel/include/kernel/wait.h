@@ -69,6 +69,6 @@ struct thread* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue
 bool wait_queue_is_empty(wait_queue_t*);
 
 /* remove a specific thread out of a wait queue it's blocked on */
-zx_status_t wait_queue_unblock_thread(struct thread* t, zx_status_t wait_queue_error, bool* local_resched);
+zx_status_t wait_queue_unblock_thread(struct thread* t, zx_status_t wait_queue_error);
 
 __END_CDECLS

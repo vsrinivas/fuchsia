@@ -33,11 +33,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t 
     if (timer_trylock_or_cancel(timer, &thread_lock))
         return INT_NO_RESCHEDULE;
 
-    bool local_resched;
-    if (wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT, &local_resched) >= ZX_OK &&
-        local_resched) {
-        sched_reschedule();
-    }
+    wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT);
 
     spin_unlock(&thread_lock);
 
@@ -286,16 +282,16 @@ void wait_queue_destroy(wait_queue_t* wait) {
 /**
  * @brief  Wake a specific thread in a wait queue
  *
- * This function extracts a specific thread from a wait queue, wakes it, and
- * puts it at the head of the run queue.
+ * This function extracts a specific thread from a wait queue, wakes it,
+ * puts it at the head of the run queue, and does a reschedule if
+ * necessary.
  *
  * @param t  The thread to wake
  * @param wait_queue_error  The return value which the new thread will receive from wait_queue_block().
- * @param local_resched  Returns if the caller should reschedule locally.
  *
  * @return ZX_ERR_BAD_STATE if thread was not in any wait queue.
  */
-zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error, bool* local_resched) {
+zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -312,7 +308,8 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error,
     t->blocking_wait_queue = NULL;
     t->blocked_status = wait_queue_error;
 
-    *local_resched = sched_unblock(t);
+    if (sched_unblock(t))
+        sched_reschedule();
 
     return ZX_OK;
 }
