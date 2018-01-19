@@ -60,7 +60,7 @@ source_set("context_index_unittest") {
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -109,7 +109,7 @@ source_set("context_repository_unittest") {
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

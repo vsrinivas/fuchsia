@@ -131,6 +131,6 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/gtest",
     "//peridot/lib/testing:fake_application_launcher",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

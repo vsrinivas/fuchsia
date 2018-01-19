@@ -29,7 +29,7 @@ source_set("unittests") {
   deps = [
     ":lock",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

@@ -117,7 +117,7 @@ source_set("chain_impl_unittest") {
     ":story_runner",
     "//peridot/lib/gtest",
     "//peridot/lib/testing:story_controller_mock",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -130,7 +130,7 @@ source_set("key_generator_unittest") {
 
   deps = [
     ":story_runner",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -145,6 +145,6 @@ source_set("link_impl_unittest") {
     ":story_runner",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/entity/cpp:json",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

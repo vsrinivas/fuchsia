@@ -65,7 +65,7 @@ source_set("directory_source_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/gtest",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

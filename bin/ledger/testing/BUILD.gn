@@ -38,7 +38,7 @@ source_set("lib") {
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/trace-provider",
   ]
 
@@ -75,7 +75,7 @@ source_set("ledger_instance_factory") {
   deps = [
     "//peridot/lib/callback",
     "//peridot/lib/convert",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

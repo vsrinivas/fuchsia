@@ -27,7 +27,7 @@ executable("e2e_sync") {
     "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

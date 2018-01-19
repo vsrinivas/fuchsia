@@ -28,7 +28,6 @@ executable("unittests") {
 
   deps = [
     ":bup",
-    "//third_party/gtest",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }

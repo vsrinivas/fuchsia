@@ -65,7 +65,7 @@ source_set("unittests") {
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/user_intelligence/fidl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/trace",
   ]
 }

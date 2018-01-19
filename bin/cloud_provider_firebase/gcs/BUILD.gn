@@ -44,7 +44,7 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/network:fake",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

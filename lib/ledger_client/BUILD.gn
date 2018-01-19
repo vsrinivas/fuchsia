@@ -118,7 +118,7 @@ source_set("page_client_unittest") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/async/cpp:operation",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -133,6 +133,6 @@ source_set("storage_unittest") {
     ":storage",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

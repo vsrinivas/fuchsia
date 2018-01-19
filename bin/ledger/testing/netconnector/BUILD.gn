@@ -26,7 +26,7 @@ source_set("netconnector") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp/reporting",
     "//peridot/lib/convert",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -49,7 +49,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

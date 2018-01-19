@@ -110,7 +110,7 @@ source_set("test_with_ledger") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/gtest",
     "//peridot/lib/ledger_client:page_client",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -179,6 +179,6 @@ source_set("mock_base") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

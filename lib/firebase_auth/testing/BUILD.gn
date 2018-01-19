@@ -67,7 +67,7 @@ source_set("unittests") {
     ":service_account",
     "//peridot/lib/gtest",
     "//peridot/lib/network:fake",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]
 }

@@ -47,6 +47,6 @@ source_set("unittests") {
     "//peridot/public/lib/clipboard/fidl",
     "//peridot/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

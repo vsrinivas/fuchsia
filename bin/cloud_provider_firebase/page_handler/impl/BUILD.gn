@@ -51,7 +51,7 @@ source_set("unittests") {
     "//peridot/bin/cloud_provider_firebase/gcs",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/firebase",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

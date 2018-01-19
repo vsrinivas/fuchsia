@@ -132,7 +132,7 @@ source_set("unittests") {
     "//peridot/lib/backoff/testing",
     "//peridot/lib/convert",
     "//peridot/public/lib/auth/fidl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

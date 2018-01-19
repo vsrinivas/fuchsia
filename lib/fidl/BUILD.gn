@@ -163,7 +163,7 @@ source_set("app_client_unittest") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/gtest",
     "//peridot/lib/testing:fake_application_launcher",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -176,6 +176,6 @@ source_set("json_xdr_unittest") {
 
   deps = [
     ":json_xdr",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

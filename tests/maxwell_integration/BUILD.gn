@@ -89,7 +89,7 @@ source_set("context_common") {
   public_deps = [
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -112,7 +112,7 @@ source_set("common") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -131,6 +131,6 @@ source_set("test_suggestion_listener") {
   ]
 
   public_deps = [
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

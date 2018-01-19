@@ -29,7 +29,7 @@ source_set("json_unittest") {
 
   deps = [
     ":json",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]
 }

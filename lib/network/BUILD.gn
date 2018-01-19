@@ -54,6 +54,6 @@ source_set("unittests") {
     "//garnet/public/lib/netstack/fidl:net_address",
     "//peridot/lib/backoff/testing",
     "//peridot/lib/gtest",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

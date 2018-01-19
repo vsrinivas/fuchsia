@@ -111,6 +111,6 @@ source_set("unittests") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:mock_base",
     "//peridot/public/lib/story/fidl:fidl_cpp_sources",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

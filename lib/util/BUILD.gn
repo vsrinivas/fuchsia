@@ -58,6 +58,6 @@ source_set("unittests") {
   deps = [
     ":util",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 }

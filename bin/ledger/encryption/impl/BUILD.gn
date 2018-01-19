@@ -50,7 +50,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/callback",
-    "//third_party/gtest",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
