@@ -22,19 +22,17 @@
 
 __BEGIN_CDECLS
 
-// Basic timeout duration.
-// This is for things like waiting for a process to exit or a channel to
-// be readable.
-#define TU_WAIT_TIMEOUT_SECONDS 2
-#define TU_WAIT_TIMEOUT_NANOSECONDS ((int64_t) TU_WAIT_TIMEOUT_SECONDS * 1000 * 1000 * 1000)
-
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
 // helpful when running "while /boot/test/sys/debugger-test; do true; done".
 #define TU_WATCHDOG_TICK_DURATION ((int64_t)ZX_MSEC(50))  // 0.05 seconds
 
 // Number of sleep intervals until the watchdog fires.
-// Obviously this must be reasonably larger than TU_WAIT_TIMEOUT_SECONDS.
+// Note: There is a tension here between not wanting to block a complete test
+// run because of a hung test for too long, vs not wanting to introduce
+// flakyness into a test run because of a loaded machine (not uncommon on
+// bots). One solution would be a runtime determination of what a good value
+// is.
 #define TU_WATCHDOG_TIMEOUT_TICKS 100  // 5 seconds
 
 // These malloc-using calls will terminate the process on ENOMEM.
@@ -112,11 +110,11 @@ void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* 
 
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
-// The call fails and the process terminates if the call times out within TU_WAIT_TIMEOUT_NANOSECONDS.
+// Note: This waits "forever", and relies on the watchdog to catch hung tests.
 bool tu_channel_wait_readable(zx_handle_t channel);
 
 // Wait for |process| to be signaled (ZX_PROCESS_TERMINATED).
-// The call fails and the calling process terminates if the call times out within TU_WAIT_TIMEOUT_NANOSECONDS.
+// Note: This waits "forever", and relies on the watchdog to catch hung tests.
 
 void tu_process_wait_signaled(zx_handle_t process);
 

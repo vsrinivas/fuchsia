@@ -170,15 +170,11 @@ void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* 
         tu_fatal(__func__, status);
 }
 
-// Wait until |channel| is readable or peer is closed.
-// Result is true if readable, otherwise false.
-
 bool tu_channel_wait_readable(zx_handle_t channel)
 {
     zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     zx_signals_t pending;
-    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS;
-    zx_status_t result = tu_wait(1, &channel, &signals, &pending, timeout);
+    zx_status_t result = tu_wait(1, &channel, &signals, &pending, ZX_TIME_INFINITE);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_CHANNEL_READABLE) == 0) {
@@ -247,8 +243,7 @@ void tu_process_wait_signaled(zx_handle_t process)
 {
     zx_signals_t signals = ZX_PROCESS_TERMINATED;
     zx_signals_t pending;
-    int64_t timeout = TU_WAIT_TIMEOUT_NANOSECONDS;
-    zx_status_t result = tu_wait(1, &process, &signals, &pending, timeout);
+    zx_status_t result = tu_wait(1, &process, &signals, &pending, ZX_TIME_INFINITE);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_PROCESS_TERMINATED) == 0) {
