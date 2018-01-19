@@ -11,6 +11,7 @@ license = "BSD-3-Clause"
 failure = "0.1"
 fuchsia-vfs-watcher = "0.1"
 futures = "0.1"
+log = "0.3"
 tokio-core = "0.1"
 
 [profile.release]
