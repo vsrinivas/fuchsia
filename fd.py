@@ -255,16 +255,20 @@ def main():
       target = target[2:]
 
     candidate = target
-    if os.path.exists(candidate):
-      return candidate
 
-    candidate = get_abs_path(target)
-    if os.path.exists(candidate):
-      return candidate
+    # Do not guess-work when the user specifies an option to intend to use.
+    # Do guess work otherwise.
+    if not args.choice:
+      if os.path.exists(candidate):
+        return candidate
 
-    candidate = os.path.abspath(target)
-    if os.path.exists(candidate):
-      return candidate
+      candidate = get_abs_path(target)
+      if os.path.exists(candidate):
+        return candidate
+
+      candidate = os.path.abspath(target)
+      if os.path.exists(candidate):
+        return candidate
 
     t = get_trie(args.rebuild)
     return get_abs_path(choose_options(t, target, args.choice))
