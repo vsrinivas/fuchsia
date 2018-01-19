@@ -29,13 +29,19 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
 
             Name(_PRT, Package()                                    // _PRT: PCI Routing Table
             {
-                // Device 0-5.
+                // Device 0-11.
                 Package() { 0x0000ffff, 0, Zero, 32 },
                 Package() { 0x0001ffff, 0, Zero, 33 },
                 Package() { 0x0002ffff, 0, Zero, 34 },
                 Package() { 0x0003ffff, 0, Zero, 35 },
                 Package() { 0x0004ffff, 0, Zero, 36 },
                 Package() { 0x0005ffff, 0, Zero, 37 },
+                Package() { 0x0006ffff, 0, Zero, 38 },
+                Package() { 0x0007ffff, 0, Zero, 39 },
+                Package() { 0x0008ffff, 0, Zero, 40 },
+                Package() { 0x0009ffff, 0, Zero, 41 },
+                Package() { 0x000affff, 0, Zero, 42 },
+                Package() { 0x000bffff, 0, Zero, 43 },
             })
 
             NAME(_CRS, ResourceTemplate() {                         // _CRS: Current Resource Setting

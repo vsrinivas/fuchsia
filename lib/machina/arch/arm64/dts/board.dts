@@ -89,12 +89,18 @@
     bus-range = <0 0>;
     ranges = <0x2000000 0 0x10001000 0x10001000 0 0xfff000>;
     interrupt-map-mask = <0xf800 0 0 1>;
-    interrupt-map = <0x0000 0 0 1 &gic 0 0 4>, // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
-                    <0x0800 0 0 1 &gic 0 1 4>, // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
-                    <0x1000 0 0 1 &gic 0 2 4>, // HIGH MID LOW WIRE GIC SPI 34 HIGH/CPU-0
-                    <0x1800 0 0 1 &gic 0 3 4>, // HIGH MID LOW WIRE GIC SPI 35 HIGH/CPU-0
-                    <0x2000 0 0 1 &gic 0 4 4>, // HIGH MID LOW WIRE GIC SPI 36 HIGH/CPU-0
-                    <0x2800 0 0 1 &gic 0 5 4>; // HIGH MID LOW WIRE GIC SPI 37 HIGH/CPU-0
+    interrupt-map = <0x0000 0 0 1 &gic 0 0 4>,  // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
+                    <0x0800 0 0 1 &gic 0 1 4>,  // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
+                    <0x1000 0 0 1 &gic 0 2 4>,  // HIGH MID LOW WIRE GIC SPI 34 HIGH/CPU-0
+                    <0x1800 0 0 1 &gic 0 3 4>,  // HIGH MID LOW WIRE GIC SPI 35 HIGH/CPU-0
+                    <0x2000 0 0 1 &gic 0 4 4>,  // HIGH MID LOW WIRE GIC SPI 36 HIGH/CPU-0
+                    <0x2800 0 0 1 &gic 0 5 4>,  // HIGH MID LOW WIRE GIC SPI 37 HIGH/CPU-0
+                    <0x3000 0 0 1 &gic 0 6 4>,  // HIGH MID LOW WIRE GIC SPI 38 HIGH/CPU-0
+                    <0x3800 0 0 1 &gic 0 7 4>,  // HIGH MID LOW WIRE GIC SPI 39 HIGH/CPU-0
+                    <0x4000 0 0 1 &gic 0 8 4>,  // HIGH MID LOW WIRE GIC SPI 40 HIGH/CPU-0
+                    <0x4800 0 0 1 &gic 0 9 4>,  // HIGH MID LOW WIRE GIC SPI 41 HIGH/CPU-0
+                    <0x5000 0 0 1 &gic 0 10 4>, // HIGH MID LOW WIRE GIC SPI 42 HIGH/CPU-0
+                    <0x5800 0 0 1 &gic 0 11 4>; // HIGH MID LOW WIRE GIC SPI 43 HIGH/CPU-0
     #address-cells = <3>;
     #size-cells = <2>;
     #interrupt-cells = <1>;

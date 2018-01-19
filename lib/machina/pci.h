@@ -17,7 +17,7 @@
 // clang-format off
 
 #define PCI_DEVICE_INVALID          UINT16_MAX
-#define PCI_MAX_DEVICES             6u
+#define PCI_MAX_DEVICES             12u
 #define PCI_MAX_BARS                2u
 
 // PCI configuration constants.
