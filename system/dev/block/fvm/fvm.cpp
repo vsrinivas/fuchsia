@@ -954,17 +954,17 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
         size_t vslice = vslice_start + i;
         uint32_t pslice = SliceGetLocked(vslice);
 
-        uint64_t vmo_offset;
+        uint64_t vmo_offset = txn->vmo_offset;
         zx_off_t length;
         if (vslice == vslice_start) {
             length = fbl::round_up(txn->offset + 1, slice_size) - txn->offset;
-            vmo_offset = 0;
+            vmo_offset += 0;
         } else if (vslice == vslice_end) {
             length = length_remaining;
-            vmo_offset = txn->length - length_remaining;
+            vmo_offset += txn->length - length_remaining;
         } else {
             length = slice_size;
-            vmo_offset = txns[0]->length + slice_size * (i - 1);
+            vmo_offset += txns[0]->length + slice_size * (i - 1);
         }
         ZX_DEBUG_ASSERT(length <= slice_size);
 

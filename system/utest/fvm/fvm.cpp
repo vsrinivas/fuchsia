@@ -1568,10 +1568,20 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
             size_t len_start = slice_size * 3 - info.block_size;
             size_t len_end = slice_size * 3 + info.block_size;
 
-            for (size_t dev_off = dev_off_start; dev_off <= dev_off_end; dev_off += info.block_size) {
-                for (size_t len = len_start; len <= len_end; len += info.block_size) {
-                    ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, dev_off, len));
-                    ASSERT_TRUE(vc->CheckRead(vb.get(), 0, dev_off, len));
+            // Test a variety of:
+            // Starting device offsets,
+
+            size_t bsz = info.block_size;
+            for (size_t dev_off = dev_off_start; dev_off <= dev_off_end; dev_off += bsz) {
+                printf("  Testing non-contiguous write/read starting at offset: %zu\n", dev_off);
+                // Operation lengths,
+                for (size_t len = len_start; len <= len_end; len += bsz) {
+                    printf("    Testing operation of length: %zu\n", len);
+                    // and starting VMO offsets
+                    for (size_t vmo_off = 0; vmo_off < 3 * bsz; vmo_off += bsz) {
+                        ASSERT_TRUE(vc->CheckWrite(vb.get(), vmo_off, dev_off, len));
+                        ASSERT_TRUE(vc->CheckRead(vb.get(), vmo_off, dev_off, len));
+                    }
                 }
             }
         }
