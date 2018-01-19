@@ -10,7 +10,7 @@ if jiri_manifest != ""
   " Get the current build dir from fx
   let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
   " Tell YCM where to find its configuration script
-  let g:ycm_global_ycm_extra_conf = g:fuchsia_dir . '/scripts/vim/ycm_extra_conf.py'
+  let g:ycm_global_ycm_extra_conf = g:fuchsia_dir . '/scripts/youcompleteme/ycm_extra_conf.py'
 
   let &runtimepath = g:fuchsia_dir . "/scripts/vim/," .
         \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/," .
