@@ -498,10 +498,9 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     }
 
     const common::MacAddr& mymac = device_->GetState()->address();
-    infof("NIC %s associated with \"%s\"(%s) in protocol %s\n", MACSTR(mymac), bss_->ssid.data(),
-          MACSTR(bssid),
-          // TODO(porce): Improve this by referring to the associated BSS data struct
-          IsHTReady() ? "802.11n HT 2.4GHz" : "802.11g 2.4GHz");
+    infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", mymac.ToString().c_str(),
+          bss_->ssid.data(), bssid.ToString().c_str(), common::ChanStr(channel()).c_str(),
+          common::BandStr(channel()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
 
     return ZX_OK;
 }

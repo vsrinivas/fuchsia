@@ -270,37 +270,41 @@ zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_S
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing dispatcher_.
 zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
     // TODO(porce): Implement == operator for wlan_channel_t, or an equality test function.
+
+    char buf[80];
+    snprintf(buf, sizeof(buf), "channel set: from %s to %s",
+             common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str());
+
     if (chan.primary == state_->channel().primary && chan.cbw == state_->channel().cbw) {
-        infof("channel set: from %s to %s request suppressed\n",
-              common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str());
+        warnf("%s suppressed\n", buf);
         return ZX_OK;
     }
 
-    infof("channel set: from %s to %s attempinting..\n", common::ChanStr(state_->channel()).c_str(),
-          common::ChanStr(chan).c_str());
     zx_status_t status = dispatcher_.PreChannelChange(chan);
     if (status != ZX_OK) {
-        errorf("channel set: from %s to %s prechange failed (status %d)\n",
-               common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str(), status);
+        errorf("%s prechange failed (status %d)\n", buf, status);
         return status;
     }
 
-    // TODO(porce): Handle when status != ZX_OK
     status = wlanmac_proxy_.SetChannel(0u, &chan);
+    if (status != ZX_OK) {
+        // TODO(porce): Revert the successful PreChannelChange()
+        errorf("%s change failed (status %d)\n", buf, status);
+        return status;
+    }
 
-    // TODO(porce): Make it explicit when status != ZX_OK, how to recover from
-    // the actions of PreChannelChange().
-    if (status == ZX_OK) { state_->set_channel(chan); }
+    state_->set_channel(chan);
 
-    zx_status_t post_status = dispatcher_.PostChannelChange();
+    status = dispatcher_.PostChannelChange();
     if (status != ZX_OK) {
         // TODO(porce): Revert the successful PreChannelChange(), wlanmac_proxy_.SetChannel(),
         // and state_->set_channel()
-        errorf("channel set: from %s to %s postchange failed (status %d)\n",
-               common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str(), status);
+        errorf("%s postchange failed (status %d)\n", buf, status);
         return status;
     }
-    return post_status;
+
+    verbosef("%s succeeded\n", buf);
+    return ZX_OK;
 }
 
 zx_status_t Device::SetStatus(uint32_t status) {

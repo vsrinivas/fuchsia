@@ -151,5 +151,9 @@ std::string ChanStrLong(const wlan_channel_t& chan) {
     return std::string(buf);
 }
 
+std::string BandStr(const wlan_channel_t& chan) {
+    return Is2Ghz(chan) ? "2GHz" : "5GHz";
+}
+
 }  // namespace common
 }  // namespace wlan
