@@ -5,11 +5,11 @@
 package wlan
 
 var supportedChannels = []uint8{
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+	// 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
 	36, 40, 44, 48,
 	// TODO(tkilbourn): enable DFS channels
 	// 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,
-	149, 153, 157, 161, 165,
+	// 149, 153, 157, 161, 165, // TODO(NET-392)
 }
 
 var supportedChannelMap map[uint8]struct{}
