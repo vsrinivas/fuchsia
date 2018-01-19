@@ -56,8 +56,8 @@ public:
     // The number of key slots available for a single zxcrypt volume.
     static const slot_num_t kNumSlots;
 
-    // The number of pairs of blocks reserved for volume metadata.
-    static const size_t kReservedPairs;
+    // The number of FVM-like slices reserved for volume metadata.
+    static const size_t kReservedSlices;
 
     ~Volume();
 
@@ -69,9 +69,9 @@ public:
     // |fd|.
     static zx_status_t Create(fbl::unique_fd fd, const crypto::Bytes& root_key);
 
-    // Opens a zxcrypt volume on the block device described by |fd| using the |key|
-    // corresponding to given key |slot|.  The |fd| parameter means this factory method can be used
-    // from libzxcrypt.  This method takes ownership of |fd|.
+    // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
+    // given key |slot|.  The |fd| parameter means this method can be used from libzxcrypt. This
+    // method takes ownership of |fd|.
     static zx_status_t Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_num_t slot,
                             fbl::unique_ptr<Volume>* out);
 
@@ -90,24 +90,24 @@ public:
     ////////////////
     // Driver methods
 
-    // Opens a zxcrypt volume on the block device described by |dev| using the |key|
-    // corresponding to given key |slot|.  The |dev| parameter means this factory method can be used
-    // from the zxcrypt driver.
+    // Opens a zxcrypt volume on the block device described by |dev| using the |key| corresponding
+    // to given key |slot|.  The |dev| parameter means this method can be used from the driver.
     static zx_status_t Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t slot,
                             fbl::unique_ptr<Volume>* out);
 
-    // Copies the block device and FVM information.  If the parent device is not an FVM partition,
-    // the FVM information is synthetically generated.  The parent device's FVM support can be
-    // determined using |HasFVM|.
-    zx_status_t GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm);
+    // Copies the block device information.  This will differ from the block info retrieved directly
+    // for parents with small block sizes; zxcrypt volumes coalesce blocks smaller than a page into
+    // page-sized blocks.
+    zx_status_t GetBlockInfo(block_info_t* out_block) const;
 
-    // Indicates if the underlying block device is an FVM partition.
-    bool HasFVM() const { return has_fvm_; }
+    // Copies the FVM information.  If the parent device is not an FVM partition, the FVM
+    // information is synthetically generated.  The parent device's actual FVM support is indicated
+    // |out_has_fvm|.
+    zx_status_t GetFvmInfo(fvm_info_t* out_fvm, bool* out_has_fvm) const;
 
-    // Returns the data key and IV in |out_key| and |out_iv|, respectively.  These can be used to
-    // initialize a data cipher.  This method can only be called if the volume belongs to the
-    // zxcrypt driver.
-    zx_status_t BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out_decrypt);
+    // Uses the data key material to initialize |cipher| for the given |direction|.  This method
+    // must only be called from the zxcrypt driver.
+    zx_status_t Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Volume);
@@ -137,8 +137,8 @@ private:
     // Resets the superblock offset to the first location (block 0).
     zx_status_t Begin();
 
-    // Advances the offset to the next superblock location.  Returns ZX_ERR_STOP if no more offsets
-    // available; ZX_ERR_NEXT otherwise.
+    // Advances the superblock offset to the next volume location.  Returns ZX_ERR_STOP if no more
+    // offsets available; ZX_ERR_NEXT otherwise.
     zx_status_t Next();
 
     // Creates a new volume, with a new instance GUID and data key and IV, and seals it with the
@@ -178,7 +178,7 @@ private:
     zx_device_t* dev_;
     fbl::unique_fd fd_;
 
-    // The underlying device block and FVM information, and a flag to indicate whether the
+    // The underlying device block and FVM  information and a flag to indicates whether the
     // underlying block device supports FVM ioctls.
     block_info_t blk_;
     fvm_info_t fvm_;

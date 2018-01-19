@@ -26,12 +26,6 @@ bool TestCreate(Volume::Version version, bool fvm) {
 
     TestDevice device;
     ASSERT_OK(device.GenerateKey(version));
-    // These expected failures aren't possible on FVM, because fvm_init checks for them and fails.
-    if (!fvm) {
-        // Small device
-        ASSERT_OK(device.Create(kBlockSize, kBlockSize, fvm));
-        EXPECT_ZX(Volume::Create(fbl::move(device.parent()), device.key()), ZX_ERR_NO_SPACE);
-    }
 
     // Invalid file descriptor
     fbl::unique_fd bad_fd;
@@ -99,7 +93,6 @@ DEFINE_EACH_DEVICE(TestOpen);
 
 bool TestEnroll(Volume::Version version, bool fvm) {
     BEGIN_TEST;
-
     TestDevice device;
     ASSERT_OK(device.DefaultInit(version, fvm));
 

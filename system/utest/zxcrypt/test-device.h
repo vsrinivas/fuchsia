@@ -91,6 +91,8 @@ private:
     // Tears down the current ramdisk and all its children.
     void Reset();
 
+    // Indicates if create_ramdisk was called successfully.
+    bool has_ramdisk_;
     // The pathname of the ramdisk
     char ramdisk_path_[PATH_MAX];
     // The pathname of the FVM partition.

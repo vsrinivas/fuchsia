@@ -118,7 +118,7 @@ zx_status_t WaitForBlockDevice(char* driver, fbl::unique_fd* out_fd) {
 
 } // namespace
 
-TestDevice::TestDevice() : block_size_(0) {
+TestDevice::TestDevice() : has_ramdisk_(false), block_size_(0) {
     Reset();
 }
 
@@ -226,6 +226,7 @@ zx_status_t TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
         xprintf("create_ramdisk(%zu, %zu, %p) failed\n", block_size, count, ramdisk_path_);
         return ZX_ERR_IO;
     }
+    has_ramdisk_ = true;
     if ((rc = WaitForBlockDevice(GetBlockDriver(ramdisk_path_), &ramdisk_)) != ZX_OK) {
         return rc;
     }
@@ -357,11 +358,12 @@ zx_status_t TestDevice::Read(const fbl::unique_fd& fd, uint8_t* buf, zx_off_t of
 void TestDevice::Reset() {
     fvm_part_.reset();
     ramdisk_.reset();
-    if (strnlen(ramdisk_path_, PATH_MAX) != 0) {
+    if (has_ramdisk_) {
         destroy_ramdisk(ramdisk_path_);
     }
     memset(ramdisk_path_, 0, sizeof(ramdisk_path_));
     memset(fvm_part_path_, 0, sizeof(fvm_part_path_));
+    has_ramdisk_ = false;
 }
 
 } // namespace testing

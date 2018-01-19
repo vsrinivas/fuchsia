@@ -15,6 +15,7 @@
 #include <crypto/hkdf.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
@@ -34,11 +35,11 @@
 namespace zxcrypt {
 
 // Several copies of the metadata for a zxcrypt volume is saved at the beginning and end of the
-// devices.  The number of copies is given by |kReservedPairs|, and the locations of each block can
-// be iterated through using |Begin| and |Next|.  The metadata block, or superblock, consists of a
-// fixed type GUID, an instance GUID, a 32-bit version, a set of "key slots"  The key slots are data
-// cipher key material encrypted with a wrapping crypto::AEAD key derived from the caller-provided
-// root key and specific slot.
+// devices.  The number of copies is given by |kMetadataBlocks * kReservedSlices|, and the locations
+// of each block can be iterated through using |Begin| and |Next|.  The metadata block, or
+// superblock, consists of a fixed type GUID, an instance GUID, a 32-bit version, a set of "key
+// slots"  The key slots are data cipher key material encrypted with a wrapping crypto::AEAD key
+// derived from the caller-provided root key and specific slot.
 
 // Determines what algorithms are in use when creating new zxcrypt devices.
 const Volume::Version Volume::kDefaultVersion = Volume::kAES256_XTS_SHA256;
@@ -48,12 +49,15 @@ const Volume::Version Volume::kDefaultVersion = Volume::kAES256_XTS_SHA256;
 // |ZX_ERR_NOT_SUPPORTED|.
 const slot_num_t Volume::kNumSlots = 16;
 
-// The number of metadata blocks at each end of the device.  That is, there are |kReservedPairs|
-// blocks reserved at the start of the device, and another |kReservedPairs| blocks reserved at the
-// end of the device.
-const size_t Volume::kReservedPairs = 2;
+// The number of FVM-like slices reserved at the start of the device, each holding |kMetadataBlocks|
+// copies of the superblock.
+const size_t Volume::kReservedSlices = 2;
 
 namespace {
+
+// The number of metadata blocks in a reserved metadata slice, each holding a copy of the
+// superblock.
+const size_t kMetadataBlocks = 2;
 
 // HKDF labels
 const size_t kMaxLabelLen = 16;
@@ -251,7 +255,7 @@ zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t 
     return ZX_OK;
 }
 
-zx_status_t Volume::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
+zx_status_t Volume::GetBlockInfo(block_info_t* out_blk) const {
     if (!block_.get()) {
         xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
@@ -259,28 +263,36 @@ zx_status_t Volume::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
     if (out_blk) {
         memcpy(out_blk, &blk_, sizeof(blk_));
     }
-    if (out_fvm) {
-        memcpy(out_fvm, &fvm_, sizeof(fvm_));
-    }
-
     return ZX_OK;
 }
 
-zx_status_t Volume::BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out_decrypt) {
+zx_status_t Volume::GetFvmInfo(fvm_info_t* out_fvm, bool* out_has_fvm) const {
+    if (!block_.get()) {
+        xprintf("not initialized\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    if (out_fvm) {
+        memcpy(out_fvm, &fvm_, sizeof(fvm_));
+    }
+    if (out_has_fvm) {
+        *out_has_fvm = has_fvm_;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Volume::Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(dev_); // Cannot bind from library
 
-    if (!out_encrypt || !out_decrypt) {
-        xprintf("bad parameter(s): out_encrypt=%p, out_decrypt=%p\n", out_encrypt, out_decrypt);
+    if (!cipher) {
+        xprintf("bad parameter(s): cipher=%p\n", cipher);
         return ZX_ERR_INVALID_ARGS;
     }
     if (!block_.get()) {
         xprintf("not initialized\n");;
         return ZX_ERR_BAD_STATE;
     }
-    uint64_t tweakable = UINT64_MAX / blk_.block_size;
-    if ((rc = out_encrypt->InitEncrypt(cipher_, data_key_, data_iv_, tweakable)) != ZX_OK ||
-        (rc = out_decrypt->InitDecrypt(cipher_, data_key_, data_iv_, tweakable)) != ZX_OK) {
+    if ((rc = cipher->Init(cipher_, direction, data_key_, data_iv_, blk_.block_size)) != ZX_OK) {
         return rc;
     }
 
@@ -310,6 +322,14 @@ zx_status_t Volume::Init() {
         xprintf("failed to get block info: %s\n", zx_status_get_string(rc));
         return rc;
     }
+    // Sanity check
+    safeint::CheckedNumeric<uint64_t> size = blk_.block_size;
+    size *= blk_.block_count;
+    if (!size.IsValid()) {
+        xprintf("invalid block device: size=%" PRIu32 ", count=%" PRIu64 "\n", blk_.block_size,
+                blk_.block_count);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     // Adjust block size and count to be page-aligned
     if (blk_.block_size < PAGE_SIZE) {
         if (PAGE_SIZE % blk_.block_size != 0) {
@@ -328,43 +348,46 @@ zx_status_t Volume::Init() {
     if ((rc = block_.Resize(blk_.block_size)) != ZX_OK) {
         return rc;
     }
-
     safeint::CheckedNumeric<size_t> reserved_size = blk_.block_size;
-    reserved_size *= kReservedPairs;
+    reserved_size *= kMetadataBlocks;
 
     // Get FVM info
     switch ((rc = Ioctl(IOCTL_BLOCK_FVM_QUERY, nullptr, 0, &fvm_, sizeof(fvm_)))) {
     case ZX_OK: {
         // This *IS* an FVM partition.
-        if (fvm_.slice_size < reserved_size.ValueOrDie() || fvm_.vslice_count < 2) {
+        if (fvm_.slice_size < reserved_size.ValueOrDie() || fvm_.vslice_count <= kReservedSlices) {
             xprintf("bad device: slice_size=%zu, vslice_count=%zu\n", fvm_.slice_size,
                     fvm_.vslice_count);
             return ZX_ERR_NO_SPACE;
         }
 
-        // Check if last slice is allocated
+        // Ensure first kReservedSlices + 1 slices are allocated
+        size_t required = kReservedSlices + 1;
+        size_t range = 1;
         query_request_t request;
-        request.count = 1;
-        request.vslice_start[0] = fvm_.vslice_count - 1;
         query_response_t response;
-        if ((rc = Ioctl(IOCTL_BLOCK_FVM_VSLICE_QUERY, &request, sizeof(request), &response,
-                        sizeof(response))) < 0) {
-            xprintf("failed to query FVM vslice: %s\n", zx_status_get_string(rc));
-            return rc;
-        }
-        if (response.count == 0 || response.vslice_range[0].count == 0) {
-            xprintf("invalid response\n");;
-            return ZX_ERR_INTERNAL;
-        }
-
-        // Allocate last slice if needed
         extend_request_t extend;
-        extend.offset = fvm_.vslice_count - 1;
-        extend.length = 1;
-        if (!response.vslice_range[0].allocated &&
-            (rc = Ioctl(IOCTL_BLOCK_FVM_EXTEND, &extend, sizeof(extend), nullptr, 0)) < 0) {
-            xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));
-            return rc;
+        for (size_t i = 0; i < required; i += range) {
+            // Ask about the next contiguous range
+            request.count = 1;
+            request.vslice_start[0] = i + 1;
+            if ((rc = Ioctl(IOCTL_BLOCK_FVM_VSLICE_QUERY, &request, sizeof(request), &response,
+                            sizeof(response))) < 0 ||
+                response.count == 0 || (range = response.vslice_range[0].count) == 0) {
+                xprintf("ioctl_block_fvm_vslice_query failed: %s\n", zx_status_get_string(rc));
+                return rc;
+            }
+            // If already allocated, continue
+            if (response.vslice_range[0].allocated) {
+                continue;
+            };
+            // Otherwise, allocate it
+            extend.offset = i + 1;
+            extend.length = fbl::min(required - i, range);
+            if ((rc = Ioctl(IOCTL_BLOCK_FVM_EXTEND, &extend, sizeof(extend), nullptr, 0)) < 0) {
+                xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));
+                return rc;
+            }
         }
 
         has_fvm_ = true;
@@ -373,14 +396,15 @@ zx_status_t Volume::Init() {
 
     case ZX_ERR_NOT_SUPPORTED:
         // This is *NOT* an FVM partition.
-        if ((blk_.block_count / 2) < kReservedPairs) {
+        if ((blk_.block_count / kReservedSlices) < kMetadataBlocks) {
             xprintf("bad device: block_size=%u, block_count=%" PRIu64 "\n", blk_.block_size,
                     blk_.block_count);
             return ZX_ERR_NO_SPACE;
         }
 
-        // Set "slice" parameters to allow us to pretend it is FVM and use one set of logic.
-        fvm_.vslice_count = blk_.block_count / kReservedPairs;
+        // Set "slice" parameters to allow us to pretend it is FVM and use one set
+        // of logic.
+        fvm_.vslice_count = blk_.block_count / kMetadataBlocks;
         fvm_.slice_size = reserved_size.ValueOrDie();
         has_fvm_ = false;
         break;
@@ -390,9 +414,9 @@ zx_status_t Volume::Init() {
         return rc;
     }
 
-    // Adjust counts to reflect the two reserved slices
-    fvm_.vslice_count -= 2;
-    blk_.block_count -= (fvm_.slice_size / blk_.block_size) * 2;
+    // Adjust counts to reflect the reserved slices
+    fvm_.vslice_count -= kReservedSlices;
+    blk_.block_count -= (fvm_.slice_size / blk_.block_size) * kReservedSlices;
     cleanup.cancel();
     return ZX_OK;
 }
@@ -494,13 +518,10 @@ zx_status_t Volume::Next() {
     if (slice_offset != 0 && slice_offset < fvm_.slice_size) {
         return ZX_ERR_NEXT;
     }
-    // If finished with the first slice, move to the last slice.
-    if (offset_ <= fvm_.slice_size) {
-        offset_ = (fvm_.vslice_count + 1) * fvm_.slice_size;
-        return ZX_ERR_NEXT;
-    }
-    // Finished last slice; no more offsets
-    return ZX_ERR_STOP;
+    // Move to next slice
+    offset_ -= slice_offset;
+    offset_ += fvm_.slice_size;
+    return offset_ / fvm_.slice_size < kReservedSlices ? ZX_ERR_NEXT : ZX_ERR_STOP;
 }
 
 zx_status_t Volume::CreateBlock() {
@@ -544,7 +565,8 @@ zx_status_t Volume::CreateBlock() {
 zx_status_t Volume::CommitBlock() {
     zx_status_t rc;
 
-    // Make a copy to compare the read result to; this reduces the number of writes we must do.
+    // Make a copy to compare the read result to; this reduces the number of
+    // writes we must do.
     crypto::Bytes block;
     if ((rc = block.Copy(block_)) != ZX_OK) {
         return rc;
@@ -645,9 +667,9 @@ zx_status_t Volume::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
 
 zx_status_t Volume::Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) {
     zx_status_t rc;
-    // Don't include debug messages here; some errors (e.g. ZX_ERR_NOT_SUPPORTED) are expected under
-    // certain conditions (e.g. calling FVM ioctls on a non-FVM device).  Handle error reporting at
-    // the call sites instead.
+    // Don't include debug messages here; some errors (e.g. ZX_ERR_NOT_SUPPORTED)
+    // are expected under certain conditions (e.g. calling FVM ioctls on a non-FVM
+    // device).  Handle error reporting at the call sites instead.
     if (dev_) {
         size_t actual;
         if ((rc = device_ioctl(dev_, op, in, in_len, out, out_len, &actual)) < 0) {
