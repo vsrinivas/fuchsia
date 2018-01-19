@@ -1,0 +1,82 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module wlan.phy;
+
+enum ChannelBandwidth {
+  CBW20,
+  CBW40,
+  CBW40ABOVE = CBW40,
+  CBW40BELOW,
+  CBW80,
+  CBW160,
+  CBW80P80,
+};
+
+struct Channel {
+  uint8 primary;
+  uint8 cbw;
+  uint8 secondary80;
+};
+
+enum SupportedPhy {
+  DSSS,
+  CCK,
+  OFDM,
+  HT_MIXED,
+  HT_GREENFIELD,
+  VHT,
+};
+
+enum DriverFeature {
+  SCAN_OFFLOAD,
+  RATE_SELECTION,
+};
+
+enum MacMode {
+  STA,
+  AP,
+};
+
+enum Capability {
+  SHORT_PREAMBLE,
+  SPECTRUM_MGMT,
+  SHORT_SLOT_TIME,
+  RADIO_MGMT,
+};
+
+struct HtCapabilities {
+  uint16 ht_capability_info;
+  uint8 ampdu_params;
+  array<uint8, 16> supported_mcs_set;
+  uint16 ht_ext_capabilities;
+  uint32 tx_beamforming_capabilities;
+  uint8 asel_capabilities;
+};
+
+struct VhtCapabilities {
+  uint32 vht_capability_info;
+  uint64 supported_vht_mcs_and_nss_set;
+};
+
+struct ChannelList {
+  uint16 base_freq;
+  array<uint8> channels;
+};
+
+struct BandInfo {
+  string description;
+  HtCapabilities ht_caps;
+  VhtCapabilities? vht_caps;
+  array<uint8, 12> basic_rates;
+  ChannelList supported_channels;
+};
+
+struct WlanInfo {
+  array<SupportedPhy> supported_phys;
+  array<DriverFeature> driver_features;
+  array<MacMode> mac_modes;
+  array<Capability> caps;
+  array<BandInfo> bands;
+};

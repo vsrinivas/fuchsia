@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("wlan_protocol_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("protocol") {
+  sources = [
+    "include/wlan/protocol/ioctl.h",
+    "include/wlan/protocol/device.h",
+  ]
+
+  public_configs = [ ":wlan_protocol_config" ]
+}
