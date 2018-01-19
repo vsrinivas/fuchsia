@@ -22,6 +22,7 @@ usage() {
     echo "    -d Directory to clone toybox into."
     echo "    -s Directory to clone dash into."
     echo "    -o Initrd output path."
+    echo "    -p Disk image output path."
     echo ""
     exit 1
 }
@@ -155,7 +156,7 @@ declare FORCE="${FORCE:-false}"
 declare BUILD_INITRD="${BUILD_INITRD:-false}"
 declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 
-while getopts "fird:s:o:" opt; do
+while getopts "fird:s:o:p:" opt; do
   case "${opt}" in
   f) FORCE="true" ;;
   i) BUILD_INITRD="true" ;;
@@ -163,6 +164,7 @@ while getopts "fird:s:o:" opt; do
   d) TOYBOX_SRC_DIR="${OPTARG}" ;;
   s) DASH_SRC_DIR="${OPTARG}" ;;
   o) INITRD_OUT="${OPTARG}" ;;
+  p) DISK_OUT="${OPTARG}" ;;
   *) usage ;;
   esac
 done
@@ -238,4 +240,7 @@ fi
 if [[ "${BUILD_ROOTFS}" = "true" ]]; then
   package_rootfs "${TOYBOX_SYSROOT}" "${TOYBOX_ROOTFS}"
   echo "filesystem image at ${TOYBOX_ROOTFS}"
+  if [ -n "${DISK_OUT}" ]; then
+    mv "${TOYBOX_ROOTFS}" "${DISK_OUT}"
+  fi
 fi

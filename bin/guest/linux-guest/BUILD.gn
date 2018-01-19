@@ -10,10 +10,40 @@ if (target_cpu == "arm64") {
   linux_platform = "x86"
 }
 
+linux_dir = "$target_out_dir/linux/source"
+sysroot_dir = "$target_out_dir/linux/sysroot"
+linux_image = "$target_out_dir/linux/Image"
+disk_image = "$target_out_dir/linux/disk.img"
+initrd_image = "$target_out_dir/linux/initrd.img"
+
+# Build a simple toybox sysroot that is packaged both as an initrd and
+# as an ext2 filesystem image.
+action("sysroot") {
+  visibility = [ ":*" ]
+
+  script = "//garnet/bin/guest/scripts/mksysroot.sh"
+  args = [
+    "-r",
+    "-p",
+    rebase_path("$disk_image"),
+    "-i",
+    "-o",
+    rebase_path("$initrd_image"),
+    "-d",
+    rebase_path("$sysroot_dir/toybox"),
+    "-s",
+    rebase_path("$sysroot_dir/dash"),
+    "$linux_platform",
+  ]
+
+  outputs = [
+    disk_image,
+    initrd_image,
+  ]
+}
+
 action("kernel") {
   visibility = [ ":*" ]
-  linux_dir = "$target_out_dir/linux/source"
-  linux_image = "$target_out_dir/linux/Image"
 
   script = "//garnet/bin/guest/scripts/mklinux.sh"
   args = [
@@ -25,35 +55,13 @@ action("kernel") {
   ]
 
   outputs = [
-    "$linux_image",
-  ]
-}
-
-action("initrd") {
-  visibility = [ ":*" ]
-  sysroot_dir = "$target_out_dir/linux/sysroot"
-  initrd_image = "$target_out_dir/linux/initrd.img"
-
-  script = "//garnet/bin/guest/scripts/mksysroot.sh"
-  args = [
-    "-i",
-    "-d",
-    rebase_path("$sysroot_dir/toybox"),
-    "-s",
-    rebase_path("$sysroot_dir/dash"),
-    "-o",
-    rebase_path("$initrd_image"),
-    "$linux_platform",
-  ]
-
-  outputs = [
-    "$initrd_image",
+    linux_image,
   ]
 }
 
 guest_app("linux-guest") {
   deps = [
-    ":initrd",
+    ":sysroot",
     ":kernel",
   ]
 
@@ -63,8 +71,13 @@ guest_app("linux-guest") {
     cmdline = "earlycon=uart,io,0x3f8 console=ttyS0 console=tty0 io_delay=none clocksource=tsc"
   }
 
-  kernel_outputs = get_target_outputs(":kernel")
-  initrd_outputs = get_target_outputs(":initrd")
-  kernel = kernel_outputs[0]
-  ramdisk = initrd_outputs[0]
+  kernel = linux_image
+  ramdisk = initrd_image
+
+  disk_name = "filesystem.img"
+  resources = [ {
+        path = rebase_path(disk_image)
+        dest = "${disk_name}"
+      } ]
+  block_devices = [ "/pkg/data/${disk_name},ro" ]
 }
