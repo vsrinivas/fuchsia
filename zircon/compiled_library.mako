@@ -68,12 +68,17 @@ group("${data.name}") {
 }
 
 sdk_atom("${data.name}_sdk") {
+  domain = "c-pp"
+  name = "${data.name}"
+
   % if data.is_shared:
   prefix = "shared"
   % else:
   prefix = "static"
   % endif
-  name = "cpp:compiled_$prefix:${data.name}"
+  tags = [
+    "type:compiled_$prefix",
+  ]
 
   files = [
     % for dest, source in sorted(data.includes.iteritems()):

@@ -29,7 +29,12 @@ group("sysroot") {
 }
 
 sdk_atom("sysroot_sdk") {
+  domain = "c-pp"
   name = "sysroot"
+
+  tags = [
+    "type:sysroot",
+  ]
 
   files = [
     % for path, file in sorted(data.files.iteritems()):

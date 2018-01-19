@@ -13,7 +13,7 @@ import("//build/cpp/sdk_library.gni")
 #
 #   sdk_name (optional)
 #     Name of the library in the SDK.
-#     If not specified, the GN target's short name is used.
+#     If not specified, a name is inferred from the target's label.
 
 template("sdk_shared_library") {
 

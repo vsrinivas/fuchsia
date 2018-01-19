@@ -13,7 +13,14 @@
 #
 #   name (optional)
 #     Name of the element.
-#     Defaults to the GN target name. Must be unique within the given domain.
+#     Must be unique within the given domain.
+#
+#   name_file (optional)
+#     Path to a file containing the name of the element.
+#     This should be used when the element's name requires some computation in
+#     its own build target.
+#
+#     NOTE: Exactly one of `name` or `name_file` must be set.
 #
 #   files (optional)
 #     List of scopes describing the contents of this element.
@@ -68,9 +75,18 @@ template("sdk_atom") {
   }
   domain_name = invoker.domain
 
-  atom_name = target_name
   if (defined(invoker.name)) {
-    atom_name = invoker.name
+    name_args = [
+      "--name",
+      invoker.name,
+    ]
+  } else if (defined(invoker.name_file)) {
+    name_args = [
+      "--name-file",
+      rebase_path(invoker.name_file),
+    ]
+  } else {
+    assert(false, "Must specify either name or name_file")
   }
 
   gn_deps = []
@@ -137,11 +153,9 @@ template("sdk_atom") {
       manifest,
     ]
 
-    args = [
+    args = name_args + [
       "--domain",
       domain_name,
-      "--name",
-      atom_name,
       "--out",
       rebase_path(manifest),
       "--base",

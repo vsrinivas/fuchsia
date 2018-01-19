@@ -74,9 +74,11 @@ def main():
     parser.add_argument('--domain',
                         help='Name of the domain the element belongs to',
                         required=True)
-    parser.add_argument('--name',
-                        help='Name of the element',
-                        required=True)
+    name_group = parser.add_mutually_exclusive_group(required=True)
+    name_group.add_argument('--name',
+                            help='Name of the element')
+    name_group.add_argument('--name-file',
+                            help='Path to the file containing the name of the element')
     parser.add_argument('--out',
                         help='Path to the output file',
                         required=True)
@@ -96,6 +98,12 @@ def main():
                         help='List of tags for the included elements',
                         nargs='*')
     args = parser.parse_args()
+
+    if (args.name):
+	name = args.name
+    else:
+        with open(args.name_file, 'r') as name_file:
+            name = name_file.read()
 
     # Gather the definitions of other atoms this atom depends on.
     (deps, atoms) = gather_dependencies(args.deps)
@@ -124,7 +132,7 @@ def main():
 
     id = {
         'domain': args.domain,
-        'name': args.name,
+        'name': name,
     }
     atoms.update([Atom({
         'id': id,
