@@ -14,19 +14,17 @@ __BEGIN_CDECLS
 
 typedef enum camera_cmd {
     // Commands sent on the stream channel.
-    CAMERA_STREAM_CMD_GET_FORMATS      = 0x1000,
-    CAMERA_STREAM_CMD_SET_FORMAT       = 0x1001,
+    CAMERA_STREAM_CMD_GET_FORMATS = 0x1000,
+    CAMERA_STREAM_CMD_SET_FORMAT  = 0x1001,
 
-    // Commands sent on the ring buffer channel
-    CAMERA_RB_CMD_GET_DATA_BUFFER      = 0x2000,
-    CAMERA_RB_CMD_GET_METADATA_BUFFER  = 0x2001,
-    CAMERA_RB_CMD_START                = 0x2002,
-    CAMERA_RB_CMD_STOP                 = 0x2003,
-    CAMERA_RB_CMD_FRAME_LOCK           = 0x2004,
-    CAMERA_RB_CMD_FRAME_RELEASE        = 0x2005,
+    // Commands sent on the video buffer channel
+    CAMERA_VB_CMD_SET_BUFFER      = 0x2000,
+    CAMERA_VB_CMD_START           = 0x2001,
+    CAMERA_VB_CMD_STOP            = 0x2002,
+    CAMERA_VB_CMD_FRAME_RELEASE   = 0x2003,
 
-    // Async notifications sent on the ring buffer channel.
-    CAMERA_RB_METADATA_POSITION_NOTIFY = 0x3000,
+    // Async notifications sent on the video buffer channel.
+    CAMERA_VB_FRAME_NOTIFY        = 0x3000,
 } camera_cmd_t;
 
 // Common header for all camera requests and responses.
@@ -64,35 +62,34 @@ typedef enum camera_pixel_format {
 // in order to describe the formats supported by a video stream.
 typedef struct camera_video_format {
     camera_capture_type_t capture_type;
+    // The width, in pixels, of the decoded video.
     uint16_t width;
+    // The height, in pixels, of the decoded video.
     uint16_t height;
+    // The number of bytes per line of video.
+    uint32_t stride;
+    // The number of bits per pixel used to specify color in the decoded video.
     uint8_t bits_per_pixel;
     camera_pixel_format_t pixel_format;
-    // The frame rate is frames_per_nsec_numerator / frames_per_nsec_denominator.
-    uint32_t frames_per_nsec_numerator;
-    uint32_t frames_per_nsec_denominator;
+    // The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
+    uint32_t frames_per_sec_numerator;
+    uint32_t frames_per_sec_denominator;
 
     // To deal with temporal encoding we will need
     // uint32 frames_per_packet;
-} __PACKED camera_video_format_t;
+} camera_video_format_t;
 
 // camera_metadata_t
 //
 // Describes the characteristics of the corresponding frame in the
-// data ring buffer.
+// data buffer.
 typedef struct camera_metadata {
-    // Identifier for the frame.
-    uint32_t frame_number;
-    // The position (in bytes) of the frame in the data buffer.
-    uint32_t data_rb_offset;
-    // Number of bytes in the frame.
-    uint32_t frame_size;
-
-    camera_video_format_t format;
-
-    uint32_t presentation_timestamp;
-    uint32_t source_time_clock;
-    uint32_t clock_frequency_hz;
+    // The time at the midpoint of the capture operation, expressed in
+    // nanoseconds with respect to the monotonic clock.
+    // i.e. the average between the start and end times at which the sensor
+    // captured the frame, *not* the time that the driver received the frame
+    // from the hardware interconnect/interface.
+    int64_t timestamp;
 
     // Other fields such as zoom level may be added in future.
 } camera_metadata_t;
@@ -118,7 +115,6 @@ typedef struct camera_stream_cmd_get_formats_resp {
 } camera_stream_cmd_get_formats_resp_t;
 
 // CAMERA_STREAM_CMD_SET_FORMAT
-//
 // Sent by the client to indicate desired stream characteristics.
 typedef struct camera_stream_cmd_set_format_req {
     camera_cmd_hdr_t hdr;
@@ -130,114 +126,99 @@ typedef struct camera_stream_cmd_set_format_resp {
     camera_cmd_hdr_t hdr;
     zx_status_t result;
 
+    uint32_t max_frame_size;
+
     // NOTE: Upon success, a channel used to control the video buffer will also
     // be returned.
 } camera_stream_cmd_set_format_resp_t;
 
-// CAMERA_RB_CMD_GET_DATA_BUFFER
-typedef struct camera_rb_cmd_get_data_buffer_req {
+// CAMERA_VB_CMD_SET_BUFFER
+//
+// Set the data buffer for storing frames.
+// TODO(jocelyndang): consider whether the buffer should be provided by the
+// driver instead.
+typedef struct camera_vb_cmd_set_buffer_req {
     camera_cmd_hdr_t hdr;
-} camera_rb_cmd_get_data_buffer_req_t;
 
-typedef struct camera_rb_cmd_get_data_buffer_resp {
+    // NOTE: The client must transfer a VMO handle for the data buffer
+    // with read-write permissions. The size of the VMO should be an
+    // integral multiple of max_frame_size returned in SET_FORMAT.
+} camera_vb_cmd_set_buffer_req_t;
+
+typedef struct camera_vb_cmd_set_buffer_resp {
     camera_cmd_hdr_t hdr;
-    zx_status_t     result;
+    zx_status_t result;
+} camera_vb_cmd_set_buffer_resp_t;
 
-    uint32_t max_frame_size;
-    // NOTE: If result == ZX_OK, a VMO handle representing the data ring buffer to
-    // be used will be returned as well.  Clients may map this buffer with
-    // read-only permissions. The size of the VMO indicates there the wrap point
-    // of the ring (in bytes) is located in the VMO.
-    // This size *must* always be a integral multiple of the maximum frame size.
-    // Frames will be aligned to maximum frame size.
-} camera_rb_cmd_get_data_buffer_resp_t;
-
-// CAMERA_RB_CMD_GET_METADATA_BUFFER
-typedef struct camera_rb_cmd_get_metadata_buffer_req {
-    camera_cmd_hdr_t hdr;
-} camera_rb_cmd_get_metadata_buffer_req_t;
-
-typedef struct camera_rb_cmd_get_metadata_buffer_resp {
-    camera_cmd_hdr_t hdr;
-    zx_status_t     result;
-
-    // NOTE: If result == ZX_OK, a VMO handle representing the metadata ring buffer to
-    // be used will be returned as well.  Clients may map this buffer with
-    // read-only permissions. The size of the VMO indicates there the wrap point
-    // of the ring (in bytes) is located in the VMO.
-    // This size *must* always be an integral number of metadata entries.
-} camera_rb_cmd_get_metadata_buffer_resp_t;
-
-// CAMERA_RB_CMD_START
+// CAMERA_VB_CMD_START
 //
 // Starts the streaming of frames.
-typedef struct camera_rb_cmd_start_req {
+typedef struct camera_vb_cmd_start_req {
     camera_cmd_hdr_t hdr;
-} camera_rb_cmd_start_req_t;
+} camera_vb_cmd_start_req_t;
 
-typedef struct camera_rb_cmd_start_resp {
+typedef struct camera_vb_cmd_start_resp {
     camera_cmd_hdr_t hdr;
     zx_status_t     result;
-} camera_rb_cmd_start_resp_t;
+} camera_vb_cmd_start_resp_t;
 
-// CAMERA_RB_CMD_STOP
+// CAMERA_VB_CMD_STOP
 //
 // Stops the streaming of frames.
-typedef struct camera_rb_cmd_stop_req {
+typedef struct camera_vb_cmd_stop_req {
     camera_cmd_hdr_t hdr;
-} camera_rb_cmd_stop_req_t;
+} camera_vb_cmd_stop_req_t;
 
-typedef struct camera_rb_cmd_stop_resp {
-    camera_cmd_hdr_t hdr;
-    zx_status_t     result;
-} camera_rb_cmd_stop_resp_t;
-
-// CAMERA_RB_CMD_FRAME_LOCK
-//
-// Locks the specified frame. If successful, the driver will not overwrite the
-// specified frame until it receives a CAMERA_RB_CMD_FRAME_RELEASE command
-// for the frame.
-// Clients should lock frames for as short a duration as possible.
-typedef struct camera_rb_cmd_frame_lock_req {
-    camera_cmd_hdr_t hdr;
-    uint32_t frame_number;
-} camera_rb_cmd_frame_lock_req_t;
-
-typedef struct camera_rb_cmd_frame_lock_resp {
+typedef struct camera_vb_cmd_stop_resp {
     camera_cmd_hdr_t hdr;
     zx_status_t     result;
-} camera_rb_cmd_frame_lock_resp_t;
+} camera_vb_cmd_stop_resp_t;
 
-// CAMERA_RB_CMD_FRAME_RELEASE
+// CAMERA_VB_CMD_FRAME_RELEASE
 //
 // Unlocks the specified frame, allowing the driver to reuse the memory.
-typedef struct camera_rb_cmd_frame_release_req {
+typedef struct camera_vb_cmd_frame_release_req {
     camera_cmd_hdr_t hdr;
-    // This is from the camera metadata buffer.
-    uint32_t frame_number;
-} camera_rb_cmd_frame_release_req_t;
+    // The position (in bytes) of the start of the frame in the data buffer.
+    // This is from the FRAME_NOTIFY message.
+    uint64_t data_vb_offset;
+} camera_vb_cmd_frame_release_req_t;
 
-typedef struct camera_rb_cmd_frame_release_resp {
+typedef struct camera_vb_cmd_frame_release_resp {
     camera_cmd_hdr_t hdr;
     zx_status_t     result;
-} camera_rb_cmd_frame_release_resp_t;
+} camera_vb_cmd_frame_release_resp_t;
 
-// CAMERA_RB_METADATA_POSITION_NOTIFY
-#define CAMERA_RB_METADATA_POSITION_NOTIFY_MAX_ENTRIES (8u)
+typedef enum camera_error {
+    // An error occurred during the production of a frame.
+    // No data will be available in the data buffer corresponding to this
+    // notification.
+    CAMERA_ERROR_FRAME = 0x1,
 
-// Sent by the driver to the client when one or more frames are
-// available for processing.
-typedef struct camera_rb_metadata_position_notify {
+    // No space was available in the data buffer, resulting in a dropped frame.
+    CAMERA_ERROR_BUFFER_FULL = 0x2
+} camera_error_t;
+
+// Sent by the driver to the client when a frame is available for processing,
+// or an error occurred.
+typedef struct camera_vb_frame_notify {
     camera_cmd_hdr_t hdr;
 
-    // The frame numbers for the metadata and video data.
-    // The client should issue a CAMERA_RB_CMD_FRAME_LOCK request with
-    // the relevant frame number before reading the corresponding metadata entry.
-    // The length of this array is equal to the number of metadata entries.
-    uint32_t frame_numbers[CAMERA_RB_METADATA_POSITION_NOTIFY_MAX_ENTRIES];
-    // The current position (in bytes) of the driver/hardware's
-    // pointer in the metadata ring buffer.
-    uint32_t metadata_buffer_pos;
-} camera_rb_metadata_position_notify_t;
+    // Non zero if an error occurred.
+    camera_error_t error;
+
+    // Number of bytes in the frame.
+    uint32_t frame_size;
+
+    // The position (in bytes) of the start of the frame in the data buffer.
+    // This is guaranteed to be a multiple of max_frame_size returned in
+    // SET_FORMAT.
+    uint64_t data_vb_offset;
+
+    camera_metadata_t metadata;
+
+    // NOTE: The frame will be not be reused by the driver until the client
+    // calls FRAME_RELEASE with the frame's timestamp.
+} camera_vb_frame_notify_t;
 
 __END_CDECLS
