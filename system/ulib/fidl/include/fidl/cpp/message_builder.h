@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <fidl/cpp/builder.h>
+#include <fidl/cpp/message_buffer.h>
 #include <fidl/cpp/message.h>
 #include <fidl/types.h>
 #include <zircon/types.h>
@@ -59,9 +60,8 @@ public:
     zx_status_t Encode(Message* message_out, const char** error_msg_out);
 
 private:
-    // Builder::buffer() is owned by this object.
     const fidl_type_t* type_;
-    const uint32_t handles_capacity_;
+    MessageBuffer buffer_;
 };
 
 } // namespace fidl

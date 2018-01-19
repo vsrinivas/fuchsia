@@ -26,6 +26,9 @@ namespace fidl {
 // the buffer appropriately.
 class Builder {
 public:
+    // Creates a buffer without any storage.
+    Builder();
+
     // Creates a buffer that stores objects in the given memory.
     //
     // The constructed |Builder| object does not take ownership of the given
@@ -77,6 +80,12 @@ public:
     // provided to this builder in its constructor.
     BytePart Finalize();
 
+    // Attaches the given storage to the |Builder|.
+    //
+    // The |Builder| object does not take ownership of the given storage. The
+    // next object will be allocated at the start of the buffer.
+    void Reset(void* buffer, uint32_t capacity);
+
 protected:
     uint8_t* buffer() const { return buffer_; }
     uint32_t capacity() const { return capacity_; }
@@ -87,7 +96,7 @@ private:
 
     uint32_t capacity_;
     uint32_t at_;
-    uint8_t* const buffer_;
+    uint8_t* buffer_;
 };
 
 } // namespace fidl
