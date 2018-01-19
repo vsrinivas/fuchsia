@@ -10,8 +10,8 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/superblock.cpp \
     $(LOCAL_DIR)/test-device.cpp \
+    $(LOCAL_DIR)/volume.cpp \
 
 MODULE_NAME := zxcrypt-test
 

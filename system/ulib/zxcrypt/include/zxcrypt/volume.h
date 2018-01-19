@@ -18,7 +18,7 @@
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-// |zxcrypt::Superblock| manages the interactions of both driver and library code with the metadata
+// |zxcrypt::Volume| manages the interactions of both driver and library code with the metadata
 // used to format and operate zxcrypt devices.  Driver code uses the public constructor and instance
 // methods, while library code can use the static methods with a file descriptor to the underlying
 // block device.  The superblock is saved multiple times on disk to provide redundancy.
@@ -41,7 +41,7 @@ const size_t kZx1130KeyLen = 32;
 
 using slot_num_t = zx_off_t;
 
-class Superblock final {
+class Volume final {
 public:
     // The supported version, named by the algorithms they use.  New version should increment the
     // version number and update the default version.  Zero indicates an error state.
@@ -50,37 +50,37 @@ public:
         kAES256_XTS_SHA256 = 1,
     };
 
-    // The default version, used when sealing a new superblock.
+    // The default version, used when sealing a new volume.
     static const Version kDefaultVersion;
 
     // The number of key slots available for a single zxcrypt volume.
     static const slot_num_t kNumSlots;
 
-    // The number of pairs of blocks reserved for superblock metadata.
+    // The number of pairs of blocks reserved for volume metadata.
     static const size_t kReservedPairs;
 
-    ~Superblock();
+    ~Volume();
 
     ////////////////
     // Library methods
 
-    // Creates a new zxcrypt superblock associated with the given file descriptor, |fd|.  This will
+    // Creates a new zxcrypt volume associated with the given file descriptor, |fd|.  This will
     // format the block device as zxcrypt using the given |key|.  This method takes ownership of
     // |fd|.
     static zx_status_t Create(fbl::unique_fd fd, const crypto::Bytes& root_key);
 
-    // Opens a zxcrypt superblock on the block device described by |fd| using the |key|
+    // Opens a zxcrypt volume on the block device described by |fd| using the |key|
     // corresponding to given key |slot|.  The |fd| parameter means this factory method can be used
     // from libzxcrypt.  This method takes ownership of |fd|.
     static zx_status_t Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_num_t slot,
-                            fbl::unique_ptr<Superblock>* out);
+                            fbl::unique_ptr<Volume>* out);
 
     // Adds a given |root_key| using the given key |slot|.  This key can then be used to |Open| the
-    // zxcrypt device.  This method can only be called if the superblock belongs to libzxcrypt.
+    // zxcrypt device.  This method can only be called if the volume belongs to libzxcrypt.
     zx_status_t Enroll(const crypto::Bytes& root_key, slot_num_t slot);
 
     // Removes the root key in the given key |slot|.  This key can no longer be used to |Open| the
-    // zxcrypt device.  This method can only be called if the superblock belongs to libzxcrypt.
+    // zxcrypt device.  This method can only be called if the volume belongs to libzxcrypt.
     zx_status_t Revoke(slot_num_t slot);
 
     // Removes ALL keys, rendering any data in the zxcrypt device inaccessible.  It is an error to
@@ -90,11 +90,11 @@ public:
     ////////////////
     // Driver methods
 
-    // Opens a zxcrypt superblock on the block device described by |dev| using the |key|
+    // Opens a zxcrypt volume on the block device described by |dev| using the |key|
     // corresponding to given key |slot|.  The |dev| parameter means this factory method can be used
     // from the zxcrypt driver.
     static zx_status_t Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t slot,
-                            fbl::unique_ptr<Superblock>* out);
+                            fbl::unique_ptr<Volume>* out);
 
     // Copies the block device and FVM information.  If the parent device is not an FVM partition,
     // the FVM information is synthetically generated.  The parent device's FVM support can be
@@ -105,16 +105,16 @@ public:
     bool HasFVM() const { return has_fvm_; }
 
     // Returns the data key and IV in |out_key| and |out_iv|, respectively.  These can be used to
-    // initialize a data cipher.  This method can only be called if the superblock belongs to the
+    // initialize a data cipher.  This method can only be called if the volume belongs to the
     // zxcrypt driver.
     zx_status_t BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out_decrypt);
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Superblock);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Volume);
 
     // Use the static factory methods above instead of these constructors.
-    explicit Superblock(fbl::unique_fd&& fd);
-    explicit Superblock(zx_device_t* dev);
+    explicit Volume(fbl::unique_fd&& fd);
+    explicit Volume(zx_device_t* dev);
 
     ////////////////
     // Configuration methods
@@ -122,7 +122,7 @@ private:
     // Retrieves the block and FVM information and adjusts it.
     zx_status_t Init();
 
-    // Maps the superblock version to crypto algorithms.
+    // Maps the volume version to crypto algorithms.
     zx_status_t Configure(Version version);
 
     // Derives intermediate keys for the given key |slot| from the given |key|.
@@ -134,14 +134,14 @@ private:
     ////////////////
     // Block methods
 
-    // Resets the superblock to the first location (block 0).
+    // Resets the superblock offset to the first location (block 0).
     zx_status_t Begin();
 
     // Advances the offset to the next superblock location.  Returns ZX_ERR_STOP if no more offsets
     // available; ZX_ERR_NEXT otherwise.
     zx_status_t Next();
 
-    // Creates a new superblock, with a new instance GUID and data key and IV, and seals it with the
+    // Creates a new volume, with a new instance GUID and data key and IV, and seals it with the
     // given |key|
     zx_status_t CreateBlock();
 

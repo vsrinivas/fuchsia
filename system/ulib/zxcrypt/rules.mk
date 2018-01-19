@@ -9,7 +9,7 @@ MODULE_SO_NAME := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/superblock.cpp \
+    $(LOCAL_DIR)/volume.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \

@@ -19,7 +19,7 @@
 #include <fvm/fvm.h>
 #include <zircon/types.h>
 #include <zx/time.h>
-#include <zxcrypt/superblock.h>
+#include <zxcrypt/volume.h>
 
 #include "test-device.h"
 
@@ -130,14 +130,14 @@ TestDevice::~TestDevice() {
     Reset();
 }
 
-zx_status_t TestDevice::GenerateKey(Superblock::Version version) {
+zx_status_t TestDevice::GenerateKey(Volume::Version version) {
     zx_status_t rc;
 
     // TODO(aarongreen): See ZX-1130. The code below should be enabled when that bug is fixed.
 #if 0
     crypto::digest::Algorithm digest;
     switch (version) {
-    case Superblock::kAES256_XTS_SHA256:
+    case Volume::kAES256_XTS_SHA256:
         digest = crypto::digest::kSHA256;
         break;
     default:
@@ -169,12 +169,12 @@ zx_status_t TestDevice::Create(size_t device_size, size_t block_size, bool fvm) 
     }
 }
 
-zx_status_t TestDevice::DefaultInit(Superblock::Version version, bool fvm) {
+zx_status_t TestDevice::DefaultInit(Volume::Version version, bool fvm) {
     zx_status_t rc;
 
     if ((rc = GenerateKey(version)) != ZX_OK ||
         (rc = Create(kDeviceSize, kBlockSize, fvm)) != ZX_OK ||
-        (rc = Superblock::Create(parent(), key_)) != ZX_OK) {
+        (rc = Volume::Create(parent(), key_)) != ZX_OK) {
         return rc;
     }
 

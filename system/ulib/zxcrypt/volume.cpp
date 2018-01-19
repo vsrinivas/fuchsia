@@ -20,14 +20,14 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
+#include <safeint/safe_math.h>
 #include <sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <zxcrypt/superblock.h>
-#include <safeint/safe_math.h>
+#include <zxcrypt/volume.h>
 
 #define MXDEBUG 0
 
@@ -41,17 +41,17 @@ namespace zxcrypt {
 // root key and specific slot.
 
 // Determines what algorithms are in use when creating new zxcrypt devices.
-const Superblock::Version Superblock::kDefaultVersion = Superblock::kAES256_XTS_SHA256;
+const Volume::Version Volume::kDefaultVersion = Volume::kAES256_XTS_SHA256;
 
 // Maximum number of key slots.  If a device's block size can not hold |kNumSlots| for a particular
 // version, then attempting to |Create| or |Open| a zxcrypt volume will fail with
 // |ZX_ERR_NOT_SUPPORTED|.
-const slot_num_t Superblock::kNumSlots = 16;
+const slot_num_t Volume::kNumSlots = 16;
 
 // The number of metadata blocks at each end of the device.  That is, there are |kReservedPairs|
 // blocks reserved at the start of the device, and another |kReservedPairs| blocks reserved at the
 // end of the device.
-const size_t Superblock::kReservedPairs = 2;
+const size_t Volume::kReservedPairs = 2;
 
 namespace {
 
@@ -125,11 +125,11 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t op, void* buf, size_t off, size_t 
 
 } // namespace
 
-Superblock::~Superblock() {}
+Volume::~Volume() {}
 
 // Library methods
 
-zx_status_t Superblock::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
+zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
     zx_status_t rc;
 
     if (!fd) {
@@ -137,17 +137,17 @@ zx_status_t Superblock::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    Superblock superblock(fbl::move(fd));
-    if ((rc = superblock.Init()) != ZX_OK || (rc = superblock.CreateBlock()) != ZX_OK ||
-        (rc = superblock.SealBlock(key, 0)) != ZX_OK || (rc = superblock.CommitBlock()) != ZX_OK) {
+    Volume volume(fbl::move(fd));
+    if ((rc = volume.Init()) != ZX_OK || (rc = volume.CreateBlock()) != ZX_OK ||
+        (rc = volume.SealBlock(key, 0)) != ZX_OK || (rc = volume.CommitBlock()) != ZX_OK) {
         return rc;
     }
 
     return ZX_OK;
 }
 
-zx_status_t Superblock::Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_num_t slot,
-                             fbl::unique_ptr<Superblock>* out) {
+zx_status_t Volume::Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_num_t slot,
+                         fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
     if (!fd || slot >= kNumSlots || !out) {
@@ -157,20 +157,20 @@ zx_status_t Superblock::Open(fbl::unique_fd fd, const crypto::Bytes& key, slot_n
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Superblock> superblock(new (&ac) Superblock(fbl::move(fd)));
+    fbl::unique_ptr<Volume> volume(new (&ac) Volume(fbl::move(fd)));
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Superblock));
+        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
-    if ((rc = superblock->Init()) != ZX_OK || (rc = superblock->Open(key, slot)) != ZX_OK) {
+    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
         return rc;
     }
 
-    *out = fbl::move(superblock);
+    *out = fbl::move(volume);
     return ZX_OK;
 }
 
-zx_status_t Superblock::Enroll(const crypto::Bytes& key, slot_num_t slot) {
+zx_status_t Volume::Enroll(const crypto::Bytes& key, slot_num_t slot) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot enroll from driver
 
@@ -189,7 +189,7 @@ zx_status_t Superblock::Enroll(const crypto::Bytes& key, slot_num_t slot) {
     return ZX_OK;
 }
 
-zx_status_t Superblock::Revoke(slot_num_t slot) {
+zx_status_t Volume::Revoke(slot_num_t slot) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot revoke from driver
 
@@ -203,15 +203,15 @@ zx_status_t Superblock::Revoke(slot_num_t slot) {
     }
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
     crypto::Bytes invalid;
-    if ((rc = invalid.InitRandom(slot_len_)) != ZX_OK || (rc = block_.Copy(invalid, off)) != ZX_OK ||
-        (rc = CommitBlock()) != ZX_OK) {
+    if ((rc = invalid.InitRandom(slot_len_)) != ZX_OK ||
+        (rc = block_.Copy(invalid, off)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
         return rc;
     }
 
     return ZX_OK;
 }
 
-zx_status_t Superblock::Shred() {
+zx_status_t Volume::Shred() {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot shred from driver
 
@@ -234,8 +234,8 @@ zx_status_t Superblock::Shred() {
 
 // Driver methods
 
-zx_status_t Superblock::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t slot,
-                             fbl::unique_ptr<Superblock>* out) {
+zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, slot_num_t slot,
+                         fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
     if (!dev || slot >= kNumSlots || !out) {
@@ -244,20 +244,20 @@ zx_status_t Superblock::Open(zx_device_t* dev, const crypto::Bytes& key, slot_nu
         return ZX_ERR_INVALID_ARGS;
     }
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Superblock> superblock(new (&ac) Superblock(dev));
+    fbl::unique_ptr<Volume> volume(new (&ac) Volume(dev));
     if (!ac.check()) {
-        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Superblock));
+        xprintf("%s: allocation failed: %zu bytes\n", __PRETTY_FUNCTION__, sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
-    if ((rc = superblock->Init()) != ZX_OK || (rc = superblock->Open(key, slot)) != ZX_OK) {
+    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
         return rc;
     }
 
-    *out = fbl::move(superblock);
+    *out = fbl::move(volume);
     return ZX_OK;
 }
 
-zx_status_t Superblock::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
+zx_status_t Volume::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
     if (!block_.get()) {
         xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
         return ZX_ERR_BAD_STATE;
@@ -272,7 +272,7 @@ zx_status_t Superblock::GetInfo(block_info_t* out_blk, fvm_info_t* out_fvm) {
     return ZX_OK;
 }
 
-zx_status_t Superblock::BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out_decrypt) {
+zx_status_t Volume::BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher* out_decrypt) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(dev_); // Cannot bind from library
 
@@ -296,17 +296,17 @@ zx_status_t Superblock::BindCiphers(crypto::Cipher* out_encrypt, crypto::Cipher*
 
 // Private methods
 
-Superblock::Superblock(fbl::unique_fd&& fd) : dev_(nullptr), fd_(fbl::move(fd)) {
+Volume::Volume(fbl::unique_fd&& fd) : dev_(nullptr), fd_(fbl::move(fd)) {
     Reset();
 }
 
-Superblock::Superblock(zx_device_t* dev) : dev_(dev), fd_() {
+Volume::Volume(zx_device_t* dev) : dev_(dev), fd_() {
     Reset();
 }
 
 // Configuration methods
 
-zx_status_t Superblock::Init() {
+zx_status_t Volume::Init() {
     zx_status_t rc;
 
     Reset();
@@ -407,11 +407,11 @@ zx_status_t Superblock::Init() {
     return ZX_OK;
 }
 
-zx_status_t Superblock::Configure(Superblock::Version version) {
+zx_status_t Volume::Configure(Volume::Version version) {
     zx_status_t rc;
 
     switch (version) {
-    case Superblock::kAES256_XTS_SHA256:
+    case Volume::kAES256_XTS_SHA256:
         aead_ = crypto::AEAD::kAES128_GCM_SIV;
         cipher_ = crypto::Cipher::kAES256_XTS;
         digest_ = crypto::digest::kSHA256;
@@ -449,7 +449,7 @@ zx_status_t Superblock::Configure(Superblock::Version version) {
     return ZX_OK;
 }
 
-zx_status_t Superblock::DeriveSlotKeys(const crypto::Bytes& key, slot_num_t slot) {
+zx_status_t Volume::DeriveSlotKeys(const crypto::Bytes& key, slot_num_t slot) {
     zx_status_t rc;
 
     crypto::HKDF hkdf;
@@ -469,7 +469,7 @@ zx_status_t Superblock::DeriveSlotKeys(const crypto::Bytes& key, slot_num_t slot
     return ZX_OK;
 }
 
-void Superblock::Reset() {
+void Volume::Reset() {
     memset(&blk_, 0, sizeof(blk_));
     memset(&fvm_, 0, sizeof(fvm_));
     has_fvm_ = false;
@@ -488,7 +488,7 @@ void Superblock::Reset() {
 
 // Block methods
 
-zx_status_t Superblock::Begin() {
+zx_status_t Volume::Begin() {
     if (fvm_.slice_size == 0) {
         xprintf("%s: not initialized\n", __PRETTY_FUNCTION__);
         return ZX_ERR_STOP;
@@ -497,7 +497,7 @@ zx_status_t Superblock::Begin() {
     return ZX_ERR_NEXT;
 }
 
-zx_status_t Superblock::Next() {
+zx_status_t Volume::Next() {
     offset_ += block_.len();
     size_t slice_offset = offset_ % fvm_.slice_size;
     // If slice isn't complete, move to next block in slice
@@ -513,7 +513,7 @@ zx_status_t Superblock::Next() {
     return ZX_ERR_STOP;
 }
 
-zx_status_t Superblock::CreateBlock() {
+zx_status_t Volume::CreateBlock() {
     zx_status_t rc;
 
     // Create a "backdrop" of random data
@@ -551,7 +551,7 @@ zx_status_t Superblock::CreateBlock() {
     return ZX_OK;
 }
 
-zx_status_t Superblock::CommitBlock() {
+zx_status_t Volume::CommitBlock() {
     zx_status_t rc;
 
     // Make a copy to compare the read result to; this reduces the number of writes we must do.
@@ -572,7 +572,7 @@ zx_status_t Superblock::CommitBlock() {
     return ZX_OK;
 }
 
-zx_status_t Superblock::SealBlock(const crypto::Bytes& key, slot_num_t slot) {
+zx_status_t Volume::SealBlock(const crypto::Bytes& key, slot_num_t slot) {
     zx_status_t rc;
 
     // Encrypt the data key
@@ -591,7 +591,7 @@ zx_status_t Superblock::SealBlock(const crypto::Bytes& key, slot_num_t slot) {
     return ZX_OK;
 }
 
-zx_status_t Superblock::Open(const crypto::Bytes& key, slot_num_t slot) {
+zx_status_t Volume::Open(const crypto::Bytes& key, slot_num_t slot) {
     zx_status_t rc;
 
     for (rc = Begin(); rc == ZX_ERR_NEXT; rc = Next()) {
@@ -609,7 +609,7 @@ zx_status_t Superblock::Open(const crypto::Bytes& key, slot_num_t slot) {
     return ZX_ERR_ACCESS_DENIED;
 }
 
-zx_status_t Superblock::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
+zx_status_t Volume::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
     zx_status_t rc;
 
     // Check the type GUID matches |kTypeGuid|.
@@ -642,8 +642,7 @@ zx_status_t Superblock::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
     if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
         (rc = aead.InitOpen(aead_, wrap_key_)) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
-        (rc = aead.SetAD(header_)) != ZX_OK ||
-        (rc = aead.Open(wrap_iv_, ctext, &ptext)) != ZX_OK ||
+        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Open(wrap_iv_, ctext, &ptext)) != ZX_OK ||
         (rc = ptext.Split(&data_iv_)) != ZX_OK || (rc = ptext.Split(&data_key_)) != ZX_OK) {
         return rc;
     }
@@ -657,7 +656,7 @@ zx_status_t Superblock::OpenBlock(const crypto::Bytes& key, slot_num_t slot) {
 
 // Device methods
 
-zx_status_t Superblock::Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) {
+zx_status_t Volume::Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) {
     zx_status_t rc;
     // Don't include debug messages here; some errors (e.g. ZX_ERR_NOT_SUPPORTED) are expected under
     // certain conditions (e.g. calling FVM ioctls on a non-FVM device).  Handle error reporting at
@@ -676,7 +675,7 @@ zx_status_t Superblock::Ioctl(int op, const void* in, size_t in_len, void* out, 
     return ZX_OK;
 }
 
-zx_status_t Superblock::Read() {
+zx_status_t Volume::Read() {
     if (dev_) {
         return SyncIO(dev_, IOTXN_OP_READ, block_.get(), offset_, block_.len());
     } else {
@@ -699,7 +698,7 @@ zx_status_t Superblock::Read() {
     }
 }
 
-zx_status_t Superblock::Write() {
+zx_status_t Volume::Write() {
     if (dev_) {
         return SyncIO(dev_, IOTXN_OP_WRITE, block_.get(), offset_, block_.len());
     } else {

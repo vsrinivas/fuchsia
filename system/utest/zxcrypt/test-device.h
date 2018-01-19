@@ -16,9 +16,9 @@
 #include "crypto/utils.h"
 
 #define DEFINE_EACH_DEVICE(Test)                                                                   \
-    bool Test##Raw(Superblock::Version version) { return Test(version, false /* not FVM */); }     \
+    bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); }         \
     DEFINE_EACH(Test##Raw);                                                                        \
-    bool Test##Fvm(Superblock::Version version) { return Test(version, true /* FVM */); }          \
+    bool Test##Fvm(Volume::Version version) { return Test(version, true /* FVM */); }              \
     DEFINE_EACH(Test##Fvm);
 
 #define RUN_EACH_DEVICE(Test)                                                                      \
@@ -60,11 +60,11 @@ public:
     zx_status_t Create(size_t device_size, size_t block_size, bool fvm);
 
     // Generates a key of an appropriate length for the given |version|.
-    zx_status_t GenerateKey(Superblock::Version version);
+    zx_status_t GenerateKey(Volume::Version version);
 
     // Convenience method that generates a key and creates a device according to |version| and
     // |fvm|.
-    zx_status_t DefaultInit(Superblock::Version version, bool fvm);
+    zx_status_t DefaultInit(Volume::Version version, bool fvm);
 
     // Flips a (pseudo)random bit in the byte at the given |offset| on the block device.  The call
     // to |srand| in main.c guarantees the same bit will be chosen for a given test iteration.
