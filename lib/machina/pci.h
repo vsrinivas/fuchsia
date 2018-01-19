@@ -16,12 +16,6 @@
 
 // clang-format off
 
-#define PCI_DEVICE_ROOT_COMPLEX     0u
-#define PCI_DEVICE_VIRTIO_BALLOON   1u
-#define PCI_DEVICE_VIRTIO_BLOCK     2u
-#define PCI_DEVICE_VIRTIO_GPU       3u
-#define PCI_DEVICE_VIRTIO_INPUT     4u
-#define PCI_DEVICE_VIRTIO_NET       5u
 #define PCI_DEVICE_INVALID          UINT16_MAX
 #define PCI_MAX_DEVICES             6u
 #define PCI_MAX_BARS                2u
@@ -218,8 +212,7 @@ class PciBus {
   //
   // This method is *not* thread-safe and must only be called during
   // initialization.
-  zx_status_t Connect(PciDevice* device,
-                      uint8_t slot) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  zx_status_t Connect(PciDevice* device) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // Access devices via the ECAM region.
   //
@@ -267,6 +260,8 @@ class PciBus {
   uint32_t pio_base_ = 0x8000;
   // Next mmio window to be allocated to connected devices.
   uint32_t mmio_base_ = kPciMmioBarPhysBase;
+  // Pointer to the next open PCI slot.
+  size_t next_open_slot_ = 0;
 };
 
 }  // namespace machina

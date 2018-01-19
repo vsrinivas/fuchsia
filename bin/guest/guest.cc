@@ -327,7 +327,7 @@ int main(int argc, char** argv) {
   // Setup balloon device.
   machina::VirtioBalloon balloon(guest.phys_mem());
   balloon.set_deflate_on_demand(options.balloon_demand_page());
-  status = bus.Connect(balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
+  status = bus.Connect(balloon.pci_device());
   if (status != ZX_OK) {
     return status;
   }
@@ -351,7 +351,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(block.pci_device(), PCI_DEVICE_VIRTIO_BLOCK);
+    status = bus.Connect(block.pci_device());
     if (status != ZX_OK) {
       return status;
     }
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  status = bus.Connect(input.pci_device(), PCI_DEVICE_VIRTIO_INPUT);
+  status = bus.Connect(input.pci_device());
   if (status != ZX_OK) {
     return status;
   }
@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  status = bus.Connect(gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
+  status = bus.Connect(gpu.pci_device());
   if (status != ZX_OK) {
     return status;
   }
@@ -406,7 +406,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  status = bus.Connect(net.pci_device(), PCI_DEVICE_VIRTIO_NET);
+  status = bus.Connect(net.pci_device());
   if (status != ZX_OK) {
     return status;
   }

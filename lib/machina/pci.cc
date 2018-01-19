@@ -9,6 +9,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/pci.h>
 #include <hypervisor/bits.h>
+#include <zircon/assert.h>
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
@@ -121,7 +122,7 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
 zx_status_t PciBus::Init() {
   root_complex_.bar_[0].size = 0x10;
   root_complex_.bar_[0].trap_type = TrapType::MMIO_SYNC;
-  zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
+  zx_status_t status = Connect(&root_complex_);
   if (status != ZX_OK)
     return status;
 
@@ -152,11 +153,11 @@ void PciBus::set_config_addr(uint32_t addr) {
   config_addr_ = addr;
 }
 
-zx_status_t PciBus::Connect(PciDevice* device, uint8_t slot) {
-  if (slot >= PCI_MAX_DEVICES)
+zx_status_t PciBus::Connect(PciDevice* device) {
+  if (next_open_slot_ >= PCI_MAX_DEVICES)
     return ZX_ERR_OUT_OF_RANGE;
-  if (device_[slot])
-    return ZX_ERR_ALREADY_EXISTS;
+  ZX_DEBUG_ASSERT(device_[next_open_slot_] == nullptr);
+  size_t slot = next_open_slot_++;
 
   // Initialize BAR registers.
   for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
