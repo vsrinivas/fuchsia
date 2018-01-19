@@ -337,8 +337,13 @@ int main(int argc, char** argv) {
 
   // Setup block device.
   machina::VirtioBlock block(guest.phys_mem());
-  if (!options.block_path().empty()) {
-    status = block.Init(options.block_path().c_str());
+  if (!options.block_devices().empty()) {
+    if (options.block_devices().size() > 1) {
+      FXL_LOG(ERROR) << "Multiple block devices are not yet supported";
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const BlockSpec& block_spec = options.block_devices()[0];
+    status = block.Init(block_spec.path.c_str());
     if (status != ZX_OK) {
       return status;
     }
