@@ -40,7 +40,16 @@ Escher can also build on Linux.  In order to do so, you need to:
     ```
     (cd examples/common/third_party; git submodule init; git submodule update)
     ```
-  * specify that you want to build only the Escher module:
+  * build Fuchsia normally.
+    ```
+    cd $FUCHSIA_DIR
+    fx set x86-64 --release
+    fx full-build
+    ```
+    * This shouldn't be necessary, but Escher is probably the only
+    package that is built as a standalone Linux artifact (everything
+    else built for Linux is a tool to help the Fuchsia build).
+  * specify that you want to build only the Escher module, for Linux:
     ```
     cd $FUCHSIA_DIR
     fx set x86-64 --release --packages garnet/packages/escher_linux
