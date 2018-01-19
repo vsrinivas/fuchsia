@@ -330,7 +330,7 @@ static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
  * This function is for use only in interrupt handlers while interrupts are
  * disabled.  Disabling preemption allows an interrupt to be fully handled
  * before the current CPU switches to another thread. */
-static void thread_preempt_disable(void) {
+static inline void thread_preempt_disable(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(arch_in_int_handler());
     thread_t* current_thread = get_current_thread();
@@ -346,7 +346,7 @@ static void thread_preempt_disable(void) {
  *
  * Like thread_preempt_disable(), this is for use only in interrupt
  * handlers while interrupts are disabled. */
-static bool thread_preempt_reenable(void) {
+static inline bool thread_preempt_reenable(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(arch_in_int_handler());
     thread_t* current_thread = get_current_thread();
