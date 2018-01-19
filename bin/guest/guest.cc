@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <vector>
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -336,25 +337,25 @@ int main(int argc, char** argv) {
   }
 
   // Setup block device.
-  machina::VirtioBlock block(guest.phys_mem());
-  if (!options.block_devices().empty()) {
-    if (options.block_devices().size() > 1) {
-      FXL_LOG(ERROR) << "Multiple block devices are not yet supported";
-      return ZX_ERR_NOT_SUPPORTED;
+  std::vector<fbl::unique_ptr<machina::VirtioBlock>> block_devices;
+  for (const auto& block_spec : options.block_devices()) {
+    auto block = fbl::make_unique<machina::VirtioBlock>(guest.phys_mem());
+
+    status = block->Init(block_spec.path.c_str());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to initialize block device " << status;
+      return status;
     }
-    const BlockSpec& block_spec = options.block_devices()[0];
-    status = block.Init(block_spec.path.c_str());
+    status = block->Start();
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start block device " << status;
+      return status;
+    }
+    status = bus.Connect(block->pci_device());
     if (status != ZX_OK) {
       return status;
     }
-    status = block.Start();
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = bus.Connect(block.pci_device());
-    if (status != ZX_OK) {
-      return status;
-    }
+    block_devices.push_back(fbl::move(block));
   }
 
   // Setup input device.
