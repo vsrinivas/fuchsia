@@ -5,6 +5,7 @@
 module modular;
 
 import "daisy.fidl";
+import "peridot/public/lib/story/fidl/create_chain.fidl";
 
 [ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
@@ -52,10 +53,11 @@ struct ModuleResolverResult {
   // `verb_template` file referenced by the `module` metadata file for
   // |package_id| where |local_name| is defined. The value is a JSON string
   // that either encodes an Entity reference, or static data.
+  //
+  // DEPRECATED: This is to be replaced by |create_chain_info|.
   map<string, string> initial_nouns;
 
-  // TODO(thatguy): Schema information for the Link. This can be derived by the
-  // client by looking at both |package_id| and |local_name|.
+  CreateChainInfo create_chain_info;
 
   ResolutionDebugInfo? debug_info;
 };

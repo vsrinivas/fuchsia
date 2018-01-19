@@ -9,6 +9,7 @@
 #include "garnet/public/lib/fxl/strings/split_string.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/public/lib/entity/cpp/json.h"
+#include "peridot/public/lib/story/fidl/create_chain.fidl.h"
 
 namespace maxwell {
 
@@ -18,40 +19,6 @@ namespace {
 std::ostream& operator<<(std::ostream& o,
                          const std::pair<std::string, std::string>& id) {
   return o << id.first << ":" << id.second;
-}
-
-void CopyNounsToModuleResolverResult(const modular::DaisyPtr& daisy,
-                                     modular::ModuleResolverResultPtr* result) {
-  (*result)->initial_nouns.mark_non_null();
-  for (auto entry : daisy->nouns) {
-    const auto& name = entry.GetKey();
-    const auto& noun = entry.GetValue();
-
-    if (noun->is_entity_reference()) {
-      (*result)->initial_nouns[name] =
-          modular::EntityReferenceToJson(noun->get_entity_reference());
-    } else if (noun->is_json()) {
-      (*result)->initial_nouns[name] = noun->get_json();
-    }
-    // There's nothing to copy over from 'entity_types', since it only
-    // specifies noun constraint information, and no actual content.
-  }
-}
-
-modular::FindModulesResultPtr CreateDefaultResult(
-    const modular::DaisyPtr& daisy) {
-  auto result = modular::FindModulesResult::New();
-
-  result->modules.resize(0);
-
-  auto print_it = modular::ModuleResolverResult::New();
-  print_it->module_id = "resolution_failed";
-  print_it->local_name = "n/a";
-
-  CopyNounsToModuleResolverResult(daisy, &print_it);
-
-  result->modules.push_back(std::move(print_it));
-  return result;
 }
 
 }  // namespace
@@ -160,9 +127,11 @@ class ModuleResolverImpl::FindModulesCall
   }
 
  private:
-  // |noun_name| and |types| come from the daisy.
+  // |noun_name| and |types| come from the Daisy.
   void ProcessNounTypes(const std::string& noun_name,
                         std::vector<std::string> types) {
+    noun_types_cache_[noun_name] = types;
+
     // The types list we have is an OR - any Module that can handle any of the
     // types for this noun is valid, so we union all valid resolutions. First,
     // we gather all such modules, regardless of if they handle the verb.
@@ -208,11 +177,71 @@ class ModuleResolverImpl::FindModulesCall
     }
   }
 
+  void CopyNounsToModuleResolverResult(
+      const modular::DaisyPtr& daisy,
+      modular::ModuleResolverResultPtr* result) {
+    (*result)->initial_nouns.mark_non_null();
+    (*result)->create_chain_info = modular::CreateChainInfo::New();
+    auto& create_chain_info = (*result)->create_chain_info;  // For convenience.
+    create_chain_info->property_info.mark_non_null();
+    for (auto entry : daisy->nouns) {
+      const auto& name = entry.GetKey();
+      const auto& noun = entry.GetValue();
+
+      if (noun->is_entity_reference()) {
+        // TODO(thatguy): Remove this once no more Modules are using the root
+        // Link. MI4-736
+        (*result)->initial_nouns[name] =
+            modular::EntityReferenceToJson(noun->get_entity_reference());
+
+        auto create_link = modular::CreateLinkInfo::New();
+        create_link->initial_data =
+            modular::EntityReferenceToJson(noun->get_entity_reference());
+        // TODO(thatguy): set |create_link->allowed_types|.
+        // TODO(thatguy): set |create_link->permissions|.
+        auto property_info = modular::CreateChainPropertyInfo::New();
+        property_info->set_create_link(std::move(create_link));
+
+        create_chain_info->property_info[name] = std::move(property_info);
+      } else if (noun->is_link()) {
+        auto property_info = modular::CreateChainPropertyInfo::New();
+        property_info->set_link_path(noun->get_link().Clone());
+        create_chain_info->property_info[name] = std::move(property_info);
+      } else if (noun->is_json()) {
+        // TODO(thatguy): Remove this once no more Modules are using the root
+        // Link. MI4-736
+        (*result)->initial_nouns[name] = noun->get_json();
+      }
+      // There's nothing to copy over from 'entity_types', since it only
+      // specifies noun constraint information, and no actual content.
+    }
+  }
+
+  modular::FindModulesResultPtr CreateDefaultResult(
+      const modular::DaisyPtr& daisy) {
+    auto result = modular::FindModulesResult::New();
+
+    result->modules.resize(0);
+
+    auto print_it = modular::ModuleResolverResult::New();
+    print_it->module_id = "resolution_failed";
+    print_it->local_name = "n/a";
+
+    CopyNounsToModuleResolverResult(daisy, &print_it);
+
+    result->modules.push_back(std::move(print_it));
+    return result;
+  }
+
   modular::FindModulesResultPtr result_;
 
   ModuleResolverImpl* const module_resolver_impl_;
   modular::DaisyPtr daisy_;
   modular::ResolverScoringInfoPtr scoring_info_;
+
+  // A cache of the Entity types for each noun in |daisy_|.
+  std::map<std::string, std::vector<std::string>> noun_types_cache_;
+
   std::set<EntryId> candidates_;
   uint32_t num_nouns_countdown_ = 0;
 

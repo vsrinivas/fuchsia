@@ -4,6 +4,9 @@
 
 module modular;
 
+import "create_link.fidl";
+import "peridot/public/lib/module/fidl/link_path.fidl";
+
 // Chains contain Links that are each keyed by a string.
 struct CreateChainInfo {
   // Contains instructions to create each key in the Chain.
