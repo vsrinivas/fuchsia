@@ -82,5 +82,11 @@ template("guest_app") {
             dest = "guest.cfg"
           } ]
     }
+
+    # Pass-through any additional resources.
+    if (defined(invoker.resources)) {
+      resources += invoker.resources
+    }
   }
+
 }

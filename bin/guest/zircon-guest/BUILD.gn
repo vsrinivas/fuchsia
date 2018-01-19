@@ -15,6 +15,22 @@ if (current_cpu == "x64") {
 
 _mdigen = "//out/build-zircon/tools/mdigen"
 
+action("gpt_image") {
+  visibility = [ ":*" ]
+  gpt_image = "$target_out_dir/zircon.gpt"
+
+  script = "//garnet/bin/guest/scripts/mkgpt.sh"
+  args = [
+    "-o",
+    rebase_path("$target_out_dir"),
+    "$zircon_cpu",
+  ]
+
+  outputs = [
+    "$gpt_image",
+  ]
+}
+
 action("guest-mdi") {
   visibility = [ ":*" ]
   script = "//build/gn_run_binary.sh"
@@ -72,6 +88,7 @@ bootdata("guest-bootdata") {
 
 guest_app("zircon-guest") {
   deps = [
+    ":gpt_image",
     ":guest-bootdata",
   ]
 
@@ -79,4 +96,10 @@ guest_app("zircon-guest") {
   ramdisk = bootdata_outputs[0]
   kernel = "//out/build-zircon/build-${zircon_platforms[0]}/zircon.bin"
   guest_config = rebase_path("guest.cfg")
+
+  gpt_outputs = get_target_outputs(":gpt_image")
+  resources = [ {
+        path = rebase_path(gpt_outputs[0])
+        dest = "gpt.img"
+      } ]
 }

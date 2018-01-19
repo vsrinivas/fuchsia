@@ -9,23 +9,45 @@
 set -eo pipefail
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ZIRCONDIR="${ZIRCON_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
-BUILDDIR="${ZIRCON_BUILD_DIR:-$ZIRCONDIR/build-zircon-pc-x86-64}"
-MINFS="${BUILDDIR}/tools/minfs"
-
-# Zircon's block-watcher will auto mount GPT partitions with this GUID as
-# the system partition.
-ZIRCON_SYSTEM_GUID="606B000B-B7C7-4653-A7D5-B737332C899D"
-ZIRCON_GPT_IMAGE="${BUILDDIR}/zircon.gpt"
-ZIRCON_SYSTEM_IMAGE="${BUILDDIR}/system.minfs"
+BUILDDIR="${GUEST_SCRIPTS_DIR}/../../../../out"
+MINFS="${BUILDDIR}/build-zircon/tools/minfs"
 
 usage() {
-    echo "usage: ${0} [-f]"
+    echo "usage: ${0} [-f] {x86-64|arm64}"
     echo ""
     echo "    -f Force a rebuild even if the artifact already exists."
+    echo "    -o Output directory for image files."
     echo ""
     exit 1
 }
+
+declare FORCE="${FORCE:-false}"
+declare OUTDIR="${BUILDDIR}"
+
+while getopts "fo:" opt; do
+  case "${opt}" in
+    f) FORCE="true" ;;
+    o) OUTDIR=${OPTARG} ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+readonly "${FORCE}"
+case "${1}" in
+arm64) ;&
+x86-64)
+  ARCH="$1";;
+*)
+  usage;;
+esac
+
+
+# Zircon's block-watcher will auto mount GPT partitions with this GUID as
+# the system partition.
+declare -r ZIRCON_SYSTEM_GUID="606B000B-B7C7-4653-A7D5-B737332C899D"
+declare -r ZIRCON_GPT_IMAGE="${OUTDIR}/zircon.gpt"
+declare -r ZIRCON_SYSTEM_IMAGE="${OUTDIR}/system.minfs"
 
 # sgdisk is used to manipulate GPT partition tables.
 check_sgdisk() {
@@ -49,7 +71,7 @@ generate_system_image() {
   ${MINFS} ${image} mkdir ::/bin
 
   # Copy binaries from system/uapp into the system image.
-  for app_path in `find "${BUILDDIR}/system/uapp" -iname "*.elf"`; do
+  for app_path in `find "${BUILDDIR}/build-zircon/build-user-${ARCH}/system/uapp" -iname "*.elf"`; do
     local exe_name=`basename "${app_path}"`
     # Strip the '.elf' file extension.
     local app="${exe_name%.*}"
@@ -85,17 +107,6 @@ generate_gpt_image() {
       count=${sys_part_size} \
       conv=notrunc
 }
-
-declare FORCE="${FORCE:-false}"
-
-while getopts "f" opt; do
-  case "${opt}" in
-    f) FORCE="true" ;;
-    *) usage ;;
-  esac
-done
-
-readonly "${FORCE}"
 
 check_sgdisk
 
