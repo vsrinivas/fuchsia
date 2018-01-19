@@ -25,8 +25,11 @@ def main():
     args = parser.parse_args()
 
     (direct_deps, atoms) = gather_dependencies(args.deps)
+    ids = []
+    if args.is_group:
+        ids = map(lambda i: i.json, sorted(list(direct_deps)))
     manifest = {
-        'names': sorted(list(direct_deps)) if args.is_group else [],
+        'ids': ids,
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
     with open(os.path.abspath(args.out), 'w') as out:

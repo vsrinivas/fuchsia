@@ -9,8 +9,8 @@
         "$ref": "#/definitions/atom"
       }
     },
-    "names": {
-      "description": "Names of the main atoms in this manifest (as opposed to dependencies)",
+    "ids": {
+      "description": "IDs of the main atoms in this manifest (as opposed to dependencies)",
       "type": "array",
       "items": {
         "$ref": "#/definitions/atomId"
@@ -19,7 +19,7 @@
   },
   "required": [
       "atoms",
-      "names"
+      "ids"
   ],
   "additionalProperties": false,
   "definitions": {

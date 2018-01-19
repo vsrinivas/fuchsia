@@ -9,27 +9,50 @@ import os
 import sys
 
 
-class Atom(object):
-    '''Wrapper class for atom data, adding convenience methods.'''
+class AtomId(object):
+    '''Represents an atom id.'''
 
     def __init__(self, json):
-        self.json = json
-        self.name = json['name']
+     self.json = json
+     self.key = (json['domain'], json['name'])
 
     def __str__(self):
-        return self.name
+        return '%s(%s)' % (self.json['name'], self.json['domain'])
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.key)
 
     def __eq__(self, other):
-        return self.name == other.name
+        return self.key == other.key
 
     def __ne__(self, other):
         return not __eq__(self, other)
 
     def __cmp__(self, other):
-        return cmp(self.name, other.name)
+        return cmp(self.key, other.key)
+
+
+class Atom(object):
+    '''Wrapper class for atom data, adding convenience methods.'''
+
+    def __init__(self, json):
+        self.json = json
+        self.id = AtomId(json['id'])
+
+    def __str__(self):
+        return str(self.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __ne__(self, other):
+        return not __eq__(self, other)
+
+    def __cmp__(self, other):
+        return cmp(self.id, other.id)
 
 
 def gather_dependencies(manifests):
@@ -41,13 +64,16 @@ def gather_dependencies(manifests):
     for dep in manifests:
         with open(dep, 'r') as dep_file:
             dep_manifest = json.load(dep_file)
-            direct_deps.update(dep_manifest['names'])
+            direct_deps.update(map(lambda i: AtomId(i), dep_manifest['ids']))
             atoms.update(map(lambda a: Atom(a), dep_manifest['atoms']))
     return (direct_deps, atoms)
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--domain',
+                        help='Name of the domain the element belongs to',
+                        required=True)
     parser.add_argument('--name',
                         help='Name of the element',
                         required=True)
@@ -96,14 +122,18 @@ def main():
             raise Exception('Destination cannot be absolute: %s' % destination)
         files[destination] = real_source
 
-    atoms.update([Atom({
+    id = {
+        'domain': args.domain,
         'name': args.name,
+    }
+    atoms.update([Atom({
+        'id': id,
         'tags': args.tags,
-        'deps': sorted(list(deps)),
+        'deps': map(lambda i: i.json, sorted(list(deps))),
         'files': files,
     })])
     manifest = {
-        'names': [args.name],
+        'ids': [id],
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
 

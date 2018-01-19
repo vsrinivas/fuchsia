@@ -57,7 +57,8 @@ template("sdk_library") {
       "testonly",
     ])
 
-    name = "cpp:$library_type:$atom_name"
+    domain = "c-pp"
+    name = "$library_type:$atom_name"
 
     files = []
     if (defined(invoker.sources)) {
