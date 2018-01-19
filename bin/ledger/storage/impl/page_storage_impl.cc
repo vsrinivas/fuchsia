@@ -633,8 +633,8 @@ void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    callback(db_->AddJournalEntry(handler, journal_id, key,
-                                  object_identifier.object_digest, priority));
+    callback(db_->AddJournalEntry(handler, journal_id, key, object_identifier,
+                                  priority));
   });
 }
 

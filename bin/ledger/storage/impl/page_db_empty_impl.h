@@ -75,7 +75,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status AddJournalEntry(coroutine::CoroutineHandler* handler,
                          const JournalId& journal_id,
                          fxl::StringView key,
-                         fxl::StringView value,
+                         const ObjectIdentifier& object_identifier,
                          KeyPriority priority) override;
   Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
                             const JournalId& journal_id,

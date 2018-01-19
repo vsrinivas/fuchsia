@@ -107,11 +107,12 @@ Status PageDbEmptyImpl::RemoveJournal(CoroutineHandler* /*handler*/,
                                       const JournalId& /*journal_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::AddJournalEntry(CoroutineHandler* /*handler*/,
-                                        const JournalId& /*journal_id*/,
-                                        fxl::StringView /*key*/,
-                                        fxl::StringView /*value*/,
-                                        KeyPriority /*priority*/) {
+Status PageDbEmptyImpl::AddJournalEntry(
+    CoroutineHandler* /*handler*/,
+    const JournalId& /*journal_id*/,
+    fxl::StringView /*key*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    KeyPriority /*priority*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveJournalEntry(

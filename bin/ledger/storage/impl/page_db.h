@@ -91,7 +91,7 @@ class PageDbMutator {
       coroutine::CoroutineHandler* handler,
       const JournalId& journal_id,
       fxl::StringView key,
-      fxl::StringView value,
+      const ObjectIdentifier& object_identifier,
       KeyPriority priority) = 0;
 
   // Removes the given key from the journal with the given |journal_id|.

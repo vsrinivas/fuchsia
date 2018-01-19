@@ -85,13 +85,14 @@ Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
                                 JournalEntryRow::GetPrefixFor(journal_id));
 }
 
-Status PageDbBatchImpl::AddJournalEntry(coroutine::CoroutineHandler* handler,
-                                        const JournalId& journal_id,
-                                        fxl::StringView key,
-                                        fxl::StringView value,
-                                        KeyPriority priority) {
+Status PageDbBatchImpl::AddJournalEntry(
+    coroutine::CoroutineHandler* handler,
+    const JournalId& journal_id,
+    fxl::StringView key,
+    const ObjectIdentifier& object_identifier,
+    KeyPriority priority) {
   return batch_->Put(handler, JournalEntryRow::GetKeyFor(journal_id, key),
-                     JournalEntryRow::GetValueFor(value, priority));
+                     JournalEntryRow::GetValueFor(object_identifier, priority));
 }
 
 Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,

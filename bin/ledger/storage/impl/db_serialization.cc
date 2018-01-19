@@ -114,19 +114,26 @@ std::string JournalEntryRow::GetKeyFor(const JournalId& id,
   return fxl::Concatenate({JournalEntryRow::GetPrefixFor(id), key});
 }
 
-std::string JournalEntryRow::GetValueFor(fxl::StringView value,
-                                         KeyPriority priority) {
+std::string JournalEntryRow::GetValueFor(
+    const ObjectIdentifier& object_identifier,
+    KeyPriority priority) {
   char priority_byte =
       (priority == KeyPriority::EAGER) ? kEagerPrefix : kLazyPrefix;
-  return fxl::Concatenate({{&kAddPrefix, 1}, {&priority_byte, 1}, value});
+  return fxl::Concatenate({{&kAddPrefix, 1},
+                           {&priority_byte, 1},
+                           EncodeObjectIdentifier(object_identifier)});
 }
 
-Status JournalEntryRow::ExtractObjectDigest(fxl::StringView db_value,
-                                            ObjectDigest* digest) {
+Status JournalEntryRow::ExtractObjectIdentifier(
+    fxl::StringView db_value,
+    ObjectIdentifier* object_identifier) {
   if (db_value[0] == kDeletePrefix[0]) {
     return Status::NOT_FOUND;
   }
-  *digest = db_value.substr(kAddPrefixSize).ToString();
+  if (!DecodeObjectIdentifier(db_value.substr(kAddPrefixSize),
+                              object_identifier)) {
+    return Status::FORMAT_ERROR;
+  }
   return Status::OK;
 }
 

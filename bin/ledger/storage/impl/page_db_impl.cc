@@ -90,14 +90,14 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
         key_value.first.substr(JournalEntryRow::kPrefixSize).ToString();
 
     if (key_value.second[0] == JournalEntryRow::kAddPrefix) {
+      Status status = JournalEntryRow::ExtractObjectIdentifier(
+          key_value.second, &change_->entry.object_identifier);
+      FXL_DCHECK(status == Status::OK);
       change_->deleted = false;
       change_->entry.priority =
           (key_value.second[1] == JournalEntryRow::kLazyPrefix)
               ? KeyPriority::LAZY
               : KeyPriority::EAGER;
-
-      change_->entry.object_identifier = MakeDefaultObjectIdentifier(
-          key_value.second.substr(JournalEntryRow::kAddPrefixSize).ToString());
     } else {
       change_->deleted = true;
     }
@@ -318,12 +318,12 @@ Status PageDbImpl::RemoveJournal(CoroutineHandler* handler,
 Status PageDbImpl::AddJournalEntry(CoroutineHandler* handler,
                                    const JournalId& journal_id,
                                    fxl::StringView key,
-                                   fxl::StringView value,
+                                   const ObjectIdentifier& object_identifier,
                                    KeyPriority priority) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->AddJournalEntry(handler, journal_id, key, value, priority));
+  RETURN_ON_ERROR(batch->AddJournalEntry(handler, journal_id, key,
+                                         object_identifier, priority));
   return batch->Execute(handler);
 }
 

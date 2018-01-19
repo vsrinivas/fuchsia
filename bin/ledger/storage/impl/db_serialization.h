@@ -92,10 +92,11 @@ class JournalEntryRow {
 
   static std::string GetKeyFor(const JournalId& id, fxl::StringView key);
 
-  static std::string GetValueFor(fxl::StringView value, KeyPriority priority);
+  static std::string GetValueFor(const ObjectIdentifier& object_identifier,
+                                 KeyPriority priority);
 
-  static Status ExtractObjectDigest(fxl::StringView db_value,
-                                    ObjectDigest* digest);
+  static Status ExtractObjectIdentifier(fxl::StringView db_value,
+                                        ObjectIdentifier* digest);
 };
 
 }  // namespace storage

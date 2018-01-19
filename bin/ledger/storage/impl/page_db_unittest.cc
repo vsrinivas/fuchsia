@@ -198,13 +198,16 @@ TEST_F(PageDbTest, JournalEntries) {
                                        commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
               page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
-                                       "value1", KeyPriority::LAZY));
+                                       MakeDefaultObjectIdentifier("value1"),
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
               page_db_.AddJournalEntry(handler, journal_id, "add-key-2",
-                                       "value2", KeyPriority::EAGER));
+                                       MakeDefaultObjectIdentifier("value2"),
+                                       KeyPriority::EAGER));
     EXPECT_EQ(Status::OK,
               page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
-                                       "value3", KeyPriority::LAZY));
+                                       MakeDefaultObjectIdentifier("value3"),
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
               page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
 
