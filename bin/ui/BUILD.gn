@@ -5,12 +5,6 @@
 import("//build/package.gni")
 import("//garnet/public/lib/ui/config.gni")
 
-config("vulkan_config") {
-  if (mozart_use_vulkan) {
-    defines = [ "MOZART_USE_VULKAN" ]
-  }
-}
-
 package("mozart_tests") {
   testonly = true
   system_image = true

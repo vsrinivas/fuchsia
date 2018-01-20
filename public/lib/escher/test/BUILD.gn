@@ -35,6 +35,7 @@ executable("escher_unittests") {
   }
 
   deps = [
+    ":gtest_vulkan",
     "base:base_unittests",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fxl",
@@ -51,12 +52,31 @@ executable("escher_unittests") {
     "//garnet/public/lib/escher",
     "//third_party/glm",
   ]
+}
+
+# Extends GTest with VK_TEST() and VK_TEST_F() macros, which behave just like
+# TEST() and TEST_F(), except that they are dynamically disabled when Vulkan
+# is not available.
+source_set("gtest_vulkan") {
+  testonly = true
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
 
   if (is_fuchsia) {
-    deps += [ "//garnet/public/lib/vulkan" ]
+    public_deps += [ "//garnet/public/lib/vulkan" ]
   }
 
   if (is_linux) {
-    configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
+    public_configs = [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
+
+  sources = [
+    "gtest_vulkan.cc",
+    "gtest_vulkan.h",
+    "gtest_vulkan_internal.h"
+  ]
 }

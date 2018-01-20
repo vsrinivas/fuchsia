@@ -170,15 +170,15 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
 
   // Prepare to create the Device and Queues.
   vk::DeviceQueueCreateInfo queue_info[2];
-  const float kQueuePriorities[2] = {0, 0};
+  const float kQueuePriority = 0;
   queue_info[0] = vk::DeviceQueueCreateInfo();
   queue_info[0].queueFamilyIndex = main_queue_family;
   queue_info[0].queueCount = 1;
-  queue_info[0].pQueuePriorities = kQueuePriorities;
+  queue_info[0].pQueuePriorities = &kQueuePriority;
   queue_info[1] = vk::DeviceQueueCreateInfo();
   queue_info[1].queueFamilyIndex = transfer_queue_family;
   queue_info[1].queueCount = 1;
-  queue_info[1].pQueuePriorities = kQueuePriorities;
+  queue_info[1].pQueuePriorities = &kQueuePriority;
 
   std::vector<const char*> extension_names;
   for (auto& extension : params.extension_names) {

@@ -23,9 +23,9 @@ source_set("testing_deps") {
   public_deps = [
     ":util",
     "//garnet/bin/ui/scene_manager:common",
+    "//garnet/public/lib/escher/test:gtest_vulkan",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/tests",
-    "//third_party/gtest",
   ]
 }
 
@@ -63,6 +63,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
     "hittest_unittest.cc",
     "imagepipe_unittest.cc",
