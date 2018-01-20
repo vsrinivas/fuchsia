@@ -5,6 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -13,9 +14,11 @@ typedef struct {
     // receiving event packets.  Returns ZX_ERR_ALREADY_BOUND if the channel
     // is already open.
     zx_status_t (*open_command_channel)(void* ctx, zx_handle_t* out_channel);
+
     // Open the two-way HCI ACL data channel.
     // Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
     zx_status_t (*open_acl_data_channel)(void* ctx, zx_handle_t* out_channel);
+
     // Open an output-only channel for monitoring HCI traffic.
     // The format of each message is: [1-octet flags] [n-octet payload]
     // The flags octet is a bitfield with the following values defined:
