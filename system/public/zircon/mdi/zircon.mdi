@@ -27,9 +27,12 @@ list    boot-reserve-mem-map.bank         MDI_BOOT_RESERVE_MEM_MAP_BANK         
 // Kernel Drivers
 
 // ARM PSCI driver
-list    kernel.arm-psci                   MDI_ARM_PSCI                          1000
-boolean kernel.arm-psci.use-smc           MDI_ARM_PSCI_USE_SMC                  1001
-boolean kernel.arm-psci.use-hvc           MDI_ARM_PSCI_USE_HVC                  1002
+list    kernel.arm-psci                                 MDI_ARM_PSCI                        1000
+boolean kernel.arm-psci.use-smc                         MDI_ARM_PSCI_USE_SMC                1001
+boolean kernel.arm-psci.use-hvc                         MDI_ARM_PSCI_USE_HVC                1002
+array[uint64] kernel.arm-psci.shutdown-args             MDI_ARM_PSCI_SHUTDOWN_ARGS          1003
+array[uint64] kernel.arm-psci.reboot-args               MDI_ARM_PSCI_REBOOT_ARGS            1004
+array[uint64] kernel.arm-psci.reboot-bootloader-args    MDI_ARM_PSCI_REBOOT_BOOTLOADER_ARGS 1005
 
 // ARM gic v3 driver
 list    kernel.arm-gic-v3                 MDI_ARM_GIC_V3                        1010

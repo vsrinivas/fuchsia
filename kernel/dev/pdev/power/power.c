@@ -10,7 +10,7 @@
 #include <pdev/power.h>
 
 static void default_reboot(enum reboot_flags flags) {
-    psci_system_reset();
+    psci_system_reset(flags);
 }
 
 static void default_shutdown(void) {
