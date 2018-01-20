@@ -69,6 +69,8 @@ kernel = {
     }
     arm-psci = {
         use-smc = true
+        reboot-args = [ 1, 0, 0 ]
+        reboot-bootloader-args = [ 4, 0, 0 ]
     }
     arm-timer = {
         irq-phys = 30
