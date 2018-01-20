@@ -751,7 +751,8 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
     link_impl_ = new LinkImpl(story_controller_impl_->ledger_client_,
                               story_controller_impl_->story_page_id_.Clone(),
-                              std::move(link_path_), nullptr);
+                              std::move(link_path_),
+                              std::move(create_link_info_));
     link_impl_->Connect(std::move(request_));
     story_controller_impl_->links_.emplace_back(link_impl_);
     // This orphaned handler will be called after this operation has been
