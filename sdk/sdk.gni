@@ -35,7 +35,7 @@ template("sdk") {
     }
 
     manifest_file = "$target_gen_dir/$main_target_name.sdk"
-    stamp_file = "$target_out_dir/${target_name}.exported"
+    stamp_file = "$target_gen_dir/$target_name.exported"
 
     action("${target_name}_export") {
       script = "//build/sdk/export_sdk.py"
@@ -43,6 +43,8 @@ template("sdk") {
       inputs = [
         manifest_file,
       ]
+
+      depfile = "$stamp_file.d"
 
       outputs = [
         stamp_file,
@@ -56,7 +58,12 @@ template("sdk") {
         "--manifest",
         rebase_path(manifest_file),
         "--domains",
-      ] + invoker.domains
+      ] + invoker.domains + [
+        "--depfile",
+        rebase_path(depfile),
+        "--depname",
+        rebase_path(stamp_file, root_build_dir),
+      ]
 
       deps = [
         ":$main_target_name",

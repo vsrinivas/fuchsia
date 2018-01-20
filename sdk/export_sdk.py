@@ -35,6 +35,12 @@ def main():
     parser.add_argument('--domains',
                         help='List of domains to export',
                         nargs='*')
+    parser.add_argument('--depname',
+                        help='Name of the depfile target',
+                        required=True)
+    parser.add_argument('--depfile',
+                        help='Path to the depfile to generate',
+                        required=True)
     args = parser.parse_args()
 
     if len(args.domains) != 1 and args.domains[0] != 'c-pp':
@@ -46,6 +52,9 @@ def main():
     make_dir(dummy_path)
     with open(dummy_path, 'w') as dummy_file:
         dummy_file.write('Told you, nothing to see here...\n')
+
+    with open(args.depfile, 'w') as dep_file:
+        dep_file.write('%s:\n' % args.depname)
 
     with open(args.stamp_file, 'w') as stamp_file:
         stamp_file.write('Now go use it\n')
