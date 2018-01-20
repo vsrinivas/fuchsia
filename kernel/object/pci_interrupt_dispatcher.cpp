@@ -33,13 +33,9 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
     PciInterruptDispatcher* thiz
             = reinterpret_cast<PciInterruptDispatcher *>(interrupt->dispatcher);
 
-    // Mask the IRQ at the PCIe hardware level if we can, and (if any threads
-    // just became runable) tell the kernel to trigger a reschedule event.
-    if (thiz->Signal(SIGNAL_MASK(interrupt->slot), false) > 0) {
-        return PCIE_IRQRET_MASK_AND_RESCHED;
-    } else {
-        return PCIE_IRQRET_MASK;
-    }
+    // Mask the IRQ at the PCIe hardware level if we can.
+    thiz->Signal(SIGNAL_MASK(interrupt->slot), true);
+    return PCIE_IRQRET_MASK;
 }
 
 zx_status_t PciInterruptDispatcher::Create(

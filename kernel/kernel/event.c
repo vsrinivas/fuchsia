@@ -137,7 +137,6 @@ zx_status_t event_wait_with_mask(event_t* e, uint signal_mask) {
 static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result,
                                  bool thread_lock_held) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
-    DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 
     // conditionally acquire/release the thread lock
     // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
