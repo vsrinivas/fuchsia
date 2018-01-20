@@ -5,9 +5,66 @@
 import("sdk_molecule.gni")
 
 # A collection of elements to be published in an SDK.
+#
+# Parameters
+#
+#   export (optional)
+#     Whether to export the contents of this SDK to the output directory.
+#     This is useful when an SDK-like file structure is needed as part of the
+#     build, for example to port a language runtime which would otherwise rely
+#     on an official SDK.
+#     Defaults to false.
+#
+#   domains (optional)
+#     If `export` is true, specifies the domains of SDK elements to export.
+#     Only the "c-pp" domain is currently supported.
 
 template("sdk") {
-  sdk_molecule(target_name) {
-    forward_variables_from(invoker, "*")
+  main_target_name = target_name
+
+  sdk_molecule(main_target_name) {
+    forward_variables_from(invoker, "*", [
+      "domains",
+      "export",
+    ])
+  }
+
+  if (defined(invoker.export) && invoker.export) {
+    if (!defined(invoker.domains)) {
+      assert(false, "A list of domains to export must be specified.")
+    }
+
+    manifest_file = "$target_gen_dir/$main_target_name.sdk"
+    stamp_file = "$target_out_dir/${target_name}.exported"
+
+    action("${target_name}_export") {
+      script = "//build/sdk/export_sdk.py"
+
+      inputs = [
+        manifest_file,
+      ]
+
+      outputs = [
+        stamp_file,
+      ]
+
+      args = [
+        "--out-dir",
+        rebase_path("$root_out_dir/sdks/$target_name"),
+        "--stamp-file",
+        rebase_path(stamp_file),
+        "--manifest",
+        rebase_path(manifest_file),
+        "--domains",
+      ] + invoker.domains
+
+      deps = [
+        ":$main_target_name",
+      ]
+    }
+  } else { # Not exported.
+    if (defined(invoker.domains)) {
+      assert(false, "A domain list may only be set if export = true.")
+    }
   }
 }

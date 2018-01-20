@@ -49,6 +49,9 @@ SDK.
 
 ## Creating a custom SDK
 
+Once elements have been set up for inclusion in an SDK, declaring such an SDK
+only takes a few steps:
+
 1. Identify the atoms needed in the SDK;
 2. Create a new SDK `//my/api` with the `sdk` template, regrouping the atoms and
    molecules that should be included;
@@ -66,3 +69,14 @@ SDK.
 The package file can now be used in a standard Fuchsia build and will produce
 the manifest at `//out/foobar/gen/my/api/api.sdk`. A JSON schema for this
 manifest is available [here](manifest_schema.json).
+
+#### Using a custom SDK in the build
+
+By setting the `export` property to true on an SDK target, that SDK's contents
+become available in the build output directory and may be used for other GN
+targets to depend on. This is useful for example when building third-party code
+which would otherwise rely on an official SDK.
+
+For an SDK declared at `//my/api` and marked as "exported", an additional GN
+target exists: `//my/api:api_export`. This target will generate a usable SDK
+under `out/<build-type>/sdks/<sdk-target-name>`.
