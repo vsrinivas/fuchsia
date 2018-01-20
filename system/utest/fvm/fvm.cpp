@@ -1570,7 +1570,6 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
 
             // Test a variety of:
             // Starting device offsets,
-
             size_t bsz = info.block_size;
             for (size_t dev_off = dev_off_start; dev_off <= dev_off_end; dev_off += bsz) {
                 printf("  Testing non-contiguous write/read starting at offset: %zu\n", dev_off);
@@ -1579,8 +1578,21 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
                     printf("    Testing operation of length: %zu\n", len);
                     // and starting VMO offsets
                     for (size_t vmo_off = 0; vmo_off < 3 * bsz; vmo_off += bsz) {
+                        // Try writing & reading the entire section (multiple
+                        // slices) at once.
                         ASSERT_TRUE(vc->CheckWrite(vb.get(), vmo_off, dev_off, len));
                         ASSERT_TRUE(vc->CheckRead(vb.get(), vmo_off, dev_off, len));
+
+                        // Try reading the section one slice at a time.
+                        // The results should be the same.
+                        size_t sub_off = 0;
+                        size_t sub_len = slice_size - (dev_off % slice_size);
+                        while (sub_off < len) {
+                            ASSERT_TRUE(vc->CheckRead(vb.get(), vmo_off + sub_off,
+                                                      dev_off + sub_off, sub_len));
+                            sub_off += sub_len;
+                            sub_len = fbl::min(slice_size, len - sub_off);
+                        }
                     }
                 }
             }
