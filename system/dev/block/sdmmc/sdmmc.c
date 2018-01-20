@@ -181,10 +181,10 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     mtx_lock(&sdmmc->lock);
     list_add_tail(&sdmmc->txn_list, &txn->node);
-    mtx_unlock(&sdmmc->lock);
-
-    // Wake up the worker thread
+    // Wake up the worker thread (while locked, so they don't accidentally
+    // clear the event).
     zx_object_signal(sdmmc->worker_event, 0, SDMMC_IOTXN_RECEIVED);
+    mtx_unlock(&sdmmc->lock);
 }
 
 // Block device protocol.
@@ -347,11 +347,14 @@ static int sdmmc_worker_thread(void* arg) {
         // between each txn.
         mtx_lock(&sdmmc->lock);
         iotxn_t* txn = list_remove_head_type(&sdmmc->txn_list, iotxn_t, node);
-        mtx_unlock(&sdmmc->lock);
         if (txn) {
+            // Unlock if we execute the transaction
+            mtx_unlock(&sdmmc->lock);
             sdmmc_do_txn(sdmmc, txn);
         } else {
+            // Stay locked if we're clearing the "RECEIVED" flag.
             zx_object_signal(sdmmc->worker_event, SDMMC_IOTXN_RECEIVED, 0);
+            mtx_unlock(&sdmmc->lock);
         }
 
         uint32_t pending;
