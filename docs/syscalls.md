@@ -134,11 +134,12 @@
 
 ## DDK
 + [cache_flush](syscalls/cache_flush.md) - Flush CPU data and/or instruction caches
-+ [interrupt_create](syscalls/interrupt_create.md) - Create an interrupt object
-+ [interrupt_bind](syscalls/interrupt_bind.md) - Bind an interrupt vector to interrupt object
-+ [interrupt_wait](syscalls/interrupt_wait.md) - Wait for an interrupt on an interrupt object
-+ [interrupt_get_timestamp](syscalls/interrupt_get_timestamp.md) - Get the timestamp for an interrupt
-+ [interrupt_signal](syscalls/interrupt_signal.md) - Signals a virtual interrupt on an interrupt object
++ [interrupt_ack](syscalls/interrupt_ack.md) - Acknowledge an interrupt object
++ [interrupt_bind](syscalls/interrupt_bind.md) - Bind an interrupt object to a port
++ [interrupt_create](syscalls/interrupt_create.md) - Create a physical or virtual interrupt object
++ [interrupt_destroy](syscalls/interrupt_destroy.md) - Destroy an interrupt object
++ [interrupt_trigger](syscalls/interrupt_trigger.md) - Trigger a virtual interrupt object
++ [interrupt_wait](interrupt_wait.md) - Wait on an interrupt object
 + [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
 + acpi_uefi_rsdp
 + mmap_device_io
