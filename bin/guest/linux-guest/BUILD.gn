@@ -57,9 +57,14 @@ guest_app("linux-guest") {
     ":kernel",
   ]
 
+  if (target_cpu == "arm64") {
+    cmdline = "earlycon=pl011,0xfff32000 console=ttyAMA0"
+  } else if (current_cpu == "x64") {
+    cmdline = "earlycon=uart,io,0x3f8 console=ttyS0 console=tty0 io_delay=none clocksource=tsc"
+  }
+
   kernel_outputs = get_target_outputs(":kernel")
   initrd_outputs = get_target_outputs(":initrd")
   kernel = kernel_outputs[0]
   ramdisk = initrd_outputs[0]
-  guest_config = rebase_path("guest-${linux_platform}.cfg")
 }

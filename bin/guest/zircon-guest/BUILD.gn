@@ -92,14 +92,16 @@ guest_app("zircon-guest") {
     ":guest-bootdata",
   ]
 
+  cmdline = "TERM=uart"
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
   kernel = "//out/build-zircon/build-${zircon_platforms[0]}/zircon.bin"
-  guest_config = rebase_path("guest.cfg")
 
   gpt_outputs = get_target_outputs(":gpt_image")
+  gpt_filename = "gpt.img"
   resources = [ {
         path = rebase_path(gpt_outputs[0])
-        dest = "gpt.img"
+        dest = "${gpt_filename}"
       } ]
+  block_devices = [ "/pkg/data/${gpt_filename}" ]
 }

@@ -11,8 +11,10 @@ import("//build/package.gni")
 #     Path to the guest kernel.
 #   ramdisk (string, optional)
 #     Path to a ramdisk file to be loaded into the guest.
-#   guest_config (string, optional)
-#     Path to a config file to use for the guest.
+#   cmdline (string, optional)
+#     Kernel cmdline string.
+#   block_devices (array, optional)
+#     List of block devices to use.
 #
 template("guest_app") {
   if (defined(invoker.cli) && invoker.cli) {
@@ -73,20 +75,37 @@ template("guest_app") {
           } ]
     }
 
-    # Add config file resource.
-    if (defined(invoker.guest_config)) {
-      guest_config = rebase_path(invoker.guest_config)
-      inputs += [ guest_config ]
-      resources += [ {
-            path = guest_config
-            dest = "guest.cfg"
-          } ]
+    config_args = []
+    if (defined(invoker.cmdline)) {
+      config_args += [
+        "--cmdline",
+        invoker.cmdline,
+      ]
     }
+
+    if (defined(invoker.block_devices)) {
+      foreach(block_spec, invoker.block_devices) {
+        config_args += [
+          "--block",
+          block_spec,
+        ]
+      }
+    }
+
+    # Add config file resource.
+    guest_config_file = "${target_out_dir}/guest.cfg"
+    guest_config = exec_script("//garnet/bin/guest/generate_guest_config.py",
+                               config_args,
+                               "string")
+    write_file(guest_config_file, guest_config)
+    resources += [ {
+          path = rebase_path(guest_config_file)
+          dest = "guest.cfg"
+        } ]
 
     # Pass-through any additional resources.
     if (defined(invoker.resources)) {
       resources += invoker.resources
     }
   }
-
 }
