@@ -483,7 +483,9 @@ void LpcmOutputStream::SendInternalStarted(void* buffer,
   producer_.ProducePacket(buffer, size, pts,
                           TimelineRate(frames_per_second_, 1), false,
                           end_of_stream, nullptr, [this, buffer, size]() {
-                            ReleasePayloadBuffer(buffer, size);
+                            if (buffer) {
+                              ReleasePayloadBuffer(buffer, size);
+                            }
                             next_return_pts_ += size / bytes_per_frame();
                             MaybeCallSendTask();
                           });
