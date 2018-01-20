@@ -162,7 +162,11 @@ MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 MODULE_PKG_FILES := $(shell find $(MODULE_SRCDIR) -type f)
 
 # split based on include/... and everything else
+ifneq ($(MODULE_PACKAGE_INCS),)
+MODULE_PKG_INCS := $(MODULE_PACKAGE_INCS)
+else
 MODULE_PKG_INCS := $(filter %.h,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
+endif
 MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
 
 # We replace . with - in module dep names to handle async.xyz which are defined
@@ -172,8 +176,12 @@ MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/
 MODULE_PKG_DEPS := $(subst .,-,$(foreach dep,$(MODULE_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 
 ifeq ($(filter src,$(MODULE_PACKAGE)),src)
+ifneq ($(MODULE_PACKAGE_SRCS),)
+MODULE_PKG_SRCS := $(MODULE_PACKAGE_SRCS)
+else
 MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
-MODULE_PKG_SRCS := $(foreach inc,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(inc))=SOURCE/$(inc))
+endif
+MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
 MODULE_PKG_ARCH := src
 MODULE_PKG_TAG := "[src]"
 # source modules need to include their static deps to be buildable

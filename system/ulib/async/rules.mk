@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
+LOCAL_INC := $(LOCAL_DIR)/include/async
 
 #
 # libasync.a: the client library
@@ -20,6 +21,16 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/task.cpp \
     $(LOCAL_DIR)/wait.cpp \
     $(LOCAL_DIR)/wait_with_timeout.cpp
+
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_INCS := \
+    $(LOCAL_INC)/auto_task.h \
+    $(LOCAL_INC)/auto_wait.h \
+    $(LOCAL_INC)/dispatcher.h \
+    $(LOCAL_INC)/receiver.h \
+    $(LOCAL_INC)/task.h \
+    $(LOCAL_INC)/wait.h \
+    $(LOCAL_INC)/wait_with_timeout.h
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl
@@ -45,6 +56,9 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/loop.c \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_INCS := $(LOCAL_INC)/loop.h
+
 MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/fbl
@@ -69,6 +83,9 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/default.c
+
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_INCS := $(LOCAL_INC)/default.h
 
 MODULE_SO_NAME := async-default
 MODULE_EXPORT := so
