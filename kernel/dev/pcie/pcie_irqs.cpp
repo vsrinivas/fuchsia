@@ -111,8 +111,6 @@ SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
 }
 
 enum handler_return SharedLegacyIrqHandler::Handler() {
-    bool need_resched = false;
-
     /* Go over the list of device's which share this legacy IRQ and give them a
      * chance to handle any interrupts which may be pending in their device.
      * Keep track of whether or not any device has requested a re-schedule event
@@ -153,9 +151,6 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                 if (hstate->handler) {
                     if (!hstate->masked)
                         irq_ret = hstate->handler(*dev, 0, hstate->ctx);
-
-                    if (irq_ret & PCIE_IRQRET_RESCHED)
-                        need_resched = true;
                 } else {
                     TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x, but no irq_ "
                            "handler has been registered by the driver.  Force disabling the "
@@ -185,7 +180,7 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
         }
     }
 
-    return need_resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
@@ -521,8 +516,7 @@ enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) 
     if (!(irq_ret & PCIE_IRQRET_MASK))
         MaskUnmaskMsiIrqLocked(hstate.pci_irq_id, false);
 
-    /* Request a reschedule if asked to do so */
-    return (irq_ret & PCIE_IRQRET_RESCHED) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {

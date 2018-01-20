@@ -73,24 +73,14 @@ typedef struct pcie_irq_mode_caps {
  * An enumeration of the permitted return values from a PCIe IRQ handler.
  *
  * ++ PCIE_IRQRET_NO_ACTION
- *    Do not mask the IRQ, do not request that the kernel perform a reschedule.
- *
- * ++ PCIE_IRQRET_RESCHED
- *    Do not mask the IRQ, request that the kernel perform a reschedule.
+ *    Do not mask the IRQ.
  *
  * ++ PCIE_IRQRET_MASK
- *    Mask the IRQ if (and only if) per vector masking is supported, but do not
- *    request that the kernel perform a reschedule.
- *
- * ++ PCIE_IRQRET_MASK_AND_RESCHED
- *    Mask the IRQ if (and only if) per vector masking is supported, and request
- *    that the kernel perform a reschedule.
+ *    Mask the IRQ if (and only if) per vector masking is supported.
  */
 typedef enum pcie_irq_handler_retval {
     PCIE_IRQRET_NO_ACTION        = 0x0,
-    PCIE_IRQRET_RESCHED          = 0x1,
-    PCIE_IRQRET_MASK             = 0x2,
-    PCIE_IRQRET_MASK_AND_RESCHED = PCIE_IRQRET_RESCHED | PCIE_IRQRET_MASK,
+    PCIE_IRQRET_MASK             = 0x1,
 } pcie_irq_handler_retval_t;
 
 /**
