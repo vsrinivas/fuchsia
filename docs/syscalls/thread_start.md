@@ -27,6 +27,22 @@ Thread handles may be waited on and will assert the signal
 *ZX_THREAD_TERMINATED* when the thread stops executing (due to
 *thread_exit**() being called.
 
+*entry* shall point to a function that must call **thread_exit**() or
+**futex_wake_handle_close_thread_exit**() or
+**vmar_unmap_handle_close_thread_exit**() before reaching the last
+instruction. Below is an example:
+
+```
+void thread_entry(uintptr_t arg1, uintptr_t arg2) __attribute__((noreturn)) {
+	// do work here.
+
+	zx_thread_exit();
+}
+```
+
+Failing to call one of the exit functions before reaching the end of
+the function will cause an architecture / toolchain specific exception.
+
 ## RETURN VALUE
 
 **thread_start**() returns ZX_OK on success.
@@ -50,4 +66,6 @@ is part of is no longer alive.
 [object_wait_one](object_wait_one.md),
 [object_wait_many](object_wait_many.md),
 [thread_create](thread_create.md),
-[thread_exit](thread_exit.md).
+[thread_exit](thread_exit.md),
+[futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md),
+[vmar_unmap_handle_close_thread_exit](vmar_unmap_handle_close_thread_exit.md).

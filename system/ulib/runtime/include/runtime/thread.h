@@ -17,10 +17,7 @@ typedef void (*zxr_thread_entry_t)(void*);
 
 typedef struct {
     zxr_thread_entry_t entry;
-    void* arg;
-
     zx_handle_t handle;
-
     atomic_int state;
 } zxr_thread_t;
 

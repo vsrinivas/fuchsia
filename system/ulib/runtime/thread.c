@@ -75,10 +75,10 @@ static _Noreturn void exit_non_detached(zxr_thread_t* thread) {
     __builtin_trap();
 }
 
-static _Noreturn void thread_trampoline(uintptr_t ctx) {
+static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
     zxr_thread_t* thread = (zxr_thread_t*)ctx;
 
-    thread->entry(thread->arg);
+    thread->entry((void*)arg);
 
     int old_state = begin_exit(thread);
     switch (old_state) {
@@ -143,7 +143,6 @@ zx_status_t zxr_thread_create(zx_handle_t process, const char* name,
 
 zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, zxr_thread_entry_t entry, void* arg) {
     thread->entry = entry;
-    thread->arg = arg;
 
     // compute the starting address of the stack
     uintptr_t sp = compute_initial_stack_pointer(stack_addr, stack_size);
@@ -151,7 +150,7 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
     // kick off the new thread
     zx_status_t status = _zx_thread_start(thread->handle,
                                           (uintptr_t)thread_trampoline, sp,
-                                          (uintptr_t)thread, 0);
+                                          (uintptr_t)thread, (uintptr_t)arg);
 
     if (status != ZX_OK)
         zxr_thread_destroy(thread);
