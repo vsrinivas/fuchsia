@@ -71,7 +71,7 @@
           "properties": {
             "gn-label": {
               "description": "Label of the GN target that generated this atom",
-              "type": "string",
+              "type": "string"
             }
           },
           "required": [
