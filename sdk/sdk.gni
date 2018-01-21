@@ -2,11 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("sdk_molecule.gni")
 
 # A collection of elements to be published in an SDK.
 #
 # Parameters
+#
+#   name (optional)
+#     Name of the SDK.
+#     Defaults to the target's name.
 #
 #   export (optional)
 #     Whether to export the contents of this SDK to the output directory.
@@ -21,12 +26,72 @@ import("sdk_molecule.gni")
 
 template("sdk") {
   main_target_name = target_name
+  generation_target_name = "${target_name}_generate"
+  copy_target_name = "${target_name}_copy"
+  verification_target_name = "${target_name}_verify"
 
-  sdk_molecule(main_target_name) {
+  # Generates the manifest.
+  sdk_molecule(generation_target_name) {
     forward_variables_from(invoker, "*", [
       "domains",
       "export",
     ])
+  }
+
+  sdk_name = target_name
+  if (defined(invoker.name)) {
+    sdk_name = invoker.name
+  }
+  final_manifest_file = "$root_out_dir/sdks/$sdk_name"
+
+  # Copies the manifest to a central location.
+  copy(copy_target_name) {
+    sources = [
+      "$target_gen_dir/$generation_target_name.sdk",
+    ]
+
+    outputs = [
+      final_manifest_file,
+    ]
+
+    deps = [
+      ":$generation_target_name",
+    ]
+  }
+
+  # Verifies that the manifest is valid.
+  compiled_action(verification_target_name) {
+    tool = "//build/tools/json_validator"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    schema_file = "//build/sdk/manifest_schema.json"
+
+    inputs = [
+      final_manifest_file,
+      schema_file,
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      rebase_path(schema_file),
+      rebase_path(final_manifest_file),
+      rebase_path(stamp_file),
+    ]
+
+    deps = [
+      ":$copy_target_name",
+    ]
+  }
+
+  group(main_target_name) {
+    deps = [
+      ":$generation_target_name",
+      ":$copy_target_name",
+      ":$verification_target_name",
+    ]
   }
 
   if (defined(invoker.export) && invoker.export) {
@@ -34,7 +99,6 @@ template("sdk") {
       assert(false, "A list of domains to export must be specified.")
     }
 
-    manifest_file = "$target_gen_dir/$main_target_name.sdk"
     stamp_file = "$target_gen_dir/$target_name.exported"
 
     action("${target_name}_export") {
@@ -56,7 +120,7 @@ template("sdk") {
         "--stamp-file",
         rebase_path(stamp_file),
         "--manifest",
-        rebase_path(manifest_file),
+        rebase_path(final_manifest_file),
         "--domains",
       ] + invoker.domains + [
         "--depfile",
