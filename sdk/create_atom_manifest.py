@@ -156,10 +156,11 @@ def main():
         'domain': args.domain,
         'name': name,
     }
+    tags = dict(map(lambda t: t.split(':', 1), args.tags))
     atoms.update([Atom({
         'id': id,
         'gn-label': args.gn_label,
-        'tags': args.tags,
+        'tags': tags,
         'deps': map(lambda i: i.json, sorted(list(deps))),
         'files': files,
     })])
