@@ -778,7 +778,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     test_vmo_object_t obj;
     ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
-    for (size_t num_ops = 1; num_ops <= MAX_TXN_MESSAGES; num_ops++) {
+    for (size_t num_ops = 1; num_ops <= 32; num_ops++) {
         txnid_t txnid;
         expected = sizeof(txnid_t);
         ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -807,7 +807,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     END_TEST;
 }
 
-bool ramdisk_test_fifo_too_many_ops(void) {
+bool ramdisk_test_fifo_large_ops_count_shutdown(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = PAGE_SIZE;
@@ -817,37 +817,47 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     zx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
-    fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
+
+    // Create a vmo
     test_vmo_object_t obj;
     ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
-    // This is one too many messages
-    size_t num_ops = MAX_TXN_MESSAGES + 1;
+    const size_t kNumOps = BLOCK_FIFO_MAX_DEPTH;
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
     fbl::AllocChecker ac;
-    fbl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[num_ops](),
-                                               num_ops);
+    fbl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[kNumOps](),
+                                              kNumOps);
     ASSERT_TRUE(ac.check());
 
-    for (size_t b = 0; b < num_ops; b++) {
+    for (size_t b = 0; b < kNumOps; b++) {
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj.vmoid;
-        requests[b].opcode     = BLOCKIO_WRITE;
+        requests[b].opcode     = BLOCKIO_WRITE | BLOCKIO_BARRIER_BEFORE;
         requests[b].length     = 1;
         requests[b].vmo_offset = 0;
-        requests[b].dev_offset = 0;
+        requests[b].dev_offset = b;
     }
 
-    // This should be caught locally by the client library
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ZX_ERR_INVALID_ARGS);
+    // Enqueue multiple barrier-based operations without waiting
+    // for completion. The intention here is for the block device
+    // server to be busy processing multiple pending operations
+    // when the FIFO is suddenly closed, causing "server termination
+    // with pending work".
+    //
+    // It's obviously hit-or-miss whether the server will actually
+    // be processing work when we shut down the fifo, but run in a
+    // loop, this test was able to trigger deadlocks in a buggy
+    // version of the server; as a consequence, it is preserved
+    // to help detect regressions.
+    uint32_t actual;
+    ZX_ASSERT(zx_fifo_write(fifo, &requests[0], sizeof(block_fifo_request_t) *
+                            requests.size(), &actual) == ZX_OK);
+    usleep(100);
+    ZX_ASSERT(zx_handle_close(fifo) == ZX_OK);
 
-    // The txn should still be usable! We should still be able to send a close request.
-    ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), ZX_OK, "Failed to free txn");
-    block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     ASSERT_EQ(close(fd), 0);
     END_TEST;
@@ -1189,7 +1199,7 @@ RUN_TEST_SMALL(ramdisk_test_fifo_multiple_vmo_multithreaded)
 // TODO(smklein): Test ops across different vmos
 RUN_TEST_SMALL(ramdisk_test_fifo_unclean_shutdown)
 RUN_TEST_SMALL(ramdisk_test_fifo_large_ops_count)
-RUN_TEST_SMALL(ramdisk_test_fifo_too_many_ops)
+RUN_TEST_SMALL(ramdisk_test_fifo_large_ops_count_shutdown)
 RUN_TEST_SMALL(ramdisk_test_fifo_intermediate_op_failure)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_vmoid)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_txnid)

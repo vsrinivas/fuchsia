@@ -369,7 +369,7 @@ void Device::BlockForward(block_op_t* block) {
 void Device::BlockComplete(block_op_t* block, zx_status_t rc) {
     Device* device = static_cast<Device*>(block->cookie);
 
-    if (rc != ZX_OK || block->command != BLOCK_OP_READ) {
+    if (rc != ZX_OK || (block->command & BLOCK_OP_MASK) != BLOCK_OP_READ) {
         device->BlockRelease(block, rc);
         return;
     }
@@ -507,7 +507,7 @@ void Device::ProcessBlock(block_op_t* block, uint64_t off) {
     packet.type = ZX_PKT_TYPE_USER;
     packet.status = ZX_ERR_NEXT;
     memcpy(packet.user.c8, &block, sizeof(block));
-    if (block->command == BLOCK_OP_READ) {
+    if ((block->command & BLOCK_OP_MASK) == BLOCK_OP_READ) {
         BlockForward(block);
     } else if ((rc = port_.queue(&packet, 1)) != ZX_OK) {
         BlockRelease(block, rc);

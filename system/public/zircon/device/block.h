@@ -133,6 +133,8 @@ typedef uint16_t vmoid_t;
 // ssize_t ioctl_block_attach_vmo(int fd, zx_handle_t* in, vmoid_t* out_vmoid);
 IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, zx_handle_t, vmoid_t);
 
+// TODO(smklein): Address this; it's not being used directly anymore.
+// Do we want to make an arena of block_ops, and have this be the txn count?
 #define MAX_TXN_MESSAGES 16
 #define MAX_TXN_COUNT 256
 
@@ -268,20 +270,30 @@ IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_st
 // transaction is out of range, for example if 'length' is too large or if 'dev_offset' is beyond
 // the end of the device, ZX_ERR_OUT_OF_RANGE is returned.
 
-#define BLOCKIO_READ 0x0001      // Reads from the Block device into the VMO
-#define BLOCKIO_WRITE 0x0002     // Writes to the Block device from the VMO
-#define BLOCKIO_SYNC 0x0003      // Unimplemented
-#define BLOCKIO_CLOSE_VMO 0x0004 // Detaches the VMO from the block device; closes the handle to it.
-#define BLOCKIO_OP_MASK 0x00FF
+// Reads from the Block device into the VMO
+#define BLOCKIO_READ           0x00000001
+// Writes to the Block device from the VMO
+#define BLOCKIO_WRITE          0x00000002
+// Write any cached data to nonvolatile storage.
+// Implies BARRIER_BEFORE and BARRIER_AFTER.
+#define BLOCKIO_FLUSH          0x00000003
+// Detaches the VMO from the block device.
+#define BLOCKIO_CLOSE_VMO      0x00000004
+#define BLOCKIO_OP_MASK        0x000000FF
 
-#define BLOCKIO_TXN_END 0x0100 // Expects response after request (and all previous) have completed
-#define BLOCKIO_FLAG_MASK 0xFF00
+// Require that this operation will not begin until all prior operations
+// have completed.
+#define BLOCKIO_BARRIER_BEFORE 0x00000100
+// Require that this operation must complete before additional operations begin.
+#define BLOCKIO_BARRIER_AFTER  0x00000200
+// Respond after request (and all previous) have completed
+#define BLOCKIO_TXN_END        0x00000400
+#define BLOCKIO_FLAG_MASK      0x0000FF00
 
 typedef struct {
     txnid_t txnid;
     vmoid_t vmoid;
-    uint16_t opcode;
-    uint16_t reserved0;
+    uint32_t opcode;
     uint64_t length;
     uint64_t vmo_offset;
     uint64_t dev_offset;

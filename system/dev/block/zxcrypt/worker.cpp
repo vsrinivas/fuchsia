@@ -66,7 +66,7 @@ zx_status_t Worker::Loop() {
     while (port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK && packet.status == ZX_ERR_NEXT) {
         block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[0]);
         extra_op_t* ex = device_->BlockToExtra(block);
-        switch (block->command) {
+        switch (block->command & BLOCK_OP_MASK) {
         case BLOCK_OP_WRITE:
             if ((rc = zx_vmo_read(ex->vmo, ex->buf, ex->off, ex->len)) != ZX_OK ||
                 (rc = encrypt_.Encrypt(ex->buf, ex->num, ex->len, ex->buf) != ZX_OK)) {

@@ -8,10 +8,13 @@
 #include <string.h>
 
 #include <ddk/device.h>
+#include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
+#include <fbl/new.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -20,16 +23,18 @@
 
 #include "server.h"
 
-// This signal is set on the FIFO when the server should be instructed
-// to terminate. Note that the block client (other end of the fifo) can
-// currently also set this bit as an alternative mechanism to shut down
-// the block server.
-//
-// If additional signals are set on the FIFO, it should be noted that
-// block clients will also be able to manipulate them.
-constexpr zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
-
 namespace {
+
+// This signal is set on the FIFO when the server should be instructed
+// to terminate.
+constexpr zx_signals_t kSignalFifoTerminate   = ZX_USER_SIGNAL_0;
+// This signal is set on the FIFO when, after the thread enqueueing operations
+// has encountered a barrier, all prior operations have completed.
+constexpr zx_signals_t kSignalFifoOpsComplete = ZX_USER_SIGNAL_1;
+// Signalled on the fifo when it has finished terminating.
+// (If we need to free up user signals, this could easily be transformed
+// into a completion object).
+constexpr zx_signals_t kSignalFifoTerminated  = ZX_USER_SIGNAL_2;
 
 void OutOfBandRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
     block_fifo_response_t response;
@@ -44,36 +49,36 @@ void OutOfBandRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
     }
 }
 
-void BlockComplete(void* cookie, zx_status_t status) {
-    block_msg_t* msg = static_cast<block_msg_t*>(cookie);
+void BlockComplete(BlockMsg* msg, zx_status_t status) {
+    auto extra = msg->extra();
     // Since iobuf is a RefPtr, it lives at least as long as the txn,
     // and is not discarded underneath the block device driver.
-    ZX_DEBUG_ASSERT(msg->iobuf != nullptr);
-    ZX_DEBUG_ASSERT(msg->txn != nullptr);
-    // Hold an extra copy of the 'blktxn' refptr; if we don't, and 'msg->txn' is
-    // the last copy, then when we nullify 'msg->txn' in Complete we end up
-    // trying to unlock a lock in a deleted BlockTxn.
-    auto blktxn = msg->txn;
-    // Pass msg to complete so 'msg->txn' can be nullified while protected
-    // by the BlockTransaction's lock.
-    blktxn->Complete(msg, status);
+    extra->iobuf = nullptr;
+    extra->server->TxnEnd();
+    extra->txn->Complete(status);
 }
 
 void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
-    BlockComplete(bop->cookie, status);
-    free(bop);
+    ZX_DEBUG_ASSERT(bop != nullptr);
+    BlockMsg msg(static_cast<block_msg_t*>(bop->cookie));
+    BlockComplete(&msg, status);
 }
 
-}  // namespace
+uint32_t OpcodeToCommand(uint32_t opcode) {
+    // TODO(ZX-1826): Unify block protocol and block device interface
+    static_assert(BLOCK_OP_READ == BLOCKIO_READ, "");
+    static_assert(BLOCK_OP_WRITE == BLOCKIO_WRITE, "");
+    static_assert(BLOCK_OP_FLUSH == BLOCKIO_FLUSH, "");
+    static_assert(BLOCK_FL_BARRIER_BEFORE == BLOCKIO_BARRIER_BEFORE, "");
+    static_assert(BLOCK_FL_BARRIER_AFTER == BLOCKIO_BARRIER_AFTER, "");
+    const uint32_t shared = BLOCK_OP_READ | BLOCK_OP_WRITE | BLOCK_OP_FLUSH |
+            BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER;
+    return opcode & shared;
+}
 
-void BlockServer::Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
-                        uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
-    block_op_t* bop = (block_op_t*) malloc(block_op_size_);
-    if (bop == nullptr) {
-        BlockComplete(msg, ZX_ERR_NO_MEMORY);
-        return;
-    }
-    bop->command = (msg->opcode == BLOCKIO_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
+void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
+                uint64_t dev_offset, block_msg_t* msg, BlockMsgQueue* queue) {
+    block_op_t* bop = &msg->op;
     bop->rw.length = (uint32_t) length;
     bop->rw.vmo = vmo;
     bop->rw.offset_dev = dev_offset;
@@ -81,39 +86,30 @@ void BlockServer::Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
     bop->rw.pages = NULL;
     bop->completion_cb = BlockCompleteCb;
     bop->cookie = msg;
-    bp_.ops->queue(bp_.ctx, bop);
+    queue->push_back(msg);
 }
 
-BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid) :
+}  // namespace
+
+TransactionGroup::TransactionGroup(zx_handle_t fifo, txnid_t txnid) :
     fifo_(fifo), flags_(0), ctr_(0) {
     memset(&response_, 0, sizeof(response_));
     response_.txnid = txnid;
 }
 
-BlockTransaction::~BlockTransaction() {}
+TransactionGroup::~TransactionGroup() {}
 
-zx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
+zx_status_t TransactionGroup::Enqueue(bool do_respond) {
     fbl::AutoLock lock(&lock_);
     if (flags_ & kTxnFlagRespond) {
         // Can't get more than one response for a txn
         response_.status = ZX_ERR_IO;
         goto fail;
-    } else if (ctr_ == MAX_TXN_MESSAGES - 1) {
-        // This is the last message! We expect TXN_END, and will append it
-        // whether or not it was provided.
-        // If it WASN'T provided, then it would not be clear when to
-        // clear the current block transaction.
-        do_respond = true;
-    }
-
-    if (response_.status != ZX_OK) {
+    } else if (response_.status != ZX_OK) {
         // This operation already failed; don't bother enqueueing it.
         goto fail;
     }
-    ZX_DEBUG_ASSERT(ctr_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
-    msgs_[ctr_].flags = 0;
-    msgs_[ctr_].sub_txns = 1;
-    *msg_out = &msgs_[ctr_++];
+    ctr_++;
     if (do_respond) {
         SetResponseReadyLocked();
     }
@@ -125,7 +121,12 @@ fail:
     return ZX_ERR_IO;
 }
 
-void BlockTransaction::SetResponse(zx_status_t status, bool ready_to_send) {
+void TransactionGroup::CtrAdd(uint32_t n) {
+    fbl::AutoLock lock(&lock_);
+    ctr_ += n;
+}
+
+void TransactionGroup::SetResponse(zx_status_t status, bool ready_to_send) {
     fbl::AutoLock lock(&lock_);
 
     if (response_.status == ZX_OK) {
@@ -136,14 +137,14 @@ void BlockTransaction::SetResponse(zx_status_t status, bool ready_to_send) {
     }
 }
 
-void BlockTransaction::SetResponseReadyLocked() {
+void TransactionGroup::SetResponseReadyLocked() {
     flags_ |= kTxnFlagRespond;
     if (response_.count == ctr_) {
         RespondLocked();
     }
 }
 
-void BlockTransaction::RespondLocked() {
+void TransactionGroup::RespondLocked() {
     uint32_t actual;
     zx_status_t status = zx_fifo_write(fifo_, &response_,
                                        sizeof(block_fifo_response_t), &actual);
@@ -156,19 +157,10 @@ void BlockTransaction::RespondLocked() {
     flags_ &= ~kTxnFlagRespond;
 }
 
-void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
+void TransactionGroup::Complete(zx_status_t status) {
     fbl::AutoLock lock(&lock_);
     if ((status != ZX_OK) && (response_.status == ZX_OK)) {
         response_.status = status;
-    }
-
-    ZX_DEBUG_ASSERT(msg->sub_txns > 0);
-    msg->sub_txns--;
-    if (msg->sub_txns > 0) {
-        // The are more pending sub-txns to complete before we respond.
-        // This case will only occur for requests larger than the maximum xfer
-        // size.
-        return;
     }
 
     response_.count++;
@@ -178,8 +170,6 @@ void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
     if ((flags_ & kTxnFlagRespond) && (response_.count == ctr_)) {
         RespondLocked();
     }
-    msg->txn.reset();
-    msg->iobuf.reset();
 }
 
 IoBuffer::IoBuffer(zx::vmo vmo, vmoid_t id) : io_vmo_(fbl::move(vmo)), vmoid_(id) {}
@@ -197,22 +187,66 @@ zx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
     return ZX_OK;
 }
 
+void BlockServer::BarrierComplete() {
+    // This is the only location that unsets the OpsComplete
+    // signal. We'll never "miss" a signal, because we process
+    // the queue AFTER unsetting it.
+    barrier_in_progress_.store(false);
+    fifo_.signal(kSignalFifoOpsComplete, 0);
+    InQueueDrainer();
+}
+
+void BlockServer::TerminateQueue() {
+    InQueueDrainer();
+    while (true) {
+        if (pending_count_.load() == 0 && in_queue_.is_empty()) {
+            return;
+        }
+        zx_signals_t signals = kSignalFifoOpsComplete;
+        zx_signals_t seen = 0;
+        fifo_.wait_one(signals, zx::deadline_after(zx::msec(10)), &seen);
+        if (seen & kSignalFifoOpsComplete) {
+            BarrierComplete();
+        }
+    }
+}
+
 zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
+    auto cleanup = fbl::MakeAutoCall([this]() {
+        TerminateQueue();
+        ZX_ASSERT(pending_count_.load() == 0);
+        ZX_ASSERT(in_queue_.is_empty());
+        fifo_.signal(0, kSignalFifoTerminated);
+    });
+
     // Keep trying to read messages from the fifo until we have a reason to
     // terminate
+    zx_status_t status;
     while (true) {
-        zx_status_t status = fifo_.read(requests, sizeof(block_fifo_request_t), count);
-        if (status == ZX_ERR_SHOULD_WAIT) {
-            zx_signals_t waitfor = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate;
-            zx_signals_t observed;
-            if ((status = fifo_.wait_one(waitfor, zx::time::infinite(), &observed)) != ZX_OK) {
+        status = fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH *
+                            sizeof(block_fifo_request_t), count);
+        zx_signals_t signals;
+        zx_signals_t seen;
+        switch (status) {
+        case ZX_ERR_SHOULD_WAIT:
+            signals = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED |
+                    kSignalFifoTerminate | kSignalFifoOpsComplete;
+            if ((status = fifo_.wait_one(signals, zx::time::infinite(), &seen)) != ZX_OK) {
                 return status;
             }
-            if ((observed & ZX_FIFO_PEER_CLOSED) || (observed & kSignalFifoTerminate)) {
+            if (seen & kSignalFifoOpsComplete) {
+                BarrierComplete();
+                continue;
+            }
+            if ((seen & ZX_FIFO_PEER_CLOSED) || (seen & kSignalFifoTerminate)) {
                 return ZX_ERR_PEER_CLOSED;
             }
             // Try reading again...
-        } else {
+            break;
+        case ZX_OK:
+            cleanup.cancel();
+            return ZX_OK;
+        default:
             return status;
         }
     }
@@ -260,7 +294,7 @@ zx_status_t BlockServer::AllocateTxn(txnid_t* out) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             fbl::AllocChecker ac;
-            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
+            txns_[i] = fbl::AdoptRef(new (&ac) TransactionGroup(fifo_.get(), txnid));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -280,6 +314,47 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     txns_[txnid] = nullptr;
 }
 
+void BlockServer::TxnEnd() {
+    size_t old_count = pending_count_.fetch_sub(1);
+    ZX_ASSERT(old_count > 0);
+    if ((old_count == 1) && barrier_in_progress_.load()) {
+        // Since we're avoiding locking, and there is a gap between
+        // "pending count decremented" and "FIFO signalled", it's possible
+        // that we'll receive spurious wakeup requests.
+        fifo_.signal(0, kSignalFifoOpsComplete);
+    }
+}
+
+void BlockServer::InQueueDrainer() {
+    while (true) {
+        if (in_queue_.is_empty()) {
+            return;
+        }
+
+        auto msg = in_queue_.begin();
+        if (deferred_barrier_before_) {
+            msg->op.command |= BLOCK_FL_BARRIER_BEFORE;
+            deferred_barrier_before_ = false;
+        }
+
+        if (msg->op.command & BLOCK_FL_BARRIER_BEFORE) {
+            barrier_in_progress_.store(true);
+            if (pending_count_.load() > 0) {
+                return;
+            }
+            // Since we're the only thread that could add to pending
+            // count, we reliably know it has terminated.
+            barrier_in_progress_.store(false);
+        }
+        if (msg->op.command & BLOCK_FL_BARRIER_AFTER) {
+            deferred_barrier_before_ = true;
+        }
+        pending_count_.fetch_add(1);
+        in_queue_.pop_front();
+        bp_.ops->queue(bp_.ctx, &msg->op);
+    }
+}
+
 zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
                                 zx::fifo* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
@@ -291,6 +366,15 @@ zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
     zx_status_t status;
     if ((status = zx::fifo::create(BLOCK_FIFO_MAX_DEPTH, BLOCK_FIFO_ESIZE, 0,
                                    fifo_out, &bs->fifo_)) != ZX_OK) {
+        delete bs;
+        return status;
+    }
+
+    // Notably, drop ZX_RIGHT_SIGNAL_PEER, since we use bs->fifo for thread
+    // signalling internally within the block server.
+    zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE |
+            ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT;
+    if ((status = fifo_out->replace(rights, fifo_out)) != ZX_OK) {
         delete bs;
         return status;
     }
@@ -308,6 +392,10 @@ zx_status_t BlockServer::Serve() {
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
     uint32_t count;
     while (true) {
+        // Attempt to drain as much of the input queue as possible
+        // before (potentially) blocking in Read.
+        InQueueDrainer();
+
         if ((status = Read(requests, &count) != ZX_OK)) {
             return status;
         }
@@ -317,7 +405,9 @@ zx_status_t BlockServer::Serve() {
             txnid_t txnid = requests[i].txnid;
             vmoid_t vmoid = requests[i].vmoid;
 
+            // TODO(ZX-1586): Remove this lock once txns are preallocated.
             fbl::AutoLock server_lock(&server_lock_);
+
             if (txnid >= MAX_TXN_COUNT || txns_[txnid] == nullptr) {
                 // Operation which is not accessing a valid txn
                 if (wants_reply) {
@@ -343,15 +433,11 @@ zx_status_t BlockServer::Serve() {
                     continue;
                 }
 
-                block_msg_t* msg;
-                status = txns_[txnid]->Enqueue(wants_reply, &msg);
+                // Enqueue the message against the transaction group.
+                status = txns_[txnid]->Enqueue(wants_reply);
                 if (status != ZX_OK) {
                     break;
                 }
-                ZX_DEBUG_ASSERT(msg->txn == nullptr);
-                msg->txn = txns_[txnid];
-                ZX_DEBUG_ASSERT(msg->iobuf == nullptr);
-                msg->iobuf = iobuf.CopyPointer();
 
                 // Hack to ensure that the vmo is valid.
                 // In the future, this code will be responsible for pinning VMO pages,
@@ -360,11 +446,19 @@ zx_status_t BlockServer::Serve() {
                 status = iobuf->ValidateVmoHack(bsz * requests[i].length,
                                                 bsz * requests[i].vmo_offset);
                 if (status != ZX_OK) {
-                    BlockComplete(msg, status);
+                    txns_[txnid]->Complete(status);
                     break;
                 }
 
-                msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
+                BlockMsg msg;
+                if ((status = BlockMsg::Create(block_op_size_, &msg)) != ZX_OK) {
+                    txns_[txnid]->Complete(status);
+                    break;
+                }
+                msg.extra()->txn = txns_[txnid];
+                msg.extra()->iobuf = iobuf.CopyPointer();
+                msg.extra()->server = this;
+                msg.op()->command = OpcodeToCommand(requests[i].opcode);
 
                 const uint64_t max_xfer = info_.max_transfer_size / bsz;
                 if (max_xfer != 0 && max_xfer < requests[i].length) {
@@ -372,29 +466,59 @@ zx_status_t BlockServer::Serve() {
                     uint64_t vmo_offset = requests[i].vmo_offset;
                     uint64_t dev_offset = requests[i].dev_offset;
 
-                    size_t sub_txns = fbl::round_up(len_remaining, max_xfer) / max_xfer;
-                    msg->sub_txns = static_cast<uint32_t>(sub_txns);
-                    for (size_t i = 0; i < sub_txns; i++) {
+                    // If the request is larger than the maximum transfer size,
+                    // split it up into a collection of smaller block messages.
+                    //
+                    // Once all of these smaller messages are created, splice
+                    // them into the input queue together.
+                    BlockMsgQueue sub_txns_queue;
+                    uint32_t sub_txns =
+                            static_cast<uint32_t>(fbl::round_up(len_remaining,
+                                                                max_xfer) / max_xfer);
+                    uint32_t sub_txn_idx = 0;
+                    while (sub_txn_idx != sub_txns) {
+                        // We'll be using a new BlockMsg for each sub-component.
+                        if (!msg.valid()) {
+                            if ((status = BlockMsg::Create(block_op_size_,
+                                                           &msg)) != ZX_OK) {
+                                txns_[txnid]->Complete(status);
+                                break;
+                            }
+                            msg.extra()->txn = txns_[txnid];
+                            msg.extra()->iobuf = iobuf.CopyPointer();
+                            msg.extra()->server = this;
+                            msg.op()->command = OpcodeToCommand(requests[i].opcode);
+                        }
+
+
                         uint64_t length = fbl::min(len_remaining, max_xfer);
                         len_remaining -= length;
 
-                        uint32_t flags = msg->flags;
-                        Queue(flags, iobuf->vmo(), length,
-                              vmo_offset, dev_offset, msg);
+                        // Only set the "AFTER" barrier on the last sub-txn.
+                        msg.op()->command &= ~(sub_txn_idx == sub_txns - 1 ? 0 :
+                                               BLOCK_FL_BARRIER_AFTER);
+                        // Only set the "BEFORE" barrier on the first sub-txn.
+                        msg.op()->command &= ~(sub_txn_idx == 0 ? 0 :
+                                               BLOCK_FL_BARRIER_BEFORE);
+                        InQueueAdd(iobuf->vmo(), length, vmo_offset, dev_offset, msg.release(),
+                                   &sub_txns_queue);
                         vmo_offset += length;
                         dev_offset += length;
+                        sub_txn_idx++;
                     }
+                    txns_[txnid]->CtrAdd(sub_txns - 1);
                     ZX_DEBUG_ASSERT(len_remaining == 0);
+
+                    in_queue_.splice(in_queue_.end(), sub_txns_queue);
                 } else {
-                    Queue(msg->flags, iobuf->vmo(), requests[i].length,
-                          requests[i].vmo_offset, requests[i].dev_offset, msg);
+                    InQueueAdd(iobuf->vmo(), requests[i].length, requests[i].vmo_offset,
+                               requests[i].dev_offset, msg.release(), &in_queue_);
                 }
 
                 break;
             }
-            case BLOCKIO_SYNC: {
-                // TODO(smklein): It might be more useful to have this on a per-vmo basis
-                fprintf(stderr, "Warning: BLOCKIO_SYNC is currently unimplemented\n");
+            case BLOCKIO_FLUSH: {
+                fprintf(stderr, "Warning: BLOCKIO_FLUSH is currently unimplemented\n");
                 break;
             }
             case BLOCKIO_CLOSE_VMO: {
@@ -414,19 +538,24 @@ zx_status_t BlockServer::Serve() {
 }
 
 BlockServer::BlockServer(zx_device_t* dev, block_protocol_t* bp) :
-    dev_(dev), bp_(*bp), block_op_size_(0), last_id_(VMOID_INVALID + 1) {
+    dev_(dev), bp_(*bp), block_op_size_(0), pending_count_(0),
+    barrier_in_progress_(false), last_id_(VMOID_INVALID + 1) {
     size_t actual;
     device_ioctl(dev_, IOCTL_BLOCK_GET_INFO, nullptr, 0, &info_, sizeof(info_), &actual);
 }
 
 BlockServer::~BlockServer() {
-    ShutDown();
+    ZX_ASSERT(pending_count_.load() == 0);
+    ZX_ASSERT(in_queue_.is_empty());
 }
 
 void BlockServer::ShutDown() {
     // Identify that the server should stop reading and return,
     // implicitly closing the fifo.
     fifo_.signal(0, kSignalFifoTerminate);
+    zx_signals_t signals = kSignalFifoTerminated;
+    zx_signals_t seen;
+    fifo_.wait_one(signals, zx::time::infinite(), &seen);
 }
 
 // C declarations

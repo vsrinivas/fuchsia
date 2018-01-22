@@ -93,8 +93,6 @@ void block_fifo_release_client(fifo_client_t* client) {
 zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests, size_t count) {
     if (count == 0) {
         return ZX_OK;
-    } else if (count > MAX_TXN_MESSAGES) {
-        return ZX_ERR_INVALID_ARGS;
     }
 
     txnid_t txnid = requests[0].txnid;
@@ -105,9 +103,12 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
     zx_status_t status;
     for (size_t i = 0; i < count; i++) {
         assert(requests[i].txnid == txnid);
-        requests[i].opcode = (requests[i].opcode & BLOCKIO_OP_MASK) |
-                             (i == count - 1 ? BLOCKIO_TXN_END : 0);
+        requests[i].opcode = requests[i].opcode & BLOCKIO_OP_MASK;
     }
+
+    requests[0].opcode |= BLOCKIO_BARRIER_BEFORE;
+    requests[count - 1].opcode |= BLOCKIO_TXN_END | BLOCKIO_BARRIER_AFTER;
+
     if ((status = do_write(client->fifo, &requests[0], count)) != ZX_OK) {
         return status;
     }
