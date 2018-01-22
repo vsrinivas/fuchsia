@@ -22,6 +22,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as a ramdisk\n";
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
   std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line\n";
+  std::cerr << "\t--nographic                     Disable GPU device and graphics output\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
   std::cerr << "\t                                and adjust the balloon size based on the amount of\n";
   std::cerr << "\t                                unused guest memory\n";
