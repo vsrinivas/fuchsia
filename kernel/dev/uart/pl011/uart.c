@@ -46,8 +46,6 @@ static cbuf_t uart_rx_buf;
 
 static enum handler_return pl011_uart_irq(void *arg)
 {
-    bool resched = false;
-
     /* read interrupt status and mask */
     uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
@@ -61,13 +59,11 @@ static enum handler_return pl011_uart_irq(void *arg)
             }
 
             char c = UARTREG(uart_base, UART_DR);
-            cbuf_write_char(&uart_rx_buf, c, false);
-
-            resched = true;
+            cbuf_write_char(&uart_rx_buf, c);
         }
     }
 
-    return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 static void pl011_uart_init(mdi_node_ref_t* node, uint level)

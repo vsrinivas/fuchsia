@@ -201,7 +201,7 @@ static int last_code;
 
 static cbuf_t* key_buf;
 
-static int i8042_process_scode(uint8_t scode, unsigned int flags) {
+static void i8042_process_scode(uint8_t scode, unsigned int flags) {
     // is this a multi code sequence?
     bool multi = (last_code == 0xe0);
 
@@ -278,16 +278,12 @@ static int i8042_process_scode(uint8_t scode, unsigned int flags) {
     default:; // nothing
     }
 
-    int chars_added = 0;
     if (!key_up) {
         for (uint i = 0; str[i] != '\0'; i++) {
             LTRACEF("char 0x%hhx (%c)\n", str[i], isprint(str[i]) ? (str[i]) : ' ');
-            cbuf_write_char(key_buf, str[i], false);
-            chars_added++;
+            cbuf_write_char(key_buf, str[i]);
         }
     }
-
-    return chars_added;
 }
 
 static int i8042_wait_read(void) {
@@ -391,8 +387,6 @@ static int keyboard_command(uint8_t* param, int command) {
 }
 
 static enum handler_return i8042_interrupt(void* arg) {
-    bool resched = false;
-
     // keep handling status on the keyboard controller until no bits are set we care about
     bool retry;
     do {
@@ -403,11 +397,9 @@ static enum handler_return i8042_interrupt(void* arg) {
         // check for incoming data from the controller
         if (str & I8042_STR_OBF) {
             uint8_t data = i8042_read_data();
-            int chars_added = i8042_process_scode(data,
-                                                  ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
-                                                      ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
-            if (chars_added > 0)
-                resched = true;
+            i8042_process_scode(data,
+                                ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
+                                ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
 
             retry = true;
         }
@@ -415,7 +407,7 @@ static enum handler_return i8042_interrupt(void* arg) {
         // TODO: check other status bits here
     } while (retry);
 
-    return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 int platform_read_key(char* c) {

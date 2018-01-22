@@ -53,15 +53,13 @@ static void uart_write(uint8_t reg, uint8_t val) {
 
 static enum handler_return platform_drain_debug_uart_rx(void) {
     unsigned char c;
-    bool resched = false;
 
     while (uart_read(5) & (1 << 0)) {
         c = uart_read(0);
-        cbuf_write_char(&console_input_buf, c, false);
-        resched = true;
+        cbuf_write_char(&console_input_buf, c);
     }
 
-    return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 static enum handler_return uart_irq_handler(void* arg) {

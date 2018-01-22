@@ -58,7 +58,7 @@ size_t cbuf_space_avail(cbuf_t *cbuf);
 
 /* special cases for dealing with a single char of data */
 size_t cbuf_read_char(cbuf_t *cbuf, char *c, bool block);
-size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule);
+size_t cbuf_write_char(cbuf_t *cbuf, char c);
 
 __END_CDECLS
 

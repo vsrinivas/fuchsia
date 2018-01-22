@@ -95,10 +95,10 @@ static enum handler_return uart_irq(void *arg)
                 break;
         }
         char c = UARTREG(base, S905_UART_RFIFO);
-        cbuf_write_char(&uart_rx_buf, c, false);
+        cbuf_write_char(&uart_rx_buf, c);
     }
 
-    return INT_RESCHEDULE;
+    return INT_NO_RESCHEDULE;
 }
 
 static void s905_uart_init(mdi_node_ref_t* node, uint level)

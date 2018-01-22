@@ -47,7 +47,7 @@ size_t cbuf_space_avail(cbuf_t *cbuf)
     return valpow2(cbuf->len_pow2) - consumed - 1;
 }
 
-size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule)
+size_t cbuf_write_char(cbuf_t *cbuf, char c)
 {
     DEBUG_ASSERT(cbuf);
 
@@ -55,7 +55,6 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule)
     spin_lock_irqsave(&cbuf->lock, state);
 
     size_t ret = 0;
-    int signaled = 0;
     if (cbuf_space_avail(cbuf) > 0) {
         cbuf->buf[cbuf->head] = c;
 
@@ -63,13 +62,10 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool reschedule)
         ret = 1;
 
         if (cbuf->head != cbuf->tail)
-            signaled = event_signal(&cbuf->event, false);
+            event_signal(&cbuf->event, true);
     }
 
     spin_unlock_irqrestore(&cbuf->lock, state);
-
-    if (reschedule && (signaled > 0))
-        thread_reschedule();
 
     return ret;
 }
