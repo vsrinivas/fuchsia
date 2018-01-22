@@ -84,7 +84,7 @@
     <project name="third_party/go"
              remote="https://fuchsia.googlesource.com/third_party/go"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="6f416d45ed66f2a18788c92e898099678da99bdc"
+             revision="4ee2426bb85b541728cdbfed3a912eccfc58f242"
              path="third_party/go"/>
     <project name="go_x_crypto"
              path="third_party/golang/crypto"
