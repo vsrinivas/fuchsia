@@ -7,13 +7,13 @@
 #include "frame_handler.h"
 #include "macaddr_map.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
-
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/types.h>
+
 #include <list>
 
 namespace wlan {

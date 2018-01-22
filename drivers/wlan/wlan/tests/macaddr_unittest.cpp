@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/drivers/wlan/common/macaddr.h"
+#include <wlan/common/macaddr.h>
 
 namespace wlan {
 namespace common {

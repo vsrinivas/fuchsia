@@ -3,18 +3,19 @@
 // found in the LICENSE file.
 
 #include "dispatcher.h"
+
 #include "ap_mlme.h"
 #include "client_mlme.h"
 #include "frame_handler.h"
 #include "packet.h"
 #include "serialize.h"
 
-#include "garnet/drivers/wlan/common/channel.h"
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/channel.h>
 #include <zircon/types.h>
 
 #include <cinttypes>

@@ -8,8 +8,6 @@
 #include "dispatcher.h"
 #include "packet.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
-
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
@@ -18,6 +16,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 #include <zx/port.h>

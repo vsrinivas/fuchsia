@@ -8,13 +8,13 @@
 #include "frame_handler.h"
 #include "mac_frame.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
-#include "garnet/drivers/wlan/common/moving_average.h"
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
+#include <wlan/common/moving_average.h>
 #include <zircon/types.h>
 
 namespace wlan {

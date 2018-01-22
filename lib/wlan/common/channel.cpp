@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "channel.h"
+#include <wlan/common/channel.h>
 
 #include <zircon/assert.h>
 

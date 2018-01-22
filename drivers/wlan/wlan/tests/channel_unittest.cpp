@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/drivers/wlan/common/channel.h"
+#include <wlan/common/channel.h>
 
 namespace wlan {
 namespace common {

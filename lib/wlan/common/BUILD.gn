@@ -2,16 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("wlan_common_config") {
+  include_dirs = [ "include" ]
+}
+
 source_set("common") {
   sources = [
-    "bitfield.h",
     "channel.cpp",
-    "channel.h",
+    "include/wlan/common/bitfield.h",
+    "include/wlan/common/channel.h",
+    "include/wlan/common/cipher.h",
+    "include/wlan/common/macaddr.h",
+    "include/wlan/common/moving_average.h",
     "macaddr.cpp",
-    "macaddr.h",
-    "moving_average.h",
-    "cipher.h",
   ]
 
+  public_configs = [ ":wlan_common_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
+

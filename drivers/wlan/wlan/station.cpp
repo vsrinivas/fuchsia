@@ -4,8 +4,6 @@
 
 #include "station.h"
 
-#include "garnet/drivers/wlan/common/channel.h"
-
 #include "debug.h"
 #include "device_interface.h"
 #include "logging.h"
@@ -13,6 +11,8 @@
 #include "packet.h"
 #include "serialize.h"
 #include "timer.h"
+
+#include <wlan/common/channel.h>
 
 #include <cstring>
 #include <utility>

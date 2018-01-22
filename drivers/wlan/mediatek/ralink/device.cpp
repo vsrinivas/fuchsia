@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "device.h"
-#include "garnet/drivers/wlan/common/channel.h"
-#include "garnet/drivers/wlan/common/cipher.h"
 #include "logging.h"
 #include "ralink.h"
 
@@ -12,6 +10,8 @@
 #include <ddk/protocol/wlan.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <wlan/common/channel.h>
+#include <wlan/common/cipher.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zx/vmo.h>

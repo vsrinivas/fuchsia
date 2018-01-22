@@ -6,10 +6,9 @@
 
 #include "element.h"
 
-#include "garnet/drivers/wlan/common/bitfield.h"
-#include "garnet/drivers/wlan/common/macaddr.h"
-
 #include <fbl/type_support.h>
+#include <wlan/common/bitfield.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

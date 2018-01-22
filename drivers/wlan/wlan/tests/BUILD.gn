@@ -77,7 +77,7 @@ executable("common_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/drivers/wlan/common",
+    "//garnet/lib/wlan/common",
     "//third_party/gtest",
   ]
 

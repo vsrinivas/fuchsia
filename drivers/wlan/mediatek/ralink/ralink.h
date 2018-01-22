@@ -86,7 +86,7 @@ struct IvEivEntry {
 
 // KeyMode cipher definitions differ from IEEE's cipher suite types.
 // Compare to: IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
-// See also wlan/common/cipher.h
+// See also garnet/lib/wlan/common/include/wlan/common/cipher.h
 enum KeyMode : uint8_t {
     kNone = 0,
     kWep42 = 1,

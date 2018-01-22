@@ -8,9 +8,8 @@
 #include "timer.h"
 #include "wlan.h"
 
-#include "garnet/drivers/wlan/common/channel.h"
-
 #include <fbl/limits.h>
+#include <wlan/common/channel.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/wlan.h>

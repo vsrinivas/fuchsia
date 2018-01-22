@@ -18,7 +18,7 @@ driver_module("ralink_driver") {
   ]
 
   deps = [
-    "//garnet/drivers/wlan/common",
+    "//garnet/lib/wlan/common",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

@@ -6,12 +6,12 @@
 
 #include "mac_frame.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
 #include <cstdint>

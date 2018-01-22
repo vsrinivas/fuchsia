@@ -6,9 +6,8 @@
 
 #include "logging.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
-
 #include <fbl/ref_ptr.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
 #include <typeinfo>

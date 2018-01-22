@@ -4,7 +4,7 @@
 
 #include "bss.h"
 
-#include "garnet/drivers/wlan/common/channel.h"
+#include <wlan/common/channel.h>
 
 #include <string>
 

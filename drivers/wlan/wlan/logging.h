@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 
 // TODO(tkilbourn): use standard logging infrastructure

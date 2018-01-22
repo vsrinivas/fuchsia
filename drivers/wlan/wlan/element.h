@@ -4,16 +4,15 @@
 
 #pragma once
 
-#include <fbl/type_support.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-
 #include "element_id.h"
 #include "logging.h"
 
-#include "garnet/drivers/wlan/common/bitfield.h"
-#include "garnet/drivers/wlan/common/macaddr.h"
+#include <fbl/type_support.h>
+#include <wlan/common/bitfield.h>
+#include <wlan/common/macaddr.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <unordered_map>

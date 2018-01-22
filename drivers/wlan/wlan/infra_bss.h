@@ -9,9 +9,8 @@
 #include "frame_handler.h"
 #include "macaddr_map.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
-
 #include <fbl/ref_ptr.h>
+#include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
 namespace wlan {

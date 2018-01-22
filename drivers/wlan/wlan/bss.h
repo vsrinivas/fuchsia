@@ -4,23 +4,21 @@
 
 #pragma once
 
-#include <ddk/protocol/wlan.h>
-#include <fbl/macros.h>
-#include <zircon/types.h>
-
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
-
 #include "element.h"
 #include "enum.h"
 #include "logging.h"
 #include "mac_frame.h"
 #include "macaddr_map.h"
 
-#include "garnet/drivers/wlan/common/macaddr.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
+#include <ddk/protocol/wlan.h>
+#include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
+#include <zircon/types.h>
 
 namespace wlan {
 // BeaconHash is a signature to compare consecutive beacons without memcmp().

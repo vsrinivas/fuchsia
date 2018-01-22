@@ -4,6 +4,8 @@
 
 // IEEE Std 802.11-2016, 9.4.2.1 Table 9-77
 
+#include <cstdint>
+
 namespace wlan {
 namespace element_id {
 enum ElementId : uint8_t {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "client_mlme.h"
-#include "dispatcher.h"
 
+#include "dispatcher.h"
 #include "interface.h"
 #include "logging.h"
 #include "mac_frame.h"
@@ -15,6 +15,9 @@
 #include "timer.h"
 #include "wlan.h"
 
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+
+#include <wlan/common/bitfield.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zx/time.h>
@@ -22,9 +25,6 @@
 #include <cinttypes>
 #include <cstring>
 #include <sstream>
-
-#include "garnet/drivers/wlan/common/bitfield.h"
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
 

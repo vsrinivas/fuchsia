@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/drivers/wlan/common/moving_average.h"
+#include <wlan/common/moving_average.h>
 
 namespace wlan {
 namespace {
