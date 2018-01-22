@@ -92,8 +92,6 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
 
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
-
-    aml_gpio_release(&bus->gpio);
     free(bus);
 }
 
@@ -112,44 +110,36 @@ static aml_i2c_dev_desc_t i2c_devs[] = {
 */
 };
 
-static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
+static int gauss_start_thread(void* arg) {
+    gauss_bus_t* bus = arg;
     zx_status_t status;
 
-    gauss_bus_t* bus = calloc(1, sizeof(gauss_bus_t));
-    if (!bus) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus)) != ZX_OK) {
-        goto fail;
-    }
-
-    if ((status = gauss_gpio_init(&bus->gpio)) != ZX_OK) {
+    if ((status = gauss_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_gpio_init failed: %d\n", status);
         goto fail;
     }
 
     // pinmux for Gauss i2c
-    aml_pinmux_config(&bus->gpio, I2C_SCK_A, 1);
-    aml_pinmux_config(&bus->gpio, I2C_SDA_A, 1);
-    aml_pinmux_config(&bus->gpio, I2C_SCK_B, 1);
-    aml_pinmux_config(&bus->gpio, I2C_SDA_B, 1);
+    gpio_set_alt_function(&bus->gpio, I2C_SCK_A, 1);
+    gpio_set_alt_function(&bus->gpio, I2C_SDA_A, 1);
+    gpio_set_alt_function(&bus->gpio, I2C_SCK_B, 1);
+    gpio_set_alt_function(&bus->gpio, I2C_SDA_B, 1);
 
     // Config pinmux for gauss PDM pins
-    aml_pinmux_config(&bus->gpio, A113_GPIOA(14), 1);
-    aml_pinmux_config(&bus->gpio, A113_GPIOA(15), 1);
-    aml_pinmux_config(&bus->gpio, A113_GPIOA(16), 1);
-    aml_pinmux_config(&bus->gpio, A113_GPIOA(17), 1);
-    aml_pinmux_config(&bus->gpio, A113_GPIOA(18), 1);
+    gpio_set_alt_function(&bus->gpio, A113_GPIOA(14), 1);
+    gpio_set_alt_function(&bus->gpio, A113_GPIOA(15), 1);
+    gpio_set_alt_function(&bus->gpio, A113_GPIOA(16), 1);
+    gpio_set_alt_function(&bus->gpio, A113_GPIOA(17), 1);
+    gpio_set_alt_function(&bus->gpio, A113_GPIOA(18), 1);
 
-    aml_pinmux_config(&bus->gpio, TDM_BCLK_C, 1);
-    aml_pinmux_config(&bus->gpio, TDM_FSYNC_C, 1);
-    aml_pinmux_config(&bus->gpio, TDM_MOSI_C, 1);
-    aml_pinmux_config(&bus->gpio, TDM_MISO_C, 2);
+    gpio_set_alt_function(&bus->gpio, TDM_BCLK_C, 1);
+    gpio_set_alt_function(&bus->gpio, TDM_FSYNC_C, 1);
+    gpio_set_alt_function(&bus->gpio, TDM_MOSI_C, 1);
+    gpio_set_alt_function(&bus->gpio, TDM_MISO_C, 2);
 
-    aml_pinmux_config(&bus->gpio, SPK_MUTEn, 0);
-    gpio_config(&bus->gpio.proto, SPK_MUTEn, GPIO_DIR_OUT);
-    gpio_write(&bus->gpio.proto, SPK_MUTEn, 1);
+    gpio_set_alt_function(&bus->gpio, SPK_MUTEn, 0);
+    gpio_config(&bus->gpio, SPK_MUTEn, GPIO_DIR_OUT);
+    gpio_write(&bus->gpio, SPK_MUTEn, 1);
 
     if ((status = aml_i2c_init(&bus->i2c, i2c_devs, countof(i2c_devs))) != ZX_OK) {
         zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
@@ -170,10 +160,59 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO,"Requested sample rate = %d, actual = %ld\n",GAUSS_TDM_SAMPLE_RATE,
                                                        actual_freq / GAUSS_TDM_CLK_N);
 
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_I2C, &bus->i2c.proto);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    if ((status = gauss_usb_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);
+        goto fail;
+    }
+    if ((status = gauss_audio_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_audio_init failed: %d\n", status);
+        goto fail;
+    }
+
+#if I2C_TEST
+    if ((status = pbus_device_add(&bus->pbus, &i2c_test_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d\n", status);
+        goto fail;
+    }
+#endif
+
+    if ((status = pbus_device_add(&bus->pbus, &led_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
+        goto fail;
+    }
+
+    return ZX_OK;
+fail:
+    zxlogf(ERROR, "gauss_start_thread failed, not all devices have been initialized\n");
+    return status;
+}
+
+static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
+    zx_status_t status;
+
+    gauss_bus_t* bus = calloc(1, sizeof(gauss_bus_t));
+    if (!bus) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus)) != ZX_OK) {
+        goto fail;
+    }
+
+    bus->parent = parent;
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;
 
-    device_add_args_t args = {
+   device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "gauss-bus",
         .ctx = bus,
@@ -186,37 +225,11 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
-    if (status != ZX_OK) {
+    thrd_t t;
+    int thrd_rc = thrd_create_with_name(&t, gauss_start_thread, bus, "gauss_start_thread");
+    if (thrd_rc != thrd_success) {
         goto fail;
     }
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_GPIO, &bus->gpio.proto);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_I2C, &bus->i2c.proto);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-
-    if ((status = gauss_usb_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);
-    }
-    if ((status = gauss_audio_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "gauss_audio_init failed: %d\n", status);
-    }
-
-#if I2C_TEST
-    if ((status = pbus_device_add(&bus->pbus, &i2c_test_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d\n", status);
-    }
-#endif
-
-    if ((status = pbus_device_add(&bus->pbus, &led_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
-        return status;
-    }
-
     return ZX_OK;
 
 fail:

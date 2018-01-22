@@ -60,7 +60,7 @@ static int phy_irq_thread(void* arg) {
     volatile void* usb_regs = addr + (4 * PHY_REGISTER_SIZE);
     uint32_t temp;
 
-    gpio_config(&bus->gpio.proto, USB_VBUS_GPIO, GPIO_DIR_OUT);
+    gpio_config(&bus->gpio, USB_VBUS_GPIO, GPIO_DIR_OUT);
 
     while (1) {
         uint64_t slots;
@@ -84,7 +84,7 @@ static int phy_irq_thread(void* arg) {
         zxlogf(INFO, "phy_irq_thread setting mode %s\n", (host ? "HOST" : "DEVICE"));
 
         if (host) {
-            gpio_write(&bus->gpio.proto, USB_VBUS_GPIO, 1);
+            gpio_write(&bus->gpio, USB_VBUS_GPIO, 1);
         }
 
         temp = readl(usb_regs + USB_R0_OFFSET);
@@ -123,7 +123,7 @@ static int phy_irq_thread(void* arg) {
         writel(temp, u2p_regs + U2P_R0_OFFSET);
 
         if (!host) {
-            gpio_write(&bus->gpio.proto, USB_VBUS_GPIO, 0);
+            gpio_write(&bus->gpio, USB_VBUS_GPIO, 0);
         }
     }
     return 0;
