@@ -21,7 +21,9 @@ interface NetConnector {
   RegisterServiceProvider@0(string service_name,
                             app.ServiceProvider service_provider);
 
-  // Gets a provider for services on the specified device.
+  // Gets a provider for services on the specified device. Services provided
+  // on the local device can be accessed by passing a |device_name| of "local"
+  // or the actual name of the local device.
   GetDeviceServiceProvider@1(string device_name,
                              app.ServiceProvider& service_provider);
 
