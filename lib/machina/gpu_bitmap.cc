@@ -131,7 +131,7 @@ void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap,
 
   size_t stride = src_rect.width * pixelsize();
   size_t src_offset =
-      (src_bitmap.width() * src_rect.y + src_rect.x) * pixelsize();
+      (src_bitmap.width() * src_rect.y + src_rect.x) * src_bitmap.pixelsize();
   size_t dst_offset = (width() * dst_rect.y + dst_rect.x) * pixelsize();
   uint8_t* src_buf = src_bitmap.buffer();
   uint8_t* dst_buf = buffer();
@@ -145,8 +145,8 @@ void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap,
 
   for (uint32_t row = 0; row < src_rect.height; ++row) {
     copy(dst_buf + dst_offset, src_buf + src_offset, stride, format());
+    src_offset += src_bitmap.width() * src_bitmap.pixelsize();
     dst_offset += width() * pixelsize();
-    src_offset += src_bitmap.width() * pixelsize();
   }
 }
 
