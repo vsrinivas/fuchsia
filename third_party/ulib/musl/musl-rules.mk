@@ -605,7 +605,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/process/posix_spawnattr_setsigmask.c \
     $(LOCAL_DIR)/src/process/posix_spawnp.c \
     $(LOCAL_DIR)/src/process/system.c \
-    $(LOCAL_DIR)/src/process/vfork.c \
     $(LOCAL_DIR)/src/process/wait.c \
     $(LOCAL_DIR)/src/process/waitid.c \
     $(LOCAL_DIR)/src/process/waitpid.c \

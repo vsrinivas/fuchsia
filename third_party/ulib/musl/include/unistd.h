@@ -151,7 +151,6 @@ unsigned ualarm(unsigned, unsigned);
 #define L_SET 0
 #define L_INCR 1
 #define L_XTND 2
-pid_t vfork(void);
 int vhangup(void);
 int getpagesize(void);
 int getdtablesize(void);
