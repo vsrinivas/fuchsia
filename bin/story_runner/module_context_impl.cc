@@ -120,14 +120,15 @@ void ModuleContextImpl::StartDaisy(
     const fidl::String& link_name,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+    const StartDaisyCallback& callback) {
   // TODO(alhaad): This should happen on the story controller operation queue.
   module_resolver_->FindModules(
       DaisyToResolverQuery(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
-                         view_owner = std::move(view_owner)](
+                         view_owner = std::move(view_owner), callback](
                             FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
         // module in story shell.
@@ -146,6 +147,9 @@ void ModuleContextImpl::StartDaisy(
             module_data_->module_path, name, module_url, link_name,
             std::move(incoming_services), std::move(module_controller),
             std::move(view_owner), ModuleSource::INTERNAL);
+
+        // TODO(meiyili): populate with more than success status
+        callback(StartDaisyStatus::SUCCESS);
       }));
 }
 
@@ -169,14 +173,16 @@ void ModuleContextImpl::StartDaisyInShell(
     const fidl::String& link_name,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation) {
+    SurfaceRelationPtr surface_relation,
+    const StartDaisyInShellCallback& callback) {
   // TODO(alhaad): This should happen on the story controller operation queue.
   module_resolver_->FindModules(
       DaisyToResolverQuery(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
-                         surface_relation = std::move(surface_relation)](
+                         surface_relation = std::move(surface_relation),
+                         callback](
                             FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
         // module in story shell.
@@ -195,6 +201,9 @@ void ModuleContextImpl::StartDaisyInShell(
             std::move(incoming_services), std::move(module_controller),
             std::move(surface_relation), true /* focus */,
             ModuleSource::INTERNAL);
+
+        // TODO(meiyili): populate with more than success status
+        callback(StartDaisyStatus::SUCCESS);
       }));
 }
 

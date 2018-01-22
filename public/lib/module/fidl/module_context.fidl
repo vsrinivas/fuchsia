@@ -69,7 +69,7 @@ interface ModuleContext {
   StartDaisy@2(string name, Daisy daisy, string? link_name,
                app.ServiceProvider&? incoming_services,
                ModuleController& module_controller,
-               mozart.ViewOwner& view_owner);
+               mozart.ViewOwner& view_owner) => (StartDaisyStatus status);
 
   // Like StartModule(), but the view of the newly started module is
   // sent to the story shell for display.
@@ -100,7 +100,8 @@ interface ModuleContext {
   StartDaisyInShell@4(string name, Daisy daisy, string? link_name,
                       app.ServiceProvider&? incoming_services,
                       ModuleController& module_controller,
-                      SurfaceRelation? surface_relation);
+                      SurfaceRelation? surface_relation)
+                      => (StartDaisyStatus status);
 
   // Like StartModule(), used to embed the view of the requested module, but
   // also allows to obtain information of modules started transitively in the
@@ -200,4 +201,9 @@ interface EmbedModuleController {
 
   // Requests that the module be hidden in the story.
   Defocus@1();
+};
+
+// Communicates the status of the daisy resolution
+enum StartDaisyStatus {
+  SUCCESS = 0
 };

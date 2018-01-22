@@ -73,7 +73,8 @@ class ModuleContextImpl : ModuleContext {
       const fidl::String& link_name,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      const StartDaisyCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShell(
       const fidl::String& name,
@@ -90,7 +91,8 @@ class ModuleContextImpl : ModuleContext {
       const fidl::String& link_name,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation) override;
+      SurfaceRelationPtr surface_relation,
+      const StartDaisyInShellCallback& callback) override;
   // |ModuleContext|
   void EmbedModule(
       const fidl::String& name,
