@@ -9,6 +9,11 @@
 #define ZXSIO_PAYLOAD_SZ 900
 #define ZXSIO_HDR_SZ       (__builtin_offsetof(zxsio_msg_t, data))
 
+// Flags for zxsio.flags
+
+// Set if listen() was called for this socket.
+#define ZXSIO_DID_LISTEN (1<<0)
+
 typedef struct zxsio zxsio_t;
 
 struct zxsio {
@@ -17,6 +22,9 @@ struct zxsio {
 
     // socket handle
     zx_handle_t s;
+
+    // see ZXSIO flags above
+    uint32_t flags;
 };
 
 typedef struct zxsio_msg zxsio_msg_t;

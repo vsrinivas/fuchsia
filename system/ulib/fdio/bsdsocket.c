@@ -187,8 +187,19 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     }
 
 #if WITH_NEW_SOCKET
-    //TODO use share/accept transport
-    return -1;
+    zx_handle_t s2;
+    zx_status_t r = io->ops->misc(io, ZXRIO_ACCEPT, 0, 0, &s2, sizeof(s2));
+    if (r == ZX_ERR_SHOULD_WAIT) {
+        return ERRNO(EWOULDBLOCK);
+    } else if (r != ZX_OK) {
+        fdio_release(io);
+        return ERROR(r);
+    }
+
+    fdio_t* io2;
+    if ((io2 = fdio_socket_create(s2, FDIO_FLAG_SOCKET_CONNECTED)) == NULL) {
+        return ERROR(ZX_ERR_NO_RESOURCES);
+    }
 #else
     fdio_t* io2;
     zx_status_t r;
@@ -217,6 +228,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         fdio_release(io);
         return ERROR(r);
     }
+#endif
     fdio_release(io);
 
     fdio_socket_set_stream_ops(io2);
@@ -247,7 +259,6 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EMFILE);
     }
     return fd2;
-#endif
 }
 
 int getaddrinfo(const char* __restrict node,

@@ -5,6 +5,7 @@
 #include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 
@@ -32,6 +33,41 @@ static bool is_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
         return false;
     }
     return is_message_valid(msg);
+}
+
+static zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
+    zxsio_t* sio = (zxsio_t*)io;
+
+    if (!(sio->flags & ZXSIO_DID_LISTEN)) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    zx_status_t r;
+    for (;;) {
+        r = zx_socket_accept(sio->s, s2);
+        if (r == ZX_ERR_SHOULD_WAIT) {
+            if (io->flags & FDIO_FLAG_NONBLOCK) {
+                return ZX_ERR_SHOULD_WAIT;
+            }
+
+            // wait for an incoming connection
+            zx_signals_t pending;
+            r = zx_object_wait_one(sio->s, ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, &pending);
+            if (r < 0) {
+                return r;
+            }
+            if (pending & ZX_SOCKET_ACCEPT) {
+                continue;
+            }
+            if (pending & ZX_SOCKET_PEER_CLOSED) {
+                return ZX_ERR_PEER_CLOSED;
+            }
+            // impossible
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
+    return r;
 }
 
 static ssize_t zxsio_read_stream(fdio_t* io, void* data, size_t len) {
@@ -614,6 +650,11 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     case ZXRIO_BIND:
     case ZXRIO_LISTEN:
         break;
+    case ZXRIO_ACCEPT:
+        if (len != sizeof(zx_handle_t)) {
+            return ZX_ERR_INTERNAL;
+        }
+        return zxsio_accept(io, ptr);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -636,6 +677,11 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     if (ptr && msg.datalen > 0) {
         memcpy(ptr, msg.data, msg.datalen);
     }
+
+    if (op == ZXRIO_LISTEN && r == ZX_OK) {
+        sio->flags |= ZXSIO_DID_LISTEN;
+    }
+
     return r;
 }
 
@@ -717,6 +763,7 @@ fdio_t* fdio_socket_create(zx_handle_t s, int flags) {
     sio->io.refcount = 1;
     sio->io.flags = FDIO_FLAG_SOCKET | flags;
     sio->s = s;
+    sio->flags = 0;
     return &sio->io;
 }
 
