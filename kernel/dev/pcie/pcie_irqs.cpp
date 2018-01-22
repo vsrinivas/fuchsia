@@ -38,13 +38,11 @@ void PcieDevice::ResetCommonIrqBookkeeping() {
     if (irq_.handler_count > 1) {
         DEBUG_ASSERT(irq_.handlers != &irq_.singleton_handler);
         delete[] irq_.handlers;
-    } else {
-        DEBUG_ASSERT(irq_.handlers == &irq_.singleton_handler);
-        irq_.singleton_handler.handler = nullptr;
-        irq_.singleton_handler.ctx = nullptr;
-        irq_.singleton_handler.dev = nullptr;
     }
 
+    irq_.singleton_handler.handler = nullptr;
+    irq_.singleton_handler.ctx = nullptr;
+    irq_.singleton_handler.dev = nullptr;
     irq_.mode          = PCIE_IRQ_MODE_DISABLED;
     irq_.handlers      = nullptr;
     irq_.handler_count = 0;
