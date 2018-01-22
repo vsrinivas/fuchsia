@@ -530,7 +530,6 @@ template("fidl") {
       generated_code = true
 
       deps = [
-        "//topaz/public/dart/zircon",
         "//topaz/public/lib/fidl/dart",
       ]
       fidl_deps = []
