@@ -358,47 +358,50 @@ int main(int argc, char** argv) {
     block_devices.push_back(fbl::move(block));
   }
 
-  // Setup input device.
   machina::InputDispatcher input_dispatcher(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher);
   machina::VirtioInput input(&input_dispatcher, guest.phys_mem(),
                              "machina-input", "serial-number");
-  status = input.Start();
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = bus.Connect(input.pci_device());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Setup GPU device.
   machina::VirtioGpu gpu(guest.phys_mem());
-  fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
-  status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
-  if (status == ZX_OK) {
-    // If we were able to acquire the zircon framebuffer then no compositor
-    // is present. In this case we should read input events directly from the
-    // input devics.
-    status = hid_event_source.Start();
+
+  if (options.enable_gpu()) {
+    // Setup input device.
+    status = input.Start();
     if (status != ZX_OK) {
       return status;
     }
-  } else {
-    // Expose a view that can be composited by mozart. Input events will be
-    // injected by the view events.
-    status = setup_scenic_framebuffer(&gpu, &input_dispatcher);
+    status = bus.Connect(input.pci_device());
     if (status != ZX_OK) {
       return status;
     }
-  }
-  status = gpu.Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = bus.Connect(gpu.pci_device());
-  if (status != ZX_OK) {
-    return status;
+
+    // Setup GPU device.
+    fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
+    status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
+    if (status == ZX_OK) {
+      // If we were able to acquire the zircon framebuffer then no compositor
+      // is present. In this case we should read input events directly from the
+      // input devics.
+      status = hid_event_source.Start();
+      if (status != ZX_OK) {
+        return status;
+      }
+    } else {
+      // Expose a view that can be composited by mozart. Input events will be
+      // injected by the view events.
+      status = setup_scenic_framebuffer(&gpu, &input_dispatcher);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    status = gpu.Init();
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = bus.Connect(gpu.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Setup net device.

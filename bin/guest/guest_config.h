@@ -38,6 +38,7 @@ class GuestConfig {
   }
   uint32_t balloon_pages_threshold() const { return balloon_pages_threshold_; }
   bool balloon_demand_page() const { return balloon_demand_page_; }
+  bool enable_gpu() const { return enable_gpu_; }
 
  private:
   friend class GuestConfigParser;
@@ -48,6 +49,7 @@ class GuestConfig {
   uint32_t balloon_interval_seconds_ = 0;
   uint32_t balloon_pages_threshold_ = 0;
   bool balloon_demand_page_ = false;
+  bool enable_gpu_ = true;
 };
 
 class GuestConfigParser {

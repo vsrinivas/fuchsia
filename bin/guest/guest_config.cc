@@ -122,9 +122,9 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
     bool flag_value = default_flag_value;
     if (!option_value.empty()) {
       if (option_value == "true") {
-        flag_value = true;
+        flag_value = default_flag_value;
       } else if (option_value == "false") {
-        flag_value = false;
+        flag_value = !default_flag_value;
       } else {
         FXL_LOG(ERROR) << "Option: '" << key
                        << "' expects either 'true' or 'false'; received '"
@@ -176,6 +176,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* config)
            parse_number(&config_->balloon_interval_seconds_)},
           {"balloon-threshold",
            parse_number(&config_->balloon_pages_threshold_)},
+          {"nographic", set_flag(&config_->enable_gpu_, false)},
       } {}
 
 GuestConfigParser::~GuestConfigParser() = default;
