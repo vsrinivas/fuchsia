@@ -43,6 +43,30 @@ git branch -d branch_name
 See the Gerrit documentation for more detail:
 [https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change](https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change)
 
+### Change description tags
+
+If submitting a change to Zircon, Garnet, Peridot or Topaz, include [tags] in
+the commit subject flagging which module, library, app, etc, is affected by the
+change. The style here is somewhat informal. Look at these example changes to
+get a feel for how these are used.
+
+* https://fuchsia-review.googlesource.com/c/zircon/+/112976
+* https://fuchsia-review.googlesource.com/c/garnet/+/110795
+* https://fuchsia-review.googlesource.com/c/peridot/+/113955
+* https://fuchsia-review.googlesource.com/c/topaz/+/114013
+
+Gerrit will flag your change with
+`Needs Label: Commit-Message-has-tags` if these are missing.
+
+Example:
+```
+# Ready to submit
+[parent][component] Update component in Topaz.
+
+# Needs Label: Commit-Message-has-tags
+Update component in Topaz.
+```
+
 ## [Non-Googlers only] Sign the Google CLA
 
 In order to land your change, you need to sign the [Google CLA](https://cla.developers.google.com/).
