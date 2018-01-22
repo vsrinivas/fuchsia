@@ -2,21 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <getopt.h>
 #include <stdlib.h>
 #include <blktest/blktest.h>
 #include <unittest/unittest.h>
 
+void print_usage(char* self) {
+    fprintf(stderr, "Usage: %s -d <blkdev_path>\n", self);
+}
+
 int main(int argc, char** argv) {
+    int opt;
     const char* blkdev = NULL;
-    int i = 1;
-    while (i < argc - 1) {
-        if ((strlen(argv[i]) == 2) && (argv[i][0] == '-') && (argv[i][1] == 'd')) {
-            if (strlen(argv[i+1]) > 0) {
-                blkdev = argv[i+1];
-                break;
-            }
+    while ((opt = getopt(argc, argv, "d:")) != -1) {
+        switch (opt) {
+        case 'd':
+            blkdev = optarg;
+            break;
+        default:
+            print_usage(argv[0]);
+            return 1;
         }
-        i += 1;
+    }
+
+    if (!blkdev) {
+        print_usage(argv[0]);
+        return 1;
     }
 
     unsetenv(BLKTEST_BLK_DEV);
