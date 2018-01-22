@@ -4,7 +4,6 @@
 
 #include "channel.h"
 
-#include <garnet/drivers/wlan/wlan/logging.h>
 #include <zircon/assert.h>
 
 // TODO(porce): Look up constants from the operating class table.
@@ -87,10 +86,7 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
 }
 
 bool IsValidChan(const wlan_channel_t& chan) {
-    bool result = Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
-
-    if (result == false) { errorf("invalid channel value: %s\n", ChanStr(chan).c_str()); }
-    return result;
+    return Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
 }
 
 Mhz GetCenterFreq(const wlan_channel_t& chan) {
