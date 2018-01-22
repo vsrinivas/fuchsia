@@ -827,11 +827,11 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
     request.dev_offset = 1;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
 
-    // Actually, we don't care about aligning VMO offsets, so this request should be fine
+    // Send a request that has a non-block aligned vmo offset
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 1;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_INVALID_ARGS, "");
 
     block_fifo_release_client(client);
     ASSERT_EQ(ioctl_block_fifo_close(fd), ZX_OK, "Failed to close fifo");
