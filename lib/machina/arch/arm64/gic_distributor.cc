@@ -189,13 +189,11 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
       return ZX_OK;
     }
   }
-  for (Vcpu** vcpu = vcpus_; cpu_mask != 0; vcpu++, cpu_mask >>= 1) {
-    if (!(cpu_mask & 1)) {
+  for (int i = 0; cpu_mask != 0; cpu_mask >>= 1, i++) {
+    if (!(cpu_mask & 1) || vcpus_[i] == nullptr) {
       continue;
-    } else if (vcpu == nullptr) {
-      return ZX_ERR_BAD_STATE;
     }
-    zx_status_t status = (*vcpu)->Interrupt(global_irq);
+    zx_status_t status = vcpus_[i]->Interrupt(global_irq);
     if (status != ZX_OK) {
       return status;
     }
