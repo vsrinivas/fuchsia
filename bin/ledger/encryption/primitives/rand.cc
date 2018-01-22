@@ -13,28 +13,7 @@
 
 namespace encryption {
 
-namespace {
-
-void InitEntropy() {
-  auto current_time = zx_clock_get(ZX_CLOCK_UTC);
-  if (zx_cprng_add_entropy(&current_time, sizeof(current_time)) != ZX_OK) {
-    FXL_LOG(WARNING)
-        << "Unable to add entropy to the kernel. No additional entropy added.";
-    return;
-  }
-}
-
-void EnsureInitEntropy() {
-  static std::atomic<bool> initialized(false);
-  if (initialized)
-    return;
-  InitEntropy();
-  initialized = true;
-}
-}  // namespace
-
 void RandBytes(void* buffer, size_t size) {
-  EnsureInitEntropy();
   FXL_CHECK(fxl::RandBytes(static_cast<uint8_t*>(buffer), size));
 }
 
