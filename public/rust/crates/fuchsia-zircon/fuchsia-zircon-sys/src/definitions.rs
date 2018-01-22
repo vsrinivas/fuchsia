@@ -4,7 +4,7 @@
 
 #[link(name = "zircon")]
 extern {
-    pub fn zx_time_get(
+    pub fn zx_clock_get(
         clock_id: u32
         ) -> zx_time_t;
 

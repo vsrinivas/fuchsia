@@ -90,7 +90,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  zx_time_t start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
   zx_time_t internal_buffer_full_time = start_time - kBufferSizeTime;
   zx_time_t packet_time = start_time + delay_ns + ZX_MSEC(1);
 

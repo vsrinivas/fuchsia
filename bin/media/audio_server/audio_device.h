@@ -50,7 +50,7 @@ class AudioDevice : public AudioObject {
   //
   // plugged   : true when an audio output stream is either hardwired, or
   //             believes that it has something connected to its plug.
-  // plug_time : The last time (according to zx_time_get(ZX_CLOCK_MONOTONIC) at
+  // plug_time : The last time (according to zx_clock_get(ZX_CLOCK_MONOTONIC) at
   //             which the plugged/unplugged state of the output stream last
   //             changed.
   bool plugged() const { return plugged_; }

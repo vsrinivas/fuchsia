@@ -146,7 +146,7 @@ pub struct WaitItem<'a> {
 }
 
 /// An identifier to select a particular clock. See
-/// [zx_time_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/time_get.md)
+/// [zx_clock_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md)
 /// for more information about the possible values.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

@@ -63,7 +63,7 @@ int MediaApp::Run() {
 
   WriteAudioIntoBuffer(mapped_address_, kTotalMappingFrames);
 
-  start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC) + first_pts_delay_;
+  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC) + first_pts_delay_;
   RefillBuffer();
   if (!StartPlayback(start_time_))
     return 3;
@@ -186,7 +186,7 @@ bool MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
   FXL_DCHECK(packet_consumer_);
 
   if (verbose_) {
-    const float delay = (float)zx_time_get(ZX_CLOCK_MONOTONIC) - start_time_;
+    const float delay = (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_;
     printf("SendMediaPacket num %zu time %.2f\n", num_packets_sent_,
            num_packets_sent_ ? delay / 1000000 : (float)-first_pts_delay_);
   }
@@ -201,7 +201,7 @@ bool MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
 // For more fine-grained awareness/control of buffers, clients should use the
 // (asynchronous) MediaPacketConsumerPtr interface and call SupplyPacket().
 bool MediaApp::RefillBuffer() {
-  const zx_duration_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_duration_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_duration_t time_data_needed =
       now - std::min(now, start_time_) + high_water_mark_;
   size_t num_payloads_needed =
@@ -236,13 +236,13 @@ bool MediaApp::StartPlayback(uint64_t reference_time) {
   transform->reference_delta = 1;
   transform->subject_delta = 1;
 
-  const zx_time_t before = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t before = zx_clock_get(ZX_CLOCK_MONOTONIC);
   bool status =
       timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
   if (verbose_) {
     printf("SetTimelineTransform(%.3fms) at %.3fms took %.2fms, returned %d\n",
            (float)reference_time / 1000000, (float)before / 1000000,
-           (float)(zx_time_get(ZX_CLOCK_MONOTONIC) - before) / 1000000, status);
+           (float)(zx_clock_get(ZX_CLOCK_MONOTONIC) - before) / 1000000, status);
   }
   return status;
 }
@@ -253,7 +253,7 @@ void MediaApp::WaitForPackets(size_t num_packets) {
   if (num_packets >= kNumPacketsToSend)
     wake_time += (low_water_mark_ - first_pts_delay_);
 
-  const zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   if (wake_time > now) {
     if (verbose_) {
       const zx_duration_t nap_duration = wake_time - now;

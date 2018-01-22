@@ -125,7 +125,7 @@ async_wait_result_t EventTimestamper::Wait::Handle(
     async_t* async,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
-  zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   task_runner_->PostTask([now, this] {
     if (state_ == State::ABANDONED) {
       // The EventTimestamper::Watch that owned us was destroyed; we must

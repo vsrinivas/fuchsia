@@ -32,7 +32,7 @@ void LogImporter::Start() {
   }
 
   start_ticks_ = zx_ticks_get();
-  start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
+  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   wait_.set_object(log_.get());
   wait_.set_trigger(ZX_LOG_READABLE);

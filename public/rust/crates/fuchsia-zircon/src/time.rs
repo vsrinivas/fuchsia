@@ -204,10 +204,10 @@ impl Time {
     /// Get the current time, from the specific clock id.
     ///
     /// Wraps the
-    /// [zx_time_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/time_get.md)
+    /// [zx_clock_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md)
     /// syscall.
     pub fn get(clock_id: ClockId) -> Time {
-        unsafe { Time(sys::zx_time_get(clock_id as u32)) }
+        unsafe { Time(sys::zx_clock_get(clock_id as u32)) }
     }
 
     /// Compute a deadline for the time in the future that is the given `Duration` away.

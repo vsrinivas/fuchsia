@@ -40,7 +40,7 @@ TEST(EventTimestamper, DISABLED_SmokeTest) {
   }
 
   for (size_t i = 0; i < kEventCount; ++i) {
-    target_callback_times[i] = zx_time_get(ZX_CLOCK_MONOTONIC);
+    target_callback_times[i] = zx_clock_get(ZX_CLOCK_MONOTONIC);
     events[i].signal(0u, ZX_EVENT_SIGNALED);
     watches[i].Start();
   }

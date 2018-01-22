@@ -139,7 +139,7 @@ void Frame::TraceGpuQueryResults(
   constexpr static const char* kCategoryLiteral = "gfx";
   const trace_async_id_t async_id = TRACE_NONCE();
 
-  zx_time_t now_nanos = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now_nanos = zx_clock_get(ZX_CLOCK_MONOTONIC);
   uint64_t now_ticks = zx_ticks_get();
   double ticks_per_nanosecond = zx_ticks_per_second() / 1000000000.0;
 

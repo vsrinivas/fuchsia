@@ -11,12 +11,12 @@
 namespace scene_manager {
 
 Display::Display(DisplayMetrics metrics)
-    : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)), metrics_(metrics) {}
+    : last_vsync_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)), metrics_(metrics) {}
 
 zx_time_t Display::GetLastVsyncTime() {
   // Since listening for frame presentation events is our only way of knowing
   // when vsyncs have occurred, we often need to make an educated guess.
-  const zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_time_t interval_duration = GetVsyncInterval();
   const uint64_t num_intervals = (now - last_vsync_time_) / interval_duration;
   return last_vsync_time_ + (num_intervals * interval_duration);
@@ -32,7 +32,7 @@ zx_time_t Display::GetVsyncInterval() const {
 
 void Display::set_last_vsync_time(zx_time_t vsync_time) {
   FXL_DCHECK(vsync_time >= last_vsync_time_ &&
-             vsync_time <= zx_time_get(ZX_CLOCK_MONOTONIC));
+             vsync_time <= zx_clock_get(ZX_CLOCK_MONOTONIC));
   last_vsync_time_ = vsync_time;
 }
 

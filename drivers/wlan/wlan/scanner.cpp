@@ -162,7 +162,7 @@ void Scanner::RemoveStaleBss() {
 
     // Only prune if necessary time passed.
     static zx_time_t ts_last_prune = 0;
-    auto now = zx_time_get(ZX_CLOCK_UTC);
+    auto now = zx_clock_get(ZX_CLOCK_UTC);
     if (ts_last_prune + kBssPruneDelay > now) { return; }
 
     // Prune stale entries.

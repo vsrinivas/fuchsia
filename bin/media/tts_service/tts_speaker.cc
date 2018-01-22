@@ -227,7 +227,7 @@ void TtsSpeaker::SendPendingAudio() {
 
   if (!clock_started_) {
     auto start = media::TimelineTransform::New();
-    start->reference_time = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(50);
+    start->reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(50);
     start->subject_time = 0;
     start->reference_delta = 1u;
     start->subject_delta = 1u;

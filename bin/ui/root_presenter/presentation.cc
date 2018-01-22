@@ -376,7 +376,7 @@ void Presentation::HandleAltBackspace() {
       return;
   }
 
-  animation_start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
+  animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
   UpdateAnimation(animation_start_time_);
 }
 

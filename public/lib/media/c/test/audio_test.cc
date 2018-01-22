@@ -471,7 +471,7 @@ TEST(media_client, audio_stream_write) {
     ASSERT_TRUE(delay_list[dev_num] > 0);
 
     zx_time_t pres_time =
-        (2 * delay_list[dev_num]) + zx_time_get(ZX_CLOCK_MONOTONIC);
+        (2 * delay_list[dev_num]) + zx_clock_get(ZX_CLOCK_MONOTONIC);
     ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_write(
                          stream_list[dev_num], audio_buffer1.data(),
                          WRITE_BUFFER_NUM_SAMPLES, pres_time));
@@ -518,7 +518,7 @@ TEST(media_client, audio_stream_write_c) {
 
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);
-  zx_time_t pres_time = (2 * delay_nsec) + zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t pres_time = (2 * delay_nsec) + zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   ASSERT_EQ(ZX_OK,
             audio_output_stream_write(stream, audio_buffer.data(),

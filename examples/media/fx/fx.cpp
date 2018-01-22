@@ -489,7 +489,7 @@ void FxProcessor::ProcessInput(bool first_time) {
     // TODO(johngro) : this lead time amount should not be arbitrary... it
     // needs to be based on the requirements of the renderer at the moment.
     media::TimelineTransformPtr start = media::TimelineTransform::New();
-    start->reference_time = zx_time_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
+    start->reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
     start->subject_time = 0;
     start->reference_delta = 1u;
     start->subject_delta = 1u;
@@ -511,7 +511,7 @@ void FxProcessor::ProcessInput(bool first_time) {
 void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
                                        media::MediaPacketPtr* out_pkt2) {
   // Figure out how much input data we have to process.
-  zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
   if (input_wp <= input_rp_) {
     printf("input wp <= rp (wp %" PRId64 " rp %" PRId64 " now %" PRIu64 ")\n",

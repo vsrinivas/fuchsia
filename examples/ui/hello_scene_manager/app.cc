@@ -219,7 +219,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
       static_cast<float>(display_info->physical_height);
   CreateExampleScene(display_width, display_height);
 
-  start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
+  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
   camera_anim_start_time_ = start_time_;
   Update(start_time_);
 }

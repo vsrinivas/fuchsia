@@ -47,7 +47,7 @@ FrameScheduler::ComputePresentationAndWakeupTimes() const {
 
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
   const zx_time_t vsync_interval = display_->GetVsyncInterval();
-  const zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_time_t required_render_time = PredictRequiredFrameRenderTime();
   const zx_time_t requested_presentation_time =
       requested_presentation_times_.top();

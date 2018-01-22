@@ -12,7 +12,7 @@ namespace machina {
 
 // Returns the current time in seconds.
 static inline time_t rtc_time() {
-  return zx_time_get(ZX_CLOCK_UTC) / ZX_SEC(1);
+  return zx_clock_get(ZX_CLOCK_UTC) / ZX_SEC(1);
 }
 
 }  // namespace machina

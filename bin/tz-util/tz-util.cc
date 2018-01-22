@@ -56,7 +56,7 @@ class TzUtil {
     if (command_line.HasOption(kGetOffsetCmd)) {
       int32_t local_offset, dst_offset;
       zx_time_t milliseconds_since_epoch =
-          zx_time_get(ZX_CLOCK_UTC) / ZX_MSEC(1);
+          zx_clock_get(ZX_CLOCK_UTC) / ZX_MSEC(1);
       if (time_svc_->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
                                               &local_offset, &dst_offset)) {
         std::cout << local_offset + dst_offset << std::endl;

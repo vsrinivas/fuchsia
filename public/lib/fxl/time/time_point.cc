@@ -47,7 +47,7 @@ TimePoint TimePoint::Now() {
 
 // static
 TimePoint TimePoint::Now() {
-  return TimePoint(zx_time_get(ZX_CLOCK_MONOTONIC));
+  return TimePoint(zx_clock_get(ZX_CLOCK_MONOTONIC));
 }
 
 #elif defined(OS_WIN)

@@ -14,7 +14,7 @@
 namespace {
 
 zx_time_t now() {
-    return zx_time_get(ZX_CLOCK_MONOTONIC);
+    return zx_clock_get(ZX_CLOCK_MONOTONIC);
 }
 
 } // namespace

@@ -22,7 +22,7 @@ class SystemClock : public Clock {
    public:
     SystemClock(uint32_t clock_id = ZX_CLOCK_MONOTONIC) : clock_id_(clock_id) {}
 
-    zx_time_t Now() const override { return zx::time::get(clock_id_); }
+    zx_time_t Now() const override { return zx_clock_get(clock_id_); }
 
    private:
     uint32_t clock_id_;

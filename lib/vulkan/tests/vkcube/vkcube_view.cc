@@ -42,7 +42,7 @@ void VkCubeView::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_inf
         image_pipe_id, fidl::InterfaceRequest<scenic::ImagePipe>(std::move(endpoint1))));
     pane_material.SetTexture(image_pipe_id);
     session()->ReleaseResource(image_pipe_id);
-    session()->Present(zx_time_get(ZX_CLOCK_MONOTONIC), [](scenic::PresentationInfoPtr info) {});
+    session()->Present(zx_clock_get(ZX_CLOCK_MONOTONIC), [](scenic::PresentationInfoPtr info) {});
 
     resize_callback_(logical_size().width, logical_size().height,
                      fidl::InterfaceHandle<scenic::ImagePipe>(std::move(endpoint0)));
