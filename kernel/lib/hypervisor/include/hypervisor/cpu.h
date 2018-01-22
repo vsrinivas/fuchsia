@@ -23,4 +23,4 @@ cpu_num_t cpu_of(uint16_t vpid);
 thread_t* pin_thread(uint16_t vpid);
 
 // Check that the current thread is correctly pinned, based on the given VPID.
-bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid);
+bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread);

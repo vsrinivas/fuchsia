@@ -123,7 +123,7 @@ AutoGich::~AutoGich() {
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     zx_paddr_t vttbr = arm64_vttbr(vmid_, gpas_->table_phys());
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
@@ -171,7 +171,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
         return ZX_ERR_INVALID_ARGS;
@@ -184,7 +184,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
         return ZX_ERR_INVALID_ARGS;

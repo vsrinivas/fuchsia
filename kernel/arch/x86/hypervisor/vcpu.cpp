@@ -568,7 +568,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_addr
     thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, gpas, traps));
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vpid, thread, gpas, traps));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -603,9 +603,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_addr
     return ZX_OK;
 }
 
-Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
-    : thread_(thread), vpid_(vpid), gpas_(gpas), traps_(traps),
-      vmx_state_(/* zero-init */) {}
+Vcpu::Vcpu(uint16_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
+    : vpid_(vpid), thread_(thread), gpas_(gpas), traps_(traps), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -637,7 +636,7 @@ static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     zx_status_t status;
     do {
@@ -720,7 +719,7 @@ static void register_copy(Out* out, const In& in) {
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {
@@ -738,7 +737,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    if (!check_pinned_cpu_invariant(thread_, vpid_))
+    if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {

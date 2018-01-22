@@ -99,8 +99,8 @@ public:
     zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
 private:
-    const thread_t* thread_;
     const uint16_t vpid_;
+    const thread_t* thread_;
     LocalApicState local_apic_state_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
@@ -109,7 +109,7 @@ private:
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
-    Vcpu(const thread_t* thread, uint16_t vpid, GuestPhysicalAddressSpace* gpas, TrapMap* traps);
+    Vcpu(uint16_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps);
 };
 
 // Create a guest.
