@@ -452,15 +452,6 @@ class PageStorageTest : public ::test::TestWithCoroutines {
         handler, object_identifier, object);
   }
 
-  Status DeleteObject(CoroutineHandler* handler, ObjectDigest object_digest) {
-#if 0
-    return PageStorageImplAccessorForTest::GetDb(storage_).DeleteObject(
-        handler, object_digest);
-#else
-    return Status::OK;
-#endif
-  }
-
   ::testing::AssertionResult ObjectIsUntracked(
       ObjectIdentifier object_identifier,
       bool expected_untracked) {
@@ -1526,10 +1517,6 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       fxl::StringView root_data;
       ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
       sync.AddObject(object_identifiers[i].object_digest, root_data.ToString());
-
-      // Remove the root from the local storage. The value was never added.
-      // ASSERT_EQ(Status::OK,
-      //          DeleteObject(handler, object_identifiers[i].object_digest));
     }
 
     // Reset and clear the storage.
