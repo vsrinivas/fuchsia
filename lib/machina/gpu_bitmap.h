@@ -8,6 +8,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 namespace machina {
@@ -26,10 +27,13 @@ class GpuBitmap {
   GpuBitmap();
 
   // Create a bitmap with an existing buffer.
-  GpuBitmap(uint32_t width, uint32_t height, uint8_t* buffer);
+  GpuBitmap(uint32_t width,
+            uint32_t height,
+            zx_pixel_format_t format,
+            uint8_t* buffer);
 
   // Create a bitmap for a given size.
-  GpuBitmap(uint32_t width, uint32_t height);
+  GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format);
 
   // Move semantics.
   GpuBitmap(GpuBitmap&&);
@@ -39,6 +43,8 @@ class GpuBitmap {
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+  zx_pixel_format_t format() const { return format_; }
+  uint8_t pixelsize() const { return ZX_PIXEL_FORMAT_BYTES(format_); }
   uint8_t* buffer() const { return ptr_; }
 
   // Draws a portion of another bitmap into this one.
@@ -52,6 +58,7 @@ class GpuBitmap {
  private:
   uint32_t width_;
   uint32_t height_;
+  zx_pixel_format_t format_;
 
   // Reading of the buffer should always occur through |ptr_| as |buffer_| is
   // not used when operating when an externally-managed buffer.

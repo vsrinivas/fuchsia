@@ -209,6 +209,10 @@ void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
 void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
                                  virtio_gpu_ctrl_hdr_t* response) {
   fbl::unique_ptr<GpuResource> res = GpuResource::Create(request, this);
+  if (!res) {
+    response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
+    return;
+  }
   resources_.insert(fbl::move(res));
   response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }

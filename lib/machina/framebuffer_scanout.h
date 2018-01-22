@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_
 #define GARNET_LIB_MACHINA_FRAMEBUFFER_SCANOUT_H_
 
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/gpu.h>
 #include <zircon/types.h>
@@ -19,14 +20,12 @@ class FramebufferScanout : public GpuScanout {
   // Create a scanout that owns a zircon framebuffer device.
   static zx_status_t Create(const char* path, fbl::unique_ptr<GpuScanout>* out);
 
-  ~FramebufferScanout();
-
   void FlushRegion(const virtio_gpu_rect_t& rect) override;
 
  private:
-  FramebufferScanout(GpuBitmap surface, int fd);
+  FramebufferScanout(GpuBitmap surface, fbl::unique_fd fd);
 
-  int fd_;
+  fbl::unique_fd fd_;
 };
 
 }  // namespace machina

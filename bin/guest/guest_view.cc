@@ -88,13 +88,12 @@ GuestView::GuestView(
   image_info_.height = kDisplayHeight;
   image_info_.stride = kDisplayWidth * 4;
   image_info_.pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-  image_info_.color_space = scenic::ImageInfo::ColorSpace::SRGB;
-  image_info_.tiling = scenic::ImageInfo::Tiling::LINEAR;
 
   // Allocate a framebuffer and attach it as a GPU scanout.
   memory_ = fbl::make_unique<scenic_lib::HostMemory>(
       session(), scenic_lib::Image::ComputeSize(image_info_));
   machina::GpuBitmap bitmap(kDisplayWidth, kDisplayHeight,
+                            ZX_PIXEL_FORMAT_ARGB_8888,
                             reinterpret_cast<uint8_t*>(memory_->data_ptr()));
   scanout_.SetBitmap(std::move(bitmap));
   gpu->AddScanout(&scanout_);

@@ -17,6 +17,7 @@ namespace {
 static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
 static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
+static constexpr uint8_t kPixelSize = 4;
 static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kRootResourceId = 1;
 static constexpr uint32_t kScanoutId = 0;
@@ -53,8 +54,8 @@ class VirtioGpuTest {
   }
 
   zx_status_t CreateScanout(uint32_t width, uint32_t height) {
-    GpuBitmap surface(width, height);
-    scanout_size_ = width * height * VirtioGpu::kBytesPerPixel;
+    GpuBitmap surface(width, height, ZX_PIXEL_FORMAT_ARGB_8888);
+    scanout_size_ = width * height * surface.pixelsize();
     scanout_buffer_ = surface.buffer();
 
     scanout_.SetBitmap(fbl::move(surface));
@@ -96,7 +97,7 @@ class VirtioGpuTest {
     request.resource_id = kRootResourceId;
     request.nr_entries = 1;
 
-    uint32_t size = kDisplayWidth * kDisplayHeight * VirtioGpu::kBytesPerPixel;
+    uint32_t size = kDisplayWidth * kDisplayHeight * kPixelSize;
     auto backing = fbl::make_unique<BackingPages>(size);
     virtio_gpu_mem_entry_t entry = {};
     entry.addr = reinterpret_cast<uint64_t>(backing->buffer.get());

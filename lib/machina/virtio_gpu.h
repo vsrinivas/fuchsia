@@ -29,8 +29,6 @@ using ScanoutId = uint32_t;
 // Virtio 2D GPU device.
 class VirtioGpu : public VirtioDevice {
  public:
-  static constexpr uint8_t kBytesPerPixel = 4;
-
   VirtioGpu(const PhysMem& phys_mem);
   ~VirtioGpu() override;
 

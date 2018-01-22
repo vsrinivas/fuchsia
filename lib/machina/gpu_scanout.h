@@ -17,7 +17,7 @@ class GpuResource;
 // A scanout represents a display that GPU resources can be rendered to.
 class GpuScanout {
  public:
-  GpuScanout() {}
+  GpuScanout() = default;
   GpuScanout(GpuBitmap surface) : surface_(fbl::move(surface)) {}
 
   virtual ~GpuScanout() = default;
@@ -26,6 +26,7 @@ class GpuScanout {
 
   uint32_t width() const { return surface_.width(); }
   uint32_t height() const { return surface_.height(); }
+  uint8_t pixelsize() const { return surface_.pixelsize(); }
 
   virtual void FlushRegion(const virtio_gpu_rect_t& rect);
 
@@ -36,7 +37,7 @@ class GpuScanout {
   GpuBitmap surface_;
 
   // Scanout parameters.
-  GpuResource* resource_;
+  GpuResource* resource_ = nullptr;
   GpuRect rect_;
 };
 

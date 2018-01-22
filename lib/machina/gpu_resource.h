@@ -38,10 +38,6 @@ class GpuResource
 
   GpuResource(VirtioGpu*, ResourceId, GpuBitmap);
 
-  uint32_t width() const { return bitmap_.width(); }
-
-  uint32_t height() const { return bitmap_.height(); }
-
   const GpuBitmap& bitmap() const { return bitmap_; }
 
   void AttachToScanout(GpuScanout* scanout) { scanout_ = scanout; }
