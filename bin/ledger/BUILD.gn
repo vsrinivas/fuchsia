@@ -51,6 +51,10 @@ package("ledger_tests") {
     },
 
     {
+      name = "ledger_benchmark_backlog"
+    },
+
+    {
       name = "ledger_benchmark_get_page"
     },
 
@@ -136,6 +140,42 @@ package("ledger_tests") {
       path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/get_page/add_new_page.tspec")
       dest = "ledger/benchmark/add_new_page.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog.tspec")
+      dest = "ledger/benchmark/backlog.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog_big_entry.tspec")
+      dest = "ledger/benchmark/backlog_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog_big_entry_updates.tspec")
+      dest = "ledger/benchmark/backlog_big_entry_updates.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog_many_big_entries.tspec")
+      dest = "ledger/benchmark/backlog_many_big_entries.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog_many_small_entries.tspec")
+      dest = "ledger/benchmark/backlog_many_small_entries.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/backlog_small_entry_updates.tspec")
+      dest = "ledger/benchmark/backlog_small_entry_updates.tspec"
     },
 
     {

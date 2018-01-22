@@ -1,0 +1,34 @@
+{
+  "test_suite_name": "fuchsia.ledger",
+  "app": "ledger_benchmark_backlog",
+  "args": ["--unique-key-count=1", "--value-size=10000000", "--commit-count=1", "--refs=on"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 180,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "populate and upload",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "populate",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "get page",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "download",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "get all entries",
+      "event_category": "benchmark"
+    }
+  ]
+}
