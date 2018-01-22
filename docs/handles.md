@@ -40,9 +40,9 @@ handles to the same kernel object with different rights.
 ## Using Handles
 There are many syscalls that create a new kernel object
 and which return a handle to it. To name a few:
-+ `zx_event_create`
-+ `zx_process_create`
-+ `zx_thread_create`
++ [`zx_event_create`](syscalls/event_create.md)
++ [`zx_process_create`](syscalls/process_create.md)
++ [`zx_thread_create`](syscalls/thread_create.md)
 
 These calls create both the kernel object and the first
 handle pointing to it. The handle is bound to the process that
@@ -52,25 +52,25 @@ that type of kernel object.
 There is only one syscall that can make a copy of a handle,
 which points to the same kernel object and is bound to the same
 process that issued the syscall:
-+ `zx_handle_duplicate`
++ [`zx_handle_duplicate`](syscalls/handle_duplicate.md)
 
 There is one syscall that creates an equivalent handle (possibly
 with fewer rights), invalidating the original handle:
-+ `zx_handle_replace`
++ [`zx_handle_replace`](syscalls/handle_replace.md)
 
 There is one syscall that just destroys a handle:
-+ `zx_handle_close`
++ [`zx_handle_close`](syscalls/handle_close.md)
 
 There are two syscalls that takes a handle bound to calling
 process and binds it into kernel (puts the handle in-transit):
-+ `zx_channel_write`
-+ `zx_socket_share`
++ [`zx_channel_write`](syscalls/channel_write.md)
++ [`zx_socket_share`](syscalls/socket_share.md)
 
 There are three syscalls that takes an in-transit handle and
 binds it to the calling process:
-+ `zx_channel_read`
-+ `zx_channel_call`
-+ `zx_socket_accept`
++ [`zx_channel_read`](syscalls/channel_read.md)
++ [`zx_channel_call`](syscalls/channel_call.md)
++ [`zx_socket_accept`](syscalls/socket_accept.md)
 
 The channel and socket syscalls above are used to transfer a handle from
 one process to another. For example it is possible to connect
@@ -81,7 +81,7 @@ process calls `zx_channel_read` on the same channel.
 Finally, there is a single syscall that gives a new process its
 bootstrapping handle, that is, the handle that it can use to
 request other handles:
-+ `zx_process_start`
++ [`zx_process_start`](syscalls/process_start.md)
 
 The bootstrapping handle can be of any transferable kernel object but
 the most reasonable case is that it points to one end of a channel
