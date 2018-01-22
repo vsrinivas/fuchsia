@@ -13,7 +13,6 @@
 #include <arch/arm64/el2_state.h>
 #include <arch/hypervisor.h>
 #include <dev/psci.h>
-#include <dev/timer/arm_generic.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 #include <vm/fault.h>
@@ -31,11 +30,6 @@
     })
 
 static const uint16_t kSmcPsci = 0;
-
-enum TimerControl : uint64_t {
-    ENABLE = 1u << 0,
-    IMASK = 1u << 1,
-};
 
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
     ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
@@ -68,34 +62,16 @@ static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
 }
 
-static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
-    GichState* gich_state = static_cast<GichState*>(arg);
-    bool signaled;
-    gich_state->interrupt_tracker.Signal(true, &signaled);
-    return INT_NO_RESCHEDULE;
-}
-
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
                                               GichState* gich_state) {
     const WaitInstruction wi(iss);
     if (wi.is_wfe) {
-        return ZX_ERR_NOT_SUPPORTED;
+        thread_reschedule();
+    } else {
+        thread_yield();
     }
     next_pc(guest_state);
-
-    timer_cancel(&gich_state->timer);
-    bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
-    bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
-    if (enabled && !masked) {
-        uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
-        zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
-        if (deadline <= current_time()) {
-            return ZX_OK;
-        }
-        timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
-    }
-
-    return gich_state->interrupt_tracker.Wait(nullptr);
+    return ZX_OK;
 }
 
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state) {

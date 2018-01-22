@@ -176,7 +176,7 @@ static bool vcpu_wfi(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_wfi_start, vcpu_wfi_end));
+    ASSERT_TRUE(setup(&test, vcpu_wfi_start, vcpu_wfi_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;

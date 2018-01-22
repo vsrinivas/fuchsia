@@ -25,9 +25,7 @@ FUNCTION(vcpu_interrupt_end)
 
 // Test wfi instruction handling.
 FUNCTION(vcpu_wfi_start)
-    msr daifclr, #2
     wfi
-.skip 0x278
     mov x0, EXIT_TEST_ADDR
     str xzr, [x0]
 FUNCTION(vcpu_wfi_end)
