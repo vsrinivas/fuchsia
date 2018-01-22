@@ -1,14 +1,14 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "gtest/gtest.h"
+#include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
+#include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
-#include "lib/module_resolver/cpp/formatting.h"
-#include "lib/entity/cpp/json.h"
 
 namespace maxwell {
 namespace {
@@ -55,7 +55,7 @@ class QueryBuilder {
   }
 
   // |path_parts| is a pair of { module path array, link name }.
-  QueryBuilder& AddLinkInfoNoun(
+  QueryBuilder& AddLinkInfoNounWithContent(
       std::string name,
       std::pair<std::vector<std::string>, std::string> path_parts,
       std::string entity_reference) {
@@ -65,7 +65,29 @@ class QueryBuilder {
 
     auto link_info = modular::ResolverLinkInfo::New();
     link_info->path = std::move(link_path);
-    link_info->content_snapshot = modular::EntityReferenceToJson(entity_reference);
+    link_info->content_snapshot =
+        modular::EntityReferenceToJson(entity_reference);
+
+    auto noun = modular::ResolverNounConstraint::New();
+    noun->set_link_info(std::move(link_info));
+    query->noun_constraints.insert(name, std::move(noun));
+    return *this;
+  }
+
+  // |path_parts| is a pair of { module path array, link name }.
+  QueryBuilder& AddLinkInfoNounWithTypeConstraints(
+      std::string name,
+      std::pair<std::vector<std::string>, std::string> path_parts,
+      std::vector<std::string> allowed_types) {
+    auto link_path = modular::LinkPath::New();
+    link_path->module_path = fidl::Array<fidl::String>::From(path_parts.first);
+    link_path->link_name = path_parts.second;
+
+    auto link_info = modular::ResolverLinkInfo::New();
+    link_info->path = std::move(link_path);
+    link_info->allowed_types = modular::LinkAllowedTypes::New();
+    link_info->allowed_types->allowed_entity_types =
+        fidl::Array<fidl::String>::From(allowed_types);
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
@@ -197,10 +219,25 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   }
 
   source1->idle();
-  source2->idle();
 
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1").build();
-  FindModules(std::move(query));
+  // This is mostly the contents of the FindModules() convenience function
+  // above.  It's copied here so that we can call source2->idle() before
+  // RunLoopUntil() for this case only.
+  auto scoring_info = modular::ResolverScoringInfo::New();
+  bool got_response = false;
+  resolver_->FindModules(
+      std::move(query), nullptr /* scoring_info */,
+      [this, &got_response](const modular::FindModulesResultPtr& result) {
+        got_response = true;
+        result_ = result.Clone();
+      });
+  // Waiting until here to set |source2| as idle shows that FindModules() is
+  // effectively delayed until all sources have indicated idle ("module2" is in
+  // |source2|).
+  source2->idle();
+  ASSERT_TRUE(RunLoopUntil([&got_response] { return got_response; }));
+
   ASSERT_EQ(2lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
   EXPECT_EQ("module2", results()[1]->module_id);
@@ -322,6 +359,41 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
   // TODO(thatguy): Validate that the initial_nouns content is correct.
 }
 
+TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"foo"}}, {"destination", {"baz"}}};
+    source->add("1", entry);
+  }
+  source->idle();
+
+  // First try matching "module1" for a query that describes a Link that
+  // already allows "foo" in the Link.
+  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
+                   .AddLinkInfoNounWithTypeConstraints("start",
+                       { {"a", "b"}, "c"}, {"foo"})
+                   .build();
+  FindModules(std::move(query));
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+
+  // Same thing should happen if there aren't any allowed types, but the Link's
+  // content encodes an Entity reference.
+  fidl::String entity_reference = AddEntity({{"foo", ""}});
+  query = QueryBuilder("com.google.fuchsia.navigate.v1")
+                   .AddLinkInfoNounWithContent("start",
+                       { {"a", "b"}, "c"}, entity_reference)
+                   .build();
+  FindModules(std::move(query));
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+}
+
 TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
   // Add the same entry twice, to simulate what could happen during a network
   // reconnect, and show that the Module is still available.
@@ -343,9 +415,6 @@ TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("id1", results()[0]->module_id);
 }
-
-// TODO(thatguy): Add tests for:
-//   * Delaying Connect() call until all sources have reported idle.
 
 }  // namespace
 }  // namespace maxwell

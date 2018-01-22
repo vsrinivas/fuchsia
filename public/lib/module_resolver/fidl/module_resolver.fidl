@@ -65,7 +65,7 @@ struct ResolverLinkInfo {
 
   // If |allowed_types| is not available, an Entity reference in the Link's value
   // can be used to get type constraint information.
-  string content_snapshot;
+  string? content_snapshot;
 
   // TODO(thatguy): May want to include LinkPermissions for further matching
   // and constraint generation.
