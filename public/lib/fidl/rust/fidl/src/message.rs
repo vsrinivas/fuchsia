@@ -144,6 +144,13 @@ impl DecodeBuf {
         }
     }
 
+    /// Create a new `DecodeBuf` from a `zircon::MessageBuf`.
+    pub fn new_with(buf: MessageBuf) -> Self {
+        DecodeBuf {
+            inner: buf,
+        }
+    }
+
     /// Extracts a reference to the inner message buffer.
     pub fn get_buf(&self) -> &MessageBuf {
         &self.inner
