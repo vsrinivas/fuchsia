@@ -70,3 +70,36 @@ pub type ServerImmediate<Item> = futures::future::FutureResult<Item, CloseChanne
 pub trait Future<Item>: futures::Future<Item = Item, Error = Error> + Send {}
 impl<T, Item> Future<Item> for T
     where T: futures::Future<Item = Item, Error = Error> + Send {}
+
+#[macro_export]
+macro_rules! fidl_enum {
+    ($typename:ident, [$($name:ident = $value:expr;)*]) => {
+        #[allow(non_upper_case_globals)]
+        impl $typename {
+            $(
+                pub const $name: $typename = $typename($value);
+            )*
+
+            #[allow(unreachable_patterns)]
+            fn fidl_enum_name(&self) -> Option<&'static str> {
+                match self.0 {
+                    $(
+                        $value => Some(stringify!($name)),
+                    )*
+                    _ => None,
+                }
+            }
+        }
+
+        impl ::std::fmt::Debug for $typename {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                f.write_str(concat!(stringify!($typename), "("))?;
+                match self.fidl_enum_name() {
+                    Some(name) => f.write_str(&name)?,
+                    None => ::std::fmt::Debug::fmt(&self.0, f)?,
+                }
+                f.write_str(")")
+            }
+        }
+    }
+}

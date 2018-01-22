@@ -8,23 +8,23 @@ const GenerateEnum = `
 {{/* . (dot) refers to a the Go type |rustgen.EnumTemplate|  */}}
 {{- define "GenerateEnum" -}}
 {{- $enum := . -}}
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct {{$enum.Name}}(
   {{- if eq $enum.Signed true}} i32
   {{- else}} u32 {{- end}}
 );
 
-impl {{$enum.Name}} {
-   {{range $enum_val := $enum.Values}}
-      pub const {{$enum_val.Name}}: {{$enum.Name}} = {{$enum.Name}}({{$enum_val.Value}});
-  {{end}}
+fidl_enum!({{$enum.Name}}, [
+    {{range $enum_val := $enum.Values}}
+	  {{$enum_val.Name}} = {{$enum_val.Value}};
+	{{end}}
 
   {{if eq $enum.Signed true -}}
-     pub const UNKNOWN: {{$enum.Name}} = {{$enum.Name}}(0x7FFFFFFF);
+     UNKNOWN = 0x7FFFFFFF;
   {{else}}
-     pub const UNKNOWN: {{$enum.Name}} = {{$enum.Name}}(0xFFFFFFFF);
+     UNKNOWN = 0xFFFFFFFF;
   {{end}}
-}
+]);
 
 impl ::fidl::Encodable for {{$enum.Name}} {
   fn encode(self, buf: &mut ::fidl::EncodeBuf, base: usize, offset: usize) {
