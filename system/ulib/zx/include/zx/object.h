@@ -73,7 +73,7 @@ public:
 
     zx_status_t wait_one(zx_signals_t signals, zx::time deadline,
                          zx_signals_t* pending) const {
-        return zx_object_wait_one(value_, signals, deadline.value(), pending);
+        return zx_object_wait_one(value_, signals, deadline.get(), pending);
     }
 
     zx_status_t wait_async(const object<port>& port, uint64_t key,
@@ -87,7 +87,7 @@ public:
     }
 
     static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx::time deadline) {
-        return zx_object_wait_many(wait_items, count, deadline.value());
+        return zx_object_wait_many(wait_items, count, deadline.get());
     }
 
     // TODO(abarth): Not all of these methods apply to every type of object. We

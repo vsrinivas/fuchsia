@@ -22,7 +22,7 @@ typedef uint64_t nsecs_t;
 
 static nsecs_t now(void) {
 #ifdef __Fuchsia__
-    return zx_time_get(ZX_CLOCK_MONOTONIC);
+    return zx_clock_get(ZX_CLOCK_MONOTONIC);
 #else
     // clock_gettime(CLOCK_MONOTONIC) would be better but may not exist on the host
     struct timeval tv;

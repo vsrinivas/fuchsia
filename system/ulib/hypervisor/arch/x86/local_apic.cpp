@@ -74,7 +74,7 @@ zx_status_t LocalApicTimer::WriteLvt(uint32_t value) {
     if (mode > static_cast<uint32_t>(Mode::TscDeadline))
         return ZX_ERR_NOT_SUPPORTED;
     mode_ = static_cast<LocalApicTimer::Mode>(mode);
-    UpdateLocked(zx::time::get(ZX_CLOCK_MONOTONIC));
+    UpdateLocked(zx_clock_get(ZX_CLOCK_MONOTONIC));
     return ZX_OK;
 }
 
@@ -92,7 +92,7 @@ zx_status_t LocalApicTimer::WriteDcr(uint32_t value) {
     fbl::AutoLock lock(&mutex_);
     uint32_t shift = bits_shift(value, 1, 0) | (bit_shift(value, 3) << 2);
     divisor_shift_ = (shift + 1) & 7;
-    UpdateLocked(zx::time::get(ZX_CLOCK_MONOTONIC));
+    UpdateLocked(zx_clock_get(ZX_CLOCK_MONOTONIC));
     return ZX_OK;
 }
 
@@ -104,7 +104,7 @@ uint32_t LocalApicTimer::ReadDcr() const {
 
 zx_status_t LocalApicTimer::WriteIcr(uint32_t value) {
     fbl::AutoLock lock(&mutex_);
-    reset_time_ = zx::time::get(ZX_CLOCK_MONOTONIC);
+    reset_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
     initial_count_ = value;
     UpdateLocked(reset_time_);
     return ZX_OK;
@@ -117,7 +117,7 @@ uint32_t LocalApicTimer::ReadIcr() const {
 
 uint32_t LocalApicTimer::ReadCcr() const {
     fbl::AutoLock lock(&mutex_);
-    uint64_t elapsed = zx::time::get(ZX_CLOCK_MONOTONIC) - reset_time_;
+    uint64_t elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - reset_time_;
     uint64_t ticks = elapsed >> divisor_shift_;
 
     switch (mode_) {
@@ -168,7 +168,7 @@ void LocalApicTimer::Interrupt() {
     if (!expire_time_)
         return;
 
-    UpdateLocked(zx::time::get(ZX_CLOCK_MONOTONIC));
+    UpdateLocked(zx_clock_get(ZX_CLOCK_MONOTONIC));
     apic_->Interrupt(vector_);
 }
 

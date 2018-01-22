@@ -363,7 +363,7 @@ int iochk(int argc, char** argv) {
     }
 
     if (!seed_set) {
-        base_seed = zx_time_get(ZX_CLOCK_MONOTONIC);
+        base_seed = zx_clock_get(ZX_CLOCK_MONOTONIC);
     }
     printf("seed is %ld\n", base_seed);
 

@@ -95,7 +95,7 @@ bool netifc_send_pending(void) {
 }
 
 void update_timeouts(void) {
-    zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
                              debuglog_next_timeout : tftp_next_timeout;
     if (next_timeout != ZX_TIME_INFINITE) {
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
                 printf("netsvc: netifc_poll() failed - terminating\n");
                 break;
             }
-            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
             if (now > debuglog_next_timeout) {
                 debuglog_timeout_expired();
             }

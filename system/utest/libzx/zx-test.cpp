@@ -180,26 +180,26 @@ static bool port_test() {
 static bool time_test() {
     BEGIN_TEST;
 
-    ASSERT_EQ(zx::time().value(), 0);
-    ASSERT_EQ(zx::time::infinite().value(), ZX_TIME_INFINITE);
+    ASSERT_EQ(zx::time().get(), 0);
+    ASSERT_EQ(zx::time::infinite().get(), ZX_TIME_INFINITE);
 
-    ASSERT_EQ(zx::duration().value(), 0);
-    ASSERT_EQ(zx::duration::infinite().value(), ZX_TIME_INFINITE);
+    ASSERT_EQ(zx::duration().get(), 0);
+    ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
 
-    ASSERT_EQ(zx::usec(10).value(), ZX_USEC(10));
-    ASSERT_EQ(zx::msec(10).value(), ZX_MSEC(10));
-    ASSERT_EQ(zx::sec(10).value(), ZX_SEC(10));
-    ASSERT_EQ(zx::min(10).value(), ZX_MIN(10));
-    ASSERT_EQ(zx::hour(10).value(), ZX_HOUR(10));
+    ASSERT_EQ(zx::usec(10).get(), ZX_USEC(10));
+    ASSERT_EQ(zx::msec(10).get(), ZX_MSEC(10));
+    ASSERT_EQ(zx::sec(10).get(), ZX_SEC(10));
+    ASSERT_EQ(zx::min(10).get(), ZX_MIN(10));
+    ASSERT_EQ(zx::hour(10).get(), ZX_HOUR(10));
 
-    ASSERT_EQ((zx::time() + zx::usec(19)).value(), ZX_USEC(19));
-    ASSERT_EQ((zx::time::infinite() - zx::time()).value(), ZX_TIME_INFINITE);
-    ASSERT_EQ((zx::time::infinite() - zx::time::infinite()).value(), 0);
-    ASSERT_EQ((zx::time() + zx::duration::infinite()).value(), ZX_TIME_INFINITE);
+    ASSERT_EQ((zx::time() + zx::usec(19)).get(), ZX_USEC(19));
+    ASSERT_EQ((zx::time::infinite() - zx::time()).get(), ZX_TIME_INFINITE);
+    ASSERT_EQ((zx::time::infinite() - zx::time::infinite()).get(), 0);
+    ASSERT_EQ((zx::time() + zx::duration::infinite()).get(), ZX_TIME_INFINITE);
 
     // Just a smoke test
     ASSERT_GE(zx::deadline_after(10), 10);
-    ASSERT_GE(zx::deadline_after(zx::usec(10)).value(), ZX_USEC(10));
+    ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
 
     END_TEST;
 }

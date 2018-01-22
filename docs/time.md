@@ -4,7 +4,7 @@
 
 *zx\_time\_t* is in nanoseconds.
 
-Use [zx_time_get()](syscalls/time_get.md) to get the current time.
+Use [zx_clock_get()](syscalls/clock_get.md) to get the current time.
 
 ## Kernel-internal time units
 

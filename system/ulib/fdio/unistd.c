@@ -1541,7 +1541,7 @@ static int zx_utimens(fdio_t* io, const struct timespec times[2], int flags) {
 
     // extract modify time
     vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
-        ? zx_time_get(ZX_CLOCK_UTC)
+        ? zx_clock_get(ZX_CLOCK_UTC)
         : ZX_SEC(times[1].tv_sec) + times[1].tv_nsec;
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {

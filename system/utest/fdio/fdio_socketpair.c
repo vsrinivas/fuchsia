@@ -193,9 +193,9 @@ int poll_for_read_with_timeout(void* arg) {
     pollfd.revents = 0;
 
     int timeout_ms = 100;
-    zx_time_t time_before = zx_time_get(CLOCK_MONOTONIC);
+    zx_time_t time_before = zx_clock_get(CLOCK_MONOTONIC);
     poll_args->poll_result = poll(&pollfd, 1, timeout_ms);
-    zx_time_t time_after = zx_time_get(CLOCK_MONOTONIC);
+    zx_time_t time_after = zx_clock_get(CLOCK_MONOTONIC);
     poll_args->poll_time = time_after - time_before;
 
     int num_readable = 0;

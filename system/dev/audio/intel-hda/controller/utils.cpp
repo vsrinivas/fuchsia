@@ -34,11 +34,11 @@ zx_status_t WaitCondition(zx_time_t timeout,
     ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
     ZX_DEBUG_ASSERT(cond != nullptr);
 
-    zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     timeout += now;
 
     while (!cond(cond_ctx)) {
-        now = zx_time_get(ZX_CLOCK_MONOTONIC);
+        now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         if (now >= timeout)
             return ZX_ERR_TIMED_OUT;
 

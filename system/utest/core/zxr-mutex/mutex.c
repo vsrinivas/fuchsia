@@ -15,7 +15,7 @@
 static zxr_mutex_t mutex = ZXR_MUTEX_INIT;
 
 static void xlog(const char* str) {
-    uint64_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }

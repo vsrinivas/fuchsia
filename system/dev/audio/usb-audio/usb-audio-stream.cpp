@@ -892,7 +892,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         audio_proto::RingBufPositionNotify notify_pos;
     } resp;
 
-    uint64_t complete_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+    uint64_t complete_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
     Action when_finished = Action::NONE;
 
     // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more

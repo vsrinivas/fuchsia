@@ -622,7 +622,7 @@ ACPI_STATUS AcpiOsWaitSemaphore(
         return AE_OK;
     }
 
-    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
+    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
     struct timespec then = {
         .tv_sec = static_cast<time_t>(now / ZX_SEC(1)),
         .tv_nsec = static_cast<long>(now % ZX_SEC(1)),

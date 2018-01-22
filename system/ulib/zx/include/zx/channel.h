@@ -56,7 +56,7 @@ public:
                      const zx_channel_call_args_t* args,
                      uint32_t* actual_bytes, uint32_t* actual_handles,
                      zx_status_t* read_status) const {
-        return zx_channel_call(get(), flags, deadline.value(), args, actual_bytes,
+        return zx_channel_call(get(), flags, deadline.get(), args, actual_bytes,
                                actual_handles, read_status);
     }
 };

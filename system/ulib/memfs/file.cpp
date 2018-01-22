@@ -164,7 +164,7 @@ zx_status_t VnodeFile::Truncate(size_t len) {
     }
 
     length_ = len;
-    modify_time_ = zx_time_get(ZX_CLOCK_UTC);
+    modify_time_ = zx_clock_get(ZX_CLOCK_UTC);
     return ZX_OK;
 }
 

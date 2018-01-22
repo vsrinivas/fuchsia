@@ -1,20 +1,20 @@
-# zx_time_get
+# zx_clock_get
 
 ## NAME
 
-time_get - Acquire the current time.
+clock_get - Acquire the current time.
 
 ## SYNOPSIS
 
 ```
 #include <zircon/syscalls.h>
 
-zx_time_t zx_time_get(uint32_t clock_id)
+zx_time_t zx_clock_get(uint32_t clock_id)
 ```
 
 ## DESCRIPTION
 
-**zx_time_get**() returns the current time of *clock_id*, or 0 if *clock_id* is
+**zx_clock_get**() returns the current time of *clock_id*, or 0 if *clock_id* is
 invalid.
 
 ## SUPPORTED CLOCK IDS
@@ -27,8 +27,8 @@ invalid.
 
 ## RETURN VALUE
 
-On success, **zx_time_get**() returns the current time according to the given clock ID.
+On success, **zx_clock_get**() returns the current time according to the given clock ID.
 
 ## ERRORS
 
-On error, **zx_time_get**() currently returns 0.
+On error, **zx_clock_get**() currently returns 0.

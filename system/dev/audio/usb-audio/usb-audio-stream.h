@@ -74,7 +74,7 @@ private:
           usb_(*usb),
           default_domain_(fbl::move(default_domain)),
           usb_index_(usb_index),
-          create_time_(zx_time_get(ZX_CLOCK_MONOTONIC)) { }
+          create_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) { }
 
     virtual ~UsbAudioStream();
 

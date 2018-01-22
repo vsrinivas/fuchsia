@@ -17,7 +17,7 @@ public:
 
     static constexpr duration infinite() { return duration(ZX_TIME_INFINITE); }
 
-    constexpr zx_duration_t value() const { return value_; }
+    constexpr zx_duration_t get() const { return value_; }
 
     constexpr duration operator-(duration other) const {
         return duration(value_ - other.value_);
@@ -58,23 +58,18 @@ public:
 
     static constexpr time infinite() { return  time(ZX_TIME_INFINITE); }
 
-    // TODO(abarth): Return zx::time rather than zx_time_t.
-    static inline zx_time_t get(uint32_t clock_id) {
-        return zx_time_get(clock_id);
-    }
-
-    constexpr zx_time_t value() const { return value_; }
+    constexpr zx_time_t get() const { return value_; }
 
     constexpr duration operator-(time other) const {
         return duration(value_ - other.value_);
     }
 
     constexpr time operator+(duration delta) const {
-        return time(value_ + delta.value());
+        return time(value_ + delta.get());
     }
 
     constexpr time operator-(duration delta) const {
-        return time(value_ - delta.value());
+        return time(value_ - delta.get());
     }
 
     constexpr bool operator==(time other) const { return value_ == other.value_; }
@@ -87,6 +82,14 @@ public:
 private:
     zx_time_t value_ = 0;
 };
+
+namespace clock {
+
+static inline time get(uint32_t clock_id) {
+    return time(zx_clock_get(clock_id));
+}
+
+} // namespace clock
 
 constexpr inline duration usec(uint64_t n) { return duration(ZX_USEC(n)); }
 
@@ -104,7 +107,7 @@ inline zx_status_t nanosleep(zx_time_t deadline) {
 }
 
 inline zx_status_t nanosleep(zx::time deadline) {
-    return zx_nanosleep(deadline.value());
+    return zx_nanosleep(deadline.get());
 }
 
 // TODO(abarth): Remove.
@@ -113,7 +116,7 @@ inline zx_time_t deadline_after(zx_duration_t nanoseconds) {
 }
 
 inline time deadline_after(zx::duration nanoseconds) {
-    return time(zx_deadline_after(nanoseconds.value()));
+    return time(zx_deadline_after(nanoseconds.get()));
 }
 
 } // namespace zx

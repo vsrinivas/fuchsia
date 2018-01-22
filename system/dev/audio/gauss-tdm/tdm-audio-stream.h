@@ -65,7 +65,7 @@ private:
         : TdmAudioStreamBase(parent),
           TdmOutputStreamProtocol(),
           default_domain_(fbl::move(default_domain)),
-          create_time_(zx_time_get(ZX_CLOCK_MONOTONIC)) { }
+          create_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) { }
 
     virtual ~TdmOutputStream();
 

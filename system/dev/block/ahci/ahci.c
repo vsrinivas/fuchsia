@@ -82,23 +82,23 @@ typedef struct ahci_device {
 
 static inline zx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint32_t mask, zx_time_t timeout) {
     int i = 0;
-    zx_time_t start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
     do {
         if (!(ahci_read(reg) & mask)) return ZX_OK;
         usleep(10 * 1000);
         i++;
-    } while (zx_time_get(ZX_CLOCK_MONOTONIC) - start_time < timeout);
+    } while (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time < timeout);
     return ZX_ERR_TIMED_OUT;
 }
 
 static inline zx_status_t ahci_wait_for_set(const volatile uint32_t* reg, uint32_t mask, zx_time_t timeout) {
     int i = 0;
-    zx_time_t start_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
     do {
         if (ahci_read(reg) & mask) return ZX_OK;
         usleep(10 * 1000);
         i++;
-    } while (zx_time_get(ZX_CLOCK_MONOTONIC) - start_time < timeout);
+    } while (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time < timeout);
     return ZX_ERR_TIMED_OUT;
 }
 
@@ -317,7 +317,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     // set the watchdog
     // TODO: general timeout mechanism
-    pdata->timeout = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(1);
+    pdata->timeout = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(1);
     completion_signal(&dev->watchdog_completion);
     return ZX_OK;
 }
@@ -533,7 +533,7 @@ static int ahci_watchdog_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     for (;;) {
         bool idle = true;
-        zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         for (int i = 0; i < AHCI_MAX_PORTS; i++) {
             ahci_port_t* port = &dev->ports[i];
             if (!(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT))) {

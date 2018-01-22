@@ -71,7 +71,7 @@ Generally, the operations conducted over the ring buffer channel include...
    bus transaction failure, etc...
  * Receiving clock recovery information in the case that the audio output clock
    is based on a different oscillator than the oscillator which backs
-   [ZX_CLOCK_MONOTONIC](../syscalls/time_get.md)
+   [ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md)
 
 ## Operational Details
 
@@ -677,14 +677,14 @@ Upon successfully starting a stream, drivers **must** provide their best
 estimate of the time at which their hardware began to transmit or capture the
 stream in the `start_time` field of the response.  This time stamp **must** be
 taken from the clock exposed via the
-[ZX_CLOCK_MONOTONIC](../syscalls/time_get.md) syscall.  Along with with the FIFO
+[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) syscall.  Along with with the FIFO
 depth property of the ring buffer, this timestamp allows applications to send or
 receive stream data without the need for periodic position updates from the
 driver.  Along with the outboard latency estimate provided by the stream
 channel, this timestamp allows applications to synchronize presentation of audio
 information across multiple streams, or even multiple devices (provided that an
 external time synchronization protocol is used to synchronize the
-[ZX_CLOCK_MONOTONIC](../syscalls/time_get.md) timelines across the cohort of
+[ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md) timelines across the cohort of
 synchronized devices).
 
 > TODO: Redefine `start_time` to allow it to be an arbitrary 'audio stream

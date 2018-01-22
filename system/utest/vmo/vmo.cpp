@@ -1379,13 +1379,13 @@ bool vmo_unmap_coherency() {
 
     const zx_time_t max_duration = ZX_SEC(30);
     const zx_time_t max_wait = ZX_SEC(1);
-    zx_time_t start = zx_time_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
     for (;;) {
         // wait for it to loop at least once
-        zx_time_t t = zx_time_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t t = zx_clock_get(ZX_CLOCK_MONOTONIC);
         size_t last_count = args.count.load();
         while (args.count.load() <= last_count) {
-            if (zx_time_get(ZX_CLOCK_MONOTONIC) - t > max_wait) {
+            if (zx_clock_get(ZX_CLOCK_MONOTONIC) - t > max_wait) {
                 UNITTEST_FAIL_TRACEF("looper appears stuck!\n");
                 break;
             }
@@ -1395,7 +1395,7 @@ bool vmo_unmap_coherency() {
         status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, len, nullptr, 0);
         EXPECT_EQ(0, status, "vm decommit");
 
-        if (zx_time_get(ZX_CLOCK_MONOTONIC) - start > max_duration)
+        if (zx_clock_get(ZX_CLOCK_MONOTONIC) - start > max_duration)
             break;
     }
 

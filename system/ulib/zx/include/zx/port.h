@@ -39,7 +39,7 @@ public:
     }
 
     zx_status_t wait(zx::time deadline, zx_port_packet_t* packet, size_t size) const {
-        return zx_port_wait(get(), deadline.value(), packet, size);
+        return zx_port_wait(get(), deadline.get(), packet, size);
     }
 
     zx_status_t cancel(zx_handle_t source, uint64_t key) const {

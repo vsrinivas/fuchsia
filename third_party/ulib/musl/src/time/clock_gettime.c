@@ -25,7 +25,7 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
         errno = EINVAL;
         return -1;
     }
-    zx_time_t now = _zx_time_get(zx_clock);
+    zx_time_t now = _zx_clock_get(zx_clock);
     ts->tv_sec = now / ZX_SEC(1);
     ts->tv_nsec = now % ZX_SEC(1);
     return 0;

@@ -110,12 +110,12 @@ int LoadGeneratorThread::Run() {
             break;
 
         double sleep_delay = MakeRandomDouble(min_sleep_msec(), max_sleep_msec());
-        zx_time_t sleep_deadline = zx_time_get(ZX_CLOCK_MONOTONIC)
+        zx_time_t sleep_deadline = zx_clock_get(ZX_CLOCK_MONOTONIC)
                                  + static_cast<zx_time_t>(sleep_delay * 1000000.0);
 
         do {
             static constexpr zx_time_t max_sleep = ZX_MSEC(10);
-            zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
             if (now >= sleep_deadline)
                 break;
@@ -144,7 +144,7 @@ void usage(const char* program_name) {
            "  N             : Number of threads to create.  Default %u\n"
            "  min/max_work  : Min/max msec for threads to work for.  Default %.1f,%.1f mSec\n"
            "  min/max_sleep : Min/max msec for threads to sleep for.  Default %.1f,%.1f mSec\n"
-           "  seed          : RNG seed to use.  Defaults to seeding from zx_time_get\n",
+           "  seed          : RNG seed to use.  Defaults to seeding from zx_clock_get\n",
            program_name,
            kDefaultNumThreads,
            kDefaultMinWorkMsec,
@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
     }
 
     // Parse the PRNG seed, if present.
-    unsigned int seed = static_cast<unsigned int>(zx_time_get(CLOCK_MONOTONIC));
+    unsigned int seed = static_cast<unsigned int>(zx_clock_get(CLOCK_MONOTONIC));
     if (argc >= 7) {
         if (sscanf(argv[6], "%u", &seed) != 1) return -1;
     }

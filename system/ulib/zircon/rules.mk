@@ -24,6 +24,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/zx_system_get_version.cpp \
     $(LOCAL_DIR)/zx_ticks_get.cpp \
     $(LOCAL_DIR)/zx_ticks_per_second.cpp \
+    $(LOCAL_DIR)/zx_time_get.cpp \
     $(LOCAL_DIR)/syscall-wrappers.cpp \
 
 ifeq ($(ARCH),arm64)

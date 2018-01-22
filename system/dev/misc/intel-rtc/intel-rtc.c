@@ -77,7 +77,7 @@ static void set_utc_offset(rtc_t* rtc) {
     uint64_t rtc_seconds = local_epoc + seconds_since_local_epoc;
     uint64_t rtc_nanoseconds = rtc_seconds * 1000000000;
 
-    uint64_t monotonic_nanoseconds = zx_time_get(ZX_CLOCK_MONOTONIC);
+    uint64_t monotonic_nanoseconds = zx_clock_get(ZX_CLOCK_MONOTONIC);
     int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
 
     zx_status_t status = zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);

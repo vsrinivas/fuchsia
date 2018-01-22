@@ -26,8 +26,8 @@ zx_time_t nstimespec(struct timespec ts) {
 
 bool test_attr(void) {
     BEGIN_TEST;
-    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
-    ASSERT_NE(now, 0u, "zx_time_get only returns zero on error");
+    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "zx_clock_get only returns zero on error");
 
     int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fd1, 0, "");
@@ -97,8 +97,8 @@ bool test_parent_directory_time(void) {
         return true;
     }
 
-    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
-    ASSERT_NE(now, 0u, "zx_time_get only returns zero on error");
+    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "zx_clock_get only returns zero on error");
 
     // Create a parent directory to contain new contents
     zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));

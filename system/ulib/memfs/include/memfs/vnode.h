@@ -42,7 +42,7 @@ public:
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.
     bool IsDirectory() const { return dnode_ != nullptr; }
-    void UpdateModified() { modify_time_ = zx_time_get(ZX_CLOCK_UTC); }
+    void UpdateModified() { modify_time_ = zx_clock_get(ZX_CLOCK_UTC); }
 
     virtual ~VnodeMemfs();
 

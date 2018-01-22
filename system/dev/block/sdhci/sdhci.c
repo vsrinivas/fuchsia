@@ -134,12 +134,12 @@ static bool sdhci_supports_adma2_64bit(sdhci_device_t* dev) {
 }
 
 static zx_status_t sdhci_wait_for_reset(sdhci_device_t* dev, const uint32_t mask, zx_time_t timeout) {
-    zx_time_t deadline = zx_time_get(ZX_CLOCK_MONOTONIC) + timeout;
+    zx_time_t deadline = zx_clock_get(ZX_CLOCK_MONOTONIC) + timeout;
     while (true) {
         if (((dev->regs->ctrl1) & mask) == 0) {
             break;
         }
-        if (zx_time_get(ZX_CLOCK_MONOTONIC) > deadline) {
+        if (zx_clock_get(ZX_CLOCK_MONOTONIC) > deadline) {
             printf("sdhci: timed out while waiting for reset\n");
             return ZX_ERR_TIMED_OUT;
         }
@@ -864,12 +864,12 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
     dev->regs->ctrl1 = ctrl1;
 
     // Wait for the clock to stabilize.
-    zx_time_t deadline = zx_time_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(1);
+    zx_time_t deadline = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_SEC(1);
     while (true) {
         if (((dev->regs->ctrl1) & SDHCI_INTERNAL_CLOCK_STABLE) != 0)
             break;
 
-        if (zx_time_get(ZX_CLOCK_MONOTONIC) > deadline) {
+        if (zx_clock_get(ZX_CLOCK_MONOTONIC) > deadline) {
             zxlogf(ERROR, "sdhci: Clock did not stabilize in time\n");
             status = ZX_ERR_TIMED_OUT;
             goto fail;

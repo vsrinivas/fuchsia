@@ -15,7 +15,7 @@
 static mtx_t g_mutex = MTX_INIT;
 
 static void xlog(const char* str) {
-    uint64_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+    uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }
@@ -209,7 +209,7 @@ static bool test_timeout_elapsed(void) {
               ZX_OK, "failed to wait");
 
     for (int i = 0; i < 5; ++i) {
-        zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         struct timespec then = {
             .tv_sec = now / ZX_SEC(1),
             .tv_nsec = now % ZX_SEC(1),
@@ -221,7 +221,7 @@ static bool test_timeout_elapsed(void) {
         }
         int rc = mtx_timedlock(&args.mutex, &then);
         ASSERT_EQ(rc, thrd_timedout, "wait should time out");
-        zx_time_t elapsed = zx_time_get(ZX_CLOCK_MONOTONIC) - now;
+        zx_time_t elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - now;
         if (elapsed < kAcceptableElapsedTime) {
             unittest_printf_critical("\nelapsed %" PRIu64
                             " < kAcceptableElapsedTime: %" PRIu64 "\n",

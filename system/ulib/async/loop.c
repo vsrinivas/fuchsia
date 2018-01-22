@@ -298,7 +298,7 @@ static zx_status_t async_loop_dispatch_tasks(async_loop_t* loop) {
         // we would like to process in order.
         list_node_t* node;
         if (list_is_empty(&loop->due_list)) {
-            zx_time_t due_time = zx_time_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t due_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
             list_node_t* tail = NULL;
             list_for_every(&loop->task_list, node) {
                 if (node_to_task(node)->deadline > due_time)
