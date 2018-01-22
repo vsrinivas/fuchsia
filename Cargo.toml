@@ -4,6 +4,7 @@
 members =  [
   "bin/device_settings",
   "bin/wlanstack",
+  "drivers/wlan/testing/util",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",

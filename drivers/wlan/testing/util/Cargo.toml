@@ -1,0 +1,11 @@
+[package]
+name = "wlan-test-util"
+version = "0.1.0"
+authors = ["Tim Kilbourn <tkilbourn@google.com>"]
+
+[dependencies]
+failure = "0.1"
+fdio = "0.2"
+fuchsia-wlan-dev = "0.1"
+fuchsia-zircon = "0.3"
+garnet_lib_wlan_fidl = "0.1"

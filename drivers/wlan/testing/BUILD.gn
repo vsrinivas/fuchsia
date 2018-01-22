@@ -7,6 +7,7 @@ import("//build/config/fuchsia/rules.gni")
 group("testing") {
   public_deps = [
     ":wlanphy-testdev",
+    "//garnet/drivers/wlan/testing/util",
   ]
 }
 
