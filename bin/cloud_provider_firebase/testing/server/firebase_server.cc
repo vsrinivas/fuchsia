@@ -264,7 +264,7 @@ void FillTimestamp(rapidjson::Value* value,
   }
 
   if (timestamp == std::numeric_limits<int64_t>::min()) {
-    timestamp = zx_time_get(ZX_CLOCK_UTC) / 1000;
+    timestamp = zx_clock_get(ZX_CLOCK_UTC) / 1000;
   }
 
   std::vector<std::string> elements_to_change;
