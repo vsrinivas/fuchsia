@@ -75,7 +75,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
 
 Vcpu::Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
            TrapMap* traps)
-    : vmid_(vmid), vpid_(vpid), thread_(thread), gpas_(gpas), traps_(traps),
+    : vmid_(vmid), vpid_(vpid), thread_(thread), running_(false), gpas_(gpas), traps_(traps),
       el2_state_(/* zero-init */) {
     (void)thread_;
 }
@@ -134,7 +134,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             uint64_t curr_hcr = hcr_;
             if (gich_maybe_interrupt(&gich_state_))
                 curr_hcr |= HCR_EL2_VI;
+            running_.store(true);
             status = arm64_el2_resume(vttbr, state, curr_hcr);
+            running_.store(false);
         }
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
@@ -152,20 +154,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     bool signaled;
     zx_status_t status = gich_state_.interrupt_tracker.Interrupt(vector, true, &signaled);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
-
-    if (!signaled) {
-        DEBUG_ASSERT(!arch_ints_disabled());
-        arch_disable_ints();
-        auto cpu = cpu_of(vpid_);
-        // If we did not signal the VCPU and we are not running on the same CPU,
-        // it means the VCPU is currently running, therefore we should issue an
-        // IPI to force a VM exit.
-        if (cpu != arch_curr_cpu_num()) {
-            mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu), 0);
-        }
-        arch_enable_ints();
+    }
+    if (!signaled && running_.load()) {
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;
 }

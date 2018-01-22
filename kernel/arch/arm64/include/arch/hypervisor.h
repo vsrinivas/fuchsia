@@ -118,6 +118,7 @@ private:
     const uint8_t vmid_;
     const uint8_t vpid_;
     const thread_t* thread_;
+    fbl::atomic_bool running_;
     GichState gich_state_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;

@@ -101,6 +101,7 @@ public:
 private:
     const uint16_t vpid_;
     const thread_t* thread_;
+    fbl::atomic_bool running_;
     LocalApicState local_apic_state_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;

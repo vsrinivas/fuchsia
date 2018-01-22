@@ -604,7 +604,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_addr
 }
 
 Vcpu::Vcpu(uint16_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
-    : vpid_(vpid), thread_(thread), gpas_(gpas), traps_(traps), vmx_state_(/* zero-init */) {}
+    : vpid_(vpid), thread_(thread), running_(false), gpas_(gpas), traps_(traps),
+    vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -647,7 +648,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             vmx_state_.host_state.xcr0 = x86_xgetbv(0);
             x86_xsetbv(0, vmx_state_.guest_state.xcr0);
         }
+        running_.store(true);
         status = vmx_enter(&vmx_state_);
+        running_.store(false);
         if (x86_feature_test(X86_FEATURE_XSAVE)) {
             // Save the guest XCR0, and load the host XCR0.
             vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
@@ -682,19 +685,11 @@ void vmx_exit(VmxState* vmx_state) {
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     bool signaled;
     zx_status_t status = local_apic_state_.interrupt_tracker.Interrupt(vector, true, &signaled);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
-
-    if (!signaled) {
-        DEBUG_ASSERT(!arch_ints_disabled());
-        arch_disable_ints();
-        auto cpu = cpu_of(vpid_);
-        // If we did not signal the VCPU and we are not running on the same CPU,
-        // it means the VCPU is currently running, therefore we should issue an
-        // IPI to force a VM exit.
-        if (cpu != arch_curr_cpu_num())
-            mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu), 0);
-        arch_enable_ints();
+    }
+    if (!signaled && running_.load()) {
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;
 }
