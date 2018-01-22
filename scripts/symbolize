@@ -289,7 +289,7 @@ def main():
         # Strip any trailing carriage return character ("\r"), since
         # these appear in the serial console output from QEMU.
         line = line.rstrip()
-        if bt_end_re.match(line):
+        if bt_end_re.match(line) or end_of_file:
             if len(processed_lines) != 0:
                 writeline("\nstart of symbolized stack:\n")
                 writelines(processed_lines)
@@ -310,7 +310,10 @@ def main():
                 total_stack_size = 0
                 prev_sp = None
                 zircon_bt = False
-            continue
+            if end_of_file:
+                break
+            else:
+                continue
 
         m = arch_re.match(line)
         if m:
@@ -409,11 +412,6 @@ def main():
             # inlined lines are aligned to be to the right of "=>".
             processed_lines.append(prefix +
                     call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
-            continue
-
-        # Exit if we've reached the end of stdin
-        if end_of_file:
-            break
 
 if __name__ == '__main__':
     sys.exit(main())
