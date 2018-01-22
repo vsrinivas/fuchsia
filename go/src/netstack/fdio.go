@@ -111,6 +111,8 @@ type iostate struct {
 	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
 	writeLoopDone chan struct{}
+
+	withNewSocket bool // remove when we remove old FDIO support
 }
 
 func (ios *iostate) acquire() {
@@ -499,7 +501,7 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, withNewSocket bool) (reterr error) {
+func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, withNewSocket bool, isAccept bool) (reterr error) {
 	var peerS zx.Handle
 	var ios *iostate
 	if iosOrig == nil {
@@ -510,6 +512,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 			ep:            ep,
 			refs:          1,
 			writeLoopDone: make(chan struct{}),
+			withNewSocket: withNewSocket,
 		}
 		if ep != nil || withNewSocket {
 			switch transProto {
@@ -522,6 +525,9 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 				}
 				if withNewSocket {
 					t |= zx.SocketHasControl
+					if !isAccept {
+						t |= zx.SocketHasAccept
+					}
 				}
 				s0, s1, err := zx.NewSocket(t)
 				if err != nil {
@@ -562,25 +568,43 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	s.io[newCookie] = ios
 	s.mu.Unlock()
 
-	// Before we add a dispatcher for this iostate, respond to the client describing what
-	// kind of object this is.
-	ro := fdio.RioDescription{
-		Status: errStatus(nil),
-		Type:   uint32(fdio.ProtocolSocket),
+	defer func() {
+		if reterr != nil {
+			ios.dataHandle.Close()
+			if ios.peerDataHandle != 0 {
+				ios.peerDataHandle.Close()
+			}
+			peerS.Close()
+
+			s.mu.Lock()
+			delete(s.io, newCookie)
+			s.mu.Unlock()
+		}
+	}()
+
+	if withNewSocket && isAccept {
+		if err := zx.Socket(h).Share(peerS); err != nil {
+			return err
+		}
+	} else {
+		// Before we add a dispatcher for this iostate, respond to the client describing what
+		// kind of object this is.
+		ro := fdio.RioDescription{
+			Status: errStatus(nil),
+			Type:   uint32(fdio.ProtocolSocket),
+		}
+		ro.SetOp(fdio.OpOnOpen)
+		if peerS != 0 {
+			ro.Handle = peerS
+		}
+		ro.Write(h, 0)
 	}
-	ro.SetOp(fdio.OpOnOpen)
-	if peerS != 0 {
-		ro.Handle = peerS
-	}
-	ro.Write(h, 0)
 
 	if withNewSocket {
 		go ios.loopControl(s, int64(newCookie))
 	} else if err := s.dispatcher.AddHandler(h, fdio.ServerHandler(s.fdioHandler), int64(newCookie)); err != nil {
-		s.mu.Lock()
-		delete(s.io, newCookie)
-		s.mu.Unlock()
 		h.Close()
+		return err
 	}
 
 	switch transProto {
@@ -645,7 +669,7 @@ func (s *socketServer) opSocket(h zx.Handle, ios *iostate, msg *fdio.Msg, path s
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	err = s.newIostate(h, nil, n, transProto, wq, ep, withNewSocket)
+	err = s.newIostate(h, nil, n, transProto, wq, ep, withNewSocket, false)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -711,7 +735,7 @@ func (s *socketServer) opAccept(h zx.Handle, ios *iostate, msg *fdio.Msg, path s
 		return mxerror.Errorf(zx.ErrInternal, "accept: %v", err)
 	}
 
-	err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep, false)
+	err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep, false, true)
 	return err
 }
 
@@ -998,6 +1022,54 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Sta
 	return fdioSockAddrReply(a, msg)
 }
 
+func (s *socketServer) loopListen(ios *iostate) {
+	// When an incoming connection is available, wait for the listening socket to
+	// enter a shareable state, then share it with zircon.
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	ios.wq.EventRegister(&inEntry, waiter.EventIn)
+	defer ios.wq.EventUnregister(&inEntry)
+	for range inCh {
+		obs, err := ios.dataHandle.WaitOne(
+			zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+			zx.TimensecInfinite)
+		switch mxerror.Status(err) {
+		case zx.ErrOk:
+			switch {
+			case obs&zx.SignalSocketShare != 0:
+				// NOP
+			case obs&LOCAL_SIGNAL_CLOSING != 0:
+				return
+			case obs&zx.SignalSocketPeerClosed != 0:
+				return
+			}
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			return
+		default:
+			log.Printf("listen: wait failed: %v", err)
+		}
+
+		newep, newwq, e := ios.ep.Accept()
+		if e == tcpip.ErrWouldBlock {
+			log.Printf("listen: internal error. Accept returned ErrWouldBlock")
+			continue
+		}
+		if e != nil {
+			if debug {
+				log.Printf("listen: accept failed: %v", e)
+			}
+			return
+		}
+
+		err = s.newIostate(ios.dataHandle, nil, ios.netProto, ios.transProto, newwq, newep, true, true)
+		if err != nil {
+			if debug {
+				log.Printf("listen: newIostate failed: %v", e)
+			}
+			return
+		}
+	}
+}
+
 func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) {
 	d := msg.Data[:msg.Datalen]
 	if len(d) != 4 {
@@ -1019,26 +1091,32 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 		}
 		return mxNetError(err)
 	}
-	go func() {
-		// When an incoming connection is queued up (that is,
-		// calling accept would return a new connection),
-		// signal the fdio socket that it exists. This allows
-		// the socket API client to implement a blocking accept.
-		inEntry, inCh := waiter.NewChannelEntry(nil)
-		ios.wq.EventRegister(&inEntry, waiter.EventIn)
-		defer ios.wq.EventUnregister(&inEntry)
-		for range inCh {
-			err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
-			switch mxerror.Status(err) {
-			case zx.ErrOk:
+
+	if ios.withNewSocket {
+		go s.loopListen(ios)
+	} else {
+		go func() {
+			// When an incoming connection is queued up (that is,
+			// calling accept would return a new connection),
+			// signal the fdio socket that it exists. This allows
+			// the socket API client to implement a blocking accept.
+			inEntry, inCh := waiter.NewChannelEntry(nil)
+			ios.wq.EventRegister(&inEntry, waiter.EventIn)
+			defer ios.wq.EventUnregister(&inEntry)
+			for range inCh {
+				err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
+				switch mxerror.Status(err) {
+				case zx.ErrOk:
+					continue
+				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+					return
+				default:
+					log.Printf("socket signal ZXSIO_SIGNAL_INCOMING: %v", err)
+				}
 				continue
-			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-				return
-			default:
-				log.Printf("socket signal ZXSIO_SIGNAL_INCOMING: %v", err)
 			}
-		}
-	}()
+		}()
+	}
 
 	msg.Datalen = 0
 	msg.SetOff(0)
@@ -1325,14 +1403,14 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		var err error
 		switch {
 		case strings.HasPrefix(path, "none-v2"): // ZXRIO_SOCKET_DIR_NONE
-			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, true)
+			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, true, false)
 		case strings.HasPrefix(path, "socket-v2/"): // ZXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept-v2"): // ZXRIO_SOCKET_DIR_ACCEPT
 			log.Printf("open: unimplemented")
 			err = mxerror.Errorf(zx.ErrNotSupported, "open: unimplemented path=%q", path)
 		case strings.HasPrefix(path, "none"): // ZXRIO_SOCKET_DIR_NONE
-			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false)
+			err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, false)
 		case strings.HasPrefix(path, "socket/"): // ZXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // ZXRIO_SOCKET_DIR_ACCEPT
@@ -1357,7 +1435,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		return fdio.ErrIndirect.Status
 	case fdio.OpClone:
 		ios.acquire()
-		err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil, false)
+		err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil, false, false)
 		if err != nil {
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
 			ro := fdio.RioDescription{
