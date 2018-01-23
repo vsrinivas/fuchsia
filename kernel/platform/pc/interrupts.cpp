@@ -15,6 +15,7 @@
 #include <dev/interrupt.h>
 #include <err.h>
 #include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/pow2_range_allocator.h>
@@ -39,21 +40,18 @@
 #include <trace.h>
 
 struct int_handler_struct {
-    spin_lock_t lock;
+    SpinLock lock;
     int_handler handler;
     void* arg;
 };
 
-static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock lock;
 static struct int_handler_struct int_handler_table[X86_INT_COUNT];
 static p2ra_state_t x86_irq_vector_allocator;
 
 static void platform_init_apic(uint level) {
     pic_map(PIC1_BASE, PIC2_BASE);
     pic_disable();
-
-    for (size_t i = 0; i < fbl::count_of(int_handler_table); ++i)
-        spin_lock_init(&int_handler_table[i].lock);
 
     // Enumerate the IO APICs
     uint32_t num_io_apics;
@@ -132,33 +130,21 @@ static void platform_init_apic(uint level) {
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2);
 
 zx_status_t mask_interrupt(unsigned int vector) {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
-
+    AutoSpinLockIrqSave guard(&lock);
     apic_io_mask_irq(vector, IO_APIC_IRQ_MASK);
-
-    spin_unlock_irqrestore(&lock, state);
-
     return ZX_OK;
 }
 
 zx_status_t unmask_interrupt(unsigned int vector) {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
-
+    AutoSpinLockIrqSave guard(&lock);
     apic_io_mask_irq(vector, IO_APIC_IRQ_UNMASK);
-
-    spin_unlock_irqrestore(&lock, state);
-
     return ZX_OK;
 }
 
 zx_status_t configure_interrupt(unsigned int vector,
                                 enum interrupt_trigger_mode tm,
                                 enum interrupt_polarity pol) {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
-
+    AutoSpinLockIrqSave guard(&lock);
     apic_io_configure_irq(
         vector,
         tm,
@@ -168,24 +154,14 @@ zx_status_t configure_interrupt(unsigned int vector,
         DST_MODE_PHYSICAL,
         apic_bsp_id(),
         0);
-
-    spin_unlock_irqrestore(&lock, state);
-
     return ZX_OK;
 }
 
 zx_status_t get_interrupt_config(unsigned int vector,
                                  enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol) {
-    zx_status_t ret;
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
-
-    ret = apic_io_fetch_irq_config(vector, tm, pol);
-
-    spin_unlock_irqrestore(&lock, state);
-
-    return ret;
+    AutoSpinLockIrqSave guard(&lock);
+    return apic_io_fetch_irq_config(vector, tm, pol);
 }
 
 enum handler_return platform_irq(x86_iframe_t* frame) {
@@ -199,10 +175,11 @@ enum handler_return platform_irq(x86_iframe_t* frame) {
 
     struct int_handler_struct* handler = &int_handler_table[x86_vector];
 
-    spin_lock(&handler->lock);
-    if (handler->handler)
-        ret = handler->handler(handler->arg);
-    spin_unlock(&handler->lock);
+    {
+        AutoSpinLock guard(&handler->lock);
+        if (handler->handler)
+            ret = handler->handler(handler->arg);
+    }
 
     apic_issue_eoi();
     return ret;
@@ -213,8 +190,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
         return ZX_ERR_INVALID_ARGS;
     }
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
+    AutoSpinLockIrqSave guard(&lock);
     zx_status_t result = ZX_OK;
 
     /* Fetch the x86 vector currently configured for this global irq.  Force
@@ -245,7 +221,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
             TRACEF("Failed to allocate x86 IRQ vector for global IRQ (%u) when "
                    "registering new handler (%p, %p)\n",
                    vector, handler, arg);
-            goto finished;
+            return result;
         }
 
         DEBUG_ASSERT((range_start >= X86_INT_PLATFORM_BASE) &&
@@ -256,25 +232,22 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
     // Update the handler table and register the x86 vector with the io_apic.
     DEBUG_ASSERT(!!x86_vector == !!handler);
 
-    // No need to irq_save; we already did that when we grabbed the outer lock.
-    spin_lock(&int_handler_table[x86_vector].lock);
+    {
+        // No need to irq_save; we already did that when we grabbed the outer lock.
+        AutoSpinLock handler_guard(&int_handler_table[x86_vector].lock);
 
-    if (handler && int_handler_table[x86_vector].handler) {
-        p2ra_free_range(&x86_irq_vector_allocator, x86_vector, 1);
-        result = ZX_ERR_ALREADY_BOUND;
-        spin_unlock(&int_handler_table[x86_vector].lock);
-        goto finished;
+        if (handler && int_handler_table[x86_vector].handler) {
+            p2ra_free_range(&x86_irq_vector_allocator, x86_vector, 1);
+            return ZX_ERR_ALREADY_BOUND;
+        }
+
+        int_handler_table[x86_vector].handler = handler;
+        int_handler_table[x86_vector].arg = handler ? arg : NULL;
     }
-
-    int_handler_table[x86_vector].handler = handler;
-    int_handler_table[x86_vector].arg = handler ? arg : NULL;
-    spin_unlock(&int_handler_table[x86_vector].lock);
 
     apic_io_configure_irq_vector(vector, x86_vector);
 
-finished:
-    spin_unlock_irqrestore(&lock, state);
-    return result;
+    return ZX_OK;
 }
 
 bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
@@ -367,9 +340,8 @@ void x86_register_msi_handler(const pcie_msi_block_t* block,
     DEBUG_ASSERT((x86_vector >= X86_INT_PLATFORM_BASE) &&
                  (x86_vector <= X86_INT_PLATFORM_MAX));
 
-    spin_lock(&int_handler_table[x86_vector].lock);
+    AutoSpinLock guard(&int_handler_table[x86_vector].lock);
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? ctx : NULL;
-    spin_unlock(&int_handler_table[x86_vector].lock);
 }
 #endif // WITH_DEV_PCIE
