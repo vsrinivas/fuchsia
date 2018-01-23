@@ -37,9 +37,9 @@ class CobaltContext {
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   app::ApplicationContext* app_context_;
   cobalt::CobaltEncoderPtr encoder_;
-  int32_t project_id_;
-  int32_t metric_id_;
-  int32_t encoding_id_;
+  const int32_t project_id_;
+  const int32_t metric_id_;
+  const int32_t encoding_id_;
 
   std::multiset<uint32_t> events_to_send_;
   std::multiset<uint32_t> events_in_transit_;

@@ -149,7 +149,7 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fxl::Closure>(
       fxl::MakeCopyable(
-          [context = std::move(context), cobalt_context = cobalt_context]() mutable {
+          [context = std::move(context), cobalt_context]() mutable {
         context.reset();
         *cobalt_context = nullptr;
       }));
