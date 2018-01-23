@@ -14,13 +14,12 @@ namespace {
 
 constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
-} // namespace
+}  // namespace
 
 ChannelReader::ChannelReader(MessageHandler* message_handler)
-  : async_(nullptr),
-    wait_(this, ZX_HANDLE_INVALID, kSignals),
-    message_handler_(message_handler) {
-}
+    : async_(nullptr),
+      wait_(this, ZX_HANDLE_INVALID, kSignals),
+      message_handler_(message_handler) {}
 
 ChannelReader::~ChannelReader() {
   if (async_)
@@ -43,7 +42,10 @@ zx::channel ChannelReader::Unbind() {
   wait_.Cancel(async_);
   wait_.set_object(ZX_HANDLE_INVALID);
   async_ = nullptr;
-  return std::move(channel_);
+  zx::channel channel = std::move(channel_);
+  if (message_handler_)
+    message_handler_->OnChannelGone();
+  return channel;
 }
 
 zx_status_t ChannelReader::WaitAndDispatchMessageUntil(zx::time deadline) {
@@ -122,5 +124,5 @@ void ChannelReader::NotifyError() {
     error_handler_();
 }
 
-} // namespace internal
-} // namespace fidl
+}  // namespace internal
+}  // namespace fidl

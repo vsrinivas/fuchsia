@@ -11,12 +11,26 @@
 namespace fidl {
 namespace internal {
 
+// An interface for receiving FIDL messages.
+//
+// Used by |ChannelReader| to call back into its client whenever it reads a
+// message from the channel.
 class MessageHandler {
  public:
+  virtual ~MessageHandler();
+
+  // A new message has arrived.
+  //
+  // The memory backing the message will remain valid until this method returns,
+  // at which point the memory might or might not be deallocated.
   virtual zx_status_t OnMessage(Message message) = 0;
 
- protected:
-  virtual ~MessageHandler();
+  // The channel from which the messages were being read is gone.
+  //
+  // The channel's peer might have been closed or the |ChannelReader| might have
+  // unbound from the channel. In either case, implementations that keep
+  // per-channel state should reset their state when this method is called.
+  virtual void OnChannelGone();
 };
 
 }  // namespace internal

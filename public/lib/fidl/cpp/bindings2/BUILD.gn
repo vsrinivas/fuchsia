@@ -8,6 +8,16 @@ source_set("bindings2") {
     "internal/channel_reader.h",
     "internal/message_handler.cc",
     "internal/message_handler.h",
+    "internal/pending_response.cc",
+    "internal/pending_response.h",
+    "internal/proxy_controller.cc",
+    "internal/proxy_controller.h",
+    "internal/stub.cc",
+    "internal/stub.h",
+    "internal/stub_controller.cc",
+    "internal/stub_controller.h",
+    "internal/weak_stub_controller.cc",
+    "internal/weak_stub_controller.h",
     "put.h",
     "string.cc",
     "string.h",
@@ -31,6 +41,8 @@ executable("fidl_bindings2_unittests") {
 
   sources = [
     "internal/channel_reader_unittest.cc",
+    "internal/proxy_controller_unittest.cc",
+    "internal/stub_controller_unittest.cc",
     "put_unittest.cc",
     "string_unittest.cc",
     "take_unittest.cc",
@@ -39,9 +51,9 @@ executable("fidl_bindings2_unittests") {
 
   deps = [
     ":bindings2",
+    "//garnet/public/lib/fidl/cpp/bindings2/test",
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
   ]
 }
-

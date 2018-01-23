@@ -16,6 +16,7 @@ namespace {
 class CopyingMessageHandler : public MessageHandler {
  public:
   int message_count_ = 0;
+  int channel_gone_count_ = 0;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
 
@@ -28,15 +29,15 @@ class CopyingMessageHandler : public MessageHandler {
                                         handles.data() + handles.actual());
     return ZX_OK;
   }
+
+  void OnChannelGone() override { ++channel_gone_count_; }
 };
 
 class StatusMessageHandler : public MessageHandler {
  public:
   zx_status_t status = ZX_OK;
 
-  zx_status_t OnMessage(Message message) override {
-    return status;
-  }
+  zx_status_t OnMessage(Message message) override { return status; }
 };
 
 class CallbackMessageHandler : public MessageHandler {
@@ -67,8 +68,10 @@ TEST(ChannelReader, Control) {
   EXPECT_TRUE(reader.is_bound());
   EXPECT_EQ(saved, reader.channel().get());
 
+  EXPECT_EQ(0, handler.channel_gone_count_);
   zx::channel h3 = reader.Unbind();
   EXPECT_EQ(saved, h3.get());
+  EXPECT_EQ(1, handler.channel_gone_count_);
   reader.Bind(std::move(h3));
 
   EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
@@ -89,17 +92,17 @@ TEST(ChannelReader, Control) {
   EXPECT_EQ(0u, handler.handles_.size());
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   h2.reset();
   EXPECT_EQ(0, error_count);
+  EXPECT_EQ(1, handler.channel_gone_count_);
   EXPECT_TRUE(reader.is_bound());
 
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
 
   EXPECT_EQ(1, error_count);
+  EXPECT_EQ(2, handler.channel_gone_count_);
   EXPECT_FALSE(reader.is_bound());
 }
 
@@ -111,9 +114,7 @@ TEST(ChannelReader, HandlerError) {
   reader.set_message_handler(&handler);
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   async::Loop loop(&kTestLoopConfig);
 
@@ -162,9 +163,7 @@ TEST(ChannelReader, HandlerStop) {
   reader.set_message_handler(&handler);
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   async::Loop loop(&kTestLoopConfig);
 
@@ -218,9 +217,7 @@ TEST(ChannelReader, BindTwice) {
 TEST(ChannelReader, WaitAndDispatchMessageUntilErrors) {
   ChannelReader reader;
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_ERR_BAD_STATE, reader.WaitAndDispatchMessageUntil(zx::time()));
@@ -273,9 +270,7 @@ TEST(ChannelReader, UnbindDuringHandler) {
   reader.set_message_handler(&handler);
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   async::Loop loop(&kTestLoopConfig);
 
@@ -320,16 +315,15 @@ TEST(ChannelReader, ShouldWaitFromRead) {
   handler.callback = [&message_count, &reader](Message message) {
     ++message_count;
     uint32_t actual_bytes, actual_handles;
-    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
-        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD,
-                nullptr, 0, &actual_bytes, nullptr, 0, &actual_handles));
+    EXPECT_EQ(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, 0,
+                              &actual_bytes, nullptr, 0, &actual_handles));
     return ZX_OK;
   };
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   async::Loop loop(&kTestLoopConfig);
   reader.Bind(std::move(h1));
@@ -370,17 +364,16 @@ TEST(ChannelReader, ShouldWaitFromReadWithUnbind) {
   handler.callback = [&message_count, &reader](Message message) {
     ++message_count;
     uint32_t actual_bytes, actual_handles;
-    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
-        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD,
-                nullptr, 0, &actual_bytes, nullptr, 0, &actual_handles));
+    EXPECT_EQ(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, 0,
+                              &actual_bytes, nullptr, 0, &actual_handles));
     reader.Unbind();
     return ZX_OK;
   };
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   async::Loop loop(&kTestLoopConfig);
   reader.Bind(std::move(h1));
@@ -406,9 +399,7 @@ TEST(ChannelReader, NoHandler) {
   ChannelReader reader;
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] {
-    ++error_count;
-  });
+  reader.set_error_handler([&error_count] { ++error_count; });
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));

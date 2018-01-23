@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/bindings2/internal/message_handler.h"
+#include "lib/fidl/cpp/bindings2/internal/stub.h"
 
 namespace fidl {
 namespace internal {
 
-MessageHandler::~MessageHandler() = default;
-
-void MessageHandler::OnChannelGone() {}
+Stub::~Stub() = default;
 
 }  // namespace internal
 }  // namespace fidl
