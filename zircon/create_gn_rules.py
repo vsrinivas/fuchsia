@@ -145,6 +145,10 @@ def generate_source_library(package, context):
     data.deps += filter_deps(package.get('deps', []))
     data.deps += filter_deps(package.get('static-deps', []))
 
+    # Libraries.
+    if 'zircon' in package.get('deps', []):
+        data.libs.add('zircon')
+
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
     generate_build_file(build_path, 'source_library.mako', data, context)
@@ -161,7 +165,6 @@ class CompiledLibrary(object):
         self.include_dirs = set()
         self.deps = []
         self.lib_name = ''
-        self.is_shared = False
         self.prebuilt = ''
         self.debug_prebuilt = ''
 
@@ -183,14 +186,14 @@ def generate_compiled_library(package, context):
     libs = package.get('lib', {})
     if len(libs) == 1:
         # Static library.
-        data.is_shared = False
+        is_shared = False
         (name, path) = libs.items()[0]
         (file, _) = extract_file(name, path, context)
         data.prebuilt = "//%s" % file
         data.lib_name = os.path.basename(file)
     elif len(libs) == 2:
         # Shared library.
-        data.is_shared = True
+        is_shared = True
         for name, path in libs.iteritems():
             (file, _) = extract_file(name, path, context)
             if '/debug/' in name:
@@ -206,8 +209,9 @@ def generate_compiled_library(package, context):
     data.deps += filter_deps(package.get('deps', []))
 
     # Generate the build file.
+    template = 'shared_library.mako' if is_shared else 'static_library.mako'
     build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
-    generate_build_file(build_path, 'compiled_library.mako', data, context)
+    generate_build_file(build_path, template, data, context)
 
 
 class Sysroot(object):
@@ -262,8 +266,8 @@ def main():
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
+    shutil.rmtree(os.path.join(out_dir, 'lib'), True)
+    shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
     debug = args.debug
 
     # Generate package descriptions through Zircon's build.

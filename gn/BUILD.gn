@@ -1043,9 +1043,10 @@ if (generate_zircon_gn_files) {
       exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
   supporting_templates = [
-    "//build/zircon/compiled_library.mako",
     "//build/zircon/header.mako",
+    "//build/zircon/shared_library.mako",
     "//build/zircon/source_library.mako",
+    "//build/zircon/static_library.mako",
     "//build/zircon/sysroot.mako",
   ]
 
