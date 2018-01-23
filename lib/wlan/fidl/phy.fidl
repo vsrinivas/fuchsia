@@ -49,7 +49,7 @@ enum Capability {
 struct HtCapabilities {
   uint16 ht_capability_info;
   uint8 ampdu_params;
-  array<uint8, 16> supported_mcs_set;
+  array<uint8> supported_mcs_set;
   uint16 ht_ext_capabilities;
   uint32 tx_beamforming_capabilities;
   uint8 asel_capabilities;
@@ -69,7 +69,7 @@ struct BandInfo {
   string description;
   HtCapabilities ht_caps;
   VhtCapabilities? vht_caps;
-  array<uint8, 12> basic_rates;
+  array<uint8> basic_rates;
   ChannelList supported_channels;
 };
 
