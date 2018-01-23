@@ -25,11 +25,11 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
-  CloudProviderFactory(fxl::RefPtr<fxl::TaskRunner> main_task_runner,
-                       app::ApplicationContext* application_context);
+  CloudProviderFactory(app::ApplicationContext* application_context,
+                       std::string credentials_path);
   ~CloudProviderFactory();
 
-  bool Init(std::string credentials_path);
+  void Init();
 
   void MakeCloudProvider(
       std::string server_id,
@@ -37,15 +37,15 @@ class CloudProviderFactory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
-  app::ApplicationContext* application_context_;
+  class TokenProviderContainer;
+  app::ApplicationContext* const application_context_;
+  const std::string credentials_path_;
 
   // Thread used to run the token manager on.
   std::thread services_thread_;
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
-  ledger::NetworkServiceImpl network_service_;
-  service_account::ServiceAccountTokenProvider token_provider_;
-  fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings_;
+  callback::AutoCleanableSet<TokenProviderContainer> token_providers_;
 
   app::ApplicationControllerPtr cloud_provider_controller_;
   FactoryPtr cloud_provider_factory_;

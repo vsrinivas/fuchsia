@@ -18,17 +18,46 @@ namespace {
 constexpr char kAppUrl[] = "cloud_provider_firestore";
 }  // namespace
 
+class CloudProviderFactory::TokenProviderContainer {
+ public:
+  TokenProviderContainer(
+      app::ApplicationContext* application_context,
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      std::string credentials_path,
+      fidl::InterfaceRequest<modular::auth::TokenProvider> request)
+      : application_context_(application_context),
+        network_service_(
+            std::move(task_runner),
+            [this] {
+              return application_context_
+                  ->ConnectToEnvironmentService<network::NetworkService>();
+            }),
+        token_provider_(&network_service_, fxl::GenerateUUID()),
+        binding_(&token_provider_, std::move(request)) {
+    if (!token_provider_.LoadCredentials(credentials_path)) {
+      FXL_LOG(ERROR) << "Failed to load token provider credentials at: "
+                     << credentials_path;
+    }
+  }
+
+  void set_on_empty(fxl::Closure on_empty) {
+    binding_.set_connection_error_handler(std::move(on_empty));
+  }
+
+ private:
+  app::ApplicationContext* const application_context_;
+  ledger::NetworkServiceImpl network_service_;
+  service_account::ServiceAccountTokenProvider token_provider_;
+  fidl::Binding<modular::auth::TokenProvider> binding_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderContainer);
+};
+
 CloudProviderFactory::CloudProviderFactory(
-    fxl::RefPtr<fxl::TaskRunner> main_task_runner,
-    app::ApplicationContext* application_context)
+    app::ApplicationContext* application_context,
+    std::string credentials_path)
     : application_context_(application_context),
-      network_service_(
-          std::move(main_task_runner),
-          [this] {
-            return application_context_
-                ->ConnectToEnvironmentService<network::NetworkService>();
-          }),
-      token_provider_(&network_service_, fxl::GenerateUUID()) {}
+      credentials_path_(std::move(credentials_path)) {}
 
 CloudProviderFactory::~CloudProviderFactory() {
   services_task_runner_->PostTask(
@@ -36,11 +65,7 @@ CloudProviderFactory::~CloudProviderFactory() {
   services_thread_.join();
 }
 
-bool CloudProviderFactory::Init(std::string credentials_path) {
-  if (!token_provider_.LoadCredentials(credentials_path)) {
-    return false;
-  }
-
+void CloudProviderFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
   app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -49,7 +74,6 @@ bool CloudProviderFactory::Init(std::string credentials_path) {
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
-  return true;
 }
 
 void CloudProviderFactory::MakeCloudProvider(
@@ -63,8 +87,8 @@ void CloudProviderFactory::MakeCloudProvider(
   modular::auth::TokenProviderPtr token_provider;
   services_task_runner_->PostTask(fxl::MakeCopyable(
       [this, request = token_provider.NewRequest()]() mutable {
-        token_provider_bindings_.AddBinding(&token_provider_,
-                                            std::move(request));
+        token_providers_.emplace(application_context_, services_task_runner_,
+                                 credentials_path_, std::move(request));
       }));
 
   auto firebase_config = cloud_provider_firestore::Config::New();

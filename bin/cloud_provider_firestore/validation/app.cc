@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<app::ApplicationContext> application_context =
       app::ApplicationContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(
-      message_loop.task_runner(), application_context.get());
+      application_context.get(), credentials_path);
 
   cloud_provider::ValidationTestsLauncher launcher(
       application_context.get(), [&factory, api_key, server_id](auto request) {
@@ -65,15 +65,8 @@ int main(int argc, char** argv) {
 
   int32_t return_code = -1;
   message_loop.task_runner()->PostTask(
-      [&factory, &launcher, &return_code, &message_loop,
-       credentials_path = std::move(credentials_path)]() mutable {
-        if (!factory.Init(std::move(credentials_path))) {
-          std::cerr << "Failed to initialize the cloud provider factory."
-                    << std::endl;
-          message_loop.PostQuitTask();
-          return_code = -1;
-          return;
-        }
+      [&factory, &launcher, &return_code, &message_loop] {
+        factory.Init();
 
         launcher.Run([&return_code, &message_loop](int32_t result) {
           return_code = result;
