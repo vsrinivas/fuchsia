@@ -15,6 +15,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/identifier_table.cpp \
     $(LOCAL_DIR)/lib/lexer.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \
+    $(LOCAL_DIR)/lib/source_file.cpp \
+    $(LOCAL_DIR)/lib/source_location.cpp \
     $(LOCAL_DIR)/lib/source_manager.cpp \
     $(LOCAL_DIR)/main.cpp \
 

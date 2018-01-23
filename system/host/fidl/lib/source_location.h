@@ -29,6 +29,8 @@ public:
     const StringView& data() const { return data_; }
     const SourceFile& source_file() const { return *source_file_; }
 
+    StringView SourceLine(int* line_number_out) const;
+
 private:
     SourceLocation() : data_(StringView()), source_file_(nullptr) {}
 

@@ -45,8 +45,14 @@ enum {
 
 decltype(nullptr) Parser::Fail() {
     if (ok_) {
+        int line_number;
+        auto surrounding_line = last_token_.location().SourceLine(&line_number);
+
         std::string error = "found unexpected token: ";
         error += last_token_.data();
+        error += "\n";
+        error += "on line #" + std::to_string(line_number) + ":\n\n";
+        error += surrounding_line;
         error += "\n";
 
         error_reporter_->ReportError(error);
