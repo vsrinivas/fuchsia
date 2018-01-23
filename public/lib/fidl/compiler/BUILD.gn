@@ -15,7 +15,6 @@ group("compiler") {
   ]
 }
 
-# Build the fidl compiler
 go_binary("fidl") {
   go_dependencies = [ {
         source = "src/fidl"
@@ -24,7 +23,6 @@ go_binary("fidl") {
   gopackage = "fidl/compiler/cmd/fidl"
 }
 
-# Build the C generator
 go_binary("fidl-c") {
   go_dependencies = [ {
         source = "src/fidl"
@@ -33,7 +31,6 @@ go_binary("fidl-c") {
   gopackage = "fidl/compiler/generators/c"
 }
 
-# Build the Go generator
 go_binary("fidl-go") {
   go_dependencies = [ {
         source = "src/fidl"
@@ -42,11 +39,26 @@ go_binary("fidl-go") {
   gopackage = "fidl/compiler/generators/go"
 }
 
-# Build the Rust generator
 go_binary("fidl-rust") {
   go_dependencies = [ {
         source = "src/fidl"
         package = "fidl"
       } ]
   gopackage = "fidl/compiler/generators/rust"
+}
+
+group("compiler2") {
+  testonly = true
+
+  deps = [
+    ":fidl2",
+  ]
+}
+
+go_binary("fidl2") {
+  go_dependencies = [ {
+      source = "src/fidl2"
+      package = "fidl2"
+    } ]
+  gopackage = "fidl/compiler/fidl2"
 }
