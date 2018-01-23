@@ -3459,9 +3459,6 @@ void DumpTxwi(TxPacket* packet) {
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
 
-    size_t pkt_length = tx_pkt_len(pkt);
-    size_t txwi_length = txwi_len();
-    size_t align_pad_length = align_pad_len(pkt);
     size_t req_length = usb_tx_pkt_len(pkt);
 
     if (req_length > kWriteBufSize) {
@@ -3486,7 +3483,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(req != nullptr);
 
     TxPacket* packet;
-    zx_status_t status = usb_request_mmap(req, reinterpret_cast<void**>(&packet));
+    auto status = usb_request_mmap(req, reinterpret_cast<void**>(&packet));
     if (status != ZX_OK) {
         errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
@@ -3494,18 +3491,43 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
         return status;
     }
 
-    std::memset(packet, 0, sizeof(TxInfo) + txwi_length);
+    status = FillUsbTxPacket(packet, pkt);
+    if (status != ZX_OK) {
+        errorf("could not fill usb request packet: %d\n", status);
+        return status;
+    }
+
+    // Send the whole thing
+    req->header.length = req_length;
+    usb_request_queue(&usb_, req);
+
+#if RALINK_DUMP_TX
+    DumpWlanTxInfo(pkt->info);
+    DumpTxwi(packet);
+#endif  // RALINK_DUMP_TX
+
+    return ZX_OK;
+}
+
+zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet) {
+    ZX_DEBUG_ASSERT(wlan_packet != nullptr && wlan_packet->packet_head != nullptr);
+
+    size_t pkt_length = tx_pkt_len(wlan_packet);
+    size_t txwi_length = txwi_len();
+    size_t align_pad_length = align_pad_len(wlan_packet);
+
+    std::memset(usb_packet, 0, sizeof(TxInfo) + txwi_length);
 
     // The length field in TxInfo includes everything from the TXWI fields to the alignment pad
-    packet->tx_info.set_tx_pkt_length(txwi_length + pkt_length + align_pad_length);
+    usb_packet->tx_info.set_tx_pkt_length(txwi_length + pkt_length + align_pad_length);
 
     // TODO(tkilbourn): set these more appropriately
-    const bool protected_frame = (pkt->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
+    const bool protected_frame = (wlan_packet->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
     uint8_t wiv = !protected_frame;
-    packet->tx_info.set_wiv(wiv);
-    packet->tx_info.set_qsel(2);
+    usb_packet->tx_info.set_wiv(wiv);
+    usb_packet->tx_info.set_qsel(2);
 
-    Txwi0& txwi0 = packet->txwi0;
+    Txwi0& txwi0 = usb_packet->txwi0;
     txwi0.set_frag(0);
     txwi0.set_mmps(0);
     txwi0.set_cfack(0);
@@ -3517,20 +3539,20 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     txwi0.set_txop(Txwi0::kHtTxop);
 
     uint8_t phy_mode = ddk_phy_to_ralink_phy(WLAN_PHY_OFDM);  // Default
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
-        phy_mode = ddk_phy_to_ralink_phy(pkt->info.phy);
+    if (wlan_packet->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
+        phy_mode = ddk_phy_to_ralink_phy(wlan_packet->info.phy);
     }
     txwi0.set_phy_mode(phy_mode);
 
     uint8_t mcs = kMaxOfdmMcs;  // this is the same as the max HT mcs
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_MCS) {
-        mcs = mcs_to_ralink_mcs(phy_mode, pkt->info.mcs);
+    if (wlan_packet->info.valid_fields & WLAN_TX_INFO_VALID_MCS) {
+        mcs = mcs_to_ralink_mcs(phy_mode, wlan_packet->info.mcs);
     }
     txwi0.set_mcs(mcs);
 
     uint8_t cbw = CBW20;
-    if (pkt->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH) {
-        cbw = pkt->info.cbw;
+    if (wlan_packet->info.valid_fields & WLAN_TX_INFO_VALID_CHAN_WIDTH) {
+        cbw = wlan_packet->info.cbw;
         // TODO(porce): Investigate how to configure txwi differently
         // for CBW40ABOVE and CBW40BELOW
     }
@@ -3540,9 +3562,9 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
-    auto frame_hdr = reinterpret_cast<const FrameHeader*>(pkt->packet_head->data);
+    auto frame_hdr = reinterpret_cast<const FrameHeader*>(wlan_packet->packet_head->data);
     auto wcid = LookupTxWcid(frame_hdr->addr1, protected_frame);
-    Txwi1& txwi1 = packet->txwi1;
+    Txwi1& txwi1 = usb_packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);
 
@@ -3554,29 +3576,20 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     txwi1.set_mpdu_total_byte_count(pkt_length);
     txwi1.set_tx_packet_id(10);
 
-    Txwi2& txwi2 = packet->txwi2;
+    Txwi2& txwi2 = usb_packet->txwi2;
     txwi2.set_iv(0);
 
-    Txwi3& txwi3 = packet->txwi3;
+    Txwi3& txwi3 = usb_packet->txwi3;
     txwi3.set_eiv(0);
 
     // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
     // consider them when determining the start of the payload.
     size_t payload_offset = txwi_length - 16;
-    uint8_t* payload_ptr = &packet->payload[payload_offset];
+    uint8_t* payload_ptr = &usb_packet->payload[payload_offset];
 
     // Write out the payload
-    WritePayload(payload_ptr, pkt);
+    WritePayload(payload_ptr, wlan_packet);
     std::memset(&payload_ptr[pkt_length], 0, align_pad_length + terminal_pad_len());
-
-    // Send the whole thing
-    req->header.length = req_length;
-    usb_request_queue(&usb_, req);
-
-#if RALINK_DUMP_TX
-    DumpWlanTxInfo(pkt->info);
-    DumpTxwi(packet);
-#endif  // RALINK_DUMP_TX
 
     return ZX_OK;
 }

@@ -29,6 +29,7 @@ template <uint8_t A> class RfcsrRegister;
 template <uint16_t A> class EepromField;
 enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
+struct TxPacket;
 
 class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
    public:
@@ -174,6 +175,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
+    zx_status_t FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
