@@ -188,7 +188,9 @@ static enum handler_return threadload(timer_t* t, zx_time_t now, void* arg) {
     timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
 
     /* reschedule here to allow the debuglog a chance to run */
-    return INT_RESCHEDULE;
+    thread_preempt_set_pending();
+
+    return INT_NO_RESCHEDULE;
 }
 
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {

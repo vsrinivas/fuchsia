@@ -573,14 +573,15 @@ static enum handler_return sched_timer_tick(timer_t* t, zx_time_t now, void* arg
         /* set a timer to go off on the time slice interval from now */
         timer_set_oneshot(t, now + THREAD_INITIAL_TIME_SLICE, sched_timer_tick, NULL);
 
-        /* the irq handler will call back into us with sched_preempt() */
-        return INT_RESCHEDULE;
+        /* Mark a reschedule as pending.  The irq handler will call back
+         * into us with sched_preempt(). */
+        thread_preempt_set_pending();
     } else {
         /* the timer tick must have fired early, reschedule and continue */
         timer_set_oneshot(t, current_thread->last_started_running + current_thread->remaining_time_slice,
                           sched_timer_tick, NULL);
-        return INT_NO_RESCHEDULE;
     }
+    return INT_NO_RESCHEDULE;
 }
 
 // On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
