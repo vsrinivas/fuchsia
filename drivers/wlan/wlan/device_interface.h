@@ -57,7 +57,7 @@ class DeviceInterface {
 
     virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
     virtual zx_status_t SetStatus(uint32_t status) = 0;
-    virtual zx_status_t SetBss(const common::MacAddr& mac, uint8_t type) = 0;
+    virtual zx_status_t ConfigureBss(wlan_bss_config_t* cfg) = 0;
     virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
 
     virtual fbl::RefPtr<DeviceState> GetState() = 0;

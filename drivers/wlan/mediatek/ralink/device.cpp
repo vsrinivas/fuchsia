@@ -3677,17 +3677,23 @@ setchan_failure:
     return status;
 }
 
+// TODO(hahnr): Remove.
 zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
+    ZX_DEBUG_ASSERT(false);
+    return ZX_OK;
+}
+
+zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
     if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
     MacBssidDw0 bss0;
     MacBssidDw1 bss1;
-    bss0.set_mac_addr_0(mac[0]);
-    bss0.set_mac_addr_1(mac[1]);
-    bss0.set_mac_addr_2(mac[2]);
-    bss0.set_mac_addr_3(mac[3]);
-    bss1.set_mac_addr_4(mac[4]);
-    bss1.set_mac_addr_5(mac[5]);
+    bss0.set_mac_addr_0(config->bssid[0]);
+    bss0.set_mac_addr_1(config->bssid[1]);
+    bss0.set_mac_addr_2(config->bssid[2]);
+    bss0.set_mac_addr_3(config->bssid[3]);
+    bss1.set_mac_addr_4(config->bssid[4]);
+    bss1.set_mac_addr_5(config->bssid[5]);
     bss1.set_multi_bss_mode(MultiBssIdMode::k1BssIdMode);
 
     auto status = WriteRegister(bss0);
@@ -3695,13 +3701,54 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     status = WriteRegister(bss1);
     CHECK_WRITE(BSSID_DW1, status);
 
-    memcpy(bssid_, mac, 6);
+    memcpy(bssid_, config->bssid, 6);
+
+    // Additional configurations when BSS is managed by this device.
+    // This will allow offloading Beacon management to hardware.
+    if (!config->remote) {
+        BcnOffset0 offset;
+        offset.clear();
+        offset.set_bcn0_offset(0xE0);
+        auto status = WriteRegister(offset);
+        CHECK_WRITE(BCN_OFFSET_0, status);
+
+        BcnTimeCfg bcnTimeCfg;
+        bcnTimeCfg.set_bcn_intval(1600);
+        bcnTimeCfg.set_tsf_timer_en(1);
+        bcnTimeCfg.set_tsf_sync_mode(3);
+        bcnTimeCfg.set_tbtt_timer_en(1);
+        bcnTimeCfg.set_bcn_tx_en(1);
+        status = WriteRegister(bcnTimeCfg);
+        CHECK_WRITE(BCN_TIME_CFG, status);
+
+        TbttSyncCfg tsc;
+        tsc.set_tbtt_adjust(0);
+        tsc.set_bcn_exp_win(32);
+        tsc.set_bcn_aifsn(1);
+        tsc.set_bcn_cwmin(0);
+        status = WriteRegister(tsc);
+        CHECK_WRITE(TBTT_SYNC_CFG, status);
+
+        // TODO(hahnr): Implement a less naive configuration for basic rate and xifs time.
+        LegacyBasicRate lbr;
+        lbr.set_rate_1mbps(1);
+        lbr.set_rate_2mbps(1);
+        lbr.set_rate_5_5mbps(1);
+        lbr.set_rate_11mbps(1);
+        status = WriteRegister(lbr);
+        CHECK_WRITE(LEGACY_BASIC_RATE, status);
+
+        XifsTimeCfg xtc;
+        xtc.set_cck_sifs_time(16);
+        xtc.set_ofdm_sifs_time(16);
+        xtc.set_ofdm_xifs_time(4);
+        xtc.set_eifs_time(342);
+        xtc.set_bb_rxend_en(1);
+        status = WriteRegister(xtc);
+        CHECK_WRITE(XIFS_TIME_CFG, status);
+    }
 
     return ZX_OK;
-}
-
-zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
-    return WlanmacSetBss(options, config->bssid, config->bss_type);
 }
 
 // Maps IEEE cipher suites to vendor specific cipher representations, called KeyMode.

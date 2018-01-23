@@ -100,7 +100,12 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     }
 
     // TODO(hahnr): Update when other BSS types are supported.
-    device_->SetBss(bssid_, WLAN_BSS_TYPE_INFRASTRUCTURE);
+    wlan_bss_config_t cfg{
+        .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+        .remote = true,
+    };
+    bssid_.CopyTo(cfg.bssid);
+    device_->ConfigureBss(&cfg);
     return status;
 }  // namespace wlan
 

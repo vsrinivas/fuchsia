@@ -315,8 +315,8 @@ void Device::SetStatusLocked(uint32_t status) {
     if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Status(status); }
 }
 
-zx_status_t Device::SetBss(const common::MacAddr& mac, uint8_t type) {
-    return wlanmac_proxy_.SetBss(0u, mac.byte, type);
+zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
+    return wlanmac_proxy_.ConfigureBss(0u, cfg);
 }
 
 zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
