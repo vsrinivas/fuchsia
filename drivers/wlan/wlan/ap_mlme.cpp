@@ -34,7 +34,7 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
     debugfn();
 
     switch (id.target()) {
-    case to_enum_type(ObjectTarget::kBss):{
+    case to_enum_type(ObjectTarget::kBss): {
         common::MacAddr client_addr(id.mac());
         return bss_->HandleTimeout(client_addr);
     }

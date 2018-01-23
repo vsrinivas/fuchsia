@@ -6,6 +6,8 @@
 #include "logging.h"
 #include "packet.h"
 
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
@@ -170,9 +172,7 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     auto frame = BuildMgmtFrame<Beacon>(&packet, body_payload_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    // TODO(porce): Use mutable frame when ready
-    // audo hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& bssid = device_->GetState()->address();
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
@@ -180,8 +180,7 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     hdr->sc.set_seq(next_seq());
     FillTxInfo(&packet, *hdr);
 
-    // auto bcn = frame.body;
-    Beacon* bcn = (Beacon*)frame.body;
+    auto bcn = frame.body;
     bcn->beacon_interval = start_req_->beacon_period;
     bcn->timestamp = beacon_timestamp();
     bcn->cap.set_ess(1);

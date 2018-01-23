@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "beacon_sender.h"
+#include "beacon_sender_interface.h"
 #include "infra_bss.h"
 #include "mlme.h"
 #include "packet.h"
@@ -32,7 +32,7 @@ class ApMlme : public Mlme {
 
    private:
     DeviceInterface* const device_;
-    fbl::unique_ptr<BeaconSender> bcn_sender_;
+    fbl::unique_ptr<BeaconSenderInterface> bcn_sender_;
     fbl::RefPtr<InfraBss> bss_;
 };
 

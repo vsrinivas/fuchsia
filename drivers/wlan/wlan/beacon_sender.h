@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "beacon_sender_interface.h"
 #include "device_interface.h"
 #include "timer.h"
 
@@ -21,19 +22,17 @@ using timestamp_t = std::chrono::time_point<std::chrono::steady_clock,
 // BeaconSender sends periodic Beacon frames for a given BSS. The BeaconSender only supports one
 // BSS at a time. Beacons are sent from a separate thread.
 // Sending Beacons through software is unlikely to be precise enough due to the tight time
-// constraints and should be replaced with hardware support in release builds.
-// However, sending Beacons through software allows postponing driver support and unblocks future
-// AP development.
-// TODO(hahnr): Add support for multiple BSS.
-class BeaconSender {
+// constraints. Use this BeaconSender only for development purposes to cut ties to the driver.
+// In all other cases make use of the HwBeaconSender which requires the driver to pick-up the Beacon
+// frame and correctly configure its hardware.
+class BeaconSender : public BeaconSenderInterface {
    public:
     explicit BeaconSender(DeviceInterface* device);
-    ~BeaconSender() = default;
 
-    zx_status_t Init();
-    bool IsStarted();
-    zx_status_t Start(const StartRequest& req);
-    zx_status_t Stop();
+    zx_status_t Init() override;
+    bool IsStarted() override;
+    zx_status_t Start(const StartRequest& req) override;
+    zx_status_t Stop() override;
 
    private:
     bool IsStartedLocked() const;
