@@ -24,6 +24,8 @@
 
 #define SCRATCHSZ 2048
 
+#define TFTP_TIMEOUT_SECS 1
+
 #define NB_IMAGE_PREFIX_LEN (strlen(NB_IMAGE_PREFIX))
 #define NB_FILENAME_PREFIX_LEN (strlen(NB_FILENAME_PREFIX))
 
@@ -153,11 +155,14 @@ static int paver_copy_buffer(void* arg) {
         completion_reset(&file_info->paver.data_ready);
         size_t write_ndx = atomic_load(&file_info->paver.offset);
         if (write_ndx == read_ndx) {
-            // Wait for more data to be written
-            if (completion_wait(&file_info->paver.data_ready, ZX_TIME_INFINITE) == ZX_OK) {
+            // Wait for more data to be written -- we are allowed up to 3 tftp timeouts before
+            // a connection is dropped, so we should wait at least that long before giving up.
+            if (completion_wait(&file_info->paver.data_ready, ZX_SEC(5 * TFTP_TIMEOUT_SECS))
+                == ZX_OK) {
                 continue;
             }
-            printf("netsvc: failed while waiting for data in paver-copy thread\n");
+            printf("netsvc: timed out while waiting for data in paver-copy thread\n");
+            result = TFTP_ERR_TIMED_OUT;
             goto done;
         }
         while(read_ndx < write_ndx) {
@@ -184,10 +189,12 @@ done:
     if (refcount == 1) {
         dealloc_paver_buffer(file_info);
     }
-    // All of the data has been written out to the paver process, wait for it to complete
-    zx_signals_t signals;
-    zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
-                       zx_deadline_after(ZX_SEC(10)), &signals);
+    // If all of the data has been written out to the paver process wait for it to complete
+    if (result == 0) {
+        zx_signals_t signals;
+        zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
+                           zx_deadline_after(ZX_SEC(10)), &signals);
+    }
     zx_handle_close(file_info->paver.process);
 
     // Extra protection against double-close.
@@ -417,7 +424,7 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     // Initialize transport interface
     memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
     transport_info.dest_port = sport;
-    transport_info.timeout_ms = 1000; // Reasonable default for now
+    transport_info.timeout_ms = TFTP_TIMEOUT_SECS * 1000;
     tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
 }
