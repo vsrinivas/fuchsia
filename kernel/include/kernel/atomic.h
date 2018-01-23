@@ -28,6 +28,10 @@ static inline int atomic_or(volatile int* ptr, int val) {
     return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
 }
 
+static inline int atomic_xor(volatile int* ptr, int val) {
+    return __atomic_fetch_xor(ptr, val, __ATOMIC_SEQ_CST);
+}
+
 static inline bool atomic_cmpxchg(volatile int* ptr, int* oldval, int newval) {
     return __atomic_compare_exchange_n(ptr, oldval, newval, false,
                                        __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
@@ -56,6 +60,10 @@ static inline int atomic_and_relaxed(volatile int* ptr, int val) {
 
 static inline int atomic_or_relaxed(volatile int* ptr, int val) {
     return __atomic_fetch_or(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_xor_relaxed(volatile int* ptr, int val) {
+    return __atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED);
 }
 
 static inline bool atomic_cmpxchg_relaxed(volatile int* ptr, int* oldval, int newval) {
@@ -96,6 +104,10 @@ static inline int64_t atomic_or_64(volatile int64_t* ptr, int64_t val) {
     return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
 }
 
+static inline int64_t atomic_xor_64(volatile int64_t* ptr, int64_t val) {
+    return __atomic_fetch_xor(ptr, val, __ATOMIC_SEQ_CST);
+}
+
 static inline bool atomic_cmpxchg_64(volatile int64_t* ptr, int64_t* oldval,
                                      int64_t newval) {
     return __atomic_compare_exchange_n(ptr, oldval, newval, false,
@@ -124,6 +136,10 @@ static inline uint64_t atomic_and_u64(volatile uint64_t* ptr, uint64_t val) {
 
 static inline uint64_t atomic_or_u64(volatile uint64_t* ptr, uint64_t val) {
     return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline uint64_t atomic_xor_u64(volatile uint64_t* ptr, uint64_t val) {
+    return __atomic_fetch_xor(ptr, val, __ATOMIC_SEQ_CST);
 }
 
 static inline bool atomic_cmpxchg_u64(volatile uint64_t* ptr, uint64_t* oldval,
