@@ -136,10 +136,9 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
     return elrs != prev_elrs;
 }
 
-static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
+static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     auto vcpu = static_cast<Vcpu*>(arg);
     vcpu->Interrupt(kTimerVector);
-    return INT_NO_RESCHEDULE;
 }
 
 static zx_status_t timer_maybe_set(GuestState* guest_state, GichState* gich_state, Vcpu* vcpu) {

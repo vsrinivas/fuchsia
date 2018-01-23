@@ -351,7 +351,6 @@ bool timer_cancel(timer_t* timer) {
 /* called at interrupt time to process any pending timers */
 enum handler_return timer_tick(zx_time_t now) {
     timer_t* timer;
-    enum handler_return ret = INT_NO_RESCHEDULE;
 
     DEBUG_ASSERT(arch_ints_disabled());
 
@@ -392,8 +391,7 @@ enum handler_return timer_tick(zx_time_t now) {
         CPU_STATS_INC(timers);
 
         LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
-        if (timer->callback(timer, now, timer->arg) == INT_RESCHEDULE)
-            ret = INT_RESCHEDULE;
+        timer->callback(timer, now, timer->arg);
 
         DEBUG_ASSERT(arch_ints_disabled());
         /* it may have been requeued, grab the lock so we can safely inspect it */
@@ -421,7 +419,7 @@ enum handler_return timer_tick(zx_time_t now) {
     /* we're done manipulating the timer queue */
     spin_unlock(&timer_lock);
 
-    return ret;
+    return INT_NO_RESCHEDULE;
 }
 
 zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {

@@ -378,10 +378,9 @@ void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
     }
 }
 
-static enum handler_return pmm_dump_timer(timer_t* t, zx_time_t now, void*) TA_REQ(arena_lock) {
+static void pmm_dump_timer(timer_t* t, zx_time_t now, void*) TA_REQ(arena_lock) {
     timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(20), &pmm_dump_timer, nullptr);
     pmm_dump_free();
-    return INT_NO_RESCHEDULE;
 }
 
 // No lock analysis here, as we want to just go for it in the panic case without the lock.

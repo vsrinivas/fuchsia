@@ -555,11 +555,11 @@ void sched_migrate(thread_t* t) {
 }
 
 /* preemption timer that is set whenever a thread is scheduled */
-static enum handler_return sched_timer_tick(timer_t* t, zx_time_t now, void* arg) {
+static void sched_timer_tick(timer_t* t, zx_time_t now, void* arg) {
     /* if the preemption timer went off on the idle or a real time thread, ignore it */
     thread_t* current_thread = get_current_thread();
     if (unlikely(thread_is_real_time_or_idle(current_thread)))
-        return INT_NO_RESCHEDULE;
+        return;
 
     LOCAL_KTRACE2("timer_tick", (uint32_t)current_thread->user_tid, current_thread->remaining_time_slice);
 
@@ -581,7 +581,6 @@ static enum handler_return sched_timer_tick(timer_t* t, zx_time_t now, void* arg
         timer_set_oneshot(t, current_thread->last_started_running + current_thread->remaining_time_slice,
                           sched_timer_tick, NULL);
     }
-    return INT_NO_RESCHEDULE;
 }
 
 // On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp

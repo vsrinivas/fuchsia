@@ -135,7 +135,7 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
-static enum handler_return threadload(timer_t* t, zx_time_t now, void* arg) {
+static void threadload(timer_t* t, zx_time_t now, void* arg) {
     static struct cpu_stats old_stats[SMP_MAX_CPUS];
     static zx_duration_t last_idle_time[SMP_MAX_CPUS];
 
@@ -189,8 +189,6 @@ static enum handler_return threadload(timer_t* t, zx_time_t now, void* arg) {
 
     /* reschedule here to allow the debuglog a chance to run */
     thread_preempt_set_pending();
-
-    return INT_NO_RESCHEDULE;
 }
 
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {

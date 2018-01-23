@@ -828,8 +828,8 @@ void thread_reschedule(void) {
 }
 
 /* timer callback to wake up a sleeping thread */
-static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now,
-                                                void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void thread_sleep_handler(timer_t* timer, zx_time_t now,
+                                 void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     thread_t* t = (thread_t*)arg;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -839,11 +839,11 @@ static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now,
      * thread_lock.
      */
     if (timer_trylock_or_cancel(timer, &thread_lock))
-        return INT_NO_RESCHEDULE;
+        return;
 
     if (t->state != THREAD_SLEEPING) {
         spin_unlock(&thread_lock);
-        return INT_NO_RESCHEDULE;
+        return;
     }
 
     t->blocked_status = ZX_OK;
@@ -853,8 +853,6 @@ static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now,
         sched_reschedule();
 
     spin_unlock(&thread_lock);
-
-    return INT_NO_RESCHEDULE;
 }
 
 #define MIN_SLEEP_SLACK ZX_USEC(1)

@@ -20,8 +20,8 @@ void wait_queue_init(wait_queue_t* wait) {
 
 // Disable thread safety analysis here since Clang has trouble with the analysis
 // around timer_trylock_or_cancel.
-static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
-                                                      void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
+                                       void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     thread_t* thread = (thread_t*)arg;
 
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
@@ -31,13 +31,11 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t 
      * thread_lock.
      */
     if (timer_trylock_or_cancel(timer, &thread_lock))
-        return INT_NO_RESCHEDULE;
+        return;
 
     wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT);
 
     spin_unlock(&thread_lock);
-
-    return INT_NO_RESCHEDULE;
 }
 
 static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadline,

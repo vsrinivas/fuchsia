@@ -443,10 +443,10 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
 
 static void update_timer(LocalApicState* local_apic_state, uint64_t deadline);
 
-static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
+static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
     if (local_apic_state->lvt_timer & LVT_MASKED) {
-        return INT_NO_RESCHEDULE;
+        return;
     }
     if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_PERIODIC) {
         update_timer(local_apic_state, lvt_deadline(local_apic_state));
@@ -454,7 +454,6 @@ static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg
     uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
     bool signaled;
     local_apic_state->interrupt_tracker.Interrupt(vector, &signaled);
-    return INT_NO_RESCHEDULE;
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {

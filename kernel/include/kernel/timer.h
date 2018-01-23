@@ -18,7 +18,7 @@ __BEGIN_CDECLS
 void timer_queue_init(void);
 
 struct timer;
-typedef enum handler_return (*timer_callback)(struct timer*, zx_time_t now, void* arg);
+typedef void (*timer_callback)(struct timer*, zx_time_t now, void* arg);
 
 #define TIMER_MAGIC (0x74696D72) //'timr'
 
@@ -82,7 +82,7 @@ void timer_init(timer_t*);
  * arg: the argument to pass to the callback
  *
  * The timer function is declared as:
- *   enum handler_return callback(timer_t *, zx_time_t now, void *arg) { ... }
+ *   void callback(timer_t *, zx_time_t now, void *arg) { ... }
  *
  * The |slack| parameter defines an interval depending on the |mode| in which
  * is acceptable to fire the timer:

@@ -18,11 +18,9 @@
 
 #include <zircon/types.h>
 
-static enum handler_return timer_cb(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_cb(timer_t* timer, zx_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, true);
-
-    return INT_NO_RESCHEDULE;
 }
 
 static int timer_do_one_thread(void* arg) {
@@ -70,11 +68,10 @@ static void timer_test_all_cpus(void) {
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static enum handler_return timer_cb2(timer_t* timer, zx_time_t now, void* arg) {
+static void timer_cb2(timer_t* timer, zx_time_t now, void* arg) {
     int* timer_count = (int*)arg;
     atomic_add(timer_count, 1);
     thread_preempt_set_pending();
-    return INT_NO_RESCHEDULE;
 }
 
 static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
