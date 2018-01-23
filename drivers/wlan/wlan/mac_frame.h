@@ -106,6 +106,29 @@ class SequenceControl : public common::BitField<uint16_t> {
 
 constexpr uint16_t kMaxSequenceNumber = (1 << 12) - 1;
 
+// IEEE Std 802.11-2016, 9.2.4.5.4, Table 9-9
+namespace ack_policy {
+enum AckPolicy : uint8_t {
+    kNormalAck = 0,  // or Implicit Block Ack Request
+    kNoAck = 1,
+    kNoExplicitAck = 2,  // or PSMP Ack
+    kBlockAck = 3,
+};
+
+}  // namespace ack_policy
+
+// IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
+class QosControl : public common::BitField<uint16_t> {
+   public:
+    WLAN_BIT_FIELD(tid, 0, 4);
+    WLAN_BIT_FIELD(eosp, 4, 1);  // End of Service Period
+    WLAN_BIT_FIELD(ack_policy, 5, 2);
+    WLAN_BIT_FIELD(amsdu_present, 7, 1);
+
+    // Interpretation varies
+    WLAN_BIT_FIELD(byte, 8, 8);
+};
+
 // IEEE Std 802.11-2016, 9.2.4.6
 class HtControl : public common::BitField<uint32_t> {
    public:
@@ -561,13 +584,12 @@ struct DataFrameHeader {
         return reinterpret_cast<common::MacAddr*>(raw() + offset);
     }
 
-    // TODO(porce): Cast to QoSControl struct.
-    uint8_t* qos_ctrl() {
+    QosControl* qos_ctrl() {
         if (!HasQosCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
         if (HasAddr4()) { offset += common::kMacAddrLen; }
 
-        return raw() + offset;
+        return reinterpret_cast<QosControl*>(raw() + offset);
     }
 
     HtControl* ht_ctrl() {
