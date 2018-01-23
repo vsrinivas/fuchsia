@@ -33,7 +33,9 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   ~UserSyncImpl() override;
 
   // UserSync:
-  std::unique_ptr<LedgerSync> CreateLedgerSync(fxl::StringView app_id) override;
+  std::unique_ptr<LedgerSync> CreateLedgerSync(
+      fxl::StringView app_id,
+      encryption::EncryptionService* encryption_service) override;
 
   // Starts UserSyncImpl. This method must be called before any other method.
   void Start();

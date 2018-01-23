@@ -10,6 +10,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
@@ -30,7 +31,8 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   UserSyncImplTest()
       : environment_(message_loop_.task_runner()),
-        cloud_provider_(cloud_provider_ptr_.NewRequest()) {
+        cloud_provider_(cloud_provider_ptr_.NewRequest()),
+        encryption_service_(message_loop_.task_runner()) {
     UserConfig user_config;
     user_config.user_directory = tmp_dir.path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
@@ -55,6 +57,7 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   TestCloudProvider cloud_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
+  encryption::FakeEncryptionService encryption_service_;
   TestSyncStateWatcher sync_state_watcher_;
 
   int on_version_mismatch_calls_ = 0;
@@ -83,7 +86,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
-  auto ledger_a = user_sync_->CreateLedgerSync("app-id");
+  auto ledger_a = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
   auto ledger_a_ptr = static_cast<LedgerSyncImpl*>(ledger_a.get());
   EXPECT_FALSE(ledger_a_ptr->IsUploadEnabled());
   EXPECT_TRUE(
@@ -92,7 +95,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   EXPECT_EQ("some-value", cloud_provider_.device_set.checked_fingerprint);
 
   // Verify that newly created LedgerSyncs also have the upload enabled.
-  auto ledger_b = user_sync_->CreateLedgerSync("app-id");
+  auto ledger_b = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
   auto ledger_b_ptr = static_cast<LedgerSyncImpl*>(ledger_b.get());
   EXPECT_TRUE(ledger_b_ptr->IsUploadEnabled());
 }
@@ -105,7 +108,7 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
-  auto ledger = user_sync_->CreateLedgerSync("app-id");
+  auto ledger = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
   auto ledger_ptr = static_cast<LedgerSyncImpl*>(ledger.get());
   EXPECT_FALSE(ledger_ptr->IsUploadEnabled());
   EXPECT_TRUE(

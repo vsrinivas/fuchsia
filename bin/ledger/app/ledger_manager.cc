@@ -118,10 +118,13 @@ class LedgerManager::PageManagerContainer {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
 
-LedgerManager::LedgerManager(Environment* environment,
-                             std::unique_ptr<storage::LedgerStorage> storage,
-                             std::unique_ptr<cloud_sync::LedgerSync> sync)
+LedgerManager::LedgerManager(
+    Environment* environment,
+    std::unique_ptr<encryption::EncryptionService> encryption_service,
+    std::unique_ptr<storage::LedgerStorage> storage,
+    std::unique_ptr<cloud_sync::LedgerSync> sync)
     : environment_(environment),
+      encryption_service_(std::move(encryption_service)),
       storage_(std::move(storage)),
       sync_(std::move(sync)),
       ledger_impl_(this),

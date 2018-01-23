@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 
 namespace cloud_sync {
@@ -21,6 +22,7 @@ class LedgerSyncImpl : public LedgerSync {
  public:
   LedgerSyncImpl(ledger::Environment* environment,
                  const UserConfig* user_config,
+                 encryption::EncryptionService* encryption_service,
                  fxl::StringView app_id,
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
@@ -43,6 +45,7 @@ class LedgerSyncImpl : public LedgerSync {
  private:
   ledger::Environment* const environment_;
   const UserConfig* const user_config_;
+  encryption::EncryptionService* const encryption_service_;
   const std::string app_id_;
   bool upload_enabled_ = false;
   std::set<PageSyncImpl*> active_page_syncs_;

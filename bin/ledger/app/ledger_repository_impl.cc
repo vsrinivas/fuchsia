@@ -7,6 +7,7 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -58,18 +59,23 @@ void LedgerRepositoryImpl::GetLedger(
   auto it = ledger_managers_.find(ledger_name);
   if (it == ledger_managers_.end()) {
     std::string name_as_string = convert::ToString(ledger_name);
+    std::unique_ptr<encryption::EncryptionService> encryption_service =
+        std::make_unique<encryption::EncryptionServiceImpl>(
+            environment_->main_runner());
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
             environment_->main_runner(), environment_->coroutine_service(),
-            base_storage_dir_, name_as_string);
+            encryption_service.get(), base_storage_dir_, name_as_string);
     std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
     if (user_sync_) {
-      ledger_sync = user_sync_->CreateLedgerSync(name_as_string);
+      ledger_sync = user_sync_->CreateLedgerSync(name_as_string,
+                                                 encryption_service.get());
     }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),
-        std::forward_as_tuple(environment_, std::move(ledger_storage),
+        std::forward_as_tuple(environment_, std::move(encryption_service),
+                              std::move(ledger_storage),
                               std::move(ledger_sync)));
     FXL_DCHECK(result.second);
     it = result.first;

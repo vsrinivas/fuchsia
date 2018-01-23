@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 
 namespace cloud_sync {
 
@@ -23,7 +24,8 @@ class UserSync {
   virtual ~UserSync() {}
 
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id) = 0;
+      fxl::StringView app_id,
+      encryption::EncryptionService* encryption_service) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);

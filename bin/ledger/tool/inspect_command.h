@@ -10,6 +10,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/tool/command.h"
@@ -41,6 +42,7 @@ class InspectCommand : public Command {
 
   std::unique_ptr<storage::LedgerStorageImpl> GetLedgerStorage();
 
+  std::unique_ptr<encryption::EncryptionService> encryption_service_;
   std::unique_ptr<storage::PageStorage> storage_;
   const std::vector<std::string> args_;
   std::string app_id_;

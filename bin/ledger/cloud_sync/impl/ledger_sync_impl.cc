@@ -11,12 +11,15 @@
 
 namespace cloud_sync {
 
-LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
-                               const UserConfig* user_config,
-                               fxl::StringView app_id,
-                               std::unique_ptr<SyncStateWatcher> watcher)
+LedgerSyncImpl::LedgerSyncImpl(
+    ledger::Environment* environment,
+    const UserConfig* user_config,
+    encryption::EncryptionService* encryption_service,
+    fxl::StringView app_id,
+    std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
+      encryption_service_(encryption_service),
       app_id_(app_id.ToString()),
       user_watcher_(std::move(watcher)),
       aggregator_(user_watcher_.get()) {
@@ -37,10 +40,6 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   FXL_DCHECK(page_storage);
 
   auto result = std::make_unique<PageSyncContext>();
-  // TODO(qsr): LE-330 Review how and where encryption services are created.
-  result->encryption_service =
-      std::make_unique<encryption::EncryptionServiceImpl>(
-          environment_->main_runner());
   cloud_provider::PageCloudPtr page_cloud;
   user_config_->cloud_provider->GetPageCloud(
       convert::ToArray(app_id_), convert::ToArray(page_storage->GetId()),
@@ -52,9 +51,8 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
         }
       });
   auto page_sync = std::make_unique<PageSyncImpl>(
-      environment_->main_runner(), page_storage,
-      result->encryption_service.get(), std::move(page_cloud),
-      std::make_unique<backoff::ExponentialBackoff>(),
+      environment_->main_runner(), page_storage, encryption_service_,
+      std::move(page_cloud), std::make_unique<backoff::ExponentialBackoff>(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback,
       aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {

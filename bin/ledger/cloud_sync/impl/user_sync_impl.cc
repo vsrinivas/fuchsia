@@ -40,11 +40,13 @@ UserSyncImpl::~UserSyncImpl() {
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    fxl::StringView app_id) {
+    fxl::StringView app_id,
+    encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
 
   auto result = std::make_unique<LedgerSyncImpl>(
-      environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
+      environment_, &user_config_, encryption_service, app_id,
+      aggregator_.GetNewStateWatcher());
   result->set_on_delete([this, ledger_sync = result.get()]() {
     active_ledger_syncs_.erase(ledger_sync);
   });

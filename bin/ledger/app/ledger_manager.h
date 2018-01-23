@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/app/ledger_impl.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
 #include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -32,9 +33,11 @@ namespace ledger {
 // deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
  public:
-  LedgerManager(Environment* environment,
-                std::unique_ptr<storage::LedgerStorage> storage,
-                std::unique_ptr<cloud_sync::LedgerSync> sync);
+  LedgerManager(
+      Environment* environment,
+      std::unique_ptr<encryption::EncryptionService> encryption_service,
+      std::unique_ptr<storage::LedgerStorage> storage,
+      std::unique_ptr<cloud_sync::LedgerSync> sync);
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -82,6 +85,7 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
                     const GetPageDebugCallback& callback) override;
 
   Environment* const environment_;
+  std::unique_ptr<encryption::EncryptionService> encryption_service_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;

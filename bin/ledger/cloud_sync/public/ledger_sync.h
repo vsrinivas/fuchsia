@@ -18,9 +18,6 @@ namespace cloud_sync {
 
 // Page sync along with associated objects that it uses.
 struct PageSyncContext {
-  // TODO(qsr): LE-330 Review the location of EncryptionService depending on
-  // where it is used.
-  std::unique_ptr<encryption::EncryptionService> encryption_service;
   std::unique_ptr<PageSync> page_sync;
 };
 

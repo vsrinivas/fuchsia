@@ -23,6 +23,7 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/tool/convert.h"
 #include "peridot/lib/callback/waiter.h"
 
@@ -380,9 +381,13 @@ void InspectCommand::PrintHelp(fxl::Closure on_done) {
 }
 
 std::unique_ptr<storage::LedgerStorageImpl> InspectCommand::GetLedgerStorage() {
+  if (!encryption_service_) {
+    encryption_service_ = std::make_unique<encryption::EncryptionServiceImpl>(
+        fsl::MessageLoop::GetCurrent()->task_runner());
+  }
   return std::make_unique<storage::LedgerStorageImpl>(
       fsl::MessageLoop::GetCurrent()->task_runner(), &coroutine_service_,
-      user_repository_path_, app_id_);
+      encryption_service_.get(), user_repository_path_, app_id_);
 }
 
 }  // namespace tool

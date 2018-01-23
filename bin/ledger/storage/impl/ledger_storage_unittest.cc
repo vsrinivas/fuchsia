@@ -11,6 +11,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -20,8 +21,10 @@ namespace {
 class LedgerStorageTest : public gtest::TestWithMessageLoop {
  public:
   LedgerStorageTest()
-      : storage_(message_loop_.task_runner(),
+      : encryption_service_(message_loop_.task_runner()),
+        storage_(message_loop_.task_runner(),
                  &coroutine_service_,
+                 &encryption_service_,
                  tmp_dir_.path(),
                  "test_app") {}
 
@@ -30,6 +33,7 @@ class LedgerStorageTest : public gtest::TestWithMessageLoop {
  private:
   files::ScopedTempDir tmp_dir_;
   coroutine::CoroutineServiceImpl coroutine_service_;
+  encryption::FakeEncryptionService encryption_service_;
 
  protected:
   LedgerStorageImpl storage_;

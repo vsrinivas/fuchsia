@@ -13,6 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
@@ -119,7 +120,10 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
         std::make_unique<FakeLedgerSync>(message_loop_.task_runner());
     sync_ptr = sync.get();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, std::move(storage), std::move(sync));
+        &environment_,
+        std::make_unique<encryption::FakeEncryptionService>(
+            message_loop_.task_runner()),
+        std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
