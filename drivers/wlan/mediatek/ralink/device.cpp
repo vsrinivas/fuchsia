@@ -4,6 +4,7 @@
 
 #include "device.h"
 #include "logging.h"
+#include "mac_frame.h"
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
@@ -3549,9 +3550,8 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
-    auto frame = static_cast<const uint8_t*>(pkt->packet_head->data);
-    auto addr1 = frame + 4;  // 4 = FC + Duration fields
-    auto wcid = LookupTxWcid(addr1, protected_frame);
+    auto frame_hdr = reinterpret_cast<const FrameHeader*>(pkt->packet_head->data);
+    auto wcid = LookupTxWcid(frame_hdr->addr1, protected_frame);
     Txwi1& txwi1 = packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);

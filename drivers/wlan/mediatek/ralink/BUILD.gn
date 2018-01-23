@@ -13,6 +13,7 @@ driver_module("ralink_driver") {
     "device.cpp",
     "device.h",
     "driver.cpp",
+    "mac_frame.h",
     "ralink.h",
     "register.h",
   ]
