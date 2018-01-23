@@ -102,22 +102,3 @@ private:
 
     Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread);
 };
-
-/* Create a guest. */
-zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
-
-/* Set a trap within a guest. */
-zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
-                                fbl::RefPtr<PortDispatcher> port, uint64_t key);
-
-/* Resume execution of a VCPU. */
-zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);
-
-/* Issue an interrupt on a VCPU. */
-zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);
-
-/* Read the register state of a VCPU. */
-zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len);
-
-/* Write the register state of a VCPU. */
-zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len);

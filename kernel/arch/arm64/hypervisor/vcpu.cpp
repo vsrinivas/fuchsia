@@ -141,7 +141,8 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
-    zx_paddr_t vttbr = arm64_vttbr(guest_->Vmid(), guest_->AddressSpace()->table_phys());
+    const ArchVmAspace& aspace = guest_->AddressSpace()->aspace()->arch_aspace();
+    zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
     GuestState* guest_state = &el2_state_.guest_state;
     zx_status_t status;

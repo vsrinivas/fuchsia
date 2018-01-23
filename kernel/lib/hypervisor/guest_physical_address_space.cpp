@@ -49,6 +49,48 @@ struct AspaceVmoLocator final : public VmEnumerator {
 };
 } // namespace
 
+zx_status_t GuestMapping::Create(fbl::RefPtr<VmObject> guest_phys_mem, zx_vaddr_t guest_base,
+                                 size_t size, const char* name,
+                                 fbl::unique_ptr<GuestMapping>* guest_mapping) {
+    // Overflow check.
+    if (guest_base > fbl::numeric_limits<zx_vaddr_t>::max() - size)
+        return ZX_ERR_INVALID_ARGS;
+
+    // Boundaries check.
+    if (guest_base + size > guest_phys_mem->size())
+        return ZX_ERR_INVALID_ARGS;
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<GuestMapping> mapping(new (&ac) GuestMapping);
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+
+    // GuestMapping destroys mapping_ in destructor, so we allocate GuestMapping first
+    // and then initialize all the members.
+    fbl::RefPtr<VmAddressRegion> vmar = VmAspace::kernel_aspace()->RootVmar();
+    zx_status_t status = vmar->CreateVmMapping(/* mapping_offset (ignored) */ 0,
+                                               size,
+                                               /* align_pow2 */ false,
+                                               /* vmar_flags */ 0,
+                                               guest_phys_mem,
+                                               guest_base,
+                                               kGuestMmuFlags,
+                                               name,
+                                               &mapping->mapping_);
+    if (status != ZX_OK)
+        return status;
+
+    mapping->guest_base_ = guest_base;
+    mapping->size_ = size;
+    *guest_mapping = fbl::move(mapping);
+    return ZX_OK;
+}
+
+GuestMapping::~GuestMapping() {
+    if (mapping_)
+        mapping_->Destroy();
+}
+
 zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_mem,
 #ifdef ARCH_ARM64
                                               uint8_t vmid,
@@ -135,41 +177,4 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* hos
     // Lookup the physical address of this page in the VMO.
     vaddr_t offset = guest_paddr - vmo_locator.base;
     return vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
-}
-
-zx_status_t GuestMapping::Create(fbl::RefPtr<VmObject> guest_phys_mem, zx_vaddr_t guest_base,
-                                 size_t size, const char* name,
-                                 fbl::unique_ptr<GuestMapping>* guest_mapping) {
-    // Overflow check.
-    if (guest_base > fbl::numeric_limits<zx_vaddr_t>::max() - size)
-        return ZX_ERR_INVALID_ARGS;
-
-    // Boundaries check.
-    if (guest_base + size > guest_phys_mem->size())
-        return ZX_ERR_INVALID_ARGS;
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<GuestMapping> mapping(new (&ac) GuestMapping);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-
-    // GuestMapping destroys mapping_ in destructor, so we allocate GuestMapping first
-    // and then initizlize all the members.
-    fbl::RefPtr<VmAddressRegion> vmar = VmAspace::kernel_aspace()->RootVmar();
-    zx_status_t status = vmar->CreateVmMapping(/* mapping_offset (ignored) */ 0,
-                                               size,
-                                               /* align_pow2 */ false,
-                                               /* vmar_flags */ 0,
-                                               guest_phys_mem,
-                                               guest_base,
-                                               kGuestMmuFlags,
-                                               name,
-                                               &mapping->mapping_);
-    if (status != ZX_OK)
-        return status;
-
-    mapping->guest_base_ = guest_base;
-    mapping->size_ = size;
-    *guest_mapping = fbl::move(mapping);
-    return ZX_OK;
 }

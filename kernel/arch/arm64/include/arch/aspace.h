@@ -40,6 +40,7 @@ public:
                      vaddr_t align, size_t size, uint mmu_flags) override;
 
     paddr_t arch_table_phys() const override { return tt_phys_; }
+    uint16_t arch_asid() const { return asid_; }
     void arch_set_asid(uint16_t asid) { asid_ = asid; }
 
     static void ContextSwitch(ArmArchVmAspace* from, ArmArchVmAspace* to);

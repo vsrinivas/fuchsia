@@ -17,6 +17,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 #include <vm/fault.h>
+#include <vm/physmap.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
@@ -30,6 +31,7 @@
         ZX_OK;                                                                  \
     })
 
+static constexpr size_t kPageTableLevelShift = 3;
 static constexpr uint16_t kSmcPsci = 0;
 static constexpr uint32_t kTimerVector = 27;
 
@@ -121,7 +123,26 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state)
     }
 }
 
-static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state) {
+static void invalidate_cache(zx_paddr_t table, size_t index_shift) {
+    // TODO(abdulla): Make this understand concatenated page tables.
+    auto* pte = static_cast<pte_t*>(paddr_to_physmap(table));
+    pte_t page = index_shift > MMU_GUEST_PAGE_SIZE_SHIFT ?
+                 MMU_PTE_L012_DESCRIPTOR_BLOCK : MMU_PTE_L3_DESCRIPTOR_PAGE;
+    for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
+        pte_t desc = pte[i] & MMU_PTE_DESCRIPTOR_MASK;
+        pte_t paddr = pte[i] & MMU_PTE_OUTPUT_ADDR_MASK;
+        if (desc == page) {
+            zx_vaddr_t vaddr = reinterpret_cast<zx_vaddr_t>(paddr_to_physmap(paddr));
+            arch_invalidate_cache_range(vaddr, 1lu << index_shift);
+        } else if (desc != MMU_PTE_DESCRIPTOR_INVALID) {
+            size_t adjust_shift = MMU_GUEST_PAGE_SIZE_SHIFT - kPageTableLevelShift;
+            invalidate_cache(paddr, index_shift - adjust_shift);
+        }
+    }
+}
+
+static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state,
+                                             GuestPhysicalAddressSpace* gpas) {
     const SystemInstruction si(iss);
     const uint64_t reg = guest_state->x[si.xt];
 
@@ -138,7 +159,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         // value of the SCTLR_EL1.M field is 0 for all purposes other than
         // returning the value of a direct read of the field.
         //
-        // Therefore if SCTLR_EL1.M is set to 1, we need to set HCR_EL2.DC to 0.
+        // Therefore if SCTLR_EL1.M is set to 1, we need to set HCR_EL2.DC to 0
+        // and invalidate the guest physical address space.
         uint32_t sctlr_el1 = reg & UINT32_MAX;
         if (sctlr_el1 & SCTLR_ELX_M) {
             *hcr &= ~HCR_EL2_DC;
@@ -148,6 +170,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
             if (sctlr_el1 & SCTLR_ELX_C) {
                 *hcr &= ~HCR_EL2_TVM;
             }
+            const ArchVmAspace& aspace = gpas->aspace()->arch_aspace();
+            invalidate_cache(aspace.arch_table_phys(), MMU_GUEST_TOP_SHIFT);
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
@@ -258,7 +282,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
         return handle_smc_instruction(syndrome.iss, guest_state);
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
-        return handle_system_instruction(syndrome.iss, hcr, guest_state);
+        return handle_system_instruction(syndrome.iss, hcr, guest_state, gpas);
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
         return handle_instruction_abort(guest_state, gpas);

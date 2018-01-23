@@ -19,10 +19,7 @@ public:
     static zx_status_t Create(fbl::RefPtr<VmObject> guest_phys_mem, zx_vaddr_t guest_base,
                               size_t size, const char* name,
                               fbl::unique_ptr<GuestMapping>* guest_mapping);
-    ~GuestMapping() {
-        if (mapping_)
-            mapping_->Destroy();
-    }
+    ~GuestMapping();
 
     // All pointers returned from the function become invalid when GuestMapping destroyed.
     template <typename T>
@@ -39,8 +36,6 @@ public:
     }
 
 private:
-    GuestMapping() = default;
-
     fbl::RefPtr<VmMapping> mapping_;
     zx_vaddr_t guest_base_;
     size_t size_;
@@ -58,7 +53,6 @@ public:
 
     size_t size() const { return paspace_->size(); }
     const fbl::RefPtr<VmAspace>& aspace() const { return paspace_; }
-    zx_paddr_t table_phys() const { return paspace_->arch_aspace().arch_table_phys(); }
 
     zx_status_t MapInterruptController(vaddr_t guest_paddr, paddr_t host_paddr, size_t size);
     zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);
