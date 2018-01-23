@@ -453,7 +453,7 @@ static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg
     }
     uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
     bool signaled;
-    local_apic_state->interrupt_tracker.Interrupt(vector, true, &signaled);
+    local_apic_state->interrupt_tracker.Interrupt(vector, &signaled);
     return INT_NO_RESCHEDULE;
 }
 
