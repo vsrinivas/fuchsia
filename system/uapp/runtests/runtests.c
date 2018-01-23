@@ -203,7 +203,7 @@ static bool run_test(const char* path, FILE* out) {
     }
 
     if (proc_info.return_code != 0) {
-        printf("FAILURE`: %s exited with nonzero status: %d\n", path, proc_info.return_code);
+        printf("FAILURE: %s exited with nonzero status: %d\n", path, proc_info.return_code);
         record_test_result(&tests, path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
         return false;
     }
