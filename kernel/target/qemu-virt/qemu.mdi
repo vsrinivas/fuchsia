@@ -27,13 +27,6 @@ periph-mem-map = {
     }
 }
 
-boot-reserve-mem-map = {
-    bank = {
-        base-phys = MEMBASE
-        length = 0x10000 // FDT goes here
-    }
-}
-
 kernel = {
     arm-pl011-uart = {
         base-phys = 0x09000000

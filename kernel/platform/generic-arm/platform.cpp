@@ -139,6 +139,11 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
         return;
     }
 
+    // mark the range used by the FDT as reserved, in case we need it later
+    dprintf(INFO, "FDT: device tree located at [%#" PRIx64 ", %#" PRIx64 "]\n",
+            boot_structure_paddr, boot_structure_paddr + fdt_totalsize(fdt) - 1);
+    boot_reserve_add_range(boot_structure_paddr, fdt_totalsize(fdt));
+
     int offset = fdt_path_offset(fdt, "/chosen");
     if (offset < 0) {
         printf("%s: fdt_path_offset(/chosen) failed\n", __FUNCTION__);
@@ -522,19 +527,14 @@ static void process_bootdata(bootdata_t* root) {
 }
 
 void platform_early_init(void) {
-    // QEMU does not put device tree pointer in the boot-time x0 register if loaded
-    // as a ELF file. so set it here before calling read_device_tree.
-    if (boot_structure_paddr == 0) {
-        // TODO: remove this hard coded constant
-        // one possible solution is to start booting qemu via the .bin file instead of .elf
-        // which seems to cause qemu to pass this pointer via x0
-        boot_structure_paddr = 0x40000000;
+    // if the boot_structure_paddr variable is -1, it was not set
+    // in start.S, so we are in a bad place.
+    if (boot_structure_paddr == -1UL) {
+        panic("no bootdata structure!\n");
     }
 
     void* boot_structure_kvaddr = paddr_to_physmap(boot_structure_paddr);
-    if (!boot_structure_kvaddr) {
-        panic("no bootdata structure!\n");
-    }
+    DEBUG_ASSERT(boot_structure_kvaddr);
 
     // initialize the boot memory reservation system
     boot_reserve_init();

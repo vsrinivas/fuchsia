@@ -300,7 +300,7 @@ DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
 END_DATA(arch_boot_el)
 DATA(boot_structure_paddr)
-    .quad 0x00ff00ffdeadbeef
+    .quad -1
 END_DATA(boot_structure_paddr)
 
 DATA(page_tables_not_ready)
