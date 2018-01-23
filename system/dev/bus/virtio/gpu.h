@@ -8,6 +8,7 @@
 #include "virtio_gpu.h"
 
 #include <fbl/unique_ptr.h>
+#include <semaphore.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 
@@ -80,7 +81,8 @@ private:
 
     // request condition
     fbl::Mutex request_lock_;
-    cnd_t request_cond_ = {};
+    sem_t request_sem_;
+    sem_t response_sem_;
 
     // flush thread
     void virtio_gpu_flusher();

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <ddk/debug.h>
 #include <ddk/debug.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <pretty/hexdump.h>
@@ -78,18 +79,24 @@ void GpuDevice::virtio_gpu_flush(void* ctx) {
 
 GpuDevice::GpuDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, fbl::move(backend)) {
-    cnd_init(&request_cond_);
+    sem_init(&request_sem_, 0, 1);
+    sem_init(&response_sem_, 0, 0);
     cnd_init(&flush_cond_);
 }
 
 GpuDevice::~GpuDevice() {
     // TODO: clean up allocated physical memory
-    cnd_destroy(&request_cond_);
+    sem_destroy(&request_sem_);
+    sem_destroy(&response_sem_);
     cnd_destroy(&flush_cond_);
 }
 
 zx_status_t GpuDevice::send_command_response(const void* cmd, size_t cmd_len, void** _res, size_t res_len) {
     LTRACEF("dev %p, cmd %p, cmd_len %zu, res %p, res_len %zu\n", this, cmd, cmd_len, _res, res_len);
+
+    /* Keep this single message at a time */
+    sem_wait(&request_sem_);
+    fbl::MakeAutoCall([this]() { sem_post(&request_sem_); });
 
     uint16_t i;
     struct vring_desc* desc = vring_.AllocDescChain(2, &i);
@@ -121,16 +128,13 @@ zx_status_t GpuDevice::send_command_response(const void* cmd, size_t cmd_len, vo
     vring_.Kick();
 
     /* wait for result */
-    cnd_wait(&request_cond_, request_lock_.GetInternal());
+    sem_wait(&response_sem_);
 
     return ZX_OK;
 }
 
 zx_status_t GpuDevice::get_display_info() {
     LTRACEF("dev %p\n", this);
-
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
 
     /* construct the get display info message */
     virtio_gpu_ctrl_hdr req;
@@ -171,9 +175,6 @@ zx_status_t GpuDevice::allocate_2d_resource(uint32_t* resource_id, uint32_t widt
 
     assert(resource_id);
 
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
-
     /* construct the request */
     virtio_gpu_resource_create_2d req;
     memset(&req, 0, sizeof(req));
@@ -201,9 +202,6 @@ zx_status_t GpuDevice::attach_backing(uint32_t resource_id, zx_paddr_t ptr, size
     LTRACEF("dev %p, resource_id %u, ptr %#" PRIxPTR ", buf_len %zu\n", this, resource_id, ptr, buf_len);
 
     assert(ptr);
-
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     struct {
@@ -234,9 +232,6 @@ zx_status_t GpuDevice::attach_backing(uint32_t resource_id, zx_paddr_t ptr, size
 zx_status_t GpuDevice::set_scanout(uint32_t scanout_id, uint32_t resource_id, uint32_t width, uint32_t height) {
     LTRACEF("dev %p, scanout_id %u, resource_id %u, width %u, height %u\n", this, scanout_id, resource_id, width, height);
 
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
-
     /* construct the request */
     virtio_gpu_set_scanout req;
     memset(&req, 0, sizeof(req));
@@ -263,9 +258,6 @@ zx_status_t GpuDevice::set_scanout(uint32_t scanout_id, uint32_t resource_id, ui
 zx_status_t GpuDevice::flush_resource(uint32_t resource_id, uint32_t width, uint32_t height) {
     LTRACEF("dev %p, resource_id %u, width %u, height %u\n", this, resource_id, width, height);
 
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
-
     /* construct the request */
     virtio_gpu_resource_flush req;
     memset(&req, 0, sizeof(req));
@@ -290,9 +282,6 @@ zx_status_t GpuDevice::flush_resource(uint32_t resource_id, uint32_t width, uint
 
 zx_status_t GpuDevice::transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height) {
     LTRACEF("dev %p, resource_id %u, width %u, height %u\n", this, resource_id, width, height);
-
-    /* grab a lock to keep this single message at a time */
-    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     virtio_gpu_transfer_to_host_2d req;
@@ -328,7 +317,7 @@ void GpuDevice::virtio_gpu_flusher() {
     for (;;) {
         {
             fbl::AutoLock al(&flush_lock_);
-            if (!flush_pending_)
+            while (!flush_pending_)
                 cnd_wait(&flush_cond_, flush_lock_.GetInternal());
             flush_pending_ = false;
         }
@@ -526,10 +515,8 @@ void GpuDevice::IrqRingUpdate() {
             desc = vring_.DescFromIndex((uint16_t)i);
         }
 
-        // wack the request condition
-        request_lock_.Acquire();
-        cnd_signal(&request_cond_);
-        request_lock_.Release();
+        // notify the request thread
+        sem_post(&response_sem_);
     };
 
     // tell the ring to find free chains and hand it back to our lambda
