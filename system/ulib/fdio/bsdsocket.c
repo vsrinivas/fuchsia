@@ -26,6 +26,8 @@
 #include "private.h"
 #include "unistd.h"
 
+zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
+
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
                                    void* restrict optval,
                                    socklen_t* restrict optlen);
@@ -188,7 +190,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
 
 #if WITH_NEW_SOCKET
     zx_handle_t s2;
-    zx_status_t r = io->ops->misc(io, ZXRIO_ACCEPT, 0, 0, &s2, sizeof(s2));
+    zx_status_t r = zxsio_accept(io, &s2);
     if (r == ZX_ERR_SHOULD_WAIT) {
         return ERRNO(EWOULDBLOCK);
     } else if (r != ZX_OK) {

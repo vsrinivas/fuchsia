@@ -35,7 +35,7 @@ static bool is_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
     return is_message_valid(msg);
 }
 
-static zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
+zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
     zxsio_t* sio = (zxsio_t*)io;
 
     if (!(sio->flags & ZXSIO_DID_LISTEN)) {
@@ -571,8 +571,6 @@ static zx_status_t zxsio_write_control(zxsio_t* sio, zxsio_msg_t* msg) {
 }
 
 static ssize_t zxsio_read_control(zxsio_t* sio, void* data, size_t len) {
-    int nonblock = sio->io.flags & FDIO_FLAG_NONBLOCK;
-
     // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r;
@@ -588,7 +586,7 @@ static ssize_t zxsio_read_control(zxsio_t* sio, void* data, size_t len) {
         }
         if (r == ZX_ERR_PEER_CLOSED || r == ZX_ERR_BAD_STATE) {
             return 0;
-        } else if (r == ZX_ERR_SHOULD_WAIT && !nonblock) {
+        } else if (r == ZX_ERR_SHOULD_WAIT) {
             zx_signals_t pending;
             r = zx_object_wait_one(sio->s,
                                    ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_PEER_CLOSED,
@@ -649,17 +647,13 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     case ZXRIO_CONNECT:
     case ZXRIO_BIND:
     case ZXRIO_LISTEN:
+    case ZXRIO_FCNTL:
         break;
-    case ZXRIO_ACCEPT:
-        if (len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INTERNAL;
-        }
-        return zxsio_accept(io, ptr);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    memset(&msg, 0, ZXRIO_HDR_SZ);
+    memset(&msg, 0, ZXSIO_HDR_SZ);
     msg.op = op;
     msg.arg = maxreply;
     msg.arg2.off = off;
@@ -703,7 +697,37 @@ static zx_status_t zxsio_close(fdio_t* io) {
 
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zxsio_t* sio = (zxsio_t*)io;
+    const uint8_t* data = in_buf;
+    zx_status_t r = 0;
+    zxsio_msg_t msg;
+
+    if (in_len > ZXSIO_PAYLOAD_SZ || out_len > ZXSIO_PAYLOAD_SZ) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (IOCTL_KIND(op) != IOCTL_KIND_DEFAULT) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    memset(&msg, 0, ZXSIO_HDR_SZ);
+    msg.op = ZXRIO_IOCTL;
+    msg.datalen = in_len;
+    msg.arg = out_len;
+    msg.arg2.op = op;
+    memcpy(msg.data, data, in_len);
+
+    if ((r = zxsio_txn(sio, &msg)) < 0) {
+        return r;
+    }
+
+    size_t copy_len = msg.datalen;
+    if (msg.datalen > out_len) {
+        copy_len = out_len;
+    }
+
+    memcpy(out_buf, msg.data, copy_len);
+    return r;
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {

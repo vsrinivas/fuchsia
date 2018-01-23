@@ -58,8 +58,7 @@ __BEGIN_CDECLS
 #define ZXRIO_LINK        (0x0000001a | ZXRIO_ONE_HANDLE)
 #define ZXRIO_MMAP         0x0000001b
 #define ZXRIO_FCNTL        0x0000001c
-#define ZXRIO_ACCEPT       0x0000001d
-#define ZXRIO_NUM_OPS      30
+#define ZXRIO_NUM_OPS      29
 
 #define ZXRIO_OP(n)        ((n) & 0x3FF) // opcode
 #define ZXRIO_HC(n)        (((n) >> 8) & 3) // handle count
@@ -72,7 +71,7 @@ __BEGIN_CDECLS
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
-    "setattr", "sync", "link", "mmap", "fcntl", "accept" }
+    "setattr", "sync", "link", "mmap", "fcntl" }
 
 // dispatcher callback return code that there were no messages to read
 #define ERR_DISPATCHER_NO_WORK ZX_ERR_SHOULD_WAIT
