@@ -49,3 +49,7 @@ int _printf(const char* fmt, ...) {
     }
     return r;
 }
+
+int puts16(char16_t* str) {
+    return gConOut->OutputString(gConOut, str) == EFI_SUCCESS ? 0 : EFI_END_OF_FILE;
+}

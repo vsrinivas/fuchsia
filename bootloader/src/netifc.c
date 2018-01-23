@@ -10,8 +10,9 @@
 
 #include <xefi.h>
 
-#include <inet6.h>
-#include <netifc.h>
+#include "inet6.h"
+#include "netifc.h"
+#include "osboot.h"
 
 static efi_simple_network_protocol* snp;
 
@@ -79,14 +80,22 @@ void* eth_get_buffer(size_t sz) {
 }
 
 void eth_put_buffer(void* data) {
-    eth_buffer* buf = (void*)(((uint64_t)data) & (~2047));
+    efi_physical_addr buf_paddr = (efi_physical_addr)data;
+    if ((buf_paddr < eth_buffers_base)
+        || (buf_paddr >= (eth_buffers_base + (NUM_BUFFER_PAGES * PAGE_SIZE)))) {
+        printf("fatal: attempt to use buffer outside of allocated range\n");
+        for (;;)
+            ;
+    }
 
+    eth_buffer* buf = (void*)(buf_paddr & (~2047));
     if (buf->magic != ETH_BUFFER_MAGIC) {
         printf("fatal: eth buffer %p (from %p) bad magic %" PRIx64 "\n",
                buf, data, buf->magic);
         for (;;)
             ;
     }
+
     buf->next = eth_buffers;
     eth_buffers_avail++;
     eth_buffers = buf;
@@ -197,7 +206,8 @@ efi_simple_network_protocol* netifc_find_available(void) {
             }
         }
 
-        printf("%ls: ", paths[i]);
+        puts16(paths[i]);
+        printf(": ");
         ret = bs->HandleProtocol(handles[i], &SimpleNetworkProtocol, (void**)&cur_snp);
         if (ret) {
             printf("Failed to open (%s)\n", xefi_strerror(ret));
@@ -346,7 +356,12 @@ void netifc_poll(void) {
             return;
         }
         if (txdone) {
-            eth_put_buffer(txdone);
+            // Check to make sure this is one of our buffers (see ZX-1516)
+            efi_physical_addr buf_paddr = (efi_physical_addr)txdone;
+            if ((buf_paddr >= eth_buffers_base)
+                && (buf_paddr < (eth_buffers_base + (NUM_BUFFER_PAGES * PAGE_SIZE)))) {
+                eth_put_buffer(txdone);
+            }
         }
     }
 

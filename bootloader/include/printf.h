@@ -37,6 +37,9 @@ typedef int (*_printf_engine_output_func)(const char *str, size_t len, void *sta
 
 int _printf_engine(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
 
+// Print a wide string to console
+int puts16(char16_t *str);
+
 __END_CDECLS
 
 #endif
