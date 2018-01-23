@@ -222,6 +222,19 @@ func TestReaderReadFile(t *testing.T) {
 	}
 }
 
+func TestReaderGetSize(t *testing.T) {
+	far := exampleArchive()
+
+	r, err := NewReader(bytes.NewReader(far))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := r.GetSize("a"), uint64(2); got != want {
+		t.Errorf("GetSize() = %d, want %d", got, want)
+	}
+}
+
 func TestReadEmpty(t *testing.T) {
 	r, err := NewReader(bytes.NewReader(emptyArchive()))
 	if err != nil {

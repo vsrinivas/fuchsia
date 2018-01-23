@@ -106,7 +106,7 @@ func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
 
 // NewSinglePackage initializes a new pkgfs filesystem that hosts only a single
 // package.
-func NewSinglePackage(pkgPath, blobstoreDir string) (*Filesystem, error) {
+func NewSinglePackage(blob, blobstoreDir string) (*Filesystem, error) {
 	bm, err := blobstore.New(blobstoreDir, "")
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func NewSinglePackage(pkgPath, blobstoreDir string) (*Filesystem, error) {
 		blobstore: bm,
 	}
 
-	pd, err := newPackageDirFromBlob(pkgPath, f)
+	pd, err := newPackageDirFromBlob(blob, f)
 	if err != nil {
 		return nil, err
 	}
@@ -452,13 +452,11 @@ func importPackage(fs *Filesystem, root string) {
 		go fs.amberPxy.GetBlob(root)
 	}
 
-	// TODO(raggi): validate the package names, ensure they do not contain '/', '=', and are neither '.' or '..'
-
 	if needsCount == 0 {
 		pkgIndexDir := fs.index.PackagePath(p.Name)
 		os.MkdirAll(pkgIndexDir, os.ModePerm)
 
-		if err := ioutil.WriteFile(filepath.Join(pkgIndexDir, p.Version), contents, os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(pkgIndexDir, p.Version), []byte(root), os.ModePerm); err != nil {
 			// XXX(raggi): is this a really bad state?
 			log.Printf("pkgfs: error writing package installed index for %s/%s: %s", p.Name, p.Version, err)
 		}
@@ -471,7 +469,7 @@ func importPackage(fs *Filesystem, root string) {
 	pkgInstalling := fs.index.InstallingPackageVersionPath(p.Name, p.Version)
 	os.MkdirAll(filepath.Dir(pkgInstalling), os.ModePerm)
 
-	if err := ioutil.WriteFile(pkgInstalling, contents, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(pkgInstalling, []byte(root), os.ModePerm); err != nil {
 		log.Printf("error writing package installing index for %s/%s: %s", p.Name, p.Version, err)
 	}
 }
@@ -680,20 +678,17 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 		merkleroot = filesystem.static.GetPackage(name, version)
 	}
 
-	if merkleroot != "" {
-		return newPackageDirFromBlob(filepath.Join(filesystem.blobstore.Root, merkleroot), filesystem)
+	if merkleroot == "" {
+		bmerkle, err := ioutil.ReadFile(filesystem.index.PackageVersionPath(name, version))
+		if err != nil {
+			return nil, goErrToFSErr(err)
+		}
+		merkleroot = string(bmerkle)
 	}
 
-	packageIndex := filesystem.index.PackageVersionPath(name, version)
-	f, err := os.Open(packageIndex)
+	pd, err := newPackageDirFromBlob(merkleroot, filesystem)
 	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
-	defer f.Close()
-
-	pd, err := newPackageDirFromReader(f, filesystem)
-	if err != nil {
-		return nil, goErrToFSErr(err)
+		return nil, err
 	}
 
 	// update the name related fields for easier debugging:
@@ -706,7 +701,8 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 
 // Initialize a package directory server interface from a package meta.far
 func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
-	f, err := os.Open(blob)
+	blobPath := filepath.Join(filesystem.blobstore.Root, blob)
+	f, err := os.Open(blobPath)
 	if err != nil {
 		log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
 		return nil, goErrToFSErr(err)
@@ -732,6 +728,9 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 	pd.unsupportedDirectory = unsupportedDirectory(blob)
 	pd.name = blob
 	pd.version = ""
+
+	pd.contents["meta"] = blob
+
 	return pd, nil
 }
 
@@ -798,6 +797,17 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() {
 		debugLog("pkgfs:packagedir:open %q unsupported flags", name)
 		return nil, nil, nil, fs.ErrNotSupported
+	}
+
+	if name == "meta" || strings.HasPrefix(name, "meta/") {
+		if blob, ok := d.contents["meta"]; ok {
+			d, err := newMetaFarDir(d.name, d.version, blob, d.fs)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			return d.Open(strings.TrimPrefix(name, "meta"), flags)
+		}
+		return nil, nil, nil, fs.ErrNotFound
 	}
 
 	if root, ok := d.contents[name]; ok {

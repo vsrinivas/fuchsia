@@ -7,7 +7,6 @@ package main
 import (
 	"flag"
 	"log"
-	"path/filepath"
 
 	"syscall/zx"
 
@@ -28,11 +27,11 @@ func mountSystem() {
 
 	fs, err := pkgfs.NewSinglePackage(*pkg, *blobstore)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("system: failed to initialize from package %q in %q: %s", *pkg, *blobstore, err)
 	}
 
 	if err := fs.Mount(*sysPath); err != nil {
-		log.Fatal(err)
+		log.Fatalf("system: failed to mount: %s", err)
 	}
 
 	log.Printf("system: package %s mounted at %s", *pkg, *sysPath)
@@ -47,7 +46,7 @@ func main() {
 	flag.Parse()
 
 	if *pkg == "" && len(flag.Args()) == 1 {
-		*pkg = filepath.Join(*blobstore, flag.Arg(0))
+		*pkg = flag.Arg(0)
 	}
 	if *pkg != "" {
 		mountSystem()

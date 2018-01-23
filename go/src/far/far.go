@@ -206,6 +206,14 @@ func NewReader(s io.ReaderAt) (*Reader, error) {
 	return r, nil
 }
 
+// Close closes the underlying reader source, if it implements io.Closer
+func (r *Reader) Close() error {
+	if c, ok := r.source.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
+}
+
 func (r *Reader) readIndex() error {
 	buf := make([]byte, IndexLen)
 	if _, err := r.source.ReadAt(buf, 0); err != nil {
@@ -314,6 +322,17 @@ func (r *Reader) ReadFile(path string) ([]byte, error) {
 		}
 	}
 	return nil, os.ErrNotExist
+}
+
+func (r *Reader) GetSize(path string) uint64 {
+	bpath := []byte(path)
+	for i := range r.dirEntries {
+		de := &r.dirEntries[i]
+		if bytes.Equal(bpath, r.pathData[de.NameOffset:de.NameOffset+uint32(de.NameLength)]) {
+			return de.DataLength
+		}
+	}
+	return 0
 }
 
 // IsFAR looks for the FAR magic header, returning true if it is found. Only the header is consumed from the given input. If any IO error occurs, false is returned.
