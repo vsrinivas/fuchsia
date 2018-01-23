@@ -250,7 +250,7 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
     list_add_tail(&ctx->tx_txn_bufs, &request->node);
 
     if (request->response.status == ZX_ERR_IO_REFUSED) {
-        zxlogf(INFO, "%s: resetting transmit endpoint\n", module_name);
+        zxlogf(TRACE, "%s: resetting transmit endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
     }
 
@@ -301,7 +301,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
     if (request->response.status != ZX_OK) {
-        zxlogf(INFO, "%s: usb_read_complete called with status %d\n",
+        zxlogf(TRACE, "%s: usb_read_complete called with status %d\n",
                 module_name, (int)request->response.status);
     }
 
@@ -311,7 +311,7 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     }
 
     if (request->response.status == ZX_ERR_IO_REFUSED) {
-        zxlogf(INFO, "%s: resetting receive endpoint\n", module_name);
+        zxlogf(TRACE, "%s: resetting receive endpoint\n", module_name);
         usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint.addr);
     } else if (request->response.status == ZX_OK) {
         usb_recv(ctx, request);
@@ -420,7 +420,7 @@ static int ecm_int_handler_thread(void* cookie) {
             zxlogf(TRACE, "%s: terminating interrupt handling thread\n", module_name);
             return txn->response.status;
         } else if (txn->response.status == ZX_ERR_IO_REFUSED) {
-            zxlogf(INFO, "%s: resetting interrupt endpoint\n", module_name);
+            zxlogf(TRACE, "%s: resetting interrupt endpoint\n", module_name);
             usb_reset_endpoint(&ctx->usb, ctx->int_endpoint.addr);
         } else {
             zxlogf(ERROR, "%s: error (%ld) waiting for interrupt - ignoring\n",
@@ -431,7 +431,7 @@ static int ecm_int_handler_thread(void* cookie) {
 
 static bool parse_cdc_header(usb_cs_header_interface_descriptor_t* header_desc) {
     // Check for supported CDC version
-    zxlogf(INFO, "%s: device reports CDC version as 0x%x\n", module_name, header_desc->bcdCDC);
+    zxlogf(TRACE, "%s: device reports CDC version as 0x%x\n", module_name, header_desc->bcdCDC);
     return header_desc->bcdCDC >= CDC_SUPPORTED_VERSION;
 }
 
