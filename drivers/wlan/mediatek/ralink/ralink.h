@@ -227,10 +227,12 @@ class MaxPcnt : public Register<0x040c> {
 
 class PbfCfg : public Register<0x0408> {
    public:
+    // bit 0 unknown
     WLAN_BIT_FIELD(rx0q_en, 1, 1);
     WLAN_BIT_FIELD(tx2q_en, 2, 1);
     WLAN_BIT_FIELD(tx1q_en, 3, 1);
     WLAN_BIT_FIELD(tx0q_en, 4, 1);
+    // bit 5-7 unknown
     WLAN_BIT_FIELD(hcca_mode, 8, 1);
     WLAN_BIT_FIELD(rx0q_mode, 9, 1);
     WLAN_BIT_FIELD(tx2q_mode, 10, 1);
@@ -481,6 +483,8 @@ class TxPwrCfg0 : public Register<0x1314> {
     WLAN_BIT_FIELD(tx_pwr_ofdm_12, 24, 8);
 };
 
+// TODO(porce): Implement TxPwrCfg0Ext. Study which chipset needs this.
+
 class TxPwrCfg1 : public Register<0x1318> {
    public:
     WLAN_BIT_FIELD(tx_pwr_ofdm_24, 0, 8);
@@ -582,6 +586,9 @@ class TxopCtrlCfg : public Register<0x1340> {
    public:
     WLAN_BIT_FIELD(txop_trun_en, 0, 6);
     WLAN_BIT_FIELD(lsig_txop_en, 6, 1);
+
+    // These control the behavior of secondary 20MHz channel's CCA
+    // and an option to fall back to 20MHz transmission from 40MHz one
     WLAN_BIT_FIELD(ext_cca_en, 7, 1);
     WLAN_BIT_FIELD(ext_cca_dly, 8, 8);
     WLAN_BIT_FIELD(ext_cw_min, 16, 4);
@@ -721,8 +728,11 @@ class AutoRspCfg : public Register<0x1404> {
    public:
     WLAN_BIT_FIELD(auto_rsp_en, 0, 1);
     WLAN_BIT_FIELD(bac_ackpolicy_en, 1, 1);
-    WLAN_BIT_FIELD(cts_40m_mode, 2, 1);  // CBW40
-    WLAN_BIT_FIELD(cts_40m_ref, 3, 1);   // CBW40
+
+    // CBW40 CTS behavior control
+    WLAN_BIT_FIELD(cts_40m_mode, 2, 1);
+    WLAN_BIT_FIELD(cts_40m_ref, 3, 1);
+
     WLAN_BIT_FIELD(cck_short_en, 4, 1);
     WLAN_BIT_FIELD(ctrl_wrap_en, 5, 1);
     WLAN_BIT_FIELD(bac_ack_policy, 6, 1);

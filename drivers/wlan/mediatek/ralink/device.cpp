@@ -831,9 +831,9 @@ zx_status_t Device::InitRegisters() {
     CHECK_READ(AUTO_RSP_CFG, status);
     arc.set_auto_rsp_en(1);
     arc.set_bac_ackpolicy_en(1);
-    arc.set_cts_40m_mode(0);
+    arc.set_cts_40m_mode(1);
     arc.set_cts_40m_ref(0);
-    arc.set_cck_short_en(1);
+    arc.set_cck_short_en(0);
     arc.set_ctrl_wrap_en(0);
     arc.set_bac_ack_policy(0);
     arc.set_ctrl_pwr_bit(0);
@@ -876,9 +876,9 @@ zx_status_t Device::InitRegisters() {
     status = ReadRegister(&mm20pc);
     CHECK_READ(MM20_PROT_CFG, status);
     mm20pc.set_prot_rate(0x4004);
-    mm20pc.set_prot_ctrl(0);
+    mm20pc.set_prot_ctrl(1);
     mm20pc.set_prot_nav(1);
-    mm20pc.set_txop_allow_cck_tx(1);
+    mm20pc.set_txop_allow_cck_tx(0);
     mm20pc.set_txop_allow_ofdm_tx(1);
     mm20pc.set_txop_allow_mm20_tx(1);
     mm20pc.set_txop_allow_mm40_tx(0);
@@ -892,9 +892,9 @@ zx_status_t Device::InitRegisters() {
     status = ReadRegister(&mm40pc);
     CHECK_READ(MM40_PROT_CFG, status);
     mm40pc.set_prot_rate(0x4084);
-    mm40pc.set_prot_ctrl(0);
+    mm40pc.set_prot_ctrl(1);
     mm40pc.set_prot_nav(1);
-    mm40pc.set_txop_allow_cck_tx(1);
+    mm40pc.set_txop_allow_cck_tx(0);
     mm40pc.set_txop_allow_ofdm_tx(1);
     mm40pc.set_txop_allow_mm20_tx(1);
     mm40pc.set_txop_allow_mm40_tx(1);
@@ -908,9 +908,9 @@ zx_status_t Device::InitRegisters() {
     status = ReadRegister(&gf20pc);
     CHECK_READ(GF20_PROT_CFG, status);
     gf20pc.set_prot_rate(0x4004);
-    gf20pc.set_prot_ctrl(0);
+    gf20pc.set_prot_ctrl(1);
     gf20pc.set_prot_nav(1);
-    gf20pc.set_txop_allow_cck_tx(1);
+    gf20pc.set_txop_allow_cck_tx(0);
     gf20pc.set_txop_allow_ofdm_tx(1);
     gf20pc.set_txop_allow_mm20_tx(1);
     gf20pc.set_txop_allow_mm40_tx(0);
@@ -924,9 +924,9 @@ zx_status_t Device::InitRegisters() {
     status = ReadRegister(&gf40pc);
     CHECK_READ(GF40_PROT_CFG, status);
     gf40pc.set_prot_rate(0x4084);
-    gf40pc.set_prot_ctrl(0);
+    gf40pc.set_prot_ctrl(1);
     gf40pc.set_prot_nav(1);
-    gf40pc.set_txop_allow_cck_tx(1);
+    gf40pc.set_txop_allow_cck_tx(0);
     gf40pc.set_txop_allow_ofdm_tx(1);
     gf40pc.set_txop_allow_mm20_tx(1);
     gf40pc.set_txop_allow_mm40_tx(1);
@@ -978,9 +978,9 @@ zx_status_t Device::InitRegisters() {
     TxRtsCfg txrtscfg;
     status = ReadRegister(&txrtscfg);
     CHECK_READ(TX_RTS_CFG, status);
-    txrtscfg.set_rts_rty_limit(32);
+    txrtscfg.set_rts_rty_limit(7);
     txrtscfg.set_rts_thres(2353);  // IEEE80211_MAX_RTS_THRESHOLD in Linux
-    txrtscfg.set_rts_fbk_en(0);
+    txrtscfg.set_rts_fbk_en(1);
     status = WriteRegister(txrtscfg);
     CHECK_WRITE(TX_RTS_CFG, status);
 
@@ -1007,6 +1007,7 @@ zx_status_t Device::InitRegisters() {
     status = WriteRegister(ppc);
     CHECK_WRITE(PWR_PIN_CFG, status);
 
+    // TODO(porce): Factor out encryption key clearing
     for (int i = 0; i < 4; i++) {
         status = WriteRegister(SHARED_KEY_MODE_BASE + i * sizeof(uint32_t), 0);
         CHECK_WRITE(SHARED_KEY_MODE, status);
@@ -1840,6 +1841,7 @@ zx_status_t Device::WaitForMacCsr() {
 }
 
 zx_status_t Device::SetRxFilter() {
+    // TODO(porce): Support dynamic filter configuration
     RxFiltrCfg rfc;
     zx_status_t status = ReadRegister(&rfc);
     CHECK_READ(RX_FILTR_CFG, status);
@@ -1857,8 +1859,8 @@ zx_status_t Device::SetRxFilter() {
     rfc.set_drop_cts(1);
     rfc.set_drop_rts(1);
     rfc.set_drop_pspoll(1);
-    rfc.set_drop_ba(0);
-    rfc.set_drop_bar(1);
+    rfc.set_drop_ba(0);   // TODO(porce): Investigate the merit of
+    rfc.set_drop_bar(1);  // independent filtering of BA and BAR
     rfc.set_drop_ctrl_rsv(1);
     status = WriteRegister(rfc);
     CHECK_WRITE(RX_FILTR_CFG, status);
@@ -3410,7 +3412,6 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     chan.primary = 1;
     chan.cbw = CBW20;
     status = WlanmacSetChannel(0, &chan);
-    if (status != ZX_OK) { warnf("could not set channel err=%d\n", status); }
 
     infof("wlan started\n");
     return ZX_OK;
