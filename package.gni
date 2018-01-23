@@ -2,12 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/clang_toolchain.gni")
-
-# TODO(raggi): discuss how we want to handle the keys and then re-organize.
-# This value is shared with //build/gn/BUILD.gn.
 declare_args() {
-  package_signing_key = "//build/development.key"
+  # Build packages as FAR archives and store them in /system. This is required
+  # for --bootfs builds.
+  bootfs_packages = false
 }
 
 # Defines a package
@@ -151,7 +149,10 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
       app = false
-      fuchsia_package = false
+      # By default we want to build Fuchsia packages, but they are not
+      # supported under bootfs, so in that case we build the old archive format
+      # packages.
+      fuchsia_package = !bootfs_packages
       system_image = false
       binaries = []
       drivers = []

@@ -3,77 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/bootdata.gni")
+import("//build/gn/config.gni")
 import("//build/gn/packages.gni")
+import("//build/package.gni")
 import("//build/toolchain/clang_toolchain.gni")
-
-declare_args() {
-  # Manifest files describing target libraries from toolchains.
-  # TODO(TO-471): This is ignored as a build argument and overridden below.
-  toolchain_manifests = [ "${clang_prefix}/../lib/${clang_target}.manifest" ]
-
-  # Groups to include from the Zircon /boot manifest into /boot.
-  # This is either "all" or a comma-separated list of one or more of:
-  #   core -- necessary to boot
-  #   misc -- utilities in /bin
-  #   test -- test binaries in /bin and /test
-  zircon_boot_groups = "core"
-
-  # A list of labels for `bootdata` targets (see //build/bootdata.gni)
-  # to roll into the final bootable image.  These targets must use the
-  # default `output_name` and `output_extension`.
-  extra_bootdata = []
-
-  # File containing kernel command line arguments to roll into the
-  # bootdata image used for booting.
-  kernel_cmdline_file = ""
-
-  # A list of platforms, i.e. different Zircon kernels that were built.
-  # There will be a different `bootdata-${platform}.bin` built for each.
-  if (target_cpu == "x64") {
-    zircon_platforms = [ "x86" ]
-  } else {
-    zircon_platforms = [ target_cpu ]
-  }
-
-  # The package key to use for signing the system package. New keys can be
-  # generated with the `pm` host command.
-  system_package_key = "//build/development.key"
-
-  # The size of the minfs data partition image to create. Normally this image
-  # is added to FVM, and can therefore expand as needed. It must be at least
-  # 10mb (the default) in order to be succesfully initialized.
-  data_image_size = "10m"
-
-  # Build boot images that prefer Zedboot over local boot.
-  always_zedboot = false
-
-  # Whether to automatically generate BUILD.gn files for Zircon artifacts.
-  generate_zircon_gn_files = false
-}
-
-declare_args() {
-  # Groups to include from the Zircon /boot manifest into /system
-  # (instead of into /boot like Zircon's own bootdata.bin does).
-  # Should not include any groups that are also in zircon_boot_groups,
-  # which see.  If zircon_boot_groups is "all" then this should be "".
-  if (zircon_boot_groups == "all") {
-    zircon_system_groups = ""
-  } else {
-    # TODO(mcgrathr): Could default to "" for !is_debug, or "production
-    # build".  Note including "test" here places all of Zircon's tests
-    # into /system/test, which means that Fuchsia bots run those tests
-    # too.
-    zircon_system_groups = "misc,test"
-  }
-}
-
-if (zircon_boot_groups == "all") {
-  assert(zircon_system_groups == "",
-         "zircon_boot_groups already has everything")
-} else {
-  assert(zircon_system_groups != "all" && zircon_system_groups != "core",
-         "zircon_system_groups cannot include core (or all)")
-}
 
 # TODO(TO-471): The toolchain package will provide this file
 # but it doesn't yet, so generate it with this kludge.
@@ -102,45 +35,6 @@ action("generate_clang_toolchain_manifest") {
   ]
 }
 
-# Permit dependencies on testonly targets from packages.
-testonly = true
-
-if (current_cpu == "x64") {
-  zircon_cpu = "x86-64"
-} else {
-  zircon_cpu = current_cpu
-}
-
-zircon_boot_manifest =
-    "//out/build-zircon/build-user-${zircon_cpu}/bootfs.manifest"
-zircon_ulib_manifest =
-    "//out/build-zircon/build-user-${zircon_cpu}-ulib/bootfs.manifest"
-
-final_boot_manifest = "$root_out_dir/boot.manifest"
-final_system_manifest = "$root_out_dir/system.manifest"
-
-# pkgsvr_index is the static packages index for the package server, it contains
-# all package content addresses that are added to the blobstore during the
-# build.
-pkgsvr_index = "$root_gen_dir/pkgsvr_index"
-packages_dir = "$root_build_dir/package"
-# Packages blobs manifest is all the blobs from inside all Fuchsia packages, as well as their meta.fars.
-packages_blobs_manifest = "$root_build_dir/packages_blobs.manifest"
-# Final blobstore manifest is the packages_blobs_manifest.
-final_blobstore_manifest = "$root_build_dir/blobstore.manifest"
-
-# Keep the following in sync with the values in
-#   //scripts/devshell/lib/image_build_vars.sh
-images_dir = "$root_out_dir/images"
-system_package_dir = "$root_gen_dir/system.pkg"
-system_package_meta_far = "$system_package_dir/meta.far"
-system_package_cmdline = "$images_dir/cmdline.txt"
-blobstore_image_path = "$images_dir/blobstore.blk"
-data_image_path = "$images_dir/data.blk"
-fvm_image_path = "$images_dir/fvm.blk"
-fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"
-fvm_data_sparse_image_path = "$images_dir/fvm.data.sparse.blk"
-
 finalize_manifests_extra = [
   "elfinfo.py",
   "manifest.py",
@@ -149,7 +43,10 @@ finalize_manifests_extra = [
 ]
 
 action("finalize_manifests") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//build/bootfs:*",
+  ]
 
   packages_file = "$target_gen_dir/packages"
   system_manifest_file = "$target_gen_dir/system.bootfs.manifest"
@@ -501,16 +398,6 @@ foreach(platform, zircon_platforms) {
       inputs += get_target_outputs(label)
     }
   }
-}
-
-# Package up the /system filesystem.
-bootdata("system_bootfs") {
-  deps = [
-    ":finalize_manifests",
-  ]
-  inputs = [
-    final_system_manifest,
-  ]
 }
 
 # data.blk creates an empty but initialized minfs data partition. The partition
@@ -1004,37 +891,6 @@ group("images") {
         ":zedboot-${platform}.vboot",
       ]
     }
-  }
-}
-
-# DEPRECATED
-# Roll those together into the image for booting with /system from RAM disk.
-bootdata("mkbootfs") {
-  output_name = "user"
-  output_extension = "bootfs"
-  deps = [
-    ":bootdata-${zircon_platforms[0]}",
-    ":system_bootfs",
-  ]
-  inputs = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
-  deps += extra_bootdata
-  foreach(label, extra_bootdata) {
-    # get_target_outputs only works on labels defined in the same file.
-    # So just assume each `bootdata` target used the defaults so its
-    # output file is computable directly from the target name.
-    inputs += [ "$root_out_dir/" + get_label_info(label, "name") + ".bin" ]
-  }
-}
-
-group("bootfs") {
-  deps = [
-    ":mkbootfs",
-  ]
-  foreach(platform, zircon_platforms) {
-    deps += [ ":bootdata-${platform}" ]
   }
 }
 
