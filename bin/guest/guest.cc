@@ -363,6 +363,7 @@ int main(int argc, char** argv) {
   machina::VirtioInput input(&input_dispatcher, guest.phys_mem(),
                              "machina-input", "serial-number");
   machina::VirtioGpu gpu(guest.phys_mem());
+  fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
   if (options.enable_gpu()) {
     // Setup input device.
@@ -376,7 +377,6 @@ int main(int argc, char** argv) {
     }
 
     // Setup GPU device.
-    fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
     status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
     if (status == ZX_OK) {
       // If we were able to acquire the zircon framebuffer then no compositor
