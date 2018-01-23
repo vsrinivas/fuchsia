@@ -7,6 +7,7 @@
 
 #include "garnet/lib/ui/scenic/resources/nodes/scene.h"
 #include "garnet/lib/ui/scenic/resources/resource.h"
+#include "garnet/lib/ui/scenic/resources/buffer.h"
 
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/stage.h"
@@ -29,6 +30,13 @@ class Camera final : public Resource {
                      const glm::vec3& eye_up,
                      float fovy);
 
+  // Sets the buffer for this camera. For details see SetCameraPoseBufferOp in
+  // //garnet/public/lib/ui/scenic/fidl/ops.fidl
+  void SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
+                     uint32_t num_entries,
+                     uint64_t base_time,
+                     uint64_t time_interval);
+
   const glm::vec3& eye_position() const { return eye_position_; }
   const glm::vec3& eye_look_at() const { return eye_look_at_; }
   const glm::vec3& eye_up() const { return eye_up_; }
@@ -48,10 +56,16 @@ class Camera final : public Resource {
  private:
   ScenePtr scene_;
 
-  glm::vec3 eye_position_;
-  glm::vec3 eye_look_at_;
-  glm::vec3 eye_up_;
+  glm::vec3 eye_position_ = glm::vec3();
+  glm::vec3 eye_look_at_ = glm::vec3();
+  glm::vec3 eye_up_ = glm::vec3(0.0f, 1.0f, 0.0f);
   float fovy_ = 0;
+
+  // PoseBuffer parameters
+  fxl::RefPtr<Buffer> pose_buffer_;
+  uint32_t num_entries_ = 0;
+  uint64_t base_time_ = 0;
+  uint64_t time_interval_ = 0;
 };
 
 using CameraPtr = fxl::RefPtr<Camera>;

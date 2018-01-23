@@ -584,7 +584,10 @@ bool Session::ApplySetCameraPoseBufferOp(
            "invalid camera ID";
     return false;
   }
-  // Do the actual thing here in a later change
+
+  camera->SetPoseBuffer(buffer, op->num_entries, op->base_time,
+                        op->time_interval);
+
   return true;
 }
 

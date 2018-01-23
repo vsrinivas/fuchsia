@@ -23,6 +23,18 @@ void Camera::SetProjection(const glm::vec3& eye_position,
   fovy_ = fovy;
 }
 
+void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
+                           uint32_t num_entries,
+                           uint64_t base_time,
+                           uint64_t time_interval) {
+  pose_buffer_ = buffer;
+  num_entries_ = num_entries;
+  base_time_ = base_time;
+  time_interval_ = time_interval;
+  error_reporter()->ERROR() << "SetPoseBuffer is only partially implemented, "
+                               "please do not use outside of tests yet";
+}
+
 escher::Camera Camera::GetEscherCamera(
     const escher::ViewingVolume& volume) const {
   if (fovy_ == 0.f) {
