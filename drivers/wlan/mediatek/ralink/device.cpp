@@ -3459,25 +3459,14 @@ void DumpTxwi(TxPacket* packet) {
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
 
-    size_t len = pkt->packet_head->len;
-    if (pkt->packet_tail != nullptr) {
-        if (pkt->packet_tail->len < pkt->tail_offset) { return ZX_ERR_INVALID_ARGS; }
-        len += pkt->packet_tail->len - pkt->tail_offset;
-    }
+    size_t pkt_length = tx_pkt_len(pkt);
+    size_t txwi_length = txwi_len();
+    size_t align_pad_length = align_pad_len(pkt);
+    size_t req_length = usb_tx_pkt_len(pkt);
 
-    // Our USB packet looks like:
-    //   TxInfo (4 bytes)
-    //   TXWI fields (16-20 bytes, depending on device)
-    //   packet (len bytes)
-    //   alignment zero padding (round up to a 4-byte boundary)
-    //   terminal zero padding (4 bytes)
-    size_t txwi_len = (rt_type_ == RT5592) ? 20 : 16;
-    size_t align_pad_len = ((len + 3) & ~3) - len;
-    size_t terminal_pad_len = 4;
-    size_t req_len = sizeof(TxInfo) + txwi_len + len + align_pad_len + terminal_pad_len;
-
-    if (req_len > kWriteBufSize) {
-        errorf("usb request buffer size insufficient for tx packet -- %zu bytes needed\n", req_len);
+    if (req_length > kWriteBufSize) {
+        errorf("usb request buffer size insufficient for tx packet -- %zu bytes needed\n",
+               req_length);
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -3505,10 +3494,10 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
         return status;
     }
 
-    std::memset(packet, 0, sizeof(TxInfo) + txwi_len);
+    std::memset(packet, 0, sizeof(TxInfo) + txwi_length);
 
     // The length field in TxInfo includes everything from the TXWI fields to the alignment pad
-    packet->tx_info.set_tx_pkt_length(txwi_len + len + align_pad_len);
+    packet->tx_info.set_tx_pkt_length(txwi_length + pkt_length + align_pad_length);
 
     // TODO(tkilbourn): set these more appropriately
     const bool protected_frame = (pkt->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
@@ -3562,7 +3551,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     // Separate the workflow for the BlockAck originator case from the responder case.
     txwi1.set_ba_win_size(64);
     txwi1.set_wcid(wcid);
-    txwi1.set_mpdu_total_byte_count(len);
+    txwi1.set_mpdu_total_byte_count(pkt_length);
     txwi1.set_tx_packet_id(10);
 
     Txwi2& txwi2 = packet->txwi2;
@@ -3573,15 +3562,15 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
 
     // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
     // consider them when determining the start of the payload.
-    size_t payload_offset = txwi_len - 16;
+    size_t payload_offset = txwi_length - 16;
     uint8_t* payload_ptr = &packet->payload[payload_offset];
 
     // Write out the payload
     WritePayload(payload_ptr, pkt);
-    std::memset(&payload_ptr[len], 0, align_pad_len + terminal_pad_len);
+    std::memset(&payload_ptr[pkt_length], 0, align_pad_length + terminal_pad_len());
 
     // Send the whole thing
-    req->header.length = req_len;
+    req->header.length = req_length;
     usb_request_queue(&usb_, req);
 
 #if RALINK_DUMP_TX
@@ -4010,6 +3999,38 @@ void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
 
     auto dev = static_cast<Device*>(cookie);
     dev->HandleTxComplete(request);
+}
+
+constexpr size_t Device::tx_pkt_len(wlan_tx_packet_t* pkt) {
+    auto len = pkt->packet_head->len;
+    if (pkt->packet_tail != nullptr) {
+        if (pkt->packet_tail->len < pkt->tail_offset) { return ZX_ERR_INVALID_ARGS; }
+        len += pkt->packet_tail->len - pkt->tail_offset;
+    }
+    return len;
+}
+
+constexpr size_t Device::txwi_len() {
+    return (rt_type_ == RT5592) ? 20 : 16;
+}
+
+constexpr size_t Device::align_pad_len(wlan_tx_packet_t* pkt) {
+    auto len = tx_pkt_len(pkt);
+    return ((len + 3) & ~3) - len;
+}
+
+constexpr size_t Device::terminal_pad_len() {
+    return 4;
+}
+
+constexpr size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
+    // Our USB packet looks like:
+    //   TxInfo (4 bytes)
+    //   TXWI fields (16-20 bytes, depending on device)
+    //   packet (len bytes)
+    //   alignment zero padding (round up to a 4-byte boundary)
+    //   terminal zero padding (4 bytes)
+    return sizeof(TxInfo) + txwi_len() + tx_pkt_len(pkt) + align_pad_len(pkt) + terminal_pad_len();
 }
 
 }  // namespace ralink
