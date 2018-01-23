@@ -45,19 +45,19 @@ public:
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(vmoid_t id, uint64_t relative_block, uint64_t absolute_block, uint64_t nblocks) {
+    void Enqueue(vmoid_t id, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks) {
         for (size_t i = 0; i < count_; i++) {
             if (requests_[i].vmoid != id) {
                 continue;
             }
 
-            if (requests_[i].vmo_offset == relative_block) {
+            if (requests_[i].vmo_offset == vmo_offset) {
                 // Take the longer of the operations (if operating on the same
                 // blocks).
                 requests_[i].length = (requests_[i].length > nblocks) ? requests_[i].length : nblocks;
                 return;
-            } else if ((requests_[i].vmo_offset + requests_[i].length == relative_block) &&
-                       (requests_[i].dev_offset + requests_[i].length == absolute_block)) {
+            } else if ((requests_[i].vmo_offset + requests_[i].length == vmo_offset) &&
+                       (requests_[i].dev_offset + requests_[i].length == dev_offset)) {
                 // Combine with the previous request, if immediately following.
                 requests_[i].length += nblocks;
                 return;
@@ -69,8 +69,8 @@ public:
         // NOTE: It's easier to compare everything when dealing
         // with blocks (not offsets!) so the following are described in
         // terms of blocks until we Flush().
-        requests_[count_].vmo_offset = relative_block;
-        requests_[count_].dev_offset = absolute_block;
+        requests_[count_].vmo_offset = vmo_offset;
+        requests_[count_].dev_offset = dev_offset;
         requests_[count_].length = nblocks;
         count_++;
 
@@ -127,13 +127,12 @@ public:
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(const void* id, uint64_t relative_block,
-                 uint64_t absolute_block, uint64_t nblocks) {
+    void Enqueue(const void* id, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks) {
         for (size_t b = 0; b < nblocks; b++) {
             if (Write) {
-                handler_->Writeblk(absolute_block + b, GetBlock<BlockSize>(id, relative_block + b));
+                handler_->Writeblk(dev_offset + b, GetBlock<BlockSize>(id, vmo_offset + b));
             } else {
-                handler_->Readblk(absolute_block + b, GetBlock<BlockSize>(id, relative_block + b));
+                handler_->Readblk(dev_offset + b, GetBlock<BlockSize>(id, vmo_offset + b));
             }
         }
     }

@@ -27,21 +27,21 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block,
-                       uint64_t absolute_block, uint64_t nblocks) {
-    validate_vmo_size(vmo, static_cast<blk_t>(relative_block));
+void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset,
+                       uint64_t nblocks) {
+    validate_vmo_size(vmo, static_cast<blk_t>(vmo_offset));
     for (size_t i = 0; i < count_; i++) {
         if (requests_[i].vmo != vmo) {
             continue;
         }
 
-        if (requests_[i].vmo_offset == relative_block) {
+        if (requests_[i].vmo_offset == vmo_offset) {
             // Take the longer of the operations (if operating on the same
             // blocks).
             requests_[i].length = (requests_[i].length > nblocks) ? requests_[i].length : nblocks;
             return;
-        } else if ((requests_[i].vmo_offset + requests_[i].length == relative_block) &&
-                   (requests_[i].dev_offset + requests_[i].length == absolute_block)) {
+        } else if ((requests_[i].vmo_offset + requests_[i].length == vmo_offset) &&
+                   (requests_[i].dev_offset + requests_[i].length == dev_offset)) {
             // Combine with the previous request, if immediately following.
             requests_[i].length += nblocks;
             return;
@@ -52,8 +52,8 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block,
     // NOTE: It's easier to compare everything when dealing
     // with blocks (not offsets!) so the following are described in
     // terms of blocks until we Flush().
-    requests_[count_].vmo_offset = relative_block;
-    requests_[count_].dev_offset = absolute_block;
+    requests_[count_].vmo_offset = vmo_offset;
+    requests_[count_].dev_offset = dev_offset;
     requests_[count_].length = nblocks;
     count_++;
 

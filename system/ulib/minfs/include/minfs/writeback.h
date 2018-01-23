@@ -59,8 +59,7 @@ public:
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
-                 uint64_t nblocks);
+    void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
     size_t Count() const { return count_; }
     write_request_t* Requests() { return &requests_[0]; }
 
