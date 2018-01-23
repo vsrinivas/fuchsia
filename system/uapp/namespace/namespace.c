@@ -36,6 +36,7 @@ int run_in_namespace(int argc, const char* const* argv,
         fprintf(stderr, "error: failed to create namespace: %d\n", r);
         return -1;
     }
+    const char* replacement_argv0 = NULL;
     for (size_t n = 0; n < count; n++) {
         const char* dst = *mapping++;
         char* src = strchr(dst, '=');
@@ -44,6 +45,14 @@ int run_in_namespace(int argc, const char* const* argv,
             return -1;
         }
         *src++ = 0;
+        if (strcmp(dst, "--replace-child-argv0") == 0) {
+            if (replacement_argv0) {
+                fprintf(stderr, "error: multiple --replace-child-argv0 specified\n");
+                return -1;
+            }
+            replacement_argv0 = src;
+            continue;
+        }
         int fd = open(src, O_RDONLY | O_DIRECTORY);
         if (fd < 0) {
             fprintf(stderr, "error: cannot open '%s'\n", src);
@@ -70,7 +79,18 @@ int run_in_namespace(int argc, const char* const* argv,
     launchpad_t* lp;
     launchpad_create(0, argv[0], &lp);
     launchpad_clone(lp, LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
-    launchpad_set_args(lp, argc, argv);
+
+    if (replacement_argv0) {
+        const char** argv_with_replaced_argv0 = malloc(argc * sizeof(const char*));
+        argv_with_replaced_argv0[0] = replacement_argv0;
+        for (int i = 1; i < argc; i++)
+            argv_with_replaced_argv0[i] = argv[i];
+        launchpad_set_args(lp, argc, argv_with_replaced_argv0);
+        free(argv_with_replaced_argv0);
+    } else {
+        launchpad_set_args(lp, argc, argv);
+    }
+
     launchpad_set_nametable(lp, flat->count, flat->path);
     launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
     launchpad_load_from_vmo(lp, binary);
@@ -126,9 +146,11 @@ int main(int argc, const char* const* argv) {
         return run_in_namespace(child_argc, child_argv, count, mapping);
     }
 
-    printf("Usage: %s ( --dump | [dst=src]+ [ -- cmd arg1 ... argn ] )\n"
+    printf("Usage: %s ( --dump | [dst=src]+ [--replace-child-argv0=child_argv0] [ -- cmd arg1 ... argn ] )\n"
            "Dumps the current namespace or runs a command with src mapped to dst.\n"
-           "If no command is specified, runs a shell.\n",
+           "If no command is specified, runs a shell.\n"
+           "If --replace-child-argv0 is supplied, that string will be used for argv[0]\n"
+           "as the child process sees it.\n",
            argv[0]);
     return -1;
 }
