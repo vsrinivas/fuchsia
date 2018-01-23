@@ -9,7 +9,6 @@
 
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <zircon/thread_annotations.h>
 #include <fdio/debug.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>

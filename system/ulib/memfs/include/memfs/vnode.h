@@ -7,7 +7,6 @@
 #include <threads.h>
 
 #include <zircon/compiler.h>
-#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 #include <fdio/io.h>
 #include <fdio/remoteio.h>
