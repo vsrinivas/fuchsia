@@ -87,6 +87,19 @@ protected:
     std::weak_ptr<MsdArmConnection> connection_;
 };
 
+class MsdArmDevice::PerfCounterRequest : public DeviceRequest {
+public:
+    PerfCounterRequest(uint32_t type) : type_(type) {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override
+    {
+        return device->ProcessPerfCounterRequest(type_);
+    }
+
+    uint32_t type_;
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdArmDevice> MsdArmDevice::Create(void* device_handle, bool start_device_thread)
@@ -196,6 +209,8 @@ bool MsdArmDevice::Init(void* device_handle)
     enabled_cores = gpu_features_.shader_present;
 #endif
     power_manager_->EnableCores(register_io_.get(), enabled_cores);
+    perf_counters_ = std::make_unique<PerformanceCounters>(this);
+
     return true;
 }
 
@@ -310,6 +325,17 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
             enable_reg.ace().set(true);
             enable_reg.WriteTo(register_io_.get());
         }
+    }
+    if (irq_status.performance_counter_sample_completed().get()) {
+        uint64_t duration_ms = 0;
+        std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
+
+        magma::log(magma::LOG_INFO, "Performance counter read complete, duration %lu ms:\n",
+                   duration_ms);
+        for (uint32_t i = 0; i < perf_result.size(); ++i) {
+            magma::log(magma::LOG_INFO, "Performance counter %d: %u\n", i, perf_result[i]);
+        }
+        irq_status.performance_counter_sample_completed().set(0);
     }
 
     if (irq_status.reg_value()) {
@@ -851,6 +877,29 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
     }
 }
 
+void MsdArmDevice::RequestPerfCounterOperation(uint32_t type)
+{
+    EnqueueDeviceRequest(std::make_unique<PerfCounterRequest>(type));
+}
+
+magma::Status MsdArmDevice::ProcessPerfCounterRequest(uint32_t type)
+{
+    if (type == (MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE | MAGMA_DUMP_TYPE_PERF_COUNTERS)) {
+        if (!perf_counters_->TriggerRead(true))
+            return MAGMA_STATUS_INVALID_ARGS;
+    } else if (type == MAGMA_DUMP_TYPE_PERF_COUNTERS) {
+        if (!perf_counters_->TriggerRead(false))
+            return MAGMA_STATUS_INVALID_ARGS;
+    } else if (type == MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE) {
+        if (!perf_counters_->Enable())
+            return MAGMA_STATUS_INVALID_ARGS;
+    } else {
+        DASSERT(false);
+        return MAGMA_STATUS_INVALID_ARGS;
+    }
+    return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
@@ -868,4 +917,14 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
     return MsdArmDevice::cast(device)->QueryInfo(id, value_out);
 }
 
-void msd_device_dump_status(msd_device_t* device) { MsdArmDevice::cast(device)->DumpStatusToLog(); }
+void msd_device_dump_status(msd_device_t* device, uint32_t dump_type)
+{
+    uint32_t perf_dump_type =
+        dump_type & (MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE | MAGMA_DUMP_TYPE_PERF_COUNTERS);
+    if (perf_dump_type) {
+        MsdArmDevice::cast(device)->RequestPerfCounterOperation(perf_dump_type);
+    }
+    if (!dump_type || (dump_type & MAGMA_DUMP_TYPE_NORMAL)) {
+        MsdArmDevice::cast(device)->DumpStatusToLog();
+    }
+}

@@ -81,6 +81,10 @@ public:
 
 class GpuStatus : public magma::RegisterBase {
 public:
+    DEF_BIT(0, gpu_active);
+    DEF_BIT(1, power_active);
+    DEF_BIT(2, performance_counters_active);
+
     static auto Get() { return magma::RegisterAddr<GpuStatus>(0x34); }
 };
 
@@ -150,6 +154,48 @@ public:
     static auto GetIrqClear() { return magma::RegisterAddr<JobIrqFlags>(0x1004); }
     static auto GetIrqMask() { return magma::RegisterAddr<JobIrqFlags>(0x1008); }
     static auto GetStatus() { return magma::RegisterAddr<JobIrqFlags>(0x100c); }
+};
+
+// Not legal to write to while the performance counters are enabled.
+class PerformanceCounterBase : public magma::RegisterPairBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterBase>(0x60); }
+};
+
+class PerformanceCounterConfig : public magma::RegisterBase {
+public:
+    enum Mode {
+        kModeDisabled = 0,
+        kModeManual = 1,
+    };
+    DEF_FIELD(3, 0, mode);
+    DEF_FIELD(7, 4, address_space);
+
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterConfig>(0x68); }
+};
+
+// Not legal to write to while the performance counters are enabled.
+class PerformanceCounterJmEnable : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterJmEnable>(0x6c); }
+};
+
+// Not legal to write to while the performance counters are enabled.
+class PerformanceCounterShaderEnable : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterShaderEnable>(0x70); }
+};
+
+// Not legal to write to while the performance counters are enabled.
+class PerformanceCounterTilerEnable : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterTilerEnable>(0x74); }
+};
+
+// Not legal to write to while the performance counters are enabled.
+class PerformanceCounterMmuL2Enable : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PerformanceCounterMmuL2Enable>(0x7c); }
 };
 
 class CoreReadyState {

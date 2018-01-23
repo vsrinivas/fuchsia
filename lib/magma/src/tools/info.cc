@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h> // for close
 
 #include "magma_util/macros.h"
@@ -19,7 +20,12 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int ret = fdio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, nullptr, 0, nullptr, 0);
+    uint32_t dump_type = 0;
+    if (argc >= 2) {
+        dump_type = atoi(argv[1]);
+    }
+
+    int ret = fdio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, &dump_type, sizeof(dump_type), nullptr, 0);
     magma::log(magma::LOG_INFO, "Dumping system driver status to system log (%d)", ret);
 
     close(fd);

@@ -36,6 +36,12 @@ extern "C" {
 #define MAGMA_CACHE_POLICY_WRITE_COMBINING 1
 #define MAGMA_CACHE_POLICY_UNCACHED 2
 
+#define MAGMA_DUMP_TYPE_NORMAL (1 << 0)
+// Dump current perf counters and disable them
+#define MAGMA_DUMP_TYPE_PERF_COUNTERS (1 << 1)
+// Start perf counter recording
+#define MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE (1 << 2)
+
 typedef int32_t magma_status_t;
 
 typedef uint32_t magma_cache_operation_t;

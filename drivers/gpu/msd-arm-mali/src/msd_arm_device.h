@@ -21,6 +21,7 @@
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_arm_connection.h"
+#include "performance_counters.h"
 #include "platform_device.h"
 #include "platform_interrupt.h"
 #include "platform_semaphore.h"
@@ -29,7 +30,8 @@
 class MsdArmDevice : public msd_device_t,
                      public JobScheduler::Owner,
                      public MsdArmConnection::Owner,
-                     public AddressManager::Owner {
+                     public AddressManager::Owner,
+                     public PerformanceCounters::Owner {
 public:
     // Creates a device for the given |device_handle| and returns ownership.
     // If |start_device_thread| is false, then StartDeviceThread should be called
@@ -101,6 +103,12 @@ public:
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
+    void RequestPerfCounterOperation(uint32_t type);
+
+    // PerformanceCounters::Owner implementation.
+    AddressManager* address_manager() override { return address_manager_.get(); }
+    MsdArmConnection::Owner* connection_owner() override { return this; }
+
 private:
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
     if (x)                                                                                         \
@@ -118,6 +126,7 @@ private:
     class MmuInterruptRequest;
     class ScheduleAtomRequest;
     class CancelAtomsRequest;
+    class PerfCounterRequest;
 
     magma::RegisterIo* register_io() override
     {
@@ -147,6 +156,7 @@ private:
     magma::Status ProcessMmuInterrupt();
     magma::Status ProcessScheduleAtoms();
     magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
+    magma::Status ProcessPerfCounterRequest(uint32_t type);
 
     void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
 
@@ -191,6 +201,8 @@ private:
     std::unique_ptr<JobScheduler> scheduler_;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
     uint64_t cycle_counter_refcount_ = 0;
+
+    std::unique_ptr<PerformanceCounters> perf_counters_;
 };
 
 #endif // MSD_ARM_DEVICE_H

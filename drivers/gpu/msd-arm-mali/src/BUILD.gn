@@ -40,6 +40,8 @@ source_set("src") {
     "msd_arm_driver.h",
     "msd_arm_semaphore.cc",
     "msd_arm_semaphore.h",
+    "performance_counters.cc",
+    "performance_counters.h",
     "power_manager.cc",
     "power_manager.h",
     "registers.h",

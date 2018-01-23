@@ -35,6 +35,9 @@ public:
 
     std::shared_ptr<AddressSlotMapping> GetMappingForSlot(uint32_t slot);
 
+    std::shared_ptr<AddressSlotMapping>
+    AllocateMappingForAddressSpace(std::shared_ptr<MsdArmConnection> connection);
+
     // AddressSpaceObserver implementation.
     void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length,
                                   bool synchronous) override;
@@ -75,8 +78,6 @@ private:
     std::shared_ptr<AddressSlotMapping>
     GetMappingForAddressSpaceUnlocked(const AddressSpace* address_space)
         FXL_EXCLUSIVE_LOCKS_REQUIRED(address_slot_lock_);
-    std::shared_ptr<AddressSlotMapping>
-    AllocateMappingForAddressSpace(std::shared_ptr<MsdArmConnection> connection);
     std::shared_ptr<AddressSlotMapping> AssignToSlot(std::shared_ptr<MsdArmConnection> connection,
                                                      uint32_t slot)
         FXL_EXCLUSIVE_LOCKS_REQUIRED(address_slot_lock_);

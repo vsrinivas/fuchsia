@@ -196,4 +196,4 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-void msd_device_dump_status(msd_device_t* device) {}
+void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {}

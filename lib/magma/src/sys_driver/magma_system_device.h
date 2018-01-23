@@ -58,7 +58,7 @@ public:
     // Called on connection thread
     void ConnectionClosed(std::thread::id thread_id);
 
-    void DumpStatus() { msd_device_dump_status(msd_dev()); }
+    void DumpStatus(uint32_t dump_type) { msd_device_dump_status(msd_dev(), dump_type); }
 
     magma::Status Query(uint32_t id, uint64_t* value_out)
     {

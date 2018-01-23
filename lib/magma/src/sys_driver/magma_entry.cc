@@ -115,9 +115,17 @@ static zx_status_t device_ioctl(void* context, uint32_t op, const void* in_buf, 
 
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
+            uint32_t dump_type = 0;
+            if (in_buf && in_len >= sizeof(uint32_t)) {
+                dump_type = *reinterpret_cast<const uint32_t*>(in_buf);
+            }
+            if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                              MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %d", dump_type);
+            }
             std::unique_lock<std::mutex> lock(device->magma_mutex);
             if (device->magma_system_device)
-                device->magma_system_device->DumpStatus();
+                device->magma_system_device->DumpStatus(dump_type);
             result = ZX_OK;
             break;
         }
