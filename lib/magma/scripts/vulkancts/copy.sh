@@ -13,7 +13,7 @@ dest_dir=/data/vulkancts
 netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
 
 fuchsia_platform=x86-64
-if [[ $platform == *"-arm64" ]]; then
+if [[ $platform == *"arm64" ]]; then
     fuchsia_platform=aarch64
 fi
 
