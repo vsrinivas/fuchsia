@@ -20,12 +20,15 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* app_context) {
   return cobalt::InitializeCobalt(task_runner, app_context,
-                                  kLedgerCobaltProjectId, kCobaltMetricId,
-                                  kCobaltEncodingId, &g_cobalt_context);
+                                  kLedgerCobaltProjectId, &g_cobalt_context);
 }
 
 void ReportEvent(CobaltEvent event) {
-  cobalt::ReportEvent(static_cast<uint32_t>(event), g_cobalt_context);
+  cobalt::ValuePtr value = cobalt::Value::New();
+  value->set_index_value(static_cast<uint32_t>(event));
+  cobalt::CobaltObservation observation(kCobaltMetricId, kCobaltEncodingId,
+                                        std::move(value));
+  cobalt::ReportObservation(observation, g_cobalt_context);
 }
 
 }  // namespace ledger

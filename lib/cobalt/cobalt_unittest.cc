@@ -15,7 +15,6 @@ namespace cobalt {
 constexpr int32_t kFakeCobaltProjectId = 1;
 constexpr int32_t kFakeCobaltMetricId = 2;
 constexpr int32_t kFakeCobaltEncodingId = 3;
-constexpr int32_t kFakeCobaltEvent = 4;
 
 class FakeTaskRunner : public fxl::TaskRunner {
  public:
@@ -46,46 +45,33 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   void AddObservation(uint32_t metric_id,
                       uint32_t encoding_id,
                       ValuePtr observation,
-                      const AddObservationCallback& callback) override {}
+                      const AddObservationCallback& callback) override {
+    RecordCall("AddObservation", observation);
+    callback(Status::OK);
+  };
 
   void AddStringObservation(
       uint32_t metric_id,
       uint32_t encoding_id,
       const fidl::String& observation,
-      const AddStringObservationCallback& callback) override {
-    ValuePtr value = Value::New();
-    value->set_string_value(observation);
-    RecordCall("AddStringObservation", value);
-    callback(Status::OK);
-  };
+      const AddStringObservationCallback& callback) override {};
 
-  void AddIntObservation(uint32_t metric_id,
-                         uint32_t encoding_id,
-                         const int64_t observation,
-                         const AddIntObservationCallback& callback) override {
-    ValuePtr value = Value::New();
-    value->set_int_value(observation);
-    RecordCall("AddIntObservation", value);
-    callback(Status::OK);
-  };
+  void AddIntObservation(
+      uint32_t metric_id, uint32_t encoding_id, const int64_t observation,
+      const AddIntObservationCallback& callback) override {};
 
   void AddDoubleObservation(
       uint32_t metric_id, uint32_t encoding_id, const double observation,
-      const AddDoubleObservationCallback& callback) override {
-    ValuePtr value = Value::New();
-    value->set_double_value(observation);
-    RecordCall("AddDoubleObservation", value);
-    callback(Status::OK);
-  };
+      const AddDoubleObservationCallback& callback) override {};
 
   void AddIndexObservation(
       uint32_t metric_id, uint32_t encoding_id, uint32_t index,
-      const AddIndexObservationCallback& callback) override {
-    ValuePtr value = Value::New();
-    value->set_index_value(index);
-    RecordCall("AddIndexObservation", value);
-    callback(Status::OK);
-  };
+      const AddIndexObservationCallback& callback) override {};
+
+  void AddIntBucketDistribution(
+      uint32_t metric_id, uint32_t encoding_id,
+      fidl::Map<uint32_t, uint64_t> distribution,
+      const AddIntBucketDistributionCallback& callback) override {}
 
   void AddMultipartObservation(
       uint32_t metric_id, fidl::Array<ObservationValuePtr> observation,
@@ -94,23 +80,13 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
     callback(Status::OK);
   }
 
-  void AddIntBucketDistribution(
-      uint32_t metric_id, uint32_t encoding_id,
-      fidl::Map<uint32_t, uint64_t> distribution,
-      const AddIntBucketDistributionCallback& callback) override {
-    ValuePtr value = Value::New();
-    value->set_int_bucket_distribution(std::move(distribution));
-    RecordCall("AddIntBucketDistribution", value);
-    callback(Status::OK);
-  }
-
   void SendObservations(const SendObservationsCallback& callback) override {};
 
   void ExpectCalledOnceWith(const std::string& func, ValuePtr& expected) {
-    EXPECT_EQ(1U, calls.count(func));
-    if (calls.count(func) > 0) {
-      EXPECT_EQ(1U, calls[func].size());
-      ValuePtr actual = calls[func][0].Clone();
+    EXPECT_EQ(1U, calls_.count(func));
+    if (calls_.count(func) > 0) {
+      EXPECT_EQ(1U, calls_[func].size());
+      ValuePtr actual = calls_[func][0].Clone();
       EXPECT_EQ(expected->which(), actual->which());
       switch (expected->which()) {
         case Value::Tag::DOUBLE_VALUE: {
@@ -132,6 +108,8 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
         case Value::Tag::INT_BUCKET_DISTRIBUTION: {
           EXPECT_EQ(expected->get_int_bucket_distribution().size(),
                     actual->get_int_bucket_distribution().size());
+          EXPECT_TRUE(expected->get_int_bucket_distribution().Equals(
+              actual->get_int_bucket_distribution()));
           break;
         }
         case Value::Tag::__UNKNOWN__: {
@@ -143,10 +121,10 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
 
  private:
   void RecordCall(const std::string& func, ValuePtr& value) {
-    calls[func].push_back(std::move(value));
+    calls_[func].push_back(value.Clone());
   }
 
-  std::map<std::string, std::vector<ValuePtr>> calls;
+  std::map<std::string, std::vector<ValuePtr>> calls_;
 };
 
 
@@ -219,23 +197,78 @@ class CobaltTest : public gtest::TestWithMessageLoop {
 TEST_F(CobaltTest, InitializeCobalt) {
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             kFakeCobaltMetricId, kFakeCobaltEncodingId,
                              &cobalt_context);
   EXPECT_NE(cobalt_context, nullptr);
   ac.call();
   EXPECT_EQ(cobalt_context, nullptr);
 }
 
-TEST_F(CobaltTest, ReportEvent) {
-  ValuePtr expected_value = Value::New();
-  expected_value->set_index_value(kFakeCobaltEvent);
+TEST_F(CobaltTest, ReportIndexObservation) {
+  ValuePtr value = Value::New();
+  value->set_index_value(123);
+  CobaltObservation observation(
+      kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             kFakeCobaltMetricId, kFakeCobaltEncodingId,
                              &cobalt_context);
-  ReportEvent(kFakeCobaltEvent, cobalt_context);
+  ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
-  cobalt_encoder()->ExpectCalledOnceWith("AddIndexObservation", expected_value);
+  cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
+}
+
+TEST_F(CobaltTest, ReportIntObservation) {
+  ValuePtr value = Value::New();
+  value->set_int_value(123);
+  CobaltObservation observation(
+      kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
+  CobaltContext* cobalt_context = nullptr;
+  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
+                             &cobalt_context);
+  ReportObservation(observation, cobalt_context);
+  RunLoopUntilIdle();
+  cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
+}
+
+TEST_F(CobaltTest, ReportDoubleObservation) {
+  ValuePtr value = Value::New();
+  value->set_double_value(1.5);
+  CobaltObservation observation(
+      kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
+  CobaltContext* cobalt_context = nullptr;
+  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
+                             &cobalt_context);
+  ReportObservation(observation, cobalt_context);
+  RunLoopUntilIdle();
+  cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
+}
+
+TEST_F(CobaltTest, ReportStringObservation) {
+  ValuePtr value = Value::New();
+  value->set_string_value("test");
+  CobaltObservation observation(
+      kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
+  CobaltContext* cobalt_context = nullptr;
+  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
+                             &cobalt_context);
+  ReportObservation(observation, cobalt_context);
+  RunLoopUntilIdle();
+  cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
+}
+
+TEST_F(CobaltTest, ReportIntBucketObservation) {
+  ValuePtr value = Value::New();
+  fidl::Map<uint32_t, uint64_t> map;
+  map[1] = 2;
+  map[2] = 3;
+  value->set_int_bucket_distribution(std::move(map));
+  CobaltObservation observation(
+      kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
+  CobaltContext* cobalt_context = nullptr;
+  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
+                             &cobalt_context);
+  ReportObservation(observation, cobalt_context);
+  RunLoopUntilIdle();
+  cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
 }
 
 }  // namespace cobalt
