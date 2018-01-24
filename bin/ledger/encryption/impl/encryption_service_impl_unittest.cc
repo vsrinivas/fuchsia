@@ -6,8 +6,11 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
+
+using ledger::SetWhenCalled;
 
 namespace encryption {
 namespace {
@@ -20,45 +23,55 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
   void EncryptCommit(convert::ExtendedStringView commit_storage,
                      Status* status,
                      std::string* result) {
+    bool called;
     encryption_service_.EncryptCommit(
-        commit_storage, callback::Capture(MakeQuitTask(), status, result));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        commit_storage, callback::Capture(SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage,
                      Status* status,
                      std::string* result) {
+    bool called;
     encryption_service_.DecryptCommit(
         encrypted_commit_storage,
-        callback::Capture(MakeQuitTask(), status, result));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   void GetObjectName(storage::ObjectIdentifier object_identifier,
                      Status* status,
                      std::string* result) {
+    bool called;
     encryption_service_.GetObjectName(
         std::move(object_identifier),
-        callback::Capture(MakeQuitTask(), status, result));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   void EncryptObject(std::unique_ptr<const storage::Object> object,
                      Status* status,
                      std::string* result) {
+    bool called;
     encryption_service_.EncryptObject(
-        std::move(object), callback::Capture(MakeQuitTask(), status, result));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        std::move(object), callback::Capture(SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   void DecryptObject(storage::ObjectIdentifier object_identifier,
                      std::string encrypted_data,
                      Status* status,
                      std::string* result) {
+    bool called;
     encryption_service_.DecryptObject(
         std::move(object_identifier), std::move(encrypted_data),
-        callback::Capture(MakeQuitTask(), status, result));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   EncryptionServiceImpl encryption_service_;
