@@ -10,10 +10,13 @@
 
 #define AHCI_MAX_PORTS    32
 #define AHCI_MAX_COMMANDS 32
-#define AHCI_MAX_PRDS     8192 // for 32M max xfer size for fully discontiguous iotxn,
-                               // hardware max is 64k-1
+#define AHCI_MAX_PRDS     ((PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
+#define AHCI_MAX_PAGES    AHCI_MAX_PRDS
+// one page less of 2M because of unnaligned offset
+#define AHCI_MAX_BYTES    (2 * 1024 * 1024)
 
 #define AHCI_PRD_MAX_SIZE 0x400000 // 4mb
+static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD max size\n");
 
 #define AHCI_PORT_INT_CPD (1 << 31)
 #define AHCI_PORT_INT_TFE (1 << 30)

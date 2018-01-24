@@ -115,4 +115,3 @@ typedef struct block_protocol {
 //
 // Prevents later operations from being reordered before this one.
 #define BLOCK_FL_BARRIER_AFTER       0x00000200
-

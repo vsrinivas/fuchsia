@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/block.h>
 #include "ahci.h"
 
 #define SATA_CMD_IDENTIFY_DEVICE      0xec
@@ -34,16 +35,33 @@
 
 #define SATA_MAX_BLOCK_COUNT  0x10000 // 16-bit count
 
-typedef struct sata_pdata {
-    zx_time_t timeout; // for ahci driver watchdog
-    uint64_t lba;   // in blocks
-    uint16_t count; // in blocks
+typedef struct sata_txn {
+    block_op_t bop;
+    list_node_t node;
+
+    zx_time_t timeout;
+
     uint8_t cmd;
     uint8_t device;
+
+    zx_status_t status;
+} sata_txn_t;
+
+typedef struct ahci_device ahci_device_t;
+
+typedef struct sata_devinfo {
+    uint32_t block_size;
     int max_cmd;
-    int port;
-} sata_pdata_t;
+} sata_devinfo_t;
 
-#define sata_iotxn_pdata(txn) iotxn_pdata(txn, sata_pdata_t)
+zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port);
 
-zx_status_t sata_bind(zx_device_t* dev, int port);
+// sets the device info for the device at portnr
+void ahci_set_devinfo(ahci_device_t* controller, int portnr, sata_devinfo_t* devinfo);
+
+// queue a txn on the controller
+void ahci_queue(ahci_device_t* controller, int portnr, sata_txn_t* txn);
+
+static inline void block_complete(block_op_t* bop, zx_status_t status) {
+    bop->completion_cb(bop, status);
+}
