@@ -89,10 +89,9 @@ def filter_commit(commit):
 def print_commits(layer, commits):
     """Prints the given commits in a user=pleasing format."""
     commits = [c for c in commits if filter_commit(c)]
-    print('')
-    print('        --------------')
-    print('        | %s |' % '{:^10}'.format(layer))
-    print('        --------------')
+    print('--------------')
+    print('| %s |' % '{:^10}'.format(layer))
+    print('--------------')
     for commit in commits:
         print('%s | %s | %s' % (commit['commit'][:7],
                                 commit['author']['name'][:15].ljust(15),
@@ -122,6 +121,8 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
     if layer == 'vendor' and not revision:
         print('Error: vendor layers require a Topaz revision.')
         return 1
+
+    print('Pending commits for: %s' % layer.upper())
 
     if layer == 'vendor':
         commits = get_commits('topaz', revision)
