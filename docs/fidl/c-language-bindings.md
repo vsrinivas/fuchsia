@@ -628,7 +628,7 @@ library example;
 
 interface Animal {
     Say(string text, handle<event> token);
-    Add(int32 a, int32 b) => (int32 sum);
+    Add(int32 a, int32 b) -> (int32 sum);
 };
 ```
 
