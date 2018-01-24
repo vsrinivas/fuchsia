@@ -10,6 +10,8 @@ source_set("fake") {
   sources = [
     "fake_encryption_service.cc",
     "fake_encryption_service.h",
+    "fake_encryption_service_factory.cc",
+    "fake_encryption_service_factory.h",
   ]
 
   public_deps = [

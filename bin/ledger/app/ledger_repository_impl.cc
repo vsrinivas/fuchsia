@@ -7,7 +7,6 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
-#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -20,6 +19,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<cloud_sync::UserSync> user_sync)
     : base_storage_dir_(std::move(base_storage_dir)),
       environment_(environment),
+      encryption_service_factory_(environment->main_runner()),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
@@ -60,8 +60,7 @@ void LedgerRepositoryImpl::GetLedger(
   if (it == ledger_managers_.end()) {
     std::string name_as_string = convert::ToString(ledger_name);
     std::unique_ptr<encryption::EncryptionService> encryption_service =
-        std::make_unique<encryption::EncryptionServiceImpl>(
-            environment_->main_runner());
+        encryption_service_factory_.MakeEncryptionService(name_as_string);
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
             environment_->main_runner(), environment_->coroutine_service(),

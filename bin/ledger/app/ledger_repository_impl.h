@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
@@ -66,6 +67,7 @@ class LedgerRepositoryImpl : public LedgerRepository,
 
   const std::string base_storage_dir_;
   Environment* const environment_;
+  encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<cloud_sync::UserSync> user_sync_;
   callback::AutoCleanableMap<std::string,

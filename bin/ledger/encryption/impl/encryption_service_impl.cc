@@ -44,14 +44,16 @@ Status ToEncryptionStatus(storage::Status status) {
 }  // namespace
 
 EncryptionServiceImpl::EncryptionServiceImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    std::string namespace_id)
+    : task_runner_(std::move(task_runner)),
+      namespace_id_(std::move(namespace_id)) {}
 
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
 storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
     storage::ObjectDigest digest) {
-  return {kDefaultKeyIndex, kDefaultDeletionScopeId, std::move(digest)};
+  return {GetCurrentKeyIndex(), kDefaultDeletionScopeId, std::move(digest)};
 }
 
 void EncryptionServiceImpl::EncryptCommit(
@@ -59,8 +61,9 @@ void EncryptionServiceImpl::EncryptCommit(
     std::function<void(Status, std::string)> callback) {
   flatbuffers::FlatBufferBuilder builder;
 
-  auto storage = CreateEncryptedCommitStorage(
-      builder, kDefaultKeyIndex, commit_storage.ToFlatBufferVector(&builder));
+  auto storage =
+      CreateEncryptedCommitStorage(builder, GetCurrentKeyIndex(),
+                                   commit_storage.ToFlatBufferVector(&builder));
   builder.Finish(storage);
 
   std::string encrypted_storage(
@@ -133,6 +136,10 @@ void EncryptionServiceImpl::DecryptObject(
                          encrypted_data = std::move(encrypted_data)]() mutable {
     callback(Status::OK, encrypted_data);
   });
+}
+
+uint32_t EncryptionServiceImpl::GetCurrentKeyIndex() {
+  return kDefaultKeyIndex;
 }
 
 }  // namespace encryption

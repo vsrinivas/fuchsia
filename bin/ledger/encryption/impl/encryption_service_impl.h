@@ -17,7 +17,8 @@ namespace encryption {
 
 class EncryptionServiceImpl : public EncryptionService {
  public:
-  explicit EncryptionServiceImpl(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  EncryptionServiceImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                        std::string namespace_id);
   ~EncryptionServiceImpl() override;
 
   // EncryptionService:
@@ -41,7 +42,10 @@ class EncryptionServiceImpl : public EncryptionService {
       std::function<void(Status, std::string)> callback) override;
 
  private:
+  uint32_t GetCurrentKeyIndex();
+
   callback::ScopedTaskRunner task_runner_;
+  const std::string namespace_id_;
 };
 
 }  // namespace encryption
