@@ -26,7 +26,8 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
              const SocketAddress& address) override;
 
  private:
-  MdnsInterfaceTransceiverV6(const netstack::NetInterface* if_info,
+  MdnsInterfaceTransceiverV6(IpAddress address,
+                             const std::string& name,
                              uint32_t index);
 
   friend class MdnsInterfaceTransceiver;  // For constructor.

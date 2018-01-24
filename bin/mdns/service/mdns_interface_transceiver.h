@@ -15,10 +15,6 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
-namespace netstack {
-class NetInterface;
-}  // namespace netstack
-
 namespace mdns {
 
 // Handles mDNS communication for a single NIC. This class is abstract and has
@@ -31,11 +27,10 @@ class MdnsInterfaceTransceiver {
       std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   // Creates the variant of |MdnsInterfaceTransceiver| appropriate for the
-  // address family specified in |if_info|. |index| is the index of the
-  // interface.
-  static std::unique_ptr<MdnsInterfaceTransceiver> Create(
-      const netstack::NetInterface* if_info,
-      uint32_t index);
+  // address family specified in |address|. |name| is the name of the interface,
+  // and |index| is its index.
+  static std::unique_ptr<MdnsInterfaceTransceiver>
+  Create(IpAddress address, const std::string& name, uint32_t index);
 
   virtual ~MdnsInterfaceTransceiver();
 
@@ -69,7 +64,8 @@ class MdnsInterfaceTransceiver {
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
 
-  MdnsInterfaceTransceiver(const netstack::NetInterface* if_info,
+  MdnsInterfaceTransceiver(IpAddress address,
+                           const std::string& name,
                            uint32_t index);
 
   uint32_t index() const { return index_; }
@@ -105,8 +101,8 @@ class MdnsInterfaceTransceiver {
 
   IpAddress address_;
   IpAddress alternate_address_;
-  uint32_t index_;
   std::string name_;
+  uint32_t index_;
   fxl::UniqueFD socket_fd_;
   fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;

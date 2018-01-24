@@ -13,10 +13,10 @@
 
 namespace mdns {
 
-MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(
-    const netstack::NetInterface* if_info,
-    uint32_t index)
-    : MdnsInterfaceTransceiver(if_info, index) {}
+MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(IpAddress address,
+                                                       const std::string& name,
+                                                       uint32_t index)
+    : MdnsInterfaceTransceiver(address, name, index) {}
 
 MdnsInterfaceTransceiverV4::~MdnsInterfaceTransceiverV4() {}
 

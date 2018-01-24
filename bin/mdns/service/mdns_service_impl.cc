@@ -4,6 +4,7 @@
 
 #include "garnet/bin/mdns/service/mdns_service_impl.h"
 
+#include "garnet/bin/mdns/service/fidl_interface_monitor.h"
 #include "garnet/bin/mdns/service/host_name.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
@@ -33,7 +34,8 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
-  mdns_.Start(GetHostName());
+  mdns_.Start(FidlInterfaceMonitor::Create(application_context_),
+              GetHostName());
 }
 
 void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,

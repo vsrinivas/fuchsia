@@ -54,7 +54,8 @@ class Mdns : public MdnsAgent::Host {
   void SetVerbose(bool verbose);
 
   // Starts the transceiver.
-  void Start(const std::string& host_name);
+  void Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+             const std::string& host_name);
 
   // Stops the transceiver.
   void Stop();
@@ -106,6 +107,13 @@ class Mdns : public MdnsAgent::Host {
                           const std::string& instance_name);
 
  private:
+  enum class State {
+    kNotStarted,
+    kWaitingForInterfaces,
+    kAddressProbeInProgress,
+    kActive,
+  };
+
   struct TaskQueueEntry {
     TaskQueueEntry(MdnsAgent* agent, fxl::Closure task, fxl::TimePoint time)
         : agent_(agent), task_(task), time_(time) {}
@@ -195,7 +203,7 @@ class Mdns : public MdnsAgent::Host {
   uint32_t next_host_name_deduplicator_ = 2;
   std::string host_name_;
   std::string host_full_name_;
-  bool started_ = false;
+  State state_ = State::kNotStarted;
   std::priority_queue<TaskQueueEntry> task_queue_;
   fxl::TimePoint posted_task_time_ = fxl::TimePoint::Max();
   std::unordered_map<ReplyAddress, DnsMessage, ReplyAddressHash>

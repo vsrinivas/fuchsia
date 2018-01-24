@@ -135,7 +135,8 @@ IpAddress::IpAddress(const netstack::NetAddress* addr) {
       memcpy(&v6_, &addr->ipv6[0], 16);
       break;
     default:
-      FXL_DCHECK(false);
+      family_ = AF_UNSPEC;
+      std::memset(&v6_, 0, sizeof(v6_));
       break;
   }
 }

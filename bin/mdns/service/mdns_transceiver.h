@@ -9,17 +9,14 @@
 
 #include <netinet/in.h>
 
+#include "garnet/bin/mdns/service/interface_monitor.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace mdns {
 
 // Sends and receives mDNS messages on any number of interfaces.
-class MdnsTransceiver : public netstack::NotificationListener {
+class MdnsTransceiver {
  public:
   using LinkChangeCallback = std::function<void()>;
   using InboundMessageCallback =
@@ -36,7 +33,8 @@ class MdnsTransceiver : public netstack::NotificationListener {
   void EnableInterface(const std::string& name, sa_family_t family);
 
   // Starts the transceiver.
-  void Start(const LinkChangeCallback& link_change_callback,
+  void Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+             const fxl::Closure& link_change_callback,
              const InboundMessageCallback& inbound_message_callback);
 
   // Stops the transceiver.
@@ -64,30 +62,28 @@ class MdnsTransceiver : public netstack::NotificationListener {
   };
 
   // Determines if the interface is enabled.
-  bool InterfaceEnabled(const netstack::NetInterface* if_info);
+  bool InterfaceEnabled(const InterfaceDescr& interface_descr);
 
   // Creates a new |MdnsInterfaceTransceiver| for each interface that's ready
-  // and doesn't already have one. Schedules another call to this method if
-  // unready interfaces were found.
+  // and doesn't already have one.
   void FindNewInterfaces();
 
-  // Determines if a |MdnsInterfaceTransciver| has already been created for the
-  // specified address.
-  bool InterfaceAlreadyFound(const IpAddress& address);
+  // Add an interface transceiver for the described interface at the given index
+  // if it doesn't exist already. Returns true if the interface transceiver was
+  // added, false if it existed already.
+  bool MaybeAddInterfaceTransceiver(size_t index,
+                                    const InterfaceDescr& interface_descr);
 
-  // NotificationListener implementation.
-  void OnInterfacesChanged(
-      fidl::Array<netstack::NetInterfacePtr> interfaces) override;
+  // Remove the interface transceiver with the given index if it exists. Returns
+  // true if the transceiver was removed, false if it didn't exist.
+  bool MaybeRemoveInterfaceTransceiver(size_t index);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  std::unique_ptr<InterfaceMonitor> interface_monitor_;
   std::vector<InterfaceId> enabled_interfaces_;
   LinkChangeCallback link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
-  netstack::NetstackPtr netstack_;
-  fidl::Binding<netstack::NotificationListener> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

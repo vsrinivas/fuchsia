@@ -36,8 +36,12 @@ void Mdns::SetVerbose(bool verbose) {
   verbose_ = verbose;
 }
 
-void Mdns::Start(const std::string& host_name) {
+void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+                 const std::string& host_name) {
   FXL_DCHECK(!host_name.empty());
+  FXL_DCHECK(state_ == State::kNotStarted);
+
+  state_ = State::kWaitingForInterfaces;
 
   original_host_name_ = host_name;
 
@@ -48,6 +52,7 @@ void Mdns::Start(const std::string& host_name) {
   AddAgent(std::make_shared<AddressResponder>(this));
 
   transceiver_.Start(
+      std::move(interface_monitor),
       [this]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we
@@ -55,7 +60,15 @@ void Mdns::Start(const std::string& host_name) {
         // changes that cause two hosts with the same name to be on the same
         // subnet. To improve matters, we need to be prepared to change a host
         // name we've been using for awhile.
-        if (!started_ && transceiver_.has_interfaces()) {
+        // TODO(dalesat): Add option to skip address probe.
+        // The mDNS spec is explicit about the need for address probes and
+        // that host names should be user-friendly. Many embedded devices, on
+        // the other hand, use host names that are guaranteed unique by virtue
+        // of including large random values, serial numbers, etc. This mDNS
+        // implementation should offer the option of turning off address probes
+        // for such devices.
+        if (state_ == State::kWaitingForInterfaces &&
+            transceiver_.has_interfaces()) {
           StartAddressProbe(original_host_name_);
         }
       },
@@ -98,14 +111,16 @@ void Mdns::Start(const std::string& host_name) {
         SendMessages();
       });
 
-  if (transceiver_.has_interfaces()) {
+  // The interface monitor may have already found interfaces. In that case,
+  // start the address probe in case we don't get any link change notifications.
+  if (state_ == State::kWaitingForInterfaces && transceiver_.has_interfaces()) {
     StartAddressProbe(original_host_name_);
   }
 }
 
 void Mdns::Stop() {
   transceiver_.Stop();
-  started_ = false;
+  state_ = State::kNotStarted;
 }
 
 void Mdns::ResolveHostName(const std::string& host_name,
@@ -222,6 +237,8 @@ bool Mdns::ReannounceInstance(const std::string& service_name,
 }
 
 void Mdns::StartAddressProbe(const std::string& host_name) {
+  state_ = State::kAddressProbeInProgress;
+
   host_name_ = host_name;
   host_full_name_ = MdnsNames::LocalHostFullName(host_name);
 
@@ -249,7 +266,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
         std::cerr << "mDNS: Using unique host name " << host_full_name_ << "\n";
 
         // Start all the agents.
-        started_ = true;
+        state_ = State::kActive;
 
         // |resource_renewer_| doesn't need to be started, but we do it
         // anyway in case that changes.
@@ -368,7 +385,7 @@ void Mdns::RemoveAgent(const MdnsAgent* agent,
 }
 
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
-  if (started_) {
+  if (state_ == State::kActive) {
     agents_.emplace(agent.get(), agent);
     FXL_DCHECK(!host_full_name_.empty());
     agent->Start(host_full_name_);

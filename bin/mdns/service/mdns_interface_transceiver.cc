@@ -21,31 +21,33 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace mdns {
 
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
-    const netstack::NetInterface* if_info,
+    IpAddress address,
+    const std::string& name,
     uint32_t index) {
   MdnsInterfaceTransceiver* interface_transceiver;
 
-  if (!if_info->addr->ipv4.is_null()) {
-    interface_transceiver = new MdnsInterfaceTransceiverV4(if_info, index);
+  if (address.is_v4()) {
+    interface_transceiver =
+        new MdnsInterfaceTransceiverV4(address, name, index);
   } else {
-    interface_transceiver = new MdnsInterfaceTransceiverV6(if_info, index);
+    interface_transceiver =
+        new MdnsInterfaceTransceiverV6(address, name, index);
   }
 
   return std::unique_ptr<MdnsInterfaceTransceiver>(interface_transceiver);
 }
 
-MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(
-    const netstack::NetInterface* if_info,
-    uint32_t index)
-    : address_(if_info->addr.get()),
+MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(IpAddress address,
+                                                   const std::string& name,
+                                                   uint32_t index)
+    : address_(address),
+      name_(name),
       index_(index),
-      name_(if_info->name),
       inbound_buffer_(kMaxPacketSize),
       outbound_buffer_(kMaxPacketSize) {}
 
