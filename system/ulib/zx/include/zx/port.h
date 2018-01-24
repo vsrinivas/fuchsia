@@ -33,11 +33,6 @@ public:
         return zx_port_queue(get(), packet, size);
     }
 
-    // TODO(abarth): Remove.
-    zx_status_t wait(zx_time_t deadline, zx_port_packet_t* packet, size_t size) const {
-        return zx_port_wait(get(), deadline, packet, size);
-    }
-
     zx_status_t wait(zx::time deadline, zx_port_packet_t* packet, size_t size) const {
         return zx_port_wait(get(), deadline.get(), packet, size);
     }

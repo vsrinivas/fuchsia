@@ -65,12 +65,6 @@ public:
         return status;
     }
 
-    // TODO(abarth): Remove.
-    zx_status_t wait_one(zx_signals_t signals, zx_time_t deadline,
-                         zx_signals_t* pending) const {
-        return zx_object_wait_one(value_, signals, deadline, pending);
-    }
-
     zx_status_t wait_one(zx_signals_t signals, zx::time deadline,
                          zx_signals_t* pending) const {
         return zx_object_wait_one(value_, signals, deadline.get(), pending);
@@ -79,11 +73,6 @@ public:
     zx_status_t wait_async(const object<port>& port, uint64_t key,
                            zx_signals_t signals, uint32_t options) const {
         return zx_object_wait_async(value_, port.get(), key, signals, options);
-    }
-
-    // TODO(abarth): Remove.
-    static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx_time_t deadline) {
-        return zx_object_wait_many(wait_items, count, deadline);
     }
 
     static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx::time deadline) {

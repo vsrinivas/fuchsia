@@ -101,18 +101,8 @@ constexpr inline duration min(uint64_t n) { return duration(ZX_MIN(n)); }
 
 constexpr inline duration hour(uint64_t n) { return duration(ZX_HOUR(n)); }
 
-// TODO(abarth): Remove.
-inline zx_status_t nanosleep(zx_time_t deadline) {
-    return zx_nanosleep(deadline);
-}
-
 inline zx_status_t nanosleep(zx::time deadline) {
     return zx_nanosleep(deadline.get());
-}
-
-// TODO(abarth): Remove.
-inline zx_time_t deadline_after(zx_duration_t nanoseconds) {
-    return zx_deadline_after(nanoseconds);
 }
 
 inline time deadline_after(zx::duration nanoseconds) {
