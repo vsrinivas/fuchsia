@@ -340,9 +340,19 @@ int main(int argc, char** argv) {
   std::vector<fbl::unique_ptr<machina::VirtioBlock>> block_devices;
   for (const auto& block_spec : options.block_devices()) {
     fbl::unique_ptr<machina::BlockDispatcher> dispatcher;
-    status = machina::BlockDispatcher::Create(
-        block_spec.path.c_str(), block_spec.mode, block_spec.data_plane,
-        guest.phys_mem(), &dispatcher);
+    if (!block_spec.path.empty()) {
+      status = machina::BlockDispatcher::CreateFromPath(
+          block_spec.path.c_str(), block_spec.mode, block_spec.data_plane,
+          guest.phys_mem(), &dispatcher);
+    } else if (!block_spec.guid.empty()) {
+      status = machina::BlockDispatcher::CreateFromGuid(
+          block_spec.guid, options.block_wait() ? ZX_TIME_INFINITE : 0,
+          block_spec.mode, block_spec.data_plane, guest.phys_mem(),
+          &dispatcher);
+    } else {
+      FXL_LOG(ERROR) << "Block spec missing path or GUID attributes";
+      return ZX_ERR_INVALID_ARGS;
+    }
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create block dispatcher " << status;
       return status;

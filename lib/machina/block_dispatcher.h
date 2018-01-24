@@ -6,6 +6,7 @@
 #define GARNET_LIB_MACHINA_BLOCK_DISPATCHER_H_
 
 #include <sys/types.h>
+#include <vector>
 
 #include <fbl/unique_ptr.h>
 #include <hypervisor/phys_mem.h>
@@ -23,12 +24,38 @@ class BlockDispatcher {
     FDIO,
     FIFO,
   };
+  enum class GuidType {
+    NONE,
+    GPT_PARTITION_GUID,
+  };
+  struct Guid {
+    GuidType type = GuidType::NONE;
+    uint8_t bytes[16];
 
-  static zx_status_t Create(const char* path,
-                            Mode mode,
-                            DataPlane data_plane,
-                            const PhysMem& phys_mem,
-                            fbl::unique_ptr<BlockDispatcher>* dispatcher);
+    // If |false|, |bytes| contains a valid GUID.
+    bool empty() const { return type == GuidType::NONE; }
+  };
+
+  static zx_status_t CreateFromPath(
+      const char* path,
+      Mode mode,
+      DataPlane data_plane,
+      const PhysMem& phys_mem,
+      fbl::unique_ptr<BlockDispatcher>* dispatcher);
+
+  static zx_status_t CreateFromGuid(
+      const Guid& guid,
+      zx_duration_t timeout,
+      Mode mode,
+      DataPlane data_plane,
+      const PhysMem& phys_mem,
+      fbl::unique_ptr<BlockDispatcher>* dispatcher);
+
+  static zx_status_t CreateFromFd(int fd,
+                                  Mode mode,
+                                  DataPlane data_plane,
+                                  const PhysMem& phys_mem,
+                                  fbl::unique_ptr<BlockDispatcher>* dispatcher);
 
   BlockDispatcher(size_t size, bool read_only)
       : size_(size), read_only_(read_only) {}

@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <iostream>
 
+#include <zircon/device/block.h>
+
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -21,6 +23,8 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--kernel=[kernel.bin]           Use file 'kernel.bin' as the kernel\n";
   std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as a ramdisk\n";
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
+  std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
+  std::cerr << "\t                                available instead of failing.\n";
   std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line\n";
   std::cerr << "\t--nographic                     Disable GPU device and graphics output\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
@@ -34,12 +38,14 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\n";
   std::cerr << " Block devices can be specified by path:\n";
   std::cerr << "    /pkg/data/disk.img\n";
+  std::cerr << " Or by GUID:\n";
+  std::cerr << "    guid:14db42cf-beb7-46a2-9ef8-89b13bb80528,rw\n";
   std::cerr << "\n";
   std::cerr << " Additional Options:\n";
   std::cerr << "    rw/ro: Create a read/write or read-only device.\n";
   std::cerr << "    fdio:  Use the FDIO back-end for the block device.\n";
   std::cerr << "    fifo:  Use the FIFO back-end for the block device. This only works if the\n";
-  std::cerr << "           target is a real block device (/dev/class/block/XYZ).\n";
+  std::cerr << "           target is a real block device (GUID or /dev/class/block/XYZ)\n";
   std::cerr << "\n";
   std::cerr << " Ex:\n";
   std::cerr << "\n";
@@ -139,6 +145,44 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
   };
 }
 
+static zx_status_t parse_guid(const std::string& guid_str,
+                              machina::BlockDispatcher::Guid& guid) {
+  std::vector<uint8_t> nibbles;
+  for (const char& c : guid_str) {
+    switch (c) {
+      case '0' ... '9':
+        nibbles.push_back(c - '0');
+        break;
+      case 'a' ... 'f':
+        nibbles.push_back(10 + (c - 'a'));
+        break;
+      case 'A' ... 'F':
+        nibbles.push_back(10 + (c - 'A'));
+        break;
+      case '-':
+        continue;
+      default:
+        FXL_LOG(ERROR) << "String is not a valid guid " << guid_str;
+        return ZX_ERR_INVALID_ARGS;
+    }
+  }
+  if (nibbles.size() != (2 * sizeof(guid.bytes))) {
+    FXL_LOG(ERROR) << "String is not a valid guid " << guid_str;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  for (size_t i = 0; i < nibbles.size(); i += 2) {
+    guid.bytes[i / 2] = nibbles[i] << 4 | nibbles[i + 1];
+  }
+
+  // Pack with with mixed-endian byte ordering.
+  std::swap(guid.bytes[0], guid.bytes[3]);
+  std::swap(guid.bytes[1], guid.bytes[2]);
+  std::swap(guid.bytes[4], guid.bytes[5]);
+  std::swap(guid.bytes[6], guid.bytes[7]);
+  return ZX_OK;
+}
+
 static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::string token;
   std::istringstream tokenStream(spec);
@@ -153,7 +197,23 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
       out->mode = machina::BlockDispatcher::Mode::RO;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
+    } else if (token.compare(0, 5, "guid:") == 0) {
+      // Only a single GUID may be specified.
+      if (!out->guid.empty()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      std::string guid_str = token.substr(5);
+      zx_status_t status = parse_guid(guid_str, out->guid);
+      if (status != ZX_OK) {
+        return status;
+      }
+      out->guid.type = machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID;
     }
+  }
+
+  // Path and GUID are mutually exclusive, but one must be provided.
+  if (out->path.empty() == out->guid.empty()) {
+    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
@@ -178,6 +238,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* config)
           {"balloon-threshold",
            parse_number(&config_->balloon_pages_threshold_)},
           {"nographic", set_flag(&config_->enable_gpu_, false)},
+          {"block-wait", set_flag(&config_->block_wait_, true)},
       } {}
 
 GuestConfigParser::~GuestConfigParser() = default;

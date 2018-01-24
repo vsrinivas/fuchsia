@@ -11,7 +11,9 @@
 #include <block-client/client.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fdio/watcher.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
 #include <zircon/compiler.h>
@@ -20,6 +22,8 @@
 #include "lib/fxl/logging.h"
 
 namespace machina {
+
+static const char kBlockDirPath[] = "/dev/class/block";
 
 // Dispatcher that fulfills block requests using file-descriptor IO
 // (ex: read/write to a file descriptor).
@@ -221,7 +225,7 @@ class FifoBlockDispatcher : public BlockDispatcher {
   fbl::Mutex fifo_mutex_;
 };
 
-zx_status_t BlockDispatcher::Create(
+zx_status_t BlockDispatcher::CreateFromPath(
     const char* path,
     Mode mode,
     DataPlane data_plane,
@@ -235,17 +239,89 @@ zx_status_t BlockDispatcher::Create(
     return ZX_ERR_IO;
   }
 
-  off_t file_size = lseek(fd, 0, SEEK_END);
-  if (file_size < 0) {
-    FXL_LOG(ERROR) << "Failed to read size of file \"" << path << "\"";
+  return CreateFromFd(fd, mode, data_plane, phys_mem, dispatcher);
+}
+
+struct GuidLookupArgs {
+  int fd;
+  const BlockDispatcher::Guid& guid;
+};
+
+static zx_status_t MatchBlockDeviceToGuid(int dirfd,
+                                          int event,
+                                          const char* fn,
+                                          void* cookie) {
+  if (event != WATCH_EVENT_ADD_FILE) {
+    return ZX_OK;
+  }
+  auto args = static_cast<GuidLookupArgs*>(cookie);
+
+  fbl::unique_fd fd(openat(dirfd, fn, O_RDONLY));
+  if (!fd) {
+    FXL_LOG(ERROR) << "Failed to open device " << kBlockDirPath << "/" << fn;
     return ZX_ERR_IO;
   }
 
+  uint8_t device_guid[GUID_LEN];
+  ssize_t result = ioctl_block_get_partition_guid(fd.get(), device_guid,
+                                                  sizeof(device_guid));
+  if (result < 0) {
+    return ZX_OK;
+  }
+  size_t device_guid_len = static_cast<size_t>(result);
+  if (args->guid.empty() || sizeof(args->guid.bytes) != device_guid_len) {
+    return ZX_OK;
+  }
+  if (memcmp(args->guid.bytes, device_guid, device_guid_len) != 0) {
+    return ZX_OK;
+  }
+  args->fd = fd.release();
+  return ZX_ERR_STOP;
+}
+
+zx_status_t BlockDispatcher::CreateFromGuid(
+    const Guid& guid,
+    zx_duration_t timeout,
+    Mode mode,
+    DataPlane data_plane,
+    const PhysMem& phys_mem,
+    fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+  if (guid.type != GuidType::GPT_PARTITION_GUID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fbl::unique_fd dir_fd(open(kBlockDirPath, O_DIRECTORY | O_RDONLY));
+  if (!dir_fd) {
+    return ZX_ERR_IO;
+  }
+
+  GuidLookupArgs args = {-1, guid};
+  zx_status_t status = fdio_watch_directory(
+      dir_fd.get(), MatchBlockDeviceToGuid, timeout, &args);
+  if (status == ZX_ERR_STOP) {
+    return CreateFromFd(args.fd, mode, data_plane, phys_mem, dispatcher);
+  }
+  return status;
+}
+
+zx_status_t BlockDispatcher::CreateFromFd(
+    int fd,
+    Mode mode,
+    DataPlane data_plane,
+    const PhysMem& phys_mem,
+    fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+  off_t file_size = lseek(fd, 0, SEEK_END);
+  if (file_size < 0) {
+    FXL_LOG(ERROR) << "Failed to read size of block device";
+    return ZX_ERR_IO;
+  }
+
+  bool read_only = mode == Mode::RO;
   switch (data_plane) {
     case DataPlane::FDIO:
       return FdioBlockDispatcher::Create(fd, file_size, read_only, dispatcher);
     case DataPlane::FIFO:
-      return FifoBlockDispatcher::Create(fd, file_size, read_only, phys_mem, dispatcher);
+      return FifoBlockDispatcher::Create(fd, file_size, read_only, phys_mem,
+                                         dispatcher);
     default:
       FXL_LOG(ERROR) << "Unsupported block dispatcher data plane";
       return ZX_ERR_INVALID_ARGS;

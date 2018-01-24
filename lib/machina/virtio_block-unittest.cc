@@ -39,7 +39,7 @@ class VirtioBlockTest {
       return ZX_ERR_IO;
 
     fbl::unique_ptr<machina::BlockDispatcher> dispatcher;
-    zx_status_t status = machina::BlockDispatcher::Create(
+    zx_status_t status = machina::BlockDispatcher::CreateFromPath(
         block_path, machina::BlockDispatcher::Mode::RW,
         machina::BlockDispatcher::DataPlane::FDIO, phys_mem_, &dispatcher);
     status = block_.SetDispatcher(fbl::move(dispatcher));
