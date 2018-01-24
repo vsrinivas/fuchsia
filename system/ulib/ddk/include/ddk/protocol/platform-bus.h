@@ -10,9 +10,12 @@
 __BEGIN_CDECLS;
 
 typedef struct {
+    // physical address of MMIO region
+    // does not need to be page aligned
     zx_paddr_t  base;
-    zx_off_t    offset; // MMIO offset relative to base
-    size_t      length; // MMIO length starting from base + offset
+    // length of MMIO region in bytes
+    // does not need to be page aligned
+    size_t      length;
 } pbus_mmio_t;
 
 typedef struct {

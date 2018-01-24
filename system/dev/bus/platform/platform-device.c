@@ -51,14 +51,15 @@ static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index, zx
     }
 
     pbus_mmio_t* mmio = &dev->mmios[index];
-    size_t vmo_size = ROUNDUP(mmio->offset + mmio->length, PAGE_SIZE);
-    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, vmo_size,
+    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
+    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
+    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, vmo_base, vmo_size,
                                                 out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
-    *out_offset = mmio->offset;
+    *out_offset = mmio->base - vmo_base;
     *out_length = mmio->length;
     *out_handle_count = 1;
     return ZX_OK;
@@ -372,13 +373,6 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         return ZX_ERR_NO_MEMORY;
     }
     if (pdev->mmio_count) {
-        for (uint32_t i = 0; i < pdev->mmio_count; i++) {
-            if (pdev->mmios[i].offset >= PAGE_SIZE) {
-                zxlogf(ERROR, "platform_device_add: bad mmio offset %zu for mmio %u\n",
-                       pdev->mmios[i].offset, i);
-                return ZX_ERR_INVALID_ARGS;
-            }
-        }
         size_t size = pdev->mmio_count * sizeof(*pdev->mmios);
         dev->mmios = malloc(size);
         if (!dev->mmios) {
