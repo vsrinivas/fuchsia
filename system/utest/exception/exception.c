@@ -907,11 +907,26 @@ static bool packet_pid_test(void)
 
     EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
 
-    // Test that zx_thread_read_state() and zx_thread_write_state() will
-    // both return ZX_ERR_NOT_SUPPORTED when a thread is paused in the
-    // ZX_EXCP_THREAD_STARTING state.
+    send_msg(our_channel, MSG_DONE);
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+    wait_process_exit_from_debugger(eport, child, packet_tid);
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
+    END_TEST;
+}
+
+// Check that zx_thread_read_state() and zx_thread_write_state() both
+// return ZX_ERR_NOT_SUPPORTED.  This is used for testing the cases where a
+// thread is paused in the ZX_EXCP_THREAD_STARTING or or
+// ZX_EXCP_THREAD_EXITING states.
+static bool check_read_or_write_regs_is_rejected(zx_handle_t process,
+                                                 zx_handle_t tid)
+{
     zx_handle_t thread;
-    ASSERT_EQ(zx_object_get_child(child, packet_tid, ZX_RIGHT_SAME_RIGHTS,
+    ASSERT_EQ(zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS,
                                   &thread), ZX_OK, "");
     uint32_t regs_size = 0;
     // First find the size of the register buffer.
@@ -919,18 +934,68 @@ static bool packet_pid_test(void)
                                    &regs_size),
               ZX_ERR_BUFFER_TOO_SMALL, "");
     uint8_t regs_buffer[regs_size];
-    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0,
+    EXPECT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0,
                                    regs_buffer, regs_size, &regs_size),
               ZX_ERR_NOT_SUPPORTED, "");
-    ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0,
+    EXPECT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0,
                                     regs_buffer, regs_size),
               ZX_ERR_NOT_SUPPORTED, "");
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
+    return true;
+}
 
+// Test the behavior of zx_thread_read_state() and zx_thread_write_state()
+// when a thread is paused in the ZX_EXCP_THREAD_STARTING or
+// ZX_EXCP_THREAD_EXITING states.
+//
+// For ZX_EXCP_THREAD_EXITING, this tests the case where a thread is
+// exiting without the whole process also exiting.
+static bool thread_state_when_starting_or_exiting_test(void)
+{
+    BEGIN_TEST;
+
+    zx_handle_t child, eport, our_channel;
+    start_test_child_with_eport(zx_job_default(), test_child_name,
+                                &child, &eport, &our_channel);
+
+    // Wait for the ZX_EXCP_THREAD_STARTING message for the subprocess's
+    // initial thread.
+    zx_koid_t initial_tid;
+    ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
+                                          &initial_tid), "");
+    EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, initial_tid), "");
+    resume_thread_from_exception(child, initial_tid,
+                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+
+    // Tell the subprocess to create a second thread.
+    send_msg(our_channel, MSG_CREATE_AUX_THREAD);
+    // Wait for the ZX_EXCP_THREAD_STARTING message about that thread.
+    zx_koid_t tid;
+    ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
+                                          &tid), "");
+    EXPECT_NE(tid, initial_tid, "");
+    EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, tid), "");
+    resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER,
+                                 0);
+
+    // Tell the second thread to exit.
+    send_msg(our_channel, MSG_SHUTDOWN_AUX_THREAD);
+    // Wait for the ZX_EXCP_THREAD_EXITING message about that thread.
+    zx_koid_t tid2;
+    ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_EXITING,
+                                          &tid2), "");
+    EXPECT_EQ(tid2, tid, "");
+    EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, tid), "");
+
+    // Clean up: Resume the thread so that the process can exit.
+    zx_handle_t thread;
+    ASSERT_EQ(zx_object_get_child(child, tid, ZX_RIGHT_SAME_RIGHTS, &thread),
+              ZX_OK, "");
+    ASSERT_EQ(zx_task_resume(thread, ZX_RESUME_EXCEPTION), ZX_OK, "");
+    tu_handle_close(thread);
+    // Clean up: Tell the process to exit and wait for it to exit.
     send_msg(our_channel, MSG_DONE);
-    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
-    wait_process_exit_from_debugger(eport, child, packet_tid);
-
+    tu_process_wait_signaled(child);
     tu_handle_close(child);
     tu_handle_close(eport);
     tu_handle_close(our_channel);
@@ -1622,6 +1687,7 @@ RUN_TEST_ENABLE_CRASH_HANDLER(grandparent_job_handler_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(process_handler_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(thread_handler_test);
 RUN_TEST(packet_pid_test);
+RUN_TEST(thread_state_when_starting_or_exiting_test);
 RUN_TEST(process_start_test);
 RUN_TEST(process_exit_notification_test);
 RUN_TEST(thread_exit_notification_test);
