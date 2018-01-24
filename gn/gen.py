@@ -95,6 +95,8 @@ def main():
                         action="store_const", const="release")
     parser.add_argument("--build-dir",
                         help="the directory (relative to FUCHSIA_DIR) into which to generate the build")
+    parser.add_argument("--ide",
+                        help="An IDE value to pass to gn")
     parser.add_argument("--target_cpu", "-t", help="Target CPU",
                         default="x86-64", choices=['x86-64', 'aarch64'])
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
@@ -214,6 +216,8 @@ def main():
     gn_args += args.gn_args
 
     gn_command.append('--args=' + ' '.join(gn_args))
+    if args.ide:
+        gn_command.append('--ide=' + args.ide)
     return subprocess.call([paths.GN_PATH] + gn_command)
 
 
