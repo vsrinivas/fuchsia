@@ -15,6 +15,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/module/fidl/link_path.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/bin/user_runner/focus.h"
@@ -135,7 +136,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
         story_provider_impl_(story_provider_impl),
         url_(url),
         extra_info_(std::move(extra_info)),
-        root_json_(root_json) {
+        root_json_(root_json),
+        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
     Ready();
   }
 
@@ -199,6 +201,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
     // operation is done.
     controller_->Sync(
         [this, flow] { story_provider_impl_->NotifyImportanceWatchers(); });
+
+    ReportStoryLaunchTime(zx_clock_get(ZX_CLOCK_UTC) - start_time_);
   }
 
   ledger::Ledger* const ledger_;                  // not owned
@@ -208,6 +212,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   const fidl::String url_;
   FidlStringMap extra_info_;
   fidl::String root_json_;
+  const zx_time_t start_time_;
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;

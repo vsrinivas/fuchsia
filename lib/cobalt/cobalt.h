@@ -19,23 +19,26 @@ namespace cobalt {
 class CobaltObservation {
  public:
   CobaltObservation(uint32_t metric_id, uint32_t encoding_id, ValuePtr value);
+  CobaltObservation(uint32_t metric_id,
+                    fidl::Array<cobalt::ObservationValuePtr> parts);
   CobaltObservation(const CobaltObservation&);
   CobaltObservation(CobaltObservation&&);
   ~CobaltObservation();
   std::string ValueRepr();
 
-  uint32_t encoding_id() const { return encoding_id_; }
   uint32_t metric_id() const { return metric_id_; }
-  const ValuePtr& value() const { return value_; }
+  void Report(CobaltEncoderPtr& encoder, std::function<void(Status)> callback);
 
   CobaltObservation& operator=(const CobaltObservation&);
   CobaltObservation& operator=(CobaltObservation&&);
   bool operator<(const CobaltObservation& rhs) const;
 
  private:
-  uint32_t encoding_id_;
+  bool CompareObservationValueLess(
+      const ObservationValuePtr& observationValue,
+      const ObservationValuePtr& rhsObservationValue) const;
   uint32_t metric_id_;
-  ValuePtr value_;
+  fidl::Array<cobalt::ObservationValuePtr> parts_;
 };
 
 class CobaltContext {
@@ -77,6 +80,11 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 // Report an observation to Cobalt.
 void ReportObservation(CobaltObservation observation,
                        CobaltContext* cobalt_context);
+
+// Report a multipart observation to Cobalt.
+void ReportMultipartObservation(uint32_t metric_id,
+                                fidl::Array<cobalt::ObservationValuePtr> parts,
+                                CobaltContext* cobalt_context);
 
 };  // namespace cobalt
 

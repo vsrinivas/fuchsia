@@ -47,6 +47,7 @@ source_set("story_runner") {
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/bin/agent_runner:public",
     "//peridot/bin/component",
+    "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:focus",
     "//peridot/lib/common:teardown",

@@ -306,7 +306,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         app_context_, settings_.user_runner, settings_.user_shell,
         settings_.story_shell, token_manager_->primary_service().get()));
 
-    ReportEvent(CobaltEvent::BOOTED_TO_DEVICE_RUNNER);
+    ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
   }
 
   // |DeviceShellContext|

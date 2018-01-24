@@ -25,6 +25,7 @@
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/story_marker.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/module_context_impl.h"
@@ -204,7 +205,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         embed_module_watcher_(std::move(embed_module_watcher)),
-        view_owner_request_(std::move(view_owner_request)) {
+        view_owner_request_(std::move(view_owner_request)),
+        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
     Ready();
   }
 
@@ -323,6 +325,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         [this](StoryModulesWatcher* const watcher) {
           watcher->OnNewModule(module_data_.Clone());
         });
+    ReportModuleLaunchTime(
+        module_data_->module_url, zx_clock_get(ZX_CLOCK_UTC) - start_time_);
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -331,6 +335,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
 };

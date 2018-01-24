@@ -76,7 +76,7 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   void AddMultipartObservation(
       uint32_t metric_id, fidl::Array<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override {
-    //  TODO(miguelfrde): add support for multipart in peridot/lib/cobalt.
+    RecordCall("AddMultipartObservation", observation);
     callback(Status::OK);
   }
 
@@ -86,45 +86,35 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
     EXPECT_EQ(1U, calls_.count(func));
     if (calls_.count(func) > 0) {
       EXPECT_EQ(1U, calls_[func].size());
-      ValuePtr actual = calls_[func][0].Clone();
+      ValuePtr& actual = calls_[func][0];
       EXPECT_EQ(expected->which(), actual->which());
-      switch (expected->which()) {
-        case Value::Tag::DOUBLE_VALUE: {
-          EXPECT_EQ(expected->get_double_value(), actual->get_double_value());
-          break;
-        }
-        case Value::Tag::INDEX_VALUE: {
-          EXPECT_EQ(expected->get_index_value(), actual->get_index_value());
-          break;
-        }
-        case Value::Tag::INT_VALUE: {
-          EXPECT_EQ(expected->get_int_value(), actual->get_int_value());
-          break;
-        }
-        case Value::Tag::STRING_VALUE: {
-          EXPECT_EQ(expected->get_string_value(), actual->get_string_value());
-          break;
-        }
-        case Value::Tag::INT_BUCKET_DISTRIBUTION: {
-          EXPECT_EQ(expected->get_int_bucket_distribution().size(),
-                    actual->get_int_bucket_distribution().size());
-          EXPECT_TRUE(expected->get_int_bucket_distribution().Equals(
-              actual->get_int_bucket_distribution()));
-          break;
-        }
-        case Value::Tag::__UNKNOWN__: {
-          FAIL();
-        }
-      }
+      EXPECT_TRUE(actual.Equals(expected));
+    }
+  }
+
+  void ExpectCalledOnceWith(const std::string& func,
+                            fidl::Array<ObservationValuePtr>& expected_parts) {
+    EXPECT_EQ(1U, multipart_calls_.count(func));
+    if (multipart_calls_.count(func) > 0) {
+      EXPECT_EQ(1U, multipart_calls_[func].size());
+      fidl::Array<ObservationValuePtr>& actual = multipart_calls_[func][0];
+      EXPECT_TRUE(actual.Equals(expected_parts));
     }
   }
 
  private:
   void RecordCall(const std::string& func, ValuePtr& value) {
-    calls_[func].push_back(value.Clone());
+    calls_[func].push_back(std::move(value));
+  }
+
+  void RecordCall(const std::string& func,
+                  fidl::Array<ObservationValuePtr>& parts) {
+    multipart_calls_[func].push_back(std::move(parts));
   }
 
   std::map<std::string, std::vector<ValuePtr>> calls_;
+  std::map<std::string, std::vector<fidl::Array<ObservationValuePtr>>>
+      multipart_calls_;
 };
 
 
@@ -269,6 +259,30 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
+}
+
+TEST_F(CobaltTest, ReportMultipartObservation) {
+  auto parts = fidl::Array<cobalt::ObservationValuePtr>::New(2);
+  parts[0] = cobalt::ObservationValue::New();
+  parts[0]->name = "part1";
+  parts[0]->encoding_id = kFakeCobaltEncodingId;
+  parts[0]->value = cobalt::Value::New();
+  parts[0]->value->set_string_value("test");
+
+  parts[1] = cobalt::ObservationValue::New();
+  parts[1]->name = "part2";
+  parts[1]->encoding_id = kFakeCobaltEncodingId;
+  parts[1]->value = cobalt::Value::New();
+  parts[1]->value->set_int_value(2);
+
+  CobaltObservation observation(
+      static_cast<uint32_t>(kFakeCobaltMetricId), parts.Clone());
+  CobaltContext* cobalt_context = nullptr;
+  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
+                             &cobalt_context);
+  ReportObservation(observation, cobalt_context);
+  RunLoopUntilIdle();
+  cobalt_encoder()->ExpectCalledOnceWith("AddMultipartObservation", parts);
 }
 
 }  // namespace cobalt

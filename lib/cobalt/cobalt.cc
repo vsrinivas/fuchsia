@@ -20,70 +20,120 @@ namespace cobalt {
 
 CobaltObservation::CobaltObservation(uint32_t metric_id,
                                      uint32_t encoding_id, ValuePtr value) :
-    encoding_id_(encoding_id), metric_id_(metric_id), value_(value.Clone()) {
+    metric_id_(metric_id) {
   FXL_DCHECK(!value.is_null() && (
       value->is_string_value() || value->is_int_value() ||
       value->is_double_value() || value->is_index_value() ||
       value->is_int_bucket_distribution()));
+  parts_.push_back(ObservationValue::New());
+  parts_[0]->value = std::move(value);
+  parts_[0]->encoding_id = encoding_id;
 }
 
+CobaltObservation::~CobaltObservation() = default;
+
+CobaltObservation::CobaltObservation(
+    uint32_t metric_id, fidl::Array<cobalt::ObservationValuePtr> parts)
+    : metric_id_(metric_id), parts_(std::move(parts)) {}
+
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs) :
-  CobaltObservation(rhs.metric_id_, rhs.encoding_id_, rhs.value_.Clone()) {}
+  CobaltObservation(rhs.metric_id_, rhs.parts_.Clone()) {}
 
 CobaltObservation::CobaltObservation(CobaltObservation&& rhs) :
-  CobaltObservation(rhs.metric_id_, rhs.encoding_id_, rhs.value_.Clone()) {}
+  CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
-CobaltObservation::~CobaltObservation() {
-  value_.reset();
+void CobaltObservation::Report(
+    CobaltEncoderPtr& encoder,
+    std::function<void(Status)> callback) {
+  if (parts_.size() == 1) {
+    encoder->AddObservation(metric_id_, parts_[0]->encoding_id,
+                            parts_[0]->value.Clone(), callback);
+  } else {
+    encoder->AddMultipartObservation(metric_id_, std::move(parts_), callback);
+  }
 }
 
 std::string CobaltObservation::ValueRepr() {
-  switch (value_->which()) {
-    case Value::Tag::__UNKNOWN__:
-      return "unknown";
-    case Value::Tag::STRING_VALUE:
-      return value_->get_string_value();
-    case Value::Tag::DOUBLE_VALUE:
-      return std::to_string(value_->get_double_value());
-    case Value::Tag::INT_VALUE:
-      return std::to_string(value_->get_int_value());
-    case Value::Tag::INDEX_VALUE:
-      return std::to_string(value_->get_index_value());
-    case Value::Tag::INT_BUCKET_DISTRIBUTION:
-      std::ostringstream stream;
-      stream << "bucket of size ";
-      stream << value_->get_int_bucket_distribution().size();
-      return stream.str();
+  std::ostringstream stream;
+  stream << "[";
+  for (auto& observation_value : parts_) {
+    ValuePtr& value = observation_value->value;
+    switch (value->which()) {
+      case Value::Tag::__UNKNOWN__: {
+        stream << "unknown";
+        break;
+      }
+      case Value::Tag::STRING_VALUE: {
+        stream << value->get_string_value();
+        break;
+      }
+      case Value::Tag::DOUBLE_VALUE: {
+        stream << value->get_double_value();
+        break;
+      }
+      case Value::Tag::INT_VALUE: {
+        stream << value->get_int_value();
+        break;
+      }
+      case Value::Tag::INDEX_VALUE: {
+        stream << value->get_index_value();
+        break;
+      }
+      case Value::Tag::INT_BUCKET_DISTRIBUTION: {
+        stream << "bucket of size "
+               << value->get_int_bucket_distribution().size();
+        break;
+      }
+    }
+    stream << ",";
   }
+  stream << "]";
+  return stream.str();
 }
 
 bool CobaltObservation::operator<(const CobaltObservation& rhs) const {
   if (metric_id_ != rhs.metric_id_) {
     return metric_id_ < rhs.metric_id_;
   }
-  if (encoding_id_ != rhs.encoding_id_) {
-    return encoding_id_ < rhs.encoding_id_;
+  if (parts_.size() < rhs.parts_.size()) {
+    return true;
   }
-  if (value_->which() != rhs.value_->which()) {
-    return value_->which() < rhs.value_->which();
+  for (uint64_t i = 0; i < parts_.size(); i++) {
+    if (!CompareObservationValueLess(parts_[i], rhs.parts_[i])) {
+      return false;
+    }
   }
-  switch (value_->which()) {
+  return true;
+}
+
+bool CobaltObservation::CompareObservationValueLess(
+    const ObservationValuePtr& observation_value,
+    const ObservationValuePtr& rhs_observation_value) const {
+  if (observation_value->encoding_id != observation_value->encoding_id) {
+    return observation_value->encoding_id < rhs_observation_value->encoding_id;
+  }
+  ValuePtr& value = observation_value->value;
+  ValuePtr& rhs_value = rhs_observation_value->value;
+  if (value->which() != rhs_value->which()) {
+    return value->which() < rhs_value->which();
+  }
+  switch (value->which()) {
     case Value::Tag::__UNKNOWN__:
       return false;
     case Value::Tag::DOUBLE_VALUE:
-      return value_->get_double_value() < rhs.value_->get_double_value();
+      return value->get_double_value() < rhs_value->get_double_value();
     case Value::Tag::INT_VALUE:
-      return value_->get_int_value() < rhs.value_->get_int_value();
+      return value->get_int_value() < rhs_value->get_int_value();
     case Value::Tag::INDEX_VALUE:
-      return value_->get_index_value() < rhs.value_->get_index_value();
+      return value->get_index_value() < rhs_value->get_index_value();
     case Value::Tag::STRING_VALUE:
-      return value_->get_string_value() < rhs.value_->get_string_value();
+      return value->get_string_value() < rhs_value->get_string_value();
     case Value::Tag::INT_BUCKET_DISTRIBUTION: {
-      if (value_->get_int_bucket_distribution().size() ==
-          rhs.value_->get_int_bucket_distribution().size()) {
-        auto i = value_->get_int_bucket_distribution().cbegin();
-        auto j = rhs.value_->get_int_bucket_distribution().cbegin();
-        while (i != value_->get_int_bucket_distribution().cend()) {
+      if (value->get_int_bucket_distribution().size() ==
+          rhs_value->get_int_bucket_distribution().size()) {
+        auto i = value->get_int_bucket_distribution().cbegin();
+        auto j = rhs_value->get_int_bucket_distribution().cbegin();
+        while (i != value->get_int_bucket_distribution().cend()) {
           if (i.GetKey() != j.GetKey()) {
             return i.GetKey() < j.GetKey();
           }
@@ -95,26 +145,24 @@ bool CobaltObservation::operator<(const CobaltObservation& rhs) const {
         }
         return false;
       }
-      return value_->get_int_bucket_distribution().size() <
-          rhs.value_->get_int_bucket_distribution().size();
+      return value->get_int_bucket_distribution().size() <
+          rhs_value->get_int_bucket_distribution().size();
     }
   }
 }
 
 CobaltObservation& CobaltObservation::operator=(const CobaltObservation& rhs) {
   if (this != &rhs) {
-    encoding_id_ = rhs.encoding_id_;
     metric_id_ = rhs.metric_id_;
-    value_ = rhs.value_.Clone();
+    parts_ = rhs.parts_.Clone();
   }
   return *this;
 }
 
 CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
   if (this != &rhs) {
-    encoding_id_ = rhs.encoding_id_;
     metric_id_ = rhs.metric_id_;
-    value_ = std::move(rhs.value_);
+    parts_ = std::move(rhs.parts_);
   }
   return *this;
 }
@@ -188,9 +236,8 @@ void CobaltContext::SendObservations() {
   auto waiter = callback::CompletionWaiter::Create();
   for (auto observation : observations_in_transit_) {
     auto callback = waiter->NewCallback();
-    encoder_->AddObservation(
-        observation.metric_id(), observation.encoding_id(),
-        observation.value().Clone(),
+    observation.Report(
+        encoder_,
         [this, observation, callback = std::move(callback)](Status status) {
           AddObservationCallback(observation, status);
           callback();
@@ -231,8 +278,7 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
       FXL_LOG(WARNING)
           << "Cobalt rejected obsevation for metric: "
           << observation.metric_id()
-          << " with encoding: " << observation.encoding_id()
-          << " and value: " << observation.ValueRepr()
+          << " with value: " << observation.ValueRepr()
           << " with status: " << status;
     case cobalt::Status::OK:  // fall through
       // Remove the observation from the set of observations to send.

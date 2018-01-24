@@ -175,7 +175,7 @@ void UserRunnerImpl::Initialize(
   InitializeMaxwell(user_shell->url, std::move(story_shell));
   InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
-  ReportEvent(CobaltEvent::BOOTED_TO_USER_RUNNER);
+  ReportEvent(ModularEvent::BOOTED_TO_USER_RUNNER);
 }
 
 void UserRunnerImpl::InitializeUser(

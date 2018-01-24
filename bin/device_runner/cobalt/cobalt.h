@@ -13,21 +13,40 @@
 
 namespace modular {
 
+// Metric IDs that Cobalt requires to identify the data we are logging.
+// These are not events (events are tracked through ModularEvents index metric).
+// Data for each can be of different types: string, multipart, int, etc.
+// Next enum value: 6
+enum class CobaltMetric : uint32_t {
+  MODULE_LAUNCHED = 1,
+  MODULE_PAIRS_IN_STORY = 2,
+  MODULAR_EVENTS = 3,
+  MODULE_LAUNCH_TIME = 4,
+  STORY_LAUNCH_TIME = 5,
+};
+
 // The events to report.
 // Next enum value: 2
-enum class CobaltEvent : uint32_t {
+enum class ModularEvent : uint32_t {
   BOOTED_TO_DEVICE_RUNNER = 0,
   BOOTED_TO_USER_RUNNER = 1,
 };
 
-// Cobalt initialization. When cobalt is not need, the returned object must be
+
+// Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* app_context);
 
-// Report an event to Cobalt.
-void ReportEvent(CobaltEvent event);
+// Report a modular event to Cobalt.
+void ReportEvent(ModularEvent event);
+
+// Report a module launch time duration to Cobalt.
+void ReportModuleLaunchTime(std::string module_url, zx_time_t time);
+
+// Report a story launch time duration to Cobalt.
+void ReportStoryLaunchTime(zx_time_t time);
 
 };  // namespace modular
 
