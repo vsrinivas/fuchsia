@@ -128,11 +128,8 @@ enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {
     if (interrupt->flags & INTERRUPT_MASK_POSTWAIT)
         mask_interrupt(interrupt->vector);
 
-    if (thiz->Signal(SIGNAL_MASK(interrupt->slot), false) > 0) {
-        return INT_RESCHEDULE;
-    } else {
-        return INT_NO_RESCHEDULE;
-    }
+    thiz->Signal(SIGNAL_MASK(interrupt->slot), true);
+    return INT_NO_RESCHEDULE;
 }
 
 void InterruptEventDispatcher::MaskInterrupt(uint32_t vector) {
