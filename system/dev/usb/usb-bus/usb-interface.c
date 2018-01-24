@@ -252,10 +252,13 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
 
     completion_t completion = COMPLETION_INIT;
 
+    req->header.device_id = intf->device_id;
     req->header.length = length;
     req->complete_cb = usb_control_complete;
     req->cookie = &completion;
-    hci_queue(ctx, req);
+    // We call this directly instead of via hci_queue, as it's safe to call our
+    // own completion callback, and prevents clients getting into odd deadlocks.
+    usb_hci_request_queue(&intf->hci, req);
     zx_status_t status = completion_wait(&completion, timeout);
 
     if (status == ZX_OK) {
