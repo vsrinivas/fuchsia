@@ -54,8 +54,9 @@ static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
 static void xhci_process_transactions_locked(xhci_t* xhci, xhci_slot_t* slot, uint8_t ep_index,
                                              list_node_t* completed_reqs);
 
-zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index) {
+zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_address) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
+    uint8_t ep_index = xhci_endpoint_index(ep_address);
     xhci_endpoint_t* ep = &slot->eps[ep_index];
     usb_request_t* req;
 
@@ -94,6 +95,15 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t ep_inde
             return ZX_ERR_INTERNAL;
         }
         mtx_lock(&ep->lock);
+
+        // calling USB_REQ_CLEAR_FEATURE on a stalled control endpoint will not work,
+        // so we only do this for the other endpoints
+        if (ep_address != 0) {
+            // This should come after the successful completion of a Reset Endpoint Command.
+            // See XHCI spec, section 4.6.8
+            xhci_control_request(xhci, slot_id, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_ENDPOINT,
+                                 USB_REQ_CLEAR_FEATURE, USB_ENDPOINT_HALT, ep_address, NULL, 0);
+        }
     }
 
     // resetting the dequeue pointer gets us out of ERROR state, and is also necessary

@@ -107,8 +107,7 @@ static zx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, int 
 
 static zx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
     xhci_t* xhci = ctx;
-    uint8_t ep_index = xhci_endpoint_index(ep_address);
-    return xhci_reset_endpoint(xhci, device_id, ep_index);
+    return xhci_reset_endpoint(xhci, device_id, ep_address);
 }
 
 static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
