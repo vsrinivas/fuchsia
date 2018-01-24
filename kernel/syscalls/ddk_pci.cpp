@@ -93,6 +93,21 @@ private:
     zx_pci_irq_swizzle_lut_t lut_;
 };
 
+// Scan |lut| for entries mapping to |irq|, and replace them with
+// ZX_PCI_NO_IRQ_MAPPING.
+static void pci_irq_swizzle_lut_remove_irq(zx_pci_irq_swizzle_lut_t* lut, uint32_t irq) {
+    for (size_t dev = 0; dev < fbl::count_of(*lut); ++dev) {
+        for (size_t func = 0; func < fbl::count_of((*lut)[dev]); ++func) {
+            for (size_t pin = 0; pin < fbl::count_of((*lut)[dev][func]); ++pin) {
+                uint32_t* assigned_irq = &(*lut)[dev][func][pin];
+                if (*assigned_irq == irq) {
+                    *assigned_irq = ZX_PCI_NO_IRQ_MAPPING;
+                }
+            }
+        }
+    }
+}
+
 zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
 
     LTRACEF("handle %x mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len, add);
@@ -174,6 +189,15 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     // Configure interrupts
     for (unsigned int i = 0; i < arg->num_irqs; ++i) {
         uint32_t irq = arg->irqs[i].global_irq;
+        if (!is_valid_interrupt(irq, 0)) {
+            // If the interrupt isn't valid, mask it out of the IRQ swizzle table
+            // and don't activate it.  Attempts to use legacy IRQs for the device
+            // will fail later.
+            arg->irqs[i].global_irq = ZX_PCI_NO_IRQ_MAPPING;
+            pci_irq_swizzle_lut_remove_irq(&arg->dev_pin_to_global_irq, irq);
+            continue;
+        }
+
         enum interrupt_trigger_mode tm = IRQ_TRIGGER_MODE_EDGE;
         if (arg->irqs[i].level_triggered) {
             tm = IRQ_TRIGGER_MODE_LEVEL;
