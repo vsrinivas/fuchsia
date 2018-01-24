@@ -6,7 +6,11 @@ import("//build/config/sysroot.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
+  # Allows Cargo.lock to be updated when performing local builds.
   use_frozen_with_cargo = true
+  # Sets a custom base directory for `rustc` and `cargo`.
+  # This can be used to test custom Rust toolchains.
+  rustc_prefix = "//buildtools/${host_platform}/rust/bin"
 }
 
 # Defines a Rust artifact
@@ -62,8 +66,6 @@ template("rust_artifact") {
       target_triple = "aarch64-unknown-fuchsia"
     }
   }
-
-  rust_base = "//buildtools/${host_os}-${host_cpu}/rust"
 
   if (is_debug) {
     build_type = "debug"
@@ -171,9 +173,9 @@ template("rust_artifact") {
              "--crate-root",
              rebase_path(source_dir),
              "--cargo",
-             rebase_path("$rust_base/bin/cargo"),
+             rebase_path("$rustc_prefix/cargo"),
              "--rustc",
-             rebase_path("$rust_base/bin/rustc"),
+             rebase_path("$rustc_prefix/rustc"),
              "--target-triple",
              target_triple,
              "--label",
