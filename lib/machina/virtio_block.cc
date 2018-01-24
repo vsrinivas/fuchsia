@@ -27,9 +27,12 @@ class FdioBlockDispatcher : public VirtioBlockRequestDispatcher {
  public:
   static zx_status_t Create(
       int fd,
+      size_t size,
+      bool read_only,
       fbl::unique_ptr<VirtioBlockRequestDispatcher>* out) {
     fbl::AllocChecker ac;
-    auto dispatcher = fbl::make_unique_checked<FdioBlockDispatcher>(&ac, fd);
+    auto dispatcher =
+        fbl::make_unique_checked<FdioBlockDispatcher>(&ac, size, read_only, fd);
     if (!ac.check())
       return ZX_ERR_NO_MEMORY;
 
@@ -37,7 +40,8 @@ class FdioBlockDispatcher : public VirtioBlockRequestDispatcher {
     return ZX_OK;
   }
 
-  FdioBlockDispatcher(int fd) : fd_(fd) {}
+  FdioBlockDispatcher(size_t size, bool read_only, int fd)
+      : VirtioBlockRequestDispatcher(size, read_only), fd_(fd) {}
 
   zx_status_t Flush() override {
     fbl::AutoLock lock(&file_mutex_);
@@ -82,6 +86,8 @@ class FifoBlockDispatcher : public VirtioBlockRequestDispatcher {
  public:
   static zx_status_t Create(
       int fd,
+      size_t size,
+      bool read_only,
       const PhysMem& phys_mem,
       fbl::unique_ptr<VirtioBlockRequestDispatcher>* out) {
     zx_handle_t fifo;
@@ -124,7 +130,7 @@ class FifoBlockDispatcher : public VirtioBlockRequestDispatcher {
 
     fbl::AllocChecker ac;
     auto dispatcher = fbl::make_unique_checked<FifoBlockDispatcher>(
-        &ac, fd, txnid, vmoid, fifo_client, phys_mem.addr());
+        &ac, size, read_only, fd, txnid, vmoid, fifo_client, phys_mem.addr());
     if (!ac.check())
       return ZX_ERR_NO_MEMORY;
 
@@ -135,12 +141,15 @@ class FifoBlockDispatcher : public VirtioBlockRequestDispatcher {
     return ZX_OK;
   }
 
-  FifoBlockDispatcher(int fd,
+  FifoBlockDispatcher(size_t size,
+                      bool read_only,
+                      int fd,
                       txnid_t txnid,
                       vmoid_t vmoid,
                       fifo_client_t* fifo_client,
                       size_t guest_vmo_addr)
-      : fd_(fd),
+      : VirtioBlockRequestDispatcher(size, read_only),
+        fd_(fd),
         txnid_(txnid),
         vmoid_(vmoid),
         fifo_client_(fifo_client),
@@ -236,6 +245,7 @@ zx_status_t VirtioBlock::Init(const char* path) {
 
   // Open block file. First try to open as read-write but fall back to read
   // only if that fails.
+  bool read_only = false;
   int fd = open(path, O_RDWR);
   if (fd < 0) {
     fd = open(path, O_RDONLY);
@@ -245,32 +255,35 @@ zx_status_t VirtioBlock::Init(const char* path) {
     }
     FXL_LOG(WARNING) << "Unable to open block file \"" << path
                      << "\" read-write. Block device will be read-only.";
-    set_read_only();
+    read_only = true;
   }
-  // Read file size.
-  off_t ret = lseek(fd, 0, SEEK_END);
-  if (ret < 0) {
-    FXL_LOG(ERROR) << "Failed to read size of block file \"" << path << "\"";
+
+  off_t file_size = lseek(fd, 0, SEEK_END);
+  if (file_size < 0) {
+    FXL_LOG(ERROR) << "Failed to read size of file \"" << path << "\"";
     return ZX_ERR_IO;
   }
-  size_ = ret;
-  config_.capacity = size_ / kSectorSize;
 
   // Prefer using the faster FIFO-based IO. If the file is not a block device
   // file then fall back to using posix IO.
   fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher;
-  zx_status_t status = FifoBlockDispatcher::Create(fd, phys_mem(), &dispatcher);
+  zx_status_t status = FifoBlockDispatcher::Create(fd, file_size, read_only,
+                                                   phys_mem(), &dispatcher);
   if (status == ZX_OK) {
     FXL_LOG(INFO) << "Using FIFO IO for block device \"" << path << "\"";
   } else {
-    status = FdioBlockDispatcher::Create(fd, &dispatcher);
+    status = FdioBlockDispatcher::Create(fd, file_size, read_only, &dispatcher);
     if (status != ZX_OK) {
       return status;
     }
     FXL_LOG(INFO) << "Using posix IO for block device \"" << path << "\"";
   }
-  dispatcher_ = fbl::move(dispatcher);
 
+  dispatcher_ = fbl::move(dispatcher);
+  config_.capacity = dispatcher_->size() / kSectorSize;
+  if (dispatcher_->read_only()) {
+    set_read_only();
+  }
   return ZX_OK;
 }
 

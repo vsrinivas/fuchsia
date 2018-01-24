@@ -17,6 +17,8 @@ namespace machina {
 // Component to service block requests.
 class VirtioBlockRequestDispatcher {
  public:
+  VirtioBlockRequestDispatcher(size_t size, bool read_only)
+      : size_(size), read_only_(read_only) {}
   virtual ~VirtioBlockRequestDispatcher() = default;
 
   virtual zx_status_t Flush() = 0;
@@ -25,6 +27,13 @@ class VirtioBlockRequestDispatcher {
                             const void* buf,
                             size_t size) = 0;
   virtual zx_status_t Submit() = 0;
+
+  bool read_only() const { return read_only_; }
+  size_t size() const { return size_; }
+
+ private:
+  size_t size_;
+  bool read_only_;
 };
 
 // Stores the state of a block device.
@@ -61,13 +70,10 @@ class VirtioBlock : public VirtioDevice {
   virtio_queue_t& queue() { return queue_; }
 
  private:
-  // Size of file backing the block device.
-  uint64_t size_ = 0;
   // Queue for handling block requests.
   virtio_queue_t queue_;
   // Device configuration fields.
   virtio_blk_config_t config_ = {};
-
   fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
 };
 
