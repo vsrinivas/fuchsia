@@ -42,7 +42,7 @@ class LedgerStorageImpl : public LedgerStorage {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   coroutine::CoroutineService* const coroutine_service_;
-  encryption::EncryptionService* encryption_service_;
+  encryption::EncryptionService* const encryption_service_;
   std::string storage_dir_;
 };
 
