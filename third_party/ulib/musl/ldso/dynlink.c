@@ -1184,10 +1184,10 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
      * threads to obtain copies of both the new TLS, and an
      * extended DTV capable of storing an additional slot for
      * the newly-loaded DSO. */
-    size_t namelen = strlen(name) + 1;
-    size_t build_id_log_len = build_id_log_size(&temp_dso, namelen - 1);
+    size_t namelen = strlen(name);
+    size_t build_id_log_len = build_id_log_size(&temp_dso, namelen);
     alloc_size = (sizeof *p + ndeps * sizeof(p->deps[0]) +
-                  namelen + build_id_log_len);
+                  namelen + 1 + build_id_log_len);
     if (runtime && temp_dso.tls.image) {
         size_t per_th = temp_dso.tls.size + temp_dso.tls.align + sizeof(void*) * (tls_cnt + 3);
         n_th = atomic_load(&libc.thread_count);
@@ -1206,9 +1206,10 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
     p->needed_by = needed_by;
     p->l_map.l_name = (void*)&p->buf[ndeps];
     memcpy(p->l_map.l_name, name, namelen);
-    format_build_id_log(p, p->l_map.l_name + namelen, p->l_map.l_name, namelen);
+    p->l_map.l_name[namelen] = '\0';
+    format_build_id_log(p, p->l_map.l_name + namelen + 1, p->l_map.l_name, namelen);
     if (runtime)
-        do_tls_layout(p, p->l_map.l_name + namelen + build_id_log_len, n_th);
+        do_tls_layout(p, p->l_map.l_name + namelen + 1 + build_id_log_len, n_th);
 
     dso_set_next(tail, p);
     dso_set_prev(p, tail);
