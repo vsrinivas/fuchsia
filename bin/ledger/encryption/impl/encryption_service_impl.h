@@ -43,10 +43,22 @@ class EncryptionServiceImpl : public EncryptionService {
       std::function<void(Status, std::string)> callback) override;
 
  private:
-  uint32_t GetCurrentKeyIndex();
+  class KeyService;
 
-  callback::ScopedTaskRunner task_runner_;
+  uint32_t GetCurrentKeyIndex();
+  void GetNamespaceKey(const std::function<void(const std::string&)>& callback);
+  void GetReferenceKey(uint32_t deletion_scope_id,
+                       const std::string& digest,
+                       const std::function<void(const std::string&)>& callback);
+
   const std::string namespace_id_;
+  std::unique_ptr<KeyService> key_service_;
+
+  std::vector<std::function<void(const std::string&)>> namespace_key_callbacks_;
+  std::string namespace_key_;
+
+  // This must be the last member of this class.
+  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace encryption

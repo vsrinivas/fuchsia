@@ -20,6 +20,7 @@ source_set("impl") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/encryption/public",
     "//peridot/lib/callback",
   ]
