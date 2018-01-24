@@ -54,8 +54,7 @@ bool PrintIPAddresses(bool print_ipv4, bool print_ipv6, bool verbose) {
   }
 
   netc_get_if_info_t get_if_info;
-  ssize_t size = ioctl_netc_get_if_info(fd, &get_if_info);
-
+  const ssize_t size = ioctl_netc_get_num_ifs(fd, &get_if_info.n_info);
   if (size < 0 || get_if_info.n_info == 0) {
     perror("no interfaces from ioctl_netc_get_if_info");
     close(fd);
@@ -63,6 +62,12 @@ bool PrintIPAddresses(bool print_ipv4, bool print_ipv6, bool verbose) {
   }
 
   for (uint32_t i = 0; i < get_if_info.n_info; ++i) {
+    const ssize_t size = ioctl_netc_get_if_info_at(fd, &i, &get_if_info.info[i]);
+    if (size < 0) {
+      perror("ioctl_netc_get_if_info_at failed");
+      close(fd);
+      return false;
+    }
     netc_if_info_t* if_info = &get_if_info.info[i];
 
     if (if_info->addr.ss_family == AF_INET && print_ipv4) {
