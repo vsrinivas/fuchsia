@@ -326,6 +326,7 @@ template("package") {
         script = "//build/gn_run_binary.sh"
         inputs = [
           far_path,
+          archive_manifest,
         ]
         outputs = [
           output,
