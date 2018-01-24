@@ -835,35 +835,6 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     // This should be caught locally by the client library
     ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ZX_ERR_INVALID_ARGS);
 
-    // Since the client-side automatically appends the "TXN_END" flag, we avoid using it here.
-    for (size_t i = 0; i < requests.size(); i++) {
-        uint32_t actual;
-retry_write:
-        zx_status_t status = zx_fifo_write(fifo, &requests[i], sizeof(block_fifo_request_t),
-                                           &actual);
-        if (status == ZX_ERR_SHOULD_WAIT) {
-            zx_signals_t signals;
-            ASSERT_EQ(zx_object_wait_one(fifo, ZX_FIFO_WRITABLE, ZX_TIME_INFINITE, &signals),
-                      ZX_OK);
-            ASSERT_EQ(signals & ZX_FIFO_WRITABLE, ZX_FIFO_WRITABLE);
-            goto retry_write;
-        } else {
-            ASSERT_EQ(status, ZX_OK);
-        }
-    }
-
-    // Even though we never sent a request for TXN_END, we'll get a response because
-    // we filled our txn to the brim.
-    zx_signals_t signals;
-    ASSERT_EQ(zx_object_wait_one(fifo, ZX_FIFO_READABLE, ZX_TIME_INFINITE, &signals),
-              ZX_OK);
-    ASSERT_EQ(signals & ZX_FIFO_READABLE, ZX_FIFO_READABLE);
-    block_fifo_response_t response;
-    uint32_t count;
-    ASSERT_EQ(zx_fifo_read(fifo, &response, sizeof(block_fifo_response_t), &count), ZX_OK);
-    ASSERT_EQ(response.status, ZX_ERR_IO);
-    ASSERT_EQ(response.txnid, txnid);
-
     // The txn should still be usable! We should still be able to send a close request.
     ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), ZX_OK, "Failed to free txn");
     block_fifo_release_client(client);
