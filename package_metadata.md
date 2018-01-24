@@ -66,6 +66,12 @@ The sandbox file is a JSON object with the following schema:
                 "type": "string"
             }
         },
+        "pkgfs": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
         "features": {
             "type": "array",
             "items": {
@@ -85,6 +91,12 @@ The `system` array contains a list of well-known paths within the system package
 that are provided to the application. For example, if the string `bin` appears
 in the `system` array, then `/system/bin` will appear in the namespaces of
 applications loaded from the package.
+
+The `pkgfs` array contains a list of well-known paths within the pkgfs tree
+that are provided to the application. For example, if the string `packages`
+appears in the `pkgfs` array, then `/pkgfs/packages` will appear in the
+namespaces of applications loaded from the package, providing access to all
+packages fully cached on the system.
 
 The `features` array contains a list of well-known features that the package
 wishes to use. Including a feature in this list is a request for the environment
