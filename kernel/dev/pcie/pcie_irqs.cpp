@@ -111,6 +111,7 @@ SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
 }
 
 enum handler_return SharedLegacyIrqHandler::Handler() {
+    DEBUG_ASSERT(arch_in_int_handler());
     /* Go over the list of device's which share this legacy IRQ and give them a
      * chance to handle any interrupts which may be pending in their device.
      * Keep track of whether or not any device has requested a re-schedule event
@@ -491,6 +492,7 @@ bailout:
 }
 
 enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
+    DEBUG_ASSERT(arch_in_int_handler());
     DEBUG_ASSERT(irq_.msi);
     /* No need to save IRQ state; we are in an IRQ handler at the moment. */
     AutoSpinLock handler_lock(&hstate.lock);
@@ -520,6 +522,7 @@ enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) 
 }
 
 enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {
+    DEBUG_ASSERT(arch_in_int_handler());
     DEBUG_ASSERT(arg);
     auto& hstate = *(reinterpret_cast<pcie_irq_handler_state_t*>(arg));
     DEBUG_ASSERT(hstate.dev);

@@ -384,6 +384,7 @@ void mp_set_curr_cpu_active(bool active) {
 }
 
 enum handler_return mp_mbx_generic_irq(void) {
+    DEBUG_ASSERT(arch_in_int_handler());
     DEBUG_ASSERT(arch_ints_disabled());
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
@@ -404,6 +405,7 @@ enum handler_return mp_mbx_generic_irq(void) {
 }
 
 enum handler_return mp_mbx_reschedule_irq(void) {
+    DEBUG_ASSERT(arch_in_int_handler());
     const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);

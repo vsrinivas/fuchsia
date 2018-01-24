@@ -350,6 +350,7 @@ bool timer_cancel(timer_t* timer) {
 
 /* called at interrupt time to process any pending timers */
 enum handler_return timer_tick(zx_time_t now) {
+    DEBUG_ASSERT(arch_in_int_handler());
     timer_t* timer;
 
     DEBUG_ASSERT(arch_ints_disabled());

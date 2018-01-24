@@ -274,6 +274,7 @@ static unsigned int gic_remap_interrupt(unsigned int vector) {
 
 // called from assembly
 static enum handler_return gic_handle_irq(iframe* frame) {
+    DEBUG_ASSERT(arch_in_int_handler());
     // get the current vector
     uint32_t iar = gic_read_iar();
     unsigned vector = iar & 0x3ff;
@@ -314,6 +315,7 @@ static enum handler_return gic_handle_irq(iframe* frame) {
 }
 
 static enum handler_return gic_handle_fiq(iframe* frame) {
+    DEBUG_ASSERT(arch_in_int_handler());
     PANIC_UNIMPLEMENTED;
 }
 
@@ -331,18 +333,21 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
 }
 
 static enum handler_return arm_ipi_generic_handler(void *arg) {
+    DEBUG_ASSERT(arch_in_int_handler());
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_generic_irq();
 }
 
 static enum handler_return arm_ipi_reschedule_handler(void *arg) {
+    DEBUG_ASSERT(arch_in_int_handler());
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_reschedule_irq();
 }
 
 static enum handler_return arm_ipi_halt_handler(void *arg) {
+    DEBUG_ASSERT(arch_in_int_handler());
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     arch_disable_ints();

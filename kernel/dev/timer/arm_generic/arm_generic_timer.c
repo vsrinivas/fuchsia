@@ -209,6 +209,7 @@ static uint64_t read_ct(void)
 
 static enum handler_return platform_tick(void *arg)
 {
+    DEBUG_ASSERT(arch_in_int_handler());
     write_ctl(0);
     return timer_tick(current_time());
 }

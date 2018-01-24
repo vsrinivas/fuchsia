@@ -46,6 +46,7 @@ static cbuf_t uart_rx_buf;
 
 static enum handler_return pl011_uart_irq(void *arg)
 {
+    DEBUG_ASSERT(arch_in_int_handler());
     /* read interrupt status and mask */
     uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
