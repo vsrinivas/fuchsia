@@ -49,6 +49,10 @@
              path="third_party/cobalt_config"
              remote="https://cobalt-analytics.googlesource.com/config"
              gerrithost="https://cobalt-analytics-review.googlesource.com"/>
+    <project name="third_party/crashpad"
+             path="third_party/crashpad"
+             remote="https://fuchsia.googlesource.com/third_party/crashpad"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"
              remote="https://fuchsia.googlesource.com/third_party/expat"
@@ -154,6 +158,10 @@
              remote="https://fuchsia.googlesource.com/third_party/mesa"
              remotebranch="master"
              revision="3603babc3ccea6a4424473b7869eb881996622a2"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/mini_chromium"
+             path="third_party/crashpad/third_party/mini_chromium/mini_chromium"
+             remote="https://fuchsia.googlesource.com/third_party/mini_chromium"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/netstack"
              path="third_party/netstack"
