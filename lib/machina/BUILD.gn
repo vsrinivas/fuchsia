@@ -6,6 +6,8 @@ import("//build/package.gni")
 
 shared_library("machina") {
   sources = [
+    "block_dispatcher.cc",
+    "block_dispatcher.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
     "gpu_bitmap.cc",

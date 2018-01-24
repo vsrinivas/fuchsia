@@ -8,33 +8,12 @@
 #include <fbl/mutex.h>
 #include <virtio/block.h>
 
+#include "garnet/lib/machina/block_dispatcher.h"
 #include "garnet/lib/machina/virtio.h"
 
 typedef struct file_state file_state_t;
 
 namespace machina {
-
-// Component to service block requests.
-class VirtioBlockRequestDispatcher {
- public:
-  VirtioBlockRequestDispatcher(size_t size, bool read_only)
-      : size_(size), read_only_(read_only) {}
-  virtual ~VirtioBlockRequestDispatcher() = default;
-
-  virtual zx_status_t Flush() = 0;
-  virtual zx_status_t Read(off_t disk_offset, void* buf, size_t size) = 0;
-  virtual zx_status_t Write(off_t disk_offset,
-                            const void* buf,
-                            size_t size) = 0;
-  virtual zx_status_t Submit() = 0;
-
-  bool read_only() const { return read_only_; }
-  size_t size() const { return size_; }
-
- private:
-  size_t size_;
-  bool read_only_;
-};
 
 // Stores the state of a block device.
 class VirtioBlock : public VirtioDevice {
@@ -74,7 +53,7 @@ class VirtioBlock : public VirtioDevice {
   virtio_queue_t queue_;
   // Device configuration fields.
   virtio_blk_config_t config_ = {};
-  fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher_;
+  fbl::unique_ptr<BlockDispatcher> dispatcher_;
 };
 
 }  // namespace machina
