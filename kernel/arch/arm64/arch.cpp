@@ -136,6 +136,8 @@ void arch_early_init(void) {
 void arch_init(void) TA_NO_THREAD_SAFETY_ANALYSIS {
     arch_mp_init_percpu();
 
+    dprintf(INFO, "ARM boot EL%lu\n", arm64_get_boot_el());
+
     arm64_feature_debug(true);
 
     uint32_t max_cpus = arch_max_num_cpus();
