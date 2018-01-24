@@ -719,9 +719,23 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     // the payload
     wlan_packet->set_peer(Packet::Peer::kWlan);
     auto hdr = wlan_packet->mut_field<DataFrameHeader>(0);
-    std::memset(hdr, 0, sizeof(DataFrameHeader));
+
+    // TODO(porce): Investigate. When this should be the case
+    // TP-Link 2GHz does not require QoS ctrl field
+    // whiles its 5GHz does require.
+    // has_qos_ctrl = txinfo.cbw != CBW20;
+    bool has_qos_ctrl = false;
+    bool has_ht_ctrl = false;  // TODO(porce): make this dynamic
+
+    // Set header
+    size_t hdr_len_max = sizeof(DataFrameHeader) + kHtCtrlLen + kQosCtrlLen;
+    std::memset(hdr, 0, hdr_len_max);
     hdr->fc.set_type(kData);
+    hdr->fc.set_subtype(has_qos_ctrl ? kQosdata : kDataSubtype);
     hdr->fc.set_to_ds(1);
+    hdr->fc.set_from_ds(0);
+    hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
+
     // Ensure all outgoing data frames are protected when RSNA is established.
     if (!bss_->rsn.is_null() && controlled_port_ == PortState::kOpen) {
         hdr->fc.set_protected_frame(1);
@@ -733,9 +747,21 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     hdr->addr3 = eth->dest;
 
     hdr->sc.set_seq(next_seq());
-    debugf("header: %s\n", debug::Describe(*hdr).c_str());
 
-    auto llc = wlan_packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
+    // TODO(porce): Construct addr4 field
+
+    if (hdr->HasQosCtrl()) {  // QoS Control field
+        auto qos_ctrl = hdr->qos_ctrl();
+        qos_ctrl->set_tid(0);
+        qos_ctrl->set_eosp(0);
+        qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
+        qos_ctrl->set_amsdu_present(0);
+        qos_ctrl->set_byte(0);
+    }
+
+    // TODO(porce): Construct htc_order field
+
+    auto llc = wlan_packet->mut_field<LlcHeader>(hdr->len());
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;
     llc->control = kLlcUnnumberedInformation;
@@ -744,6 +770,8 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     std::memcpy(llc->payload, eth->payload, frame.body_len);
     wlan_packet->CopyCtrlFrom(txinfo);
+
+    debugf("%s: wlan hdr: %s\n", __FUNCTION__, debug::Describe(*hdr).c_str());
 
     zx_status_t status = device_->SendWlan(std::move(wlan_packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
