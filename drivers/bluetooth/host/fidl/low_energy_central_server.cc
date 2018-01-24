@@ -2,41 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "low_energy_central_fidl_impl.h"
+#include "low_energy_central_server.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "app.h"
-#include "fidl_helpers.h"
+#include "helpers.h"
 
-// Make the FIDL namespace explicit.
-namespace btfidl = ::bluetooth;
+using bluetooth::ErrorCode;
+using bluetooth::Int8;
+using bluetooth::Status;
 
-namespace bluetooth_service {
+using bluetooth::low_energy::CentralDelegate;
+using bluetooth::low_energy::CentralDelegatePtr;
+using bluetooth::low_energy::ScanFilterPtr;
 
-LowEnergyCentralFidlImpl::LowEnergyCentralFidlImpl(
-    AdapterManager* adapter_manager,
-    ::fidl::InterfaceRequest<::btfidl::low_energy::Central> request,
-    const ConnectionErrorHandler& connection_error_handler)
-    : adapter_manager_(adapter_manager),
+namespace bthost {
+
+LowEnergyCentralServer::LowEnergyCentralServer(
+    fxl::WeakPtr<::btlib::gap::Adapter> adapter,
+    fidl::InterfaceRequest<Central> request)
+    : ServerBase(adapter, this, std::move(request)),
       requesting_scan_(false),
-      binding_(this, std::move(request)),
-      weak_ptr_factory_(this) {
-  FXL_DCHECK(adapter_manager_);
-  FXL_DCHECK(connection_error_handler);
-  adapter_manager_->AddObserver(this);
-  binding_.set_error_handler(
-      [this, connection_error_handler] { connection_error_handler(this); });
-}
+      weak_ptr_factory_(this) {}
 
-LowEnergyCentralFidlImpl::~LowEnergyCentralFidlImpl() {
-  adapter_manager_->RemoveObserver(this);
-}
-
-void LowEnergyCentralFidlImpl::SetDelegate(
-    ::fidl::InterfaceHandle<::btfidl::low_energy::CentralDelegate> delegate) {
+void LowEnergyCentralServer::SetDelegate(
+    ::fidl::InterfaceHandle<CentralDelegate> delegate) {
   if (!delegate) {
     FXL_VLOG(1) << "Cannot set a null delegate";
     return;
@@ -49,45 +41,35 @@ void LowEnergyCentralFidlImpl::SetDelegate(
   });
 }
 
-void LowEnergyCentralFidlImpl::GetPeripherals(
+void LowEnergyCentralServer::GetPeripherals(
     ::fidl::Array<::fidl::String> service_uuids,
     const GetPeripheralsCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
-void LowEnergyCentralFidlImpl::GetPeripheral(
+void LowEnergyCentralServer::GetPeripheral(
     const ::fidl::String& identifier,
     const GetPeripheralCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
-void LowEnergyCentralFidlImpl::StartScan(
-    ::btfidl::low_energy::ScanFilterPtr filter,
-    const StartScanCallback& callback) {
+void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
+                                       const StartScanCallback& callback) {
   FXL_VLOG(1) << "Low Energy Central StartScan()";
-
-  if (!adapter_manager_->GetActiveAdapter()) {
-    FXL_VLOG(1) << "Adapter not available";
-    callback(fidl_helpers::NewErrorStatus(
-        ::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE,
-        "Bluetooth not available on the current system"));
-    return;
-  }
 
   if (requesting_scan_) {
     FXL_VLOG(1) << "Scan request already in progress";
-    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS,
+    callback(fidl_helpers::NewErrorStatus(ErrorCode::IN_PROGRESS,
                                           "Scan request in progress"));
     return;
   }
 
   if (filter && !fidl_helpers::IsScanFilterValid(*filter)) {
     FXL_VLOG(1) << "Invalid scan filter given";
-    callback(
-        fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::INVALID_ARGUMENTS,
-                                     "ScanFilter contains an invalid UUID"));
+    callback(fidl_helpers::NewErrorStatus(
+        ErrorCode::INVALID_ARGUMENTS, "ScanFilter contains an invalid UUID"));
     return;
   }
 
@@ -95,16 +77,14 @@ void LowEnergyCentralFidlImpl::StartScan(
     // A scan is already in progress. Update its filter and report success.
     scan_session_->ResetToDefault();
     fidl_helpers::PopulateDiscoveryFilter(*filter, scan_session_->filter());
-    callback(::btfidl::Status::New());
+    callback(Status::New());
     return;
   }
 
   requesting_scan_ = true;
-  adapter_manager_->GetActiveAdapter()->le_discovery_manager()->StartDiscovery(
-      fxl::MakeCopyable([
-        self = weak_ptr_factory_.GetWeakPtr(), filter = std::move(filter),
-        callback
-      ](auto session) {
+  adapter()->le_discovery_manager()->StartDiscovery(
+      fxl::MakeCopyable([self = weak_ptr_factory_.GetWeakPtr(),
+                         filter = std::move(filter), callback](auto session) {
         if (!self)
           return;
 
@@ -113,8 +93,7 @@ void LowEnergyCentralFidlImpl::StartScan(
         if (!session) {
           FXL_VLOG(1) << "Failed to start discovery session";
           callback(fidl_helpers::NewErrorStatus(
-              ::btfidl::ErrorCode::FAILED,
-              "Failed to start discovery session"));
+              ErrorCode::FAILED, "Failed to start discovery session"));
           return;
         }
 
@@ -129,11 +108,11 @@ void LowEnergyCentralFidlImpl::StartScan(
 
         self->scan_session_ = std::move(session);
         self->NotifyScanStateChanged(true);
-        callback(::btfidl::Status::New());
+        callback(Status::New());
       }));
 }
 
-void LowEnergyCentralFidlImpl::StopScan() {
+void LowEnergyCentralServer::StopScan() {
   FXL_VLOG(1) << "Low Energy Central StopScan()";
 
   if (!scan_session_) {
@@ -145,41 +124,33 @@ void LowEnergyCentralFidlImpl::StopScan() {
   NotifyScanStateChanged(false);
 }
 
-void LowEnergyCentralFidlImpl::ConnectPeripheral(
+void LowEnergyCentralServer::ConnectPeripheral(
     const ::fidl::String& identifier,
     const ConnectPeripheralCallback& callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
-
-  if (!adapter_manager_->GetActiveAdapter()) {
-    FXL_VLOG(1) << "Adapter not available";
-    callback(fidl_helpers::NewErrorStatus(
-        ::btfidl::ErrorCode::BLUETOOTH_NOT_AVAILABLE,
-        "Bluetooth not available on the current system"));
-    return;
-  }
 
   auto iter = connections_.find(identifier);
   if (iter != connections_.end()) {
     if (iter->second) {
       callback(fidl_helpers::NewErrorStatus(
-          ::btfidl::ErrorCode::ALREADY, "Already connected to requested peer"));
+          ErrorCode::ALREADY, "Already connected to requested peer"));
     } else {
-      callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::IN_PROGRESS,
+      callback(fidl_helpers::NewErrorStatus(ErrorCode::IN_PROGRESS,
                                             "Connect request pending"));
     }
     return;
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb =
-      [ self, callback, id = identifier.get() ](auto status, auto conn_ref) {
+  auto conn_cb = [self, callback, id = identifier.get()](auto status,
+                                                         auto conn_ref) {
     if (!self)
       return;
 
     auto iter = self->connections_.find(id);
     if (iter == self->connections_.end()) {
       FXL_VLOG(1) << "Connect request canceled";
-      auto error = fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::FAILED,
+      auto error = fidl_helpers::NewErrorStatus(ErrorCode::FAILED,
                                                 "Connect request canceled");
       callback(std::move(error));
       return;
@@ -194,8 +165,7 @@ void LowEnergyCentralFidlImpl::ConnectPeripheral(
       // TODO(armansito): Report PROTOCOL_ERROR only if |status| correspond to
       // an actual HCI error reported from the controller. LE conn mgr currently
       // uses HCI error codes for internal errors which needs to change.
-      auto error = fidl_helpers::NewErrorStatus(
-          ::btfidl::ErrorCode::PROTOCOL_ERROR, msg);
+      auto error = fidl_helpers::NewErrorStatus(ErrorCode::PROTOCOL_ERROR, msg);
       error->error->protocol_error_code = status;
       callback(std::move(error));
       return;
@@ -224,22 +194,21 @@ void LowEnergyCentralFidlImpl::ConnectPeripheral(
                      "connection attempt";
     }
 
-    callback(::btfidl::Status::New());
+    callback(Status::New());
   };
 
-  if (!adapter_manager_->GetActiveAdapter()->le_connection_manager()->Connect(
-          identifier.get(), conn_cb)) {
+  if (!adapter()->le_connection_manager()->Connect(identifier.get(), conn_cb)) {
     auto msg = fxl::StringPrintf("Cannot connect to unknown device id: %s",
                                  identifier.get().c_str());
     FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, msg));
+    callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND, msg));
     return;
   }
 
   connections_[identifier] = nullptr;
 }
 
-void LowEnergyCentralFidlImpl::DisconnectPeripheral(
+void LowEnergyCentralServer::DisconnectPeripheral(
     const ::fidl::String& identifier,
     const DisconnectPeripheralCallback& callback) {
   auto iter = connections_.find(identifier.get());
@@ -247,7 +216,7 @@ void LowEnergyCentralFidlImpl::DisconnectPeripheral(
     auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
                                  identifier.get().c_str());
     FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, msg));
+    callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND, msg));
     return;
   }
 
@@ -261,24 +230,10 @@ void LowEnergyCentralFidlImpl::DisconnectPeripheral(
     NotifyPeripheralDisconnected(identifier.get());
   }
 
-  callback(::btfidl::Status::New());
+  callback(Status::New());
 }
 
-void LowEnergyCentralFidlImpl::OnActiveAdapterChanged(
-    ::btlib::gap::Adapter* adapter) {
-  FXL_VLOG(1) << "The active adapter has changed; terminating all running LE "
-                 "Central procedures";
-
-  if (scan_session_)
-    StopScan();
-
-  for (auto& iter : connections_) {
-    NotifyPeripheralDisconnected(iter.first);
-  }
-  connections_.clear();
-}
-
-void LowEnergyCentralFidlImpl::OnScanResult(
+void LowEnergyCentralServer::OnScanResult(
     const ::btlib::gap::RemoteDevice& remote_device) {
   if (!delegate_)
     return;
@@ -290,22 +245,22 @@ void LowEnergyCentralFidlImpl::OnScanResult(
   }
 
   if (remote_device.rssi() != ::btlib::hci::kRSSIInvalid) {
-    fidl_device->rssi = ::btfidl::Int8::New();
+    fidl_device->rssi = Int8::New();
     fidl_device->rssi->value = remote_device.rssi();
   }
 
   delegate_->OnDeviceDiscovered(std::move(fidl_device));
 }
 
-void LowEnergyCentralFidlImpl::NotifyScanStateChanged(bool scanning) {
+void LowEnergyCentralServer::NotifyScanStateChanged(bool scanning) {
   if (delegate_)
     delegate_->OnScanStateChanged(scanning);
 }
 
-void LowEnergyCentralFidlImpl::NotifyPeripheralDisconnected(
+void LowEnergyCentralServer::NotifyPeripheralDisconnected(
     const std::string& identifier) {
   if (delegate_)
     delegate_->OnPeripheralDisconnected(identifier);
 }
 
-}  // namespace bluetooth_service
+}  // namespace bthost

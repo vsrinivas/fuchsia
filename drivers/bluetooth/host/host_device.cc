@@ -7,7 +7,9 @@
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/lib/bluetooth/c/bt_host.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 #include "host.h"
 
@@ -78,7 +80,8 @@ zx_status_t HostDevice::Bind() {
 
   std::thread host_thread = fsl::CreateThread(&host_thread_runner_, "bt-host");
 
-  // Send the bootstrap message.
+  // Send the bootstrap message to Host. The Host object can only be accessed on
+  // the Host thread.
   host_thread_runner_->PostTask([hci_proto, this] {
     std::lock_guard<std::mutex> lock(mtx_);
     host_ = fxl::MakeRefCounted<Host>(hci_proto);
@@ -133,12 +136,40 @@ zx_status_t HostDevice::Ioctl(uint32_t op,
                               size_t in_len,
                               void* out_buf,
                               size_t out_len,
-                              size_t* actual) {
+                              size_t* out_actual) {
   FXL_VLOG(1) << "bthost: ioctl";
 
-  // TODO(armansito): implement
+  if (!out_buf)
+    return ZX_ERR_INVALID_ARGS;
 
-  return ZX_ERR_NOT_SUPPORTED;
+  if (out_len < sizeof(zx_handle_t))
+    return ZX_ERR_BUFFER_TOO_SMALL;
+
+  if (op != IOCTL_BT_HOST_OPEN_CHANNEL)
+    return ZX_ERR_NOT_SUPPORTED;
+
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK)
+    return status;
+
+  FXL_DCHECK(local);
+  FXL_DCHECK(remote);
+
+  std::lock_guard<std::mutex> lock(mtx_);
+
+  // Tell Host to start processing messages on this handle.
+  FXL_DCHECK(host_thread_runner_);
+  host_thread_runner_->PostTask(
+      fxl::MakeCopyable([host = host_, chan = std::move(local)]() mutable {
+        host->BindHostInterface(std::move(chan));
+      }));
+
+  zx_handle_t* reply = static_cast<zx_handle_t*>(out_buf);
+  *reply = remote.release();
+  *out_actual = sizeof(zx_handle_t);
+
+  return ZX_OK;
 }
 
 void HostDevice::CleanUp() {

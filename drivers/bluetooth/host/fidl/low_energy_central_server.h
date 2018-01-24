@@ -7,27 +7,24 @@
 #include <memory>
 #include <unordered_map>
 
-#include "garnet/bin/bluetooth/adapter_manager.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "lib/bluetooth/fidl/low_energy.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 
-namespace bluetooth_service {
+#include "garnet/drivers/bluetooth/host/fidl/server_base.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
+
+namespace bthost {
 
 // Implements the low_energy::Central FIDL interface.
-class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
-                                 public AdapterManager::Observer {
+class LowEnergyCentralServer
+    : public ServerBase<bluetooth::low_energy::Central> {
  public:
-  // |adapter_manager| is used to lazily request a handle to the corresponding
-  // adapter. It MUST out-live this LowEnergyCentralFidlImpl instance.
-  using ConnectionErrorHandler = std::function<void(LowEnergyCentralFidlImpl*)>;
-  LowEnergyCentralFidlImpl(
-      AdapterManager* adapter_manager,
-      ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request,
-      const ConnectionErrorHandler& connection_error_handler);
-  ~LowEnergyCentralFidlImpl() override;
+  LowEnergyCentralServer(
+      fxl::WeakPtr<::btlib::gap::Adapter> adapter,
+      ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
+  ~LowEnergyCentralServer() override = default;
 
  private:
   // ::bluetooth::low_energy::Central overrides:
@@ -47,9 +44,6 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
       const ::fidl::String& identifier,
       const DisconnectPeripheralCallback& callback) override;
 
-  // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
-
   // Called by |scan_session_| when a device is discovered.
   void OnScanResult(const ::btlib::gap::RemoteDevice& remote_device);
 
@@ -59,9 +53,6 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   // Notifies the delegate that the device with the given identifier has been
   // disconnected.
   void NotifyPeripheralDisconnected(const std::string& identifier);
-
-  // We keep a raw pointer as we expect this to outlive us.
-  AdapterManager* adapter_manager_;  // weak
 
   // The currently active LE discovery session. This is initialized when a
   // client requests to perform a scan.
@@ -76,18 +67,14 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   std::unordered_map<std::string, ::btlib::gap::LowEnergyConnectionRefPtr>
       connections_;
 
-  // The interface binding that represents the connection to the client
-  // application.
-  ::fidl::Binding<::bluetooth::low_energy::Central> binding_;
-
   // The delegate that is set via SetDelegate()
   ::bluetooth::low_energy::CentralDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.
-  fxl::WeakPtrFactory<LowEnergyCentralFidlImpl> weak_ptr_factory_;
+  fxl::WeakPtrFactory<LowEnergyCentralServer> weak_ptr_factory_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyCentralFidlImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyCentralServer);
 };
 
-}  // namespace bluetooth_service
+}  // namespace bthost

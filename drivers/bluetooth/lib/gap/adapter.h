@@ -55,7 +55,7 @@ class Adapter final {
 
   // Returns a 128-bit UUID that uniquely identifies this adapter on the current
   // system.
-  std::string identifier() const { return identifier_; }
+  const std::string& identifier() const { return identifier_; }
 
   // Initializes the host-subsystem state for the HCI device this was created
   // for. This performs the initial HCI transport set up. Returns false if an

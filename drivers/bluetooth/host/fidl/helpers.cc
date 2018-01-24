@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl_helpers.h"
+#include "helpers.h"
 
 #include <unordered_set>
 
@@ -15,7 +15,7 @@
 // Make the FIDL namespace explicit.
 namespace btfidl = ::bluetooth;
 
-namespace bluetooth_service {
+namespace bthost {
 namespace fidl_helpers {
 namespace {
 
@@ -198,7 +198,7 @@ bool PopulateDiscoveryFilter(
 }
 
 }  // namespace fidl_helpers
-}  // namespace bluetooth_service
+}  // namespace bthost
 
 namespace fidl {
 

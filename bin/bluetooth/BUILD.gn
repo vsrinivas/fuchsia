@@ -8,22 +8,7 @@ executable("bin") {
   output_name = "bluetooth"
 
   sources = [
-    "adapter_fidl_impl.cc",
-    "adapter_fidl_impl.h",
-    "adapter_manager.cc",
-    "adapter_manager.h",
-    "adapter_manager_fidl_impl.cc",
-    "adapter_manager_fidl_impl.h",
-    "app.cc",
-    "app.h",
-    "fidl_helpers.cc",
-    "fidl_helpers.h",
-    "gatt_server_fidl_impl.cc",
-    "gatt_server_fidl_impl.h",
-    "low_energy_central_fidl_impl.cc",
-    "low_energy_central_fidl_impl.h",
-    "low_energy_peripheral_fidl_impl.cc",
-    "low_energy_peripheral_fidl_impl.h",
+    # TODO(armansito): Re-add sources with bt-host support (see NET-374).
     "main.cc",
   ]
 

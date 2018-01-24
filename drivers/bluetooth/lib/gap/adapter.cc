@@ -150,8 +150,6 @@ void Adapter::ShutDown() {
   }
 
   CleanUp();
-
-  // TODO(armansito): Clean up all protocol layers and send HCI Reset.
 }
 
 void Adapter::InitializeStep2(const InitializeCallback& callback) {
@@ -368,6 +366,8 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
 }
 
 void Adapter::InitializeStep4(const InitializeCallback& callback) {
+  FXL_DCHECK(IsInitializing());
+
   // Initialize the scan manager based on current feature support.
   if (state_.low_energy_state().IsFeatureSupported(
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
@@ -444,6 +444,9 @@ void Adapter::CleanUp() {
   hci_le_connector_ = nullptr;
   hci_le_advertiser_ = nullptr;
 
+  // TODO(armansito): hci::Transport::ShutDown() should send a shutdown message
+  // to the bt-hci device, which would be responsible for sending HCI_Reset upon
+  // exit.
   if (hci_->IsInitialized())
     hci_->ShutDown();
 }

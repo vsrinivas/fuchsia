@@ -22,7 +22,7 @@ class DiscoveryFilter;
 }  // namespace gap
 }  // namespace btlib
 
-namespace bluetooth_service {
+namespace bthost {
 namespace fidl_helpers {
 
 ::bluetooth::StatusPtr NewErrorStatus(::bluetooth::ErrorCode error_code,
@@ -48,7 +48,7 @@ bool PopulateDiscoveryFilter(
     ::btlib::gap::DiscoveryFilter* out_filter);
 
 }  // namespace fidl_helpers
-}  // namespace bluetooth_service
+}  // namespace bthost
 
 // fidl::TypeConverter specializations for common::ByteBuffer and friends.
 namespace fidl {
