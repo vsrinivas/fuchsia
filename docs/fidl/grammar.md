@@ -37,17 +37,17 @@ zero-or-more = ( list-part )* ;
 `file` is the starting symbol.
 
 ```
-file = module-header , using-list , declaration-list ;
+file = library-header , using-list , declaration-list ;
 
-module-header = "module" , compound-identifier ;
+library-header = "library" , compound-identifier , ";" ;
 
 using-list = ( using )* ;
 
-declaration-list = ( declaration )* ;
+declaration-list = ( declaration , ";" )* ;
 
 compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
-using = "using" , compound-identifier , ( "as" , IDENTIFIER ) ;
+using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
 declaration = const-declaration | enum-declaration | interface-declaration |
               struct-declaration | union-declaration ;

@@ -1,12 +1,12 @@
-library example_4
+library example_4;
 
 struct Point {
     uint64 x;
-}
-enum Enum {}
+};
+enum Enum {};
 interface Interface {
     const bool foo = true;
     const string s = "abc";
     enum Enum {};
     23: func(bool x) -> ();
-}
+};

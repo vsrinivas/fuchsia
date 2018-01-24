@@ -1,5 +1,5 @@
-library example_2
+library example_2;
 
 struct Point {
     // yo
-}
+};

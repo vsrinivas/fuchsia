@@ -1,4 +1,4 @@
-library example_3
+library example_3;
 
 struct Point {
     // Abscissa
@@ -6,4 +6,4 @@ struct Point {
 
     // Ordinate
     int64 y;
-}
+};

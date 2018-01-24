@@ -1,15 +1,15 @@
-library interface_ordinals
+library interface_ordinals;
 
 interface Foo {
     1: SomeMethod();
     2: SomeMethodWithAResponse() -> ();
     3: event SomeEvent(status response);
-}
+};
 
 interface Bar {
     4: DoIt();
-}
+};
 
 interface FooAndBarWaitTheresMore : Foo, Bar {
     5: MoreMoreMore();
-}
+};

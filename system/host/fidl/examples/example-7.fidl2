@@ -1,9 +1,9 @@
-library examples_7
+library examples_7;
 
-using pkg
+using pkg;
 
 // ¡🇷🇸🇷
 
 interface Hello {
   0: Say(string req) -> (string response);
-}
+};

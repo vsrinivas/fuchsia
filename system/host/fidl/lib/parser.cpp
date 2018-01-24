@@ -901,6 +901,9 @@ std::unique_ptr<File> Parser::ParseFile() {
     auto identifier = ParseCompoundIdentifier();
     if (!Ok())
         return Fail();
+    ConsumeToken(Token::Kind::Semicolon);
+    if (!Ok())
+        return Fail();
 
     auto parse_using = [&using_list, this]() {
         switch (Peek()) {
@@ -914,6 +917,9 @@ std::unique_ptr<File> Parser::ParseFile() {
     };
 
     while (parse_using() == More) {
+        if (!Ok())
+            return Fail();
+        ConsumeToken(Token::Kind::Semicolon);
         if (!Ok())
             return Fail();
     }
@@ -948,6 +954,9 @@ std::unique_ptr<File> Parser::ParseFile() {
     };
 
     while (parse_declaration() == More) {
+        if (!Ok())
+            return Fail();
+        ConsumeToken(Token::Kind::Semicolon);
         if (!Ok())
             return Fail();
     }

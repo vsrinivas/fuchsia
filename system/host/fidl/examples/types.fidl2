@@ -1,8 +1,8 @@
-library types
+library types;
 
-struct this_is_a_struct {}
-union this_is_a_union {}
-interface this_is_an_interface {}
+struct this_is_a_struct {};
+union this_is_a_union {};
+interface this_is_an_interface {};
 
 struct primitive_types {
     bool b;
@@ -16,7 +16,7 @@ struct primitive_types {
     uint64 u64;
     float32 f32;
     float64 f64;
-}
+};
 
 struct arrays {
     const uint32 arrays_size = 32;
@@ -56,7 +56,7 @@ struct arrays {
     array<array<uint64>:4>:size u64_2;
     array<array<float32>:4>:size f32_2;
     array<array<float64>:4>:size f64_2;
-}
+};
 
 struct vectors {
     const uint32 vectors_size = 32;
@@ -180,7 +180,7 @@ struct vectors {
     vector<vector<uint64>:4>:size? u64_nullable_sized_2;
     vector<vector<float32>:4>:size? f32_nullable_sized_2;
     vector<vector<float64>:4>:size? f64_nullable_sized_2;
-}
+};
 
 struct handles {
     handle handle_handle;
@@ -224,7 +224,7 @@ struct handles {
     handle<hypervisor>? nullable_hypervisor_handle;
     handle<guest>? nullable_guest_handle;
     handle<timer>? nullable_timer_handle;
-}
+};
 
 struct strings {
     const uint32 strings_size = 32;
@@ -235,34 +235,34 @@ struct strings {
     string:size size_1_s;
     string:4? nullable_size_0_s;
     string:size? nullable_size_1_s;
-}
+};
 
-enum default_enum {}
-enum i8_enum : int8 {}
-enum i16_enum : int16 {}
-enum i32_enum : int32 {}
-enum i64_enum : int64 {}
-enum u8_enum : uint8 {}
-enum u16_enum : uint16 {}
-enum u32_enum : uint32 {}
-enum u64_enum : uint64 {}
+enum default_enum {};
+enum i8_enum : int8 {};
+enum i16_enum : int16 {};
+enum i32_enum : int32 {};
+enum i64_enum : int64 {};
+enum u8_enum : uint8 {};
+enum u16_enum : uint16 {};
+enum u32_enum : uint32 {};
+enum u64_enum : uint64 {};
 
 struct structs {
     this_is_a_struct s;
     this_is_a_struct? nullable_s;
-}
+};
 
 struct unions {
     this_is_a_union s;
     this_is_a_union? nullable_u;
-}
+};
 
 struct interfaces {
     this_is_an_interface i;
     this_is_an_interface? nullable_i;
-}
+};
 
 struct requests {
     request<this_is_an_interface> r;
     request<this_is_an_interface>? nullable_r;
-}
+};

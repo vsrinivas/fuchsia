@@ -1,9 +1,9 @@
-library example_9
+library example_9;
 
 enum EchoMe {
     zero = 0;
     one = 1;
-}
+};
 
 interface Echo {
   0: Echo(uint32 @uint32) -> (uint32 response);
@@ -11,6 +11,6 @@ interface Echo {
   2: Echo(EchoMe req) -> (EchoMe response);
   3: Echo(handle req) -> (handle response);
   4: Echo(handle<channel> req) -> (handle<channel> response);
-}
+};
 
-const EchoMe favorite_echo = zero
+const EchoMe favorite_echo = zero;

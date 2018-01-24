@@ -1,22 +1,22 @@
-library example_5
+library example_5;
 
 struct Point {
     uint64 x;
-}
+};
 union NotAPoint {
     uint64 x;
     uint32 y;
     uint16 z;
-}
-enum Enum {}
+};
+enum Enum {};
 enum Enum2 : uint64 {
     enum_0 = 0;
     enum_1 = 23;
-}
+};
 enum Enum23 : int32 {
     enum_3 = 0;
     enum_4 = -23;
-}
+};
 interface Thing {
     const int64 foo = 3;
     1: one_function(string s, bool b) -> ();
@@ -25,4 +25,4 @@ interface Thing {
     const string foo_string = "3";
     3: three_function(string s, request<Thing> r);
     4: four_function(string s, request<Thing> r) -> (handle<channel> r);
-}
+};
