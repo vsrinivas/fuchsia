@@ -15,7 +15,7 @@
 // Max no of tags associated with a logger.
 #define FX_LOG_MAX_TAGS (4)
 
-// Max individual tag lenght.
+// Max individual tag length including terminating character.
 #define FX_LOG_MAX_TAG_LEN (64)
 
 // Log entry severity.

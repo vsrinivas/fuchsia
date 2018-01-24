@@ -37,10 +37,11 @@ struct fx_logger {
   // So they should be validated before calling this constructor.
   fx_logger(const fx_logger_config_t* config) {
     pid_ = GetCurrentProcessKoid();
-    // TODO: set socket if available
+    socket_.reset(config->log_service_channel);
     console_fd_.reset(config->console_fd);
     SetSeverity(config->min_severity);
     AddTags(config->tags, config->num_tags);
+    dropped_logs_.store(0, fbl::memory_order_relaxed);
   }
 
   ~fx_logger() = default;
@@ -57,10 +58,17 @@ struct fx_logger {
   }
 
  private:
+  zx_status_t VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
+                                const char* msg, va_list args);
+
+  zx_status_t VLogWriteToConsoleFd(fx_log_severity_t severity, const char* tag,
+                                   const char* msg, va_list args);
+
   zx_status_t AddTags(const char** tags, size_t ntags);
 
   zx_koid_t pid_;
   fbl::atomic<fx_log_severity_t> severity_;
+  fbl::atomic<uint64_t> dropped_logs_;
   fbl::unique_fd console_fd_;
   zx::socket socket_;
   fbl::Vector<fbl::String> tags_;

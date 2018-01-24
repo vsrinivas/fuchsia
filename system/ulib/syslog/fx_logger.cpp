@@ -4,8 +4,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
+#include <zircon/assert.h>
 
 #include <syslog/logger.h>
+#include <syslog/wire_format.h>
 
 #include "fx_logger.h"
 
@@ -25,20 +27,71 @@ zx_koid_t GetCurrentThreadKoid() {
 
 }  // namespace
 
-zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
-                                 const char* msg, va_list args) {
-  if (msg == NULL) {
+zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
+                                         const char* tag, const char* msg,
+                                         va_list args) {
+  zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  fx_log_packet_t packet;
+  memset(&packet, 0, sizeof(packet));
+  constexpr size_t kDataSize = sizeof(packet.data);
+  packet.metadata.version = 0;
+  packet.metadata.pid = pid_;
+  packet.metadata.tid = GetCurrentThreadKoid();
+  packet.metadata.time = time;
+  packet.metadata.severity = severity;
+  packet.metadata.dropped_logs = dropped_logs_.load();
+
+  // Write tags
+  size_t pos = 0;
+  for (size_t i = 0; i < tags_.size(); i++) {
+    size_t len = tags_[i].length();
+    ZX_DEBUG_ASSERT(len < 128);
+    packet.data[pos++] = static_cast<char>(len);
+    memcpy(packet.data + pos, tags_[i].c_str(), len);
+    pos += len;
+  }
+  if (tag != NULL) {
+    size_t len = strlen(tag);
+    if (len > 0) {
+      size_t write_len =
+          fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1));
+      ZX_DEBUG_ASSERT(write_len < 128);
+      packet.data[pos++] = static_cast<char>(write_len);
+      memcpy(packet.data + pos, tag, write_len);
+      pos += write_len;
+    }
+  }
+  packet.data[pos++] = 0;
+  ZX_DEBUG_ASSERT(pos < kDataSize);
+  // Write msg
+  int n = static_cast<int>(kDataSize - pos);
+  int count = vsnprintf(packet.data + pos, n, msg, args);
+  if (count < 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (GetSeverity() > severity) {
-    return ZX_OK;
+  if (count >= n) {
+    // truncated
+    constexpr char kEllipsis[] = "...";
+    constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
+    memcpy(packet.data + kDataSize - 1 - kEllipsisSize, kEllipsis,
+           kEllipsisSize);
   }
-
-  // return until we add socket support
-  if (console_fd_.get() == -1) {
-    return ZX_OK;
+  auto status = socket_.write(0, &packet, sizeof(packet), nullptr);
+  switch (status) {
+    case ZX_ERR_SHOULD_WAIT:
+    case ZX_ERR_PEER_CLOSED:
+    case ZX_ERR_NO_MEMORY:
+    case ZX_ERR_BAD_STATE:
+    case ZX_ERR_ACCESS_DENIED:
+      dropped_logs_.fetch_add(1);
+      break;
   }
+  return status;
+}
 
+zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
+                                            const char* tag, const char* msg,
+                                            va_list args) {
   zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
   constexpr char kEllipsis[] = "...";
   constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
@@ -60,7 +113,8 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
       if (!tagstr_.empty()) {
         buf.Append(", ");
       }
-      buf.Append(tag, fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN)));
+      buf.Append(tag,
+                 fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1)));
     }
   }
   buf.Append("]");
@@ -98,6 +152,23 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
   return ZX_OK;
 }
 
+zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
+                                 const char* msg, va_list args) {
+  if (msg == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (GetSeverity() > severity) {
+    return ZX_OK;
+  }
+
+  if (socket_.is_valid()) {
+    return VLogWriteToSocket(severity, tag, msg, args);
+  } else if (console_fd_.get() != -1) {
+    return VLogWriteToConsoleFd(severity, tag, msg, args);
+  }
+  return ZX_ERR_BAD_STATE;
+}
+
 // This function is not thread safe
 zx_status_t fx_logger::AddTags(const char** tags, size_t ntags) {
   if (ntags > FX_LOG_MAX_TAGS) {
@@ -107,8 +178,8 @@ zx_status_t fx_logger::AddTags(const char** tags, size_t ntags) {
   auto fd_mode = console_fd_.get() != -1;
   for (size_t i = 0; i < ntags; i++) {
     auto len = strlen(tags[i]);
-    fbl::String str(tags[i],
-                    len > FX_LOG_MAX_TAG_LEN ? FX_LOG_MAX_TAG_LEN : len);
+    fbl::String str(
+        tags[i], len > FX_LOG_MAX_TAG_LEN - 1 ? FX_LOG_MAX_TAG_LEN - 1 : len);
     if (fd_mode) {
       if (tagstr_.empty()) {
         tagstr_ = str;
