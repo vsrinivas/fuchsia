@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
 source_set("cobalt") {
   sources = [
     "cobalt.cc",
@@ -17,5 +22,18 @@ source_set("cobalt") {
     "//garnet/public/lib/cobalt/fidl",
     "//peridot/lib/backoff",
     "//peridot/lib/callback",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "cobalt_unittest.cc",
+  ]
+
+  deps = [
+    ":cobalt",
+    "//peridot/lib/gtest",
   ]
 }

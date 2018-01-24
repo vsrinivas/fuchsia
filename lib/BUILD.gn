@@ -12,6 +12,7 @@ executable("unittests") {
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/backoff:unittests",
     "//peridot/lib/callback:unittests",
+    "//peridot/lib/cobalt:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/firebase:unittests",
