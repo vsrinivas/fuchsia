@@ -105,7 +105,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   if (config.mi_dashboard) {
     StartAgent(
-        "agents/mi_dashboard.dartx",
+        "agents/mi_dashboard",
         [this](const std::string& url, app::ServiceNamespace* agent_host) {
           AddStandardServices(url, agent_host);
           agent_host->AddService<maxwell::ContextDebug>(

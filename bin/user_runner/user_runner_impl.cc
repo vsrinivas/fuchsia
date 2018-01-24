@@ -68,8 +68,7 @@ constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
-constexpr char kLedgerDashboardUrl[] =
-    "file:///system/apps/ledger_dashboard.dartx";
+constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
