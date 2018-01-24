@@ -15,7 +15,18 @@ namespace machina {
 
 class BlockDispatcher {
  public:
+  enum class Mode {
+    RO,
+    RW,
+  };
+  enum class DataPlane {
+    FDIO,
+    FIFO,
+  };
+
   static zx_status_t Create(const char* path,
+                            Mode mode,
+                            DataPlane data_plane,
                             const PhysMem& phys_mem,
                             fbl::unique_ptr<BlockDispatcher>* dispatcher);
 

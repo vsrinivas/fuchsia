@@ -12,16 +12,14 @@
 
 #include <zircon/types.h>
 
-struct BlockSpec {
-  enum class Mode {
-    FDIO,
-    FIFO,
-    AUTO,
-  };
+#include "garnet/lib/machina/block_dispatcher.h"
 
+struct BlockSpec {
   std::string path;
-  Mode mode = Mode::AUTO;
-  bool writable = true;
+  machina::BlockDispatcher::Mode mode =
+      machina::BlockDispatcher::Mode::RW;
+  machina::BlockDispatcher::DataPlane data_plane =
+      machina::BlockDispatcher::DataPlane::FDIO;
 };
 
 class GuestConfig {

@@ -108,13 +108,13 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   ASSERT_EQ(2, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_FALSE(spec0.writable);
-  ASSERT_EQ(BlockSpec::Mode::FDIO, spec0.mode);
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec0.data_plane);
   ASSERT_STREQ("/pkg/data/foo", spec0.path.c_str());
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_TRUE(spec1.writable);
-  ASSERT_EQ(BlockSpec::Mode::FIFO, spec1.mode);
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
   ASSERT_STREQ("/dev/class/block/001", spec1.path.c_str());
 }
 
@@ -132,13 +132,13 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(2, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_FALSE(spec0.writable);
-  ASSERT_EQ(BlockSpec::Mode::FDIO, spec0.mode);
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec0.data_plane);
   ASSERT_STREQ("/pkg/data/foo", spec0.path.c_str());
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_TRUE(spec1.writable);
-  ASSERT_EQ(BlockSpec::Mode::FIFO, spec1.mode);
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
   ASSERT_STREQ("/dev/class/block/001", spec1.path.c_str());
 }
 

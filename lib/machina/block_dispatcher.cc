@@ -223,21 +223,16 @@ class FifoBlockDispatcher : public BlockDispatcher {
 
 zx_status_t BlockDispatcher::Create(
     const char* path,
+    Mode mode,
+    DataPlane data_plane,
     const PhysMem& phys_mem,
     fbl::unique_ptr<BlockDispatcher>* dispatcher) {
-  // Open block file. First try to open as read-write but fall back to read
-  // only if that fails.
-  bool read_only = false;
-  int fd = open(path, O_RDWR);
+  bool read_only = mode == Mode::RO;
+  int fd = open(path, read_only ? O_RDONLY : O_RDWR);
   if (fd < 0) {
-    fd = open(path, O_RDONLY);
-    if (fd < 0) {
-      FXL_LOG(ERROR) << "Failed to open block file \"" << path << "\"";
-      return ZX_ERR_IO;
-    }
-    FXL_LOG(WARNING) << "Unable to open block file \"" << path
-                     << "\" read-write. Block device will be read-only.";
-    read_only = true;
+    FXL_LOG(ERROR) << "Failed to open block file \"" << path << "\" "
+                   << (read_only ? "RO" : "RW");
+    return ZX_ERR_IO;
   }
 
   off_t file_size = lseek(fd, 0, SEEK_END);
@@ -246,21 +241,15 @@ zx_status_t BlockDispatcher::Create(
     return ZX_ERR_IO;
   }
 
-
-  // Prefer using the faster FIFO-based IO. If the file is not a block device
-  // file then fall back to using posix IO.
-  zx_status_t status =
-      FifoBlockDispatcher::Create(fd, file_size, read_only, phys_mem, dispatcher);
-  if (status == ZX_OK) {
-    FXL_LOG(INFO) << "Using FIFO IO for block device \"" << path << "\"";
-  } else {
-    status = FdioBlockDispatcher::Create(fd, file_size, read_only, dispatcher);
-    if (status != ZX_OK) {
-      return status;
-    }
-    FXL_LOG(INFO) << "Using posix IO for block device \"" << path << "\"";
+  switch (data_plane) {
+    case DataPlane::FDIO:
+      return FdioBlockDispatcher::Create(fd, file_size, read_only, dispatcher);
+    case DataPlane::FIFO:
+      return FifoBlockDispatcher::Create(fd, file_size, read_only, phys_mem, dispatcher);
+    default:
+      FXL_LOG(ERROR) << "Unsupported block dispatcher data plane";
+      return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
 }
 
 }  // namespace machina

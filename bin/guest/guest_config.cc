@@ -144,13 +144,13 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::istringstream tokenStream(spec);
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
-      out->mode = BlockSpec::Mode::FDIO;
+      out->data_plane = machina::BlockDispatcher::DataPlane::FDIO;
     } else if (token == "fifo") {
-      out->mode = BlockSpec::Mode::FIFO;
+      out->data_plane = machina::BlockDispatcher::DataPlane::FIFO;
     } else if (token == "rw") {
-      out->writable = true;
+      out->mode = machina::BlockDispatcher::Mode::RW;
     } else if (token == "ro") {
-      out->writable = false;
+      out->mode = machina::BlockDispatcher::Mode::RO;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
     }

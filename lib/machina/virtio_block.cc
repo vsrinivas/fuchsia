@@ -35,20 +35,17 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem)
                       | VIRTIO_BLK_F_BLK_SIZE);
 }
 
-zx_status_t VirtioBlock::Init(const char* path) {
+zx_status_t VirtioBlock::SetDispatcher(
+    fbl::unique_ptr<BlockDispatcher> dispatcher) {
   if (dispatcher_ != nullptr) {
     FXL_LOG(ERROR) << "Block device has already been initialized.";
     return ZX_ERR_BAD_STATE;
   }
 
-  zx_status_t status = BlockDispatcher::Create(path, phys_mem(), &dispatcher_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
+  dispatcher_ = fbl::move(dispatcher);
   config_.capacity = dispatcher_->size() / kSectorSize;
   if (dispatcher_->read_only()) {
-    set_read_only();
+    add_device_features(VIRTIO_BLK_F_RO);
   }
   return ZX_OK;
 }
