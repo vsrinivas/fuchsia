@@ -63,7 +63,7 @@ public:
             ZX_DEBUG_ASSERT(status == ZX_OK);
 
             status = trace_stopped_.wait_one(ZX_EVENT_SIGNALED,
-                                             zx_deadline_after(ZX_MSEC(1000)), nullptr);
+                                             zx::deadline_after(zx::msec(1000)), nullptr);
             ZX_DEBUG_ASSERT(status == ZX_OK);
         }
 

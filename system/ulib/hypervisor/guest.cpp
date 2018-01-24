@@ -85,7 +85,7 @@ Guest::~Guest() {
 zx_status_t Guest::IoThread() {
     while (true) {
         zx_port_packet_t packet;
-        zx_status_t status = port_.wait(ZX_TIME_INFINITE, &packet, 0);
+        zx_status_t status = port_.wait(zx::time::infinite(), &packet, 0);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to wait for device port %d\n", status);
             break;

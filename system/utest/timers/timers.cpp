@@ -34,14 +34,14 @@ static bool basic_test() {
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
     zx_signals_t pending;
-    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_ERR_TIMED_OUT);
+    EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
     EXPECT_EQ(pending, 0u);
 
     for (int ix = 0; ix != 10; ++ix) {
-        const auto deadline_timer = zx_deadline_after(ZX_MSEC(50));
-        const auto deadline_wait = zx_deadline_after(ZX_SEC(1));
+        const auto deadline_timer = zx::deadline_after(zx::msec(50));
+        const auto deadline_wait = zx::deadline_after(zx::sec(1));
         // Timer should fire faster than the wait timeout.
-        ASSERT_EQ(timer.set(deadline_timer, 0u), ZX_OK);
+        ASSERT_EQ(timer.set(deadline_timer, zx::duration()), ZX_OK);
 
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_OK);
         EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
@@ -56,10 +56,10 @@ static bool restart_test() {
 
     zx_signals_t pending;
     for (int ix = 0; ix != 10; ++ix) {
-        const auto deadline_timer = zx_deadline_after(ZX_MSEC(500));
-        const auto deadline_wait = zx_deadline_after(ZX_MSEC(1));
+        const auto deadline_timer = zx::deadline_after(zx::msec(500));
+        const auto deadline_wait = zx::deadline_after(zx::msec(1));
         // Setting a timer already running is equivalent to a cancel + set.
-        ASSERT_EQ(timer.set(deadline_timer, 0u), ZX_OK);
+        ASSERT_EQ(timer.set(deadline_timer, zx::duration()), ZX_OK);
 
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_ERR_TIMED_OUT);
         EXPECT_EQ(pending, 0u);
@@ -82,7 +82,7 @@ static bool edge_cases() {
 
     zx::timer timer;
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    ASSERT_EQ(timer.set(0u, 0u), ZX_OK);
+    ASSERT_EQ(timer.set(zx::time(), zx::duration()), ZX_OK);
 
     END_TEST;
 }
@@ -98,7 +98,7 @@ static bool restart_race() {
     zx::timer timer;
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
     while (zx_clock_get(ZX_CLOCK_MONOTONIC) - start < kTestDuration) {
-        ASSERT_EQ(timer.set(zx_deadline_after(ZX_USEC(100)), 0u), ZX_OK);
+        ASSERT_EQ(timer.set(zx::deadline_after(zx::usec(100)), zx::duration()), ZX_OK);
     }
 
     EXPECT_EQ(timer.cancel(), ZX_OK);
@@ -115,17 +115,17 @@ static bool signals_asserted_immediately() {
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
     for (int i = 0; i < 100; i++) {
-        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx::time now = zx::clock::get(ZX_CLOCK_MONOTONIC);
 
-        EXPECT_EQ(timer.set(now, 0u), ZX_OK);
+        EXPECT_EQ(timer.set(now, zx::duration()), ZX_OK);
 
         zx_signals_t pending;
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_OK);
+        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_OK);
         EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
         EXPECT_EQ(timer.cancel(), ZX_OK);
 
-        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_ERR_TIMED_OUT);
+        EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
         EXPECT_EQ(pending, 0u);
     }
 
@@ -153,14 +153,14 @@ static bool coalesce_test(uint32_t mode) {
 
     zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
-    const auto deadline_1 = start + ZX_MSEC(350);
-    const auto deadline_2 = start + ZX_MSEC(250);
+    const auto deadline_1 = zx::time(start + ZX_MSEC(350));
+    const auto deadline_2 = zx::time(start + ZX_MSEC(250));
 
-    ASSERT_EQ(timer_1.set(deadline_1, 0u), ZX_OK);
-    ASSERT_EQ(timer_2.set(deadline_2, ZX_MSEC(110)), ZX_OK);
+    ASSERT_EQ(timer_1.set(deadline_1, zx::duration()), ZX_OK);
+    ASSERT_EQ(timer_2.set(deadline_2, zx::msec(110)), ZX_OK);
 
     zx_signals_t pending;
-    EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, ZX_TIME_INFINITE, &pending), ZX_OK);
+    EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
     EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
     auto duration = zx_clock_get(ZX_CLOCK_MONOTONIC) - start;

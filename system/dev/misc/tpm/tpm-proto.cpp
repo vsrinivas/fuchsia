@@ -53,15 +53,11 @@
 #define TPM_INTERFACE_ID_TYPE_CRB      0x1
 #define TPM_INTERFACE_ID_TYPE_FIFO_1_3 0xf
 
-// Timeouts (in ns)
-#define TIMEOUT_A 750000  //  750 ms
-#define TIMEOUT_B 2000000 // 2000 ms
-#define TIMEOUT_C 200000  //  200 ms
-#define TIMEOUT_D 30000   //   30 ms
-
 namespace {
 
-constexpr zx_duration_t kWaitForProgressDelay = ZX_MSEC(2);
+constexpr zx::duration TIMEOUT_A = zx::msec(750);
+
+constexpr zx::duration kWaitForProgressDelay = zx::msec(2);
 
 } // namespace
 

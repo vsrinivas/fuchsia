@@ -46,9 +46,9 @@ private:
     };
 
     // Timeout to use if this device does not have an IRQ wired up.
-    static constexpr zx_duration_t kNoIrqTimeout = ZX_MSEC(20);
+    static constexpr zx::duration kNoIrqTimeout = zx::msec(20);
     // Delay to use between retries if an I2C operation errors.
-    static constexpr zx_duration_t kI2cRetryDelay = ZX_USEC(50);
+    static constexpr zx::duration kI2cRetryDelay = zx::usec(50);
 
     I2cCr50Interface(zx_device_t* i2c_dev, zx::handle irq);
 

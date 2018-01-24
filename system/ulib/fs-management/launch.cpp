@@ -72,7 +72,7 @@ zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
     }
     zx::process proc(proc_handle);
 
-    status = proc.wait_one(ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, nullptr);
+    status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
         fprintf(stderr, "launch: Error waiting for process to terminate\n");
         return status;

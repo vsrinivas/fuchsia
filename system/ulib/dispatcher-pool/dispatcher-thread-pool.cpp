@@ -294,7 +294,7 @@ int ThreadPool::Thread::Main() {
 
         // Wait for there to be work to dispatch.  We should never encounter an
         // error, but if we do, shut down.
-        res = pool_->port().wait(ZX_TIME_INFINITE, &pkt, 0);
+        res = pool_->port().wait(zx::time::infinite(), &pkt, 0);
         ZX_DEBUG_ASSERT(res == ZX_OK);
 
         // Is it time to exit?

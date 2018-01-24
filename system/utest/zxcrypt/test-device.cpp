@@ -108,7 +108,7 @@ zx_status_t WaitForBlockDevice(char* driver, fbl::unique_fd* out_fd) {
     }
     auto cleanup = fbl::MakeAutoCall([&] { closedir(dir); });
 
-    zx_time_t deadline = zx::deadline_after(ZX_SEC(3));
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
     BlockDeviceRequest req(driver);
     if ((rc = fdio_watch_directory(dirfd(dir), BlockWatcher, deadline, &req)) != ZX_ERR_STOP) {
         xprintf("%s: fdio_watch_directory(%d, %p, %" PRIu64 ", %p) failed: %s\n",

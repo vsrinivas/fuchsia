@@ -35,10 +35,10 @@
 // to keep it fairly short. If it's too short, the test will occasionally be flaky,
 // especially on qemu.
 #define PROPAGATE_MSEC (50)
-#define PROPAGATE_TIME (zx::deadline_after(ZX_MSEC(PROPAGATE_MSEC)))
+#define PROPAGATE_TIME (zx::deadline_after(zx::msec(PROPAGATE_MSEC)))
 // We expect something to happen prior to timeout, and the test will fail if it doesn't. So
 // wait longer to further reduce the likelihood of test flakiness.
-#define FAIL_TIMEOUT (zx::deadline_after(ZX_MSEC(3 * PROPAGATE_MSEC)))
+#define FAIL_TIMEOUT (zx::deadline_after(zx::msec(3 * PROPAGATE_MSEC)))
 
 // Because of test flakiness if a previous test case's ethertap device isn't cleaned up, we put a
 // delay at the end of each test to give devmgr time to clean up the ethertap devices.
@@ -133,7 +133,7 @@ zx_status_t OpenEthertapDev(int* fd) {
         return ZX_ERR_IO;
     }
 
-    zx_status_t status = fdio_watch_directory(ethdir, WatchCb, zx::deadline_after(ZX_SEC(2)),
+    zx_status_t status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
                                               reinterpret_cast<void*>(fd));
     if (status == ZX_ERR_STOP) {
         return ZX_OK;
@@ -362,7 +362,7 @@ static bool EthernetStartTest() {
 
     // Verify no signals asserted on the rx fifo
     zx_signals_t obs;
-    client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, 0, &obs);
+    client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::time(), &obs);
     EXPECT_FALSE(obs & ETH_SIGNAL_STATUS);
 
     // Start the ethernet client
@@ -556,7 +556,7 @@ static bool EthernetDataTest_Send() {
 
     // Ensure that the fifo is writable
     zx_signals_t obs;
-    EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, 0, &obs));
+    EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
     ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
     // Grab an available TX fifo entry
@@ -624,7 +624,7 @@ static bool EthernetDataTest_Recv() {
 
     // The socket should be writable
     zx_signals_t obs;
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_WRITABLE, 0, &obs));
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_WRITABLE, zx::time(), &obs));
     ASSERT_TRUE(obs & ZX_SOCKET_WRITABLE);
 
     // Send a buffer through the socket
@@ -651,7 +651,7 @@ static bool EthernetDataTest_Recv() {
     EXPECT_BYTES_EQ(buf, return_buf, entry.length, "");
 
     // RX fifo should be readable, and we can return the buffer to the driver
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, 0, &obs));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
     ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
     entry.length = 2048;

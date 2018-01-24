@@ -206,7 +206,7 @@ int HidDevice::Thread() {
     zx_status_t status = ZX_OK;
     const zx_signals_t wait = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | HID_SHUTDOWN;
     while (true) {
-        status = data_.wait_one(wait, ZX_TIME_INFINITE, &pending);
+        status = data_.wait_one(wait, zx::time::infinite(), &pending);
         if (status != ZX_OK) {
             zxlogf(ERROR, "hidctl: error waiting on data: %d\n", status);
             break;

@@ -234,7 +234,7 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             zx_signals_t waitfor = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate;
             zx_signals_t observed;
-            if ((status = fifo_.wait_one(waitfor, ZX_TIME_INFINITE, &observed)) != ZX_OK) {
+            if ((status = fifo_.wait_one(waitfor, zx::time::infinite(), &observed)) != ZX_OK) {
                 return status;
             }
             if ((observed & ZX_FIFO_PEER_CLOSED) || (observed & kSignalFifoTerminate)) {

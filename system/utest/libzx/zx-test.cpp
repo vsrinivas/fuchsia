@@ -170,7 +170,7 @@ static bool port_test() {
     ASSERT_EQ(channel[1].write(0u, "12345", 5, nullptr, 0u), ZX_OK);
 
     zx_port_packet_t packet = {};
-    ASSERT_EQ(port.wait(0ull, &packet, 0u), ZX_OK);
+    ASSERT_EQ(port.wait(zx::time(), &packet, 0u), ZX_OK);
     ASSERT_EQ(packet.key, key);
     ASSERT_EQ(packet.type, ZX_PKT_TYPE_SIGNAL_ONE);
     ASSERT_EQ(packet.signal.count, 1u);
@@ -198,7 +198,6 @@ static bool time_test() {
     ASSERT_EQ((zx::time() + zx::duration::infinite()).get(), ZX_TIME_INFINITE);
 
     // Just a smoke test
-    ASSERT_GE(zx::deadline_after(10), 10);
     ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
 
     END_TEST;

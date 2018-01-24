@@ -80,7 +80,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         zx_signals_t sigs;
 
         res = rb_ch_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                              stop_time, &sigs);
+                              zx::time(stop_time), &sigs);
 
         // If we get a timeout error, we have hit our stop time.
         if (res == ZX_ERR_TIMED_OUT) break;

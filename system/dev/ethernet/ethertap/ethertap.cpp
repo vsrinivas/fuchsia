@@ -191,7 +191,7 @@ int TapDevice::Thread() {
     const zx_signals_t wait = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ETHERTAP_SIGNAL_ONLINE
         | ETHERTAP_SIGNAL_OFFLINE | TAP_SHUTDOWN;
     while (true) {
-        status = data_.wait_one(wait, ZX_TIME_INFINITE, &pending);
+        status = data_.wait_one(wait, zx::time::infinite(), &pending);
         if (status != ZX_OK) {
             ethertap_trace("error waiting on data: %d\n", status);
             break;

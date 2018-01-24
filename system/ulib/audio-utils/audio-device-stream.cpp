@@ -25,7 +25,7 @@
 namespace audio {
 namespace utils {
 
-static constexpr zx_duration_t CALL_TIMEOUT = ZX_MSEC(500);
+static constexpr zx::duration CALL_TIMEOUT = zx::msec(500);
 template <typename ReqType, typename RespType>
 zx_status_t DoCallImpl(const zx::channel& channel,
                        const ReqType&     req,
@@ -48,7 +48,7 @@ zx_status_t DoCallImpl(const zx::channel& channel,
     uint32_t bytes, handles;
     zx_status_t read_status, write_status;
 
-    write_status = channel.call(0, zx_deadline_after(CALL_TIMEOUT), &args, &bytes, &handles,
+    write_status = channel.call(0, zx::deadline_after(CALL_TIMEOUT), &args, &bytes, &handles,
                                 &read_status);
 
     if (write_status != ZX_OK) {
@@ -207,7 +207,7 @@ zx_status_t AudioDeviceStream::GetSupportedFormats(
 
         zx_signals_t pending_sig;
         res = stream_ch_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                  zx_deadline_after(CALL_TIMEOUT),
+                                  zx::deadline_after(CALL_TIMEOUT),
                                   &pending_sig);
         if (res != ZX_OK) {
             printf("Failed to wait for next response after processing %u/%u formats (res %d)\n",
@@ -337,7 +337,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
         while (true) {
             zx_signals_t pending;
             res = stream_ch_.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
-                                      deadline, &pending);
+                                      zx::time(deadline), &pending);
 
             if ((res != ZX_OK) || (pending & ZX_CHANNEL_PEER_CLOSED)) {
                 if (res != ZX_ERR_TIMED_OUT)
@@ -383,7 +383,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
             zx_time_t next_wake = fbl::min(deadline, now + ZX_MSEC(100u));
 
             zx_signals_t sigs;
-            zx_status_t res = stream_ch_.wait_one(ZX_CHANNEL_PEER_CLOSED, next_wake, &sigs);
+            zx_status_t res = stream_ch_.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(next_wake), &sigs);
 
             if ((res != ZX_OK) && (res != ZX_ERR_TIMED_OUT)) {
                 printf("Error waiting on stream channel (res %d)\n", res);
@@ -609,7 +609,7 @@ bool AudioDeviceStream::IsChannelConnected(const zx::channel& ch) {
         return false;
 
     zx_signals_t junk;
-    return ch.wait_one(ZX_CHANNEL_PEER_CLOSED, 0u, &junk) != ZX_ERR_TIMED_OUT;
+    return ch.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(), &junk) != ZX_ERR_TIMED_OUT;
 }
 
 

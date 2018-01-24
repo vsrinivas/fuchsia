@@ -97,7 +97,7 @@ void ExecutionDomain::Deactivate(bool sync_dispatch) {
         __UNUSED zx_status_t res;
         zx_signals_t pending;
 
-        res = dispatch_idle_evt_.wait_one(ZX_USER_SIGNAL_0, zx_deadline_after(ZX_SEC(5)), &pending);
+        res = dispatch_idle_evt_.wait_one(ZX_USER_SIGNAL_0, zx::deadline_after(zx::sec(5)), &pending);
 
         ZX_DEBUG_ASSERT(res == ZX_OK);
         ZX_DEBUG_ASSERT((pending & ZX_USER_SIGNAL_0) != 0);

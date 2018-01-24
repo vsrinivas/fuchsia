@@ -22,7 +22,7 @@ namespace {
 
 // Amount of time to allow for other threads to release their references
 // to the trace buffer during shutdown.  See point of use for details.
-constexpr unsigned int kSynchronousShutdownTimeoutMilliseconds = 1000;
+constexpr zx::duration kSynchronousShutdownTimeout = zx::msec(1000);
 
 // Trace engine lock.
 // See rules below for how this is used.
@@ -239,15 +239,15 @@ bool handle_async_dispatcher_shutdown() {
     // just prior to process exit.
     auto status = g_event.wait_one(
         SIGNAL_CONTEXT_RELEASED,
-        zx_deadline_after(ZX_MSEC(kSynchronousShutdownTimeoutMilliseconds)),
+        zx::deadline_after(kSynchronousShutdownTimeout),
         nullptr);
     if (status != ZX_OK) {
         // Uh oh.
         printf("Timed out waiting for %u trace context references to be released "
-               "after %u ms while the asynchronous dispatcher was shutting down.\n"
+               "after %lu ns while the asynchronous dispatcher was shutting down.\n"
                "Tracing will no longer be available in this process.",
                g_context_refs.load(fbl::memory_order_relaxed),
-               kSynchronousShutdownTimeoutMilliseconds);
+               kSynchronousShutdownTimeout.get());
         return false;
     }
 
