@@ -12,6 +12,7 @@
 #include "lib/fxl/random/uuid.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/svc/cpp/services.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -28,6 +29,7 @@ class CloudProviderFactory::TokenProviderContainer {
       : application_context_(application_context),
         network_service_(
             std::move(task_runner),
+            std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return application_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();

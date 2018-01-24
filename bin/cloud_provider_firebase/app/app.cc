@@ -11,6 +11,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/network/network_service_impl.h"
 
 namespace cloud_provider_firebase {
@@ -23,6 +24,7 @@ class App : public modular::Lifecycle {
         trace_provider_(loop_.async()),
         network_service_(
             loop_.task_runner(),
+            std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return application_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();

@@ -162,8 +162,10 @@ class NetworkServiceImpl::RunningRequest {
 
 NetworkServiceImpl::NetworkServiceImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
+    std::unique_ptr<backoff::Backoff> backoff,
     std::function<network::NetworkServicePtr()> network_service_factory)
-    : network_service_factory_(std::move(network_service_factory)),
+    : backoff_(std::move(backoff)),
+      network_service_factory_(std::move(network_service_factory)),
       task_runner_(std::move(task_runner)) {}
 
 NetworkServiceImpl::~NetworkServiceImpl() {}
@@ -199,7 +201,7 @@ network::NetworkService* NetworkServiceImpl::GetNetworkService() {
       }
       network_service_.reset();
       task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
-                                   backoff_.GetNext());
+                                   backoff_->GetNext());
     });
   }
 

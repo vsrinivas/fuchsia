@@ -7,7 +7,7 @@
 
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
+#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 #include "peridot/lib/network/network_service.h"
@@ -18,6 +18,7 @@ class NetworkServiceImpl : public NetworkService {
  public:
   NetworkServiceImpl(
       fxl::RefPtr<fxl::TaskRunner> task_runner,
+      std::unique_ptr<backoff::Backoff> backoff,
       std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkServiceImpl() override;
 
@@ -32,7 +33,7 @@ class NetworkServiceImpl : public NetworkService {
 
   void RetryGetNetworkService();
 
-  backoff::ExponentialBackoff backoff_;
+  std::unique_ptr<backoff::Backoff> backoff_;
   bool in_backoff_ = false;
   std::function<network::NetworkServicePtr()> network_service_factory_;
   network::NetworkServicePtr network_service_;

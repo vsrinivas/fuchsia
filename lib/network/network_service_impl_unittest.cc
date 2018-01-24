@@ -18,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
@@ -115,6 +116,7 @@ class NetworkServiceImplTest : public gtest::TestWithMessageLoop {
  public:
   NetworkServiceImplTest()
       : network_service_(message_loop_.task_runner(),
+                         std::make_unique<backoff::TestBackoff>(),
                          [this] { return NewNetworkService(); }) {}
 
   void SetSocketResponse(zx::socket body, uint32_t status_code) {
@@ -175,10 +177,9 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
              }),
        &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
   EXPECT_FALSE(callback_destroyed);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_TRUE(callback_destroyed);
@@ -196,15 +197,13 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
       [this, &received_response,
        destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
          callback_destroyed = true;
-         message_loop_.PostQuitTask();
        })](network::URLResponsePtr) {
         received_response = true;
-        message_loop_.PostQuitTask();
       });
 
   message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_FALSE(received_response);
   EXPECT_TRUE(callback_destroyed);
 }
@@ -223,9 +222,8 @@ TEST_F(NetworkServiceImplTest, NetworkDeleted) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -247,9 +245,8 @@ TEST_F(NetworkServiceImplTest, Redirection) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -273,7 +270,7 @@ TEST_F(NetworkServiceImplTest, CancelOnCallback) {
         request = nullptr;
       });
   EXPECT_FALSE(response);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
 }

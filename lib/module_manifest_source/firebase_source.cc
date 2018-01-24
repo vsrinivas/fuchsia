@@ -13,6 +13,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/network/network_service_impl.h"
@@ -167,8 +168,10 @@ FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     : db_id_(db_id),
       prefix_(prefix),
       network_service_(
-          new ledger::NetworkServiceImpl(std::move(task_runner),
-                                         std::move(network_service_factory))),
+          new ledger::NetworkServiceImpl(
+              std::move(task_runner),
+              std::make_unique<backoff::ExponentialBackoff>(),
+              std::move(network_service_factory))),
       client_(
           new firebase::FirebaseImpl(network_service_.get(), db_id, prefix)),
       weak_factory_(this) {}
