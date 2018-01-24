@@ -5,7 +5,9 @@
 
 import argparse
 import errno
+import json
 import os
+import shutil
 import sys
 
 
@@ -47,11 +49,20 @@ def main():
         print('Only the "c-pp" domain is supported at the moment.')
         return 1
 
-    # TODO(pylaligand): lay out a nice little SDK in the output directory.
-    dummy_path = os.path.join(args.out_dir, 'nothing_to_see_yet.txt')
-    make_dir(dummy_path)
-    with open(dummy_path, 'w') as dummy_file:
-        dummy_file.write('Told you, nothing to see here...\n')
+    # Remove any existing output.
+    shutil.rmtree(args.out_dir, True)
+
+    with open(args.manifest, 'r') as manifest_file:
+        manifest = json.load(manifest_file)
+    atoms = filter(lambda a: a['id']['domain'] == 'c-pp', manifest['atoms'])
+
+    base_dir = os.path.join(args.out_dir, 'pkg')
+    for atom in atoms:
+        dir = os.path.join(base_dir, atom['id']['name'])
+        for relative_destination, source in atom['files'].iteritems():
+            destination = os.path.join(dir, relative_destination)
+            make_dir(destination)
+            shutil.copyfile(source, destination)
 
     with open(args.depfile, 'w') as dep_file:
         dep_file.write('%s:\n' % args.depname)

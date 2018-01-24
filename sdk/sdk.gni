@@ -42,7 +42,7 @@ template("sdk") {
   if (defined(invoker.name)) {
     sdk_name = invoker.name
   }
-  final_manifest_file = "$root_out_dir/sdks/$sdk_name"
+  final_manifest_file = "$root_out_dir/sdk-manifests/$sdk_name"
 
   # Copies the manifest to a central location.
   copy(copy_target_name) {
@@ -105,7 +105,7 @@ template("sdk") {
       script = "//build/sdk/export_sdk.py"
 
       inputs = [
-        manifest_file,
+        final_manifest_file,
       ]
 
       depfile = "$stamp_file.d"
@@ -130,7 +130,7 @@ template("sdk") {
       ]
 
       deps = [
-        ":$main_target_name",
+        ":$copy_target_name",
       ]
     }
   } else { # Not exported.
