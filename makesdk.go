@@ -127,8 +127,8 @@ func init() {
 		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 			toolchainLibs,
-			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/6.0.0/lib/fuchsia", hostOs, hostCpu),
-			"toolchain_libs/clang/6.0.0/lib/fuchsia",
+			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/7.0.0/lib/fuchsia", hostOs, hostCpu),
+			"toolchain_libs/clang/7.0.0/lib/fuchsia",
 		},
 	}
 
