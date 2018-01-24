@@ -147,19 +147,19 @@ void NetConnectorImpl::StartListener() {
           if (to->v4_address) {
             std::cerr << "netconnector: Device '" << to->instance_name
                       << "' discovered at address "
-                      << SocketAddress(to->v4_address.get());
+                      << SocketAddress(to->v4_address.get()) << "\n";
             params_->RegisterDevice(to->instance_name,
                                     IpAddress(to->v4_address->addr.get()));
           } else if (to->v6_address) {
             std::cerr << "netconnector: Device '" << to->instance_name
                       << "' discovered at address "
-                      << SocketAddress(to->v6_address.get());
+                      << SocketAddress(to->v6_address.get()) << "\n";
             params_->RegisterDevice(to->instance_name,
                                     IpAddress(to->v6_address->addr.get()));
           }
         } else if (from != nullptr && to == nullptr) {
           std::cerr << "netconnector: Device '" << from->instance_name
-                    << "' lost";
+                    << "' lost\n";
           params_->UnregisterDevice(from->instance_name);
         }
       });
