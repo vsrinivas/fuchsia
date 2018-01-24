@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 
 #include <syslog/logger.h>
@@ -34,15 +35,16 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
 
   buf.Append("[");
   if (!tagstr_.empty()) {
-    buf.AppendPrintf("%s", tagstr_.c_str());
+    buf.Append(tagstr_);
   }
-  buf.Append("]");
 
-  buf.Append("[");
   if (tag != NULL) {
     size_t len = strlen(tag);
     if (len > 0) {
-      buf.AppendPrintf("%.*s", FX_LOG_MAX_TAG_LEN, tag);
+      if (!tagstr_.empty()) {
+        buf.Append(", ");
+      }
+      buf.Append(tag, fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN)));
     }
   }
   buf.Append("]");

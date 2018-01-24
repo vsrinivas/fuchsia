@@ -127,7 +127,7 @@ bool test_log_write_with_global_tag(void) {
   size_t n = read(pipefd[1], &buf, 256);
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[gtag][tag] INFO: 10, just some string\n"), buf);
+  EXPECT_TRUE(ends_with(buf, "[gtag, tag] INFO: 10, just some string\n"), buf);
   close(pipefd[1]);
   END_TEST;
 }
@@ -144,7 +144,7 @@ bool test_log_write_with_multi_global_tag(void) {
   size_t n = read(pipefd[1], &buf, 256);
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[gtag, gtag2][tag] INFO: 10, just some string\n"),
+  EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"),
               buf);
   close(pipefd[1]);
   END_TEST;
