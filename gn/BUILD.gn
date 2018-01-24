@@ -252,7 +252,7 @@ action("finalize_manifests") {
     # action.  We're relying on the depfile to notice their changes.
     #sources += [ package_manifest ]
 
-    args += [ "--optional-manifest=" + rebase_path(package_manifest) ]
+    args += [ "--optional-manifest=" + rebase_path(package_manifest, root_build_dir) ]
   }
 
   foreach(package, package_list) {
@@ -267,7 +267,7 @@ action("finalize_manifests") {
     outputs += [ final_manifest ]
     args += [
       "--standalone-output=" + rebase_path(final_manifest, root_build_dir),
-      "--manifest=" + rebase_path(package_manifest),
+      "--manifest=" + rebase_path(package_manifest, root_build_dir),
     ]
   }
 
@@ -283,7 +283,7 @@ action("finalize_manifests") {
     outputs += [ final_manifest ]
     args += [
       "--standalone-output=" + rebase_path(final_manifest, root_build_dir),
-      "--manifest=" + rebase_path(package_manifest),
+      "--manifest=" + rebase_path(package_manifest, root_build_dir),
     ]
   }
 }
