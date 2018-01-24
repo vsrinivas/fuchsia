@@ -59,6 +59,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   for (const auto& path : sandbox.system())
     PushDirectoryFromPath("/system/" + path);
 
+  for (const auto& path : sandbox.pkgfs())
+    PushDirectoryFromPath("/pkgfs/" + path);
+
   for (const auto& feature : sandbox.features()) {
     if (feature == "persistent-storage") {
       // TODO(flowerhack): Make this feature more fine-grained.

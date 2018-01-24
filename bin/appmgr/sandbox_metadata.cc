@@ -25,6 +25,7 @@ bool CopyArrayToVector(const Value& value, std::vector<std::string>* vector) {
 
 constexpr char kDev[] = "dev";
 constexpr char kSystem[] = "system";
+constexpr char kPkgfs[] = "pkgfs";
 constexpr char kFeatures[] = "features";
 
 SandboxMetadata::SandboxMetadata() = default;
@@ -49,6 +50,12 @@ bool SandboxMetadata::Parse(const std::string& data) {
   auto system = document.FindMember(kSystem);
   if (system != document.MemberEnd()) {
     if (!CopyArrayToVector(system->value, &system_))
+      return false;
+  }
+
+  auto pkgfs = document.FindMember(kPkgfs);
+  if (pkgfs != document.MemberEnd()) {
+    if (!CopyArrayToVector(pkgfs->value, &pkgfs_))
       return false;
   }
 
