@@ -78,13 +78,14 @@ def assemble_manifest(manifests_dir, output_stream):
 
     No returns, but may raise an exception if writing to output_stream fails.
     """
-    inputs = ["final_archive_manifest"]
+    inputs = ["final_package_manifest", "final_archive_manifest"]
     for input in inputs:
         manifest = os.path.join(manifests_dir, input)
         if os.path.exists(manifest) and os.stat(manifest).st_size > 0:
             with open(manifest, "r") as src:
                 for line in src:
                     output_stream.write(line)
+            break
 
 def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir):
     """Add a FAR to the update repository under the specified name
