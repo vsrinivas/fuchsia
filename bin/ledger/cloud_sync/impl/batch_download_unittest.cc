@@ -85,14 +85,13 @@ TEST_F(BatchDownloadTest, AddCommit) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
-                               [this, &done_calls] {
+                               [&done_calls] {
                                  done_calls++;
-                                 message_loop_.PostQuitTask();
                                },
                                [&error_calls] { error_calls++; });
   batch_download.Start();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1, done_calls);
   EXPECT_EQ(0, error_calls);
   EXPECT_EQ(1u, storage_.received_commits.size());
@@ -108,14 +107,13 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("43"),
-                               [this, &done_calls] {
+                               [&done_calls] {
                                  done_calls++;
-                                 message_loop_.PostQuitTask();
                                },
                                [&error_calls] { error_calls++; });
   batch_download.Start();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1, done_calls);
   EXPECT_EQ(0, error_calls);
   EXPECT_EQ(2u, storage_.received_commits.size());
@@ -132,14 +130,13 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
                                [&done_calls] { done_calls++; },
-                               [this, &error_calls] {
+                               [&error_calls] {
                                  error_calls++;
-                                 message_loop_.PostQuitTask();
                                });
   storage_.should_fail_add_commit_from_sync = true;
   batch_download.Start();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0, done_calls);
   EXPECT_EQ(1, error_calls);
   EXPECT_TRUE(storage_.received_commits.empty());
