@@ -32,6 +32,10 @@ source_set("unittests") {
     "cobalt_unittest.cc",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/svc/cpp",
+  ]
+
   deps = [
     ":cobalt",
     "//peridot/lib/gtest",

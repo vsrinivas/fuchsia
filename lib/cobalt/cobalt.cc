@@ -51,7 +51,7 @@ void CobaltContext::ReportEvent(uint32_t event) {
 
 void CobaltContext::ConnectToCobaltApplication() {
   auto encoder_factory =
-      app_context_->ConnectToEnvironmentService<cobalt::CobaltEncoderFactory>();
+      app_context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
   encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
   encoder_.set_error_handler([this] { OnConnectionError(); });
 
@@ -92,14 +92,14 @@ void CobaltContext::SendEvents() {
     auto callback = waiter->NewCallback();
     encoder_->AddIndexObservation(
         metric_id_, encoding_id_, static_cast<uint32_t>(event),
-        [this, event, callback = std::move(callback)](cobalt::Status status) {
+        [this, event, callback = std::move(callback)](Status status) {
           auto cleanup = fxl::MakeAutoCall(callback);
 
           switch (status) {
-            case cobalt::Status::INVALID_ARGUMENTS:
-            case cobalt::Status::FAILED_PRECONDITION:
+            case Status::INVALID_ARGUMENTS:
+            case Status::FAILED_PRECONDITION:
               FXL_DCHECK(false) << "Unexpected status: " << status;
-            case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
+            case Status::OBSERVATION_TOO_BIG:  // fall through
               // Log the failure.
               FXL_LOG(WARNING) << "Cobalt rejected event: " << event
                                << " with status: " << status;
@@ -108,9 +108,9 @@ void CobaltContext::SendEvents() {
               // events to send.
               events_in_transit_.erase(event);
               break;
-            case cobalt::Status::INTERNAL_ERROR:
-            case cobalt::Status::SEND_FAILED:
-            case cobalt::Status::TEMPORARILY_FULL:
+            case Status::INTERNAL_ERROR:
+            case Status::SEND_FAILED:
+            case Status::TEMPORARILY_FULL:
               // Keep the event for re-queueing.
               break;
           }
