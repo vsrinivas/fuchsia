@@ -4014,7 +4014,7 @@ void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
     dev->HandleTxComplete(request);
 }
 
-constexpr size_t Device::tx_pkt_len(wlan_tx_packet_t* pkt) {
+size_t Device::tx_pkt_len(wlan_tx_packet_t* pkt) {
     auto len = pkt->packet_head->len;
     if (pkt->packet_tail != nullptr) {
         if (pkt->packet_tail->len < pkt->tail_offset) { return ZX_ERR_INVALID_ARGS; }
@@ -4023,20 +4023,20 @@ constexpr size_t Device::tx_pkt_len(wlan_tx_packet_t* pkt) {
     return len;
 }
 
-constexpr size_t Device::txwi_len() {
+size_t Device::txwi_len() {
     return (rt_type_ == RT5592) ? 20 : 16;
 }
 
-constexpr size_t Device::align_pad_len(wlan_tx_packet_t* pkt) {
+size_t Device::align_pad_len(wlan_tx_packet_t* pkt) {
     auto len = tx_pkt_len(pkt);
     return ((len + 3) & ~3) - len;
 }
 
-constexpr size_t Device::terminal_pad_len() {
+size_t Device::terminal_pad_len() {
     return 4;
 }
 
-constexpr size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
+size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
     // Our USB packet looks like:
     //   TxInfo (4 bytes)
     //   TXWI fields (16-20 bytes, depending on device)

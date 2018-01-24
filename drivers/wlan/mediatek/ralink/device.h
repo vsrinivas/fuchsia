@@ -181,11 +181,11 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
 
-    constexpr size_t tx_pkt_len(wlan_tx_packet_t* pkt);
-    constexpr size_t txwi_len();
-    constexpr size_t align_pad_len(wlan_tx_packet_t* pkt);
-    constexpr size_t terminal_pad_len();
-    constexpr size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
+    size_t tx_pkt_len(wlan_tx_packet_t* pkt);
+    size_t txwi_len();
+    size_t align_pad_len(wlan_tx_packet_t* pkt);
+    size_t terminal_pad_len();
+    size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
 
     usb_protocol_t usb_;
     fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
