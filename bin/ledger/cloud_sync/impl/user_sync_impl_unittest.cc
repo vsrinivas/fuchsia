@@ -41,7 +41,6 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
         &environment_, std::move(user_config),
         std::make_unique<backoff::TestBackoff>(), &sync_state_watcher_, [this] {
           on_version_mismatch_calls_++;
-          message_loop_.PostQuitTask();
         });
   }
   ~UserSyncImplTest() override {}
@@ -74,7 +73,7 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
       cloud_provider::Status::NOT_FOUND;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1, on_version_mismatch_calls_);
 }
 
