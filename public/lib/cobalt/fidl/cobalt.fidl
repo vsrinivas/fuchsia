@@ -72,12 +72,16 @@ struct ObservationValue {
   uint32 encoding_id;
 };
 
-// A value that may be a string, int, double or index.
+// A value that may be a string, int, double, index or distribution of ints.
 union Value {
   string string_value;
   int64  int_value;
   double double_value;
   uint32 index_value;
+  // The key is a bucket index and the value is a count for that bucket. The
+  // definition of the buckets is given by the IntegerBuckets in the MetricPart
+  // definition registered with Cobalt.
+  map<uint32, uint64> int_bucket_distribution;
 };
 
 [ServiceName="cobalt::CobaltEncoderFactory"]
@@ -176,6 +180,24 @@ interface CobaltEncoder {
   //               with the definition of the metric and encoding.
   AddMultipartObservation@5(uint32 metric_id,
                             array<ObservationValue> observation)
+      => (Status status);
+
+  // Adds a distribution of int observations. It will eventually be sent to the
+  // Cobalt server.
+  //
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID.
+  //
+  // |encoding_id| Must be an encoding ID registered with the Cobalt system
+  //               and associated with this encoder's project ID.
+  //
+  // |observations| The Distribution to be encoded. A bucket distribution is a
+  //                mapping from bucket indices to element counts in those
+  //                buckets. The definition of the buckets is given by the
+  //                IntegerBuckets in the MetricPart definition registered with
+  //                Cobalt.
+  AddIntBucketDistribution@6(uint32 metric_id, uint32 encoding_id,
+                             map<uint32, uint64> observations)
       => (Status status);
 
   // Obsolete. This does nothing and always returns OK.

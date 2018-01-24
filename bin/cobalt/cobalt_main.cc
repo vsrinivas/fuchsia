@@ -126,10 +126,9 @@ class CobaltEncoderImpl : public CobaltEncoder {
                          const int64_t observation,
                          const AddIntObservationCallback& callback) override;
 
-  void AddDoubleObservation(uint32_t metric_id,
-                            uint32_t encoding_id,
-                            const double observation,
-                            const AddIntObservationCallback& callback) override;
+  void AddDoubleObservation(
+      uint32_t metric_id, uint32_t encoding_id, const double observation,
+      const AddDoubleObservationCallback& callback) override;
 
   void AddIndexObservation(
       uint32_t metric_id,
@@ -141,6 +140,11 @@ class CobaltEncoderImpl : public CobaltEncoder {
       uint32_t metric_id,
       fidl::Array<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override;
+
+  void AddIntBucketDistribution(
+      uint32_t metric_id, uint32_t encoding_id,
+      fidl::Map<uint32_t, uint64_t> observations,
+      const AddIntBucketDistributionCallback& callback) override;
 
   void SendObservations(const SendObservationsCallback& callback) override;
 
@@ -196,10 +200,8 @@ void CobaltEncoderImpl::AddIntObservation(
 }
 
 void CobaltEncoderImpl::AddDoubleObservation(
-    uint32_t metric_id,
-    uint32_t encoding_id,
-    const double observation,
-    const AddIntObservationCallback& callback) {
+    uint32_t metric_id, uint32_t encoding_id, const double observation,
+    const AddDoubleObservationCallback& callback) {
   auto result = encoder_.EncodeDouble(metric_id, encoding_id, observation);
   AddEncodedObservation(&result, callback);
 }
@@ -250,6 +252,14 @@ void CobaltEncoderImpl::AddMultipartObservation(
   }
   auto result = encoder_.Encode(metric_id, value);
   AddEncodedObservation(&result, callback);
+}
+
+void CobaltEncoderImpl::AddIntBucketDistribution(
+    uint32_t metric_id, uint32_t encoding_id,
+    fidl::Map<uint32_t, uint64_t> observations,
+    const AddIntBucketDistributionCallback& callback) {
+  FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
+  callback(Status::INTERNAL_ERROR);
 }
 
 void CobaltEncoderImpl::SendObservations(
