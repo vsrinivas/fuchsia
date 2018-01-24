@@ -1,24 +1,28 @@
-Fuchsia is Not Linux
-====================
+# Fuchsia is not Linux
 _A modular, capability-based operating system_
 
-This "book" is a collection of topics describing the Fuchsia operating system.
-Sections will be populated over time.
+This document is a collection of articles describing the Fuchsia operating system,
+organized around particular subsystems. Sections will be populated over time.
 
-# Zircon Kernel
+[TOC]
+
+## Zircon Kernel
+
+Zircon is the microkernel underlying the rest of Fuchsia. Zircon
+also provides core drivers and Fuchsia's libc implementation.
 
  - [Concepts][zircon-concepts]
  - [System Calls][zircon-syscalls] / VDSO (libzircon)
  - Boot Sequence
 
-# Zircon Core
+## Zircon Core
 
  - Device Manager & Device Hosts
  - Device Driver Model (DDK)
  - [C Library (libc) & POSIX IO (libfdio)](libc.md)
  - [Process Start / ELF Loading (liblaunchpad)](launchpad.md)
 
-# Framework
+## Framework
 
  - [Core Libraries](core_libraries.md)
  - Application model
@@ -35,16 +39,16 @@ Sections will be populated over time.
  - [Agent][framework-agent]
  - Links
 
-# Storage
+## Storage
 
  - [Block devices](block_devices.md)
  - [File systems](filesystems.md)
  - Directory hierarchy
- - [Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md)
+ - [Ledger][ledger]
  - Document store
  - Application cache
 
-# Networking
+## Networking
 
  - Ethernet
  - [Wireless](wireless_networking.md)
@@ -52,7 +56,7 @@ Sections will be populated over time.
  - Sockets
  - HTTP
 
-# Graphics
+## Graphics
 
  - [Magma (vulkan driver)](https://fuchsia.googlesource.com/garnet/+/master/lib/magma/)
  - [Escher (physically-based renderer)](
@@ -63,47 +67,36 @@ Sections will be populated over time.
  - [View manager](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/)
  - [Flutter (toolkit)](https://flutter.io/)
 
-# Media
+## Media
 
  - Audio
  - Video
  - DRM
 
-# Intelligence
+## Intelligence
 
  - Context
  - Agent Framework
  - Suggestions
 
-# User interface
+## User interface
 
  - Device, user, and story shells
  - Stories and modules
 
-# Backwards compatibility
+## Backwards compatibility
 
  - POSIX lite
  - Web runtime
 
-# Update and recovery
+## Update and recovery
 
  - Verified boot
  - Updater
-
-# Developer tools
-
- - Building
-   - [How to build](build_system.md)
-   - [Build system overview](build_overview.md)
- - Testing
- - [Debugging](debugging.md)
- - Tracing
- - [Toolchain](toolchain.md)
-
-
 
 [zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md "Zircon concepts"
 [zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md "Zircon syscalls"
 [framework-story]: https://fuchsia.googlesource.com/modular/+/master/docs/story.md "Framework story"
 [framework-module]: https://fuchsia.googlesource.com/modular/+/master/docs/module.md "Framework module"
 [framework-agent]: https://fuchsia.googlesource.com/modular/+/master/docs/agent.md "Framework agent"
+[ledger]: https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md

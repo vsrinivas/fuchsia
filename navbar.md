@@ -1,8 +1,9 @@
 # Fuchsia
 
-* [Home](/book.md)
-* [Getting Started](/getting_started.md)
-* [Glossary](/glossary.md)
+* [Home](README.md)
+* [Glossary](glossary.md)
+* [Development](development.md)
+* [System](book.md)
 
-[home]: /book.md
+[home]: README.md
 [logo]: /images/fuchsia-logo-32x32.png
