@@ -43,9 +43,120 @@ static void put_i2c_txn(i2c_txn_t* txn) {
     mtx_unlock(&bus->i2c_txn_lock);
 }
 
-static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
-                                         size_t *out_length, zx_handle_t* out_handle,
-                                         uint32_t* out_handle_count) {
+static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
+                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
+    platform_dev_t* dev = ctx;
+
+    if (index >= dev->mmio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    pbus_mmio_t* mmio = &dev->mmios[index];
+    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
+    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
+    zx_handle_t vmo_handle;
+    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, vmo_base, vmo_size,
+                                                &vmo_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        return status;
+    }
+
+    status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
+        goto fail;
+    }
+
+    uintptr_t virt;
+    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, vmo_size,
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
+                         &virt);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
+        goto fail;
+    }
+
+    *size = mmio->length;
+    *out_handle = vmo_handle;
+    *vaddr = (void *)(virt + (mmio->base - vmo_base));
+    return ZX_OK;
+
+fail:
+    zx_handle_close(vmo_handle);
+    return status;
+}
+
+static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+    platform_dev_t* dev = ctx;
+
+    if (index >= dev->irq_count || !out_handle) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    pbus_irq_t* irq = &dev->irqs[index];
+    zx_status_t status = zx_interrupt_create(dev->bus->resource, 0, out_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
+        return status;
+    }
+    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq, irq->mode);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_bind failed %d\n", status);
+        zx_handle_close(*out_handle);
+    }
+    return status;
+}
+
+static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
+                                                 zx_handle_t* out_handle) {
+    platform_dev_t* dev = ctx;
+    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2, out_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_create_contiguous failed %d\n",
+               status);
+    }
+    return status;
+}
+
+static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
+                                               uint32_t map_flags, void** out_vaddr,
+                                               zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+    zx_handle_t handle;
+    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE, out_paddr, sizeof(*out_paddr));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmo_op_range failed %d\n", status);
+        zx_handle_close(handle);
+        return status;
+    }
+
+    uintptr_t addr;
+    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size, map_flags, &addr);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmar_map failed %d\n", status);
+        zx_handle_close(handle);
+        return status;
+    }
+
+    *out_vaddr = (void *)addr;
+    *out_handle = handle;
+    return ZX_OK;
+}
+
+static platform_device_protocol_ops_t platform_dev_proto_ops = {
+    .map_mmio = platform_dev_map_mmio,
+    .map_interrupt = platform_dev_map_interrupt,
+    .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
+    .map_contig_vmo = platform_dev_map_contig_vmo,
+};
+
+static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
+                                     size_t *out_length, zx_handle_t* out_handle,
+                                     uint32_t* out_handle_count) {
     if (index >= dev->mmio_count) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -56,7 +167,7 @@ static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index, zx
     zx_status_t status = zx_vmo_create_physical(dev->bus->resource, vmo_base, vmo_size,
                                                 out_handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        zxlogf(ERROR, "pdev_rpc_get_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
     *out_offset = mmio->base - vmo_base;
@@ -65,41 +176,27 @@ static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index, zx
     return ZX_OK;
 }
 
-static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t index,
-                                              zx_handle_t* out_handle, uint32_t* out_handle_count) {
-    if (index >= dev->irq_count || !out_handle) {
-        return ZX_ERR_INVALID_ARGS;
+static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev, uint32_t index,
+                                          zx_handle_t* out_handle, uint32_t* out_handle_count) {
+
+    zx_status_t status = platform_dev_map_interrupt(dev, index, out_handle);
+    if (status == ZX_OK) {
+        *out_handle_count = 1;
     }
-    pbus_irq_t* irq = &dev->irqs[index];
-    zx_status_t status = zx_interrupt_create(dev->bus->resource, 0, out_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
-        return status;
-    }
-    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq, irq->mode);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_bind failed %d\n", status);
-        zx_handle_close(*out_handle);
-        return status;
-    }
-    *out_handle_count = 1;
-    return ZX_OK;
+    return status;
 }
 
-static zx_status_t platform_dev_alloc_contig_vmo(platform_dev_t* dev, size_t size,
-                                                 uint32_t align_log2,  zx_handle_t* out_handle,
-                                                 uint32_t* out_handle_count) {
-    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2, out_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_create_contiguous failed %d\n",
-               status);
-        return status;
+static zx_status_t pdev_rpc_alloc_contig_vmo(platform_dev_t* dev, size_t size,
+                                             uint32_t align_log2, zx_handle_t* out_handle,
+                                             uint32_t* out_handle_count) {
+    zx_status_t status = platform_dev_alloc_contig_vmo(dev, size, align_log2, out_handle);
+    if (status == ZX_OK) {
+        *out_handle_count = 1;
     }
-    *out_handle_count = 1;
-    return ZX_OK;
+    return status;
 }
 
-static zx_status_t platform_dev_ums_get_initial_mode(platform_dev_t* dev, usb_mode_t* out_mode) {
+static zx_status_t pdev_rpc_ums_get_initial_mode(platform_dev_t* dev, usb_mode_t* out_mode) {
     platform_bus_t* bus = dev->bus;
     if (!bus->ums.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -107,7 +204,7 @@ static zx_status_t platform_dev_ums_get_initial_mode(platform_dev_t* dev, usb_mo
     return usb_mode_switch_get_initial_mode(&bus->ums, out_mode);
 }
 
-static zx_status_t platform_dev_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
+static zx_status_t pdev_rpc_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
     platform_bus_t* bus = dev->bus;
     if (!bus->ums.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -115,8 +212,8 @@ static zx_status_t platform_dev_ums_set_mode(platform_dev_t* dev, usb_mode_t mod
     return usb_mode_switch_set_mode(&bus->ums, mode);
 }
 
-static zx_status_t platform_dev_gpio_config(platform_dev_t* dev, uint32_t index,
-                                            gpio_config_flags_t flags) {
+static zx_status_t pdev_rpc_gpio_config(platform_dev_t* dev, uint32_t index,
+                                        gpio_config_flags_t flags) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -129,8 +226,8 @@ static zx_status_t platform_dev_gpio_config(platform_dev_t* dev, uint32_t index,
     return gpio_config(&bus->gpio, index, flags);
 }
 
-static zx_status_t platform_dev_gpio_set_alt_function(platform_dev_t* dev, uint32_t index,
-                                                      uint32_t function) {
+static zx_status_t pdev_rpc_gpio_set_alt_function(platform_dev_t* dev, uint32_t index,
+                                                  uint32_t function) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -143,7 +240,7 @@ static zx_status_t platform_dev_gpio_set_alt_function(platform_dev_t* dev, uint3
     return gpio_set_alt_function(&bus->gpio, index, function);
 }
 
-static zx_status_t platform_dev_gpio_read(platform_dev_t* dev, uint32_t index, uint8_t* out_value) {
+static zx_status_t pdev_rpc_gpio_read(platform_dev_t* dev, uint32_t index, uint8_t* out_value) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -156,7 +253,7 @@ static zx_status_t platform_dev_gpio_read(platform_dev_t* dev, uint32_t index, u
     return gpio_read(&bus->gpio, index, out_value);
 }
 
-static zx_status_t platform_dev_gpio_write(platform_dev_t* dev, uint32_t index, uint8_t value) {
+static zx_status_t pdev_rpc_gpio_write(platform_dev_t* dev, uint32_t index, uint8_t value) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -169,7 +266,7 @@ static zx_status_t platform_dev_gpio_write(platform_dev_t* dev, uint32_t index, 
     return gpio_write(&bus->gpio, index, value);
 }
 
-static zx_status_t platform_i2c_get_channel(platform_dev_t* dev, uint32_t index,
+static zx_status_t pdev_rpc_i2c_get_channel(platform_dev_t* dev, uint32_t index,
                                             pdev_i2c_resp_t* resp) {
     platform_bus_t* bus = dev->bus;
     if (!bus->i2c.ops) {
@@ -238,7 +335,7 @@ static void platform_i2c_complete(zx_status_t status, const uint8_t* data, size_
     put_i2c_txn(txn);
 }
 
-static zx_status_t platform_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
+static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
                                         zx_handle_t channel) {
     // TODO(voydanoff) Do not rely on client passing back a pointer to us.
     // We need a safer solution for this.
@@ -252,13 +349,13 @@ static zx_status_t platform_i2c_transact(platform_dev_t* dev, pdev_req_t* req, u
                         req->i2c.txn_ctx.read_length, platform_i2c_complete, txn);
 }
 
-static zx_status_t platform_i2c_get_bitrate(platform_dev_t* dev, pdev_i2c_req_t* req,
+static zx_status_t pdev_rpc_i2c_get_bitrate(platform_dev_t* dev, pdev_i2c_req_t* req,
                                             pdev_i2c_resp_t* resp) {
     i2c_channel_t* channel = (i2c_channel_t *)req->server_ctx;
     return i2c_set_bitrate(channel, req->bitrate);
 }
 
-static void platform_i2c_channel_release(platform_dev_t* dev, pdev_i2c_req_t* req) {
+static void pdev_rpc_i2c_channel_release(platform_dev_t* dev, pdev_i2c_req_t* req) {
     i2c_channel_t* channel = (i2c_channel_t *)req->server_ctx;
     return i2c_channel_release(channel);
 }
@@ -285,40 +382,40 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 
     switch (req->op) {
     case PDEV_GET_MMIO:
-        resp.status = platform_dev_get_mmio(dev, req->index, &resp.mmio.offset, &resp.mmio.length,
+        resp.status = pdev_rpc_get_mmio(dev, req->index, &resp.mmio.offset, &resp.mmio.length,
                                             &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
-        resp.status = platform_dev_get_interrupt(dev, req->index, &handle, &handle_count);
+        resp.status = pdev_rpc_get_interrupt(dev, req->index, &handle, &handle_count);
         break;
     case PDEV_ALLOC_CONTIG_VMO:
-        resp.status = platform_dev_alloc_contig_vmo(dev, req->contig_vmo.size,
+        resp.status = pdev_rpc_alloc_contig_vmo(dev, req->contig_vmo.size,
                                                     req->contig_vmo.align_log2,
                                                     &handle, &handle_count);
         break;
     case PDEV_UMS_GET_INITIAL_MODE:
-        resp.status = platform_dev_ums_get_initial_mode(dev, &resp.usb_mode);
+        resp.status = pdev_rpc_ums_get_initial_mode(dev, &resp.usb_mode);
         break;
     case PDEV_UMS_SET_MODE:
-        resp.status = platform_dev_ums_set_mode(dev, req->usb_mode);
+        resp.status = pdev_rpc_ums_set_mode(dev, req->usb_mode);
         break;
     case PDEV_GPIO_CONFIG:
-        resp.status = platform_dev_gpio_config(dev, req->index, req->gpio_flags);
+        resp.status = pdev_rpc_gpio_config(dev, req->index, req->gpio_flags);
         break;
     case PDEV_GPIO_SET_ALT_FUNCTION:
-        resp.status = platform_dev_gpio_set_alt_function(dev, req->index, req->gpio_alt_function);
+        resp.status = pdev_rpc_gpio_set_alt_function(dev, req->index, req->gpio_alt_function);
         break;
     case PDEV_GPIO_READ:
-        resp.status = platform_dev_gpio_read(dev, req->index, &resp.gpio_value);
+        resp.status = pdev_rpc_gpio_read(dev, req->index, &resp.gpio_value);
         break;
     case PDEV_GPIO_WRITE:
-        resp.status = platform_dev_gpio_write(dev, req->index, req->gpio_value);
+        resp.status = pdev_rpc_gpio_write(dev, req->index, req->gpio_value);
         break;
     case PDEV_I2C_GET_CHANNEL:
-        resp.status = platform_i2c_get_channel(dev, req->index, &resp.i2c);
+        resp.status = pdev_rpc_i2c_get_channel(dev, req->index, &resp.i2c);
         break;
     case PDEV_I2C_TRANSACT:
-        resp.status = platform_i2c_transact(dev, req, req_data.data, channel);
+        resp.status = pdev_rpc_i2c_transact(dev, req, req_data.data, channel);
         if (resp.status == ZX_OK) {
             // If platform_i2c_transact succeeds, we return immmediately instead of calling
             // zx_channel_write below. Instead we will respond in platform_i2c_complete().
@@ -326,10 +423,10 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         }
         break;
     case PDEV_I2C_SET_BITRATE:
-        resp.status = platform_i2c_get_bitrate(dev, &req->i2c, &resp.i2c);
+        resp.status = pdev_rpc_i2c_get_bitrate(dev, &req->i2c, &resp.i2c);
         break;
     case PDEV_I2C_CHANNEL_RELEASE:
-        platform_i2c_channel_release(dev, &req->i2c);
+        pdev_rpc_i2c_channel_release(dev, &req->i2c);
         break;
     default:
         zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);
@@ -345,6 +442,19 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     return status;
 }
 
+static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    platform_dev_t* dev = ctx;
+
+    if (proto_id == ZX_PROTOCOL_PLATFORM_DEV) {
+        platform_device_protocol_t* proto = protocol;
+        proto->ops = &platform_dev_proto_ops;
+        proto->ctx = dev;
+        return ZX_OK;
+    } else {
+        return platform_bus_get_protocol(dev->bus, proto_id, protocol);
+    }
+}
+
 void platform_dev_free(platform_dev_t* dev) {
     free(dev->mmios);
     free(dev->irqs);
@@ -356,6 +466,7 @@ void platform_dev_free(platform_dev_t* dev) {
 static zx_protocol_device_t platform_dev_proto = {
     .version = DEVICE_OPS_VERSION,
     .rxrpc = platform_dev_rxrpc,
+    .get_protocol = platform_dev_get_protocol,
     // Note that we do not have a release callback here because we
     // need to support re-adding platform devices when they are reenabled.
 };
@@ -363,7 +474,7 @@ static zx_protocol_device_t platform_dev_proto = {
 zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uint32_t flags) {
     zx_status_t status = ZX_OK;
 
-    if (flags & ~PDEV_ADD_DISABLED) {
+    if (flags & ~(PDEV_ADD_DISABLED | PDEV_ADD_PBUS_DEVHOST)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -413,6 +524,7 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
     }
 
     dev->bus = bus;
+    dev->flags = flags;
     strlcpy(dev->name, pdev->name, sizeof(dev->name));
     dev->vid = pdev->vid;
     dev->pid = pdev->pid;
@@ -446,7 +558,7 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
         snprintf(namestr, sizeof(namestr), "%04x:%04x:%04x", dev->vid, dev->pid, dev->did);
         char argstr[64];
         snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
-
+        bool new_devhost = !(dev->flags & PDEV_ADD_PBUS_DEVHOST);
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = namestr,
@@ -455,8 +567,8 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
             .props = props,
             .prop_count = countof(props),
-            .proxy_args = argstr,
-            .flags = DEVICE_ADD_MUST_ISOLATE,
+            .proxy_args = (new_devhost ? argstr : NULL),
+            .flags = (new_devhost ? DEVICE_ADD_MUST_ISOLATE : 0),
         };
         // add PCI root at top level
         zx_device_t* parent = dev->bus->zxdev;

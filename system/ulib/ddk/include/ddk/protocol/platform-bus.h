@@ -51,10 +51,13 @@ typedef struct {
 enum {
     // Add the device but to not publish it to the devmgr until enabled with pbus_device_enable().
     PDEV_ADD_DISABLED = (1 << 0),
+    // Add the device to run in platform bus devhost rather than in a new devhost.
+    PDEV_ADD_PBUS_DEVHOST = (1 << 1),
 };
 
 typedef struct {
     zx_status_t (*set_protocol)(void* ctx, uint32_t proto_id, void* protocol);
+    zx_status_t (*wait_protocol)(void* ctx, uint32_t proto_id);
     zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev, uint32_t flags);
     zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
     const char* (*get_board_name)(void* ctx);
@@ -68,6 +71,12 @@ typedef struct {
 static inline zx_status_t pbus_set_protocol(platform_bus_protocol_t* pbus,
                                             uint32_t proto_id, void* protocol) {
     return pbus->ops->set_protocol(pbus->ctx, proto_id, protocol);
+}
+
+// waits for the specified protocol to be made available by another driver
+// calling pbus_set_protocol()
+static inline zx_status_t pbus_wait_protocol(platform_bus_protocol_t* pbus, uint32_t proto_id) {
+    return pbus->ops->wait_protocol(pbus->ctx, proto_id);
 }
 
 static inline zx_status_t pbus_device_add(platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
