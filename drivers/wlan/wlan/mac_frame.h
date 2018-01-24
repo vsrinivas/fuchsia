@@ -415,6 +415,8 @@ struct MgmtFrameHeader {
         return reinterpret_cast<const HtControl* const>(raw() + offset);
     }
 
+    HtControl* ht_ctrl() { return const_cast<HtControl*>(const_this()->ht_ctrl()); }
+
     bool IsBeacon() const { return fc.subtype() == kBeacon; }
 
     bool IsProbeResponse() const { return fc.subtype() == kProbeResponse; }
@@ -423,6 +425,7 @@ struct MgmtFrameHeader {
 
    private:
     const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }
+    const MgmtFrameHeader* const_this() { return const_cast<const MgmtFrameHeader*>(this); }
 
 } __PACKED;
 
@@ -577,32 +580,36 @@ struct DataFrameHeader {
         return hdr_len;
     }
 
-    common::MacAddr* addr4() {
+    const common::MacAddr* addr4() const {
         if (!HasAddr4()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
-
-        return reinterpret_cast<common::MacAddr*>(raw() + offset);
+        return reinterpret_cast<const common::MacAddr*>(raw() + offset);
     }
 
-    QosControl* qos_ctrl() {
+    common::MacAddr* addr4() { return const_cast<common::MacAddr*>(const_this()->addr4()); }
+
+    const QosControl* qos_ctrl() const {
         if (!HasQosCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
         if (HasAddr4()) { offset += common::kMacAddrLen; }
-
-        return reinterpret_cast<QosControl*>(raw() + offset);
+        return reinterpret_cast<const QosControl*>(raw() + offset);
     }
 
-    HtControl* ht_ctrl() {
+    QosControl* qos_ctrl() { return const_cast<QosControl*>(const_this()->qos_ctrl()); }
+
+    const HtControl* ht_ctrl() const {
         if (!fc.HasHtCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
         if (HasAddr4()) { offset += common::kMacAddrLen; }
         if (HasQosCtrl()) { offset += kQosCtrlLen; }
-
-        return reinterpret_cast<HtControl*>(raw() + offset);
+        return reinterpret_cast<const HtControl*>(raw() + offset);
     }
 
+    HtControl* ht_ctrl() { return const_cast<HtControl*>(const_this()->ht_ctrl()); }
+
    private:
-    uint8_t* raw() { return reinterpret_cast<uint8_t*>(this); }
+    const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }
+    const DataFrameHeader* const_this() { return const_cast<const DataFrameHeader*>(this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.1.5

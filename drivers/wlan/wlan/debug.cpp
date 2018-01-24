@@ -53,10 +53,10 @@ std::string Describe(const FrameHeader& hdr) {
     return output.str();
 }
 
-std::string Describe(DataFrameHeader& hdr) {
+std::string Describe(const DataFrameHeader& hdr) {
     std::string output = Describe(*reinterpret_cast<const FrameHeader*>(&hdr));
 
-    if (hdr.HasAddr4()) { output += " addr4: " + (&hdr)->addr4()->ToString(); }
+    if (hdr.HasAddr4()) { output += " addr4: " + hdr.addr4()->ToString(); }
     return output;
 }
 
