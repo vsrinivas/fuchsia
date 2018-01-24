@@ -19,11 +19,11 @@ purpose, goals, and requirements, as well as links to related documents.
 
 The Fuchsia Interface Definition Language provides a syntax for declaring named
 constants, enums, structs, unions, and interfaces. These declarations are
-collected into packages for distribution.
+collected into libraries for distribution.
 
 FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
 sequence of semicolon delimited declarations. The order of declarations within a
-FIDL file or among FIDL files within a package is irrelevant. FIDL does not
+FIDL file or among FIDL files within a library is irrelevant. FIDL does not
 require (or support) forward declarations of any kind.
 
 Topics for discussion:
@@ -31,7 +31,7 @@ Topics for discussion:
 *   Previously we defined FIDL files as standalone units loosely organized into
     modules which caused problems for languages such as Dart and Rust which
     prefer to work with more granular units, hence the idea of formalizing the
-    concept of FIDL packages. Is this the right approach?
+    concept of FIDL libraries. Is this the right approach?
 
 ### Tokens
 
@@ -60,7 +60,7 @@ The following keywords are reserved in FIDL.
     **as, bool, const, float32, float64, handle,**
 
 
-    **int8, int16, int32, int64, interface, package, string, struct,**
+    **int8, int16, int32, int64, interface, library, string, struct,**
 
 
     **uint8, uint16, uint32, uint64, union, using, vector**
@@ -80,8 +80,8 @@ used as identifiers (when escaped with "@").
 Identifiers are case-sensitive.
 
 ```
-    // a package named "foo"
-    package foo;
+    // a library named "foo"
+    library foo;
 
     // a struct named "Foo"
     struct Foo { };
@@ -93,8 +93,8 @@ Identifiers are case-sensitive.
 #### Qualified Identifiers
 
 FIDL always looks for unqualified symbols within the scope of the current
-package. To reference symbols in other packages, they must be qualified by
-prefixing the identifier with the package name or alias.
+library. To reference symbols in other libraries, they must be qualified by
+prefixing the identifier with the library name or alias.
 
 Names may also require qualification when they refer to symbols which have been
 declared within the scope of a **struct**, **union**, or **interface**.
@@ -102,12 +102,12 @@ declared within the scope of a **struct**, **union**, or **interface**.
 **objects.fidl:**
 
 ```
-    package objects;
+    library objects;
     using textures as tex;
 
     interface Frob {
-      // "Thing" refers to "Thing" in the "objects" package
-      // "tex.Color" refers to "Color" in the "textures" package
+      // "Thing" refers to "Thing" in the "objects" library
+      // "tex.Color" refers to "Color" in the "textures" library
       Paint(Thing thing, tex.Color color);
     };
 
@@ -119,7 +119,7 @@ declared within the scope of a **struct**, **union**, or **interface**.
 **textures.fidl:**
 
 ```
-    package textures;
+    library textures;
 
     struct Color {
       uint32 rgba;
@@ -128,8 +128,8 @@ declared within the scope of a **struct**, **union**, or **interface**.
 
 Topics for discussion:
 
-*   Should we provide shortcuts for referencing types in other packages? Should
-    we support importing symbols into the package's own scope?
+*   Should we provide shortcuts for referencing types in other libraries? Should
+    we support importing symbols into the library's own scope?
 
 #### Literals
 
@@ -161,62 +161,62 @@ NB: I am sure there are other viewpoints on this… Ideally the grammar should b
 LL(1) but whoever ultimately writes the new compiler can weigh in on what's
 simple to parse or not.
 
-### Packages
+### Libraries
 
-Packages are named containers of FIDL declarations.
+Libraries are named containers of FIDL declarations.
 
-Each package has a name consisting of a dot-delimited identifier. Package names
+Each library has a name consisting of a dot-delimited identifier. Library names
 appear in [Qualified Identifiers](#qualified-identifiers).
 
-Packages may declare that they use other packages with a "using" declaration.
-This allows the package to refer to symbols defined in other packages upon which
+Libraries may declare that they use other libraries with a "using" declaration.
+This allows the library to refer to symbols defined in other libraries upon which
 they depend. Symbols which are imported this way may be accessed either by
-qualifying them with the package name as in _"mozart.geometry.Rect"_ or by
-qualifying them with the package alias as in _"geo.Rect"_.
+qualifying them with the library name as in _"mozart.geometry.Rect"_ or by
+qualifying them with the library alias as in _"geo.Rect"_.
 
 ```
-    package mozart.composition;
+    library mozart.composition;
     using mozart.geometry as geo;
     using mozart.buffers;
 
     interface Compositor { … };
 ```
 
-In the source tree, each package consists of a directory with some number of
+In the source tree, each library consists of a directory with some number of
 ***.fidl** files. The name of the directory is irrelevant to the FIDL compiler
-but by convention it should resemble the package name itself. A directory should
-not contain FIDL files for more than one package.
+but by convention it should resemble the library name itself. A directory should
+not contain FIDL files for more than one library.
 
-The scope of "package" and "using" declarations is limited to a single file.
-Each individual file within a FIDL package must restate the "package"
+The scope of "library" and "using" declarations is limited to a single file.
+Each individual file within a FIDL library must restate the "library"
 declaration together with any "using" declarations needed by that file.
 
-When the FIDL compiler encounters a package name such as "mozart.geometry",
-searches the package path to find the directory which contains that package's
+When the FIDL compiler encounters a library name such as "mozart.geometry",
+searches the library path to find the directory which contains that library's
 FIDL files, then loads the files. The compiler emits an error ifs any referenced
-package cannot be found.
+library cannot be found.
 
 The build system generally takes care of providing the FIDL compiler with a
-suitable package path argument derived from the build dependencies for the
-target. eg. _"--package mozart.geometry=apps/mozart/services/geometry --package
+suitable library path argument derived from the build dependencies for the
+target. eg. _"--library mozart.geometry=apps/mozart/services/geometry --library
 mozart.buffers=apps/mozart/services/buffers"_
 
-The package's name may be used by certain language bindings to provide scoping
+The library's name may be used by certain language bindings to provide scoping
 for symbols emitted by the code generator.
 
 For example, the C++ bindings generator places declarations for the FIDL library
 "mozart.composition" within the C++ namespace "mozart::composition". Similarly,
 for languages such as Dart and Rust which have their own module system, each
-FIDL package is compiled as a module for that language.
+FIDL library is compiled as a module for that language.
 
 Topics for discussion:
 
-*   Are there any attributes we would like to define at the package level? eg.
+*   Are there any attributes we would like to define at the library level? eg.
     C++ namespace or other code generator hints
-*   Should the individual FIDL files which make up a package be collated (merged
-    into one combined file archive) or is the one-to-one mapping of package to
+*   Should the individual FIDL files which make up a library be collated (merged
+    into one combined file archive) or is the one-to-one mapping of library to
     directory good enough?
-*   Do FIDL packages need any auxiliary metadata represented separately from the
+*   Do FIDL libraries need any auxiliary metadata represented separately from the
     FIDL files themselves?
 
 ### Types and Type Declarations
@@ -268,10 +268,10 @@ The ordinal index is **required** for each enum element. The underlying type of
 an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
 uint64**. If omitted, the underlying type is assumed to be **uint32**.
 
-Enums may be scoped within: **package, struct, union, interface**.
+Enums may be scoped within: **library, struct, union, interface**.
 
 ```
-    // An enum declared at package scope.
+    // An enum declared at library scope.
     enum Beverage : uint8 {
         WATER = 0,
         COFFEE = 1,
@@ -279,7 +279,7 @@ Enums may be scoped within: **package, struct, union, interface**.
         WHISKEY = 3,
     };
 
-    // An enum declared at package scope.
+    // An enum declared at library scope.
     // Underlying type is assumed to be uint32.
     enum Vessel {
         CUP = 0,
@@ -605,10 +605,10 @@ optionality:
 Constant declarations introduce a name within their scope. The constant's type
 must be either a primitive or an enum.
 
-Constants may be scoped within: **package, struct, union, interface**.
+Constants may be scoped within: **library, struct, union, interface**.
 
 ```
-    // a constant declared at package scope
+    // a constant declared at library scope
     const int32 kFavoriteNumber = 42;
 
     // a constant declared within an interface scope

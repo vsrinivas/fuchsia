@@ -624,7 +624,7 @@ The examples in this section use the following declarations.
 # FIDL Declarations
 
 ```
-package example;
+library example;
 
 interface Animal {
     Say(string text, handle<event> token);

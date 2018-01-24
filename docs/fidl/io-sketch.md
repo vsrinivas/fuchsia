@@ -33,7 +33,7 @@ manner without relying on **ioctl** style trampolines.
 #### file.fidl
 
 ```
-package fdio;
+library fdio;
 
 const uint32 FILE_CLASS = 0x1000;
 
@@ -57,7 +57,7 @@ interface file {
 #### device.fidl
 
 ```
-package fdio;
+library fdio;
 
 const uint32 DEVICE_CLASS = 0x2000;
 
@@ -80,7 +80,7 @@ interface watch_listener {
 #### ethernet.fidl
 
 ```
-package fdio;
+library fdio;
 
 const uint32 ETHERNET_CLASS = 0x3000;
 

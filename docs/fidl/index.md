@@ -127,7 +127,7 @@ Requirements
     deserialization, and validation.
 *   FIDL syntax is familiar, easily accessible, and programming language
     agnostic.
-*   FIDL provides a package system to simplify deployment and use by other
+*   FIDL provides a library system to simplify deployment and use by other
     developers.
 *   FIDL expresses the most common data types needed for system APIs; it does
     not seek to provide a comprehensive one-to-one mapping of all types offered
@@ -230,27 +230,27 @@ protocols described using FIDL.
 The author of a FIDL based protocol creates one or more ***.fidl files** to
 describe their data structures and interfaces.
 
-FIDL files are grouped into one or more **FIDL packages** by the author. Each
-package represents a group of logically related functionality with a unique
-package name. FIDL files within the same package implicitly have access to all
-other declarations within the same package. The order of declarations within the
-FIDL files that make up a package is not significant.
+FIDL files are grouped into one or more **FIDL libraries** by the author. Each
+library represents a group of logically related functionality with a unique
+library name. FIDL files within the same library implicitly have access to all
+other declarations within the same library. The order of declarations within the
+FIDL files that make up a library is not significant.
 
-FIDL files of one package can access declarations within another FIDL package by
-**importing** the other FIDL module. Importing other FIDL packages makes their
+FIDL files of one library can access declarations within another FIDL library by
+**importing** the other FIDL module. Importing other FIDL libraries makes their
 symbols available for use thereby enabling the construction of protocols derived
-from them. Imported symbols must be qualified by the package name or by an alias
+from them. Imported symbols must be qualified by the library name or by an alias
 to prevent namespace collisions.
 
 # Publishing FIDL
 
-The publisher of a FIDL based protocol is responsible for making FIDL packages
-available to consumers. For example, the author may disseminate FIDL packages in
+The publisher of a FIDL based protocol is responsible for making FIDL libraries
+available to consumers. For example, the author may disseminate FIDL libraries in
 a public source repository or distribute them as part of an SDK.
 
 Consumers need only point the FIDL compiler at the directory which contains the
-FIDL files for a package (and its dependencies) to generate code for that
-package. The precise details for how this is done will generally be addressed by
+FIDL files for a library (and its dependencies) to generate code for that
+library. The precise details for how this is done will generally be addressed by
 the consumer's build system.
 
 # Consuming FIDL
@@ -261,11 +261,11 @@ language runtimes, the consumer may have a choice of a few different flavors of
 generated code all of which are interoperable at the wire format level but
 perhaps not at the source level.
 
-In the Fuchsia world build environment, generating code from FIDL packages will
+In the Fuchsia world build environment, generating code from FIDL libraries will
 be done automatically for all relevant languages by individual FIDL build
-targets for each package.
+targets for each library.
 
-In the Fuchsia SDK environment, generating code from FIDL packages will be done
+In the Fuchsia SDK environment, generating code from FIDL libraries will be done
 as part of compiling the applications which use them.
 
 <!-- Footnotes themselves at the bottom. -->
