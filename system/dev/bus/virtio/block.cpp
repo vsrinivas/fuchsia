@@ -20,31 +20,19 @@
 
 #define LOCAL_TRACE 0
 
+// 1MB max transfer (unless further restricted by ring size
+#define MAX_SCATTER 257
+#define MAX_MAX_XFER ((MAX_SCATTER - 1) * PAGE_SIZE)
+
+#define PAGE_MASK (PAGE_SIZE - 1)
+
 namespace virtio {
 
-// DDK level ops
-
-// queue an iotxn. iotxn's are always completed by its complete() op
-void BlockDevice::virtio_block_iotxn_queue(void* ctx, iotxn_t* txn) {
-    LTRACEF("ctx %p, txn %p\n", ctx, txn);
-
-    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
-
-    switch (txn->opcode) {
-    case IOTXN_OP_READ: {
-        LTRACEF("READ offset %#" PRIx64 " length %#" PRIx64 "\n", txn->offset, txn->length);
-        bd->QueueReadWriteTxn(txn);
-        break;
-    }
-    case IOTXN_OP_WRITE:
-        LTRACEF("WRITE offset %#" PRIx64 " length %#" PRIx64 "\n", txn->offset, txn->length);
-        bd->QueueReadWriteTxn(txn);
-        break;
-    default:
-        iotxn_complete(txn, -1, 0);
-        break;
-    }
+static void txn_complete(block_txn_t* txn, zx_status_t status) {
+    txn->op.completion_cb(&txn->op, status);
 }
+
+// DDK level ops
 
 // optional: return the size (in bytes) of the readable/writable space
 // of the device.  Will default to 0 (non-seekable) if this is unimplemented
@@ -61,6 +49,39 @@ void BlockDevice::GetInfo(block_info_t* info) {
     info->block_size = GetBlockSize();
     info->block_count = GetSize() / GetBlockSize();
     info->max_transfer_size = (uint32_t)(PAGE_SIZE * (ring_size - 2));
+
+    // limit max transfer to our worst case scatter list size
+    if (info->max_transfer_size > MAX_MAX_XFER) {
+        info->max_transfer_size = MAX_MAX_XFER;
+    }
+}
+
+void BlockDevice::virtio_block_query(void* ctx, block_info_t* info, size_t* bopsz) {
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
+    bd->GetInfo(info);
+    *bopsz = sizeof(block_txn_t);
+}
+
+void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop) {
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
+    block_txn_t* txn = static_cast<block_txn_t*>((void*) bop);
+
+    switch(txn->op.command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+        bd->QueueReadWriteTxn(txn, false);
+        break;
+    case BLOCK_OP_WRITE:
+        bd->QueueReadWriteTxn(txn, true);
+        break;
+    case BLOCK_OP_FLUSH:
+        //TODO: this should complete after any in-flight IO and before
+        //      any later IO begins
+        txn_complete(txn, ZX_OK);
+        break;
+    default:
+        txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
+    }
+
 }
 
 zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -82,6 +103,8 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
         // rebind to reread the partition table
         return device_rebind(bd->device());
     }
+    case IOCTL_DEVICE_SYNC:
+        return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -153,9 +176,11 @@ zx_status_t BlockDevice::Init() {
 
     // initialize the zx_device and publish us
     // point the ctx of our DDK device at ourself
-    device_ops_.iotxn_queue = &virtio_block_iotxn_queue;
     device_ops_.get_size = &virtio_block_get_size;
     device_ops_.ioctl = &virtio_block_ioctl;
+
+    block_ops_.query = &virtio_block_query;
+    block_ops_.queue = &virtio_block_queue;
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
@@ -163,6 +188,7 @@ zx_status_t BlockDevice::Init() {
     args.ctx = this;
     args.ops = &device_ops_;
     args.proto_id = ZX_PROTOCOL_BLOCK_CORE;
+    args.proto_ops = &block_ops_;
 
     auto status = device_add(bus_device_, &args, &device_);
     if (status < 0) {
@@ -200,13 +226,13 @@ void BlockDevice::IrqRingUpdate() {
         }
 
         // search our pending txn list to see if this completes it
-        iotxn_t* txn;
-        list_for_every_entry (&iotxn_list, txn, iotxn_t, node) {
-            if (txn->context == head_desc) {
+        block_txn_t* txn;
+        list_for_every_entry (&txn_list, txn, block_txn_t, node) {
+            if (txn->desc == head_desc) {
                 LTRACEF("completes txn %p\n", txn);
-                free_blk_req((unsigned int)txn->extra[1]);
+                free_blk_req((unsigned int)txn->index);
                 list_delete(&txn->node);
-                iotxn_complete(txn, ZX_OK, txn->length);
+                txn_complete(txn, ZX_OK);
                 break;
             }
         }
@@ -220,95 +246,62 @@ void BlockDevice::IrqConfigChange() {
     LTRACE_ENTRY;
 }
 
-// given a iotxn, call back for every physical address run
-// TODO: see if we can use the iotxn_phys_iter routines instead
-template <typename callback>
-static void ScatterGatherHelper(const iotxn_t* txn, callback callback_new_run) {
-    uint64_t run_start = -1;
-    uint64_t run_len = 0;
-
-    uint64_t offset = (txn->vmo_offset % PAGE_SIZE);
-    uint64_t remaining_len = txn->length;
-
-    for (uint64_t i = 0; i < txn->phys_count; i++) {
-        uint64_t page_offset = offset % PAGE_SIZE;
-
-        if (txn->phys[i] != run_start + run_len) {
-            // starting a new run, complete the old one first
-            if (run_start != (uint64_t)-1)
-                callback_new_run(run_start, run_len);
-
-            run_start = txn->phys[i] + page_offset;
-            run_len = 0;
-        }
-
-        run_len += fbl::min(PAGE_SIZE - page_offset, remaining_len);
-        remaining_len -= fbl::min(PAGE_SIZE - page_offset, remaining_len);
-        offset += PAGE_SIZE - page_offset;
-    }
-
-    // if there is still len left
-    if (remaining_len > 0)
-        run_len += remaining_len;
-
-    // handle the last partial run
-    if (run_len > 0)
-        callback_new_run(run_start, run_len);
-}
-
-void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
-    LTRACEF("txn %p, pflags %#x\n", txn, txn->pflags);
+void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
+    LTRACEF("txn %p, command %#x\n", txn, txn->op.command);
 
     fbl::AutoLock lock(&lock_);
 
-    bool write = (txn->opcode == IOTXN_OP_WRITE);
-
-    // offset must be aligned to block size
-    if (txn->offset % config_.blk_size) {
-        LTRACEF("offset %#" PRIx64 " is not aligned to sector size %u!\n", txn->offset, config_.blk_size);
-        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-        return;
-    }
-
-    if (txn->length % config_.blk_size) {
-        LTRACEF("length %#" PRIx64 " is not aligned to sector size %u!\n", txn->length, config_.blk_size);
-        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-        return;
-    }
+    txn->op.rw.offset_vmo *= config_.blk_size;
 
     // transaction must fit within device
-    if ((txn->offset >= GetSize()) || (GetSize() - txn->offset < txn->length)) {
+    if ((txn->op.rw.offset_dev >= config_.capacity) ||
+        (config_.capacity - txn->op.rw.offset_dev < txn->op.rw.length)) {
         LTRACEF("request beyond the end of the device!\n");
-        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
         return;
     }
 
-    if (txn->length == 0) {
-        iotxn_complete(txn, ZX_OK, 0);
+    size_t bytes = txn->op.rw.length * config_.blk_size;
+
+    zx_status_t r;
+    zx_handle_t vmo = txn->op.rw.vmo;
+    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
+                             txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
+        TRACEF("could not commit pages\n");
+        txn_complete(txn, ZX_ERR_INTERNAL);
         return;
     }
+
+    uint64_t pages[MAX_SCATTER];
+    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
+                             txn->op.rw.offset_vmo, bytes, pages, sizeof(pages))) != ZX_OK) {
+        TRACEF("nvme: could not lookup pages\n");
+        txn_complete(txn, ZX_ERR_INTERNAL);
+        return;
+    }
+
+    // Take the starting byte into the initial page plus total bytes
+    // transferred, convert to page count (rounded up)
+    size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
 
     // allocate and start filling out a block request
     auto index = alloc_blk_req();
     if (index >= blk_req_count) {
         TRACEF("too many block requests queued (%zu)!\n", index);
-        iotxn_complete(txn, ZX_ERR_NO_RESOURCES, 0);
+        txn_complete(txn, ZX_ERR_NO_RESOURCES);
         return;
     }
 
     auto req = &blk_req_[index];
     req->type = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
     req->ioprio = 0;
-    req->sector = txn->offset / 512;
+    req->sector = txn->op.rw.offset_dev;
     LTRACEF("blk_req type %u ioprio %u sector %" PRIu64 "\n",
             req->type, req->ioprio, req->sector);
 
     // save the req index into the txn->extra[1] slot so we can free it when we complete the transfer
-    txn->extra[1] = index;
+    txn->index = index;
 
-    // get the physical map for the transfer
-    auto status = iotxn_physmap(txn);
-    LTRACEF("status %d, pflags %#x\n", status, txn->pflags);
 #if LOCAL_TRACE
     LTRACEF("phys %p, phys_count %#lx\n", txn->phys, txn->phys_count);
     for (uint64_t i = 0; i < txn->phys_count; i++) {
@@ -316,58 +309,57 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     }
 #endif
 
-    // count the number of physical runs we're going to need
-    size_t run_count = 0;
-
-    {
-        auto new_run_callback = [&run_count](uint64_t start, uint64_t len) {
-            LTRACEF("start %#lx len %#lx\n", start, len);
-            run_count++;
-        };
-
-        ScatterGatherHelper(txn, new_run_callback);
-    }
-
-    LTRACEF("run count %lu\n", run_count);
-    assert(run_count > 0);
+    LTRACEF("page count %lu\n", pagecount);
+    assert(pagecount > 0);
 
     /* put together a transfer */
     uint16_t i;
-    auto desc = vring_.AllocDescChain((uint16_t)(2u + run_count), &i);
+    auto desc = vring_.AllocDescChain((uint16_t)(2u + pagecount), &i);
     if (!desc) {
-        TRACEF("failed to allocate descriptor chain of length %zu\n", 2u + run_count);
+        TRACEF("failed to allocate descriptor chain of length %zu\n", 2u + pagecount);
         // TODO: handle this scenario by requeing the transfer in smaller runs
-        iotxn_complete(txn, ZX_ERR_NO_RESOURCES, 0);
+        txn_complete(txn, ZX_ERR_NO_RESOURCES);
         return;
     }
 
     LTRACEF("after alloc chain desc %p, i %u\n", desc, i);
 
-    /* point the iotxn at this head descriptor */
-    txn->context = desc;
+    /* point the txn at this head descriptor */
+    txn->desc = desc;
 
     /* set up the descriptor pointing to the head */
     desc->addr = blk_req_pa_ + index * sizeof(virtio_blk_req_t);
     desc->len = sizeof(virtio_blk_req_t);
     desc->flags = VRING_DESC_F_NEXT;
     LTRACE_DO(virtio_dump_desc(desc));
-    {
-        auto new_run_callback = [this, write, &desc](uint64_t start, uint64_t len) {
-            /* set up the descriptor pointing to the buffer */
-            desc = vring_.DescFromIndex(desc->next);
 
-            desc->addr = start;
-            desc->len = (uint32_t)len;
-            desc->flags = VRING_DESC_F_NEXT;
-            LTRACEF("pa %#lx, len %#x\n", desc->addr, desc->len);
+    for (size_t n = 0; n < pagecount; n++) {
+        desc = vring_.DescFromIndex(desc->next);
+        desc->addr = pages[n];
+        desc->len = (uint32_t) ((bytes > PAGE_SIZE) ? PAGE_SIZE : bytes);
+        if (n == 0) {
+            // first entry may not be page aligned
+            size_t page0_offset = txn->op.rw.offset_vmo & PAGE_MASK;
 
-            if (!write)
-                desc->flags |= VRING_DESC_F_WRITE; /* mark buffer as write-only if its a block read */
-        };
+            // adjust starting address
+            desc->addr += page0_offset;
 
-        ScatterGatherHelper(txn, new_run_callback);
+            // trim length if necessary
+            size_t max = PAGE_SIZE - page0_offset;
+            if (desc->len > max) {
+                desc->len = (uint32_t) max;
+            }
+        }
+        desc->flags = VRING_DESC_F_NEXT;
+        LTRACEF("pa %#lx, len %#x\n", desc->addr, desc->len);
+
+        if (!write)
+            desc->flags |= VRING_DESC_F_WRITE; /* mark buffer as write-only if its a block read */
+
+        bytes -= desc->len;
     }
     LTRACE_DO(virtio_dump_desc(desc));
+    assert(bytes == 0);
 
     /* set up the descriptor pointing to the response */
     desc = vring_.DescFromIndex(desc->next);
@@ -376,8 +368,8 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     desc->flags = VRING_DESC_F_WRITE;
     LTRACE_DO(virtio_dump_desc(desc));
 
-    // save the iotxn in a list
-    list_add_tail(&iotxn_list, &txn->node);
+    // save the txn in a list
+    list_add_tail(&txn_list, &txn->node);
 
     /* submit the transfer */
     vring_.SubmitChain(i);
