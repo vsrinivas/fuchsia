@@ -33,7 +33,7 @@ class Demo : public modular::Lifecycle, ListenCallClient {
   ~Demo() override {}
 
   void Run() {
-    listen_call_handler_ = firestore_service_.Listen(this);
+    listen_call_handler_ = firestore_service_.Listen(nullptr, this);
 
     loop_.task_runner()->PostDelayedTask([this] { loop_.PostQuitTask(); },
                                          fxl::TimeDelta::FromSeconds(20));
@@ -93,7 +93,7 @@ class Demo : public modular::Lifecycle, ListenCallClient {
 
     // Make the RPC and print the status.
     firestore_service_.CreateDocument(
-        std::move(request), [this](auto status, auto result) {
+        std::move(request), nullptr, [this](auto status, auto result) {
           if (!status.ok()) {
             FXL_LOG(ERROR) << "Failed to create the document, "
                            << "error message: " << status.error_message()

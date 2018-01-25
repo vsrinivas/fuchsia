@@ -18,7 +18,9 @@ class FirebaseAuthPlugin : public grpc::MetadataCredentialsPlugin {
       grpc::string_ref /*method_name*/,
       const grpc::AuthContext& /*channel_auth_context*/,
       std::multimap<grpc::string, grpc::string>* metadata) override {
-    metadata->insert(std::make_pair("Authorization", header_value_));
+    // note: grpc seems to insist on lowercase "authorization", otherwise we get
+    // "Illegal header key" from "src/core/lib/surface/validate_metadata.c".
+    metadata->insert(std::make_pair("authorization", header_value_));
     return grpc::Status::OK;
   }
 

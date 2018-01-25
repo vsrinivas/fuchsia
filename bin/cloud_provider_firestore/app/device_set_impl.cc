@@ -30,12 +30,15 @@ std::string GetDevicePath(fxl::StringView user_path,
 
 DeviceSetImpl::DeviceSetImpl(
     std::string user_path,
+    CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
     fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
     : user_path_(std::move(user_path)),
+      credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
       binding_(this, std::move(request)) {
   FXL_DCHECK(!user_path_.empty());
+  FXL_DCHECK(credentials_provider_);
   FXL_DCHECK(firestore_service_);
 
   // The class shuts down when the client connection is disconnected.
@@ -54,14 +57,22 @@ void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
   request.set_name(
       GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
 
-  firestore_service_->GetDocument(
-      std::move(request), [callback](auto status, auto result) {
-        if (!status.ok()) {
-          callback(ConvertGrpcStatus(status.error_code()));
-          return;
-        }
+  credentials_provider_->GetCredentials(
+      [this, request = std::move(request),
+       callback](auto call_credentials) mutable {
+        firestore_service_->GetDocument(
+            std::move(request), std::move(call_credentials),
+            [callback](auto status, auto result) {
+              if (!status.ok()) {
+                FXL_LOG(ERROR) << "Server request failed, "
+                               << "error message: " << status.error_message()
+                               << ", error details: " << status.error_details();
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
 
-        callback(cloud_provider::Status::OK);
+              callback(cloud_provider::Status::OK);
+            });
       });
 }
 
@@ -75,13 +86,21 @@ void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
   exists.set_boolean_value(true);
   (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
 
-  firestore_service_->CreateDocument(
-      std::move(request), [callback](auto status, auto result) {
-        if (!status.ok()) {
-          callback(cloud_provider::Status::SERVER_ERROR);
-          return;
-        }
-        callback(cloud_provider::Status::OK);
+  credentials_provider_->GetCredentials(
+      [this, request = std::move(request),
+       callback](auto call_credentials) mutable {
+        firestore_service_->CreateDocument(
+            std::move(request), std::move(call_credentials),
+            [callback](auto status, auto result) {
+              if (!status.ok()) {
+                FXL_LOG(ERROR) << "Server request failed, "
+                               << "error message: " << status.error_message()
+                               << ", error details: " << status.error_details();
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
+              callback(cloud_provider::Status::OK);
+            });
       });
 }
 

@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 
 namespace cloud_provider_firestore {
@@ -22,6 +23,7 @@ namespace cloud_provider_firestore {
 class DeviceSetImpl : public cloud_provider::DeviceSet {
  public:
   DeviceSetImpl(std::string user_path,
+                CredentialsProvider* credentials_provider,
                 FirestoreService* firestore_service,
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
@@ -44,7 +46,8 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
   void Erase(const EraseCallback& callback) override;
 
   const std::string user_path_;
-  FirestoreService* const firestore_service_ = nullptr;
+  CredentialsProvider* const credentials_provider_;
+  FirestoreService* const firestore_service_;
 
   fidl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;

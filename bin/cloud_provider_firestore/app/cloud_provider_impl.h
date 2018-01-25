@@ -44,7 +44,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
 
   const std::string user_id_;
 
-  std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
+  std::unique_ptr<CredentialsProvider> credentials_provider_;
   std::unique_ptr<FirestoreService> firestore_service_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;

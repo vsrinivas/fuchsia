@@ -72,10 +72,12 @@ FirestoreServiceImpl::~FirestoreServiceImpl() {
 
 void FirestoreServiceImpl::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
   DocumentResponseCall& call = document_response_calls_.emplace();
+  call.context.set_credentials(call_credentials);
   auto response_reader =
       firestore_->AsyncGetDocument(&call.context, std::move(request), &cq_);
   MakeCall<google::firestore::v1beta1::Document>(
@@ -84,10 +86,12 @@ void FirestoreServiceImpl::GetDocument(
 
 void FirestoreServiceImpl::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
   DocumentResponseCall& call = document_response_calls_.emplace();
+  call.context.set_credentials(call_credentials);
   auto response_reader =
       firestore_->AsyncCreateDocument(&call.context, std::move(request), &cq_);
 
@@ -97,9 +101,11 @@ void FirestoreServiceImpl::CreateDocument(
 
 void FirestoreServiceImpl::DeleteDocument(
     google::firestore::v1beta1::DeleteDocumentRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status)> callback) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
   EmptyResponseCall& call = empty_response_calls_.emplace();
+  call.context.set_credentials(call_credentials);
   auto response_reader =
       firestore_->AsyncDeleteDocument(&call.context, std::move(request), &cq_);
 
@@ -108,11 +114,14 @@ void FirestoreServiceImpl::DeleteDocument(
 }
 
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
     ListenCallClient* client) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
 
-  auto stream_factory = [cq = &cq_, firestore = firestore_.get()](
+  auto stream_factory = [cq = &cq_, firestore = firestore_.get(),
+                         call_credentials = std::move(call_credentials)](
                             grpc::ClientContext* context, void* tag) {
+    context->set_credentials(call_credentials);
     return firestore->AsyncListen(context, cq, tag);
   };
   auto& call = listen_calls_.emplace(client, std::move(stream_factory));

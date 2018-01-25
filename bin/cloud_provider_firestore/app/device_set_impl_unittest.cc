@@ -7,6 +7,7 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
@@ -17,7 +18,9 @@ namespace {
 class DeviceSetImplTest : public gtest::TestWithMessageLoop {
  public:
   DeviceSetImplTest()
-      : device_set_impl_("user_path",
+      : test_credentials_provider_(message_loop_.task_runner()),
+        device_set_impl_("user_path",
+                         &test_credentials_provider_,
                          &firestore_service_,
                          device_set_.NewRequest()) {
     // Configure test Firestore service to quit the message loop at each
@@ -27,6 +30,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop {
 
  protected:
   cloud_provider::DeviceSetPtr device_set_;
+  TestCredentialsProvider test_credentials_provider_;
   TestFirestoreService firestore_service_;
   DeviceSetImpl device_set_impl_;
 

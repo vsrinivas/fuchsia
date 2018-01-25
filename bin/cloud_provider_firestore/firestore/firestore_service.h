@@ -43,21 +43,25 @@ class FirestoreService {
   // Gets a single document.
   virtual void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
 
   // Creates a new document.
   virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
 
   // Deletes a document.
   virtual void DeleteDocument(
       google::firestore::v1beta1::DeleteDocumentRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status)> callback) = 0;
 
   virtual std::unique_ptr<ListenCallHandler> Listen(
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) = 0;
 
  private:

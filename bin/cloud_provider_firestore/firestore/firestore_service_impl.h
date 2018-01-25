@@ -66,18 +66,23 @@ class FirestoreServiceImpl : public FirestoreService {
 
   void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
+                      std::shared_ptr<grpc::CallCredentials> call_credentials,
                       std::function<void(grpc::Status)> callback) override;
 
-  std::unique_ptr<ListenCallHandler> Listen(ListenCallClient* client) override;
+  std::unique_ptr<ListenCallHandler> Listen(
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      ListenCallClient* client) override;
 
  private:
   void Poll();

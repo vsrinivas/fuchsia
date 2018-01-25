@@ -9,6 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/cloud_provider_firestore/app/credentials_provider_impl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
@@ -19,11 +20,9 @@ constexpr char kUsersCollection[] = "users";
 constexpr char kDefaultDocument[] = "default_document";
 
 std::string GetUserPath(fxl::StringView root_path, fxl::StringView user_id) {
-  std::string encoded_user_id = EncodeKey(user_id);
   return fxl::Concatenate({root_path, kSeparator, kUsersCollection, kSeparator,
-                           encoded_user_id, kSeparator,
-                           storage::kSerializationVersion, kSeparator,
-                           kDefaultDocument});
+                           user_id, kSeparator, storage::kSerializationVersion,
+                           kSeparator, kDefaultDocument});
 }
 
 CloudProviderImpl::CloudProviderImpl(
@@ -32,7 +31,6 @@ CloudProviderImpl::CloudProviderImpl(
     std::unique_ptr<FirestoreService> firestore_service,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : user_id_(std::move(user_id)),
-      firebase_auth_(std::move(firebase_auth)),
       firestore_service_(std::move(firestore_service)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
@@ -42,13 +40,16 @@ CloudProviderImpl::CloudProviderImpl(
     }
   });
   // The class also shuts down when the auth provider is disconnected.
-  firebase_auth_->set_connection_error_handler([this] {
+  firebase_auth->set_connection_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "
                    << "shutting down the cloud provider.";
     if (on_empty_) {
       on_empty_();
     }
   });
+
+  credentials_provider_ =
+      std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));
 }
 
 CloudProviderImpl::~CloudProviderImpl() {}
@@ -58,8 +59,8 @@ void CloudProviderImpl::GetDeviceSet(
     const GetDeviceSetCallback& callback) {
   std::string user_path =
       GetUserPath(firestore_service_->GetRootPath(), user_id_);
-  device_sets_.emplace(std::move(user_path), firestore_service_.get(),
-                       std::move(device_set));
+  device_sets_.emplace(std::move(user_path), credentials_provider_.get(),
+                       firestore_service_.get(), std::move(device_set));
   callback(cloud_provider::Status::OK);
 }
 
