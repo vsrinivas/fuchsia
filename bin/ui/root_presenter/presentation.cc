@@ -184,13 +184,16 @@ void Presentation::CreateViewTree(
                             std::move(root_view_host_import_token_));
 
   FXL_DCHECK(!display_model_initialized_);
+
   display_configuration::InitializeModelForDisplay(
       display_info->width_in_px, display_info->height_in_px, &display_model_);
-
   display_model_initialized_ = true;
+  display_usage_default_ = display_model_.environment_info().usage;
 
-  DisplayMetrics metrics =
-      CalculateDisplayMetrics(&display_model_, display_usage_override_);
+  if (display_usage_override_ != mozart::DisplayUsage::UNKNOWN)
+    display_model_.environment_info().usage = display_usage_override_;
+
+  DisplayMetrics metrics = display_model_.GetMetrics();
   display_configuration::LogDisplayMetrics(metrics);
 
   const bool kOverrideDpRatio = true;
@@ -233,44 +236,36 @@ std::string DisplayUsageName(mozart::DisplayUsage usage) {
 }
 
 void Presentation::SetDisplayUsage(mozart::DisplayUsage usage) {
-  if (display_usage_override_ == usage)
+  if (display_usage_override_ == usage) {
+    FXL_DCHECK(display_model_.environment_info().usage ==
+               display_usage_override_);
+    return;
+  }
+  display_usage_override_ = usage;
+  if (display_model_.environment_info().usage == display_usage_override_)
     return;
 
-  display_usage_override_ = usage;
-  DisplayMetrics new_metrics =
-      CalculateDisplayMetrics(&display_model_, display_usage_override_);
+  if (display_usage_override_ == mozart::DisplayUsage::UNKNOWN) {
+    display_model_.environment_info().usage = display_usage_default_;
+  } else {
+    display_model_.environment_info().usage = display_usage_override_;
+  }
+
+  DisplayMetrics new_metrics = display_model_.GetMetrics();
   display_configuration::LogDisplayMetrics(new_metrics);
   SetDisplayMetrics(new_metrics);
 
-  mozart::DisplayUsage new_usage =
-      display_usage_override_ != mozart::DisplayUsage::UNKNOWN
-          ? display_usage_override_
-          : display_model_.environment_info().usage;
+  mozart::DisplayUsage new_usage = display_model_.environment_info().usage;
   FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
                 << DisplayUsageName(new_usage);
 }
 
-DisplayMetrics Presentation::CalculateDisplayMetrics(
-    DisplayModel* display_model,
-    mozart::DisplayUsage display_usage_override) {
-  if (display_usage_override == mozart::DisplayUsage::UNKNOWN) {
-    return display_model->GetMetrics();
-  } else {
-    // Temporarily modify |display_model_| so we can calculate metrics based on
-    // a modified display usage.
-    mozart::DisplayUsage saved_display_usage =
-        display_model->environment_info().usage;
-    display_model->environment_info().usage = display_usage_override;
-    DisplayMetrics metrics = display_model->GetMetrics();
-    display_model->environment_info().usage = saved_display_usage;
-
-    return metrics;
-  }
-}
-
-void Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
+bool Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
   if (display_metrics_ == metrics)
-    return;
+    return true;
+
+  if (!display_model_initialized_)
+    return false;
 
   display_metrics_ = metrics;
 
@@ -293,6 +288,7 @@ void Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
                   display_metrics_.y_scale_in_px_per_pp(), 1.f);
   layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
                  static_cast<float>(display_metrics_.height_in_px()));
+  return true;
 }
 
 void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {

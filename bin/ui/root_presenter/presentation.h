@@ -74,9 +74,11 @@ class Presentation : private mozart::ViewTreeListener,
   // Gets the DisplayMetrics for the given |model|. If |display_usage_override|
   // is not UNKNOWN, uses that value for purpose of calculating metrics.
   static DisplayMetrics CalculateDisplayMetrics(
-      DisplayModel* display_model,
+      const DisplayModel& display_model,
       mozart::DisplayUsage display_usage_override);
-  void SetDisplayMetrics(const DisplayMetrics& metrics);
+  // Sets |display_metrics_| and updates view_manager and Scenic. Returns false
+  // if the updates were skipped (if initialization hasn't happened yet).
+  bool SetDisplayMetrics(const DisplayMetrics& metrics);
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
@@ -150,14 +152,17 @@ class Presentation : private mozart::ViewTreeListener,
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 
-  bool display_model_initialized_ = false;
   DisplayModel display_model_;
+  bool display_model_initialized_ = false;
+  // The display usage value set when |display_model_| was initialized.
+  mozart::DisplayUsage display_usage_default_ = mozart::DisplayUsage::UNKNOWN;
+  // Set by SetDisplayUsage. This value is used instead of
+  // |display_usage_default_| unless it's UNKNOWN.
+  mozart::DisplayUsage display_usage_override_ = mozart::DisplayUsage::UNKNOWN;
+
   // |display_metrics_| must be recalculated anytime |display_model_| changes
   // using CalculateDisplayMetrics().
   DisplayMetrics display_metrics_;
-  // If not set to UNKNOWN, overrides the DisplayUsage value of |display_model_|
-  // for the purpose of calculating |display_metrics_|.
-  mozart::DisplayUsage display_usage_override_ = mozart::DisplayUsage::UNKNOWN;
 
   mozart::ViewPtr root_view_;
 
