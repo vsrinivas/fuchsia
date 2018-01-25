@@ -26,7 +26,8 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
   // InterfaceMonitor implementation.
   void RegisterLinkChangeCallback(const fxl::Closure& callback) override;
 
-  const std::vector<std::unique_ptr<InterfaceDescr>>& GetInterfaces() override;
+  const std::vector<std::unique_ptr<InterfaceDescriptor>>& GetInterfaces()
+      override;
 
  private:
   // NotificationListener implementation.
@@ -36,7 +37,7 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
   netstack::NetstackPtr netstack_;
   fidl::Binding<netstack::NotificationListener> binding_;
   fxl::Closure link_change_callback_;
-  std::vector<std::unique_ptr<InterfaceDescr>> interfaces_;
+  std::vector<std::unique_ptr<InterfaceDescriptor>> interfaces_;
 };
 
 }  // namespace mdns

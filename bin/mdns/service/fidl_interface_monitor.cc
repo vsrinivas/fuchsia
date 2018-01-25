@@ -51,7 +51,7 @@ void FidlInterfaceMonitor::RegisterLinkChangeCallback(
   link_change_callback_ = callback;
 }
 
-const std::vector<std::unique_ptr<InterfaceDescr>>&
+const std::vector<std::unique_ptr<InterfaceDescriptor>>&
 FidlInterfaceMonitor::GetInterfaces() {
   return interfaces_;
 }
@@ -83,7 +83,7 @@ void FidlInterfaceMonitor::OnInterfacesChanged(
     // Add a descriptor if we don't already have one.
     if (interfaces_[if_info->id] == nullptr) {
       interfaces_[if_info->id].reset(
-          new InterfaceDescr(address, if_info->name));
+          new InterfaceDescriptor(address, if_info->name));
       link_change = true;
     }
   }

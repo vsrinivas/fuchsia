@@ -66,7 +66,8 @@ void MdnsTransceiver::SetHostFullName(const std::string& host_full_name) {
   }
 }
 
-bool MdnsTransceiver::InterfaceEnabled(const InterfaceDescr& interface_descr) {
+bool MdnsTransceiver::InterfaceEnabled(
+    const InterfaceDescriptor& interface_descr) {
   if (enabled_interfaces_.empty()) {
     return true;
   }
@@ -137,7 +138,7 @@ void MdnsTransceiver::FindNewInterfaces() {
 
 bool MdnsTransceiver::MaybeAddInterfaceTransceiver(
     size_t index,
-    const InterfaceDescr& interface_descr) {
+    const InterfaceDescriptor& interface_descr) {
   if (interfaces_.size() > index && interfaces_[index] != nullptr) {
     // Interface transceiver already exists.
     return false;

@@ -14,8 +14,8 @@
 namespace mdns {
 
 // Describes an interface.
-struct InterfaceDescr {
-  InterfaceDescr(IpAddress address, const std::string& name)
+struct InterfaceDescriptor {
+  InterfaceDescriptor(IpAddress address, const std::string& name)
       : address_(address), name_(name) {}
 
   IpAddress address_;
@@ -31,7 +31,7 @@ class InterfaceMonitor {
   virtual void RegisterLinkChangeCallback(const fxl::Closure& callback) = 0;
 
   // Returns the current collection of viable interfaces.
-  virtual const std::vector<std::unique_ptr<InterfaceDescr>>&
+  virtual const std::vector<std::unique_ptr<InterfaceDescriptor>>&
   GetInterfaces() = 0;
 
  protected:

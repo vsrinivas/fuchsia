@@ -62,7 +62,7 @@ class MdnsTransceiver {
   };
 
   // Determines if the interface is enabled.
-  bool InterfaceEnabled(const InterfaceDescr& interface_descr);
+  bool InterfaceEnabled(const InterfaceDescriptor& interface_descr);
 
   // Creates a new |MdnsInterfaceTransceiver| for each interface that's ready
   // and doesn't already have one.
@@ -72,7 +72,7 @@ class MdnsTransceiver {
   // if it doesn't exist already. Returns true if the interface transceiver was
   // added, false if it existed already.
   bool MaybeAddInterfaceTransceiver(size_t index,
-                                    const InterfaceDescr& interface_descr);
+                                    const InterfaceDescriptor& interface_descr);
 
   // Remove the interface transceiver with the given index if it exists. Returns
   // true if the transceiver was removed, false if it didn't exist.
