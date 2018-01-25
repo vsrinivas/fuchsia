@@ -242,6 +242,15 @@ For more discussion on encapsulating `unsafe` invariants, see
 [Ralf Jung's "The Scope of Unsafe"][scope-of-unsafe] and
 [Niko Matsakis's "Tootsie Pop" model][tootsie-pop].
 
+## Building With a Custom Toolchain
+
+If you want to test out Fuchsia with your own custom-built versions of rustc or cargo,
+you can set the `rustc_prefix` argument to `fx set`, like this:
+
+```
+fx set x86-64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
+```
+
 [target-library]: https://fuchsia.googlesource.com/build/+/master/rust/rust_library.gni "Rust library"
 [target-binary]: https://fuchsia.googlesource.com/build/+/master/rust/rust_binary.gni "Rust binary"
 [manifest]: http://doc.crates.io/manifest.html "Manifest file"
