@@ -599,12 +599,10 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
 }
 
 zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
-    // Drop data frames if either, there is no BSSID set yet,
-    // or the frame is not from the BSS.
+    if (state_ != WlanState::kAssociated) { return ZX_OK; }
+
     auto from_bss = (bssid() != nullptr && *bssid() == hdr.addr2);
-    auto associated = (state_ == WlanState::kAssociated);
-    if (!associated) { debugf("dropping data packet while not associated\n"); }
-    if (!from_bss || !associated) { return ZX_ERR_STOP; }
+    if (!from_bss) { return ZX_ERR_STOP; }
     return ZX_OK;
 }
 
@@ -629,9 +627,16 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
 zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
                                      const wlan_rx_info_t& rxinfo) {
     debugfn();
+    if (kFisharkEnabled) { DumpDataFrame(frame); }
+
+    auto associated = (state_ == WlanState::kAssociated);
+    if (!associated) {
+        debugf("dropping data packet while not associated\n");
+        return ZX_ERR_STOP;
+    }
+
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
-    ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     switch (frame.hdr->fc.subtype()) {
     case DataSubtype::kDataSubtype:
@@ -769,6 +774,12 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     llc->protocol_id = eth->ether_type;
 
     std::memcpy(llc->payload, eth->payload, frame.body_len);
+
+    fishark("Outbound data frame: len %zu\n", wlan_packet->len());
+    fishark("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
+    fishark("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
+    fishark("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
+
     wlan_packet->CopyCtrlFrom(txinfo);
 
     debugf("%s: wlan hdr: %s\n", __FUNCTION__, debug::Describe(*hdr).c_str());
@@ -1185,6 +1196,31 @@ zx_status_t Station::PostChannelChange() {
         // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
     }
     return ZX_OK;
+}
+
+void Station::DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame) {
+    const common::MacAddr& mymac = device_->GetState()->address();
+
+    auto hdr = frame.hdr;
+
+    auto is_ucast_to_self = mymac == hdr->addr1;
+    auto is_mcast = hdr->addr1.IsBcast();
+    auto is_bcast = hdr->addr1.IsMcast();
+    auto is_interesting = is_ucast_to_self || is_mcast || is_bcast;
+
+    auto associated = (state_ == WlanState::kAssociated);
+    auto from_bss = (bssid() != nullptr && *bssid() == hdr->addr2);
+    if (associated) { is_interesting = is_interesting && from_bss; }
+
+    if (!is_interesting) { return; }
+
+    auto llc = frame.body;
+    auto frame_len = hdr->len() + frame.body_len;
+
+    fishark("Inbound data frame: len %zu\n", frame_len);
+    fishark("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
+    fishark("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
+    fishark("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {

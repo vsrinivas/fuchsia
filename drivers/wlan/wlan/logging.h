@@ -30,11 +30,15 @@ LOG_CATEGORY(kLogDataPacketTrace, 19);
 LOG_CATEGORY(kLogDataBeaconTrace, 20);
 LOG_CATEGORY(kLogWlanFrameTrace, 21);
 LOG_CATEGORY(kLogFrameHandlerTrace, 22);
+LOG_CATEGORY(kLogFishark, 23);  // Packet decoder log
 
 #undef LOG_CATEGORY
 
 // Set this to tune log output
+// TODO(porce): Will revert before merge
 constexpr uint64_t kLogLevel = kLogInfos;
+
+constexpr bool kFisharkEnabled = kLogLevel | kLogFishark;
 
 #define wlogf(level, level_prefix, args...)                                 \
     do {                                                                    \
@@ -55,6 +59,8 @@ constexpr uint64_t kLogLevel = kLogInfos;
 #define debugbss(args...)  wlogf(kLogDataBeaconTrace, "[V:bss ] ", args)
 #define debugfhandler(args...)  wlogf(kLogFrameHandlerTrace, "[V:fhdl] ", args)
 #define debugbcnsndr(args...)  wlogf(kLogDataBeaconTrace, "[V:bcns] ", args)
+
+#define fishark(args...) wlogf(kLogFishark, "[fishark] ", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"

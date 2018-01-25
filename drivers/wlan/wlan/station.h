@@ -106,6 +106,8 @@ class Station : public FrameHandler {
     zx_status_t PreChannelChange(wlan_channel_t chan);
     zx_status_t PostChannelChange();
 
+    void DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame);
+
     const Timer& timer() const { return *timer_; }
 
    private:

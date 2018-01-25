@@ -119,9 +119,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
     void RemoveChildHandler(fbl::RefPtr<FrameHandler> ptr) {
         children_.erase(
-                std::remove_if(children_.begin(), children_.end(),
-                               [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
-                children_.end());
+            std::remove_if(children_.begin(), children_.end(),
+                           [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
+            children_.end());
     }
 
    protected:
@@ -148,7 +148,8 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     // Data frame handlers.
     virtual zx_status_t HandleDataFrame(const DataFrameHeader& hdr) { return ZX_OK; }
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NilHeader)
-    // TODO(hahnr): Rename to something more specific since there are two HandleDataFrame methods now.
+    // TODO(hahnr): Rename to something more specific since there are two HandleDataFrame methods
+    // now.
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(DataFrame, LlcHeader)
 
     // Management frame handlers.
