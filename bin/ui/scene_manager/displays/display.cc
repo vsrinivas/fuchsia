@@ -11,7 +11,7 @@
 namespace scene_manager {
 
 Display::Display(uint32_t width_in_px, uint32_t height_in_px)
-    : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)),
+    : last_vsync_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)),
       width_in_px_(width_in_px),
       height_in_px_(height_in_px) {}
 
