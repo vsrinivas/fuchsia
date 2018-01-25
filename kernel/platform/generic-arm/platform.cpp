@@ -536,17 +536,21 @@ void platform_early_init(void) {
     // The previous environment passes us a boot structure. It may be a
     // device tree or a bootdata container. We attempt to detect the type of the
     // container and handle it appropriately.
+    const char *boot_structure_type = "";
     size_t arena_size = 0;
     if (is_bootdata_container(boot_structure_kvaddr)) {
         // We leave out arena size for now
+        boot_structure_type = "bootdata container";
         ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
                                         &ramdisk_size);
     } else if (is_zircon_boot_header(boot_structure_kvaddr)) {
+        boot_structure_type = "efi header";
         efi_zircon_hdr_t* hdr = (efi_zircon_hdr_t*)boot_structure_kvaddr;
         cmdline_append(hdr->cmd_line);
         ramdisk_base = paddr_to_physmap(hdr->ramdisk_base_phys);
         ramdisk_size = hdr->ramdisk_size;
     } else {
+        boot_structure_type = "FDT";
         // on qemu we read arena size from the device tree
         read_device_tree(boot_structure_kvaddr, &ramdisk_base, &ramdisk_size, &arena_size);
         // Some legacy bootloaders do not properly set linux,initrd-end
@@ -575,6 +579,10 @@ void platform_early_init(void) {
     dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
             ramdisk_start_phys, ramdisk_end_phys - 1);
     boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
+
+    // print how we got here to help us debug bringup
+    dprintf(INFO, "boot structure at %#lx seems to point to a %s\n",
+            boot_structure_paddr, boot_structure_type);
 
     /* add the main memory arena */
     if (arena_size) {
