@@ -112,6 +112,7 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
 
 BlockDevice::BlockDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, fbl::move(backend)) {
+    completion_reset(&txn_signal_);
 }
 
 BlockDevice::~BlockDevice() {
@@ -225,16 +226,38 @@ void BlockDevice::IrqRingUpdate() {
             desc = vring_.DescFromIndex((uint16_t)i);
         }
 
-        // search our pending txn list to see if this completes it
-        block_txn_t* txn;
-        list_for_every_entry (&txn_list, txn, block_txn_t, node) {
-            if (txn->desc == head_desc) {
-                LTRACEF("completes txn %p\n", txn);
-                free_blk_req((unsigned int)txn->index);
-                list_delete(&txn->node);
-                txn_complete(txn, ZX_OK);
-                break;
+        bool need_signal = false;
+        bool need_complete = false;
+        block_txn_t* txn = nullptr;
+        {
+            fbl::AutoLock lock(&txn_lock_);
+
+            // search our pending txn list to see if this completes it
+
+            list_for_every_entry (&txn_list_, txn, block_txn_t, node) {
+                if (txn->desc == head_desc) {
+                    LTRACEF("completes txn %p\n", txn);
+                    free_blk_req((unsigned int)txn->index);
+                    list_delete(&txn->node);
+
+                    // we will do this outside of the lock
+                    need_complete = true;
+
+                    // check to see if QueueTxn is waiting on
+                    // resources becoming available
+                    if ((need_signal = txn_wait_)) {
+                        txn_wait_ = false;
+                    }
+                    break;
+                }
             }
+        }
+
+        if (need_signal) {
+            completion_signal(&txn_signal_);
+        }
+        if (need_complete) {
+            txn_complete(txn, ZX_OK);
         }
     };
 
@@ -246,50 +269,17 @@ void BlockDevice::IrqConfigChange() {
     LTRACE_ENTRY;
 }
 
-void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
-    LTRACEF("txn %p, command %#x\n", txn, txn->op.command);
+zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes,
+                           uint64_t* pages, size_t pagecount, uint16_t* idx) {
 
-    fbl::AutoLock lock(&lock_);
-
-    txn->op.rw.offset_vmo *= config_.blk_size;
-
-    // transaction must fit within device
-    if ((txn->op.rw.offset_dev >= config_.capacity) ||
-        (config_.capacity - txn->op.rw.offset_dev < txn->op.rw.length)) {
-        LTRACEF("request beyond the end of the device!\n");
-        txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    size_t bytes = txn->op.rw.length * config_.blk_size;
-
-    zx_status_t r;
-    zx_handle_t vmo = txn->op.rw.vmo;
-    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
-                             txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
-        TRACEF("could not commit pages\n");
-        txn_complete(txn, ZX_ERR_INTERNAL);
-        return;
-    }
-
-    uint64_t pages[MAX_SCATTER];
-    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
-                             txn->op.rw.offset_vmo, bytes, pages, sizeof(pages))) != ZX_OK) {
-        TRACEF("nvme: could not lookup pages\n");
-        txn_complete(txn, ZX_ERR_INTERNAL);
-        return;
-    }
-
-    // Take the starting byte into the initial page plus total bytes
-    // transferred, convert to page count (rounded up)
-    size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
-
-    // allocate and start filling out a block request
-    auto index = alloc_blk_req();
-    if (index >= blk_req_count) {
-        TRACEF("too many block requests queued (%zu)!\n", index);
-        txn_complete(txn, ZX_ERR_NO_RESOURCES);
-        return;
+    size_t index;
+    {
+        fbl::AutoLock lock(&txn_lock_);
+        index = alloc_blk_req();
+        if (index >= blk_req_count) {
+            LTRACEF("too many block requests queued (%zu)!\n", index);
+            return ZX_ERR_NO_RESOURCES;
+        }
     }
 
     auto req = &blk_req_[index];
@@ -316,10 +306,10 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
     uint16_t i;
     auto desc = vring_.AllocDescChain((uint16_t)(2u + pagecount), &i);
     if (!desc) {
-        TRACEF("failed to allocate descriptor chain of length %zu\n", 2u + pagecount);
-        // TODO: handle this scenario by requeing the transfer in smaller runs
-        txn_complete(txn, ZX_ERR_NO_RESOURCES);
-        return;
+        LTRACEF("failed to allocate descriptor chain of length %zu\n", 2u + pagecount);
+        fbl::AutoLock lock(&txn_lock_);
+        free_blk_req(index);
+        return ZX_ERR_NO_RESOURCES;
     }
 
     LTRACEF("after alloc chain desc %p, i %u\n", desc, i);
@@ -368,14 +358,91 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
     desc->flags = VRING_DESC_F_WRITE;
     LTRACE_DO(virtio_dump_desc(desc));
 
-    // save the txn in a list
-    list_add_tail(&txn_list, &txn->node);
+    *idx = i;
+    return ZX_OK;
+}
 
-    /* submit the transfer */
-    vring_.SubmitChain(i);
+void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
+    LTRACEF("txn %p, command %#x\n", txn, txn->op.command);
 
-    /* kick it off */
-    vring_.Kick();
+    fbl::AutoLock lock(&lock_);
+
+    txn->op.rw.offset_vmo *= config_.blk_size;
+
+    // transaction must fit within device
+    if ((txn->op.rw.offset_dev >= config_.capacity) ||
+        (config_.capacity - txn->op.rw.offset_dev < txn->op.rw.length)) {
+        LTRACEF("request beyond the end of the device!\n");
+        txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
+        return;
+    }
+
+    size_t bytes = txn->op.rw.length * config_.blk_size;
+
+    zx_status_t r;
+    zx_handle_t vmo = txn->op.rw.vmo;
+    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
+                             txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
+        TRACEF("could not commit pages\n");
+        txn_complete(txn, ZX_ERR_INTERNAL);
+        return;
+    }
+
+    uint64_t pages[MAX_SCATTER];
+    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
+                             txn->op.rw.offset_vmo, bytes, pages, sizeof(pages))) != ZX_OK) {
+        TRACEF("nvme: could not lookup pages\n");
+        txn_complete(txn, ZX_ERR_INTERNAL);
+        return;
+    }
+
+    // Take the starting byte into the initial page plus total bytes
+    // transferred, convert to page count (rounded up)
+    size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
+
+    bool cannot_fail = false;
+
+    for (;;) {
+        uint16_t idx;
+
+        // attempt to setup hw txn
+        zx_status_t status = QueueTxn(txn, write, bytes, pages, pagecount, &idx);
+        if (status == ZX_OK) {
+            fbl::AutoLock lock(&txn_lock_);
+
+            // save the txn in a list
+            list_add_tail(&txn_list_, &txn->node);
+
+            /* submit the transfer */
+            vring_.SubmitChain(idx);
+
+            /* kick it off */
+            vring_.Kick();
+
+            return;
+        } else {
+            if (cannot_fail) {
+                printf("virtio-block: failed to queue txn to hw: %d\n", status);
+                txn_complete(txn, status);
+                return;
+            }
+
+            fbl::AutoLock lock(&txn_lock_);
+
+            if (list_is_empty(&txn_list_)) {
+                // we hold the queue lock and the list is empty
+                // if we fail this time around, no point in trying again
+                cannot_fail = true;
+                continue;
+            } else {
+                // let the completer know we need to wake up
+                txn_wait_ = true;
+            }
+        }
+
+        completion_wait(&txn_signal_, ZX_TIME_INFINITE);
+        completion_reset(&txn_signal_);
+    }
 }
 
 } // namespace virtio

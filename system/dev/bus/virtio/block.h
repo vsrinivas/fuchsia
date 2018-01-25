@@ -14,6 +14,8 @@
 #include <zircon/device/block.h>
 #include <ddk/protocol/block.h>
 
+#include <sync/completion.h>
+
 namespace virtio {
 
 struct block_txn_t {
@@ -51,6 +53,8 @@ private:
 
     void GetInfo(block_info_t* info);
 
+    zx_status_t QueueTxn(block_txn_t* txn, bool write, size_t bytes,
+                         uint64_t* pages, size_t pagecount, uint16_t* idx);
     void QueueReadWriteTxn(block_txn_t* txn, bool write);
 
     // the main virtio ring
@@ -85,8 +89,11 @@ private:
         blk_req_bitmap_ &= ~(1 << i);
     }
 
-    // pending iotxns
-    list_node txn_list = LIST_INITIAL_VALUE(txn_list);
+    // pending iotxns and waiter state
+    fbl::Mutex txn_lock_;
+    list_node txn_list_ = LIST_INITIAL_VALUE(txn_list_);
+    bool txn_wait_ = false;
+    completion_t txn_signal_;
 
     block_protocol_ops_t block_ops_ = {};
 };
