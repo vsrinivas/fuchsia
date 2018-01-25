@@ -126,27 +126,26 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
       std::function<void(fxl::Closure)> on_get_object)
       : on_get_object_(std::move(on_get_object)) {}
 
-  void AddObject(ObjectDigestView object_digest, const std::string& value) {
-    digest_to_value_[object_digest.ToString()] = value;
+  void AddObject(ObjectIdentifier object_identifier, const std::string& value) {
+    digest_to_value_[std::move(object_identifier)] = value;
   }
 
-  void GetObject(ObjectDigestView object_digest,
+  void GetObject(ObjectIdentifier object_identifier,
                  std::function<void(Status status,
                                     std::unique_ptr<DataSource> data_source)>
                      callback) override {
-    ObjectDigest digest = object_digest.ToString();
-    std::string& value = digest_to_value_[digest];
-    object_requests.insert(digest);
+    std::string& value = digest_to_value_[object_identifier];
+    object_requests.insert(std::move(object_identifier));
     on_get_object_([callback = std::move(callback), value] {
       callback(Status::OK, DataSource::Create(value));
     });
   }
 
-  std::set<ObjectDigest> object_requests;
+  std::set<ObjectIdentifier> object_requests;
 
  private:
   std::function<void(fxl::Closure)> on_get_object_;
-  std::map<ObjectDigest, std::string> digest_to_value_;
+  std::map<ObjectIdentifier, std::string> digest_to_value_;
 };
 
 class FakeSyncDelegate : public DelayingFakeSyncDelegate {
@@ -699,10 +698,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ObjectIdentifier root_identifier = node->GetIdentifier();
 
     // Add the three objects to FakeSyncDelegate.
-    sync.AddObject(lazy_value.object_identifier.object_digest,
-                   lazy_value.value);
-    sync.AddObject(eager_value.object_identifier.object_digest,
-                   eager_value.value);
+    sync.AddObject(lazy_value.object_identifier, lazy_value.value);
+    sync.AddObject(eager_value.object_identifier, eager_value.value);
 
     {
       // Ensure root_object is not kept, as the storage it depends on will be
@@ -712,7 +709,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
       fxl::StringView root_data;
       ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-      sync.AddObject(root_identifier.object_digest, root_data.ToString());
+      sync.AddObject(root_identifier, root_data.ToString());
     }
 
     // Reset and clear the storage.
@@ -736,10 +733,9 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(2u, sync.object_requests.size());
-    EXPECT_TRUE(sync.object_requests.find(root_identifier.object_digest) !=
+    EXPECT_TRUE(sync.object_requests.find(root_identifier) !=
                 sync.object_requests.end());
-    EXPECT_TRUE(sync.object_requests.find(
-                    eager_value.object_identifier.object_digest) !=
+    EXPECT_TRUE(sync.object_requests.find(eager_value.object_identifier) !=
                 sync.object_requests.end());
 
     // Adding the same commit twice should not request any objects from sync.
@@ -776,7 +772,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
 
   fxl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-  sync.AddObject(root_identifier.object_digest, root_data.ToString());
+  sync.AddObject(root_identifier, root_data.ToString());
 
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
@@ -1208,7 +1204,7 @@ TEST_F(PageStorageTest, GetObject) {
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
-  sync.AddObject(data.object_identifier.object_digest, data.value);
+  sync.AddObject(data.object_identifier, data.value);
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const Object> object =
@@ -1230,7 +1226,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
   ObjectData data2("Some data2", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
-  sync.AddObject(data.object_identifier.object_digest, data2.value);
+  sync.AddObject(data.object_identifier, data2.value);
   storage_->SetSyncDelegate(&sync);
 
   TryGetObject(data.object_identifier, PageStorage::Location::NETWORK,
@@ -1515,12 +1511,12 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       std::unique_ptr<const btree::TreeNode> node;
       ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
       object_identifiers[i] = node->GetIdentifier();
-      sync.AddObject(value.object_identifier.object_digest, value.value);
+      sync.AddObject(value.object_identifier, value.value);
       std::unique_ptr<const Object> root_object =
           TryGetObject(object_identifiers[i], PageStorage::Location::NETWORK);
       fxl::StringView root_data;
       ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-      sync.AddObject(object_identifiers[i].object_digest, root_data.ToString());
+      sync.AddObject(object_identifiers[i], root_data.ToString());
     }
 
     // Reset and clear the storage.
@@ -1560,11 +1556,11 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     EXPECT_EQ(Status::OK, status);
 
     EXPECT_EQ(4u, sync.object_requests.size());
-    EXPECT_NE(sync.object_requests.find(object_identifiers[0].object_digest),
+    EXPECT_NE(sync.object_requests.find(object_identifiers[0]),
               sync.object_requests.end());
-    EXPECT_EQ(sync.object_requests.find(object_identifiers[1].object_digest),
+    EXPECT_EQ(sync.object_requests.find(object_identifiers[1]),
               sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find(object_identifiers[2].object_digest),
+    EXPECT_NE(sync.object_requests.find(object_identifiers[2]),
               sync.object_requests.end());
   });
 }
@@ -1720,22 +1716,21 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // node is already there, so we create two (child, which is empty, and root,
   // which contains child).
   std::string child_data = btree::EncodeNode(0u, std::vector<Entry>(), {});
-  ObjectDigest child_digest =
-      ComputeObjectDigest(ObjectType::VALUE, child_data);
-  sync.AddObject(child_digest, child_data);
+  ObjectIdentifier child_identifier = encryption_service_.MakeObjectIdentifier(
+      ComputeObjectDigest(ObjectType::VALUE, child_data));
+  sync.AddObject(child_identifier, child_data);
 
-  std::string root_data = btree::EncodeNode(
-      0u, std::vector<Entry>(),
-      {{0u, encryption_service_.MakeObjectIdentifier(child_digest)}});
-  ObjectDigest root_digest = ComputeObjectDigest(ObjectType::VALUE, root_data);
-  sync.AddObject(root_digest, root_data);
+  std::string root_data =
+      btree::EncodeNode(0u, std::vector<Entry>(), {{0u, child_identifier}});
+  ObjectIdentifier root_identifier = encryption_service_.MakeObjectIdentifier(
+      ComputeObjectDigest(ObjectType::VALUE, root_data));
+  sync.AddObject(root_identifier, root_data);
 
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
 
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), encryption_service_.MakeObjectIdentifier(root_digest),
-      std::move(parent));
+      storage_.get(), root_identifier, std::move(parent));
   CommitId id = commit->GetId();
 
   // Start adding the remote commit.

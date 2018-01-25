@@ -767,7 +767,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
              ObjectDigestType::INLINE);
 
   page_sync_->GetObject(
-      object_identifier.object_digest,
+      object_identifier,
       [this, callback = std::move(callback),
        object_identifier = std::move(object_identifier)](
           Status status, std::unique_ptr<DataSource> data_source) mutable {

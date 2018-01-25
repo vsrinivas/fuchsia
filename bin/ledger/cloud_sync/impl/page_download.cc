@@ -246,46 +246,55 @@ void PageDownload::DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
 }
 
 void PageDownload::GetObject(
-    storage::ObjectDigestView object_digest,
+    storage::ObjectIdentifier object_identifier,
     std::function<void(storage::Status status,
                        std::unique_ptr<storage::DataSource> data_source)>
         callback) {
   current_get_object_calls_++;
-  auto object_digest_str = object_digest.ToString();
-  (*page_cloud_)
-      ->GetObject(
-          convert::ToArray(object_digest_str),
-          [this, object_digest_str, callback = std::move(callback)](
-              cloud_provider::Status status, uint64_t size,
-              zx::socket data) mutable {
-            if (status == cloud_provider::Status::NETWORK_ERROR ||
-                status == cloud_provider::Status::AUTH_ERROR) {
-              FXL_LOG(WARNING) << log_prefix_
-                               << "GetObject() failed due to a connection "
-                                  "error or stale auth token, retrying.";
-              current_get_object_calls_--;
-              RetryWithBackoff([this,
-                                object_digest = std::move(object_digest_str),
-                                callback = std::move(callback)] {
-                GetObject(object_digest, callback);
-              });
-              return;
-            }
+  encryption_service_->GetObjectName(
+      object_identifier,
+      task_runner_->MakeScoped(
+          [this, object_identifier, callback = std::move(callback)](
+              encryption::Status satus, std::string object_name) mutable {
+            (*page_cloud_)
+                ->GetObject(
+                    convert::ToArray(object_name),
+                    [this, object_identifier = std::move(object_identifier),
+                     callback = std::move(callback)](
+                        cloud_provider::Status status, uint64_t size,
+                        zx::socket data) mutable {
+                      if (status == cloud_provider::Status::NETWORK_ERROR ||
+                          status == cloud_provider::Status::AUTH_ERROR) {
+                        FXL_LOG(WARNING)
+                            << log_prefix_
+                            << "GetObject() failed due to a connection "
+                               "error or stale auth token, retrying.";
+                        current_get_object_calls_--;
+                        RetryWithBackoff(
+                            [this,
+                             object_identifier = std::move(object_identifier),
+                             callback = std::move(callback)] {
+                              GetObject(object_identifier, callback);
+                            });
+                        return;
+                      }
 
-            backoff_->Reset();
-            if (status != cloud_provider::Status::OK) {
-              FXL_LOG(WARNING)
-                  << log_prefix_
-                  << "Fetching remote object failed with status: " << status;
-              callback(storage::Status::IO_ERROR, nullptr);
-              current_get_object_calls_--;
-              return;
-            }
+                      backoff_->Reset();
+                      if (status != cloud_provider::Status::OK) {
+                        FXL_LOG(WARNING)
+                            << log_prefix_
+                            << "Fetching remote object failed with status: "
+                            << status;
+                        callback(storage::Status::IO_ERROR, nullptr);
+                        current_get_object_calls_--;
+                        return;
+                      }
 
-            callback(storage::Status::OK,
-                     storage::DataSource::Create(std::move(data), size));
-            current_get_object_calls_--;
-          });
+                      callback(storage::Status::OK, storage::DataSource::Create(
+                                                        std::move(data), size));
+                      current_get_object_calls_--;
+                    });
+          }));
 }
 
 void PageDownload::HandleError(const char error_description[]) {

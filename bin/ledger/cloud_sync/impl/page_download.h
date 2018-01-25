@@ -73,7 +73,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   // storage::PageSyncDelegate:
   void GetObject(
-      storage::ObjectDigestView object_digest,
+      storage::ObjectIdentifier object_identifier,
       std::function<void(storage::Status status,
                          std::unique_ptr<storage::DataSource> data_source)>
           callback) override;

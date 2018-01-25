@@ -22,7 +22,7 @@ class PageSyncDelegate {
 
   // Retrieves the object of the given id from the cloud.
   virtual void GetObject(
-      ObjectDigestView object_digest,
+      ObjectIdentifier object_identifier,
       std::function<void(Status status, std::unique_ptr<DataSource>)>
           callback) = 0;
 

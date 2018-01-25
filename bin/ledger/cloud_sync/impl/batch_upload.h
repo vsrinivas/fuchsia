@@ -71,8 +71,13 @@ class BatchUpload {
 
   void UploadNextObject();
 
+  // Retrieves the content of the given object and uploads it.
+  void GetObjectContentAndUpload(storage::ObjectIdentifier object_identifier,
+                                 std::string object_name);
+
   // Uploads the given object.
   void UploadObject(storage::ObjectIdentifier object_identifier,
+                    std::string object_name,
                     std::unique_ptr<const storage::Object> object);
 
   // Filters already synced commits.

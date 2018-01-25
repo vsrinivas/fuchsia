@@ -109,7 +109,7 @@ void EncryptionServiceImpl::GetObjectName(
   // TODO(qsr): Replace with real hash.
   task_runner_.PostTask([callback = std::move(callback),
                          name = object_identifier.object_digest]() mutable {
-    callback(Status::OK, std::move(name));
+    callback(Status::OK, "_" + name + "_");
   });
 }
 

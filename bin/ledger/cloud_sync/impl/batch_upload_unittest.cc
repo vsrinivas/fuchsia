@@ -285,17 +285,21 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
                            page_cloud_.received_commits.front().data));
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1", page_cloud_.received_objects["obj_digest1"]);
-  EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
+  EXPECT_EQ(
+      "obj_data1",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+  EXPECT_EQ(
+      "obj_data2",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
 }
 
 // Verifies that the number of concurrent object uploads is limited to
@@ -334,18 +338,24 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   EXPECT_EQ(0u, error_calls_);
   EXPECT_EQ(3u, page_cloud_.add_object_calls);
   EXPECT_EQ(3u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data0", page_cloud_.received_objects["obj_digest0"]);
-  EXPECT_EQ("obj_data1", page_cloud_.received_objects["obj_digest1"]);
-  EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
+  EXPECT_EQ(
+      "obj_data0",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id0)]);
+  EXPECT_EQ(
+      "obj_data1",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+  EXPECT_EQ(
+      "obj_data2",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest0")));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id0));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
 }
 
 // Test an upload that fails on uploading objects.
@@ -407,13 +417,17 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   // Verify that the objects were uploaded to cloud provider and marked as
   // synced.
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1", page_cloud_.received_objects["obj_digest1"]);
-  EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
+  EXPECT_EQ(
+      "obj_data1",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+  EXPECT_EQ(
+      "obj_data2",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
 
   // Verify that neither the commit wasn't marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -462,17 +476,21 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
                            page_cloud_.received_commits.front().data));
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
-  EXPECT_EQ("obj_data1", page_cloud_.received_objects["obj_digest1"]);
-  EXPECT_EQ("obj_data2", page_cloud_.received_objects["obj_digest2"]);
+  EXPECT_EQ(
+      "obj_data1",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+  EXPECT_EQ(
+      "obj_data2",
+      page_cloud_
+          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest1")));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(
-                    encryption_service_.MakeObjectIdentifier("obj_digest2")));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
 }
 
 // Test a commit upload that gets an error from storage.

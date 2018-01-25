@@ -93,20 +93,54 @@ void BatchUpload::UploadNextObject() {
       std::move(remaining_object_identifiers_.back());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_identifiers_.pop_back();
-  storage_->GetPiece(
+
+  // TODO(qsr): Retrieving the object name should be done in parallel with
+  // retrieving the object content.
+  encryption_service_->GetObjectName(
       object_identifier_to_send,
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
-          [this, object_identifier_to_send](
+          fxl::MakeCopyable([this, object_identifier_to_send](
+                                encryption::Status encryption_status,
+                                std::string object_name) mutable {
+            if (encryption_status != encryption::Status::OK) {
+              FXL_DCHECK(current_objects_handled_ > 0);
+              current_objects_handled_--;
+
+              errored_ = true;
+              // Re-enqueue the object for another upload attempt.
+              remaining_object_identifiers_.push_back(
+                  std::move(object_identifier_to_send));
+
+              if (current_objects_handled_ == 0u) {
+                on_error_(error_type_);
+              }
+              return;
+            }
+
+            GetObjectContentAndUpload(std::move(object_identifier_to_send),
+                                      std::move(object_name));
+          })));
+}
+
+void BatchUpload::GetObjectContentAndUpload(
+    storage::ObjectIdentifier object_identifier,
+    std::string object_name) {
+  storage_->GetPiece(
+      object_identifier,
+      callback::MakeScoped(
+          weak_ptr_factory_.GetWeakPtr(),
+          [this, object_identifier, object_name = std::move(object_name)](
               storage::Status storage_status,
               std::unique_ptr<const storage::Object> object) mutable {
             FXL_DCHECK(storage_status == storage::Status::OK);
-            UploadObject(std::move(object_identifier_to_send),
+            UploadObject(std::move(object_identifier), std::move(object_name),
                          std::move(object));
           }));
 }
 
 void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
+                               std::string object_name,
                                std::unique_ptr<const storage::Object> object) {
   fsl::SizedVmo data;
   auto status = object->GetVmo(&data);
@@ -115,8 +149,7 @@ void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
 
   (*page_cloud_)
       ->AddObject(
-          convert::ToArray(object_identifier.object_digest),
-          std::move(data).ToTransport(),
+          convert::ToArray(object_name), std::move(data).ToTransport(),
           callback::MakeScoped(
               weak_ptr_factory_.GetWeakPtr(),
               [this, object_identifier = std::move(object_identifier)](

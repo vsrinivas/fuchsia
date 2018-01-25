@@ -323,14 +323,17 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageDownloadTest, GetObject) {
-  page_cloud_.objects_to_return["object_digest"] = "content";
+  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  std::string object_name =
+      encryption_service_.GetObjectNameSynchronous(object_identifier);
+  page_cloud_.objects_to_return[object_name] = "content";
   page_download_->StartDownload();
 
   bool called;
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
-      storage::ObjectDigestView("object_digest"),
+      object_identifier,
       callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
   RunLoopUntilIdle();
 
@@ -342,6 +345,10 @@ TEST_F(PageDownloadTest, GetObject) {
 
 // Verifies that sync retries GetObject() attempts upon connection error.
 TEST_F(PageDownloadTest, RetryGetObject) {
+  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  std::string object_name =
+      encryption_service_.GetObjectNameSynchronous(object_identifier);
+
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
@@ -351,18 +358,18 @@ TEST_F(PageDownloadTest, RetryGetObject) {
 
   page_download_->StartDownload();
 
-  message_loop_.SetAfterTaskCallback([this] {
+  message_loop_.SetAfterTaskCallback([this, &object_name] {
     // Allow the operation to succeed after looping through five attempts.
     if (page_cloud_.get_object_calls == 5u) {
       page_cloud_.status_to_return = cloud_provider::Status::OK;
-      page_cloud_.objects_to_return["object_digest"] = "content";
+      page_cloud_.objects_to_return[object_name] = "content";
     }
   });
   bool called;
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
-      storage::ObjectDigestView("object_digest"),
+      object_identifier,
       callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
   RunLoopUntilIdle();
 
