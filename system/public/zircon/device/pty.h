@@ -5,7 +5,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <zircon/device/device.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
