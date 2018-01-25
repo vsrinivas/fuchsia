@@ -214,7 +214,7 @@ TEST_F(BatchUploadTest, SingleCommit) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
 
@@ -239,7 +239,7 @@ TEST_F(BatchUploadTest, MultipleCommits) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
 
@@ -275,7 +275,7 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
 
@@ -326,14 +326,13 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
 
   page_cloud_.delay_add_object_callbacks = true;
   batch_upload->Start();
-  // TODO(ppi): how to avoid the wait?
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(50)));
+  RunLoopUntilIdle();
   // Verify that only two object uploads are in progress.
   EXPECT_EQ(2u, page_cloud_.add_object_calls);
 
   page_cloud_.delay_add_object_callbacks = false;
   page_cloud_.RunPendingCallbacks();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
   EXPECT_EQ(3u, page_cloud_.add_object_calls);
@@ -377,7 +376,7 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
 
   page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
   EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
@@ -409,7 +408,7 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
   EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
@@ -452,7 +451,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 
   page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
   EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
@@ -468,7 +467,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
       std::make_unique<TestObject>(id2, "obj_data2");
   page_cloud_.object_status_to_return = cloud_provider::Status::OK;
   batch_upload->Retry();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(1u, page_cloud_.received_commits.size());
@@ -503,7 +502,7 @@ TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
       MakeBatchUploadWithStorage(&test_storage, std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
   EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
@@ -532,7 +531,7 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
       MakeBatchUploadWithStorage(&test_storage, std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
   EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
@@ -567,7 +566,7 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   page_cloud_.reset_object_status_after_call = true;
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
 
@@ -587,7 +586,7 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
 
   // Try upload again.
   batch_upload->Retry();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
 
@@ -604,7 +603,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommits) {
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
 
@@ -633,7 +632,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   // Mark commit as synced.
   storage::Status status;
   storage_.MarkCommitSynced("id", callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
 
@@ -641,7 +640,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   page_cloud_.add_commits_calls = 0;
   page_cloud_.commit_status_to_return = cloud_provider::Status::OK;
   batch_upload->Retry();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
 
