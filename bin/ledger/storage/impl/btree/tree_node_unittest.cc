@@ -11,7 +11,10 @@
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
+
+using ledger::SetWhenCalled;
 
 namespace storage {
 namespace btree {
@@ -90,11 +93,13 @@ TEST_F(TreeNodeTest, GetEntryChild) {
     EXPECT_EQ(entries[i], GetEntry(node.get(), i));
   }
 
+  bool called;
   for (int i = 0; i <= size; ++i) {
     Status status;
     std::unique_ptr<const TreeNode> child;
-    node->GetChild(i, callback::Capture(MakeQuitTask(), &status, &child));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    node->GetChild(i, callback::Capture(SetWhenCalled(&called), &status, &child));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_EQ(node->children_identifiers().find(i),
               node->children_identifiers().end());
