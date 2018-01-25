@@ -6,7 +6,8 @@
 ### make a zedboot USB key
 
 ## usage: fx mkzedboot [options] <usb device>
-##  -f  force writing to a non-usb target
+##  -f            force writing to a non-usb target
+##  -i|--install  include "offline" install
 
 set -e
 
@@ -16,6 +17,12 @@ force=false
 if [[ "$1" == "-f" ]]; then
   shift
   force=true
+fi
+
+include_install=false
+if [[ "$1" == "-i" ]] || [[ "$1" == "--install" ]]; then
+  shift
+  include_install=true
 fi
 
 is_usb() {
@@ -83,12 +90,46 @@ unmountcmd
 "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
 unmountcmd
 "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
+
+# NOTE: Ok, so here goes some stuff. I could have written a much smarter "dd"
+# (a thing that can operate on block-boundaries for seek and copy, but that
+# doesn't do operations ONE BLOCK AT A TIME because it's 2018 yo), or I could
+# do what follows. Before this change, adding the install image to a disk via
+# DD would take 20 minutes. That's just absurd.
+# The stuff:
+# Align the install_offset to a 4mb boundary.
+# Pad the partition size to a 4mb boundary.
+# Set the dd block size to 4mb, even though it really isn't 4mb.
+# Seek offset*lba/4mb
+# Write with osync
+
+install_image_path="${FUCHSIA_BUILD_DIR}/images/install-${ZIRCON_PROJECT}.blk"
+if $include_install; then
+  if [[ ! -f "${install_image_path}" ]]; then
+    echo >&2 "Install image not found at ${install_image_path} did you build it?"
+    exit 1
+  fi
+
+  install_image_size=$(wc -c "${install_image_path}" | awk '{print $1}')
+  # Add some slack, like the build does, as the file size doesn't represent the
+  # volume size and there's no host tool that presently will print the
+  # superblock volume size data.
+  install_image_size=$((($install_image_size * 14) / 10))
+  # It begins. Pad the image size to a 4mb boundary above it's size:
+  install_size=$((($install_image_size + 4194303) / 4194304))
+  # We need to specify the install size in 512byte lba's:
+  install_size=$(($install_size * 8192))
+
+  install_min_offset=$(($esp_size + $esp_offset + $vboot_size))
+  # Align the partition offset to a 4mb "block size"
+  install_offset=$(( (($install_min_offset * 512) + 4194303) / 4194304))
+  # The lba offset of that is:
+  install_lba_offset=$(($install_offset * 8192))
+  unmountcmd
+  "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${install_size}" -t "48435546-4953-2041-494E-5354414C4C52" -b "${install_lba_offset}" -l install "${USB_DEVICE}"
+fi
 unmountcmd
 "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
-echo "done"
-
-echo "Building zedboot partitions..."
-fx-command-run build "images/zedboot-${ZIRCON_PROJECT}.vboot" "images/zedboot-${ZIRCON_PROJECT}.esp.blk"
 echo "done"
 
 echo "Writing zedboot for EFI"
@@ -97,6 +138,11 @@ dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.esp.blk" of="${USB_
 echo "Writing zedboot for Cros"
 unmountcmd
 dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.vboot" of="${USB_DEVICE}" seek=${vboot_offset}
+if $include_install; then
+  echo "Writing install partition"
+  unmountcmd
+  dd if="${install_image_path}" of="${USB_DEVICE}" seek=${install_offset} bs=4194304
+fi
 echo "done"
 
 case "$(uname)" in
