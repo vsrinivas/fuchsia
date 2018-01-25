@@ -13,6 +13,3 @@ fuchsia-vfs-watcher = "0.1"
 futures = "0.1"
 log = "0.3"
 tokio-core = "0.1"
-
-[profile.release]
-panic = 'abort'

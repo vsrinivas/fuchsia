@@ -10,6 +10,3 @@ license = "BSD-3-Clause"
 byteorder = "1.2"
 bytes = "0.4"
 failure = "0.1"
-
-[profile.release]
-panic = 'abort'

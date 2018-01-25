@@ -18,6 +18,3 @@ futures = "0.1.15"
 garnet_public_lib_bluetooth_fidl = "0.1"
 garnet_public_lib_power_fidl = "0.1"
 tokio-core = "0.1"
-
-[profile.release]
-panic = 'abort'
