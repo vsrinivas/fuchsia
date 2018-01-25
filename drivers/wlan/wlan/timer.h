@@ -7,6 +7,7 @@
 #include "clock.h"
 
 #include <zircon/types.h>
+#include <zx/time.h>
 #include <zx/timer.h>
 
 namespace wlan {
@@ -16,32 +17,32 @@ class Timer {
     explicit Timer(uint64_t id);
     virtual ~Timer();
 
-    virtual zx_time_t Now() const = 0;
+    virtual zx::time Now() const = 0;
 
     // TODO(tkilbourn): add slack
-    zx_status_t SetTimer(zx_time_t deadline);
+    zx_status_t SetTimer(zx::time deadline);
     zx_status_t CancelTimer();
 
     uint64_t id() const { return id_; }
-    zx_time_t deadline() const { return deadline_; }
+    zx::time deadline() const { return deadline_; }
 
    protected:
-    virtual zx_status_t SetTimerImpl(zx_time_t deadline) = 0;
+    virtual zx_status_t SetTimerImpl(zx::time deadline) = 0;
     virtual zx_status_t CancelTimerImpl() = 0;
 
    private:
     uint64_t id_;
-    zx_time_t deadline_ = 0;
+    zx::time deadline_;
 };
 
 class SystemTimer final : public Timer {
    public:
     SystemTimer(uint64_t id, zx::timer timer);
 
-    zx_time_t Now() const override { return clock_.Now(); }
+    zx::time Now() const override { return clock_.Now(); }
 
    protected:
-    zx_status_t SetTimerImpl(zx_time_t deadline) override;
+    zx_status_t SetTimerImpl(zx::time deadline) override;
     zx_status_t CancelTimerImpl() override;
 
    private:
@@ -53,10 +54,10 @@ class TestTimer final : public Timer {
    public:
     TestTimer(uint64_t id, TestClock* clock) : Timer(id), clock_(clock) {}
 
-    zx_time_t Now() const override { return clock_->Now(); }
+    zx::time Now() const override { return clock_->Now(); }
 
    protected:
-    zx_status_t SetTimerImpl(zx_time_t duration) override;
+    zx_status_t SetTimerImpl(zx::time duration) override;
     zx_status_t CancelTimerImpl() override;
 
    private:

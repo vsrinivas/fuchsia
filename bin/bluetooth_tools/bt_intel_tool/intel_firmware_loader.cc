@@ -316,26 +316,26 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
   zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timeout);
 
   // We use a 5 second timeout for each event.
-  zx_duration_t evt_timeout = ZX_SEC(5);
-  timeout.set(zx::deadline_after(evt_timeout), ZX_TIMER_SLACK_CENTER);
+  zx::duration evt_timeout = zx::sec(5);
+  timeout.set(zx::deadline_after(evt_timeout), zx::duration());
 
   while (!failed && events.size() > 0) {
     size_t remaining_evt_count = events.size();
-    async_loop_run(async_get_default(), zx::deadline_after(ZX_SEC(1)), true);
+    async_loop_run(async_get_default(), zx_deadline_after(ZX_SEC(1)), true);
 
     if (events.size() < remaining_evt_count) {
       // The expected event was received. Clear the old timeout and set up a new
       // one for the next event.
       timeout.cancel();
       if (events.size() > 0u) {
-        timeout.set(zx::deadline_after(evt_timeout), ZX_TIMER_SLACK_CENTER);
+        timeout.set(zx::deadline_after(evt_timeout), zx::duration());
       }
       continue;
     }
 
     // The expected event was not received in this iteration of the loop. Check
     // to see if this was due to a timeout.
-    zx_status_t status = timeout.wait_one(ZX_TIMER_SIGNALED, 0u, nullptr);
+    zx_status_t status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status == ZX_OK) {
       std::cerr << "Timed out while waiting for event" << std::endl;
       return false;

@@ -32,11 +32,11 @@ void CancelableTask::Cancel() {
   posted_ = false;
 }
 
-bool CancelableTask::Post(fxl::Closure task, zx_duration_t nanoseconds) {
+bool CancelableTask::Post(fxl::Closure task, zx::duration nanoseconds) {
   if (posted_)
     return false;
 
-  task_.set_deadline(zx::deadline_after(nanoseconds));
+  task_.set_deadline(zx::deadline_after(nanoseconds).get());
   task_.set_handler(
       [this, task = std::move(task)](async_t*, zx_status_t status) {
         posted_ = false;

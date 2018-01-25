@@ -44,7 +44,7 @@ int add_wlan() {
     do {
         devfd = open(devpath, O_RDWR);
         if (devfd >= 0) { break; }
-        zx::nanosleep(zx_deadline_after(ZX_SEC(1)));
+        zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     } while (++retry < 100);
 
     if (devfd < 0) {

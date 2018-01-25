@@ -62,7 +62,7 @@ bool MultiprocTaskRunner::RunsTasksOnCurrentThread() {
 void MultiprocTaskRunner::Worker(uint32_t thread_number) {
   while (true) {
     zx_port_packet_t packet;
-    zx_status_t status = port_.wait(ZX_TIME_INFINITE, &packet, 0u);
+    zx_status_t status = port_.wait(zx::time::infinite(), &packet, 0u);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "zx::port::wait failed, status " << status;
       break;

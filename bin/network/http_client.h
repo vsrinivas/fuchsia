@@ -379,7 +379,7 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
           response_body_stream_.write(0, buffer, todo, &written);
       if (result == ZX_ERR_SHOULD_WAIT) {
         result = response_body_stream_.wait_one(
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE,
+            ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
             nullptr);
         if (result == ZX_OK)
           continue;  // retry now that the socket is ready

@@ -11,7 +11,7 @@ namespace test {
 
 bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
   zx_signals_t pending = 0u;
-  fence.wait_one(signal, 0, &pending);
+  fence.wait_one(signal, zx::time(), &pending);
   return (pending & signal) != 0u;
 }
 

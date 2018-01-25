@@ -189,7 +189,7 @@ void VendorHci::SendCommand(
 std::unique_ptr<btlib::hci::EventPacket> VendorHci::ReadEventPacket() const {
   zx_signals_t observed;
   zx_status_t status = channel_->wait_one(
-      ZX_CHANNEL_READABLE, zx::deadline_after(ZX_SEC(1)), &observed);
+      ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(1)), &observed);
 
   if (status != ZX_OK) {
     errorf("VendorHci: channel error: %s\n", zx_status_get_string(status));

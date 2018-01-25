@@ -55,7 +55,7 @@ class ResponsePrinter {
 
       if (result == ZX_ERR_SHOULD_WAIT) {
         body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                      ZX_TIME_INFINITE, nullptr);
+                      zx::time::infinite(), nullptr);
       } else if (result == ZX_OK) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");

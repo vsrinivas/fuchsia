@@ -39,7 +39,7 @@
 
 namespace {
 
-zx_status_t sleep_for(zx_duration_t t) {
+zx_status_t sleep_for(zx::duration t) {
     return zx::nanosleep(zx::deadline_after(t));
 }
 
@@ -71,7 +71,7 @@ int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
 
 namespace ralink {
 
-constexpr zx_duration_t Device::kDefaultBusyWait;
+constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
@@ -488,14 +488,14 @@ zx_status_t Device::LoadFirmware() {
         errorf("failed to send load firmware command\n");
         return status;
     }
-    sleep_for(ZX_MSEC(10));
+    sleep_for(zx::msec(10));
 
     H2mMailboxCsr hmcsr;
     status = WriteRegister(hmcsr);
     CHECK_WRITE(H2M_MAILBOX_CSR, status);
 
     SysCtrl sc;
-    status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, ZX_MSEC(1));
+    status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, zx::msec(1));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("system MCU not ready\n"); }
         return status;
@@ -522,7 +522,7 @@ zx_status_t Device::LoadFirmware() {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     return ZX_OK;
 }
@@ -536,12 +536,12 @@ zx_status_t Device::EnableRadio() {
         errorf("error waking MCU err=%d\n", status);
         return status;
     }
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     // Wait for WPDMA to be ready
     WpdmaGloCfg wgc;
     auto wpdma_pred = [&wgc]() { return !wgc.tx_dma_busy() && !wgc.rx_dma_busy(); };
-    status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
+    status = BusyWait(&wgc, wpdma_pred, zx::msec(10));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("WPDMA busy\n"); }
         return status;
@@ -565,7 +565,7 @@ zx_status_t Device::EnableRadio() {
     CHECK_WRITE(USB_DMA_CFG, status);
 
     // Wait for WPDMA again
-    status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
+    status = BusyWait(&wgc, wpdma_pred, zx::msec(10));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("WPDMA busy\n"); }
         return status;
@@ -579,7 +579,7 @@ zx_status_t Device::EnableRadio() {
 
     // Wait for MAC status ready
     MacStatusReg msr;
-    status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, ZX_MSEC(10));
+    status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, zx::msec(10));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("BBP busy\n"); }
         return status;
@@ -603,7 +603,7 @@ zx_status_t Device::EnableRadio() {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     status = WaitForBbp();
     if (status != ZX_OK) {
@@ -632,7 +632,7 @@ zx_status_t Device::EnableRadio() {
     status = WriteRegister(msc);
     CHECK_WRITE(MAC_SYS_CTRL, status);
 
-    sleep_for(ZX_USEC(50));
+    sleep_for(zx::usec(50));
 
     status = ReadRegister(&wgc);
     CHECK_READ(WPDMA_GLO_CFG, status);
@@ -1558,7 +1558,7 @@ zx_status_t Device::InitRfcsr() {
     status = WriteRfcsr(r2);
     CHECK_WRITE(RF2, status);
 
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
     r2.set_rescal_en(0);
     status = WriteRfcsr(r2);
     CHECK_WRITE(RF2, status);
@@ -1573,7 +1573,7 @@ zx_status_t Device::InitRfcsr() {
     }
 
     if (rt_type_ == RT5592) {
-        sleep_for(ZX_MSEC(1));
+        sleep_for(zx::msec(1));
         AdjustFreqOffset();
         if (rt_rev_ >= REV_RT5592C) {
             status = WriteBbp(BbpRegister<103>(0xc0));
@@ -1610,7 +1610,7 @@ zx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uin
     hc.set_command(command);
     status = WriteRegister(hc);
     CHECK_WRITE(HOST_CMD, status);
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     return status;
 }
@@ -1692,7 +1692,7 @@ zx_status_t Device::WaitForBbp() {
     H2mMailboxCsr hmc;
     status = WriteRegister(hmc);
     CHECK_WRITE(H2M_MAILBOX_CSR, status);
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     uint8_t val;
     for (unsigned int i = 0; i < kMaxBusyReads; i++) {
@@ -1837,7 +1837,7 @@ zx_status_t Device::DetectAutoRun(bool* autorun) {
 
 zx_status_t Device::WaitForMacCsr() {
     AsicVerId avi;
-    return BusyWait(&avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, ZX_MSEC(1));
+    return BusyWait(&avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, zx::msec(1));
 }
 
 zx_status_t Device::SetRxFilter() {
@@ -2752,7 +2752,7 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     status = WriteBbp(b3);
     CHECK_WRITE(BBP3, status);
 
-    sleep_for(ZX_MSEC(1));
+    sleep_for(zx::msec(1));
 
     // Clear channel stats by reading the registers
     ChIdleSta cis;
@@ -2886,7 +2886,7 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
 }
 
 template <typename R, typename Predicate>
-zx_status_t Device::BusyWait(R* reg, Predicate pred, zx_duration_t delay) {
+zx_status_t Device::BusyWait(R* reg, Predicate pred, zx::duration delay) {
     zx_status_t status;
     unsigned int busy;
     for (busy = 0; busy < kMaxBusyReads; busy++) {

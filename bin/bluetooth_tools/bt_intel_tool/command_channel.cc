@@ -130,15 +130,15 @@ void CommandChannel::SendCommandSync(
   zx::timer timeout;
   zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timeout);
   // Wait up to 500ms for a response.
-  timeout.set(zx::deadline_after(ZX_MSEC(500)), ZX_MSEC(50));
+  timeout.set(zx::deadline_after(zx::msec(500)), zx::msec(50));
   for (;;) {
-    async_loop_run(async_get_default(), zx::deadline_after(ZX_MSEC(10)), true);
+    async_loop_run(async_get_default(), zx_deadline_after(ZX_MSEC(10)), true);
     if (received) {
       status = ZX_OK;
       break;
     }
 
-    status = timeout.wait_one(ZX_TIMER_SIGNALED, 0u, nullptr);
+    status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status != ZX_ERR_TIMED_OUT) {
       if (status == ZX_OK)
         status = ZX_ERR_TIMED_OUT;

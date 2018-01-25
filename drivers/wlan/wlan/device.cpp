@@ -343,7 +343,7 @@ void Device::MainLoop() {
     zx_port_packet_t pkt;
     bool running = true;
     while (running) {
-        zx_time_t timeout = zx::deadline_after(ZX_SEC(30));
+        zx::time timeout = zx::deadline_after(zx::sec(30));
         zx_status_t status = port_.wait(timeout, &pkt, 0);
         std::lock_guard<std::mutex> lock(lock_);
         if (status == ZX_ERR_TIMED_OUT) {

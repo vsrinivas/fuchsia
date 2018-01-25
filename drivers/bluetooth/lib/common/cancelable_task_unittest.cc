@@ -18,7 +18,7 @@ TEST(CancelableTaskTest, IsPosted) {
   CancelableTask task;
   EXPECT_FALSE(task.posted());
 
-  EXPECT_TRUE(task.Post([] {}, 100));
+  EXPECT_TRUE(task.Post([] {}, zx::duration(100)));
   EXPECT_TRUE(task.posted());
 
   task.Cancel();
@@ -27,7 +27,7 @@ TEST(CancelableTaskTest, IsPosted) {
 
 // Tests that tasks can be posted more than once.
 TEST(CancelableTaskTest, PostAgain) {
-  constexpr zx_duration_t kTimeoutNs = 2000000000;
+  constexpr zx::duration kTimeoutNs(2000000000);
 
   fsl::MessageLoop loop;
   CancelableTask task;

@@ -21,13 +21,13 @@ FenceListener::FenceListener(zx::event fence)
 }
 
 bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
-  zx_time_t zx_deadline;
+  zx::time zx_deadline;
   if (timeout <= fxl::TimeDelta::Zero())
-    zx_deadline = 0u;
+    zx_deadline = zx::time();
   else if (timeout == fxl::TimeDelta::Max())
-    zx_deadline = ZX_TIME_INFINITE;
+    zx_deadline = zx::time::infinite();
   else
-    zx_deadline = zx::deadline_after(timeout.ToNanoseconds());
+    zx_deadline = zx::deadline_after(zx::duration(timeout.ToNanoseconds()));
 
   zx_signals_t pending = 0u;
   while (!ready_) {
@@ -35,7 +35,7 @@ bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
         fence_.wait_one(kFenceSignalled, zx_deadline, &pending);
     FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
     ready_ = pending & kFenceSignalled;
-    if (zx_deadline != ZX_TIME_INFINITE)
+    if (zx_deadline != zx::time::infinite())
       break;
   }
   return ready_;

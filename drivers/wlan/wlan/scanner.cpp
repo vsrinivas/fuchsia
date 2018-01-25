@@ -39,7 +39,7 @@ zx_status_t Scanner::Start(const ScanRequest& req) {
 
     if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }
     ZX_DEBUG_ASSERT(channel_index_ == 0);
-    ZX_DEBUG_ASSERT(channel_start_ == 0);
+    ZX_DEBUG_ASSERT(channel_start_.get() == 0);
 
     resp_ = ScanResponse::New();
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
@@ -57,7 +57,7 @@ zx_status_t Scanner::Start(const ScanRequest& req) {
     req_ = req.Clone();
 
     channel_start_ = timer_->Now();
-    zx_time_t timeout = InitialTimeout();
+    zx::time timeout = InitialTimeout();
     zx_status_t status = device_->SetChannel(ScanChannel());
     if (status != ZX_OK) {
         errorf("could not queue set channel: %d\n", status);
@@ -83,7 +83,7 @@ void Scanner::Reset() {
     req_.reset();
     resp_.reset();
     channel_index_ = 0;
-    channel_start_ = 0;
+    channel_start_ = zx::time();
     timer_->CancelTimer();
     nbrs_bss_.Clear();
 }
@@ -161,8 +161,8 @@ void Scanner::RemoveStaleBss() {
     // TODO(porce): Implement a complex preemption logic here.
 
     // Only prune if necessary time passed.
-    static zx_time_t ts_last_prune = 0;
-    auto now = zx_clock_get(ZX_CLOCK_UTC);
+    static zx::time ts_last_prune;
+    auto now = zx::clock::get(ZX_CLOCK_UTC);
     if (ts_last_prune + kBssPruneDelay > now) { return; }
 
     // Prune stale entries.
@@ -191,7 +191,7 @@ zx_status_t Scanner::HandleTimeout() {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
-    zx_time_t now = timer_->Now();
+    zx::time now = timer_->Now();
     zx_status_t status = ZX_OK;
 
     // Reached max channel dwell time
@@ -218,7 +218,7 @@ zx_status_t Scanner::HandleTimeout() {
         // TODO(tkilbourn): if there was no sign of activity on this channel, skip ahead to the next
         // one
         // For now, just continue the scan.
-        zx_time_t timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
+        zx::time timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
         status = timer_->SetTimer(timeout);
         if (status != ZX_OK) { goto timer_fail; }
         return ZX_OK;
@@ -229,7 +229,7 @@ zx_status_t Scanner::HandleTimeout() {
         now >= channel_start_ + WLAN_TU(req_->probe_delay)) {
         debugf("Reached probe delay\n");
         // TODO(hahnr): Add support for CCA as described in IEEE Std 802.11-2016 11.1.4.3.2 f)
-        zx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
+        zx::time timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
         status = timer_->SetTimer(timeout);
         if (status != ZX_OK) { goto timer_fail; }
         SendProbeRequest();
@@ -254,7 +254,7 @@ zx_status_t Scanner::HandleError(zx_status_t error_code) {
     return SendScanResponse();
 }
 
-zx_time_t Scanner::InitialTimeout() const {
+zx::time Scanner::InitialTimeout() const {
     if (req_->scan_type == ScanTypes::PASSIVE) {
         return channel_start_ + WLAN_TU(req_->min_channel_time);
     } else {

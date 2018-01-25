@@ -29,7 +29,7 @@ Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
       if (status == ZX_ERR_SHOULD_WAIT) {
         zx_signals_t pending = 0;
         status = socket.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                                 ZX_TIME_INFINITE, &pending);
+                                 zx::time::infinite(), &pending);
         if (status < 0) {
           FXL_LOG(ERROR) << "Wait on socket failed: " << status;
           return Tracee::TransferStatus::kCorrupted;

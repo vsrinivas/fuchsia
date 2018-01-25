@@ -36,9 +36,9 @@ void Station::Reset() {
     timer_->CancelTimer();
     state_ = WlanState::kUnjoined;
     bss_.reset();
-    join_timeout_ = 0;
-    auth_timeout_ = 0;
-    last_seen_ = 0;
+    join_timeout_ = zx::time();
+    auth_timeout_ = zx::time();
+    last_seen_ = zx::time();
     bssid_.Reset();
 }
 
@@ -360,8 +360,8 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
-    if (join_timeout_ > 0) {
-        join_timeout_ = 0;
+    if (join_timeout_ > zx::time()) {
+        join_timeout_ = zx::time();
         timer_->CancelTimer();
         state_ = WlanState::kUnauthenticated;
         debugjoin("joined %s\n", bss_->ssid.data());
@@ -429,7 +429,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
     common::MacAddr bssid(bss_->bssid.data());
     debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
-    auth_timeout_ = 0;
+    auth_timeout_ = zx::time();
     timer_->CancelTimer();
     SendAuthResponse(AuthenticateResultCodes::SUCCESS);
     return ZX_OK;
@@ -479,7 +479,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
 
     common::MacAddr bssid(bss_->bssid.data());
     state_ = WlanState::kAssociated;
-    assoc_timeout_ = 0;
+    assoc_timeout_ = zx::time();
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
     SendAssocResponse(AssociateResultCodes::SUCCESS);
@@ -525,7 +525,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
     device_->SetStatus(0);
     controlled_port_ = PortState::kBlocked;
 
-    signal_report_timeout_ = 0;
+    signal_report_timeout_ = zx::time();
     timer_->CancelTimer();
 
     return SendDisassociateIndication(disassoc->reason_code);
@@ -752,28 +752,28 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
 zx_status_t Station::HandleTimeout() {
     debugfn();
-    zx_time_t now = timer_->Now();
-    if (join_timeout_ > 0 && now > join_timeout_) {
+    zx::time now = timer_->Now();
+    if (join_timeout_ > zx::time() && now > join_timeout_) {
         debugjoin("join timed out; resetting\n");
 
         Reset();
         return SendJoinResponse();
     }
 
-    if (auth_timeout_ > 0 && now >= auth_timeout_) {
+    if (auth_timeout_ > zx::time() && now >= auth_timeout_) {
         debugjoin("auth timed out; moving back to joining\n");
-        auth_timeout_ = 0;
+        auth_timeout_ = zx::time();
         return SendAuthResponse(AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
     }
 
-    if (assoc_timeout_ > 0 && now >= assoc_timeout_) {
+    if (assoc_timeout_ > zx::time() && now >= assoc_timeout_) {
         debugjoin("assoc timed out; moving back to authenticated\n");
-        assoc_timeout_ = 0;
+        assoc_timeout_ = zx::time();
         // TODO(tkilbourn): need a better error code for this
         return SendAssocResponse(AssociateResultCodes::REFUSED_TEMPORARILY);
     }
 
-    if (signal_report_timeout_ > 0 && now > signal_report_timeout_ &&
+    if (signal_report_timeout_ > zx::time() && now > signal_report_timeout_ &&
         state_ == WlanState::kAssociated) {
         signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
         timer_->SetTimer(signal_report_timeout_);
@@ -1237,7 +1237,7 @@ uint16_t Station::next_seq() {
     return seq;
 }
 
-zx_time_t Station::deadline_after_bcn_period(zx_duration_t tus) {
+zx::time Station::deadline_after_bcn_period(zx_duration_t tus) {
     ZX_DEBUG_ASSERT(!bss_.is_null());
     return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
 }

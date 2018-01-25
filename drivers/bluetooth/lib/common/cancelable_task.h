@@ -5,6 +5,7 @@
 #pragma once
 
 #include <async/task.h>
+#include <zx/time.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -31,7 +32,7 @@ class CancelableTask final {
 
   // Posts a task to be run after |nanoseconds|. Returns false is a task is
   // currently posted or if the operation fails.
-  bool Post(fxl::Closure task, zx_duration_t nanoseconds);
+  bool Post(fxl::Closure task, zx::duration nanoseconds);
 
  private:
   bool posted_;

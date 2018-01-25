@@ -124,7 +124,7 @@ bool LowEnergyConnector::CreateConnection(
           FXL_DCHECK(self);
           self->OnCreateConnectionTimeout();
         },
-        ZX_MSEC(timeout_ms));
+        zx::msec(timeout_ms));
   };
 
   hci_->command_channel()->SendCommand(std::move(request), task_runner_,

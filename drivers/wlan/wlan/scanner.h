@@ -12,6 +12,7 @@
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
+#include <zx/time.h>
 
 #include <unordered_map>
 
@@ -53,7 +54,7 @@ class Scanner : public FrameHandler {
     const Timer& timer() const { return *timer_; }
 
    private:
-    zx_time_t InitialTimeout() const;
+    zx::time InitialTimeout() const;
     zx_status_t SendScanResponse();
     zx_status_t SendProbeRequest();
     // Removes stale BSS entries from the neighbor BSS map. Pruning will only take effect every
@@ -62,8 +63,8 @@ class Scanner : public FrameHandler {
     void RemoveStaleBss();
 
     static constexpr size_t kMaxBssEntries = 20;  // Limited by zx.Channel buffer size.
-    static constexpr zx_time_t kBssExpiry = ZX_SEC(60);
-    static constexpr zx_time_t kBssPruneDelay = ZX_SEC(5);
+    static constexpr zx::duration kBssExpiry = zx::sec(60);
+    static constexpr zx::duration kBssPruneDelay = zx::sec(5);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
@@ -71,7 +72,7 @@ class Scanner : public FrameHandler {
     ScanResponsePtr resp_ = nullptr;
 
     size_t channel_index_ = 0;
-    zx_time_t channel_start_ = 0;
+    zx::time channel_start_;
 
     // TODO(porce): Decouple neighbor BSS management from scanner.
     BssMap nbrs_bss_ = {kMaxBssEntries};

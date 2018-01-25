@@ -50,7 +50,7 @@ void AuthenticatedState::OnEnter() {
 
 void AuthenticatedState::OnExit() {
     client_->CancelTimer();
-    auth_timeout_ = 0;
+    auth_timeout_ = zx::time();
 }
 
 void AuthenticatedState::HandleTimeout() {
@@ -66,7 +66,7 @@ zx_status_t AuthenticatedState::HandleAssociationRequest(
 
     // Received request which we've been waiting for. Timer can get canceled.
     client_->CancelTimer();
-    auth_timeout_ = 0;
+    auth_timeout_ = zx::time();
 
     aid_t aid;
     auto status = client_->bss()->AssignAid(client_->addr(), &aid);
@@ -128,15 +128,15 @@ zx_status_t RemoteClient::HandleAnyFrame() {
     return ZX_OK;
 }
 
-zx_time_t RemoteClient::StartTimer(zx_duration_t tus) {
+zx::time RemoteClient::StartTimer(zx_duration_t tus) {
     CancelTimer();
-    zx_time_t deadline = timer_->Now() + WLAN_TU(tus);
+    zx::time deadline = timer_->Now() + WLAN_TU(tus);
     timer_->SetTimer(deadline);
     return deadline;
 }
 
-bool RemoteClient::HasTimerTriggered(zx_time_t deadline) {
-    return deadline > 0 && timer_->Now() >= deadline;
+bool RemoteClient::HasTimerTriggered(zx::time deadline) {
+    return deadline > zx::time() && timer_->Now() >= deadline;
 }
 
 void RemoteClient::CancelTimer() {

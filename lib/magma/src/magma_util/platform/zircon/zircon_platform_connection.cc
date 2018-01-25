@@ -694,7 +694,7 @@ public:
         zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         zx_signals_t pending = 0;
 
-        zx_status_t status = channel_.wait_one(signals, blocking ? ZX_TIME_INFINITE : 0, &pending);
+        zx_status_t status = channel_.wait_one(signals, blocking ? zx::time::infinite() : zx::time(), &pending);
         if (status == ZX_ERR_TIMED_OUT) {
             DLOG("got ZX_ERR_TIMED_OUT, returning true");
             return 0;

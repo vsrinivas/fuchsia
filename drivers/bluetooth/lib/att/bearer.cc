@@ -159,7 +159,7 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   current_ = queue_.pop_front();
   if (current()) {
     FXL_DCHECK(!timeout_task_.posted());
-    timeout_task_.Post(std::move(timeout_cb), ZX_MSEC(timeout_ms));
+    timeout_task_.Post(std::move(timeout_cb), zx::msec(timeout_ms));
     chan->Send(std::move(current()->pdu));
   }
 }

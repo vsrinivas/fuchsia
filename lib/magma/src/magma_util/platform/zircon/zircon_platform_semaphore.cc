@@ -26,7 +26,7 @@ bool ZirconPlatformSemaphore::WaitNoReset(uint64_t timeout_ms)
     TRACE_DURATION("magma:sync", "semaphore wait", "id", koid_);
     zx_signals_t pending = 0;
     zx_status_t status = event_.wait_one(
-        zx_signal(), timeout_ms == UINT64_MAX ? ZX_TIME_INFINITE : zx::deadline_after(ZX_MSEC(timeout_ms)), &pending);
+        zx_signal(), timeout_ms == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::msec(timeout_ms)), &pending);
     if (status == ZX_ERR_TIMED_OUT)
         return false;
 

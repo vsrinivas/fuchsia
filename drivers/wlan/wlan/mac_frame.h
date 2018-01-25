@@ -13,6 +13,7 @@
 #include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <zx/time.h>
 
 #include <cstdint>
 
@@ -20,8 +21,8 @@ namespace wlan {
 
 class Packet;
 
-static constexpr zx_duration_t TimeUnit = ZX_USEC(1024);
-template <typename T> static inline constexpr zx_duration_t WLAN_TU(T n) {
+static constexpr zx::duration TimeUnit = zx::usec(1024);
+template <typename T> static inline constexpr zx::duration WLAN_TU(T n) {
     static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;
 }

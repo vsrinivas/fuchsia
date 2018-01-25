@@ -186,11 +186,11 @@ TEST_F(ScannerTest, Timeout_MinChannelTime) {
     req_->max_channel_time = 10;
 
     ASSERT_EQ(ZX_OK, Start());
-    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
+    EXPECT_EQ(WLAN_TU(req_->min_channel_time).get(), scanner_.timer().deadline().get());
 
-    clock_.Set(WLAN_TU(req_->min_channel_time));
+    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
-    EXPECT_EQ(WLAN_TU(req_->max_channel_time), scanner_.timer().deadline());
+    EXPECT_EQ(zx::time() + WLAN_TU(req_->max_channel_time), scanner_.timer().deadline());
 }
 
 TEST_F(ScannerTest, Timeout_MaxChannelTime) {
@@ -200,10 +200,10 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
 
     ASSERT_EQ(ZX_OK, Start());
 
-    clock_.Set(WLAN_TU(req_->min_channel_time));
+    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
     ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    clock_.Set(WLAN_TU(req_->max_channel_time));
+    clock_.Set(zx::time() + WLAN_TU(req_->max_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
@@ -224,10 +224,10 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
 
     EXPECT_EQ(1u, CurrentChannel());
 
-    clock_.Set(WLAN_TU(req_->min_channel_time));
+    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
     ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    clock_.Set(WLAN_TU(req_->max_channel_time));
+    clock_.Set(zx::time() + WLAN_TU(req_->max_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(2u, scanner_.ScanChannel().primary);
     EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
@@ -242,11 +242,11 @@ TEST_F(ScannerTest, DISABLED_Timeout_ProbeDelay) {
     req_->max_channel_time = 10;
 
     ASSERT_EQ(ZX_OK, Start());
-    EXPECT_EQ(WLAN_TU(req_->probe_delay), scanner_.timer().deadline());
+    EXPECT_EQ(WLAN_TU(req_->probe_delay).get(), scanner_.timer().deadline().get());
 
-    clock_.Set(WLAN_TU(req_->probe_delay));
+    clock_.Set(zx::time() + WLAN_TU(req_->probe_delay));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
-    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
+    EXPECT_EQ(WLAN_TU(req_->min_channel_time).get(), scanner_.timer().deadline().get());
 }
 
 TEST_F(ScannerTest, ScanResponse) {
@@ -267,7 +267,7 @@ TEST_F(ScannerTest, ScanResponse) {
     auto beacon = ImmutableMgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
 
     EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
-    clock_.Set(1);
+    clock_.Set(zx::time(1));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());

@@ -170,7 +170,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t ConfigureTxPower(const wlan_channel_t& chan);
 
     template <typename R, typename Predicate>
-    zx_status_t BusyWait(R* reg, Predicate pred, zx_duration_t delay = kDefaultBusyWait);
+    zx_status_t BusyWait(R* reg, Predicate pred, zx::duration delay = kDefaultBusyWait);
 
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
@@ -196,7 +196,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};
 
-    constexpr static zx_duration_t kDefaultBusyWait = ZX_USEC(100);
+    constexpr static zx::duration kDefaultBusyWait = zx::usec(100);
 
     // constants read out of the device
     uint16_t rt_type_ = 0;

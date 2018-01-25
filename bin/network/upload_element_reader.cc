@@ -28,7 +28,7 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
     err_ = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (err_ == ZX_ERR_SHOULD_WAIT) {
       err_ = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              ZX_TIME_INFINITE, nullptr);
+                              zx::time::infinite(), nullptr);
       if (err_ == ZX_OK)
         continue;  // retry now that the socket is ready
     }

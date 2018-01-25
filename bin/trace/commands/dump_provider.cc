@@ -16,7 +16,7 @@
 namespace tracing {
 namespace {
 
-constexpr fxl::TimeDelta kReadTimeout = fxl::TimeDelta::FromSeconds(5);
+constexpr zx::duration kReadTimeout = zx::sec(5);
 constexpr size_t kBufferSize = 16 * 1024;
 
 }  // namespace
@@ -60,10 +60,10 @@ void DumpProvider::Run(const fxl::CommandLine& command_line,
   for (;;) {
     zx_signals_t pending;
     status = incoming.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                               zx::deadline_after(kReadTimeout.ToNanoseconds()),
+                               zx::deadline_after(kReadTimeout),
                                &pending);
     if (status == ZX_ERR_TIMED_OUT) {
-      err() << "Timed out after " << kReadTimeout.ToSecondsF()
+      err() << "Timed out after " << kReadTimeout.get() / zx::sec(1).get()
             << " seconds waiting for provider to write data" << std::endl;
       break;
     }

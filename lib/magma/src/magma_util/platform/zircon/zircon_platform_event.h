@@ -25,7 +25,7 @@ public:
 
         zx_status_t status = zx_event_.wait_one(
             zx_signal(),
-            timeout_ms == UINT64_MAX ? ZX_TIME_INFINITE : zx::deadline_after(ZX_MSEC(timeout_ms)),
+            timeout_ms == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::msec(timeout_ms)),
             &pending);
         DASSERT(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
 

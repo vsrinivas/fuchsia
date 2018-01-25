@@ -30,7 +30,7 @@ bool BlockingDrainFrom(
       }
     } else if (result == ZX_ERR_SHOULD_WAIT) {
       result = source.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                               ZX_TIME_INFINITE, nullptr);
+                               zx::time::infinite(), nullptr);
       if (result != ZX_OK) {
         // If the socket was closed, then treat as EOF.
         return result == ZX_ERR_PEER_CLOSED;

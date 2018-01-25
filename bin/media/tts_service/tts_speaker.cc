@@ -304,7 +304,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
     zx_signals_t pending;
     zx_status_t res;
 
-    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &pending);
+    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
     if ((res != ZX_OK) || abort_playback_.load()) {
       return CST_AUDIO_STREAM_STOP;
     }

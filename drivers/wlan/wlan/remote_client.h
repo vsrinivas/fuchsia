@@ -52,7 +52,7 @@ class AuthenticatedState : public BaseState {
 
    private:
     static constexpr zx_duration_t kAuthenticationTimeoutTu = 1800000;  // 30min
-    zx_time_t auth_timeout_ = 0;
+    zx::time auth_timeout_;
 };
 
 class AssociatedState : public BaseState {
@@ -85,8 +85,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public FrameHandler {
 
     // Note: There can only ever by one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
-    zx_time_t StartTimer(zx_duration_t tus);
-    bool HasTimerTriggered(zx_time_t deadline);
+    zx::time StartTimer(zx_duration_t tus);
+    bool HasTimerTriggered(zx::time deadline);
     void CancelTimer();
 
     uint16_t next_seq_no() { return last_seq_no_++ & kMaxSequenceNumber; }

@@ -36,7 +36,7 @@ class ResponseConsumer {
 
       if (result == ZX_ERR_SHOULD_WAIT) {
         body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                      ZX_TIME_INFINITE, nullptr);
+                      zx::time::infinite(), nullptr);
       } else if (result == ZX_ERR_PEER_CLOSED) {
         // not an error
         break;

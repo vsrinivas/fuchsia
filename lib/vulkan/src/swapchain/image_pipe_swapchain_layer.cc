@@ -378,8 +378,8 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
 
     zx_status_t status = pending_images_[0].release_fence.wait_one(
         ZX_EVENT_SIGNALED,
-        timeout_ns == UINT64_MAX ? ZX_TIME_INFINITE
-                                 : zx_deadline_after(timeout_ns),
+        timeout_ns == UINT64_MAX ? zx::time::infinite()
+                                 : zx::deadline_after(zx::duration(timeout_ns)),
         &pending);
     if (status == ZX_ERR_TIMED_OUT) {
       return VK_TIMEOUT;

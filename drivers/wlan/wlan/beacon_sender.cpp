@@ -105,7 +105,7 @@ void BeaconSender::MessageLoop() {
     zx_port_packet_t pkt;
     bool running = true;
     while (running) {
-        zx_time_t timeout = zx::deadline_after(ZX_SEC(kMessageLoopMaxWaitSeconds));
+        zx::time timeout = zx::deadline_after(zx::sec(kMessageLoopMaxWaitSeconds));
         zx_status_t status = port_.wait(timeout, &pkt, 0);
         if (status == ZX_ERR_TIMED_OUT) {
             continue;
@@ -246,7 +246,7 @@ zx_status_t BeaconSender::SetTimeout() {
     ZX_DEBUG_ASSERT(timer_);
 
     timer_->CancelTimer();
-    zx_time_t timeout = timer_->Now() + WLAN_TU(start_req_->beacon_period);
+    zx::time timeout = timer_->Now() + WLAN_TU(start_req_->beacon_period);
     auto status = timer_->SetTimer(timeout);
     if (status != ZX_OK) {
         timer_->CancelTimer();
