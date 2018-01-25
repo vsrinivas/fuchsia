@@ -157,6 +157,37 @@ bool decode_single_present_handle() {
     END_TEST;
 }
 
+bool decode_single_present_handle_unaligned_error() {
+    BEGIN_TEST;
+
+    // Test a short, unaligned version of nonnullable message
+    // handle. All fidl message objects should be 8 byte aligned.
+    struct unaligned_nonnullable_handle_inline_data {
+        fidl_message_header_t header;
+        zx_handle_t handle;
+    };
+    struct unaligned_nonnullable_handle_message_layout {
+        unaligned_nonnullable_handle_inline_data inline_struct;
+    };
+
+    unaligned_nonnullable_handle_message_layout message = {};
+    message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+    zx_handle_t handles[] = {
+        dummy_handle_0,
+    };
+
+    // Decoding the unaligned version of the struct should fail.
+    const char* error = nullptr;
+    auto status = fidl_decode(&nonnullable_handle_message_type, &message, sizeof(message), handles,
+                              ArrayCount(handles), &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
 bool decode_multiple_present_handles() {
     BEGIN_TEST;
 
@@ -1440,6 +1471,7 @@ END_TEST_CASE(null_parameters)
 
 BEGIN_TEST_CASE(handles)
 RUN_TEST(decode_single_present_handle)
+RUN_TEST(decode_single_present_handle_unaligned_error)
 RUN_TEST(decode_multiple_present_handles)
 RUN_TEST(decode_single_absent_handle)
 RUN_TEST(decode_multiple_absent_handles)

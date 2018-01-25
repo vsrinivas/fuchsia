@@ -19,11 +19,10 @@ Builder::Builder(void* buffer, uint32_t capacity)
 Builder::~Builder() = default;
 
 void* Builder::Allocate(uint32_t size) {
-    uint64_t base = FidlAlign(at_);
-    uint64_t limit = base + size;
+    uint64_t limit = FidlAlign(at_ + size);
     if (limit > capacity_)
         return nullptr;
-    uint8_t* result = &buffer_[base];
+    uint8_t* result = &buffer_[at_];
     memset(buffer_ + at_, 0, limit - at_);
     at_ = static_cast<uint32_t>(limit);
     return result;
