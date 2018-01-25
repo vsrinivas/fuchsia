@@ -35,6 +35,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/fidl \
     system/ulib/trace-engine \
     system/ulib/zircon \
 

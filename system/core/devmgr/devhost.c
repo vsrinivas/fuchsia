@@ -21,6 +21,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <fdio/io.fidl2.h>
 #include <fdio/util.h>
 #include <fdio/remoteio.h>
 
@@ -214,24 +215,6 @@ done:
     return drv->status;
 }
 
-static void dh_handle_open(zxrio_msg_t* msg, size_t len,
-                           zx_handle_t h, iostate_t* ios) {
-    if ((msg->hcount != 1) ||
-        (msg->datalen != (len - ZXRIO_HDR_SZ))) {
-        zx_handle_close(h);
-        log(ERROR, "devhost: malformed OPEN reques\n");
-        return;
-    }
-    msg->handle[0] = h;
-
-    zx_status_t r;
-    if ((r = devhost_rio_handler(msg, ios)) < 0) {
-        if (r != ERR_DISPATCHER_INDIRECT) {
-            log(ERROR, "devhost: OPEN failed: %d\n", r);
-        }
-    }
-}
-
 static void dh_send_status(zx_handle_t h, zx_status_t status) {
     dc_msg_t reply = {
         .txid = 0,
@@ -257,13 +240,43 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
     // handle remoteio open messages only
-    if ((msize >= ZXRIO_HDR_SZ) && (msg.op == ZXRIO_OPEN)) {
+    if ((msize >= sizeof(fidl_message_header_t)) &&
+        ((msg.op == ZXRIO_OPEN) || (msg.op == ZXFIDL_OPEN))) {
         if (hcount != 1) {
+            log(ERROR, "devhost: Malformed open request (bad handle count)\n");
             r = ZX_ERR_INTERNAL;
             goto fail;
         }
+
+        DirectoryOpenMsg* request = (DirectoryOpenMsg*) &msg;
+        zxrio_msg_t* rmsg = (zxrio_msg_t*) &msg;
+
+        if (msg.op == ZXFIDL_OPEN) {
+            // Decode open request (FIDL2)
+            if ((msize < sizeof(DirectoryOpenMsg)) ||
+                (FIDL_ALIGN(sizeof(DirectoryOpenMsg)) + FIDL_ALIGN(request->path.size) != msize) ||
+                (request->object != FIDL_HANDLE_PRESENT) ||
+                (request->path.data != (char*) FIDL_ALLOC_PRESENT)) {
+                log(ERROR, "devhost: Malformed open request (bad message)\n");
+                r = ZX_ERR_IO;
+                goto fail;
+            }
+            request->object = hin[0];
+            request->path.data = (void*)((uintptr_t)(&msg) +
+                                         FIDL_ALIGN(sizeof(DirectoryOpenMsg)));
+        } else {
+            // Decode open request (RIO)
+            rmsg->hcount = 1;
+            rmsg->handle[0] = hin[0];
+        }
+
         log(RPC_RIO, "devhost[%s] remoteio OPEN\n", path);
-        dh_handle_open((void*) &msg, msize, hin[0], ios);
+        if ((r = devhost_rio_handler(rmsg, ios)) < 0) {
+            if (r != ERR_DISPATCHER_INDIRECT) {
+                log(ERROR, "devhost: OPEN failed: %d\n", r);
+            }
+        }
+
         return ZX_OK;
     }
 

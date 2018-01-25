@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/dispatcher.c \
     $(LOCAL_DIR)/get-vmo.c \
+    $(LOCAL_DIR)/fidl.cpp \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
@@ -45,6 +46,6 @@ MODULE_EXPORT := so
 
 MODULE_SO_NAME := fdio
 MODULE_LIBS := system/ulib/zircon system/ulib/c
-
+MODULE_STATIC_LIBS := system/ulib/fidl system/ulib/fbl system/ulib/zxcpp system/ulib/zx
 
 include make/module.mk

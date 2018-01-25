@@ -25,7 +25,7 @@ MODULE_SRCS := \
 	$(DEVMGR_SRCS)/devhost-rpc-server.c \
 	$(DEVMGR_SRCS)/devhost-shared.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/port
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/fidl system/ulib/sync system/ulib/port
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 

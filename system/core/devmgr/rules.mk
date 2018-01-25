@@ -30,6 +30,7 @@ MODULE_HEADER_DEPS := \
     system/ulib/ddk
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fidl \
     system/ulib/gpt \
     system/ulib/bootdata \
     system/ulib/loader-service \

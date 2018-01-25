@@ -19,7 +19,7 @@
 
 #include "private-socket.h"
 
-static bool is_message_valid(zxsio_msg_t* msg) {
+static bool is_rio_message_valid(zxsio_msg_t* msg) {
     if ((msg->datalen > ZXSIO_PAYLOAD_SZ) ||
         (msg->hcount > 0)) {
         return false;
@@ -27,12 +27,12 @@ static bool is_message_valid(zxsio_msg_t* msg) {
     return true;
 }
 
-static bool is_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
+static bool is_rio_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
     if ((size < ZXSIO_HDR_SZ) ||
         (msg->datalen != (size - ZXSIO_HDR_SZ))) {
         return false;
     }
-    return is_message_valid(msg);
+    return is_rio_message_valid(msg);
 }
 
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
@@ -607,7 +607,7 @@ static ssize_t zxsio_read_control(zxsio_t* sio, void* data, size_t len) {
 }
 
 static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
-    if (!is_message_valid(msg)) {
+    if (!is_rio_message_valid(msg)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -620,7 +620,7 @@ static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
 
     size_t dsize = (size_t)r;
     // check for protocol errors
-    if (!is_message_reply_valid(msg, dsize) ||
+    if (!is_rio_message_reply_valid(msg, dsize) ||
         (ZXRIO_OP(msg->op) != ZXRIO_STATUS)) {
         return ZX_ERR_IO;
     }

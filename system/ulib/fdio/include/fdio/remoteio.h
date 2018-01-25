@@ -17,6 +17,11 @@ __BEGIN_CDECLS
 
 // clang-format off
 
+// Determines whether or not client-side code should
+// send requests using the Remote IO protocol or the
+// FIDL protocol.
+// #define ZXRIO_FIDL
+
 #define ZXRIO_HDR_SZ       (__builtin_offsetof(zxrio_msg_t, data))
 
 #define ZXRIO_ONE_HANDLE   0x00000100
@@ -60,12 +65,45 @@ __BEGIN_CDECLS
 #define ZXRIO_LINK        (0x0000001a | ZXRIO_ONE_HANDLE)
 #define ZXRIO_MMAP         0x0000001b
 #define ZXRIO_FCNTL        0x0000001c
-#define ZXRIO_NUM_OPS      29
+#define ZXRIO_REWIND       0x0000001d
+#define ZXRIO_NUM_OPS      30
 
-// Control Ordinals; unsolicited messages from
-// the server to the client.
-#define ZXRIO_ON_OPEN      0x80000007
+// FIDL Ordinals
 
+// Object
+#define ZXFIDL_CLONE      0x80000001
+#define ZXFIDL_CLOSE      0x80000002
+#define ZXRIO_ON_OPEN     0x80000007
+
+// Node
+#define ZXFIDL_SYNC       0x81000001
+#define ZXFIDL_STAT       0x81000002
+#define ZXFIDL_SETATTR    0x81000003
+#define ZXFIDL_IOCTL      0x81000004
+
+// File
+#define ZXFIDL_READ       0x82000001
+#define ZXFIDL_READ_AT    0x82000002
+#define ZXFIDL_WRITE      0x82000003
+#define ZXFIDL_WRITE_AT   0x82000004
+#define ZXFIDL_SEEK       0x82000005
+#define ZXFIDL_TRUNCATE   0x82000006
+#define ZXFIDL_GET_FLAGS  0x82000007
+#define ZXFIDL_SET_FLAGS  0x82000008
+#define ZXFIDL_GET_VMO_AT 0x8200000a
+
+// Directory
+#define ZXFIDL_OPEN       0x83000001
+#define ZXFIDL_UNLINK     0x83000002
+#define ZXFIDL_READDIR    0x83000003
+#define ZXFIDL_REWIND     0x83000004
+#define ZXFIDL_RENAME     0x83000006
+#define ZXFIDL_LINK       0x83000007
+
+#define FIDL_ROUNDUP(n, a) (((n) + ((a) - 1)) & ~((a) - 1))
+#define FIDL_ALIGN(a) FIDL_ROUNDUP((a), FIDL_ALIGNMENT)
+
+#define ZXRIO_FIDL_MSG(n)  ((n) & ZXRIO_FIDL_ORD)
 #define ZXRIO_OP(n)        (n) // opcode
 #define ZXRIO_HC(n)        (((n) >> 8) & 3) // handle count
 #define ZXRIO_OPNAME(n)    ((n) & 0xFF) // opcode, "name" part only
@@ -77,7 +115,7 @@ __BEGIN_CDECLS
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
-    "setattr", "sync", "link", "mmap", "fcntl" }
+    "setattr", "sync", "link", "mmap", "fcntl", "rewind", }
 
 // dispatcher callback return code that there were no messages to read
 #define ERR_DISPATCHER_NO_WORK ZX_ERR_SHOULD_WAIT
@@ -133,7 +171,7 @@ zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_msg_t* msg, zxrio_cb_t cb, voi
 zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie);
 
 // Transmits a response message |msg| back to the client on the peer end of |h|.
-zx_status_t zxrio_respond(zx_handle_t h, zxrio_msg_t* msg);
+zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, zxrio_msg_t* msg);
 
 // OPEN and CLOSE messages, can be forwarded to another remoteio server,
 // without any need to wait for a reply.  The reply channel from the initial

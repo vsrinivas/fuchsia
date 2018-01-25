@@ -68,7 +68,7 @@ interface Object {
   const uint32 kOpenFlagStatus         = 0x01000000;
 
   // May be used to create another connection to the same remote object.
-  0x80000001: Clone(request<Object> object);
+  0x80000001: Clone(uint32 flags, request<Object> object);
 
   // Terminates connection with object.
   0x80000002: Close() -> (status s);
@@ -131,6 +131,7 @@ struct NodeAttributes {
 // Node defines a filesystem object, which implements a minimal set of functionality
 // to be compatible with posix filesystem operations.
 interface Node : Object {
+  const uint64 kMaxIoctlHandles = 2;
   const uint64 kMaxBuf = 8192;
 
   // Synchronizes updates to the node to the underlying media, if it exists.
@@ -146,9 +147,17 @@ interface Node : Object {
   const uint32 kNodeAttributeFlagModificationTime = 0x00000002;
   0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (status s);
 
-  0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<uint8>:kMaxBuf in) -> (status s, vector<uint8>:kMaxBuf out);
+  0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in) -> (status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
+};
 
-  0x81000005: Ioctl1H(handle h, uint32 opcode, uint64 max_out, vector<uint8>:kMaxBuf in) -> (status s, vector<uint8>:kMaxBuf out);
+// Update the Seek offset.
+enum SeekOrigin : uint32 {
+  // Seek from the start of the file.
+  Start = 0;
+  // Seek from the current position in the file.
+  Current = 1;
+  // Seek from the end of the file.
+  End = 2;
 };
 
 // File defines the interface of a node which contains a flat layout of data.
@@ -169,16 +178,7 @@ interface File : Node {
   // Does not affect the seek offset.
   0x82000004: WriteAt(vector<uint8>:kMaxBuf data, uint64 offset) -> (status s, uint64 actual);
 
-  // Update the Seek offset.
-  enum SeekOrigin : uint32 {
-    // Seek from the start of the file.
-    Start = 0;
-    // Seek from the current position in the file.
-    Current = 1;
-    // Seek from the end of the file.
-    End = 2;
-  };
-  0x82000005: Seek(int64 offset, SeekFrom start) -> (status s, uint64 offset);
+  0x82000005: Seek(int64 offset, SeekOrigin start) -> (status s, uint64 offset);
 
   // Shrink the file size to 'length' bytes.
   0x82000006: Truncate(uint64 length) -> (status s);
@@ -235,7 +235,7 @@ interface Directory : Node {
   0x83000003: ReadDirents(uint64 max_out) -> (status s, vector<uint8>:kMaxBuf dirents);
 
   // Reset the directory seek offset.
-  0x83000004: Rewind();
+  0x83000004: Rewind() -> (status s);
 
   // Acquire a token to a Directory which can be used to identify
   // access to it at a later point in time.

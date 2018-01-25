@@ -4,8 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <fidl/coding.h>
-#include <fidl/types.h>
+#include <zircon/fidl.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,57 +20,56 @@ typedef uint32_t SeekOrigin;
 #define SeekOrigin_Current UINT32_C(1)
 #define SeekOrigin_End UINT32_C(2)
 
-typedef struct Clone_request Clone_request;
-typedef struct Close_request Close_request;
-typedef struct Close_response Close_response;
-typedef struct ListInterfaces_request ListInterfaces_request;
-typedef struct ListInterfaces_response ListInterfaces_response;
-typedef struct Bind_request Bind_request;
-typedef struct Describe_request Describe_request;
-typedef struct Describe_response Describe_response;
-typedef struct OnOpen_response OnOpen_response;
-typedef struct Sync_request Sync_request;
-typedef struct Sync_response Sync_response;
-typedef struct GetAttr_request GetAttr_request;
-typedef struct GetAttr_response GetAttr_response;
-typedef struct SetAttr_request SetAttr_request;
-typedef struct SetAttr_response SetAttr_response;
-typedef struct Ioctl_request Ioctl_request;
-typedef struct Ioctl_response Ioctl_response;
-typedef struct Ioctl1H_request Ioctl1H_request;
-typedef struct Ioctl1H_response Ioctl1H_response;
-typedef struct Read_request Read_request;
-typedef struct Read_response Read_response;
-typedef struct ReadAt_request ReadAt_request;
-typedef struct ReadAt_response ReadAt_response;
-typedef struct Write_request Write_request;
-typedef struct Write_response Write_response;
-typedef struct WriteAt_request WriteAt_request;
-typedef struct WriteAt_response WriteAt_response;
-typedef struct Seek_request Seek_request;
-typedef struct Seek_response Seek_response;
-typedef struct Truncate_request Truncate_request;
-typedef struct Truncate_response Truncate_response;
-typedef struct GetFlags_request GetFlags_request;
-typedef struct GetFlags_response GetFlags_response;
-typedef struct SetFlags_request SetFlags_request;
-typedef struct SetFlags_response SetFlags_response;
-typedef struct GetVmo_request GetVmo_request;
-typedef struct GetVmo_response GetVmo_response;
-typedef struct GetVmoAt_request GetVmoAt_request;
-typedef struct GetVmoAt_response GetVmoAt_response;
-typedef struct Open_request Open_request;
-typedef struct Unlink_request Unlink_request;
-typedef struct Unlink_response Unlink_response;
-typedef struct ReadDirents_request ReadDirents_request;
-typedef struct ReadDirents_response ReadDirents_response;
-typedef struct Rewind_request Rewind_request;
-typedef struct GetToken_request GetToken_request;
-typedef struct GetToken_response GetToken_response;
-typedef struct Rename_request Rename_request;
-typedef struct Rename_response Rename_response;
-typedef struct Link_request Link_request;
-typedef struct Link_response Link_response;
+typedef struct ObjectCloneMsg ObjectCloneMsg;
+typedef struct ObjectCloseMsg ObjectCloseMsg;
+typedef struct ObjectCloseRsp ObjectCloseRsp;
+typedef struct ObjectListInterfacesMsg ObjectListInterfacesMsg;
+typedef struct ObjectListInterfacesRsp ObjectListInterfacesRsp;
+typedef struct ObjectBindMsg ObjectBindMsg;
+typedef struct ObjectDescribeMsg ObjectDescribeMsg;
+typedef struct ObjectDescribeRsp ObjectDescribeRsp;
+typedef struct ObjectOnOpenEvt ObjectOnOpenEvt;
+typedef struct NodeSyncMsg NodeSyncMsg;
+typedef struct NodeSyncRsp NodeSyncRsp;
+typedef struct NodeGetAttrMsg NodeGetAttrMsg;
+typedef struct NodeGetAttrRsp NodeGetAttrRsp;
+typedef struct NodeSetAttrMsg NodeSetAttrMsg;
+typedef struct NodeSetAttrRsp NodeSetAttrRsp;
+typedef struct NodeIoctlMsg NodeIoctlMsg;
+typedef struct NodeIoctlRsp NodeIoctlRsp;
+typedef struct FileReadMsg FileReadMsg;
+typedef struct FileReadRsp FileReadRsp;
+typedef struct FileReadAtMsg FileReadAtMsg;
+typedef struct FileReadAtRsp FileReadAtRsp;
+typedef struct FileWriteMsg FileWriteMsg;
+typedef struct FileWriteRsp FileWriteRsp;
+typedef struct FileWriteAtMsg FileWriteAtMsg;
+typedef struct FileWriteAtRsp FileWriteAtRsp;
+typedef struct FileSeekMsg FileSeekMsg;
+typedef struct FileSeekRsp FileSeekRsp;
+typedef struct FileTruncateMsg FileTruncateMsg;
+typedef struct FileTruncateRsp FileTruncateRsp;
+typedef struct FileGetFlagsMsg FileGetFlagsMsg;
+typedef struct FileGetFlagsRsp FileGetFlagsRsp;
+typedef struct FileSetFlagsMsg FileSetFlagsMsg;
+typedef struct FileSetFlagsRsp FileSetFlagsRsp;
+typedef struct FileGetVmoMsg FileGetVmoMsg;
+typedef struct FileGetVmoRsp FileGetVmoRsp;
+typedef struct FileGetVmoAtMsg FileGetVmoAtMsg;
+typedef struct FileGetVmoAtRsp FileGetVmoAtRsp;
+typedef struct DirectoryOpenMsg DirectoryOpenMsg;
+typedef struct DirectoryUnlinkMsg DirectoryUnlinkMsg;
+typedef struct DirectoryUnlinkRsp DirectoryUnlinkRsp;
+typedef struct DirectoryReadDirentsMsg DirectoryReadDirentsMsg;
+typedef struct DirectoryReadDirentsRsp DirectoryReadDirentsRsp;
+typedef struct DirectoryRewindMsg DirectoryRewindMsg;
+typedef struct DirectoryRewindRsp DirectoryRewindRsp;
+typedef struct DirectoryGetTokenMsg DirectoryGetTokenMsg;
+typedef struct DirectoryGetTokenRsp DirectoryGetTokenRsp;
+typedef struct DirectoryRenameMsg DirectoryRenameMsg;
+typedef struct DirectoryRenameRsp DirectoryRenameRsp;
+typedef struct DirectoryLinkMsg DirectoryLinkMsg;
+typedef struct DirectoryLinkRsp DirectoryLinkRsp;
 typedef struct Service Service;
 typedef struct File File;
 typedef struct Directory Directory;
@@ -81,372 +81,61 @@ typedef struct ObjectInfo ObjectInfo;
 
 // Extern declarations
 
-extern const fidl_type_t Clone_request_coded_type;
-extern const fidl_type_t Close_request_coded_type;
-extern const fidl_type_t Close_response_coded_type;
-extern const fidl_type_t ListInterfaces_request_coded_type;
-extern const fidl_type_t ListInterfaces_response_coded_type;
-extern const fidl_type_t Bind_request_coded_type;
-extern const fidl_type_t Describe_request_coded_type;
-extern const fidl_type_t Describe_response_coded_type;
-extern const fidl_type_t OnOpen_response_coded_type;
-extern const fidl_type_t Sync_request_coded_type;
-extern const fidl_type_t Sync_response_coded_type;
-extern const fidl_type_t GetAttr_request_coded_type;
-extern const fidl_type_t GetAttr_response_coded_type;
-extern const fidl_type_t SetAttr_request_coded_type;
-extern const fidl_type_t SetAttr_response_coded_type;
-extern const fidl_type_t Ioctl_request_coded_type;
-extern const fidl_type_t Ioctl_response_coded_type;
-extern const fidl_type_t Ioctl1H_request_coded_type;
-extern const fidl_type_t Ioctl1H_response_coded_type;
-extern const fidl_type_t Read_request_coded_type;
-extern const fidl_type_t Read_response_coded_type;
-extern const fidl_type_t ReadAt_request_coded_type;
-extern const fidl_type_t ReadAt_response_coded_type;
-extern const fidl_type_t Write_request_coded_type;
-extern const fidl_type_t Write_response_coded_type;
-extern const fidl_type_t WriteAt_request_coded_type;
-extern const fidl_type_t WriteAt_response_coded_type;
-extern const fidl_type_t Seek_request_coded_type;
-extern const fidl_type_t Seek_response_coded_type;
-extern const fidl_type_t Truncate_request_coded_type;
-extern const fidl_type_t Truncate_response_coded_type;
-extern const fidl_type_t GetFlags_request_coded_type;
-extern const fidl_type_t GetFlags_response_coded_type;
-extern const fidl_type_t SetFlags_request_coded_type;
-extern const fidl_type_t SetFlags_response_coded_type;
-extern const fidl_type_t GetVmo_request_coded_type;
-extern const fidl_type_t GetVmo_response_coded_type;
-extern const fidl_type_t GetVmoAt_request_coded_type;
-extern const fidl_type_t GetVmoAt_response_coded_type;
-extern const fidl_type_t Open_request_coded_type;
-extern const fidl_type_t Unlink_request_coded_type;
-extern const fidl_type_t Unlink_response_coded_type;
-extern const fidl_type_t ReadDirents_request_coded_type;
-extern const fidl_type_t ReadDirents_response_coded_type;
-extern const fidl_type_t Rewind_request_coded_type;
-extern const fidl_type_t GetToken_request_coded_type;
-extern const fidl_type_t GetToken_response_coded_type;
-extern const fidl_type_t Rename_request_coded_type;
-extern const fidl_type_t Rename_response_coded_type;
-extern const fidl_type_t Link_request_coded_type;
-extern const fidl_type_t Link_response_coded_type;
+extern const fidl_type_t ObjectCloneReqCoded;
+extern const fidl_type_t ObjectCloseReqCoded;
+extern const fidl_type_t ObjectCloseRspCoded;
+extern const fidl_type_t ObjectListInterfacesReqCoded;
+extern const fidl_type_t ObjectListInterfacesRspCoded;
+extern const fidl_type_t ObjectBindReqCoded;
+extern const fidl_type_t ObjectDescribeReqCoded;
+extern const fidl_type_t ObjectDescribeRspCoded;
+extern const fidl_type_t ObjectOnOpenEvtCoded;
+extern const fidl_type_t NodeSyncReqCoded;
+extern const fidl_type_t NodeSyncRspCoded;
+extern const fidl_type_t NodeGetAttrReqCoded;
+extern const fidl_type_t NodeGetAttrRspCoded;
+extern const fidl_type_t NodeSetAttrReqCoded;
+extern const fidl_type_t NodeSetAttrRspCoded;
+extern const fidl_type_t NodeIoctlReqCoded;
+extern const fidl_type_t NodeIoctlRspCoded;
+extern const fidl_type_t FileReadReqCoded;
+extern const fidl_type_t FileReadRspCoded;
+extern const fidl_type_t FileReadAtReqCoded;
+extern const fidl_type_t FileReadAtRspCoded;
+extern const fidl_type_t FileWriteReqCoded;
+extern const fidl_type_t FileWriteRspCoded;
+extern const fidl_type_t FileWriteAtReqCoded;
+extern const fidl_type_t FileWriteAtRspCoded;
+extern const fidl_type_t FileSeekReqCoded;
+extern const fidl_type_t FileSeekRspCoded;
+extern const fidl_type_t FileTruncateReqCoded;
+extern const fidl_type_t FileTruncateRspCoded;
+extern const fidl_type_t FileGetFlagsReqCoded;
+extern const fidl_type_t FileGetFlagsRspCoded;
+extern const fidl_type_t FileSetFlagsReqCoded;
+extern const fidl_type_t FileSetFlagsRspCoded;
+extern const fidl_type_t FileGetVmoReqCoded;
+extern const fidl_type_t FileGetVmoRspCoded;
+extern const fidl_type_t FileGetVmoAtReqCoded;
+extern const fidl_type_t FileGetVmoAtRspCoded;
+extern const fidl_type_t DirectoryOpenReqCoded;
+extern const fidl_type_t DirectoryUnlinkReqCoded;
+extern const fidl_type_t DirectoryUnlinkRspCoded;
+extern const fidl_type_t DirectoryReadDirentsReqCoded;
+extern const fidl_type_t DirectoryReadDirentsRspCoded;
+extern const fidl_type_t DirectoryRewindReqCoded;
+extern const fidl_type_t DirectoryRewindRspCoded;
+extern const fidl_type_t DirectoryGetTokenReqCoded;
+extern const fidl_type_t DirectoryGetTokenRspCoded;
+extern const fidl_type_t DirectoryRenameReqCoded;
+extern const fidl_type_t DirectoryRenameRspCoded;
+extern const fidl_type_t DirectoryLinkReqCoded;
+extern const fidl_type_t DirectoryLinkRspCoded;
 
 // Declarations
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-struct Clone_request {
-    fidl_message_header_t header;
-    zx_handle_t object;
-};
-
-struct Close_request {
-    fidl_message_header_t header;
-};
-
-struct Close_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct ListInterfaces_request {
-    fidl_message_header_t header;
-};
-
-struct ListInterfaces_response {
-    fidl_message_header_t header;
-    fidl_vector_t interfaces;
-};
-
-struct Bind_request {
-    fidl_message_header_t header;
-    fidl_string_t iface;
-};
-
-struct Describe_request {
-    fidl_message_header_t header;
-};
-
-struct Describe_response {
-    fidl_message_header_t header;
-    ObjectInfo info;
-};
-
-struct OnOpen_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    ObjectInfo* info;
-};
-
-struct Sync_request {
-    fidl_message_header_t header;
-};
-
-struct Sync_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct GetAttr_request {
-    fidl_message_header_t header;
-};
-
-struct GetAttr_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    NodeAttributes attributes;
-};
-
-struct SetAttr_request {
-    fidl_message_header_t header;
-    uint32_t flags;
-    NodeAttributes attributes;
-};
-
-struct SetAttr_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct Ioctl_request {
-    fidl_message_header_t header;
-    uint32_t opcode;
-    uint64_t max_out;
-    fidl_vector_t in;
-};
-
-struct Ioctl_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    fidl_vector_t out;
-};
-
-struct Ioctl1H_request {
-    fidl_message_header_t header;
-    zx_handle_t h;
-    uint32_t opcode;
-    uint64_t max_out;
-    fidl_vector_t in;
-};
-
-struct Ioctl1H_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    fidl_vector_t out;
-};
-
-struct Read_request {
-    fidl_message_header_t header;
-    uint64_t count;
-};
-
-struct Read_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    fidl_vector_t data;
-};
-
-struct ReadAt_request {
-    fidl_message_header_t header;
-    uint64_t count;
-    uint64_t offset;
-};
-
-struct ReadAt_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    fidl_vector_t data;
-};
-
-struct Write_request {
-    fidl_message_header_t header;
-    fidl_vector_t data;
-};
-
-struct Write_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    uint64_t actual;
-};
-
-struct WriteAt_request {
-    fidl_message_header_t header;
-    fidl_vector_t data;
-    uint64_t offset;
-};
-
-struct WriteAt_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    uint64_t actual;
-};
-
-struct Seek_request {
-    fidl_message_header_t header;
-    int64_t offset;
-    SeekFrom start;
-};
-
-struct Seek_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    uint64_t offset;
-};
-
-struct Truncate_request {
-    fidl_message_header_t header;
-    uint64_t length;
-};
-
-struct Truncate_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct GetFlags_request {
-    fidl_message_header_t header;
-};
-
-struct GetFlags_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    uint32_t flags;
-};
-
-struct SetFlags_request {
-    fidl_message_header_t header;
-    uint32_t flags;
-};
-
-struct SetFlags_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct GetVmo_request {
-    fidl_message_header_t header;
-    uint32_t flags;
-};
-
-struct GetVmo_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    zx_handle_t v;
-};
-
-struct GetVmoAt_request {
-    fidl_message_header_t header;
-    uint32_t flags;
-    uint64_t offset;
-    uint64_t length;
-};
-
-struct GetVmoAt_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    zx_handle_t v;
-};
-
-struct Open_request {
-    fidl_message_header_t header;
-    uint32_t flags;
-    uint32_t mode;
-    fidl_string_t path;
-    zx_handle_t object;
-};
-
-struct Unlink_request {
-    fidl_message_header_t header;
-    fidl_string_t path;
-};
-
-struct Unlink_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct ReadDirents_request {
-    fidl_message_header_t header;
-    uint64_t max_out;
-};
-
-struct ReadDirents_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    fidl_vector_t dirents;
-};
-
-struct Rewind_request {
-    fidl_message_header_t header;
-};
-
-struct GetToken_request {
-    fidl_message_header_t header;
-};
-
-struct GetToken_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-    zx_handle_t token;
-};
-
-struct Rename_request {
-    fidl_message_header_t header;
-    fidl_string_t src;
-    zx_handle_t dst_parent_token;
-    fidl_string_t dst;
-};
-
-struct Rename_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
-struct Link_request {
-    fidl_message_header_t header;
-    fidl_string_t src;
-    zx_handle_t dst_parent_token;
-    fidl_string_t dst;
-};
-
-struct Link_response {
-    fidl_message_header_t header;
-    zx_status_t s;
-};
-
 struct Service {
+    uint8_t reserved; // Manually inserted to cope with zero-size struct issues
 };
 
 struct File {
@@ -454,6 +143,7 @@ struct File {
 };
 
 struct Directory {
+    uint8_t reserved; // Manually inserted to cope with zero-size struct issues
 };
 
 struct Pipe {
@@ -491,6 +181,312 @@ struct ObjectInfo {
         Device device;
     };
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct ObjectCloneMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+    zx_handle_t object;
+};
+
+struct ObjectCloseMsg {
+    fidl_message_header_t hdr;
+};
+
+struct ObjectCloseRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct ObjectListInterfacesMsg {
+    fidl_message_header_t hdr;
+};
+
+struct ObjectListInterfacesRsp {
+    fidl_message_header_t hdr;
+    fidl_vector_t interfaces;
+};
+
+struct ObjectBindMsg {
+    fidl_message_header_t hdr;
+    fidl_string_t iface;
+};
+
+struct ObjectDescribeMsg {
+    fidl_message_header_t hdr;
+};
+
+struct ObjectDescribeRsp {
+    fidl_message_header_t hdr;
+    ObjectInfo info;
+};
+
+struct ObjectOnOpenEvt {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    ObjectInfo* info;
+};
+
+struct NodeSyncMsg {
+    fidl_message_header_t hdr;
+};
+
+struct NodeSyncRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct NodeGetAttrMsg {
+    fidl_message_header_t hdr;
+};
+
+struct NodeGetAttrRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    NodeAttributes attributes;
+};
+
+struct NodeSetAttrMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+    NodeAttributes attributes;
+};
+
+struct NodeSetAttrRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct NodeIoctlMsg {
+    fidl_message_header_t hdr;
+    uint32_t opcode;
+    uint64_t max_out;
+    fidl_vector_t handles;
+    fidl_vector_t in;
+};
+
+struct NodeIoctlRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t handles;
+    fidl_vector_t out;
+};
+
+struct FileReadMsg {
+    fidl_message_header_t hdr;
+    uint64_t count;
+};
+
+struct FileReadRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t data;
+};
+
+struct FileReadAtMsg {
+    fidl_message_header_t hdr;
+    uint64_t count;
+    uint64_t offset;
+};
+
+struct FileReadAtRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t data;
+};
+
+struct FileWriteMsg {
+    fidl_message_header_t hdr;
+    fidl_vector_t data;
+};
+
+struct FileWriteRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t actual;
+};
+
+struct FileWriteAtMsg {
+    fidl_message_header_t hdr;
+    fidl_vector_t data;
+    uint64_t offset;
+};
+
+struct FileWriteAtRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t actual;
+};
+
+struct FileSeekMsg {
+    fidl_message_header_t hdr;
+    int64_t offset;
+    SeekOrigin start;
+};
+
+struct FileSeekRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t offset;
+};
+
+struct FileTruncateMsg {
+    fidl_message_header_t hdr;
+    uint64_t length;
+};
+
+struct FileTruncateRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct FileGetFlagsMsg {
+    fidl_message_header_t hdr;
+};
+
+struct FileGetFlagsRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint32_t flags;
+};
+
+struct FileSetFlagsMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+};
+
+struct FileSetFlagsRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct FileGetVmoMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+};
+
+struct FileGetVmoRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t v;
+};
+
+struct FileGetVmoAtMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+    uint64_t offset;
+    uint64_t length;
+};
+
+struct FileGetVmoAtRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t v;
+};
+
+struct DirectoryOpenMsg {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+    uint32_t mode;
+    fidl_string_t path;
+    zx_handle_t object;
+};
+
+struct DirectoryUnlinkMsg {
+    fidl_message_header_t hdr;
+    fidl_string_t path;
+};
+
+struct DirectoryUnlinkRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct DirectoryReadDirentsMsg {
+    fidl_message_header_t hdr;
+    uint64_t max_out;
+};
+
+struct DirectoryReadDirentsRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t dirents;
+};
+
+struct DirectoryRewindMsg {
+    fidl_message_header_t hdr;
+};
+
+struct DirectoryRewindRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct DirectoryGetTokenMsg {
+    fidl_message_header_t hdr;
+};
+
+struct DirectoryGetTokenRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t token;
+};
+
+struct DirectoryRenameMsg {
+    fidl_message_header_t hdr;
+    fidl_string_t src;
+    zx_handle_t dst_parent_token;
+    fidl_string_t dst;
+};
+
+struct DirectoryRenameRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct DirectoryLinkMsg {
+    fidl_message_header_t hdr;
+    fidl_string_t src;
+    zx_handle_t dst_parent_token;
+    fidl_string_t dst;
+};
+
+struct DirectoryLinkRsp {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
 #define ObjectInfo_tag_service UINT32_C(0)
 #define ObjectInfo_tag_file UINT32_C(1)
 #define ObjectInfo_tag_directory UINT32_C(2)

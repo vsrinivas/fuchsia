@@ -77,3 +77,12 @@ zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
 // or closed on failure.
 zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
                               fdio_t** out);
+
+// Wait/Read from a new client connection, with the expectation of
+// acquiring an Open response.
+//
+// Shared implementation between RemoteIO and FIDL2, since the response
+// message is aligned.
+//
+// Does not close |h|, even on error.
+zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info);
