@@ -22,12 +22,13 @@ public:
         virtual bool RemoveMapping(uint64_t address) = 0;
     };
 
-    GpuMapping(uint64_t addr, uint64_t size, uint64_t flags, Owner* owner,
+    GpuMapping(uint64_t addr, uint64_t page_offset, uint64_t size, uint64_t flags, Owner* owner,
                std::shared_ptr<MsdArmBuffer> buffer);
 
     ~GpuMapping();
 
     uint64_t gpu_va() const { return addr_; }
+    uint64_t page_offset() const { return page_offset_; }
     uint64_t size() const { return size_; }
     uint64_t flags() const { return flags_; }
 
@@ -36,6 +37,7 @@ public:
 
 private:
     uint64_t addr_;
+    uint64_t page_offset_;
     uint64_t size_;
     uint64_t flags_;
     Owner* owner_;

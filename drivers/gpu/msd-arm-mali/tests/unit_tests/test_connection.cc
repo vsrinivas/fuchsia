@@ -61,42 +61,51 @@ public:
 
         // GPU VA not page aligned
         EXPECT_FALSE(connection->AddMapping(
-            std::make_unique<GpuMapping>(1, 1, 0, connection.get(), buffer)));
+            std::make_unique<GpuMapping>(1, 0, 1, 0, connection.get(), buffer)));
 
         // Empty GPU VA.
         EXPECT_FALSE(connection->AddMapping(
-            std::make_unique<GpuMapping>(PAGE_SIZE, 0, 0, connection.get(), buffer)));
+            std::make_unique<GpuMapping>(PAGE_SIZE, 0, 0, 0, connection.get(), buffer)));
 
         // size would overflow.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, std::numeric_limits<uint64_t>::max() - PAGE_SIZE * 100 + 1, 0,
+            1000 * PAGE_SIZE, 0, std::numeric_limits<uint64_t>::max() - PAGE_SIZE * 100 + 1, 0,
             connection.get(), buffer)));
 
         // GPU VA would be larger than 48 bits wide.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, (1ul << 48) - 999 * PAGE_SIZE, 0, connection.get(), buffer)));
+            1000 * PAGE_SIZE, 0, (1ul << 48) - 999 * PAGE_SIZE, 0, connection.get(), buffer)));
 
         // Map is too large for buffer.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, PAGE_SIZE * 101, 0, connection.get(), buffer)));
+            1000 * PAGE_SIZE, 0, PAGE_SIZE * 101, 0, connection.get(), buffer)));
+
+        // Map is past end of buffer due to offset.
+        EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
+            1000 * PAGE_SIZE, 1, PAGE_SIZE * 100, 0, connection.get(), buffer)));
+
+        // Page offset would overflow.
+        EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
+            1000 * PAGE_SIZE, std::numeric_limits<uint64_t>::max() / PAGE_SIZE, PAGE_SIZE * 100, 0,
+            connection.get(), buffer)));
 
         // Invalid flags.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, PAGE_SIZE * 100, (1 << 14), connection.get(), buffer)));
+            1000 * PAGE_SIZE, 0, PAGE_SIZE * 100, (1 << 14), connection.get(), buffer)));
 
         EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, PAGE_SIZE * 100, 0, connection.get(), buffer)));
+            1000 * PAGE_SIZE, 0, PAGE_SIZE * 100, 0, connection.get(), buffer)));
 
         // Mapping would overlap previous mapping.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1001 * PAGE_SIZE, PAGE_SIZE * 99, 0, connection.get(), buffer)));
+            1001 * PAGE_SIZE, 0, PAGE_SIZE * 99, 0, connection.get(), buffer)));
 
         // Mapping would overlap next mapping.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            999 * PAGE_SIZE, PAGE_SIZE * 100, 0, connection.get(), buffer)));
+            999 * PAGE_SIZE, 0, PAGE_SIZE * 100, 0, connection.get(), buffer)));
 
         EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1100 * PAGE_SIZE, PAGE_SIZE * 100, 0, connection.get(), buffer)));
+            1100 * PAGE_SIZE, 0, PAGE_SIZE * 100, 0, connection.get(), buffer)));
 
         EXPECT_FALSE(connection->RemoveMapping(1001 * PAGE_SIZE));
 

@@ -223,7 +223,7 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
     }
     auto buffer = mapping->buffer().lock();
     DASSERT(buffer);
-    if (!buffer->platform_buffer()->PinPages(0, page_count))
+    if (!buffer->platform_buffer()->PinPages(mapping->page_offset(), page_count))
         return DRETF(false, "Pages can't be pinned");
 
     uint64_t access_flags = 0;
@@ -246,7 +246,8 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
           kMagmaArmMaliGpuMapFlagInnerShareable | kMagmaArmMaliGpuMapFlagBothShareable))
         return DRETF(false, "Unsupported map flags %lx\n", mapping->flags());
 
-    if (!address_space_->Insert(gpu_va, buffer->platform_buffer(), 0, mapping->size(),
+    if (!address_space_->Insert(gpu_va, buffer->platform_buffer(),
+                                mapping->page_offset() * PAGE_SIZE, mapping->size(),
                                 access_flags)) {
         buffer->platform_buffer()->UnpinPages(start_page, page_count);
         return DRETF(false, "Pages can't be inserted into address space");
@@ -266,7 +267,7 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 
     uint64_t page_count = magma::round_up(it->second->size(), PAGE_SIZE) >> PAGE_SHIFT;
     auto buffer = it->second->buffer().lock();
-    if (buffer && !buffer->platform_buffer()->UnpinPages(0, page_count))
+    if (buffer && !buffer->platform_buffer()->UnpinPages(it->second->page_offset(), page_count))
         DLOG("Unable to unpin pages");
     gpu_mappings_.erase(gpu_va);
     return true;
@@ -318,7 +319,7 @@ void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
     std::shared_ptr<MsdArmBuffer> buffer = MsdArmAbiBuffer::cast(abi_buffer)->ptr();
 
-    auto mapping = std::make_unique<GpuMapping>(gpu_va, buffer->platform_buffer()->size(), flags,
+    auto mapping = std::make_unique<GpuMapping>(gpu_va, page_offset, page_count * PAGE_SIZE, flags,
                                                 connection, buffer);
     connection->AddMapping(std::move(mapping));
 }
