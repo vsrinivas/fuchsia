@@ -22,24 +22,16 @@ class DataSourceTest : public gtest::TestWithMessageLoop {
     DataSource::Status status;
 
     source->Get(
-        [this, &result, &status](std::unique_ptr<DataSource::DataChunk> data,
+        [&result, &status](std::unique_ptr<DataSource::DataChunk> data,
                                  DataSource::Status received_status) {
           status = received_status;
           if (received_status == DataSource::Status::ERROR) {
-            message_loop_.PostQuitTask();
             return;
           }
-
           result += data->Get().ToString();
-
-          if (received_status == DataSource::Status::DONE) {
-            message_loop_.PostQuitTask();
-          }
         });
 
-    if (RunLoopWithTimeout()) {
-      return ::testing::AssertionFailure() << "Timed out.";
-    }
+    RunLoopUntilIdle();
 
     if (status != DataSource::Status::DONE) {
       return ::testing::AssertionFailure()
@@ -111,14 +103,13 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
                                         nb_iterations * value.size());
 
   data_source->Get(
-      [this, &chunks, &status](std::unique_ptr<DataSource::DataChunk> chunk,
+      [&chunks, &status](std::unique_ptr<DataSource::DataChunk> chunk,
                                DataSource::Status new_status) {
         EXPECT_NE(DataSource::Status::ERROR, new_status);
         if (new_status == DataSource::Status::TO_BE_CONTINUED) {
           chunks.push_back(chunk->Get().ToString());
         }
         status = new_status;
-        message_loop_.PostQuitTask();
       });
 
   for (size_t i = 0; i < nb_iterations; ++i) {
@@ -129,11 +120,11 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
                                                &actual));
     EXPECT_EQ(value.size(), actual);
 
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoopUntilIdle();
   }
 
   socket_pair.socket1.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(DataSource::Status::DONE, status);
 
   EXPECT_EQ(nb_iterations, chunks.size());
