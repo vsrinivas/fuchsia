@@ -34,6 +34,8 @@ source_set("lib") {
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 executable("ledger_benchmark_put") {
@@ -49,4 +51,6 @@ executable("ledger_benchmark_put") {
   sources = [
     "app.cc",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

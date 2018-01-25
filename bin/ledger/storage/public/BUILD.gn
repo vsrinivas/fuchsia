@@ -55,4 +55,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/socket",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

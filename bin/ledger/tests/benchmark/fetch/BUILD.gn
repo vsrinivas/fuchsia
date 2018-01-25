@@ -33,4 +33,6 @@ executable("ledger_benchmark_fetch") {
     "fetch.cc",
     "fetch.h",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

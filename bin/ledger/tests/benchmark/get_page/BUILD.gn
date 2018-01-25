@@ -30,4 +30,6 @@ executable("ledger_benchmark_get_page") {
     "get_page.cc",
     "get_page.h",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

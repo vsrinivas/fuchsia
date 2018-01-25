@@ -256,6 +256,9 @@ config("ledger_config") {
 
              # Remove when enabled globally by TO-100.
              "-Wuser-defined-warnings",
+
+             # Warn about unreachable code.
+             "-Wunreachable-code",
            ]
 
   ldflags = safe_stack_flags + [

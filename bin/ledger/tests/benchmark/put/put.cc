@@ -221,7 +221,7 @@ void PutBenchmark::CommitAndRunNext(int i,
                                     std::vector<fidl::Array<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit(fxl::MakeCopyable([this, i, key_number, keys = std::move(keys)](
+  page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](
                                       ledger::Status status) mutable {
     if (benchmark::QuitOnError(status, "Page::Commit")) {
       return;

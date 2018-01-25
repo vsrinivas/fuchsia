@@ -18,4 +18,6 @@ source_set("fake") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/public",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

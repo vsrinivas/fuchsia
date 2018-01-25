@@ -9,4 +9,6 @@ source_set("x64") {
     "context.S",
     "context.h",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

@@ -39,6 +39,8 @@ executable("launch_benchmark") {
     "//peridot/bin/ledger/tests/benchmark/put:lib",
     "//peridot/public/lib/ledger/fidl",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 copy("run_ledger_benchmarks") {

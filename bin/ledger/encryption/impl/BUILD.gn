@@ -23,12 +23,16 @@ source_set("impl") {
     "//peridot/bin/ledger/encryption/public",
     "//peridot/lib/callback",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 flatbuffer("encrypted_commit") {
   sources = [
     "encrypted_commit.fbs",
   ]
+
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -46,4 +50,6 @@ source_set("unittests") {
     "//peridot/lib/callback",
     "//third_party/gtest",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

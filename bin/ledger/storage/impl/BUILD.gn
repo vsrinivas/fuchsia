@@ -59,6 +59,8 @@ source_set("object_identifier_lib") {
     ":object_identifier",
     "//peridot/bin/ledger/storage/public",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("lib") {
@@ -142,6 +144,8 @@ source_set("test_utils") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/testing:lib",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {

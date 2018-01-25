@@ -32,4 +32,6 @@ executable("ledger_benchmark_sync") {
     "sync.cc",
     "sync.h",
   ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
