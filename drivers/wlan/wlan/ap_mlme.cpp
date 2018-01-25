@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "ap_mlme.h"
-#include "beacon_sender.h"
 #include "dispatcher.h"
+#include "hw_beacon_sender.h"
 
 #include "logging.h"
 
@@ -16,7 +16,7 @@ zx_status_t ApMlme::Init() {
     debugfn();
 
     // Setup BeaconSender.
-    bcn_sender_.reset(new BeaconSender(device_));
+    bcn_sender_.reset(new HwBeaconSender(device_));
     auto status = bcn_sender_->Init();
     if (status != ZX_OK) {
         errorf("could not initialize BeaconSender: %d\n", status);
@@ -54,6 +54,16 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
         return ZX_OK;
     }
 
+    // Configure BSS in driver.
+    auto& bssid = device_->GetState()->address();
+    wlan_bss_config_t cfg{
+        .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+        .remote = false,
+    };
+    bssid.CopyTo(cfg.bssid);
+    device_->ConfigureBss(&cfg);
+
+    // Start Beacon sender.
     bcn_sender_->Start(req);
     AddChildHandler(bss_);
 

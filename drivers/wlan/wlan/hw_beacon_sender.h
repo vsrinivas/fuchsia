@@ -30,7 +30,7 @@ class HwBeaconSender : public BeaconSenderInterface {
     zx_status_t SendBeaconFrame(const StartRequest& req);
 
     DeviceInterface* const device_;
-    bool started_;
+    bool started_ = false;
 };
 
 }  // namespace wlan

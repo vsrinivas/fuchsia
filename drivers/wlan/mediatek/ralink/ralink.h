@@ -43,6 +43,7 @@ struct RxWcidEntry {
 constexpr uint16_t RX_WCID_BASE = 0x1800;
 constexpr uint16_t FW_IMAGE_BASE = 0x3000;
 constexpr uint16_t PAIRWISE_KEY_BASE = 0x4000;
+constexpr uint16_t BEACON_BASE = 0x4000;
 constexpr uint16_t IV_EIV_BASE = 0x6000;
 constexpr uint16_t WCID_ATTR_BASE = 0x6800;
 constexpr uint16_t SHARED_KEY_BASE = 0x6c00;
@@ -71,6 +72,10 @@ constexpr int8_t kNoProtectionKeyLen = 0;
 constexpr uint8_t kWcidUnknown = 255;
 constexpr uint8_t kWcidBcastAddr = 2;
 constexpr uint8_t kWcidBssid = 1;
+
+// Beacon offset's value is a multiple of 64 bytes.
+constexpr uint8_t kBeaconOffsetFactorByte = 64;
+constexpr size_t kMaxBeaconSizeByte = 512;
 
 // Entry for pairwise and shared key table.
 struct KeyEntry {

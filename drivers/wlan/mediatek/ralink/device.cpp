@@ -3456,8 +3456,54 @@ void DumpTxwi(TxPacket* packet) {
            txwi1.tx_packet_id());
 }
 
+zx_status_t Device::ConfigureBssBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
+    size_t req_len = usb_tx_pkt_len(bcn_pkt);
+    if (req_len > kMaxBeaconSizeByte) {
+        errorf("Beacon exceeds limit of %zu bytes: %zu\n", kMaxBeaconSizeByte, req_len);
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    auto buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[req_len]);
+    auto usb_packet = reinterpret_cast<TxPacket*>(buf.get());
+    auto status = FillUsbTxPacket(usb_packet, bcn_pkt);
+    if (status != ZX_OK) {
+        errorf("could not fill usb request packet: %d\n", status);
+        return status;
+    }
+
+    BcnOffset0 bcnOffset0;
+    status = ReadRegister(&bcnOffset0);
+    CHECK_READ(BCN_OFFSET_0, status);
+
+    // The Beacon layout in shared memory does not include TxInfo. Hence, skip it.
+    auto data = buf.get() + sizeof(TxInfo);
+    uint8_t* data_end = data + req_len - sizeof(TxInfo);
+    uint16_t index = BEACON_BASE + bcnOffset0.bcn0_offset() * kBeaconOffsetFactorByte;
+
+    // Write Beacon in chunks to the device.
+    const size_t max_chunk_size = 64;
+    for (; data_end - data > 0; data += max_chunk_size, index += max_chunk_size) {
+        size_t written;
+        size_t writing = std::min(max_chunk_size, static_cast<size_t>(data_end - data));
+        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, index, data,
+                             writing, ZX_TIME_INFINITE, &written);
+        if (status != ZX_OK || written < writing) {
+            std::printf("error writing Beacon to offset 0x%4x: %d\n", index, status);
+            return ZX_ERR_IO;
+        }
+    }
+    return ZX_OK;
+}
+
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
+
+    // Intercept Beacon frames and instead of sending them, write them into the corresponding
+    // shared memory region.
+    // TODO(hahnr): Delete once beacon configuration goes through dedicated DDK path.
+    auto frame_hdr = reinterpret_cast<const FrameHeader*>(pkt->packet_head->data);
+    if (frame_hdr->fc.IsMgmt() && frame_hdr->fc.subtype() == 0x08) {
+        return ConfigureBssBeacon(options, pkt);
+    }
 
     size_t req_length = usb_tx_pkt_len(pkt);
 
