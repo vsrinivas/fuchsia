@@ -42,19 +42,7 @@ App::App()
   fidl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate>
       delegate_request = delegate.NewRequest();
   manager_delegate_.Bind(std::move(delegate_request));
-
   adapter_manager_->SetDelegate(std::move(delegate));
-
-  adapter_manager_->IsBluetoothAvailable([this](bool available) {
-    if (!available)
-      return;
-
-    adapter_manager_->GetActiveAdapter(active_adapter_.NewRequest());
-    bluetooth::control::AdapterDelegatePtr delegate;
-    auto request = delegate.NewRequest();
-    adapter_delegate_.Bind(std::move(request));
-    active_adapter_->SetDelegate(std::move(delegate));
-  });
 }
 
 void App::ReadNextInput() {
@@ -108,10 +96,14 @@ void App::OnActiveAdapterChanged(
             << ")\n";
 
   adapter_manager_->GetActiveAdapter(active_adapter_.NewRequest());
+
   bluetooth::control::AdapterDelegatePtr delegate;
-  fidl::InterfaceRequest<bluetooth::control::AdapterDelegate> request =
-      delegate.NewRequest();
-  adapter_delegate_.Bind(std::move(request));
+
+  if (adapter_delegate_.is_bound()) {
+    adapter_delegate_.Unbind();
+  }
+  adapter_delegate_.Bind(delegate.NewRequest());
+
   active_adapter_->SetDelegate(std::move(delegate));
 }
 

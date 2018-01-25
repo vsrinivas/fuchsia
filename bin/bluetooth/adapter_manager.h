@@ -4,111 +4,178 @@
 
 #pragma once
 
+#include <memory>
+#include <queue>
 #include <unordered_map>
 
-#include "garnet/drivers/bluetooth/lib/common/observer_list.h"
+#include <async/cpp/task.h>
 
+#include "lib/bluetooth/fidl/control.fidl.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace btlib {
-namespace gap {
-
-class Adapter;
-
-}  // namespace gap
-}  // namespace btlib
+#include "garnet/lib/bluetooth/fidl/host.fidl.h"
 
 namespace bluetooth_service {
 
-// AdapterManager is a singleton that is responsible for initializing, cleaning
-// up, and providing access to Adapter instances.
+// Represents a local Bluetooth adapter backed by a bt-host device. Instances of
+// this class are owned by an AdapterManager.
+class Adapter {
+ public:
+  // Returns a basic information about this adapter, such as its ID and address.
+  const bluetooth::control::AdapterInfoPtr& info() const { return info_; }
+
+  // Returns a Host interface pointer that can be used to send messages to the
+  // underlying bt-host. Returns nullptr if the Host interface pointer is not
+  // bound.
+  bluetooth::host::Host* host() const { return host_ ? host_.get() : nullptr; }
+
+ private:
+  friend class AdapterManager;
+
+  Adapter(bluetooth::control::AdapterInfoPtr info,
+          bluetooth::host::HostPtr host);
+
+  bluetooth::control::AdapterInfoPtr info_;
+  bluetooth::host::HostPtr host_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(Adapter);
+};
+
+// AdapterManager is responsible for managing the Bluetooth adapters on the
+// system. Specifically, it
 //
-// This class is not thread-safe.
+//   * acts as the backend for the control.AdapterManager interface;
+//
+//   * tracks and maintains a connection to every bt-host device that is on the
+//     system;
+//
+//   * is responsible for maintaining the active adapter and making sure
+//     inactive adapters are disabled when not in use;
+//
+//   * buffers requests to access the adapters during bootstrap so that early
+//     FIDL requests don't fail prematurely.
+//
+// INITIALIZATION:
+//
+// AdapterManager starts out in the "initializing" state. It provides
+// asynchronous getters for the adapters which get resolved when AdapterManager
+// becomes fully initialized.
+//
+// AdapterManager moves out of the "initializing" state once the first bt-host
+// is initialized or after 5 seconds if no bt-host devices are found during that
+// time.
 class AdapterManager final {
  public:
-  class Observer {
-   public:
-    virtual ~Observer() = default;
+  using ActiveAdapterCallback = std::function<void(const Adapter*)>;
+  using AdapterCallback = std::function<void(const Adapter&)>;
 
-    // Called when the active adapter changes. |adapter| will be nullptr if all
-    // adapters have been removed and no new default was set.
-    virtual void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) = 0;
-
-    // Called when a new Bluetooth HCI device is found. This will be called with
-    // a fully initialized Adapter instance.
-    virtual void OnAdapterCreated(::btlib::gap::Adapter* adapter);
-
-    // Called when a Bluetooth HCI device has been removed from the system or
-    // any of the transport channels was shut down for an unknown reason. The
-    // returned adapter will have been completely shut down and is ready for
-    // removal.
-    virtual void OnAdapterRemoved(::btlib::gap::Adapter* adapter);
-  };
+  using AdapterMap = std::unordered_map<std::string, std::unique_ptr<Adapter>>;
+  using AdapterMapCallback = std::function<void(const AdapterMap&)>;
 
   AdapterManager();
   ~AdapterManager();
 
-  // Returns the adapter with the given |identifier|. Returns nullptr if
-  // |identifier| is not recognized.
-  fxl::WeakPtr<::btlib::gap::Adapter> GetAdapter(
-      const std::string& identifier) const;
+  // Called when the active adapter changes with a pointer to the new active
+  // adapter's information. Called with nullptr if an active adapter no longer
+  // exists.
+  //
+  // NOTE: The provided Adapter is owned by this AdapterManager. The given raw
+  // pointer should not be retained.
+  void set_active_adapter_changed_callback(ActiveAdapterCallback callback) {
+    active_adapter_changed_cb_ = std::move(callback);
+  }
 
-  // Calls the given iterator function over all currently known adapters.
-  using ForEachAdapterFunc = std::function<void(::btlib::gap::Adapter*)>;
-  void ForEachAdapter(const ForEachAdapterFunc& func) const;
+  // Called when an adapter is added.
+  void set_adapter_added_callback(AdapterCallback callback) {
+    adapter_added_cb_ = std::move(callback);
+  }
 
-  // Returns true if any Bluetooth adapters are currently managed by this
-  // AdapterManager.
-  bool HasAdapters() const;
+  // Called when an adapter is removed.
+  void set_adapter_removed_callback(AdapterCallback callback) {
+    adapter_removed_cb_ = std::move(callback);
+  }
 
-  // Adds/Removes an Observer to receive Adapter life-cycle notifications from
-  // us. Each registered |observer| MUST out-live this AdapterManager.
-  void AddObserver(Observer* observer);
-  void RemoveObserver(Observer* observer);
+  // Asynchronously returns a Host interface pointer to the current active
+  // adapter when the AdapterManager becomes initialzed. Returns nullptr if
+  // there is no active adapter.
+  void GetActiveAdapter(ActiveAdapterCallback callback);
 
-  // Returns the current active adapter. Returns nullptr if no active adapter
-  // was set.
-  fxl::WeakPtr<::btlib::gap::Adapter> GetActiveAdapter();
+  // Asynchronously returns the list of known adapters when the AdapterManager
+  // becomes initialized.
+  void ListAdapters(AdapterMapCallback callback);
 
-  // Assigns the current active adapter. Returns false if |identifier| is not
-  // recognized. Otherwise notifies all observers and returns true.
+  // Makes the adapter with the given |identifier| the active adapter. Returns
+  // false if |identifier| is not recognized or if the AdapterManager has not
+  // been fully initialized.
   bool SetActiveAdapter(const std::string& identifier);
 
- private:
-  bool SetActiveAdapterInternal(::btlib::gap::Adapter* adapter);
+  // Synchronously returns the current active adapter.
+  Adapter* active_adapter() const { return active_adapter_; }
 
-  // Called by |device_watcher_| for Bluetooth HCI devices that are found on the
-  // system.
+  // All currently known adapters.
+  const AdapterMap& adapters() const { return adapters_; }
+
+ private:
+  // Called by |device_watcher_| when bt-host devices are found.
   void OnDeviceFound(int dir_fd, std::string filename);
 
-  // Called after an Adapter is initialized.
-  void RegisterAdapter(std::unique_ptr<::btlib::gap::Adapter> adapter);
+  // Called when an Adapter is ready to be created. This creates and stores an
+  // Adapter with the given parameters. If this is the first adapter that is
+  // created then it will be assigned as the new active adapter.
+  //
+  // This also causes this AdapterManager to transition out of the
+  // "initializing" state (if it is in that state) and resolve all adapter
+  // requests that were previously queued.
+  void CreateAdapter(bluetooth::host::HostPtr host,
+                     bluetooth::control::AdapterInfoPtr info);
 
-  // Called when an adapter object's underlying transport gets closed.
-  void OnAdapterTransportClosed(std::string adapter_identifier);
+  // Called when the connection to a Host is lost.
+  void OnHostDisconnected(const std::string& identifier);
 
-  // Called by OnAdapterTransportClosed when the current active adapter has been
-  // removed. This makes the next available adapter as active, or sets the
-  // active adapter to nullptr if none exists.
-  void AssignNextActiveAdapter();
+  // Called when |init_timeout_task_| expires.
+  async_task_result_t OnInitTimeout(async_t* async, zx_status_t status);
 
-  // The list of observers who are interested in notifications from us.
-  ::btlib::common::ObserverList<Observer> observers_;
+  // Cancels |init_timeout_task_|.
+  void CancelInitTimeout();
 
-  // The device watcher we use to watch for Bluetooth HCI devices in the system.
+  // Assigns |adapter| as active. If there is a current active adapter then it
+  // will be told to close all of its handles.
+  void SetActiveAdapterInternal(Adapter* adapter);
+
+  // Marks this instance as initialized and resolves all pending requests.
+  void ResolvePendingRequests();
+
+  // An AdapterManager is in the "initializing" state when it gets created and
+  // remains in this state until the first local adapter it processes or when a
+  // timer expires.
+  bool initializing_;
+
+  ActiveAdapterCallback active_adapter_changed_cb_;
+  AdapterCallback adapter_added_cb_;
+  AdapterCallback adapter_removed_cb_;
+
+  // Used to monitor bt-host devices.
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 
-  // All Adapter instances that we are managing.
-  std::unordered_map<std::string, std::unique_ptr<::btlib::gap::Adapter>>
-      adapters_;
+  // Mapping from adapter IDs to Adapters.
+  AdapterMap adapters_;
 
-  // The current active adapter.
-  ::btlib::gap::Adapter* active_adapter_;
+  // The currently active adapter. This raw pointer points to a managed instance
+  // stored in |adapters_|.
+  Adapter* active_adapter_;  // weak
 
-  // Note: This should remain the last member so it'll be destroyed and
-  // invalidate its weak pointers before any other members are destroyed.
+  // The initializing state timeout. We use this to exit the "initializing"
+  // state if no adapters are added during this period.
+  async::Task init_timeout_task_;
+
+  // Asynchronous requests queued during the "initializing" state.
+  std::queue<std::function<void()>> pending_requests_;
+
+  // Vends weak pointers. This is kept as the last member so that, upon
+  // destruction, weak pointers are invalidated before other members are
+  // destroyed.
   fxl::WeakPtrFactory<AdapterManager> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AdapterManager);

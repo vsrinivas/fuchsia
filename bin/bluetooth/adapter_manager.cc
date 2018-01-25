@@ -6,9 +6,11 @@
 
 #include <fcntl.h>
 
-#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
-#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
-#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include <async/default.h>
+#include <fbl/function.h>
+#include <zircon/status.h>
+
+#include "garnet/lib/bluetooth/c/bt_host.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -16,180 +18,235 @@
 namespace bluetooth_service {
 namespace {
 
-const char kBluetoothDeviceDir[] = "/dev/class/bt-hci";
+const char kBluetoothDeviceDir[] = "/dev/class/bt-host";
+
+// We remain in the initializing state for at most 5 seconds.
+constexpr zx::duration kInitTimeout = zx::sec(5);
 
 }  // namespace
 
-// Default no-op implementations for optional Observer methods.
-void AdapterManager::Observer::OnAdapterCreated(
-    ::btlib::gap::Adapter* adapter) {}
-void AdapterManager::Observer::OnAdapterRemoved(
-    ::btlib::gap::Adapter* adapter) {}
+Adapter::Adapter(bluetooth::control::AdapterInfoPtr info,
+                 bluetooth::host::HostPtr host)
+    : info_(std::move(info)), host_(std::move(host)) {
+  FXL_DCHECK(info_);
+  FXL_DCHECK(host_);
+}
 
-AdapterManager::AdapterManager() : weak_ptr_factory_(this) {
+AdapterManager::AdapterManager()
+    : initializing_(true), active_adapter_(nullptr), weak_ptr_factory_(this) {
   device_watcher_ = fsl::DeviceWatcher::Create(
       kBluetoothDeviceDir,
-      std::bind(&AdapterManager::OnDeviceFound, this, std::placeholders::_1,
-                std::placeholders::_2));
+      fbl::BindMember(this, &AdapterManager::OnDeviceFound));
+  FXL_DCHECK(device_watcher_);
+
+  init_timeout_task_.set_deadline(zx::deadline_after(kInitTimeout).get());
+  init_timeout_task_.set_handler(
+      fbl::BindMember(this, &AdapterManager::OnInitTimeout));
+
+  zx_status_t status = init_timeout_task_.Post(async_get_default());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "bluetooth: Failed to post init timeout task: "
+                   << zx_status_get_string(status);
+  }
 }
 
 AdapterManager::~AdapterManager() {
-  for (auto& iter : adapters_) {
-    iter.second->ShutDown();
+  // Make sure to cancel any timeout task before this gets destroyed.
+  CancelInitTimeout();
+}
+
+void AdapterManager::GetActiveAdapter(ActiveAdapterCallback callback) {
+  if (!initializing_) {
+    callback(active_adapter_);
+    return;
   }
-  adapters_.clear();
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  pending_requests_.push([self, callback = std::move(callback)] {
+    if (self) {
+      callback(self->active_adapter_);
+    }
+  });
 }
 
-fxl::WeakPtr<::btlib::gap::Adapter> AdapterManager::GetAdapter(
-    const std::string& identifier) const {
-  auto iter = adapters_.find(identifier);
-  if (iter == adapters_.end())
-    return fxl::WeakPtr<::btlib::gap::Adapter>();
-  return iter->second->AsWeakPtr();
-}
-
-void AdapterManager::ForEachAdapter(const ForEachAdapterFunc& func) const {
-  for (auto& iter : adapters_) {
-    func(iter.second.get());
+void AdapterManager::ListAdapters(AdapterMapCallback callback) {
+  if (!initializing_) {
+    callback(adapters_);
+    return;
   }
-}
 
-bool AdapterManager::HasAdapters() const {
-  return !adapters_.empty();
-}
-
-void AdapterManager::AddObserver(Observer* observer) {
-  observers_.AddObserver(observer);
-}
-
-void AdapterManager::RemoveObserver(Observer* observer) {
-  observers_.RemoveObserver(observer);
-}
-
-fxl::WeakPtr<::btlib::gap::Adapter> AdapterManager::GetActiveAdapter() {
-  if (active_adapter_)
-    return active_adapter_->AsWeakPtr();
-  return fxl::WeakPtr<::btlib::gap::Adapter>();
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  pending_requests_.push([self, callback = std::move(callback)] {
+    if (self) {
+      callback(self->adapters_);
+    }
+  });
 }
 
 bool AdapterManager::SetActiveAdapter(const std::string& identifier) {
+  if (initializing_)
+    return false;
+
   auto iter = adapters_.find(identifier);
   if (iter == adapters_.end())
     return false;
 
-  auto adapter = iter->second.get();
-
-  return SetActiveAdapterInternal(adapter);
-}
-
-bool AdapterManager::SetActiveAdapterInternal(::btlib::gap::Adapter* adapter) {
-  // Return true if the adapter is already assigned.
-  if (active_adapter_ == adapter)
-    return true;
-
-  active_adapter_ = adapter;
-  for (auto& observer : observers_)
-    observer.OnActiveAdapterChanged(active_adapter_);
-
+  SetActiveAdapterInternal(iter->second.get());
   return true;
 }
 
 void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
-  FXL_VLOG(1) << "bluetooth_service: AdapterManager: device found at "
+  FXL_VLOG(1) << "bluetooth: AdapterManager: device found at "
               << fxl::StringPrintf("%s/%s", kBluetoothDeviceDir,
                                    filename.c_str());
 
-  fxl::UniqueFD hci_dev_fd(openat(dir_fd, filename.c_str(), O_RDWR));
-  if (!hci_dev_fd.is_valid()) {
-    FXL_LOG(ERROR)
-        << "bluetooth_service: AdapterManager: failed to open HCI device file: "
-        << strerror(errno);
+  fxl::UniqueFD dev(openat(dir_fd, filename.c_str(), O_RDWR));
+  if (!dev.is_valid()) {
+    FXL_LOG(ERROR) << "bluetooth: failed to open bt-host device: "
+                   << strerror(errno);
     return;
   }
 
-  auto hci_dev =
-      std::make_unique<::btlib::hci::IoctlDeviceWrapper>(std::move(hci_dev_fd));
-  auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
-  auto adapter = std::make_unique<::btlib::gap::Adapter>(std::move(hci));
+  zx::channel host_channel;
+  ssize_t status = ioctl_bt_host_open_channel(
+      dev.get(), host_channel.reset_and_get_address());
+  if (status < 0) {
+    FXL_LOG(ERROR) << "bluetooth: Failed to open Host channel: "
+                   << zx_status_get_string(status);
+    return;
+  }
+
+  FXL_DCHECK(host_channel);
+
+  fidl::InterfaceHandle<bluetooth::host::Host> handle(std::move(host_channel));
+  FXL_DCHECK(handle.is_valid());
+
+  // Bind the channel to a host interface pointer.
+  auto host = handle.Bind();
+
+  // We create and store an Adapter for |host| only when GetInfo() succeeds.
+  // Ownership of |host| is passed to |callback| only when we receive a response
+  // from GetInfo().
+  //
+  // If a response is not received (e.g. because the handle was
+  // closed) then |callback| will never execute. In that case |host| will be
+  // destroyed along with |callback|.
+  auto* host_raw = host.get();
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto callback = fxl::MakeCopyable(
+      [self, host = std::move(host)](auto adapter_info) mutable {
+        if (self)
+          self->CreateAdapter(std::move(host), std::move(adapter_info));
+      });
+
+  host_raw->GetInfo(callback);
+}
+
+void AdapterManager::CreateAdapter(bluetooth::host::HostPtr host,
+                                   bluetooth::control::AdapterInfoPtr info) {
+  FXL_DCHECK(host);
+  FXL_DCHECK(info);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-
-  // TODO(armansito): Storing the raw pointer here so that it can be accessed
-  // after moving |adapter| is ugly. Instead add a factory method that
-  // asynchronously returns the adapter unique_ptr and change signature of
-  // |disconnect_cb| to take in an Adapter reference.
-  auto adapter_ptr = adapter.get();
-
-  // Called when Adapter initialization has completed.
-  auto init_cb = fxl::MakeCopyable([ adapter = std::move(adapter),
-                                     self ](bool success) mutable {
-    if (!success) {
-      FXL_VLOG(1)
-          << "bluetooth_service: AdapterManager: failed to initialize adapter";
-      return;
-    }
-
-    if (!self) {
-      // AdapterManager was deleted before this callback was run.
-      adapter->ShutDown();
-      return;
-    }
-
-    self->RegisterAdapter(std::move(adapter));
+  auto id = info->identifier;
+  host.set_error_handler([self, id] {
+    if (self)
+      self->OnHostDisconnected(id);
   });
 
-  // Once initialized, this callback will be called when the underlying HCI
-  // device disconnects.
-  auto disconnect_cb = [ self, id = adapter_ptr->identifier() ]() {
-    if (self)
-      self->OnAdapterTransportClosed(id);
-  };
+  auto adapter =
+      std::unique_ptr<Adapter>(new Adapter(std::move(info), std::move(host)));
+  auto* adapter_raw = adapter.get();
 
-  adapter_ptr->Initialize(init_cb, disconnect_cb);
+  adapters_[id] = std::move(adapter);
+
+  if (!active_adapter_) {
+    SetActiveAdapterInternal(adapter_raw);
+  }
+
+  if (adapter_added_cb_) {
+    adapter_added_cb_(*adapter_raw);
+  }
+
+  // Leave the "initializing" state on the first adapter we see.
+  if (initializing_) {
+    CancelInitTimeout();
+    ResolvePendingRequests();
+  }
 }
 
-void AdapterManager::RegisterAdapter(
-    std::unique_ptr<::btlib::gap::Adapter> adapter) {
-  FXL_DCHECK(adapters_.find(adapter->identifier()) == adapters_.end());
-
-  auto ptr = adapter.get();
-  adapters_[adapter->identifier()] = std::move(adapter);
-
-  for (auto& observer : observers_)
-    observer.OnAdapterCreated(ptr);
-
-  // If there is no current active adapter then assign it. This means that
-  // generally the first adapter we see will be made active.
-  // TODO(armansito): Either provide a mechanism for upper layers to
-  // enable/disable this policy or remove it altogether. This may or may not be
-  // the behavior we want.
-  if (!active_adapter_)
-    SetActiveAdapterInternal(ptr);
-}
-
-void AdapterManager::OnAdapterTransportClosed(std::string adapter_identifier) {
-  auto iter = adapters_.find(adapter_identifier);
+void AdapterManager::OnHostDisconnected(const std::string& identifier) {
+  auto iter = adapters_.find(identifier);
   FXL_DCHECK(iter != adapters_.end());
 
-  FXL_VLOG(1) << "bluetooth_service: AdapterManager: Adapter transport closed: "
-              << adapter_identifier;
+  FXL_VLOG(1) << "bluetooth: Adapter removed: " << identifier;
 
-  // Remove the adapter from the list so that it's no longer accessible to
-  // service clients. We notify the delegate only after the adapter has been
-  // fully shut down.
+  // Remove the adapter from the list so that it is no longer accessible to
+  // service clients.
   auto adapter = std::move(iter->second);
   adapters_.erase(iter);
-  adapter->ShutDown();
 
-  if (adapter.get() == active_adapter_)
-    AssignNextActiveAdapter();
-  for (auto& observer : observers_)
-    observer.OnAdapterRemoved(adapter.get());
+  FXL_DCHECK(adapter);
+
+  // If the active adapter was removed then we assign the next available one as
+  // active.
+  if (adapter.get() == active_adapter_) {
+    SetActiveAdapterInternal(
+        adapters_.empty() ? nullptr : adapters_.begin()->second.get());
+  }
+
+  if (adapter_removed_cb_) {
+    adapter_removed_cb_(*adapter);
+  }
 }
 
-void AdapterManager::AssignNextActiveAdapter() {
-  SetActiveAdapterInternal(adapters_.empty() ? nullptr
-                                             : adapters_.begin()->second.get());
+async_task_result_t AdapterManager::OnInitTimeout(async_t*,
+                                                  zx_status_t status) {
+  FXL_DCHECK(initializing_);
+
+  if (status == ZX_OK) {
+    ResolvePendingRequests();
+  } else {
+    FXL_VLOG(1) << "bluetooth: Init timeout fired with error: "
+                << zx_status_get_string(status);
+    initializing_ = false;
+  }
+
+  return ASYNC_TASK_FINISHED;
+}
+
+void AdapterManager::CancelInitTimeout() {
+  zx_status_t status = init_timeout_task_.Cancel(async_get_default());
+  if (status != ZX_OK) {
+    FXL_VLOG(1) << "bluetooth: Failed to cancel init timeout task: "
+                << zx_status_get_string(status);
+  }
+}
+
+void AdapterManager::SetActiveAdapterInternal(Adapter* adapter) {
+  FXL_DCHECK(adapter);
+
+  if (active_adapter_) {
+    // Tell the current active adapter to close all of its handles.
+    FXL_DCHECK(active_adapter_->host());
+    active_adapter_->host()->Close();
+  }
+
+  active_adapter_ = adapter;
+  if (active_adapter_changed_cb_) {
+    active_adapter_changed_cb_(active_adapter_);
+  }
+}
+
+void AdapterManager::ResolvePendingRequests() {
+  FXL_DCHECK(initializing_);
+
+  initializing_ = false;
+
+  while (!pending_requests_.empty()) {
+    pending_requests_.front()();
+    pending_requests_.pop();
+  }
 }
 
 }  // namespace bluetooth_service

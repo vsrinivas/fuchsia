@@ -8,15 +8,23 @@ executable("bin") {
   output_name = "bluetooth"
 
   sources = [
-    # TODO(armansito): Re-add sources with bt-host support (see NET-374).
+    "adapter_manager.cc",
+    "adapter_manager.h",
+    "adapter_manager_server.cc",
+    "adapter_manager_server.h",
+    "app.cc",
+    "app.h",
     "main.cc",
   ]
 
   deps = [
-    "//garnet/drivers/bluetooth/lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/fsl",
+
+    # Internal Bluetooth API
+    "//garnet/lib/bluetooth/c",
+    "//garnet/lib/bluetooth/fidl",
   ]
 }
 

@@ -150,15 +150,16 @@ struct AdapterInfo {
   // 6-octet Bluetooth device address which can be displayed to the user.
   string address;
 
-  // The current adapter state. All nullable fields of |statue| will contain a non-null value when
-  // it is a member of AdapterInfo.
-  AdapterState state;
+  // The current adapter state. This field is only present when an AdapterInfo
+  // is obtained via the Adapter and AdapterDelegate interfaces. If present, all
+  // optional members of |state| will also be present.
+  AdapterState? state;
 };
 
 // Delegate interface for receiving notifications from an adapter.
 interface AdapterDelegate {
-  // Called when the adapter state changes. Only the changed fields of |state| will be populated;
-  // unchanged fields will be null.
+  // Called when the adapter state changes. Only the changed fields of |state|
+  // will be present; unchanged fields will be null.
   OnAdapterStateChanged@0(AdapterState state);
 
   // Called during device discovery to report a discovered device.
@@ -167,7 +168,7 @@ interface AdapterDelegate {
 
 // Interface for interacting with a local Bluetooth adapter.
 interface Adapter {
-  // Returns information about this adapter.
+  // Returns information about this adapter, including its state.
   GetInfo@0() => (AdapterInfo info);
 
   // Registers a delegate to receive adapter state notifications.
@@ -210,25 +211,22 @@ interface AdapterManagerDelegate {
   OnAdapterRemoved@2(string identifier);
 };
 
-// Primary Bluetooth control service to access platform definitions.
+// Primary Bluetooth control service to watch for local Bluetooth adapters.
 [ServiceName="bluetooth::control::AdapterManager"]
 interface AdapterManager {
-  // Returns whether or not any Bluetooth hardware is available on the current platform.
+  // Returns whether or not Bluetooth is currently available on the system.
   IsBluetoothAvailable@0() => (bool available);
 
   // Registers a delegate to receive notifications from this AdapterManager.
   SetDelegate@1(AdapterManagerDelegate delegate);
 
   // Returns information about all local adapters that are known to the system.
-  GetAdapters@2() => (array<AdapterInfo>? adapters);
-
-  // Returns a handle to the local adapter with the given |identifier|, if it exists.
-  GetAdapter@3(string identifier, Adapter& adapter);
+  ListAdapters@2() => (array<AdapterInfo>? adapters);
 
   // Sets the local adapter with the given |identifier| to act as the backing adapter for all
   // Bluetooth interfaces.
-  SetActiveAdapter@4(string identifier) => (Status status);
+  SetActiveAdapter@3(string identifier) => (Status status);
 
   // Returns a handle to the current local adapter, if it exists.
-  GetActiveAdapter@5(Adapter& adapter);
+  GetActiveAdapter@4(Adapter& adapter);
 };

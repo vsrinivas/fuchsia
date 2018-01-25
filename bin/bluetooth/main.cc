@@ -10,6 +10,8 @@
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 
+#include "app.h"
+
 namespace {
 
 const char kUsageString[] =
@@ -33,8 +35,7 @@ int main(int argc, const char* argv[]) {
 
   fsl::MessageLoop message_loop;
 
-  // TODO(armansito): Re-enable this as part of NET-374.
-  // bluetooth_service::App app(app::ApplicationContext::CreateFromStartupInfo());
+  bluetooth_service::App app(app::ApplicationContext::CreateFromStartupInfo());
 
   message_loop.Run();
 

@@ -4,10 +4,10 @@
 
 #include "app.h"
 
-#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
-#include "lib/fxl/logging.h"
+#include <fbl/function.h>
 
-using std::placeholders::_1;
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 
 namespace bluetooth_service {
 
@@ -16,139 +16,104 @@ App::App(std::unique_ptr<app::ApplicationContext> application_context)
       weak_ptr_factory_(this) {
   FXL_DCHECK(application_context_);
 
-  adapter_manager_.AddObserver(this);
+  adapter_manager_.set_active_adapter_changed_callback(
+      fbl::BindMember(this, &App::OnActiveAdapterChanged));
+  adapter_manager_.set_adapter_added_callback(
+      fbl::BindMember(this, &App::OnAdapterAdded));
+  adapter_manager_.set_adapter_removed_callback(
+      fbl::BindMember(this, &App::OnAdapterRemoved));
+
   application_context_->outgoing_services()
       ->AddService<::bluetooth::control::AdapterManager>(
-          std::bind(&App::OnAdapterManagerRequest, this, _1));
+          fbl::BindMember(this, &App::OnAdapterManagerRequest));
   application_context_->outgoing_services()
       ->AddService<::bluetooth::low_energy::Central>(
-          std::bind(&App::OnLowEnergyCentralRequest, this, _1));
+          fbl::BindMember(this, &App::OnLowEnergyCentralRequest));
   application_context_->outgoing_services()
       ->AddService<::bluetooth::low_energy::Peripheral>(
-          std::bind(&App::OnLowEnergyPeripheralRequest, this, _1));
+          fbl::BindMember(this, &App::OnLowEnergyPeripheralRequest));
   application_context_->outgoing_services()
       ->AddService<::bluetooth::gatt::Server>(
-          std::bind(&App::OnGattServerRequest, this, _1));
+          fbl::BindMember(this, &App::OnGattServerRequest));
 }
 
-App::~App() {
-  adapter_manager_.RemoveObserver(this);
+void App::OnActiveAdapterChanged(const Adapter* adapter) {
+  FXL_LOG(INFO) << "bluetooth: Active adapter changed: "
+                << (adapter ? adapter->info()->identifier : "(null)");
+  for (auto& server : servers_) {
+    server->NotifyActiveAdapterChanged(adapter);
+  }
 }
 
-void App::OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) {
-  FXL_LOG(INFO) << "Active adapter changed: "
-                << (adapter ? adapter->identifier() : "(null)");
-  // TODO(armansito): Do something meaningful here.
+void App::OnAdapterAdded(const Adapter& adapter) {
+  FXL_LOG(INFO) << "bluetooth: Adapter added: " << adapter.info()->identifier;
+  for (auto& server : servers_) {
+    server->NotifyAdapterAdded(adapter);
+  }
 }
 
-void App::OnAdapterCreated(::btlib::gap::Adapter* adapter) {
-  FXL_LOG(INFO) << "Adapter added: " << adapter->identifier();
-  // TODO(armansito): Do something meaningful here.
-}
-
-void App::OnAdapterRemoved(::btlib::gap::Adapter* adapter) {
-  FXL_LOG(INFO) << "Adapter removed: " << adapter->identifier();
-  // TODO(armansito): Do something meaningful here.
+void App::OnAdapterRemoved(const Adapter& adapter) {
+  FXL_LOG(INFO) << "bluetooth: Adapter removed: " << adapter.info()->identifier;
+  for (auto& server : servers_) {
+    server->NotifyAdapterRemoved(adapter);
+  }
 }
 
 void App::OnAdapterManagerRequest(
     ::fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request) {
-  auto impl = std::make_unique<AdapterManagerFidlImpl>(
-      this, std::move(request),
-      std::bind(&App::OnAdapterManagerFidlImplDisconnected, this, _1));
-  adapter_manager_fidl_impls_.push_back(std::move(impl));
+  auto impl = std::make_unique<AdapterManagerServer>(
+      &adapter_manager_, std::move(request),
+      fbl::BindMember(this, &App::OnAdapterManagerServerDisconnected));
+  servers_.push_back(std::move(impl));
 }
 
 void App::OnLowEnergyCentralRequest(
     ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request) {
-  auto impl = std::make_unique<LowEnergyCentralFidlImpl>(
-      &adapter_manager_, std::move(request),
-      std::bind(&App::OnLowEnergyCentralFidlImplDisconnected, this, _1));
-  low_energy_central_fidl_impls_.push_back(std::move(impl));
+  adapter_manager_.GetActiveAdapter(
+      fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
+        // Transfer the handle to the active adapter if there is one.
+        if (adapter) {
+          adapter->host()->RequestLowEnergyCentral(std::move(request));
+        }
+      }));
 }
 
 void App::OnLowEnergyPeripheralRequest(
     ::fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request) {
-  auto impl = std::make_unique<LowEnergyPeripheralFidlImpl>(
-      &adapter_manager_, std::move(request),
-      std::bind(&App::OnLowEnergyPeripheralFidlImplDisconnected, this, _1));
-  low_energy_peripheral_fidl_impls_.push_back(std::move(impl));
+  adapter_manager_.GetActiveAdapter(
+      fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
+        // Transfer the handle to the active adapter if there is one.
+        if (adapter) {
+          adapter->host()->RequestLowEnergyPeripheral(std::move(request));
+        }
+      }));
 }
 
 void App::OnGattServerRequest(
     ::fidl::InterfaceRequest<::bluetooth::gatt::Server> request) {
-  auto impl = std::make_unique<GattServerFidlImpl>(
-      &adapter_manager_, std::move(request),
-      std::bind(&App::OnGattServerFidlImplDisconnected, this, _1));
-  gatt_server_fidl_impls_.push_back(std::move(impl));
+  adapter_manager_.GetActiveAdapter(
+      fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
+        // Transfer the handle to the active adapter if there is one.
+        if (adapter) {
+          adapter->host()->RequestGattServer(std::move(request));
+        }
+      }));
 }
 
-void App::OnAdapterManagerFidlImplDisconnected(
-    AdapterManagerFidlImpl* adapter_manager_fidl_impl) {
-  FXL_DCHECK(adapter_manager_fidl_impl);
+void App::OnAdapterManagerServerDisconnected(AdapterManagerServer* server) {
+  FXL_DCHECK(server);
 
-  FXL_LOG(INFO) << "AdapterManagerFidlImpl disconnected";
+  FXL_LOG(INFO) << "bluetooth: AdapterManagerServer disconnected";
 
-  auto iter = adapter_manager_fidl_impls_.begin();
-  for (; iter != adapter_manager_fidl_impls_.end(); ++iter) {
-    if (iter->get() == adapter_manager_fidl_impl)
+  auto iter = servers_.begin();
+  for (; iter != servers_.end(); ++iter) {
+    if (iter->get() == server)
       break;
   }
 
   // An entry MUST be in the list.
-  FXL_DCHECK(iter != adapter_manager_fidl_impls_.end());
-  adapter_manager_fidl_impls_.erase(iter);
-}
-
-void App::OnLowEnergyCentralFidlImplDisconnected(
-    LowEnergyCentralFidlImpl* low_energy_central_fidl_impl) {
-  FXL_CHECK(low_energy_central_fidl_impl);
-
-  FXL_LOG(INFO) << "LowEnergyCentralFidlImpl disconnected";
-
-  auto iter = low_energy_central_fidl_impls_.begin();
-  for (; iter != low_energy_central_fidl_impls_.end(); ++iter) {
-    if (iter->get() == low_energy_central_fidl_impl)
-      break;
-  }
-
-  // An entry MUST be in the list.
-  FXL_DCHECK(iter != low_energy_central_fidl_impls_.end());
-  low_energy_central_fidl_impls_.erase(iter);
-}
-
-void App::OnLowEnergyPeripheralFidlImplDisconnected(
-    LowEnergyPeripheralFidlImpl* low_energy_peripheral_fidl_impl) {
-  FXL_CHECK(low_energy_peripheral_fidl_impl);
-
-  FXL_LOG(INFO) << "LowEnergyPeripheralFidlImpl disconnected";
-
-  auto iter = low_energy_peripheral_fidl_impls_.begin();
-  for (; iter != low_energy_peripheral_fidl_impls_.end(); ++iter) {
-    if (iter->get() == low_energy_peripheral_fidl_impl)
-      break;
-  }
-
-  // An entry MUST be in the list.
-  FXL_DCHECK(iter != low_energy_peripheral_fidl_impls_.end());
-  low_energy_peripheral_fidl_impls_.erase(iter);
-}
-
-void App::OnGattServerFidlImplDisconnected(
-    GattServerFidlImpl* gatt_server_fidl_impl) {
-  FXL_DCHECK(gatt_server_fidl_impl);
-
-  FXL_LOG(INFO) << "GattServerFidlImpl disconnected";
-
-  auto iter = gatt_server_fidl_impls_.begin();
-  for (; iter != gatt_server_fidl_impls_.end(); ++iter) {
-    if (iter->get() == gatt_server_fidl_impl)
-      break;
-  }
-
-  // An entry MUST be in the list.
-  FXL_DCHECK(iter != gatt_server_fidl_impls_.end());
-  gatt_server_fidl_impls_.erase(iter);
+  FXL_DCHECK(iter != servers_.end());
+  servers_.erase(iter);
 }
 
 }  // namespace bluetooth_service

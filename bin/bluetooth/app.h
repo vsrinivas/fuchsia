@@ -8,72 +8,60 @@
 #include <vector>
 
 #include "garnet/bin/bluetooth/adapter_manager.h"
-#include "garnet/bin/bluetooth/adapter_manager_fidl_impl.h"
-#include "garnet/bin/bluetooth/gatt_server_fidl_impl.h"
-#include "garnet/bin/bluetooth/low_energy_central_fidl_impl.h"
-#include "garnet/bin/bluetooth/low_energy_peripheral_fidl_impl.h"
+#include "garnet/bin/bluetooth/adapter_manager_server.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/bluetooth/fidl/control.fidl.h"
+#include "lib/bluetooth/fidl/gatt.fidl.h"
+#include "lib/bluetooth/fidl/low_energy.fidl.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace bluetooth_service {
 
-// The App class represents the Bluetooth system service application. This class
-// acts as the entry point to the Bluetooth system.
-class App final : public AdapterManager::Observer {
+// The App class represents the Bluetooth system service application. It owns
+// the AdapterManager and resolves FIDL service requests.
+//
+// When a FIDL service request is received for an interface that is tied to a
+// bt-host device, the provided channel handle is forwarded to the current
+// active adapter device. The interface handle is owned by the bt-host device as
+// long as the device exists and remains the active adapter.
+class App final {
  public:
   explicit App(std::unique_ptr<app::ApplicationContext> application_context);
-  ~App() override;
+  ~App() = default;
 
   // Returns the underlying AdapterManager that owns the gap::Adapter instances.
   AdapterManager* adapter_manager() { return &adapter_manager_; }
 
  private:
-  // AdapterManager::Delegate overrides:
-  void OnActiveAdapterChanged(::btlib::gap::Adapter* adapter) override;
-  void OnAdapterCreated(::btlib::gap::Adapter* adapter) override;
-  void OnAdapterRemoved(::btlib::gap::Adapter* adapter) override;
+  // AdapterManager callbacks:
+  void OnActiveAdapterChanged(const Adapter* adapter);
+  void OnAdapterAdded(const Adapter& adapter);
+  void OnAdapterRemoved(const Adapter& adapter);
 
   // Called when there is an interface request for the AdapterManager FIDL
   // service.
   void OnAdapterManagerRequest(
-      ::fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request);
+      fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request);
 
   // Called when there is an interface request for the low_energy::Central FIDL
   // service.
   void OnLowEnergyCentralRequest(
-      ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
+      fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
 
   // Called when there is an interface request for the low_energy::Peripheral
   // FIDL service.
   void OnLowEnergyPeripheralRequest(
-      ::fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
+      fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
 
   // Called when there is an interface request for the gatt::Server FIDL
   // service.
   void OnGattServerRequest(
-      ::fidl::InterfaceRequest<::bluetooth::gatt::Server> request);
+      fidl::InterfaceRequest<::bluetooth::gatt::Server> request);
 
-  // Called when a AdapterManagerFidlImpl that we own notifies a connection
+  // Called when a AdapterManagerServer that we own notifies a connection
   // error handler.
-  void OnAdapterManagerFidlImplDisconnected(
-      AdapterManagerFidlImpl* adapter_manager_fidl_impl);
-
-  // Called when a LowEnergyCentralFidlImpl that we own notifies its connection
-  // error handler.
-  void OnLowEnergyCentralFidlImplDisconnected(
-      LowEnergyCentralFidlImpl* low_energy_central_fidl_impl);
-
-  // Called when a LowEnergyPeripheralFidlImpl that we own notifies its
-  // connection error handler.
-  void OnLowEnergyPeripheralFidlImplDisconnected(
-      LowEnergyPeripheralFidlImpl* low_energy_peripheral_fidl_impl);
-
-  // Called when a GattServerFidlImpl that we own notifies its connection error
-  // handler.
-  void OnGattServerFidlImplDisconnected(
-      GattServerFidlImpl* gatt_server_fidl_impl);
+  void OnAdapterManagerServerDisconnected(AdapterManagerServer* server);
 
   // Provides access to the environment. This is used to publish outgoing
   // services.
@@ -85,21 +73,7 @@ class App final : public AdapterManager::Observer {
 
   // The list of AdapterManager FIDL interface handles that have been vended
   // out.
-  std::vector<std::unique_ptr<AdapterManagerFidlImpl>>
-      adapter_manager_fidl_impls_;
-
-  // The list of low_energy::Central FIDL interface handles that have been
-  // vended out.
-  std::vector<std::unique_ptr<LowEnergyCentralFidlImpl>>
-      low_energy_central_fidl_impls_;
-
-  // The list of low_energy::Peripheral FIDL interface handles that have been
-  // vended out.
-  std::vector<std::unique_ptr<LowEnergyPeripheralFidlImpl>>
-      low_energy_peripheral_fidl_impls_;
-
-  // The list of gatt::Server FIDL interface handles that have been vended out.
-  std::vector<std::unique_ptr<GattServerFidlImpl>> gatt_server_fidl_impls_;
+  std::vector<std::unique_ptr<AdapterManagerServer>> servers_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
