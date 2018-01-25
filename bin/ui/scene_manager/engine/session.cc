@@ -746,12 +746,37 @@ bool Session::ApplyCreateRoundedRectangle(
     return false;
   }
 
-  auto rectangle = CreateRoundedRectangle(
-      id, args->width->get_vector1(), args->height->get_vector1(),
-      args->top_left_radius->get_vector1(),
-      args->top_right_radius->get_vector1(),
-      args->bottom_right_radius->get_vector1(),
-      args->bottom_left_radius->get_vector1());
+  const float width = args->width->get_vector1();
+  const float height = args->height->get_vector1();
+  const float top_left_radius = args->top_left_radius->get_vector1();
+  const float top_right_radius = args->top_right_radius->get_vector1();
+  const float bottom_right_radius = args->bottom_right_radius->get_vector1();
+  const float bottom_left_radius = args->bottom_left_radius->get_vector1();
+
+  // TODO(MZ-123): how would we enforce these with variable values?  If these
+  // variables are driven by animations, then the constraint can be violated
+  // outside of Op-application.  We could still kill the session in that case,
+  // but what about if the animation is imported from another session?  It's OK
+  // to kill a session when the client does something wrong, but not cool to
+  // kill a session based on the actions of another client.
+  if (top_left_radius + top_right_radius > width ||
+      bottom_left_radius + bottom_right_radius > width) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplyCreateRoundedRectangle(): "
+           "sum of corner radii exceeds width.";
+    return false;
+  }
+  if (top_left_radius + bottom_left_radius > height ||
+      top_right_radius + bottom_right_radius > height) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplyCreateRoundedRectangle(): "
+           "sum of corner radii exceeds height.";
+    return false;
+  }
+
+  auto rectangle = CreateRoundedRectangle(id, width, height, top_left_radius,
+                                          top_right_radius, bottom_right_radius,
+                                          bottom_left_radius);
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 

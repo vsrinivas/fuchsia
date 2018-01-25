@@ -16,7 +16,13 @@ struct Rectangle {
   Value height; // float
 };
 
-// RoundedRectangle centered at (0,0).
+// RoundedRectangle centered at (0,0).  Legal parameter values must satisfy the
+// constraint that the flat sides of the rectangle have non-negative length.
+// In other words, the following constraints must hold:
+//   - top_left_radius + top_right_radius <= width
+//   - bottom_left_radius + bottom_right_radius <= width
+//   - top_left_radius + bottom_left_radius <= height
+//   - top_right_radius + bottom_right_radius <= height
 struct RoundedRectangle {
   Value width;                // float
   Value height;               // float
