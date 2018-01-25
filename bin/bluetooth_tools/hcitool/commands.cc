@@ -374,9 +374,9 @@ bool HandleSetEventMask(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleSetAdvEnable(const CommandData* cmd_data,
-                        const fxl::CommandLine& cmd_line,
-                        const fxl::Closure& complete_cb) {
+bool HandleLESetAdvEnable(const CommandData* cmd_data,
+                          const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
     return false;
@@ -410,9 +410,9 @@ bool HandleSetAdvEnable(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleSetAdvParams(const CommandData* cmd_data,
-                        const fxl::CommandLine& cmd_line,
-                        const fxl::Closure& complete_cb) {
+bool HandleLESetAdvParams(const CommandData* cmd_data,
+                          const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
     return false;
@@ -479,9 +479,9 @@ bool HandleSetAdvParams(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleSetAdvData(const CommandData* cmd_data,
-                      const fxl::CommandLine& cmd_line,
-                      const fxl::Closure& complete_cb) {
+bool HandleLESetAdvData(const CommandData* cmd_data,
+                        const fxl::CommandLine& cmd_line,
+                        const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
     return false;
@@ -533,9 +533,9 @@ bool HandleSetAdvData(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleSetScanParams(const CommandData* cmd_data,
-                         const fxl::CommandLine& cmd_line,
-                         const fxl::Closure& complete_cb) {
+bool HandleLESetScanParams(const CommandData* cmd_data,
+                           const fxl::CommandLine& cmd_line,
+                           const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
     return false;
@@ -586,9 +586,9 @@ bool HandleSetScanParams(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleSetScanEnable(const CommandData* cmd_data,
-                         const fxl::CommandLine& cmd_line,
-                         const fxl::Closure& complete_cb) {
+bool HandleLEScan(const CommandData* cmd_data,
+                  const fxl::CommandLine& cmd_line,
+                  const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
                  "[--help|--timeout=<t>|--no-dedup|--name-filter]"
@@ -745,21 +745,21 @@ void RegisterCommands(const CommandData* cmd_data,
                               BIND(HandleWriteLocalName));
   dispatcher->RegisterHandler("set-event-mask", "Send HCI_Set_Event_Mask",
                               BIND(HandleSetEventMask));
-  dispatcher->RegisterHandler("set-adv-enable",
+  dispatcher->RegisterHandler("le-set-adv-enable",
                               "Send HCI_LE_Set_Advertising_Enable",
-                              BIND(HandleSetAdvEnable));
-  dispatcher->RegisterHandler("set-adv-params",
+                              BIND(HandleLESetAdvEnable));
+  dispatcher->RegisterHandler("le-set-adv-params",
                               "Send HCI_LE_Set_Advertising_Parameters",
-                              BIND(HandleSetAdvParams));
-  dispatcher->RegisterHandler("set-adv-data",
+                              BIND(HandleLESetAdvParams));
+  dispatcher->RegisterHandler("le-set-adv-data",
                               "Send HCI_LE_Set_Advertising_Data",
-                              BIND(HandleSetAdvData));
-  dispatcher->RegisterHandler("set-scan-params",
+                              BIND(HandleLESetAdvData));
+  dispatcher->RegisterHandler("le-set-scan-params",
                               "Send HCI_LE_Set_Scan_Parameters",
-                              BIND(HandleSetScanParams));
-  dispatcher->RegisterHandler("set-scan-enable",
+                              BIND(HandleLESetScanParams));
+  dispatcher->RegisterHandler("le-scan",
                               "Perform a LE device scan for a limited duration",
-                              BIND(HandleSetScanEnable));
+                              BIND(HandleLEScan));
 
 #undef BIND
 }
