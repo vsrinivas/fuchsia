@@ -41,7 +41,6 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/storage/public/read_data_source.h"
 #include "peridot/lib/callback/trace_callback.h"
 #include "peridot/lib/callback/waiter.h"
 #include "zx/vmar.h"
@@ -774,87 +773,75 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
       object_identifier,
       [this, callback = std::move(callback),
        object_identifier = std::move(object_identifier)](
-          Status status, std::unique_ptr<DataSource> data_source) mutable {
+          Status status, std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status != Status::OK) {
           callback(status);
           return;
         }
-        ReadDataSource(
-            &managed_container_, std::move(data_source),
-            [this, callback = std::move(callback),
-             object_identifier = std::move(object_identifier)](
-                Status status,
-                std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        coroutine_service_->StartCoroutine(fxl::MakeCopyable(
+            [this, object_identifier = std::move(object_identifier),
+             chunk = std::move(chunk), final_callback = std::move(callback)](
+                CoroutineHandler* handler) mutable {
+              auto callback = UpdateActiveHandlersCallback(
+                  handler, std::move(final_callback));
+
+              auto object_digest_type =
+                  GetObjectDigestType(object_identifier.object_digest);
+              FXL_DCHECK(object_digest_type == ObjectDigestType::VALUE_HASH ||
+                         object_digest_type == ObjectDigestType::INDEX_HASH);
+
+              if (object_identifier.object_digest !=
+                  ComputeObjectDigest(GetObjectType(object_digest_type),
+                                      chunk->Get())) {
+                callback(Status::OBJECT_DIGEST_MISMATCH);
+                return;
+              }
+
+              if (object_digest_type == ObjectDigestType::VALUE_HASH) {
+                AddPiece(std::move(object_identifier), std::move(chunk),
+                         ChangeSource::SYNC, std::move(callback));
+                return;
+              }
+
+              auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+              Status status =
+                  ForEachPiece(chunk->Get(), [&](ObjectIdentifier identifier) {
+                    if (GetObjectDigestType(identifier.object_digest) ==
+                        ObjectDigestType::INLINE) {
+                      return Status::OK;
+                    }
+
+                    Status status =
+                        db_->ReadObject(handler, identifier, nullptr);
+                    if (status == Status::NOT_FOUND) {
+                      DownloadFullObject(std::move(identifier),
+                                         waiter->NewCallback());
+                      return Status::OK;
+                    }
+                    return status;
+                  });
               if (status != Status::OK) {
                 callback(status);
                 return;
               }
-              coroutine_service_->StartCoroutine(fxl::MakeCopyable(
+
+              waiter->Finalize(fxl::MakeCopyable(
                   [this, object_identifier = std::move(object_identifier),
                    chunk = std::move(chunk),
-                   final_callback =
-                       std::move(callback)](CoroutineHandler* handler) mutable {
-                    auto callback = UpdateActiveHandlersCallback(
-                        handler, std::move(final_callback));
-
-                    auto object_digest_type =
-                        GetObjectDigestType(object_identifier.object_digest);
-                    FXL_DCHECK(
-                        object_digest_type == ObjectDigestType::VALUE_HASH ||
-                        object_digest_type == ObjectDigestType::INDEX_HASH);
-
-                    if (object_identifier.object_digest !=
-                        ComputeObjectDigest(GetObjectType(object_digest_type),
-                                            chunk->Get())) {
-                      callback(Status::OBJECT_DIGEST_MISMATCH);
-                      return;
-                    }
-
-                    if (object_digest_type == ObjectDigestType::VALUE_HASH) {
-                      AddPiece(std::move(object_identifier), std::move(chunk),
-                               ChangeSource::SYNC, std::move(callback));
-                      return;
-                    }
-
-                    auto waiter =
-                        callback::StatusWaiter<Status>::Create(Status::OK);
-                    Status status = ForEachPiece(
-                        chunk->Get(), [&](ObjectIdentifier identifier) {
-                          if (GetObjectDigestType(identifier.object_digest) ==
-                              ObjectDigestType::INLINE) {
-                            return Status::OK;
-                          }
-
-                          Status status =
-                              db_->ReadObject(handler, identifier, nullptr);
-                          if (status == Status::NOT_FOUND) {
-                            DownloadFullObject(std::move(identifier),
-                                               waiter->NewCallback());
-                            return Status::OK;
-                          }
-                          return status;
-                        });
+                   callback = std::move(callback)](Status status) mutable {
                     if (status != Status::OK) {
                       callback(status);
                       return;
                     }
 
-                    waiter->Finalize(fxl::MakeCopyable(
-                        [this, object_identifier = std::move(object_identifier),
-                         chunk = std::move(chunk),
-                         callback =
-                             std::move(callback)](Status status) mutable {
-                          if (status != Status::OK) {
-                            callback(status);
-                            return;
-                          }
-
-                          AddPiece(std::move(object_identifier),
-                                   std::move(chunk), ChangeSource::SYNC,
-                                   std::move(callback));
-                        }));
+                    AddPiece(std::move(object_identifier), std::move(chunk),
+                             ChangeSource::SYNC, std::move(callback));
                   }));
-            });
+            }));
       });
 }
 

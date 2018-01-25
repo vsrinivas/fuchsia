@@ -104,17 +104,8 @@ void BatchUpload::UploadNextObject() {
                                 encryption::Status encryption_status,
                                 std::string object_name) mutable {
             if (encryption_status != encryption::Status::OK) {
-              FXL_DCHECK(current_objects_handled_ > 0);
-              current_objects_handled_--;
-
-              errored_ = true;
-              // Re-enqueue the object for another upload attempt.
-              remaining_object_identifiers_.push_back(
+              EnqueueForRetryAndSignalError(
                   std::move(object_identifier_to_send));
-
-              if (current_objects_handled_ == 0u) {
-                on_error_(error_type_);
-              }
               return;
             }
 
@@ -147,6 +138,35 @@ void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);
 
+  encryption_service_->EncryptObject(
+      std::move(object_identifier), std::move(data),
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                           [this, object_identifier = object->GetIdentifier(),
+                            object_name = std::move(object_name)](
+                               encryption::Status encryption_status,
+                               std::string encrypted_data) mutable {
+                             if (encryption_status != encryption::Status::OK) {
+                               EnqueueForRetryAndSignalError(
+                                   std::move(object_identifier));
+                               return;
+                             }
+
+                             UploadEncryptedObject(std::move(object_identifier),
+                                                   std::move(object_name),
+                                                   std::move(encrypted_data));
+                           }));
+}
+
+void BatchUpload::UploadEncryptedObject(
+    storage::ObjectIdentifier object_identifier,
+    std::string object_name,
+    std::string content) {
+  fsl::SizedVmo data;
+  if (!fsl::VmoFromString(content, &data)) {
+    EnqueueForRetryAndSignalError(std::move(object_identifier));
+    return;
+  }
+
   (*page_cloud_)
       ->AddObject(
           convert::ToArray(object_name), std::move(data).ToTransport(),
@@ -158,17 +178,7 @@ void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
                 current_uploads_--;
 
                 if (status != cloud_provider::Status::OK) {
-                  FXL_DCHECK(current_objects_handled_ > 0);
-                  current_objects_handled_--;
-
-                  errored_ = true;
-                  // Re-enqueue the object for another upload attempt.
-                  remaining_object_identifiers_.push_back(
-                      std::move(object_identifier));
-
-                  if (current_objects_handled_ == 0u) {
-                    on_error_(error_type_);
-                  }
+                  EnqueueForRetryAndSignalError(std::move(object_identifier));
                   return;
                 }
 
@@ -316,6 +326,20 @@ void BatchUpload::UploadCommits() {
                           }));
                     }));
       }));
+}
+
+void BatchUpload::EnqueueForRetryAndSignalError(
+    storage::ObjectIdentifier object_identifier) {
+  FXL_DCHECK(current_objects_handled_ > 0);
+  current_objects_handled_--;
+
+  errored_ = true;
+  // Re-enqueue the object for another upload attempt.
+  remaining_object_identifiers_.push_back(std::move(object_identifier));
+
+  if (current_objects_handled_ == 0u) {
+    on_error_(error_type_);
+  }
 }
 
 }  // namespace cloud_sync

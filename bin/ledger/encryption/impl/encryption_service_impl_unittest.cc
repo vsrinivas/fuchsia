@@ -52,12 +52,13 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
     EXPECT_TRUE(called);
   }
 
-  void EncryptObject(std::unique_ptr<const storage::Object> object,
+  void EncryptObject(storage::ObjectIdentifier object_identifier,
+                     fsl::SizedVmo content,
                      Status* status,
                      std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
-        std::move(object),
+        std::move(object_identifier), std::move(content),
         callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
@@ -109,12 +110,15 @@ TEST_F(EncryptionServiceTest, GetName) {
 TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   storage::ObjectIdentifier identifier{42u, 42u, std::string(33u, '\0')};
   std::string content(256u, '\0');
+  auto object =
+      std::make_unique<storage::fake::FakeObject>(identifier, content);
+  fsl::SizedVmo content_vmo;
+  ASSERT_EQ(storage::Status::OK, object->GetVmo(&content_vmo));
 
   Status status;
   std::string encrypted_bytes;
-  EncryptObject(
-      std::make_unique<storage::fake::FakeObject>(identifier, content), &status,
-      &encrypted_bytes);
+  EncryptObject(object->GetIdentifier(), std::move(content_vmo), &status,
+                &encrypted_bytes);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(encrypted_bytes.empty());
 

@@ -161,16 +161,17 @@ class TestPageStorageFailingToMarkPieces : public TestPageStorage {
   }
 };
 
-class BatchUploadTest : public gtest::TestWithMessageLoop {
+template <typename E>
+class BaseBatchUploadTest : public gtest::TestWithMessageLoop {
  public:
-  BatchUploadTest()
+  BaseBatchUploadTest()
       : encryption_service_(message_loop_.task_runner()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {}
-  ~BatchUploadTest() override {}
+  ~BaseBatchUploadTest() override {}
 
- protected:
+ public:
   TestPageStorage storage_;
-  encryption::FakeEncryptionService encryption_service_;
+  E encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
 
@@ -204,8 +205,10 @@ class BatchUploadTest : public gtest::TestWithMessageLoop {
   }
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(BatchUploadTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BaseBatchUploadTest);
 };
+
+using BatchUploadTest = BaseBatchUploadTest<encryption::FakeEncryptionService>;
 
 // Test an upload of a single commit with no unsynced objects.
 TEST_F(BatchUploadTest, SingleCommit) {
@@ -287,12 +290,14 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
   EXPECT_EQ(
       "obj_data1",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id1)]));
   EXPECT_EQ(
       "obj_data2",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id2)]));
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
@@ -339,16 +344,19 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   EXPECT_EQ(3u, page_cloud_.received_objects.size());
   EXPECT_EQ(
       "obj_data0",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id0)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id0)]));
   EXPECT_EQ(
       "obj_data1",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id1)]));
   EXPECT_EQ(
       "obj_data2",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id2)]));
 
   // Verify the sync status in storage.
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
@@ -418,12 +426,14 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
   EXPECT_EQ(
       "obj_data1",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id1)]));
   EXPECT_EQ(
       "obj_data2",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id2)]));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id1));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count(id2));
@@ -477,12 +487,14 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ(2u, page_cloud_.received_objects.size());
   EXPECT_EQ(
       "obj_data1",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id1)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id1)]));
   EXPECT_EQ(
       "obj_data2",
-      page_cloud_
-          .received_objects[encryption_service_.GetObjectNameSynchronous(id2)]);
+      encryption_service_.DecryptObjectSynchronous(
+          page_cloud_.received_objects[encryption_service_
+                                           .GetObjectNameSynchronous(id2)]));
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
@@ -646,6 +658,81 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Verify that no calls were made to attempt to upload the commit.
   EXPECT_EQ(0u, page_cloud_.add_commits_calls);
+}
+
+class FailingEncryptCommitEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingEncryptCommitEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void EncryptCommit(
+      convert::ExtendedStringView /*commit_storage*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+class FailingGetNameEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingGetNameEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void GetObjectName(
+      storage::ObjectIdentifier /*object_identifier*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+class FailingEncryptObjectEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingEncryptObjectEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void EncryptObject(
+      storage::ObjectIdentifier /*object_identifier*/,
+      fsl::SizedVmo /*content*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+template <typename E>
+using FailingBatchUploadTest = BaseBatchUploadTest<E>;
+
+using FailingEncryptionServices =
+    ::testing::Types<FailingEncryptCommitEncryptionService,
+                     FailingGetNameEncryptionService,
+                     FailingEncryptObjectEncryptionService>;
+
+TYPED_TEST_CASE(FailingBatchUploadTest, FailingEncryptionServices);
+
+TYPED_TEST(FailingBatchUploadTest, Fail) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(this->storage_.NewCommit("id", "content"));
+  auto id1 = this->encryption_service_.MakeObjectIdentifier("obj_digest1");
+  auto id2 = this->encryption_service_.MakeObjectIdentifier("obj_digest2");
+
+  this->storage_.unsynced_objects_to_return[id1] =
+      std::make_unique<TestObject>(id1, "obj_data1");
+  this->storage_.unsynced_objects_to_return[id2] =
+      std::make_unique<TestObject>(id2, "obj_data2");
+
+  auto batch_upload = this->MakeBatchUpload(std::move(commits));
+
+  batch_upload->Start();
+  this->RunLoopUntilIdle();
+  EXPECT_EQ(0u, this->done_calls_);
+  EXPECT_GE(this->error_calls_, 1u);
+
+  // Verify the artifacts uploaded to cloud provider.
+  EXPECT_EQ(0u, this->page_cloud_.received_commits.size());
 }
 
 }  // namespace

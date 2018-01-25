@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
@@ -67,9 +68,15 @@ void FakeEncryptionService::GetObjectName(
 }
 
 void FakeEncryptionService::EncryptObject(
-    std::unique_ptr<const storage::Object> object,
+    storage::ObjectIdentifier /*object_identifier*/,
+    fsl::SizedVmo content,
     std::function<void(Status, std::string)> callback) {
-  std::string result = EncryptObjectSynchronous(std::move(object));
+  std::string content_as_string;
+  if (!fsl::StringFromVmo(content, &content_as_string)) {
+    callback(Status::IO_ERROR, "");
+    return;
+  }
+  std::string result = EncryptObjectSynchronous(content_as_string);
   task_runner_->PostTask(
       [callback = std::move(callback), result = std::move(result)]() mutable {
         callback(Status::OK, std::move(result));
@@ -77,11 +84,10 @@ void FakeEncryptionService::EncryptObject(
 }
 
 void FakeEncryptionService::DecryptObject(
-    storage::ObjectIdentifier object_identifier,
+    storage::ObjectIdentifier /*object_identifier*/,
     std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
-  std::string result = DecryptObjectSynchronous(std::move(object_identifier),
-                                                std::move(encrypted_data));
+  std::string result = DecryptObjectSynchronous(encrypted_data);
   task_runner_->PostTask(
       [callback = std::move(callback), result = std::move(result)]() mutable {
         callback(Status::OK, std::move(result));
@@ -104,18 +110,12 @@ std::string FakeEncryptionService::GetObjectNameSynchronous(
 }
 
 std::string FakeEncryptionService::EncryptObjectSynchronous(
-    std::unique_ptr<const storage::Object> object) {
-  fxl::StringView data;
-  storage::Status status = object->GetData(&data);
-  if (status != storage::Status::OK) {
-    return "";
-  }
-  return Encode(data);
+    convert::ExtendedStringView object_content) {
+  return Encode(object_content);
 }
 
 std::string FakeEncryptionService::DecryptObjectSynchronous(
-    storage::ObjectIdentifier /*object_identifier*/,
-    std::string encrypted_data) {
+    convert::ExtendedStringView encrypted_data) {
   return Decode(encrypted_data);
 }
 

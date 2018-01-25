@@ -18,10 +18,15 @@ namespace encryption {
 // Status of encryption operations.
 enum class Status {
   OK,
+  AUTH_ERROR,
   NETWORK_ERROR,
   INVALID_ARGUMENT,
+  IO_ERROR,
   INTERNAL_ERROR,
 };
+
+// Returns whether the given |status| is a permanent error.
+bool IsPermanentError(Status status);
 
 // Handles all encryption for a page of the Ledger.
 class EncryptionService {
@@ -56,7 +61,8 @@ class EncryptionService {
 
   // Encrypts the given object.
   virtual void EncryptObject(
-      std::unique_ptr<const storage::Object> object,
+      storage::ObjectIdentifier object_identifier,
+      fsl::SizedVmo content,
       std::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given object.

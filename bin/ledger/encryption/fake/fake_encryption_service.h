@@ -39,7 +39,8 @@ class FakeEncryptionService : public EncryptionService {
       storage::ObjectIdentifier object_identifier,
       std::function<void(Status, std::string)> callback) override;
   void EncryptObject(
-      std::unique_ptr<const storage::Object> object,
+      storage::ObjectIdentifier object_identifier,
+      fsl::SizedVmo content,
       std::function<void(Status, std::string)> callback) override;
   void DecryptObject(
       storage::ObjectIdentifier object_identifier,
@@ -60,12 +61,11 @@ class FakeEncryptionService : public EncryptionService {
 
   // Synchronously encrypts the object.
   std::string EncryptObjectSynchronous(
-      std::unique_ptr<const storage::Object> object);
+      convert::ExtendedStringView object_content);
 
   // Synchronously decrypts the object.
   std::string DecryptObjectSynchronous(
-      storage::ObjectIdentifier object_identifier,
-      std::string encrypted_data);
+      convert::ExtendedStringView encrypted_data);
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

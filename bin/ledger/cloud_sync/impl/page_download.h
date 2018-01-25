@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "peridot/lib/backoff/backoff.h"
+#include "peridot/lib/callback/managed_container.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
@@ -74,11 +75,26 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status status,
-                         std::unique_ptr<storage::DataSource> data_source)>
+      std::function<void(storage::Status,
+                         std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
-  void HandleError(const char error_description[]);
+  void DecryptObject(
+      storage::ObjectIdentifier object_identifier,
+      std::unique_ptr<storage::DataSource> content,
+      std::function<void(storage::Status,
+                         std::unique_ptr<storage::DataSource::DataChunk>)>
+          callback);
+
+  void HandleGetObjectError(
+      storage::ObjectIdentifier object_identifier,
+      bool is_permanent,
+      const char error_name[],
+      std::function<void(storage::Status,
+                         std::unique_ptr<storage::DataSource::DataChunk>)>
+          callback);
+
+  void HandleDownloadCommitError(const char error_description[]);
 
   // Sets the state for commit download.
   void SetCommitState(DownloadSyncState new_state);
@@ -102,6 +118,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // Pending remote commits to download.
   fidl::Array<cloud_provider::CommitPtr> commits_to_download_;
   fidl::Array<uint8_t> position_token_;
+  // Container for in-progress datasource.
+  callback::ManagedContainer managed_container_;
 
   // State:
   // Commit download state.

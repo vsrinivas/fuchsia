@@ -6,6 +6,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
@@ -34,13 +35,6 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
   return VerifyEncryptedCommitStorageBuffer(verifier);
 }
 
-Status ToEncryptionStatus(storage::Status status) {
-  if (status == storage::Status::OK) {
-    return Status::OK;
-  }
-
-  return Status::INTERNAL_ERROR;
-}
 }  // namespace
 
 EncryptionServiceImpl::EncryptionServiceImpl(
@@ -114,16 +108,20 @@ void EncryptionServiceImpl::GetObjectName(
 }
 
 void EncryptionServiceImpl::EncryptObject(
-    std::unique_ptr<const storage::Object> object,
+    storage::ObjectIdentifier /*object_identifier*/,
+    fsl::SizedVmo content,
     std::function<void(Status, std::string)> callback) {
-  // Ensures the callback is asynchronous.
   // TODO(qsr): Replace with real encryption.
-  task_runner_.PostTask(fxl::MakeCopyable(
-      [callback = std::move(callback), object = std::move(object)]() mutable {
-        fxl::StringView data;
-        Status status = ToEncryptionStatus(object->GetData(&data));
-        callback(status, data.ToString());
-      }));
+  std::string data;
+  if (!fsl::StringFromVmo(content, &data)) {
+    callback(Status::IO_ERROR, "");
+    return;
+  }
+  // Ensures the callback is asynchronous.
+  task_runner_.PostTask(
+      [callback = std::move(callback), data = std::move(data)]() mutable {
+        callback(Status::OK, std::move(data));
+      });
 }
 
 void EncryptionServiceImpl::DecryptObject(
@@ -134,7 +132,7 @@ void EncryptionServiceImpl::DecryptObject(
   // TODO(qsr): Replace with real decryption.
   task_runner_.PostTask([callback = std::move(callback),
                          encrypted_data = std::move(encrypted_data)]() mutable {
-    callback(Status::OK, encrypted_data);
+    callback(Status::OK, std::move(encrypted_data));
   });
 }
 

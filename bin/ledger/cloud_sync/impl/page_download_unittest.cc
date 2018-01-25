@@ -31,10 +31,11 @@
 namespace cloud_sync {
 namespace {
 
-class PageDownloadTest : public gtest::TestWithMessageLoop,
-                         public PageDownload::Delegate {
+template <typename E>
+class BasePageDownloadTest : public gtest::TestWithMessageLoop,
+                             public PageDownload::Delegate {
  public:
-  PageDownloadTest()
+  BasePageDownloadTest()
       : storage_(&message_loop_),
         encryption_service_(message_loop_.task_runner()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
@@ -43,7 +44,7 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
         &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
         std::make_unique<backoff::TestBackoff>());
   }
-  ~PageDownloadTest() override {}
+  ~BasePageDownloadTest() override {}
 
  protected:
   void SetOnNewStateCallback(fxl::Closure callback) {
@@ -66,28 +67,13 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
 
     if (on_idle_called) {
       return ::testing::AssertionSuccess();
-    } else {
-      return ::testing::AssertionFailure()
-             << "The download state never reached idle.";
     }
-  }
-
-  std::string GetData(storage::DataSource* data_source) {
-    std::stringstream data;
-    data_source->Get(
-        [&data](std::unique_ptr<storage::DataSource::DataChunk> chunk,
-                storage::DataSource::Status status) {
-          EXPECT_NE(storage::DataSource::Status::ERROR, status);
-          if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
-            data << chunk->Get();
-          }
-        });
-    RunLoopUntilIdle();
-    return data.str();
+    return ::testing::AssertionFailure()
+           << "The download state never reached idle.";
   }
 
   TestPageStorage storage_;
-  encryption::FakeEncryptionService encryption_service_;
+  E encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
   int backoff_get_next_calls_ = 0;
@@ -109,8 +95,11 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
 
   fxl::Closure new_state_callback_;
   callback::ScopedTaskRunner task_runner_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDownloadTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BasePageDownloadTest);
 };
+
+using PageDownloadTest =
+    BasePageDownloadTest<encryption::FakeEncryptionService>;
 
 // Verifies that the backlog of unsynced commits is retrieved from the cloud
 // provider and saved in storage.
@@ -326,21 +315,21 @@ TEST_F(PageDownloadTest, GetObject) {
   storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
   std::string object_name =
       encryption_service_.GetObjectNameSynchronous(object_identifier);
-  page_cloud_.objects_to_return[object_name] = "content";
+  page_cloud_.objects_to_return[object_name] =
+      encryption_service_.EncryptObjectSynchronous("content");
   page_download_->StartDownload();
 
   bool called;
   storage::Status status;
-  std::unique_ptr<storage::DataSource> data_source;
+  std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   storage_.page_sync_delegate_->GetObject(
       object_identifier, callback::Capture(callback::SetWhenCalled(&called),
-                                           &status, &data_source));
+                                           &status, &data_chunk));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(7u, data_source->GetSize());
-  EXPECT_EQ("content", GetData(data_source.get()));
+  EXPECT_EQ("content", data_chunk->Get().ToString());
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.
@@ -362,22 +351,111 @@ TEST_F(PageDownloadTest, RetryGetObject) {
     // Allow the operation to succeed after looping through five attempts.
     if (page_cloud_.get_object_calls == 5u) {
       page_cloud_.status_to_return = cloud_provider::Status::OK;
-      page_cloud_.objects_to_return[object_name] = "content";
+      page_cloud_.objects_to_return[object_name] =
+          encryption_service_.EncryptObjectSynchronous("content");
     }
   });
   bool called;
   storage::Status status;
-  std::unique_ptr<storage::DataSource> data_source;
+  std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   storage_.page_sync_delegate_->GetObject(
       object_identifier, callback::Capture(callback::SetWhenCalled(&called),
-                                           &status, &data_source));
+                                           &status, &data_chunk));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
   EXPECT_EQ(6u, page_cloud_.get_object_calls);
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(7u, data_source->GetSize());
-  EXPECT_EQ("content", GetData(data_source.get()));
+  EXPECT_EQ("content", data_chunk->Get().ToString());
+}
+
+class FailingDecryptCommitEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingDecryptCommitEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void DecryptCommit(
+      convert::ExtendedStringView /*storage_bytes*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+class FailingGetNameEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingGetNameEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void GetObjectName(
+      storage::ObjectIdentifier /*object_identifier*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+class FailingDecryptObjectEncryptionService
+    : public encryption::FakeEncryptionService {
+ public:
+  explicit FailingDecryptObjectEncryptionService(
+      fxl::RefPtr<fxl::TaskRunner> task_runner)
+      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+
+  void DecryptObject(
+      storage::ObjectIdentifier /*object_identifier*/,
+      std::string /*encrypted_data*/,
+      std::function<void(encryption::Status, std::string)> callback) override {
+    callback(encryption::Status::INVALID_ARGUMENT, "");
+  }
+};
+
+using FailingDecryptCommitPageDownloadTest =
+    BasePageDownloadTest<FailingDecryptCommitEncryptionService>;
+TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
+  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+
+  page_cloud_.commits_to_return.push_back(
+      MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(
+      MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.position_token_to_return = convert::ToArray("43");
+
+  EXPECT_FALSE(StartDownloadAndWaitForIdle());
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(DOWNLOAD_PERMANENT_ERROR, states_.back());
+}
+
+template <typename E>
+using FailingPageDownloadTest = BasePageDownloadTest<E>;
+
+using FailingEncryptionServices =
+    ::testing::Types<FailingGetNameEncryptionService,
+                     FailingDecryptObjectEncryptionService>;
+
+TYPED_TEST_CASE(FailingPageDownloadTest, FailingEncryptionServices);
+
+TYPED_TEST(FailingPageDownloadTest, Fail) {
+  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  std::string object_name =
+      this->encryption_service_.GetObjectNameSynchronous(object_identifier);
+  this->page_cloud_.objects_to_return[object_name] =
+      this->encryption_service_.EncryptObjectSynchronous("content");
+  this->page_download_->StartDownload();
+
+  bool called;
+  storage::Status status;
+  std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
+  this->storage_.page_sync_delegate_->GetObject(
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called),
+                                           &status, &data_chunk));
+  this->RunLoopUntilIdle();
+
+  ASSERT_TRUE(called);
+  EXPECT_EQ(storage::Status::IO_ERROR, status);
 }
 
 }  // namespace

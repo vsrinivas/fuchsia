@@ -34,7 +34,8 @@ class EncryptionServiceImpl : public EncryptionService {
       storage::ObjectIdentifier object_identifier,
       std::function<void(Status, std::string)> callback) override;
   void EncryptObject(
-      std::unique_ptr<const storage::Object> object,
+      storage::ObjectIdentifier object_identifier,
+      fsl::SizedVmo content,
       std::function<void(Status, std::string)> callback) override;
   void DecryptObject(
       storage::ObjectIdentifier object_identifier,

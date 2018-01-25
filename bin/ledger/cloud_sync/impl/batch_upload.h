@@ -80,11 +80,20 @@ class BatchUpload {
                     std::string object_name,
                     std::unique_ptr<const storage::Object> object);
 
+  // Uploads the given object.
+  void UploadEncryptedObject(storage::ObjectIdentifier object_identifier,
+                             std::string object_name,
+                             std::string content);
+
   // Filters already synced commits.
   void FilterAndUploadCommits();
 
   // Uploads the commits.
   void UploadCommits();
+
+  // Notifies an error when trying to upload the given object.
+  void EnqueueForRetryAndSignalError(
+      storage::ObjectIdentifier object_identifier);
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;

@@ -7,6 +7,7 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/read_data_source.h"
 
 namespace cloud_sync {
 namespace {
@@ -16,6 +17,22 @@ DownloadSyncState GetMergedState(DownloadSyncState commit_state,
     return commit_state;
   }
   return current_get_object_calls == 0 ? DOWNLOAD_IDLE : DOWNLOAD_IN_PROGRESS;
+}
+
+bool IsPermanentError(cloud_provider::Status status) {
+  switch (status) {
+    case cloud_provider::Status::OK:
+    case cloud_provider::Status::AUTH_ERROR:
+    case cloud_provider::Status::NETWORK_ERROR:
+      return false;
+    case cloud_provider::Status::ARGUMENT_ERROR:
+    case cloud_provider::Status::INTERNAL_ERROR:
+    case cloud_provider::Status::NOT_FOUND:
+    case cloud_provider::Status::PARSE_ERROR:
+    case cloud_provider::Status::SERVER_ERROR:
+    case cloud_provider::Status::UNKNOWN_ERROR:
+      return true;
+  }
 }
 }  // namespace
 
@@ -54,7 +71,7 @@ void PageDownload::StartDownload() {
         // timestamp is the right value.
         if (status != storage::Status::OK &&
             status != storage::Status::NOT_FOUND) {
-          HandleError("Failed to retrieve the sync metadata.");
+          HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
         if (last_commit_ts.empty()) {
@@ -118,6 +135,22 @@ void PageDownload::StartDownload() {
       }));
 }
 
+bool PageDownload::IsIdle() {
+  switch (GetMergedState(commit_state_, current_get_object_calls_)) {
+    case DOWNLOAD_STOPPED:
+    case DOWNLOAD_IDLE:
+    case DOWNLOAD_PERMANENT_ERROR:
+      return true;
+      break;
+    case DOWNLOAD_BACKLOG:
+    case DOWNLOAD_TEMPORARY_ERROR:
+    case DOWNLOAD_SETTING_REMOTE_WATCHER:
+    case DOWNLOAD_IN_PROGRESS:
+      return false;
+      break;
+  }
+}
+
 void PageDownload::BacklogDownloaded() {
   SetRemoteWatcher(false);
 }
@@ -135,7 +168,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
                                                 std::string last_commit_ts) {
         if (status != storage::Status::OK &&
             status != storage::Status::NOT_FOUND) {
-          HandleError("Failed to retrieve the sync metadata.");
+          HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
 
@@ -152,7 +185,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
                   // This should always succeed - any errors are reported
                   // through OnError().
                   if (status != cloud_provider::Status::OK) {
-                    HandleError(
+                    HandleDownloadCommitError(
                         "Unexpected error when setting the PageCloudWatcher.");
                   }
                 });
@@ -192,8 +225,7 @@ void PageDownload::OnNewObject(fidl::Array<uint8_t> /*id*/,
 void PageDownload::OnError(cloud_provider::Status status) {
   FXL_DCHECK(commit_state_ == DOWNLOAD_IDLE ||
              commit_state_ == DOWNLOAD_IN_PROGRESS);
-  if (status == cloud_provider::Status::NETWORK_ERROR ||
-      status == cloud_provider::Status::AUTH_ERROR) {
+  if (!IsPermanentError(status)) {
     // Reset the watcher and schedule a retry.
     if (watcher_binding_.is_bound()) {
       watcher_binding_.Unbind();
@@ -207,13 +239,14 @@ void PageDownload::OnError(cloud_provider::Status status) {
   }
 
   if (status == cloud_provider::Status::PARSE_ERROR) {
-    HandleError("Received a malformed remote commit notification.");
+    HandleDownloadCommitError(
+        "Received a malformed remote commit notification.");
     return;
   }
 
   FXL_LOG(WARNING) << "Received unexpected error from PageCloudWatcher: "
                    << status;
-  HandleError("Received unexpected error from PageCloudWatcher.");
+  HandleDownloadCommitError("Received unexpected error from PageCloudWatcher.");
 }
 
 void PageDownload::DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
@@ -241,14 +274,17 @@ void PageDownload::DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
         commits_to_download_ = fidl::Array<cloud_provider::CommitPtr>::New(0);
         DownloadBatch(std::move(commits), std::move(position_token_), nullptr);
       },
-      [this] { HandleError("Failed to persist a remote commit in storage"); });
+      [this] {
+        HandleDownloadCommitError(
+            "Failed to persist a remote commit in storage");
+      });
   batch_download_->Start();
 }
 
 void PageDownload::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status status,
-                       std::unique_ptr<storage::DataSource> data_source)>
+    std::function<void(storage::Status,
+                       std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   current_get_object_calls_++;
   encryption_service_->GetObjectName(
@@ -257,15 +293,9 @@ void PageDownload::GetObject(
           [this, object_identifier, callback = std::move(callback)](
               encryption::Status status, std::string object_name) mutable {
             if (status != encryption::Status::OK) {
-              FXL_LOG(WARNING)
-                  << log_prefix_
-                  << "GetObject() failed due to an encryption error, retrying.";
-              current_get_object_calls_--;
-              RetryWithBackoff(
-                  [this, object_identifier = std::move(object_identifier),
-                   callback = std::move(callback)] {
-                    GetObject(object_identifier, callback);
-                  });
+              HandleGetObjectError(std::move(object_identifier),
+                                   encryption::IsPermanentError(status),
+                                   "encryption", std::move(callback));
               return;
             }
             (*page_cloud_)
@@ -275,41 +305,83 @@ void PageDownload::GetObject(
                      callback = std::move(callback)](
                         cloud_provider::Status status, uint64_t size,
                         zx::socket data) mutable {
-                      if (status == cloud_provider::Status::NETWORK_ERROR ||
-                          status == cloud_provider::Status::AUTH_ERROR) {
-                        FXL_LOG(WARNING)
-                            << log_prefix_
-                            << "GetObject() failed due to a connection "
-                               "error or stale auth token, retrying.";
-                        current_get_object_calls_--;
-                        RetryWithBackoff(
-                            [this,
-                             object_identifier = std::move(object_identifier),
-                             callback = std::move(callback)] {
-                              GetObject(object_identifier, callback);
-                            });
-                        return;
-                      }
-
-                      backoff_->Reset();
                       if (status != cloud_provider::Status::OK) {
-                        FXL_LOG(WARNING)
-                            << log_prefix_
-                            << "Fetching remote object failed with status: "
-                            << status;
-                        callback(storage::Status::IO_ERROR, nullptr);
-                        current_get_object_calls_--;
+                        HandleGetObjectError(std::move(object_identifier),
+                                             IsPermanentError(status),
+                                             "cloud provider",
+                                             std::move(callback));
                         return;
                       }
 
-                      callback(storage::Status::OK, storage::DataSource::Create(
-                                                        std::move(data), size));
-                      current_get_object_calls_--;
+                      DecryptObject(
+                          std::move(object_identifier),
+                          storage::DataSource::Create(std::move(data), size),
+                          std::move(callback));
                     });
           }));
 }
 
-void PageDownload::HandleError(const char error_description[]) {
+void PageDownload::DecryptObject(
+    storage::ObjectIdentifier object_identifier,
+    std::unique_ptr<storage::DataSource> content,
+    std::function<void(storage::Status,
+                       std::unique_ptr<storage::DataSource::DataChunk>)>
+        callback) {
+  storage::ReadDataSource(
+      &managed_container_, std::move(content),
+      [this, object_identifier = std::move(object_identifier),
+       callback = std::move(callback)](
+          storage::Status status,
+          std::unique_ptr<storage::DataSource::DataChunk> content) mutable {
+        if (status != storage::Status::OK) {
+          HandleGetObjectError(std::move(object_identifier), true, "io",
+                               std::move(callback));
+          return;
+        }
+        encryption_service_->DecryptObject(
+            object_identifier, content->Get().ToString(),
+            [this, object_identifier, callback = std::move(callback)](
+                encryption::Status status, std::string content) mutable {
+              if (status != encryption::Status::OK) {
+                HandleGetObjectError(object_identifier,
+                                     encryption::IsPermanentError(status),
+                                     "encryption", callback);
+                return;
+              }
+              backoff_->Reset();
+              callback(
+                  storage::Status::OK,
+                  storage::DataSource::DataChunk::Create(std::move(content)));
+              current_get_object_calls_--;
+            });
+      });
+}
+
+void PageDownload::HandleGetObjectError(
+    storage::ObjectIdentifier object_identifier,
+    bool is_permanent,
+    const char error_name[],
+    std::function<void(storage::Status,
+                       std::unique_ptr<storage::DataSource::DataChunk>)>
+        callback) {
+  if (is_permanent) {
+    backoff_->Reset();
+    FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent "
+                     << error_name << " error";
+    callback(storage::Status::IO_ERROR, nullptr);
+    current_get_object_calls_--;
+    return;
+  }
+  FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a "
+                   << error_name << " error, retrying";
+  current_get_object_calls_--;
+  RetryWithBackoff([this, object_identifier = std::move(object_identifier),
+                    callback = std::move(callback)] {
+    GetObject(object_identifier, callback);
+  });
+}
+
+void PageDownload::HandleDownloadCommitError(const char error_description[]) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();
@@ -340,22 +412,6 @@ void PageDownload::RetryWithBackoff(fxl::Closure callable) {
         }
       },
       backoff_->GetNext());
-}
-
-bool PageDownload::IsIdle() {
-  switch (GetMergedState(commit_state_, current_get_object_calls_)) {
-    case DOWNLOAD_STOPPED:
-    case DOWNLOAD_IDLE:
-    case DOWNLOAD_PERMANENT_ERROR:
-      return true;
-      break;
-    case DOWNLOAD_BACKLOG:
-    case DOWNLOAD_TEMPORARY_ERROR:
-    case DOWNLOAD_SETTING_REMOTE_WATCHER:
-    case DOWNLOAD_IN_PROGRESS:
-      return false;
-      break;
-  }
 }
 
 }  // namespace cloud_sync

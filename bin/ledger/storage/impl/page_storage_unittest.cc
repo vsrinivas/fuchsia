@@ -130,14 +130,14 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     digest_to_value_[std::move(object_identifier)] = value;
   }
 
-  void GetObject(ObjectIdentifier object_identifier,
-                 std::function<void(Status status,
-                                    std::unique_ptr<DataSource> data_source)>
-                     callback) override {
+  void GetObject(
+      ObjectIdentifier object_identifier,
+      std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
+          callback) override {
     std::string& value = digest_to_value_[object_identifier];
     object_requests.insert(std::move(object_identifier));
     on_get_object_([callback = std::move(callback), value] {
-      callback(Status::OK, DataSource::Create(value));
+      callback(Status::OK, DataSource::DataChunk::Create(value));
     });
   }
 
