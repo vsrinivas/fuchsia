@@ -103,5 +103,5 @@ guest_app("zircon-guest") {
         path = rebase_path(gpt_outputs[0])
         dest = "${gpt_filename}"
       } ]
-  block_devices = [ "/pkg/data/${gpt_filename}" ]
+  block_devices = [ "/pkg/data/${gpt_filename},ro" ]
 }
