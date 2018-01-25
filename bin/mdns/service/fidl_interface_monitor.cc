@@ -61,7 +61,7 @@ void FidlInterfaceMonitor::OnInterfacesChanged(
   bool link_change = false;
 
   for (const auto& if_info : interfaces) {
-    IpAddress address = IpAddress(if_info->addr.get());
+    IpAddress address = MdnsFidlUtil::IpAddressFrom(if_info->addr.get());
 
     if (!address.is_valid() || address.is_loopback() ||
         (if_info->flags & netstack::NetInterfaceFlagUp) == 0) {

@@ -193,7 +193,7 @@ bool MdnsFidlUtil::UpdateSocketAddressIPv6(
     const netstack::SocketAddressPtr& net_address,
     const SocketAddress& socket_address) {
   FXL_DCHECK(net_address);
-  FXL_DCHECK(socket_address.is_v4());
+  FXL_DCHECK(socket_address.is_v6());
 
   bool changed = false;
 
@@ -214,6 +214,29 @@ bool MdnsFidlUtil::UpdateSocketAddressIPv6(
   }
 
   return changed;
+}
+
+// static
+IpAddress MdnsFidlUtil::IpAddressFrom(const netstack::NetAddress* addr) {
+  FXL_DCHECK(addr != nullptr);
+  switch (addr->family) {
+    case netstack::NetAddressFamily::IPV4:
+      if (!addr->ipv4) {
+        return IpAddress();
+      }
+
+      FXL_DCHECK(addr->ipv4.size() == sizeof(in_addr));
+      return IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4.data()));
+    case netstack::NetAddressFamily::IPV6:
+      if (!addr->ipv6) {
+        return IpAddress();
+      }
+
+      FXL_DCHECK(addr->ipv6.size() == sizeof(in6_addr));
+      return IpAddress(*reinterpret_cast<const in6_addr*>(addr->ipv6.data()));
+    default:
+      return IpAddress();
+  }
 }
 
 }  // namespace mdns

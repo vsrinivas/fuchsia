@@ -8,10 +8,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace netstack {
-class NetAddress;
-}
-
 namespace mdns {
 
 // Represents a V4 or V6 IP address.
@@ -57,8 +53,8 @@ class IpAddress {
   // Creates an address from a sockaddr struct.
   explicit IpAddress(const sockaddr* addr);
 
-  // Creates an address from a NetAddress class.
-  explicit IpAddress(const netstack::NetAddress* addr);
+  // Creates an address from a sockaddr_storage struct.
+  explicit IpAddress(const sockaddr_storage& addr);
 
   bool is_valid() const { return family_ != AF_UNSPEC; }
 

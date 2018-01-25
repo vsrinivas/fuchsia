@@ -114,25 +114,31 @@ IpAddress::IpAddress(const in6_addr& addr) {
 
 IpAddress::IpAddress(const sockaddr* addr) {
   FXL_DCHECK(addr != nullptr);
-  FXL_DCHECK(addr->sa_family == AF_INET || addr->sa_family == AF_INET6);
-  family_ = addr->sa_family;
-  if (is_v4()) {
-    v4_ = reinterpret_cast<const sockaddr_in*>(addr)->sin_addr;
-  } else {
-    v6_ = reinterpret_cast<const sockaddr_in6*>(addr)->sin6_addr;
+  switch (addr->sa_family) {
+    case AF_INET:
+      family_ = AF_INET;
+      v4_ = reinterpret_cast<const sockaddr_in*>(addr)->sin_addr;
+      break;
+    case AF_INET6:
+      family_ = AF_INET6;
+      v6_ = reinterpret_cast<const sockaddr_in6*>(addr)->sin6_addr;
+      break;
+    default:
+      family_ = AF_UNSPEC;
+      std::memset(&v6_, 0, sizeof(v6_));
+      break;
   }
 }
 
-IpAddress::IpAddress(const netstack::NetAddress* addr) {
-  FXL_DCHECK(addr != nullptr);
-  switch (addr->family) {
-    case netstack::NetAddressFamily::IPV4:
+IpAddress::IpAddress(const sockaddr_storage& addr) {
+  switch (addr.ss_family) {
+    case AF_INET:
       family_ = AF_INET;
-      memcpy(&v4_, &addr->ipv4[0], 4);
+      v4_ = reinterpret_cast<const sockaddr_in*>(&addr)->sin_addr;
       break;
-    case netstack::NetAddressFamily::IPV6:
+    case AF_INET6:
       family_ = AF_INET6;
-      memcpy(&v6_, &addr->ipv6[0], 16);
+      v6_ = reinterpret_cast<const sockaddr_in6*>(&addr)->sin6_addr;
       break;
     default:
       family_ = AF_UNSPEC;

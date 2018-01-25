@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/socket_address.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -54,11 +55,11 @@ IpAddress GetHostAddress() {
       [](const fidl::Array<netstack::NetInterfacePtr>& interfaces) {
         for (const auto& interface : interfaces) {
           if (interface->addr->family == netstack::NetAddressFamily::IPV4) {
-            ip_address = IpAddress(interface->addr.get());
+            ip_address = MdnsFidlUtil::IpAddressFrom(interface->addr.get());
             break;
           }
           if (interface->addr->family == netstack::NetAddressFamily::IPV6) {
-            ip_address = IpAddress(interface->addr.get());
+            ip_address = MdnsFidlUtil::IpAddressFrom(interface->addr.get());
             // Keep looking...v4 is preferred.
           }
         }

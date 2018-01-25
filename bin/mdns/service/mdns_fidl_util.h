@@ -46,6 +46,8 @@ class MdnsFidlUtil {
   static bool UpdateSocketAddressIPv6(
       const netstack::SocketAddressPtr& net_address,
       const SocketAddress& socket_address);
+
+  static IpAddress IpAddressFrom(const netstack::NetAddress* addr);
 };
 
 }  // namespace mdns
