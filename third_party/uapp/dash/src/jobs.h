@@ -62,6 +62,7 @@ struct procstat {
 };
 
 struct job {
+	zx_handle_t zx_job_hndl;	/* zircon job handle */
 	struct procstat ps0;	/* status of process */
 	struct procstat *ps;	/* status or processes when more than one */
 #if JOBS

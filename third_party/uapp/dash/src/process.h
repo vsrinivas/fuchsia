@@ -9,11 +9,12 @@
 union node;
 
 int process_launch(int argc, const char* const* argv, const char* path,
-                   int index, zx_handle_t* process, zx_status_t* status_out,
-                   const char** errmsg);
+                   int index, zx_handle_t* process, zx_handle_t job,
+                   zx_status_t* status_out, const char** errmsg);
 
-zx_status_t process_subshell(union node* n, const char* const* envp, zx_handle_t* process, int *fds,
-                             const char** errmsg);
+zx_status_t process_subshell(union node* n, const char* const* envp,
+                             zx_handle_t* process, zx_handle_t job,
+                             int *fds, const char** errmsg);
 
 // Waits for the process to terminate and returns the exit code for the process.
-int process_await_termination(zx_handle_t process, bool blocking);
+int process_await_termination(zx_handle_t process, zx_handle_t job, bool blocking);

@@ -47,6 +47,8 @@
 #include <sys/resource.h>
 #endif
 #include <sys/ioctl.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #include "shell.h"
 #if JOBS
@@ -581,6 +583,7 @@ freejob(struct job *jp)
 	if (jp->ps != &jp->ps0)
 		ckfree(jp->ps);
 	jp->used = 0;
+	zx_handle_close(jp->zx_job_hndl);
 	set_curjob(jp, CUR_DELETE);
 	INTON;
 }
@@ -776,6 +779,11 @@ makejob(union node *node, int nprocs)
 	jp->ps = &jp->ps0;
 	if (nprocs > 1) {
 		jp->ps = ckmalloc(nprocs * sizeof (struct procstat));
+	}
+	zx_status_t rv = zx_job_create(zx_job_default(), 0, &jp->zx_job_hndl);
+	if (rv != ZX_OK) {
+		sh_error("job not created - PTY_SIGNAL_EVENT inactive (%d)\n", rv);
+		jp->zx_job_hndl = ZX_HANDLE_INVALID;
 	}
 	TRACE(("makejob(0x%lx, %d) returns %%%d\n", (long)node, nprocs,
 	    jobno(jp)));
@@ -1036,7 +1044,8 @@ dowait(int block, struct job *job)
 				state = JOBRUNNING;
 				break;
 			}
-			status = process_await_termination (sp->pid, false);
+			// TODO(ZX-1564) This is called A LOT - find a way to do this without polling
+			status = process_await_termination (sp->pid, jp->zx_job_hndl, false);
 			if (status != ZX_ERR_TIMED_OUT) {
 				// Convert status to something that looks
 				// like a wait()-generated status.
