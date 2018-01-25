@@ -186,11 +186,6 @@ class PageStorageImpl : public PageStorage {
                                    size_t size,
                                    std::function<void(Status)> callback);
 
-  void ReadDataSource(
-      std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
-          callback);
-
   // Notifies the registered watchers with the |commits| in commit_to_send_.
   void NotifyWatchers();
 

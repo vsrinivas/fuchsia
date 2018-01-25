@@ -25,6 +25,8 @@ source_set("public") {
     "page_storage.cc",
     "page_storage.h",
     "page_sync_delegate.h",
+    "read_data_source.cc",
+    "read_data_source.h",
     "types.cc",
     "types.h",
   ]
@@ -33,6 +35,7 @@ source_set("public") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/util:ptr",
     "//third_party/flatbuffers",
@@ -48,6 +51,7 @@ source_set("unittests") {
   sources = [
     "data_source_unittest.cc",
     "object_unittest.cc",
+    "read_data_source_unittest.cc",
   ]
 
   deps = [
