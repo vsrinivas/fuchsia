@@ -22,7 +22,7 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
     return ZX_OK;
   }
 
-  zx_time_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
   constexpr char kEllipsis[] = "...";
   constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
   constexpr size_t kMaxMessageSize = 2043;

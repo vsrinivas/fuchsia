@@ -47,11 +47,6 @@
 
 # Time
 
-# TODO(abarth): Remove this call in favor of clock_get.
-syscall time_get vdsocall
-    (clock_id: uint32_t)
-    returns (zx_time_t);
-
 syscall clock_get
     (clock_id: uint32_t)
     returns (zx_time_t);
