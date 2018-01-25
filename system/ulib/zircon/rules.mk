@@ -19,6 +19,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/zx_channel_call.cpp \
     $(LOCAL_DIR)/zx_deadline_after.cpp \
     $(LOCAL_DIR)/zx_status_get_string.cpp \
+    $(LOCAL_DIR)/zx_system_get_cpu_features.cpp \
     $(LOCAL_DIR)/zx_system_get_num_cpus.cpp \
     $(LOCAL_DIR)/zx_system_get_physmem.cpp \
     $(LOCAL_DIR)/zx_system_get_version.cpp \

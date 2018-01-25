@@ -177,52 +177,53 @@ void arm64_feature_init() {
         arm64_icache_size = (1u << arm64_icache_shift);
 
         // parse the ISA feature bits
+        arm64_features |= ZX_CPU_HAS_FEATURES;
         uint64_t isar0 = ARM64_READ_SYSREG(id_aa64isar0_el1);
         if (BITS_SHIFT(isar0, 7, 4) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_AES;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_AES;
         }
         if (BITS_SHIFT(isar0, 7, 4) >= 2) {
-            arm64_features |= ARM64_FEATURE_ISA_PMULL;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_PMULL;
         }
         if (BITS_SHIFT(isar0, 11, 8) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_SHA1;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_SHA1;
         }
         if (BITS_SHIFT(isar0, 15, 12) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_SHA2;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_SHA2;
         }
         if (BITS_SHIFT(isar0, 19, 16) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_CRC32;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_CRC32;
         }
         if (BITS_SHIFT(isar0, 23, 20) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_ATOMICS;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_ATOMICS;
         }
         if (BITS_SHIFT(isar0, 31, 28) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_RDM;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_RDM;
         }
         if (BITS_SHIFT(isar0, 35, 32) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_SHA3;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_SHA3;
         }
         if (BITS_SHIFT(isar0, 39, 36) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_SM3;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_SM3;
         }
         if (BITS_SHIFT(isar0, 43, 40) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_SM4;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_SM4;
         }
         if (BITS_SHIFT(isar0, 47, 44) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_DP;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_DP;
         }
 
         uint64_t isar1 = ARM64_READ_SYSREG(id_aa64isar1_el1);
         if (BITS_SHIFT(isar1, 3, 0) >= 1) {
-            arm64_features |= ARM64_FEATURE_ISA_DPB;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_DPB;
         }
 
         uint64_t pfr0 = ARM64_READ_SYSREG(id_aa64pfr0_el1);
         if (BITS_SHIFT(pfr0, 19, 16) < 0b1111) {
-            arm64_features |= ARM64_FEATURE_ISA_FP;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_FP;
         }
         if (BITS_SHIFT(pfr0, 23, 20) < 0b1111) {
-            arm64_features |= ARM64_FEATURE_ISA_ASIMD;
+            arm64_features |= ZX_ARM64_FEATURE_ISA_ASIMD;
         }
     }
 
@@ -239,20 +240,20 @@ static void print_feature() {
         uint32_t bit;
         const char* name;
     } features[] = {
-        {ARM64_FEATURE_ISA_FP, "fp"},
-        {ARM64_FEATURE_ISA_ASIMD, "asimd"},
-        {ARM64_FEATURE_ISA_AES, "aes"},
-        {ARM64_FEATURE_ISA_PMULL, "pmull"},
-        {ARM64_FEATURE_ISA_SHA1, "sha1"},
-        {ARM64_FEATURE_ISA_SHA2, "sha2"},
-        {ARM64_FEATURE_ISA_CRC32, "crc32"},
-        {ARM64_FEATURE_ISA_ATOMICS, "atomics"},
-        {ARM64_FEATURE_ISA_RDM, "rdm"},
-        {ARM64_FEATURE_ISA_SHA3, "sha3"},
-        {ARM64_FEATURE_ISA_SM3, "sm3"},
-        {ARM64_FEATURE_ISA_SM4, "sm4"},
-        {ARM64_FEATURE_ISA_DP, "dp"},
-        {ARM64_FEATURE_ISA_DPB, "dpb"},
+        {ZX_ARM64_FEATURE_ISA_FP, "fp"},
+        {ZX_ARM64_FEATURE_ISA_ASIMD, "asimd"},
+        {ZX_ARM64_FEATURE_ISA_AES, "aes"},
+        {ZX_ARM64_FEATURE_ISA_PMULL, "pmull"},
+        {ZX_ARM64_FEATURE_ISA_SHA1, "sha1"},
+        {ZX_ARM64_FEATURE_ISA_SHA2, "sha2"},
+        {ZX_ARM64_FEATURE_ISA_CRC32, "crc32"},
+        {ZX_ARM64_FEATURE_ISA_ATOMICS, "atomics"},
+        {ZX_ARM64_FEATURE_ISA_RDM, "rdm"},
+        {ZX_ARM64_FEATURE_ISA_SHA3, "sha3"},
+        {ZX_ARM64_FEATURE_ISA_SM3, "sm3"},
+        {ZX_ARM64_FEATURE_ISA_SM4, "sm4"},
+        {ZX_ARM64_FEATURE_ISA_DP, "dp"},
+        {ZX_ARM64_FEATURE_ISA_DPB, "dpb"},
     };
 
     printf("ARM Features: ");

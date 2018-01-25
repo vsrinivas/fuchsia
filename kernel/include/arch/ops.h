@@ -44,6 +44,7 @@ static uint64_t arch_cycle_count(void);
 
 static cpu_num_t arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);
+static uint arch_cpu_features(void);
 
 void arch_disable_cache(uint flags);
 void arch_enable_cache(uint flags);

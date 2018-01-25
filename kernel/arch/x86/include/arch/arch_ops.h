@@ -61,6 +61,11 @@ static inline void arch_spinloop_signal(void)
 #define mb()        __asm__ volatile ("mfence" ::: "memory")
 #define smp_mb()    mb()
 
+static inline uint32_t arch_cpu_features(void)
+{
+    return 0; // Use cpuid instead.
+}
+
 uint32_t arch_dcache_line_size(void);
 uint32_t arch_icache_line_size(void);
 

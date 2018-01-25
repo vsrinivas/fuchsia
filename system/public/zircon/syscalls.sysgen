@@ -85,6 +85,10 @@ syscall system_get_physmem vdsocall
     ()
     returns (uint64_t);
 
+syscall system_get_cpu_features vdsocall const
+    ()
+    returns (zx_status_t, out: uint32_t features);
+
 # Abstraction of machine operations
 
 syscall cache_flush vdsocall

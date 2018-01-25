@@ -44,6 +44,11 @@ static inline uint64_t arch_cycle_count(void) {
     return ARM64_READ_SYSREG(pmccntr_el0);
 }
 
+static inline uint32_t arch_cpu_features(void)
+{
+    return arm64_features;
+}
+
 static inline uint32_t arch_dcache_line_size(void) {
     return arm64_dcache_size;
 }

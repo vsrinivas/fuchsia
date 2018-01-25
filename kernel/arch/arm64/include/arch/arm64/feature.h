@@ -9,29 +9,13 @@
 #include <arch/arm64.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
+#include <zircon/cpu-features.h>
 
 __BEGIN_CDECLS
 
-// feature flags
-// clang-format off
-#define ARM64_FEATURE_ISA_FP        (1u << 0)
-#define ARM64_FEATURE_ISA_ASIMD     (1u << 1)
-#define ARM64_FEATURE_ISA_AES       (1u << 2)
-#define ARM64_FEATURE_ISA_PMULL     (1u << 3)
-#define ARM64_FEATURE_ISA_SHA1      (1u << 4)
-#define ARM64_FEATURE_ISA_SHA2      (1u << 5)
-#define ARM64_FEATURE_ISA_CRC32     (1u << 6)
-#define ARM64_FEATURE_ISA_ATOMICS   (1u << 7)
-#define ARM64_FEATURE_ISA_RDM       (1u << 8)
-#define ARM64_FEATURE_ISA_SHA3      (1u << 9)
-#define ARM64_FEATURE_ISA_SM3       (1u << 10)
-#define ARM64_FEATURE_ISA_SM4       (1u << 11)
-#define ARM64_FEATURE_ISA_DP        (1u << 12)
-#define ARM64_FEATURE_ISA_DPB       (1u << 13)
-// clang-format on
+extern uint32_t arm64_features;
 
 static inline bool arm64_feature_test(uint32_t feature) {
-    extern uint32_t arm64_features;
 
     return arm64_features & feature;
 }
