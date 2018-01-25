@@ -80,6 +80,9 @@ typedef struct tx_info {
 // indicates the device is busy although its lock is released
 #define ETHDEV0_BUSY (1u)
 
+// Number of empty fifo entries to read at a time
+#define FIFO_BATCH_SZ 32
+
 // ethernet instance device
 typedef struct ethdev {
     list_node_t node;
@@ -96,6 +99,8 @@ typedef struct ethdev {
     uint32_t tx_depth;
     zx_handle_t rx_fifo;
     uint32_t rx_depth;
+    eth_fifo_entry_t rx_entries[FIFO_BATCH_SZ];
+    size_t rx_entry_count;
 
     // io buffer
     zx_handle_t io_vmo;
@@ -150,39 +155,42 @@ static inline ssize_t eth_set_promisc_locked(ethdev_t* edev, bool req_on) {
 }
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
-    eth_fifo_entry_t e;
     zx_status_t status;
     uint32_t count;
 
-    // TODO: read multiple and cache locally to reduce syscalls
-    if ((status = zx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        if (status == ZX_ERR_SHOULD_WAIT) {
-            if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
-                zxlogf(ERROR, "eth [%s]: no rx buffers available (%u times)\n",
-                       edev->name, edev->fail_rx_read);
+    if (edev->rx_entry_count == 0) {
+        status = zx_fifo_read(edev->rx_fifo, edev->rx_entries, sizeof(edev->rx_entries), &count);
+        if (status != ZX_OK) {
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
+                    zxlogf(ERROR, "eth [%s]: no rx buffers available (%u times)\n",
+                           edev->name, edev->fail_rx_read);
+                }
+            } else {
+                // Fatal, should force teardown
+                zxlogf(ERROR, "eth [%s]: rx fifo read failed %d\n", edev->name, status);
             }
-        } else {
-            // Fatal, should force teardown
-            zxlogf(ERROR, "eth [%s]: rx fifo read failed %d\n", edev->name, status);
+            return;
         }
-        return;
+        edev->rx_entry_count = count;
     }
 
-    if ((e.offset >= edev->io_size) || ((e.length > (edev->io_size - e.offset)))) {
+    eth_fifo_entry_t* e = &edev->rx_entries[--edev->rx_entry_count];
+    if ((e->offset >= edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
         // invalid offset/length. report error. drop packet
-        e.length = 0;
-        e.flags = ETH_FIFO_INVALID;
-    } else if (len > e.length) {
-        e.length = 0;
-        e.flags = ETH_FIFO_INVALID;
+        e->length = 0;
+        e->flags = ETH_FIFO_INVALID;
+    } else if (len > e->length) {
+        e->length = 0;
+        e->flags = ETH_FIFO_INVALID;
     } else {
         // packet fits. deliver it
-        memcpy(edev->io_buf + e.offset, data, len);
-        e.length = len;
-        e.flags = ETH_FIFO_RX_OK | extra;
+        memcpy(edev->io_buf + e->offset, data, len);
+        e->length = len;
+        e->flags = ETH_FIFO_RX_OK | extra;
     }
 
-    if ((status = zx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
+    if ((status = zx_fifo_write(edev->rx_fifo, e, sizeof(*e), &count)) < 0) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
                 zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n",
