@@ -1898,7 +1898,6 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 }
 
 enum handler_return apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSIS {
-    DEBUG_ASSERT(arch_in_int_handler());
     if (!atomic_load(&perfmon_active)) {
         apic_issue_eoi();
         return INT_NO_RESCHEDULE;

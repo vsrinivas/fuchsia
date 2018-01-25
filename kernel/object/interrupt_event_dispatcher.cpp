@@ -116,7 +116,6 @@ zx_status_t InterruptEventDispatcher::Bind(uint32_t slot, uint32_t vector, uint3
 }
 
 enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {
-    DEBUG_ASSERT(arch_in_int_handler());
     Interrupt* interrupt = reinterpret_cast<Interrupt*>(ctx);
 
     // only record timestamp if this is the first IRQ since we started waiting

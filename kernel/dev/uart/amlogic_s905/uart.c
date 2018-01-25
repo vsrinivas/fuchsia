@@ -86,7 +86,6 @@ static uint32_t s905_uart_irq = 0;
 
 static enum handler_return uart_irq(void *arg)
 {
-    DEBUG_ASSERT(arch_in_int_handler());
     uintptr_t base = (uintptr_t)arg;
 
     /* read interrupt status and mask */

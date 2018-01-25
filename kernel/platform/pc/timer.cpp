@@ -179,14 +179,12 @@ zx_time_t ticks_to_nanos(uint64_t ticks) {
 
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static enum handler_return pit_timer_tick(void* arg) {
-    DEBUG_ASSERT(arch_in_int_handler());
     pit_ticks += 1;
     return INT_NO_RESCHEDULE;
 }
 
 // The APIC timers will call this when they fire
 enum handler_return platform_handle_apic_timer_tick(void) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return timer_tick(current_time());
 }
 

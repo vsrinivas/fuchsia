@@ -147,7 +147,6 @@ private:
     explicit SharedLegacyIrqHandler(uint irq_id);
 
     static enum handler_return HandlerThunk(void *arg) {
-        DEBUG_ASSERT(arch_in_int_handler());
         DEBUG_ASSERT(arg);
         return reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
     }

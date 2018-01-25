@@ -165,7 +165,6 @@ zx_status_t get_interrupt_config(unsigned int vector,
 }
 
 enum handler_return platform_irq(x86_iframe_t* frame) {
-    DEBUG_ASSERT(arch_in_int_handler());
     // get the current vector
     uint64_t x86_vector = frame->vector;
     DEBUG_ASSERT(x86_vector >= X86_INT_PLATFORM_BASE &&

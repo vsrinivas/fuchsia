@@ -82,12 +82,10 @@ static void default_init_percpu(void) {
 }
 
 static enum handler_return default_handle_irq(iframe* frame) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return INT_NO_RESCHEDULE;
 }
 
 static enum handler_return default_handle_fiq(iframe* frame) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return INT_NO_RESCHEDULE;
 }
 
@@ -146,12 +144,10 @@ void interrupt_init_percpu(void) {
 }
 
 enum handler_return platform_irq(iframe* frame) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return intr_ops->handle_irq(frame);
 }
 
 enum handler_return platform_fiq(iframe* frame) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return intr_ops->handle_fiq(frame);
 }
 

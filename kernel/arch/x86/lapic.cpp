@@ -412,7 +412,6 @@ cleanup:
 }
 
 enum handler_return apic_timer_interrupt_handler(void) {
-    DEBUG_ASSERT(arch_in_int_handler());
     return platform_handle_apic_timer_tick();
 }
 
@@ -423,7 +422,6 @@ static void apic_error_init(void) {
 }
 
 enum handler_return apic_error_interrupt_handler(void) {
-    DEBUG_ASSERT(arch_in_int_handler());
     DEBUG_ASSERT(arch_ints_disabled());
 
     // This write doesn't effect the subsequent read, but is required prior to

@@ -61,7 +61,6 @@ static void platform_drain_debug_uart_rx(void) {
 }
 
 static enum handler_return uart_irq_handler(void* arg) {
-    DEBUG_ASSERT(arch_in_int_handler());
     platform_drain_debug_uart_rx();
     return INT_NO_RESCHEDULE;
 }
