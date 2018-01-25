@@ -34,6 +34,7 @@
         "garnet/packages/make-fuchsia-vol",
         "garnet/packages/mdns",
         "garnet/packages/mdns_service",
+        "garnet/packages/mdns_standalone",
         "garnet/packages/media",
         "garnet/packages/media_audio",
         "garnet/packages/media_examples",

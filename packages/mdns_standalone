@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "mdns_standalone": "//garnet/bin/mdns/standalone"
+    }
+}
