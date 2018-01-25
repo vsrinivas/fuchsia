@@ -18,9 +18,8 @@
 #ifndef _PCI_H_
 #define _PCI_H_
 
-#include <linux/interrupt.h>
-
 #include "hw.h"
+#if 0 // NEEDS PORTING
 #include "ce.h"
 #include "ahb.h"
 
@@ -311,4 +310,5 @@ void ath10k_pci_release_resource(struct ath10k *ar);
  */
 #define ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC 60
 
+#endif // NEEDS PORTING
 #endif /* _PCI_H_ */

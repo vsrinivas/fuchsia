@@ -15,12 +15,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/pci.h>
-#include <linux/module.h>
-#include <linux/interrupt.h>
-#include <linux/spinlock.h>
-#include <linux/bitops.h>
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <zircon/status.h>
 
+#if 0 // NEEDS PORTING
 #include "core.h"
 #include "debug.h"
 
@@ -31,7 +31,9 @@
 #include "htc.h"
 
 #include "ce.h"
+#endif // NEEDS PORTING
 #include "pci.h"
+#if 0 // NEEDS PORTING
 
 enum ath10k_pci_reset_mode {
 	ATH10K_PCI_RESET_AUTO = 0,
@@ -3176,10 +3178,11 @@ static const struct ath10k_bus_ops ath10k_pci_bus_ops = {
 	.write32	= ath10k_bus_pci_write32,
 	.get_num_banks	= ath10k_pci_get_num_banks,
 };
+#endif
 
-static int ath10k_pci_probe(struct pci_dev *pdev,
-			    const struct pci_device_id *pci_dev)
-{
+static zx_status_t ath10k_pci_probe(void *ctx, zx_device_t *dev) {
+    return ZX_OK;
+#if 0 // NEEDS PORTING
 	int ret = 0;
 	struct ath10k *ar;
 	struct ath10k_pci *ar_pci;
@@ -3357,8 +3360,10 @@ err_core_destroy:
 	ath10k_core_destroy(ar);
 
 	return ret;
+#endif // NEEDS PORTING
 }
 
+#if 0 // NEEDS PORTING
 static void ath10k_pci_remove(struct pci_dev *pdev)
 {
 	struct ath10k *ar = pci_get_drvdata(pdev);
@@ -3382,71 +3387,23 @@ static void ath10k_pci_remove(struct pci_dev *pdev)
 	ath10k_pci_release(ar);
 	ath10k_core_destroy(ar);
 }
+#endif // NEEDS PORTING
 
-MODULE_DEVICE_TABLE(pci, ath10k_pci_id_table);
-
-static struct pci_driver ath10k_pci_driver = {
-	.name = "ath10k_pci",
-	.id_table = ath10k_pci_id_table,
-	.probe = ath10k_pci_probe,
-	.remove = ath10k_pci_remove,
+static zx_driver_ops_t ath10k_pci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = ath10k_pci_probe,
 };
 
-static int __init ath10k_pci_init(void)
-{
-	int ret;
+ZIRCON_DRIVER_BEGIN(ath10k_pci, ath10k_pci_driver_ops, "zircon", "0.1", 10)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, ATHEROS_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA988X_2_0_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6174_2_1_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA99X0_2_0_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6164_2_1_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9377_1_0_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9984_1_0_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9887_1_0_DEVICE_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9888_2_0_DEVICE_ID),
+ZIRCON_DRIVER_END(ath10k_pci)
 
-	ret = pci_register_driver(&ath10k_pci_driver);
-	if (ret)
-		printk(KERN_ERR "failed to register ath10k pci driver: %d\n",
-		       ret);
-
-	ret = ath10k_ahb_init();
-	if (ret)
-		printk(KERN_ERR "ahb init failed: %d\n", ret);
-
-	return ret;
-}
-module_init(ath10k_pci_init);
-
-static void __exit ath10k_pci_exit(void)
-{
-	pci_unregister_driver(&ath10k_pci_driver);
-	ath10k_ahb_exit();
-}
-
-module_exit(ath10k_pci_exit);
-
-MODULE_AUTHOR("Qualcomm Atheros");
-MODULE_DESCRIPTION("Driver support for Qualcomm Atheros 802.11ac WLAN PCIe/AHB devices");
-MODULE_LICENSE("Dual BSD/GPL");
-
-/* QCA988x 2.0 firmware files */
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" ATH10K_FW_API2_FILE);
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" ATH10K_FW_API3_FILE);
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" ATH10K_FW_API4_FILE);
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" ATH10K_FW_API5_FILE);
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" QCA988X_HW_2_0_BOARD_DATA_FILE);
-MODULE_FIRMWARE(QCA988X_HW_2_0_FW_DIR "/" ATH10K_BOARD_API2_FILE);
-
-/* QCA9887 1.0 firmware files */
-MODULE_FIRMWARE(QCA9887_HW_1_0_FW_DIR "/" ATH10K_FW_API5_FILE);
-MODULE_FIRMWARE(QCA9887_HW_1_0_FW_DIR "/" QCA9887_HW_1_0_BOARD_DATA_FILE);
-MODULE_FIRMWARE(QCA9887_HW_1_0_FW_DIR "/" ATH10K_BOARD_API2_FILE);
-
-/* QCA6174 2.1 firmware files */
-MODULE_FIRMWARE(QCA6174_HW_2_1_FW_DIR "/" ATH10K_FW_API4_FILE);
-MODULE_FIRMWARE(QCA6174_HW_2_1_FW_DIR "/" ATH10K_FW_API5_FILE);
-MODULE_FIRMWARE(QCA6174_HW_2_1_FW_DIR "/" QCA6174_HW_2_1_BOARD_DATA_FILE);
-MODULE_FIRMWARE(QCA6174_HW_2_1_FW_DIR "/" ATH10K_BOARD_API2_FILE);
-
-/* QCA6174 3.1 firmware files */
-MODULE_FIRMWARE(QCA6174_HW_3_0_FW_DIR "/" ATH10K_FW_API4_FILE);
-MODULE_FIRMWARE(QCA6174_HW_3_0_FW_DIR "/" ATH10K_FW_API5_FILE);
-MODULE_FIRMWARE(QCA6174_HW_3_0_FW_DIR "/" ATH10K_FW_API6_FILE);
-MODULE_FIRMWARE(QCA6174_HW_3_0_FW_DIR "/" QCA6174_HW_3_0_BOARD_DATA_FILE);
-MODULE_FIRMWARE(QCA6174_HW_3_0_FW_DIR "/" ATH10K_BOARD_API2_FILE);
-
-/* QCA9377 1.0 firmware files */
-MODULE_FIRMWARE(QCA9377_HW_1_0_FW_DIR "/" ATH10K_FW_API5_FILE);
-MODULE_FIRMWARE(QCA9377_HW_1_0_FW_DIR "/" QCA9377_HW_1_0_BOARD_DATA_FILE);

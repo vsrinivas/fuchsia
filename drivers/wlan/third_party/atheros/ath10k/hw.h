@@ -18,7 +18,11 @@
 #ifndef _HW_H_
 #define _HW_H_
 
+#if 0 // NEEDS PORTING
 #include "targaddrs.h"
+#endif // NEEDS PORTING
+
+#define ATHEROS_VID    (0x168c)
 
 #define ATH10K_FW_DIR			"ath10k"
 
@@ -31,6 +35,7 @@
 #define QCA9377_1_0_DEVICE_ID   (0x0042)
 #define QCA9887_1_0_DEVICE_ID   (0x0050)
 
+#if 0 // NEEDS PORTING
 /* QCA988X 1.0 definitions (unsupported) */
 #define QCA988X_HW_1_0_CHIP_ID_REV	0x0
 
@@ -1063,4 +1068,5 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params *hw,
 #define RTC_SYNC_STATUS_PLL_CHANGING_MASK	0x00000020
 /* qca6174 PLL offset/mask end */
 
+#endif // NEEDS PORTING
 #endif /* _HW_H_ */

@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "ath10k": "//garnet/drivers/wlan/third_party/atheros/fuchsia:ath10k"
+        "ath10k": "//garnet/drivers/wlan/third_party/atheros/ath10k:ath10k"
     }
 }
