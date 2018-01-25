@@ -150,7 +150,7 @@ class Presentation : private mozart::ViewTreeListener,
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 
-  bool display_model_initialized_;
+  bool display_model_initialized_ = false;
   DisplayModel display_model_;
   // |display_metrics_| must be recalculated anytime |display_model_| changes
   // using CalculateDisplayMetrics().
