@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/cancellable_helper.h"
 #include "peridot/lib/callback/capture.h"
 
@@ -37,19 +38,22 @@ class CommonAncestorTest : public test::TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
       std::function<void(storage::Journal*)> contents) {
+    bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
     storage_->StartCommit(parent_id.ToString(), storage::JournalType::IMPLICIT,
-                          callback::Capture(MakeQuitTask(), &status, &journal));
-    EXPECT_FALSE(RunLoopWithTimeout());
+                          callback::Capture(SetWhenCalled(&called), &status, &journal));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture(MakeQuitTask(), &status, &commit));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), &status, &commit));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
     return commit;
   }
@@ -58,12 +62,14 @@ class CommonAncestorTest : public test::TestWithPageStorage {
       storage::CommitIdView left,
       storage::CommitIdView right,
       std::function<void(storage::Journal*)> contents) {
+    bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
     storage_->StartMergeCommit(
         left.ToString(), right.ToString(),
-        callback::Capture(MakeQuitTask(), &status, &journal));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), &status, &journal));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
 
     contents(journal.get());
@@ -71,18 +77,21 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     std::unique_ptr<const storage::Commit> actual_commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
-    EXPECT_FALSE(RunLoopWithTimeout());
+        callback::Capture(SetWhenCalled(&called), &actual_status, &actual_commit));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit;
   }
 
   std::unique_ptr<const storage::Commit> GetRoot() {
+    bool called;
     storage::Status status;
     std::unique_ptr<const storage::Commit> root;
     storage_->GetCommit(storage::kFirstPageCommitId,
-                        callback::Capture(MakeQuitTask(), &status, &root));
-    EXPECT_FALSE(RunLoopWithTimeout());
+                        callback::Capture(SetWhenCalled(&called), &status, &root));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
     return root;
   }
@@ -100,12 +109,14 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
   std::unique_ptr<const storage::Commit> commit_2 = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
 
+  bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_1),
                      std::move(commit_2),
-                     callback::Capture(MakeQuitTask(), &status, &result));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 }
@@ -116,12 +127,14 @@ TEST_F(CommonAncestorTest, RootAndChild) {
   std::unique_ptr<const storage::Commit> child = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "a"));
 
+  bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(root),
                      std::move(child),
-                     callback::Capture(MakeQuitTask(), &status, &result));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 }
@@ -147,20 +160,23 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
       CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "2"));
 
   // Ancestor of (1) and (merge) needs to be (root).
+  bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_1),
                      std::move(commit_merge),
-                     callback::Capture(MakeQuitTask(), &status, &result));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 
   // Ancestor of (2) and (A).
   FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_2),
                      std::move(commit_a),
-                     callback::Capture(MakeQuitTask(), &status, &result));
-  EXPECT_FALSE(RunLoopWithTimeout());
+                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 }
@@ -181,13 +197,15 @@ TEST_F(CommonAncestorTest, LongChain) {
   }
 
   // Ancestor of (last commit) and (b) needs to be (root).
+  bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(&coroutine_service_, storage_.get(),
                      std::move(last_commit), std::move(commit_b),
-                     callback::Capture(MakeQuitTask(), &status, &result));
+                     callback::Capture(SetWhenCalled(&called), &status, &result));
   // This test lasts ~2.5s on x86+qemu+kvm.
-  EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 }
