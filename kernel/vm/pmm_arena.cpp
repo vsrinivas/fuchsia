@@ -33,13 +33,13 @@ void PmmArena::EnforceFill() {
 
 void PmmArena::FreeFill(vm_page_t* page) {
     paddr_t paddr = page_address_from_arena(page);
-    void* kvaddr = paddr_to_kvaddr(paddr);
+    void* kvaddr = paddr_to_physmap(paddr);
     memset(kvaddr, PMM_FREE_FILL_BYTE, PAGE_SIZE);
 }
 
 void PmmArena::CheckFreeFill(vm_page_t* page) {
     paddr_t paddr = page_address_from_arena(page);
-    uint8_t* kvaddr = static_cast<uint8_t*>(paddr_to_kvaddr(paddr));
+    uint8_t* kvaddr = static_cast<uint8_t*>(paddr_to_physmap(paddr));
     for (size_t j = 0; j < PAGE_SIZE; ++j) {
         ASSERT(!enforce_fill_ || *(kvaddr + j) == PMM_FREE_FILL_BYTE);
     }
