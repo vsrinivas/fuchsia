@@ -29,6 +29,11 @@ namespace test {
 namespace e2e_local {
 namespace {
 
+// TODO(LE-399): This timeout allows the test to pass on qemu, debug mode on the
+// bots. It is a stopgap to remove the flakes, but the problem need to be
+// investigated.
+constexpr auto kTimeoutForLE_399 = fxl::TimeDelta::FromSeconds(10);
+
 template <class A>
 bool Equals(const fidl::Array<uint8_t>& a1, const A& a2) {
   if (a1.size() != a2.size())
@@ -163,7 +168,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, fidl::GetSynchronousProxy(&ledger_repository),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   ASSERT_EQ(ledger::Status::OK, status);
 
   ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
@@ -194,7 +199,7 @@ TEST_F(LedgerEndToEndTest, Terminate) {
     message_loop_.PostQuitTask();
   });
   controller_->Terminate();
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   EXPECT_TRUE(called);
 }
 
@@ -235,7 +240,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
@@ -286,7 +291,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
@@ -323,7 +328,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
