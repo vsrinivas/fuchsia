@@ -36,6 +36,7 @@ void CopyResolverNounsToLink(const ModuleResolverResultPtr& module_result,
 ResolverQueryPtr DaisyToResolverQuery(const DaisyPtr& daisy) {
   auto query = ResolverQuery::New();
   query->verb = daisy->verb;
+  query->url = daisy->url;
 
   for (const auto& entry : daisy->nouns) {
     const auto& name = entry.GetKey();

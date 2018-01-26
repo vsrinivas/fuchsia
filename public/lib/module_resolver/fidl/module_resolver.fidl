@@ -33,7 +33,14 @@ interface ModuleResolver {
 // In that role, it has references to structures and concepts that are only
 // visible within the abstraction layer of the Framework.
 struct ResolverQuery {
+  // Ignored if |url| is set.
   string? verb;
+
+  // Set to the URL of the specific Module you wish to launch. If set, |verb|
+  // is ignored.
+  // TODO(thatguy): Replace with a package ID, whenever we've landed on what
+  // exactly that looks like.
+  string? url;
 
   map<string, ResolverNounConstraint> noun_constraints;
 };

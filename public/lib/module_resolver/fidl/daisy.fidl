@@ -10,7 +10,14 @@ import "lib/module/fidl/link_path.fidl";
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
 struct Daisy {
+  // Ignored if |url| is set.
   string? verb;
+
+  // Set to the URL of the specific Module you wish to launch. If set, |verb|
+  // is ignored.
+  // TODO(thatguy): Replace with a package ID, whenever we've landed on what
+  // exactly that looks like.
+  string? url;
 
   // A list of zero or more Nouns, keyed by the noun's name in |verb|'s
   // definition, from which Entity type constraints are derived. If no |verb|

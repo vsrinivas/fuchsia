@@ -90,6 +90,13 @@ class ModuleResolverImpl::FindModulesCall
   void Run() {
     FlowToken flow{this, &result_};
 
+    if (query_->url) {
+      // Client already knows what Module they want to use, so we'll
+      // short-circuit resolution.
+      result_ = HandleUrlQuery(query_);
+      return;
+    }
+
     if (!query_->verb) {
       // TODO(thatguy): Add no-verb resolution.
       result_ = CreateEmptyResult();
@@ -224,6 +231,22 @@ class ModuleResolverImpl::FindModulesCall
       // There's nothing to copy over from 'entity_types', since it only
       // specifies noun constraint information, and no actual content.
     }
+  }
+
+  modular::FindModulesResultPtr HandleUrlQuery(
+      const modular::ResolverQueryPtr& query) {
+    auto result = modular::FindModulesResult::New();
+
+    result->modules.resize(1);
+
+    auto mod_result = modular::ModuleResolverResult::New();
+    mod_result->module_id = query->url;
+    mod_result->local_name = "n/a";
+
+    CopyNounsToModuleResolverResult(query, &mod_result);
+
+    result->modules[0] = std::move(mod_result);
+    return result;
   }
 
   modular::FindModulesResultPtr CreateEmptyResult() {

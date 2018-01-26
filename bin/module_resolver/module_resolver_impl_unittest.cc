@@ -25,6 +25,11 @@ class QueryBuilder {
 
   modular::ResolverQueryPtr build() { return std::move(query); }
 
+  QueryBuilder& SetUrl(std::string url) {
+    query->url = url;
+    return *this;
+  }
+
   QueryBuilder& SetVerb(std::string verb) {
     query->verb = verb;
     return *this;
@@ -187,6 +192,27 @@ TEST_F(ModuleResolverImplTest, Null) {
 
   // The Resolver returns an empty candidate list
   ASSERT_EQ(0lu, results().size());
+}
+
+TEST_F(ModuleResolverImplTest, ExplicitUrl) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  modular::ModuleManifestSource::Entry entry;
+  entry.binary = "no see this";
+  entry.verb = "verb";
+  source->add("1", entry);
+  source->idle();
+
+  auto query = QueryBuilder("verb").SetUrl("another URL").build();
+
+  FindModules(std::move(query));
+
+  // Even though the query has a verb set that matches another Module, we
+  // ignore it and prefer only the one URL. It's OK that the referenced Module
+  // ("another URL") doesn't have a manifest entry.
+  ASSERT_EQ(1u, results().size());
+  EXPECT_EQ("another URL", results()[0]->module_id);
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
