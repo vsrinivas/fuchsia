@@ -14,11 +14,6 @@ cd "${FUCHSIA_DIR}"
 
 DEFAULT_GN_PACKAGE_LIST=(
   garnet/packages/guest
-  garnet/packages/zircon-guest
-  garnet/packages/linux-guest
-  garnet/packages/runtime
-  garnet/packages/runtime_config
-  garnet/packages/netstack
 )
 DEFAULT_GN_PACKAGES=$(IFS=, ; echo "${DEFAULT_GN_PACKAGE_LIST[*]}")
 

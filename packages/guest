@@ -2,8 +2,12 @@
     "languages": [
         "cpp"
     ],
-    "packages": {
-        "guest_tests": "//garnet/bin/guest:guest_tests",
-        "machina_tests": "//garnet/lib/machina:machina_tests"
-    }
+    "imports": [
+        "garnet/packages/guest_tests",
+        "garnet/packages/runtime",
+        "garnet/packages/runtime_config",
+        "garnet/packages/netstack",
+        "garnet/packages/zircon-guest",
+        "garnet/packages/linux-guest"
+    ]
 }
