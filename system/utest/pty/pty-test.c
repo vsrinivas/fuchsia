@@ -205,8 +205,25 @@ static bool pty_test(void) {
     END_TEST;
 }
 
+bool not_a_pty_test(void) {
+    BEGIN_TEST;
+
+    int root_dir = open("/", O_DIRECTORY | O_RDONLY);
+    EXPECT_GE(root_dir, 0, "");
+
+    // Calling pty ioctls such as 'get window size' should fail
+    // properly on things that are not ptys.
+    pty_window_size_t ws;
+    EXPECT_EQ(ioctl_pty_get_window_size(root_dir, &ws), ZX_ERR_NOT_SUPPORTED, "");
+
+    close(root_dir);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(pty_tests)
 RUN_TEST(pty_test)
+RUN_TEST(not_a_pty_test)
 END_TEST_CASE(pty_tests)
 
 int main(int argc, char** argv) {
