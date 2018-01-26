@@ -17,7 +17,6 @@ namespace scene_manager {
 class GpuImage;
 using GpuImagePtr = fxl::RefPtr<GpuImage>;
 
-// TODO: We're not handling memory offset.!!
 class GpuImage : public Image {
  public:
   static const ResourceTypeInfo kTypeInfo;
@@ -51,10 +50,14 @@ class GpuImage : public Image {
   // |session| is the Session that this image can be referenced from.
   // |image_info| specifies size, format, and other properties.
   // |vk_image| is the VkImage, whose lifetime is now controlled by this
-  // object. |memory| is the GPU memory that is associated with this image.
+  // object.
+  // |memory| is the GPU memory that is associated with this image.
+  // |memory_offset| is the offset in bytes into the memory where the image is
+  // stored.
   GpuImage(Session* session,
            scenic::ResourceId id,
            GpuMemoryPtr memory,
+           uint64_t memory_offset,
            escher::ImageInfo image_info,
            vk::Image vk_image_);
 

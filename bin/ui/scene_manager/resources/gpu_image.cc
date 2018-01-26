@@ -18,11 +18,13 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
 GpuImage::GpuImage(Session* session,
                    scenic::ResourceId id,
                    GpuMemoryPtr memory,
+                   uint64_t memory_offset,
                    escher::ImageInfo image_info,
                    vk::Image vk_image)
     : Image(session, id, GpuImage::kTypeInfo), memory_(std::move(memory)) {
   image_ = escher::Image::New(session->engine()->escher_resource_recycler(),
-                              image_info, vk_image, memory_->escher_gpu_mem());
+                              image_info, vk_image, memory_->escher_gpu_mem(),
+                              memory_offset);
   FXL_CHECK(image_);
 }
 
@@ -99,12 +101,9 @@ GpuImagePtr GpuImage::New(Session* session,
     return nullptr;
   }
 
-  // TODO(MZ-444): Take memory_offset into account when creating escher::Image
-  // or escher::GpuMem.
-  FXL_DCHECK(memory_offset == 0);
-
   return fxl::AdoptRef(new GpuImage(session, id, std::move(memory),
-                                    escher_image_info, vk_image));
+                                    memory_offset, escher_image_info,
+                                    vk_image));
 }
 
 bool GpuImage::UpdatePixels() {

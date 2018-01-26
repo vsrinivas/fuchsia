@@ -19,27 +19,30 @@ ImagePtr Image::New(ResourceManager* image_owner,
                     ImageInfo info,
                     vk::Image vk_image,
                     GpuMemPtr mem,
+                    vk::DeviceSize mem_offset,
                     bool bind_image_memory) {
   if (mem && bind_image_memory) {
     auto bind_result = image_owner->device().bindImageMemory(
-        vk_image, mem->base(), mem->offset());
+        vk_image, mem->base(), mem->offset() + mem_offset);
     if (bind_result != vk::Result::eSuccess) {
       FXL_DLOG(ERROR) << "vkBindImageMemory failed: "
                       << vk::to_string(bind_result);
       return nullptr;
     }
   }
-  return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem));
+  return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem, mem_offset));
 }
 
 Image::Image(ResourceManager* image_owner,
              ImageInfo info,
              vk::Image vk_image,
-             GpuMemPtr mem)
+             GpuMemPtr mem,
+             vk::DeviceSize mem_offset)
     : WaitableResource(image_owner),
       info_(info),
       image_(vk_image),
-      mem_(std::move(mem)) {
+      mem_(std::move(mem)),
+      mem_offset_(mem_offset) {
   // TODO: How do we future-proof this in case more formats are added?
   switch (info.format) {
     case vk::Format::eD16Unorm:
@@ -74,10 +77,6 @@ Image::~Image() {
   } else {
     vulkan_context().device.destroyImage(image_);
   }
-}
-
-vk::DeviceSize Image::memory_offset() const {
-  return mem_->offset() + mem_offset_;
 }
 
 }  // namespace escher

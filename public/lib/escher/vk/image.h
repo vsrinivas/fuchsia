@@ -41,11 +41,13 @@ class Image : public WaitableResource {
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
   // If |mem| is passed and |bind_image_memory| is true, this method also binds
-  // the memory to the image.
+  // the memory to the image. |mem_offset| is the offset of the image's memory
+  // within |mem|.
   static ImagePtr New(ResourceManager* image_owner,
                       ImageInfo info,
                       vk::Image,
                       GpuMemPtr mem,
+                      vk::DeviceSize mem_offset = 0,
                       bool bind_image_memory = true);
 
   // Returns image_ and mem_ to the owner.
@@ -59,9 +61,8 @@ class Image : public WaitableResource {
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
   const GpuMemPtr& memory() const { return mem_; }
-  // Offset of the Image within it's GpuMem + the offset of the GpuMem within
-  // its slab.  NOTE: not the same as memory()->offset().
-  vk::DeviceSize memory_offset() const;
+  // Offset of the Image within its GpuMem.
+  vk::DeviceSize memory_offset() const { return mem_offset_; }
 
   // TODO(ES-44): Deprecated.  Use vk() instead.
   vk::Image get() const { return image_; }
@@ -71,7 +72,12 @@ class Image : public WaitableResource {
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
-  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
+  // |mem_offset| is the offset of the image's memory within |mem|.
+  Image(ResourceManager* image_owner,
+        ImageInfo info,
+        vk::Image,
+        GpuMemPtr mem,
+        vk::DeviceSize mem_offset);
 
  private:
   const ImageInfo info_;
