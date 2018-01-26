@@ -38,8 +38,10 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\n";
   std::cerr << " Block devices can be specified by path:\n";
   std::cerr << "    /pkg/data/disk.img\n";
-  std::cerr << " Or by GUID:\n";
+  std::cerr << " Or by GPT Partition GUID:\n";
   std::cerr << "    guid:14db42cf-beb7-46a2-9ef8-89b13bb80528,rw\n";
+  std::cerr << " Or by GPT Partition Type GUID:\n";
+  std::cerr << "    type-guid:4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709,rw\n";
   std::cerr << "\n";
   std::cerr << " Additional Options:\n";
   std::cerr << "    rw/ro: Create a read/write or read-only device.\n";
@@ -147,6 +149,10 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
 
 static zx_status_t parse_guid(const std::string& guid_str,
                               machina::BlockDispatcher::Guid& guid) {
+  if (!guid.empty()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   std::vector<uint8_t> nibbles;
   for (const char& c : guid_str) {
     switch (c) {
@@ -198,16 +204,20 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
     } else if (token.compare(0, 5, "guid:") == 0) {
-      // Only a single GUID may be specified.
-      if (!out->guid.empty()) {
-        return ZX_ERR_INVALID_ARGS;
-      }
       std::string guid_str = token.substr(5);
       zx_status_t status = parse_guid(guid_str, out->guid);
       if (status != ZX_OK) {
         return status;
       }
       out->guid.type = machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID;
+    } else if (token.compare(0, 10, "type-guid:") == 0) {
+      std::string guid_str = token.substr(10);
+      zx_status_t status = parse_guid(guid_str, out->guid);
+      if (status != ZX_OK) {
+        return status;
+      }
+      out->guid.type =
+          machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID;
     }
   }
 

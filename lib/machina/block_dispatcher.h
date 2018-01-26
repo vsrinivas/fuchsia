@@ -26,7 +26,14 @@ class BlockDispatcher {
   };
   enum class GuidType {
     NONE,
+
+    // Each GPT partition has 2 GUIDs, one that is unique to that specific
+    // partition, and one that specifies the purpose of the partition.
+    //
+    // For a partial list of existing parition type GUIDs, see
+    // https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
     GPT_PARTITION_GUID,
+    GPT_PARTITION_TYPE_GUID,
   };
   struct Guid {
     GuidType type = GuidType::NONE;

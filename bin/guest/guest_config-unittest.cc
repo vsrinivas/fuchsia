@@ -118,10 +118,11 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
 
   const char* argv[] = {"exe_name", "--block=/pkg/data/foo,ro,fdio",
                         "--block=/dev/class/block/001,rw,fifo",
-                        "--block=guid:" TEST_GUID_STRING ",rw,fifo"};
+                        "--block=guid:" TEST_GUID_STRING ",rw,fifo",
+                        "--block=type-guid:" TEST_GUID_STRING ",ro,fdio"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
-  ASSERT_EQ(3, config.block_devices().size());
+  ASSERT_EQ(4, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
@@ -142,6 +143,14 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
             spec2.guid.type);
   ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
+
+  const BlockSpec& spec3 = config.block_devices()[3];
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec3.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec3.data_plane);
+  ASSERT_TRUE(spec3.path.empty());
+  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID,
+            spec3.guid.type);
+  ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 
 TEST(GuestConfigParserTest, BlockSpecJson) {
@@ -153,10 +162,11 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
           "block": [
             "/pkg/data/foo,ro,fdio",
             "/dev/class/block/001,rw,fifo",
-            "guid:)JSON" TEST_GUID_STRING R"JSON(,rw,fifo"
+            "guid:)JSON" TEST_GUID_STRING R"JSON(,rw,fifo",
+            "type-guid:)JSON" TEST_GUID_STRING R"JSON(,ro,fdio"
           ]
         })JSON"));
-  ASSERT_EQ(3, config.block_devices().size());
+  ASSERT_EQ(4, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
@@ -175,6 +185,14 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
             spec2.guid.type);
   ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
+
+  const BlockSpec& spec3 = config.block_devices()[3];
+  ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec3.mode);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec3.data_plane);
+  ASSERT_TRUE(spec3.path.empty());
+  ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID,
+            spec3.guid.type);
+  ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 
 }  // namespace

@@ -245,6 +245,7 @@ zx_status_t BlockDispatcher::CreateFromPath(
 struct GuidLookupArgs {
   int fd;
   const BlockDispatcher::Guid& guid;
+  ssize_t (*guid_ioctl)(int fd, void* out, size_t out_len);
 };
 
 static zx_status_t MatchBlockDeviceToGuid(int dirfd,
@@ -263,8 +264,7 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd,
   }
 
   uint8_t device_guid[GUID_LEN];
-  ssize_t result = ioctl_block_get_partition_guid(fd.get(), device_guid,
-                                                  sizeof(device_guid));
+  ssize_t result = args->guid_ioctl(fd.get(), device_guid, sizeof(device_guid));
   if (result < 0) {
     return ZX_OK;
   }
@@ -286,15 +286,23 @@ zx_status_t BlockDispatcher::CreateFromGuid(
     DataPlane data_plane,
     const PhysMem& phys_mem,
     fbl::unique_ptr<BlockDispatcher>* dispatcher) {
-  if (guid.type != GuidType::GPT_PARTITION_GUID) {
-    return ZX_ERR_INVALID_ARGS;
+  GuidLookupArgs args = {-1, guid, nullptr};
+  switch (guid.type) {
+    case GuidType::GPT_PARTITION_GUID:
+      args.guid_ioctl = &ioctl_block_get_partition_guid;
+      break;
+    case GuidType::GPT_PARTITION_TYPE_GUID:
+      args.guid_ioctl = &ioctl_block_get_type_guid;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
   }
+
   fbl::unique_fd dir_fd(open(kBlockDirPath, O_DIRECTORY | O_RDONLY));
   if (!dir_fd) {
     return ZX_ERR_IO;
   }
 
-  GuidLookupArgs args = {-1, guid};
   zx_status_t status = fdio_watch_directory(
       dir_fd.get(), MatchBlockDeviceToGuid, timeout, &args);
   if (status == ZX_ERR_STOP) {
