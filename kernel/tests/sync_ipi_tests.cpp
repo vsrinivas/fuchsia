@@ -15,6 +15,7 @@
 #include <kernel/thread.h>
 #include <stdio.h>
 #include <trace.h>
+#include <unittest.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
@@ -74,18 +75,17 @@ cleanup:
     event_destroy(&gate);
 };
 
-int sync_ipi_tests(int argc, const cmd_args* argv) {
+static bool sync_ipi_tests(void* context) {
+    BEGIN_TEST;
+
     uint num_cpus = arch_max_num_cpus();
     uint online = mp_get_online_mask();
     if (online != (1U << num_cpus) - 1) {
         printf("Can only run test with all CPUs online\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        return true;
     }
 
     uint runs = TEST_RUNS;
-    if (argc > 1) {
-        runs = (uint)argv[1].u;
-    }
 
     /* Test that we're actually blocking and only signaling the ones we target */
     for (uint i = 0; i < runs; ++i) {
@@ -119,6 +119,10 @@ int sync_ipi_tests(int argc, const cmd_args* argv) {
         LTRACEF("Deadlock test passed\n");
     }
 
-    printf("Success\n");
-    return ZX_OK;
+    END_TEST;
 }
+
+UNITTEST_START_TESTCASE(sync_ipi_tests)
+UNITTEST("sync_ipi_tests", sync_ipi_tests)
+UNITTEST_END_TESTCASE(sync_ipi_tests, "sync_ipi_tests", "sync_ipi_tests",
+                      nullptr, nullptr);
