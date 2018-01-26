@@ -17,6 +17,11 @@
 #     True if a direct dependency on this molecule should be interpreted as a
 #     direct dependency on its own dependencies.
 #     Useful for group-like templates.
+#
+#   metadata (optional)
+#     List of scopes describing the metadata to attach to this molecule.
+#     Each scope must have two attributes: a "key" and a "value". Keys are
+#     string; values cannot be arrays or scopes.
 
 template("sdk_molecule") {
 
@@ -32,6 +37,16 @@ template("sdk_molecule") {
       gen_dir = get_label_info(dep, "target_gen_dir")
       name = get_label_info(dep, "name")
       dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+    }
+  }
+
+  metadata = []
+  if (defined(invoker.metadata)) {
+    foreach(meta, invoker.metadata) {
+      metadata += [
+        "--metadata",
+        "${meta.key}=${meta.value}",
+      ]
     }
   }
 
@@ -60,7 +75,7 @@ template("sdk_molecule") {
       "--out",
       rebase_path(manifest),
       "--deps",
-    ] + dep_manifests
+    ] + dep_manifests + metadata
 
     if (is_group) {
       args += [

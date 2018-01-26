@@ -15,11 +15,16 @@
       "items": {
         "$ref": "#/definitions/atomId"
       }
+    },
+    "meta": {
+      "description": "A collection of metadata about the SDK",
+      "$ref": "#/definitions/sdkMetadata"
     }
   },
   "required": [
       "atoms",
-      "ids"
+      "ids",
+      "meta"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -80,6 +85,20 @@
         "files",
         "id",
         "tags"
+      ],
+      "additionalProperties": false
+    },
+    "sdkMetadata": {
+      "description": "Additional information about an SDK",
+      "type": "object",
+      "properties": {
+        "arch": {
+          "description": "The target architecture for binaries referenced in this manifest, expressed as a compiler triple",
+          "type": "string"
+        }
+      },
+      "required": [
+        "arch"
       ],
       "additionalProperties": false
     }

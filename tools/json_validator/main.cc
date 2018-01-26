@@ -51,14 +51,14 @@ int main(int argc, const char** argv) {
   if (!file_document.Accept(validator)) {
     fprintf(stderr, "Error: the file %s is invalid according to schema %s.\n",
             file_path.c_str(), schema_path.c_str());
-    StringBuffer sb;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-    fprintf(stderr, " - location in schema     %s\n", sb.GetString());
+    StringBuffer buffer;
+    validator.GetInvalidSchemaPointer().StringifyUriFragment(buffer);
+    fprintf(stderr, " - location in schema     %s\n", buffer.GetString());
     fprintf(stderr, " - affected keyword       %s\n",
             validator.GetInvalidSchemaKeyword());
-    sb.Clear();
-    validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-    fprintf(stderr, " - document reference     %s\n", sb.GetString());
+    buffer.Clear();
+    validator.GetInvalidDocumentPointer().StringifyUriFragment(buffer);
+    fprintf(stderr, " - document reference     %s\n", buffer.GetString());
     return 1;
   }
 

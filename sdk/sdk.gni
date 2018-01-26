@@ -30,12 +30,30 @@ template("sdk") {
   copy_target_name = "${target_name}_copy"
   verification_target_name = "${target_name}_verify"
 
+  if (!is_fuchsia) {
+    assert(false, "SDKs can only target Fuchsia")
+  }
+  if (target_cpu == "x64") {
+    compiler_triple = "x86_64-fuchsia"
+  } else if (target_cpu == "arm64") {
+    compiler_triple = "aarch64-fuchsia"
+  } else {
+    assert(false, "Unrecognized CPU: $target_cpu")
+  }
+
   # Generates the manifest.
   sdk_molecule(generation_target_name) {
     forward_variables_from(invoker, "*", [
       "domains",
       "export",
     ])
+
+    metadata = [
+      {
+        key = "arch"
+        value = compiler_triple
+      }
+    ]
   }
 
   sdk_name = target_name
@@ -131,6 +149,7 @@ template("sdk") {
 
       deps = [
         ":$copy_target_name",
+        ":$verification_target_name",
       ]
     }
   } else { # Not exported.

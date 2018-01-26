@@ -22,6 +22,10 @@ def main():
     parser.add_argument('--is-group',
                         help='True if the molecule is a grouping of its deps',
                         action='store_true')
+    parser.add_argument('--metadata',
+                        help='Metadata to attach to the manifest',
+                        action='append',
+                        default=[])
     args = parser.parse_args()
 
     (direct_deps, atoms) = gather_dependencies(args.deps)
@@ -35,6 +39,8 @@ def main():
         'ids': ids,
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
+    if args.metadata:
+        manifest['meta'] = dict(map(lambda m: m.split('=', 1), args.metadata))
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(manifest, out, indent=2, sort_keys=True)
 
