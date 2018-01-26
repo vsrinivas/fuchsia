@@ -56,7 +56,7 @@ zx_status_t HidCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             hiddev->Shutdown();
         } else {
             // devmgr owns the memory until release is called
-            hiddev.release();
+            __UNUSED auto ptr = hiddev.release();
 
             auto out = static_cast<zx_handle_t*>(out_buf);
             *out = remote.release();
@@ -286,7 +286,7 @@ extern "C" zx_status_t hidctl_bind(void* ctx, zx_device_t* device, void** cookie
         zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {
         // devmgr owns the memory now
-        dev.release();
+        __UNUSED auto ptr = dev.release();
     }
     return status;
 }

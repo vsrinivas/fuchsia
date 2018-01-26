@@ -435,7 +435,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
 
 void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
     // The connection will be destroyed by |UnregisterAndDestroyConnection()|
-    connection.release();
+    __UNUSED auto ptr = connection.release();
 }
 
 void Vfs::UnregisterAndDestroyConnection(Connection* connection) {

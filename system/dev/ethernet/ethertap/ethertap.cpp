@@ -60,7 +60,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             zxlogf(ERROR, "tapctl: could not add tap device: %d\n", status);
         } else {
             // devmgr owns the memory until release is called
-            tap.release();
+            __UNUSED auto ptr = tap.release();
 
             zx_handle_t* out = reinterpret_cast<zx_handle_t*>(out_buf);
             *out = remote.release();
@@ -300,7 +300,7 @@ extern "C" zx_status_t tapctl_bind(void* ctx, zx_device_t* device, void** cookie
         zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {
         // devmgr owns the memory now
-        dev.release();
+        __UNUSED auto ptr = dev.release();
     }
     return status;
 }

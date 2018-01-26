@@ -287,7 +287,7 @@ zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     }
 
     // devmgr is now in charge of the memory for dev
-    dev.release();
+    __UNUSED auto ptr = dev.release();
 
     zxlogf(INFO, "acpi-tbmc: initialized\n");
     return ZX_OK;

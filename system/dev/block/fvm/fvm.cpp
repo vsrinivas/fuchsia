@@ -106,7 +106,8 @@ zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) cons
     if ((status = vp->DdkAdd(name)) != ZX_OK) {
         return status;
     }
-    vp.release();
+    // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+    __UNUSED auto ptr = vp.release();
     return ZX_OK;
 }
 
@@ -1026,7 +1027,8 @@ void VPartition::BlockQueue(block_op_t* txn) {
     for (size_t i = 0; i < txn_count; i++) {
         mgr_->Queue(txns[i]);
     }
-    state.release();
+    // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+    __UNUSED auto ptr = state.release();
 }
 
 #ifdef IOTXN_LEGACY_SUPPORT
@@ -1177,7 +1179,8 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
     for (size_t i = 0; i < txn_count; i++) {
         iotxn_queue(GetParent(), txns[i]);
     }
-    state.release();
+    // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+    __UNUSED auto ptr = state.release();
 }
 
 #endif // IOTXN_LEGACY_SUPPORT
@@ -1227,6 +1230,7 @@ zx_status_t fvm_bind(zx_device_t* parent) {
         vpm->DdkRemove();
         return status;
     }
-    vpm.release();
+    // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+    __UNUSED auto ptr = vpm.release();
     return ZX_OK;
 }

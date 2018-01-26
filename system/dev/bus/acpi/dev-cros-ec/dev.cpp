@@ -87,7 +87,7 @@ zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
             }
 
             // devmgr is now in charge of the memory for motion_dev
-            motion_dev.release();
+            __UNUSED auto ptr = motion_dev.release();
             zxlogf(INFO, "acpi-cros-ec-motion: initialized\n");
         }
     }

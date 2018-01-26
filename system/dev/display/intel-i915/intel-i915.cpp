@@ -629,7 +629,9 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         zxlogf(ERROR, "i915: failed to add controller device\n");
         return status;
     }
-    controller_ptr->release();
+    // DevMgr now owns this pointer, release it to avoid destroying the object
+    // when device goes out of scope.
+    __UNUSED auto ptr = controller_ptr->release();
 
     zxlogf(TRACE, "i915: initializing displays\n");
     status = InitDisplays();

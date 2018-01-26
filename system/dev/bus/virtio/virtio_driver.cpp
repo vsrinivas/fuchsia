@@ -96,6 +96,6 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
     }
 
     // if we're here, we're successful so drop the unique ptr ref to the object and let it live on
-    virtio_device.release();
+    __UNUSED auto ptr = virtio_device.release();
     return ZX_OK;
 }

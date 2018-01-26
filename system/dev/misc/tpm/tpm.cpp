@@ -242,7 +242,9 @@ zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
 
     status = device->Bind();
     if (status == ZX_OK) {
-        device.release();
+        // DevMgr now owns this pointer, release it to avoid destroying the
+        // object when device goes out of scope.
+        __UNUSED auto ptr = device.release();
     }
     return status;
 }

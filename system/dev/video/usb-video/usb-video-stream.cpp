@@ -60,7 +60,7 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
     auto status = dev->Bind(name, intf, control_header, input_header);
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
-        dev.release();
+        __UNUSED auto ptr = dev.release();
     }
     return status;
 }

@@ -9,6 +9,7 @@
 #include <fbl/macros.h>
 #include <fbl/recycler.h>
 #include <fbl/type_support.h>
+#include <zircon/compiler.h>
 
 namespace fbl {
 
@@ -55,7 +56,7 @@ public:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(unique_ptr);
 
-    T* release() {
+    T* release() __WARN_UNUSED_RESULT {
         T* t = ptr_;
         ptr_ = nullptr;
         return t;
@@ -162,7 +163,7 @@ public:
     unique_ptr(const unique_ptr& o) = delete;
     unique_ptr& operator=(const unique_ptr& o) = delete;
 
-    T* release() {
+    T* release() __WARN_UNUSED_RESULT {
         T* t = ptr_;
         ptr_ = nullptr;
         return t;
