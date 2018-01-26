@@ -134,31 +134,29 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(X86PageTableBase);
 
     class CacheLineFlusher;
+    class ConsistencyManager;
     struct MappingCursor;
 
     zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
                            PageTableLevel level, const MappingCursor& start_cursor,
-                           MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
-                           list_node* to_free) TA_REQ(lock_);
+                           MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
     zx_status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                              const MappingCursor& start_cursor,
-                             MappingCursor* new_cursor, PendingTlbInvalidation* tlb) TA_REQ(lock_);
+                             MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 
     bool RemoveMapping(volatile pt_entry_t* table,
                        PageTableLevel level, const MappingCursor& start_cursor,
-                       MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
-                       list_node* to_free) TA_REQ(lock_);
+                       MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
     bool RemoveMappingL0(volatile pt_entry_t* table,
                          const MappingCursor& start_cursor,
-                         MappingCursor* new_cursor, PendingTlbInvalidation* tlb) TA_REQ(lock_);
+                         MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 
     zx_status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
                               PageTableLevel level, const MappingCursor& start_cursor,
-                              MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
-                              list_node* to_free) TA_REQ(lock_);
+                              MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
     zx_status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                                 const MappingCursor& start_cursor, MappingCursor* new_cursor,
-                                PendingTlbInvalidation* tlb) TA_REQ(lock_);
+                                ConsistencyManager* cm) TA_REQ(lock_);
 
     zx_status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
                            PageTableLevel level,
@@ -169,15 +167,13 @@ private:
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     zx_status_t SplitLargePage(PageTableLevel level, vaddr_t vaddr,
-                               volatile pt_entry_t* pte, PendingTlbInvalidation* tlb,
-                               list_node* to_free) TA_REQ(lock_);
+                               volatile pt_entry_t* pte, ConsistencyManager* cm) TA_REQ(lock_);
 
-    void UpdateEntry(CacheLineFlusher* flusher, PendingTlbInvalidation* tlb,
-                     PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                     paddr_t paddr, PtFlags flags, bool was_terminal) TA_REQ(lock_);
-    void UnmapEntry(CacheLineFlusher* flusher, PendingTlbInvalidation* tlb,
-                    PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
-                    bool was_terminal) TA_REQ(lock_);
+    void UpdateEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
+                     volatile pt_entry_t* pte, paddr_t paddr, PtFlags flags,
+                     bool was_terminal) TA_REQ(lock_);
+    void UnmapEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
+                    volatile pt_entry_t* pte, bool was_terminal) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("X86P")> canary_;
 
