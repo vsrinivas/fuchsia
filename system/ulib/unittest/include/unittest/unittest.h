@@ -551,7 +551,7 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_NONNULL(actual, ...) UT_NONNULL(actual, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
-#define ASSERT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expecetd, actual, length, msg, RET_FALSE)
+#define ASSERT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, RET_FALSE)
 
 /* For comparing uint64_t, like hw_id_t. */
