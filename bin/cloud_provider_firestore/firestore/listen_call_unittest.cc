@@ -134,23 +134,6 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
   EXPECT_EQ(0, on_finished_calls_);
 }
 
-TEST_F(ListenCallTest, WriteAndFinish) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
-  EXPECT_EQ(1, on_connected_calls_);
-
-  handler->Write(google::firestore::v1beta1::ListenRequest());
-  (*stream_->write_tag)(true);
-
-  handler->Finish();
-  (*stream_->read_tag)(false);
-  (*stream_->finish_tag)(true);
-  EXPECT_EQ(1, on_empty_calls_);
-  EXPECT_EQ(1, on_connected_calls_);
-  EXPECT_EQ(0, on_response_calls_);
-  EXPECT_EQ(1, on_finished_calls_);
-}
-
 TEST_F(ListenCallTest, WriteAndDeleteHandler) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
   (*connect_tag_)(true);
@@ -166,24 +149,6 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
   EXPECT_EQ(1, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
   EXPECT_EQ(0, on_finished_calls_);
-}
-
-TEST_F(ListenCallTest, ReadAndFinish) {
-  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
-  EXPECT_EQ(1, on_connected_calls_);
-
-  (*stream_->read_tag)(true);
-  (*stream_->read_tag)(true);
-  (*stream_->read_tag)(true);
-
-  handler->Finish();
-  (*stream_->read_tag)(false);
-  (*stream_->finish_tag)(true);
-  EXPECT_EQ(1, on_empty_calls_);
-  EXPECT_EQ(1, on_connected_calls_);
-  EXPECT_EQ(3, on_response_calls_);
-  EXPECT_EQ(1, on_finished_calls_);
 }
 
 TEST_F(ListenCallTest, ReadAndDeleteHandler) {

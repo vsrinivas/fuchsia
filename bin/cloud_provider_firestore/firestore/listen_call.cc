@@ -96,16 +96,6 @@ void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
   pending_cq_operations_++;
 }
 
-void ListenCall::Finish() {
-  // It's only valid to finish the connection after it was established.
-  FXL_DCHECK(connected_ || !client_);
-  FXL_DCHECK(!finish_requested_);
-  finish_requested_ = true;
-
-  stream_->Finish(&status_, &on_finish_);
-  pending_cq_operations_++;
-}
-
 void ListenCall::OnHandlerGone() {
   // Unset the |client_| pointer, so that no client notifications are made
   // after the handler is deleted.
@@ -130,6 +120,16 @@ void ListenCall::FinishIfNeeded() {
   } else {
     CheckEmpty();
   }
+}
+
+void ListenCall::Finish() {
+  // It's only valid to finish the connection after it was established.
+  FXL_DCHECK(connected_ || !client_);
+  FXL_DCHECK(!finish_requested_);
+  finish_requested_ = true;
+
+  stream_->Finish(&status_, &on_finish_);
+  pending_cq_operations_++;
 }
 
 void ListenCall::HandleFinished(grpc::Status status) {

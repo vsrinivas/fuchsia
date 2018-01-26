@@ -37,14 +37,14 @@ class ListenCall {
 
   void Write(google::firestore::v1beta1::ListenRequest request);
 
-  void Finish();
-
   void OnHandlerGone();
 
  private:
   void ReadNext();
 
   void FinishIfNeeded();
+
+  void Finish();
 
   void HandleFinished(grpc::Status status);
 
@@ -91,8 +91,6 @@ class ListenCallHandlerImpl : public ListenCallHandler {
   void Write(google::firestore::v1beta1::ListenRequest request) override {
     call_->Write(std::move(request));
   }
-
-  void Finish() override { call_->Finish(); }
 
  private:
   ListenCall* const call_;

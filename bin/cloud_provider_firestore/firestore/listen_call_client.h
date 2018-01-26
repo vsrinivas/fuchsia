@@ -39,8 +39,8 @@ class ListenCallClient {
 
   // Called when the stream is closed.
   //
-  // Might be called after the client called |Finish()| on the stream, but also
-  // without such a call in case of an error.
+  // Might be called at any time before or after the OnConnected() call, when
+  // an error shuts down the stream.
   //
   // This method will be called exactly once. No other methods will be called
   // after this one. No methods on the associated ListenCallHandler can be
@@ -66,12 +66,6 @@ class ListenCallHandler {
   // Can be only called after the |OnConnected()| notification on the associated
   // ListenCallClient.
   virtual void Write(google::firestore::v1beta1::ListenRequest request) = 0;
-
-  // Requests the RPC to finish.
-  //
-  // Can be only called after the |OnConnected()| notification on the associated
-  // ListenCallClient.
-  virtual void Finish() = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ListenCallHandler);
