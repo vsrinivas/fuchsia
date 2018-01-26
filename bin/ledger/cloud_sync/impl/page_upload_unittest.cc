@@ -79,14 +79,14 @@ class PageUploadTest : public gtest::TestWithMessageLoop,
 TEST_F(PageUploadTest, UploadBacklog) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ("id1", page_cloud_.received_commits[0].id);
@@ -105,27 +105,29 @@ TEST_F(PageUploadTest, UploadBacklog) {
 TEST_F(PageUploadTest, UploadBacklogOnlyOnSingleHead) {
   // Verify that two local commits are not uploaded when there is two local
   // heads.
+  bool upload_is_idle = false;
   storage_.head_count = 2;
   storage_.NewCommit("id0", "content0");
   storage_.NewCommit("id1", "content1");
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
   EXPECT_EQ(0u, page_cloud_.received_commits.size());
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
 
   // Add a new commit and reduce the number of heads to 1.
+  upload_is_idle = false;
   storage_.head_count = 1;
   auto commit = storage_.NewCommit("id2", "content2");
   storage_.new_commits_to_return["id2"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(),
                                   storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   // Verify that all local commits were uploaded.
   ASSERT_EQ(3u, page_cloud_.received_commits.size());
@@ -157,25 +159,27 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   page_cloud_.position_token_to_return = convert::ToArray("44");
 
   is_download_idle_ = false;
-  SetOnNewStateCallback([this] {
+  bool upload_wait_remote_download = false;
+  SetOnNewStateCallback([this, &upload_wait_remote_download] {
     if (states_.back() == UPLOAD_WAIT_REMOTE_DOWNLOAD) {
-      message_loop_.PostQuitTask();
+      upload_wait_remote_download = true;
     }
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_wait_remote_download);
 
   EXPECT_EQ(0u, page_cloud_.received_commits.size());
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
 
   is_download_idle_ = true;
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ("local1", page_cloud_.received_commits[0].id);
@@ -193,13 +197,14 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
 // watcher are uploaded to PageCloudHandler, with the exception of commits that
 // themselves come from sync.
 TEST_F(PageUploadTest, UploadNewCommits) {
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
 
   auto commit1 = storage_.NewCommit("id1", "content1");
   storage_.new_commits_to_return["id1"] = commit1->Clone();
@@ -217,7 +222,8 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   storage_.watcher_->OnNewCommits(commit3->AsList(),
                                   storage::ChangeSource::LOCAL);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ("id1", page_cloud_.received_commits[0].id);
@@ -234,13 +240,14 @@ TEST_F(PageUploadTest, UploadNewCommits) {
 // Verifies that new commits being added to storage are only uploaded while
 // there is only a single head.
 TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
 
   // Add a new commit when there's only one head and verify that it is
   // uploaded.
@@ -250,7 +257,9 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   storage_.watcher_->OnNewCommits(commit0->AsList(),
                                   storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
   ASSERT_EQ(1u, page_cloud_.received_commits.size());
   EXPECT_EQ("id0", page_cloud_.received_commits[0].id);
   EXPECT_EQ("content0", encryption_service_.DecryptCommitSynchronous(
@@ -265,7 +274,9 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(),
                                   storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
   ASSERT_EQ(0u, page_cloud_.received_commits.size());
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.count("id1"));
 
@@ -277,7 +288,8 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   storage_.watcher_->OnNewCommits(commit2->AsList(),
                                   storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
   ASSERT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ("id1", page_cloud_.received_commits[0].id);
   EXPECT_EQ("content1", encryption_service_.DecryptCommitSynchronous(
@@ -292,20 +304,21 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
 // Verifies that existing commits are uploaded before the new ones.
 TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   storage_.NewCommit("id1", "content1");
-
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
 
   auto commit = storage_.NewCommit("id2", "content2");
   storage_.new_commits_to_return["id2"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(),
                                   storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ("id1", page_cloud_.received_commits[0].id);
@@ -323,12 +336,12 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
 // delayed, here we set the delays to 0.
 TEST_F(PageUploadTest, RetryUpload) {
   page_upload_->StartUpload();
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
   SetOnNewStateCallback(nullptr);
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
@@ -363,13 +376,12 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
   SetOnNewStateCallback([this, &on_idle_calls] {
     if (states_.back() == UPLOAD_IDLE) {
       on_idle_calls++;
-      message_loop_.PostQuitTask();
     }
   });
   page_upload_->StartUpload();
 
   // Verify that the idle callback is called once both commits are uploaded.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(2u, page_cloud_.received_commits.size());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_upload_->IsIdle());
@@ -381,7 +393,7 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
   storage_.watcher_->OnNewCommits(commit3->AsList(),
                                   storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(3u, page_cloud_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_upload_->IsIdle());
@@ -398,12 +410,11 @@ TEST_F(PageUploadTest, FailToListCommits) {
   SetOnNewStateCallback([this, &error_calls] {
     if (states_.back() == UPLOAD_PERMANENT_ERROR) {
       error_calls++;
-      message_loop_.PostQuitTask();
     }
   });
 
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1, error_calls);
   EXPECT_FALSE(storage_.watcher_set);
   EXPECT_EQ(0u, page_cloud_.received_commits.size());
@@ -411,19 +422,21 @@ TEST_F(PageUploadTest, FailToListCommits) {
 
 // Verifies that already synced commits are not re-uploaded.
 TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle()) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
 
   auto commit = std::make_unique<TestCommit>("id", "content");
   storage_.new_commits_to_return["id"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(),
                                   storage::ChangeSource::LOCAL);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   // Commit is already synced.
   ASSERT_EQ(0u, page_cloud_.received_commits.size());
@@ -432,14 +445,14 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
 // Verifies that commits that are received between the first upload and the
 // retry are not sent.
 TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
-  SetOnNewStateCallback([this] {
-    if (page_upload_->IsIdle() ||
-        states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
-      message_loop_.PostQuitTask();
-    }
+  bool upload_is_idle = false;
+  SetOnNewStateCallback([this, &upload_is_idle] {
+    upload_is_idle = page_upload_->IsIdle();
   });
   page_upload_->StartUpload();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
 
@@ -452,7 +465,7 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   EXPECT_TRUE(RunLoopUntil([this] {
     return states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR;
   }));
-  EXPECT_TRUE(page_cloud_.add_commits_calls > 0u);
+  EXPECT_GT(page_cloud_.add_commits_calls, 0u);
 
   // Configure the cloud to accept the next attempt to upload.
   page_cloud_.commit_status_to_return = cloud_provider::Status::OK;
@@ -462,7 +475,8 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   // unsynced commits to return).
   storage_.unsynced_commits_to_return.clear();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
 
   // Verify that no calls were made to attempt to upload the commit.
   EXPECT_EQ(0u, page_cloud_.add_commits_calls);
