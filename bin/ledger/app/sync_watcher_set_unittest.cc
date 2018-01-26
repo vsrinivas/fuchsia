@@ -61,7 +61,7 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
 
   watcher_set.AddSyncWatcher(std::move(watcher_ptr));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   ASSERT_EQ(1u, impl.download_states.size());
   EXPECT_EQ(SyncState::IN_PROGRESS, *impl.download_states.rbegin());
@@ -71,7 +71,7 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
   watcher_set.Notify(cloud_sync::DOWNLOAD_PERMANENT_ERROR,
                      cloud_sync::UPLOAD_IDLE);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   ASSERT_EQ(2u, impl.download_states.size());
   EXPECT_EQ(SyncState::ERROR, *impl.download_states.rbegin());
@@ -86,7 +86,7 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   SyncWatcherImpl impl1(watcher_ptr1.NewRequest());
   watcher_set.AddSyncWatcher(std::move(watcher_ptr1));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, impl1.download_states.size());
   EXPECT_EQ(SyncState::IDLE, *impl1.download_states.rbegin());
   EXPECT_EQ(1u, impl1.upload_states.size());
@@ -96,7 +96,7 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   SyncWatcherImpl impl2(watcher_ptr2.NewRequest());
   watcher_set.AddSyncWatcher(std::move(watcher_ptr2));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, impl2.download_states.size());
   EXPECT_EQ(SyncState::IDLE, *impl2.download_states.rbegin());
   EXPECT_EQ(1u, impl2.upload_states.size());
@@ -105,9 +105,7 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   watcher_set.Notify(cloud_sync::DOWNLOAD_IN_PROGRESS,
                      cloud_sync::UPLOAD_WAIT_REMOTE_DOWNLOAD);
 
-  // The two watchers are notified.
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   ASSERT_EQ(2u, impl1.download_states.size());
   EXPECT_EQ(SyncState::IN_PROGRESS, *impl1.download_states.rbegin());
