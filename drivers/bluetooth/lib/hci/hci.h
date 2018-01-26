@@ -9,6 +9,7 @@
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/common/device_class.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
@@ -216,7 +217,7 @@ struct ReadClassOfDeviceReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  uint8_t class_of_device[3];
+  common::DeviceClass class_of_device;
 } __PACKED;
 
 // =============================================
@@ -224,7 +225,7 @@ struct ReadClassOfDeviceReturnParams {
 constexpr OpCode kWriteClassOfDevice = ControllerAndBasebandOpCode(0x0024);
 
 struct WriteClassOfDeviceCommandParams {
-  uint8_t class_of_device[3];
+  common::DeviceClass class_of_device;
 } __PACKED;
 
 // ===============================================================
