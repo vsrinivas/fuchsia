@@ -94,9 +94,27 @@ void MdnsServiceImpl::PublishServiceInstance(
     return;
   }
 
-  mdns_.PublishServiceInstance(service_name, instance_name,
-                               IpPort::From_uint16_t(port),
-                               text.To<std::vector<std::string>>(), callback);
+  auto publisher = std::unique_ptr<SimplePublisher>(new SimplePublisher(
+      IpPort::From_uint16_t(port), std::move(text), callback));
+
+  if (!mdns_.PublishServiceInstance(service_name, instance_name,
+                                    publisher.get())) {
+    callback(MdnsResult::ALREADY_PUBLISHED_LOCALLY);
+    return;
+  }
+
+  MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  // |Mdns| told us our instance is unique locally, so the full name should
+  // not appear in our collection.
+  FXL_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
+             publishers_by_instance_full_name_.end());
+
+  publishers_by_instance_full_name_.emplace(instance_full_name,
+                                            std::move(publisher));
 }
 
 void MdnsServiceImpl::UnpublishServiceInstance(
@@ -107,26 +125,53 @@ void MdnsServiceImpl::UnpublishServiceInstance(
     return;
   }
 
-  mdns_.UnpublishServiceInstance(service_name, instance_name);
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  // This will delete the publisher, unpublishing the service instance.
+  publishers_by_instance_full_name_.erase(instance_full_name);
 }
 
 void MdnsServiceImpl::AddResponder(
     const fidl::String& service_name,
     const fidl::String& instance_name,
     fidl::InterfaceHandle<MdnsResponder> responder_handle) {
+  FXL_DCHECK(responder_handle);
+
+  auto responder_ptr = MdnsResponderPtr::Create(std::move(responder_handle));
+  FXL_DCHECK(responder_ptr);
+
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    auto responder = MdnsResponderPtr::Create(std::move(responder_handle));
-    responder->UpdateStatus(MdnsResult::INVALID_SERVICE_NAME);
+    responder_ptr->UpdateStatus(MdnsResult::INVALID_SERVICE_NAME);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    auto responder = MdnsResponderPtr::Create(std::move(responder_handle));
-    responder->UpdateStatus(MdnsResult::INVALID_INSTANCE_NAME);
+    responder_ptr->UpdateStatus(MdnsResult::INVALID_INSTANCE_NAME);
     return;
   }
 
-  mdns_.AddResponder(service_name, instance_name, std::move(responder_handle));
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto publisher = std::unique_ptr<ResponderPublisher>(new ResponderPublisher(
+      std::move(responder_ptr), [this, instance_full_name]() {
+        publishers_by_instance_full_name_.erase(instance_full_name);
+      }));
+
+  if (!mdns_.PublishServiceInstance(service_name, instance_name,
+                                    publisher.get())) {
+    publisher->responder_->UpdateStatus(MdnsResult::ALREADY_PUBLISHED_LOCALLY);
+    return;
+  }
+
+  // |Mdns| told us our instance is unique locally, so the full name should
+  // not appear in our collection.
+  FXL_DCHECK(publishers_by_instance_full_name_.find(instance_full_name) ==
+             publishers_by_instance_full_name_.end());
+
+  publishers_by_instance_full_name_.emplace(instance_full_name,
+                                            std::move(publisher));
 }
 
 void MdnsServiceImpl::SetSubtypes(const fidl::String& service_name,
@@ -137,8 +182,15 @@ void MdnsServiceImpl::SetSubtypes(const fidl::String& service_name,
     return;
   }
 
-  mdns_.SetSubtypes(service_name, instance_name,
-                    subtypes.To<std::vector<std::string>>());
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto iter = publishers_by_instance_full_name_.find(instance_full_name);
+  if (iter == publishers_by_instance_full_name_.end()) {
+    return;
+  }
+
+  iter->second->SetSubtypes(subtypes.To<std::vector<std::string>>());
 }
 
 void MdnsServiceImpl::ReannounceInstance(const fidl::String& service_name,
@@ -148,7 +200,15 @@ void MdnsServiceImpl::ReannounceInstance(const fidl::String& service_name,
     return;
   }
 
-  mdns_.ReannounceInstance(service_name, instance_name);
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto iter = publishers_by_instance_full_name_.find(instance_full_name);
+  if (iter == publishers_by_instance_full_name_.end()) {
+    return;
+  }
+
+  iter->second->Reannounce();
 }
 
 void MdnsServiceImpl::SetVerbose(bool value) {
@@ -223,6 +283,54 @@ void MdnsServiceImpl::MdnsServiceSubscriptionImpl::GetInstances(
     uint64_t version_last_seen,
     const GetInstancesCallback& callback) {
   instances_publisher_.Get(version_last_seen, callback);
+}
+
+MdnsServiceImpl::SimplePublisher::SimplePublisher(
+    IpPort port,
+    fidl::Array<fidl::String> text,
+    const PublishServiceInstanceCallback& callback)
+    : port_(port),
+      text_(text.To<std::vector<std::string>>()),
+      callback_(callback) {}
+
+void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
+  callback_(success ? MdnsResult::OK : MdnsResult::ALREADY_PUBLISHED_ON_SUBNET);
+}
+
+void MdnsServiceImpl::SimplePublisher::GetPublication(
+    bool query,
+    const std::string& subtype,
+    const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
+  callback(Mdns::Publication::Create(port_, text_));
+}
+
+MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
+    MdnsResponderPtr responder,
+    const fxl::Closure& deleter)
+    : responder_(std::move(responder)) {
+  FXL_DCHECK(responder_);
+
+  responder_.set_connection_error_handler([this, deleter]() {
+    responder_.set_connection_error_handler(nullptr);
+    deleter();
+  });
+}
+
+void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
+  FXL_DCHECK(responder_);
+  responder_->UpdateStatus(success ? MdnsResult::OK
+                                   : MdnsResult::ALREADY_PUBLISHED_ON_SUBNET);
+}
+
+void MdnsServiceImpl::ResponderPublisher::GetPublication(
+    bool query,
+    const std::string& subtype,
+    const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
+  FXL_DCHECK(responder_);
+  responder_->GetPublication(query, subtype,
+                             [callback](MdnsPublicationPtr publication_ptr) {
+                               callback(MdnsFidlUtil::Convert(publication_ptr));
+                             });
 }
 
 }  // namespace mdns

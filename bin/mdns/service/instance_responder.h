@@ -9,33 +9,21 @@
 #include <vector>
 
 #include "garnet/bin/mdns/service/ip_port.h"
+#include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
 
 namespace mdns {
 
 // Dynamically publishes an instance of a service type.
 class InstanceResponder : public MdnsAgent {
  public:
-  using PublishCallback = std::function<void(MdnsResult result)>;
-
-  // Creates an |InstanceResponder|. Subtypes in |announced_subtypes| are
-  // announced initially. The |MdnsResponder| referenced by |responder_handle|
-  // is consulted to determine how queries are handled.
+  // Creates an |InstanceResponder|. The publisher is consulted to determine
+  // how queries are handled.
   InstanceResponder(MdnsAgent::Host* host,
                     const std::string& service_name,
                     const std::string& instance_name,
-                    fidl::InterfaceHandle<MdnsResponder> responder_handle);
-
-  // Creates an |InstanceResponder|. No subtypes are announced. Queries for
-  // |service_name| are responded to using the information in |publication|.
-  // Queries for subtypes of |service_name| are ignored.
-  InstanceResponder(MdnsAgent::Host* host,
-                    const std::string& service_name,
-                    const std::string& instance_name,
-                    MdnsPublicationPtr publication,
-                    const PublishCallback& callback);
+                    Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
 
@@ -47,8 +35,10 @@ class InstanceResponder : public MdnsAgent {
 
   void Quit() override;
 
-  // Updates the status.
-  void UpdateStatus(MdnsResult result);
+  // Reports whether the publication attempt was successful. Publication can
+  // fail if the service instance is currently be published by another device
+  // on the subnet.
+  void ReportSuccess(bool success);
 
   // Sets the subtypes to publish.
   void SetSubtypes(std::vector<std::string> subtypes);
@@ -65,7 +55,7 @@ class InstanceResponder : public MdnsAgent {
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
 
-  // Gets an |MdnsPublication| from |mdns_responder_| and, if not null, sends
+  // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
   void GetAndSendPublication(bool query,
                              const std::string& subtype = "",
@@ -73,7 +63,7 @@ class InstanceResponder : public MdnsAgent {
                                  MdnsAddresses::kV4MulticastReply) const;
 
   // Sends a publication. An empty |subtype| indicates no subtype.
-  void SendPublication(const MdnsPublication& publication,
+  void SendPublication(const Mdns::Publication& publication,
                        const std::string& subtype = "",
                        const ReplyAddress& reply_address =
                            MdnsAddresses::kV4MulticastReply) const;
@@ -84,20 +74,17 @@ class InstanceResponder : public MdnsAgent {
                             const ReplyAddress& reply_address =
                                 MdnsAddresses::kV4MulticastReply) const;
 
-  // Turns |publication| into a goodbye by setting the TTLs to zero and sends
-  // it via multicast.
-  void SendGoodbye(MdnsPublicationPtr publication) const;
+  // Sends a publication with zero ttls, indicating the service instance is
+  // no longer published.
+  void SendGoodbye() const;
 
   std::string host_full_name_;
   std::string service_name_;
   std::string instance_name_;
   std::string instance_full_name_;
+  Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
-  MdnsResponderPtr mdns_responder_;
-  MdnsPublicationPtr publication_;
-  PublishCallback callback_;
   fxl::TimeDelta announcement_interval_ = kInitialAnnouncementInterval;
-  bool should_quit_ = false;
 };
 
 }  // namespace mdns

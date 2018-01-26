@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
@@ -84,6 +86,49 @@ class MdnsServiceImpl : public MdnsService {
     FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceSubscriptionImpl);
   };
 
+  // Publisher for PublishServiceInstance.
+  class SimplePublisher : public Mdns::Publisher {
+   public:
+    SimplePublisher(IpPort port,
+                    fidl::Array<fidl::String> text,
+                    const PublishServiceInstanceCallback& callback);
+
+   private:
+    // Mdns::Publisher implementation.
+    void ReportSuccess(bool success) override;
+
+    void GetPublication(
+        bool query,
+        const std::string& subtype,
+        const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
+        override;
+
+    IpPort port_;
+    std::vector<std::string> text_;
+    PublishServiceInstanceCallback callback_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(SimplePublisher);
+  };
+
+  // Publisher for AddResponder.
+  class ResponderPublisher : public Mdns::Publisher {
+   public:
+    ResponderPublisher(MdnsResponderPtr responder, const fxl::Closure& deleter);
+
+    // Mdns::Publisher implementation.
+    void ReportSuccess(bool success) override;
+
+    void GetPublication(
+        bool query,
+        const std::string& subtype,
+        const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
+        override;
+
+    MdnsResponderPtr responder_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(ResponderPublisher);
+  };
+
   // Starts the service.
   void Start();
 
@@ -92,6 +137,8 @@ class MdnsServiceImpl : public MdnsService {
   mdns::Mdns mdns_;
   std::unordered_map<std::string, std::unique_ptr<MdnsServiceSubscriptionImpl>>
       subscriptions_by_service_name_;
+  std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>
+      publishers_by_instance_full_name_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceImpl);
 };

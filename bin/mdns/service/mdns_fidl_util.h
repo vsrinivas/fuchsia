@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/socket_address.h"
 #include "lib/mdns/fidl/mdns.fidl.h"
 
@@ -48,6 +49,9 @@ class MdnsFidlUtil {
       const SocketAddress& socket_address);
 
   static IpAddress IpAddressFrom(const netstack::NetAddress* addr);
+
+  static std::unique_ptr<Mdns::Publication> Convert(
+      const MdnsPublicationPtr& publication_ptr);
 };
 
 }  // namespace mdns

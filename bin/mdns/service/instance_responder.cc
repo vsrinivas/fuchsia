@@ -9,40 +9,19 @@
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
 
 namespace mdns {
-
-InstanceResponder::InstanceResponder(
-    MdnsAgent::Host* host,
-    const std::string& service_name,
-    const std::string& instance_name,
-    fidl::InterfaceHandle<MdnsResponder> responder_handle)
-    : MdnsAgent(host),
-      service_name_(service_name),
-      instance_name_(instance_name),
-      instance_full_name_(
-          MdnsNames::LocalInstanceFullName(instance_name, service_name)),
-      mdns_responder_(MdnsResponderPtr::Create(std::move(responder_handle))) {
-  mdns_responder_.set_connection_error_handler([this]() {
-    mdns_responder_.set_connection_error_handler(nullptr);
-    mdns_responder_.reset();
-    RemoveSelf(instance_full_name_);
-  });
-}
 
 InstanceResponder::InstanceResponder(MdnsAgent::Host* host,
                                      const std::string& service_name,
                                      const std::string& instance_name,
-                                     MdnsPublicationPtr publication,
-                                     const PublishCallback& callback)
+                                     Mdns::Publisher* publisher)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
           MdnsNames::LocalInstanceFullName(instance_name, service_name)),
-      publication_(std::move(publication)),
-      callback_(callback) {}
+      publisher_(publisher) {}
 
 InstanceResponder::~InstanceResponder() {}
 
@@ -83,22 +62,13 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
 }
 
 void InstanceResponder::Quit() {
-  if (publication_) {
-    SendGoodbye(std::move(publication_));
-    RemoveSelf(instance_full_name_);
-    return;
-  }
-
-  should_quit_ = true;
-  GetAndSendPublication(false);
+  SendGoodbye();
+  RemoveSelf(instance_full_name_);
 }
 
-void InstanceResponder::UpdateStatus(MdnsResult result) {
-  if (mdns_responder_) {
-    mdns_responder_->UpdateStatus(result);
-  } else if (callback_) {
-    callback_(result);
-    callback_ = nullptr;
+void InstanceResponder::ReportSuccess(bool success) {
+  if (publisher_) {
+    publisher_->ReportSuccess(success);
   }
 }
 
@@ -146,36 +116,21 @@ void InstanceResponder::GetAndSendPublication(
     bool query,
     const std::string& subtype,
     const ReplyAddress& reply_address) const {
-  if (mdns_responder_) {
-    mdns_responder_->GetPublication(
-        query, subtype.empty() ? fidl::String() : fidl::String(subtype),
-        [ this, subtype,
-          reply_address = reply_address ](MdnsPublicationPtr publication) {
-          if (should_quit_) {
-            if (publication) {
-              SendGoodbye(std::move(publication));
-            }
-
-            RemoveSelf(instance_full_name_);
-            return;
-          }
-
-          if (publication) {
-            SendPublication(*publication, subtype, reply_address);
-          }
-        });
-
+  if (publisher_ == nullptr) {
     return;
   }
 
-  FXL_DCHECK(publication_);
-  if (subtype.empty()) {
-    SendPublication(*publication_, subtype, reply_address);
-  }
+  publisher_->GetPublication(query, subtype, [
+    this, subtype, reply_address = reply_address
+  ](std::unique_ptr<Mdns::Publication> publication) {
+    if (publication) {
+      SendPublication(*publication, subtype, reply_address);
+    }
+  });
 }
 
 void InstanceResponder::SendPublication(
-    const MdnsPublication& publication,
+    const Mdns::Publication& publication,
     const std::string& subtype,
     const ReplyAddress& reply_address) const {
   if (!subtype.empty()) {
@@ -191,14 +146,14 @@ void InstanceResponder::SendPublication(
   auto srv_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->time_to_live_ = publication.srv_ttl_seconds;
-  srv_resource->srv_.port_ = IpPort::From_uint16_t(publication.port);
+  srv_resource->srv_.port_ = publication.port_;
   srv_resource->srv_.target_ = host_full_name_;
   SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
 
   auto txt_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
   txt_resource->time_to_live_ = publication.txt_ttl_seconds;
-  txt_resource->txt_.strings_ = publication.text.To<std::vector<std::string>>();
+  txt_resource->txt_.strings_.clear();
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
   SendAddresses(MdnsResourceSection::kAdditional, reply_address);
@@ -218,17 +173,13 @@ void InstanceResponder::SendSubtypePtrRecord(
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::SendGoodbye(MdnsPublicationPtr publication) const {
-  FXL_DCHECK(publication);
+void InstanceResponder::SendGoodbye() const {
+  Mdns::Publication publication;
+  publication.ptr_ttl_seconds = 0;
+  publication.srv_ttl_seconds = 0;
+  publication.txt_ttl_seconds = 0;
 
-  // TXT will be sent, but with no strings.
-  publication_->text.reset();
-
-  publication_->ptr_ttl_seconds = 0;
-  publication_->srv_ttl_seconds = 0;
-  publication_->txt_ttl_seconds = 0;
-
-  SendPublication(*publication_);
+  SendPublication(publication);
 }
 
 }  // namespace mdns

@@ -239,4 +239,21 @@ IpAddress MdnsFidlUtil::IpAddressFrom(const netstack::NetAddress* addr) {
   }
 }
 
+// static
+std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
+    const MdnsPublicationPtr& publication_ptr) {
+  if (!publication_ptr) {
+    return nullptr;
+  }
+
+  auto publication = Mdns::Publication::Create(
+      IpPort::From_uint16_t(publication_ptr->port),
+      publication_ptr->text.To<std::vector<std::string>>());
+  publication->ptr_ttl_seconds = publication_ptr->ptr_ttl_seconds;
+  publication->srv_ttl_seconds = publication_ptr->srv_ttl_seconds;
+  publication->txt_ttl_seconds = publication_ptr->txt_ttl_seconds;
+
+  return publication;
+}
+
 }  // namespace mdns
