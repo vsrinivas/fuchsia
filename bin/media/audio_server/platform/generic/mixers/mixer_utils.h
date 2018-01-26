@@ -72,10 +72,9 @@ class SampleScaler<
     typename std::enable_if<(ScaleType == ScalerType::LT_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
-    // Round before shifting down
-    return static_cast<int32_t>(
-        ((static_cast<int64_t>(val) * scale) + Gain::kFractionalRoundValue) >>
-        Gain::kFractionalScaleBits);
+    // TODO(mpuryear): MTWN-80 Round before shifting down
+    return static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
+                                Gain::kFractionalScaleBits);
   }
 };
 
@@ -95,11 +94,12 @@ class SampleScaler<
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     using Limit = std::numeric_limits<int16_t>;
 
-    // Round before shifting down
-    val = static_cast<int32_t>(
-        ((static_cast<int64_t>(val) * scale) + Gain::kFractionalRoundValue) >>
-        Gain::kFractionalScaleBits);
+    // TODO(mpuryear): MTWN-80 Round before shifting down
+    val = static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
+                               Gain::kFractionalScaleBits);
 
+    // TODO(mpuryear): MTWN-82 No per-stream clamp (MTWN-83 Accumulate clamp)
+    // With this, we may be able to merge GT_UNITY and LT_UNITY specializations.
     if (unlikely(val > Limit::max())) {
       return Limit::max();
     } else if (unlikely(val < Limit::min())) {
@@ -140,6 +140,8 @@ class SrcReader<
  public:
   static constexpr size_t DstPerSrc = 1;
   static inline int32_t Read(const SType* src) {
+    // TODO(mpuryear): MTWN-81 Resolve asymmetry between neg and pos odds.
+    // Either divide instead of shift, or +1 (if positive) before shifting
     return (SampleNormalizer<SType>::Read(src + 0) +
             SampleNormalizer<SType>::Read(src + 1)) >>
            1;
@@ -171,6 +173,7 @@ class DstMixer<ScaleType,
   static inline constexpr int32_t Mix(int32_t dst,
                                       int32_t sample,
                                       Gain::AScale scale) {
+    // TODO(mpuryear): MTWN-83 Accumulator should clamp to int32 (also MTWN-82)
     return SampleScaler<ScaleType>::Scale(sample, scale) + dst;
   }
 };

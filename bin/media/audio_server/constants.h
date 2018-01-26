@@ -17,6 +17,13 @@ namespace audio {
 // Using 64-bit signed timestamps means that we have 51 bits of whole frame
 // units to work with.  At 192KHz, this allows for ~372.7 years of usable range
 // before rollover when starting from a frame counter of 0.
+//
+// With 12 bits of fractional position, we can only specify rates to 244 ppm.
+// Nominally mixing at 48 kHz, this equates to rate increments of ~12 Hz. It
+// also significantly limits our interpolation accuracy: fractional position has
+// an inherent error of 2^-12, so interpolated values have potential worst-case
+// error of [pos_error * max_intersample_delta], or the bottom 4 bits of signal.
+// TODO(mpuryear): MTWN-86 Consider increasing our fractional position precision
 constexpr uint32_t kPtsFractionalBits = 12;
 
 // A compile time constant which is guaranteed to never be used as a valid

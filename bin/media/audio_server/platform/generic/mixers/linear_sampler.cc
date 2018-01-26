@@ -45,12 +45,14 @@ class LinearSamplerImpl : public LinearSampler {
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
     // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
+    // TODO(mpuryear): MTWN-74 Add rounding before the shift-down.
     return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
   }
 
   int32_t filter_data_[2 * DChCount];
 };
 
+// TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
 template <typename SType>
 class NxNLinearSamplerImpl : public LinearSampler {
  public:
@@ -88,6 +90,8 @@ class NxNLinearSamplerImpl : public LinearSampler {
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
     // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
+    // TODO(mpuryear): MTWN-74 Add rounding before the shift-down.
+    // TODO(mpuryear): MTWN-75 minimize LinearSamplerImpl code duplication
     return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
   }
 
@@ -167,6 +171,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
 
       soff += avail * frac_step_size;
       doff += avail;
+      // Note: if "accumulate" is NOT set, we should have cleared the buffer
+      // (but didn't). This likely isn't worth our effort- StandardOutputBase::
+      // Process always zeroes a buffer before using it to mix.
+      // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
 
@@ -179,7 +187,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       int32_t* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
+        // The following line is incorrect if fractional src_pos is non-zero!
         int32_t sample = SR::Read(src + S + (D / SR::DstPerSrc));
+        // TODO(mpuryear): MTWN-77 Interpolate here, don't point-sample.
+
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
     }
@@ -196,6 +207,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     for (size_t D = 0; D < DChCount; ++D) {
       filter_data_[D] = SR::Read(src + S + (D / SR::DstPerSrc));
     }
+    // TODO(mpuryear): MTWN-78 Return TRUE if we complete both dst and src?
+    // Should we hold a buf if we consume its last frame but don't need more?
     return (doff < dst_frames);
   }
 
@@ -429,10 +442,8 @@ static inline MixerPtr SelectNxNLSM(
     const AudioMediaTypeDetailsPtr& src_format) {
   switch (src_format->sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
-      FXL_LOG(INFO) << "Selected NxN LinearSampler (u8)";
       return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format->channels));
     case AudioSampleFormat::SIGNED_16:
-      FXL_LOG(INFO) << "Selected NxN LinearSampler (s16)";
       return MixerPtr(new NxNLinearSamplerImpl<int16_t>(src_format->channels));
     default:
       return nullptr;

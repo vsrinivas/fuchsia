@@ -1,6 +1,23 @@
-#Copyright 2016 The Fuchsia Authors.All rights reserved.
-#Use of this source code is governed by a BSD - style license that can be
-#found in the LICENSE file.
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/build/test.gni")
+
+source_set("audio_mixer_lib") {
+  sources = [
+    "gain.cc",
+    "platform/generic/mixer.cc",
+    "platform/generic/mixers/linear_sampler.cc",
+    "platform/generic/mixers/no_op.cc",
+    "platform/generic/mixers/point_sampler.cc",
+    "platform/generic/output_formatter.cc",
+  ]
+
+  public_deps = [
+    "//garnet/bin/media/fidl",
+  ]
+}
 
 executable("audio_server") {
   sources =
@@ -21,14 +38,8 @@ executable("audio_server") {
         "audio_renderer_impl.cc",
         "audio_server_impl.cc",
         "driver_ring_buffer.cc",
-        "gain.cc",
         "main.cc",
         "platform/driver_output.cc",
-        "platform/generic/mixer.cc",
-        "platform/generic/mixers/linear_sampler.cc",
-        "platform/generic/mixers/no_op.cc",
-        "platform/generic/mixers/point_sampler.cc",
-        "platform/generic/output_formatter.cc",
         "platform/generic/standard_output_base.cc",
         "platform/generic/throttle_output.cc",
         "utils.cc",
@@ -41,6 +52,7 @@ executable("audio_server") {
 
       deps = [
         "//garnet/bin/media/audio",
+        "//garnet/bin/media/audio_server:audio_mixer_lib",
         "//garnet/bin/media/fidl",
         "//garnet/bin/media/util",
         "//garnet/lib/media/wav_writer",
@@ -56,4 +68,22 @@ executable("audio_server") {
         "//zircon/public/lib/fbl",
         "//zircon/public/lib/zx",
       ]
+
+}
+
+test("tests") {
+  output_name = "audio_mixer_tests"
+
+  sources = [
+    "test/mixer_tests_shared.cc",
+    "test/audio_analysis.cc",
+    "test/audio_analysis_tests.cc",
+    "test/mixer_transparency_tests.cc",
+    "test/mixer_gain_tests.cc",
+    "test/mixer_resampler_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/media/audio_server:audio_mixer_lib"
+  ]
 }

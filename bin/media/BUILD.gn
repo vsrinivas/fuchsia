@@ -61,6 +61,7 @@ package("tests") {
 
   deps = [
     "//garnet/bin/media/audio:tests",
+    "//garnet/bin/media/audio_server:tests",
     "//garnet/bin/media/demux:tests",
     "//garnet/bin/media/media_service:tests",
     "//garnet/bin/media/net_media_service:tests",
@@ -71,6 +72,10 @@ package("tests") {
   ]
 
   tests = [
+    {
+      name = "audio_mixer_tests"
+    },
+
     {
       name = "media_audio_tests"
     },

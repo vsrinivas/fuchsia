@@ -32,8 +32,10 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
-    // Convert to signed, round, reduce to 8-bit ==> +0x8000, +0x0080, >>8
-    return static_cast<DType>((sample + 0x8080) >> 8);
+    // TODO(mpuryear): MTWN-84: Round upon conversion; don't floor/truncate.
+    // For now, reverting a previous fix (round by adding 8080, not 8000),
+    // until mechanisms are in place to quantify the effect of the improvement.
+    return static_cast<DType>((sample + 0x8000) >> 8);
   }
 };
 
@@ -112,8 +114,7 @@ OutputFormatterPtr OutputFormatter::Select(
     case AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
     default:
-      FXL_LOG(ERROR) << "Unsupported output sample format "
-                     << format->sample_format;
+      FXL_LOG(ERROR) << "Unsupported output format " << format->sample_format;
       return nullptr;
   }
 }

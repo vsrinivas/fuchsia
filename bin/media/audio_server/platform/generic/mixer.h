@@ -93,6 +93,9 @@ class Mixer {
   // @return True if the mixer is finished with this source data and will not
   // need it in the future.  False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
+  //
+  // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
+  // src_frames, as number of frames was never intended to be fractional.
   virtual bool Mix(int32_t* dst,
                    uint32_t dst_frames,
                    uint32_t* dst_offset,

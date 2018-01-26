@@ -35,10 +35,13 @@ class Gain {
   static constexpr float kMinGain = AudioRenderer::kMutedGain;
   static constexpr float kMaxGain = 24.0f;
 
-  // Set the renderer's contribution to a link's overall software gain control.
-  // With a 4.28 fixed point internal amplitude scalar, legal values are on the
-  // range from [-inf, 24.0].  Safe to call from any thread, but should only
-  // really be called from the main message loop thread.
+  // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
+  // Some comments below say 'should' (i.e. recommendation, not requirement).
+
+  // Set the renderer's contribution to a link's overall software gain
+  // control. With a 4.28 fixed point internal amplitude scalar, legal values
+  // are on the range from [-inf, 24.0].  Safe to call from any thread, but
+  // should only really be called from the main message loop thread.
   void SetRendererGain(float db_gain) { db_target_rend_gain_.store(db_gain); }
 
   // Get the current gain's amplitude scalar, given the current audio output's

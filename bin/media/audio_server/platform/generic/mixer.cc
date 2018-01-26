@@ -27,6 +27,9 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
   // We should always have a source format.
   FXL_DCHECK(src_format);
 
+  // TODO(mpuryear): requests that include AudioSampleFormat::NONE or ::ANY
+  // perhaps should ASSERT, since obtaining a functional mixer is never possible
+
   // If we don't have a destination format, just stick with no-op.  This is
   // probably the ThrottleOutput we are picking a mixer for.
   if (!optional_dst_format) {
