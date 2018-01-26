@@ -305,7 +305,19 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
               .build();
   FindModules(std::move(query));
   ASSERT_EQ(1u, results().size());
-  EXPECT_EQ("module2", results()[0]->module_id);
+  auto& res = results()[0];
+  EXPECT_EQ("module2", res->module_id);
+
+  // Verify that |create_chain_info| is set up correctly.
+  ASSERT_TRUE(res->create_chain_info);
+  EXPECT_EQ(1lu, res->create_chain_info->property_info.size());
+  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
+  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(start->is_create_link());
+  EXPECT_EQ(modular::EntityReferenceToJson(location_entity),
+            start->get_create_link()->initial_data);
+  // TODO(thatguy): Populate |allowed_types| correctly.
+  EXPECT_FALSE(start->get_create_link()->allowed_types);
 }
 
 TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
@@ -339,20 +351,39 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
 
   // Same thing as above, but we'll use JSON with embedded type information and
   // should see the same exactly results.
+  const auto startJson = R"({
+        "@type": [ "foo", "tangoTown" ],
+        "thecake": "is a lie"
+      })";
+  const auto destinationJson = R"({
+        "@type": "baz",
+        "really": "it is"
+      })";
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddJsonNoun("start", R"({
-                      "@type": [ "foo", "tangoTown" ],
-                      "thecake": "is a lie"
-                    })")
-                   .AddJsonNoun("destination", R"({
-                      "@type": "baz",
-                      "really": "it is"
-                    })")
+                   .AddJsonNoun("start", startJson)
+                   .AddJsonNoun("destination", destinationJson)
                    .build();
   FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
-  // TODO(thatguy): Validate that the initial_nouns content is correct.
+  auto& res = results()[0];
+  EXPECT_EQ("module1", res->module_id);
+
+  // Verify that |create_chain_info| is set up correctly.
+  ASSERT_TRUE(res->create_chain_info);
+  EXPECT_EQ(2lu, res->create_chain_info->property_info.size());
+  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
+  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(start->is_create_link());
+  EXPECT_EQ(startJson, start->get_create_link()->initial_data);
+  // TODO(thatguy): Populate |allowed_types| correctly.
+  EXPECT_FALSE(start->get_create_link()->allowed_types);
+
+  ASSERT_TRUE(res->create_chain_info->property_info["destination"]);
+  auto& destination = res->create_chain_info->property_info["destination"];
+  ASSERT_TRUE(destination->is_create_link());
+  EXPECT_EQ(destinationJson, destination->get_create_link()->initial_data);
+  // TODO(thatguy): Populate |allowed_types| correctly.
+  EXPECT_FALSE(destination->get_create_link()->allowed_types);
 }
 
 TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
@@ -387,7 +418,18 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
               .build();
   FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
+  auto& res = results()[0];
+  EXPECT_EQ("module1", res->module_id);
+
+  // Verify that |create_chain_info| is set up correctly.
+  ASSERT_TRUE(res->create_chain_info);
+  EXPECT_EQ(1lu, res->create_chain_info->property_info.size());
+  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
+  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(start->is_link_path());
+  EXPECT_EQ("a", start->get_link_path()->module_path[0]);
+  EXPECT_EQ("b", start->get_link_path()->module_path[1]);
+  EXPECT_EQ("c", start->get_link_path()->link_name);
 }
 
 TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
