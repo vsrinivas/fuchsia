@@ -43,7 +43,7 @@ static pbus_dev_t display_dev = {
     .name = "display",
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM,
-    .did = PDEV_PID_VIM_DISPLAY,
+    .did = PDEV_DID_VIM_DISPLAY,
     .mmios = vim_display_mmios,
     .mmio_count = countof(vim_display_mmios),
 };

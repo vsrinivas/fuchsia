@@ -43,6 +43,6 @@ __BEGIN_CDECLS;
 #define PDEV_VID_KHADAS             4
 #define PDEV_PID_VIM                1
 #define PDEV_PID_VIM2               2
-#define PDEV_PID_VIM_DISPLAY        1
+#define PDEV_DID_VIM_DISPLAY        1
 
 __END_CDECLS;
