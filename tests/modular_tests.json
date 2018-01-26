@@ -19,22 +19,6 @@
       }
     },
     {
-      "name":"component_context",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/test/modular_tests/component_context_test_module",
-      "copy":{
-        "/system/test/modular_tests":[
-          "component_context_test_module",
-          "component_context_test_one_agent",
-          "component_context_test_agent2",
-          "component_context_unstoppable_agent"
-        ]
-      }
-    },
-    {
-      "name":"context_engine",
-      "exec":"/system/test/maxwell/context_engine_test"
-    },
-    {
       "name":"context_index",
       "exec":"/system/test/maxwell_unittests"
     },
