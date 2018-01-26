@@ -57,9 +57,6 @@
 
 extern paddr_t boot_structure_paddr; // Defined in start.S.
 
-static paddr_t ramdisk_start_phys = 0;
-static paddr_t ramdisk_end_phys = 0;
-
 static void* ramdisk_base;
 static size_t ramdisk_size;
 
@@ -120,19 +117,16 @@ void platform_panic_start(void) {
 }
 
 // Reads Linux device tree to initialize command line and return ramdisk location
-static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
+static void read_device_tree(void *fdt, void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
+    paddr_t ramdisk_start_phys = 0;
+    paddr_t ramdisk_end_phys = 0;
+
     if (ramdisk_base)
         *ramdisk_base = nullptr;
     if (ramdisk_size)
         *ramdisk_size = 0;
     if (mem_size)
         *mem_size = 0;
-
-    void* fdt = paddr_to_physmap(boot_structure_paddr);
-    if (!fdt) {
-        printf("%s: could not find device tree\n", __FUNCTION__);
-        return;
-    }
 
     if (fdt_check_header(fdt) < 0) {
         printf("%s fdt_check_header failed\n", __FUNCTION__);
@@ -550,13 +544,11 @@ void platform_early_init(void) {
     } else if (is_zircon_boot_header(boot_structure_kvaddr)) {
         efi_zircon_hdr_t* hdr = (efi_zircon_hdr_t*)boot_structure_kvaddr;
         cmdline_append(hdr->cmd_line);
-        ramdisk_start_phys = hdr->ramdisk_base_phys;
+        ramdisk_base = paddr_to_physmap(hdr->ramdisk_base_phys);
         ramdisk_size = hdr->ramdisk_size;
-        ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
-        ramdisk_base = paddr_to_physmap(ramdisk_start_phys);
     } else {
         // on qemu we read arena size from the device tree
-        read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
+        read_device_tree(boot_structure_kvaddr, &ramdisk_base, &ramdisk_size, &arena_size);
         // Some legacy bootloaders do not properly set linux,initrd-end
         // Pull the ramdisk size directly from the bootdata container
         //   now that we have the base to ensure that the size is valid.
@@ -568,15 +560,21 @@ void platform_early_init(void) {
         panic("no ramdisk!\n");
     }
 
-    // add the ramdisk to the boot reserve memory list
-    dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
-            ramdisk_start_phys, ramdisk_end_phys - 1);
-
-    boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
-
+    // walk the bootdata structure, looking for MDI and command line
+    // if MDI is found, process it. this will likely initialize platform drivers
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
+
+    // Serial port should be active now
+
     // Read cmdline after processing bootdata, which may contain cmdline data.
     halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
+
+    // add the ramdisk to the boot reserve memory list
+    paddr_t ramdisk_start_phys = physmap_to_paddr(ramdisk_base);
+    paddr_t ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
+    dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
+            ramdisk_start_phys, ramdisk_end_phys - 1);
+    boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
 
     /* add the main memory arena */
     if (arena_size) {
