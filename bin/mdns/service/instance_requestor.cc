@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mdns/service/instance_subscriber.h"
+#include "garnet/bin/mdns/service/instance_requestor.h"
 
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/fxl/logging.h"
@@ -16,26 +16,34 @@ static constexpr fxl::TimeDelta kMaxQueryInterval =
 
 }  // namespace
 
-InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
-                                       const std::string& service_name,
-                                       const ServiceInstanceCallback& callback)
+InstanceRequestor::InstanceRequestor(MdnsAgent::Host* host,
+                                     const std::string& service_name)
     : MdnsAgent(host),
       service_name_(service_name),
       service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
-      callback_(callback),
       question_(
-          std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {
-  FXL_DCHECK(callback_);
+          std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
+
+InstanceRequestor::~InstanceRequestor() {}
+
+void InstanceRequestor::AddSubscriber(Mdns::Subscriber* subscriber) {
+  subscribers_.insert(subscriber);
+  ReportAllDiscoveries(subscriber);
 }
 
-InstanceSubscriber::~InstanceSubscriber() {}
+void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
+  subscribers_.erase(subscriber);
+  if (subscribers_.empty()) {
+    Quit();
+  }
+}
 
-void InstanceSubscriber::Start(const std::string& host_full_name) {
+void InstanceRequestor::Start(const std::string& host_full_name) {
   SendQuery();
 }
 
-void InstanceSubscriber::ReceiveResource(const DnsResource& resource,
-                                         MdnsResourceSection section) {
+void InstanceRequestor::ReceiveResource(const DnsResource& resource,
+                                        MdnsResourceSection section) {
   switch (resource.type_) {
     case DnsType::kPtr:
       if (resource.name_.dotted_string_ == service_full_name_) {
@@ -75,8 +83,8 @@ void InstanceSubscriber::ReceiveResource(const DnsResource& resource,
   }
 }
 
-void InstanceSubscriber::EndOfMessage() {
-  // Use the callback to report updates.
+void InstanceRequestor::EndOfMessage() {
+  // Report updates.
   for (auto& pair : instance_infos_by_full_name_) {
     InstanceInfo& instance_info = pair.second;
 
@@ -103,10 +111,24 @@ void InstanceSubscriber::EndOfMessage() {
     }
 
     // Something has changed.
-    callback_(service_name_, instance_info.instance_name_,
-              SocketAddress(target_info.v4_address_, instance_info.port_),
-              SocketAddress(target_info.v6_address_, instance_info.port_),
-              instance_info.text_);
+    if (instance_info.new_) {
+      instance_info.new_ = false;
+      for (auto subscriber : subscribers_) {
+        subscriber->InstanceDiscovered(
+            service_name_, instance_info.instance_name_,
+            SocketAddress(target_info.v4_address_, instance_info.port_),
+            SocketAddress(target_info.v6_address_, instance_info.port_),
+            instance_info.text_);
+      }
+    } else {
+      for (auto subscriber : subscribers_) {
+        subscriber->InstanceChanged(
+            service_name_, instance_info.instance_name_,
+            SocketAddress(target_info.v4_address_, instance_info.port_),
+            SocketAddress(target_info.v6_address_, instance_info.port_),
+            instance_info.text_);
+      }
+    }
 
     instance_info.dirty_ = false;
   }
@@ -123,9 +145,46 @@ void InstanceSubscriber::EndOfMessage() {
       iter = target_infos_by_full_name_.erase(iter);
     }
   }
+
+  for (auto subscriber : subscribers_) {
+    subscriber->UpdatesComplete();
+  }
 }
 
-void InstanceSubscriber::SendQuery() {
+void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
+  bool updates_happened = false;
+
+  for (auto& pair : instance_infos_by_full_name_) {
+    InstanceInfo& instance_info = pair.second;
+
+    if (instance_info.target_.empty()) {
+      // We haven't yet seen an SRV record for this instance.
+      continue;
+    }
+
+    auto iter = target_infos_by_full_name_.find(instance_info.target_);
+    FXL_DCHECK(iter != target_infos_by_full_name_.end());
+    TargetInfo& target_info = iter->second;
+
+    if (!target_info.v4_address_ && !target_info.v6_address_) {
+      // No addresses yet.
+      continue;
+    }
+
+    updates_happened = true;
+    subscriber->InstanceDiscovered(
+        service_name_, instance_info.instance_name_,
+        SocketAddress(target_info.v4_address_, instance_info.port_),
+        SocketAddress(target_info.v6_address_, instance_info.port_),
+        instance_info.text_);
+  }
+
+  if (updates_happened) {
+    subscriber->UpdatesComplete();
+  }
+}
+
+void InstanceRequestor::SendQuery() {
   SendQuestion(question_);
 
   if (query_delay_ == fxl::TimeDelta::Zero()) {
@@ -141,8 +200,8 @@ void InstanceSubscriber::SendQuery() {
                   fxl::TimePoint::Now() + query_delay_);
 }
 
-void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,
-                                            MdnsResourceSection section) {
+void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
+                                           MdnsResourceSection section) {
   const std::string& instance_full_name =
       resource.ptr_.pointer_domain_name_.dotted_string_;
 
@@ -168,9 +227,9 @@ void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceSubscriber::ReceiveSrvResource(const DnsResource& resource,
-                                            MdnsResourceSection section,
-                                            InstanceInfo* instance_info) {
+void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource,
+                                           MdnsResourceSection section,
+                                           InstanceInfo* instance_info) {
   if (resource.time_to_live_ == 0) {
     RemoveInstance(resource.name_.dotted_string_);
     return;
@@ -194,9 +253,9 @@ void InstanceSubscriber::ReceiveSrvResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceSubscriber::ReceiveTxtResource(const DnsResource& resource,
-                                            MdnsResourceSection section,
-                                            InstanceInfo* instance_info) {
+void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource,
+                                           MdnsResourceSection section,
+                                           InstanceInfo* instance_info) {
   if (resource.time_to_live_ == 0) {
     if (!instance_info->text_.empty()) {
       instance_info->text_.clear();
@@ -221,9 +280,9 @@ void InstanceSubscriber::ReceiveTxtResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceSubscriber::ReceiveAResource(const DnsResource& resource,
-                                          MdnsResourceSection section,
-                                          TargetInfo* target_info) {
+void InstanceRequestor::ReceiveAResource(const DnsResource& resource,
+                                         MdnsResourceSection section,
+                                         TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v4_address_) {
       target_info->v4_address_ = IpAddress::kInvalid;
@@ -241,9 +300,9 @@ void InstanceSubscriber::ReceiveAResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceSubscriber::ReceiveAaaaResource(const DnsResource& resource,
-                                             MdnsResourceSection section,
-                                             TargetInfo* target_info) {
+void InstanceRequestor::ReceiveAaaaResource(const DnsResource& resource,
+                                            MdnsResourceSection section,
+                                            TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
     if (target_info->v6_address_) {
       target_info->v6_address_ = IpAddress::kInvalid;
@@ -261,12 +320,13 @@ void InstanceSubscriber::ReceiveAaaaResource(const DnsResource& resource,
   Renew(resource);
 }
 
-void InstanceSubscriber::RemoveInstance(const std::string& instance_full_name) {
+void InstanceRequestor::RemoveInstance(const std::string& instance_full_name) {
   auto iter = instance_infos_by_full_name_.find(instance_full_name);
   if (iter != instance_infos_by_full_name_.end()) {
-    callback_(service_name_, iter->second.instance_name_,
-              SocketAddress::kInvalid, SocketAddress::kInvalid,
-              std::vector<std::string>());
+    for (auto subscriber : subscribers_) {
+      subscriber->InstanceLost(service_name_, iter->second.instance_name_);
+    }
+
     instance_infos_by_full_name_.erase(iter);
   }
 }

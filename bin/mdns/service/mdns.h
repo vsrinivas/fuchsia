@@ -18,7 +18,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
 
 namespace mdns {
 
@@ -41,6 +40,47 @@ class Mdns : public MdnsAgent::Host {
     uint32_t ptr_ttl_seconds = 4500;  // default 75 minutes
     uint32_t srv_ttl_seconds = 120;   // default 2 minutes
     uint32_t txt_ttl_seconds = 4500;  // default 75 minutes
+  };
+
+  // Abstract base class for client-supplied subscriber.
+  class Subscriber {
+   public:
+    virtual ~Subscriber();
+
+    // Unsubscribes from the service. If this |Subscriber| is already
+    // unsubscribed, this method does nothing.
+    void Unsubscribe();
+
+    // Called when a new instance is discovered.
+    virtual void InstanceDiscovered(const std::string& service,
+                                    const std::string& instance,
+                                    const SocketAddress& v4_address,
+                                    const SocketAddress& v6_address,
+                                    const std::vector<std::string>& text) = 0;
+
+    // Called when a previously discovered instance changes addresses or text.
+    virtual void InstanceChanged(const std::string& service,
+                                 const std::string& instance,
+                                 const SocketAddress& v4_address,
+                                 const SocketAddress& v6_address,
+                                 const std::vector<std::string>& text) = 0;
+
+    // Called when an instance is lost.
+    virtual void InstanceLost(const std::string& service,
+                              const std::string& instance) = 0;
+
+    // Called to indicate that instance changes are complete for now.
+    virtual void UpdatesComplete() = 0;
+
+   protected:
+    Subscriber() {}
+
+   private:
+    void Connect(std::shared_ptr<InstanceRequestor> instance_requestor);
+
+    std::shared_ptr<InstanceRequestor> instance_subscriber_;
+
+    friend class Mdns;
   };
 
   // Abstract base class for client-supplied publisher.
@@ -92,13 +132,6 @@ class Mdns : public MdnsAgent::Host {
       std::function<void(const std::string& host_name,
                          const IpAddress& v4_address,
                          const IpAddress& v6_address)>;
-  using ServiceInstanceCallback =
-      std::function<void(const std::string& service,
-                         const std::string& instance,
-                         const SocketAddress& v4_address,
-                         const SocketAddress& v6_address,
-                         const std::vector<std::string>& text)>;
-  using PublishCallback = std::function<void(MdnsResult result)>;
 
   Mdns();
 
@@ -129,17 +162,18 @@ class Mdns : public MdnsAgent::Host {
                        fxl::TimePoint timeout,
                        const ResolveHostNameCallback& callback);
 
+  // Subscribes to the specified service. The subscription is cancelled when
+  // the subscriber is deleted or its |Unsubscribe| method is called.
+  // Multiple subscriptions may be created for a given service name.
+  void SubscribeToService(const std::string& service_name,
+                          Subscriber* subscriber);
+
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
   // is deleted or its |Unpublish| method is called.
   bool PublishServiceInstance(const std::string& service_name,
                               const std::string& instance_name,
                               Publisher* publisher);
-
-  // Registers interest in the specified service.
-  std::shared_ptr<MdnsAgent> SubscribeToService(
-      const std::string& service_name,
-      const ServiceInstanceCallback& callback);
 
  private:
   enum class State {
@@ -245,6 +279,8 @@ class Mdns : public MdnsAgent::Host {
       outbound_messages_by_reply_address_;
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
+  std::unordered_map<std::string, std::shared_ptr<InstanceRequestor>>
+      instance_subscribers_by_service_name_;
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>
       instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;

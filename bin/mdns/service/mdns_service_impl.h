@@ -9,7 +9,7 @@
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/fidl/mdns.fidl.h"
 
@@ -55,35 +55,41 @@ class MdnsServiceImpl : public MdnsService {
   void SetVerbose(bool value) override;
 
  private:
-  class MdnsServiceSubscriptionImpl : public MdnsServiceSubscription {
+  class Subscriber : public Mdns::Subscriber, public MdnsServiceSubscription {
    public:
-    MdnsServiceSubscriptionImpl(MdnsServiceImpl* owner,
-                                const std::string& service_name);
+    Subscriber(fidl::InterfaceRequest<MdnsServiceSubscription> request,
+               const fxl::Closure& deleter);
 
-    ~MdnsServiceSubscriptionImpl() override;
+    ~Subscriber() override;
 
-    void AddBinding(
-        fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request);
+    // Mdns::Subscriber implementation:
+    void InstanceDiscovered(const std::string& service,
+                            const std::string& instance,
+                            const SocketAddress& v4_address,
+                            const SocketAddress& v6_address,
+                            const std::vector<std::string>& text) override;
 
-    // Sets a callback for a in-proc party. This is used by |NetConnectorImpl|
-    // to discover Fuchsia devices.
-    void SetCallback(const Mdns::ServiceInstanceCallback& callback) {
-      callback_ = callback;
-    }
+    void InstanceChanged(const std::string& service,
+                         const std::string& instance,
+                         const SocketAddress& v4_address,
+                         const SocketAddress& v6_address,
+                         const std::vector<std::string>& text) override;
+
+    void InstanceLost(const std::string& service,
+                      const std::string& instance) override;
+
+    void UpdatesComplete() override;
 
     // MdnsServiceSubscription implementation.
     void GetInstances(uint64_t version_last_seen,
                       const GetInstancesCallback& callback) override;
 
    private:
-    MdnsServiceImpl* owner_;
-    std::shared_ptr<MdnsAgent> agent_;
-    fidl::BindingSet<MdnsServiceSubscription> bindings_;
-    Mdns::ServiceInstanceCallback callback_ = nullptr;
+    fidl::Binding<MdnsServiceSubscription> binding_;
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
     std::unordered_map<std::string, MdnsServiceInstancePtr> instances_by_name_;
 
-    FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceSubscriptionImpl);
+    FXL_DISALLOW_COPY_AND_ASSIGN(Subscriber);
   };
 
   // Publisher for PublishServiceInstance.
@@ -135,8 +141,8 @@ class MdnsServiceImpl : public MdnsService {
   app::ApplicationContext* application_context_;
   fidl::BindingSet<MdnsService> bindings_;
   mdns::Mdns mdns_;
-  std::unordered_map<std::string, std::unique_ptr<MdnsServiceSubscriptionImpl>>
-      subscriptions_by_service_name_;
+  size_t next_subscriber_id_ = 0;
+  std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;
   std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>
       publishers_by_instance_full_name_;
 

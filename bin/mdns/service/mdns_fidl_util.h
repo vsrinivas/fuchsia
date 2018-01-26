@@ -22,7 +22,7 @@ class MdnsFidlUtil {
       const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
-  static bool UpdateServiceInstance(
+  static void UpdateServiceInstance(
       const MdnsServiceInstancePtr& service_instance,
       const SocketAddress& v4_address,
       const SocketAddress& v6_address,
@@ -38,14 +38,6 @@ class MdnsFidlUtil {
       const SocketAddress& socket_address);
 
   static netstack::SocketAddressPtr CreateSocketAddressIPv6(
-      const SocketAddress& socket_address);
-
-  static bool UpdateSocketAddressIPv4(
-      const netstack::SocketAddressPtr& net_address,
-      const SocketAddress& socket_address);
-
-  static bool UpdateSocketAddressIPv6(
-      const netstack::SocketAddressPtr& net_address,
       const SocketAddress& socket_address);
 
   static IpAddress IpAddressFrom(const netstack::NetAddress* addr);

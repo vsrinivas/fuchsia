@@ -7,7 +7,9 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
+#include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/socket_address.h"
 #include "lib/fxl/time/time_delta.h"
@@ -15,21 +17,19 @@
 namespace mdns {
 
 // Searches for instances of a service type.
-class InstanceSubscriber : public MdnsAgent {
+class InstanceRequestor : public MdnsAgent {
  public:
-  using ServiceInstanceCallback =
-      std::function<void(const std::string& service,
-                         const std::string& instance,
-                         const SocketAddress& v4_address,
-                         const SocketAddress& v6_address,
-                         const std::vector<std::string>& text)>;
+  // Creates an |InstanceRequestor|.
+  InstanceRequestor(MdnsAgent::Host* host, const std::string& service_name);
 
-  // Creates an |InstanceSubscriber|.
-  InstanceSubscriber(MdnsAgent::Host* host,
-                     const std::string& service_name,
-                     const ServiceInstanceCallback& callback);
+  ~InstanceRequestor() override;
 
-  ~InstanceSubscriber() override;
+  // Adds the subscriber.
+  void AddSubscriber(Mdns::Subscriber* subscriber);
+
+  // Removes the subscriber. If it's the last subscriber, this
+  // |InstanceRequestor| is destroyed.
+  void RemoveSubscriber(Mdns::Subscriber* subscriber);
 
   // MdnsAgent overrides.
   void Start(const std::string& host_full_name) override;
@@ -45,6 +45,7 @@ class InstanceSubscriber : public MdnsAgent {
     std::string target_;
     IpPort port_;
     std::vector<std::string> text_;
+    bool new_ = true;
     bool dirty_ = true;
   };
 
@@ -54,6 +55,9 @@ class InstanceSubscriber : public MdnsAgent {
     bool keep_ = false;
     bool dirty_ = false;
   };
+
+  // Report all known instances to the indicated subscriber.
+  void ReportAllDiscoveries(Mdns::Subscriber* subscriber);
 
   // Sends a query for instances and schedules the next query, as appropriate.
   void SendQuery();
@@ -81,7 +85,7 @@ class InstanceSubscriber : public MdnsAgent {
 
   std::string service_name_;
   std::string service_full_name_;
-  ServiceInstanceCallback callback_;
+  std::unordered_set<Mdns::Subscriber*> subscribers_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
   fxl::TimeDelta query_delay_;

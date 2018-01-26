@@ -13,8 +13,8 @@
 #include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/host_name_resolver.h"
 #include "garnet/bin/mdns/service/instance_prober.h"
+#include "garnet/bin/mdns/service/instance_requestor.h"
 #include "garnet/bin/mdns/service/instance_responder.h"
-#include "garnet/bin/mdns/service/instance_subscriber.h"
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/service/resource_renewer.h"
@@ -133,17 +133,24 @@ void Mdns::ResolveHostName(const std::string& host_name,
       std::make_shared<HostNameResolver>(this, host_name, timeout, callback));
 }
 
-std::shared_ptr<MdnsAgent> Mdns::SubscribeToService(
-    const std::string& service_name,
-    const ServiceInstanceCallback& callback) {
+void Mdns::SubscribeToService(const std::string& service_name,
+                              Subscriber* subscriber) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FXL_DCHECK(callback);
+  FXL_DCHECK(subscriber);
 
-  auto agent =
-      std::make_shared<InstanceSubscriber>(this, service_name, callback);
+  std::shared_ptr<InstanceRequestor> agent;
 
-  AddAgent(agent);
-  return agent;
+  auto iter = instance_subscribers_by_service_name_.find(service_name);
+  if (iter == instance_subscribers_by_service_name_.end()) {
+    agent = std::make_shared<InstanceRequestor>(this, service_name);
+    instance_subscribers_by_service_name_.emplace(service_name, agent);
+    AddAgent(agent);
+  } else {
+    agent = iter->second;
+  }
+
+  subscriber->Connect(agent);
+  agent->AddSubscriber(subscriber);
 }
 
 bool Mdns::PublishServiceInstance(const std::string& service_name,
@@ -203,8 +210,8 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
         agents_awaiting_start_.clear();
       });
 
-  // We don't use |AddAgent| here, because agents added that way don't actually
-  // participate until we're done probing for host name conflicts.
+  // We don't use |AddAgent| here, because agents added that way don't
+  // actually participate until we're done probing for host name conflicts.
   agents_.emplace(address_prober.get(), address_prober);
   address_prober->Start(host_full_name_);
   SendMessages();
@@ -388,6 +395,7 @@ void Mdns::ReceiveQuestion(const DnsQuestion& question,
   for (auto& pair : agents_) {
     pair.second->ReceiveQuestion(question, reply_address);
   }
+
   DALLOW_AGENT_REMOVAL();
 }
 
@@ -399,6 +407,7 @@ void Mdns::ReceiveResource(const DnsResource& resource,
   for (auto& pair : agents_) {
     pair.second->ReceiveResource(resource, section);
   }
+
   DALLOW_AGENT_REMOVAL();
 }
 
@@ -444,6 +453,25 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
   publication->port_ = port;
   publication->text_ = text;
   return std::unique_ptr<Mdns::Publication>(publication);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Mdns::Subscriber::~Subscriber() {
+  Unsubscribe();
+}
+
+void Mdns::Subscriber::Connect(
+    std::shared_ptr<InstanceRequestor> instance_requestor) {
+  FXL_DCHECK(instance_requestor);
+  instance_subscriber_ = instance_requestor;
+}
+
+void Mdns::Subscriber::Unsubscribe() {
+  if (instance_subscriber_) {
+    instance_subscriber_->RemoveSubscriber(this);
+    instance_subscriber_ = nullptr;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

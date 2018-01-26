@@ -61,21 +61,17 @@ void MdnsServiceImpl::SubscribeToService(
     const fidl::String& service_name,
     fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    subscription_request = nullptr;
     return;
   }
 
-  auto iter = subscriptions_by_service_name_.find(service_name);
+  size_t id = next_subscriber_id_++;
+  auto subscriber = std::make_unique<Subscriber>(
+      std::move(subscription_request),
+      [this, id]() { subscribers_by_id_.erase(id); });
 
-  if (iter == subscriptions_by_service_name_.end()) {
-    auto pair = subscriptions_by_service_name_.emplace(
-        service_name,
-        std::make_unique<MdnsServiceSubscriptionImpl>(this, service_name));
-    FXL_DCHECK(pair.second);
-    iter = pair.first;
-  }
+  mdns_.SubscribeToService(service_name, subscriber.get());
 
-  iter->second->AddBinding(std::move(subscription_request));
+  subscribers_by_id_.emplace(id, std::move(subscriber));
 }
 
 void MdnsServiceImpl::PublishServiceInstance(
@@ -215,17 +211,13 @@ void MdnsServiceImpl::SetVerbose(bool value) {
   mdns_.SetVerbose(value);
 }
 
-MdnsServiceImpl::MdnsServiceSubscriptionImpl::MdnsServiceSubscriptionImpl(
-    MdnsServiceImpl* owner,
-    const std::string& service_name)
-    : owner_(owner) {
-  bindings_.set_on_empty_set_handler([this, service_name]() {
-    if (!callback_) {
-      FXL_DCHECK(agent_);
-      FXL_DCHECK(owner_);
-      agent_->Quit();
-      owner_->subscriptions_by_service_name_.erase(service_name);
-    }
+MdnsServiceImpl::Subscriber::Subscriber(
+    fidl::InterfaceRequest<MdnsServiceSubscription> request,
+    const fxl::Closure& deleter)
+    : binding_(this, std::move(request)) {
+  binding_.set_connection_error_handler([this, deleter]() {
+    binding_.set_connection_error_handler(nullptr);
+    deleter();
   });
 
   instances_publisher_.SetCallbackRunner(
@@ -239,47 +231,44 @@ MdnsServiceImpl::MdnsServiceSubscriptionImpl::MdnsServiceSubscriptionImpl(
 
         callback(version, std::move(instances));
       });
-
-  agent_ = owner->mdns_.SubscribeToService(
-      service_name,
-      [this](const std::string& service, const std::string& instance,
-             const SocketAddress& v4_address, const SocketAddress& v6_address,
-             const std::vector<std::string>& text) {
-        if (callback_) {
-          callback_(service, instance, v4_address, v6_address, text);
-        }
-
-        bool changed = false;
-
-        if (v4_address.is_valid() || v6_address.is_valid()) {
-          auto iter = instances_by_name_.find(instance);
-          if (iter == instances_by_name_.end()) {
-            instances_by_name_.emplace(
-                instance, MdnsFidlUtil::CreateServiceInstance(
-                              service, instance, v4_address, v6_address, text));
-            changed = true;
-          } else {
-            changed = MdnsFidlUtil::UpdateServiceInstance(
-                iter->second, v4_address, v6_address, text);
-          }
-        } else {
-          changed = instances_by_name_.erase(instance) != 0;
-        }
-
-        if (changed) {
-          instances_publisher_.SendUpdates();
-        }
-      });
 }
 
-MdnsServiceImpl::MdnsServiceSubscriptionImpl::~MdnsServiceSubscriptionImpl() {}
+MdnsServiceImpl::Subscriber::~Subscriber() {}
 
-void MdnsServiceImpl::MdnsServiceSubscriptionImpl::AddBinding(
-    fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request) {
-  bindings_.AddBinding(this, std::move(subscription_request));
+void MdnsServiceImpl::Subscriber::InstanceDiscovered(
+    const std::string& service,
+    const std::string& instance,
+    const SocketAddress& v4_address,
+    const SocketAddress& v6_address,
+    const std::vector<std::string>& text) {
+  instances_by_name_.emplace(
+      instance, MdnsFidlUtil::CreateServiceInstance(
+                    service, instance, v4_address, v6_address, text));
 }
 
-void MdnsServiceImpl::MdnsServiceSubscriptionImpl::GetInstances(
+void MdnsServiceImpl::Subscriber::InstanceChanged(
+    const std::string& service,
+    const std::string& instance,
+    const SocketAddress& v4_address,
+    const SocketAddress& v6_address,
+    const std::vector<std::string>& text) {
+  auto iter = instances_by_name_.find(instance);
+  if (iter != instances_by_name_.end()) {
+    MdnsFidlUtil::UpdateServiceInstance(iter->second, v4_address, v6_address,
+                                        text);
+  }
+}
+
+void MdnsServiceImpl::Subscriber::InstanceLost(const std::string& service,
+                                               const std::string& instance) {
+  instances_by_name_.erase(instance);
+}
+
+void MdnsServiceImpl::Subscriber::UpdatesComplete() {
+  instances_publisher_.SendUpdates();
+}
+
+void MdnsServiceImpl::Subscriber::GetInstances(
     uint64_t version_last_seen,
     const GetInstancesCallback& callback) {
   instances_publisher_.Get(version_last_seen, callback);
