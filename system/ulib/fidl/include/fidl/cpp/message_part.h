@@ -82,15 +82,6 @@ public:
     const T* end() const { return data_ + actual_; }
     const T* cend() const { return data_ + actual_; }
 
-    // Returns a view of this part of the message with |n| objects removed from
-    // the start.
-    //
-    // The given value for |n| must be less than or equal to the amount of
-    // storage that is actually being used for this part of the message.
-    MessagePart<T> TrimStart(uint32_t n) const {
-        return MessagePart<T>(data_ + n, capacity_ - n, actual_ - n);
-    }
-
 private:
     T* data_;
     uint32_t capacity_;

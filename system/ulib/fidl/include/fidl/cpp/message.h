@@ -36,38 +36,44 @@ public:
     Message(Message&& other);
     Message& operator=(Message&& other);
 
+    // Whether the message has enough bytes to contain a fidl_message_header_t.
+    bool has_header() const {
+        return bytes_.actual() >= sizeof(fidl_message_header_t);
+    }
+
     // The header at the start of the message.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     const fidl_message_header_t& header() const {
         return *reinterpret_cast<fidl_message_header_t*>(bytes_.data());
     }
 
     // The transaction ID in the message header.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     zx_txid_t txid() const { return header().txid; }
 
     // The flags in the message header.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     uint32_t flags() const { return header().flags; }
 
     // The flags in the message header.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     uint32_t ordinal() const { return header().ordinal; }
 
     // The message payload that follows the header.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     BytePart payload() const {
-        return BytePart(bytes_.TrimStart(sizeof(fidl_message_header_t)));
+        constexpr uint32_t n = sizeof(fidl_message_header_t);
+        return BytePart(bytes_.data() + n, bytes_.capacity() - n, bytes_.actual() - n);
     }
 
     // The message payload that follows the header interpreted as the given type.
     //
-    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    // Valid only if has_header().
     template<typename T>
     T* GetPayloadAs() const {
         return reinterpret_cast<T*>(bytes_.data() + sizeof(fidl_message_header_t));
