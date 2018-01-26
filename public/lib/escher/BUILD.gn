@@ -12,9 +12,11 @@ package("escher_tests") {
     "test:escher_unittests",
   ]
 
-  tests = [ {
-        name = "escher_unittests"
-      } ]
+  tests = [
+    {
+      name = "escher_unittests"
+    },
+  ]
 }
 
 # When targeting Linux, we use a LunarG Vulkan SDK that we download from
@@ -88,6 +90,8 @@ source_set("escher") {
     "geometry/tessellation.h",
     "geometry/transform.h",
     "geometry/types.h",
+    "hmd/pose_buffer_latching_shader.cc",
+    "hmd/pose_buffer_latching_shader.h",
     "impl/command_buffer.cc",
     "impl/command_buffer.h",
     "impl/command_buffer_pool.cc",
@@ -131,10 +135,10 @@ source_set("escher") {
     "impl/model_pipeline_cache.cc",
     "impl/model_pipeline_cache.h",
     "impl/model_pipeline_spec.h",
-    "impl/model_renderer.cc",
-    "impl/model_renderer.h",
     "impl/model_render_pass.cc",
     "impl/model_render_pass.h",
+    "impl/model_renderer.cc",
+    "impl/model_renderer.h",
     "impl/model_shadow_map_lighting_pass.cc",
     "impl/model_shadow_map_lighting_pass.h",
     "impl/model_shadow_map_pass.cc",
@@ -176,13 +180,13 @@ source_set("escher") {
     "renderer/paper_renderer.h",
     "renderer/renderer.cc",
     "renderer/renderer.h",
+    "renderer/semaphore.cc",
+    "renderer/semaphore.h",
     "renderer/shadow_map.cc",
     "renderer/shadow_map.h",
     "renderer/shadow_map_renderer.cc",
     "renderer/shadow_map_renderer.h",
     "renderer/shadow_map_type_info.h",
-    "renderer/semaphore.cc",
-    "renderer/semaphore.h",
     "resources/resource.cc",
     "resources/resource.h",
     "resources/resource_manager.cc",

@@ -16,6 +16,7 @@ executable("escher_unittests") {
     "math/rotations_unittest.cc",
     "mesh_spec_unittest.cc",
     "object_unittest.cc",
+    "pose_buffer_latching_test.cc",
     "run_all_unittests.cc",
     "scene/directional_light_unittest.cc",
     "shape/rounded_rect_unittest.cc",
@@ -76,7 +77,7 @@ source_set("gtest_vulkan") {
   sources = [
     "gtest_vulkan.cc",
     "gtest_vulkan.h",
-    "gtest_vulkan_internal.h"
+    "gtest_vulkan_internal.h",
   ]
 }
 
@@ -94,6 +95,6 @@ source_set("gtest_escher") {
 
   sources = [
     "gtest_escher.cc",
-    "gtest_escher.h"
+    "gtest_escher.h",
   ]
 }
