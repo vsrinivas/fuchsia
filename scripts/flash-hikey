@@ -6,6 +6,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+set -e
+
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x00080000
 RAMDISK_OFFSET=0x07c00000
@@ -60,6 +62,8 @@ help_recovery() {
     echo "  Fastboot(Switch 3)        open/OFF"
     echo "You can alter the recovery port with the -p option."
 
+    echo "NOTE: the recovery utility may require root permissions. If so rerun the script under sudo."
+
     # TODO(alexlegg): Check that ${RECOVERY_PORT} exists and give options if it doesn't.
 
     read -p "Proceed (y|n)? " -n 1 -r
@@ -74,7 +78,7 @@ help_fastboot() {
     echo "Check that the device is in fastboot mode:"
     echo "  Auto Power up(Switch 1)   closed/ON"
     echo "  Recovery(Switch 2)        open/OFF"
-    echo "  Fastboot(Switch 3)        open/ON"
+    echo "  Fastboot(Switch 3)        closed/ON"
 
     read -p "Proceed (y|n)? " -n 1 -r
     echo
