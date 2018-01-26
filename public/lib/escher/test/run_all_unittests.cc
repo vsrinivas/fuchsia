@@ -1,10 +1,9 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
 #include "lib/escher/escher_process_init.h"
+#include "lib/escher/test/gtest_escher.h"
 #include "lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
@@ -13,11 +12,11 @@
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  escher::GlslangInitializeProcess();
+  escher::test::SetUpEscher();
 #ifdef OS_FUCHSIA
   fsl::MessageLoop message_loop;
 #endif
   int result = RUN_ALL_TESTS();
-  escher::GlslangFinalizeProcess();
+  escher::test::TearDownEscher();
   return result;
 }

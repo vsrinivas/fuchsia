@@ -35,11 +35,9 @@ executable("escher_unittests") {
   }
 
   deps = [
-    ":gtest_vulkan",
+    ":gtest_escher",
     "base:base_unittests",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/fxl",
-    "//third_party/gtest",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
@@ -78,5 +76,23 @@ source_set("gtest_vulkan") {
     "gtest_vulkan.cc",
     "gtest_vulkan.h",
     "gtest_vulkan_internal.h"
+  ]
+}
+
+# Builds upon gtest_vulkan to provide the functions SetUpTestEscher()
+# and TearDownTestEscher(), which should be called from main(), and
+# GetTestEscher(), which may be called from VK_TEST().  All of these
+# functions are in namespace escher.
+source_set("gtest_escher") {
+  testonly = true
+
+  public_deps = [
+    ":gtest_vulkan",
+    "//garnet/public/lib/escher",
+  ]
+
+  sources = [
+    "gtest_escher.cc",
+    "gtest_escher.h"
   ]
 }
