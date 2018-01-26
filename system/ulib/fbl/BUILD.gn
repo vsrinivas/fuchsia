@@ -31,6 +31,7 @@ sdk_source_set("fbl") {
     "include/fbl/intrusive_wavl_tree_internal.h",
     "include/fbl/limits.h",
     "include/fbl/macros.h",
+    "include/fbl/memory_probe.h",
     "include/fbl/mutex.h",
     "include/fbl/new.h",
     "include/fbl/null_lock.h",
