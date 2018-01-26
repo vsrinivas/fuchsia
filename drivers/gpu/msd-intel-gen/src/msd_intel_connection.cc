@@ -96,6 +96,10 @@ void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* bu
 {
 }
 
+void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer)
+{
+}
+
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
                                                                msd_client_id_t client_id)
 {

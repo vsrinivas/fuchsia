@@ -61,6 +61,7 @@ TEST(MsdBuffer, MapAndUnmap)
     msd_connection_unmap_buffer_gpu(connection, msd_buffer, 0);
 
     // One mapping is still outstanding, and this should release it.
+    msd_connection_release_buffer(connection, msd_buffer);
     msd_connection_close(connection);
 
     msd_buffer_destroy(msd_buffer);

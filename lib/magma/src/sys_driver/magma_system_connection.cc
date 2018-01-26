@@ -28,6 +28,7 @@ MagmaSystemConnection::~MagmaSystemConnection()
     if (device) {
         for (auto iter = buffer_map_.begin(); iter != buffer_map_.end();) {
             auto id = iter->first;
+            msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
             iter = buffer_map_.erase(iter);
             device->ReleaseBuffer(id);
         }
@@ -164,6 +165,7 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
         pair.second->ReleaseBuffer(iter->second.buffer);
     }
 
+    msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
     buffer_map_.erase(iter);
     // Now that our shared reference has been dropped we tell our
     // device that we're done with the buffer

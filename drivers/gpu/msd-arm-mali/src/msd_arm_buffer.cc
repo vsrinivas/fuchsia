@@ -53,6 +53,14 @@ void MsdArmBuffer::RemoveMapping(GpuMapping* mapping)
     gpu_mappings_.erase(mapping);
 }
 
+std::shared_ptr<MsdArmBuffer> MsdArmAbiBuffer::CloneBuffer()
+{
+    uint32_t buffer_handle;
+    bool status = base_ptr_->platform_buffer()->duplicate_handle(&buffer_handle);
+    DASSERT(status);
+    return std::shared_ptr<MsdArmBuffer>(MsdArmBuffer::Import(buffer_handle));
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer_t* msd_buffer_import(uint32_t handle)

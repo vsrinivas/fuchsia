@@ -41,7 +41,10 @@ private:
 
 class MsdArmAbiBuffer : public msd_buffer_t {
 public:
-    MsdArmAbiBuffer(std::shared_ptr<MsdArmBuffer> ptr) : ptr_(std::move(ptr)) { magic_ = kMagic; }
+    MsdArmAbiBuffer(std::shared_ptr<MsdArmBuffer> ptr) : base_ptr_(std::move(ptr))
+    {
+        magic_ = kMagic;
+    }
 
     static MsdArmAbiBuffer* cast(msd_buffer_t* buf)
     {
@@ -49,10 +52,15 @@ public:
         DASSERT(buf->magic_ == kMagic);
         return static_cast<MsdArmAbiBuffer*>(buf);
     }
-    std::shared_ptr<MsdArmBuffer> ptr() { return ptr_; }
+
+    std::shared_ptr<MsdArmBuffer> base_ptr() { return base_ptr_; }
+
+    // Get a new buffer referencing the same memory.
+    std::shared_ptr<MsdArmBuffer> CloneBuffer();
 
 private:
-    std::shared_ptr<MsdArmBuffer> ptr_;
+    std::shared_ptr<MsdArmBuffer> base_ptr_;
+
     static const uint32_t kMagic = 0x62756666; // "buff"
 };
 

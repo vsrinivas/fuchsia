@@ -9,12 +9,14 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 
 #include "address_space.h"
 #include "gpu_mapping.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
+#include "msd_arm_buffer.h"
 #include "msd_arm_semaphore.h"
 
 struct magma_arm_mali_atom;
@@ -65,6 +67,11 @@ public:
     }
     std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
 
+    // Get a buffer dedicated to this connection that's safe to use from the
+    // connection thread without locking.
+    std::shared_ptr<MsdArmBuffer> GetBuffer(MsdArmAbiBuffer* buffer);
+    void ReleaseBuffer(MsdArmAbiBuffer* buffer);
+
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
@@ -76,6 +83,8 @@ private:
     std::unique_ptr<AddressSpace> address_space_;
     // Map GPU va to a mapping.
     std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+
+    std::unordered_map<MsdArmAbiBuffer*, std::shared_ptr<MsdArmBuffer>> buffers_;
 
     Owner* owner_;
 
