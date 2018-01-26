@@ -15,7 +15,6 @@ __BEGIN_CDECLS
 int thread_tests(void);
 int sleep_tests(void);
 int port_tests(void);
-void printf_tests(void);
 void clock_tests(void);
 void timer_tests(void);
 void benchmarks(void);

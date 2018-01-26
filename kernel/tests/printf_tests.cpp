@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
+#include <unittest.h>
 
 #if !WITH_NO_FP
 #include "float_test_vec.c"
@@ -23,8 +24,8 @@ static void printf_tests_float(void) {
 }
 #endif
 
-void printf_tests(void) {
-    printf("printf tests\n");
+static bool printf_tests(void* context) {
+    BEGIN_TEST;
 
     printf("numbers:\n");
     printf("int8:  %hhd %hhd %hhd\n", -12, 0, 254);
@@ -112,4 +113,11 @@ void printf_tests(void) {
 #if !WITH_NO_FP
     printf_tests_float();
 #endif
+
+    END_TEST;
 }
+
+UNITTEST_START_TESTCASE(printf_tests)
+UNITTEST("printf_tests", printf_tests)
+UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests",
+                      nullptr, nullptr);
