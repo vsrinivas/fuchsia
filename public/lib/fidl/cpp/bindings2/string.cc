@@ -25,10 +25,16 @@ StringPtr::StringPtr() : is_null_(true) {}
 
 StringPtr::StringPtr(std::string str) : str_(std::move(str)), is_null_(false) {}
 
+StringPtr::StringPtr(const char* str)
+    : str_(str ? std::string(str) : std::string()), is_null_(!str) {}
+
+StringPtr::StringPtr(const char* str, size_t length)
+    : str_(str ? std::string(str, length) : std::string()), is_null_(!str) {}
+
 StringPtr::~StringPtr() = default;
 
 StringPtr::StringPtr(StringPtr&& other)
-  : str_(std::move(other.str_)), is_null_(other.is_null_) {}
+    : str_(std::move(other.str_)), is_null_(other.is_null_) {}
 
 StringPtr& StringPtr::operator=(StringPtr&& other) {
   str_ = std::move(other.str_);
@@ -37,8 +43,8 @@ StringPtr& StringPtr::operator=(StringPtr&& other) {
 }
 
 StringPtr StringPtr::Take(StringView* view) {
-  return view->is_null() ?
-      StringPtr() : StringPtr(std::string(view->data(), view->size()));
+  return view->is_null() ? StringPtr()
+                         : StringPtr(std::string(view->data(), view->size()));
 }
 
 bool PutAt(Builder* builder, StringView* view, StringPtr* string) {

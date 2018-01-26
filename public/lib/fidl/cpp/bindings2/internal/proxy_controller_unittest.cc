@@ -208,6 +208,107 @@ TEST(ProxyController, ShortReply) {
   EXPECT_EQ(2, error_count);
 }
 
+TEST(ProxyController, Move) {
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  async::Loop loop(&kTestLoopConfig);
+
+  ProxyController controller1;
+  EXPECT_EQ(ZX_OK, controller1.reader().Bind(std::move(h1)));
+
+  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
+  builder.header()->ordinal = 3u;
+  StringPtr string("hello!");
+  EXPECT_TRUE(Build(&builder, string));
+
+  int callback_count = 0;
+  auto handler = std::make_unique<CallbackMessageHandler>();
+  handler->callback = [&callback_count](Message message) {
+    ++callback_count;
+    EXPECT_EQ(42u, message.ordinal());
+    return ZX_OK;
+  };
+
+  EXPECT_EQ(ZX_OK, controller1.Send(&builder, std::move(handler)));
+
+  EXPECT_EQ(0, callback_count);
+  loop.RunUntilIdle();
+  EXPECT_EQ(0, callback_count);
+
+  MessageBuffer buffer;
+  Message message = buffer.CreateEmptyMessage();
+  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
+  EXPECT_NE(0u, message.txid());
+  EXPECT_EQ(3u, message.ordinal());
+
+  ProxyController controller2 = std::move(controller1);
+  EXPECT_FALSE(controller1.reader().is_bound());
+  EXPECT_TRUE(controller2.reader().is_bound());
+
+  zx_txid_t txid = message.txid();
+  fidl_message_header_t header = {};
+  header.txid = txid;
+  header.ordinal = 42u;
+
+  EXPECT_EQ(ZX_OK,
+            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+
+  EXPECT_EQ(0, callback_count);
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, callback_count);
+}
+
+TEST(ProxyController, Reset) {
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  async::Loop loop(&kTestLoopConfig);
+
+  ProxyController controller;
+  EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
+
+  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
+  builder.header()->ordinal = 3u;
+  StringPtr string("hello!");
+  EXPECT_TRUE(Build(&builder, string));
+
+  int callback_count = 0;
+  auto handler = std::make_unique<CallbackMessageHandler>();
+  handler->callback = [&callback_count](Message message) {
+    ++callback_count;
+    EXPECT_EQ(42u, message.ordinal());
+    return ZX_OK;
+  };
+
+  EXPECT_EQ(ZX_OK, controller.Send(&builder, std::move(handler)));
+
+  EXPECT_EQ(0, callback_count);
+  loop.RunUntilIdle();
+  EXPECT_EQ(0, callback_count);
+
+  MessageBuffer buffer;
+  Message message = buffer.CreateEmptyMessage();
+  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
+  EXPECT_NE(0u, message.txid());
+  EXPECT_EQ(3u, message.ordinal());
+
+  controller.Reset();
+  EXPECT_FALSE(controller.reader().is_bound());
+
+  zx_txid_t txid = message.txid();
+  fidl_message_header_t header = {};
+  header.txid = txid;
+  header.ordinal = 42u;
+
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
+            h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
+
+  EXPECT_EQ(0, callback_count);
+  loop.RunUntilIdle();
+  EXPECT_EQ(0, callback_count);
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace fidl

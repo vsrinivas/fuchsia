@@ -13,6 +13,24 @@ ProxyController::ProxyController() : reader_(this), next_txid_(1) {}
 
 ProxyController::~ProxyController() = default;
 
+ProxyController::ProxyController(ProxyController&& other)
+    : reader_(this),
+      handlers_(std::move(other.handlers_)),
+      next_txid_(other.next_txid_) {
+  reader_.TakeChannelAndErrorHandlerFrom(&other.reader());
+  other.Reset();
+}
+
+ProxyController& ProxyController::operator=(ProxyController&& other) {
+  if (this != &other) {
+    reader_.TakeChannelAndErrorHandlerFrom(&other.reader());
+    handlers_ = std::move(other.handlers_);
+    next_txid_ = other.next_txid_;
+    other.Reset();
+  }
+  return *this;
+}
+
 zx_status_t ProxyController::Send(
     MessageBuilder* builder,
     std::unique_ptr<MessageHandler> response_handler) {
@@ -36,6 +54,11 @@ zx_status_t ProxyController::Send(
   return ZX_OK;
 }
 
+void ProxyController::Reset() {
+  reader_.Reset();
+  ClearPendingHandlers();
+}
+
 zx_status_t ProxyController::OnMessage(Message message) {
   if (!message.has_header())
     return ZX_ERR_INVALID_ARGS;
@@ -52,6 +75,10 @@ zx_status_t ProxyController::OnMessage(Message message) {
 }
 
 void ProxyController::OnChannelGone() {
+  ClearPendingHandlers();
+}
+
+void ProxyController::ClearPendingHandlers() {
   handlers_.clear();
   next_txid_ = 1;
 }

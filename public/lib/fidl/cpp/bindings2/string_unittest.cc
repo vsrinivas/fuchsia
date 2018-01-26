@@ -41,5 +41,19 @@ TEST(StringPtr, PutAt) {
   EXPECT_EQ(0, memcmp(view->data(), string->data(), 12u));
 }
 
+TEST(StringPtr, Conversions) {
+  StringPtr hello = "hello";
+  EXPECT_FALSE(hello.is_null());
+  EXPECT_EQ("hello", *hello);
+
+  StringPtr world("world", 5);
+  EXPECT_FALSE(world.is_null());
+  EXPECT_EQ("world", *world);
+
+  StringPtr null = nullptr;
+  EXPECT_TRUE(null.is_null());
+  EXPECT_TRUE(null->empty());
+}
+
 }  // namespace
 }  // namespace fidl

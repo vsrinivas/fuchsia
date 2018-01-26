@@ -31,9 +31,13 @@ class ProxyController : public MessageHandler {
   ProxyController(const ProxyController&) = delete;
   ProxyController& operator=(const ProxyController&) = delete;
 
+  ProxyController(ProxyController&&);
+  ProxyController& operator=(ProxyController&&);
+
   // The |ChannelReader| that is listening for responses to messages sent by
   // this object.
   ChannelReader& reader() { return reader_; }
+  const ChannelReader& reader() const { return reader_; }
 
   // Send a message over the channel.
   //
@@ -49,6 +53,12 @@ class ProxyController : public MessageHandler {
   zx_status_t Send(MessageBuilder* builder,
                    std::unique_ptr<MessageHandler> response_handler);
 
+  // Clears all the state associated with this |ProxyController|.
+  //
+  // After this method returns, the |ProxyController| is in the same state it
+  // would have been in if freshly constructed.
+  void Reset();
+
  private:
   // Called by the |ChannelReader| when a message arrives on the channel from
   // the server.
@@ -57,9 +67,12 @@ class ProxyController : public MessageHandler {
   // unsolicited event.
   zx_status_t OnMessage(Message message) final;
 
+  // Causes the |ProxyController| to |ClearPendingHandlers()|.
+  void OnChannelGone() final;
+
   // Causes the |ProxyController| to destroy all pending response handlers and
   // reset its transition identifiers.
-  void OnChannelGone() final;
+  void ClearPendingHandlers();
 
   ChannelReader reader_;
   std::map<zx_txid_t, std::unique_ptr<MessageHandler>> handlers_;

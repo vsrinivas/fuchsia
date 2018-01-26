@@ -53,11 +53,10 @@ TEST(StubController, NoResponse) {
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count](Message message,
-                                     PendingResponse response) {
+  stub.callback = [&callback_count](Message message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_FALSE(response.needs_response());
@@ -65,7 +64,7 @@ TEST(StubController, NoResponse) {
     return ZX_OK;
   };
 
-  stub_ctrl.set_stub(std::move(stub));
+  stub_ctrl.set_stub(&stub);
 
   MessageBuilder builder(&unbounded_nonnullable_string_message_type);
   builder.header()->ordinal = 5u;
@@ -90,11 +89,10 @@ TEST(StubController, Response) {
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count](Message message,
-                                     PendingResponse response) {
+  stub.callback = [&callback_count](Message message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
@@ -106,7 +104,7 @@ TEST(StubController, Response) {
     return ZX_OK;
   };
 
-  stub_ctrl.set_stub(std::move(stub));
+  stub_ctrl.set_stub(&stub);
 
   MessageBuilder builder(&unbounded_nonnullable_string_message_type);
   builder.header()->ordinal = 5u;
@@ -141,11 +139,11 @@ TEST(StubController, ResponseAfterUnbind) {
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count, &stub_ctrl](Message message,
-                                                 PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](Message message,
+                                                PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reader().Unbind();
@@ -160,7 +158,7 @@ TEST(StubController, ResponseAfterUnbind) {
     return ZX_OK;
   };
 
-  stub_ctrl.set_stub(std::move(stub));
+  stub_ctrl.set_stub(&stub);
 
   MessageBuilder builder(&unbounded_nonnullable_string_message_type);
   builder.header()->ordinal = 5u;
@@ -194,11 +192,11 @@ TEST(StubController, ResponseAfterDestroy) {
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count, &stub_ctrl](Message message,
-                                                 PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](Message message,
+                                                PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reset();
@@ -213,7 +211,7 @@ TEST(StubController, ResponseAfterDestroy) {
     return ZX_OK;
   };
 
-  stub_ctrl->set_stub(std::move(stub));
+  stub_ctrl->set_stub(&stub);
 
   MessageBuilder builder(&unbounded_nonnullable_string_message_type);
   builder.header()->ordinal = 5u;
@@ -250,11 +248,10 @@ TEST(StubController, BadResponse) {
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count](Message message,
-                                     PendingResponse response) {
+  stub.callback = [&callback_count](Message message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
@@ -265,7 +262,7 @@ TEST(StubController, BadResponse) {
     return ZX_OK;
   };
 
-  stub_ctrl.set_stub(std::move(stub));
+  stub_ctrl.set_stub(&stub);
 
   MessageBuilder builder(&unbounded_nonnullable_string_message_type);
   builder.header()->ordinal = 5u;
@@ -301,16 +298,15 @@ TEST(StubController, BadMessage) {
   int error_count = 0;
   stub_ctrl.reader().set_error_handler([&error_count]() { ++error_count; });
 
-  auto stub = std::make_unique<CallbackStub>();
+  CallbackStub stub;
 
   int callback_count = 0;
-  stub->callback = [&callback_count](Message message,
-                                     PendingResponse response) {
+  stub.callback = [&callback_count](Message message, PendingResponse response) {
     ++callback_count;
     return ZX_OK;
   };
 
-  stub_ctrl.set_stub(std::move(stub));
+  stub_ctrl.set_stub(&stub);
 
   EXPECT_EQ(ZX_OK, h2.write(0, "a", 1, nullptr, 0));
 

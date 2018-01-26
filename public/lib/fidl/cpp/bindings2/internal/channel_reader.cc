@@ -29,6 +29,8 @@ ChannelReader::~ChannelReader() {
 zx_status_t ChannelReader::Bind(zx::channel channel) {
   if (is_bound())
     Unbind();
+  if (!channel)
+    return ZX_OK;
   channel_ = std::move(channel);
   async_ = async_get_default();
   wait_.set_object(channel_.get());
@@ -39,6 +41,8 @@ zx_status_t ChannelReader::Bind(zx::channel channel) {
 }
 
 zx::channel ChannelReader::Unbind() {
+  if (!is_bound())
+    return zx::channel();
   wait_.Cancel(async_);
   wait_.set_object(ZX_HANDLE_INVALID);
   async_ = nullptr;
@@ -48,7 +52,21 @@ zx::channel ChannelReader::Unbind() {
   return channel;
 }
 
-zx_status_t ChannelReader::WaitAndDispatchMessageUntil(zx::time deadline) {
+void ChannelReader::Reset() {
+  Unbind();
+  error_handler_ = std::function<void()>();
+}
+
+zx_status_t ChannelReader::TakeChannelAndErrorHandlerFrom(
+    ChannelReader* other) {
+  zx_status_t status = Bind(other->Unbind());
+  if (status != ZX_OK)
+    return status;
+  error_handler_ = std::move(other->error_handler_);
+  return ZX_OK;
+}
+
+zx_status_t ChannelReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   if (!is_bound())
     return ZX_ERR_BAD_STATE;
   zx_signals_t pending = ZX_SIGNAL_NONE;

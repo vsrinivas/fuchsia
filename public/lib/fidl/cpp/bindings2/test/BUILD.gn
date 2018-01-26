@@ -8,9 +8,15 @@ source_set("test") {
   sources = [
     "fidl_types.cc",
     "fidl_types.h",
+    "frobinator.cc",
+    "frobinator.h",
+    "frobinator_impl.cc",
+    "frobinator_impl.h",
   ]
 
   public_deps = [
+    "//garnet/public/lib/fidl/cpp/bindings2",
+    "//third_party/gtest",
     "//zircon/system/ulib/fidl",
   ]
 

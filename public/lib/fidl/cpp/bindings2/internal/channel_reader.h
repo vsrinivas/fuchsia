@@ -6,13 +6,13 @@
 #define LIB_FIDL_CPP_BINDINGS2_INTERNAL_CHANNEL_READER_H_
 
 #include <async/cpp/wait.h>
-#include <fidl/cpp/message_buffer.h>
 #include <fidl/cpp/message.h>
+#include <fidl/cpp/message_buffer.h>
 #include <zx/channel.h>
 
+#include <functional>
 #include <memory>
 #include <utility>
-#include <functional>
 
 #include "lib/fidl/cpp/bindings2/internal/message_handler.h"
 
@@ -45,22 +45,31 @@ class ChannelReader {
   // any.
   zx::channel Unbind();
 
+  // Unbinds the channel from this |ChannelReader| and clears the error handler.
+  void Reset();
+
+  // Unbinds the channel from |other| and bindings it to this |ChannelReader|.
+  //
+  // Also moves the error handler from |other| to this |ChannelReader|.
+  //
+  // Useful for implementing move semantics for objects that have a
+  // |ChannelReader|.
+  zx_status_t TakeChannelAndErrorHandlerFrom(ChannelReader* other);
+
   // Whether the |ChannelReader| is currently bound.
   //
   // See |Bind()| and |Unbind()|.
   bool is_bound() const { return channel_.is_valid(); }
 
   // The channel to which this |ChannelReader| is bound, if any.
-  const zx::channel& channel() const {
-    return channel_;
-  }
+  const zx::channel& channel() const { return channel_; }
 
   // Synchronously waits on |channel()| until either a message is available or
   // the peer closes. If the channel is readable, reads a single message from
   // the channel and dispatches it to the message handler.
   //
   // Returns |ZX_ERR_BAD_STATE| if this |ChannelReader| is not bound.
-  zx_status_t WaitAndDispatchMessageUntil(zx::time deadline);
+  zx_status_t WaitAndDispatchOneMessageUntil(zx::time deadline);
 
   // The given message handler is called whenever the |ChannelReader| reads a
   // message from the channel.

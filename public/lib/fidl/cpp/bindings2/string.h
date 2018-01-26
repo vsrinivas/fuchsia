@@ -8,8 +8,8 @@
 #include <fidl/cpp/builder.h>
 #include <fidl/cpp/string_view.h>
 
-#include <utility>
 #include <string>
+#include <utility>
 
 #include "lib/fidl/cpp/bindings2/traits.h"
 
@@ -29,7 +29,9 @@ class StringPtr {
   using View = StringView;
 
   StringPtr();
-  explicit StringPtr(std::string str);
+  StringPtr(std::string str);
+  StringPtr(const char* str);
+  StringPtr(const char* str, size_t length);
   ~StringPtr();
 
   StringPtr(const StringPtr&) = delete;

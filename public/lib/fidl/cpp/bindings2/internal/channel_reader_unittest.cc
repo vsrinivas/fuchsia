@@ -49,8 +49,28 @@ class CallbackMessageHandler : public MessageHandler {
   }
 };
 
+class DestructionCounter {
+ public:
+  DestructionCounter(int* counter) : counter_(counter) {}
+
+  ~DestructionCounter() {
+    if (counter_)
+      ++(*counter_);
+  }
+
+ private:
+  int* counter_ = nullptr;
+};
+
 TEST(ChannelReader, Trivial) {
   ChannelReader reader;
+}
+
+TEST(ChannelReader, Bind) {
+  ChannelReader reader;
+  EXPECT_EQ(ZX_OK, reader.Bind(zx::channel()));
+  EXPECT_FALSE(reader.is_bound());
+  EXPECT_EQ(ZX_HANDLE_INVALID, reader.Unbind().get());
 }
 
 TEST(ChannelReader, Control) {
@@ -77,7 +97,7 @@ TEST(ChannelReader, Control) {
   EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
   EXPECT_EQ(0, handler.message_count_);
 
-  EXPECT_EQ(ZX_OK, reader.WaitAndDispatchMessageUntil(zx::time::infinite()));
+  EXPECT_EQ(ZX_OK, reader.WaitAndDispatchOneMessageUntil(zx::time::infinite()));
   EXPECT_EQ(1, handler.message_count_);
   EXPECT_EQ(5u, handler.bytes_.size());
   EXPECT_EQ('h', handler.bytes_[0]);
@@ -214,13 +234,14 @@ TEST(ChannelReader, BindTwice) {
   EXPECT_EQ(saved, reader.channel().get());
 }
 
-TEST(ChannelReader, WaitAndDispatchMessageUntilErrors) {
+TEST(ChannelReader, WaitAndDispatchOneMessageUntilErrors) {
   ChannelReader reader;
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, reader.WaitAndDispatchMessageUntil(zx::time()));
+  EXPECT_EQ(ZX_ERR_BAD_STATE,
+            reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(0, error_count);
 
   async::Loop loop(&kTestLoopConfig);
@@ -236,7 +257,8 @@ TEST(ChannelReader, WaitAndDispatchMessageUntilErrors) {
   EXPECT_EQ(ZX_OK, reader.Bind(std::move(h1)));
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, reader.WaitAndDispatchMessageUntil(zx::time()));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT,
+            reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
 
@@ -244,7 +266,8 @@ TEST(ChannelReader, WaitAndDispatchMessageUntilErrors) {
 
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, reader.WaitAndDispatchMessageUntil(zx::time()));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(1, error_count);
   EXPECT_FALSE(reader.is_bound());
 
@@ -252,7 +275,8 @@ TEST(ChannelReader, WaitAndDispatchMessageUntilErrors) {
 
   EXPECT_EQ(1, error_count);
   EXPECT_TRUE(reader.is_bound());
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, reader.WaitAndDispatchMessageUntil(zx::time()));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
+            reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(2, error_count);
   EXPECT_FALSE(reader.is_bound());
 }
@@ -414,6 +438,66 @@ TEST(ChannelReader, NoHandler) {
 
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
+}
+
+TEST(ChannelReader, Reset) {
+  ChannelReader reader;
+
+  int destruction_count = 0;
+  DestructionCounter counter(&destruction_count);
+  reader.set_error_handler([counter] {});
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  async::Loop loop(&kTestLoopConfig);
+  reader.Bind(std::move(h1));
+
+  EXPECT_TRUE(reader.is_bound());
+  EXPECT_EQ(2, destruction_count);
+
+  reader.Reset();
+
+  EXPECT_FALSE(reader.is_bound());
+  EXPECT_EQ(3, destruction_count);
+}
+
+TEST(ChannelReader, TakeChannelAndErrorHandlerFrom) {
+  StatusMessageHandler handler1;
+  handler1.status = ZX_OK;
+
+  ChannelReader reader1;
+  reader1.set_message_handler(&handler1);
+
+  int error_count = 0;
+  reader1.set_error_handler([&error_count] { ++error_count; });
+
+  StatusMessageHandler handler2;
+  handler2.status = ZX_ERR_INTERNAL;
+
+  ChannelReader reader2;
+  reader2.set_message_handler(&handler2);
+
+  async::Loop loop(&kTestLoopConfig);
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  reader1.Bind(std::move(h1));
+  EXPECT_EQ(ZX_OK, reader2.TakeChannelAndErrorHandlerFrom(&reader1));
+  EXPECT_FALSE(reader1.is_bound());
+  EXPECT_TRUE(reader2.is_bound());
+
+  EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
+
+  EXPECT_EQ(0, error_count);
+  EXPECT_FALSE(reader1.is_bound());
+  EXPECT_TRUE(reader2.is_bound());
+
+  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+
+  EXPECT_EQ(1, error_count);
+  EXPECT_FALSE(reader1.is_bound());
+  EXPECT_FALSE(reader2.is_bound());
 }
 
 }  // namespace

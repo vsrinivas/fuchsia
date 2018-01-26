@@ -34,6 +34,7 @@ class StubController : public MessageHandler {
 
   // The |ChannelReader| that is listening for messages sent by the client.
   ChannelReader& reader() { return reader_; }
+  const ChannelReader& reader() const { return reader_; }
 
   // The protocol-specific object that decodes messages and dispatches them to
   // an implementation of the protocol.
@@ -41,8 +42,8 @@ class StubController : public MessageHandler {
   // The stub must be set to a non-null value before messages are read from the
   // underlying channel. Typically, the caller will set a non-null stub before
   // binding a channel to the |ChannelReader|.
-  Stub* stub() const { return stub_.get(); }
-  void set_stub(std::unique_ptr<Stub> stub) { stub_ = std::move(stub); }
+  Stub* stub() const { return stub_; }
+  void set_stub(Stub* stub) { stub_ = stub; }
 
  private:
   // Called by the |ChannelReader| when a message arrives on the channel from
@@ -64,7 +65,7 @@ class StubController : public MessageHandler {
 
   WeakStubController* weak_;
   ChannelReader reader_;
-  std::unique_ptr<Stub> stub_;
+  Stub* stub_;
 };
 
 }  // namespace internal

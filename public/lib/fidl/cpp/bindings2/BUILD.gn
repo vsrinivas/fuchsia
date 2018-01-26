@@ -4,6 +4,12 @@
 
 source_set("bindings2") {
   sources = [
+    "binding.h",
+    "binding_set.h",
+    "interface_handle.h",
+    "interface_ptr.h",
+    "interface_ptr_set.h",
+    "interface_request.h",
     "internal/channel_reader.cc",
     "internal/channel_reader.h",
     "internal/message_handler.cc",
@@ -40,6 +46,12 @@ executable("fidl_bindings2_unittests") {
   testonly = true
 
   sources = [
+    "binding_set_unittest.cc",
+    "binding_unittest.cc",
+    "interface_handle_unittest.cc",
+    "interface_ptr_set_unittest.cc",
+    "interface_ptr_unittest.cc",
+    "interface_request_unittest.cc",
     "internal/channel_reader_unittest.cc",
     "internal/proxy_controller_unittest.cc",
     "internal/stub_controller_unittest.cc",
