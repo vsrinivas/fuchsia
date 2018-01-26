@@ -15,5 +15,6 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
 	kernel/lib/fbl \
+	kernel/lib/hwreg \
 
 include make/module.mk

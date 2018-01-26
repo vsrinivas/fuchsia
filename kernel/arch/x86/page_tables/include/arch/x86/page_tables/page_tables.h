@@ -8,16 +8,52 @@
 
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
+#include <hwreg/bitfields.h>
 
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
 
-/* Different page table levels in the page table mgmt hirerachy */
+// Different page table levels in the page table mgmt hirerachy
 enum PageTableLevel {
     PT_L,
     PD_L,
     PDP_L,
     PML4_L,
+};
+
+// Structure for tracking an upcoming TLB invalidation
+struct PendingTlbInvalidation {
+    struct Item {
+        uint64_t raw;
+        DEF_SUBFIELD(raw, 2, 0, page_level);
+        DEF_SUBBIT(raw, 3, is_global);
+        DEF_SUBBIT(raw, 4, is_terminal);
+        DEF_SUBFIELD(raw, 63, 12, encoded_addr);
+
+        vaddr_t addr() const { return encoded_addr() << PAGE_SIZE_SHIFT; }
+    };
+    static_assert(sizeof(Item) == 8, "");
+
+    // If true, ignore |vaddr| and perform a full invalidation for this context.
+    bool full_shootdown = false;
+    // If true, at least one enqueued entry was for a global page.
+    bool contains_global = false;
+    // Number of valid elements in |item|
+    uint count = 0;
+    // List of addresses queued for invalidation
+    Item item[32];
+
+    // Add address |v|, translated at depth |level|, to the set of addresses to be invalidated.
+    // |is_terminal| should be true iff this invalidation is targeting the final step of the translation
+    // rather than a higher page table entry.
+    // |is_global_page| should be true iff this page was mapped with the global
+    // bit set.
+    void enqueue(vaddr_t v, PageTableLevel level, bool is_global_page, bool is_terminal);
+
+    // Clear the list of pending invalidations
+    void clear();
+
+    ~PendingTlbInvalidation();
 };
 
 class X86PageTableBase {
@@ -74,9 +110,9 @@ protected:
     // Return the hardware flags to use on smaller pages after a splitting a
     // large page with flags |flags|.
     virtual PtFlags split_flags(PageTableLevel level, PtFlags flags) = 0;
-    // Invalidate a single page at the given level
-    virtual void TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
-                                   bool was_terminal) = 0;
+    // Execute the given pending invalidation
+    virtual void TlbInvalidate(PendingTlbInvalidation* pending) = 0;
+
     // Convert PtFlags to ARCH_MMU_* flags.
     virtual uint pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) = 0;
     // Returns true if a cache flush is necessary for pagetable changes to be
@@ -102,24 +138,27 @@ private:
 
     zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
                            PageTableLevel level, const MappingCursor& start_cursor,
-                           MappingCursor* new_cursor) TA_REQ(lock_);
+                           MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
+                           list_node* to_free) TA_REQ(lock_);
     zx_status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                              const MappingCursor& start_cursor,
-                             MappingCursor* new_cursor) TA_REQ(lock_);
+                             MappingCursor* new_cursor, PendingTlbInvalidation* tlb) TA_REQ(lock_);
 
     bool RemoveMapping(volatile pt_entry_t* table,
                        PageTableLevel level, const MappingCursor& start_cursor,
-                       MappingCursor* new_cursor, list_node* to_free) TA_REQ(lock_);
+                       MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
+                       list_node* to_free) TA_REQ(lock_);
     bool RemoveMappingL0(volatile pt_entry_t* table,
                          const MappingCursor& start_cursor,
-                         MappingCursor* new_cursor) TA_REQ(lock_);
+                         MappingCursor* new_cursor, PendingTlbInvalidation* tlb) TA_REQ(lock_);
 
     zx_status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
                               PageTableLevel level, const MappingCursor& start_cursor,
-                              MappingCursor* new_cursor, list_node* to_free) TA_REQ(lock_);
+                              MappingCursor* new_cursor, PendingTlbInvalidation* tlb,
+                              list_node* to_free) TA_REQ(lock_);
     zx_status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
-                                const MappingCursor& start_cursor,
-                                MappingCursor* new_cursor) TA_REQ(lock_);
+                                const MappingCursor& start_cursor, MappingCursor* new_cursor,
+                                PendingTlbInvalidation* tlb) TA_REQ(lock_);
 
     zx_status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
                            PageTableLevel level,
@@ -130,12 +169,13 @@ private:
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     zx_status_t SplitLargePage(PageTableLevel level, vaddr_t vaddr,
-                               volatile pt_entry_t* pte, list_node* to_free) TA_REQ(lock_);
+                               volatile pt_entry_t* pte, PendingTlbInvalidation* tlb,
+                               list_node* to_free) TA_REQ(lock_);
 
-    void UpdateEntry(CacheLineFlusher* flusher,
+    void UpdateEntry(CacheLineFlusher* flusher, PendingTlbInvalidation* tlb,
                      PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
                      paddr_t paddr, PtFlags flags, bool was_terminal) TA_REQ(lock_);
-    void UnmapEntry(CacheLineFlusher* flusher,
+    void UnmapEntry(CacheLineFlusher* flusher, PendingTlbInvalidation* tlb,
                     PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
                     bool was_terminal) TA_REQ(lock_);
 

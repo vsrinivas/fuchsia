@@ -119,53 +119,65 @@ static void x86_tlb_global_invalidate() {
     }
 }
 
+/**
+ * @brief  invalidate all TLB entries, excluding global entries
+ */
+static void x86_tlb_nonglobal_invalidate() {
+    x86_set_cr3(x86_get_cr3());
+}
+
 /* Task used for invalidating a TLB entry on each CPU */
 struct TlbInvalidatePage_context {
     ulong target_cr3;
-    vaddr_t vaddr;
-    enum PageTableLevel level;
-    bool global_page;
+    const PendingTlbInvalidation* pending;
 };
 static void TlbInvalidatePage_task(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
     TlbInvalidatePage_context* context = (TlbInvalidatePage_context*)raw_context;
 
     ulong cr3 = x86_get_cr3();
-    if (context->target_cr3 != cr3 && !context->global_page) {
+    if (context->target_cr3 != cr3 && !context->pending->contains_global) {
         /* This invalidation doesn't apply to this CPU, ignore it */
         return;
     }
 
-    switch (context->level) {
-    case PML4_L:
-        x86_tlb_global_invalidate();
-        break;
-    case PDP_L:
-    case PD_L:
-    case PT_L:
-        __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)context->vaddr));
-        break;
+    if (context->pending->full_shootdown) {
+        if (context->pending->contains_global) {
+            x86_tlb_global_invalidate();
+        } else {
+            x86_tlb_nonglobal_invalidate();
+        }
+        return;
+    }
+
+    for (uint i = 0; i < context->pending->count; ++i) {
+        const auto& item = context->pending->item[i];
+        switch (item.page_level()) {
+            case PML4_L:
+                panic("PML4_L invld found; should not be here\n");
+            case PDP_L:
+            case PD_L:
+            case PT_L:
+                __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)item.addr()));
+                break;
+        }
     }
 }
 
 /**
- * @brief Invalidate a single page at a given page table level
+ * @brief Execute a queued TLB invalidation
  *
  * @param pt The page table we're invalidating for (if nullptr, assume for current one)
- * @param vaddr The virtual address we are invalidating the TLB entry for
- * @param level The page table level that maps this vaddr
- * @param global_page True if we are invalidating a global mapping
- *
- * TODO(ZX-979): Optimize this.  This is horribly inefficient.
- * We should also change this to pool invalidations from a single
- * "transaction" and then only execute a single mp_sync_exec for that
- * transaction, rather than one per page.
+ * @param pending The planned invalidation
  */
-static void x86_tlb_invalidate_page(X86PageTableBase* pt, vaddr_t vaddr,
-                                    enum PageTableLevel level, bool global_page) {
+static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvalidation* pending) {
+    if (pending->count == 0) {
+        return;
+    }
+
     ulong cr3 = pt ? pt->phys() : x86_get_cr3();
     struct TlbInvalidatePage_context task_context = {
-        .target_cr3 = cr3, .vaddr = vaddr, .level = level, .global_page = global_page,
+        .target_cr3 = cr3, .pending = pending,
     };
 
     /* Target only CPUs this aspace is active on.  It may be the case that some
@@ -175,7 +187,7 @@ static void x86_tlb_invalidate_page(X86PageTableBase* pt, vaddr_t vaddr,
      * case, it will get a spurious request to flush. */
     mp_ipi_target_t target;
     cpu_mask_t target_mask = 0;
-    if (global_page || pt == nullptr) {
+    if (pending->contains_global || pt == nullptr) {
         target = MP_IPI_TARGET_ALL;
     } else {
         target = MP_IPI_TARGET_MASK;
@@ -183,6 +195,7 @@ static void x86_tlb_invalidate_page(X86PageTableBase* pt, vaddr_t vaddr,
     }
 
     mp_sync_exec(target, target_mask, TlbInvalidatePage_task, &task_context);
+    pending->clear();
 }
 
 bool X86PageTableMmu::check_paddr(paddr_t paddr) {
@@ -282,9 +295,8 @@ X86PageTableBase::PtFlags X86PageTableMmu::split_flags(PageTableLevel level,
     return flags;
 }
 
-void X86PageTableMmu::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
-                                        bool was_terminal) {
-    x86_tlb_invalidate_page(this, vaddr, level, global_page);
+void X86PageTableMmu::TlbInvalidate(PendingTlbInvalidation* pending) {
+    x86_tlb_invalidate_page(this, pending);
 }
 
 uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
@@ -392,9 +404,10 @@ X86PageTableBase::PtFlags X86PageTableEpt::split_flags(PageTableLevel level,
     return flags;
 }
 
-void X86PageTableEpt::TlbInvalidatePage(PageTableLevel level, vaddr_t vaddr, bool global_page,
-                                        bool was_terminal) {
+
+void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
     // TODO(ZX-981): Implement this.
+    pending->clear();
 }
 
 uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) {
@@ -420,7 +433,9 @@ void x86_mmu_early_init() {
 
     // Unmap the lower identity mapping.
     pml4[0] = 0;
-    x86_tlb_invalidate_page(nullptr, 0, PML4_L, false);
+    PendingTlbInvalidation tlb;
+    tlb.enqueue(0, PML4_L, /* global */ false, /* terminal */ false);
+    x86_tlb_invalidate_page(nullptr, &tlb);
 
     /* get the address width from the CPU */
     uint8_t vaddr_width = x86_linear_address_width();
