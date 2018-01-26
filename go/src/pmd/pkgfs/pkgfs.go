@@ -177,6 +177,10 @@ type rootDirectory struct {
 	dirs map[string]fs.Directory
 }
 
+func (d *rootDirectory) Dup() (fs.Directory, error) {
+	return d, nil
+}
+
 func (d *rootDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	if name == "" {
@@ -222,6 +226,10 @@ type inDirectory struct {
 	unsupportedDirectory
 
 	fs *Filesystem
+}
+
+func (d *inDirectory) Dup() (fs.Directory, error) {
+	return d, nil
 }
 
 func (d *inDirectory) Stat() (int64, time.Time, time.Time, error) {
@@ -523,6 +531,10 @@ type packagesRoot struct {
 	fs *Filesystem
 }
 
+func (d *packagesRoot) Dup() (fs.Directory, error) {
+	return d, nil
+}
+
 func (pr *packagesRoot) Close() error { return nil }
 
 func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
@@ -609,6 +621,10 @@ func newPackageListDir(name string, f *Filesystem) (*packageListDir, error) {
 		packageName:          name,
 	}
 	return &pld, nil
+}
+
+func (d *packageListDir) Dup() (fs.Directory, error) {
+	return d, nil
 }
 
 func (pld *packageListDir) Close() error {
@@ -887,6 +903,10 @@ type needsRoot struct {
 	fs *Filesystem
 }
 
+func (d *needsRoot) Dup() (fs.Directory, error) {
+	return d, nil
+}
+
 func (d *needsRoot) Close() error {
 	return nil
 }
@@ -973,6 +993,10 @@ type needsBlobsDir struct {
 	unsupportedDirectory
 
 	fs *Filesystem
+}
+
+func (d *needsBlobsDir) Dup() (fs.Directory, error) {
+	return d, nil
 }
 
 func (d *needsBlobsDir) Close() error {
