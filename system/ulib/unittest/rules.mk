@@ -10,10 +10,10 @@ MODULE_TYPE := userlib
 MODULE_GROUP := test
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/all-tests.c \
-    $(LOCAL_DIR)/crash-handler.c \
-    $(LOCAL_DIR)/crash-list.c \
-    $(LOCAL_DIR)/unittest.c \
+    $(LOCAL_DIR)/all-tests.cpp \
+    $(LOCAL_DIR)/crash-handler.cpp \
+    $(LOCAL_DIR)/crash-list.cpp \
+    $(LOCAL_DIR)/unittest.cpp \
 
 MODULE_SO_NAME := unittest
 
@@ -29,8 +29,8 @@ MODULE := $(LOCAL_DIR).hostlib
 MODULE_TYPE := hostlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/all-tests.c \
-    $(LOCAL_DIR)/unittest.c \
+    $(LOCAL_DIR)/all-tests.cpp \
+    $(LOCAL_DIR)/unittest.cpp \
 
 MODULE_HOST_LIBS := system/ulib/pretty
 

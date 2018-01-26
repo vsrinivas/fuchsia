@@ -14,19 +14,19 @@
 #include <pretty/hexdump.h>
 
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-#include "crash-list.h"
 #include "crash-handler.h"
+#include "crash-list.h"
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
-typedef uint64_t nsecs_t;
+using nsecs_t = uint64_t;
 
-static nsecs_t now(void) {
+static nsecs_t now() {
 #ifdef __Fuchsia__
     return zx_clock_get(ZX_CLOCK_MONOTONIC);
 #else
     // clock_gettime(CLOCK_MONOTONIC) would be better but may not exist on the host
     struct timeval tv;
-    if (gettimeofday(&tv, NULL) < 0)
+    if (gettimeofday(&tv, nullptr) < 0)
         return 0u;
     return tv.tv_sec * 1000000000ull + tv.tv_usec * 1000ull;
 #endif
@@ -47,7 +47,7 @@ static void default_printf(const char* line, int len, void* arg) {
 // Default output function is the printf
 static test_output_func out_func = default_printf;
 // Buffer the argument to be sent to the output function
-static void* out_func_arg = NULL;
+static void* out_func_arg = nullptr;
 
 // Controls the behavior of unittest_printf.
 // To override, specify v=N on the command line.
@@ -56,7 +56,7 @@ int utest_verbosity_level = 0;
 // Controls the types of tests which are executed.
 // Multiple test types can be "OR-ed" together to
 // run a subset of all tests.
-test_type_t utest_test_type = TEST_DEFAULT;
+test_type_t utest_test_type = static_cast<test_type>(TEST_DEFAULT);
 
 /**
  * \brief Function called to dump results
@@ -69,7 +69,7 @@ void unittest_printf_critical(const char* format, ...) {
     va_list argp;
     va_start(argp, format);
 
-    if (out_func != NULL) {
+    if (out_func) {
         // Format the string
         vsnprintf(print_buffer, PRINT_BUFFER_SIZE, format, argp);
         out_func(print_buffer, PRINT_BUFFER_SIZE, out_func_arg);
@@ -90,8 +90,7 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
     return true;
 }
 
-bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len,
-                            const char* msg) {
+bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len, const char* msg) {
     if (strncmp(expected, actual, len)) {
         printf("%s. expected\n'%s'\nactual\n'%s'\n", msg, expected, actual);
         return false;
@@ -128,14 +127,13 @@ bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg) {
 }
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
-void unittest_run_named_test(const char* name, bool (*test)(void),
-                             test_type_t test_type,
-                             struct test_info** current_test_info,
-                             bool* all_success, bool enable_crash_handler) {
+void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_type,
+                             struct test_info** current_test_info, bool* all_success,
+                             bool enable_crash_handler) {
     if (utest_test_type & test_type) {
         unittest_printf_critical("    %-51s [RUNNING]", name);
         nsecs_t start_time = now();
-        struct test_info test_info = { .all_ok = true, NULL };
+        test_info test_info = {.all_ok = true, nullptr};
         *current_test_info = &test_info;
         // The crash handler is disabled by default. To enable, the test should
         // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
@@ -144,9 +142,8 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
             test_info.crash_list = crash_list_new();
 
             test_result_t test_result;
-            zx_status_t status = run_test_with_crash_handler(test_info.crash_list,
-                                                             test,
-                                                             &test_result);
+            zx_status_t status =
+                run_test_with_crash_handler(test_info.crash_list, test, &test_result);
             if (status != ZX_OK || test_result == TEST_FAILED) {
                 test_info.all_ok = false;
             }
@@ -158,7 +155,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                 UNITTEST_FAIL_TRACEF("Expected crash did not occur\n");
                 test_info.all_ok = false;
             }
-#else // UNITTEST_CRASH_HANDLER_SUPPORTED
+#else  // UNITTEST_CRASH_HANDLER_SUPPORTED
             UNITTEST_FAIL_TRACEF("Crash tests not supported\n");
             test_info.all_ok = false;
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
@@ -168,16 +165,16 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
 
         // Recheck all_ok in case there was a failure in a C++ destructor
         // after the "return" statement in END_TEST.
-        if (!test_info.all_ok)
+        if (!test_info.all_ok) {
             *all_success = false;
+        }
 
         nsecs_t end_time = now();
         uint64_t time_taken_ms = (end_time - start_time) / 1000000;
-        unittest_printf_critical(" [%s] (%d ms)\n",
-                                 test_info.all_ok ? "PASSED" : "FAILED",
-                                 (int)time_taken_ms);
+        unittest_printf_critical(" [%s] (%d ms)\n", test_info.all_ok ? "PASSED" : "FAILED",
+                                 static_cast<int>(time_taken_ms));
 
-        *current_test_info = NULL;
+        *current_test_info = nullptr;
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);
     }
