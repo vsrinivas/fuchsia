@@ -14,8 +14,7 @@ MessageBuilder::MessageBuilder(const fidl_type_t* type,
                                uint32_t handles_capacity)
     : type_(type),
       buffer_(bytes_capacity, handles_capacity) {
-    Reset(buffer_.bytes(), buffer_.bytes_capacity());
-    New<fidl_message_header_t>();
+    Reset();
 }
 
 MessageBuilder::~MessageBuilder() = default;
@@ -26,6 +25,11 @@ zx_status_t MessageBuilder::Encode(Message* message_out,
                            HandlePart(buffer_.handles(),
                                       buffer_.handles_capacity()));
     return message_out->Encode(type_, error_msg_out);
+}
+
+void MessageBuilder::Reset() {
+    Builder::Reset(buffer_.bytes(), buffer_.bytes_capacity());
+    New<fidl_message_header_t>();
 }
 
 } // namespace fidl

@@ -65,6 +65,14 @@ public:
         return BytePart(bytes_.TrimStart(sizeof(fidl_message_header_t)));
     }
 
+    // The message payload that follows the header interpreted as the given type.
+    //
+    // Valid only if bytes().actual() is at least sizeof(fidl_message_header_t).
+    template<typename T>
+    T* GetPayloadAs() const {
+        return reinterpret_cast<T*>(bytes_.data() + sizeof(fidl_message_header_t));
+    }
+
     // The storage for the bytes of the message.
     BytePart& bytes() { return bytes_; }
     const BytePart& bytes() const { return bytes_; }

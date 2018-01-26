@@ -59,6 +59,12 @@ public:
     // error.
     zx_status_t Encode(Message* message_out, const char** error_msg_out);
 
+    // Resets all the data in the |MessageBuffer|.
+    //
+    // The underlying buffer is retained and reused. The next object will be
+    // allocated at the start of the buffer.
+    void Reset();
+
 private:
     const fidl_type_t* type_;
     MessageBuffer buffer_;
