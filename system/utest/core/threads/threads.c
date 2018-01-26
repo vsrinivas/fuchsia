@@ -371,13 +371,14 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, zx_deadline_after(ZX_MSEC(100)),
                                  NULL), ZX_ERR_TIMED_OUT, "");
 
-    // Verify thread is blocked
+    // Verify thread is blocked (though may still be running if on a very busy system)
     zx_info_thread_t info;
     ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
                                  &info, sizeof(info), NULL, NULL),
               ZX_OK, "");
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
+                info.state == ZX_THREAD_STATE_BLOCKED, "");
 
     // Check that signaling the event while suspended results in the expected
     // behavior
@@ -741,7 +742,8 @@ static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
     ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
                                  &info, sizeof(info), NULL, NULL),
               ZX_OK, "");
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
+                info.state == ZX_THREAD_STATE_BLOCKED, "");
 
     // Check that suspend/resume while blocked in a syscall results in
     // the expected behavior and is visible via async wait.
