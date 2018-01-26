@@ -202,4 +202,8 @@ void Frame::TraceGpuQueryResults(
 }
 #endif
 
+GpuAllocator* Frame::gpu_allocator() {
+  return escher_->gpu_allocator();
+}
+
 }  // namespace escher

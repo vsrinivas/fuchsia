@@ -37,6 +37,7 @@ class Frame : public Reffable {
   uint64_t frame_number() const { return frame_number_; }
   impl::CommandBuffer* command_buffer() const { return command_buffer_; }
   vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
+  GpuAllocator* gpu_allocator();
 
  private:
   // Constructor called by Escher::NewFrame().
