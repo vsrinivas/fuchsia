@@ -34,7 +34,7 @@ class FontProviderImpl : public FontProvider {
                const GetFontCallback& callback) override;
 
   // Load fonts. Returns true if all were loaded.
-  bool LoadFontsInternal();
+  bool LoadFontsInternal(const char path[], bool fallback_required);
 
   // Discard all font data.
   void Reset();

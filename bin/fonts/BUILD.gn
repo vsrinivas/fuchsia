@@ -29,6 +29,13 @@ package("fonts") {
 
   binary = "font_server"
 
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    }
+  ]
+
   resources = [
     {
       path = rebase_path("//garnet/bin/fonts/manifest.json")

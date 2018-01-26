@@ -19,6 +19,7 @@ namespace fonts {
 namespace {
 
 constexpr char kFontManifestPath[] = "/pkg/data/manifest.json";
+constexpr char kVendorFontManifestPath[] = "/system/data/vendor/fonts/manifest.json";
 constexpr char kFallback[] = "fallback";
 constexpr char kFamilies[] = "families";
 
@@ -31,32 +32,34 @@ FontProviderImpl::FontProviderImpl() = default;
 
 FontProviderImpl::~FontProviderImpl() = default;
 
-bool FontProviderImpl::LoadFontsInternal() {
+bool FontProviderImpl::LoadFontsInternal(const char path[], bool fallback_required) {
   std::string json_data;
-  if (!files::ReadFileToString(kFontManifestPath, &json_data)) {
-    FXL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath
-                   << "'.";
+  if (!files::ReadFileToString(path, &json_data)) {
+    FXL_LOG(ERROR) << "Failed to read font manifest from '" << path << "'.";
     return false;
   }
 
   rapidjson::Document document;
   document.Parse(json_data.data());
   if (document.HasParseError() || !document.IsObject()) {
-    FXL_LOG(ERROR) << "Font manifest was not vaild JSON.";
+    FXL_LOG(ERROR) << "Font manifest '" << path << "' was not vaild JSON.";
     return false;
   }
 
   const auto& fallback = document.FindMember(kFallback);
   if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
-    FXL_LOG(ERROR)
-        << "Font manifest did not contain a valid 'fallback' family.";
-    return false;
+    if (fallback_required) {
+      FXL_LOG(ERROR)
+        << "Font manifest '" << path << "' did not contain a valid 'fallback' family.";
+      return false;
+    }
+  } else {
+    fallback_ = fallback->value.GetString();
   }
-  fallback_ = fallback->value.GetString();
 
   const auto& families = document.FindMember(kFamilies);
   if (families == document.MemberEnd() || !families->value.IsArray()) {
-    FXL_LOG(ERROR) << "Font manifest did not contain any families.";
+    FXL_LOG(ERROR) << "Font manifest '" << path << "' did not contain any families.";
     return false;
   }
 
@@ -78,9 +81,16 @@ bool FontProviderImpl::LoadFontsInternal() {
 }
 
 bool FontProviderImpl::LoadFonts() {
-  bool loaded_all = LoadFontsInternal();
+  bool loaded_all = LoadFontsInternal(kFontManifestPath, true);
   if (!loaded_all)
     Reset();
+
+  if (files::IsFile(kVendorFontManifestPath))
+    loaded_all = LoadFontsInternal(kVendorFontManifestPath, false);
+
+  if (!loaded_all)
+    Reset();
+
   return loaded_all;
 }
 
