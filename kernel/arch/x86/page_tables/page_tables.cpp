@@ -201,10 +201,6 @@ void X86PageTableBase::UpdateEntry(CacheLineFlusher* flusher, PendingTlbInvalida
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
-        // Force the flush before the TLB invalidation, to avoid a race in which
-        // non-coherent remapping hardware sees the old PTE after the
-        // invalidation.
-        flusher->ForceFlush();
         // TODO(teisenbe): the is_kernel_address should be a check for the
         // global bit
         tlb->enqueue(vaddr, level, is_kernel_address(vaddr), was_terminal);
@@ -223,10 +219,6 @@ void X86PageTableBase::UnmapEntry(CacheLineFlusher* flusher, PendingTlbInvalidat
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
-        // Force the flush before the TLB invalidation, to avoid a race in which
-        // non-coherent remapping hardware sees the old PTE after the
-        // invalidation.
-        flusher->ForceFlush();
         // TODO(teisenbe): the is_kernel_address should be a check for the
         // global bit
         tlb->enqueue(vaddr, level, is_kernel_address(vaddr), was_terminal);
