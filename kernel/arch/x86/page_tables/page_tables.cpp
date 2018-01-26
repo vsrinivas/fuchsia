@@ -219,7 +219,7 @@ static volatile pt_entry_t* _map_alloc_page(void) {
  * @brief Split the given large page into smaller pages
  */
 zx_status_t X86PageTableBase::SplitLargePage(PageTableLevel level, vaddr_t vaddr,
-                                             volatile pt_entry_t* pte) {
+                                             volatile pt_entry_t* pte, list_node* to_free) {
     DEBUG_ASSERT_MSG(level != PT_L, "tried splitting PT_L");
     LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, level);
 
@@ -324,7 +324,8 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
 /**
  * @brief Unmaps the range specified by start_cursor.
  *
- * Level must be top_level() when invoked.
+ * Level must be top_level() when invoked.  The caller must, even on failure,
+ * free all pages in the |to_free| list and adjust the |pages_| count.
  *
  * @param table The top-level paging structure's virtual address.
  * @param start_cursor A cursor describing the range of address space to
@@ -335,7 +336,8 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
  * @return true if at least one page was unmapped at this level
  */
 bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
-                                     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
+                                     const MappingCursor& start_cursor, MappingCursor* new_cursor,
+                                     list_node* to_free) {
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
             start_cursor.size);
@@ -375,7 +377,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
             }
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
-            zx_status_t status = SplitLargePage(level, page_vaddr, e);
+            zx_status_t status = SplitLargePage(level, page_vaddr, e, to_free);
             if (status != ZX_OK) {
                 // If split fails, just unmap the whole thing, and let a
                 // subsequent page fault clean it up.
@@ -391,7 +393,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
         MappingCursor cursor;
         volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
         bool lower_unmapped = RemoveMapping(next_table, lower_level(level),
-                                            *new_cursor, &cursor);
+                                            *new_cursor, &cursor, to_free);
 
         // If we were requesting to unmap everything in the lower page table,
         // we know we can unmap the lower level page table.  Otherwise, if
@@ -423,8 +425,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
                              "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state,
                              X86_VIRT_TO_PHYS(next_table));
 
-            pmm_free_page(page);
-            pages_--;
+            list_add_tail(to_free, &page->free.node);
             unmapped = true;
         }
         *new_cursor = cursor;
@@ -500,7 +501,11 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
             // new_cursor->size should be how much is left to be mapped still
             cursor.size -= new_cursor->size;
             if (cursor.size > 0) {
-                RemoveMapping(table, level, cursor, &result);
+                list_node to_free = LIST_INITIAL_VALUE(to_free);
+                RemoveMapping(table, level, cursor, &result, &to_free);
+                if (!list_is_empty(&to_free)) {
+                    pages_ -= pmm_free(&to_free);
+                }
                 DEBUG_ASSERT(result.size == 0);
             }
         }
@@ -597,7 +602,8 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
 /**
  * @brief Changes the permissions/caching of the range specified by start_cursor
  *
- * Level must be top_level() when invoked.
+ * Level must be top_level() when invoked.  The caller must, even on failure,
+ * free all pages in the |to_free| list and adjust the |pages_| count.
  *
  * @param table The top-level paging structure's virtual address.
  * @param start_cursor A cursor describing the range of address space to
@@ -607,7 +613,7 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
  */
 zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
                                             PageTableLevel level, const MappingCursor& start_cursor,
-                                            MappingCursor* new_cursor) {
+                                            MappingCursor* new_cursor, list_node* to_free) {
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr,
             start_cursor.size);
@@ -649,7 +655,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
             }
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
-            ret = SplitLargePage(level, page_vaddr, e);
+            ret = SplitLargePage(level, page_vaddr, e, to_free);
             if (ret != ZX_OK) {
                 // If we failed to split the table, just unmap it.  Subsequent
                 // page faults will bring it back in.
@@ -658,7 +664,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
                 cursor.size = ps;
 
                 MappingCursor tmp_cursor;
-                RemoveMapping(table, level, cursor, &tmp_cursor);
+                RemoveMapping(table, level, cursor, &tmp_cursor, to_free);
 
                 new_cursor->SkipEntry(level);
             }
@@ -668,7 +674,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
         MappingCursor cursor;
         volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
         ret = UpdateMapping(next_table, mmu_flags, lower_level(level),
-                            *new_cursor, &cursor);
+                            *new_cursor, &cursor, to_free);
         *new_cursor = cursor;
         if (ret != ZX_OK) {
             // Currently this can't happen
@@ -730,7 +736,11 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
     };
 
     MappingCursor result;
-    RemoveMapping(virt_, top_level(), start, &result);
+    list_node to_free = LIST_INITIAL_VALUE(to_free);
+    RemoveMapping(virt_, top_level(), start, &result, &to_free);
+    if (!list_is_empty(&to_free)) {
+        pages_ -= pmm_free(&to_free);
+    }
     DEBUG_ASSERT(result.size == 0);
 
     if (unmapped)
@@ -773,7 +783,11 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
             };
 
             MappingCursor result;
-            RemoveMapping(virt_, top, start, &result);
+            list_node to_free = LIST_INITIAL_VALUE(to_free);
+            RemoveMapping(virt_, top, start, &result, &to_free);
+            if (!list_is_empty(&to_free)) {
+                pages_ -= pmm_free(&to_free);
+            }
             DEBUG_ASSERT(result.size == 0);
         }
     });
@@ -859,7 +873,13 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result);
+    list_node to_free = LIST_INITIAL_VALUE(to_free);
+    zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result, &to_free);
+    if (!list_is_empty(&to_free)) {
+        // Free any items that were added to the list, even if the update
+        // failed.
+        pages_ -= pmm_free(&to_free);
+    }
     if (status != ZX_OK) {
         return status;
     }

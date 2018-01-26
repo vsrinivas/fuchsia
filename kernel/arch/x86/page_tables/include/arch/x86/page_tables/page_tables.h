@@ -109,14 +109,14 @@ private:
 
     bool RemoveMapping(volatile pt_entry_t* table,
                        PageTableLevel level, const MappingCursor& start_cursor,
-                       MappingCursor* new_cursor) TA_REQ(lock_);
+                       MappingCursor* new_cursor, list_node* to_free) TA_REQ(lock_);
     bool RemoveMappingL0(volatile pt_entry_t* table,
                          const MappingCursor& start_cursor,
                          MappingCursor* new_cursor) TA_REQ(lock_);
 
     zx_status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
                               PageTableLevel level, const MappingCursor& start_cursor,
-                              MappingCursor* new_cursor) TA_REQ(lock_);
+                              MappingCursor* new_cursor, list_node* to_free) TA_REQ(lock_);
     zx_status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                                 const MappingCursor& start_cursor,
                                 MappingCursor* new_cursor) TA_REQ(lock_);
@@ -130,7 +130,7 @@ private:
                              volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     zx_status_t SplitLargePage(PageTableLevel level, vaddr_t vaddr,
-                               volatile pt_entry_t* pte) TA_REQ(lock_);
+                               volatile pt_entry_t* pte, list_node* to_free) TA_REQ(lock_);
 
     void UpdateEntry(CacheLineFlusher* flusher,
                      PageTableLevel level, vaddr_t vaddr, volatile pt_entry_t* pte,
