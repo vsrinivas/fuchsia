@@ -46,19 +46,3 @@ go_binary("fidl-rust") {
       } ]
   gopackage = "fidl/compiler/generators/rust"
 }
-
-group("compiler2") {
-  testonly = true
-
-  deps = [
-    ":fidl2",
-  ]
-}
-
-go_binary("fidl2") {
-  go_dependencies = [ {
-      source = "src/fidl2"
-      package = "fidl2"
-    } ]
-  gopackage = "fidl/compiler/fidl2"
-}

@@ -1,0 +1,110 @@
+{
+  "const-declarations": [
+    {
+      "name": "MY_CONST_STR",
+      "type": "String",
+      "value": {
+        "is_literal": true,
+        "maybe_literal": {
+          "is_string": true,
+          "maybe_string": "my const str value"
+        }
+      }
+    }
+  ],
+  "enum-declarations": [
+    {
+      "name": "Color",
+      "underlying-type": "uint8",
+      "values": [
+        {
+          "name": "Red",
+          "value": {
+            "is_literal": true,
+            "maybe_literal": {
+              "is_numeric": true,
+              "maybe_numeric": "0"
+            }
+          }
+        },
+        {
+          "name": "Green",
+          "value": {
+            "is_literal": true,
+            "maybe_literal": {
+              "is_numeric": true,
+              "maybe_numeric": "1"
+            }
+          }
+        },
+        {
+          "name": "Blue",
+          "value": {
+            "is_literal": true,
+            "maybe_literal": {
+              "is_numeric": true,
+              "maybe_numeric": "2"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "interface-declarations": [
+    {
+      "name": "Echo",
+      "methods": [
+        {
+          "name": "echo_things",
+          "ordinal": 5,
+          "has_request": true,
+          "maybe_request": [
+            { "name": "val1", "type": "type1" },
+            { "name": "val2", "type": "type2" }
+          ],
+          "has_response": true,
+          "maybe_response": [
+            { "name": "retval1", "type": "rettype1" },
+            { "name": "retval2", "type": "rettype2" }
+          ]
+        }
+      ]
+    }
+  ],
+  "module-dependencies": [
+  ],
+  "struct-declarations": [
+    {
+      "name": "Foo",
+      "size": 16,
+      "fields": [
+        {
+          "name": "field1",
+          "offset": 0,
+          "type": "FieldOneT"
+        },
+        {
+          "name": "field2",
+          "offset": 8,
+          "type": "FieldTwoT"
+        }
+      ]
+    }
+  ],
+  "union-declarations": [
+    {
+      "name": "Foo",
+      "size": 16,
+      "fields": [
+        {
+          "name": "field1",
+          "type": "FieldOneT"
+        },
+        {
+          "name": "field2",
+          "type": "FieldTwoT"
+        }
+      ]
+    }
+  ]
+}

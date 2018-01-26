@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/host.gni")
+
+go_binary("fidl2_generators") {
+  gopackage = "fidl2_generators"
+
+  go_dependencies = [
+    {
+      package = "fidl2_generators"
+    },
+  ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":fidl2_generators",
+  ]
+  outputs = [
+    "fidl2_generators",
+  ]
+}

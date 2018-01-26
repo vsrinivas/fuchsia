@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//garnet/public/lib/fidl/compiler/fidl2_generators:host"
+    ]
+}
