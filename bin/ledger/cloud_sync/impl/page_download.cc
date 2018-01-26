@@ -255,7 +255,19 @@ void PageDownload::GetObject(
       object_identifier,
       task_runner_->MakeScoped(
           [this, object_identifier, callback = std::move(callback)](
-              encryption::Status satus, std::string object_name) mutable {
+              encryption::Status status, std::string object_name) mutable {
+            if (status != encryption::Status::OK) {
+              FXL_LOG(WARNING)
+                  << log_prefix_
+                  << "GetObject() failed due to an encryption error, retrying.";
+              current_get_object_calls_--;
+              RetryWithBackoff(
+                  [this, object_identifier = std::move(object_identifier),
+                   callback = std::move(callback)] {
+                    GetObject(object_identifier, callback);
+                  });
+              return;
+            }
             (*page_cloud_)
                 ->GetObject(
                     convert::ToArray(object_name),
