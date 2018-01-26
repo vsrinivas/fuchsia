@@ -321,13 +321,14 @@ static zx_driver_ops_t intel_ethernet_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 10)
+ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 11)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1533), // I210 standalone
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1539), // I211-AT
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x156f), // I219-LM (Dawson Canyon NUC)
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b7), // Skull Canyon NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219-V
