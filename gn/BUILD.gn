@@ -512,6 +512,8 @@ action("fvm.sparse.blk") {
     rebase_path(fvm_path),
     rebase_path(fvm_sparse_image_path),
     "sparse",
+    "--compress",
+    "lz4",
     "--blobstore",
     rebase_path(blobstore_image_path),
   ]
@@ -539,6 +541,8 @@ action("fvm.data.sparse.blk") {
     rebase_path(fvm_path),
     rebase_path(fvm_data_sparse_image_path),
     "sparse",
+    "--compress",
+    "lz4",
     "--data",
     rebase_path(data_image_path),
   ]
