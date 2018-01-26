@@ -23,7 +23,8 @@ ValidationTestsLauncher::ValidationTestsLauncher(
       });
 }
 
-void ValidationTestsLauncher::Run(std::function<void(int32_t)> callback) {
+void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
+                                  std::function<void(int32_t)> callback) {
   callback_ = std::move(callback);
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kValidationTestsUrl;
@@ -31,6 +32,9 @@ void ValidationTestsLauncher::Run(std::function<void(int32_t)> callback) {
   service_list->names.push_back(cloud_provider::CloudProvider::Name_);
   service_provider_impl_.AddBinding(service_list->provider.NewRequest());
   launch_info->additional_services = std::move(service_list);
+  for (const auto& argument : arguments) {
+    launch_info->arguments.push_back(argument);
+  }
 
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), validation_tests_controller_.NewRequest());

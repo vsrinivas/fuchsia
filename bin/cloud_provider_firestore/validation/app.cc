@@ -8,6 +8,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
@@ -15,7 +16,7 @@
 namespace cloud_provider_firestore {
 namespace {
 constexpr fxl::StringView kServerIdFlag = "server-id";
-constexpr fxl::StringView kApiKey = "api-key";
+constexpr fxl::StringView kApiKeyFlag = "api-key";
 constexpr fxl::StringView kCredentialsFlag = "credentials";
 }  // namespace
 
@@ -24,7 +25,7 @@ void PrintUsage(const char* executable_name) {
             << executable_name
             // Comment to make clang format not break formatting.
             << "--" << kServerIdFlag << "=<string> "
-            << "--" << kApiKey << "=<string> "
+            << "--" << kApiKeyFlag << "=<string> "
             << "--" << kCredentialsFlag << "=<file path>" << std::endl;
 }
 
@@ -37,8 +38,8 @@ int main(int argc, char** argv) {
   std::string credentials_path;
   if (!command_line.GetOptionValue(
           cloud_provider_firestore::kServerIdFlag.ToString(), &server_id) ||
-      !command_line.GetOptionValue(cloud_provider_firestore::kApiKey.ToString(),
-                                   &api_key) ||
+      !command_line.GetOptionValue(
+          cloud_provider_firestore::kApiKeyFlag.ToString(), &api_key) ||
       !command_line.GetOptionValue(
           cloud_provider_firestore::kCredentialsFlag.ToString(),
           &credentials_path)) {
@@ -50,6 +51,18 @@ int main(int argc, char** argv) {
     std::cerr << "Cannot access " << credentials_path << std::endl;
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
+  }
+
+  const std::set<std::string> known_options(
+      {cloud_provider_firestore::kServerIdFlag.ToString(),
+       cloud_provider_firestore::kApiKeyFlag.ToString(),
+       cloud_provider_firestore::kCredentialsFlag.ToString()});
+  std::vector<std::string> arguments;
+  for (auto& option : command_line.options()) {
+    if (known_options.count(option.name) == 0u) {
+      arguments.push_back(
+          fxl::Concatenate({"--", option.name, "=", option.value}));
+    }
   }
 
   fsl::MessageLoop message_loop;
@@ -64,15 +77,16 @@ int main(int argc, char** argv) {
       });
 
   int32_t return_code = -1;
-  message_loop.task_runner()->PostTask(
-      [&factory, &launcher, &return_code, &message_loop] {
-        factory.Init();
+  message_loop.task_runner()->PostTask([&factory, &launcher, &return_code,
+                                        &message_loop,
+                                        arguments = std::move(arguments)] {
+    factory.Init();
 
-        launcher.Run([&return_code, &message_loop](int32_t result) {
-          return_code = result;
-          message_loop.PostQuitTask();
-        });
-      });
+    launcher.Run(arguments, [&return_code, &message_loop](int32_t result) {
+      return_code = result;
+      message_loop.PostQuitTask();
+    });
+  });
   message_loop.Run();
   return return_code;
 }

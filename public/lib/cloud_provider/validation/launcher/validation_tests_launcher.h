@@ -27,9 +27,11 @@ class ValidationTestsLauncher {
 
   // Starts the tests.
   //
+  // |arguments| are passed to the test binary.
   // |callback| is called after the tests are finished and passed the exit code
-  // of the test binary.
-  void Run(std::function<void(int32_t)> callback);
+  //     of the test binary.
+  void Run(const std::vector<std::string>& arguments,
+           std::function<void(int32_t)> callback);
 
  private:
   app::ApplicationContext* const application_context_;

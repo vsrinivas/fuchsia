@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
   message_loop.task_runner()->PostTask(
       [&factory, &launcher, &return_code, &message_loop] {
         factory.Init();
-        launcher.Run([&return_code, &message_loop](int32_t result) {
+        launcher.Run({}, [&return_code, &message_loop](int32_t result) {
           return_code = result;
           message_loop.PostQuitTask();
         });
