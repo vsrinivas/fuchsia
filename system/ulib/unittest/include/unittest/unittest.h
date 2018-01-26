@@ -190,13 +190,19 @@ int unittest_set_verbosity_level(int new_level);
     } while (0)
 
 /*
- * BEGIN_TEST_CASE and END_TEST_CASE define a function that calls
- * RUN_TEST.
+ * BEGIN_TEST_CASE and END_TEST_CASE define a function that calls RUN_TEST. The
+ * test_name parameter specifies an optional test name to run. If null, all
+ * tests will be run.
  */
 #define BEGIN_TEST_CASE(case_name)                                          \
-    bool case_name(void) {                                                  \
+    bool case_name(bool list_only, const char* test_name_matching) {        \
         bool all_success = true;                                            \
-        unittest_printf_critical("\nCASE %-50s [STARTED] \n", #case_name);
+        if (list_only) {                                                    \
+            unittest_printf_critical("\nCASE %s\n", #case_name);            \
+        } else {                                                            \
+            unittest_printf_critical("\nCASE %-50s [STARTED] \n",           \
+                                     #case_name);                           \
+        }
 
 #define DEFINE_REGISTER_TEST_CASE(case_name)                            \
     __attribute__((constructor)) static void _register_##case_name(void) { \
@@ -204,7 +210,9 @@ int unittest_set_verbosity_level(int new_level);
     }
 
 #define END_TEST_CASE(case_name)                                        \
-    if (all_success) {                                                  \
+    if (list_only) {                                                    \
+        unittest_printf_critical("CASE %s\n", #case_name);              \
+    } else if (all_success) {                                           \
         unittest_printf_critical("CASE %-50s [PASSED]\n", #case_name);  \
     } else {                                                            \
         unittest_printf_critical("CASE %-50s [FAILED]\n", #case_name);  \
@@ -219,9 +227,15 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_NAMED_TEST_TYPE(name, test, test_type, enable_crash_handler) \
-    unittest_run_named_test(name, test, test_type, &current_test_info,   \
-                            &all_success, enable_crash_handler);
+#define RUN_NAMED_TEST_TYPE(name, test, test_type, enable_crash_handler)       \
+    if (!test_name_matching || strcmp(test_name_matching, name) == 0) {        \
+        if (list_only) {                                                       \
+            unittest_printf_critical("    %s\n", name);                        \
+        } else {                                                               \
+            unittest_run_named_test(name, test, test_type, &current_test_info, \
+                                    &all_success, enable_crash_handler);       \
+        }                                                                      \
+    }
 
 #define TEST_CASE_ELEMENT(case_name) &_##case_name##_element
 
@@ -576,7 +590,7 @@ struct test_case_element {
     struct test_case_element* next;
     struct test_case_element* failed_next;
     const char* name;
-    bool (*test_case)(void);
+    bool (*test_case)(bool list_only, const char* test_name_matching);
 };
 
 /* List of processes or threads which are expected to crash. */
