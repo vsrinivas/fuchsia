@@ -96,6 +96,10 @@ class LowEnergyConnector {
   // Returns true if a connection request is currently pending.
   bool request_pending() const { return pending_request_.HasValue(); }
 
+  // Returns true if a connection timeout has been posted. Returns false if it
+  // was not posted or was canceled. This is intended for unit tests.
+  bool timeout_posted() const { return request_timeout_task_.posted(); }
+
  private:
   struct PendingRequest {
     PendingRequest() = default;

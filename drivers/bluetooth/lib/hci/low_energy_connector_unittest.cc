@@ -246,11 +246,17 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   EXPECT_TRUE(connector()->request_pending());
 
   ASSERT_FALSE(request_canceled);
+
   connector()->Cancel();
   EXPECT_TRUE(connector()->request_pending());
 
+  // The request timeout should be canceled regardless of whether it was posted
+  // before.
+  EXPECT_FALSE(connector()->timeout_posted());
+
   RunMessageLoop();
 
+  EXPECT_FALSE(connector()->timeout_posted());
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
   EXPECT_TRUE(request_canceled);
@@ -403,31 +409,6 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
 
   quit_loop_on_cancel = true;
   RunMessageLoop();
-
-  EXPECT_TRUE(request_canceled);
-  EXPECT_TRUE(in_connections().empty());
-}
-
-// This test is identical to SendRequestAndDelete except that this waits for the
-// connection request timeout to finish.
-TEST_F(HCI_LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
-  constexpr int64_t kShortTimeoutMs = 100;
-  auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
-  test_device()->AddLEDevice(std::move(fake_device));
-
-  bool ret = connector()->CreateConnection(
-      LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, [](auto, auto, auto) {},
-      kShortTimeoutMs);
-  EXPECT_TRUE(ret);
-  EXPECT_TRUE(connector()->request_pending());
-
-  DeleteConnector();
-
-  // Run the message loop long enough for the connection creation timeout to
-  // expire. The timeout handler should be canceled during destruction and no
-  // assertions should be hit.
-  RunMessageLoop(fxl::TimeDelta::FromMilliseconds(2 * kShortTimeoutMs));
 
   EXPECT_TRUE(request_canceled);
   EXPECT_TRUE(in_connections().empty());
