@@ -7,15 +7,19 @@ fx-config-read
 
 fx-machine-types() {
   echo "Available machine types:"
-  echo "  ram"
-  echo "  bootfs"
-  echo "  efi"
-  echo "  cros"
+  echo "  ram     - ramboot with /system and /pkgfs from blobs"
+  echo "  netboot - alias for ram"
+  echo "  bootfs  - ramboot with /system from bootfs (deprecated)"
+  echo "  zedboot - ramboot zedboot into zedboot"
+  echo "  efi     - pave an EFI device (e.g. nuc)"
+  echo "  cros    - pave a cros device (e.g. pixelbook)"
   echo "Machine type aliases:"
   echo "  acer"
   echo "  nuc"
   echo "  pixel"
   echo "  vboot"
+  echo "Note: currently efi,cros,acer,nuc,pixel and vboot all have the exact"
+  echo "same behavior and target specific differences occur client side."
 }
 
 zircon_bin="zircon.bin"
