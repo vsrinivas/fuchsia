@@ -153,26 +153,11 @@ static bool printf_tests(void* context) {
     EXPECT_TRUE(test_printf("test      ",
                             "%-010s", "test"), "");
 
-    int err;
-
-    err = printf("a");
-    printf(" returned %d\n", err);
-    err = printf("ab");
-    printf(" returned %d\n", err);
-    err = printf("abc");
-    printf(" returned %d\n", err);
-    err = printf("abcd");
-    printf(" returned %d\n", err);
-    err = printf("abcde");
-    printf(" returned %d\n", err);
-    err = printf("abcdef");
-    printf(" returned %d\n", err);
-
     /* make sure snprintf terminates at the right spot */
     char buf[32];
 
     memset(buf, 0, sizeof(buf));
-    err = snprintf(buf, 15, "0123456789abcdef012345678");
+    int err = snprintf(buf, 15, "0123456789abcdef012345678");
     printf("snprintf returns %d\n", err);
     hexdump8(buf, sizeof(buf));
 
