@@ -153,18 +153,37 @@ static bool printf_tests(void* context) {
     EXPECT_TRUE(test_printf("test      ",
                             "%-010s", "test"), "");
 
-    /* make sure snprintf terminates at the right spot */
+    END_TEST;
+}
+
+// Test snprintf() when the output is larger than the given buffer.
+static bool snprintf_truncation_test(void* context) {
+    BEGIN_TEST;
+
     char buf[32];
 
-    memset(buf, 0, sizeof(buf));
-    int err = snprintf(buf, 15, "0123456789abcdef012345678");
-    printf("snprintf returns %d\n", err);
-    hexdump8(buf, sizeof(buf));
+    memset(buf, 'x', sizeof(buf));
+    static const char str[26] = "0123456789abcdef012345678";
+    int shorter_length = 15;
+    int result = snprintf(buf, shorter_length, "%s", str);
+
+    // Check that snprintf() returns the length of the string that it would
+    // have written if the buffer was big enough.
+    EXPECT_EQ(result, (int)strlen(str), "");
+
+    // Check that snprintf() wrote a truncated, terminated string.
+    EXPECT_EQ(memcmp(buf, str, shorter_length - 1), 0, "");
+    EXPECT_EQ(buf[shorter_length - 1], '\0', "");
+
+    // Check that snprintf() did not overrun the buffer it was given.
+    for (uint32_t i = shorter_length; i < sizeof(buf); ++i)
+        EXPECT_EQ(buf[i], 'x', "");
 
     END_TEST;
 }
 
 UNITTEST_START_TESTCASE(printf_tests)
 UNITTEST("printf_tests", printf_tests)
+UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
 UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests",
                       nullptr, nullptr);
