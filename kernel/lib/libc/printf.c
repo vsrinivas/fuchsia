@@ -103,7 +103,7 @@ __NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, siz
 
     /* only do the math if the number is >= 10 */
     while (n >= 10) {
-        int digit = (int)n % 10;
+        int digit = (int)(n % 10);
 
         n /= 10;
 

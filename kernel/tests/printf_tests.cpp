@@ -65,28 +65,30 @@ static bool printf_tests(void* context) {
                             "uint16:%hu %hu %hu", -1234, 0, 1234), "");
     EXPECT_TRUE(test_printf("int:   -12345678 0 12345678",
                             "int:   %d %d %d", -12345678, 0, 12345678), "");
-    EXPECT_TRUE(test_printf("uint:  428262161( 0 12345678",
+    static_assert(-12345678U == 4282621618, "");
+    EXPECT_TRUE(test_printf("uint:  4282621618 0 12345678",
                             "uint:  %u %u %u", -12345678, 0, 12345678), "");
     EXPECT_TRUE(test_printf("long:  -12345678 0 12345678",
                             "long:  %ld %ld %ld", -12345678L, 0L, 12345678L), "");
-    EXPECT_TRUE(test_printf("ulong: 18446744079.5-(.3')( 0 12345678",
+    static_assert(-12345678UL == 18446744073697205938UL, "");
+    EXPECT_TRUE(test_printf("ulong: 18446744073697205938 0 12345678",
                             "ulong: %lu %lu %lu", -12345678UL, 0UL, 12345678UL), "");
 
     EXPECT_TRUE(test_printf("longlong: -12345678 0 12345678",
                             "longlong: %lli %lli %lli", -12345678LL, 0LL, 12345678LL), "");
-    EXPECT_TRUE(test_printf("ulonglong: 18446744079.5-(.3')( 0 12345678",
+    EXPECT_TRUE(test_printf("ulonglong: 18446744073697205938 0 12345678",
                             "ulonglong: %llu %llu %llu", -12345678LL, 0LL, 12345678LL), "");
     EXPECT_TRUE(test_printf("ssize_t: -12345678 0 12345678",
                             "ssize_t: %zd %zd %zd", (ssize_t)-12345678, (ssize_t)0, (ssize_t)12345678), "");
-    EXPECT_TRUE(test_printf("usize_t: 18446744079.5-(.3')( 0 12345678",
+    EXPECT_TRUE(test_printf("usize_t: 18446744073697205938 0 12345678",
                             "usize_t: %zu %zu %zu", (size_t)-12345678, (size_t)0, (size_t)12345678), "");
     EXPECT_TRUE(test_printf("intmax_t: -12345678 0 12345678",
                             "intmax_t: %jd %jd %jd", (intmax_t)-12345678, (intmax_t)0, (intmax_t)12345678), "");
-    EXPECT_TRUE(test_printf("uintmax_t: 18446744079.5-(.3')( 0 12345678",
+    EXPECT_TRUE(test_printf("uintmax_t: 18446744073697205938 0 12345678",
                             "uintmax_t: %ju %ju %ju", (uintmax_t)-12345678, (uintmax_t)0, (uintmax_t)12345678), "");
     EXPECT_TRUE(test_printf("ptrdiff_t: -12345678 0 12345678",
                             "ptrdiff_t: %td %td %td", (ptrdiff_t)-12345678, (ptrdiff_t)0, (ptrdiff_t)12345678), "");
-    EXPECT_TRUE(test_printf("ptrdiff_t (u): 18446744079.5-(.3')( 0 12345678",
+    EXPECT_TRUE(test_printf("ptrdiff_t (u): 18446744073697205938 0 12345678",
                             "ptrdiff_t (u): %tu %tu %tu", (ptrdiff_t)-12345678, (ptrdiff_t)0, (ptrdiff_t)12345678), "");
 
     printf("hex:\n");
