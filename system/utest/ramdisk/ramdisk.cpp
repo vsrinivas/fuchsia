@@ -24,7 +24,9 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/limits.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fdio/watcher.h>
 #include <unittest/unittest.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
@@ -133,27 +135,42 @@ static bool ramdisk_test_filesystem(void) {
     DIR* dir = opendir(blockpath);
     ASSERT_NONNULL(dir);
 
-    bool dev_class_block_found = false;
+    typedef struct watcher_args {
+        const char* expected_name;
+        char* blockpath;
+        bool found;
+    } watcher_args_t;
 
-    struct dirent* de;
-    while (!dev_class_block_found && ((de = readdir(dir)) != NULL)) {
-        if ((strcmp(de->d_name, ".") == 0) || strcmp(de->d_name, "..") == 0) {
-            continue;
-        }
-        int devfd = openat(dirfd(dir), de->d_name, O_RDONLY);
-        if (devfd > 0) {
-            if ((ioctl_block_get_name(devfd, out, sizeof(out)) == (ssize_t) strlen(name)) &&
-                strncmp(out, name, strlen(name)) == 0) {
+    watcher_args_t args;
+    args.expected_name = name;
+    args.blockpath = blockpath;
+    args.found = false;
+
+    auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
+        watcher_args_t* args = static_cast<watcher_args_t*>(cookie);
+        if (event == WATCH_EVENT_ADD_FILE) {
+            fbl::unique_fd fd(openat(dirfd, fn, O_RDONLY));
+            if (!fd) {
+                return ZX_OK;
+            }
+            char out[PATH_MAX];
+            if ((ioctl_block_get_name(fd.get(), out, sizeof(out)) == (ssize_t)
+                 strlen(args->expected_name)) &&
+                strncmp(out, args->expected_name, strlen(args->expected_name)) == 0) {
                 // Found a device under /dev/class/block/XYZ with the name of the
                 // ramdisk we originally created.
-                strcat(blockpath, de->d_name);
-                dev_class_block_found = true;
+                strncat(args->blockpath, fn, sizeof(blockpath) - (strlen(args->blockpath) + 1));
+                args->found = true;
+                return ZX_ERR_STOP;
             }
-            close(devfd);
         }
-    }
+        return ZX_OK;
+    };
+
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
+    ASSERT_EQ(fdio_watch_directory(dirfd(dir), cb, deadline, &args), ZX_ERR_STOP);
+    ASSERT_TRUE(args.found);
     ASSERT_EQ(closedir(dir), 0, "Could not close /dev/class/block");
-    ASSERT_TRUE(dev_class_block_found, "Ramdisk did not appear in /dev/class/block");
 
     // Check dev block is accessible before destruction
     int devfd = open(blockpath, O_RDONLY);
