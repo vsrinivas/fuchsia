@@ -340,6 +340,12 @@ void vc_status_clear() {
     }
 }
 
+void vc_status_commit() {
+    if (vc_gfx) {
+        vc_gfx_invalidate_status();
+    }
+}
+
 void vc_status_write(int x, unsigned color, const char* text) {
     char c;
     unsigned fg = default_palette[color];
@@ -351,7 +357,6 @@ void vc_status_write(int x, unsigned color, const char* text) {
             gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
             x += vc_font->width;
         }
-        vc_gfx_invalidate_status();
     }
 }
 

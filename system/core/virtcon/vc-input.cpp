@@ -201,6 +201,7 @@ void vc_status_update() {
         x += w;
         i++;
     }
+    vc_status_commit();
 }
 
 void handle_key_press(uint8_t keycode, int modifiers) {

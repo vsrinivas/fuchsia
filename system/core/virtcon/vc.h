@@ -118,6 +118,7 @@ void vc_status_update();
 // used by vc_status_invalidate to draw the status bar
 void vc_status_clear();
 void vc_status_write(int x, unsigned color, const char* text);
+void vc_status_commit();
 
 void vc_render(vc_t* vc);
 void vc_full_repaint(vc_t* vc);
