@@ -18,7 +18,7 @@ import (
 )
 
 type manifestEntry struct {
-	localPath string
+	localPath  string
 	remotePath string
 }
 
@@ -30,6 +30,7 @@ var (
 	usage = "usage: publish (-p|-b|-m) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
 	// TODO(jmatt) support publishing batches of files instead of just singles
 	tufFile      = flag.Bool("p", false, "Publish a package.")
+	packageSet   = flag.Bool("ps", false, "Publish a set of packages from a manifest.")
 	regFile      = flag.Bool("b", false, "Publish a content blob.")
 	manifestFile = flag.Bool("m", false, "Publish a the contents of a manifest as as content blobs.")
 	filePath     = flag.String("f", "", "Path of the file to publish")
@@ -51,17 +52,17 @@ func main() {
 	}
 
 	modeCheck := false
-	for _, v := range []bool{*tufFile, *regFile, *manifestFile} {
+	for _, v := range []bool{*tufFile, *packageSet, *regFile, *manifestFile} {
 		if v {
 			if modeCheck {
-				log.Fatal("Only one mode, -p, -b, or -m may be selected")
+				log.Fatal("Only one mode, -p, -ps, -b, or -m may be selected")
 			}
 			modeCheck = true
 		}
 	}
 
 	if !modeCheck {
-		log.Fatal("A mode, -p, -b, or -m must be selected")
+		log.Fatal("A mode, -p, -ps, -b, or -m must be selected")
 	}
 
 	if _, e := os.Stat(*filePath); e != nil {
@@ -80,7 +81,30 @@ func main() {
 		return
 	}
 
-	if *tufFile {
+	if *packageSet {
+		f, err := os.Open(*filePath)
+		if err != nil {
+			log.Fatalf("error reading package set manifest: %s", err)
+		}
+		defer f.Close()
+		s := bufio.NewScanner(f)
+		for s.Scan() {
+			if err := s.Err(); err != nil {
+				log.Fatalf("error reading package set manifest: %s", err)
+			}
+
+			line := s.Text()
+			parts := strings.SplitN(line, "=", 2)
+
+			if err := repo.AddPackageFile(parts[1], parts[0]); err != nil {
+				log.Fatalf("Failed to add package %q from %q: %s", parts[0], parts[1], err)
+			}
+		}
+		if err := repo.CommitUpdates(); err != nil {
+			log.Fatalf("error committing repository updates: %s", err)
+		}
+
+	} else if *tufFile {
 		if len(*name) == 0 {
 			name = filePath
 		}
@@ -99,10 +123,6 @@ func main() {
 		if *name, err = repo.AddContentBlob(*filePath); err != nil {
 			log.Fatalf("Error adding regular file: %s\n", err)
 			return
-		}
-
-		if err := repo.CommitUpdates(); err != nil {
-			log.Fatalf("Error committing regular file: %s\n", err)
 		}
 
 		fmt.Printf("Added file as %s\n", *name)
@@ -195,9 +215,8 @@ func readManifest(manifestPath string) ([]manifestEntry, error) {
 		}
 
 		entries = append(entries,
-			manifestEntry {remotePath: parts[0], localPath: parts[1]})
+			manifestEntry{remotePath: parts[0], localPath: parts[1]})
 	}
-
 
 	return entries, nil
 }
