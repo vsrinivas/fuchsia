@@ -6,18 +6,6 @@
         "library_path": "libVkLayer_image_pipe_swapchain.so",
         "api_version": "1.0.38",
         "implementation_version": "1",
-        "description": "Image Pipe Swapchain",
-        "disable_environment": {
-            "DISABLE_IMAGEPIPE_SWAPCHAIN_LAYER": "1"
-        },
-        "instance_extensions": [
-            { "name": "VK_KHR_surface", "spec_version": "25" },
-            { "name": "VK_KHR_magma_surface", "spec_version": "1" },
-            { "name": "foobar", "spec_version": "1" }
-        ],
-        "device_extensions": [
-            { "name": "VK_KHR_swapchain", "spec_version": "68" },
-            { "name": "bluecheese", "spec_version": "68" }
-        ]
+        "description": "Image Pipe Swapchain"
     }
 }
