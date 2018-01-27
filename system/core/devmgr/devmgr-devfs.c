@@ -543,6 +543,10 @@ fail:
     }
 }
 
+// Double-check that OPEN (the only message we forward)
+// cannot be mistaken for an internal dev coordinator RPC message
+static_assert((ZXRIO_OPEN & DC_OP_ID_BIT) == 0, "");
+
 static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
                                const char* name, size_t len, uint32_t type) {
     size_t sz = sizeof(vdirent_t) + len + 1;

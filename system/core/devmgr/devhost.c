@@ -254,7 +254,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
     // handle remoteio open messages only
-    if ((msize >= ZXRIO_HDR_SZ) && (ZXRIO_OP(msg.op) == ZXRIO_OPEN)) {
+    if ((msize >= ZXRIO_HDR_SZ) && (msg.op == ZXRIO_OPEN)) {
         if (hcount != 1) {
             r = ZX_ERR_INTERNAL;
             goto fail;

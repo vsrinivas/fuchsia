@@ -193,27 +193,30 @@ typedef struct {
     zx_status_t status;
 } dc_status_t;
 
+// This bit differentiates DC OPs from RIO OPs
+#define DC_OP_ID_BIT                0x10000000
+
 // Coord->Host Ops
-#define DC_OP_CREATE_DEVICE_STUB    0x80000001
-#define DC_OP_CREATE_DEVICE         0x80000002
-#define DC_OP_BIND_DRIVER           0x80000003
-#define DC_OP_CONNECT_PROXY         0x80000004
-#define DC_OP_SUSPEND               0x80000005
+#define DC_OP_CREATE_DEVICE_STUB    0x10000001
+#define DC_OP_CREATE_DEVICE         0x10000002
+#define DC_OP_BIND_DRIVER           0x10000003
+#define DC_OP_CONNECT_PROXY         0x10000004
+#define DC_OP_SUSPEND               0x10000005
 
 // Host->Coord Ops
-#define DC_OP_STATUS                0x80000010
-#define DC_OP_ADD_DEVICE            0x80000011
-#define DC_OP_ADD_DEVICE_INVISIBLE  0x80000012
-#define DC_OP_REMOVE_DEVICE         0x80000013  // also Coord->Host
-#define DC_OP_MAKE_VISIBLE          0x80000014
-#define DC_OP_BIND_DEVICE           0x80000015
-#define DC_OP_GET_TOPO_PATH         0x80000016
+#define DC_OP_STATUS                0x10000010
+#define DC_OP_ADD_DEVICE            0x10000011
+#define DC_OP_ADD_DEVICE_INVISIBLE  0x10000012
+#define DC_OP_REMOVE_DEVICE         0x10000013  // also Coord->Host
+#define DC_OP_MAKE_VISIBLE          0x10000014
+#define DC_OP_BIND_DEVICE           0x10000015
+#define DC_OP_GET_TOPO_PATH         0x10000016
 
 // Host->Coord Ops for DmCtl
-#define DC_OP_DM_COMMAND            0x80000020
-#define DC_OP_DM_OPEN_VIRTCON       0x80000021
-#define DC_OP_DM_WATCH              0x80000022
-#define DC_OP_DM_MEXEC              0x80000023
+#define DC_OP_DM_COMMAND            0x10000020
+#define DC_OP_DM_OPEN_VIRTCON       0x10000021
+#define DC_OP_DM_WATCH              0x10000022
+#define DC_OP_DM_MEXEC              0x10000023
 #define DC_PATH_MAX 1024
 
 zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
