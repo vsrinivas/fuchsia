@@ -148,7 +148,6 @@ X86PageTableBase::CacheLineFlusher::~CacheLineFlusher() {
 void X86PageTableBase::CacheLineFlusher::ForceFlush() {
     if (dirty_line_ && perform_invalidations_) {
         __asm__ volatile("clflush %0\n"
-                         "mfence"
                          :
                          : "m"(*reinterpret_cast<char*>(dirty_line_))
                          : "memory");
@@ -222,6 +221,12 @@ void X86PageTableBase::ConsistencyManager::Finish() {
     DEBUG_ASSERT(pt_->lock_.IsHeld());
 
     clf_.ForceFlush();
+    if (pt_->needs_cache_flushes()) {
+        // If the hardware needs cache flushes for the tables to be visible,
+        // make sure we serialize the flushes before issuing the TLB
+        // invalidations.
+        mb();
+    }
     pt_->TlbInvalidate(&tlb_);
     pt_ = nullptr;
 }
