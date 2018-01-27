@@ -574,7 +574,13 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
         };
 
         char namestr[ZX_DEVICE_NAME_MAX];
-        snprintf(namestr, sizeof(namestr), "%04x:%04x:%04x", dev->vid, dev->pid, dev->did);
+        if (dev->vid == PDEV_VID_GENERIC && dev->pid == PDEV_PID_GENERIC &&
+            dev->did == PDEV_DID_KPCI) {
+            strlcpy(namestr, "pci", sizeof(namestr));
+        } else {
+
+            snprintf(namestr, sizeof(namestr), "%02x:%02x:%01x", dev->vid, dev->pid, dev->did);
+        }
         char argstr[64];
         snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
         bool new_devhost = !(dev->flags & PDEV_ADD_PBUS_DEVHOST);
