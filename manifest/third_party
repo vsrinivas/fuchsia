@@ -181,6 +181,7 @@
     <project name="third_party/rapidjson"
              path="third_party/rapidjson"
              remote="https://fuchsia.googlesource.com/third_party/rapidjson"
+             revision="e8b305ae6ab34f369fb7c753406671a6caccc31f"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/roughtime"
              path="third_party/roughtime"
