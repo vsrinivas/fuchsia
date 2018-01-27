@@ -19,12 +19,14 @@ __BEGIN_CDECLS
 
 #define ZXRIO_HDR_SZ       (__builtin_offsetof(zxrio_msg_t, data))
 
-#define ZXRIO_ONE_HANDLE    0x00000100
-#define ZXRIO_TWO_HANDLES   0x00000200
+#define ZXRIO_ONE_HANDLE   0x00000100
+#define ZXRIO_TWO_HANDLES  0x00000200
 
-// Control Ordinals; unsolicited messages from
-// the server to the client.
-#define ZXRIO_ON_OPEN      0x80000001
+// Identifier that this is a FIDL message, not
+// a ZXRIO message.
+//
+// The header is shared between the two formats.
+#define ZXRIO_FIDL_ORD     0x80000000
 
 // RIO Ordinals
 #define ZXRIO_STATUS       0x00000000
@@ -60,7 +62,11 @@ __BEGIN_CDECLS
 #define ZXRIO_FCNTL        0x0000001c
 #define ZXRIO_NUM_OPS      29
 
-#define ZXRIO_OP(n)        ((n) & 0x3FF) // opcode
+// Control Ordinals; unsolicited messages from
+// the server to the client.
+#define ZXRIO_ON_OPEN      0x80000007
+
+#define ZXRIO_OP(n)        (n) // opcode
 #define ZXRIO_HC(n)        (((n) >> 8) & 3) // handle count
 #define ZXRIO_OPNAME(n)    ((n) & 0xFF) // opcode, "name" part only
 
