@@ -77,7 +77,7 @@ static bool unittest_run_all_tests_etc(const char* test_binary_name, test_type_t
 }
 
 static void print_help() {
-    printf("Arguments: [--help] [--list] [[<test_case>] <test>]\n"
+    printf("Arguments: [--help] [--list] [--case <test_case>] [--test <test>]\n"
            "\n"
            "    --help\n"
            "        Prints this screen and exits.\n"
@@ -85,14 +85,14 @@ static void print_help() {
            "    --list\n"
            "        Prints the test names instead of running them.\n"
            "\n"
-           "    --\n"
-           "        Indicates end of switches. Anything following is interpreted as a\n"
-           "        test case name.\n"
+           "    --case <test_case>\n"
+           "        Only the tests from the matching test case will be run.\n"
+           "        <test_case> is case-sensitive; regex is not supported\n"
            "\n"
-           "If <test_case> is specified, only the tests from the matching test\n"
-           "case will be run. If additionally <test> is specified, only that\n"
-           "specific test will be run. The test case and test names are case-\n"
-           "sensitive exact matches (no regular expressions).\n");
+           "    --test <test>\n"
+           "        Only the tests from the matching test will be run\n"
+           "        <test> is case-sensitive; regex is not supported\n"
+           "\n");
 }
 
 /*
@@ -102,11 +102,10 @@ bool unittest_run_all_tests(int argc, char** argv) {
     bool list_tests_only = false;
     const char* case_matcher = nullptr;
     const char* test_matcher = nullptr;
-    bool switches_allowed = true;
 
     int i = 1;
     while (i < argc) {
-        if (switches_allowed && argv[i][0] == '-') {
+        if (argv[i][0] == '-') {
             // Got a switch.
             if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
                 unittest_set_verbosity_level(argv[i][2] - '0');
@@ -116,26 +115,20 @@ bool unittest_run_all_tests(int argc, char** argv) {
                 return 0;
             } else if (strcmp(argv[i], "--list") == 0) {
                 list_tests_only = true;
-            } else if (strcmp(argv[i], "--") == 0) {
-                // "--" indicates no more switches.
-                switches_allowed = false;
-            } else {
-                printf("Unknown switch \"%s\".\n\n", argv[i]);
-                print_help();
-                return 1;
+            } else if (strcmp(argv[i], "--case") == 0) {
+                if (i + 1 >= argc) {
+                    print_help();
+                    return 1;
+                }
+                case_matcher = argv[++i];
+            } else if (strcmp(argv[i], "--test") == 0) {
+                if (i + 1 >= argc) {
+                    print_help();
+                    return 0;
+                }
+                test_matcher = argv[++i];
             }
-        } else {
-            // Non-switch parameter.
-            switches_allowed = false;
-            if (!case_matcher) {
-                case_matcher = argv[i];
-            } else if (!test_matcher) {
-                test_matcher = argv[i];
-            } else {
-                printf("Too many command line arguments.\n\n");
-                print_help();
-                return 1;
-            }
+            // Ignore other parameters
         }
         i++;
     }
