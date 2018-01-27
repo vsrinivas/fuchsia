@@ -6,6 +6,6 @@
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest"
             name="zircon"
-            revision="5cd9fa384283b1a38c2572b7db7b69b785d70ac9"/>
+            revision="b1876738123bd29a343b7660f38ef4a3a909ddad"/>
   </imports>
 </manifest>
