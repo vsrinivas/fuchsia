@@ -65,7 +65,7 @@ Buffer::Buffer(ResourceManager* manager,
       mem_(std::move(mem)),
       buffer_(buffer),
       size_(size),
-      ptr_(mem_->mapped_ptr()) {
+      ptr_(mem_->mapped_ptr() + offset) {
   FXL_DCHECK(size + offset <= mem_->size());
   vulkan_context().device.bindBufferMemory(buffer_, mem_->base(),
                                            mem_->offset() + offset);

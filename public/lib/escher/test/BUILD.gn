@@ -20,6 +20,7 @@ executable("escher_unittests") {
     "scene/directional_light_unittest.cc",
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
+    "vk/buffer_unittest.cc",
   ]
 
   if (is_fuchsia) {
