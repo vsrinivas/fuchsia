@@ -97,12 +97,17 @@ func (u *UpdateRepo) AddContentBlob(src string) (string, error) {
 	}
 
 	rootStr := hex.EncodeToString(root)
-	dst := filepath.Join(u.path, "repository", "blobs", rootStr)
-	if _, err = os.Stat(dst); err == nil {
-		return rootStr, os.ErrExist
-	}
+	return u.AddContentBlobWithMerkle(src, rootStr)
+}
 
-	return rootStr, copyFile(dst, src)
+// AddContentBlobWithMerkle adds the blob specified by src with the precomputed
+// merkle root `merkle` to the repository.
+func (u *UpdateRepo) AddContentBlobWithMerkle(src, merkle string) (string, error) {
+	dst := filepath.Join(u.path, "repository", "blobs", merkle)
+	if _, err := os.Stat(dst); err == nil {
+		return merkle, os.ErrExist
+	}
+	return merkle, copyFile(dst, src)
 }
 
 func (u *UpdateRepo) RemoveContentBlob(merkle string) error {

@@ -32,6 +32,7 @@ var (
 	tufFile      = flag.Bool("p", false, "Publish a package.")
 	packageSet   = flag.Bool("ps", false, "Publish a set of packages from a manifest.")
 	regFile      = flag.Bool("b", false, "Publish a content blob.")
+	blobSet      = flag.Bool("bs", false, "Publish a set of blobs from a manifest.")
 	manifestFile = flag.Bool("m", false, "Publish a the contents of a manifest as as content blobs.")
 	filePath     = flag.String("f", "", "Path of the file to publish")
 	name         = flag.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
@@ -52,10 +53,10 @@ func main() {
 	}
 
 	modeCheck := false
-	for _, v := range []bool{*tufFile, *packageSet, *regFile, *manifestFile} {
+	for _, v := range []bool{*tufFile, *packageSet, *regFile, *blobSet, *manifestFile} {
 		if v {
 			if modeCheck {
-				log.Fatal("Only one mode, -p, -ps, -b, or -m may be selected")
+				log.Fatal("Only one mode, -p, -ps, -b, -bs, or -m may be selected")
 			}
 			modeCheck = true
 		}
@@ -102,6 +103,28 @@ func main() {
 		}
 		if err := repo.CommitUpdates(); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
+		}
+	} else if *blobSet {
+		f, err := os.Open(*filePath)
+		if err != nil {
+			log.Fatalf("error reading package set manifest: %s", err)
+		}
+		defer f.Close()
+		s := bufio.NewScanner(f)
+		for s.Scan() {
+			if err := s.Err(); err != nil {
+				log.Fatalf("error reading package set manifest: %s", err)
+			}
+
+			line := s.Text()
+			parts := strings.SplitN(line, "=", 2)
+
+			if _, err = repo.AddContentBlobWithMerkle(parts[0], parts[1]); err != nil {
+				if err != os.ErrExist {
+					log.Fatalf("Error adding regular file: %s\n", err)
+					return
+				}
+			}
 		}
 
 	} else if *tufFile {
