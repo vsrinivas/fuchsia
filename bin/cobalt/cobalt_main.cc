@@ -143,7 +143,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
 
   void AddIntBucketDistribution(
       uint32_t metric_id, uint32_t encoding_id,
-      fidl::Map<uint32_t, uint64_t> observations,
+      fidl::Map<uint32_t, uint64_t> distribution,
       const AddIntBucketDistributionCallback& callback) override;
 
   void SendObservations(const SendObservationsCallback& callback) override;
@@ -256,7 +256,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
 
 void CobaltEncoderImpl::AddIntBucketDistribution(
     uint32_t metric_id, uint32_t encoding_id,
-    fidl::Map<uint32_t, uint64_t> observations,
+    fidl::Map<uint32_t, uint64_t> distribution,
     const AddIntBucketDistributionCallback& callback) {
   FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
   callback(Status::INTERNAL_ERROR);

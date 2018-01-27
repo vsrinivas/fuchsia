@@ -191,13 +191,13 @@ interface CobaltEncoder {
   // |encoding_id| Must be an encoding ID registered with the Cobalt system
   //               and associated with this encoder's project ID.
   //
-  // |observations| The Distribution to be encoded. A bucket distribution is a
+  // |distribution| The Distribution to be encoded. A bucket distribution is a
   //                mapping from bucket indices to element counts in those
   //                buckets. The definition of the buckets is given by the
   //                IntegerBuckets in the MetricPart definition registered with
   //                Cobalt.
   AddIntBucketDistribution@6(uint32 metric_id, uint32 encoding_id,
-                             map<uint32, uint64> observations)
+                             map<uint32, uint64> distribution)
       => (Status status);
 
   // Obsolete. This does nothing and always returns OK.
