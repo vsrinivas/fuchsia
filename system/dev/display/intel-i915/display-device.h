@@ -20,7 +20,7 @@ namespace i915 {
 class Controller;
 
 class DisplayDevice;
-using DisplayDeviceType = ddk::Device<DisplayDevice>;
+using DisplayDeviceType = ddk::Device<DisplayDevice, ddk::Suspendable>;
 
 class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
 public:
@@ -28,6 +28,7 @@ public:
     virtual ~DisplayDevice();
 
     void DdkRelease();
+    zx_status_t DdkSuspend(uint32_t reason);
 
     zx_status_t SetMode(zx_display_info_t* info);
     zx_status_t GetMode(zx_display_info_t* info);

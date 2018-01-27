@@ -119,25 +119,25 @@ void Controller::EnableBacklight(bool enable) {
     }
 }
 
-zx_status_t Controller::InitHotplug(pci_protocol_t* pci) {
+zx_status_t Controller::InitHotplug() {
     // Disable interrupts here, we'll re-enable them at the very end of ::Bind
     auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
     interrupt_ctrl.set_enable_mask(0);
     interrupt_ctrl.WriteTo(mmio_space_.get());
 
     uint32_t irq_cnt = 0;
-    zx_status_t status = pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+    zx_status_t status = pci_query_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
     if (status != ZX_OK || !irq_cnt) {
         zxlogf(ERROR, "i915: Failed to find interrupts %d %d\n", status, irq_cnt);
         return ZX_ERR_INTERNAL;
     }
 
-    if ((status = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
+    if ((status = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
         zxlogf(ERROR, "i915: Failed to set irq mode %d\n", status);
         return status;
     }
 
-    if ((status = pci_map_interrupt(pci, 0, &irq_) != ZX_OK)) {
+    if ((status = pci_map_interrupt(&pci_, 0, &irq_) != ZX_OK)) {
         zxlogf(ERROR, "i915: Failed to map interrupt %d\n", status);
         return status;
     }
@@ -560,12 +560,11 @@ void Controller::DdkRelease() {
 zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
     zxlogf(TRACE, "i915: binding to display controller\n");
 
-    pci_protocol_t pci;
-    if (device_get_protocol(parent_, ZX_PROTOCOL_PCI, &pci)) {
+    if (device_get_protocol(parent_, ZX_PROTOCOL_PCI, &pci_)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id_);
+    pci_config_read16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
     zxlogf(TRACE, "i915: device id %x\n", device_id_);
     if (device_id_ == INTEL_I915_BROADWELL_DID) {
         // TODO: this should be based on the specific target
@@ -574,26 +573,18 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     zx_status_t status;
     if (is_gen9(device_id_) && ENABLE_MODESETTING) {
-        status = igd_opregion_.Init(&pci);
+        status = igd_opregion_.Init(&pci_);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
             return status;
         }
     }
 
-    uint16_t gmch_ctrl;
-    status = pci_config_read16(&pci, registers::GmchGfxControl::kAddr, &gmch_ctrl);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to read GfxControl\n");
-        return status;
-    }
-    uint32_t gtt_size = registers::GmchGfxControl::mem_size_to_mb(gmch_ctrl);
-
     zxlogf(TRACE, "i915: mapping registers\n");
     // map register window
     uintptr_t regs;
     uint64_t regs_size;
-    status = pci_map_bar(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_bar(&pci_, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               reinterpret_cast<void**>(&regs), &regs_size, &regs_handle_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to map bar 0: %d\n", status);
@@ -611,7 +602,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");
-        status = InitHotplug(&pci);
+        status = InitHotplug();
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: failed to init hotplugging\n");
             return status;
@@ -619,7 +610,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     zxlogf(TRACE, "i915: mapping gtt\n");
-    if ((status = gtt_.Init(mmio_space_.get(), gtt_size)) != ZX_OK) {
+    if ((status = gtt_.Init(this)) != ZX_OK) {
         zxlogf(ERROR, "i915: failed to init gtt %d\n", status);
         return status;
     }

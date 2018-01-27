@@ -31,6 +31,7 @@ public:
     void DdkRelease();
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
+    pci_protocol_t* pci() { return &pci_; }
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
     uint16_t device_id() const { return device_id_; }
@@ -43,7 +44,7 @@ public:
 
 private:
     void EnableBacklight(bool enable);
-    zx_status_t InitHotplug(pci_protocol_t* pci);
+    zx_status_t InitHotplug();
     zx_status_t InitDisplays();
     fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi);
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display);
@@ -53,6 +54,8 @@ private:
 
     Gtt gtt_;
     IgdOpRegion igd_opregion_;
+
+    pci_protocol_t pci_;
 
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
     zx_handle_t regs_handle_;

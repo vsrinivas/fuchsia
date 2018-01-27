@@ -45,6 +45,15 @@ void DisplayDevice::DdkRelease() {
     delete this;
 }
 
+zx_status_t DisplayDevice::DdkSuspend(uint32_t hint) {
+    if ((hint & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC) {
+        // If we're mexecing, drop the reference to the GttRegion so it gets
+        // cleaned up and no longer references regular memory.
+        fb_gfx_addr_ = nullptr;
+    }
+    return ZX_OK;
+}
+
 // implement display protocol
 
 zx_status_t DisplayDevice::SetMode(zx_display_info_t* info) {
@@ -135,10 +144,9 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    fb_gfx_addr_ = controller_->gtt()
-            ->Insert(controller_->mmio_space(), &framebuffer_vmo_, framebuffer_size_,
-                     registers::PlaneSurface::kLinearAlignment,
-                     registers::PlaneSurface::kTrailingPtePadding);
+    fb_gfx_addr_ = controller_->gtt()->Insert(&framebuffer_vmo_, framebuffer_size_,
+                                              registers::PlaneSurface::kLinearAlignment,
+                                              registers::PlaneSurface::kTrailingPtePadding);
     if (!fb_gfx_addr_) {
         zxlogf(ERROR, "i915: Failed to allocate gfx address for framebuffer\n");
         return false;
@@ -169,7 +177,7 @@ bool DisplayDevice::Init() {
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
     plane_surface.set_surface_base_addr(
-            static_cast<uint32_t>(fb_gfx_addr_->base >> plane_surface.kRShiftCount));
+            static_cast<uint32_t>(fb_gfx_addr_->base() >> plane_surface.kRShiftCount));
     plane_surface.WriteTo(controller_->mmio_space());
 
     return true;

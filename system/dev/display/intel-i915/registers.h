@@ -12,17 +12,47 @@
 namespace registers {
 
 // Graphics & Memory Controller Hub Graphics Control - GGC_0_0_0_PCI
-// This is a 16-bit register, so it needs to be populated manually
-// TODO(stevensd/teisenbe): Is this true still?
 class GmchGfxControl : public hwreg::RegisterBase<GmchGfxControl, uint16_t> {
 public:
-    static constexpr uint32_t kAddr = 0x50;
+    static constexpr uint32_t kAddr = 0x50; // Address for the mirror
 
-    DEF_FIELD(7, 6, gtt_gfx_mem_size);
+    DEF_FIELD(15, 8, gfx_mode_select);
+    DEF_FIELD(7, 6, gtt_size);
 
-    static inline uint32_t mem_size_to_mb(uint32_t val) {
-        return val ? 1 << (20 + val) : 0;
+    inline uint32_t gtt_mappable_mem_size() {
+        return gtt_size() ? 1 << (20 + gtt_size()) : 0;
     }
+
+    inline uint32_t dsm_size() {
+        if (gfx_mode_select() <= 0x10) {
+            return gfx_mode_select() * 32 * 1024 * 1024;
+        } else if (gfx_mode_select() == 0x20) {
+            return 1024 * 1024 * 1024;
+        } else if (gfx_mode_select() == 0x30) {
+            return 1536 * 1024 * 1024;
+        } else if (gfx_mode_select() == 0x40) {
+            return 2048 * 1024 * 1024u;
+        } else if (0xf0 <= gfx_mode_select() && gfx_mode_select() < 0xff) {
+            return (gfx_mode_select() - 0xef) * 4 * 1024 * 1024;
+        } else {
+            return 0;
+        }
+    }
+
+    static auto Get() { return hwreg::RegisterAddr<GmchGfxControl>(0); }
+};
+
+// Base Data of Stolen Memory - BDSM_0_0_0_PCI
+class BaseDsm : public hwreg::RegisterBase<BaseDsm, uint32_t> {
+public:
+    static constexpr uint32_t kAddr = 0x5c; // Address for the mirror
+
+    DEF_FIELD(31, 20, base_phys_addr);
+    static constexpr uint32_t base_phys_addr_shift = 20;
+    DEF_RSVDZ_FIELD(19, 1);
+    DEF_BIT(0, lock);
+
+    static auto Get() { return hwreg::RegisterAddr<BaseDsm>(0); }
 };
 
 // MASTER_INT_CTL

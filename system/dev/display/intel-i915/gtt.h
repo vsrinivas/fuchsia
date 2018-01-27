@@ -11,18 +11,35 @@
 
 namespace i915 {
 
-class Device;
-using GttRegion = RegionAllocator::Region;
+class Controller;
+class Gtt;
+
+class GttRegion {
+public:
+    GttRegion(fbl::unique_ptr<const RegionAllocator::Region> region, Gtt* gtt);
+    ~GttRegion();
+
+    uint64_t base() const { return region_->base; }
+    uint64_t size() const { return region_->size; }
+
+private:
+    fbl::unique_ptr<const RegionAllocator::Region> region_;
+    Gtt* gtt_;
+};
 
 class Gtt {
 public:
     Gtt();
-    zx_status_t Init(hwreg::RegisterIo* mmio_space, uint32_t gtt_size);
-    fbl::unique_ptr<const GttRegion> Insert(hwreg::RegisterIo* mmio_space, zx::vmo* buffer,
+    zx_status_t Init(Controller* controller);
+    fbl::unique_ptr<const GttRegion> Insert(zx::vmo* buffer,
                                             uint32_t length, uint32_t align_pow2,
                                             uint32_t pte_padding);
 private:
+    Controller* controller_;
     RegionAllocator region_allocator_;
+    uintptr_t scratch_buffer_;
+
+    friend class GttRegion;
 };
 
 } // namespace i915
