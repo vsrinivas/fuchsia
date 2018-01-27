@@ -463,7 +463,9 @@ X86PageTableBase::~X86PageTableBase() {
     DEBUG_ASSERT_MSG(!phys_, "page table dtor called before Destroy()");
 }
 
-zx_status_t X86PageTableBase::Init(void* ctx) {
+// We disable analysis due to the write to |pages_| tripping it up.  It is safe
+// to write to |pages_| since this is part of object construction.
+zx_status_t X86PageTableBase::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     /* allocate a top level page table for the new address space */
     paddr_t pa;
     vm_page_t* p;
@@ -483,7 +485,9 @@ zx_status_t X86PageTableBase::Init(void* ctx) {
     return ZX_OK;
 }
 
-zx_status_t X86PageTableMmu::InitKernel(void* ctx) {
+// We disable analysis due to the write to |pages_| tripping it up.  It is safe
+// to write to |pages_| since this is part of object construction.
+zx_status_t X86PageTableMmu::InitKernel(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     phys_ = kernel_pt_phys;
     virt_ = (pt_entry_t*)X86_PHYS_TO_VIRT(phys_);
     ctx_ = ctx;

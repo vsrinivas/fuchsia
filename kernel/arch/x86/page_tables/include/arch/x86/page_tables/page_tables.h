@@ -73,7 +73,9 @@ public:
     paddr_t phys() const { return phys_; }
     void* virt() const { return virt_; }
 
-    size_t pages() const { return pages_; }
+    // Reading this value is primarily used for calculating memory usage.  It is
+    // fine on x86 for this to be read while the lock is not held.
+    size_t pages() const TA_NO_THREAD_SAFETY_ANALYSIS { return pages_; }
     void* ctx() const { return ctx_; }
 
     zx_status_t MapPages(vaddr_t vaddr, paddr_t* phys, size_t count,
@@ -124,7 +126,7 @@ protected:
     pt_entry_t* virt_ = nullptr;
 
     // Counter of pages allocated to back the translation table.
-    size_t pages_ = 0;
+    size_t pages_ TA_GUARDED(lock_) = 0;
 
     // A context structure that may used by a PageTable type above as part of
     // invalidation.
