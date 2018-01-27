@@ -12,18 +12,6 @@
 #include <string.h>
 #include <unittest.h>
 
-#if !WITH_NO_FP
-#include "float_test_vec.c"
-
-static void printf_tests_float(void) {
-    printf("floating point printf tests\n");
-
-    for (size_t i = 0; i < float_test_vec_size; i++) {
-        PRINT_FLOAT;
-    }
-}
-#endif
-
 // Checks that vsnprintf() gives the expected string as output.
 static bool test_printf(const char* expected, const char* format, ...) {
     char buf[100];
@@ -187,10 +175,6 @@ static bool printf_tests(void* context) {
     err = snprintf(buf, 15, "0123456789abcdef012345678");
     printf("snprintf returns %d\n", err);
     hexdump8(buf, sizeof(buf));
-
-#if !WITH_NO_FP
-    printf_tests_float();
-#endif
 
     END_TEST;
 }

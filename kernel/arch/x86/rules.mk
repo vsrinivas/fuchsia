@@ -125,7 +125,6 @@ KERNEL_COMPILEFLAGS += -msoft-float -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mno-
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
-KERNEL_DEFINES += WITH_NO_FP=1
 
 KERNEL_COMPILEFLAGS += -fPIE -include kernel/include/hidden.h
 KERNEL_COMPILEFLAGS += -mno-red-zone
