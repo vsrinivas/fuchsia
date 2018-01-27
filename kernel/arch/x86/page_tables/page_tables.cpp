@@ -174,16 +174,20 @@ public:
     explicit ConsistencyManager(X86PageTableBase* pt);
     ~ConsistencyManager();
 
-    void queue_free(vm_page_t* page) {
+    // Disable thread safety analysis here because it has trouble identifying
+    // that |pt_->lock_| is held here.
+    void queue_free(vm_page_t* page) TA_NO_THREAD_SAFETY_ANALYSIS {
+        DEBUG_ASSERT(pt_->lock_.IsHeld());
+
         list_add_tail(&to_free_, &page->free.node);
+        pt_->pages_--;
     }
 
     CacheLineFlusher* cache_line_flusher() { return &clf_; }
     PendingTlbInvalidation* pending_tlb() { return &tlb_; }
 
     // This function must be called while holding pt_->lock_.
-    // The analysis has trouble with this due to aliasing.
-    void Finish() TA_NO_THREAD_SAFETY_ANALYSIS;
+    void Finish();
 private:
     X86PageTableBase* pt_;
 
@@ -204,16 +208,21 @@ X86PageTableBase::ConsistencyManager::ConsistencyManager(X86PageTableBase* pt)
 }
 
 X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
-    DEBUG_ASSERT(list_is_empty(&to_free_));
     DEBUG_ASSERT(pt_ == nullptr);
+
+    // We free the paging structures here rather than in Finish(), to allow
+    // support deferring invoking pmm_free() until after we've left the page
+    // table lock.
+    if (!list_is_empty(&to_free_)) {
+        pmm_free(&to_free_);
+    }
 }
 
 void X86PageTableBase::ConsistencyManager::Finish() {
+    DEBUG_ASSERT(pt_->lock_.IsHeld());
+
     clf_.ForceFlush();
     pt_->TlbInvalidate(&tlb_);
-    if (!list_is_empty(&to_free_)) {
-        pt_->pages_ -= pmm_free(&to_free_);
-    }
     pt_ = nullptr;
 }
 
@@ -794,17 +803,18 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
     if (count == 0)
         return ZX_OK;
 
-    fbl::AutoLock a(&lock_);
-    DEBUG_ASSERT(virt_);
-
     MappingCursor start = {
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
-
     MappingCursor result;
+
     ConsistencyManager cm(this);
-    RemoveMapping(virt_, top_level(), start, &result, &cm);
-    cm.Finish();
+    {
+        fbl::AutoLock a(&lock_);
+        DEBUG_ASSERT(virt_);
+        RemoveMapping(virt_, top_level(), start, &result, &cm);
+        cm.Finish();
+    }
     DEBUG_ASSERT(result.size == 0);
 
     if (unmapped)
@@ -832,46 +842,47 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock a(&lock_);
-    DEBUG_ASSERT(virt_);
-
     PageTableLevel top = top_level();
     ConsistencyManager cm(this);
+    {
+        fbl::AutoLock a(&lock_);
+        DEBUG_ASSERT(virt_);
 
-    // TODO(teisenbe): Improve performance of this function by integrating deeper into
-    // the algorithm (e.g. make the cursors aware of the page array).
-    size_t idx = 0;
-    auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        if (idx > 0) {
+        // TODO(teisenbe): Improve performance of this function by integrating deeper into
+        // the algorithm (e.g. make the cursors aware of the page array).
+        size_t idx = 0;
+        auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+            if (idx > 0) {
+                MappingCursor start = {
+                    .paddr = 0, .vaddr = vaddr, .size = idx * PAGE_SIZE,
+                };
+
+                MappingCursor result;
+                RemoveMapping(virt_, top, start, &result, &cm);
+                DEBUG_ASSERT(result.size == 0);
+            }
+            cm.Finish();
+        });
+
+        vaddr_t v = vaddr;
+        for (; idx < count; ++idx) {
             MappingCursor start = {
-                .paddr = 0, .vaddr = vaddr, .size = idx * PAGE_SIZE,
+                .paddr = phys[idx], .vaddr = v, .size = PAGE_SIZE,
             };
-
             MappingCursor result;
-            RemoveMapping(virt_, top, start, &result, &cm);
+            zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result, &cm);
+            if (status != ZX_OK) {
+                dprintf(SPEW, "Add mapping failed with err=%d\n", status);
+                return status;
+            }
             DEBUG_ASSERT(result.size == 0);
+
+            v += PAGE_SIZE;
         }
+
+        undo.cancel();
         cm.Finish();
-    });
-
-    vaddr_t v = vaddr;
-    for (; idx < count; ++idx) {
-        MappingCursor start = {
-            .paddr = phys[idx], .vaddr = v, .size = PAGE_SIZE,
-        };
-        MappingCursor result;
-        zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result, &cm);
-        if (status != ZX_OK) {
-            dprintf(SPEW, "Add mapping failed with err=%d\n", status);
-            return status;
-        }
-        DEBUG_ASSERT(result.size == 0);
-
-        v += PAGE_SIZE;
     }
-
-    undo.cancel();
-    cm.Finish();
 
     if (mapped) {
         *mapped = count;
@@ -897,19 +908,20 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
     if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock a(&lock_);
-    DEBUG_ASSERT(virt_);
-
     MappingCursor start = {
         .paddr = paddr, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
     ConsistencyManager cm(this);
-    zx_status_t status = AddMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
-    cm.Finish();
-    if (status != ZX_OK) {
-        dprintf(SPEW, "Add mapping failed with err=%d\n", status);
-        return status;
+    {
+        fbl::AutoLock a(&lock_);
+        DEBUG_ASSERT(virt_);
+        zx_status_t status = AddMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
+        cm.Finish();
+        if (status != ZX_OK) {
+            dprintf(SPEW, "Add mapping failed with err=%d\n", status);
+            return status;
+        }
     }
     DEBUG_ASSERT(result.size == 0);
 
@@ -933,17 +945,18 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
     if (!allowed_flags(mmu_flags))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock a(&lock_);
-
     MappingCursor start = {
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
     ConsistencyManager cm(this);
-    zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
-    cm.Finish();
-    if (status != ZX_OK) {
-        return status;
+    {
+        fbl::AutoLock a(&lock_);
+        zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
+        cm.Finish();
+        if (status != ZX_OK) {
+            return status;
+        }
     }
     DEBUG_ASSERT(result.size == 0);
     return ZX_OK;
