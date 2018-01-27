@@ -561,6 +561,12 @@ static void nvme_queue(void* ctx, block_op_t* op) {
         txn_complete(txn, ZX_ERR_INVALID_ARGS);
         return;
     }
+    // Transaction must fit within device
+    if ((txn->op.rw.offset_dev >= nvme->info.block_count) ||
+        (nvme->info.block_count - txn->op.rw.offset_dev < txn->op.rw.length)) {
+        txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
+        return;
+    }
 
     // convert vmo offset to a byte offset
     txn->op.rw.offset_vmo *= nvme->info.block_size;
