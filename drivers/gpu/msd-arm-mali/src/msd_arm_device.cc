@@ -372,36 +372,39 @@ static bool IsHardwareResultCode(uint32_t result)
 magma::Status MsdArmDevice::ProcessJobInterrupt()
 {
     TRACE_DURATION("magma", "MsdArmDevice::ProcessJobInterrupt");
-    auto irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(register_io_.get());
-    auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-    clear_flags.WriteTo(register_io_.get());
-    DLOG("Processing job interrupt status %x", irq_status.reg_value());
+    while (true) {
+        auto irq_status = registers::JobIrqFlags::GetRawStat().ReadFrom(register_io_.get());
+        if (!irq_status.reg_value())
+            break;
+        auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
+        clear_flags.WriteTo(register_io_.get());
+        DLOG("Processing job interrupt status %x", irq_status.reg_value());
 
-    if (irq_status.failed_slots().get()) {
-        magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
-                   irq_status.failed_slots().get());
-        ProcessDumpStatusToLog();
+        if (irq_status.failed_slots().get()) {
+            magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
+                       irq_status.failed_slots().get());
+            ProcessDumpStatusToLog();
+        }
+
+        uint32_t failed = irq_status.failed_slots().get();
+        while (failed) {
+            uint32_t slot = __builtin_ffs(failed) - 1;
+            registers::JobSlotRegisters regs(slot);
+            uint32_t result = regs.Status().ReadFrom(register_io_.get()).reg_value();
+
+            if (!IsHardwareResultCode(result))
+                result = kArmMaliResultUnknownFault;
+            scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
+            failed &= ~(1 << slot);
+        }
+
+        uint32_t finished = irq_status.finished_slots().get();
+        while (finished) {
+            uint32_t slot = __builtin_ffs(finished) - 1;
+            scheduler_->JobCompleted(slot, kArmMaliResultSuccess);
+            finished &= ~(1 << slot);
+        }
     }
-
-    uint32_t failed = irq_status.failed_slots().get();
-    while (failed) {
-        uint32_t slot = __builtin_ffs(failed) - 1;
-        registers::JobSlotRegisters regs(slot);
-        uint32_t result = regs.Status().ReadFrom(register_io_.get()).reg_value();
-
-        if (!IsHardwareResultCode(result))
-            result = kArmMaliResultUnknownFault;
-        scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
-        failed &= ~(1 << slot);
-    }
-
-    uint32_t finished = irq_status.finished_slots().get();
-    while (finished) {
-        uint32_t slot = __builtin_ffs(finished) - 1;
-        scheduler_->JobCompleted(slot, kArmMaliResultSuccess);
-        finished &= ~(1 << slot);
-    }
-
     job_interrupt_->Complete();
     return MAGMA_STATUS_OK;
 }
@@ -658,14 +661,11 @@ magma::Status MsdArmDevice::ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> c
 
 void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io)
 {
+    TRACE_DURATION("magma", "ExecuteAtomOnDevice", "address", atom->gpu_address(), "slot",
+                   atom->slot());
     DASSERT(atom->slot() < 2u);
     DASSERT(atom->AreDependenciesFinished());
-
-    if (!atom->gpu_address()) {
-        // Dependency-only jobs have a 0 gpu address, so skip them.
-        scheduler_->JobCompleted(atom->slot(), kArmMaliResultSuccess);
-        return;
-    }
+    DASSERT(atom->gpu_address());
 
     // Skip atom if address space can't be assigned.
     if (!address_manager_->AssignAddressSpace(atom)) {
@@ -694,6 +694,7 @@ void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, registe
 
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
 {
+    TRACE_DURATION("magma", "AtomCompleted", "address", atom->gpu_address());
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(atom);
     atom->set_finished();

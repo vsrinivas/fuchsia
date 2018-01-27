@@ -33,6 +33,7 @@ public:
     uint32_t slot() const { return slot_; }
     uint8_t atom_number() const { return atom_number_; }
     const magma_arm_mali_user_data& user_data() const { return user_data_; }
+    bool IsDependencyOnly() const { return !gpu_address_; }
 
     void set_dependencies(const DependencyList& dependencies);
     bool AreDependenciesFinished();

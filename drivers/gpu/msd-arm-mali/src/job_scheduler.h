@@ -48,8 +48,9 @@ public:
     void ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
 private:
-    MsdArmAtom* executing_atom() const { return executing_atom_.get(); }
+    MsdArmAtom* executing_atom() const { return executing_atoms_[0].get(); }
     void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
+    void SoftJobCompleted(std::shared_ptr<MsdArmSoftAtom> atom);
 
     void set_timeout_duration(uint64_t timeout_duration_ms)
     {
@@ -63,7 +64,7 @@ private:
     uint64_t timeout_duration_ms_ = 1000;
 
     std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
-    std::shared_ptr<MsdArmAtom> executing_atom_;
+    std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;
     std::list<std::shared_ptr<MsdArmAtom>> atoms_;
 
     friend class TestJobScheduler;
