@@ -74,8 +74,12 @@ static inline zx_status_t pdev_map_mmio_buffer(platform_device_protocol_t* pdev,
 static inline zx_status_t pdev_map_contig_buffer(platform_device_protocol_t* pdev, size_t size,
                                                  uint32_t align_log2, uint32_t map_flags,
                                                  pdev_vmo_buffer_t* buffer) {
-    return pdev_map_contig_vmo(pdev, size, align_log2, map_flags, &buffer->vaddr, &buffer->paddr,
-                               &buffer->handle);
+    zx_status_t status = pdev_map_contig_vmo(pdev, size, align_log2, map_flags, &buffer->vaddr,
+                                             &buffer->paddr, &buffer->handle);
+    if (status == ZX_OK) {
+        status = zx_vmo_get_size(buffer->handle, &buffer->size);
+    }
+    return status;
 }
 
 static inline zx_status_t pdev_vmo_buffer_cache_flush(pdev_vmo_buffer_t* buffer, zx_off_t offset,
