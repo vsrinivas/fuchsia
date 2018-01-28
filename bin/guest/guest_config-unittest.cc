@@ -195,5 +195,35 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 
+#define TEST_PARSE_GUID(name, guid, result)                                   \
+  TEST(GuestConfigParserTest, GuidTest##name) {                               \
+    GuestConfig config;                                                       \
+    GuestConfigParser parser(&config);                                        \
+                                                                              \
+    const char* argv[] = {"exe_name", "--block=guid:" guid};                  \
+    ASSERT_EQ((result),                                                       \
+              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
+  }
+
+TEST_PARSE_GUID(LowerCase, "14db42cf-beb7-46a2-9ef8-89b13bb80528", ZX_OK);
+TEST_PARSE_GUID(UpperCase, "14DB42CF-BEB7-46A2-9EF8-89B13BB80528", ZX_OK);
+TEST_PARSE_GUID(MixedCase, "14DB42CF-BEB7-46A2-9ef8-89b13bb80528", ZX_OK);
+TEST_PARSE_GUID(MissingDelimeters,
+                "14db42cfbeb746a29ef889b13bb80528",
+                ZX_ERR_INVALID_ARGS);
+TEST_PARSE_GUID(ExtraDelimeters,
+                "14-db-42cf-beb7-46-a2-9ef8-89b13bb80528",
+                ZX_ERR_INVALID_ARGS);
+TEST_PARSE_GUID(
+    TooLong,
+    "14db42cf-beb7-46a2-9ef8-89b13bb80528-14db42cf-beb7-46a2-9ef8-"
+    "89b13bb80528-14db42cf-beb7-46a2-9ef8-89b13bb80528-14db42cf-beb7-"
+    "46a2-9ef8-89b13bb80528-14db42cf-beb7-46a2-9ef8-89b13bb80528",
+    ZX_ERR_INVALID_ARGS);
+TEST_PARSE_GUID(TooShort, "14db42cf", ZX_ERR_INVALID_ARGS);
+TEST_PARSE_GUID(IllegalCharacters,
+                "abcdefgh-ijkl-mnop-qrst-uvwxyz!@#$%^",
+                ZX_ERR_INVALID_ARGS);
+
 }  // namespace
 }  // namespace guest

@@ -15,6 +15,9 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
+// 32 hex characters + 4 hyphens.
+constexpr size_t kGuidStringLen = 36;
+
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
@@ -152,41 +155,19 @@ static zx_status_t parse_guid(const std::string& guid_str,
   if (!guid.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  std::vector<uint8_t> nibbles;
-  for (const char& c : guid_str) {
-    switch (c) {
-      case '0' ... '9':
-        nibbles.push_back(c - '0');
-        break;
-      case 'a' ... 'f':
-        nibbles.push_back(10 + (c - 'a'));
-        break;
-      case 'A' ... 'F':
-        nibbles.push_back(10 + (c - 'A'));
-        break;
-      case '-':
-        continue;
-      default:
-        FXL_LOG(ERROR) << "String is not a valid guid " << guid_str;
-        return ZX_ERR_INVALID_ARGS;
-    }
-  }
-  if (nibbles.size() != (2 * sizeof(guid.bytes))) {
-    FXL_LOG(ERROR) << "String is not a valid guid " << guid_str;
+  if (guid_str.size() != kGuidStringLen) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  for (size_t i = 0; i < nibbles.size(); i += 2) {
-    guid.bytes[i / 2] = nibbles[i] << 4 | nibbles[i + 1];
-  }
-
-  // Pack with with mixed-endian byte ordering.
-  std::swap(guid.bytes[0], guid.bytes[3]);
-  std::swap(guid.bytes[1], guid.bytes[2]);
-  std::swap(guid.bytes[4], guid.bytes[5]);
-  std::swap(guid.bytes[6], guid.bytes[7]);
-  return ZX_OK;
+  int ret = sscanf(
+      guid_str.c_str(),
+      "%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%"
+      "2hhx%2hhx%2hhx",
+      &guid.bytes[3], &guid.bytes[2], &guid.bytes[1], &guid.bytes[0],
+      &guid.bytes[5], &guid.bytes[4], &guid.bytes[7], &guid.bytes[6],
+      &guid.bytes[8], &guid.bytes[9], &guid.bytes[10], &guid.bytes[11],
+      &guid.bytes[12], &guid.bytes[13], &guid.bytes[14], &guid.bytes[15]);
+  return (ret == 16) ? ZX_OK : ZX_ERR_INVALID_ARGS;
 }
 
 static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
