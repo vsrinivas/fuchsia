@@ -16,6 +16,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <soc/aml-common/aml-i2c.h>
+
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -100,6 +102,7 @@ static zx_protocol_device_t gauss_bus_device_protocol = {
     .release = gauss_bus_release,
 };
 
+#if 0
 static aml_i2c_dev_desc_t i2c_devs[] = {
     {.port = AML_I2C_A, .base_phys = 0xffd1f000, .irqnum = (21+32)},
     {.port = AML_I2C_B, .base_phys = 0xffd1e000, .irqnum = (214+32)},
@@ -109,6 +112,7 @@ static aml_i2c_dev_desc_t i2c_devs[] = {
     {.port = AML_I2C_D, .base_phys = 0xffd1c000, .irqnum = (39+32)},
 */
 };
+#endif
 
 static int gauss_start_thread(void* arg) {
     gauss_bus_t* bus = arg;
@@ -141,8 +145,8 @@ static int gauss_start_thread(void* arg) {
     gpio_config(&bus->gpio, SPK_MUTEn, GPIO_DIR_OUT);
     gpio_write(&bus->gpio, SPK_MUTEn, 1);
 
-    if ((status = aml_i2c_init(&bus->i2c, i2c_devs, countof(i2c_devs))) != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
+    if ((status = gauss_i2c_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_i2c_init failed: %d\n", status);
         goto fail;
     }
 
@@ -161,10 +165,6 @@ static int gauss_start_thread(void* arg) {
                                                        actual_freq / GAUSS_TDM_CLK_N);
 
     status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_I2C, &bus->i2c.proto);
     if (status != ZX_OK) {
         goto fail;
     }

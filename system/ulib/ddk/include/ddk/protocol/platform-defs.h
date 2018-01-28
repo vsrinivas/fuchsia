@@ -48,5 +48,6 @@ __BEGIN_CDECLS;
 // Amlogic
 #define PDEV_VID_AMLOGIC            5
 #define PDEV_DID_AMLOGIC_GPIO       1
+#define PDEV_DID_AMLOGIC_I2C        2
 
 __END_CDECLS;

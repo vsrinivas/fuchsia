@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/gauss.c \
     $(LOCAL_DIR)/gauss-audio.c \
     $(LOCAL_DIR)/gauss-gpio.c \
+    $(LOCAL_DIR)/gauss-i2c.c \
     $(LOCAL_DIR)/gauss-usb.c \
 
 MODULE_STATIC_LIBS := \
