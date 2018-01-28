@@ -52,12 +52,12 @@ sdk_atom("${data.name}_sdk") {
     % for dest, source in sorted(data.includes.iteritems()):
     {
       source = "${source}"
-      dest = "${dest}"
+      dest = "include/${dest}"
     },
     % endfor
     {
       source = "${data.prebuilt}"
-      dest = "${data.lib_name}"
+      dest = "lib/${data.lib_name}"
     },
   ]
 }

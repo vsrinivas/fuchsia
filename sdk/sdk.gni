@@ -134,7 +134,7 @@ template("sdk") {
 
       args = [
         "--out-dir",
-        rebase_path("$root_out_dir/sdks/$target_name"),
+        rebase_path("$root_out_dir/sdks/$sdk_name"),
         "--stamp-file",
         rebase_path(stamp_file),
         "--manifest",
