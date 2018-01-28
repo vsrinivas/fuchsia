@@ -10,7 +10,6 @@
 #include <soc/aml-a113/a113-usb-phy.h>
 
 #include "vim.h"
-#include "vim-hw.h"
 
 #define BIT_MASK(start, count) (((1 << (count)) - 1) << (start))
 #define SET_BITS(dest, start, count, value) \

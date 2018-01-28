@@ -22,4 +22,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon
 
+MODULE_HEADER_DEPS := \
+    system/dev/soc/aml-s912
+
 include make/module.mk

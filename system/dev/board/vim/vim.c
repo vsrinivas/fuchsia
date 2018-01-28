@@ -15,31 +15,25 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
+#include <hw/reg.h>
+
+#include <soc/aml-s912/s912-hw.h>
 
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include "vim.h"
-#include "vim-hw.h"
 
-// display MMIO for VIM board
-static const pbus_mmio_t vim_display_mmios[] = {
+// DMC MMIO for display driver
+static pbus_mmio_t vim_display_mmios[] = {
     {
-        .base = 0x3d800000,
-        .length = 1920 * 1080 * 2,
+        .base = DMC_REG_BASE,
+        .length = PAGE_SIZE,
     },
 };
 
-// display MMIO for VIM2 board
-static const pbus_mmio_t vim2_display_mmios[] = {
-    {
-        .base = 0xbd851000,
-        .length = 1920 * 1080 * 2,
-    },
-};
-
-static pbus_dev_t display_dev = {
+static const pbus_dev_t display_dev = {
     .name = "display",
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM,
@@ -101,13 +95,8 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
     }
 
-    // VIM2 board has different framebuffer address
-    if (!strcmp(pbus_get_board_name(&bus->pbus), "vim2")) {
-        display_dev.mmios = vim2_display_mmios;
-    }
-
     if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "vim_usb_init could not add display_dev: %d\n", status);
+        zxlogf(ERROR, "vim_bus_bind could not add display_dev: %d\n", status);
         return status;
     }
 

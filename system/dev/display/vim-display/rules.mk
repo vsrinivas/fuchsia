@@ -11,8 +11,16 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/vim-display.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/sync
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
+
+MODULE_HEADER_DEPS := \
+    system/dev/soc/aml-s912
 
 include make/module.mk
