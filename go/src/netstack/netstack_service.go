@@ -19,6 +19,7 @@ import (
 	nsfidl "garnet/public/lib/netstack/fidl/netstack"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -71,6 +72,11 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 	for nicid, ifs := range ns.ifStates {
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
 		broadaddr := []byte(ifs.nic.Addr)
+		if len(ifs.nic.Netmask) != len(ifs.nic.Addr) {
+			log.Printf("warning: mismatched netmask and address length for nic: %+v", ifs.nic)
+			continue
+		}
+
 		for i := range broadaddr {
 			broadaddr[i] |= ^ifs.nic.Netmask[i]
 		}
@@ -207,6 +213,41 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 	ns.stack.SetRouteTable(routes)
 
 	return nil
+}
+
+func toSubnet(address net_address.NetAddress, prefixLen uint64) (tcpip.Subnet, error) {
+	// TODO: use tcpip.Address#mask after fuchsia/third_party/netstack and github/third_party/netstack are unified and #mask can be made public.
+	a := []byte(toTCPIPAddress(address))
+	m := tcpip.CIDRMask(int(prefixLen), int(len(a)*8))
+	for i, _ := range a {
+		a[i] = a[i] & m[i]
+	}
+	return tcpip.NewSubnet(tcpip.Address(a), m)
+}
+
+// Add address to the given network interface.
+func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net_address.NetAddress, prefixLen uint64) (result nsfidl.NetErr, endService error) {
+	log.Printf("net address %+v", address)
+	var protocol tcpip.NetworkProtocolNumber
+	switch address.Family {
+	case net_address.NetAddressFamily_Ipv4:
+		protocol = ipv4.ProtocolNumber
+	case net_address.NetAddressFamily_Ipv6:
+		return nsfidl.NetErr{nsfidl.Status_Ipv4Only, "IPv6 not yet supported for SetInterfaceAddress"}, nil
+	}
+
+	nic := tcpip.NICID(nicid)
+	addr := toTCPIPAddress(address)
+	sn, err := toSubnet(address, prefixLen)
+	if err != nil {
+		result = nsfidl.NetErr{nsfidl.Status_ParseError, "Error applying subnet mask to interface address"}
+		return result, nil
+	}
+
+	if err = ns.setInterfaceAddress(nic, protocol, addr, sn); err != nil {
+		return nsfidl.NetErr{nsfidl.Status_UnknownError, err.Error()}, nil
+	}
+	return nsfidl.NetErr{nsfidl.Status_Ok, ""}, nil
 }
 
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {

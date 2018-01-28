@@ -14,8 +14,10 @@ enum Protocol {
 
 enum Status {
   OK,
-  // TODO: be more specific about the kind of dns error?
+  UNKNOWN_ERROR,
   DNS_ERROR,
+  PARSE_ERROR,
+  IPV4_ONLY,
 };
 
 struct NetErr {
@@ -128,4 +130,9 @@ interface Netstack {
 
   SetRouteTable@9(array<RouteTableEntry> rt);
 
+  // Sets the address for the interface with the given nicid.
+  // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+  // TODO: prefix length is 64-bit to work around TO-830.
+  // Change the argument type once FIDL2 migration is complete.
+  SetInterfaceAddress@10(uint32 nicid, NetAddress addr, uint64 prefixLen) => (NetErr result);
 };

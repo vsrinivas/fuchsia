@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -91,6 +92,35 @@ func applyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
 		subnet[i] &= mask[i]
 	}
 	return tcpip.Address(subnet)
+}
+
+func (ns *netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, sn tcpip.Subnet) error {
+	tcpipErr := ns.stack.AddAddress(nic, protocol, addr)
+	if tcpipErr != nil {
+		return fmt.Errorf("Error adding address %s to NIC ID %s, error: %s", addr, nic, tcpipErr)
+	}
+
+	tcpipErr = ns.stack.AddSubnet(nic, protocol, sn)
+	if tcpipErr != nil {
+		return errors.New(fmt.Sprintf("Error adding subnet %s to NIC ID %s, error: %s", sn, nic, tcpipErr))
+	}
+
+	ifs, ok := ns.ifStates[nic]
+	if !ok {
+		panic(fmt.Sprintf("Interface state table out of sync: NIC [%d] known to third_party/netstack not found in garnet/netstack", nic))
+	}
+
+	ifs.staticAddressAdded(addr, sn)
+	return nil
+}
+
+func (ifs *ifState) staticAddressAdded(newAddr tcpip.Address, subnet tcpip.Subnet) {
+	ifs.ns.mu.Lock()
+	ifs.nic.Addr = newAddr
+	ifs.nic.Netmask = subnet.Mask()
+	ifs.ns.mu.Unlock()
+
+	OnInterfacesChanged()
 }
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
