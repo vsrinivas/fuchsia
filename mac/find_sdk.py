@@ -46,7 +46,11 @@ def main():
 
     sdk_dir = os.path.join(
         out.rstrip(), 'Platforms/MacOSX.platform/Developer/SDKs')
-    sdks = [re.findall('^MacOSX(10\.\d+)\.sdk$', s) for s in os.listdir(sdk_dir)]
+    try:
+        sdks = [re.findall('^MacOSX(10\.\d+)\.sdk$', s) for s in os.listdir(sdk_dir)]
+    except OSError:
+        raise Exception('Mac OSX SDK does not seem to be selected. ' +
+            'Run "sudo xcode-select -r" and try again.')
     sdks = [s[0] for s in sdks if s]
     sdks = [s for s in sdks
         if parse_version(s) >= parse_version(args.min_sdk_version)]
