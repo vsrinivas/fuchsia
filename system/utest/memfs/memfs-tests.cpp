@@ -9,7 +9,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <fdio/util.h>
 #include <memfs/memfs.h>
 #include <unittest/unittest.h>

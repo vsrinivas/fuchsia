@@ -11,14 +11,28 @@ config("async_config") {
 sdk_source_set("async") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
-    "auto_task.cpp",
-    "auto_wait.cpp",
-    "include/async/auto_task.h",
-    "include/async/auto_wait.h",
+    "include/async/dispatcher.h",
     "include/async/receiver.h",
     "include/async/task.h",
     "include/async/wait.h",
-    "include/async/wait_with_timeout.h",
+  ]
+
+  libs = [ "zircon" ]
+
+  public_configs = [ ":async_config" ]
+}
+
+sdk_source_set("cpp") {
+  # Don't forget to update rules.mk as well for the Zircon build.
+  sources = [
+    "auto_task.cpp",
+    "auto_wait.cpp",
+    "include/async/cpp/auto_task.h",
+    "include/async/cpp/auto_wait.h",
+    "include/async/cpp/receiver.h",
+    "include/async/cpp/task.h",
+    "include/async/cpp/wait.h",
+    "include/async/cpp/wait_with_timeout.h",
     "receiver.cpp",
     "task.cpp",
     "wait.cpp",
@@ -28,6 +42,7 @@ sdk_source_set("async") {
   libs = [ "zircon" ]
 
   public_deps = [
+    ":async",
     "//zircon/system/ulib/fbl",
   ]
 
@@ -52,6 +67,19 @@ sdk_source_set("loop") {
   sources = [
     "include/async/loop.h",
     "loop.c",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+
+  public_deps = [
+    ":default",
+  ]
+}
+
+sdk_source_set("loop_cpp") {
+  # Don't forget to update rules.mk as well for the Zircon build.
+  sources = [
+    "include/async/cpp/loop.h",
     "loop_wrapper.cpp",
   ]
 
@@ -59,5 +87,7 @@ sdk_source_set("loop") {
 
   public_deps = [
     ":default",
+    ":loop",
+    "//zircon/system/ulib/fbl",
   ]
 }

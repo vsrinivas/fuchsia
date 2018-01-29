@@ -17,7 +17,9 @@ MODULE_NAME := trace-example
 MODULE_STATIC_LIBS := \
     system/ulib/trace-provider \
     system/ulib/trace \
+    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.loop-cpp \
     system/ulib/async.loop \
     system/ulib/zxcpp \
     system/ulib/fbl \

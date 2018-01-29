@@ -53,7 +53,7 @@ sdk_static_library("fs") {
   include_dirs = [ "//zircon/system/private" ]
 
   deps = [
-    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

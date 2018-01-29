@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <blobstore/blobstore.h>
 #include <blobstore/fsck.h>
 #include <fbl/auto_call.h>

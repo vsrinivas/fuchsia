@@ -6,10 +6,10 @@
 
 #include <zircon/syscalls.h>
 
-#include <async/loop.h>
-#include <async/receiver.h>
-#include <async/task.h>
-#include <async/wait.h>
+#include <async/cpp/loop.h>
+#include <async/cpp/receiver.h>
+#include <async/cpp/task.h>
+#include <async/cpp/wait.h>
 
 #include <zx/event.h>
 #include <fbl/atomic.h>

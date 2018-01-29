@@ -23,7 +23,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.loop-cpp \
     system/ulib/async.loop \
     system/ulib/fbl \
     system/ulib/hypervisor \

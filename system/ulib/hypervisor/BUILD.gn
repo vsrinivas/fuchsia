@@ -42,8 +42,8 @@ source_set("hypervisor") {
   defines = [ "_ALL_SOURCE=1" ]
 
   deps = [
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:loop",
+    "//zircon/system/ulib/async:cpp",
+    "//zircon/system/ulib/async:loop_cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

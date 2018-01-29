@@ -14,6 +14,32 @@ MODULE_NAME := async
 
 MODULE_TYPE := userlib
 
+MODULE_SRCS =
+
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_INCS := \
+    $(LOCAL_INC)/dispatcher.h \
+    $(LOCAL_INC)/receiver.h \
+    $(LOCAL_INC)/task.h \
+    $(LOCAL_INC)/wait.h \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/zircon
+
+MODULE_PACKAGE := src
+
+include make/module.mk
+
+#
+# libasync-cpp.a: the C++ client library
+#
+
+MODULE := $(LOCAL_DIR).cpp
+MODULE_NAME := async-cpp
+
+MODULE_TYPE := userlib
+
 MODULE_SRCS = \
     $(LOCAL_DIR)/auto_task.cpp \
     $(LOCAL_DIR)/auto_wait.cpp \
@@ -24,15 +50,15 @@ MODULE_SRCS = \
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
-    $(LOCAL_INC)/auto_task.h \
-    $(LOCAL_INC)/auto_wait.h \
-    $(LOCAL_INC)/dispatcher.h \
-    $(LOCAL_INC)/receiver.h \
-    $(LOCAL_INC)/task.h \
-    $(LOCAL_INC)/wait.h \
-    $(LOCAL_INC)/wait_with_timeout.h
+    $(LOCAL_INC)/cpp/auto_task.h \
+    $(LOCAL_INC)/cpp/auto_wait.h \
+    $(LOCAL_INC)/cpp/receiver.h \
+    $(LOCAL_INC)/cpp/task.h \
+    $(LOCAL_INC)/cpp/wait.h \
+    $(LOCAL_INC)/cpp/wait_with_timeout.h
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
     system/ulib/fbl
 
 MODULE_LIBS := \
@@ -53,14 +79,42 @@ MODULE_NAME := async-loop
 MODULE_TYPE := userlib
 
 MODULE_SRCS = \
-    $(LOCAL_DIR)/loop.c \
+    $(LOCAL_DIR)/loop.c
+
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_INCS := $(LOCAL_INC)/loop.h
+
+MODULE_STATIC_LIBS := \
+    system/ulib/async
+
+MODULE_LIBS := \
+    system/ulib/async.default \
+    system/ulib/c \
+    system/ulib/zircon
+
+MODULE_PACKAGE := src
+
+include make/module.mk
+
+#
+# libasync-loop-cpp.a: the message loop library
+#
+
+MODULE := $(LOCAL_DIR).loop-cpp
+MODULE_NAME := async-loop-cpp
+
+MODULE_TYPE := userlib
+
+MODULE_SRCS = \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := $(LOCAL_INC)/loop.h
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.loop \
     system/ulib/fbl
 
 MODULE_LIBS := \
@@ -92,9 +146,6 @@ MODULE_EXPORT := so
 
 MODULE_LIBS := \
     system/ulib/c
-
-MODULE_STATIC_LIBS := \
-    system/ulib/fbl
 
 MODULE_PACKAGE := src
 

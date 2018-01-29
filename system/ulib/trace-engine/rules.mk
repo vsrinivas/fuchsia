@@ -17,6 +17,7 @@ MODULE_EXPORT := so
 MODULE_SO_NAME := trace-engine
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/zx \
     system/ulib/zxcpp \

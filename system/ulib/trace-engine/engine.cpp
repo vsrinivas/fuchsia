@@ -8,7 +8,7 @@
 
 #include <zircon/assert.h>
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/event.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>

@@ -4,21 +4,17 @@
 
 #pragma once
 
+#include <async/dispatcher.h>
 #include <async/task.h>
-
-#ifdef __cplusplus
-
 #include <fbl/function.h>
 #include <fbl/macros.h>
 
 namespace async {
 
-// C++ wrapper for a pending task which is automatically canceled when
-// it goes out of scope.
+// C++ wrapper for a pending task.
 //
-// This class is NOT thread-safe; it can only be used with single-threaded
-// asynchronous dispatchers.
-class AutoTask final : private async_task_t {
+// This class is thread-safe.
+class Task final : private async_task_t {
 public:
     // Handles execution of a posted task.
     //
@@ -34,23 +30,15 @@ public:
     using Handler = fbl::Function<async_task_result_t(async_t* async,
                                                       zx_status_t status)>;
 
-    // Initializes the properties of the task and binds it to an asynchronous
-    // dispatcher.
-    explicit AutoTask(async_t* async,
-                      zx_time_t deadline = ZX_TIME_INFINITE,
-                      uint32_t flags = 0u);
+    // Initializes the properties of the task.
+    explicit Task(zx_time_t deadline = ZX_TIME_INFINITE, uint32_t flags = 0u);
 
     // Destroys the task.
     //
-    // The task is canceled automatically if it is still pending.
-    ~AutoTask();
-
-    // Gets the asynchronous dispatcher to which this task has been bound.
-    async_t* async() const { return async_; }
-
-    // Returns true if the |Post()| was called successfully but the task has
-    // not started execution or been canceled.
-    bool is_pending() const { return pending_; }
+    // This object must not be destroyed until the task has completed, been
+    // successfully canceled, or the asynchronous dispatcher itself has been
+    // destroyed.
+    ~Task();
 
     // Gets or sets the handler to invoke when the task becomes due.
     // Must be set before posting the task.
@@ -69,26 +57,20 @@ public:
     // tasks with lesser or equal deadlines.
     //
     // See |async_post_task()| for details.
-    zx_status_t Post();
+    zx_status_t Post(async_t* async);
 
     // Cancels the task.
     //
-    // This method does nothing if the wait is not pending.
-    //
     // See |async_cancel_task()| for details.
-    void Cancel();
+    zx_status_t Cancel(async_t* async);
 
 private:
     static async_task_result_t CallHandler(async_t* async, async_task_t* task,
                                            zx_status_t status);
 
-    async_t* const async_;
     Handler handler_;
-    bool pending_ = false;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoTask);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Task);
 };
 
 } // namespace async
-
-#endif // __cplusplus

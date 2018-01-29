@@ -6,9 +6,6 @@
 
 #include <async/task.h>
 #include <async/wait.h>
-
-#ifdef __cplusplus
-
 #include <fbl/function.h>
 #include <fbl/macros.h>
 
@@ -100,5 +97,3 @@ private:
 };
 
 } // namespace async
-
-#endif // __cplusplus

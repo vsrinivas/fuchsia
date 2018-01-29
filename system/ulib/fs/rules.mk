@@ -25,6 +25,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/watcher.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/trace \
     system/ulib/zx \

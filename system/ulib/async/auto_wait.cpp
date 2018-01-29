@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 
 #include <zircon/assert.h>
 

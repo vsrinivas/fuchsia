@@ -6,8 +6,8 @@
 
 #include <stdio.h>
 
-#include <async/loop.h>
-#include <async/task.h>
+#include <async/cpp/loop.h>
+#include <async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 

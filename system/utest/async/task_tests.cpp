@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/auto_task.h>
-#include <async/task.h>
+#include <async/cpp/auto_task.h>
+#include <async/cpp/task.h>
 
 #include <unittest/unittest.h>
 

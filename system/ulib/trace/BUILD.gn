@@ -25,7 +25,7 @@ source_set("trace") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

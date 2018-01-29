@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <threads.h>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <fs/vfs.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>

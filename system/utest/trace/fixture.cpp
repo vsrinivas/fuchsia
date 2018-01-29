@@ -11,7 +11,7 @@
 
 #include <zircon/assert.h>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <zx/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>

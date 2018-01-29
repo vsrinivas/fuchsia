@@ -154,7 +154,7 @@ The trace provider requires an asynchronous dispatcher to operate.
 #### C++ Example
 
 ```c++
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 int main(int argc, char** argv) {
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
 #### C Example
 
 ```c
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 int main(int argc, char** argv) {

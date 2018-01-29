@@ -14,6 +14,7 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/observer.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/zx \
     system/ulib/fbl

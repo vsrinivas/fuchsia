@@ -16,7 +16,7 @@
 
 #ifdef __cplusplus
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/event.h>
 #include <fbl/function.h>
 

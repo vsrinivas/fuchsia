@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/channel.h>
 #include <zx/eventpair.h>
 #include <zx/vmo.h>

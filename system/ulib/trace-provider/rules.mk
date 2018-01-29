@@ -14,6 +14,7 @@ MODULE_SRCS = \
 
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
+    system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/zx \
     system/ulib/fbl \
