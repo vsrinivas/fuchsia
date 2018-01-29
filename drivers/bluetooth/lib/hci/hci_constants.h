@@ -1197,5 +1197,24 @@ constexpr uint16_t kConnectionHandleMax = 0x0EFF;
 // The maximum value that can ve used for a 8-bit advertising set handle.
 constexpr uint8_t kAdvertisingHandleMax = 0xEF;
 
+// The maximum value that can be sert for the length of an Inquiry
+constexpr uint8_t kInquiryLengthMax = 0x30;
+
+// The page scan repetition mode, representing a maximum time between Page Scans.
+// (See Core Spec v5.0, Volume 2, Part B, Section 8.3.1)
+enum class PageScanRepetitionMode : uint8_t {
+  kR0 = 0x00, // Continuous Scan
+  kR1 = 0x01, // <= 1.28s
+  kR2 = 0x02, // <= 2.56s
+};
+
+// LAPs defined for use in Inquiry LAP fields by Bluetooth SIG
+// See: https://www.bluetooth.com/specifications/assigned-numbers/baseband
+// The General/Unlimited Inquiry Access Code
+constexpr std::array<uint8_t, 3> kGIAC {{ 0x33, 0x8B, 0x9E }};
+
+// The Limited Dedicated Inquiry Access Code (LIAC)
+constexpr std::array<uint8_t, 3> kLIAC {{ 0x00, 0x8B, 0x9E }};
+
 }  // namespace hci
 }  // namespace btlib
