@@ -92,13 +92,13 @@ class ModuleResolverImpl::FindModulesCall
 
     if (!query_->verb) {
       // TODO(thatguy): Add no-verb resolution.
-      result_ = CreateDefaultResult(query_);
+      result_ = CreateEmptyResult();
       return;
     }
 
     auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
     if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
-      result_ = CreateDefaultResult(query_);
+      result_ = CreateEmptyResult();
       return;
     }
 
@@ -160,7 +160,7 @@ class ModuleResolverImpl::FindModulesCall
 
   void Finally(FlowToken flow) {
     if (candidates_.empty()) {
-      result_ = CreateDefaultResult(query_);
+      result_ = CreateEmptyResult();
       return;
     }
 
@@ -226,19 +226,9 @@ class ModuleResolverImpl::FindModulesCall
     }
   }
 
-  modular::FindModulesResultPtr CreateDefaultResult(
-      const modular::ResolverQueryPtr& query) {
+  modular::FindModulesResultPtr CreateEmptyResult() {
     auto result = modular::FindModulesResult::New();
-
     result->modules.resize(0);
-
-    auto print_it = modular::ModuleResolverResult::New();
-    print_it->module_id = "resolution_failed";
-    print_it->local_name = "n/a";
-
-    CopyNounsToModuleResolverResult(query, &print_it);
-
-    result->modules.push_back(std::move(print_it));
     return result;
   }
 

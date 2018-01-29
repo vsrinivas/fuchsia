@@ -171,10 +171,6 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
   modular::FindModulesResultPtr result_;
 };
 
-#define ASSERT_DEFAULT_RESULT(results) \
-  ASSERT_EQ(1lu, results.size());      \
-  EXPECT_EQ("resolution_failed", results[0]->module_id);
-
 TEST_F(ModuleResolverImplTest, Null) {
   auto source = AddSource("test");
   ResetResolver();
@@ -189,8 +185,8 @@ TEST_F(ModuleResolverImplTest, Null) {
 
   FindModules(std::move(query));
 
-  // The Resolver currently always returns a fallback Module.
-  ASSERT_DEFAULT_RESULT(results());
+  // The Resolver returns an empty candidate list
+  ASSERT_EQ(0lu, results().size());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
@@ -249,7 +245,7 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   source2->remove("1");
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build());
-  ASSERT_DEFAULT_RESULT(results());
+  ASSERT_EQ(0lu, results().size());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
@@ -297,7 +293,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
               .AddNounTypes("destination", {"notbaz"})
               .build();
   FindModules(std::move(query));
-  ASSERT_DEFAULT_RESULT(results());
+  ASSERT_EQ(0lu, results().size());
 
   // Given an entity of type "frob", find a module with verb
   // com.google.fuchsia.navigate.v1.

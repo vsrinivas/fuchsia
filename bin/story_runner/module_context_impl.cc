@@ -134,26 +134,27 @@ void ModuleContextImpl::StartDaisy(
                          module_controller = std::move(module_controller),
                          view_owner = std::move(view_owner),
                          callback](FindModulesResultPtr result) mutable {
-        // We assume that we get atleast one result back and run the first
-        // module in story shell.
-        // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing the
-        // first Module is not the correct behavior.
-        FXL_CHECK(result->modules.size() > 0);
-        const auto& module_result = result->modules[0];
-        const auto& module_url = module_result->module_id;
+        if (result->modules.size() == 0) {
+          callback(StartDaisyStatus::NO_MODULES_FOUND);
+        } else {
+          // We run the first module in story shell.
+          // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing the
+          // first Module is not the correct behavior.
+          const auto& module_result = result->modules[0];
+          const auto& module_url = module_result->module_id;
 
-        // Copy the initial nouns to the Link.
-        LinkPtr link;
-        GetLink(link_name, link.NewRequest());
-        CopyResolverNounsToLink(module_result, &link);
+          // Copy the initial nouns to the Link.
+          LinkPtr link;
+          GetLink(link_name, link.NewRequest());
+          CopyResolverNounsToLink(module_result, &link);
 
-        story_controller_impl_->StartModule(
-            module_data_->module_path, name, module_url, link_name,
-            std::move(incoming_services), std::move(module_controller),
-            std::move(view_owner), ModuleSource::INTERNAL);
+          story_controller_impl_->StartModule(
+              module_data_->module_path, name, module_url, link_name,
+              std::move(incoming_services), std::move(module_controller),
+              std::move(view_owner), ModuleSource::INTERNAL);
 
-        // TODO(meiyili): populate with more than success status
-        callback(StartDaisyStatus::SUCCESS);
+          callback(StartDaisyStatus::SUCCESS);
+        }
       }));
 }
 
@@ -187,26 +188,27 @@ void ModuleContextImpl::StartDaisyInShell(
                          module_controller = std::move(module_controller),
                          surface_relation = std::move(surface_relation),
                          callback](FindModulesResultPtr result) mutable {
-        // We assume that we get atleast one result back and run the first
-        // module in story shell.
-        // TODO(alhaad/thatguy): Revisit the assumption.
-        FXL_CHECK(result->modules.size() > 0);
-        const auto& module_result = result->modules[0];
-        const auto& module_url = module_result->module_id;
+        if (result->modules.size() == 0) {
+          callback(StartDaisyStatus::NO_MODULES_FOUND);
+        } else {
+          // We just run the first module in story shell.
+          // TODO(alhaad/thatguy): Revisit the assumption.
+          const auto& module_result = result->modules[0];
+          const auto& module_url = module_result->module_id;
 
-        // Copy the initial nouns to the Link.
-        LinkPtr link;
-        GetLink(link_name, link.NewRequest());
-        CopyResolverNounsToLink(module_result, &link);
+          // Copy the initial nouns to the Link.
+          LinkPtr link;
+          GetLink(link_name, link.NewRequest());
+          CopyResolverNounsToLink(module_result, &link);
 
-        story_controller_impl_->StartModuleInShell(
-            module_data_->module_path, name, module_url, link_name,
-            std::move(incoming_services), std::move(module_controller),
-            std::move(surface_relation), true /* focus */,
-            ModuleSource::INTERNAL);
+          story_controller_impl_->StartModuleInShell(
+              module_data_->module_path, name, module_url, link_name,
+              std::move(incoming_services), std::move(module_controller),
+              std::move(surface_relation), true /* focus */,
+              ModuleSource::INTERNAL);
 
-        // TODO(meiyili): populate with more than success status
-        callback(StartDaisyStatus::SUCCESS);
+          callback(StartDaisyStatus::SUCCESS);
+        }
       }));
 }
 

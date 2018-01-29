@@ -205,5 +205,6 @@ interface EmbedModuleController {
 
 // Communicates the status of the daisy resolution
 enum StartDaisyStatus {
-  SUCCESS = 0
+  SUCCESS = 0,
+  NO_MODULES_FOUND = 1
 };
