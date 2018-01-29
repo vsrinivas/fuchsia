@@ -82,7 +82,7 @@ config("toolchain_version_stamp") {
   # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
   # To achieve this, we insert a synthetic define into the compile line.
   clang_version_file =
-      "//buildtools/${host_platform}/.versions/clang.cipd_version"
+      "//buildtools/${host_platform}/clang/.versions/clang.cipd_version"
   if (host_os == "linux") {
     clang_stamp_file = "//buildtools/linux64/clang.stamp"
   } else if (host_os == "mac") {
