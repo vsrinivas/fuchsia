@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include <async/default.h>
 
 #include <functional>
