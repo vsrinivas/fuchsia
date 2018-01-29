@@ -83,6 +83,9 @@ MODULE_SO_NAME := ngunwind
 MODULE_LIBS := \
     system/ulib/zircon system/ulib/c
 
+# Force -O2 since the library doesn't build with -Og
+MODULE_OPTFLAGS += -O2
+
 # Compile this with frame pointers so that if we crash the crashlogger
 # the simplistic unwinder will work.
 MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
