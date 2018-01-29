@@ -51,5 +51,5 @@ int _printf(const char* fmt, ...) {
 }
 
 int puts16(char16_t* str) {
-    return gConOut->OutputString(gConOut, str) == EFI_SUCCESS ? 0 : EFI_END_OF_FILE;
+    return gConOut->OutputString(gConOut, str) == EFI_SUCCESS ? 0 : -1;
 }
