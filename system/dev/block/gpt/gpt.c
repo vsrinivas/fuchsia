@@ -181,7 +181,7 @@ static void gpt_queue(void* ctx, block_op_t* bop) {
         // Ensure that the request is in-bounds
         if ((bop->rw.offset_dev >= max) ||
             ((max - bop->rw.offset_dev) < blocks)) {
-            bop->completion_cb(bop, ZX_ERR_INVALID_ARGS);
+            bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
             return;
         }
 
