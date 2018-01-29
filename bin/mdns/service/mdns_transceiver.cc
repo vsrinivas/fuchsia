@@ -35,10 +35,9 @@ void MdnsTransceiver::Start(
   link_change_callback_ = link_change_callback;
   inbound_message_callback_ = inbound_message_callback;
 
-  interface_monitor_->RegisterLinkChangeCallback(
-      [this]() { FindNewInterfaces(); });
+  interface_monitor_->RegisterLinkChangeCallback([this]() { OnLinkChange(); });
 
-  FindNewInterfaces();
+  OnLinkChange();
 }
 
 void MdnsTransceiver::Stop() {
@@ -46,7 +45,7 @@ void MdnsTransceiver::Stop() {
     interface_monitor_->RegisterLinkChangeCallback(nullptr);
   }
 
-  for (auto& interface : interfaces_) {
+  for (auto& interface : interface_transceivers_) {
     if (interface) {
       interface->Stop();
     }
@@ -58,11 +57,46 @@ void MdnsTransceiver::SetHostFullName(const std::string& host_full_name) {
 
   host_full_name_ = host_full_name;
 
-  for (auto& interface : interfaces_) {
+  for (auto& interface : interface_transceivers_) {
     if (interface) {
       interface->SetHostFullName(host_full_name_);
     }
   }
+}
+
+MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(
+    size_t index) {
+  return interface_transceivers_.size() > index
+             ? interface_transceivers_[index].get()
+             : nullptr;
+}
+
+void MdnsTransceiver::SetInterfaceTransceiver(
+    size_t index,
+    std::unique_ptr<MdnsInterfaceTransceiver> interface_transceiver) {
+  if (!interface_transceiver) {
+    if (!GetInterfaceTransceiver(index)) {
+      return;
+    }
+
+    interface_transceivers_[index] = nullptr;
+
+    // Shrink |interface_transceivers_| to remove nulls at the end.
+    size_t new_size = interface_transceivers_.size();
+    while (new_size != 0 && interface_transceivers_[new_size - 1] == nullptr) {
+      --new_size;
+    }
+
+    interface_transceivers_.resize(new_size);
+
+    return;
+  }
+
+  if (interface_transceivers_.size() <= index) {
+    interface_transceivers_.resize(index + 1);
+  }
+
+  interface_transceivers_[index] = std::move(interface_transceiver);
 }
 
 bool MdnsTransceiver::InterfaceEnabled(
@@ -86,7 +120,7 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
   FXL_DCHECK(message);
 
   if (reply_address.socket_address() == MdnsAddresses::kV4Multicast) {
-    for (auto& interface : interfaces_) {
+    for (auto& interface : interface_transceivers_) {
       if (interface) {
         interface->SendMessage(message, reply_address.socket_address());
       }
@@ -95,20 +129,22 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
     return;
   }
 
-  FXL_DCHECK(reply_address.interface_index() < interfaces_.size());
-  interfaces_[reply_address.interface_index()]->SendMessage(
-      message, reply_address.socket_address());
+  auto interface_transceiver =
+      GetInterfaceTransceiver(reply_address.interface_index());
+  if (interface_transceiver != nullptr) {
+    interface_transceiver->SendMessage(message, reply_address.socket_address());
+  }
 }
 
 void MdnsTransceiver::LogTraffic() {
-  for (auto& interface : interfaces_) {
+  for (auto& interface : interface_transceivers_) {
     if (interface) {
       interface->LogTraffic();
     }
   }
 }
 
-void MdnsTransceiver::FindNewInterfaces() {
+void MdnsTransceiver::OnLinkChange() {
   FXL_DCHECK(interface_monitor_);
 
   bool link_change = false;
@@ -116,9 +152,12 @@ void MdnsTransceiver::FindNewInterfaces() {
 
   // Add and remove interface transceivers as appropriate.
   for (const auto& interface_descr : interface_monitor_->GetInterfaces()) {
+    auto interface_transceiver = GetInterfaceTransceiver(index);
+
     if (!interface_descr || !InterfaceEnabled(*interface_descr)) {
-      if (MaybeRemoveInterfaceTransceiver(index)) {
+      if (interface_transceiver != nullptr) {
         // Interface went away.
+        RemoveInterfaceTransceiver(index);
         link_change = true;
       }
 
@@ -126,79 +165,92 @@ void MdnsTransceiver::FindNewInterfaces() {
       continue;
     }
 
-    if (MaybeAddInterfaceTransceiver(index, *interface_descr)) {
+    if (interface_transceiver == nullptr) {
+      // New interface.
+      AddInterfaceTransceiver(index, *interface_descr);
+      link_change = true;
+    } else if (interface_transceiver->name() != interface_descr->name_ ||
+               interface_transceiver->address() != interface_descr->address_) {
+      // Existing interface has wrong name and/or address.
+      ReplaceInterfaceTransceiver(index, *interface_descr);
       link_change = true;
     }
 
     ++index;
   }
 
-  while (index < interfaces_.size()) {
-    MaybeRemoveInterfaceTransceiver(index);
-    ++index;
+  for (; index < interface_transceivers_.size(); ++index) {
+    if (GetInterfaceTransceiver(index) != nullptr) {
+      // Interface went away.
+      RemoveInterfaceTransceiver(index);
+    }
   }
 
   if (link_change && link_change_callback_) {
     link_change_callback_();
   }
-}
+}  // namespace mdns
 
-bool MdnsTransceiver::MaybeAddInterfaceTransceiver(
+void MdnsTransceiver::AddInterfaceTransceiver(
     size_t index,
     const InterfaceDescriptor& interface_descr) {
-  if (interfaces_.size() > index && interfaces_[index] != nullptr) {
-    // Interface transceiver already exists.
-    return false;
-  }
+  FXL_DCHECK(GetInterfaceTransceiver(index) == nullptr);
 
-  std::unique_ptr<MdnsInterfaceTransceiver> interface =
-      MdnsInterfaceTransceiver::Create(interface_descr.address_,
-                                       interface_descr.name_, index);
+  auto interface_transceiver = MdnsInterfaceTransceiver::Create(
+      interface_descr.address_, interface_descr.name_, index);
 
-  if (!interface->Start(inbound_message_callback_)) {
+  if (!interface_transceiver->Start(inbound_message_callback_)) {
     // Couldn't start the transceiver.
-    return false;
+    return;
   }
 
   if (!host_full_name_.empty()) {
-    interface->SetHostFullName(host_full_name_);
+    interface_transceiver->SetHostFullName(host_full_name_);
   }
 
-  for (auto& i : interfaces_) {
-    if (i != nullptr && i->name() == interface->name()) {
-      i->SetAlternateAddress(host_full_name_, interface->address());
-      interface->SetAlternateAddress(host_full_name_, i->address());
+  for (auto& i : interface_transceivers_) {
+    if (i != nullptr && i->name() == interface_transceiver->name()) {
+      i->SetAlternateAddress(host_full_name_, interface_transceiver->address());
+      interface_transceiver->SetAlternateAddress(host_full_name_, i->address());
     }
   }
 
-  if (interfaces_.size() <= index) {
-    interfaces_.resize(index + 1);
-  }
-
-  interfaces_[index] = std::move(interface);
-
-  return true;
+  SetInterfaceTransceiver(index, std::move(interface_transceiver));
 }
 
-bool MdnsTransceiver::MaybeRemoveInterfaceTransceiver(size_t index) {
-  if (interfaces_.size() <= index || interfaces_[index] == nullptr) {
-    // No such interface transceiver.
-    return false;
+void MdnsTransceiver::ReplaceInterfaceTransceiver(
+    size_t index,
+    const InterfaceDescriptor& interface_descr) {
+  auto interface_transceiver = GetInterfaceTransceiver(index);
+  FXL_DCHECK(interface_transceiver);
+
+  bool address_changed =
+      interface_transceiver->address() != interface_descr.address_;
+
+  // If the address has changed, send a message invalidating the old address.
+  if (address_changed) {
+    interface_transceiver->SendAddressGoodbye();
   }
+
+  // Replace the interface transceiver with a new one.
+  RemoveInterfaceTransceiver(index);
+  AddInterfaceTransceiver(index, interface_descr);
+
+  // If the address has changed, send a message with the new address.
+  if (address_changed) {
+    interface_transceiver = GetInterfaceTransceiver(index);
+    FXL_DCHECK(interface_transceiver);
+    interface_transceiver->SendAddress();
+  }
+}
+
+void MdnsTransceiver::RemoveInterfaceTransceiver(size_t index) {
+  auto interface_transceiver = GetInterfaceTransceiver(index);
+  FXL_DCHECK(interface_transceiver);
 
   // Stop and destroy the interface transceiver.
-  interfaces_[index]->Stop();
-  interfaces_[index] = nullptr;
-
-  // Shrink |interfaces_| to remove nulls at the end.
-  size_t new_size = interfaces_.size();
-  while (new_size != 0 && interfaces_[new_size - 1] == nullptr) {
-    --new_size;
-  }
-
-  interfaces_.resize(new_size);
-
-  return true;
+  interface_transceiver->Stop();
+  SetInterfaceTransceiver(index, nullptr);
 }
 
 }  // namespace mdns

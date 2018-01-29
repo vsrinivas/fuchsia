@@ -142,6 +142,28 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   }
 }
 
+void MdnsInterfaceTransceiver::SendAddress() {
+  FXL_DCHECK(address_resource_);
+
+  DnsMessage message;
+  message.answers_.push_back(address_resource_);
+
+  SendMessage(&message, MdnsAddresses::kV4Multicast);
+}
+
+void MdnsInterfaceTransceiver::SendAddressGoodbye() {
+  FXL_DCHECK(address_resource_);
+
+  DnsMessage message;
+  message.answers_.push_back(address_resource_);
+  uint32_t original_time_to_live = address_resource_->time_to_live_;
+  address_resource_->time_to_live_ = 0;
+
+  SendMessage(&message, MdnsAddresses::kV4Multicast);
+
+  address_resource_->time_to_live_ = original_time_to_live;
+}
+
 void MdnsInterfaceTransceiver::LogTraffic() {
   std::cout << "interface " << name_ << " " << address_ << "\n";
   std::cout << "    messages received:  " << messages_received_ << "\n";

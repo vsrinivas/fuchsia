@@ -41,7 +41,7 @@ class MdnsTransceiver {
   void Stop();
 
   // Determines if this transceiver has interfaces.
-  bool has_interfaces() { return !interfaces_.empty(); }
+  bool has_interfaces() { return !interface_transceivers_.empty(); }
 
   // Sets the host full name. This method may be called multiple times if
   // conflicts are detected.
@@ -64,29 +64,43 @@ class MdnsTransceiver {
     sa_family_t family_;
   };
 
+  // Returns the interface transceiver at |index| if it exists, nullptr if not.
+  MdnsInterfaceTransceiver* GetInterfaceTransceiver(size_t index);
+
+  // Sets the interface transceiver at |index|. |interface_transceiver| may be
+  // null.
+  void SetInterfaceTransceiver(
+      size_t index,
+      std::unique_ptr<MdnsInterfaceTransceiver> interface_transceiver);
+
   // Determines if the interface is enabled.
   bool InterfaceEnabled(const InterfaceDescriptor& interface_descr);
 
-  // Creates a new |MdnsInterfaceTransceiver| for each interface that's ready
-  // and doesn't already have one.
-  void FindNewInterfaces();
+  // Ensures that the collection of |MdnsInterfaceTransceiver|s is up-to-date
+  // with respect to the current set of interfaces.
+  void OnLinkChange();
 
-  // Add an interface transceiver for the described interface at the given index
-  // if it doesn't exist already. Returns true if the interface transceiver was
-  // added, false if it existed already.
-  bool MaybeAddInterfaceTransceiver(size_t index,
-                                    const InterfaceDescriptor& interface_descr);
+  // Adds an interface transceiver for the described interface at the given
+  // index. The interface transceiver must not exist already.
+  void AddInterfaceTransceiver(size_t index,
+                               const InterfaceDescriptor& interface_descr);
 
-  // Remove the interface transceiver with the given index if it exists. Returns
-  // true if the transceiver was removed, false if it didn't exist.
-  bool MaybeRemoveInterfaceTransceiver(size_t index);
+  // Replace an interface transceiver for the described interface at the given
+  // index. The interface transceiver must exist.
+  void ReplaceInterfaceTransceiver(size_t index,
+                                   const InterfaceDescriptor& interface_descr);
+
+  // Remove the interface transceiver with the given index. The interface
+  // transceiver must exist.
+  void RemoveInterfaceTransceiver(size_t index);
 
   std::unique_ptr<InterfaceMonitor> interface_monitor_;
   std::vector<InterfaceId> enabled_interfaces_;
   LinkChangeCallback link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
-  std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
+  std::vector<std::unique_ptr<MdnsInterfaceTransceiver>>
+      interface_transceivers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

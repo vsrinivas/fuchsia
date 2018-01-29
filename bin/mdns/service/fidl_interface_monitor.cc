@@ -80,10 +80,19 @@ void FidlInterfaceMonitor::OnInterfacesChanged(
       interfaces_.resize(if_info->id + 1);
     }
 
-    // Add a descriptor if we don't already have one.
-    if (interfaces_[if_info->id] == nullptr) {
+    InterfaceDescriptor* existing = interfaces_[if_info->id].get();
+
+    if (existing == nullptr) {
+      // We don't have an |InterfaceDescriptor| for this interface yet. Add one.
       interfaces_[if_info->id].reset(
           new InterfaceDescriptor(address, if_info->name));
+      link_change = true;
+    } else if (existing->address_ != address ||
+               existing->name_ != if_info->name) {
+      // We have an |InterfaceDescriptor| for this interface, but it's
+      // out-of-date. Update it.
+      existing->address_ = address;
+      existing->name_ = if_info->name;
       link_change = true;
     }
   }

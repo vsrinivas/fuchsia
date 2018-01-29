@@ -60,6 +60,13 @@ class MdnsInterfaceTransceiver {
   // adjacent. The same constraints will apply when this method returns.
   void SendMessage(DnsMessage* message, const SocketAddress& address);
 
+  // Sends a message containing only an address resource for this interface.
+  void SendAddress();
+
+  // Sends a message containing only an address resource for this interface with
+  // zero ttl, indicating that the address is no longer valid.
+  void SendAddressGoodbye();
+
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
 
