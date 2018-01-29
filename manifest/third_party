@@ -210,6 +210,7 @@
     <project name="third_party/sbase"
              path="third_party/sbase"
              remote="https://fuchsia.googlesource.com/third_party/sbase"
+             revision="757ca4fc704442b8c7edae7ad5f40d1b7fd75b9d"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/shaderc"
              path="third_party/shaderc"
@@ -230,10 +231,12 @@
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
+             revision="a579910bff0c9d5cab9848c8a7bb0f26f39acdd5"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/vim"
              path="third_party/vim"
              remote="https://fuchsia.googlesource.com/third_party/vim"
+             revision="f93dc96a8d3a08ead75a8248f52d27e93fbe071c"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/vulkan-cts"
              path="third_party/vulkan-cts"
