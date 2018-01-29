@@ -8,6 +8,32 @@ executable("bin") {
   output_name = "mdns_service"
 
   sources = [
+    "fidl_interface_monitor.cc",
+    "fidl_interface_monitor.h",
+    "host_name.cc",
+    "host_name.h",
+    "main.cc",
+    "mdns_fidl_util.cc",
+    "mdns_fidl_util.h",
+    "mdns_service_impl.cc",
+    "mdns_service_impl.h",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/bin/media/util",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/mdns/fidl",
+    "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/lib/svc/cpp",
+  ]
+}
+
+source_set("lib") {
+  sources = [
     "address_prober.cc",
     "address_prober.h",
     "address_responder.cc",
@@ -20,10 +46,6 @@ executable("bin") {
     "dns_reading.h",
     "dns_writing.cc",
     "dns_writing.h",
-    "fidl_interface_monitor.cc",
-    "fidl_interface_monitor.h",
-    "host_name.cc",
-    "host_name.h",
     "host_name_resolver.cc",
     "host_name_resolver.h",
     "instance_prober.cc",
@@ -37,14 +59,11 @@ executable("bin") {
     "ip_address.h",
     "ip_port.cc",
     "ip_port.h",
-    "main.cc",
     "mdns.cc",
     "mdns.h",
     "mdns_addresses.cc",
     "mdns_addresses.h",
     "mdns_agent.h",
-    "mdns_fidl_util.cc",
-    "mdns_fidl_util.h",
     "mdns_interface_transceiver.cc",
     "mdns_interface_transceiver.h",
     "mdns_interface_transceiver_v4.cc",
@@ -53,8 +72,6 @@ executable("bin") {
     "mdns_interface_transceiver_v6.h",
     "mdns_names.cc",
     "mdns_names.h",
-    "mdns_service_impl.cc",
-    "mdns_service_impl.h",
     "mdns_transceiver.cc",
     "mdns_transceiver.h",
     "packet_reader.cc",
@@ -72,14 +89,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/bin/media/util",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mdns/fidl",
-    "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/svc/cpp",
   ]
 }
 
