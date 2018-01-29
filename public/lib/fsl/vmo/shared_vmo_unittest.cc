@@ -22,7 +22,7 @@ TEST(SharedVmos, Unmappable) {
   auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()));
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
-  EXPECT_EQ(content.size(), shared_vmo->vmo_size());
+  EXPECT_LE(content.size(), shared_vmo->vmo_size());
   EXPECT_EQ(0u, shared_vmo->map_flags());
   EXPECT_EQ(nullptr, shared_vmo->Map());
 }
@@ -37,7 +37,7 @@ TEST(SharedVmos, Mapped) {
       fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()), ZX_VM_FLAG_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
-  EXPECT_EQ(content.size(), shared_vmo->vmo_size());
+  EXPECT_LE(content.size(), shared_vmo->vmo_size());
   EXPECT_EQ(ZX_VM_FLAG_PERM_READ, shared_vmo->map_flags());
   const char* data = static_cast<const char*>(shared_vmo->Map());
   EXPECT_NE(nullptr, data);
