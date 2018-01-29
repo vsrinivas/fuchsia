@@ -103,6 +103,9 @@ static void mp_sync_task(void* raw_context) {
  *  mask will be used to determine actual targets.
  *
  * Interrupts must be disabled if calling with MP_IPI_TARGET_ALL_BUT_LOCAL as target
+ *
+ * The callback in |task| will always be called with |arch_in_int_handler()|
+ * set to true.
  */
 void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, void* context) {
     uint num_cpus = arch_max_num_cpus();
@@ -162,7 +165,10 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     DEBUG_ASSERT(status == ZX_OK);
 
     if (targetting_self) {
+        bool previous_in_int_handler = arch_in_int_handler();
+        arch_set_in_int_handler(true);
         mp_sync_task(&sync_context);
+        arch_set_in_int_handler(previous_in_int_handler);
     }
     smp_mb();
 
@@ -187,7 +193,10 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
             /* Optimistically check if our task list has work without the lock.
              * mp_mbx_generic_irq will take the lock and check again */
             if (!list_is_empty(&mp.ipi_task_list[local_cpu])) {
+                bool previous_in_int_handler = arch_in_int_handler();
+                arch_set_in_int_handler(true);
                 mp_mbx_generic_irq();
+                arch_set_in_int_handler(previous_in_int_handler);
                 continue;
             }
         }

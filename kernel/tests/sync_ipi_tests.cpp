@@ -24,6 +24,7 @@
 
 static void inorder_count_task(void* raw_context) {
     ASSERT(arch_ints_disabled());
+    ASSERT(arch_in_int_handler());
     int* inorder_counter = (int*)raw_context;
     uint cpu_num = arch_curr_cpu_num();
 
@@ -34,6 +35,7 @@ static void inorder_count_task(void* raw_context) {
 
 static void counter_task(void* raw_context) {
     ASSERT(arch_ints_disabled());
+    ASSERT(arch_in_int_handler());
     int* counter = (int*)raw_context;
     atomic_add(counter, 1);
 }
