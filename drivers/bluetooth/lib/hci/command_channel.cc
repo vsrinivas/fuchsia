@@ -290,7 +290,7 @@ bool CommandChannel::HandlePendingCommandComplete(
     return false;
   }
 
-  // In case that this is a CommandComplete event, make sure that the command
+  // In case that this is a CommandStatus event, make sure that the command
   // opcode actually matches the pending command.
   if (event->event_code() == kCommandStatusEventCode &&
       le16toh(

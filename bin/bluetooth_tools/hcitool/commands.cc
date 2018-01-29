@@ -46,11 +46,11 @@ void StatusCallback(fxl::Closure complete_cb,
       std::bind(&StatusCallback, complete_cb, _1, _2));
 }
 
-void LogCommandComplete(::btlib::hci::Status status,
-                        ::btlib::hci::CommandChannel::TransactionId id) {
-  std::cout << "  Command Complete - status: "
-            << fxl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
-            << std::endl;
+void LogCommandResult(::btlib::hci::Status status,
+                      ::btlib::hci::CommandChannel::TransactionId id,
+                      const std::string& event_name = "Command Complete") {
+  std::cout << fxl::StringPrintf("  %s - status: 0x%02x (id=%lu)\n",
+                                 event_name.c_str(), status, id);
 }
 
 ::btlib::hci::CommandChannel::TransactionId SendCompleteCommand(
@@ -61,7 +61,7 @@ void LogCommandComplete(::btlib::hci::Status status,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
+    LogCommandResult(return_params->status, id);
     complete_cb();
   };
   return SendCommand(cmd_data, std::move(packet), cb, complete_cb);
@@ -200,6 +200,11 @@ void DisplayAdvertisingReport(const ::btlib::hci::LEAdvertisingReportData& data,
   }
 }
 
+void DisplayInquiryResult(const ::btlib::hci::InquiryResult& result) {
+  std::cout << "  Result: " << result.bd_addr << " (" << result.class_of_device
+            << ")" << std::endl;
+}
+
 bool HandleVersionInfo(const CommandData* cmd_data,
                        const fxl::CommandLine& cmd_line,
                        const fxl::Closure& complete_cb) {
@@ -212,7 +217,7 @@ bool HandleVersionInfo(const CommandData* cmd_data,
                           const ::btlib::hci::EventPacket& event) {
     auto params =
         event.return_params<::btlib::hci::ReadLocalVersionInfoReturnParams>();
-    LogCommandComplete(params->status, id);
+    LogCommandResult(params->status, id);
     if (params->status != ::btlib::hci::Status::kSuccess) {
       complete_cb();
       return;
@@ -267,7 +272,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadBDADDRReturnParams>();
-    LogCommandComplete(return_params->status, id);
+    LogCommandResult(return_params->status, id);
     if (return_params->status != ::btlib::hci::Status::kSuccess) {
       complete_cb();
       return;
@@ -298,7 +303,7 @@ bool HandleReadLocalName(const CommandData* cmd_data,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadLocalNameReturnParams>();
-    LogCommandComplete(return_params->status, id);
+    LogCommandResult(return_params->status, id);
     if (return_params->status != ::btlib::hci::Status::kSuccess) {
       complete_cb();
       return;
@@ -682,7 +687,7 @@ bool HandleLEScan(const CommandData* cmd_data,
                                const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
+    LogCommandResult(return_params->status, id);
     cleanup_cb();
   };
 
@@ -708,7 +713,7 @@ bool HandleLEScan(const CommandData* cmd_data,
                 const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
+    LogCommandResult(return_params->status, id);
     if (return_params->status != ::btlib::hci::Status::kSuccess) {
       cleanup_cb();
       return;
@@ -720,6 +725,156 @@ bool HandleLEScan(const CommandData* cmd_data,
 
   std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")"
             << std::endl;
+
+  return true;
+}
+
+bool HandleBRScan(const CommandData* cmd_data,
+                  const fxl::CommandLine& cmd_line,
+                  const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: scan "
+                 "[--help|--timeout=<t>|--filter=<prefix>|--max-responses=<n>]"
+              << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --timeout=<t> - Maximum duration (in seconds) of the scan\n"
+           "                    (default is 30 seconds)\n"
+           "    --filter=<prefix> - Filter devices reported by name or\n"
+           "                        BR_ADDR prefix.\n"
+           "    --max-responses=<n> - End scan after n responses are\n"
+           "                          received.\n";
+    std::cout << std::endl;
+    return false;
+  }
+
+  auto timeout = fxl::TimeDelta::FromSeconds(30);  // Default 30 seconds.
+  std::string timeout_str;
+  if (cmd_line.GetOptionValue("timeout", &timeout_str)) {
+    uint32_t time_seconds;
+    if (!fxl::StringToNumberWithError(timeout_str, &time_seconds)) {
+      std::cout << "  Malformed timeout value: " << timeout_str << std::endl;
+      return false;
+    }
+    // TODO(jamuraa): support longer than 61 second scans by repeating the
+    // Inquiry
+    if (time_seconds > 61) {
+      std::cout << "  Maximum inquiry length is 61 seconds." << std::endl;
+      return false;
+    }
+
+    timeout = fxl::TimeDelta::FromSeconds(time_seconds);
+  }
+
+  std::string filter;
+  cmd_line.GetOptionValue("filter", &filter);
+
+  uint8_t max_responses = 0;
+  std::string max_responses_str;
+  if (cmd_line.GetOptionValue("max-responses", &max_responses_str)) {
+    uint32_t responses;
+    if (!fxl::StringToNumberWithError(max_responses_str, &responses)) {
+      std::cout << "  Malformed maximum responses value: " << max_responses_str
+                << std::endl;
+      return false;
+    }
+    if (responses > 255) {
+      std::cout << "  Maximum responses must be less than 255." << std::endl;
+      return false;
+    }
+    max_responses = uint8_t(responses);
+  }
+
+  constexpr size_t kPayloadSize = sizeof(::btlib::hci::InquiryCommandParams);
+  auto packet =
+      ::btlib::hci::CommandPacket::New(::btlib::hci::kInquiry, kPayloadSize);
+  auto params = packet->mutable_view()
+                    ->mutable_payload<::btlib::hci::InquiryCommandParams>();
+
+  params->lap = ::btlib::hci::kGIAC;
+  // Always use the maximum inquiry length, we will time it more accurately.
+  params->inquiry_length = ::btlib::hci::kInquiryLengthMax;
+  params->num_responses = max_responses;
+
+  auto event_handler_ids = std::make_shared<
+      std::vector<btlib::hci::CommandChannel::EventHandlerId>>();
+  auto cleanup_cb = [complete_cb, event_handler_ids,
+                     cmd_channel = cmd_data->cmd_channel()] {
+    for (const auto& handler_id : *event_handler_ids) {
+      cmd_channel->RemoveEventHandler(handler_id);
+    }
+    complete_cb();
+  };
+
+  // Event handler to log when we receive advertising reports
+  auto inquiry_result_cb = [filter](const ::btlib::hci::EventPacket& event) {
+    FXL_DCHECK(event.event_code() == ::btlib::hci::kInquiryResultEventCode);
+
+    const auto& result =
+        event.view().payload<::btlib::hci::InquiryResultEventParams>();
+
+    for (int i = 0; i < result.num_responses; i++) {
+      if (!filter.empty() &&
+          !filter.compare(0, filter.length(),
+                          result.responses[i].bd_addr.ToString())) {
+        continue;
+      }
+      DisplayInquiryResult(result.responses[i]);
+    }
+  };
+
+  event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
+      ::btlib::hci::kInquiryResultEventCode, inquiry_result_cb,
+      cmd_data->task_runner()));
+
+  // The callback invoked for an Inquiry Complete response.
+  auto inquiry_complete_cb =
+      [cleanup_cb](const ::btlib::hci::EventPacket& event) {
+        auto params =
+            event.view().payload<::btlib::hci::InquiryCompleteEventParams>();
+        std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n",
+                                       params.status);
+        cleanup_cb();
+      };
+
+  event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
+      ::btlib::hci::kInquiryCompleteEventCode, inquiry_complete_cb,
+      cmd_data->task_runner()));
+
+  // Delayed task that stops scanning.
+  auto inquiry_cancel_cb = [cleanup_cb, cmd_data] {
+    auto packet =
+        ::btlib::hci::CommandPacket::New(::btlib::hci::kInquiryCancel, 0);
+    auto id = SendCompleteCommand(cmd_data, std::move(packet), cleanup_cb);
+    std::cout << "  Sent HCI_Inquiry_Cancel (id=" << id << ")" << std::endl;
+  };
+
+  auto cb = [inquiry_cancel_cb, cleanup_cb, timeout,
+             task_runner = cmd_data->task_runner()](
+                ::btlib::hci::CommandChannel::TransactionId id,
+                const ::btlib::hci::EventPacket& event) {
+    auto return_params =
+        event.view().payload<::btlib::hci::CommandStatusEventParams>();
+    LogCommandResult(return_params.status, id, "Command Status");
+    if (return_params.status != ::btlib::hci::Status::kSuccess) {
+      cleanup_cb();
+      return;
+    }
+    task_runner->PostDelayedTask(inquiry_cancel_cb, timeout);
+  };
+
+  // Inquiry sends a Command Status, and then we wait for the Inquiry Complete,
+  // or the timer to run out, for a long time. Count this as "complete" when the
+  // Status comes in.
+  auto id = cmd_data->cmd_channel()->SendCommand(
+      std::move(packet), cmd_data->task_runner(), cb, nullptr,
+      ::btlib::hci::kCommandStatusEventCode);
+  std::cout << "  Sent HCI_Inquiry (id=" << id << ")" << std::endl;
 
   return true;
 }
@@ -760,6 +915,9 @@ void RegisterCommands(const CommandData* cmd_data,
   dispatcher->RegisterHandler("le-scan",
                               "Perform a LE device scan for a limited duration",
                               BIND(HandleLEScan));
+  dispatcher->RegisterHandler("scan",
+                              "Perform a device scan for a limited duration",
+                              BIND(HandleBRScan));
 
 #undef BIND
 }
