@@ -82,7 +82,7 @@ static void* cond_thread1(void* arg) {
     pthread_mutex_lock(&mutex);
     log("thread 1 waiting on condition\n");
     pthread_cond_wait(&cond, &mutex);
-    log("thread 2 waiting again\n");
+    log("thread 1 waiting again\n");
     pthread_cond_wait(&cond, &mutex);
     process_waked++;
     pthread_mutex_unlock(&mutex);
