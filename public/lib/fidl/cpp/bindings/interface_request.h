@@ -47,13 +47,6 @@ class InterfaceRequest {
     return *this;
   }
 
-  // Assigning to nullptr resets the InterfaceRequest to an empty state,
-  // closing the channel currently bound to it (if any).
-  InterfaceRequest& operator=(std::nullptr_t) {
-    handle_.reset();
-    return *this;
-  }
-
   // Binds the request to a channel over which Interface is to be
   // requested.  If the request is already bound to a channel, the current
   // channel will be closed.

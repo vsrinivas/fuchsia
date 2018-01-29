@@ -53,13 +53,6 @@ class InterfacePtr {
     return *this;
   }
 
-  // Assigning nullptr to this class causes it to close the currently bound
-  // channel (if any) and returns the pointer to the unbound state.
-  InterfacePtr& operator=(std::nullptr_t) {
-    reset();
-    return *this;
-  }
-
   // Closes the bound channel (if any) on destruction.
   ~InterfacePtr() {}
 
