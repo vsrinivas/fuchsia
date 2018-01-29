@@ -393,6 +393,9 @@ END_FUNCTION(arm64_el2_tlbi_ipa)
 FUNCTION_LABEL(el2_hvc_tlbi_ipa)
     switch_to_guest
 
+    // TLBI IPAS2* instructions take bits [51:12] of the IPA.
+    lsr x1, x1, 12
+
     // Invalidate IPA. Based on ARM DEN 0024A, page 12-5.
     dsb ishst
     cbnz x2, .Lterminal
@@ -401,6 +404,8 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
 .Lterminal:
     tlbi ipas2le1is, x1
 .Lsync:
+    dsb ish
+    tlbi vmalle1is
     dsb ish
     isb
 

@@ -443,7 +443,7 @@ static bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift
 void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
     if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
         paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
-        __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr >> 12, terminal);
+        __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
         DEBUG_ASSERT(status == ZX_OK);
     } else if (asid_ == MMU_ARM64_GLOBAL_ASID) {
         // flush this address on all ASIDs
