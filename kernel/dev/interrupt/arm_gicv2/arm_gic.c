@@ -223,10 +223,13 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
     // 16 irqs encoded per ICFGR register
     uint32_t reg_ndx = vector >> 4;
     uint32_t bit_shift = ((vector & 0xf) << 1) + 1;
-    uint32_t type = (tm == IRQ_TRIGGER_MODE_EDGE) ? 1 : 0;
 
     uint32_t reg_val   = GICREG(0, GICD_ICFGR(reg_ndx));
-    reg_val |= (type << bit_shift);
+    if (tm == IRQ_TRIGGER_MODE_EDGE) {
+        reg_val |= (1 << bit_shift);
+    } else {
+        reg_val &= ~(1 << bit_shift);
+    }
     GICREG(0, GICD_ICFGR(reg_ndx)) = reg_val;
 
     return ZX_OK;
