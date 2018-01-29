@@ -90,11 +90,7 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
   // Simulate the connection response arriving.
   (*connect_tag_)(true);
 
-  // On empty should not yet be called - we still need to finish the stream.
-  EXPECT_EQ(0, on_empty_calls_);
-
-  // Simulate finishing the stream.
-  (*stream_->finish_tag)(true);
+  // Verify that on_empty was called.
   EXPECT_EQ(1, on_empty_calls_);
 
   // Verify that no client calls were made (because the handler was deleted at
@@ -123,9 +119,7 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
   handler.reset();
   (*stream_->read_tag)(false);
 
-  // Simulate closing the stream.
-  EXPECT_EQ(0, on_empty_calls_);
-  (*stream_->finish_tag)(true);
+  // Verify that on_empty was called.
   EXPECT_EQ(1, on_empty_calls_);
 
   // Verify that no further client calls were made after the handler is deleted.
@@ -144,7 +138,6 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
 
   handler.reset();
   (*stream_->read_tag)(false);
-  (*stream_->finish_tag)(true);
   EXPECT_EQ(1, on_empty_calls_);
   EXPECT_EQ(1, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
@@ -162,11 +155,28 @@ TEST_F(ListenCallTest, ReadAndDeleteHandler) {
 
   handler.reset();
   (*stream_->read_tag)(false);
-  (*stream_->finish_tag)(true);
   EXPECT_EQ(1, on_empty_calls_);
   EXPECT_EQ(1, on_connected_calls_);
   EXPECT_EQ(3, on_response_calls_);
   EXPECT_EQ(0, on_finished_calls_);
+}
+
+TEST_F(ListenCallTest, ReadError) {
+  auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
+  (*connect_tag_)(true);
+  EXPECT_EQ(1, on_connected_calls_);
+
+  (*stream_->read_tag)(true);
+  EXPECT_EQ(1, on_response_calls_);
+  EXPECT_FALSE(stream_->finish_tag);
+
+  // Simulate read error, verify that we attempt to finish the stream to
+  // retrieve the error status.
+  (*stream_->read_tag)(false);
+  EXPECT_TRUE(stream_->finish_tag);
+
+  (*stream_->finish_tag)(true);
+  EXPECT_EQ(1, on_finished_calls_);
 }
 
 }  // namespace cloud_provider_firestore

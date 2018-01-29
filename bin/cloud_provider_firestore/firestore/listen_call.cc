@@ -90,8 +90,10 @@ ListenCall::~ListenCall() {
 }
 
 void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
-  // It's only valid to perform a write after the connection was established.
+  // It's only valid to perform a write after the connection was established,
+  // and before the Finish() call was made.
   FXL_DCHECK(connected_);
+  FXL_DCHECK(!finish_requested_);
   stream_->Write(request, &on_write_);
   pending_cq_operations_++;
 }
@@ -101,21 +103,21 @@ void ListenCall::OnHandlerGone() {
   // after the handler is deleted.
   client_ = nullptr;
 
-  // Request finishing the stream only if it was correctly connected in the
-  // first place.
-  if (connected_ && !finish_requested_) {
-    Finish();
-  }
+  context_.TryCancel();
   CheckEmpty();
 }
 
 void ListenCall::ReadNext() {
+  // It's only valid to perform a read after the connection was established,
+  // and before the Finish() call was made.
+  FXL_DCHECK(connected_);
+  FXL_DCHECK(!finish_requested_);
   stream_->Read(&response_, &on_read_);
   pending_cq_operations_++;
 }
 
 void ListenCall::FinishIfNeeded() {
-  if (!finish_requested_) {
+  if (!finish_requested_ && client_) {
     Finish();
   } else {
     CheckEmpty();
@@ -123,8 +125,6 @@ void ListenCall::FinishIfNeeded() {
 }
 
 void ListenCall::Finish() {
-  // It's only valid to finish the connection after it was established.
-  FXL_DCHECK(connected_ || !client_);
   FXL_DCHECK(!finish_requested_);
   finish_requested_ = true;
 
