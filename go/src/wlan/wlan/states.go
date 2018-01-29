@@ -14,6 +14,7 @@ import (
 
 	"fmt"
 	"log"
+	"sort"
 	"time"
 )
 
@@ -183,11 +184,15 @@ func (s *queryState) timerExpired(c *Client) (state, error) {
 
 const DefaultScanInterval = 5 * time.Second
 const ScanTimeout = 30 * time.Second
+const ScanSlice = 5
 
 type scanState struct {
-	pause      bool
-	running    bool
-	cmdPending *commandRequest
+	pause             bool
+	running           bool
+	cmdPending        *commandRequest
+	supportedChannels []uint8
+	channelScanOffset int
+	aps               []AP
 }
 
 var broadcastBssid = [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
@@ -198,14 +203,16 @@ func newScanState(c *Client) *scanState {
 		// start periodic scan.
 		pause = false
 	}
-	return &scanState{pause: pause}
+	return &scanState{pause: pause,
+		supportedChannels: getSupportedChannels(c),
+		channelScanOffset: 0}
 }
 
 func (s *scanState) String() string {
 	return "scanning"
 }
 
-func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
+func getSupportedChannels(c *Client) []uint8 {
 	// TODO(tkilbourn): unify all our channel representations.
 	// TODO(tkilbourn): filter out the supported channels to a reasonable subset for now
 	channels := []uint8{}
@@ -215,6 +222,13 @@ func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
 				channels = append(channels, ch)
 			}
 		}
+	}
+	return channels
+}
+
+func newScanRequest(ssid string, c *Client, channels []uint8) *mlme.ScanRequest {
+	if len(channels) == 0 {
+		return nil
 	}
 	return &mlme.ScanRequest{
 		BssType:        mlme.BssTypes_Infrastructure,
@@ -227,6 +241,25 @@ func newScanRequest(ssid string, c *Client) *mlme.ScanRequest {
 	}
 }
 
+func (s *scanState) getChannelsSlice() []uint8 {
+	var length = ScanSlice
+	if s.channelScanOffset + ScanSlice > len(s.supportedChannels) {
+		length = len(s.supportedChannels) - s.channelScanOffset
+	}
+	channels := make([]uint8, length)
+	channels = s.supportedChannels[s.channelScanOffset:s.channelScanOffset+length]
+	if debug {
+		log.Printf("Channel Slice: %v Offset: %v Slice: %v Total: %v", channels, s.channelScanOffset, length, len(s.supportedChannels))
+	}
+
+	s.channelScanOffset += length
+	return channels
+}
+
+func (s *scanState) completed() bool {
+	return s.channelScanOffset >= len(s.supportedChannels);
+}
+
 func (s *scanState) run(c *Client) (time.Duration, error) {
 	var req *mlme.ScanRequest
 	timeout := ScanTimeout
@@ -235,9 +268,9 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if sr.Timeout > 0 {
 			timeout = time.Duration(sr.Timeout) * time.Second
 		}
-		req = newScanRequest("", c)
+		req = newScanRequest("", c, s.getChannelsSlice())
 	} else if c.cfg != nil && c.cfg.SSID != "" && !s.pause {
-		req = newScanRequest(c.cfg.SSID, c)
+		req = newScanRequest(c.cfg.SSID, c, s.getChannelsSlice())
 	}
 	if req != nil {
 		if debug {
@@ -293,25 +326,62 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 	return s, nil
 }
 
+// TODO(NET-420) The logic to pick the optimal AP should be moved into policy
+func sortAndDedupeAPs(aps []AP) []AP {
+	var aps_map = make(map[string]AP)
+	for _, ap := range aps[:] {
+		if val, ok := aps_map[ap.SSID]; ok {
+			if val.LastRSSI > ap.LastRSSI {
+				aps_map[ap.SSID] = ap
+			}
+		} else {
+			aps_map[ap.SSID] = ap
+		}
+	}
+
+	var sorted_aps []AP
+	for _, value := range aps_map {
+		sorted_aps = append(sorted_aps, value)
+	}
+	sort.Sort(ByRSSI(sorted_aps))
+	return sorted_aps
+}
+
 func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.ScanResponse:
 		if debug {
 			PrintScanResponse(v)
 		}
-		s.running = false
+		s.running = !s.completed()
 
 		if s.cmdPending != nil && s.cmdPending.id == CmdScan {
 			aps := CollectScanResults(v, "", "")
-			s.cmdPending.respC <- &CommandResult{aps, nil}
-			s.cmdPending = nil
+			s.aps = append(s.aps, aps...)
+			// TODO(NET-420) find a way to stream results upward and let higher level
+			// take care of de-duping
+			if !s.running {
+				var sorted_aps = sortAndDedupeAPs(s.aps)
+				s.cmdPending.respC <- &CommandResult{sorted_aps, nil}
+				s.channelScanOffset = 0
+				s.aps = s.aps[:0]
+				s.cmdPending = nil
+			}
 		} else if c.cfg != nil && c.cfg.SSID != "" {
 			aps := CollectScanResults(v, c.cfg.SSID, c.cfg.BSSID)
-			if len(aps) > 0 {
-				c.ap = &aps[0]
-				return newJoinState(), nil
+			s.aps = append(s.aps, aps...)
+			// TODO(NET-420) find a way to stream results upward and let higher level
+			// take care of de-duping
+			if !s.running {
+				if len(s.aps) > 0 {
+					var sorted_aps = sortAndDedupeAPs(s.aps)
+					c.ap = &sorted_aps[0]
+					return newJoinState(), nil
+				}
+				s.channelScanOffset = 0
+				s.aps = s.aps[:0]
+				s.pause = true
 			}
-			s.pause = true
 		}
 
 		return s, nil

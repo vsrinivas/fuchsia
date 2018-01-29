@@ -18,6 +18,13 @@ type AP struct {
 	LastRSSI uint8
 }
 
+// ByRSSI implements sort.Interface for []AP based on the LastRSSI field.
+type ByRSSI []AP
+
+func (a ByRSSI) Len() int           { return len(a) }
+func (a ByRSSI) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByRSSI) Less(i, j int) bool { return a[i].LastRSSI > a[j].LastRSSI }
+
 func NewAP(bssDesc *mlme.BssDescription) *AP {
 	b := *bssDesc // make a copy.
 	return &AP{
