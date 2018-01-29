@@ -301,7 +301,9 @@ void devfs_advertise(device_t* dev) {
         devnode_t* dir = proto_dir(dev->protocol_id);
         devfs_notify(dir, dev->link->name, VFS_WATCH_EVT_ADDED);
     }
-    devfs_notify(dev->parent->self, dev->self->name, VFS_WATCH_EVT_ADDED);
+    if (dev->parent && dev->parent->self) {
+        devfs_notify(dev->parent->self, dev->self->name, VFS_WATCH_EVT_ADDED);
+    }
 }
 
 zx_status_t devfs_publish(device_t* parent, device_t* dev) {
@@ -394,7 +396,9 @@ static void _devfs_remove(devnode_t* dn) {
         if (dn->device->self == dn) {
             dn->device->self = NULL;
 
-            if (dn->device->parent != NULL && !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+            if ((dn->device->parent != NULL) &&
+                (dn->device->parent->self != NULL) &&
+                !(dn->device->flags & DEV_CTX_INVISIBLE)) {
                 devfs_notify(dn->device->parent->self, dn->name, VFS_WATCH_EVT_REMOVED);
             }
         }
