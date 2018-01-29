@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <arch/arch_ops.h>
 #include <arch/spinlock.h>
 #include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
@@ -15,6 +16,7 @@ __BEGIN_CDECLS
 
 /* interrupts should already be disabled */
 static inline void spin_lock(spin_lock_t* lock) TA_ACQ(lock) {
+    DEBUG_ASSERT(arch_ints_disabled());
     arch_spin_lock(lock);
 }
 
