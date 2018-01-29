@@ -22,7 +22,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/fs-management \
     system/ulib/fvm \
-    system/ulib/installer \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/fbl \
