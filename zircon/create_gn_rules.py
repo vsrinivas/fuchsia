@@ -10,7 +10,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -174,8 +173,6 @@ def generate_compiled_library(package, context):
     lib_name = package['package']['name']
     data = CompiledLibrary(lib_name)
 
-    # TODO(pylaligand): record and use the architecture.
-
     # Includes.
     for name, path in package.get('includes', {}).iteritems():
         (file, folder) = extract_file(name, path, context)
@@ -257,6 +254,9 @@ def main():
     parser.add_argument('--out',
                         help='Path to the output directory',
                         required=True)
+    parser.add_argument('--staging',
+                        help='Path to the staging directory',
+                        required=True)
     parser.add_argument('--zircon-build',
                         help='Path to the Zircon build directory',
                         required=True)
@@ -271,7 +271,8 @@ def main():
     debug = args.debug
 
     # Generate package descriptions through Zircon's build.
-    zircon_dir = tempfile.mkdtemp('-zircon-packages')
+    zircon_dir = args.staging
+    shutil.rmtree(zircon_dir, True)
     if debug:
         print('Building Zircon in: %s' % zircon_dir)
     make_args = [
@@ -294,9 +295,6 @@ def main():
         names = sorted(map(lambda p: p['package']['name'], packages))
         for name in names:
             print(' - %s' % name)
-
-    if not debug:
-        shutil.rmtree(zircon_dir)
 
     # Generate some GN glue for each package.
     context = GenerationContext(

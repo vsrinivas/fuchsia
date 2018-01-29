@@ -15,9 +15,19 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 ZIRCON_ROOT = os.path.join(FUCHSIA_ROOT, "zircon")
 
 
+def list_files(deleted=False):
+    git_cmd = ['git', 'ls-files']
+    if deleted:
+        git_cmd.append('-d')
+    output = subprocess.check_output(git_cmd, cwd=ZIRCON_ROOT)
+    return set(output.splitlines())
+
+
 def get_files():
-    files = subprocess.check_output(['git', 'ls-files'], cwd=ZIRCON_ROOT)
-    return [os.path.join(ZIRCON_ROOT, file) for file in files.splitlines()]
+    all_files = list_files()
+    deleted_files = list_files(deleted=True)
+    files = all_files - deleted_files
+    return [os.path.join(ZIRCON_ROOT, file) for file in files]
 
 
 def main():

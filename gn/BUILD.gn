@@ -1054,6 +1054,8 @@ if (generate_zircon_gn_files) {
               [
                 "--out",
                 rebase_path("//zircon/public"),
+                "--staging",
+                rebase_path("$root_out_dir/zircon-gn"),
                 "--zircon-build",
                 rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
               ],
