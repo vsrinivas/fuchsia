@@ -195,15 +195,6 @@ void Presentation::CreateViewTree(
 
   DisplayMetrics metrics = display_model_.GetMetrics();
   display_configuration::LogDisplayMetrics(metrics);
-
-  const bool kOverrideDpRatio = true;
-  if (kOverrideDpRatio) {
-    FXL_DLOG(INFO)
-        << "RootPresenter: Ignoring display metrics, using DP-ratio of 2.0.";
-    metrics = DisplayMetrics(metrics.width_in_px(), metrics.height_in_px(), 2.f,
-                             2.f, 0.f);
-  }
-
   SetDisplayMetrics(metrics);
 
   // Add content view to root view.
