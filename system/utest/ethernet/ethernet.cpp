@@ -34,11 +34,11 @@
 // Delay for data to work through the system. The test will pause this long, so it's best
 // to keep it fairly short. If it's too short, the test will occasionally be flaky,
 // especially on qemu.
-#define PROPAGATE_MSEC (50)
+#define PROPAGATE_MSEC (100)
 #define PROPAGATE_TIME (zx::deadline_after(zx::msec(PROPAGATE_MSEC)))
 // We expect something to happen prior to timeout, and the test will fail if it doesn't. So
 // wait longer to further reduce the likelihood of test flakiness.
-#define FAIL_TIMEOUT (zx::deadline_after(zx::msec(3 * PROPAGATE_MSEC)))
+#define FAIL_TIMEOUT (zx::deadline_after(zx::msec(10 * PROPAGATE_MSEC)))
 
 // Because of test flakiness if a previous test case's ethertap device isn't cleaned up, we put a
 // delay at the end of each test to give devmgr time to clean up the ethertap devices.
