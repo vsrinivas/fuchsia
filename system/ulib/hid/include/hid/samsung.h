@@ -37,8 +37,8 @@ typedef struct samsung_touch {
     uint8_t contact_count;
 } __attribute__((packed)) samsung_touch_t;
 
-extern bool is_samsung_touch_report_desc(const uint8_t* data, size_t len);
-extern zx_status_t setup_samsung_touch(int fd);
+bool is_samsung_touch_report_desc(const uint8_t* data, size_t len);
+zx_status_t setup_samsung_touch(int fd);
 
 __END_CDECLS
 
