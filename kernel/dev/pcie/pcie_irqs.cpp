@@ -620,20 +620,14 @@ zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_ir
         switch (irq_.mode) {
         case PCIE_IRQ_MODE_LEGACY:
             DEBUG_ASSERT(list_in_list(&irq_.legacy.shared_handler_node));
-
             LeaveLegacyIrqMode();
-
-            DEBUG_ASSERT(!irq_.registered_handler_count);
             return ZX_OK;
 
         case PCIE_IRQ_MODE_MSI:
             DEBUG_ASSERT(irq_.msi);
             DEBUG_ASSERT(irq_.msi->is_valid());
             DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
-
             LeaveMsiIrqMode();
-
-            DEBUG_ASSERT(!irq_.registered_handler_count);
             return ZX_OK;
 
         /* Right now, there should be no way to get into MSI-X mode */
