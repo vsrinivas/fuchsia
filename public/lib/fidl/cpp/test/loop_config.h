@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TEST_LOOP_CONFIG_H_
 #define LIB_FIDL_CPP_TEST_LOOP_CONFIG_H_
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 
 namespace fidl {
 

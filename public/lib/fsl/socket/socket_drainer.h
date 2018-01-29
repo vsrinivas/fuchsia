@@ -6,7 +6,7 @@
 #define LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 
 #include <async/default.h>
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/socket.h>
 
 #include "lib/fxl/fxl_export.h"

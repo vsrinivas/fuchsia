@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <benchmark/benchmark.h>
 #include <gflags/gflags.h>
 #include <trace-provider/provider.h>

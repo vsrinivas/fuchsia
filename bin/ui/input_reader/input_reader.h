@@ -8,7 +8,7 @@
 #include <map>
 #include <utility>
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"

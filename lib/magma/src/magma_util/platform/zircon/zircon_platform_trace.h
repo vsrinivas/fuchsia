@@ -6,7 +6,7 @@
 #define ZIRCON_PLATFORM_TRACE_H
 
 #if MAGMA_ENABLE_TRACING
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <trace/observer.h>
 #endif

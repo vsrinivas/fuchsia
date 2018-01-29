@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_IO_DEVICE_WATCHER_H_
 #define LIB_FSL_IO_DEVICE_WATCHER_H_
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include <zx/channel.h>
 
 #include <functional>

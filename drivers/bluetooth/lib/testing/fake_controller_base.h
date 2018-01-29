@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"

@@ -4,7 +4,7 @@
 
 #include "lib/fsl/socket/files.h"
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include <stdio.h>
 #include <unistd.h>
 

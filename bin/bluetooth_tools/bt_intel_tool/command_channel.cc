@@ -9,7 +9,7 @@
 #include <iostream>
 
 #include <async/default.h>
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zx/event.h>

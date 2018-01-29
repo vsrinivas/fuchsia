@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS2_INTERNAL_CHANNEL_READER_H_
 #define LIB_FIDL_CPP_BINDINGS2_INTERNAL_CHANNEL_READER_H_
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <fidl/cpp/message_buffer.h>
 #include <fidl/cpp/message.h>
 #include <zx/channel.h>

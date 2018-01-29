@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include <async/loop.h>
-#include <async/task.h>
-#include <async/wait.h>
+#include <async/cpp/loop.h>
+#include <async/cpp/task.h>
+#include <async/cpp/wait.h>
 #include <zx/event.h>
 
 #include "lib/fxl/macros.h"

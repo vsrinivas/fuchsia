@@ -6,7 +6,7 @@
 
 #include <zx/event.h>
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/functional/closure.h"

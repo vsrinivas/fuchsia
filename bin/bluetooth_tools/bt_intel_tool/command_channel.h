@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <fbl/unique_fd.h>
 #include <zircon/types.h>
 #include <zx/channel.h>

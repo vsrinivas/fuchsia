@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
+#include <async/cpp/loop.h>
 #include <async/default.h>
-#include <async/loop.h>
 #include <errno.h>
 #include <fdio/io.h>
 #include <fdio/util.h>

@@ -51,7 +51,7 @@ extern "C" {
 #include "platform_trace.h"
 
 #ifdef MAGMA_ENABLE_TRACING
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <trace-provider/provider.h>
 #endif
 

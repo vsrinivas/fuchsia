@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include <zircon/syscalls/port.h>
 #include <zx/event.h>
 

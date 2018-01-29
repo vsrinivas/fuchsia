@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"

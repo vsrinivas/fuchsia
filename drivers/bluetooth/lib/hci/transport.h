@@ -8,7 +8,7 @@
 #include <memory>
 #include <thread>
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"

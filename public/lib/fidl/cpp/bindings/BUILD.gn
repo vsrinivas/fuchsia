@@ -86,7 +86,7 @@ sdk_source_set("bindings") {
 
   public_deps = [
     ":serialization",
-    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:cpp",
     "//zircon/system/ulib/async:default",
   ]
 }

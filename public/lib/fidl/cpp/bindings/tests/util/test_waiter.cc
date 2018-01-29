@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <async/default.h>
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 

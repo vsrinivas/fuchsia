@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/task.h>
+#include <async/cpp/task.h>
 #include <zx/time.h>
 
 #include "lib/fxl/functional/closure.h"

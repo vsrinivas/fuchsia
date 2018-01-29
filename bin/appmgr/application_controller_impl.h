@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
-#include <async/auto_wait.h>
+#include <async/cpp/auto_wait.h>
 #include <fs/pseudo-dir.h>
 #include <zx/process.h>
 

@@ -11,7 +11,7 @@
 #include <queue>
 #include <unordered_map>
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 

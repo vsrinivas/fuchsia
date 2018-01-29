@@ -196,7 +196,8 @@ source_set("trace") {
 
   if (magma_enable_tracing) {
     public_deps = [
-      "$zircon_build_root/system/ulib/async:loop",
+      "$zircon_build_root/system/ulib/async:cpp",
+      "$zircon_build_root/system/ulib/async:loop_cpp",
       "$zircon_build_root/system/ulib/trace",
       "$zircon_build_root/system/ulib/trace-provider",
       "//garnet/public/lib/fsl",

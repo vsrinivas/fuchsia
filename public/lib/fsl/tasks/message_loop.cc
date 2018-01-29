@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <async/task.h>
-#include <async/wait_with_timeout.h>
+#include <async/cpp/task.h>
+#include <async/cpp/wait_with_timeout.h>
 #include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"

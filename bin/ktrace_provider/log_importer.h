@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
-#include <async/wait.h>
+#include <async/cpp/wait.h>
 #include <zx/log.h>
 #include <trace-engine/types.h>
 

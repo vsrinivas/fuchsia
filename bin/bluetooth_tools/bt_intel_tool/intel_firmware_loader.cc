@@ -15,7 +15,7 @@
 #include <limits>
 
 #include <async/default.h>
-#include <async/loop.h>
+#include <async/cpp/loop.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <zircon/status.h>
