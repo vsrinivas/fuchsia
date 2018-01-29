@@ -175,6 +175,9 @@ class Mdns : public MdnsAgent::Host {
                               const std::string& instance_name,
                               Publisher* publisher);
 
+  // Writes log messages describing lifetime traffic.
+  void LogTraffic();
+
  private:
   enum class State {
     kNotStarted,

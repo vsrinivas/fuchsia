@@ -33,7 +33,6 @@ const fxl::TimeDelta kTrafficLoggingInterval = fxl::TimeDelta::FromSeconds(60);
 
 MdnsStandalone::MdnsStandalone(const std::string& host_name) {
   mdns_.Start(IoctlInterfaceMonitor::Create(), host_name);
-  // mdns_.SetVerbose(true);
 
   mdns_.SubscribeToService("_fuchsia._tcp.", this);
 
@@ -49,7 +48,11 @@ MdnsStandalone::~MdnsStandalone() {}
 
 void MdnsStandalone::LogTrafficAfterDelay() {
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this]() { LogTrafficAfterDelay(); }, kTrafficLoggingInterval);
+      [this]() {
+        mdns_.LogTraffic();
+        LogTrafficAfterDelay();
+      },
+      kTrafficLoggingInterval);
 }
 
 void MdnsStandalone::InstanceDiscovered(const std::string& service,

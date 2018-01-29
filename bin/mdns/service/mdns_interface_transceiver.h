@@ -60,6 +60,9 @@ class MdnsInterfaceTransceiver {
   // adjacent. The same constraints will apply when this method returns.
   void SendMessage(DnsMessage* message, const SocketAddress& address);
 
+  // Writes log messages describing lifetime traffic.
+  void LogTraffic();
+
  protected:
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
@@ -110,6 +113,10 @@ class MdnsInterfaceTransceiver {
   InboundMessageCallback inbound_message_callback_;
   std::shared_ptr<DnsResource> address_resource_;
   std::shared_ptr<DnsResource> alternate_address_resource_;
+  uint64_t messages_received_ = 0;
+  uint64_t bytes_received_ = 0;
+  uint64_t messages_sent_ = 0;
+  uint64_t bytes_sent_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsInterfaceTransceiver);
 };

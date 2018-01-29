@@ -100,6 +100,14 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
       message, reply_address.socket_address());
 }
 
+void MdnsTransceiver::LogTraffic() {
+  for (auto& interface : interfaces_) {
+    if (interface) {
+      interface->LogTraffic();
+    }
+  }
+}
+
 void MdnsTransceiver::FindNewInterfaces() {
   FXL_DCHECK(interface_monitor_);
 

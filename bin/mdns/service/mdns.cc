@@ -167,6 +167,10 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
                                       IpPort::From_uint16_t(0), agent);
 }
 
+void Mdns::LogTraffic() {
+  transceiver_.LogTraffic();
+}
+
 void Mdns::StartAddressProbe(const std::string& host_name) {
   state_ = State::kAddressProbeInProgress;
 

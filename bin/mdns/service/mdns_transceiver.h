@@ -52,6 +52,9 @@ class MdnsTransceiver {
   // |MdnsAddresses::kV4Multicast|.
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
 
+  // Writes log messages describing lifetime traffic.
+  void LogTraffic();
+
  private:
   struct InterfaceId {
     InterfaceId(const std::string& name, sa_family_t family)

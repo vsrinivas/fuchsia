@@ -133,10 +133,21 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
 
   ssize_t result = SendTo(outbound_buffer_.data(), packet_size, address);
 
+  ++messages_sent_;
+  bytes_sent_ += packet_size;
+
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to sendto, errno " << errno;
     return;
   }
+}
+
+void MdnsInterfaceTransceiver::LogTraffic() {
+  std::cout << "interface " << name_ << " " << address_ << "\n";
+  std::cout << "    messages received:  " << messages_received_ << "\n";
+  std::cout << "    bytes received:     " << bytes_received_ << "\n";
+  std::cout << "    messages sent:      " << messages_sent_ << "\n";
+  std::cout << "    bytes sent:         " << bytes_sent_ << "\n";
 }
 
 int MdnsInterfaceTransceiver::SetOptionSharePort() {
@@ -173,6 +184,9 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
         [this]() { WaitForInbound(); }, fxl::TimeDelta::FromSeconds(10));
     return;
   }
+
+  ++messages_received_;
+  bytes_received_ += result;
 
   ReplyAddress reply_address(source_address_storage, index_);
 
