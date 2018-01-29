@@ -30,7 +30,7 @@ static zx_status_t get_paddr(void* context, size_t offset, size_t index, paddr_t
     return ZX_OK;
 }
 
-static zx_status_t setup_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
+static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(0, vmo_size, &vmo);
     if (status != ZX_OK)
@@ -47,6 +47,15 @@ static zx_status_t setup_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
     return ZX_OK;
 }
 
+static zx_status_t create_gpas(fbl::RefPtr<VmObject> guest_phys_mem,
+                               fbl::unique_ptr<GuestPhysicalAddressSpace>* gpas) {
+#ifdef ARCH_ARM64
+    return GuestPhysicalAddressSpace::Create(guest_phys_mem, 1 /* vmid */, gpas);
+#elif ARCH_X86_64
+    return GuestPhysicalAddressSpace::Create(guest_phys_mem, gpas);
+#endif
+}
+
 static bool guest_physical_address_space_unmap_range(void* context) {
     BEGIN_TEST;
 
@@ -56,10 +65,10 @@ static bool guest_physical_address_space_unmap_range(void* context) {
 
     // Setup
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(ZX_OK, status, "Failed to setup vmo.\n");
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = create_gpas(vmo, &gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Unmap page.
@@ -83,10 +92,10 @@ static bool guest_physical_address_space_get_page_not_present(void* context) {
 
     // Setup
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(ZX_OK, status, "Failed to setup vmo.\n");
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = create_gpas(vmo, &gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Query unmapped address.
@@ -107,10 +116,10 @@ static bool guest_physical_address_space_get_page(void* context) {
 
     // Setup
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(ZX_OK, status, "Failed to setup vmo.\n");
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = create_gpas(vmo, &gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Read expected physical address from the VMO.
@@ -158,10 +167,10 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
 
     // Setup
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = setup_vmo(ROOT_VMO_SIZE, &vmo);
+    zx_status_t status = create_vmo(ROOT_VMO_SIZE, &vmo);
     EXPECT_EQ(ZX_OK, status, "Failed to setup vmo.\n");
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = create_gpas(vmo, &gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Allocate second VMAR, offset one page into the root.
@@ -174,7 +183,7 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
 
     // Allocate second VMO; we'll map the original VMO on top of this one.
     fbl::RefPtr<VmObject> vmo2;
-    status = setup_vmo(SECOND_VMO_SIZE, &vmo2);
+    status = create_vmo(SECOND_VMO_SIZE, &vmo2);
     EXPECT_EQ(ZX_OK, status, "Failed allocate second VMO.\n");
 
     // Map second VMO into second VMAR.
@@ -216,7 +225,7 @@ static bool guest_physical_address_space_map_interrupt_controller(void* context)
 
     // Setup GuestPhysicalAddressSpace.
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = create_gpas(vmo, &gpas);
     EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
 
     // Allocate a page to use as the APIC page.

@@ -32,8 +32,6 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     zx_status_t status = alloc_vmid(&vmid);
     if (status != ZX_OK)
         return status;
-    // TODO(abdulla): Invalidate (TLBI + IC) after allocating VMID, in case it
-    // was previously used.
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
@@ -42,7 +40,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
+    status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), vmid, &guest->gpas_);
     if (status != ZX_OK)
         return status;
 
@@ -54,7 +52,6 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    guest->gpas_->aspace()->arch_aspace().asid_ = vmid;
     *out = fbl::move(guest);
     return ZX_OK;
 }

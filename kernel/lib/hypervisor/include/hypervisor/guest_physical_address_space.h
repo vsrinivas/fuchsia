@@ -13,14 +13,16 @@
 class GuestPhysicalAddressSpace {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> guest_phys_mem,
+#ifdef ARCH_ARM64
+                              uint8_t vmid,
+#endif
                               fbl::unique_ptr<GuestPhysicalAddressSpace>* gpas);
 
     ~GuestPhysicalAddressSpace();
 
     size_t size() const { return paspace_->size(); }
     const fbl::RefPtr<VmAspace>& aspace() const { return paspace_; }
-    // TODO(abdulla): Remove this function.
-    zx_paddr_t table_phys() { return paspace_->arch_aspace().arch_table_phys(); }
+    zx_paddr_t table_phys() const { return paspace_->arch_aspace().arch_table_phys(); }
 
     zx_status_t MapInterruptController(vaddr_t guest_paddr, paddr_t host_paddr, size_t size);
     zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);

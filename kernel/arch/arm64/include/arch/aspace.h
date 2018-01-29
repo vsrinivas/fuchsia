@@ -40,12 +40,11 @@ public:
                      vaddr_t align, size_t size, uint mmu_flags) override;
 
     paddr_t arch_table_phys() const override { return tt_phys_; }
+    void arch_set_asid(uint16_t asid) { asid_ = asid; }
 
     static void ContextSwitch(ArmArchVmAspace* from, ArmArchVmAspace* to);
 
 private:
-    friend class Guest;
-
     inline bool IsValidVaddr(vaddr_t vaddr) {
         return (vaddr >= base_ && vaddr <= base_ + size_ - 1);
     }

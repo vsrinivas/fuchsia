@@ -45,6 +45,9 @@ struct AspaceVmoLocator final : public VmEnumerator {
 } // namespace
 
 zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_mem,
+#ifdef ARCH_ARM64
+                                              uint8_t vmid,
+#endif
                                               fbl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas(new (&ac)
@@ -55,6 +58,9 @@ zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_m
     gpas->paspace_ = VmAspace::Create(VmAspace::TYPE_GUEST_PHYS, "guest_paspace");
     if (!gpas->paspace_)
         return ZX_ERR_NO_MEMORY;
+#ifdef ARCH_ARM64
+    gpas->paspace_->arch_aspace().arch_set_asid(vmid);
+#endif
 
     // Initialize our VMAR with the provided VMO, mapped at address 0.
     fbl::RefPtr<VmMapping> mapping;
