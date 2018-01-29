@@ -247,7 +247,7 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     if (len >= ZX_MAX_NAME_LEN)
         len = ZX_MAX_NAME_LEN - 1;
 
-    AutoSpinLock lock(&name_lock_);
+    AutoSpinLockIrqSave lock(&name_lock_);
     memcpy(thread_.name, name, len);
     memset(thread_.name + len, 0, ZX_MAX_NAME_LEN - len);
     return ZX_OK;
@@ -256,7 +256,7 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
 void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
-    AutoSpinLock lock(&name_lock_);
+    AutoSpinLockIrqSave lock(&name_lock_);
     memcpy(out_name, thread_.name, ZX_MAX_NAME_LEN);
 }
 
