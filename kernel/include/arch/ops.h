@@ -29,7 +29,16 @@ __BEGIN_CDECLS
 static void arch_enable_ints(void);
 static void arch_disable_ints(void);
 static bool arch_ints_disabled(void);
+
+/* The arch_in_int_handler() flag is used to check that in-kernel interrupt
+ * handlers do not do any blocking operations.  This is a per-CPU flag.
+ * Various blocking operations, such as mutex_acquire(), contain assertions
+ * that arch_in_int_handler() is false.
+ *
+ * arch_in_int_handler() should only be true when interrupts are
+ * disabled. */
 static bool arch_in_int_handler(void);
+static void arch_set_in_int_handler(bool in_int_handler);
 
 static uint64_t arch_cycle_count(void);
 
