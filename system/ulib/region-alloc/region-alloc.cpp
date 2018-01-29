@@ -298,7 +298,7 @@ zx_status_t RegionAllocator::GetRegion(uint64_t size,
     // Consider all of the regions which are large enough to hold our
     // allocation.  Stop as soon as we find one which can satisfy the alignment
     // restrictions.
-    uint64_t aligned_base;
+    uint64_t aligned_base = 0;
     while (iter.IsValid()) {
         ZX_DEBUG_ASSERT(iter->size >= size);
         aligned_base = (iter->base + mask) & inv_mask;

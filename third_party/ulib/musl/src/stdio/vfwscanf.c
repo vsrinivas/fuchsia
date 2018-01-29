@@ -90,7 +90,7 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
     int size;
     int alloc;
     const wchar_t* p;
-    int c, t;
+    int c = 0, t;
     char* s = NULL;
     wchar_t* wcs = NULL;
     void* dest = NULL;

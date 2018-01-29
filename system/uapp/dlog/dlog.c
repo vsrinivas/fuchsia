@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     bool tail = false;
     bool filter_pid = false;
     bool plain = false;
-    zx_koid_t pid;
+    zx_koid_t pid = 0;
     zx_handle_t h;
 
     while (argc > 1) {

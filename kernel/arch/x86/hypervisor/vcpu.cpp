@@ -683,7 +683,7 @@ void vmx_exit(VmxState* vmx_state) {
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
-    bool signaled;
+    bool signaled = false;
     zx_status_t status = local_apic_state_.interrupt_tracker.Interrupt(vector, &signaled);
     if (status != ZX_OK) {
         return status;

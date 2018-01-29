@@ -364,7 +364,7 @@ static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
 
 __NO_SAFESTACK NO_ASAN
 static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
-    uint32_t h = 0, gh, gho, *ght;
+    uint32_t h = 0, gh = 0, gho = 0, *ght;
     size_t ghm = 0;
     struct symdef def = {};
     for (; dso; dso = dso_next(dso)) {

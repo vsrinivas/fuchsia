@@ -501,7 +501,7 @@ static zx_status_t ums_check_luns_ready(ums_t* ums) {
 
     for (uint8_t lun = 0; lun <= ums->max_lun && status == ZX_OK; lun++) {
         ums_block_t* dev = &ums->block_devs[lun];
-        bool ready;
+        bool ready = false;
 
         status = ums_test_unit_ready(ums, lun);
         if (status == ZX_OK) {

@@ -16,7 +16,7 @@
 
 static void initialize_options(struct options* o) {
     for (enum option i = 0; i < OPTION_MAX; ++i) {
-        const char* value;
+        const char* value = NULL;
         switch (i) {
             OPTION_DEFAULT(FILENAME);
             OPTION_DEFAULT(SHUTDOWN);
@@ -36,8 +36,8 @@ static void initialize_options(struct options* o) {
 static void apply_option(struct options* o, const char* arg) {
     size_t len = strlen(arg);
     for (enum option i = 0; i < OPTION_MAX; ++i) {
-        const char* string;
-        size_t string_len;
+        const char* string = NULL;
+        size_t string_len = 0;
         switch (i) {
             OPTION_STRING(FILENAME);
             OPTION_STRING(SHUTDOWN);

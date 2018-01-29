@@ -682,7 +682,7 @@ static int waiter_thread(void* arg) {
     auto& ev   = ob[1];
     const auto key = 919u;
 
-    int st;
+    zx_status_t st = ZX_OK;;
 
     auto count = kStressCount;
     while (--count) {

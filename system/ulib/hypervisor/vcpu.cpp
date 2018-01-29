@@ -104,7 +104,7 @@ static zx_status_t handle_mem(Vcpu* vcpu, const zx_packet_guest_mem_t* mem, uint
             return status;
     }
 
-    bool do_write;
+    bool do_write = false;
 #if __aarch64__
     do_write = mem->read;
     status = handle_mmio_arm(mem, trap_key, &vcpu_state.x[mem->xt]);
