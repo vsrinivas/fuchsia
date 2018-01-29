@@ -159,12 +159,13 @@ mod tests {
 
     #[test]
     fn vmo_set_size() {
-        let start_size = 12;
+        // Use a multiple of page size to match VMOs page aligned size
+        let start_size = 4096;
         let vmo = Vmo::create(start_size).unwrap();
         assert_eq!(start_size, vmo.get_size().unwrap());
 
         // Change the size and make sure the new size is reported
-        let new_size = 23;
+        let new_size = 8192;
         assert!(vmo.set_size(new_size).is_ok());
         assert_eq!(new_size, vmo.get_size().unwrap());
     }
@@ -172,14 +173,17 @@ mod tests {
     #[test]
     fn vmo_read_write() {
         let mut vec1 = vec![0; 16];
-        let vmo = Vmo::create(vec1.len() as u64).unwrap();
+        let vmo = Vmo::create(4096 as u64).unwrap();
         assert_eq!(vmo.write(b"abcdef", 0), Ok(6));
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"abcdef", &vec1[0..6]);
         assert_eq!(vmo.write(b"123", 2), Ok(3));
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"ab123f", &vec1[0..6]);
-        assert_eq!(15, vmo.read(&mut vec1, 1).unwrap());
+
+        // Read one byte into the vmo. Size returned is still 16 because
+        // the size of the VMO has been rounded up to the next page size.
+        assert_eq!(16, vmo.read(&mut vec1, 1).unwrap());
         assert_eq!(b"b123f", &vec1[0..5]);
     }
 
@@ -222,35 +226,35 @@ mod tests {
 
     #[test]
     fn vmo_clone() {
-        let original = Vmo::create(12).unwrap();
+        let original = Vmo::create(16).unwrap();
         assert_eq!(original.write(b"one", 0), Ok(3));
 
         // Clone the VMO, and make sure it contains what we expect.
-        let clone = original.clone(0, 10).unwrap();
+        let clone = original.clone(0, 16).unwrap();
         let mut read_buffer = vec![0; 16];
-        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..3], b"one");
 
         // Writing to the original will affect the clone too, surprisingly.
         assert_eq!(original.write(b"two", 0), Ok(3));
-        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..3], b"two");
-        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..3], b"two");
 
         // However, writing to the clone will not affect the original
         assert_eq!(clone.write(b"three", 0), Ok(5));
-        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..3], b"two");
-        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..5], b"three");
 
         // And now that the copy-on-write has happened, writing to the original will not affect the
         // clone. How bizarre.
         assert_eq!(original.write(b"four", 0), Ok(4));
-        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..4], b"four");
-        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(16));
         assert_eq!(&read_buffer[0..5], b"three");
     }
 }
