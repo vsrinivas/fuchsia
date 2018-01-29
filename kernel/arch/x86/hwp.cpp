@@ -31,7 +31,7 @@ static void hwp_enable_sync_task(void* ctx) {
 }
 
 static void hwp_enable(void) {
-    AutoSpinLock guard(&lock);
+    AutoSpinLockNoIrqSave guard(&lock);
 
     if (hwp_enabled) {
         return;
@@ -56,7 +56,7 @@ static void hwp_set_hint_sync_task(void* ctx) {
 }
 
 static void hwp_set_hint(unsigned long hint) {
-    AutoSpinLock guard(&lock);
+    AutoSpinLockNoIrqSave guard(&lock);
 
     if (!hwp_enabled) {
         printf("Enable HWP first\n");

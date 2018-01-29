@@ -423,7 +423,7 @@ uint32_t apic_io_isa_to_global(uint8_t isa_irq) {
 
 void apic_io_save(void) {
     DEBUG_ASSERT(arch_ints_disabled());
-    AutoSpinLock guard(&lock);
+    AutoSpinLockNoIrqSave guard(&lock);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic* apic = &io_apics[i];
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
@@ -436,7 +436,7 @@ void apic_io_save(void) {
 
 void apic_io_restore(void) {
     DEBUG_ASSERT(arch_ints_disabled());
-    AutoSpinLock guard(&lock);
+    AutoSpinLockNoIrqSave guard(&lock);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic* apic = &io_apics[i];
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {

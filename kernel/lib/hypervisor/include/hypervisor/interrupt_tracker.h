@@ -25,7 +25,7 @@ public:
 
     // Returns whether there are pending interrupts.
     bool Pending() {
-        AutoSpinLock lock(&lock_);
+        AutoSpinLockNoIrqSave lock(&lock_);
         return bitmap_.Scan(0, N, false) != N;
     }
 
@@ -33,7 +33,7 @@ public:
     zx_status_t Pop(uint32_t* vector) {
         uint32_t value;
         {
-            AutoSpinLock lock(&lock_);
+            AutoSpinLockNoIrqSave lock(&lock_);
             value = static_cast<uint32_t>(bitmap_.Scan(0, N, false));
             if (value == N)
                 return ZX_ERR_NOT_FOUND;
@@ -48,7 +48,7 @@ public:
     zx_status_t Track(uint32_t vector) {
         if (vector >= N)
             return ZX_ERR_OUT_OF_RANGE;
-        AutoSpinLock lock(&lock_);
+        AutoSpinLockNoIrqSave lock(&lock_);
         // We reverse the value, as RawBitmapGeneric::Scan will return the
         // lowest priority interrupt, but we need the highest priority.
         return bitmap_.SetOne(N - vector - 1);

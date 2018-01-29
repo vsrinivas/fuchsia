@@ -176,7 +176,7 @@ enum handler_return platform_irq(x86_iframe_t* frame) {
     struct int_handler_struct* handler = &int_handler_table[x86_vector];
 
     {
-        AutoSpinLock guard(&handler->lock);
+        AutoSpinLockNoIrqSave guard(&handler->lock);
         if (handler->handler)
             ret = handler->handler(handler->arg);
     }
@@ -234,7 +234,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
 
     {
         // No need to irq_save; we already did that when we grabbed the outer lock.
-        AutoSpinLock handler_guard(&int_handler_table[x86_vector].lock);
+        AutoSpinLockNoIrqSave handler_guard(&int_handler_table[x86_vector].lock);
 
         if (handler && int_handler_table[x86_vector].handler) {
             p2ra_free_range(&x86_irq_vector_allocator, x86_vector, 1);

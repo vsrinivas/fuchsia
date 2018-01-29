@@ -443,7 +443,7 @@ static void recompute_state_size(void) {
         new_size = leaf.b;
     }
 
-    AutoSpinLock guard(&state_lock);
+    AutoSpinLockNoIrqSave guard(&state_lock);
     /* Only allow size to increase; all CPUs should converge to the same value,
      * but for sanity let's keep it monotonically increasing */
     if (new_size > register_state_size) {

@@ -42,7 +42,7 @@ static void x86_clear_tss_io_bitmap(const bitmap::RleBitmap& bitmap) {
 }
 
 void x86_clear_tss_io_bitmap(IoBitmap& io_bitmap) {
-    AutoSpinLock guard(&io_bitmap.lock_);
+    AutoSpinLockNoIrqSave guard(&io_bitmap.lock_);
     if (!io_bitmap.bitmap_)
         return;
 
@@ -61,7 +61,7 @@ static void x86_set_tss_io_bitmap(const bitmap::RleBitmap& bitmap) {
 }
 
 void x86_set_tss_io_bitmap(IoBitmap& io_bitmap) {
-    AutoSpinLock guard(&io_bitmap.lock_);
+    AutoSpinLockNoIrqSave guard(&io_bitmap.lock_);
     if (!io_bitmap.bitmap_)
         return;
 
@@ -91,7 +91,7 @@ void IoBitmap::UpdateTask(void* raw_context) {
     }
 
     {
-        AutoSpinLock guard(&io_bitmap.lock_);
+        AutoSpinLockNoIrqSave guard(&io_bitmap.lock_);
         // This is overkill, but it's much simpler to reason about
         x86_reset_tss_io_bitmap();
         x86_set_tss_io_bitmap(*io_bitmap.bitmap_);
@@ -134,7 +134,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
 
     zx_status_t status = ZX_OK;
     do {
-        AutoSpinLock guard(&lock_);
+        AutoSpinLockNoIrqSave guard(&lock_);
 
         if (!bitmap_) {
             bitmap_ = fbl::move(optimistic_bitmap);
