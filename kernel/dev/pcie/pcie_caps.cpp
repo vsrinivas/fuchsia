@@ -366,7 +366,7 @@ zx_status_t PcieDevice::ProbeCapabilitiesLocked() {
      * contain a proper PCI Express Capability Structure.  Because of this, we
      * maintain a quirks list of non compliant devices which are actually PCIe,
      * but do not appear to be so at first glance. */
-    if (pcie_->is_valid() || quirk_should_force_pcie(*this)) {
+    if ((is_pcie() || quirk_should_force_pcie(*this)) && pcie_->is_valid()) {
         ret = ParseExtCapabilitiesLocked();
     }
 
