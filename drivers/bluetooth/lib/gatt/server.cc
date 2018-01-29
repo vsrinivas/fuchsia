@@ -73,9 +73,12 @@ Server::Server(const std::string& peer_id,
       att::kWriteRequest, fbl::BindMember(this, &Server::OnWriteRequest));
   write_cmd_id_ = att_->RegisterHandler(
       att::kWriteCommand, fbl::BindMember(this, &Server::OnWriteCommand));
+  read_blob_req_id_ = att_->RegisterHandler(
+      att::kReadBlobRequest, fbl::BindMember(this, &Server::OnReadBlobRequest));
 }
 
 Server::~Server() {
+  att_->UnregisterHandler(read_blob_req_id_);
   att_->UnregisterHandler(write_cmd_id_);
   att_->UnregisterHandler(write_req_id_);
   att_->UnregisterHandler(read_req_id_);
@@ -405,6 +408,72 @@ void Server::OnReadByType(att::Bearer::TransactionId tid,
   }
 
   att_->Reply(tid, std::move(buffer));
+}
+
+void Server::OnReadBlobRequest(att::Bearer::TransactionId tid,
+                               const att::PacketReader& packet) {
+  FXL_DCHECK(packet.opcode() == att::kReadBlobRequest);
+
+  if (packet.payload_size() != sizeof(att::ReadBlobRequestParams)) {
+    att_->ReplyWithError(tid, att::kInvalidHandle, att::ErrorCode::kInvalidPDU);
+    return;
+  }
+
+  const auto& params = packet.payload<att::ReadBlobRequestParams>();
+  att::Handle handle = le16toh(params.handle);
+  uint16_t offset = le16toh(params.offset);
+
+  const auto* attr = db_->FindAttribute(handle);
+  if (!attr) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kInvalidHandle);
+    return;
+  }
+
+  // TODO(armansito): Check against the connection security level here and
+  // succeed if it is sufficient.
+  if (!attr->read_reqs().allowed_without_security()) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
+    return;
+  }
+
+  constexpr size_t kHeaderSize = sizeof(att::Header);
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto callback = [self, tid, offset, handle](att::ErrorCode ecode,
+                                              const auto& value) {
+    if (!self) return;
+
+    if (ecode != att::ErrorCode::kNoError) {
+      self->att_->ReplyWithError(tid, handle, ecode);
+      return;
+    }
+
+    size_t value_size = std::min(value.size(), self->att_->mtu() - kHeaderSize);
+    auto buffer = common::NewSlabBuffer(value_size + kHeaderSize);
+    FXL_CHECK(buffer);
+
+    att::PacketWriter writer(att::kReadBlobResponse, buffer.get());
+    writer.mutable_payload_data().Write(value.view(0, value_size));
+
+    self->att_->Reply(tid, std::move(buffer));
+  };
+
+  // Use the cached value if there is one.
+  if (attr->value()) {
+    if (offset >= attr->value()->size()) {
+      att_->ReplyWithError(tid, handle, att::ErrorCode::kInvalidOffset);
+      return;
+    }
+    size_t value_size =
+        std::min(attr->value()->size(), self->att_->mtu() - kHeaderSize);
+    callback(att::ErrorCode::kNoError, attr->value()->view(offset, value_size));
+    return;
+  }
+
+  // TODO(bwb): Add a timeout to this as per NET-434
+  if (!attr->ReadAsync(peer_id_, offset, callback)) {
+    att_->ReplyWithError(tid, handle, att::ErrorCode::kReadNotPermitted);
+  }
 }
 
 void Server::OnReadRequest(att::Bearer::TransactionId tid,

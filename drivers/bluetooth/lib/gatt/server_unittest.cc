@@ -1539,6 +1539,245 @@ TEST_F(GATT_ServerTest, ReadRequestError) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
+TEST_F(GATT_ServerTest, ReadBlobRequestInvalidPDU) {
+  // Just opcode
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x0C);
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read blob request
+      0x00, 0x00,  // handle: 0
+      0x04         // error: Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestDynamicSuccess) {
+  const auto kDeclValue = common::CreateStaticByteBuffer('d', 'e', 'c', 'l');
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+
+  attr->set_read_handler([&](const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
+    EXPECT_EQ(attr->handle(), handle);
+    EXPECT_EQ(22u, offset);
+    result_cb(att::ErrorCode::kNoError,
+              common::CreateStaticByteBuffer(
+                  'e', ' ', 'U', 's', 'i', 'n', 'g', ' ', 'A', ' ', 'L', 'o',
+                  'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u'));
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x02, 0x00, // handle: 0x0002
+      0x16, 0x00  // offset: 0x0016
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x0D,          // opcode: read blob response
+      // Read Request response
+      'e', ' ', 'U', 's', 'i', 'n', 'g', ' ', 'A', ' ', 'L',
+      'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u'
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobDynamicRequestError) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->set_read_handler([&](const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
+    EXPECT_EQ(attr->handle(), handle);
+
+    result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x02, 0x00, // handle: 0x0002
+      0x16, 0x00  // offset: 0x0016
+      );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (the attribute causing the error)
+      0x0E         // error: Unlikely error
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestStaticSuccess) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x01, 0x00, // handle: 0x0002
+      0x16, 0x00  // offset: 0x0016
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x0D,          // opcode: read blob response
+      // Read Request response
+      'e', ' ', 'U', 's', 'i', 'n', 'g', ' ', 'A', ' ', 'L',
+      'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u'
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestStaticOverflowError) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      's', 'h', 'o', 'r', 't', 'e', 'r');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x01, 0x00, // handle: 0x0001
+      0x16, 0x10  // offset: 0x1016
+  );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,       // Error
+      0x0C,       // opcode
+      0x01, 0x00, // handle: 0x0001
+      0x07        // InvalidOffset
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestInvalidHandleError) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x02, 0x30, // handle: 0x0002
+      0x16, 0x00  // offset: 0x0016
+      );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read blob request
+      0x02, 0x30,  // handle: 0x0001
+      0x01         // error: invalid handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestNotPermitedError) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, att::AccessRequirements(),
+                    att::AccessRequirements(true, false, false));
+  attr->set_read_handler([&](const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
+    EXPECT_EQ(attr->handle(), handle);
+
+    result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x02, 0x00, // handle: 0x0002
+      0x16, 0x00  // offset: 0x0016
+      );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (the attribute causing the error)
+      0x02         // error: Not Permitted
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, ReadBlobRequestInvalidOffsetError) {
+  const auto kTestValue = common::CreateStaticByteBuffer(
+      'A', ' ', 'V', 'e', 'r', 'y', ' ', 'L', 'o', 'n', 'g', ' ', 'D', 'e', 'v',
+      'i', 'c', 'e', ' ', 'N', 'a', 'm', 'e', ' ', 'U', 's', 'i', 'n', 'g', ' ',
+      'A', ' ', 'L', 'o', 'n', 'g', ' ', 'A', 't', 't', 'r', 'i', 'b', 'u', 't',
+      'e');
+
+  auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
+  auto* attr = grp->AddAttribute(kTestType16, AllowedNoSecurity(),
+                                 att::AccessRequirements());
+  attr->set_read_handler([&](const auto& peer_id, att::Handle handle,
+                             uint16_t offset, const auto& result_cb) {
+    EXPECT_EQ(kTestDeviceId, peer_id);
+    EXPECT_EQ(attr->handle(), handle);
+
+    result_cb(att::ErrorCode::kInvalidOffset, common::BufferView());
+  });
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x0C,       // opcode: read blob request
+      0x02, 0x00, // handle: 0x0002
+      0x16, 0x40  // offset: 0x4016
+      );
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read by type
+      0x02, 0x00,  // handle: 0x0002 (the attribute causing the error)
+      0x07         // error: Invalid Offset Error
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
 TEST_F(GATT_ServerTest, ReadRequestSuccess) {
   const auto kDeclValue = common::CreateStaticByteBuffer('d', 'e', 'c', 'l');
   const auto kTestValue = common::CreateStaticByteBuffer('f', 'o', 'o');
