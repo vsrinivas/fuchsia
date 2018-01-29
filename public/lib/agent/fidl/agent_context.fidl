@@ -44,6 +44,9 @@ struct TaskInfo {
   string task_id;
   // The condition that would cause this task to get scheduled.
   TriggerCondition trigger_condition;
+  // If set to true, the trigger condition will be persisted on the user's
+  // ledger and will be available across reboots and devices.
+  bool persistent;
 };
 
 union TriggerCondition {

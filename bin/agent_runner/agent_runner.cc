@@ -229,7 +229,14 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
     FXL_NOTREACHED();
   }
 
-  agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
+  if (task_info->persistent) {
+    // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()| after
+    // this trigger information has been added to the ledger via a ledger page
+    // watching mechanism.
+    agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
+  } else {
+    AddedTask(MakeTriggerKey(agent_url, data.task_id), data);
+  }
 }
 
 void AgentRunner::AddedTask(const std::string& key,
@@ -391,6 +398,9 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
 void AgentRunner::DeleteTask(const std::string& agent_url,
                              const std::string& task_id) {
+  // This works for non-persistent tasks too since
+  // |AgentRunnerStorageImpl::DeleteTask| handles missing keys in ledger
+  // gracefully.
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 

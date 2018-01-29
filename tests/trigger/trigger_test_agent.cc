@@ -33,6 +33,7 @@ class TestAgentApp : modular::TriggerTestService {
     auto trigger_condition = modular::TriggerCondition::New();
     trigger_condition->set_queue_name("Trigger Queue");
     task_info->trigger_condition = std::move(trigger_condition);
+    task_info->persistent = true;
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
     agent_services_.AddService<modular::TriggerTestService>(
