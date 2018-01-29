@@ -98,24 +98,22 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
     case SystemRegister::MAIR_EL1:
         return SET_SYSREG(mair_el1);
     case SystemRegister::SCTLR_EL1: {
-        if (si.read)
+        if (si.read) {
             return ZX_ERR_NOT_SUPPORTED;
+        }
 
         // From ARM DDI 0487B.b, Section D10.2.89: If the value of HCR_EL2.{DC,
         // TGE} is not {0, 0} then in Non-secure state the PE behaves as if the
         // value of the SCTLR_EL1.M field is 0 for all purposes other than
         // returning the value of a direct read of the field.
         //
-        // We do not set HCR_EL2.TGE, so we only need to modify HCR_EL2.DC.
-        //
-        // TODO(abdulla): Investigate clean of cache and invalidation of TLB.
+        // Therefore if SCTLR_EL1.M is set to 1, we need to set HCR_EL2.DC to 0.
+        // Additionally, once the guest has set SCTLR_EL1.M to 1, we no longer
+        // need to trap writes to virtual memory control registers, so we can
+        // set HCR_EL2.TVM to 0 to improve performance.
         uint32_t sctlr_el1 = reg & UINT32_MAX;
-        if ((guest_state->system_state.sctlr_el1 ^ sctlr_el1) & SCTLR_ELX_M) {
-            if (sctlr_el1 & SCTLR_ELX_M) {
-                *hcr &= ~HCR_EL2_DC;
-            } else {
-                *hcr |= HCR_EL2_DC;
-            }
+        if (sctlr_el1 & SCTLR_ELX_M) {
+            *hcr &= ~(HCR_EL2_DC | HCR_EL2_TVM);
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
