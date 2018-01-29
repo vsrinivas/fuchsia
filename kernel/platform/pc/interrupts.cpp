@@ -340,7 +340,7 @@ void x86_register_msi_handler(const pcie_msi_block_t* block,
     DEBUG_ASSERT((x86_vector >= X86_INT_PLATFORM_BASE) &&
                  (x86_vector <= X86_INT_PLATFORM_MAX));
 
-    AutoSpinLock guard(&int_handler_table[x86_vector].lock);
+    AutoSpinLockIrqSave guard(&int_handler_table[x86_vector].lock);
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? ctx : NULL;
 }
