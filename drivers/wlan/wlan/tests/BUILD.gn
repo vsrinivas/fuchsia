@@ -93,10 +93,6 @@ package("wlan_tests") {
     "//garnet/drivers/wlan/testing",
   ]
 
-  binaries = [ {
-        name = "wlan-testutil"
-      } ]
-
   tests = [
     {
       name = "wlan_mac_unittest"
@@ -111,7 +107,7 @@ package("wlan_tests") {
     },
   ]
 
-  drivers = [ {
-        name = "wlan-testdev.so"
-      } ]
+  drivers = [{
+        name = "wlanphy-testdev.so"
+      }]
 }
