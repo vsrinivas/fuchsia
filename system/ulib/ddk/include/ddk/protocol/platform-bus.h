@@ -20,6 +20,7 @@ typedef struct {
 
 typedef struct {
     uint32_t    irq;
+    uint32_t    mode;   // ZX_INTERRUPT_MODE_* flags
 } pbus_irq_t;
 
 typedef struct {

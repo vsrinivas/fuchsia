@@ -25,6 +25,7 @@ static const pbus_mmio_t xhci_mmios[] = {
 static const pbus_irq_t xhci_irqs[] = {
     {
         .irq = 62,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 

@@ -26,6 +26,7 @@ static const pbus_mmio_t dwc3_mmios[] = {
 static const pbus_irq_t dwc3_irqs[] = {
     {
         .irq = DWC3_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 

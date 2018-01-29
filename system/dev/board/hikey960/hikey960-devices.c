@@ -25,6 +25,7 @@ static const pbus_mmio_t dwc3_mmios[] = {
 static const pbus_irq_t dwc3_irqs[] = {
     {
         .irq = IRQ_USB3,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
@@ -102,6 +103,7 @@ static const pbus_mmio_t xhci_mmios[] = {
 static const pbus_irq_t xhci_irqs[] = {
     {
         .irq = IRQ_USB3,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
@@ -126,12 +128,15 @@ static const pbus_mmio_t mali_mmios[] = {
 static const pbus_irq_t mali_irqs[] = {
     {
         .irq = IRQ_G3D_JOB,
+        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
         .irq = IRQ_G3D_MMU,
+        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
         .irq = IRQ_G3D_GPU,
+        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
 };
 

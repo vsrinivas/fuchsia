@@ -28,6 +28,7 @@ static const pbus_mmio_t audio_in_mmios[] = {
 static const pbus_irq_t audio_in_irqs[] = {
     {
         .irq = PDM_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
@@ -65,7 +66,10 @@ static const pbus_i2c_channel_t tdm_i2cs[] = {
 };
 
 static const pbus_irq_t tdm_irqs[] = {
-    { .irq = (90 + 32)},
+    {
+        .irq = (90 + 32),
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
 };
 
 static const pbus_dev_t gauss_tdm_audio_dev = {
