@@ -291,17 +291,20 @@ struct ath10k_hw_ce_ctrl1 {
     uint32_t reset;
     struct ath10k_hw_ce_regs_addr_map* src_ring;
     struct ath10k_hw_ce_regs_addr_map* dst_ring;
-    struct ath10k_hw_ce_regs_addr_map* dmax; };
+    struct ath10k_hw_ce_regs_addr_map* dmax;
+};
 
 struct ath10k_hw_ce_cmd_halt {
     uint32_t status_reset;
     uint32_t msb;
     uint32_t mask;
-    struct ath10k_hw_ce_regs_addr_map* status; };
+    struct ath10k_hw_ce_regs_addr_map* status;
+};
 
 struct ath10k_hw_ce_host_ie {
     uint32_t copy_complete_reset;
-    struct ath10k_hw_ce_regs_addr_map* copy_complete; };
+    struct ath10k_hw_ce_regs_addr_map* copy_complete;
+};
 
 struct ath10k_hw_ce_host_wm_regs {
     uint32_t dstr_lmask;
@@ -329,7 +332,8 @@ struct ath10k_hw_ce_dst_src_wm_regs {
     uint32_t low_rst;
     uint32_t high_rst;
     struct ath10k_hw_ce_regs_addr_map* wm_low;
-    struct ath10k_hw_ce_regs_addr_map* wm_high; };
+    struct ath10k_hw_ce_regs_addr_map* wm_high;
+};
 
 struct ath10k_hw_ce_regs {
     uint32_t sr_base_addr;
@@ -353,7 +357,8 @@ struct ath10k_hw_ce_regs {
     struct ath10k_hw_ce_cmd_halt* cmd_halt;
     struct ath10k_hw_ce_host_ie* host_ie;
     struct ath10k_hw_ce_dst_src_wm_regs* wm_srcr;
-    struct ath10k_hw_ce_dst_src_wm_regs* wm_dstr; };
+    struct ath10k_hw_ce_dst_src_wm_regs* wm_dstr;
+};
 
 struct ath10k_hw_values {
     uint32_t rtc_state_val_on;
@@ -372,7 +377,7 @@ extern const struct ath10k_hw_values qca4019_values;
 extern struct ath10k_hw_ce_regs qcax_ce_regs;
 
 #if 0 // NEEDS PORTING
-void ath10k_hw_fill_survey_time(struct ath10k *ar, struct survey_info *survey, uint32_t cc,
+void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey, uint32_t cc,
                                 uint32_t rcc, uint32_t cc_prev, uint32_t rcc_prev);
 #endif // NEEDS PORTING
 
@@ -570,10 +575,10 @@ extern const struct ath10k_hw_clk_params qca6174_clk[];
 
 static inline int
 ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params* hw,
-                        struct htt_rx_desc* rxd)
-{
-    if (hw->hw_ops->rx_desc_get_l3_pad_bytes)
+                                struct htt_rx_desc* rxd) {
+    if (hw->hw_ops->rx_desc_get_l3_pad_bytes) {
         return hw->hw_ops->rx_desc_get_l3_pad_bytes(rxd);
+    }
     return 0;
 }
 

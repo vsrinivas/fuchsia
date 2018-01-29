@@ -32,33 +32,33 @@
 
 TRACE_EVENT(ath_log,
 
-	    TP_PROTO(struct wiphy *wiphy,
-		     struct va_format *vaf),
+            TP_PROTO(struct wiphy* wiphy,
+                     struct va_format* vaf),
 
-	    TP_ARGS(wiphy, vaf),
+            TP_ARGS(wiphy, vaf),
 
-	    TP_STRUCT__entry(
-		    __string(device, wiphy_name(wiphy))
-		    __string(driver, KBUILD_MODNAME)
-		    __dynamic_array(char, msg, ATH_DBG_MAX_LEN)
-	    ),
+            TP_STRUCT__entry(
+                __string(device, wiphy_name(wiphy))
+                __string(driver, KBUILD_MODNAME)
+                __dynamic_array(char, msg, ATH_DBG_MAX_LEN)
+            ),
 
-	    TP_fast_assign(
-		    __assign_str(device, wiphy_name(wiphy));
-		    __assign_str(driver, KBUILD_MODNAME);
-		    WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg),
-					   ATH_DBG_MAX_LEN,
-					   vaf->fmt,
-					   *vaf->va) >= ATH_DBG_MAX_LEN);
-	    ),
+            TP_fast_assign(
+                __assign_str(device, wiphy_name(wiphy));
+                __assign_str(driver, KBUILD_MODNAME);
+                WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg),
+                                       ATH_DBG_MAX_LEN,
+                                       vaf->fmt,
+                                       *vaf->va) >= ATH_DBG_MAX_LEN);
+            ),
 
-	    TP_printk(
-		    "%s %s %s",
-		    __get_str(driver),
-		    __get_str(device),
-		    __get_str(msg)
-	    )
-);
+            TP_printk(
+                "%s %s %s",
+                __get_str(driver),
+                __get_str(device),
+                __get_str(msg)
+            )
+           );
 
 #endif /* _TRACE_H || TRACE_HEADER_MULTI_READ */
 
