@@ -99,11 +99,8 @@ TEST(SharedBufferSetTest, Validate) {
   EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator(1, 0), 1));
   EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator(2, 0), 1));
   EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator(3, 0), 1));
-  EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator(0, 1001), 1));
   for (uint64_t offset = 0; offset < 1000; ++offset) {
     EXPECT_TRUE(under_test.Validate(SharedBufferSet::Locator(0, offset), 1));
-    EXPECT_FALSE(under_test.Validate(SharedBufferSet::Locator(0, offset),
-                                     1001 - offset));
   }
 }
 
