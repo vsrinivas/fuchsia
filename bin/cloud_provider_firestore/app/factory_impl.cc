@@ -26,6 +26,18 @@ FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner)
 
 FactoryImpl::~FactoryImpl() {}
 
+void FactoryImpl::ShutDown(fxl::Closure callback) {
+  if (providers_.empty()) {
+    callback();
+    return;
+  }
+
+  providers_.set_on_empty(std::move(callback));
+  for (auto& cloud_provider : providers_) {
+    cloud_provider.ShutDownAndReportEmpty();
+  }
+}
+
 void FactoryImpl::GetCloudProvider(
     ConfigPtr config,
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,

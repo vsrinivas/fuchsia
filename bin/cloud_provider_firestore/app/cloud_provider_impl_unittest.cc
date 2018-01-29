@@ -7,6 +7,7 @@
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -18,7 +19,8 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
     auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
         message_loop_.task_runner());
     firebase_auth_ = firebase_auth.get();
-    std::unique_ptr<FirestoreService> firestore_service;
+    auto firestore_service = std::make_unique<TestFirestoreService>();
+    firestore_service_ = firestore_service.get();
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
         "some user id", std::move(firebase_auth), std::move(firestore_service),
         cloud_provider_.NewRequest());
@@ -28,6 +30,7 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  protected:
   firebase_auth::TestFirebaseAuth* firebase_auth_ = nullptr;
 
+  TestFirestoreService* firestore_service_;
   cloud_provider::CloudProviderPtr cloud_provider_;
   std::unique_ptr<CloudProviderImpl> cloud_provider_impl_;
 
@@ -37,23 +40,34 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
 
 TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  cloud_provider_impl_->set_on_empty(
+      [this, &on_empty_called] { on_empty_called = true; });
+  EXPECT_FALSE(firestore_service_->shutdown_callback);
   cloud_provider_.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+
+  // Verify that shutdown was started, but on_empty wasn't called yet.
+  EXPECT_TRUE(firestore_service_->shutdown_callback);
+  EXPECT_FALSE(on_empty_called);
+
+  // Verify that on_empty is called when the shutdown callback is executed.
+  firestore_service_->shutdown_callback();
   EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  cloud_provider_impl_->set_on_empty(
+      [this, &on_empty_called] { on_empty_called = true; });
   firebase_auth_->TriggerConnectionErrorHandler();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+
+  // Verify that shutdown was started, but on_empty wasn't called yet.
+  EXPECT_TRUE(firestore_service_->shutdown_callback);
+  EXPECT_FALSE(on_empty_called);
+
+  // Verify that on_empty is called when the shutdown callback is executed.
+  firestore_service_->shutdown_callback();
   EXPECT_TRUE(on_empty_called);
 }
 

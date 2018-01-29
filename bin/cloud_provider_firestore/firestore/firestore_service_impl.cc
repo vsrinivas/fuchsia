@@ -65,10 +65,7 @@ FirestoreServiceImpl::FirestoreServiceImpl(
   polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
 
-FirestoreServiceImpl::~FirestoreServiceImpl() {
-  cq_.Shutdown();
-  polling_thread_.join();
-}
+FirestoreServiceImpl::~FirestoreServiceImpl() {}
 
 void FirestoreServiceImpl::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,
@@ -126,6 +123,21 @@ std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
   };
   auto& call = listen_calls_.emplace(client, std::move(stream_factory));
   return std::make_unique<ListenCallHandlerImpl>(&call);
+}
+
+void FirestoreServiceImpl::ShutDown(fxl::Closure callback) {
+  // Ask the CompletionQueue to shut down. This makes cq_.Next() to start
+  // returning false once the pending operations are drained.
+  cq_.Shutdown();
+
+  // Wait for the polling thread to exit.
+  polling_thread_.join();
+
+  // The CQ polling thread might have posted new tasks on the main thread before
+  // exiting, completing the calls that were active when we initated the
+  // CompletionQueue shut down. These must be processed before we call the
+  // client callback, so post the client callback on the main thread too.
+  main_runner_->PostTask(std::move(callback));
 }
 
 void FirestoreServiceImpl::Poll() {

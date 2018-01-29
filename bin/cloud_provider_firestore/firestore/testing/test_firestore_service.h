@@ -58,8 +58,12 @@ class TestFirestoreService : public FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
 
+  void ShutDown(fxl::Closure callback) override;
+
   std::vector<GetDocumentRecord> get_document_records;
   std::vector<CreateDocumentRecord> create_document_records;
+
+  fxl::Closure shutdown_callback;
 
  private:
   const std::string db_path_;

@@ -36,16 +36,21 @@ class FactoryImplTest : public gtest::TestWithMessageLoop {
 TEST_F(FactoryImplTest, GetCloudProvider) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
-  cloud_provider::Status status;
+  cloud_provider::Status status = cloud_provider::Status::INTERNAL_ERROR;
   cloud_provider::CloudProviderPtr cloud_provider;
   auto config = Config::New();
   config->server_id = "some server id";
   config->api_key = "some api key";
   factory_->GetCloudProvider(
       std::move(config), token_provider_binding_.NewBinding(),
-      cloud_provider.NewRequest(), callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      cloud_provider.NewRequest(), callback::Capture([] {}, &status));
+  RunLoopUntilIdle();
   EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  bool called = false;
+  factory_impl_.ShutDown([&called] { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
 }
 
 }  // namespace cloud_provider_firestore

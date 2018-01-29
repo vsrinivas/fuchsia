@@ -36,7 +36,9 @@ class App : public modular::Lifecycle {
     loop_.Run();
   }
 
-  void Terminate() override { loop_.PostQuitTask(); }
+  void Terminate() override {
+    factory_impl_.ShutDown([this] { loop_.PostQuitTask(); });
+  }
 
  private:
   fsl::MessageLoop loop_;

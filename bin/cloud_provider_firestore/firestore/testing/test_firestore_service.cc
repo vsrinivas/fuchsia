@@ -54,4 +54,8 @@ std::unique_ptr<ListenCallHandler> TestFirestoreService::Listen(
   return nullptr;
 }
 
+void TestFirestoreService::ShutDown(fxl::Closure callback) {
+  shutdown_callback = std::move(callback);
+}
+
 }  // namespace cloud_provider_firestore

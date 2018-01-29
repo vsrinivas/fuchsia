@@ -60,9 +60,15 @@ class FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status)> callback) = 0;
 
+  // Initiates a stream to watch for change notifications.
   virtual std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) = 0;
+
+  // Shuts the client down.
+  //
+  // It is only safe to delete the class after the callback is called.
+  virtual void ShutDown(fxl::Closure callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FirestoreService);

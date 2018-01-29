@@ -34,18 +34,12 @@ CloudProviderImpl::CloudProviderImpl(
       firestore_service_(std::move(firestore_service)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
-    if (on_empty_) {
-      on_empty_();
-    }
-  });
+  binding_.set_connection_error_handler([this] { ShutDownAndReportEmpty(); });
   // The class also shuts down when the auth provider is disconnected.
   firebase_auth->set_connection_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "
                    << "shutting down the cloud provider.";
-    if (on_empty_) {
-      on_empty_();
-    }
+    ShutDownAndReportEmpty();
   });
 
   credentials_provider_ =
@@ -53,6 +47,14 @@ CloudProviderImpl::CloudProviderImpl(
 }
 
 CloudProviderImpl::~CloudProviderImpl() {}
+
+void CloudProviderImpl::ShutDownAndReportEmpty() {
+  firestore_service_->ShutDown([this] {
+    if (on_empty_) {
+      on_empty_();
+    }
+  });
+}
 
 void CloudProviderImpl::GetDeviceSet(
     fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,

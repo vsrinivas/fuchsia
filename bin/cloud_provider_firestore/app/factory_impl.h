@@ -23,6 +23,12 @@ class FactoryImpl : public Factory {
 
   ~FactoryImpl() override;
 
+  // Shuts down all cloud providers owned by the class.
+  //
+  // It is only valid to delete the factory after the completion callback is
+  // called.
+  void ShutDown(fxl::Closure callback);
+
  private:
   // Factory:
   void GetCloudProvider(

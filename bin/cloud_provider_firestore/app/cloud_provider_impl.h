@@ -31,6 +31,11 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
+  // Shuts the class down and calls the on_empty callback, if set.
+  //
+  // It is only valid to delete the class after the on_empty callback is called.
+  void ShutDownAndReportEmpty();
+
  private:
   void GetDeviceSet(
       fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,

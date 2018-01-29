@@ -84,6 +84,8 @@ class FirestoreServiceImpl : public FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
 
+  void ShutDown(fxl::Closure callback) override;
+
  private:
   void Poll();
 
