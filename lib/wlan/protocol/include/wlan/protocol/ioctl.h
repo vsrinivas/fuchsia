@@ -14,6 +14,15 @@ __BEGIN_CDECLS
 // Returns a wlan.phy WlanInfo struct.
 #define IOCTL_WLANPHY_QUERY IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_WLANPHY, 0)
 
+// Creates a wlaniface device.
+// in: wlan.phy CreateIfaceRequest
+// out: wlan.iface WlanIface
+#define IOCTL_WLANPHY_CREATE_IFACE IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_WLANPHY, 1)
+
+// Destroys a wlaniface device.
+// in: wlan.phy DestroyIfaceRequest
+#define IOCTL_WLANPHY_DESTROY_IFACE IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_WLANPHY, 2)
+
 __END_CDECLS
 
 #endif  // GARNET_LIB_WLAN_PROTOCOL_IOCTL_H

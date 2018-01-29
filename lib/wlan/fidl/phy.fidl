@@ -34,8 +34,8 @@ enum DriverFeature {
   RATE_SELECTION,
 };
 
-enum MacMode {
-  STA,
+enum MacRole {
+  CLIENT,
   AP,
 };
 
@@ -76,7 +76,15 @@ struct BandInfo {
 struct WlanInfo {
   array<SupportedPhy> supported_phys;
   array<DriverFeature> driver_features;
-  array<MacMode> mac_modes;
+  array<MacRole> mac_roles;
   array<Capability> caps;
   array<BandInfo> bands;
+};
+
+struct CreateIfaceRequest {
+    MacRole role;
+};
+
+struct DestroyIfaceRequest {
+    uint16 id;
 };
