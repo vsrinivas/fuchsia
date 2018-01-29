@@ -465,8 +465,10 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     }
 
     edid::Edid edid(this);
+    edid::timing_params_t timing_params;
     bool is_hdmi;
-    if (!edid.Init() || !edid.CheckForHdmi(&is_hdmi) || !EnablePowerWell2()) {
+    if (!edid.Init() || !edid.GetPreferredTiming(&timing_params)
+            || !edid.CheckForHdmi(&is_hdmi) || !EnablePowerWell2()) {
         return false;
     }
     zxlogf(TRACE, "Found a %s monitor\n", is_hdmi ? "hdmi" : "dvi");
@@ -483,7 +485,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     uint8_t p0, p1, p2;
     uint32_t dco_central_freq_khz;
     uint64_t dco_freq_khz;
-    if (!calculate_params(edid.preferred_timing().pixel_clock_10khz * 10,
+    if (!calculate_params(timing_params.pixel_freq_10khz * 10,
                           &dco_freq_khz, &dco_central_freq_khz, &p0, &p1, &p2)) {
         zxlogf(ERROR, "hdmi: failed to calculate clock params\n");
         return false;
@@ -567,15 +569,15 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     trans_clk_sel.WriteTo(mmio_space());
 
     // Configure the transcoder
-    uint32_t h_active = edid.preferred_timing().horizontal_addressable() - 1;
-    uint32_t h_sync_start = h_active + edid.preferred_timing().horizontal_front_porch();
-    uint32_t h_sync_end = h_sync_start + edid.preferred_timing().horizontal_sync_pulse_width();
-    uint32_t h_total = h_active + edid.preferred_timing().horizontal_blanking();
+    uint32_t h_active = timing_params.horizontal_addressable - 1;
+    uint32_t h_sync_start = h_active + timing_params.horizontal_front_porch;
+    uint32_t h_sync_end = h_sync_start + timing_params.horizontal_sync_pulse;
+    uint32_t h_total = h_sync_end + timing_params.horizontal_back_porch;
 
-    uint32_t v_active = edid.preferred_timing().vertical_addressable() - 1;
-    uint32_t v_sync_start = v_active + edid.preferred_timing().vertical_front_porch();
-    uint32_t v_sync_end = v_sync_start + edid.preferred_timing().vertical_sync_pulse_width();
-    uint32_t v_total = v_active + edid.preferred_timing().vertical_blanking();
+    uint32_t v_active = timing_params.vertical_addressable - 1;
+    uint32_t v_sync_start = v_active + timing_params.vertical_front_porch;
+    uint32_t v_sync_end = v_sync_start + timing_params.vertical_sync_pulse;
+    uint32_t v_total = v_sync_end + timing_params.vertical_back_porch;
 
     auto h_total_reg = trans_regs.HTotal().FromValue(0);
     h_total_reg.set_count_total(h_total);
@@ -604,15 +606,15 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(is_hdmi ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
     ddi_func.set_bits_per_color(ddi_func.k8bbc);
-    ddi_func.set_sync_polarity(edid.preferred_timing().vsync_polarity() << 1
-                                | edid.preferred_timing().hsync_polarity());
+    ddi_func.set_sync_polarity(timing_params.vertical_sync_polarity << 1
+                                | timing_params.horizontal_sync_polarity);
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.WriteTo(mmio_space());
 
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(edid.preferred_timing().interlaced());
+    trans_conf.set_interlaced_mode(timing_params.interlaced);
     trans_conf.WriteTo(mmio_space());
 
     // Configure voltage swing and related IO settings.
@@ -678,8 +680,8 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
-    info->width = edid.preferred_timing().horizontal_addressable();
-    info->height = edid.preferred_timing().vertical_addressable();
+    info->width = timing_params.horizontal_addressable;
+    info->height = timing_params.vertical_addressable;
     info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     info->format = ZX_PIXEL_FORMAT_ARGB_8888;
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);

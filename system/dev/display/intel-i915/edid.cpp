@@ -29,6 +29,10 @@ template<typename T> bool base_validate(T* block) {
     return sum == 0;
 }
 
+uint32_t round_div(double num, double div) {
+    return (uint32_t) ((num / div) + .5);
+}
+
 } // namespace
 
 namespace edid {
@@ -141,6 +145,100 @@ bool Edid::CheckForHdmi(bool* is_hdmi) {
         return CheckBlockMap(1, is_hdmi)
             && (*is_hdmi || base_edid_.num_extensions < 128 || CheckBlockMap(128, is_hdmi));
     }
+}
+
+bool Edid::GetPreferredTiming(timing_params_t* params) {
+    if (base_edid_.preferred_timing.pixel_clock_10khz) {
+        params->pixel_freq_10khz = base_edid_.preferred_timing.pixel_clock_10khz;
+        params->horizontal_addressable = base_edid_.preferred_timing.horizontal_addressable();
+        params->horizontal_front_porch = base_edid_.preferred_timing.horizontal_front_porch();
+        params->horizontal_sync_pulse = base_edid_.preferred_timing.horizontal_sync_pulse_width();
+        params->horizontal_back_porch = base_edid_.preferred_timing.horizontal_blanking()
+                - params->horizontal_sync_pulse - params->horizontal_front_porch;
+
+        params->vertical_addressable = base_edid_.preferred_timing.vertical_addressable();
+        params->vertical_front_porch = base_edid_.preferred_timing.vertical_front_porch();
+        params->vertical_sync_pulse = base_edid_.preferred_timing.vertical_sync_pulse_width();
+        params->vertical_back_porch = base_edid_.preferred_timing.vertical_blanking()
+                - params->vertical_sync_pulse - params->vertical_front_porch;
+
+        params->vertical_sync_polarity = base_edid_.preferred_timing.vsync_polarity();
+        params->horizontal_sync_polarity = base_edid_.preferred_timing.hsync_polarity();
+        params->interlaced = base_edid_.preferred_timing.interlaced();
+    } else {
+        // Pick the largest resolution advertised by the display and then use the
+        // generalized timing formula to compute the timing parameters.
+        // TODO(ZX-1413): Check standard DMT tables (some standard modes don't conform to GTF)
+        // TODO(ZX-1413): Handle secondary GTF and CVT
+        // TODO(stevensd): Support interlaced modes and margins
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint32_t v_rate = 0;
+
+        for (unsigned i = 0; i < fbl::count_of(base_edid_.standard_timings); i++) {
+            StandardTimingDescriptor* desc = base_edid_.standard_timings + i;
+            if (desc->byte1 == 0x01 && desc->byte2 == 0x01) {
+                continue;
+            }
+            uint32_t vertical_resolution = desc->vertical_resolution(
+                    base_edid_.edid_version, base_edid_.edid_revision);
+            if (width * height < desc->horizontal_resolution() * vertical_resolution) {
+                width = desc->horizontal_resolution();
+                height = vertical_resolution;
+                v_rate = desc->vertical_freq() + 60;
+            }
+        }
+
+        if (!width || !height || !v_rate) {
+            zxlogf(ERROR, "Couldn't find preferred resolution\n");
+            return false;
+        }
+
+        // Default values for GFT variables
+        static constexpr uint32_t kCellGran = 8;
+        static constexpr uint32_t kMinPorch = 1;
+        static constexpr uint32_t kVsyncRequired = 3;
+        static constexpr uint32_t kHsyncPercent = 8;
+        static constexpr uint32_t kMinVsyncPlusBpUs = 550;
+        static constexpr uint32_t kM = 600;
+        static constexpr uint32_t kC = 40;
+        static constexpr uint32_t kK = 128;
+        static constexpr uint32_t kJ = 20;
+        static constexpr uint32_t kCPrime = ((kC - kJ) * kK / 256) + kJ;
+        static constexpr uint32_t kMPrime = (kK * kM) / 256;
+
+        uint32_t h_pixels_rnd = round_div(width, kCellGran) * kCellGran;
+        double h_period_est =
+                (1000000.0 - kMinVsyncPlusBpUs * v_rate) / (v_rate * (height + kMinPorch));
+        uint32_t vsync_bp = round_div(kMinVsyncPlusBpUs, h_period_est);
+        uint32_t v_back_porch = vsync_bp - kVsyncRequired;
+        uint32_t v_total_lines = height + vsync_bp + kMinPorch;
+        double v_field_rate_est = 1000000.0 / (h_period_est * v_total_lines);
+        double h_period = (1.0 * h_period_est * v_field_rate_est) / v_rate;
+        double ideal_duty_cycle = kCPrime - (kMPrime * h_period_est / 1000);
+        uint32_t h_blank_pixels = 2 * kCellGran * round_div(
+                h_pixels_rnd * ideal_duty_cycle, (100 - ideal_duty_cycle) * (2 * kCellGran));
+        uint32_t total_pixels = h_pixels_rnd + h_blank_pixels;
+        double pixel_freq = total_pixels / h_period;
+
+        params->pixel_freq_10khz = (uint32_t) (pixel_freq * 100 + 50);
+        params->horizontal_addressable = h_pixels_rnd;
+        params->horizontal_sync_pulse =
+                round_div(kHsyncPercent * total_pixels, 100 * kCellGran) * kCellGran;
+        params->horizontal_front_porch = h_blank_pixels / 2 - params->horizontal_sync_pulse;
+        params->horizontal_back_porch =
+                params->horizontal_front_porch + params->horizontal_sync_pulse;
+        params->vertical_addressable = height;
+        params->vertical_front_porch = kMinPorch;
+        params->vertical_sync_pulse = kVsyncRequired;
+        params->vertical_back_porch = v_back_porch;
+
+        params->vertical_sync_polarity = 1;
+        params->horizontal_sync_polarity= 0;
+        params->interlaced = 0;
+    }
+
+    return true;
 }
 
 } // namespace edid

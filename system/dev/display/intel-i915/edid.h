@@ -85,6 +85,32 @@ struct DetailedTimingDescriptor {
 
 static_assert(sizeof(DetailedTimingDescriptor) == 18, "Size check for EdidTimingDesc");
 
+struct StandardTimingDescriptor {
+    uint32_t horizontal_resolution() const { return (byte1 + 31) * 8; }
+    uint32_t vertical_resolution(uint8_t edid_version, uint8_t edid_revision) const {
+        if (aspect_ratio() == 0) {
+            if (edid_version < 1 || (edid_version == 1 && edid_version < 3)) {
+                return horizontal_resolution();
+            } else {
+                return horizontal_resolution() * 10 / 16;
+            }
+        } else if (aspect_ratio() == 1) {
+            return horizontal_resolution() * 3 / 4;
+        } else if (aspect_ratio() == 2) {
+            return horizontal_resolution() * 4 / 5;
+        } else if (aspect_ratio() == 3) {
+            return horizontal_resolution() * 9 / 16;
+        } else {
+            ZX_DEBUG_ASSERT(false);
+        }
+    }
+
+    uint8_t byte1;
+    uint8_t byte2;
+    DEF_SUBFIELD(byte2, 7, 6, aspect_ratio);
+    DEF_SUBFIELD(byte2, 5, 0, vertical_freq);
+};
+
 // This covers the "base" EDID data -- the first 128 bytes (block 0).  In
 // many cases, that is all the display provides, but there may be more data
 // in extension blocks.
@@ -98,14 +124,19 @@ struct BaseEdid {
 
     // Offset 0
     uint8_t header[8];
-    uint8_t various[46]; // Fields that we don't need to read yet.
-    // Offset 0x36
+    uint8_t unused1[10];
+    uint8_t edid_version;
+    uint8_t edid_revision;
+    uint8_t various[18]; // Fields that we don't need to read yet.
+    StandardTimingDescriptor standard_timings[8];
     DetailedTimingDescriptor preferred_timing;
     uint8_t rest[kBlockSize - 0x36 - 18 - 2]; // Fields that we don't need to read yet.
     uint8_t num_extensions;
     uint8_t checksum_byte;
 };
 
+static_assert(offsetof(BaseEdid, edid_version) == 0x12, "Layout check");
+static_assert(offsetof(BaseEdid, standard_timings) == 0x26, "Layout check");
 static_assert(offsetof(BaseEdid, preferred_timing) == 0x36, "Layout check");
 
 // EDID block type map. Block 1 if there are >1 blocks, and block
@@ -219,13 +250,31 @@ public:
     virtual bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
 };
 
+typedef struct timing_params {
+    uint32_t pixel_freq_10khz;
+
+    uint32_t horizontal_addressable;
+    uint32_t horizontal_front_porch;
+    uint32_t horizontal_sync_pulse;
+    uint32_t horizontal_back_porch;
+
+    uint32_t vertical_addressable;
+    uint32_t vertical_front_porch;
+    uint32_t vertical_sync_pulse;
+    uint32_t vertical_back_porch;
+
+    uint32_t vertical_sync_polarity;
+    uint32_t horizontal_sync_polarity;
+    uint32_t interlaced;
+} timing_params_t;
+
 class Edid {
 public:
     explicit Edid(EdidSource* edid_source);
     bool Init();
     bool CheckForHdmi(bool* is_hdmi);
 
-    DetailedTimingDescriptor& preferred_timing() { return base_edid_.preferred_timing; }
+    bool GetPreferredTiming(timing_params_t* params);
 private:
     bool CheckBlockMap(uint8_t block_num, bool* is_hdmi);
     bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi);

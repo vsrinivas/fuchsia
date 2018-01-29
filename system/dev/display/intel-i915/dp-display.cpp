@@ -828,7 +828,8 @@ bool DpDisplay::Init(zx_display_info* info) {
     }
 
     edid::Edid edid(this);
-    if (!edid.Init()) {
+    edid::timing_params_t timing;
+    if (!edid.Init() || !edid.GetPreferredTiming(&timing)) {
         return false;
     }
     zxlogf(TRACE, "Found a displayport monitor\n");
@@ -890,11 +891,9 @@ bool DpDisplay::Init(zx_display_info* info) {
     clock_select.set_trans_clock_select(ddi() + 1);
     clock_select.WriteTo(mmio_space());
 
-    edid::DetailedTimingDescriptor* timing = &edid.preferred_timing();
-
     // Pixel clock rate: The rate at which pixels are sent, in pixels per
     // second (Hz), divided by 10000.
-    uint32_t pixel_clock_rate = timing->pixel_clock_10khz;
+    uint32_t pixel_clock_rate = timing.pixel_freq_10khz;
 
     // This is the rate at which bits are sent on a single DisplayPort
     // lane, in raw bits per second, divided by 10000.
@@ -935,15 +934,15 @@ bool DpDisplay::Init(zx_display_info* info) {
     link_n_reg.WriteTo(mmio_space());
 
     // Configure the rest of the transcoder
-    uint32_t h_active = timing->horizontal_addressable() - 1;
-    uint32_t h_sync_start = h_active + timing->horizontal_front_porch();
-    uint32_t h_sync_end = h_sync_start + timing->horizontal_sync_pulse_width();
-    uint32_t h_total = h_active + timing->horizontal_blanking();
+    uint32_t h_active = timing.horizontal_addressable - 1;
+    uint32_t h_sync_start = h_active + timing.horizontal_front_porch;
+    uint32_t h_sync_end = h_sync_start + timing.horizontal_sync_pulse;
+    uint32_t h_total = h_sync_end + timing.horizontal_back_porch;
 
-    uint32_t v_active = timing->vertical_addressable() - 1;
-    uint32_t v_sync_start = v_active + timing->vertical_front_porch();
-    uint32_t v_sync_end = v_sync_start + timing->vertical_sync_pulse_width();
-    uint32_t v_total = v_active + timing->vertical_blanking();
+    uint32_t v_active = timing.vertical_addressable - 1;
+    uint32_t v_sync_start = v_active + timing.vertical_front_porch;
+    uint32_t v_sync_end = v_sync_start + timing.vertical_sync_pulse;
+    uint32_t v_total = v_sync_end + timing.vertical_back_porch;
 
     auto h_total_reg = trans.HTotal().FromValue(0);
     h_total_reg.set_count_total(h_total);
@@ -978,7 +977,7 @@ bool DpDisplay::Init(zx_display_info* info) {
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
     ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
-    ddi_func.set_sync_polarity(timing->vsync_polarity() << 1 | timing->hsync_polarity());
+    ddi_func.set_sync_polarity(timing.vertical_sync_polarity << 1 | timing.horizontal_sync_polarity);
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
@@ -986,7 +985,7 @@ bool DpDisplay::Init(zx_display_info* info) {
 
     auto trans_conf = trans.Conf().FromValue(0);
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(timing->interlaced());
+    trans_conf.set_interlaced_mode(timing.interlaced);
     trans_conf.WriteTo(mmio_space());
 
     // Configure the pipe
@@ -1009,8 +1008,8 @@ bool DpDisplay::Init(zx_display_info* info) {
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
 
-    info->width = timing->horizontal_addressable();
-    info->height = timing->vertical_addressable();
+    info->width = timing.horizontal_addressable;
+    info->height = timing.vertical_addressable;
     info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     info->format = kPixelFormat;
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
