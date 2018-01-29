@@ -423,7 +423,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
 
                 // account for idle time if a cpu is currently idle
                 {
-                    AutoSpinLockIrqSave lock(&thread_lock);
+                    AutoSpinLock lock(&thread_lock);
 
                     zx_time_t idle_time = cpu->stats.idle_time;
                     bool is_idle = mp_is_cpu_idle(i);

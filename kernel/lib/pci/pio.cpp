@@ -30,7 +30,7 @@ static constexpr uint32_t WidthMask(size_t width) {
 }
 
 zx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
-    AutoSpinLockIrqSave lock(&pio_lock);
+    AutoSpinLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {
@@ -52,7 +52,7 @@ zx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func,
 }
 
 zx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
-    AutoSpinLockIrqSave lock(&pio_lock);
+    AutoSpinLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {

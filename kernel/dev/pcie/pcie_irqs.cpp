@@ -191,7 +191,7 @@ void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
      * device level.  Then add this dev to the handler's list.  If this was the
      * first device added to the handler list, unmask the handler IRQ at the top
      * level. */
-    AutoSpinLockIrqSave lock(&device_handler_list_lock_);
+    AutoSpinLock lock(&device_handler_list_lock_);
 
     dev.cfg_->Write(PciConfig::kCommand, dev.cfg_->Read(PciConfig::kCommand) |
                                           PCIE_CFG_COMMAND_INT_DISABLE);
@@ -210,7 +210,7 @@ void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
     /* Make absolutely sure we have been masked at the PCIe config level, then
      * remove the device from the shared handler list.  If this was the last
      * device on the list, mask the top level IRQ */
-    AutoSpinLockIrqSave lock(&device_handler_list_lock_);
+    AutoSpinLock lock(&device_handler_list_lock_);
 
     dev.cfg_->Write(PciConfig::kCommand, dev.cfg_->Read(PciConfig::kCommand) |
                                           PCIE_CFG_COMMAND_INT_DISABLE);
@@ -227,7 +227,7 @@ zx_status_t PcieDevice::MaskUnmaskLegacyIrq(bool mask) {
     pcie_irq_handler_state_t& hstate = irq_.handlers[0];
 
     {
-        AutoSpinLockIrqSave lock(&hstate.lock);
+        AutoSpinLock lock(&hstate.lock);
 
         if (mask) ModifyCmdLocked(0, PCIE_CFG_COMMAND_INT_DISABLE);
         else      ModifyCmdLocked(PCIE_CFG_COMMAND_INT_DISABLE, 0);
@@ -319,7 +319,7 @@ zx_status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
     DEBUG_ASSERT(irq_.handlers);
 
     {
-        AutoSpinLockIrqSave handler_lock(&irq_.handlers[irq_id].lock);
+        AutoSpinLock handler_lock(&irq_.handlers[irq_id].lock);
         MaskUnmaskMsiIrqLocked(irq_id, mask);
     }
 
@@ -691,7 +691,7 @@ zx_status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id,
     DEBUG_ASSERT(irq_.registered_handler_count <= irq_.handler_count);
 
     {
-        AutoSpinLockIrqSave handler_lock(&hstate.lock);
+        AutoSpinLock handler_lock(&hstate.lock);
         hstate.handler = handler;
         hstate.ctx     = handler ? ctx : nullptr;
     }

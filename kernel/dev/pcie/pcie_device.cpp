@@ -263,7 +263,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
     //    initiated.  Also back up the BARs in the process.
     {
         DEBUG_ASSERT(irq_.legacy.shared_handler != nullptr);
-        AutoSpinLockIrqSave cmd_reg_lock(&cmd_reg_lock_);
+        AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
 
         cmd_backup = cfg_->Read(PciConfig::kCommand);
         cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
@@ -289,7 +289,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
                bus_id_, dev_id_, func_id_);
 
         // Restore the command register
-        AutoSpinLockIrqSave cmd_reg_lock(&cmd_reg_lock_);
+        AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
         cfg_->Write(PciConfig::kCommand, cmd_backup);
 
         return ret;
@@ -319,7 +319,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
 
     if (ret == ZX_OK) {
         // 6) Software reconfigures the function and enables it for normal operation
-        AutoSpinLockIrqSave cmd_reg_lock(&cmd_reg_lock_);
+        AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
 
         for (uint i = 0; i < bar_count_; ++i)
             cfg_->Write(PciConfig::kBAR(i), bar_backup[i]);
@@ -359,7 +359,7 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
     {
-        AutoSpinLockIrqSave cmd_reg_lock(&cmd_reg_lock_);
+        AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
         cfg_->Write(PciConfig::kCommand,
                      static_cast<uint16_t>((cfg_->Read(PciConfig::kCommand) & ~clr_bits)
                                                                              |  set_bits));

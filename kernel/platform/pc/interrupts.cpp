@@ -130,13 +130,13 @@ static void platform_init_apic(uint level) {
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2);
 
 zx_status_t mask_interrupt(unsigned int vector) {
-    AutoSpinLockIrqSave guard(&lock);
+    AutoSpinLock guard(&lock);
     apic_io_mask_irq(vector, IO_APIC_IRQ_MASK);
     return ZX_OK;
 }
 
 zx_status_t unmask_interrupt(unsigned int vector) {
-    AutoSpinLockIrqSave guard(&lock);
+    AutoSpinLock guard(&lock);
     apic_io_mask_irq(vector, IO_APIC_IRQ_UNMASK);
     return ZX_OK;
 }
@@ -144,7 +144,7 @@ zx_status_t unmask_interrupt(unsigned int vector) {
 zx_status_t configure_interrupt(unsigned int vector,
                                 enum interrupt_trigger_mode tm,
                                 enum interrupt_polarity pol) {
-    AutoSpinLockIrqSave guard(&lock);
+    AutoSpinLock guard(&lock);
     apic_io_configure_irq(
         vector,
         tm,
@@ -160,7 +160,7 @@ zx_status_t configure_interrupt(unsigned int vector,
 zx_status_t get_interrupt_config(unsigned int vector,
                                  enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol) {
-    AutoSpinLockIrqSave guard(&lock);
+    AutoSpinLock guard(&lock);
     return apic_io_fetch_irq_config(vector, tm, pol);
 }
 
@@ -190,7 +190,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoSpinLockIrqSave guard(&lock);
+    AutoSpinLock guard(&lock);
     zx_status_t result = ZX_OK;
 
     /* Fetch the x86 vector currently configured for this global irq.  Force
@@ -340,7 +340,7 @@ void x86_register_msi_handler(const pcie_msi_block_t* block,
     DEBUG_ASSERT((x86_vector >= X86_INT_PLATFORM_BASE) &&
                  (x86_vector <= X86_INT_PLATFORM_MAX));
 
-    AutoSpinLockIrqSave guard(&int_handler_table[x86_vector].lock);
+    AutoSpinLock guard(&int_handler_table[x86_vector].lock);
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? ctx : NULL;
 }
