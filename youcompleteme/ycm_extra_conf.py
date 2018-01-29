@@ -13,7 +13,7 @@ import subprocess
 # NOTE: paths.py is a direct copy from //build/gn/paths.py
 # If there is an issue with the paths not being valid, just pull a new copy.
 import sys
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import paths as fuchsia_paths
 
 fuchsia_root = os.path.realpath(fuchsia_paths.FUCHSIA_ROOT)
