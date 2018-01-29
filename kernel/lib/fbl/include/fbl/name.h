@@ -44,7 +44,7 @@ public:
     // is written.
     void get(size_t out_len, char *out_name) const {
         if (out_len > 0u) {
-            AutoSpinLock lock(&lock_);
+            AutoSpinLockIrqSave lock(&lock_);
             strlcpy(out_name, name_, min(out_len, Size));
         }
     }
@@ -55,7 +55,7 @@ public:
         if (len >= Size)
             len = Size - 1;
 
-        AutoSpinLock lock(&lock_);
+        AutoSpinLockIrqSave lock(&lock_);
         memcpy(name_, name, len);
         memset(name_ + len, 0, Size - len);
         return ZX_OK;
