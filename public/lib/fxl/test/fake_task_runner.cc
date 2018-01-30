@@ -15,11 +15,11 @@ void FakeTaskRunner::PostTask(Closure task) {
 }
 
 void FakeTaskRunner::PostTaskForTime(Closure task, TimePoint target_time) {
-  FXL_NOTIMPLEMENTED();
+  FXL_LOG(ERROR) << "Not implemented in: FakeTaskRunner::PostTaskForTime";
 }
 
 void FakeTaskRunner::PostDelayedTask(Closure task, TimeDelta delay) {
-  FXL_NOTIMPLEMENTED();
+  FXL_LOG(ERROR) << "Not implemented in: FakeTaskRunner::PostDelayedTask";
 }
 
 bool FakeTaskRunner::RunsTasksOnCurrentThread() {
