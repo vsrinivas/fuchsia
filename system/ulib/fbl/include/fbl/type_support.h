@@ -58,11 +58,6 @@ struct remove_reference<T&&> {
     using type = T;
 };
 
-template <typename T>
-constexpr typename remove_reference<T>::type&& move(T&& t) {
-    return static_cast<typename remove_reference<T>::type&&>(t);
-}
-
 // remove_const:
 
 template <typename T>
@@ -93,6 +88,13 @@ template <typename T>
 struct remove_cv {
     typedef typename remove_volatile<typename remove_const<T>::type>::type type;
 };
+
+// move
+
+template <typename T>
+constexpr typename remove_reference<T>::type&& move(T&& t) {
+    return static_cast<typename remove_reference<T>::type&&>(t);
+}
 
 // forward:
 
