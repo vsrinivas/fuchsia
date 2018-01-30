@@ -29,8 +29,8 @@ source_set("unittests") {
   testonly = true
   sources = [
     "crypto_test_util.cc",
-    "hmac_unittests.cc",
-    "kdf_unittests.cc",
+    "hmac_unittest.cc",
+    "kdf_unittest.cc",
   ]
 
   deps = [
