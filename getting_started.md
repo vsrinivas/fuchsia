@@ -126,7 +126,7 @@ using [QEMU](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `buildtools/qemu`.
 
 The `fx run` command will launch Zircon within QEMU, using the locally built
-`user.bootfs`:
+disk image:
 
 ```
 fx run

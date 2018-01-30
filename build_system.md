@@ -59,23 +59,6 @@ arguments.  [See here](build_variants.md) for details.
 
 For a list of all `gen.py` options, run `gen.py --help`.
 
-### Running Fuchsia
-
-The commands above create an `out/debug-{arch}/user.bootfs` file. To run the
-system with this filesystem attached in QEMU, pass the path to user.bootfs as
-the value of the `-x` parameter in Zircon's start command script, for example:
-
-```
-./scripts/run-zircon-x86-64 -x out/debug-x86-64/user.bootfs -m 2048
-./scripts/run-zircon-arm64 -x out/debug-aarch64/user.bootfs -m 2048
-```
-
-See the [standard build instructions](/getting_started.md#Boot-from-QEMU)
-for other flags you can pass to QEMU.
-
-[zircon]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/getting_started.md "Zircon"
-
-
 ### Running on ARM Hardware
 
 To build a fuchsia image for a particular ARM hardware target, you must also

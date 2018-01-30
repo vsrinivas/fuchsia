@@ -3,10 +3,9 @@
 This document describes how to get a NUC up and running with Fuchsia.
 
 [1. Get Parts](#parts)<br/>
-[2. Create an Installable Fuchsia USB Drive](#usb)<br/>
-[3. Prepare the NUC](#nuc)<br/>
-[4. Install Fuchsia](#install)<br/>
-[5. Update NUC BIOS to allow netbooting](#bios)<br/>
+[2. Prepare the NUC](#nuc)<br/>
+[3. Install Fuchsia](#install)<br/>
+[4. Update NUC BIOS to allow netbooting](#bios)<br/>
 
 -----
 
@@ -43,22 +42,7 @@ This table shows what I bought from Amazon.
 
 -----
 
-## 2. Create an Installable Fuchsia USB Drive <a name="usb"/>
-
-Full description of what to do can be found [here](https://fuchsia.googlesource.com/install-fuchsia/+/master/README.md).
-
-The concise version is as follows:
-Build Fuchsia.
-Run “create installer bootfs” script. (If you built release, use -r argument)
-Copy the installer bootfs over the user bootfs.
-Plug in USB drive.
-Unmount the USB drive (via “Disks” if you are on gLinux.  If you unmount via the file browser it won’t work).
-Run “create gigaboot bootable usb” script.  (If you built release, use -r argument)
-Unplug drive.
-
------
-
-## 3. Prepare the NUC <a name="nuc"/>
+## 2. Prepare the NUC <a name="nuc"/>
 NUCs don’t come with RAM or an SSD so you need to install them.
 <br/><center><img width="50%" src="images/developing_on_nuc/parts.jpg"/></center><br/>
 
@@ -76,6 +60,15 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 1. Plug power, ethernet, HDMI, keyboard, and mouse into NUC.
 
 -----
+
+## 3. Build Fuchsia <a name="build"/>
+
+1. Follow the [getting started guidelines](getting_started.md)
+1. Plug in your USB key to your build workstation
+1. Identify the path to your USB key by running `fx list-usb-disks`
+1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`
+1. Plug the Zedboot USB key into the NUC and boot it
+1. Run `fx boot` on your workstation
 
 ## 4. Install Fuchsia <a name="install"/>
 
