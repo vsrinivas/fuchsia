@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
-use std::fmt::{Debug, Formatter, Result};
-
+use std::fmt;
 use suite_selector;
 use integrity;
 use keywrap;
+use super::{Error, Result};
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {
@@ -17,12 +17,12 @@ macro_rules! return_none_if_unknown_algo {
     };
 }
 
-pub struct Akm {
-    oui: [u8; 3],
-    suite_type: u8,
+pub struct Akm<'a> {
+    pub oui: &'a [u8],
+    pub suite_type: u8,
 }
 
-impl Akm {
+impl<'a> Akm<'a> {
     /// Only AKMs specified in IEEE 802.11-2016, 9.4.2.25.4, Table 9-133 have known algorithms.
     fn has_known_algorithm(&self) -> bool {
         if self.is_reserved() || self.is_vendor_specific() {
@@ -98,16 +98,20 @@ impl Akm {
     }
 }
 
-impl suite_selector::Factory for Akm {
-    type Suite = Akm;
+impl<'a> suite_selector::Factory<'a> for Akm<'a> {
+    type Suite = Akm<'a>;
 
-    fn new(oui: [u8; 3], suite_type: u8) -> Akm {
-        Akm { oui, suite_type }
+    fn new(oui: &'a [u8], suite_type: u8) -> Result<Self::Suite> {
+        if oui.len() != 3 {
+            Err(Error::InvalidOuiLength(oui.len()))
+        } else {
+            Ok(Akm { oui, suite_type })
+        }
     }
 }
 
-impl Debug for Akm {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl<'a> fmt::Debug for Akm<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
     }
 }

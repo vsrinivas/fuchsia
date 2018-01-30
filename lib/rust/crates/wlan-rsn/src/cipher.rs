@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
-use std::fmt::{Debug, Formatter, Result};
+use std::fmt;
 use suite_selector;
+use super::{Error, Result};
 
 macro_rules! return_none_if_unknown_usage {
     ($e:expr) => {
@@ -14,12 +15,13 @@ macro_rules! return_none_if_unknown_usage {
     };
 }
 
-pub struct Cipher {
-    oui: [u8; 3],
+
+pub struct Cipher<'a> {
+    oui: &'a [u8],
     suite_type: u8,
 }
 
-impl Cipher {
+impl<'a> Cipher<'a> {
     /// Reserved and vendor specific cipher suites have no known usage and require special
     /// treatments.
     fn has_known_usage(&self) -> bool {
@@ -71,16 +73,20 @@ impl Cipher {
     }
 }
 
-impl suite_selector::Factory for Cipher {
-    type Suite = Cipher;
+impl<'a> suite_selector::Factory<'a> for Cipher<'a> {
+    type Suite = Cipher<'a>;
 
-    fn new(oui: [u8; 3], suite_type: u8) -> Cipher {
-        Cipher { oui, suite_type }
+    fn new(oui: &'a [u8], suite_type: u8) -> Result<Self::Suite> {
+        if oui.len() != 3 {
+            Err(Error::InvalidOuiLength(oui.len()))
+        } else {
+            Ok(Cipher { oui, suite_type })
+        }
     }
 }
 
-impl Debug for Cipher {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl<'a> fmt::Debug for Cipher<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
     }
 }

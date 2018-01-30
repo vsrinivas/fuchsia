@@ -2,149 +2,93 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate byteorder;
-extern crate bytes;
-
-use self::byteorder::{ReadBytesExt, LittleEndian};
-use self::bytes::Buf;
-use std::io::{Cursor, Read};
-use std::io;
-use std::result;
-
 use suite_selector;
-use akm::Akm;
-use cipher::Cipher;
-use pmkid::Pmkid;
+use pmkid;
+use akm;
+use cipher;
 
-macro_rules! return_ok_on_empty {
-    ( $rdr:expr,$result:expr ) => {
-        {
-            if $rdr.remaining() == 0 {
-                return Ok($result)
-            }
-        }
-    };
-}
+use nom::{le_u8, le_u16, IResult};
 
-#[derive(Debug, Fail)]
-pub enum Error {
-    // When parsing an RSNE all reads are guarded by sufficient length checks. However, read(...)
-    // could throw arbitrary errors which we want to catch and not ignore or panic on. This variant
-    // will wrap these errors.
-    #[fail(display = "unexpected io error while parsing RSNE: {}", _0)]
-    UnexpectedIoError(#[cause] io::Error),
-    #[fail(display = "invalid RSNE; too short")]
-    TooShort,
-    #[fail(display = "invalid RSNE; too long")]
-    TooLong,
-    #[fail(display = "invalid RSNE; expected suite selector (pairwise or AKM) but was too short")]
-    ExpectedSuiteSelector,
-    #[fail(display = "invalid RSNE; expected pairwise cipher suite list count but failed with: {}", _0)]
-    ExpectedPairwiseListCount(#[cause] io::Error),
-    #[fail(display = "invalid RSNE; expected AKM suite list count but failed with: {}", _0)]
-    ExpectedAkmListCount(#[cause] io::Error),
-    #[fail(display = "invalid RSNE; expected PMKID list count but failed with: {}", _0)]
-    ExpectedPmkidListCount(#[cause] io::Error),
-    #[fail(display = "invalid RSNE; expected PMKID but was too short")]
-    ExpectedPmkid,
-    #[fail(display = "invalid RSNE; expected RSN capabilities but failed with: {}", _0)]
-    ExpectedCapabilities(#[cause] io::Error),
-}
-
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self {
-        Error::UnexpectedIoError(e)
-    }
-}
-
-pub type Result<T> = result::Result<T, Error>;
+macro_rules! if_remaining (
+  ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
+);
 
 // IEEE 802.11-2016, 9.4.2.25.1
 #[derive(Default, Debug)]
-pub struct Rsne {
+pub struct Rsne<'a> {
     element_id: u8,
     length: u8,
     version: u16,
-    group_data_cipher_suite: Option<Cipher>,
-    pairwise_cipher_suites: Vec<Cipher>,
-    akm_suites: Vec<Akm>,
+    group_data_cipher_suite: Option<cipher::Cipher<'a>>,
+    pairwise_cipher_suites: Vec<cipher::Cipher<'a>>,
+    akm_suites: Vec<akm::Akm<'a>>,
     rsn_capabilities: u16,
-    pmkids: Vec<Pmkid>,
-    group_mgmt_cipher_suite: Option<Cipher>,
+    pmkids: Vec<pmkid::Pmkid<'a>>,
+    group_mgmt_cipher_suite: Option<cipher::Cipher<'a>>,
 }
 
-// TODO(hahnr): Figure out whether RSNEs with reserved cipher suites should get rejected.
-pub fn from_bytes(data: &[u8]) -> Result<Rsne> {
-    let mut rdr = Cursor::new(data);
-    if rdr.remaining() > 251 {
-        return Err(Error::TooLong);
-    }
-    if rdr.remaining() < 4 {
-        return Err(Error::TooShort);
-    }
-
-    let mut rsne = Rsne { ..Default::default() };
-    rsne.element_id = rdr.read_u8()?;
-    rsne.length = rdr.read_u8()?;
-    rsne.version = rdr.read_u16::<LittleEndian>()?;
-
-    // Read group data cipher suite.
-    if rdr.remaining() == 0 {
-        return Ok(rsne);
-    }
-    rsne.group_data_cipher_suite = Some(read_suite_selector::<Cipher>(&mut rdr)?);
-
-    // Read pairwise cipher suites.
-    return_ok_on_empty!(rdr, rsne);
-    let count = rdr.read_u16::<LittleEndian>().map_err(Error::ExpectedPairwiseListCount)?;
-    for _ in 0..count {
-        rsne.pairwise_cipher_suites.push(read_suite_selector::<Cipher>(&mut rdr)?);
-    }
-
-    // Read AKM suites.
-    return_ok_on_empty!(rdr, rsne);
-    let count = rdr.read_u16::<LittleEndian>().map_err(Error::ExpectedAkmListCount)?;
-    for _ in 0..count {
-        rsne.akm_suites.push(read_suite_selector::<Akm>(&mut rdr)?)
-    }
-
-    // Read RSN capabilities.
-    return_ok_on_empty!(rdr, rsne);
-    let caps = rdr.read_u16::<LittleEndian>().map_err(Error::ExpectedCapabilities)?;
-    rsne.rsn_capabilities = caps;
-
-    // Read PMKIDs.
-    return_ok_on_empty!(rdr, rsne);
-    let count = rdr.read_u16::<LittleEndian>().map_err(Error::ExpectedPmkidListCount)?;
-    for _ in 0..count {
-        rsne.pmkids.push(read_pmkid(&mut rdr)?);
-    }
-
-    // Read group mgmt cipher suite.
-    return_ok_on_empty!(rdr, rsne);
-    rsne.group_mgmt_cipher_suite = Some(read_suite_selector::<Cipher>(&mut rdr)?);
-
-    Ok(rsne)
+fn read_suite_selector<'a, T>(input: &'a [u8]) -> IResult<&'a [u8], T>
+    where T: suite_selector::Factory<'a, Suite=T> {
+    let (i1, bytes) = try_parse!(input, take!(4));
+    let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(&bytes[0..3], bytes[3])));
+    return IResult::Done(i2, ctor_result);
 }
 
-fn read_suite_selector<T>(rdr: &mut Cursor<&[u8]>) -> Result<T>
-    where T: suite_selector::Factory<Suite=T> {
-    if rdr.remaining() < 4 {
-        Err(Error::ExpectedSuiteSelector)
-    } else {
-        let mut oui = [0; 3];
-        rdr.read_exact(&mut oui)?;
-        let suite_type = rdr.read_u8()?;
-        Ok(T::new(oui, suite_type))
-    }
+fn read_pmkid<'a>(input: &'a [u8]) -> IResult<&'a [u8], pmkid::Pmkid> {
+    let (i1, bytes) = try_parse!(input, take!(16));
+    let (i2, result) = try_parse!(i1, expr_res!(pmkid::new(&bytes)));
+    return IResult::Done(i2, result);
 }
 
-fn read_pmkid(rdr: &mut Cursor<&[u8]>) -> Result<Pmkid> {
-    if rdr.remaining() < 16 {
-        Err(Error::ExpectedPmkid)
-    } else {
-        let mut pmkid = [0; 16];
-        rdr.read_exact(&mut pmkid)?;
-        Ok(pmkid)
+named!(akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
+named!(cipher<&[u8], cipher::Cipher>, call!(read_suite_selector::<cipher::Cipher>));
+
+named!(pub from_bytes<&[u8], Rsne>,
+       do_parse!(
+           element_id: le_u8 >>
+           length: le_u8 >>
+           version: le_u16 >>
+           group_cipher: if_remaining!(cipher) >>
+           pairwise_count: if_remaining!(le_u16) >>
+           pairwise_list: count!(cipher, pairwise_count.unwrap_or(0) as usize)  >>
+           akm_count: if_remaining!(le_u16) >>
+           akm_list: count!(akm, akm_count.unwrap_or(0) as usize)  >>
+           rsn_capabilities: if_remaining!(le_u16) >>
+           pmkid_count: if_remaining!(le_u16) >>
+           pmkid_list: count!(read_pmkid, pmkid_count.unwrap_or(0) as usize)  >>
+           group_mgmt_cipher_suite: if_remaining!(cipher) >>
+           eof!() >>
+           (Rsne{
+                element_id: element_id,
+                length: length,
+                version: version,
+                group_data_cipher_suite: group_cipher,
+                pairwise_cipher_suites: pairwise_list,
+                akm_suites: akm_list,
+                rsn_capabilities: rsn_capabilities.unwrap_or(0),
+                pmkids: pmkid_list,
+                group_mgmt_cipher_suite: group_mgmt_cipher_suite
+           })
+    )
+);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_parse_with_nom(b: &mut Bencher) {
+        let frame: Vec<u8> = vec![
+            0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
+            0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00, 0x01, 0x00, 0x01, 0x02, 0x03, 0x04,
+            0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x00, 0x0f,
+            0xac, 0x04
+        ];
+        b.iter(|| {
+            from_bytes(&frame)
+        });
     }
+
+    // TODO(hahnr): Add tests.
 }

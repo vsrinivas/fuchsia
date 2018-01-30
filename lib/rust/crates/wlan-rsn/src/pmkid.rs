@@ -2,4 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub type Pmkid = [u8; 16];
+use super::{Error, Result};
+
+pub type Pmkid<'a> = &'a [u8];
+
+pub fn new<'a>(pmkid: &'a [u8]) -> Result<Pmkid> {
+    if pmkid.len() != 16 {
+        Err(Error::InvalidPmkidLength(pmkid.len()))
+    } else {
+        Ok(pmkid)
+    }
+}
