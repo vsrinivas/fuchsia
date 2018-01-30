@@ -35,6 +35,7 @@ function HELP {
     echo "-x <bootdata>        : use specified bootdata"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "--debugger           : Enable gdb stub and wait for connection"
     echo "--vnc=<display>      : use vnc based display"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
     echo "-h for help"
@@ -50,6 +51,7 @@ AUDIO=
 AUDIO_WAVFILE="/tmp/qemu.wav"
 BUILD=0
 CLANG=0
+DEBUGGER=0
 DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
@@ -113,6 +115,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
+            debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
             diskfmt=*) DISKFMT=${OPTARG#*=};;
             vnc=*) VNC=${OPTARG#*=};;
@@ -310,6 +313,10 @@ if (( $VIRTIO )); then
     ARGS+=" -device virtio-rng-pci"
     ARGS+=" -device virtio-mouse-pci"
     ARGS+=" -device virtio-keyboard-pci"
+fi
+
+if (( $DEBUGGER )); then
+    ARGS+=" -s -S"
 fi
 
 case $ARCH in

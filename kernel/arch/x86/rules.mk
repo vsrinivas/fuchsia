@@ -146,8 +146,6 @@ ifeq ($(call TOBOOL,$(ENABLE_NEW_BOOTDATA)),true)
 MODULE_DEFINES += ENABLE_NEW_BOOTDATA=1
 endif
 
-ARCH_OPTFLAGS := -O2
-
 LINKER_SCRIPT += $(LOCAL_BUILDDIR)/kernel.ld
 
 # potentially generated files that should be cleaned out with clean make rule

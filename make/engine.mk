@@ -18,6 +18,7 @@ include make/macros.mk
 # default them to something so when they're referenced in the make instance they're not undefined
 BUILDROOT ?= .
 DEBUG ?= 2
+DEBUG_HARD ?= false
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
 ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
@@ -111,6 +112,12 @@ $(error No project specified. Use 'make list' for a list of projects or 'make he
 endif
 endif
 
+# DEBUG_HARD enables limited optimizations and full debug symbols for use with gdb/lldb
+ifeq ($(call TOBOOL,$(DEBUG_HARD)),true)
+GLOBAL_DEBUGFLAGS := -O0 -g3
+endif
+GLOBAL_DEBUGFLAGS ?= -O2 -g
+
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
 GENERATED_INCLUDES:=$(BUILDDIR)/gen/global/include
 OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
@@ -121,7 +128,6 @@ USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 HOST_CONFIG_HEADER := $(BUILDDIR)/config-host.h
 GLOBAL_INCLUDES := system/public system/private $(GENERATED_INCLUDES)
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
-GLOBAL_DEBUGFLAGS ?= -g
 # When embedding source file locations in debugging information, by default
 # the compiler will record the absolute path of the current directory and
 # make everything relative to that.  Instead, we tell the compiler to map
