@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/clang_toolchain.gni")
+
 declare_args() {
   # Build packages as FAR archives and store them in /system. This is required
   # for --bootfs builds.
