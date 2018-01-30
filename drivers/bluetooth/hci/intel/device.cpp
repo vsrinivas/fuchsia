@@ -18,7 +18,11 @@ namespace btintel {
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
     : DeviceType(device), hci_(*hci), firmware_loaded_(false) {}
 
-zx_status_t Device::Bind(bool secure) {
+zx_status_t Device::Bind() {
+  return DdkAdd("btintel", DEVICE_ADD_INVISIBLE);
+}
+
+zx_status_t Device::LoadFirmware(bool secure) {
   zx_status_t status;
   zx::channel acl_channel, cmd_channel;
 
@@ -26,8 +30,7 @@ zx_status_t Device::Bind(bool secure) {
   status =
       bt_hci_open_command_channel(&hci_, cmd_channel.reset_and_get_address());
   if (status != ZX_OK) {
-    errorf("couldn't open command channel: %s\n", zx_status_get_string(status));
-    return status;
+    return Remove(status, "couldn't open command channel");
   }
 
   // Find the version and boot params.
@@ -43,13 +46,13 @@ zx_status_t Device::Bind(bool secure) {
   if (secure) {
     // If we're already in firmware, we're done.
     if (version.fw_variant == kFirmwareFirmwareVariant) {
-      return AddDevice("already loaded");
+      return Appear("already loaded");
     }
 
     // We only know how to load if we're in bootloader.
     if (version.fw_variant != kBootloaderFirmwareVariant) {
-      errorf("Unknown firmware variant: 0x%x\n", version.fw_variant);
-      return ZX_ERR_NOT_SUPPORTED;
+      auto note = fbl::StringPrintf("Unknown firmware variant (0x%x)", version.fw_variant);
+      return Remove(ZX_ERR_NOT_SUPPORTED, note.c_str());
     }
 
     ReadBootParamsReturnParams boot_params = cmd_hci.SendReadBootParams();
@@ -59,7 +62,7 @@ zx_status_t Device::Bind(bool secure) {
     fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
   } else {
     if (version.fw_patch_num > 0) {
-      return AddDevice("already patched");
+      return Appear("already patched");
     }
 
     fw_filename = fbl::StringPrintf(
@@ -78,15 +81,13 @@ zx_status_t Device::Bind(bool secure) {
   }
 
   if (!fw_vmo) {
-    errorf("can't load firmware %s\n", fw_filename.c_str());
-    return ZX_ERR_NOT_SUPPORTED;
+    return Remove(ZX_ERR_NOT_SUPPORTED, "can't load firmware");
   }
 
   status =
       bt_hci_open_acl_data_channel(&hci_, acl_channel.reset_and_get_address());
   if (status != ZX_OK) {
-    errorf("couldn't open ACL channel: %s\n", zx_status_get_string(status));
-    return status;
+    return Remove(status, "couldn't open ACL channel");;
   }
 
   FirmwareLoader loader(&cmd_channel, &acl_channel);
@@ -105,28 +106,28 @@ zx_status_t Device::Bind(bool secure) {
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
 
   if (result == FirmwareLoader::LoadStatus::kError) {
-    errorf("firmware loading failed!\n");
-    return ZX_ERR_BAD_STATE;
+    return Remove(ZX_ERR_BAD_STATE, "firmware loading failed");;
   }
 
   cmd_hci.SendReset();
 
   // TODO(jamuraa): other systems receive a post-boot event here, should we?
-
   // TODO(jamuraa): ddc file loading (NET-381)
 
   auto note = fbl::StringPrintf("%s using %s", secure ? "loaded" : "patched",
                                 fw_filename.c_str());
-  return AddDevice(note.c_str());
+  return Appear(note.c_str());
 }
 
-zx_status_t Device::AddDevice(const char* success_note) {
-  zx_status_t status = DdkAdd("btintel");
-  if (status != ZX_OK) {
-    errorf("add device failed: %s\n", zx_status_get_string(status));
+zx_status_t Device::Remove(zx_status_t status, const char *note) {
+    DdkRemove();
+    errorf("%s: %s", note, zx_status_get_string(status));
     return status;
-  }
-  infof("%s\n", success_note);
+}
+
+zx_status_t Device::Appear(const char* note) {
+  DdkMakeVisible();
+  infof("%s\n", note);
   firmware_loaded_ = true;
   return ZX_OK;
 }

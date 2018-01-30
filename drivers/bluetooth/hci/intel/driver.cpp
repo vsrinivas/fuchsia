@@ -23,6 +23,7 @@ extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
   usb_protocol_t usb;
   zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (result != ZX_OK) {
+    errorf("couldn't get USB protocol: %s\n", zx_status_get_string(result));
     return result;
   }
 
@@ -41,18 +42,20 @@ extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
   bt_hci_protocol_t hci;
   result = device_get_protocol(device, ZX_PROTOCOL_BT_HCI, &hci);
   if (result != ZX_OK) {
+    errorf("couldn't get BT_HCI protocol: %s\n", zx_status_get_string(result));
     return result;
   }
 
   auto btdev = new btintel::Device(device, &hci);
+  result = btdev->Bind();
+  if (result != ZX_OK) {
+    errorf("failed binding device: %s\n", zx_status_get_string(result));
+    delete btdev;
+    return result;
+  }
+  // Bind succeeded and devmgr is now responsible for releasing |btdev|
   auto f = std::async(std::launch::async, [btdev, secure]() {
-    zx_status_t status;
-    status = btdev->Bind(secure);
-    if (status != ZX_OK) {
-      errorf("failed to bind: %s\n", zx_status_get_string(status));
-      delete btdev;
-    }
-    // Bind succeeded and devmgr is responsible for releasing |btdev|
+    btdev->LoadFirmware(secure);
   });
   return ZX_OK;
 }
