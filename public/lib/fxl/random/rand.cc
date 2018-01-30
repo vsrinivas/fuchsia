@@ -37,18 +37,18 @@ namespace fxl {
 uint64_t RandUint64() {
   uint64_t number;
   bool success =
-    RandBytes(reinterpret_cast<unsigned char*>(&number), sizeof(number));
+    RandBytes(&number, sizeof(number));
 
   FXL_CHECK(success);
   return number;
 }
 
-bool RandBytes(unsigned char* output, size_t output_length) {
+bool RandBytes(void* output, size_t output_length) {
   FXL_DCHECK(output);
 
 #if defined(OS_FUCHSIA)
   size_t remaining = output_length;
-  unsigned char* offset = output;
+  unsigned char* offset = static_cast<unsigned char*>(output);
   size_t actual;
   size_t read_len;
   do {
@@ -85,7 +85,7 @@ bool RandBytes(unsigned char* output, size_t output_length) {
     return false;
 
   const bool success =
-    ReadFileDescriptor(fd.get(), reinterpret_cast<char*>(output), output_length);
+    ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
 
   FXL_DCHECK(success);
   return success;

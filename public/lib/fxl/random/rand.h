@@ -17,7 +17,7 @@ namespace fxl {
 // Returns a random number in range [0, UINT64_MAX]
 FXL_EXPORT uint64_t RandUint64();
 
-FXL_EXPORT bool RandBytes(unsigned char* output, size_t output_length);
+FXL_EXPORT bool RandBytes(void* output, size_t output_length);
 
 }  // namespace fxl
 
