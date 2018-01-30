@@ -5,8 +5,8 @@
 #include "phy-device.h"
 
 #include "iface-device.h"
-#include "garnet/lib/wlan/fidl/iface.fidl-common.h"
-#include "garnet/lib/wlan/fidl/phy.fidl-common.h"
+#include "garnet/lib/wlan/fidl/iface.fidl.h"
+#include "garnet/lib/wlan/fidl/phy.fidl.h"
 
 #include <ddk/debug.h>
 #include <wlan/protocol/device.h>
