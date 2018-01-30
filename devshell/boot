@@ -36,12 +36,12 @@ case "${machine_type}" in
     disks=()
     add_fvm=false
   ;;
-  ram|netboot)
+  ram|netboot|--netboot)
     ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${ZIRCON_PROJECT}.bin"
     disks=()
     add_fvm=false
   ;;
-  bootfs)
+  bootfs|--bootfs)
     echo
     echo "bootfs is deprecated, please try to use \"ram\" instead"
     echo
