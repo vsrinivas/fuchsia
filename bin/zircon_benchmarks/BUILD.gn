@@ -45,6 +45,7 @@ source_set("lib") {
     "null.cc",
     "ports.cc",
     "processes.cc",
+    "pthreads.cc",
     "round_trips.cc",
     "sockets.cc",
     "syscalls.cc",
