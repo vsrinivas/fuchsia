@@ -52,18 +52,6 @@ void MdnsTransceiver::Stop() {
   }
 }
 
-void MdnsTransceiver::SetHostFullName(const std::string& host_full_name) {
-  FXL_DCHECK(!host_full_name.empty());
-
-  host_full_name_ = host_full_name;
-
-  for (auto& interface : interface_transceivers_) {
-    if (interface) {
-      interface->SetHostFullName(host_full_name_);
-    }
-  }
-}
-
 MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(
     size_t index) {
   return interface_transceivers_.size() > index
@@ -204,14 +192,10 @@ void MdnsTransceiver::AddInterfaceTransceiver(
     return;
   }
 
-  if (!host_full_name_.empty()) {
-    interface_transceiver->SetHostFullName(host_full_name_);
-  }
-
   for (auto& i : interface_transceivers_) {
     if (i != nullptr && i->name() == interface_transceiver->name()) {
-      i->SetAlternateAddress(host_full_name_, interface_transceiver->address());
-      interface_transceiver->SetAlternateAddress(host_full_name_, i->address());
+      i->SetAlternateAddress(interface_transceiver->address());
+      interface_transceiver->SetAlternateAddress(i->address());
     }
   }
 
@@ -229,7 +213,7 @@ void MdnsTransceiver::ReplaceInterfaceTransceiver(
 
   // If the address has changed, send a message invalidating the old address.
   if (address_changed) {
-    interface_transceiver->SendAddressGoodbye();
+    interface_transceiver->SendAddressGoodbye(host_full_name_);
   }
 
   // Replace the interface transceiver with a new one.
@@ -240,7 +224,7 @@ void MdnsTransceiver::ReplaceInterfaceTransceiver(
   if (address_changed) {
     interface_transceiver = GetInterfaceTransceiver(index);
     FXL_DCHECK(interface_transceiver);
-    interface_transceiver->SendAddress();
+    interface_transceiver->SendAddress(host_full_name_);
   }
 }
 

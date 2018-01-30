@@ -88,30 +88,11 @@ void MdnsInterfaceTransceiver::Stop() {
   socket_fd_.reset();
 }
 
-void MdnsInterfaceTransceiver::SetHostFullName(
-    const std::string& host_full_name) {
-  FXL_DCHECK(!host_full_name.empty());
-
-  address_resource_ = MakeAddressResource(host_full_name, address_);
-
-  if (alternate_address_) {
-    alternate_address_resource_ =
-        MakeAddressResource(host_full_name, alternate_address_);
-  }
-}
-
 void MdnsInterfaceTransceiver::SetAlternateAddress(
-    const std::string& host_full_name,
     const IpAddress& alternate_address) {
-  FXL_DCHECK(!alternate_address_resource_);
   FXL_DCHECK(alternate_address.family() != address_.family());
 
   alternate_address_ = alternate_address;
-
-  if (!host_full_name.empty()) {
-    alternate_address_resource_ =
-        MakeAddressResource(host_full_name, alternate_address_);
-  }
 }
 
 void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
@@ -142,26 +123,21 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   }
 }
 
-void MdnsInterfaceTransceiver::SendAddress() {
-  FXL_DCHECK(address_resource_);
-
+void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   DnsMessage message;
-  message.answers_.push_back(address_resource_);
+  message.answers_.push_back(GetAddressResource(host_full_name));
 
   SendMessage(&message, MdnsAddresses::kV4Multicast);
 }
 
-void MdnsInterfaceTransceiver::SendAddressGoodbye() {
-  FXL_DCHECK(address_resource_);
-
+void MdnsInterfaceTransceiver::SendAddressGoodbye(
+    const std::string& host_full_name) {
   DnsMessage message;
-  message.answers_.push_back(address_resource_);
-  uint32_t original_time_to_live = address_resource_->time_to_live_;
-  address_resource_->time_to_live_ = 0;
+  // Not using |GetAddressResource| here, because we want to modify the ttl.
+  message.answers_.push_back(MakeAddressResource(host_full_name, address_));
+  message.answers_.back()->time_to_live_ = 0;
 
   SendMessage(&message, MdnsAddresses::kV4Multicast);
-
-  address_resource_->time_to_live_ = original_time_to_live;
 }
 
 void MdnsInterfaceTransceiver::LogTraffic() {
@@ -230,6 +206,32 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   WaitForInbound();
 }
 
+std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
+    const std::string& host_full_name) {
+  FXL_DCHECK(address_.is_valid());
+
+  if (!address_resource_ ||
+      address_resource_->name_.dotted_string_ != host_full_name) {
+    address_resource_ = MakeAddressResource(host_full_name, address_);
+  }
+
+  return address_resource_;
+}
+
+std::shared_ptr<DnsResource>
+MdnsInterfaceTransceiver::GetAlternateAddressResource(
+    const std::string& host_full_name) {
+  FXL_DCHECK(alternate_address_.is_valid());
+
+  if (!alternate_address_resource_ ||
+      alternate_address_resource_->name_.dotted_string_ != host_full_name) {
+    alternate_address_resource_ =
+        MakeAddressResource(host_full_name, alternate_address_);
+  }
+
+  return alternate_address_resource_;
+}
+
 std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
     const std::string& host_full_name,
     const IpAddress& address) {
@@ -250,10 +252,7 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
     std::vector<std::shared_ptr<DnsResource>>* resources) {
   for (auto iter = resources->begin(); iter != resources->end(); ++iter) {
     if ((*iter)->type_ == DnsType::kA || (*iter)->type_ == DnsType::kAaaa) {
-      FXL_DCHECK(address_resource_)
-          << "An A or AAAA record was sent before the host name established.";
-
-      **iter = *address_resource_;
+      *iter = GetAddressResource((*iter)->name_.dotted_string_);
 
       auto next_iter = iter;
       ++next_iter;
@@ -262,15 +261,17 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
                              ((*next_iter)->type_ == DnsType::kA ||
                               (*next_iter)->type_ == DnsType::kAaaa);
 
-      if (alternate_address_resource_) {
+      if (alternate_address_.is_valid()) {
+        auto resource =
+            GetAlternateAddressResource((*iter)->name_.dotted_string_);
         if (next_is_address) {
           // There's already a second address record. Copy the alternate address
           // record over it.
-          **next_iter = *alternate_address_resource_;
+          *next_iter = resource;
         } else {
           // There's no second address record. Insert the alternate address
           // record after the first one.
-          resources->insert(next_iter, alternate_address_resource_);
+          resources->insert(next_iter, resource);
         }
       } else if (next_is_address) {
         // We don't need this second address record.

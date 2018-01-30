@@ -180,8 +180,6 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_
             << "\n";
 
-  transceiver_.SetHostFullName(host_full_name_);
-
   address_placeholder_ =
       std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
 

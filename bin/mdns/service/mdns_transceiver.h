@@ -43,10 +43,6 @@ class MdnsTransceiver {
   // Determines if this transceiver has interfaces.
   bool has_interfaces() { return !interface_transceivers_.empty(); }
 
-  // Sets the host full name. This method may be called multiple times if
-  // conflicts are detected.
-  void SetHostFullName(const std::string& host_full_name);
-
   // Sends a messaage to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
   // |MdnsAddresses::kV4Multicast|.

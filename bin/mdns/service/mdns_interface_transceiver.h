@@ -44,14 +44,8 @@ class MdnsInterfaceTransceiver {
   // Stops the interface transceiver.
   void Stop();
 
-  // Sets the host full name. This method may be called multiple times if
-  // conflicts are detected.
-  void SetHostFullName(const std::string& host_full_name);
-
-  // Sets an alternate address for the interface. |host_full_name| may be empty,
-  // in which case |SetHostFullName| will be called later.
-  void SetAlternateAddress(const std::string& host_full_name,
-                           const IpAddress& alternate_address);
+  // Sets an alternate address for the interface.
+  void SetAlternateAddress(const IpAddress& alternate_address);
 
   // Sends a messaage to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address| is
@@ -61,11 +55,11 @@ class MdnsInterfaceTransceiver {
   void SendMessage(DnsMessage* message, const SocketAddress& address);
 
   // Sends a message containing only an address resource for this interface.
-  void SendAddress();
+  void SendAddress(const std::string& host_full_name);
 
   // Sends a message containing only an address resource for this interface with
   // zero ttl, indicating that the address is no longer valid.
-  void SendAddressGoodbye();
+  void SendAddressGoodbye(const std::string& host_full_name);
 
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
@@ -99,6 +93,17 @@ class MdnsInterfaceTransceiver {
 
   void InboundReady(zx_status_t status, uint32_t events);
 
+  // Returns an address resource (A/AAAA) record with the given name and the
+  // address contained in |alternate_address_|, which must be valid.
+  std::shared_ptr<DnsResource> GetAddressResource(
+      const std::string& host_full_name);
+
+  // Returns an address resource (A/AAAA) record with the given name and the
+  // address contained in |address_|, which must be valid.
+  std::shared_ptr<DnsResource> GetAlternateAddressResource(
+      const std::string& host_full_name);
+
+  // Makes an address resource (A/AAAA) record with the given name and address.
   std::shared_ptr<DnsResource> MakeAddressResource(
       const std::string& host_full_name,
       const IpAddress& address);
