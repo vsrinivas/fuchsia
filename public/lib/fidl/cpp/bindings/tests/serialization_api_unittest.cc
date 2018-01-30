@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+#include "lib/fidl/compiler/interfaces/tests/rect.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
-#include "lib/fidl/compiler/interfaces/tests/rect.fidl.h"
-#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -75,7 +75,7 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
 
 // This tests serialization of handles -- These should be deaths or
 TEST_F(StructSerializationAPITest, HandlesSerialization) {
-#ifdef NDEBUG // In debug builds serialization failures abort
+#ifdef NDEBUG  // In debug builds serialization failures abort
   {
     SCOPED_TRACE("Uninitialized Array");
     HandleStruct handle_struct;
@@ -131,7 +131,10 @@ TEST_F(StructSerializationAPITest, NullableHandleSerialization) {
 
 // Test that |Deserialize()| appropriately fails on validation.
 TEST_F(StructSerializationAPITest, DeserializationFailure) {
-  char buf[100] = {};
+  char buf_storage[100] = {};
+  // Use an 8-byte aligned pointer of |buf_storage| to deserialize into.
+  char* buf = fidl::internal::AlignPointer(buf_storage);
+
   EmptyStruct es;
 
   // Bounds checker should fail this, since buf_size is too small.
