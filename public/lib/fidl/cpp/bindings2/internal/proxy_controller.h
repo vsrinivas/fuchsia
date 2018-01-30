@@ -11,7 +11,7 @@
 #include <map>
 #include <memory>
 
-#include "lib/fidl/cpp/bindings2/internal/channel_reader.h"
+#include "lib/fidl/cpp/bindings2/internal/message_reader.h"
 #include "lib/fidl/cpp/bindings2/internal/message_handler.h"
 
 namespace fidl {
@@ -34,10 +34,10 @@ class ProxyController : public MessageHandler {
   ProxyController(ProxyController&&);
   ProxyController& operator=(ProxyController&&);
 
-  // The |ChannelReader| that is listening for responses to messages sent by
+  // The |MessageReader| that is listening for responses to messages sent by
   // this object.
-  ChannelReader& reader() { return reader_; }
-  const ChannelReader& reader() const { return reader_; }
+  MessageReader& reader() { return reader_; }
+  const MessageReader& reader() const { return reader_; }
 
   // Send a message over the channel.
   //
@@ -60,7 +60,7 @@ class ProxyController : public MessageHandler {
   void Reset();
 
  private:
-  // Called by the |ChannelReader| when a message arrives on the channel from
+  // Called by the |MessageReader| when a message arrives on the channel from
   // the server.
   //
   // The message might be a response to a previously sent message or an
@@ -74,7 +74,7 @@ class ProxyController : public MessageHandler {
   // reset its transition identifiers.
   void ClearPendingHandlers();
 
-  ChannelReader reader_;
+  MessageReader reader_;
   std::map<zx_txid_t, std::unique_ptr<MessageHandler>> handlers_;
   zx_txid_t next_txid_;
 };

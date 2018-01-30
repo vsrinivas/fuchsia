@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/bindings2/internal/channel_reader.h"
+#include "lib/fidl/cpp/bindings2/internal/message_reader.h"
 
 #include <async/default.h>
 #include <fidl/cpp/message_buffer.h>
@@ -16,17 +16,17 @@ constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
 }  // namespace
 
-ChannelReader::ChannelReader(MessageHandler* message_handler)
+MessageReader::MessageReader(MessageHandler* message_handler)
     : async_(nullptr),
       wait_(this, ZX_HANDLE_INVALID, kSignals),
       message_handler_(message_handler) {}
 
-ChannelReader::~ChannelReader() {
+MessageReader::~MessageReader() {
   if (async_)
     wait_.Cancel(async_);
 }
 
-zx_status_t ChannelReader::Bind(zx::channel channel) {
+zx_status_t MessageReader::Bind(zx::channel channel) {
   if (is_bound())
     Unbind();
   if (!channel)
@@ -40,7 +40,7 @@ zx_status_t ChannelReader::Bind(zx::channel channel) {
   return status;
 }
 
-zx::channel ChannelReader::Unbind() {
+zx::channel MessageReader::Unbind() {
   if (!is_bound())
     return zx::channel();
   wait_.Cancel(async_);
@@ -52,13 +52,13 @@ zx::channel ChannelReader::Unbind() {
   return channel;
 }
 
-void ChannelReader::Reset() {
+void MessageReader::Reset() {
   Unbind();
   error_handler_ = std::function<void()>();
 }
 
-zx_status_t ChannelReader::TakeChannelAndErrorHandlerFrom(
-    ChannelReader* other) {
+zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(
+    MessageReader* other) {
   zx_status_t status = Bind(other->Unbind());
   if (status != ZX_OK)
     return status;
@@ -66,7 +66,7 @@ zx_status_t ChannelReader::TakeChannelAndErrorHandlerFrom(
   return ZX_OK;
 }
 
-zx_status_t ChannelReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
+zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   if (!is_bound())
     return ZX_ERR_BAD_STATE;
   zx_signals_t pending = ZX_SIGNAL_NONE;
@@ -88,7 +88,7 @@ zx_status_t ChannelReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   return ZX_ERR_PEER_CLOSED;
 }
 
-async_wait_result_t ChannelReader::OnHandleReady(
+async_wait_result_t MessageReader::OnHandleReady(
     async_t* async,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
@@ -119,7 +119,7 @@ async_wait_result_t ChannelReader::OnHandleReady(
   return ASYNC_WAIT_FINISHED;
 }
 
-zx_status_t ChannelReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
+zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
   Message message = buffer->CreateEmptyMessage();
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status == ZX_ERR_SHOULD_WAIT)
@@ -136,7 +136,7 @@ zx_status_t ChannelReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
   return status;
 }
 
-void ChannelReader::NotifyError() {
+void MessageReader::NotifyError() {
   Unbind();
   if (error_handler_)
     error_handler_();

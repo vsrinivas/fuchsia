@@ -13,7 +13,7 @@ namespace internal {
 
 // An interface for receiving FIDL messages.
 //
-// Used by |ChannelReader| to call back into its client whenever it reads a
+// Used by |MessageReader| to call back into its client whenever it reads a
 // message from the channel.
 class MessageHandler {
  public:
@@ -27,7 +27,7 @@ class MessageHandler {
 
   // The channel from which the messages were being read is gone.
   //
-  // The channel's peer might have been closed or the |ChannelReader| might have
+  // The channel's peer might have been closed or the |MessageReader| might have
   // unbound from the channel. In either case, implementations that keep
   // per-channel state should reset their state when this method is called.
   virtual void OnChannelGone();

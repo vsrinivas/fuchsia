@@ -6,7 +6,7 @@
 #include <zx/channel.h>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings2/internal/channel_reader.h"
+#include "lib/fidl/cpp/bindings2/internal/message_reader.h"
 #include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
@@ -62,20 +62,20 @@ class DestructionCounter {
   int* counter_ = nullptr;
 };
 
-TEST(ChannelReader, Trivial) {
-  ChannelReader reader;
+TEST(MessageReader, Trivial) {
+  MessageReader reader;
 }
 
-TEST(ChannelReader, Bind) {
-  ChannelReader reader;
+TEST(MessageReader, Bind) {
+  MessageReader reader;
   EXPECT_EQ(ZX_OK, reader.Bind(zx::channel()));
   EXPECT_FALSE(reader.is_bound());
   EXPECT_EQ(ZX_HANDLE_INVALID, reader.Unbind().get());
 }
 
-TEST(ChannelReader, Control) {
+TEST(MessageReader, Control) {
   CopyingMessageHandler handler;
-  ChannelReader reader(&handler);
+  MessageReader reader(&handler);
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -126,11 +126,11 @@ TEST(ChannelReader, Control) {
   EXPECT_FALSE(reader.is_bound());
 }
 
-TEST(ChannelReader, HandlerError) {
+TEST(MessageReader, HandlerError) {
   StatusMessageHandler handler;
   handler.status = ZX_ERR_INTERNAL;
 
-  ChannelReader reader;
+  MessageReader reader;
   reader.set_message_handler(&handler);
 
   int error_count = 0;
@@ -153,11 +153,11 @@ TEST(ChannelReader, HandlerError) {
   EXPECT_FALSE(reader.is_bound());
 }
 
-TEST(ChannelReader, HandlerErrorWithoutErrorHandler) {
+TEST(MessageReader, HandlerErrorWithoutErrorHandler) {
   StatusMessageHandler handler;
   handler.status = ZX_ERR_INTERNAL;
 
-  ChannelReader reader;
+  MessageReader reader;
   reader.set_message_handler(&handler);
 
   async::Loop loop(&kTestLoopConfig);
@@ -175,11 +175,11 @@ TEST(ChannelReader, HandlerErrorWithoutErrorHandler) {
   EXPECT_FALSE(reader.is_bound());
 }
 
-TEST(ChannelReader, HandlerStop) {
+TEST(MessageReader, HandlerStop) {
   StatusMessageHandler handler;
   handler.status = ZX_ERR_STOP;
 
-  ChannelReader reader;
+  MessageReader reader;
   reader.set_message_handler(&handler);
 
   int error_count = 0;
@@ -216,8 +216,8 @@ TEST(ChannelReader, HandlerStop) {
   EXPECT_EQ(0, logger.message_count_);
 }
 
-TEST(ChannelReader, BindTwice) {
-  ChannelReader reader;
+TEST(MessageReader, BindTwice) {
+  MessageReader reader;
   async::Loop loop(&kTestLoopConfig);
 
   zx::channel h1, h2, j1, j2;
@@ -234,8 +234,8 @@ TEST(ChannelReader, BindTwice) {
   EXPECT_EQ(saved, reader.channel().get());
 }
 
-TEST(ChannelReader, WaitAndDispatchOneMessageUntilErrors) {
-  ChannelReader reader;
+TEST(MessageReader, WaitAndDispatchOneMessageUntilErrors) {
+  MessageReader reader;
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
@@ -281,8 +281,8 @@ TEST(ChannelReader, WaitAndDispatchOneMessageUntilErrors) {
   EXPECT_FALSE(reader.is_bound());
 }
 
-TEST(ChannelReader, UnbindDuringHandler) {
-  ChannelReader reader;
+TEST(MessageReader, UnbindDuringHandler) {
+  MessageReader reader;
   zx::channel stash;
 
   CallbackMessageHandler handler;
@@ -328,12 +328,12 @@ TEST(ChannelReader, UnbindDuringHandler) {
   EXPECT_EQ(0, logger.message_count_);
 }
 
-TEST(ChannelReader, ShouldWaitFromRead) {
+TEST(MessageReader, ShouldWaitFromRead) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
   CallbackMessageHandler handler;
-  ChannelReader reader(&handler);
+  MessageReader reader(&handler);
 
   int message_count = 0;
   handler.callback = [&message_count, &reader](Message message) {
@@ -377,12 +377,12 @@ TEST(ChannelReader, ShouldWaitFromRead) {
   EXPECT_EQ('a', logger.bytes_[0]);
 }
 
-TEST(ChannelReader, ShouldWaitFromReadWithUnbind) {
+TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
   CallbackMessageHandler handler;
-  ChannelReader reader(&handler);
+  MessageReader reader(&handler);
 
   int message_count = 0;
   handler.callback = [&message_count, &reader](Message message) {
@@ -419,8 +419,8 @@ TEST(ChannelReader, ShouldWaitFromReadWithUnbind) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, ", world", 7, nullptr, 0));
 }
 
-TEST(ChannelReader, NoHandler) {
-  ChannelReader reader;
+TEST(MessageReader, NoHandler) {
+  MessageReader reader;
 
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
@@ -440,8 +440,8 @@ TEST(ChannelReader, NoHandler) {
   EXPECT_TRUE(reader.is_bound());
 }
 
-TEST(ChannelReader, Reset) {
-  ChannelReader reader;
+TEST(MessageReader, Reset) {
+  MessageReader reader;
 
   int destruction_count = 0;
   DestructionCounter counter(&destruction_count);
@@ -462,11 +462,11 @@ TEST(ChannelReader, Reset) {
   EXPECT_EQ(3, destruction_count);
 }
 
-TEST(ChannelReader, TakeChannelAndErrorHandlerFrom) {
+TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
   StatusMessageHandler handler1;
   handler1.status = ZX_OK;
 
-  ChannelReader reader1;
+  MessageReader reader1;
   reader1.set_message_handler(&handler1);
 
   int error_count = 0;
@@ -475,7 +475,7 @@ TEST(ChannelReader, TakeChannelAndErrorHandlerFrom) {
   StatusMessageHandler handler2;
   handler2.status = ZX_ERR_INTERNAL;
 
-  ChannelReader reader2;
+  MessageReader reader2;
   reader2.set_message_handler(&handler2);
 
   async::Loop loop(&kTestLoopConfig);
