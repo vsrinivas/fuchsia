@@ -14,7 +14,7 @@ fewer branches and optimizations.
 
 Human working memory is severely limited, and people can't reason about things
 that they can't hold in memory. So your goal should be to require readers of
-your code to hold very few things in in memory in order to understand what the
+your code to hold very few things in memory in order to understand what the
 tests are saying.
 
 ## What an ideal test looks like
