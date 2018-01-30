@@ -7,6 +7,7 @@
 #include <platform.h>
 
 #include <arch/hypervisor.h>
+#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/ops.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
@@ -57,10 +58,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpa
     if (status != ZX_OK)
         return status;
 
-    uint32_t hcr_ = gic_read_gich_hcr();
-    gic_write_gich_hcr(hcr_ | kGichHcrEn);
-
-    vcpu->gich_state_.num_lrs = (gic_read_gich_vtr() & kGichVtrListRegs) + 1;
+    gic_write_gich_hcr(GICH_HCR_EN);
+    vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
+    vcpu->gich_state_.num_lrs = (gic_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
     vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_.guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
@@ -108,6 +108,15 @@ AutoGich::~AutoGich() {
     arch_enable_ints();
 }
 
+static void gich_active_interrupts(InterruptBitmap* active_interrupts) {
+    active_interrupts->ClearAll();
+    uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
+    for (uint32_t i = 0; i < lr_limit; i++) {
+        uint32_t vector = gic_read_gich_lr(i) & GICH_LR_ID_MASK;
+        active_interrupts->SetOne(vector);
+    }
+}
+
 static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
     if (guest_state->system_state.spsr_el2 & kSpsrIrq) {
         return false;
@@ -119,10 +128,12 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
         zx_status_t status = gich_state->interrupt_tracker.Pop(&vector);
         if (status != ZX_OK) {
             break;
+        } else if (gich_state->active_interrupts.GetOne(vector)) {
+            continue;
         }
-        size_t i = __builtin_ctzl(elrs);
-        gic_write_gich_lr((uint32_t)i, kGichLrPending | vector);
-        elrs &= ~(1u << i);
+        uint32_t lr_index = __builtin_ctzl(elrs);
+        elrs &= ~(1u << lr_index);
+        gic_write_gich_lr(lr_index, GICH_LR_PENDING | (vector & GICH_LR_ID_MASK));
     }
     return elrs != prev_elrs;
 }
@@ -132,21 +143,25 @@ static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     vcpu->Interrupt(kTimerVector);
 }
 
-static zx_status_t timer_maybe_set(GuestState* guest_state, GichState* gich_state, Vcpu* vcpu) {
+static void timer_maybe_set(GuestState* guest_state, GichState* gich_state, Vcpu* vcpu) {
+    if (gich_state->active_interrupts.GetOne(kTimerVector)) {
+        return;
+    }
     bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
     bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
     if (!enabled || masked) {
-        return ZX_OK;
+        return;
     }
     timer_cancel(&gich_state->timer);
 
     uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
     zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
     if (deadline <= current_time()) {
-        return gich_state->interrupt_tracker.Track(kTimerVector);
+        __UNUSED zx_status_t status = gich_state->interrupt_tracker.Track(kTimerVector);
+        DEBUG_ASSERT(status == ZX_OK);
+    } else {
+        timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, vcpu);
     }
-    timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, vcpu);
-    return ZX_OK;
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
@@ -166,6 +181,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             running_.store(true);
             status = arm64_el2_resume(vttbr, state, curr_hcr);
             running_.store(false);
+            gich_active_interrupts(&gich_state_.active_interrupts);
         }
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
@@ -175,9 +191,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
-        if (status == ZX_OK) {
-            status = timer_maybe_set(guest_state, &gich_state_, this);
-        }
+        timer_maybe_set(guest_state, &gich_state_, this);
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
@@ -186,8 +200,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     zx_status_t status = gich_state_.interrupt_tracker.Track(vector);
     if (status != ZX_OK) {
         return status;
-    }
-    if (running_.load()) {
+    } else if (running_.load()) {
         mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;

@@ -9,8 +9,6 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/vmx_state.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -76,7 +74,7 @@ private:
 struct LocalApicState {
     // Timer for APIC timer.
     timer_t timer;
-    // Tracks active interrupts.
+    // Tracks pending interrupts.
     hypervisor::InterruptTracker<X86_INT_COUNT> interrupt_tracker;
     // LVT timer configuration
     uint32_t lvt_timer = LVT_MASKED; // Initial state is masked (Vol 3 Section 10.12.5.1).

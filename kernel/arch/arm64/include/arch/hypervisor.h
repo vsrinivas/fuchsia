@@ -7,9 +7,6 @@
 #pragma once
 
 #include <arch/arm64/el2_state.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -20,11 +17,9 @@
 #include <zircon/types.h>
 
 static const uint16_t kNumInterrupts = 256;
-static const uint32_t kGichHcrEn = 1u << 0;
-static const uint32_t kGichVtrListRegs = 0b111111;
-static const uint32_t kGichLrPending = 0b01 << 28;
 
 typedef struct zx_port_packet zx_port_packet_t;
+using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;
 
 class GuestPhysicalAddressSpace;
 class PortDispatcher;
@@ -55,8 +50,10 @@ private:
 struct GichState {
     // Timer for ARM generic timer.
     timer_t timer;
-    // Tracks active interrupts.
+    // Tracks pending interrupts.
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
+    // Tracks active interrupts.
+    InterruptBitmap active_interrupts;
 
     // GICH state to be restored between VM exits.
     uint32_t num_lrs;
