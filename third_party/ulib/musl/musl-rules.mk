@@ -1081,6 +1081,7 @@ MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCDEPS := $(LOCAL_DIR)/exported.map
 MODULE_LDFLAGS := --version-script=$(LOCAL_DIR)/exported.map
+MODULE_LDFLAGS += --no-undefined-version
 MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_LIBS := system/ulib/zircon
