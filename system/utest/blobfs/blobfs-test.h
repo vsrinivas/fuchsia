@@ -56,6 +56,9 @@ public:
         read_only_ = read_only;
     }
 
+    // Sleeps or wakes the ramdisk underlying the blobfs partition, depending on its current state.
+    bool ToggleSleep();
+
 private:
     // Checks info of mounted blobfs.
     bool CheckInfo(const char* mount_path);
@@ -70,5 +73,6 @@ private:
     char ramdisk_path_[PATH_MAX];
     char fvm_path_[PATH_MAX];
     bool read_only_ = false;
+    bool asleep_ = false;
 };
 }  // namespace

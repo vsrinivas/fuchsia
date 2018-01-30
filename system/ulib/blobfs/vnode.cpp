@@ -137,8 +137,7 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     a->inode = 0;
     a->size = IsDirectory() ? 0 : SizeData();
     a->blksize = kBlobfsBlockSize;
-    a->blkcount = blobfs_->GetNode(map_index_)->num_blocks *
-                  (kBlobfsBlockSize / VNATTR_BLKSIZE);
+    a->blkcount = inode_.num_blocks * (kBlobfsBlockSize / VNATTR_BLKSIZE);
     a->nlink = 1;
     a->create_time = 0;
     a->modify_time = 0;

@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include <bitmap/raw-bitmap.h>
+#include <bitmap/rle-bitmap.h>
 #include <block-client/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -109,11 +110,13 @@ public:
         return map_index_;
     }
 
-    void SetMapIndex(size_t i) {
-        map_index_ = i;
-    }
+    void PopulateInode(size_t node_index);
 
     uint64_t SizeData() const;
+
+    const blobfs_inode_t& GetNode() const {
+        return inode_;
+    }
 
     // Constructs the "directory" blob
     VnodeBlob(fbl::RefPtr<Blobfs> bs);
@@ -127,6 +130,9 @@ public:
     void TearDown();
     virtual ~VnodeBlob();
     void CompleteSync();
+
+    // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
+    static zx_status_t VerifyBlob(Blobfs* bs, size_t node_index);
 private:
     friend struct TypeWavlTraits;
 
@@ -243,6 +249,7 @@ private:
 
     uint32_t fd_count_ = {};
     size_t map_index_ = {};
+    blobfs_inode_t inode_ = {};
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
@@ -439,30 +446,57 @@ private:
     // Precondition: The Vnode must not exist in |open_hash_|.
     fbl::RefPtr<VnodeBlob> VnodeUpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
 
-    // Finds space for a block in memory. Does not update disk.
-    zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
-    void FreeBlocks(size_t nblocks, size_t blkno);
+    // Searches for |nblocks| free blocks between the block_map_ and reserved_blocks_ bitmaps.
+    zx_status_t FindBlocks(size_t start, size_t nblocks, size_t* blkno_out);
 
-    // Finds space for a blob node in memory. Does not update disk.
-    zx_status_t AllocateNode(size_t* node_index_out);
-    void FreeNode(size_t node_index);
+    // Reserves space for a block in memory. Does not update disk.
+    zx_status_t ReserveBlocks(size_t nblocks, size_t* blkno_out);
 
-    // Access the nth inode of the node map
+    // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
+    void PersistBlocks(WriteTxn* txn, size_t nblocks, size_t blkno);
+
+    // Frees blocks from the reserved/allocated maps and updates disk if necessary.
+    void FreeBlocks(WriteTxn* txn, size_t nblocks, size_t blkno);
+
+    // Finds an unallocated node between indices start (inclusive) and end (exclusive).
+    // If it exists, sets |*node_index_out| to the first available value.
+    zx_status_t FindNode(size_t start, size_t end, size_t *node_index_out);
+
+    // Finds and reserves space for a blob node in memory. Does not update disk.
+    zx_status_t ReserveNode(size_t* node_index_out);
+
+    // Writes node data to the inode table and updates disk.
+    void PersistNode(WriteTxn* txn, size_t node_index, const blobfs_inode_t& inode);
+
+    // Frees a node, from both the reserved map and the inode table. If the inode was allocated
+    // in the inode table, write the deleted inode out to disk.
+    void FreeNode(WriteTxn* txn, size_t node_index);
+
+    // Returns a reference to the |index|th inode of the node map.
+    // This should only be accessed on two occasions:
+    // 1. To populate an existing Vnode on Lookup.
+    // 2. To update with full contents when a Vnode write has completed.
+    // No updates should occur directly on the blobfs's node.
     blobfs_inode_t* GetNode(size_t index) const;
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
+    // Should only be called by PersistBlocks and FreeBlocks.
     void WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block);
 
     // Given a node within the node map at an index, write it to disk.
+    // Should only be called by AllocateNode and FreeNode.
     void WriteNode(WriteTxn* txn, size_t map_index);
 
-    // Enqueues an update for allocated inode/block counts
+    // Enqueues an update for allocated inode/block counts.
     void WriteInfo(WriteTxn* txn);
 
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".
     zx_status_t CreateFsId();
+
+    // Verifies that the contents of a blob are valid.
+    zx_status_t VerifyBlob(size_t node_index);
 
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
@@ -485,6 +519,11 @@ private:
     vmoid_t node_map_vmoid_ = {};
     fbl::unique_ptr<MappedVmo> info_vmo_= {};
     vmoid_t info_vmoid_= {};
+
+    // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.
+    // At a steady state they will be empty.
+    bitmap::RleBitmap reserved_blocks_ = {};
+    bitmap::RleBitmap reserved_nodes_ = {};
     uint64_t fs_id_ = {};
 
     bool collecting_metrics_ = false;
@@ -492,8 +531,6 @@ private:
 };
 
 zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
-
 zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
                          fbl::RefPtr<VnodeBlob>* out);
-
 } // namespace blobfs

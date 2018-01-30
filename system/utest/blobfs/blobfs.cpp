@@ -159,40 +159,6 @@ bool BlobfsTest::Init() {
     END_HELPER;
 }
 
-bool BlobfsTest::GetDevicePath(char* path, size_t len) const {
-    BEGIN_HELPER;
-    if (type_ == FsTestType::kFvm) {
-        strlcpy(path, fvm_path_, len);
-        strlcat(path, "/fvm", len);
-
-        while (true) {
-            DIR* dir = opendir(path);
-            ASSERT_NONNULL(dir, "Unable to open FVM dir");
-
-            struct dirent* dir_entry;
-            bool updated = false;
-            while ((dir_entry = readdir(dir)) != NULL) {
-                if (strcmp(dir_entry->d_name, ".") == 0) {
-                    continue;
-                }
-
-                updated = true;
-                strlcat(path, "/", len);
-                strlcat(path, dir_entry->d_name, len);
-            }
-
-            closedir(dir);
-
-            if (!updated) {
-                break;
-            }
-        }
-    } else {
-        strlcpy(path, ramdisk_path_, len);
-    }
-    END_HELPER;
-}
-
 bool BlobfsTest::Remount() {
     BEGIN_HELPER;
     ASSERT_EQ(state_, FsTestState::kRunning);
@@ -201,44 +167,6 @@ bool BlobfsTest::Remount() {
     ASSERT_TRUE(MountInternal(), "Failed to mount blobfs");
     error.cancel();
     END_HELPER;
-}
-
-bool BlobfsTest::MountInternal() {
-    BEGIN_HELPER;
-    int flags = read_only_ ? O_RDONLY : O_RDWR;
-
-    fbl::unique_fd fd(open(ramdisk_path_, flags));
-    ASSERT_TRUE(fd, "Could not open ramdisk");
-
-    mount_options_t options;
-    memcpy(&options, &default_mount_options, sizeof(options));
-
-    if (read_only_) {
-        options.readonly = true;
-    }
-
-    // fd consumed by mount. By default, mount waits until the filesystem is
-    // ready to accept commands.
-    ASSERT_EQ(mount(fd.get(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options, launch_stdio_async), ZX_OK,
-              "Could not mount blobfs");
-
-    END_HELPER;
-}
-
-bool BlobfsTest::CheckInfo(const char* mount_path) {
-    int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0);
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
-    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + strlen("blobfs")), "Failed to query filesystem");
-    buf[r] = '\0';
-    const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
-    ASSERT_EQ(strncmp("blobfs", name, strlen("blobfs")), 0, "Unexpected filesystem mounted");
-    ASSERT_LE(info->used_nodes, info->total_nodes, "Used nodes greater than free nodes");
-    ASSERT_LE(info->used_bytes, info->total_bytes, "Used bytes greater than free bytes");
-    ASSERT_EQ(close(fd), 0);
-    return true;
 }
 
 bool BlobfsTest::Teardown(bool minimal) {
@@ -270,6 +198,99 @@ bool BlobfsTest::Teardown(bool minimal) {
     END_HELPER;
 }
 
+bool BlobfsTest::GetDevicePath(char* path, size_t len) const {
+    BEGIN_HELPER;
+    if (type_ == FsTestType::kFvm) {
+        strlcpy(path, fvm_path_, len);
+        strlcat(path, "/fvm", len);
+        while (true) {
+            DIR* dir = opendir(path);
+            ASSERT_NONNULL(dir, "Unable to open FVM dir");
+
+            struct dirent* dir_entry;
+            bool updated = false;
+            while ((dir_entry = readdir(dir)) != NULL) {
+                if (strcmp(dir_entry->d_name, ".") == 0) {
+                    continue;
+                }
+
+                updated = true;
+                strlcat(path, "/", len);
+                strlcat(path, dir_entry->d_name, len);
+            }
+
+            closedir(dir);
+
+            if (!updated) {
+                break;
+            }
+        }
+    } else {
+        strlcpy(path, ramdisk_path_, len);
+    }
+    END_HELPER;
+}
+
+bool BlobfsTest::ToggleSleep() {
+    BEGIN_HELPER;
+
+    if (asleep_) {
+        // If the ramdisk is asleep, wake it up.
+        if (type_ == FsTestType::kNormal) {
+            ASSERT_EQ(wake_ramdisk(ramdisk_path_), 0);
+        } else {
+            ASSERT_EQ(wake_ramdisk(fvm_path_), 0);
+        }
+    } else {
+        // If the ramdisk is active, put it to sleep.
+        if (type_ == FsTestType::kNormal) {
+            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, 0), 0);
+        } else {
+            ASSERT_EQ(sleep_ramdisk(fvm_path_, 0), 0);
+        }
+    }
+
+    asleep_ = !asleep_;
+    END_HELPER;
+}
+
+bool BlobfsTest::CheckInfo(const char* mount_path) {
+    int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0);
+    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
+    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
+    ssize_t r = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
+    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + strlen("blobfs")), "Failed to query filesystem");
+    buf[r] = '\0';
+    const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
+    ASSERT_EQ(strncmp("blobfs", name, strlen("blobfs")), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(info->used_nodes, info->total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(info->used_bytes, info->total_bytes, "Used bytes greater than free bytes");
+    ASSERT_EQ(close(fd), 0);
+    return true;
+}
+
+bool BlobfsTest::MountInternal() {
+    BEGIN_HELPER;
+    int flags = read_only_ ? O_RDONLY : O_RDWR;
+
+    fbl::unique_fd fd(open(ramdisk_path_, flags));
+    ASSERT_TRUE(fd, "Could not open ramdisk");
+
+    mount_options_t options;
+    memcpy(&options, &default_mount_options, sizeof(options));
+
+    if (read_only_) {
+        options.readonly = true;
+    }
+
+    // fd consumed by mount. By default, mount waits until the filesystem is
+    // ready to accept commands.
+    ASSERT_EQ(mount(fd.get(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options, launch_stdio_async), ZX_OK,
+              "Could not mount blobfs");
+
+    END_HELPER;
+}
 
 // Helper functions for testing:
 
@@ -1767,17 +1788,63 @@ bool TestPartialWrite(void) {
     ASSERT_TRUE(GenerateBlob(size, &info_complete));
     ASSERT_TRUE(GenerateBlob(size, &info_partial));
 
-    // Partially write out first blob
+    // Partially write out first blob.
     int fd_partial = open(info_partial->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd_partial, 0, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd_partial, size), 0);
-    ASSERT_EQ(StreamAll(write, fd_partial, info_partial->data.get(), size / 2), 0, "Failed to write Data");
+    ASSERT_EQ(StreamAll(write, fd_partial, info_partial->data.get(), size / 2), 0,
+              "Failed to write Data");
 
-    // Completely write out second blob
+    // Completely write out second blob.
     int fd_complete;
     ASSERT_TRUE(MakeBlob(info_complete.get(), &fd_complete));
+
     ASSERT_EQ(close(fd_complete), 0);
     ASSERT_EQ(close(fd_partial), 0);
+
+    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
+    END_TEST;
+}
+
+template <FsTestType TestType>
+bool TestPartialWriteSleepRamdisk(void) {
+    BEGIN_TEST;
+    BlobfsTest blobfsTest(TestType);
+    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+    fbl::unique_ptr<blob_info_t> info_complete;
+    fbl::unique_ptr<blob_info_t> info_partial;
+    size_t size = 1 << 20;
+    ASSERT_TRUE(GenerateBlob(size, &info_complete));
+    ASSERT_TRUE(GenerateBlob(size, &info_partial));
+
+    // Partially write out first blob.
+    int fd_partial = open(info_partial->path, O_CREAT | O_RDWR);
+    ASSERT_GT(fd_partial, 0, "Failed to create blob");
+    ASSERT_EQ(ftruncate(fd_partial, size), 0);
+    ASSERT_EQ(StreamAll(write, fd_partial, info_partial->data.get(), size / 2), 0,
+              "Failed to write Data");
+
+    // Completely write out second blob.
+    int fd_complete;
+    ASSERT_TRUE(MakeBlob(info_complete.get(), &fd_complete));
+
+    ASSERT_EQ(syncfs(fd_complete), 0);
+    ASSERT_TRUE(blobfsTest.ToggleSleep());
+
+    ASSERT_EQ(close(fd_complete), 0);
+    ASSERT_EQ(close(fd_partial), 0);
+
+    fd_complete = open(info_complete->path, O_RDONLY);
+    ASSERT_GT(fd_complete, 0, "Failed to re-open blob");
+
+    ASSERT_EQ(syncfs(fd_complete), 0);
+    ASSERT_TRUE(blobfsTest.ToggleSleep());
+
+    ASSERT_TRUE(VerifyContents(fd_complete, info_complete->data.get(), size));
+
+    fd_partial = open(info_partial->path, O_RDONLY);
+    ASSERT_LT(fd_partial, 0, "Should not be able to open invalid blob");
+    ASSERT_EQ(close(fd_complete), 0);
 
     ASSERT_TRUE(blobfsTest.Teardown(), "unmounting Blobfs");
     END_TEST;
@@ -1792,7 +1859,7 @@ bool WriteAfterUnlink(void) {
     size_t size = 1 << 20;
     ASSERT_TRUE(GenerateBlob(size, &info));
 
-    // Partially write out first blob
+    // Partially write out first blob.
     int fd1 = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd1, 0, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd1, size), 0);
@@ -1873,6 +1940,7 @@ RUN_TEST_FOR_ALL_TYPES(MEDIUM, UnlinkTiming)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, InvalidOps)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, RootDirectory)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestPartialWrite)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestPartialWriteSleepRamdisk)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestAlternateWrite)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)

@@ -110,6 +110,8 @@ private:
 
     zx_status_t ResetCache();
 
+    zx_status_t VerifyBlob(size_t node_index);
+
     RawBitmap block_map_{};
 
     fbl::unique_fd blockfd_;
@@ -148,5 +150,4 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(fbl::RefPtr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_lengths);
-
 } // namespace blobfs

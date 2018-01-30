@@ -19,6 +19,13 @@ void BlobfsChecker::TraverseInodeBitmap() {
         blobfs_inode_t* inode = blobfs_->GetNode(n);
         if (inode->start_block >= kStartBlockMinimum) {
             alloc_inodes_++;
+            inode_blocks_ += static_cast<uint32_t>(inode->num_blocks);
+
+
+            if (blobfs_->VerifyBlob(n) != ZX_OK) {
+                FS_TRACE_ERROR("check: detected inode %u with bad state\n", n);
+                error_blobs_++;
+            }
         }
     }
 }
@@ -40,6 +47,18 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
         status = ZX_ERR_BAD_STATE;
     }
 
+    if (alloc_blocks_ < kStartBlockMinimum) {
+        FS_TRACE_ERROR("check: allocated blocks (%u) are less than minimum%" PRIu64 "\n",
+                       alloc_blocks_, kStartBlockMinimum);
+        status = ZX_ERR_BAD_STATE;
+    }
+
+    if (inode_blocks_ + kStartBlockMinimum != alloc_blocks_) {
+        FS_TRACE_ERROR("check: bitmap allocated blocks (%u) do not match inode allocated blocks "
+                       "(%u)\n", alloc_blocks_, inode_blocks_);
+        status = ZX_ERR_BAD_STATE;
+    }
+
     if (alloc_inodes_ != blobfs_->info_.alloc_inode_count) {
         FS_TRACE_ERROR("check: incorrect allocated inode count %" PRIu64
                        " (should be %u)\n",
@@ -47,11 +66,15 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
         status = ZX_ERR_BAD_STATE;
     }
 
+    if (error_blobs_) {
+        status = ZX_ERR_BAD_STATE;
+    }
+
     return status;
 }
 
 BlobfsChecker::BlobfsChecker()
-    : blobfs_(nullptr), alloc_inodes_(0), alloc_blocks_(0){};
+    : blobfs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), error_blobs_(0), inode_blocks_(0) {};
 
 void BlobfsChecker::Init(fbl::RefPtr<Blobfs> blob) {
     blobfs_.reset(blob.get());

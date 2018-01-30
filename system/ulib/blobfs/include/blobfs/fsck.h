@@ -34,6 +34,8 @@ private:
     fbl::RefPtr<Blobfs> blobfs_;
     uint32_t alloc_inodes_;
     uint32_t alloc_blocks_;
+    uint32_t error_blobs_;
+    uint32_t inode_blocks_;
 };
 
 zx_status_t blobfs_check(fbl::RefPtr<Blobfs> vnode);

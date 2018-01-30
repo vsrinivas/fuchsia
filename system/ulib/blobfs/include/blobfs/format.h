@@ -23,7 +23,7 @@ namespace blobfs {
 
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobfsVersion = 0x00000004;
+constexpr uint32_t kBlobfsVersion = 0x00000005;
 
 constexpr uint32_t kBlobFlagClean        = 1;
 constexpr uint32_t kBlobFlagDirty        = 2;
@@ -82,6 +82,10 @@ constexpr uint64_t NodeMapStartBlock(const blobfs_info_t& info) {
     }
 }
 
+constexpr uint64_t NodeBitmapBlocks(const blobfs_info_t& info) {
+    return fbl::round_up(info.inode_count, kBlobfsBlockBits) / kBlobfsBlockBits;
+}
+
 constexpr uint64_t NodeMapBlocks(const blobfs_info_t& info) {
     return fbl::round_up(info.inode_count, kBlobfsInodesPerBlock) / kBlobfsInodesPerBlock;
 }
@@ -105,8 +109,7 @@ constexpr uint64_t TotalBlocks(const blobfs_info_t& info) {
 
 // States of 'Blob' identified via start block.
 constexpr uint64_t kStartBlockFree     = 0;
-constexpr uint64_t kStartBlockReserved = 1;
-constexpr uint64_t kStartBlockMinimum  = 2; // Smallest 'data' block possible
+constexpr uint64_t kStartBlockMinimum  = 1; // Smallest 'data' block possible.
 
 using digest::Digest;
 typedef struct {

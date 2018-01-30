@@ -464,6 +464,27 @@ blobfs_inode_t* Blobfs::GetNode(size_t index) {
     auto iblock = reinterpret_cast<blobfs_inode_t*>(cache_.blk);
     return &iblock[index % kBlobfsInodesPerBlock];
 }
+
+zx_status_t Blobfs::VerifyBlob(size_t node_index) {
+    blobfs_inode_t* inode = GetNode(node_index);
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[inode->num_blocks * kBlobfsBlockSize]);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    for (unsigned i = 0; i < inode->num_blocks; i++) {
+        ReadBlock(data_start_block_ + inode->start_block + i);
+        memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
+    }
+
+    uint8_t* data_ptr = data.get() + (MerkleTreeBlocks(*inode) * kBlobfsBlockSize);
+    Digest digest(&inode->merkle_root_hash[0]);
+    return MerkleTree::Verify(data_ptr, inode->blob_size, data.get(),
+                              MerkleTree::GetTreeLength(inode->blob_size), 0,
+                              inode->blob_size, digest);
+}
 } // namespace blobfs
 
 // This is used by the ioctl wrappers in magenta/device/device.h. It's not
