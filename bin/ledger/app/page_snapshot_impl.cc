@@ -15,6 +15,7 @@
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/lib/callback/trace_callback.h"
@@ -184,9 +185,14 @@ void FillEntries(
               size_t i = 0;
               for (; i < results.size(); i++) {
                 fidl::StructPtr<EntryType>& entry_ptr = context->entries[i];
+                size_t next_token_size =
+                    i + 1 >= results.size()
+                        ? 0
+                        : fidl_serialization::GetByteArraySize(
+                              context->entries[i + 1]->key.size());
                 if (!results[i]) {
                   size_t entry_size = ComputeEntrySize(entry_ptr);
-                  if (real_size + entry_size >
+                  if (real_size + entry_size + next_token_size >
                       fidl_serialization::kMaxInlineDataSize) {
                     break;
                   }
@@ -202,7 +208,7 @@ void FillEntries(
                 storage::Status read_status =
                     FillSingleEntry(*results[i], &entry_ptr);
                 size_t entry_size = ComputeEntrySize(entry_ptr);
-                if (real_size + entry_size >
+                if (real_size + entry_size + next_token_size >
                     fidl_serialization::kMaxInlineDataSize) {
                   break;
                 }

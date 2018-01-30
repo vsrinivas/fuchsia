@@ -8,19 +8,21 @@ namespace ledger {
 namespace fidl_serialization {
 
 size_t GetByteArraySize(size_t array_length) {
-  return array_length + kArrayHeaderSize;
+  return fidl::internal::Align(array_length) + kArrayHeaderSize;
 }
 
 size_t GetEntrySize(size_t key_length) {
-  size_t key_size = key_length + kArrayHeaderSize;
-  size_t object_size = kHandleSize;
-  return kPointerSize + key_size + object_size + kEnumSize;
+  size_t key_size = GetByteArraySize(key_length);
+  size_t object_size = GetByteArraySize(kHandleSize);
+  return kPointerSize + key_size + object_size +
+         fidl::internal::Align(kEnumSize);
 }
 
 size_t GetInlinedEntrySize(const InlinedEntryPtr& entry) {
-  size_t key_size = entry->key.size() + kArrayHeaderSize;
-  size_t object_size = entry->value.size() + kArrayHeaderSize;
-  return kPointerSize + key_size + object_size + kEnumSize;
+  size_t key_size = kPointerSize + GetByteArraySize(entry->key.size());
+  size_t object_size = kPointerSize + GetByteArraySize(entry->value.size());
+  return kPointerSize + kStructHeaderSize + key_size + object_size +
+         fidl::internal::Align(kEnumSize);
 }
 
 }  // namespace fidl_serialization

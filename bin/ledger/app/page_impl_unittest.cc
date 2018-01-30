@@ -748,6 +748,60 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   }
 }
 
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
+  const size_t min_key_size = 8;
+  const size_t min_value_size = 1;
+  // Approximate size of the entry: takes into account size of the pointers for
+  // key, object and entry itself; enum size for Priority and size of the header
+  // for the InlinedEntry struct.
+  const size_t min_entry_size =
+      fidl_serialization::kPointerSize * 3 + fidl_serialization::kEnumSize +
+      fidl_serialization::kStructHeaderSize +
+      fidl_serialization::GetByteArraySize(min_key_size) +
+      fidl_serialization::GetByteArraySize(min_value_size);
+  // Put enough inlined entries to cause pagination based on size of the
+  // message.
+  const size_t entry_count =
+      fidl_serialization::kMaxInlineDataSize * 3 / 2 / min_entry_size;
+  AddEntries(entry_count, 0, min_value_size);
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  // Call GetEntries and find a partial result.
+  Status status;
+  fidl::Array<InlinedEntryPtr> actual_entries;
+  fidl::Array<uint8_t> actual_next_token;
+  snapshot->GetEntriesInline(
+      nullptr, nullptr,
+      callback::Capture(MakeQuitTask(), &status, &actual_entries,
+                        &actual_next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::PARTIAL_RESULT, status);
+  EXPECT_FALSE(actual_next_token.is_null());
+
+  // Call GetEntries with the previous token and receive the remaining results.
+  fidl::Array<InlinedEntryPtr> actual_entries2;
+  fidl::Array<uint8_t> actual_next_token2;
+  snapshot->GetEntriesInline(
+      nullptr, std::move(actual_next_token),
+      callback::Capture(MakeQuitTask(), &status, &actual_entries2,
+                        &actual_next_token2));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(actual_next_token2.is_null());
+  for (auto& entry : actual_entries2) {
+    actual_entries.push_back(std::move(entry));
+  }
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+
+  // Check that the correct values of the keys are all present in the result and
+  // in the correct order.
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(GetValue(i, min_value_size),
+              convert::ToString(actual_entries[i]->value));
+  }
+}
+
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   const size_t entry_count = 100;
   AddEntries(entry_count);
