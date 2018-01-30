@@ -6,6 +6,8 @@ visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("primitives") {
   sources = [
+    "encrypt.cc",
+    "encrypt.h",
     "hash.cc",
     "hash.h",
     "hmac.cc",
@@ -29,6 +31,7 @@ source_set("unittests") {
   testonly = true
   sources = [
     "crypto_test_util.cc",
+    "encrypt_unittest.cc",
     "hmac_unittest.cc",
     "kdf_unittest.cc",
   ]
