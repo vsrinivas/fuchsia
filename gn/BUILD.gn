@@ -543,6 +543,7 @@ template("vboot") {
     kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
     private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
     inputs = [
+      futility_bin,
       kernel_keyblock,
       private_keyblock,
     ]
@@ -551,6 +552,7 @@ template("vboot") {
     foreach(bootdata_label, invoker.deps) {
       bootdata_bins += get_target_outputs(bootdata_label)
     }
+    inputs += bootdata_bins
     deps += invoker.deps
 
     bootdata_bin = bootdata_bins[0]
@@ -558,6 +560,7 @@ template("vboot") {
 
     kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
     zircon_bin = "$kernel_build_dir/zircon.bin"
+    inputs += [ zircon_bin ]
 
     output = "$images_dir/$output_name"
     outputs = [
