@@ -53,7 +53,8 @@
 #define SS_CONTEXTIDR_EL1   (SS_CNTKCTL_EL1 + 8)
 #define SS_CPACR_EL1        (SS_CONTEXTIDR_EL1 + 8)
 #define SS_CSSELR_EL1       (SS_CPACR_EL1 + 8)
-#define SS_ESR_EL1          (SS_CSSELR_EL1 + 8)
+#define SS_ELR_EL1          (SS_CSSELR_EL1 + 8)
+#define SS_ESR_EL1          (SS_ELR_EL1 + 8)
 #define SS_FAR_EL1          (SS_ESR_EL1 + 8)
 #define SS_MAIR_EL1         (SS_FAR_EL1 + 8)
 #define SS_MDSCR_EL1        (SS_MAIR_EL1 + 8)
@@ -81,7 +82,7 @@
 #define GS_FAR_EL2          (GS_ESR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
 
-#define HS_X18              (GS_HPFAR_EL2 + 8)
+#define HS_X18              (GS_HPFAR_EL2 + 16)
 // NOTE(abdulla): This differs from GS_X in that it calculates a value relative
 // to host_state.x, and not relative to El2State.
 #define HS_X(num)           ((num) * 8)
@@ -113,6 +114,7 @@ struct SystemState {
     algn32_t contextidr_el1;
     algn32_t cpacr_el1;
     algn32_t csselr_el1;
+    uint64_t elr_el1;
     algn32_t esr_el1;
     uint64_t far_el1;
     uint64_t mair_el1;
@@ -169,6 +171,7 @@ static_assert(__offsetof(SystemState, cntkctl_el1) == SS_CNTKCTL_EL1, "");
 static_assert(__offsetof(SystemState, contextidr_el1) == SS_CONTEXTIDR_EL1, "");
 static_assert(__offsetof(SystemState, cpacr_el1) == SS_CPACR_EL1, "");
 static_assert(__offsetof(SystemState, csselr_el1) == SS_CSSELR_EL1, "");
+static_assert(__offsetof(SystemState, elr_el1) == SS_ELR_EL1, "");
 static_assert(__offsetof(SystemState, esr_el1) == SS_ESR_EL1, "");
 static_assert(__offsetof(SystemState, far_el1) == SS_FAR_EL1, "");
 static_assert(__offsetof(SystemState, mair_el1) == SS_MAIR_EL1, "");

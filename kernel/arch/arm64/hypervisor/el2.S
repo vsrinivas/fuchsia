@@ -84,6 +84,7 @@
     system_register \inst, SS_CONTEXTIDR_EL1, contextidr_el1
     system_register \inst, SS_CPACR_EL1, cpacr_el1
     system_register \inst, SS_CSSELR_EL1, csselr_el1
+    system_register \inst, SS_ELR_EL1, esr_el1
     system_register \inst, SS_ESR_EL1, esr_el1
     system_register \inst, SS_FAR_EL1, far_el1
     system_register \inst, SS_MAIR_EL1, mair_el1
