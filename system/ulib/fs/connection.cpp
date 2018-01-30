@@ -447,7 +447,6 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             // Mounting requires ADMIN privileges
             if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
                 vfs_unmount_handle(msg->handle[0], 0);
-                zx_handle_close(msg->handle[0]);
                 return ZX_ERR_ACCESS_DENIED;
             }
             // If our permissions validate, fall through to the VFS ioctl

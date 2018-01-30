@@ -124,6 +124,9 @@ bool FmountFunmount(void) {
 
 // All "parent" filesystems attempt to mount a MinFS ramdisk under malicious
 // conditions.
+//
+// Note: For cases where "fmount" fails, we briefly sleep to allow the
+// filesystem to unmount itself and relinquish control of the block device.
 bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     BEGIN_HELPER;
     char ramdisk_path[PATH_MAX];
@@ -141,8 +144,9 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     // Everything *would* be perfect to call fmount, when suddenly...
     ASSERT_EQ(rmdir(mount_path), 0);
     // The directory was unlinked! We can't mount now!
-    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
-              ZX_OK);
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_ERR_NOT_DIR);
+    usleep(10000);
     ASSERT_NE(fumount(mountfd), ZX_OK);
     ASSERT_EQ(close(mountfd), 0, "Couldn't close unlinked not-mount point");
 
@@ -154,8 +158,9 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     mountfd = open(mount_path, O_CREAT | O_RDWR);
     ASSERT_GT(mountfd, 0);
     // Wait a sec, that was a file, not a directory! We can't mount that!
-    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
-              ZX_OK);
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_ERR_ACCESS_DENIED);
+    usleep(10000);
     ASSERT_NE(fumount(mountfd), ZX_OK);
     ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");
     ASSERT_EQ(unlink(mount_path), 0);
@@ -169,6 +174,7 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
               ZX_ERR_ACCESS_DENIED);
+    usleep(10000);
     ASSERT_EQ(close(mountfd), 0, "Couldn't close the unpriviledged mount point");
 
     // Okay, fine, let's mount successfully...
@@ -181,8 +187,9 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     // Awesome, that worked. But we shouldn't be able to mount again!
     fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0);
-    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
-              ZX_OK);
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_ERR_BAD_STATE);
+    usleep(10000);
     ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
     // Let's try removing the mount point (we shouldn't be allowed to do so)

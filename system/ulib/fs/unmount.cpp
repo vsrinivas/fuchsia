@@ -13,7 +13,7 @@
 
 // Sends an 'unmount' signal on the srv handle, and waits until it is closed.
 // Consumes 'srv'.
-zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
+zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t timeout) {
     zxrio_msg_t msg;
     memset(&msg, 0, ZXRIO_HDR_SZ);
 
@@ -41,7 +41,8 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     // filesystem server (or even if it supports the unmount operation). As
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount, &rs);
+    zx_status_t status = zx_channel_call(srv, 0, zx_deadline_after(timeout),
+                                         &args, &dsize, &hcount, &rs);
     if (status == ZX_ERR_CALL_FAILED) {
         // Write phase succeeded. The target filesystem had a chance to unmount properly.
         status = ZX_OK;
