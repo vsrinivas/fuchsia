@@ -51,7 +51,6 @@
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 bool use_filename_prefix = true;
-bool use_net186_workaround = false;
 
 static bool use_tftp = true;
 static bool use_color = true;
@@ -474,7 +473,7 @@ int main(int argc, char** argv) {
             continue;
         if (msg->cmd != NB_ADVERTISE)
             continue;
-        if ((use_tftp && (msg->arg < NB_VERSION_1_2)) ||
+        if ((use_tftp && (msg->arg < NB_VERSION_1_3)) ||
             (!use_tftp && (msg->arg < NB_VERSION_1_1))) {
             log("%sIncompatible version 0x%08X of bootloader "
                 "detected from %s, please upgrade your bootloader%s",
@@ -483,9 +482,6 @@ int main(int argc, char** argv) {
                 return -1;
             }
             continue;
-        }
-        if (msg->arg < NB_VERSION_1_3) {
-            use_net186_workaround = true;
         }
 
         log("got beacon from %s", sockaddr_str(&ra));

@@ -244,11 +244,6 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
                                               transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
 
-    // Work around for NET-186
-    if (use_net186_workaround) {
-        tftp_session_set_block_host_endianness(session, true);
-    }
-
     uint16_t default_block_size = DEFAULT_TFTP_BLOCK_SZ;
     uint16_t default_window_size = DEFAULT_TFTP_WIN_SZ;
     tftp_set_options(session, &default_block_size, NULL, &default_window_size);
