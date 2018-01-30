@@ -411,11 +411,28 @@ static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t 
     return ZX_OK;
 }
 
+static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* out_info) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GET_DEVICE_INFO,
+    };
+    pdev_resp_t resp;
+
+    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0,
+                                          NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+    memcpy(out_info, &resp.info, sizeof(*out_info));
+    return ZX_OK;
+}
+
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
     .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
     .map_contig_vmo = platform_dev_map_contig_vmo,
+    .get_device_info = platform_dev_get_device_info,
 };
 
 static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {

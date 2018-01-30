@@ -15,6 +15,18 @@
 __BEGIN_CDECLS;
 
 typedef struct {
+    uint32_t flags;
+    uint32_t vid;
+    uint32_t pid;
+    uint32_t did;
+    uint32_t mmio_count;
+    uint32_t irq_count;
+    uint32_t gpio_count;
+    uint32_t i2c_channel_count;
+    uint32_t reserved[8];
+} pdev_device_info_t;
+
+typedef struct {
     zx_status_t (*map_mmio)(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
                             size_t* out_size, zx_handle_t* out_handle);
     zx_status_t (*map_interrupt)(void* ctx, uint32_t index, zx_handle_t* out_handle);
@@ -22,6 +34,7 @@ typedef struct {
                                     zx_handle_t* out_handle);
     zx_status_t (*map_contig_vmo)(void* ctx, size_t size, uint32_t align_log2, uint32_t map_flags,
                                   void** out_vaddr, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
+    zx_status_t (*get_device_info)(void* ctx, pdev_device_info_t* out_info);
 } platform_device_protocol_ops_t;
 
 typedef struct {
@@ -55,6 +68,11 @@ static inline zx_status_t pdev_map_contig_vmo(platform_device_protocol_t* pdev, 
                                                 zx_handle_t* out_handle) {
     return pdev->ops->map_contig_vmo(pdev->ctx, size, align_log2, map_flags, out_vaddr, out_paddr,
                                      out_handle);
+}
+
+static inline zx_status_t pdev_get_device_info(platform_device_protocol_t* pdev,
+                                               pdev_device_info_t* out_info) {
+    return pdev->ops->get_device_info(pdev->ctx, out_info);
 }
 
 // MMIO and contiguous VMO mapping helpers

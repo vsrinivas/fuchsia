@@ -147,11 +147,27 @@ static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t 
     return ZX_OK;
 }
 
+static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* out_info) {
+    platform_dev_t* dev = ctx;
+
+    memset(out_info, 0, sizeof(*out_info));
+    out_info->vid = dev->vid;
+    out_info->pid = dev->pid;
+    out_info->did = dev->did;
+    out_info->mmio_count = dev->mmio_count;
+    out_info->irq_count = dev->irq_count;
+    out_info->gpio_count = dev->gpio_count;
+    out_info->i2c_channel_count = dev->i2c_channel_count;
+
+    return ZX_OK;
+}
+
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
     .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
     .map_contig_vmo = platform_dev_map_contig_vmo,
+    .get_device_info = platform_dev_get_device_info,
 };
 
 static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
@@ -392,6 +408,9 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         resp.status = pdev_rpc_alloc_contig_vmo(dev, req->contig_vmo.size,
                                                     req->contig_vmo.align_log2,
                                                     &handle, &handle_count);
+        break;
+    case PDEV_GET_DEVICE_INFO:
+         resp.status = platform_dev_get_device_info(dev, &resp.info);
         break;
     case PDEV_UMS_GET_INITIAL_MODE:
         resp.status = pdev_rpc_ums_get_initial_mode(dev, &resp.usb_mode);

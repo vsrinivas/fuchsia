@@ -19,6 +19,7 @@ enum {
     PDEV_GET_MMIO = 1,
     PDEV_GET_INTERRUPT,
     PDEV_ALLOC_CONTIG_VMO,
+    PDEV_GET_DEVICE_INFO,
 
     // ZX_PROTOCOL_USB_MODE_SWITCH
     PDEV_UMS_GET_INITIAL_MODE,
@@ -91,5 +92,6 @@ typedef struct {
             zx_off_t offset;
             size_t length;
         } mmio;
+        pdev_device_info_t info;
     };
 } pdev_resp_t;
