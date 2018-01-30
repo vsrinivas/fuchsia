@@ -59,6 +59,7 @@ build/gn/gen.py \
   --target_cpu=$ARCH \
   --platforms=$PLATFORM \
   --packages="${PACKAGE:-${DEFAULT_GN_PACKAGES}},build/packages/bootfs" \
+  --args bootfs_packages=true \
   $GN_ASAN \
   $GN_GOMA
 
