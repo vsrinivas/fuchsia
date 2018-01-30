@@ -1945,14 +1945,13 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 #ifdef __Fuchsia__
 void VnodeMinfs::Sync(SyncCallback closure) {
     TRACE_DURATION("minfs", "VnodeMinfs::Sync");
-    completion_t completion;
-    fs_->Sync([this, &closure](zx_status_t status) {
+    fs_->Sync([this, cb = fbl::move(closure)](zx_status_t status) {
         if (status != ZX_OK) {
-            closure(status);
+            cb(status);
             return;
         }
         status = fs_->bc_->Sync();
-        closure(status);
+        cb(status);
     });
     return;
 }
