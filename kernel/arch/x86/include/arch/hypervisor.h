@@ -87,7 +87,7 @@ struct LocalApicState {
 // Represents a virtual CPU within a guest.
 class Vcpu {
 public:
-    static zx_status_t Create(zx_vaddr_t ip, zx_vaddr_t cr3, zx_paddr_t msr_bitmaps_address,
+    static zx_status_t Create(zx_vaddr_t entry, zx_paddr_t msr_bitmaps_address,
                               GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                               fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
@@ -121,7 +121,7 @@ zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, si
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 // Create a VCPU.
-zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, zx_paddr_t msr_bitmaps_address,
+zx_status_t x86_vcpu_create(zx_vaddr_t entry, zx_paddr_t msr_bitmaps_address,
                             GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                             fbl::unique_ptr<Vcpu>* out);
 

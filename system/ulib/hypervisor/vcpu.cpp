@@ -10,8 +10,8 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
-#include <hypervisor/io.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/io.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -24,7 +24,7 @@
 #if __aarch64__
 static zx_status_t handle_mmio_arm(const zx_packet_guest_mem_t* mem, uint64_t trap_key,
                                    uint64_t* reg) {
-    IoValue mmio = { mem->access_size, { .u64 = mem->data } };
+    IoValue mmio = {mem->access_size, {.u64 = mem->data}};
     if (!mem->read)
         return trap_key_to_mapping(trap_key)->Write(mem->addr, mmio);
 
@@ -40,7 +40,7 @@ static zx_status_t handle_mmio_arm(const zx_packet_guest_mem_t* mem, uint64_t tr
 static zx_status_t handle_mmio_x86(const zx_packet_guest_mem_t* mem, uint64_t trap_key,
                                    const instruction_t* inst) {
     zx_status_t status;
-    IoValue mmio = { inst->access_size, { .u64 = 0 } };
+    IoValue mmio = {inst->access_size, {.u64 = 0}};
     switch (inst->type) {
     case INST_MOV_WRITE:
         switch (inst->access_size) {
@@ -176,16 +176,16 @@ static zx_status_t handle_vcpu(Vcpu* vcpu, const zx_packet_guest_vcpu_t* packet,
 struct Vcpu::ThreadEntryArgs {
     Guest* guest;
     Vcpu* vcpu;
-    zx_vcpu_create_args_t* vcpu_create_args;
+    zx_vaddr_t entry;
 };
 
-zx_status_t Vcpu::Create(Guest* guest, zx_vcpu_create_args_t* vcpu_create_args, uint64_t id) {
+zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
     guest_ = guest;
     id_ = id;
     ThreadEntryArgs args = {
         .guest = guest,
         .vcpu = this,
-        .vcpu_create_args = vcpu_create_args,
+        .entry = entry,
     };
     fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
     name_buffer.AppendPrintf("vcpu-%lu", id);
@@ -213,7 +213,7 @@ zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
             return ZX_ERR_BAD_STATE;
         }
 
-        zx_status_t status = zx_vcpu_create(args->guest->handle(), 0, args->vcpu_create_args, &vcpu_);
+        zx_status_t status = zx_vcpu_create(args->guest->handle(), 0, args->entry, &vcpu_);
         if (status != ZX_OK) {
             SetStateLocked(State::ERROR_FAILED_TO_CREATE);
             return status;

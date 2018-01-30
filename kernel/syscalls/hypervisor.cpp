@@ -62,8 +62,7 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
 }
 
 zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
-                            user_in_ptr<const zx_vcpu_create_args_t> user_args,
-                            user_out_handle* out) {
+                            zx_vaddr_t entry, user_out_handle* out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -73,26 +72,11 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-    zx_vcpu_create_args_t args;
-    status = user_args.copy_from_user(&args);
-    if (status != ZX_OK)
-        return status;
-
-#if ARCH_ARM64
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    status = VcpuDispatcher::Create(guest, args.ip, &dispatcher, &rights);
+    status = VcpuDispatcher::Create(guest, entry, &dispatcher, &rights);
     if (status != ZX_OK)
         return status;
-#elif ARCH_X86_64
-    fbl::RefPtr<Dispatcher> dispatcher;
-    zx_rights_t rights;
-    status = VcpuDispatcher::Create(guest, args.ip, args.cr3, &dispatcher, &rights);
-    if (status != ZX_OK)
-        return status;
-#else
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
 
     return out->make(fbl::move(dispatcher), rights);
 }

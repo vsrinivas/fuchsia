@@ -46,7 +46,7 @@ static zx_status_t get_gich(volatile Gich** gich) {
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                          TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
     uint8_t vpid;
     zx_status_t status = alloc_vpid(&vpid);
@@ -74,7 +74,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     vcpu->gich_state_.gich->hcr |= kGichHcrEn;
     vcpu->gich_state_.num_lrs = (vcpu->gich_state_.gich->vtr & kGichVtrListRegs) + 1;
     vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
-    vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
+    vcpu->el2_state_.guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC |
                  HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
@@ -228,9 +228,9 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return ZX_OK;
 }
 
-zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+zx_status_t arm_vcpu_create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                             TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(ip, vmid, gpas, traps, out);
+    return Vcpu::Create(entry, vmid, gpas, traps, out);
 }
 
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {

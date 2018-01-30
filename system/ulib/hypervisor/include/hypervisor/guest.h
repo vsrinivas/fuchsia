@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/intrusive_single_list.h>
 #include <fbl/function.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/io.h>
 #include <hypervisor/phys_mem.h>
@@ -27,7 +27,7 @@ enum class TrapType {
 
 class Guest {
 public:
-    using VcpuFactory = fbl::Function<zx_status_t(Guest* guest, uintptr_t guest_ip, uint64_t id,
+    using VcpuFactory = fbl::Function<zx_status_t(Guest* guest, uintptr_t entry, uint64_t id,
                                                   Vcpu* vcpu)>;
 
     ~Guest();
@@ -44,7 +44,7 @@ public:
     // Setup a handler function to run when an additional VCPU is brought up.
     void RegisterVcpuFactory(VcpuFactory factory);
 
-    zx_status_t StartVcpu(uintptr_t guest_ip, uint64_t id);
+    zx_status_t StartVcpu(uintptr_t entry, uint64_t id);
 
 private:
     // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
@@ -58,7 +58,7 @@ private:
     zx::port port_;
     fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>> mappings_;
 
-    VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t guest_ip, uint64_t id, Vcpu* vcpu) {
+    VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t entry, uint64_t id, Vcpu* vcpu) {
         return ZX_ERR_BAD_STATE;
     };
     fbl::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};

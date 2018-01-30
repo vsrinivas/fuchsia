@@ -7,7 +7,7 @@
 #include "constants_priv.h"
 
 #define IA32_GS_BASE              0xc0000101
-#define INTERRUPT_ADDR(base, x)   (x - base + GUEST_IP)
+#define INTERRUPT_ADDR(base, x)   (x - base + GUEST_ENTRY)
 #define CODE_64_SELECTOR          0x8
 
 .text
@@ -15,7 +15,7 @@
 .macro init_interrupt_handling start
     lgdt INTERRUPT_ADDR(\start, gdtr_for_\start)
     lidt INTERRUPT_ADDR(\start, idtr_for_\start)
-    mov $GUEST_IP + 0x1000, %rsp
+    mov $GUEST_ENTRY + 0x1000, %rsp
     jmp end_of_\start
 
 int0_for_\start:

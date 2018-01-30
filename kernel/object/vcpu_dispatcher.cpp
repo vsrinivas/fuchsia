@@ -14,23 +14,18 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t ip,
-#if ARCH_X86_64
-                                   zx_vaddr_t cr3,
-#endif
+zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
     GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
-    if (ip >= gpas->size())
+    if (entry >= gpas->size())
         return ZX_ERR_INVALID_ARGS;
 
     fbl::unique_ptr<Vcpu> vcpu;
 #if ARCH_ARM64
-    zx_status_t status = arm_vcpu_create(ip, guest->Vmid(), gpas, guest->Traps(), &vcpu);
+    zx_status_t status = arm_vcpu_create(entry, guest->Vmid(), gpas, guest->Traps(), &vcpu);
 #elif ARCH_X86_64
-    if (cr3 >= gpas->size() - PAGE_SIZE)
-        return ZX_ERR_INVALID_ARGS;
-    zx_status_t status = x86_vcpu_create(ip, cr3, guest->MsrBitmapsAddress(), gpas, guest->Traps(),
+    zx_status_t status = x86_vcpu_create(entry, guest->MsrBitmapsAddress(), gpas, guest->Traps(),
                                          &vcpu);
 #else
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;

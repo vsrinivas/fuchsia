@@ -12,7 +12,6 @@
 #include <zircon/types.h>
 
 typedef struct zx_vcpu_state zx_vcpu_state_t;
-typedef struct zx_vcpu_create_args zx_vcpu_create_args_t;
 
 class Guest;
 
@@ -56,10 +55,10 @@ public:
     //
     // Upon successful completion the VCPU will be in the state
     // |WAITING_TO_START|.
-    zx_status_t Create(Guest* guest, zx_vcpu_create_args_t* args, uint64_t id);
+    zx_status_t Create(Guest* guest, zx_vaddr_t entry, uint64_t id);
 
     // TODO(alexlegg): Remove this once the above is used in Garnet.
-    zx_status_t Create(Guest* guest, zx_vcpu_create_args_t* args) { return Create(guest, args, 0); }
+    zx_status_t Create(Guest* guest, zx_vaddr_t entry) { return Create(guest, entry, 0); }
 
     // Begins VCPU execution.
     //
@@ -72,7 +71,6 @@ public:
 
     // TODO(tjdetwiler): These should be made private as they're not thread-
     // safe.
-    zx_status_t Loop();
     zx_status_t Interrupt(uint32_t vector);
 
     zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
@@ -86,6 +84,9 @@ private:
     // interaction with the VCPU syscalls.
     struct ThreadEntryArgs;
     zx_status_t ThreadEntry(const ThreadEntryArgs* args);
+
+    // Resume the VCPU and handle packets in a loop.
+    zx_status_t Loop();
 
     // Sets the VCPU state and notifies any waiters.
     void SetStateLocked(State new_state) __TA_REQUIRES(mutex_);

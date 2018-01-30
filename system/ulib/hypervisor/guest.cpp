@@ -176,7 +176,7 @@ void Guest::RegisterVcpuFactory(VcpuFactory factory) {
     vcpu_factory_ = fbl::move(factory);
 }
 
-zx_status_t Guest::StartVcpu(uintptr_t guest_ip, uint64_t id) {
+zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
     if (id >= kMaxVcpus) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -184,7 +184,7 @@ zx_status_t Guest::StartVcpu(uintptr_t guest_ip, uint64_t id) {
         return ZX_ERR_ALREADY_EXISTS;
     }
     auto vcpu = fbl::make_unique<Vcpu>();
-    zx_status_t status = vcpu_factory_(this, guest_ip, id, vcpu.get());
+    zx_status_t status = vcpu_factory_(this, entry, id, vcpu.get());
     if (status != ZX_OK) {
         return status;
     }

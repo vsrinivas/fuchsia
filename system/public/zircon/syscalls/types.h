@@ -12,7 +12,6 @@ typedef struct zx_pci_bar zx_pci_bar_t;
 typedef struct zx_pcie_device_info zx_pcie_device_info_t;
 typedef struct zx_pci_init_arg zx_pci_init_arg_t;
 typedef union zx_rrec zx_rrec_t;
-typedef struct zx_vcpu_create_args zx_vcpu_create_args_t;
 typedef struct zx_system_powerctl_arg zx_system_powerctl_arg_t;
 
 __END_CDECLS

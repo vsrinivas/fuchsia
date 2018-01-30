@@ -11,7 +11,7 @@ vcpu_create - create a VCPU
 #include <zircon/syscalls/hypervisor.h>
 
 zx_status_t zx_vcpu_create(zx_handle_t guest, uint32_t options,
-                           const zx_vcpu_create_args_t* args, zx_handle_t* out);
+                           zx_vaddr_t entry, zx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -21,9 +21,8 @@ within the virtual machine. One or more VCPUs may be created per guest, where
 the number of VCPUs does not need to match the number of physical CPUs on the
 machine.
 
-*args* contains the instruction pointer used to indicate where in guest physical
-memory execution of the VCPU should start, as well as architecture-specific
-arguments required to begin execution.
+*entry* is the instruction pointer used to indicate where in guest physical
+memory execution of the VCPU should start.
 
 *vcpu* is bound to the thread that created it, and all syscalls that operate on
 it must be called from the same thread, with the exception of

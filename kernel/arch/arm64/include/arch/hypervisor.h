@@ -104,7 +104,7 @@ private:
 
 class Vcpu {
 public:
-    static zx_status_t Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+    static zx_status_t Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                               TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
@@ -137,7 +137,7 @@ zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, si
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
-zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+zx_status_t arm_vcpu_create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                             TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */

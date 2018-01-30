@@ -249,7 +249,7 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
     entry->value = value;
 }
 
-zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
+zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page) {
     zx_status_t status = vmclear(vmcs_address);
@@ -527,8 +527,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
     vmcs.Write(VmcsField32::GUEST_IA32_SYSENTER_CS, 0);
 
     vmcs.Write(VmcsFieldXX::GUEST_RSP, 0);
-    vmcs.Write(VmcsFieldXX::GUEST_RIP, ip);
-    vmcs.Write(VmcsFieldXX::GUEST_CR3, cr3);
+    vmcs.Write(VmcsFieldXX::GUEST_RIP, entry);
+    vmcs.Write(VmcsFieldXX::GUEST_CR3, 0);
 
     // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
     // control is 1, the VMREAD and VMWRITE instructions access the VMCS
@@ -546,7 +546,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_address,
+zx_status_t Vcpu::Create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                          fbl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
@@ -593,9 +593,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_addr
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
-    status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, msr_bitmaps_address,
-                       gpas->table_phys(), &vcpu->vmx_state_, &vcpu->host_msr_page_,
-                       &vcpu->guest_msr_page_);
+    status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry,
+                       msr_bitmaps_address, gpas->table_phys(), &vcpu->vmx_state_,
+                       &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
     if (status != ZX_OK)
         return status;
 
@@ -605,7 +605,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_addr
 
 Vcpu::Vcpu(uint16_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
     : vpid_(vpid), thread_(thread), running_(false), gpas_(gpas), traps_(traps),
-    vmx_state_(/* zero-init */) {}
+      vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -761,10 +761,10 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, paddr_t msr_bitmaps_address,
+zx_status_t x86_vcpu_create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
                             GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                             fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(ip, cr3, msr_bitmaps_address, gpas, traps, out);
+    return Vcpu::Create(entry, msr_bitmaps_address, gpas, traps, out);
 }
 
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {

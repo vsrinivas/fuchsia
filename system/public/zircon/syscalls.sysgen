@@ -654,7 +654,7 @@ syscall guest_set_trap
     returns (zx_status_t);
 
 syscall vcpu_create
-    (guest: zx_handle_t, options: uint32_t, args: zx_vcpu_create_args_t[1] IN)
+    (guest: zx_handle_t, options: uint32_t, entry: zx_vaddr_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vcpu_resume

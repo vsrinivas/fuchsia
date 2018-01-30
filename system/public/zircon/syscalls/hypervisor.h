@@ -24,14 +24,6 @@ enum {
 };
 // clang-format on
 
-// Structure to create a VCPU for a guest.
-typedef struct zx_vcpu_create_args {
-    zx_vaddr_t ip;
-#if __x86_64__
-    zx_vaddr_t cr3;
-#endif
-} zx_vcpu_create_args_t;
-
 // Structure to read and write VCPU state.
 typedef struct zx_vcpu_state {
 #if __aarch64__
