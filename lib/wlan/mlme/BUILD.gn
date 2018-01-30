@@ -1,0 +1,62 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("wlan_mlme_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("mlme") {
+  sources = [
+    "ap_mlme.cpp",
+    "beacon_sender.cpp",
+    "bss.cpp",
+    "bss_client_map.cpp",
+    "client_mlme.cpp",
+    "debug.cpp",
+    "device_interface.cpp",
+    "hw_beacon_sender.cpp",
+    "include/wlan/mlme/action_frame.h",
+    "include/wlan/mlme/ap_mlme.h",
+    "include/wlan/mlme/beacon_sender.h",
+    "include/wlan/mlme/bss.h",
+    "include/wlan/mlme/bss_client_map.h",
+    "include/wlan/mlme/client_mlme.h",
+    "include/wlan/mlme/clock.h",
+    "include/wlan/mlme/debug.h",
+    "include/wlan/mlme/device_interface.h",
+    "include/wlan/mlme/frame_handler.h",
+    "include/wlan/mlme/fsm.h",
+    "include/wlan/mlme/hw_beacon_sender.h",
+    "include/wlan/mlme/infra_bss.h",
+    "include/wlan/mlme/mac_frame.h",
+    "include/wlan/mlme/macaddr_map.h",
+    "include/wlan/mlme/macaddr_map.h",
+    "include/wlan/mlme/mlme.h",
+    "include/wlan/mlme/packet.h",
+    "include/wlan/mlme/remote_client.h",
+    "include/wlan/mlme/scanner.h",
+    "include/wlan/mlme/serialize.h",
+    "include/wlan/mlme/station.h",
+    "include/wlan/mlme/timer.h",
+    "include/wlan/mlme/wlan.h",
+    "infra_bss.cpp",
+    "mac_frame.cpp",
+    "packet.cpp",
+    "remote_client.cpp",
+    "scanner.cpp",
+    "station.cpp",
+    "timer.cpp",
+  ]
+
+  public_deps = [
+    "//garnet/lib/wlan/common",
+    "//garnet/public/lib/wlan/fidl:mlme_data_only",
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  public_configs = [ ":wlan_mlme_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}

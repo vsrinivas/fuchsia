@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <driver/usb.h>
+#include <wlan/common/logging.h>
 
 #include <cstdint>
 #include <cstdio>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include "device.h"
-#include "logging.h"
 
 extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     std::printf("%s\n", __func__);

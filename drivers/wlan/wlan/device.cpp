@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "device.h"
-#include "logging.h"
-#include "serialize.h"
-#include "timer.h"
-#include "wlan.h"
 
 #include <fbl/limits.h>
 #include <wlan/common/channel.h>
+#include <wlan/common/logging.h>
+#include <wlan/mlme/serialize.h>
+#include <wlan/mlme/timer.h>
+#include <wlan/mlme/wlan.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/wlan.h>

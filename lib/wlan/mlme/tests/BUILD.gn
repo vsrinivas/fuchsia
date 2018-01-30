@@ -1,0 +1,119 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":common_tests",
+    ":mac_tests",
+    ":scanner_tests",
+  ]
+}
+
+source_set("test_main") {
+  testonly = true
+
+  sources = [
+    "test_main.cpp",
+  ]
+
+  deps = [
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("mac_tests") {
+  output_name = "wlan_mac_unittest"
+
+  testonly = true
+
+  sources = [
+    "channel_unittest.cpp",
+    "element_unittest.cpp",
+    "mac_frame_unittest.cpp",
+    "macaddr_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("scanner_tests") {
+  output_name = "wlan_scanner_unittest"
+
+  testonly = true
+
+  sources = [
+    "scanner_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("common_tests") {
+  output_name = "wlan_common_unittest"
+
+  testonly = true
+
+  sources = [
+    "moving_average_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/common",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+package("wlan_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":tests",
+    "//garnet/drivers/wlan/testing",
+  ]
+
+  binaries = [
+    {
+      name = "wlan-test-util"
+    }
+  ]
+
+  tests = [
+    {
+      name = "wlan_mac_unittest"
+    },
+
+    {
+      name = "wlan_scanner_unittest"
+    },
+
+    {
+      name = "wlan_common_unittest"
+    },
+  ]
+
+  drivers = [{
+        name = "wlanphy-testdev.so"
+      }]
+}

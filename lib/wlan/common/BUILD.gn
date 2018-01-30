@@ -9,15 +9,26 @@ config("wlan_common_config") {
 source_set("common") {
   sources = [
     "channel.cpp",
+    "element.cpp",
+    "include/wlan/common/action_frame.h",
     "include/wlan/common/bitfield.h",
     "include/wlan/common/channel.h",
     "include/wlan/common/cipher.h",
+    "include/wlan/common/element.h",
+    "include/wlan/common/element_id.h",
+    "include/wlan/common/loggging.h",
+    "include/wlan/common/mac_frame.h",
     "include/wlan/common/macaddr.h",
     "include/wlan/common/moving_average.h",
+    "mac_frame.cpp",
     "macaddr.cpp",
+  ]
+
+  public_deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ ":wlan_common_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
-

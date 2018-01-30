@@ -9,78 +9,19 @@ config("wlan_config") {
   include_dirs = [ "." ]
 }
 
-source_set("mlme") {
-  sources = [
-    "action_frame.h",
-    "ap_mlme.cpp",
-    "ap_mlme.h",
-    "beacon_sender.cpp",
-    "beacon_sender.h",
-    "bss.cpp",
-    "bss.h",
-    "bss_client_map.cpp",
-    "bss_client_map.h",
-    "client_mlme.cpp",
-    "client_mlme.h",
-    "clock.h",
-    "debug.cpp",
-    "debug.h",
-    "device_interface.cpp",
-    "device_interface.h",
-    "dispatcher.cpp",
-    "dispatcher.h",
-    "element.cpp",
-    "element.h",
-    "element_id.h",
-    "frame_handler.h",
-    "fsm.h",
-    "hw_beacon_sender.cpp",
-    "hw_beacon_sender.h",
-    "infra_bss.cpp",
-    "infra_bss.h",
-    "logging.h",
-    "macaddr_map.h",
-    "mac_frame.cpp",
-    "mac_frame.h",
-    "mlme.h",
-    "packet.cpp",
-    "packet.h",
-    "remote_client.cpp",
-    "remote_client.h",
-    "scanner.cpp",
-    "scanner.h",
-    "serialize.h",
-    "station.cpp",
-    "station.h",
-    "timer.cpp",
-    "timer.h",
-    "wlan.h",
-  ]
-
-  public_deps = [
-    "//garnet/lib/wlan/common",
-    "//garnet/public/lib/wlan/fidl:mlme_data_only",
-    "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-
-  public_configs = [ ":wlan_config" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-}
-
 driver_module("wlan_driver") {
   output_name = "wlan"
   sources = [
     "binding.c",
     "device.cpp",
     "device.h",
+    "dispatcher.cpp",
+    "dispatcher.h",
     "driver.cpp",
-    "logging.h",
   ]
 
   deps = [
-    ":mlme",
+    "//garnet/lib/wlan/mlme",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "device.h"
-#include "logging.h"
-#include "mac_frame.h"
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
@@ -13,6 +11,8 @@
 #include <fbl/auto_call.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
+#include <wlan/common/logging.h>
+#include <wlan/common/mac_frame.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zx/vmo.h>
@@ -3500,7 +3500,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     // Intercept Beacon frames and instead of sending them, write them into the corresponding
     // shared memory region.
     // TODO(hahnr): Delete once beacon configuration goes through dedicated DDK path.
-    auto frame_hdr = reinterpret_cast<const FrameHeader*>(pkt->packet_head->data);
+    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(pkt->packet_head->data);
     if (frame_hdr->fc.IsMgmt() && frame_hdr->fc.subtype() == 0x08) {
         return ConfigureBssBeacon(options, pkt);
     }
@@ -3608,8 +3608,8 @@ zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
-    auto frame_hdr = reinterpret_cast<const FrameHeader*>(wlan_packet->packet_head->data);
-    auto wcid = LookupTxWcid(frame_hdr->addr1, protected_frame);
+    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_packet->packet_head->data);
+    auto wcid = LookupTxWcid(frame_hdr->addr1.byte, protected_frame);
     Txwi1& txwi1 = usb_packet->txwi1;
     txwi1.set_ack(0);
     txwi1.set_nseq(0);

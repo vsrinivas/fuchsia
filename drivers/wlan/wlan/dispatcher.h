@@ -4,40 +4,13 @@
 
 #pragma once
 
-#include "mac_frame.h"
-#include "mlme.h"
-
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/mlme.h>
 #include <zircon/types.h>
 
 namespace wlan {
-
-// TODO(hahnr): Figure out if this should go somewhere else.
-enum class ObjectSubtype : uint8_t {
-    kTimer = 0,
-};
-
-enum class ObjectTarget : uint8_t {
-    kScanner = 0,
-    kStation = 1,
-    kBss = 2,
-};
-
-// An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits may be used.
-class ObjectId : public common::BitField<uint64_t> {
-   public:
-    constexpr explicit ObjectId(uint64_t id) : common::BitField<uint64_t>(id) {}
-    constexpr ObjectId() = default;
-
-    // ObjectSubtype
-    WLAN_BIT_FIELD(subtype, 0, 4);
-    // ObjectTarget
-    WLAN_BIT_FIELD(target, 4, 4);
-
-    // For objects with a MAC address
-    WLAN_BIT_FIELD(mac, 8, 48);
-};
 
 // The Dispatcher converts Packets, forwarded by the Device, into concrete frames, such as
 // management frames, or service messages.

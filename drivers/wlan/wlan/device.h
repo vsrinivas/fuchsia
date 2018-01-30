@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include "device_interface.h"
 #include "dispatcher.h"
-#include "packet.h"
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
@@ -17,6 +15,8 @@
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 #include <zx/port.h>
