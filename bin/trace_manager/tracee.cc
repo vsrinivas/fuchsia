@@ -4,6 +4,7 @@
 
 #include "garnet/bin/trace_manager/tracee.h"
 
+#include <async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
 
@@ -55,11 +56,13 @@ Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
 }  // namespace
 
 Tracee::Tracee(TraceProviderBundle* bundle)
-    : bundle_(bundle), weak_ptr_factory_(this) {}
+    : bundle_(bundle), wait_(this), weak_ptr_factory_(this) {}
 
 Tracee::~Tracee() {
-  if (fence_handler_key_) {
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  if (async_) {
+    wait_.Cancel(async_);
+    wait_.set_object(ZX_HANDLE_INVALID);
+    async_ = nullptr;
   }
 }
 
@@ -113,11 +116,13 @@ bool Tracee::Start(size_t buffer_size,
   fence_ = std::move(fence);
   started_callback_ = std::move(started_callback);
   stopped_callback_ = std::move(stopped_callback);
-  fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(),
-      (TRACE_PROVIDER_SIGNAL_STARTED |
-       TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
-       ZX_EPAIR_PEER_CLOSED));
+  wait_.set_object(fence_.get());
+  wait_.set_trigger(TRACE_PROVIDER_SIGNAL_STARTED |
+                    TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
+                    ZX_EPAIR_PEER_CLOSED);
+  async_ = async_get_default();
+  status = wait_.Begin(async_);
+  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
   TransitionToState(State::kStartPending);
   return true;
 }
@@ -135,9 +140,22 @@ void Tracee::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-void Tracee::OnHandleReady(zx_handle_t handle,
-                           zx_signals_t pending,
-                           uint64_t count) {
+async_wait_result_t Tracee::OnHandleReady(async_t* async,
+                                          zx_status_t status,
+                                          const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_VLOG(2) << *bundle_ << ": error=" << status;
+    FXL_DCHECK(status == ZX_ERR_CANCELED);
+    FXL_DCHECK(state_ == State::kStartPending ||
+              state_ == State::kStarted ||
+              state_ == State::kStopping);
+    wait_.set_object(ZX_HANDLE_INVALID);
+    async_ = nullptr;
+    TransitionToState(State::kStopped);
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  zx_signals_t pending = signal->observed;
   FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
   FXL_DCHECK(pending & (TRACE_PROVIDER_SIGNAL_STARTED |
                         TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
@@ -154,7 +172,7 @@ void Tracee::OnHandleReady(zx_handle_t handle,
     // a) It remains set until we do so,
     // b) Clear it before the call back in case we get back to back
     //    notifications.
-    zx_object_signal(handle, TRACE_PROVIDER_SIGNAL_STARTED, 0u);
+    zx_object_signal(wait_.object(), TRACE_PROVIDER_SIGNAL_STARTED, 0u);
     // The provider should only be signalling us when it has finished startup.
     if (state_ == State::kStartPending) {
       TransitionToState(State::kStarted);
@@ -170,7 +188,7 @@ void Tracee::OnHandleReady(zx_handle_t handle,
 
   if (pending & TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW) {
     // The signal remains set until we clear it.
-    zx_object_signal(handle, TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW, 0u);
+    zx_object_signal(wait_.object(), TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW, 0u);
     if (state_ == State::kStarted || state_ == State::kStopping) {
       FXL_LOG(WARNING) << *bundle_
                        << ": Records got dropped, probably due to buffer overflow";
@@ -183,23 +201,16 @@ void Tracee::OnHandleReady(zx_handle_t handle,
   }
 
   if (pending & ZX_EPAIR_PEER_CLOSED) {
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
-    fence_handler_key_ = 0u;
-
+    wait_.set_object(ZX_HANDLE_INVALID);
+    async_ = nullptr;
     TransitionToState(State::kStopped);
     fxl::Closure stopped_callback = std::move(stopped_callback_);
     FXL_DCHECK(stopped_callback);
     stopped_callback();
+    return ASYNC_WAIT_FINISHED;
   }
-}
 
-void Tracee::OnHandleError(zx_handle_t handle, zx_status_t error) {
-  FXL_VLOG(2) << *bundle_ << ": error=" << error;
-  FXL_DCHECK(error == ZX_ERR_CANCELED);
-  FXL_DCHECK(state_ == State::kStartPending ||
-             state_ == State::kStarted ||
-             state_ == State::kStopping);
-  TransitionToState(State::kStopped);
+  return ASYNC_WAIT_AGAIN;
 }
 
 Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {

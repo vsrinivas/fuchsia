@@ -5,11 +5,12 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 
-#include <functional>
-#include <iosfwd>
-
+#include <async/cpp/wait.h>
 #include <zx/socket.h>
 #include <zx/vmo.h>
+
+#include <functional>
+#include <iosfwd>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -17,12 +18,10 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 namespace tracing {
 
-class Tracee : private fsl::MessageLoopHandler {
+class Tracee {
  public:
 
   enum class State {
@@ -65,11 +64,9 @@ class Tracee : private fsl::MessageLoopHandler {
 
  private:
   void TransitionToState(State new_state);
-  // |fsl::MessageLoopHandler|
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
-  void OnHandleError(zx_handle_t handle, zx_status_t error) override;
+  async_wait_result_t OnHandleReady(async_t* async,
+                                    zx_status_t status,
+                                    const zx_packet_signal_t* signal);
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
   TransferStatus WriteProviderBufferOverflowEvent(const zx::socket& socket) const;
@@ -81,7 +78,8 @@ class Tracee : private fsl::MessageLoopHandler {
   zx::eventpair fence_;
   fxl::Closure started_callback_;
   fxl::Closure stopped_callback_;
-  fsl::MessageLoop::HandlerKey fence_handler_key_{};
+  async_t* async_ = nullptr;
+  async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
   bool buffer_overflow_ = false;
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;

@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
+#include <async/cpp/wait.h>
 #include <zx/socket.h>
 
 #include <functional>
@@ -13,8 +14,6 @@
 
 #include <trace-reader/reader.h>
 
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/tracing/fidl/trace_controller.fidl.h"
@@ -22,13 +21,13 @@
 namespace tracing {
 
 // Runs traces.
-class Tracer : private fsl::MessageLoopHandler {
+class Tracer {
  public:
   using RecordConsumer = trace::TraceReader::RecordConsumer;
   using ErrorHandler = trace::TraceReader::ErrorHandler;
 
   explicit Tracer(TraceController* controller);
-  ~Tracer() override;
+  ~Tracer();
 
   // Starts tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
@@ -44,12 +43,11 @@ class Tracer : private fsl::MessageLoopHandler {
   void Stop();
 
  private:
-  // |MessageLoopHandler|:
-  void OnHandleReady(zx_handle_t handle,
-                     zx_signals_t pending,
-                     uint64_t count) override;
+  async_wait_result_t OnHandleReady(async_t* async,
+                                    zx_status_t status,
+                                    const zx_packet_signal_t* signal);
 
-  void DrainSocket();
+  async_wait_result_t DrainSocket();
   void CloseSocket();
   void Done();
 
@@ -61,7 +59,8 @@ class Tracer : private fsl::MessageLoopHandler {
   fxl::Closure start_callback_;
   fxl::Closure done_callback_;
   zx::socket socket_;
-  fsl::MessageLoop::HandlerKey handler_key_;
+  async_t* async_;
+  async::WaitMethod<Tracer, &Tracer::OnHandleReady> wait_;
   std::unique_ptr<trace::TraceReader> reader_;
   std::vector<uint8_t> buffer_;
   size_t buffer_end_ = 0u;

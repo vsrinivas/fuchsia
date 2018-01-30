@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include <async/default.h>
 #include <fbl/type_support.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
@@ -23,8 +24,12 @@ constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
 
 }  // namespace
 
-Tracer::Tracer(TraceController* controller) : controller_(controller) {
+Tracer::Tracer(TraceController* controller)
+    : controller_(controller),
+      async_(nullptr),
+      wait_(this) {
   FXL_DCHECK(controller_);
+  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }
 
 Tracer::~Tracer() {
@@ -57,8 +62,10 @@ void Tracer::Start(TraceOptionsPtr options,
   reader_.reset(new trace::TraceReader(fbl::move(record_consumer),
                                        fbl::move(error_handler)));
 
-  handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
+  async_ = async_get_default();
+  wait_.set_object(socket_.get());
+  status = wait_.Begin(async_);
+  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
 void Tracer::Stop() {
@@ -69,35 +76,37 @@ void Tracer::Stop() {
   }
 }
 
-void Tracer::OnHandleReady(zx_handle_t handle,
-                           zx_signals_t pending,
-                           uint64_t count) {
+async_wait_result_t Tracer::OnHandleReady(async_t* async,
+                                          zx_status_t status,
+                                          const zx_packet_signal_t* signal) {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
-  if (pending & ZX_SOCKET_READABLE) {
-    DrainSocket();
-  } else if (pending & ZX_SOCKET_PEER_CLOSED) {
+  if (signal->observed & ZX_SOCKET_READABLE) {
+    return DrainSocket();
+  } else if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
     Done();
+    return ASYNC_WAIT_FINISHED;
   } else {
     FXL_CHECK(false);
+    return ASYNC_WAIT_FINISHED;
   }
 }
 
-void Tracer::DrainSocket() {
+async_wait_result_t Tracer::DrainSocket() {
   for (;;) {
     size_t actual;
     zx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);
     if (status == ZX_ERR_SHOULD_WAIT)
-      return;
+      return ASYNC_WAIT_AGAIN;
 
     if (status || actual == 0) {
       if (status != ZX_ERR_PEER_CLOSED) {
         FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();
-      return;
+      return ASYNC_WAIT_FINISHED;
     }
 
     buffer_end_ += actual;
@@ -109,7 +118,7 @@ void Tracer::DrainSocket() {
     if (!reader_->ReadRecords(chunk)) {
       FXL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
-      return;
+      return ASYNC_WAIT_FINISHED;
     }
 
     size_t bytes_consumed =
@@ -122,7 +131,9 @@ void Tracer::DrainSocket() {
 
 void Tracer::CloseSocket() {
   if (socket_) {
-    fsl::MessageLoop::GetCurrent()->RemoveHandler(handler_key_);
+    wait_.Cancel(async_);
+    wait_.set_object(ZX_HANDLE_INVALID);
+    async_ = nullptr;
     socket_.reset();
   }
 }
