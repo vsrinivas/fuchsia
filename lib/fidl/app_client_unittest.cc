@@ -30,7 +30,7 @@ class TestApplicationController : app::ApplicationController {
 
   void Connect(fidl::InterfaceRequest<app::ApplicationController> request) {
     binding_.Bind(std::move(request));
-    binding_.set_connection_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this] { Kill(); });
   }
 
   bool killed() { return killed_; }

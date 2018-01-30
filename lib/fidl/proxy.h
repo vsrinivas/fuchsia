@@ -86,8 +86,8 @@ Proxy<I>::Proxy(ProxySet* const set,
     : ProxyBase(set),
       ptr_(std::move(ptr)),
       binding_(ptr_.get(), std::move(request)) {
-  ptr_.set_connection_error_handler([this] { Drop(); });
-  binding_.set_connection_error_handler([this] { Drop(); });
+  ptr_.set_error_handler([this] { Drop(); });
+  binding_.set_error_handler([this] { Drop(); });
 }
 
 template <typename I>

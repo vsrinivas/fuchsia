@@ -151,7 +151,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    FXL_CHECK(outgoing_services.is_pending());
+    FXL_CHECK(outgoing_services.is_valid());
 
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;

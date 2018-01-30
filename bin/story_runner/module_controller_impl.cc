@@ -53,7 +53,7 @@ ModuleControllerImpl::ModuleControllerImpl(
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
 
   app_client_.services().ConnectToService(module_service_.NewRequest());
-  module_service_.set_connection_error_handler([this] { OnConnectionError(); });
+  module_service_.set_error_handler([this] { OnConnectionError(); });
   module_service_->Initialize(std::move(module_context),
                               std::move(incoming_services));
 
@@ -75,8 +75,7 @@ void ModuleControllerImpl::Connect(
 }
 
 EmbedModuleControllerPtr ModuleControllerImpl::NewEmbedModuleController() {
-  return EmbedModuleControllerPtr::Create(
-      embed_module_controller_bindings_.AddBinding(this));
+  return embed_module_controller_bindings_.AddBinding(this).Bind();
 }
 
 // If the Module instance closes its own connection, we signal this to
@@ -111,7 +110,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   }
 
   auto cont = [this] {
-    module_service_.reset();
+    module_service_.Unbind();
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
@@ -135,7 +134,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
   app_client_.SetAppErrorHandler(nullptr);
-  module_service_.set_connection_error_handler(nullptr);
+  module_service_.set_error_handler(nullptr);
 
   // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it
@@ -148,7 +147,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
 }
 
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
-  auto ptr = fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher));
+  auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
 }

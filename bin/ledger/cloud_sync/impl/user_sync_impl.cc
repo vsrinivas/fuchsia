@@ -158,7 +158,7 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
 void UserSyncImpl::SetCloudErasedWatcher() {
   cloud_provider::DeviceSetWatcherPtr watcher;
   if (watcher_binding_.is_bound()) {
-    watcher_binding_.Close();
+    watcher_binding_.Unbind();
   }
   watcher_binding_.Bind(watcher.NewRequest());
   device_set_->SetWatcher(convert::ToArray(fingerprint_), std::move(watcher),

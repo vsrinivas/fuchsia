@@ -51,7 +51,7 @@ void CobaltContext::ConnectToCobaltApplication() {
   auto encoder_factory =
       app_context_->ConnectToEnvironmentService<cobalt::CobaltEncoderFactory>();
   encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
-  encoder_.set_connection_error_handler([this] { OnConnectionError(); });
+  encoder_.set_error_handler([this] { OnConnectionError(); });
 
   SendEvents();
 }
@@ -61,7 +61,7 @@ void CobaltContext::OnConnectionError() {
 
   events_to_send_.insert(events_in_transit_.begin(), events_in_transit_.end());
   events_in_transit_.clear();
-  encoder_.reset();
+  encoder_.Unbind();
   task_runner_->PostDelayedTask([this] { ConnectToCobaltApplication(); },
                                 backoff_.GetNext());
 }

@@ -27,9 +27,9 @@ class SuggestionChannel {
     return false;
   }
 
-  void set_connection_error_handler(const fxl::Closure& error_handler) {
+  void set_error_handler(const fxl::Closure& error_handler) {
     for (auto& subscriber : subscribers_) {
-      subscriber->set_connection_error_handler(error_handler);
+      subscriber->set_error_handler(error_handler);
     }
   }
 

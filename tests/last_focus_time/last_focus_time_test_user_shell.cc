@@ -82,7 +82,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be
   // running.
@@ -120,7 +120,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
   }
 
   // Deregisters itself from the watched focus provider.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   // |FocusWatcher|

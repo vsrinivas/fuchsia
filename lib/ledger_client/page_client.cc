@@ -41,7 +41,7 @@ PageClient::~PageClient() {
 fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
-  (*page_snapshot_).set_connection_error_handler([this] {
+  (*page_snapshot_).set_error_handler([this] {
     FXL_LOG(ERROR) << context_ << ": "
                    << "PageSnapshot connection unexpectedly closed.";
   });

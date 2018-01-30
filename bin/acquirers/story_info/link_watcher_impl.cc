@@ -80,7 +80,7 @@ LinkWatcherImpl::LinkWatcherImpl(
   //
   // The Link itself is not kept here, because otherwise it never becomes
   // inactive (i.e. loses all its Link connections).
-  link_watcher_binding_.set_connection_error_handler(
+  link_watcher_binding_.set_error_handler(
       [this] { owner_->DropLink(MakeLinkKey(link_path_)); });
 }
 
@@ -128,7 +128,7 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
   } else {
     // There is not simply a *single* Entity in this Link. There may be
     // multiple Entities (see below).
-    single_entity_node_writer_.reset();
+    single_entity_node_writer_.Unbind();
   }
 
   // (3)

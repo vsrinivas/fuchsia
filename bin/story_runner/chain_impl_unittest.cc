@@ -58,7 +58,7 @@ TEST_F(ChainImplTest, Empty) {
   bool saw_error{false};
   LinkPtr link;
   chain_->GetLink("someKey", link.NewRequest());
-  link.set_connection_error_handler([&saw_error] { saw_error = true; });
+  link.set_error_handler([&saw_error] { saw_error = true; });
   ASSERT_TRUE(RunLoopUntil([&saw_error] { return saw_error; }));
 }
 
@@ -94,7 +94,7 @@ TEST_F(ChainImplTest, GetLink) {
   EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(fidl::Array<fidl::String>{"link", "path1"}));
   EXPECT_FALSE(story_controller_.get_link_calls[0].name);
 
-  link.reset();
+  link.Unbind();
   story_controller_.get_link_calls.clear();
   chain_->GetLink("key2", link.NewRequest());
   ASSERT_TRUE(RunLoopUntil([this] () { return story_controller_.get_link_calls.size() > 0; }));

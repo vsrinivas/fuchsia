@@ -22,9 +22,9 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       encryption_service_factory_(environment->main_runner()),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)) {
-  bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+  bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
-  ledger_repository_debug_bindings_.set_on_empty_set_handler(
+  ledger_repository_debug_bindings_.set_empty_set_handler(
       [this] { CheckEmpty(); });
 }
 
@@ -38,10 +38,10 @@ void LedgerRepositoryImpl::BindRepository(
 std::vector<fidl::InterfaceRequest<LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
   std::vector<fidl::InterfaceRequest<LedgerRepository>> handles;
-  for (auto& binding : bindings_) {
+  for (auto& binding : bindings_.bindings()) {
     handles.push_back(binding->Unbind());
   }
-  bindings_.CloseAllBindings();
+  bindings_.CloseAll();
   return handles;
 }
 

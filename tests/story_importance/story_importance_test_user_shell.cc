@@ -44,7 +44,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be
   // running.
@@ -82,7 +82,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
   }
 
   // Deregisters itself from the watched focus provider.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the next focus change happens.
   void Continue(std::function<void()> at) { continue_ = at; }
@@ -119,7 +119,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     query->selector["all"] = std::move(selector);
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
-    binding_.set_connection_error_handler(
+    binding_.set_error_handler(
         [] { FXL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
@@ -128,7 +128,7 @@ class ContextListenerImpl : maxwell::ContextListener {
   void Handle(const Handler& handler) { handler_ = handler; }
 
   // Deregisters itself from the watched story provider.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   // |ContextListener|

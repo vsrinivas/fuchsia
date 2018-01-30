@@ -29,7 +29,7 @@ PageManager::PageManager(
       task_runner_(environment->main_runner()) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
-  page_debug_bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+  page_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
 
   if (page_sync_context_) {
     page_sync_context_->page_sync->SetSyncWatcher(&watchers_);

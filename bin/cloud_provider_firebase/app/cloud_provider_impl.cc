@@ -30,13 +30,13 @@ CloudProviderImpl::CloudProviderImpl(
       firebase_auth_(std::move(firebase_auth)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
+  binding_.set_error_handler([this] {
     if (on_empty_) {
       on_empty_();
     }
   });
   // The class also shuts down when the auth provider is disconnected.
-  firebase_auth_->set_connection_error_handler([this] {
+  firebase_auth_->set_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "
                    << "shutting down the cloud provider.";
     if (on_empty_) {

@@ -268,7 +268,7 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
                                         SubscriptionDebugInfoPtr debug_info) {
   auto id =
       AddSubscription(std::move(query), listener.get(), std::move(debug_info));
-  listener.set_connection_error_handler([this, id] { RemoveSubscription(id); });
+  listener.set_error_handler([this, id] { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
   subscriptions_[id].listener_storage = std::move(listener);
 }

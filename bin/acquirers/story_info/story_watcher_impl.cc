@@ -25,12 +25,12 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
       story_links_watcher_binding_(this) {
   story_provider->GetController(story_id, story_controller_.NewRequest());
 
-  story_controller_.set_connection_error_handler(
+  story_controller_.set_error_handler(
       [this] { owner_->DropStoryWatcher(story_id_); });
 
   story_controller_->Watch(story_watcher_binding_.NewBinding());
 
-  story_watcher_binding_.set_connection_error_handler(
+  story_watcher_binding_.set_error_handler(
       [this] { owner_->DropStoryWatcher(story_id_); });
 
   context_metadata_ = ContextMetadataBuilder()

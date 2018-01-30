@@ -64,7 +64,7 @@ class AppClientBase : public AsyncHolderBase {
 
   // Service specific parts of the termination sequence.
   virtual void ServiceTerminate(const std::function<void()>& done);
-  virtual void ServiceReset();
+  virtual void ServiceUnbind();
 
   app::ApplicationControllerPtr app_;
   app::Services services_;
@@ -95,11 +95,11 @@ class AppClient : public AppClientBase {
   void ServiceTerminate(const std::function<void()>& done) override {
     // The service is expected to acknowledge the Terminate() request by
     // closing its connection within the timeout set in Teardown().
-    service_.set_connection_error_handler(done);
+    service_.set_error_handler(done);
     service_->Terminate();
   }
 
-  void ServiceReset() override { service_.reset(); }
+  void ServiceUnbind() override { service_.Unbind(); }
 
   fidl::InterfacePtr<Service> service_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);

@@ -72,7 +72,7 @@ void Store::Initialize(InterfaceHandle<Link> link) {
   link_.Bind(std::move(link));
 
   InterfaceHandle<LinkWatcher> watcher;
-  watcher_binding_.Bind(&watcher);
+  watcher_binding_.Bind(watcher.NewRequest());
   link_->Watch(std::move(watcher));
 }
 
@@ -82,8 +82,8 @@ void Store::AddCallback(Callback c) {
 
 void Store::Stop() {
   terminating_ = true;
-  watcher_binding_.Close();
-  link_.reset();
+  watcher_binding_.Unbind();
+  link_.Unbind();
 }
 
 void Store::Notify(const fidl::String& json) {

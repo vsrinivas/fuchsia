@@ -67,7 +67,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
   }
 
   // Deregisters itself from the watched link.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue after enough changes were observed on
   // the link.
@@ -109,7 +109,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be at
   // a particular state.
@@ -303,8 +303,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void TeardownStoryController() {
     story_state_watcher_.Reset();
     link_change_count_watcher_.Reset();
-    story_controller_.reset();
-    root_link_.reset();
+    story_controller_.Unbind();
+    root_link_.Unbind();
   }
 
   const Settings settings_;

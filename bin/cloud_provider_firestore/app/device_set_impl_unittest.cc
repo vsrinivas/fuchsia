@@ -44,7 +44,7 @@ TEST_F(DeviceSetImplTest, EmptyWhenDisconnected) {
     on_empty_called = true;
     message_loop_.PostQuitTask();
   });
-  device_set_.reset();
+  device_set_.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }

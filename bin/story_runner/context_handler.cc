@@ -18,7 +18,7 @@ ContextHandler::~ContextHandler() = default;
 
 void ContextHandler::SelectTopics(const std::vector<fidl::String>& topics) {
   if (binding_.is_bound()) {
-    binding_.Close();
+    binding_.Unbind();
   }
 
   auto query = maxwell::ContextQuery::New();

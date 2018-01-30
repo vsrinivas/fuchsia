@@ -87,9 +87,25 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
 template <typename X>
-std::function<void(std::function<void()>)> Reset(X* const field) {
+std::function<void(std::function<void()>)> Reset(std::unique_ptr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
+    cont();
+  };
+}
+
+template <typename X>
+std::function<void(std::function<void()>)> Reset(fidl::StructPtr<X>* const field) {
+  return [field](std::function<void()> cont) {
+    field->reset();
+    cont();
+  };
+}
+
+template <typename X>
+std::function<void(std::function<void()>)> Reset(fidl::InterfacePtr<X>* const field) {
+  return [field](std::function<void()> cont) {
+    field->Unbind();
     cont();
   };
 }
@@ -161,11 +177,10 @@ void UserRunnerImpl::InitializeUser(
     auth::AccountPtr account,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context) {
-  token_provider_factory_ =
-      auth::TokenProviderFactoryPtr::Create(std::move(token_provider_factory));
+  token_provider_factory_ = token_provider_factory.Bind();
   AtEnd(Reset(&token_provider_factory_));
 
-  user_context_ = UserContextPtr::Create(std::move(user_context));
+  user_context_ = user_context.Bind();
   AtEnd(Reset(&user_context_));
 
   account_ = std::move(account);
@@ -242,7 +257,7 @@ void UserRunnerImpl::InitializeLedger() {
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_connection_error_handler([this] { Logout(); });
+  ledger_repository_.set_error_handler([this] { Logout(); });
   AtEnd(Reset(&ledger_repository_));
 
   ledger_client_.reset(
@@ -314,7 +329,7 @@ void UserRunnerImpl::InitializeClipboard() {
   user_scope_->AddService<Clipboard>(
       [this](fidl::InterfaceRequest<Clipboard> request) {
         services_from_clipboard_agent_->ConnectToService(Clipboard::Name_,
-                                                         request.PassChannel());
+                                                         request.TakeChannel());
       });
 }
 

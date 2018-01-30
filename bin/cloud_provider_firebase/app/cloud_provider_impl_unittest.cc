@@ -63,7 +63,7 @@ TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
     on_empty_called = true;
     message_loop_.PostQuitTask();
   });
-  cloud_provider_.reset();
+  cloud_provider_.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }

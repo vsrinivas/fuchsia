@@ -55,7 +55,7 @@ void FocusHandler::Query(const QueryCallback& callback) {
 
 // |FocusProvider|
 void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
-  change_watchers_.push_back(FocusWatcherPtr::Create(std::move(watcher)));
+  change_watchers_.push_back(watcher.Bind());
 }
 
 // |FocusProvider|
@@ -85,8 +85,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
 // |FocusController|
 void FocusHandler::WatchRequest(
     fidl::InterfaceHandle<FocusRequestWatcher> watcher) {
-  request_watchers_.push_back(
-      FocusRequestWatcherPtr::Create(std::move(watcher)));
+  request_watchers_.push_back(watcher.Bind());
 }
 
 // |PageClient|
@@ -123,8 +122,7 @@ void VisibleStoriesHandler::Query(const QueryCallback& callback) {
 
 void VisibleStoriesHandler::Watch(
     fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) {
-  change_watchers_.push_back(
-      VisibleStoriesWatcherPtr::Create(std::move(watcher)));
+  change_watchers_.push_back(watcher.Bind());
 }
 
 void VisibleStoriesHandler::Duplicate(

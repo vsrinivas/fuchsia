@@ -117,7 +117,7 @@ TEST_F(StoreTest, Store_ModelChanged) {
   link_mock.Bind(link.NewRequest());
 
   modular_example::Store store{module_name};
-  store.Initialize(link.PassInterfaceHandle());
+  store.Initialize(link.Unbind());
   store.counter.sender = module_name;
   store.counter.counter = 3;
 

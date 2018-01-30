@@ -196,7 +196,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
       status == cloud_provider::Status::AUTH_ERROR) {
     // Reset the watcher and schedule a retry.
     if (watcher_binding_.is_bound()) {
-      watcher_binding_.Close();
+      watcher_binding_.Unbind();
     }
     SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
     FXL_LOG(WARNING)
@@ -312,7 +312,7 @@ void PageDownload::GetObject(
 void PageDownload::HandleError(const char error_description[]) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (watcher_binding_.is_bound()) {
-    watcher_binding_.Close();
+    watcher_binding_.Unbind();
   }
   storage_->SetSyncDelegate(nullptr);
   SetCommitState(DOWNLOAD_PERMANENT_ERROR);

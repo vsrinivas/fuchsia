@@ -24,7 +24,7 @@ class ClipboardAgent {
             FXL_LOG(ERROR) << "Could not connect to Ledger.";
           }
         });
-    ledger.set_connection_error_handler(
+    ledger.set_error_handler(
         [] { FXL_LOG(ERROR) << "Ledger connection died."; });
 
     ledger_client_.reset(new LedgerClient(std::move(ledger)));

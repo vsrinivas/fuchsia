@@ -95,8 +95,7 @@ void PageDelegate::GetSnapshot(
                   }
                   std::string prefix = convert::ToString(key_prefix);
                   if (watcher) {
-                    PageWatcherPtr watcher_ptr =
-                        PageWatcherPtr::Create(std::move(watcher));
+                    PageWatcherPtr watcher_ptr = watcher.Bind();
                     branch_tracker_.RegisterPageWatcher(
                         std::move(watcher_ptr), commit->Clone(), prefix);
                   }
@@ -330,7 +329,7 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
 void PageDelegate::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
     const Page::SetSyncStateWatcherCallback& callback) {
-  SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
+  SyncWatcherPtr watcher_ptr = watcher.Bind();
   watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
   callback(Status::OK);
 }

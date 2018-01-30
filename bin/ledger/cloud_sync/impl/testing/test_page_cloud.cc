@@ -100,7 +100,7 @@ void TestPageCloud::SetWatcher(
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
   set_watcher_position_tokens.push_back(convert::ToString(min_position_token));
-  set_watcher = cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
+  set_watcher = watcher.Bind();
   callback(status_to_return);
 }
 

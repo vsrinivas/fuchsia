@@ -42,7 +42,7 @@ PageSyncImpl::PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
   page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_,
                                               encryption_service_, &page_cloud_,
                                               this, std::move(upload_backoff));
-  page_cloud_.set_connection_error_handler([] {
+  page_cloud_.set_error_handler([] {
     FXL_LOG(ERROR) << "Page cloud disconnected unexpectedly.";
     // TODO(ppi): we should probably shut down page download and upload.
   });

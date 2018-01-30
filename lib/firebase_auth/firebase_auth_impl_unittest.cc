@@ -25,8 +25,7 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
         token_provider_binding_(&token_provider_),
         firebase_auth_(message_loop_.task_runner(),
                        "api_key",
-                       modular::auth::TokenProviderPtr::Create(
-                           token_provider_binding_.NewBinding()),
+                       token_provider_binding_.NewBinding().Bind(),
                        InitBackoff()) {}
   ~FirebaseAuthImplTest() override {}
 

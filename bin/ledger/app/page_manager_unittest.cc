@@ -108,8 +108,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
                         callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  page1.reset();
-  page2.reset();
+  page1.Unbind();
+  page2.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 
@@ -119,7 +119,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
                         callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  page3.reset();
+  page3.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 
@@ -128,7 +128,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page_manager.BindPageSnapshot(
       std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
       "");
-  snapshot.reset();
+  snapshot.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }
@@ -147,7 +147,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   bool page_closed = false;
-  page.set_connection_error_handler([this, &page_closed] {
+  page.set_error_handler([this, &page_closed] {
     page_closed = true;
     message_loop_.PostQuitTask();
   });
@@ -198,13 +198,13 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
                      });
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  page1.reset();
-  page2.reset();
-  snapshot.reset();
+  page1.Unbind();
+  page2.Unbind();
+  snapshot.Unbind();
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_FALSE(on_empty_called);
 
-  watcher_request.PassChannel();
+  watcher_request.TakeChannel();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }
@@ -255,7 +255,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
 
   // Check that a second call on the same manager is not delayed.
   called = false;
-  page.reset();
+  page.Unbind();
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());

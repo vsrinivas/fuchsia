@@ -90,18 +90,18 @@ void AppClientBase::ImplTeardown(std::function<void()> done) {
 }
 
 void AppClientBase::ImplReset() {
-  app_.reset();
-  ServiceReset();
+  app_.Unbind();
+  ServiceUnbind();
 }
 
 void AppClientBase::SetAppErrorHandler(
     const std::function<void()>& error_handler) {
-  app_.set_connection_error_handler(error_handler);
+  app_.set_error_handler(error_handler);
 }
 
 void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 
-void AppClientBase::ServiceReset() {}
+void AppClientBase::ServiceUnbind() {}
 
 template <>
 void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done) {

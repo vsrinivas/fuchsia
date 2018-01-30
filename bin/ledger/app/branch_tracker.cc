@@ -32,7 +32,7 @@ class BranchTracker::PageWatcherContainer {
         storage_(storage),
         interface_(std::move(watcher)),
         weak_factory_(this) {
-    interface_.set_connection_error_handler([this] {
+    interface_.set_error_handler([this] {
       if (handler_) {
         handler_->Continue(true);
       }

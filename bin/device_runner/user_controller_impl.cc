@@ -29,8 +29,7 @@ UserControllerImpl::UserControllerImpl(
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
       device_shell_services_(device_shell_services
-                                 ? app::ServiceProviderPtr::Create(
-                                       std::move(device_shell_services))
+                                 ? device_shell_services.Bind()
                                  : nullptr),
       done_(std::move(done)) {
   // 0. Generate the path to map '/data' for the user runner we are starting.
@@ -102,13 +101,13 @@ void UserControllerImpl::GetPresentation(
     fidl::InterfaceRequest<mozart::Presentation> presentation) {
   if (device_shell_services_) {
     device_shell_services_->ConnectToService("mozart.Presentation",
-                                             presentation.PassChannel());
+                                             presentation.TakeChannel());
   }
 }
 
 // |UserController|
 void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
-  user_watchers_.AddInterfacePtr(UserWatcherPtr::Create(std::move(watcher)));
+  user_watchers_.AddInterfacePtr(watcher.Bind());
 }
 
 // |UserContext|

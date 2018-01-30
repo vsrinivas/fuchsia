@@ -30,8 +30,8 @@ class BoundInterface : public Boundable<Interface> {
   }
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
-    binding_.set_connection_error_handler([this, on_empty_callback]() {
-      binding_.Close();
+    binding_.set_error_handler([this, on_empty_callback]() {
+      binding_.Unbind();
       if (on_empty_callback)
         on_empty_callback();
     });

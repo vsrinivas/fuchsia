@@ -58,7 +58,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
   void Continue(modular::StoryState state, std::function<void()> at) {
@@ -197,7 +197,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
   void MaybeRepeat() {
     story_watcher_.Reset();
-    story_controller_.reset();
+    story_controller_.Unbind();
 
     story_count_++;
     Loop();

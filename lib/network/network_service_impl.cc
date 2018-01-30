@@ -61,7 +61,7 @@ class NetworkServiceImpl::RunningRequest {
  private:
   void Start() {
     // Cancel any pending request.
-    url_loader_.reset();
+    url_loader_.Unbind();
 
     // If no network service has been set, bail out and wait to be called again.
     if (!network_service_)
@@ -87,7 +87,7 @@ class NetworkServiceImpl::RunningRequest {
         std::move(request),
         TRACE_CALLBACK(
             callback::ToStdFunction([this](network::URLResponsePtr response) {
-              url_loader_.reset();
+              url_loader_.Unbind();
 
               if (response->error) {
                 callback_(std::move(response));
@@ -109,7 +109,7 @@ class NetworkServiceImpl::RunningRequest {
             "ledger", "network_url_loader_start", "url", url, "method",
             method));
 
-    url_loader_.set_connection_error_handler([this]() {
+    url_loader_.set_error_handler([this]() {
       // If the connection to the url loader failed, restart the request.
       // TODO(qsr): LE-77: Handle multiple failures with:
       // 1) backoff.
@@ -191,7 +191,7 @@ fxl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
 network::NetworkService* NetworkServiceImpl::GetNetworkService() {
   if (!network_service_) {
     network_service_ = network_service_factory_();
-    network_service_.set_connection_error_handler([this]() {
+    network_service_.set_error_handler([this]() {
       FXL_LOG(WARNING) << "Network service crashed or not configured "
                        << "in environment, trying to reconnect.";
       FXL_DCHECK(!in_backoff_);
@@ -199,7 +199,7 @@ network::NetworkService* NetworkServiceImpl::GetNetworkService() {
       for (auto& request : running_requests_) {
         request.SetNetworkService(nullptr);
       }
-      network_service_.reset();
+      network_service_.Unbind();
       task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
                                    backoff_->GetNext());
     });

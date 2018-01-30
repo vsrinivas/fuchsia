@@ -17,7 +17,7 @@
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
-// 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
+// 5s timeout for asyncs on signals (e.g. WaitForMessage).
 constexpr auto kSignalDeadline = fxl::TimeDelta::FromSeconds(5);
 
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely

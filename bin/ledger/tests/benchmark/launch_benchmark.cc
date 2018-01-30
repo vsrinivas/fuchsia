@@ -84,9 +84,9 @@ void LaunchBenchmark::StartNext() {
     launch_info->arguments.push_back(arg);
   }
   context_->launcher()->CreateApplication(std::move(launch_info),
-                                          GetProxy(&application_controller_));
+                                          application_controller_.NewRequest());
 
-  application_controller_.set_connection_error_handler([this] {
+  application_controller_.set_error_handler([this] {
     switch (sequence_type_) {
       case SequenceType::ARITHMETIC:
         current_value_ += step_;

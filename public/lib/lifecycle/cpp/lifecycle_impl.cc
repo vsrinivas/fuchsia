@@ -17,7 +17,7 @@ LifecycleImpl::LifecycleImpl(app::ServiceNamespace* service_namespace,
 
 // |Lifecycle|
 void LifecycleImpl::Terminate() {
-  binding_.Close();
+  binding_.Unbind();
   delegate_->Terminate();
 }
 

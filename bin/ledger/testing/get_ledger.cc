@@ -48,7 +48,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
   repository_factory->GetRepository(
       ledger_repository_path, std::move(cloud_provider),
       repository.NewRequest(), callback::Capture([] {}, &status));
-  if (!repository_factory.WaitForIncomingResponseUntil(
+  if (!repository_factory.WaitForResponseUntil(
           zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;
@@ -60,7 +60,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 
   repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
                         callback::Capture([] {}, &status));
-  if (!repository.WaitForIncomingResponseUntil(zx::deadline_after(kTimeout))) {
+  if (!repository.WaitForResponseUntil(zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get ledger.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -68,7 +68,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
     FXL_LOG(ERROR) << "Failure while getting ledger.";
     return status;
   }
-  ledger_ptr->set_connection_error_handler([loop] {
+  ledger_ptr->set_error_handler([loop] {
     FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
     loop->PostQuitTask();
   });
@@ -84,7 +84,7 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
   ledger::Status status;
   (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
                      callback::Capture([] {}, &status));
-  if (!ledger->WaitForIncomingResponseUntil(zx::deadline_after(kTimeout))) {
+  if (!ledger->WaitForResponseUntil(zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get page.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -92,13 +92,13 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
     return status;
   }
 
-  page->set_connection_error_handler([loop] {
+  page->set_error_handler([loop] {
     FXL_LOG(ERROR) << "The page connection was closed, quitting.";
     loop->PostQuitTask();
   });
 
   (*page)->GetId(callback::Capture([] {}, page_id));
-  page->WaitForIncomingResponseUntil(zx::deadline_after(kTimeout));
+  page->WaitForResponseUntil(zx::deadline_after(kTimeout));
   return status;
 }
 

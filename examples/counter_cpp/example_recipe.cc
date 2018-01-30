@@ -218,7 +218,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     auto multiplier_service =
         app::ConnectToService<modular::examples::Multiplier>(
             services_from_module1.get());
-    multiplier_service.set_connection_error_handler([] {
+    multiplier_service.set_error_handler([] {
       FXL_CHECK(false)
           << "Uh oh, Connection to Multiplier closed by the module 1.";
     });

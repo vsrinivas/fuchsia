@@ -51,8 +51,7 @@ class StoryProviderMock : public StoryProvider {
   // |StoryProvider|
   void Watch(
       fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
-    watchers_.AddInterfacePtr(
-        modular::StoryProviderWatcherPtr::Create(std::move(watcher)));
+    watchers_.AddInterfacePtr(watcher.Bind());
   }
 
   // |StoryProvider|
@@ -87,8 +86,7 @@ class StoryProviderMock : public StoryProvider {
   // |StoryProvider|
   void WatchImportance(
       fidl::InterfaceHandle<modular::StoryImportanceWatcher> watcher) override {
-    importance_watchers_.AddInterfacePtr(
-        modular::StoryImportanceWatcherPtr::Create(std::move(watcher)));
+    importance_watchers_.AddInterfacePtr(watcher.Bind());
   }
 
   // |StoryProvider|

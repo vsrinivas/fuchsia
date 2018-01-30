@@ -47,7 +47,7 @@ PageCloudImpl::PageCloudImpl(
       binding_(this, std::move(request)) {
   FXL_DCHECK(firebase_auth_);
   // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
+  binding_.set_error_handler([this] {
     if (on_empty_) {
       on_empty_();
     }
@@ -214,8 +214,8 @@ void PageCloudImpl::SetWatcher(
     fidl::Array<uint8_t> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
-  watcher_ = cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
-  watcher_.set_connection_error_handler([this] {
+  watcher_ = watcher.Bind();
+  watcher_.set_error_handler([this] {
     if (handler_watcher_set_) {
       Unregister();
     }

@@ -48,7 +48,7 @@ class FakePageCloud::WatcherContainer {
   bool WaitingForWatcherAck() { return waiting_for_watcher_ack_; }
 
   void set_on_empty(fxl::Closure on_empty) {
-    watcher_.set_connection_error_handler(std::move(on_empty));
+    watcher_.set_error_handler(std::move(on_empty));
   }
 
  private:
@@ -86,7 +86,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
 }
 
 FakePageCloud::FakePageCloud() {
-  bindings_.set_on_empty_set_handler([this] {
+  bindings_.set_empty_set_handler([this] {
     if (on_empty_) {
       on_empty_();
     }
@@ -177,8 +177,7 @@ void FakePageCloud::SetWatcher(
     fidl::Array<uint8_t> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
-  auto watcher_ptr =
-      cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
+  auto watcher_ptr = watcher.Bind();
 
   size_t first_pending_commit_index;
   if (!TokenToPosition(min_position_token, &first_pending_commit_index)) {

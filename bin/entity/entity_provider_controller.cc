@@ -18,7 +18,7 @@ class EntityProviderController::EntityImpl : Entity {
       : entity_provider_controller_(entity_provider_controller),
         entity_provider_(entity_provider),
         cookie_(cookie) {
-    entity_bindings_.set_on_empty_set_handler([this] {
+    entity_bindings_.set_empty_set_handler([this] {
       entity_provider_controller_->OnEmptyEntityImpls(cookie_);
       // |this| is no longer valid.
     });
@@ -59,7 +59,7 @@ EntityProviderController::EntityProviderController(
   entity_provider_launcher->ConnectToEntityProvider(
       agent_url_, entity_provider_.NewRequest(),
       agent_controller_.NewRequest());
-  agent_controller_.set_connection_error_handler([this] {
+  agent_controller_.set_error_handler([this] {
     entity_provider_runner_->OnEntityProviderFinished(agent_url_);
     // |this| no longer valid.
   });

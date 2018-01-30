@@ -169,7 +169,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
   // to somewhere where other places can reach it.
   std::shared_ptr<modular::EntityPtr> entity(new modular::EntityPtr);
   entity_resolver_->ResolveEntity(reference, entity->NewRequest());
-  entity->set_connection_error_handler(
+  entity->set_error_handler(
       [weak_this = weak_factory_.GetWeakPtr(), entity, reference, done] {
         if (!weak_this)
           return;
@@ -196,7 +196,7 @@ ContextValueWriterImpl::ContextValueWriterImpl(
       parent_id_(parent_id),
       type_(type),
       weak_factory_(this) {
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this] { writer_->DestroyContextValueWriter(this); });
 }
 

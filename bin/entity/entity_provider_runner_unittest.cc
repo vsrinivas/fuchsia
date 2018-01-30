@@ -116,8 +116,8 @@ class MyEntityProvider : AgentImpl::Delegate,
     // Get |agent_context_| and |entity_resolver_| from incoming namespace.
     FXL_CHECK(!launch_info_->additional_services.is_null());
     FXL_CHECK(launch_info_->additional_services->provider.is_valid());
-    auto additional_services = app::ServiceProviderPtr::Create(
-        std::move(launch_info_->additional_services->provider));
+    auto additional_services =
+        launch_info_->additional_services->provider.Bind();
     app::ConnectToService(additional_services.get(),
                           agent_context_.NewRequest());
     ComponentContextPtr component_context;

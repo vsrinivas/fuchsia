@@ -109,7 +109,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   EXPECT_EQ("host1", host_list[0]);
   EXPECT_EQ("host2", host_list[1]);
 
-  netconnector2.reset();
+  netconnector2.Unbind();
 
   netconnector1->GetKnownDeviceNames(
       new_version, callback::Capture(ledger::SetWhenCalled(&called),

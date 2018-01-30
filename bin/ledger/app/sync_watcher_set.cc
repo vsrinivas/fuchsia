@@ -74,7 +74,7 @@ class SyncWatcherSet::SyncWatcherContainer
 
   void set_on_empty(fxl::Closure on_empty_callback) {
     if (on_empty_callback) {
-      watcher_.set_connection_error_handler(std::move(on_empty_callback));
+      watcher_.set_error_handler(std::move(on_empty_callback));
     }
   }
 
@@ -116,8 +116,7 @@ SyncWatcherSet::~SyncWatcherSet() {}
 
 void SyncWatcherSet::AddSyncWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher) {
-  SyncWatcherContainer& container =
-      watchers_.emplace(SyncWatcherPtr::Create(std::move(watcher)));
+  SyncWatcherContainer& container = watchers_.emplace(watcher.Bind());
   container.Start(current_);
 }
 

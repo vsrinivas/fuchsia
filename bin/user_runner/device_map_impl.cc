@@ -98,7 +98,7 @@ void DeviceMapImpl::SaveCurrentDevice() {
 
 void DeviceMapImpl::WatchDeviceMap(
     fidl::InterfaceHandle<DeviceMapWatcher> watcher) {
-  auto watcher_ptr = DeviceMapWatcherPtr::Create(std::move(watcher));
+  auto watcher_ptr = watcher.Bind();
   for (const auto& item : devices_) {
     const auto& device = item.second;
     watcher_ptr->OnDeviceMapChange(device->Clone());

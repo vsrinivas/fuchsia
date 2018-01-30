@@ -14,7 +14,7 @@ TimelineStoriesWatcher::TimelineStoriesWatcher(
     : binding_(this) {
   // Add ourselves as a watcher to the StoryProvider.
   fidl::InterfaceHandle<modular::StoryProviderWatcher> handle;
-  binding_.Bind(&handle);
+  binding_.Bind(handle.NewRequest());
   (*story_provider)->Watch(std::move(handle));
 }
 

@@ -24,7 +24,7 @@ void Init(app::ApplicationContext* app_context, const std::string& identity) {
 
   g_test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
-  g_test_runner.set_connection_error_handler([] {
+  g_test_runner.set_error_handler([] {
     if (g_connected) {
       FXL_LOG(ERROR) << "Lost connection to TestRunner. Did the active test "
                         "call Logout() while modules were still running?";
@@ -49,14 +49,14 @@ void Done(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
     g_test_runner->Done([ack] {
       ack();
-      g_test_runner.reset();
+      g_test_runner.Unbind();
     });
   } else {
     ack();
   }
 
   if (g_test_runner_store.is_bound()) {
-    g_test_runner_store.reset();
+    g_test_runner_store.Unbind();
   }
 }
 
@@ -64,14 +64,14 @@ void Teardown(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
     g_test_runner->Teardown([ack] {
       ack();
-      g_test_runner.reset();
+      g_test_runner.Unbind();
     });
   } else {
     ack();
   }
 
   if (g_test_runner_store.is_bound()) {
-    g_test_runner_store.reset();
+    g_test_runner_store.Unbind();
   }
 }
 

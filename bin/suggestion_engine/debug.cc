@@ -72,20 +72,19 @@ void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestions* suggestions) {
 
 void SuggestionDebugImpl::WatchAskProposals(
     fidl::InterfaceHandle<AskProposalListener> listener) {
-  auto listener_ptr = AskProposalListenerPtr::Create(std::move(listener));
+  auto listener_ptr = listener.Bind();
   ask_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchInterruptionProposals(
     fidl::InterfaceHandle<InterruptionProposalListener> listener) {
-  auto listener_ptr =
-      InterruptionProposalListenerPtr::Create(std::move(listener));
+  auto listener_ptr = listener.Bind();
   interruption_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchNextProposals(
     fidl::InterfaceHandle<NextProposalListener> listener) {
-  auto listener_ptr = NextProposalListenerPtr::Create(std::move(listener));
+  auto listener_ptr = listener.Bind();
   next_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
   if (cached_next_proposals_) {
     listener_ptr->OnNextUpdate(std::move(cached_next_proposals_));

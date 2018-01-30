@@ -84,7 +84,7 @@ class MyDummyAgent : Agent,
     outgoing_services_.ServeDirectory(std::move(service_request));
   }
 
-  void KillApplication() { app_controller_.Close(); }
+  void KillApplication() { app_controller_.Unbind(); }
 
   size_t GetCallCount(const std::string func) { return counts.count(func); }
 
@@ -183,8 +183,8 @@ TEST_F(AgentRunnerTest, AgentController) {
   dummy_agent->KillApplication();
 
   // Agent application died, so check that AgentController dies here.
-  agent_controller.set_connection_error_handler(
-      [&agent_controller] { agent_controller.reset(); });
+  agent_controller.set_error_handler(
+      [&agent_controller] { agent_controller.Unbind(); });
   RunLoopUntil([&agent_controller] { return !agent_controller.is_bound(); });
   EXPECT_FALSE(agent_controller.is_bound());
 }

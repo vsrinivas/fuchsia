@@ -455,7 +455,7 @@ class LinkImpl::WatchCall : Operation<> {
             const uint32_t conn)
       : Operation("LinkImpl::WatchCall", container, [] {}),
         impl_(impl),
-        watcher_(LinkWatcherPtr::Create(std::move(watcher))),
+        watcher_(watcher.Bind()),
         conn_(conn) {
     Ready();
   }
@@ -803,7 +803,7 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
                                fidl::InterfaceRequest<Link> link_request)
     : impl_(impl), binding_(this, std::move(link_request)), id_(id) {
   impl_->AddConnection(this);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this] { impl_->RemoveConnection(this); });
 }
 
@@ -863,7 +863,7 @@ LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
                                              LinkWatcherPtr watcher,
                                              const uint32_t conn)
     : impl_(impl), watcher_(std::move(watcher)), conn_(conn) {
-  watcher_.set_connection_error_handler(
+  watcher_.set_error_handler(
       [this] { impl_->RemoveConnection(this); });
 }
 

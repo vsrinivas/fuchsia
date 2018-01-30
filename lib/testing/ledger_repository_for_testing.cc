@@ -49,7 +49,7 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
   if (ledger_app_client_) {
     ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
-      ledger_repo_factory_.reset();
+      ledger_repo_factory_.Unbind();
       ledger_app_client_.reset();
       done();
     });

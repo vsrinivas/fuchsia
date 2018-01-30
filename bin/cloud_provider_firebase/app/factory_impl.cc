@@ -21,8 +21,7 @@ void FactoryImpl::GetCloudProvider(
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
     const GetCloudProviderCallback& callback) {
-  auto token_provider_ptr =
-      modular::auth::TokenProviderPtr::Create(std::move(token_provider));
+  auto token_provider_ptr = token_provider.Bind();
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       main_runner_, config->api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());

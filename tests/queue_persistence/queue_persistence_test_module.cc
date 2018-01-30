@@ -72,8 +72,8 @@ class ParentApp {
     received_queue_persistence_token_.Pass();
 
     // Stop the agent.
-    agent_controller_.reset();
-    agent_service_.reset();
+    agent_controller_.Unbind();
+    agent_service_.Unbind();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_stopped",
         [this](const fidl::String&) { AgentStopped(); });
@@ -112,8 +112,8 @@ class ParentApp {
     agent_received_message_.Pass();
 
     // Stop the agent again.
-    agent_controller_.reset();
-    agent_service_.reset();
+    agent_controller_.Unbind();
+    agent_service_.Unbind();
     modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
                                       [this](const fidl::String&) {
                                         module_host_->module_context()->Done();

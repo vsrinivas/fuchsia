@@ -626,14 +626,14 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   // in, though previous messages need to be processed. The stopping of stories
   // is done on |operation_queue_| since that must strictly happen after all
   // pending messgages have been processed.
-  bindings_.CloseAllBindings();
+  bindings_.CloseAll();
   new TeardownCall(&operation_queue_, this, callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::Watch(
     fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
-  auto watcher_ptr = StoryProviderWatcherPtr::Create(std::move(watcher));
+  auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_controller_impls_) {
     const auto& container = item.second;
     watcher_ptr->OnChange(container.current_info.Clone(),
@@ -812,8 +812,7 @@ void StoryProviderImpl::GetImportance(const GetImportanceCallback& callback) {
 // |StoryProvider|
 void StoryProviderImpl::WatchImportance(
     fidl::InterfaceHandle<StoryImportanceWatcher> watcher) {
-  importance_watchers_.AddInterfacePtr(
-      StoryImportanceWatcherPtr::Create(std::move(watcher)));
+  importance_watchers_.AddInterfacePtr(watcher.Bind());
 }
 
 // |PageClient|

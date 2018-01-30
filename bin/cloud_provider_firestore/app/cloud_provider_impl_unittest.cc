@@ -43,7 +43,7 @@ TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   cloud_provider_impl_->set_on_empty(
       [this, &on_empty_called] { on_empty_called = true; });
   EXPECT_FALSE(firestore_service_->shutdown_callback);
-  cloud_provider_.reset();
+  cloud_provider_.Unbind();
   RunLoopUntilIdle();
 
   // Verify that shutdown was started, but on_empty wasn't called yet.

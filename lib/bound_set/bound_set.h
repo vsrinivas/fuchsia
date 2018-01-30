@@ -82,7 +82,7 @@ class BoundSet {
     UniqueType const id = Identify(m);
     // Set the connection error handler for the newly added item to be a
     // function that will erase it from the vector.
-    m->set_connection_error_handler([this, id] { OnConnectionError(id); });
+    m->set_error_handler([this, id] { OnConnectionError(id); });
     return c;
   }
 

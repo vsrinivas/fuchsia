@@ -90,7 +90,7 @@ class Proposinator {
 
   void Remove(const std::string& id) { out_->Remove(id); }
 
-  void KillPublisher() { out_.reset(); }
+  void KillPublisher() { out_.Unbind(); }
 
  protected:
   ProposalPublisherPtr out_;
@@ -102,7 +102,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
                   const fidl::String& url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
     fidl::InterfaceHandle<QueryHandler> query_handle;
-    ask_binding_.Bind(&query_handle);
+    ask_binding_.Bind(query_handle.NewRequest());
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
 
@@ -197,7 +197,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
-    story_provider_binding_.Bind(&story_provider_handle);
+    story_provider_binding_.Bind(story_provider_handle.NewRequest());
 
     // Hack to get an unbound FocusController for Initialize().
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
@@ -283,7 +283,7 @@ class AskTest : public virtual SuggestionEngineTest {
 
   void CloseAndResetListener() {
     if (listener_binding_.is_bound()) {
-      listener_binding_.Close();
+      listener_binding_.Unbind();
       listener_.ClearSuggestions();
     }
   }
@@ -387,7 +387,7 @@ class NextTest : public virtual SuggestionEngineTest {
   }
 
   void CloseAndResetListener() {
-    listener_binding_.Close();
+    listener_binding_.Unbind();
     listener_.ClearSuggestions();
   }
 

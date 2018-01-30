@@ -16,8 +16,7 @@ void FakeNetConnector::ConnectToServiceProvider(
 void FakeNetConnector::RegisterServiceProvider(
     const fidl::String& name,
     fidl::InterfaceHandle<app::ServiceProvider> service_provider) {
-  app::ServiceProviderPtr service_provider_ptr =
-      app::ServiceProviderPtr::Create(std::move(service_provider));
+  app::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
       fxl::MakeCopyable([name, service_provider_ptr = std::move(
                                    service_provider_ptr)](zx::channel channel) {

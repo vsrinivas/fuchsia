@@ -43,7 +43,7 @@ class CloudProviderFactory::TokenProviderContainer {
   }
 
   void set_on_empty(fxl::Closure on_empty) {
-    binding_.set_connection_error_handler(std::move(on_empty));
+    binding_.set_error_handler(std::move(on_empty));
   }
 
  private:

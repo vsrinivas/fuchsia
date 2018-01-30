@@ -69,7 +69,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     application_context()->launcher()->CreateApplication(
         std::move(launch_info), ledger_controller_.NewRequest());
 
-    ledger_controller_.set_connection_error_handler([this] {
+    ledger_controller_.set_error_handler([this] {
       for (const auto& callback : ledger_shutdown_callbacks_) {
         callback();
       }
@@ -244,7 +244,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
-  ledger_repository.set_connection_error_handler(
+  ledger_repository.set_error_handler(
       [&repo_disconnected] { repo_disconnected = true; });
 
   // Run the message loop until Ledger clears the repo directory and disconnects
@@ -295,7 +295,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
-  ledger_repository.set_connection_error_handler(
+  ledger_repository.set_error_handler(
       [&repo_disconnected] { repo_disconnected = true; });
 
   // Run the message loop until Ledger clears the repo directory and disconnects
@@ -332,10 +332,10 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
-  ledger_repository.set_connection_error_handler(
+  ledger_repository.set_error_handler(
       [&repo_disconnected] { repo_disconnected = true; });
 
-  cloud_provider_binding.Close();
+  cloud_provider_binding.Unbind();
 
   EXPECT_TRUE(RunLoopUntil([&repo_disconnected] { return repo_disconnected; }));
 

@@ -148,7 +148,7 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
 
 void DeleteEntryBenchmark::ShutDown() {
   application_controller_->Kill();
-  application_controller_.WaitForIncomingResponseUntil(
+  application_controller_.WaitForResponseUntil(
       zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();

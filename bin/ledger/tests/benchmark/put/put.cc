@@ -248,7 +248,7 @@ void PutBenchmark::CommitAndRunNext(int i,
 void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
   application_controller_->Kill();
-  application_controller_.WaitForIncomingResponseUntil(
+  application_controller_.WaitForResponseUntil(
     zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();

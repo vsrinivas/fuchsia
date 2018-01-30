@@ -24,7 +24,7 @@ ContextReaderImpl::~ContextReaderImpl() = default;
 void ContextReaderImpl::Subscribe(
     ContextQueryPtr query,
     fidl::InterfaceHandle<ContextListener> listener) {
-  auto listener_ptr = ContextListenerPtr::Create(std::move(listener));
+  auto listener_ptr = listener.Bind();
   repository_->AddSubscription(std::move(query), std::move(listener_ptr),
                                debug_.Clone());
 }

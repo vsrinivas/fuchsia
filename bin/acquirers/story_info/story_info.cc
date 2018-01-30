@@ -67,9 +67,7 @@ void StoryInfoAcquirer::Initialize(
   focus_provider_.Bind(std::move(focus_provider));
 
   // Watch for changes to what Stories are visible.
-  auto visible_stories_provider_ptr =
-      modular::VisibleStoriesProviderPtr::Create(
-          std::move(visible_stories_provider));
+  auto visible_stories_provider_ptr = visible_stories_provider.Bind();
   visible_stories_provider_ptr->Watch(
       visible_stories_watcher_binding_.NewBinding());
 

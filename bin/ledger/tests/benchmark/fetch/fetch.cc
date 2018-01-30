@@ -230,10 +230,10 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
 
 void FetchBenchmark::ShutDown() {
   writer_controller_->Kill();
-  writer_controller_.WaitForIncomingResponseUntil(
+  writer_controller_.WaitForResponseUntil(
       zx::deadline_after(zx::sec(5)));
   reader_controller_->Kill();
-  reader_controller_.WaitForIncomingResponseUntil(
+  reader_controller_.WaitForResponseUntil(
       zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();

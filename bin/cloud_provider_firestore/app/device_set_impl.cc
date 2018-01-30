@@ -42,7 +42,7 @@ DeviceSetImpl::DeviceSetImpl(
   FXL_DCHECK(firestore_service_);
 
   // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
+  binding_.set_error_handler([this] {
     if (on_empty_) {
       on_empty_();
     }

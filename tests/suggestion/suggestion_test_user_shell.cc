@@ -53,7 +53,7 @@ class TestApp : modular::StoryWatcher,
 
   void StartStoryById(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_.set_connection_error_handler([this, story_id] {
+    story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
@@ -69,8 +69,8 @@ class TestApp : modular::StoryWatcher,
       return;
     }
     story_controller_->Stop([this] {
-      story_watcher_binding_.Close();
-      story_controller_.reset();
+      story_watcher_binding_.Unbind();
+      story_controller_.Unbind();
 
       user_shell_context_->Logout();
     });

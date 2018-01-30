@@ -361,7 +361,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
   entry->clients.push_back(page_client);
 
   entry->page = std::move(page);
-  entry->page.set_connection_error_handler([context] {
+  entry->page.set_error_handler([context] {
     // TODO(mesch): If this happens, larger things are wrong. This should
     // probably be signalled up, or at least must be signalled to the page
     // client.
@@ -458,10 +458,10 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
   new ResolveCall(
       &operation_queue_, this,
-      ledger::MergeResultProviderPtr::Create(std::move(result_provider)),
-      ledger::PageSnapshotPtr::Create(std::move(left_version)),
-      ledger::PageSnapshotPtr::Create(std::move(right_version)),
-      ledger::PageSnapshotPtr::Create(std::move(common_version)));
+      result_provider.Bind(),
+      left_version.Bind(),
+      right_version.Bind(),
+      common_version.Bind());
 }
 
 void LedgerClient::ConflictResolverImpl::GetPageClients(

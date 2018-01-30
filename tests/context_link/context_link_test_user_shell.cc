@@ -50,7 +50,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     query->selector["all"] = std::move(selector);
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
-    binding_.set_connection_error_handler([] {
+    binding_.set_error_handler([] {
       FXL_LOG(ERROR) << "Lost ContextListener connection to ContextReader.";
     });
   }
@@ -60,7 +60,7 @@ class ContextListenerImpl : maxwell::ContextListener {
   void Handle(const Handler& handler) { handler_ = handler; }
 
   // Deregisters itself from the watched story provider.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   // |ContextListener|
@@ -108,7 +108,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
-    context_reader_.set_connection_error_handler(
+    context_reader_.set_error_handler(
         [] { FXL_LOG(ERROR) << "Lost ContextReader connection."; });
 
     CreateStory();

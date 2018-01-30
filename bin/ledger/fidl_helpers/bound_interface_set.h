@@ -23,10 +23,10 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
     binding_.AddBinding(&impl_, std::move(request));
   }
 
-  void CloseAllBindings() { binding_.CloseAllBindings(); }
+  void CloseAll() { binding_.CloseAll(); }
 
   void set_on_empty(fxl::Closure on_empty) {
-    binding_.set_on_empty_set_handler(std::move(on_empty));
+    binding_.set_empty_set_handler(std::move(on_empty));
   }
 
   bool is_bound() { return binding_.is_bound(); }

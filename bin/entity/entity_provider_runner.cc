@@ -83,8 +83,8 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
     bindings_.AddBinding(this, std::move(request));
   }
 
-  void set_on_empty_set_handler(const std::function<void()>& handler) {
-    bindings_.set_on_empty_set_handler(handler);
+  void set_empty_set_handler(const std::function<void()>& handler) {
+    bindings_.set_empty_set_handler(handler);
   }
 
  private:
@@ -113,7 +113,7 @@ class EntityProviderRunner::DataEntity : Entity {
     }
     data_ = std::move(data);
 
-    bindings_.set_on_empty_set_handler([provider, entity_reference] {
+    bindings_.set_empty_set_handler([provider, entity_reference] {
       provider->OnDataEntityFinished(entity_reference);
     });
   };
@@ -160,7 +160,7 @@ void EntityProviderRunner::ConnectEntityReferenceFactory(
         std::make_pair(agent_url, std::make_unique<EntityReferenceFactoryImpl>(
                                       agent_url, this)));
     FXL_DCHECK(inserted);
-    it->second->set_on_empty_set_handler([this, agent_url] {
+    it->second->set_empty_set_handler([this, agent_url] {
       entity_reference_factory_bindings_.erase(agent_url);
     });
   }

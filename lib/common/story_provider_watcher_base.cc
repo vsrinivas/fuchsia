@@ -24,7 +24,7 @@ void StoryProviderWatcherBase::Watch(
 }
 
 void StoryProviderWatcherBase::Reset() {
-  binding_.Close();
+  binding_.Unbind();
 }
 
 void StoryProviderWatcherBase::OnDelete(const ::fidl::String& /*story_id*/) {}

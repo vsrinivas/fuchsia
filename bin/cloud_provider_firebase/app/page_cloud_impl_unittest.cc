@@ -77,7 +77,7 @@ TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
     on_empty_called = true;
     message_loop_.PostQuitTask();
   });
-  page_cloud_.reset();
+  page_cloud_.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }

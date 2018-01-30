@@ -70,10 +70,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       agent_launcher_(app_context_->environment().get()) {
   component_context_.Bind(std::move(component_context_handle));
   context_engine_.Bind(std::move(context_engine_handle));
-  auto story_provider =
-      modular::StoryProviderPtr::Create(std::move(story_provider_handle));
-  auto focus_provider =
-      modular::FocusProviderPtr::Create(std::move(focus_provider_handle));
+  auto story_provider = story_provider_handle.Bind();
+  auto focus_provider = focus_provider_handle.Bind();
   visible_stories_provider_.Bind(std::move(visible_stories_provider_handle));
 
   // Start dependent processes. We get some component-scope services from
@@ -180,9 +178,9 @@ void UserIntelligenceProviderImpl::StartActionLog(
       action_log_services.ConnectToService<maxwell::UserActionLogFactory>();
   maxwell::ProposalPublisherPtr proposal_publisher;
   suggestion_engine->RegisterProposalPublisher(
-      url, fidl::GetProxy(&proposal_publisher));
+      url, proposal_publisher.NewRequest());
   action_log_factory->GetUserActionLog(std::move(proposal_publisher),
-                                       fidl::GetProxy(&user_action_log_));
+                                       user_action_log_.NewRequest());
 }
 
 void UserIntelligenceProviderImpl::StartKronk() {
@@ -200,9 +198,9 @@ void UserIntelligenceProviderImpl::StartKronk() {
   // even though it is recommended that it does). If we try to restart the agent
   // at that time, the agent runner would attempt to simply send the connection
   // request to the crashed agent instance and not relaunch the agent.
-  kronk_controller_.set_connection_error_handler([this] {
-    kronk_services_.reset();
-    kronk_controller_.reset();
+  kronk_controller_.set_error_handler([this] {
+    kronk_services_.Unbind();
+    kronk_controller_.Unbind();
 
     if (kronk_restart_.ShouldRetry()) {
       FXL_LOG(INFO) << "Restarting Kronk...";

@@ -55,9 +55,9 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
     // We only want to use Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service()
-        .set_connection_error_handler(
+        .set_error_handler(
             [agent_context_impl = agent_context_impl_] {
-              agent_context_impl->app_client_->primary_service().reset();
+              agent_context_impl->app_client_->primary_service().Unbind();
             });
 
     // When the agent process dies, we remove it.
@@ -70,7 +70,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
         });
 
     // When all the |AgentController| bindings go away maybe stop the agent.
-    agent_context_impl_->agent_controller_bindings_.set_on_empty_set_handler(
+    agent_context_impl_->agent_controller_bindings_.set_empty_set_handler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->MaybeStopAgent();
         });
@@ -125,8 +125,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Kill(FlowToken flow) {
     stopped_ = true;
-    agent_context_impl_->agent_.reset();
-    agent_context_impl_->agent_context_bindings_.CloseAllBindings();
+    agent_context_impl_->agent_.Unbind();
+    agent_context_impl_->agent_context_bindings_.CloseAll();
   }
 
   bool stopped_ = false;

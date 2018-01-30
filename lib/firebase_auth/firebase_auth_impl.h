@@ -36,7 +36,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
                    std::unique_ptr<backoff::Backoff> backoff);
 
   // FirebaseAuth:
-  void set_connection_error_handler(fxl::Closure on_error) override;
+  void set_error_handler(fxl::Closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(firebase_auth::AuthStatus, std::string)> callback)

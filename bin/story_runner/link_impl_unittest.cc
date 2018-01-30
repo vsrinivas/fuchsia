@@ -106,11 +106,11 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
 
   void TearDown() override {
     if (watcher_binding_.is_bound()) {
-      watcher_binding_.Close();
+      watcher_binding_.Unbind();
     }
 
     link_impl_.reset();
-    link_.reset();
+    link_.Unbind();
 
     page_client_peer_.reset();
     ledger_client_peer_.reset();

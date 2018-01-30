@@ -53,7 +53,7 @@ class TestAgentApp : modular::ComponentContextTestService {
     modular::testing::GetStore()->Get(
         "two_agent_connected", [this, done](const fidl::String&) {
           // Killing the agent controller should stop it.
-          two_agent_controller_.reset();
+          two_agent_controller_.Unbind();
           two_agent_connected_.Pass();
           modular::testing::GetStore()->Put("one_agent_stopped", "", [done] {
             modular::testing::Done(done);

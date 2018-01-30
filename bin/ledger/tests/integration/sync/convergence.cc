@@ -149,7 +149,7 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                fidl::InterfaceHandle<ledger::MergeResultProvider>
                    result_provider) override {
     ledger::MergeResultProviderPtr merge_result_provider =
-        ledger::MergeResultProviderPtr::Create(std::move(result_provider));
+        result_provider.Bind();
     ledger::MergeResultProvider* merge_result_provider_ptr =
         merge_result_provider.get();
     merge_result_provider_ptr->GetFullDiff(
@@ -176,11 +176,11 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
           ledger::Status merge_status;
           merge_result_provider->Merge(std::move(merged_values),
                                        callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseUntil(
+          ASSERT_TRUE(merge_result_provider.WaitForResponseUntil(
               zx::deadline_after(zx::sec(1))));
           ASSERT_EQ(ledger::Status::OK, merge_status);
           merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseUntil(
+          ASSERT_TRUE(merge_result_provider.WaitForResponseUntil(
               zx::deadline_after(zx::sec(1))));
           ASSERT_EQ(ledger::Status::OK, merge_status);
         }));

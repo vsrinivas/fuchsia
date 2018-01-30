@@ -39,7 +39,7 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   ledger::LedgerRepositoryPtr duplicated_repository;
   repository->Duplicate(duplicated_repository.NewRequest(),
                         [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(repository.WaitForIncomingResponse());
+  EXPECT_TRUE(repository.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
@@ -106,11 +106,11 @@ TEST_F(PageIntegrationTest, DeletePage) {
 
   // Delete the page.
   bool page_closed = false;
-  page.set_connection_error_handler([&page_closed] { page_closed = true; });
+  page.set_error_handler([&page_closed] { page_closed = true; });
   instance->DeletePage(id, ledger::Status::OK);
 
   // Verify that deletion of the page closed the page connection.
-  EXPECT_FALSE(page.WaitForIncomingResponse());
+  EXPECT_FALSE(page.WaitForResponse());
   EXPECT_TRUE(page_closed);
 
 // TODO(etiennej): Reactivate after LE-87 is fixed.
@@ -134,7 +134,7 @@ TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
   ledger::Status status;
   ledger_connection_1->GetPage(nullptr, page.NewRequest(),
                                [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_connection_1.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Delete this page on the second connection and verify that the operation
@@ -142,7 +142,7 @@ TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
   fidl::Array<uint8_t> id = PageGetId(&page);
   ledger_connection_2->DeletePage(std::move(id),
                                   [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_connection_2.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
 }
 

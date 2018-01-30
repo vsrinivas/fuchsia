@@ -8,7 +8,7 @@ namespace maxwell {
 
 SuggestionSubscriber::SuggestionSubscriber(
     fidl::InterfaceHandle<SuggestionListener> listener)
-    : listener_(SuggestionListenerPtr::Create(std::move(listener))) {}
+    : listener_(listener.Bind()) {}
 
 SuggestionSubscriber::~SuggestionSubscriber() = default;
 

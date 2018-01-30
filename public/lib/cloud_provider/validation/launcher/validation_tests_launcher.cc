@@ -41,7 +41,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
 
   validation_tests_controller_->Wait(
       [this](int32_t return_code) { callback_(return_code); });
-  validation_tests_controller_.set_connection_error_handler([this] {
+  validation_tests_controller_.set_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to validation tests binary.";
     callback_(-1);
   });

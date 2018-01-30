@@ -44,7 +44,7 @@ SuggestionEngineImpl::SuggestionEngineImpl()
 
   media_service_ =
       app_context_->ConnectToEnvironmentService<media::MediaService>();
-  media_service_.set_connection_error_handler([this] {
+  media_service_.set_error_handler([this] {
     FXL_LOG(INFO) << "Media service connection error";
     media_service_ = nullptr;
     media_packet_producer_ = nullptr;
@@ -156,7 +156,7 @@ void SuggestionEngineImpl::Query(
       std::make_unique<WindowedSuggestionSubscriber>(
           ask_suggestions_, std::move(listener), count);
 
-  subscriber->set_connection_error_handler([this] {
+  subscriber->set_error_handler([this] {
     debug_.OnSuggestionSelected(nullptr);
     CleanUpPreviousQuery();
   });  // called if the listener disconnects
@@ -200,8 +200,7 @@ void SuggestionEngineImpl::SubscribeToNext(
 // |SuggestionProvider|
 void SuggestionEngineImpl::RegisterFeedbackListener(
     fidl::InterfaceHandle<FeedbackListener> speech_listener) {
-  speech_listeners_.AddInterfacePtr(
-      FeedbackListenerPtr::Create(std::move(speech_listener)));
+  speech_listeners_.AddInterfacePtr(speech_listener.Bind());
 }
 
 // |SuggestionProvider|
@@ -267,7 +266,7 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 void SuggestionEngineImpl::RegisterQueryHandler(
     const fidl::String& url,
     fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
-  auto query_handler = QueryHandlerPtr::Create(std::move(query_handler_handle));
+  auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
 }
 
@@ -401,8 +400,7 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       case Action::Tag::CUSTOM_ACTION: {
-        auto custom_action = maxwell::CustomActionPtr::Create(
-            std::move(action->get_custom_action()));
+        auto custom_action = action->get_custom_action().Bind();
         custom_action->Execute(fxl::MakeCopyable(
             [this, custom_action = std::move(custom_action),
              story_color](fidl::Array<maxwell::ActionPtr> actions) {
@@ -426,19 +424,19 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   media_service_->CreateAudioRenderer(audio_renderer.NewRequest(),
                                       media_renderer.NewRequest());
 
-  media_sink_.reset();
-  media_service_->CreateSink(media_renderer.PassInterfaceHandle(),
+  media_sink_.Unbind();
+  media_service_->CreateSink(media_renderer.Unbind(),
                              media_sink_.NewRequest());
 
-  media_packet_producer_ = media::MediaPacketProducerPtr::Create(
-      std::move(media_response->media_packet_producer));
+  media_packet_producer_ =
+      media_response->media_packet_producer.Bind();
   media_sink_->ConsumeMediaType(
       std::move(media_response->media_type),
       [this](fidl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
         media_packet_producer_->Connect(
-            media::MediaPacketConsumerPtr::Create(std::move(consumer)), [this] {
-              time_lord_.reset();
-              media_timeline_consumer_.reset();
+            consumer.Bind(), [this] {
+              time_lord_.Unbind();
+              media_timeline_consumer_.Unbind();
 
               speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
                 listener->OnStatusChanged(SpeechStatus::RESPONDING);
@@ -463,7 +461,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
             });
       });
 
-  media_packet_producer_.set_connection_error_handler([this] {
+  media_packet_producer_.set_error_handler([this] {
     speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
       listener->OnStatusChanged(SpeechStatus::IDLE);
     });

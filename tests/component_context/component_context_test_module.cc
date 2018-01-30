@@ -159,7 +159,7 @@ class ParentApp {
   // Tests AgentController. Calls |done_cb| when completed successfully.
   void TestAgentController(std::function<void()> done_cb) {
     // Closing the agent controller should trigger the agent to stop.
-    one_agent_controller.reset();
+    one_agent_controller.Unbind();
 
     modular::testing::GetStore()->Get("one_agent_stopped",
                                       [this, done_cb](const fidl::String&) {
@@ -182,7 +182,7 @@ class ParentApp {
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                              [this, done_cb] {
-                               unstoppable_agent_controller_.reset();
+                               unstoppable_agent_controller_.Unbind();
                                done_cb();
                              }),
         fxl::TimeDelta::FromMilliseconds(500));

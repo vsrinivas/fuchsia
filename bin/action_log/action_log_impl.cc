@@ -190,8 +190,7 @@ void UserActionLogImpl::Duplicate(
 
 void UserActionLogImpl::Subscribe(
     fidl::InterfaceHandle<ActionLogListener> listener_handle) {
-  ActionLogListenerPtr listener =
-      ActionLogListenerPtr::Create(std::move(listener_handle));
+  ActionLogListenerPtr listener = listener_handle.Bind();
   subscribers_.AddInterfacePtr(std::move(listener));
 }
 

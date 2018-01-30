@@ -56,7 +56,7 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
   void Continue(std::function<void()> at) { continue_ = at; }
@@ -107,7 +107,7 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   // |StoryModulesWatcher|
@@ -143,7 +143,7 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   // |StoryLinksWatcher|
@@ -169,7 +169,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   }
 
   // Deregisters itself from the watched story provider.
-  void Reset() { binding_.Close(); }
+  void Reset() { binding_.Unbind(); }
 
  private:
   modular::testing::TestPoint on_delete_called_once_{"OnDelete() Called"};
@@ -541,7 +541,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_done_watcher_.Reset();
     story_modules_watcher_.Reset();
     story_links_watcher_.Reset();
-    story_controller_.reset();
+    story_controller_.Unbind();
   }
 
   const Settings settings_;

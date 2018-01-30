@@ -26,8 +26,7 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
   void GetUserActionLog(
       fidl::InterfaceHandle<ProposalPublisher> proposal_publisher_handle,
       fidl::InterfaceRequest<UserActionLog> request) {
-    ProposalPublisherPtr proposal_publisher =
-        ProposalPublisherPtr::Create(std::move(proposal_publisher_handle));
+    ProposalPublisherPtr proposal_publisher = proposal_publisher_handle.Bind();
     std::unique_ptr<UserActionLogImpl> user_action_log_impl(
         new UserActionLogImpl(std::move(proposal_publisher)));
     user_action_log_bindings_.AddBinding(std::move(user_action_log_impl),

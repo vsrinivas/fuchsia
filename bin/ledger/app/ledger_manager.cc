@@ -129,9 +129,9 @@ LedgerManager::LedgerManager(
       sync_(std::move(sync)),
       ledger_impl_(this),
       merge_manager_(environment_) {
-  bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+  bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
-  ledger_debug_bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
+  ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
 }
 
 LedgerManager::~LedgerManager() {}

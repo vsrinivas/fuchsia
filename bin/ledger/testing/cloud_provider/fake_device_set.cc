@@ -36,7 +36,7 @@ void FakeDeviceSet::SetWatcher(
     fidl::Array<uint8_t> /*fingerprint*/,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
-  watcher_ = cloud_provider::DeviceSetWatcherPtr::Create(std::move(watcher));
+  watcher_ = watcher.Bind();
   callback(cloud_provider::Status::OK);
 
   if (cloud_erase_from_watcher_ == CloudEraseFromWatcher::YES) {

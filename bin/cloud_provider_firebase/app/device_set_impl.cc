@@ -19,7 +19,7 @@ DeviceSetImpl::DeviceSetImpl(
       binding_(this, std::move(request)) {
   FXL_DCHECK(firebase_auth_);
   // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
+  binding_.set_error_handler([this] {
     if (on_empty_) {
       on_empty_();
     }
@@ -95,7 +95,7 @@ void DeviceSetImpl::SetWatcher(
     fidl::Array<uint8_t> fingerprint,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
-  watcher_ = cloud_provider::DeviceSetWatcherPtr::Create(std::move(watcher));
+  watcher_ = watcher.Bind();
   set_watcher_callback_called_ = false;
   timestamp_update_request_sent_ = false;
 

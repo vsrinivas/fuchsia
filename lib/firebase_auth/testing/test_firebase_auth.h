@@ -16,7 +16,7 @@ class TestFirebaseAuth : public FirebaseAuth {
   explicit TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // FirebaseAuth:
-  void set_connection_error_handler(fxl::Closure on_error) override;
+  void set_error_handler(fxl::Closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(AuthStatus, std::string)> callback) override;

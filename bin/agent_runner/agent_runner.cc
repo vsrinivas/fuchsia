@@ -439,7 +439,7 @@ void AgentRunner::UpdateWatchers() {
 }
 
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
-  auto ptr = AgentProviderWatcherPtr::Create(std::move(watcher));
+  auto ptr = watcher.Bind();
   // 1. Send this watcher the current list of agents.
   ptr->OnUpdate(GetAllAgents());
 

@@ -93,7 +93,7 @@ class ConflictResolverImpl : public ConflictResolver {
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {
-    binding_.set_connection_error_handler(
+    binding_.set_error_handler(
         [this] { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
@@ -112,9 +112,8 @@ class ConflictResolverImpl : public ConflictResolver {
         : left_version(std::move(left_version)),
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
-          result_provider_ptr(
-              MergeResultProviderPtr::Create(std::move(result_provider))) {
-      result_provider_ptr.set_connection_error_handler(
+          result_provider_ptr(result_provider.Bind()) {
+      result_provider_ptr.set_error_handler(
           [this] { result_provider_disconnected = true; });
     }
   };

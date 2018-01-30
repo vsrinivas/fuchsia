@@ -196,9 +196,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     return;
   }
 
-  auto cloud_provider_ptr =
-      cloud_provider::CloudProviderPtr::Create(std::move(cloud_provider));
-  cloud_provider_ptr.set_connection_error_handler(
+  auto cloud_provider_ptr = cloud_provider.Bind();
+  cloud_provider_ptr.set_error_handler(
       [this, name = repository_information.name] {
         FXL_LOG(ERROR) << "Lost connection to the cloud provider, "
                        << "shutting down the repository.";

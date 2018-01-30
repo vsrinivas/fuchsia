@@ -65,14 +65,14 @@ class MessageQueueStorage : MessageSender {
     }
 
     message_receiver_.Bind(std::move(receiver));
-    message_receiver_.set_connection_error_handler(
+    message_receiver_.set_error_handler(
         [this] {
           if (receive_ack_pending_) {
             FXL_DLOG(WARNING)
                 << "MessageReceiver closed, but OnReceive acknowledgement still"
                    " pending.";
           }
-          message_receiver_.reset();
+          message_receiver_.Unbind();
           receive_ack_pending_ = false;
         });
 
@@ -218,7 +218,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
             return;
           }
 
-          snapshot_.set_connection_error_handler(
+          snapshot_.set_error_handler(
               [] { FXL_LOG(WARNING) << "Error on snapshot connection"; });
 
           key_ = MakeMessageQueueTokenKey(component_namespace_,

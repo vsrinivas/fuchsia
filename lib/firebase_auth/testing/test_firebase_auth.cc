@@ -14,7 +14,7 @@ namespace firebase_auth {
 TestFirebaseAuth::TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
-void TestFirebaseAuth::set_connection_error_handler(fxl::Closure on_error) {
+void TestFirebaseAuth::set_error_handler(fxl::Closure on_error) {
   error_handler_ = on_error;
 }
 

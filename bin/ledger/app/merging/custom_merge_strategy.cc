@@ -12,7 +12,7 @@
 namespace ledger {
 CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
     : conflict_resolver_(std::move(conflict_resolver)) {
-  conflict_resolver_.set_connection_error_handler([this]() {
+  conflict_resolver_.set_error_handler([this]() {
     // If a merge is in progress, it must be terminated.
     if (in_progress_merge_) {
       // The actual cleanup of in_progress_merge_ will happen in its on_done

@@ -56,7 +56,7 @@ class ParentApp {
                 received_trigger_token_.Pass();
 
                 // Stop the agent.
-                agent_controller_.reset();
+                agent_controller_.Unbind();
                 modular::testing::GetStore()->Get(
                     "trigger_test_agent_stopped",
                     [this, token](const fidl::String&) {

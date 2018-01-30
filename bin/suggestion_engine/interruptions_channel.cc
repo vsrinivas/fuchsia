@@ -29,7 +29,7 @@ bool IsInterruption(const SuggestionPrototype& prototype) {
 void InterruptionsChannel::AddSubscriber(
     fidl::InterfaceHandle<SuggestionListener> subscriber,
     const RankedSuggestions& initial_suggestions_source) {
-  auto listener = SuggestionListenerPtr::Create(std::move(subscriber));
+  auto listener = subscriber.Bind();
 
   for (const auto& suggestion : initial_suggestions_source.Get()) {
     if (IsInterruption(*suggestion->prototype)) {

@@ -208,7 +208,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     } else {
       app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
-      monitor_.set_connection_error_handler([] {
+      monitor_.set_error_handler([] {
         FXL_LOG(ERROR) << "No device runner monitor found.";
         exit(1);
       });

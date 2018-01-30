@@ -225,7 +225,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // link value.
     if (i->module_data->module_url != module_data_->module_url ||
         !i->module_data->link_path->Equals(*module_data_->link_path) ||
-        embed_module_watcher_.is_valid() || incoming_services_.is_pending()) {
+        embed_module_watcher_.is_valid() || incoming_services_.is_valid()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
         Launch(flow);
@@ -236,7 +236,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // If the module is already running on the same URL and link, we just
     // connect the module controller request, if there is one. Modules started
     // with StoryController.AddModule() don't have a module controller request.
-    if (module_controller_request_.is_pending()) {
+    if (module_controller_request_.is_valid()) {
       i->module_controller_impl->Connect(std::move(module_controller_request_));
     }
   }
@@ -291,7 +291,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
     // Modules started with StoryController.AddModule() don't have a module
     // controller request.
-    if (module_controller_request_.is_pending()) {
+    if (module_controller_request_.is_valid()) {
       connection.module_controller_impl->Connect(
           std::move(module_controller_request_));
     }
@@ -914,10 +914,10 @@ class StoryControllerImpl::StopCall : Operation<> {
 
   void StoryShellDown() {
     story_controller_impl_->story_shell_app_.reset();
-    story_controller_impl_->story_shell_.reset();
+    story_controller_impl_->story_shell_.Unbind();
     if (story_controller_impl_->story_context_binding_.is_bound()) {
       // Close() dchecks if called while not bound.
-      story_controller_impl_->story_context_binding_.Close();
+      story_controller_impl_->story_context_binding_.Unbind();
     }
     StopLinks();
   }
@@ -1666,7 +1666,7 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
 
 // |StoryController|
 void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
-  auto ptr = StoryWatcherPtr::Create(std::move(watcher));
+  auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
 }
@@ -1700,7 +1700,7 @@ void StoryControllerImpl::GetActiveModules(
       &operation_queue_, fxl::MakeCopyable([this, watcher = std::move(watcher),
                                             callback]() mutable {
         if (watcher) {
-          auto ptr = StoryModulesWatcherPtr::Create(std::move(watcher));
+          auto ptr = watcher.Bind();
           modules_watchers_.AddInterfacePtr(std::move(ptr));
         }
 
@@ -1751,7 +1751,7 @@ void StoryControllerImpl::GetActiveLinks(
                fxl::MakeCopyable([this, watcher = std::move(watcher),
                                   callback]() mutable {
                  if (watcher) {
-                   auto ptr = StoryLinksWatcherPtr::Create(std::move(watcher));
+                   auto ptr = watcher.Bind();
                    links_watchers_.AddInterfacePtr(std::move(ptr));
                  }
 

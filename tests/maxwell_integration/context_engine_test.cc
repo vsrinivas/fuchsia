@@ -68,12 +68,12 @@ class ContextEngineTest : public ContextEngineTestBase {
   }
 
   void InitReader(ComponentScopePtr scope) {
-    reader_.reset();
+    reader_.Unbind();
     context_engine()->GetReader(std::move(scope), reader_.NewRequest());
   }
 
   void InitWriter(ComponentScopePtr client_info) {
-    writer_.reset();
+    writer_.Unbind();
     context_engine()->GetWriter(std::move(client_info), writer_.NewRequest());
   }
 
@@ -124,7 +124,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
-  value3.reset();
+  value3.Unbind();
   ASSERT_TRUE(RunLoopUntil([&listener] {
     return !!listener.last_update &&
            listener.last_update->values["a"].size() == 1;
@@ -152,7 +152,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
-  value4.reset();
+  value4.Unbind();
   RunLoopUntil([&listener] { return !!listener.last_update; });
   EXPECT_EQ(1lu, listener.last_update->values["a"].size());
   EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);

@@ -99,8 +99,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   void StartModule(const std::string& module_query) {
     if (module_) {
       module_->Stop([this, module_query] {
-        module_.reset();
-        module_view_.reset();
+        module_.Unbind();
+        module_view_.Unbind();
         StartModule(module_query);
       });
       return;
