@@ -131,7 +131,7 @@
     <project name="third_party/grpc"
              path="third_party/grpc"
              remote="https://fuchsia.googlesource.com/third_party/grpc"
-             revision="16d390412c17037c619626e562b1cbcf94346835"
+             revision="c34f3ae536e89e04fbfa0bcfa3ba1a363ce54b66"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/gtest"
              path="third_party/gtest"
