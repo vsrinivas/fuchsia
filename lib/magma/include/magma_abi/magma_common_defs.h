@@ -94,6 +94,13 @@ struct magma_display_size {
     uint32_t height;
 };
 
+struct magma_system_inline_command_buffer {
+    void* data;
+    uint64_t size;
+    magma_semaphore_t* semaphores;
+    uint32_t semaphore_count;
+};
+
 // The top 16 bits are reserved for vendor-specific flags.
 #define MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT 16
 

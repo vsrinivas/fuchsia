@@ -308,6 +308,14 @@ void magma_submit_command_buffer(magma_connection_t* connection, magma_buffer_t 
     delete platform_buffer;
 }
 
+void magma_execute_immediate_commands(magma_connection_t* connection, uint32_t context_id,
+                                      uint64_t command_count,
+                                      magma_system_inline_command_buffer* command_buffers)
+{
+    magma::PlatformIpcConnection::cast(connection)
+        ->ExecuteImmediateCommands(context_id, command_count, command_buffers);
+}
+
 void magma_wait_rendering(magma_connection_t* connection, magma_buffer_t buffer)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);

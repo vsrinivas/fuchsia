@@ -90,6 +90,10 @@ void magma_release_command_buffer(struct magma_connection_t* connection,
 void magma_submit_command_buffer(struct magma_connection_t* connection,
                                  magma_buffer_t command_buffer, uint32_t context_id);
 
+void magma_execute_immediate_commands(struct magma_connection_t* connection, uint32_t context_id,
+                                      uint64_t command_count,
+                                      struct magma_system_inline_command_buffer* command_buffers);
+
 void magma_wait_rendering(struct magma_connection_t* connection, magma_buffer_t buffer);
 
 // makes the buffer returned by |buffer| able to be imported via |buffer_handle_out|

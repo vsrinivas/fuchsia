@@ -136,6 +136,22 @@ public:
         EXPECT_EQ(0u, out_data_size);
     }
 
+    void TestExecuteImmediateCommands()
+    {
+        uint8_t commands_buffer[512] = {};
+        uint64_t semaphore_ids[]{0, 1, 2};
+        magma_system_inline_command_buffer commands[128];
+        for (size_t i = 0; i < 128; i++) {
+            commands[i].data = commands_buffer;
+            commands[i].size = 4;
+            commands[i].semaphore_count = 3;
+            commands[i].semaphores = semaphore_ids;
+        }
+
+        ipc_connection_->ExecuteImmediateCommands(test_context_id, 128, commands);
+        EXPECT_EQ(ipc_connection_->GetError(), 0);
+    }
+
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
     static uint64_t test_semaphore_id;
@@ -271,6 +287,30 @@ public:
             callback(channel, &data, sizeof(data));
         }
     }
+
+    magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
+                                           void* commands, uint64_t semaphore_count,
+                                           uint64_t* semaphores) override
+    {
+        EXPECT_GE(256u, commands_size);
+        uint8_t received_bytes[256] = {};
+        EXPECT_EQ(0, memcmp(received_bytes, commands, commands_size));
+        uint64_t command_count = commands_size / 4;
+        EXPECT_EQ(3u * command_count, semaphore_count);
+        for (uint32_t i = 0; i < command_count; i++) {
+            EXPECT_EQ(0u, semaphores[0]);
+            EXPECT_EQ(1u, semaphores[1]);
+            EXPECT_EQ(2u, semaphores[2]);
+            semaphores += 3;
+        }
+
+        immediate_commands_bytes_executed_ += commands_size;
+        TestPlatformConnection::test_complete = immediate_commands_bytes_executed_ == 512;
+
+        return MAGMA_STATUS_OK;
+    }
+
+    uint64_t immediate_commands_bytes_executed_ = 0;
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
@@ -378,4 +418,11 @@ TEST(PlatformConnection, NotificationChannel)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestNotificationChannel();
+}
+
+TEST(PlatformConnection, ExecuteImmediateCommands)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestExecuteImmediateCommands();
 }

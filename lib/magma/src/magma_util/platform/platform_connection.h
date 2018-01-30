@@ -67,6 +67,8 @@ public:
     virtual int GetNotificationChannelFd() = 0;
     virtual magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                                    size_t* buffer_size_out) = 0;
+    virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
+                                          magma_system_inline_command_buffer* command_buffers) = 0;
 
     static PlatformIpcConnection* cast(magma_connection_t* connection)
     {
@@ -112,6 +114,9 @@ public:
                                   uint64_t page_count) = 0;
         virtual void SetNotificationChannel(msd_channel_send_callback_t callback,
                                             msd_channel_t channel) = 0;
+        virtual magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
+                                                       void* commands, uint64_t semaphore_count,
+                                                       uint64_t* semaphore_ids) = 0;
     };
 
     PlatformConnection(std::unique_ptr<magma::PlatformEvent> shutdown_event)

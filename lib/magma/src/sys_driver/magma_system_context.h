@@ -34,6 +34,8 @@ public:
     }
 
     magma::Status ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer);
+    magma::Status ExecuteImmediateCommands(uint64_t commands_size, void* commands,
+                                           uint64_t semaphore_count, uint64_t* semaphore_ids);
 
     void ReleaseBuffer(std::shared_ptr<MagmaSystemBuffer> buffer);
 
@@ -47,4 +49,4 @@ private:
     friend class CommandBufferHelper;
 };
 
-#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_
+#endif // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_

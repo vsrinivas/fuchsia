@@ -82,6 +82,12 @@ magma_status_t msd_context_execute_command_buffer(struct msd_context_t* ctx,
                                                   struct msd_semaphore_t** wait_semaphores,
                                                   struct msd_semaphore_t** signal_semaphores);
 
+// Executes a buffer of commands of |commands_size| bytes.
+magma_status_t msd_context_execute_immediate_commands(struct msd_context_t* ctx,
+                                                      uint64_t commands_size, void* commands,
+                                                      uint64_t semaphore_count,
+                                                      struct msd_semaphore_t** semaphores);
+
 // Signals that the given |buffer| is no longer in use on the given |context|.
 // May be used to free up resources such as a cached address space mapping for the given buffer.
 void msd_context_release_buffer(struct msd_context_t* context, struct msd_buffer_t* buffer);

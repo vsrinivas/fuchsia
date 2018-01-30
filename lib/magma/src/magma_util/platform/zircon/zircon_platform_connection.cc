@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zircon_platform_event.h"
 #include "platform_connection.h"
+#include "zircon_platform_event.h"
 
 #include "zx/channel.h"
 #include <fdio/io.h>
@@ -12,6 +12,8 @@
 #include <zircon/types.h>
 
 namespace magma {
+
+constexpr size_t kReceiveBufferSize = 256;
 
 enum OpCode {
     ImportBuffer,
@@ -27,6 +29,7 @@ enum OpCode {
     MapBufferGpu,
     UnmapBufferGpu,
     CommitBuffer,
+    ExecuteImmediateCommands,
 };
 
 struct ImportBufferOp {
@@ -94,6 +97,24 @@ struct PageFlipOp {
 
 } __attribute__((packed));
 
+struct ExecuteImmediateCommandsOp {
+    const OpCode opcode = ExecuteImmediateCommands;
+    static constexpr uint32_t kNumHandles = 0;
+    uint32_t context_id;
+    uint32_t semaphore_count;
+    uint32_t commands_size;
+    uint64_t semaphores[];
+    // Command data follows the last semaphore.
+
+    uint8_t* command_data() { return reinterpret_cast<uint8_t*>(&semaphores[semaphore_count]); }
+
+    static uint32_t size(uint32_t semaphore_count, uint32_t commands_size)
+    {
+        return sizeof(ExecuteImmediateCommandsOp) + commands_size +
+               sizeof(uint64_t) * semaphore_count;
+    }
+} __attribute__((packed));
+
 struct GetErrorOp {
     const OpCode opcode = GetError;
     static constexpr uint32_t kNumHandles = 0;
@@ -153,6 +174,26 @@ PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* 
     return reinterpret_cast<PageFlipOp*>(bytes);
 }
 
+template <>
+ExecuteImmediateCommandsOp* OpCast<ExecuteImmediateCommandsOp>(uint8_t* bytes, uint32_t num_bytes,
+                                                               zx_handle_t* handles,
+                                                               uint32_t kNumHandles)
+{
+    if (num_bytes < sizeof(ExecuteImmediateCommandsOp))
+        return DRETP(nullptr, "too few bytes for executing immediate commands %u", num_bytes);
+
+    auto execute_immediate_commands_op = reinterpret_cast<ExecuteImmediateCommandsOp*>(bytes);
+    uint32_t expected_size =
+        ExecuteImmediateCommandsOp::size(execute_immediate_commands_op->semaphore_count,
+                                         execute_immediate_commands_op->commands_size);
+    if (num_bytes != expected_size)
+        return DRETP(nullptr, "wrong number of bytes in message, expected %u, got %u",
+                     expected_size, num_bytes);
+    if (kNumHandles != ExecuteImmediateCommandsOp::kNumHandles)
+        return DRETP(nullptr, "wrong number of handles in message");
+    return reinterpret_cast<ExecuteImmediateCommandsOp*>(bytes);
+}
+
 class ZirconPlatformConnection : public PlatformConnection,
                                   public std::enable_shared_from_this<ZirconPlatformConnection> {
 public:
@@ -171,7 +212,7 @@ public:
 
     bool HandleRequest() override
     {
-        constexpr uint32_t num_bytes = 256;
+        constexpr uint32_t num_bytes = kReceiveBufferSize;
         constexpr uint32_t kNumHandles = 1;
 
         uint32_t actual_bytes;
@@ -251,6 +292,10 @@ public:
                 case OpCode::PageFlip:
                     success = PageFlip(
                         OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles), handles);
+                    break;
+                case OpCode::ExecuteImmediateCommands:
+                    success = ExecuteImmediateCommands(OpCast<ExecuteImmediateCommandsOp>(
+                        bytes, actual_bytes, handles, actual_handles));
                     break;
                 case OpCode::GetError:
                     success =
@@ -380,6 +425,20 @@ private:
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
         if (!WriteError(0))
             return false;
+        return true;
+    }
+
+    bool ExecuteImmediateCommands(ExecuteImmediateCommandsOp* op)
+    {
+        DLOG("Operation: ExecuteImmediateCommands");
+        if (!op)
+            return DRETF(false, "malformed message");
+
+        magma::Status status = delegate_->ExecuteImmediateCommands(
+            op->context_id, op->commands_size, op->command_data(), op->semaphore_count,
+            op->semaphores);
+        if (!status)
+            SetError(status);
         return true;
     }
 
@@ -590,6 +649,51 @@ public:
 
         if (error != 0)
             SetError(error);
+    }
+
+    void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
+                                  magma_system_inline_command_buffer* command_buffers) override
+    {
+        uint8_t payload[kReceiveBufferSize];
+        uint64_t commands_sent = 0;
+        while (commands_sent < command_count) {
+            auto op = new (payload) ExecuteImmediateCommandsOp;
+
+            uint64_t space_used = sizeof(ExecuteImmediateCommandsOp);
+            uint64_t semaphores_used = 0;
+            uint64_t last_command;
+            for (last_command = commands_sent; last_command < command_count; last_command++) {
+                uint64_t command_space =
+                    command_buffers[last_command].size +
+                    command_buffers[last_command].semaphore_count * sizeof(uint64_t);
+                space_used += command_space;
+                if (space_used > sizeof(payload))
+                    break;
+                semaphores_used += command_buffers[last_command].semaphore_count;
+            }
+
+            op->semaphore_count = semaphores_used;
+
+            uint64_t* semaphore_data = op->semaphores;
+            uint8_t* command_data = op->command_data();
+            uint64_t command_data_used = 0;
+            for (uint64_t i = commands_sent; i < last_command; i++) {
+                memcpy(semaphore_data, command_buffers[i].semaphores,
+                       command_buffers[i].semaphore_count * sizeof(uint64_t));
+                semaphore_data += command_buffers[i].semaphore_count;
+                memcpy(command_data, command_buffers[i].data, command_buffers[i].size);
+                command_data += command_buffers[i].size;
+                command_data_used += command_buffers[i].size;
+            }
+            op->commands_size = command_data_used;
+            commands_sent = last_command;
+            uint64_t payload_size =
+                ExecuteImmediateCommandsOp::size(op->semaphore_count, op->commands_size);
+            DASSERT(payload_size <= sizeof(payload));
+            magma_status_t result = channel_write(payload, payload_size, nullptr, 0);
+            if (result != MAGMA_STATUS_OK)
+                SetError(result);
+        }
     }
 
     void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,

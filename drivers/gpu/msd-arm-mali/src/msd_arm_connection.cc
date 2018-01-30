@@ -17,6 +17,7 @@
 #include "msd_arm_device.h"
 #include "msd_arm_semaphore.h"
 #include "platform_semaphore.h"
+#include "platform_trace.h"
 
 void msd_connection_close(msd_connection_t* connection)
 {
@@ -102,6 +103,7 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
                                                   msd_semaphore_t** wait_semaphores,
                                                   msd_semaphore_t** signal_semaphores)
 {
+    TRACE_DURATION("magma", "msd_context_execute_command_buffer");
     auto context = static_cast<MsdArmContext*>(ctx);
     auto connection = context->connection().lock();
     if (!connection)
@@ -135,6 +137,7 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
     // validated and have the loop dereference memory outside of the buffer.
     volatile uint64_t* atom_count_ptr = static_cast<volatile uint64_t*>(addr);
     uint64_t atom_count = *atom_count_ptr;
+    TRACE_DURATION("magma", "atom count", "atom_count", atom_count);
 
     uint64_t buffer_max_entries =
         (buffer->platform_buffer()->size() - sizeof(uint64_t)) / sizeof(magma_arm_mali_atom);
@@ -153,6 +156,29 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
     }
 
     buffer->platform_buffer()->UnmapCpu();
+
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
+                                                      void* commands, uint64_t semaphore_count,
+                                                      msd_semaphore_t** msd_semaphores)
+{
+    auto context = static_cast<MsdArmContext*>(ctx);
+    auto connection = context->connection().lock();
+    if (!connection)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Connection not valid");
+
+    size_t count = commands_size / sizeof(magma_arm_mali_atom);
+    magma_arm_mali_atom* atoms = static_cast<magma_arm_mali_atom*>(commands);
+    std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
+    for (size_t i = 0; i < semaphore_count; i++) {
+        semaphores.push_back(MsdArmAbiSemaphore::cast(msd_semaphores[i])->ptr());
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (!connection->ExecuteAtom(&atoms[i], &semaphores))
+            return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+    }
 
     return MAGMA_STATUS_OK;
 }
@@ -328,6 +354,7 @@ void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_
                                    uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                                    uint64_t flags)
 {
+    TRACE_DURATION("magma", "msd_connection_map_buffer_gpu", "page_count", page_count);
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
     std::shared_ptr<MsdArmBuffer> buffer = connection->GetBuffer(MsdArmAbiBuffer::cast(abi_buffer));
 
@@ -339,6 +366,7 @@ void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_
 void msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* buffer,
                                      uint64_t gpu_va)
 {
+    TRACE_DURATION("magma", "msd_connection_unmap_buffer_gpu");
     MsdArmAbiConnection::cast(abi_connection)->ptr()->RemoveMapping(gpu_va);
 }
 

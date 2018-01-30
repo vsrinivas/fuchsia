@@ -105,6 +105,25 @@ magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint32_t command_buffe
     return context->ExecuteCommandBuffer(std::move(command_buffer));
 }
 
+magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_id,
+                                                              uint64_t commands_size,
+                                                              void* commands,
+                                                              uint64_t semaphore_count,
+                                                              uint64_t* semaphore_ids)
+{
+    if (!has_render_capability_)
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
+                        "Attempting to execute a command buffer without render capability");
+
+    auto context = LookupContext(context_id);
+    if (!context)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "Attempting to execute command buffer on invalid context");
+
+    return context->ExecuteImmediateCommands(commands_size, commands, semaphore_count,
+                                             semaphore_ids);
+}
+
 magma::Status MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
 {
     if (!has_render_capability_)

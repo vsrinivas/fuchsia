@@ -245,3 +245,10 @@ void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer)
 
     connection->ReleaseBuffer(abi_buffer->ptr());
 }
+
+magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
+                                                      void* commands, uint64_t semaphore_count,
+                                                      msd_semaphore_t** msd_semaphores)
+{
+    return MAGMA_STATUS_CONTEXT_KILLED;
+}

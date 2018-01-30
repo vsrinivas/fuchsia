@@ -162,6 +162,26 @@ MagmaSystemContext::ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> 
                     result);
 }
 
+magma::Status MagmaSystemContext::ExecuteImmediateCommands(uint64_t commands_size, void* commands,
+                                                           uint64_t semaphore_count,
+                                                           uint64_t* semaphore_ids)
+{
+    std::vector<msd_semaphore_t*> msd_semaphores(semaphore_count);
+    for (uint32_t i = 0; i < semaphore_count; i++) {
+        auto semaphore = owner_->LookupSemaphoreForContext(semaphore_ids[i]);
+        if (!semaphore)
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "semaphore id not found 0x%" PRIx64,
+                            semaphore_ids[i]);
+        msd_semaphores[i] = semaphore->msd_semaphore();
+    }
+    magma_status_t result = msd_context_execute_immediate_commands(
+        msd_ctx(), commands_size, commands, semaphore_count, msd_semaphores.data());
+
+    return DRET_MSG(result,
+                    "ExecuteImmediateCommands: msd_context_execute_immediate_commands failed: %d",
+                    result);
+}
+
 void MagmaSystemContext::ReleaseBuffer(std::shared_ptr<MagmaSystemBuffer> buffer)
 {
     msd_context_release_buffer(msd_ctx(), buffer->msd_buf());

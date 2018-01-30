@@ -91,6 +91,50 @@ public:
         EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, status.get());
     }
 
+    void TestValidImmediate()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom;
+        atom.atom_number = 0;
+        atom.flags = 1;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+    }
+
+    void TestInvalidSemaphoreImmediate()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom;
+        atom.atom_number = 0;
+        atom.flags = kAtomFlagSemaphoreSet;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestSemaphoreImmediate()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+        auto platform_semaphore = magma::PlatformSemaphore::Create();
+        uint32_t handle;
+        platform_semaphore->duplicate_handle(&handle);
+        connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+
+        magma_arm_mali_atom atom;
+        atom.atom_number = 0;
+        atom.flags = kAtomFlagSemaphoreSet;
+        uint64_t semaphores[] = {platform_semaphore->id()};
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 1, semaphores);
+        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+    }
+
 private:
     struct BatchBuffer {
         std::unique_ptr<MagmaSystemBuffer> buffer;
@@ -183,4 +227,9 @@ TEST(CommandBuffer, TestTooSmall) { ::Test().TestTooSmall(); }
 TEST(CommandBuffer, TestEmpty) { ::Test().TestEmpty(); }
 TEST(CommandBuffer, TestInvalidFlags) { ::Test().TestInvalidFlags(); }
 TEST(CommandBuffer, TestOverflow) { ::Test().TestOverflow(); }
+TEST(CommandBuffer, TestValid) { ::Test().TestValid(); }
+
+TEST(CommandBuffer, TestInvalidSemaphoreImmediate) { ::Test().TestInvalidSemaphoreImmediate(); }
+TEST(CommandBuffer, TestSemaphoreImmediate) { ::Test().TestSemaphoreImmediate(); }
+TEST(CommandBuffer, TestValidImmediate) { ::Test().TestValidImmediate(); }
 }
