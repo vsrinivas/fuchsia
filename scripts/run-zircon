@@ -142,22 +142,21 @@ BUILD_ARGS=
 
 if (( $ASAN )); then
     BUILDDIR_SUFFIX+=-asan
-    # at the moment asan implies clang
-    BUILD_ARGS+=' USE_ASAN=true USE_CLANG=true'
+    BUILD_ARGS+=' -A'
 elif (( $LTO )); then
     BUILDDIR_SUFFIX+=-lto
-    BUILD_ARGS+=' USE_LTO=true'
+    BUILD_ARGS+=' -L'
 elif (( $THINLTO )); then
     BUILDDIR_SUFFIX+=-thinlto
-    BUILD_ARGS+=' USE_THINLTO=true'
+    BUILD_ARGS+=' -l'
 elif (( $CLANG )); then
     BUILDDIR_SUFFIX+=-clang
-    BUILD_ARGS+=' USE_CLANG=true'
+    BUILD_ARGS+=' -C'
 fi
 
 if (( $RELEASE )); then
     BUILDDIR_SUFFIX+=-release
-    BUILD_ARGS+=' DEBUG=0'
+    BUILD_ARGS+=' -r'
 fi
 
 # build the project if asked for

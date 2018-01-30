@@ -6,8 +6,5 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-export PROJECT=x64
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-$DIR/make-parallel -C $DIR/.. $PROJECT "$@"
+${DIR}/build-zircon -a x64 "$@"

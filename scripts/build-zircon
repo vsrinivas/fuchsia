@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function HELP {
+    echo "help:"
+    echo "-a <arch>            : arm64, or x64"
+    echo "-A                   : use ASan build"
+    echo "-C                   : use Clang build"
+    echo "-l                   : use ThinLTO build"
+    echo "-L                   : use LTO build"
+    echo "-q                   : build quietly"
+    echo "-r                   : build release build"
+    echo "-d                   : build unoptimized, with full debug symbols"
+    echo "-h for help"
+    echo "all arguments after -- are passed to make directly"
+    exit 1
+}
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+ARGS=
+ARCH=
+QUIET=0
+
+while getopts a:ACdlLqr FLAG; do
+    case $FLAG in
+        a) ARCH=${OPTARG};;
+        A) ARGS+=" USE_ASAN=true USE_CLANG=true";;
+        C) ARGS+=" USE_CLANG=true";;
+        d) ARGS+=" DEBUG_HARD=1";;
+        l) ARGS+=" USE_THINLTO=true";;
+        L) ARGS+=" USE_LTO=true";;
+        q) QUIET=1;;
+        r) ARGS+=" DEBUG=0";;
+        \?)
+            echo unrecognized option
+            HELP
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ ! ${ARCH} ]]; then
+    echo no arch specified!
+    HELP
+fi
+
+${DIR}/make-parallel ${ARCH} ${ARGS} QUIET=${QUIET}
