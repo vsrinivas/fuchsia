@@ -18,7 +18,7 @@ DEFAULT_GN_PACKAGE_LIST=(
 DEFAULT_GN_PACKAGES=$(IFS=, ; echo "${DEFAULT_GN_PACKAGE_LIST[*]}")
 
 usage() {
-  echo "usage: ${0} [options] {hikey960, vim2, x86, qemu}"
+  echo "usage: ${0} [options] {hikey960, vim2, x86, qemu-x86, qemu-arm64}"
   echo
   echo "  -A            Use ASAN in GN"
   echo "  -g            Use Goma"
@@ -45,9 +45,12 @@ vim2)
   ARCH="aarch64";
   PLATFORM="${1}";;
 x86) ;&
-qemu)
+qemu-x86)
   ARCH="x86-64";
   PLATFORM="x86";;
+qemu-arm64)
+  ARCH="aarch64";
+  PLATFORM="arm64";;
 *)
   usage;;
 esac
@@ -83,11 +86,18 @@ x86)
     -1 \
     out/build-zircon/build-$PLATFORM/zircon.bin \
     out/debug-$ARCH/user.bootfs;;
-qemu)
+qemu-x86)
   zircon/scripts/run-zircon-x86-64 \
     -k \
     -V \
     -g \
     -x out/debug-$ARCH/user.bootfs \
     -o out/build-zircon/build-$PLATFORM/;;
+qemu-arm64)
+  zircon/scripts/run-zircon-arm64 \
+    -V \
+    -x out/debug-$ARCH/user.bootfs \
+    -o out/build-zircon/build-$PLATFORM \
+    -m 2048 \
+    -- -M virt,gic_version=3;;
 esac
