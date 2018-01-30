@@ -85,11 +85,23 @@ struct AudioMediaTypeDetails {
   // TODO(dalesat): Channel designations.
 };
 
-// TODO(dalesat): Change these once the mixer supports broader ranges.
 const uint32 kMinLpcmChannelCount = 1;
 const uint32 kMaxLpcmChannelCount = 8;
 const uint32 kMinLpcmFramesPerSecond = 1000;
-const uint32 kMaxLpcmFramesPerSecond = 48000;
+const uint32 kMaxLpcmFramesPerSecond = 192000;
+
+struct AudioPcmFormat {
+  const uint32 kMinChannelCount = 1;
+  const uint32 kMaxChannelCount = 8;
+  const uint32 kMinFramesPerSecond = 1000;
+  const uint32 kMaxFramesPerSecond = 192000;
+
+  AudioSampleFormat sample_format;
+  uint32 channels;
+  uint32 frames_per_second;
+  // TODO(johngro): Channel/Speaker designations.
+  // TODO(johngro): Weighting (Linear, A-law, Mu-law, etc...)
+};
 
 // Media type set details for the AUDIO medium.
 struct AudioMediaTypeSetDetails {
