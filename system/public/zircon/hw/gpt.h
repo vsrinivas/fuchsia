@@ -38,6 +38,12 @@ typedef struct gpt_entry {
     uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
 } gpt_entry_t;
 
+#define GUID_EMPTY_VALUE {                         \
+    0x00, 0x00, 0x00, 0x00,                        \
+    0x00, 0x00,                                    \
+    0x00, 0x00,                                    \
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+}
 
 #define GUID_EFI_VALUE {                           \
     0x28, 0x73, 0x2a, 0xc1,                        \

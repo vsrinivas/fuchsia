@@ -92,7 +92,11 @@ static void print_help() {
            "    --test <test>\n"
            "        Only the tests from the matching test will be run\n"
            "        <test> is case-sensitive; regex is not supported\n"
-           "\n");
+           "\n"
+           "    v=<level>\n"
+           "        Set the unit test verbosity level to <level>\n"
+           "\n"
+           );
 }
 
 /*
@@ -107,9 +111,7 @@ bool unittest_run_all_tests(int argc, char** argv) {
     while (i < argc) {
         if (argv[i][0] == '-') {
             // Got a switch.
-            if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
-                unittest_set_verbosity_level(argv[i][2] - '0');
-            } else if (strcmp(argv[i], "--help") == 0) {
+            if (strcmp(argv[i], "--help") == 0) {
                 // Specifying --help in any way prints the help and exits.
                 print_help();
                 return 0;
@@ -128,8 +130,9 @@ bool unittest_run_all_tests(int argc, char** argv) {
                 }
                 test_matcher = argv[++i];
             }
-            // Ignore other parameters
-        }
+        } else if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
+            unittest_set_verbosity_level(argv[i][2] - '0');
+        } // Ignore other parameters
         i++;
     }
 

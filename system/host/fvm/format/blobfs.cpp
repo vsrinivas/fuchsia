@@ -6,14 +6,12 @@
 
 #include "fvm/format.h"
 
-static constexpr char kBlobName[] = "blob";
-static constexpr uint8_t kBlobType[] = GUID_BLOB_VALUE;
-
-
 BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
     : Format(), fd_(fbl::move(fd)) {
-    if (!strcmp(type, kBlobName)) {
+    if (!strcmp(type, kBlobTypeName)) {
         memcpy(type_, kBlobType, sizeof(kBlobType));
+    } else if (!strcmp(type, kDefaultTypeName)) {
+        memcpy(type_, kDefaultType, sizeof(kDefaultType));
     } else {
         fprintf(stderr, "Unrecognized type for blobfs: %s\n", type);
         exit(-1);
@@ -145,7 +143,7 @@ void* BlobfsFormat::Data() {
 }
 
 void BlobfsFormat::Name(char* name) const {
-    strcpy(name, kBlobName);
+    strcpy(name, kBlobfsName);
 }
 
 uint32_t BlobfsFormat::BlockSize() const {

@@ -227,7 +227,7 @@ zx_status_t FvmContainer::Verify() const {
             return status;
         }
 
-        printf("Found valid %s partition\n", vpart->name);
+        xprintf("Found valid %s partition\n", vpart->name);
     }
 
     return ZX_OK;

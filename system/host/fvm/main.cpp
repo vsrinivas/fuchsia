@@ -24,6 +24,7 @@ int usage(void) {
     fprintf(stderr, " --blob [path] - Add path as blob type (must be blobfs)\n");
     fprintf(stderr, " --data [path] - Add path as data type (must be minfs)\n");
     fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
+    fprintf(stderr, " --default [path] - Add generic path\n");
     exit(-1);
 }
 

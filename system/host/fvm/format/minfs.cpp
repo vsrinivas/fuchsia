@@ -4,18 +4,14 @@
 
 #include "fvm/format.h"
 
-static constexpr char kMinfsName[] = "minfs";
-static constexpr char kDataTypeName[] = "data";
-static constexpr char kSystemTypeName[] = "system";
-static constexpr uint8_t kDataType[] = GUID_DATA_VALUE;
-static constexpr uint8_t kSystemType[] = GUID_SYSTEM_VALUE;
-
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     : Format() {
     if (!strcmp(type, kDataTypeName)) {
         memcpy(type_, kDataType, sizeof(kDataType));
     } else if (!strcmp(type, kSystemTypeName)) {
         memcpy(type_, kSystemType, sizeof(kSystemType));
+    } else if (!strcmp(type, kDefaultTypeName)) {
+        memcpy(type_, kDefaultType, sizeof(kDefaultType));
     } else {
         fprintf(stderr, "Unrecognized type for minfs: %s\n", type);
         exit(-1);

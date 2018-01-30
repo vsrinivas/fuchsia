@@ -10,84 +10,106 @@
 
 #include <fvm/fvm-lz4.h>
 
-#define PARTITION_SIZE (1lu << 30)  // 1 gb
-#define CONTAINER_SIZE (4lu << 30)  // 4 gb
-#define SLICE_SIZE (64lu * (1 << 20)) // 64 mb
-#define FILE_SIZE (5lu * (1 << 20)) // 5 mb
+#define SLICE_SIZE     (64lu * (1 << 20)) // 64 mb
+#define PARTITION_SIZE (1lu * (1 << 29))  // 512 mb
+#define CONTAINER_SIZE (4lu * (1 << 30))  // 4 gb
+
+#define MAX_PARTITIONS 5
 
 static char test_dir[PATH_MAX];
-static char data_path[PATH_MAX];
-static char system_path[PATH_MAX];
-static char blobfs_path[PATH_MAX];
 static char sparse_path[PATH_MAX];
 static char sparse_lz4_path[PATH_MAX];
 static char fvm_path[PATH_MAX];
 
-constexpr uint32_t kData      = 1;
-constexpr uint32_t kSystem    = 2;
-constexpr uint32_t kBlobfs    = 4;
-constexpr uint32_t kSparse    = 8;
-constexpr uint32_t kSparseLz4 = 16;
-constexpr uint32_t kFvm       = 32;
-
-// gFileFlags indicates which of the above files has been successfully created.
-// Keeping track of these across each individual test allows us to unlink only files that actually
-// exist at the end of the test. It also gives the test information about which partitions should
-// be added to the container, so this doesn't have to be specified separately.
-// Keeping track of these globally allows us to know with reasonable certainty whether files from
-// any tests have been left over, for example in the case of a test failure. In this case we can
-// optionally recover from the previous state by removing these files and continue with the next
-// test.
-static uint32_t gFileFlags = 0;
+static constexpr char kEmptyString[] = "";
 
 typedef enum {
-    SPARSE,
-    SPARSE_LZ4,
-    FVM,
-    FVM_NEW,
-    FVM_OFFSET,
+    MINFS,
+    BLOBFS,
+} fs_type_t;
+
+typedef enum {
+    DATA,
+    SYSTEM,
+    BLOBSTORE,
+    DEFAULT,
+} guid_type_t;
+
+typedef enum {
+    SPARSE,     // Sparse container
+    SPARSE_LZ4, // Sparse container compressed with LZ4
+    FVM,        // Explicitly created FVM container
+    FVM_NEW,    // FVM container created on FvmContainer::Create
+    FVM_OFFSET, // FVM container created at an offset within a file
 } container_t;
 
-bool CreateFile(const char* path, size_t size, uint32_t type) {
+typedef struct {
+    fs_type_t fs_type;
+    guid_type_t guid_type;
+    char path[PATH_MAX];
+    bool created = false;
+
+    const char* FsTypeName() {
+        switch (fs_type) {
+        case MINFS:
+            return kMinfsName;
+        case BLOBFS:
+            return kBlobfsName;
+        default:
+            return kEmptyString;
+        }
+    }
+
+    const char* GuidTypeName() {
+        switch (guid_type) {
+        case DATA:
+            return kDataTypeName;
+        case SYSTEM:
+            return kSystemTypeName;
+        case BLOBSTORE:
+            return kBlobTypeName;
+        case DEFAULT:
+            return kDefaultTypeName;
+        default:
+            return kEmptyString;
+        }
+    }
+
+    void GeneratePath(char* dir) {
+        sprintf(path, "%s%s_%s.bin", dir, FsTypeName(), GuidTypeName());
+    }
+} partition_t;
+
+static partition_t partitions[MAX_PARTITIONS];
+static uint32_t partition_count;
+
+bool CreateFile(const char* path, size_t size) {
     BEGIN_HELPER;
     int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
     ASSERT_GE(r, 0, "Unable to create path");
-    gFileFlags |= type;
     ASSERT_EQ(ftruncate(r, size), 0, "Unable to truncate disk");
     ASSERT_EQ(close(r), 0, "Unable to close disk");
     END_HELPER;
 }
 
-bool CreateMinfs(const char* path, uint32_t type) {
+bool CreateMinfs(const char* path) {
     BEGIN_HELPER;
-    printf("Creating Minfs partition: %s\n", path);
-    ASSERT_TRUE(CreateFile(path, PARTITION_SIZE, type));
+    unittest_printf("Creating Minfs partition: %s\n", path);
+    ASSERT_TRUE(CreateFile(path, PARTITION_SIZE));
     ASSERT_EQ(emu_mkfs(path), 0, "Unable to run mkfs");
     END_HELPER;
 }
 
-bool CreateData() {
-    BEGIN_HELPER;
-    ASSERT_TRUE(CreateMinfs(data_path, kData));
-    END_HELPER;
-}
 
-bool CreateSystem() {
+bool CreateBlobfs(const char* path) {
     BEGIN_HELPER;
-    ASSERT_TRUE(CreateMinfs(system_path, kSystem));
-    END_HELPER;
-}
-
-bool CreateBlobfs() {
-    BEGIN_HELPER;
-    printf("Creating Blobfs partition: %s\n", blobfs_path);
-    int r = open(blobfs_path, O_RDWR | O_CREAT | O_EXCL, 0755);
+    unittest_printf("Creating Blobfs partition: %s\n", path);
+    int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
     ASSERT_GE(r, 0, "Unable to create path");
-    gFileFlags |= kBlobfs;
     ASSERT_EQ(ftruncate(r, PARTITION_SIZE), 0, "Unable to truncate disk");
     uint64_t block_count;
     ASSERT_EQ(blobfs::blobfs_get_blockcount(r, &block_count), ZX_OK,
-                 "Cannot find end of underlying device");
+              "Cannot find end of underlying device");
     ASSERT_EQ(blobfs::blobfs_mkfs(r, block_count), ZX_OK,
               "Failed to make blobfs partition");
     ASSERT_EQ(close(r), 0, "Unable to close disk\n");
@@ -96,36 +118,46 @@ bool CreateBlobfs() {
 
 bool AddPartitions(Container* container) {
     BEGIN_HELPER;
-    if (gFileFlags & kData) {
-        printf("Adding data partition to container\n");
-        ASSERT_EQ(container->AddPartition(data_path, "data"), ZX_OK,
-                  "Failed to add data partition");
+
+    // Randomize order in which partitions are added to container.
+    uint32_t order[partition_count];
+
+    for (unsigned i = 0; i < partition_count; i++) {
+        order[i] = i;
     }
 
-    if (gFileFlags & kSystem) {
-        printf("Adding system partition to container\n");
-        ASSERT_EQ(container->AddPartition(system_path, "system"), ZX_OK,
-                  "Failed to add system partition");
+    uint32_t remaining = partition_count;
+    while (remaining) {
+        unsigned index = rand() % remaining;
+
+        if (index != remaining - 1) {
+            unsigned temp = order[remaining - 1];
+            order[remaining - 1] = order[index];
+            order[index] = temp;
+        }
+
+        remaining--;
     }
 
-    if (gFileFlags & kBlobfs) {
-        printf("Adding blobfs partition to container\n");
-        ASSERT_EQ(container->AddPartition(blobfs_path, "blobfs"), ZX_OK,
-                  "Failed to add blobfs partition");
-
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[order[i]];
+        if (part->created) {
+            unittest_printf("Adding partition to container: %s\n", part->path);
+            ASSERT_EQ(container->AddPartition(part->path, part->GuidTypeName()), ZX_OK,
+                      "Failed to add partition");
+        }
     }
+
     END_HELPER;
 }
 
-
 bool CreateSparse(compress_type_t compress) {
     BEGIN_HELPER;
-    char* path = compress ? sparse_lz4_path : sparse_path;
-    printf("Creating sparse container: %s\n", path);
+    const char* path = compress ? sparse_lz4_path : sparse_path;
+    unittest_printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
     ASSERT_EQ(SparseContainer::Create(path, SLICE_SIZE, compress, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
-    gFileFlags |= compress ? kSparseLz4 : kSparse;
     ASSERT_TRUE(AddPartitions(sparseContainer.get()));
     ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
     END_HELPER;
@@ -153,31 +185,27 @@ bool ReportContainer(const char* path, off_t offset) {
 
 bool ReportSparse(bool compress) {
     if (compress) {
-        printf("Decompressing sparse file\n");
+        unittest_printf("Decompressing sparse file\n");
         if (fvm::decompress_sparse(sparse_lz4_path, sparse_path) != ZX_OK) {
             return false;
         }
-        gFileFlags |= kSparse;
     }
     return ReportContainer(sparse_path, 0);
 }
 
 bool CreateFvm(bool create_before, off_t offset) {
     BEGIN_HELPER;
-    printf("Creating fvm container: %s\n", fvm_path);
+    unittest_printf("Creating fvm container: %s\n", fvm_path);
 
     off_t length = 0;
     if (create_before) {
-        ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE, kFvm));
+        ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE));
         ASSERT_TRUE(StatFile(fvm_path, &length));
     }
 
     fbl::unique_ptr<FvmContainer> fvmContainer;
     ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, offset, length - offset, &fvmContainer),
               ZX_OK, "Failed to initialize fvm container");
-    if (!create_before) {
-        gFileFlags |= kFvm;
-    }
     ASSERT_TRUE(AddPartitions(fvmContainer.get()));
     ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
 
@@ -220,13 +248,13 @@ bool GenerateData(size_t len, fbl::unique_ptr<uint8_t[]>* out) {
     END_HELPER;
 }
 
-bool AddDirectoryMinfs(char* path) {
+bool AddDirectoryMinfs(const char* path) {
     BEGIN_HELPER;
     ASSERT_EQ(emu_mkdir(path, 0755), 0);
     END_HELPER;
 }
 
-bool AddFileMinfs(char* path, size_t size) {
+bool AddFileMinfs(const char* path, size_t size) {
     BEGIN_HELPER;
     int fd = emu_open(path, O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0);
@@ -261,16 +289,6 @@ bool PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_siz
     END_HELPER;
 }
 
-bool PopulateData(size_t ndirs, size_t nfiles, size_t max_size) {
-    printf("Populating data partition\n");
-    return PopulateMinfs(data_path, ndirs, nfiles, max_size);
-}
-
-bool PopulateSystem(size_t ndirs, size_t nfiles, size_t max_size) {
-    printf("Populating system partition\n");
-    return PopulateMinfs(system_path, ndirs, nfiles, max_size);
-}
-
 bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     BEGIN_HELPER;
     char new_file[PATH_MAX];
@@ -285,10 +303,9 @@ bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     END_HELPER;
 }
 
-bool PopulateBlobfs(size_t nfiles, size_t max_size) {
+bool PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
     BEGIN_HELPER;
-    printf("Populating blobfs partition\n");
-    fbl::unique_fd blobfd(open(blobfs_path, O_RDWR, 0755));
+    fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
     ASSERT_TRUE(blobfd, "Unable to open blobfs path");
     fbl::RefPtr<blobfs::Blobfs> bs;
     ASSERT_EQ(blobfs::blobfs_create(&bs, fbl::move(blobfd)), ZX_OK,
@@ -302,90 +319,128 @@ bool PopulateBlobfs(size_t nfiles, size_t max_size) {
 
 bool PopulatePartitions(size_t ndirs, size_t nfiles, size_t max_size) {
     BEGIN_HELPER;
-    printf("Populating blobfs partition\n");
-    ASSERT_TRUE(PopulateData(ndirs, nfiles, max_size));
-    ASSERT_TRUE(PopulateSystem(ndirs, nfiles, max_size));
-    ASSERT_TRUE(PopulateBlobfs(nfiles, max_size));
+
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        unittest_printf("Populating partition: %s\n", part->path);
+
+        if (!part->created) {
+            continue;
+        }
+
+        switch (part->fs_type) {
+        case MINFS:
+            ASSERT_TRUE(PopulateMinfs(part->path, ndirs, nfiles, max_size));
+            break;
+        case BLOBFS:
+            ASSERT_TRUE(PopulateBlobfs(part->path, nfiles, max_size));
+            break;
+        default:
+            fprintf(stderr, "Unknown file system type");
+            ASSERT_TRUE(false);
+        }
+    }
+
     END_HELPER;
 }
 
-bool Destroy(const char* path, uint32_t type) {
+bool DestroySparse(compress_type_t compress) {
     BEGIN_HELPER;
-    printf("Destroying partition: %s\n", path);
-    ASSERT_EQ(unlink(path), 0, "Failed to unlink path");
-    gFileFlags &= ~type;
+    switch (compress) {
+    case LZ4:
+        unittest_printf("Destroying compressed sparse container: %s\n", sparse_lz4_path);
+        ASSERT_EQ(unlink(sparse_lz4_path), 0, "Failed to unlink path");
+    case NONE:
+    default:
+        unittest_printf("Destroying sparse container: %s\n", sparse_path);
+        ASSERT_EQ(unlink(sparse_path), 0, "Failed to unlink path");
+    }
     END_HELPER;
 }
 
-bool DestroyAll() {
+bool DestroyFvm() {
     BEGIN_HELPER;
-    if (gFileFlags & kData) {
-        ASSERT_TRUE(Destroy(data_path, kData));
+    unittest_printf("Destroying fvm container: %s\n", fvm_path);
+    ASSERT_EQ(unlink(fvm_path), 0, "Failed to unlink path");
+    END_HELPER;
+}
+
+bool DestroyPartitions() {
+    BEGIN_HELPER;
+
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        if (part->created) {
+            unittest_printf("Destroying partition: %s\n", part->path);
+            ASSERT_EQ(unlink(part->path), 0, "Failed to unlink path");
+            part->created = false;
+        }
     }
 
-    if (gFileFlags & kSystem) {
-        ASSERT_TRUE(Destroy(system_path, kSystem));
-    }
-
-    if (gFileFlags & kBlobfs) {
-        ASSERT_TRUE(Destroy(blobfs_path, kBlobfs));
-    }
-
-    if (gFileFlags & kSparse) {
-        ASSERT_TRUE(Destroy(sparse_path, kSparse));
-    }
-
-    if (gFileFlags & kSparseLz4) {
-        ASSERT_TRUE(Destroy(sparse_lz4_path, kSparseLz4));
-    }
-
-    if (gFileFlags & kFvm) {
-        ASSERT_TRUE(Destroy(fvm_path, kFvm));
-    }
-
-    ASSERT_FALSE(gFileFlags, "Failed to delete all partition files");
     END_HELPER;
 }
 
 bool CreatePartitions() {
     BEGIN_HELPER;
-    ASSERT_TRUE(CreateData());
-    ASSERT_TRUE(CreateSystem());
-    ASSERT_TRUE(CreateBlobfs());
+
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        unittest_printf("Creating partition %s\n", part->path);
+
+        switch (part->fs_type) {
+        case MINFS:
+            ASSERT_TRUE(CreateMinfs(part->path));
+            break;
+        case BLOBFS:
+            ASSERT_TRUE(CreateBlobfs(part->path));
+            break;
+        default:
+            fprintf(stderr, "Unknown file system type\n");
+            ASSERT_TRUE(false);
+        }
+
+        part->created = true;
+    }
+
     END_HELPER;
 }
 
-bool CreateAndReport(container_t type) {
+bool CreateReportDestroy(container_t type) {
     BEGIN_HELPER;
     switch (type) {
-        case SPARSE: {
-            ASSERT_TRUE(CreateSparse(NONE));
-            ASSERT_TRUE(ReportSparse(NONE));
-            break;
-        }
-        case SPARSE_LZ4: {
-            ASSERT_TRUE(CreateSparse(LZ4));
-            ASSERT_TRUE(ReportSparse(LZ4));
-            break;
-        }
-        case FVM: {
-            ASSERT_TRUE(CreateFvm(true, 0));
-            ASSERT_TRUE(ReportFvm(0));
-            break;
-        }
-        case FVM_NEW: {
-            ASSERT_TRUE(CreateFvm(false, 0));
-            ASSERT_TRUE(ReportFvm(0));
-            break;
-        }
-        case FVM_OFFSET: {
-            ASSERT_TRUE(CreateFvm(true, SLICE_SIZE));
-            ASSERT_TRUE(ReportFvm(SLICE_SIZE));
-            break;
-        }
-        default: {
-            ASSERT_TRUE(false);
-        }
+    case SPARSE: {
+        ASSERT_TRUE(CreateSparse(NONE));
+        ASSERT_TRUE(ReportSparse(NONE));
+        ASSERT_TRUE(DestroySparse(NONE));
+        break;
+    }
+    case SPARSE_LZ4: {
+        ASSERT_TRUE(CreateSparse(LZ4));
+        ASSERT_TRUE(ReportSparse(LZ4));
+        ASSERT_TRUE(DestroySparse(LZ4));
+        break;
+    }
+    case FVM: {
+        ASSERT_TRUE(CreateFvm(true, 0));
+        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(DestroyFvm());
+        break;
+    }
+    case FVM_NEW: {
+        ASSERT_TRUE(CreateFvm(false, 0));
+        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(DestroyFvm());
+        break;
+    }
+    case FVM_OFFSET: {
+        ASSERT_TRUE(CreateFvm(true, SLICE_SIZE));
+        ASSERT_TRUE(ReportFvm(SLICE_SIZE));
+        ASSERT_TRUE(DestroyFvm());
+        break;
+    }
+    default: {
+        ASSERT_TRUE(false);
+    }
     }
     END_HELPER;
 }
@@ -394,8 +449,8 @@ template <container_t ContainerType>
 bool TestEmptyPartitions() {
     BEGIN_TEST;
     ASSERT_TRUE(CreatePartitions());
-    ASSERT_TRUE(CreateAndReport(ContainerType));
-    ASSERT_TRUE(DestroyAll());
+    ASSERT_TRUE(CreateReportDestroy(ContainerType));
+    ASSERT_TRUE(DestroyPartitions());
     END_TEST;
 }
 
@@ -404,20 +459,47 @@ bool TestPartitions() {
     BEGIN_TEST;
     ASSERT_TRUE(CreatePartitions());
     ASSERT_TRUE(PopulatePartitions(NumDirs, NumFiles, MaxSize));
-    ASSERT_TRUE(CreateAndReport(ContainerType));
-    ASSERT_TRUE(DestroyAll());
+    ASSERT_TRUE(CreateReportDestroy(ContainerType));
+    ASSERT_TRUE(DestroyPartitions());
     END_TEST;
+}
+
+bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
+    BEGIN_HELPER;
+    // Make sure we have not already created a partition with the same fs/guid type combo.
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        if (part->fs_type == fs_type && part->guid_type == guid_type) {
+            fprintf(stderr, "Partition %s already exists!\n", part->path);
+            ASSERT_TRUE(false);
+        }
+    }
+
+    partition_t* part = &partitions[partition_count++];
+    part->fs_type = fs_type;
+    part->guid_type = guid_type;
+    part->GeneratePath(test_dir);
+    unittest_printf("Generated partition path %s\n", part->path);
+    END_HELPER;
 }
 
 bool Setup() {
     BEGIN_HELPER;
+    // Generate test directory
     srand(time(0));
     GenerateDirectory("/tmp/", 20, test_dir);
     ASSERT_EQ(mkdir(test_dir, 0755), 0, "Failed to create test path");
-    printf("Created test path %s\n", test_dir);
-    sprintf(data_path, "%sdata.bin", test_dir);
-    sprintf(system_path, "%ssystem.bin", test_dir);
-    sprintf(blobfs_path, "%sblobfs.bin", test_dir);
+    unittest_printf("Created test path %s\n", test_dir);
+
+    // Generate partition paths
+    partition_count = 0;
+    ASSERT_TRUE(GeneratePartitionPath(MINFS, DATA));
+    ASSERT_TRUE(GeneratePartitionPath(MINFS, SYSTEM));
+    ASSERT_TRUE(GeneratePartitionPath(MINFS, DEFAULT));
+    ASSERT_TRUE(GeneratePartitionPath(BLOBFS, BLOBSTORE));
+    ASSERT_TRUE(GeneratePartitionPath(BLOBFS, DEFAULT));
+
+    // Generate container paths
     sprintf(sparse_path, "%ssparse.bin", test_dir);
     sprintf(sparse_lz4_path, "%ssparse.bin.lz4", test_dir);
     sprintf(fvm_path, "%sfvm.bin", test_dir);
@@ -438,12 +520,12 @@ bool Cleanup() {
             continue;
         }
 
-        printf("Destroying leftover file %s\n", de->d_name);
+        unittest_printf("Destroying leftover file %s\n", de->d_name);
         ASSERT_EQ(unlinkat(dirfd(dir), de->d_name, 0), 0);
     }
 
     closedir(dir);
-    printf("Destroying test path: %s\n", test_dir);
+    unittest_printf("Destroying test path: %s\n", test_dir);
     ASSERT_EQ(rmdir(test_dir), 0, "Failed to remove test path");
     END_HELPER;
 }
