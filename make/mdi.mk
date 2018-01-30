@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 MDI_BIN := $(BUILDDIR)/mdi.bin
-GEN_HEADER_DIR := $(BUILDDIR)/gen/include
+GEN_HEADER_DIR := $(BUILDDIR)/gen/global/include
 MDI_HEADER_DIR := $(GEN_HEADER_DIR)/mdi
 MDI_HEADER := $(MDI_HEADER_DIR)/mdi-defs.h
 
