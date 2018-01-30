@@ -2,9 +2,7 @@
 #include <openssl/arm_arch.h>
 
 .text
-#if !defined(__clang__) || defined(BORINGSSL_CLANG_SUPPORTS_DOT_ARCH)
 .arch	armv8-a+crypto
-#endif
 .globl	gcm_init_v8
 .hidden	gcm_init_v8
 .type	gcm_init_v8,%function

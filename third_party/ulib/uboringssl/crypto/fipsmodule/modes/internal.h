@@ -66,38 +66,6 @@ extern "C" {
 #define STRICT_ALIGNMENT 0
 #endif
 
-#if defined(__GNUC__) && __GNUC__ >= 2
-static inline uint32_t CRYPTO_bswap4(uint32_t x) {
-  return __builtin_bswap32(x);
-}
-
-static inline uint64_t CRYPTO_bswap8(uint64_t x) {
-  return __builtin_bswap64(x);
-}
-#elif defined(_MSC_VER)
-OPENSSL_MSVC_PRAGMA(warning(push, 3))
-#include <intrin.h>
-OPENSSL_MSVC_PRAGMA(warning(pop))
-#pragma intrinsic(_byteswap_uint64, _byteswap_ulong)
-static inline uint32_t CRYPTO_bswap4(uint32_t x) {
-  return _byteswap_ulong(x);
-}
-
-static inline uint64_t CRYPTO_bswap8(uint64_t x) {
-  return _byteswap_uint64(x);
-}
-#else
-static inline uint32_t CRYPTO_bswap4(uint32_t x) {
-  x = (x >> 16) | (x << 16);
-  x = ((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8);
-  return x;
-}
-
-static inline uint64_t CRYPTO_bswap8(uint64_t x) {
-  return CRYPTO_bswap4(x >> 32) | (((uint64_t)CRYPTO_bswap4(x)) << 32);
-}
-#endif
-
 static inline uint32_t GETU32(const void *in) {
   uint32_t v;
   OPENSSL_memcpy(&v, in, sizeof(v));
@@ -106,6 +74,16 @@ static inline uint32_t GETU32(const void *in) {
 
 static inline void PUTU32(void *out, uint32_t v) {
   v = CRYPTO_bswap4(v);
+  OPENSSL_memcpy(out, &v, sizeof(v));
+}
+
+static inline size_t load_word_le(const void *in) {
+  size_t v;
+  OPENSSL_memcpy(&v, in, sizeof(v));
+  return v;
+}
+
+static inline void store_word_le(void *out, size_t v) {
   OPENSSL_memcpy(out, &v, sizeof(v));
 }
 
