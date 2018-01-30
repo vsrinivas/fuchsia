@@ -45,8 +45,8 @@ static uint32_t default_palette[] = {
 
 // Default height/width (in px) of console before any displays are
 // attached, since we need somewhere to put any data that is recieved.
-#define DEFAULT_HEIGHT 480
-#define DEFAULT_WIDTH 640
+#define DEFAULT_WIDTH 1024
+#define DEFAULT_HEIGHT 768
 #define SCROLLBACK_ROWS 1024 // TODO make configurable
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
