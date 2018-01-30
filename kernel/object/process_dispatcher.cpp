@@ -124,6 +124,22 @@ ProcessDispatcher::~ProcessDispatcher() {
     LTRACE_EXIT_OBJ;
 }
 
+void ProcessDispatcher::on_zero_handles() {
+    // If the process is in the initial state and the last handle is closed
+    // we never detach from the parent job, so run the shutdown sequence for
+    // that case.
+    {
+        AutoLock lock(&state_lock_);
+        if (state_ != State::INITIAL) {
+            // Use the normal cleanup path instead.
+            return;
+        }
+        SetStateLocked(State::DEAD);
+    }
+
+    FinishDeadTransition();
+}
+
 void ProcessDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
     name_.get(ZX_MAX_NAME_LEN, out_name);
 }
@@ -314,8 +330,9 @@ void ProcessDispatcher::SetStateLocked(State s) {
     }
 }
 
-// Finish processing of the transition to State::DEAD.
-// Some things need to be done outside of holding |state_lock_|.
+// Finish processing of the transition to State::DEAD. Some things need to be done
+// outside of holding |state_lock_|. Beware this is called from several places
+// including on_zero_handles().
 void ProcessDispatcher::FinishDeadTransition() {
     DEBUG_ASSERT(!completely_dead_);
     completely_dead_ = true;
