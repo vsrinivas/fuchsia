@@ -12,6 +12,8 @@
 
 namespace tpm {
 
+constexpr zx::duration I2cCr50Interface::kNoIrqTimeout;
+constexpr zx::duration I2cCr50Interface::kI2cRetryDelay;
 constexpr size_t kNumI2cTries = 3;
 
 I2cCr50Interface::I2cCr50Interface(zx_device_t* i2c_dev, zx::handle irq)

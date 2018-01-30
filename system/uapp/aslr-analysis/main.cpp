@@ -235,7 +235,7 @@ zx_status_t LaunchTestRun(const char* bin, zx_handle_t h, zx_handle_t* out) {
     hnd[0] = h;
     launchpad_create(job, "testrun", &lp);
     launchpad_load_from_file(lp, bin);
-    launchpad_set_args(lp, fbl::count_of(args), args);
+    launchpad_set_args(lp, static_cast<int>(fbl::count_of(args)), args);
     launchpad_add_handles(lp, fbl::count_of(hnd), hnd, ids);
 
     status = launchpad_go(lp, &proc, &errmsg);

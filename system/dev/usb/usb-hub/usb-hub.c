@@ -53,11 +53,11 @@ typedef struct usb_hub {
     uint8_t attached_ports[128 / 8];
 } usb_hub_t;
 
-inline bool usb_hub_is_port_attached(usb_hub_t* hub, int port) {
+bool usb_hub_is_port_attached(usb_hub_t* hub, int port) {
     return (hub->attached_ports[port / 8] & (1 << (port % 8))) != 0;
 }
 
-inline void usb_hub_set_port_attached(usb_hub_t* hub, int port, bool enabled) {
+void usb_hub_set_port_attached(usb_hub_t* hub, int port, bool enabled) {
     if (enabled) {
         hub->attached_ports[port / 8] |= (1 << (port % 8));
     } else {

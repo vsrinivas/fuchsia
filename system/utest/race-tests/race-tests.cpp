@@ -41,7 +41,7 @@ static bool test_process_exit_status_race() {
               ZX_OK);
     ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), ZX_OK);
     const char* args[] = { g_executable_filename, "--subprocess" };
-    ASSERT_EQ(launchpad_set_args(lp, fbl::count_of(args), args), ZX_OK);
+    ASSERT_EQ(launchpad_set_args(lp, static_cast<int>(fbl::count_of(args)), args), ZX_OK);
     ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), ZX_OK);
     zx_handle_t proc;
     const char* errmsg;

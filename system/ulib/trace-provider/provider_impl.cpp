@@ -127,7 +127,7 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     uint32_t num_handles = 0u;
     zx_status_t status = channel_.read(
         0u, buffer, sizeof(buffer), &num_bytes,
-        unowned_handles, fbl::count_of(unowned_handles), &num_handles);
+        unowned_handles, static_cast<uint32_t>(fbl::count_of(unowned_handles)), &num_handles);
     if (status != ZX_OK)
         return false;
 
@@ -271,7 +271,7 @@ trace_provider_t* trace_provider_create(async_t* async) {
     call.m.label = 0;
     zx_handle_t handles[] = {provider_client.release()};
     status = registry_client.write(0u, &call, sizeof(call),
-                                   handles, fbl::count_of(handles));
+                                   handles, static_cast<uint32_t>(fbl::count_of(handles)));
     if (status != ZX_OK) {
         provider_client.reset(handles[0]); // take back ownership after failure
         return nullptr;

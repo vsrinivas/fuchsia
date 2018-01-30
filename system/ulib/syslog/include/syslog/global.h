@@ -18,7 +18,7 @@ fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the
 // global logger.
-inline bool fx_log_is_enabled(fx_log_severity_t severity) {
+static bool fx_log_is_enabled(fx_log_severity_t severity) {
   fx_logger_t* logger = fx_log_get_logger();
   return logger && severity >= fx_logger_get_min_severity(logger);
 }
@@ -37,7 +37,7 @@ zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 // initialized.
 //
 // global logger would be deallocated once program ends.
-inline zx_status_t fx_log_init(void) {
+static zx_status_t fx_log_init(void) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = ZX_HANDLE_INVALID,

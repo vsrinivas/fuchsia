@@ -44,7 +44,7 @@ bool test_log_enabled_macro(void) {
   END_TEST;
 }
 
-inline zx_status_t init_helper(int fd, const char** tags, int ntags) {
+static inline zx_status_t init_helper(int fd, const char** tags, int ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = fd,
                                .log_service_channel = ZX_HANDLE_INVALID,

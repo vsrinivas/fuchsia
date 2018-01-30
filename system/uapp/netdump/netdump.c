@@ -63,13 +63,13 @@ typedef struct {
 
 #define SIMPLE_PKT_MIN_SIZE (sizeof(simple_pkt_t) + sizeof(uint32_t))
 
-inline void print_mac(const uint8_t mac[ETH_ALEN]) {
+static void print_mac(const uint8_t mac[ETH_ALEN]) {
     printf("%02x:%02x:%02x:%02x:%02x:%02x",
            mac[0], mac[1], mac[2],
            mac[3], mac[4], mac[5]);
 }
 
-inline const char* ethtype_to_string(uint16_t ethtype) {
+static const char* ethtype_to_string(uint16_t ethtype) {
     switch (ethtype) {
     case ETH_P_IP: return "IPv4";
     case ETH_P_ARP: return "ARP";
@@ -79,7 +79,7 @@ inline const char* ethtype_to_string(uint16_t ethtype) {
     }
 }
 
-inline const char* protocol_to_string(uint8_t protocol) {
+static const char* protocol_to_string(uint8_t protocol) {
     switch (protocol) {
     case IPPROTO_HOPOPTS: return "HOPOPTS";
     case IPPROTO_TCP: return "TCP";
@@ -93,7 +93,7 @@ inline const char* protocol_to_string(uint8_t protocol) {
     }
 }
 
-inline const char* port_to_string(uint16_t port) {
+static const char* port_to_string(uint16_t port) {
     switch (port) {
     case 7: return "Echo";
     case 20: return "FTP xfer";
@@ -113,7 +113,7 @@ inline const char* port_to_string(uint16_t port) {
     }
 }
 
-inline void print_port(uint16_t port, size_t verbosity) {
+static void print_port(uint16_t port, size_t verbosity) {
     const char* str = port_to_string(port);
     if (verbosity && strcmp(str, "")) {
         printf(":%u (%s) ", port, str);

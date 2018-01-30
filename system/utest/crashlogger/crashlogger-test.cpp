@@ -95,7 +95,7 @@ bool test_crash(const char* crash_arg) {
     // Launch the crasher process.
     launchpad_load_from_file(crasher_lp, argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
-    launchpad_set_args(crasher_lp, fbl::count_of(argv), argv);
+    launchpad_set_args(crasher_lp, static_cast<int>(fbl::count_of(argv)), argv);
     const char* errmsg;
     ASSERT_EQ(launchpad_go(crasher_lp, &crasher_proc, &errmsg), ZX_OK);
 
@@ -106,7 +106,7 @@ bool test_crash(const char* crash_arg) {
                      "crashlogger-test-instance", &crashlogger_lp);
     launchpad_load_from_file(crashlogger_lp, crashlogger_argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
-    launchpad_set_args(crashlogger_lp, fbl::count_of(crashlogger_argv),
+    launchpad_set_args(crashlogger_lp, static_cast<int>(fbl::count_of(crashlogger_argv)),
                        crashlogger_argv);
     zx_handle_t handles[] = { exception_port };
     uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
