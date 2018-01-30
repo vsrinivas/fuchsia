@@ -10,8 +10,8 @@
 #include "lib/netconnector/cpp/message_relay.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
@@ -42,7 +42,8 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
   fidl::Array<fidl::String> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
-      callback::Capture(ledger::SetWhenCalled(&called), &version, &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version,
+                        &host_list));
 
   RunLoopUntilIdle();
 
@@ -54,8 +55,8 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   called = false;
   netconnector1->GetKnownDeviceNames(
-      version,
-      callback::Capture(ledger::SetWhenCalled(&called), &version, &host_list));
+      version, callback::Capture(callback::SetWhenCalled(&called), &version,
+                                 &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -71,7 +72,8 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   fidl::Array<fidl::String> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
-      callback::Capture(ledger::SetWhenCalled(&called), &version, &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version,
+                        &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -79,7 +81,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   called = false;
   uint64_t new_version;
   netconnector1->GetKnownDeviceNames(
-      version, callback::Capture(ledger::SetWhenCalled(&called), &new_version,
+      version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
                                  &host_list));
 
   RunLoopUntilIdle();
@@ -99,7 +101,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   called = false;
   netconnector2->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
-      callback::Capture(ledger::SetWhenCalled(&called), &new_version,
+      callback::Capture(callback::SetWhenCalled(&called), &new_version,
                         &host_list));
 
   RunLoopUntilIdle();
@@ -112,7 +114,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   netconnector2.Unbind();
 
   netconnector1->GetKnownDeviceNames(
-      new_version, callback::Capture(ledger::SetWhenCalled(&called),
+      new_version, callback::Capture(callback::SetWhenCalled(&called),
                                      &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -166,15 +168,15 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   // Sets up MessageRelays to abstract sending messages through channels.
   bool called_host1 = false;
   std::vector<uint8_t> message_host1;
-  relays_host1[0]->SetMessageReceivedCallback(
-      callback::Capture(ledger::SetWhenCalled(&called_host1), &message_host1));
+  relays_host1[0]->SetMessageReceivedCallback(callback::Capture(
+      callback::SetWhenCalled(&called_host1), &message_host1));
 
   netconnector::MessageRelay relay2;
   relay2.SetChannel(std::move(local));
   bool called_host2 = false;
   std::vector<uint8_t> message_host2;
-  relay2.SetMessageReceivedCallback(
-      callback::Capture(ledger::SetWhenCalled(&called_host2), &message_host2));
+  relay2.SetMessageReceivedCallback(callback::Capture(
+      callback::SetWhenCalled(&called_host2), &message_host2));
 
   // Sends a message from host2 to host1.
   relay2.SendMessage({0u, 1u});
@@ -195,7 +197,8 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
 
   // Verifies that disconnection works.
   bool relay2_disconnected = false;
-  relay2.SetChannelClosedCallback(ledger::SetWhenCalled(&relay2_disconnected));
+  relay2.SetChannelClosedCallback(
+      callback::SetWhenCalled(&relay2_disconnected));
   relays_host1[0].reset();
 
   RunLoopUntilIdle();

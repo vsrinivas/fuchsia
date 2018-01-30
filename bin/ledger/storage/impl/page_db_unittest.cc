@@ -24,8 +24,8 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
@@ -60,7 +60,8 @@ class PageDbTest : public ::test::TestWithCoroutines {
 
     Status status;
     bool called;
-    page_storage_.Init(callback::Capture(ledger::SetWhenCalled(&called), &status));
+    page_storage_.Init(
+        callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);

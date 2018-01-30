@@ -22,10 +22,10 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/backoff/testing/test_backoff.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
@@ -67,8 +67,8 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
     if (on_idle_called) {
       return ::testing::AssertionSuccess();
     } else {
-      return ::testing::AssertionFailure() <<
-          "The download state never reached idle.";
+      return ::testing::AssertionFailure()
+             << "The download state never reached idle.";
     }
   }
 
@@ -76,7 +76,7 @@ class PageDownloadTest : public gtest::TestWithMessageLoop,
     std::stringstream data;
     data_source->Get(
         [&data](std::unique_ptr<storage::DataSource::DataChunk> chunk,
-                      storage::DataSource::Status status) {
+                storage::DataSource::Status status) {
           EXPECT_NE(storage::DataSource::Status::ERROR, status);
           if (status == storage::DataSource::Status::TO_BE_CONTINUED) {
             data << chunk->Get();
@@ -333,8 +333,8 @@ TEST_F(PageDownloadTest, GetObject) {
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
-      object_identifier,
-      callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called),
+                                           &status, &data_source));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -369,8 +369,8 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   storage::Status status;
   std::unique_ptr<storage::DataSource> data_source;
   storage_.page_sync_delegate_->GetObject(
-      object_identifier,
-      callback::Capture(ledger::SetWhenCalled(&called), &status, &data_source));
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called),
+                                           &status, &data_source));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);

@@ -6,11 +6,9 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
-
-using ledger::SetWhenCalled;
 
 namespace encryption {
 namespace {
@@ -26,7 +24,8 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
                      std::string* result) {
     bool called;
     encryption_service_.EncryptCommit(
-        commit_storage, callback::Capture(SetWhenCalled(&called), status, result));
+        commit_storage,
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -37,7 +36,7 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
     bool called;
     encryption_service_.DecryptCommit(
         encrypted_commit_storage,
-        callback::Capture(SetWhenCalled(&called), status, result));
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -48,7 +47,7 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
     bool called;
     encryption_service_.GetObjectName(
         std::move(object_identifier),
-        callback::Capture(SetWhenCalled(&called), status, result));
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -58,7 +57,8 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
                      std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
-        std::move(object), callback::Capture(SetWhenCalled(&called), status, result));
+        std::move(object),
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -70,7 +70,7 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
     bool called;
     encryption_service_.DecryptObject(
         std::move(object_identifier), std::move(encrypted_data),
-        callback::Capture(SetWhenCalled(&called), status, result));
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }

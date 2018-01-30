@@ -6,9 +6,9 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace storage {
@@ -59,7 +59,7 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
       &container,
       std::make_unique<SplittingDataSource>(message_loop_.task_runner(),
                                             expected_content),
-      callback::Capture(ledger::SetWhenCalled(&called), &status, &content));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -78,7 +78,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
         &container,
         std::make_unique<SplittingDataSource>(message_loop_.task_runner(),
                                               expected_content),
-        callback::Capture(ledger::SetWhenCalled(&called), &status, &content));
+        callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   }
   RunLoopUntilIdle();
   EXPECT_FALSE(called);

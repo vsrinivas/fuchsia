@@ -16,9 +16,9 @@
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/cancellable_helper.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -41,8 +41,9 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    storage_->StartCommit(parent_id.ToString(), storage::JournalType::IMPLICIT,
-                          callback::Capture(SetWhenCalled(&called), &status, &journal));
+    storage_->StartCommit(
+        parent_id.ToString(), storage::JournalType::IMPLICIT,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
@@ -51,7 +52,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     std::unique_ptr<const storage::Commit> commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture(SetWhenCalled(&called), &status, &commit));
+        callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
@@ -67,7 +68,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     std::unique_ptr<storage::Journal> journal;
     storage_->StartMergeCommit(
         left.ToString(), right.ToString(),
-        callback::Capture(SetWhenCalled(&called), &status, &journal));
+        callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
@@ -75,9 +76,9 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    storage_->CommitJournal(
-        std::move(journal),
-        callback::Capture(SetWhenCalled(&called), &actual_status, &actual_commit));
+    storage_->CommitJournal(std::move(journal),
+                            callback::Capture(callback::SetWhenCalled(&called),
+                                              &actual_status, &actual_commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, actual_status);
@@ -88,8 +89,9 @@ class CommonAncestorTest : public test::TestWithPageStorage {
     bool called;
     storage::Status status;
     std::unique_ptr<const storage::Commit> root;
-    storage_->GetCommit(storage::kFirstPageCommitId,
-                        callback::Capture(SetWhenCalled(&called), &status, &root));
+    storage_->GetCommit(
+        storage::kFirstPageCommitId,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &root));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
@@ -112,9 +114,10 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
   bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_1),
-                     std::move(commit_2),
-                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  FindCommonAncestor(
+      &coroutine_service_, storage_.get(), std::move(commit_1),
+      std::move(commit_2),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -130,9 +133,9 @@ TEST_F(CommonAncestorTest, RootAndChild) {
   bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(root),
-                     std::move(child),
-                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  FindCommonAncestor(
+      &coroutine_service_, storage_.get(), std::move(root), std::move(child),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -163,18 +166,20 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
   bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_1),
-                     std::move(commit_merge),
-                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  FindCommonAncestor(
+      &coroutine_service_, storage_.get(), std::move(commit_1),
+      std::move(commit_merge),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 
   // Ancestor of (2) and (A).
-  FindCommonAncestor(&coroutine_service_, storage_.get(), std::move(commit_2),
-                     std::move(commit_a),
-                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  FindCommonAncestor(
+      &coroutine_service_, storage_.get(), std::move(commit_2),
+      std::move(commit_a),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -200,9 +205,10 @@ TEST_F(CommonAncestorTest, LongChain) {
   bool called;
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(&coroutine_service_, storage_.get(),
-                     std::move(last_commit), std::move(commit_b),
-                     callback::Capture(SetWhenCalled(&called), &status, &result));
+  FindCommonAncestor(
+      &coroutine_service_, storage_.get(), std::move(last_commit),
+      std::move(commit_b),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   // This test lasts ~2.5s on x86+qemu+kvm.
   RunLoopUntilIdle();
   ASSERT_TRUE(called);

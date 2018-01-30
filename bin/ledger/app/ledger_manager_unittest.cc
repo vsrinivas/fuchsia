@@ -17,8 +17,8 @@
 #include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
@@ -202,7 +202,7 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
 
 TEST_F(LedgerManagerTest, OnEmptyCalled) {
   bool on_empty_called;
-  ledger_manager_->set_on_empty(SetWhenCalled(&on_empty_called));
+  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
   ledger_.Unbind();
   ledger_debug_.Unbind();
@@ -244,8 +244,9 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get the root page.
   storage_ptr->ClearCalls();
   page.Unbind();
-  ledger_->GetRootPage(page.NewRequest(),
-                       callback::Capture(SetWhenCalled(&called), &status));
+  ledger_->GetRootPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -254,8 +255,9 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get a new page with a random id.
   storage_ptr->ClearCalls();
   page.Unbind();
-  ledger_->GetPage(convert::ToArray(RandomId()), page.NewRequest(),
-                   callback::Capture(SetWhenCalled(&called), &status));
+  ledger_->GetPage(
+      convert::ToArray(RandomId()), page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -264,8 +266,9 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Create a new page.
   storage_ptr->ClearCalls();
   page.Unbind();
-  ledger_->GetPage(nullptr, page.NewRequest(),
-                   callback::Capture(SetWhenCalled(&called), &status));
+  ledger_->GetPage(
+      nullptr, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
@@ -293,13 +296,14 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
   }
 
   bool called;
-  waiter->Finalize(callback::Capture(SetWhenCalled(&called), &status));
+  waiter->Finalize(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_debug_->GetPagesList(
-      callback::Capture(SetWhenCalled(&called), &actual_pages_list));
+      callback::Capture(callback::SetWhenCalled(&called), &actual_pages_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

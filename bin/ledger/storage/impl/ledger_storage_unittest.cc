@@ -12,11 +12,9 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
-
-using ledger::SetWhenCalled;
 
 namespace storage {
 namespace {
@@ -50,14 +48,16 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   std::unique_ptr<PageStorage> page_storage;
   bool called;
   storage_.GetPageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(nullptr, page_storage);
 
   storage_.CreatePageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -66,7 +66,8 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
 
   page_storage.reset();
   storage_.GetPageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -79,7 +80,8 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   bool called;
   std::unique_ptr<PageStorage> page_storage;
   storage_.CreatePageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -88,7 +90,8 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   page_storage.reset();
 
   storage_.GetPageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -96,7 +99,8 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
 
   EXPECT_TRUE(storage_.DeletePageStorage(page_id));
   storage_.GetPageStorage(
-      page_id, callback::Capture(SetWhenCalled(&called), &status, &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);

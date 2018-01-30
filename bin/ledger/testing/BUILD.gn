@@ -23,8 +23,6 @@ source_set("lib") {
     "quit_on_error.h",
     "run_with_tracing.cc",
     "run_with_tracing.h",
-    "set_when_called.cc",
-    "set_when_called.h",
     "test_with_coroutines.cc",
     "test_with_coroutines.h",
   ]

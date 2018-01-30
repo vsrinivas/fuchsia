@@ -21,12 +21,10 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/bin/ledger/testing/set_when_called.h"
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/capture.h"
+#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
-
-using ledger::SetWhenCalled;
 
 namespace cloud_sync {
 namespace {
@@ -117,7 +115,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -160,7 +158,7 @@ TEST_F(PageSyncImplTest, PageWatcher) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
   page_sync_->SetSyncWatcher(&watcher);
   StartPageSync();
 
@@ -192,7 +190,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
   StartPageSync();
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -236,7 +234,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
     backlog_downloaded_called = true;
   });
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -267,7 +265,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
     });
   });
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
 
   StartPageSync();
   RunLoopUntilIdle();
@@ -319,7 +317,7 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 // commits and calls the error callback.
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
   StartPageSync();
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -376,7 +374,7 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
   bool called;
-  page_sync_->SetOnIdle(SetWhenCalled(&called));
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
 
   StartPageSync(UploadStatus::DISABLED);
   RunLoopUntilIdle();

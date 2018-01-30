@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/set_when_called.h"
+#include "peridot/lib/callback/set_when_called.h"
 
-namespace ledger {
+namespace callback {
 
 fxl::Closure SetWhenCalled(bool* value) {
   *value = false;
   return [value] { *value = true; };
 }
 
-}  // namespace test
+}  // namespace callback
