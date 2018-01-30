@@ -11,6 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
+#include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 #include "peridot/bin/ledger/encryption/primitives/kdf.h"
 
 namespace encryption {
@@ -39,7 +40,7 @@ constexpr size_t kRandomlyGeneratedKeySize = 16u;
 constexpr size_t kDerivedKeySize = 32u;
 
 // Cache size values.
-constexpr size_t kNamespaceKeysCacheSize = 10u;
+constexpr size_t kKeyIndexCacheSize = 10u;
 constexpr size_t kReferenceKeysCacheSize = 10u;
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
@@ -98,7 +99,12 @@ EncryptionServiceImpl::EncryptionServiceImpl(
     std::string namespace_id)
     : namespace_id_(std::move(namespace_id)),
       key_service_(std::make_unique<KeyService>(task_runner)),
-      namespace_keys_(kNamespaceKeysCacheSize,
+      master_keys_(kKeyIndexCacheSize,
+                   Status::OK,
+                   [this](auto k, auto c) {
+                     FetchMasterKey(std::move(k), std::move(c));
+                   }),
+      namespace_keys_(kKeyIndexCacheSize,
                       Status::OK,
                       [this](auto k, auto c) {
                         FetchNamespaceKey(std::move(k), std::move(c));
@@ -118,26 +124,28 @@ storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
 }
 
 void EncryptionServiceImpl::EncryptCommit(
-    convert::ExtendedStringView commit_storage,
+    std::string commit_storage,
     std::function<void(Status, std::string)> callback) {
-  flatbuffers::FlatBufferBuilder builder;
+  size_t key_index = GetCurrentKeyIndex();
 
-  auto storage =
-      CreateEncryptedCommitStorage(builder, GetCurrentKeyIndex(),
-                                   commit_storage.ToFlatBufferVector(&builder));
-  builder.Finish(storage);
+  Encrypt(key_index, std::move(commit_storage),
+          [key_index, callback = std::move(callback)](
+              Status status, std::string encrypted_storage) {
+            if (status != Status::OK) {
+              callback(status, "");
+              return;
+            }
 
-  std::string encrypted_storage(
-      reinterpret_cast<const char*>(builder.GetBufferPointer()),
-      builder.GetSize());
+            flatbuffers::FlatBufferBuilder builder;
 
-  // Ensures the callback is asynchronous.
-  // TODO(qsr): Replace with real encryption.
-  task_runner_.PostTask(
-      [callback = std::move(callback),
-       encrypted_storage = std::move(encrypted_storage)]() mutable {
-        callback(Status::OK, std::move(encrypted_storage));
-      });
+            auto storage = CreateEncryptedCommitStorage(
+                builder, key_index,
+                convert::ToFlatBufferVector(&builder, encrypted_storage));
+            builder.Finish(storage);
+            callback(Status::OK, std::string(reinterpret_cast<const char*>(
+                                                 builder.GetBufferPointer()),
+                                             builder.GetSize()));
+          });
 }
 
 void EncryptionServiceImpl::DecryptCommit(
@@ -152,15 +160,10 @@ void EncryptionServiceImpl::DecryptCommit(
   const EncryptedCommitStorage* encrypted_commit_storage =
       GetEncryptedCommitStorage(storage_bytes.data());
 
-  std::string commit_storage = convert::ToString(
-      encrypted_commit_storage->serialized_encrypted_commit_storage());
-
-  // Ensures the callback is asynchronous.
-  // TODO(qsr): Replace with real decryption.
-  task_runner_.PostTask([callback = std::move(callback),
-                         commit_storage = std::move(commit_storage)]() mutable {
-    callback(Status::OK, std::move(commit_storage));
-  });
+  Decrypt(encrypted_commit_storage->key_index(),
+          convert::ToString(
+              encrypted_commit_storage->serialized_encrypted_commit_storage()),
+          std::move(callback));
 }
 
 void EncryptionServiceImpl::GetObjectName(
@@ -177,32 +180,23 @@ void EncryptionServiceImpl::GetObjectName(
 }
 
 void EncryptionServiceImpl::EncryptObject(
-    storage::ObjectIdentifier /*object_identifier*/,
+    storage::ObjectIdentifier object_identifier,
     fsl::SizedVmo content,
     std::function<void(Status, std::string)> callback) {
-  // TODO(qsr): Replace with real encryption.
   std::string data;
   if (!fsl::StringFromVmo(content, &data)) {
     callback(Status::IO_ERROR, "");
     return;
   }
-  // Ensures the callback is asynchronous.
-  task_runner_.PostTask(
-      [callback = std::move(callback), data = std::move(data)]() mutable {
-        callback(Status::OK, std::move(data));
-      });
+  Encrypt(object_identifier.key_index, std::move(data), std::move(callback));
 }
 
 void EncryptionServiceImpl::DecryptObject(
-    storage::ObjectIdentifier /*object_identifier*/,
+    storage::ObjectIdentifier object_identifier,
     std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
-  // Ensures the callback is asynchronous.
-  // TODO(qsr): Replace with real decryption.
-  task_runner_.PostTask([callback = std::move(callback),
-                         encrypted_data = std::move(encrypted_data)]() mutable {
-    callback(Status::OK, std::move(encrypted_data));
-  });
+  Decrypt(object_identifier.key_index, std::move(encrypted_data),
+          std::move(callback));
 }
 
 uint32_t EncryptionServiceImpl::GetCurrentKeyIndex() {
@@ -228,11 +222,65 @@ void EncryptionServiceImpl::GetReferenceKey(
           Status status, const std::string& value) { callback(value); });
 }
 
+void EncryptionServiceImpl::Encrypt(
+    size_t key_index,
+    std::string data,
+    std::function<void(Status, std::string)> callback) {
+  master_keys_.Get(key_index,
+                   [data = std::move(data), callback = std::move(callback)](
+                       Status status, const std::string& key) {
+                     if (status != Status::OK) {
+                       callback(status, "");
+                       return;
+                     }
+                     std::string encrypted_data;
+                     if (!AES128GCMSIVEncrypt(key, data, &encrypted_data)) {
+                       callback(Status::INTERNAL_ERROR, "");
+                       return;
+                     }
+                     callback(Status::OK, std::move(encrypted_data));
+                   });
+}
+
+void EncryptionServiceImpl::Decrypt(
+    size_t key_index,
+    std::string encrypted_data,
+    std::function<void(Status, std::string)> callback) {
+  master_keys_.Get(key_index, [encrypted_data = std::move(encrypted_data),
+                               callback = std::move(callback)](
+                                  Status status, const std::string& key) {
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    std::string data;
+    if (!AES128GCMSIVDecrypt(key, encrypted_data, &data)) {
+      callback(Status::INTERNAL_ERROR, "");
+      return;
+    }
+    callback(Status::OK, std::move(data));
+  });
+}
+
+void EncryptionServiceImpl::FetchMasterKey(
+    size_t key_index,
+    std::function<void(Status, std::string)> callback) {
+  key_service_->GetMasterKey(
+      key_index, [callback = std::move(callback)](std::string master_key) {
+        callback(Status::OK, std::move(master_key));
+      });
+}
+
 void EncryptionServiceImpl::FetchNamespaceKey(
     size_t key_index,
     std::function<void(Status, std::string)> callback) {
-  key_service_->GetMasterKey(key_index, [this, callback = std::move(callback)](
-                                            std::string master_key) {
+  master_keys_.Get(key_index, [this, callback = std::move(callback)](
+                                  Status status,
+                                  const std::string& master_key) {
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
     callback(Status::OK,
              HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}),
                         kDerivedKeySize));

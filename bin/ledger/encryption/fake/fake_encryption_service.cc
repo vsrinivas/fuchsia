@@ -38,7 +38,7 @@ storage::ObjectIdentifier FakeEncryptionService::MakeObjectIdentifier(
 }
 
 void FakeEncryptionService::EncryptCommit(
-    convert::ExtendedStringView commit_storage,
+    std::string commit_storage,
     std::function<void(Status, std::string)> callback) {
   std::string encrypted_commit = EncryptCommitSynchronous(commit_storage);
   task_runner_->PostTask([encrypted_commit = std::move(encrypted_commit),

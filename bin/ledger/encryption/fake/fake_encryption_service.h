@@ -30,7 +30,7 @@ class FakeEncryptionService : public EncryptionService {
   storage::ObjectIdentifier MakeObjectIdentifier(
       storage::ObjectDigest digest) override;
   void EncryptCommit(
-      convert::ExtendedStringView commit_storage,
+      std::string commit_storage,
       std::function<void(Status, std::string)> callback) override;
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,

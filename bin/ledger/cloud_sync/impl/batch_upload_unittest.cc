@@ -668,7 +668,7 @@ class FailingEncryptCommitEncryptionService
       : encryption::FakeEncryptionService(std::move(task_runner)) {}
 
   void EncryptCommit(
-      convert::ExtendedStringView /*commit_storage*/,
+      std::string /*commit_storage*/,
       std::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }

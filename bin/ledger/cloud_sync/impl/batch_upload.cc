@@ -262,7 +262,7 @@ void BatchUpload::UploadCommits() {
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
     encryption_service_->EncryptCommit(
-        storage_commit->GetStorageBytes(),
+        storage_commit->GetStorageBytes().ToString(),
         [id, callback = waiter->NewCallback()](
             encryption::Status status,
             std::string encrypted_storage_bytes) mutable {

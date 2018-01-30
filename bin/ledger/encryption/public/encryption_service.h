@@ -43,7 +43,7 @@ class EncryptionService {
 
   // Encrypts the given commit storage bytes for storing in the cloud.
   virtual void EncryptCommit(
-      convert::ExtendedStringView commit_storage,
+      std::string commit_storage,
       std::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given encrypted commit storage bytes from the cloud.

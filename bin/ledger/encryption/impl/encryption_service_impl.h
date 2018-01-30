@@ -27,7 +27,7 @@ class EncryptionServiceImpl : public EncryptionService {
   storage::ObjectIdentifier MakeObjectIdentifier(
       storage::ObjectDigest digest) override;
   void EncryptCommit(
-      convert::ExtendedStringView commit_storage,
+      std::string commit_storage,
       std::function<void(Status, std::string)> callback) override;
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
@@ -52,6 +52,15 @@ class EncryptionServiceImpl : public EncryptionService {
   void GetReferenceKey(storage::ObjectIdentifier object_identifier,
                        const std::function<void(const std::string&)>& callback);
 
+  void Encrypt(size_t key_index,
+               std::string data,
+               std::function<void(Status, std::string)> callback);
+  void Decrypt(size_t key_index,
+               std::string encrypted_data,
+               std::function<void(Status, std::string)> callback);
+
+  void FetchMasterKey(size_t key_index,
+                      std::function<void(Status, std::string)> callback);
   void FetchNamespaceKey(size_t key_index,
                          std::function<void(Status, std::string)> callback);
   void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
@@ -60,6 +69,8 @@ class EncryptionServiceImpl : public EncryptionService {
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;
 
+  // Master keys indexed by key_index.
+  cache::LRUCache<uint32_t, std::string, Status> master_keys_;
   // Namespace keys indexed by key_index.
   cache::LRUCache<uint32_t, std::string, Status> namespace_keys_;
   // Reference keys indexed by deletion scope seed.

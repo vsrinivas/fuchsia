@@ -19,7 +19,7 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
       : encryption_service_(message_loop_.task_runner(), "namespace_id") {}
 
  protected:
-  void EncryptCommit(convert::ExtendedStringView commit_storage,
+  void EncryptCommit(std::string commit_storage,
                      Status* status,
                      std::string* result) {
     bool called;
@@ -80,7 +80,7 @@ class EncryptionServiceTest : public gtest::TestWithMessageLoop {
 };
 
 TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
-  fxl::StringView contents[] = {
+  std::string contents[] = {
       "",
       "Hello",
       "0123456789012345678901234567890123456789012345678901234567890123456789",
