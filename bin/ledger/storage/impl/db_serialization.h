@@ -55,14 +55,14 @@ class ObjectStatusRow {
 
 class ImplicitJournalMetadataRow {
  public:
-  static constexpr fxl::StringView kPrefix = "journals/implicit/";
+  static constexpr fxl::StringView kPrefix = "journals/implicit_metadata/";
 
   static std::string GetKeyFor(const JournalId& journal_id);
 };
 
 class SyncMetadataRow {
  public:
-  static constexpr fxl::StringView kPrefix = "sync-metadata/";
+  static constexpr fxl::StringView kPrefix = "sync_metadata/";
 
   static std::string GetKeyFor(fxl::StringView key);
 };

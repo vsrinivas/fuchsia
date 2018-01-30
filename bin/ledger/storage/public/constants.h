@@ -19,7 +19,7 @@ constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
 constexpr const fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
                                                    kCommitIdSize);
 // The serialization version of the ledger.
-constexpr const fxl::StringView kSerializationVersion = "21";
+constexpr const fxl::StringView kSerializationVersion = "22";
 
 }  // namespace storage
 
