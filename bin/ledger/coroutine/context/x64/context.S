@@ -22,8 +22,10 @@ FUNCTION(_ZN7context10GetContextEPNS_15InternalContextE)
     movq %r15,    R15_O(%rdi)
     movq %rdi,    RDI_O(%rdi)
 
+#if __has_feature(safe_stack)
     movq %fs:ZX_TLS_UNSAFE_SP_OFFSET, %rax
     movq %rax, UNSAFE_SP_O(%rdi)
+#endif
 
     # Skip return address.
     leaq 8(%rsp), %rax
@@ -62,8 +64,10 @@ FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
     movq R15_O(%rdi), %r15
     movq RSP_O(%rdi), %rsp
 
+#if __has_feature(safe_stack)
     movq UNSAFE_SP_O(%rdi), %rax
     movq %rax, %fs:ZX_TLS_UNSAFE_SP_OFFSET
+#endif
 
     # Returns 0.
     xor %rax,         %rax

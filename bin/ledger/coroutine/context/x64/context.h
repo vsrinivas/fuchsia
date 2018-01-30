@@ -15,7 +15,10 @@
 #define RDI_O 48
 #define RSP_O 56
 #define RIP_O 64
+
+#if __has_feature(safe_stack)
 #define UNSAFE_SP_O 72
+#endif
 
 #ifndef __ASSEMBLER__
 
@@ -34,7 +37,9 @@ enum Register {
   REG_RDI,
   REG_RSP,
   REG_RIP,
+#if __has_feature(safe_stack)
   REG_UNSAFE_SP,
+#endif
   NUM_REGISTERS,
 
   // Special registers.
@@ -63,7 +68,9 @@ ASSERT_REGISTER_OFFSET(R15);
 ASSERT_REGISTER_OFFSET(RDI);
 ASSERT_REGISTER_OFFSET(RSP);
 ASSERT_REGISTER_OFFSET(RIP);
+#if __has_feature(safe_stack)
 ASSERT_REGISTER_OFFSET(UNSAFE_SP);
+#endif
 
 }  // namespace context
 

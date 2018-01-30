@@ -12,9 +12,11 @@
 
 namespace context {
 
+#if __has_feature(safe_stack)
 char* GetUnsafeStackForTest(const Stack& stack) {
   return reinterpret_cast<char*>(stack.unsafe_stack());
 }
+#endif
 
 namespace {
 
@@ -80,6 +82,39 @@ TEST(Context, MakeContext) {
   EXPECT_EQ(10, va_args_result);
 }
 
+struct ThreadLocalContext {
+  static thread_local char* thread_local_ptr;
+
+  char* ptr = nullptr;
+  Context old_context;
+};
+
+thread_local char* ThreadLocalContext::thread_local_ptr = nullptr;
+
+void GetThreadLocalPointer(void* context) {
+  auto thread_local_context = reinterpret_cast<ThreadLocalContext*>(context);
+  thread_local_context->ptr = ThreadLocalContext::thread_local_ptr;
+  SetContext(&thread_local_context->old_context);
+}
+
+TEST(Context, ThreadLocal) {
+  Stack stack;
+  ThreadLocalContext context;
+
+  char c = 'a';
+  ThreadLocalContext::thread_local_ptr = &c;
+
+  Context new_context;
+
+  EXPECT_TRUE(GetContext(&new_context));
+  MakeContext(&new_context, &stack, &GetThreadLocalPointer, &context);
+
+  SwapContext(&context.old_context, &new_context);
+
+  EXPECT_EQ(&c, context.ptr);
+}
+
+#if __has_feature(safe_stack)
 // Force to set the pointed address to 1. This must be no-inline to prevent the
 // compiler to optimize away the set.
 FXL_NOINLINE void ForceSet(volatile char* addr) {
@@ -116,38 +151,6 @@ TEST(Context, MakeContextUnsafeStack) {
   EXPECT_TRUE(found);
 }
 
-struct ThreadLocalContext {
-  static thread_local char* thread_local_ptr;
-
-  char* ptr = nullptr;
-  Context old_context;
-};
-
-thread_local char* ThreadLocalContext::thread_local_ptr = nullptr;
-
-void GetThreadLocalPointer(void* context) {
-  auto thread_local_context = reinterpret_cast<ThreadLocalContext*>(context);
-  thread_local_context->ptr = ThreadLocalContext::thread_local_ptr;
-  SetContext(&thread_local_context->old_context);
-}
-
-TEST(Context, ThreadLocal) {
-  Stack stack;
-  ThreadLocalContext context;
-
-  char c = 'a';
-  ThreadLocalContext::thread_local_ptr = &c;
-
-  Context new_context;
-
-  EXPECT_TRUE(GetContext(&new_context));
-  MakeContext(&new_context, &stack, &GetThreadLocalPointer, &context);
-
-  SwapContext(&context.old_context, &new_context);
-
-  EXPECT_EQ(&c, context.ptr);
-}
-
 __NO_SAFESTACK intptr_t GetSafeStackPointer() {
   char a = 0;
   // Suppress check about returning a stack memory address.
@@ -177,6 +180,7 @@ TEST(Context, CheckStacksAreDifferent) {
 
   SwapContext(&old_context, &new_context);
 }
+#endif
 
 }  // namespace
 }  // namespace context

@@ -30,9 +30,11 @@ FUNCTION(_ZN7context10GetContextEPNS_15InternalContextE)
     mov x1,  #0
     str x1,  [x0, #X0_O]
 
+#if __has_feature(safe_stack)
     mrs x1, TPIDR_EL0
     ldr x1, [x1, #ZX_TLS_UNSAFE_SP_OFFSET]
     str x1, [x0, #UNSAFE_SP_O]
+#endif
 
     mov x0,  #0xFFFFFFFFFFFFFFFF
     ret
@@ -67,9 +69,11 @@ FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
     ldp d12, d13, [x0, #D12_O]
     ldp d14, d15, [x0, #D14_O]
 
+#if __has_feature(safe_stack)
     ldr x2,  [x0, #UNSAFE_SP_O]
     mrs x1, TPIDR_EL0
     str x2, [x1, #ZX_TLS_UNSAFE_SP_OFFSET]
+#endif
 
     ldr x0, [x0, #X0_O]
     br x30

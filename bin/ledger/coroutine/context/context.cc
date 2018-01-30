@@ -6,9 +6,6 @@
 
 #include "lib/fxl/logging.h"
 
-static_assert(__has_feature(safe_stack),
-              "Context code must be compiled with safe stack");
-
 namespace context {
 
 void SwapContext(Context* out_context, Context* in_context) {
@@ -28,15 +25,20 @@ void MakeContext(Context* context,
   memset(context, 0, sizeof(Context));
 
   uintptr_t sp = stack->safe_stack() + stack->stack_size();
-  uintptr_t unsafe_sp = stack->unsafe_stack() + stack->stack_size();
-  // Align stacks.
+  // Align stack.
   sp = ((sp + kAdditionalStackAlignment) & (~15)) - kAdditionalStackAlignment;
-  unsafe_sp = (unsafe_sp & (~15));
 
   context->registers[REG_LR] = reinterpret_cast<uintptr_t>(func);
   context->registers[REG_ARG0] = reinterpret_cast<uintptr_t>(data);
   context->registers[REG_SP] = sp;
+
+#if __has_feature(safe_stack)
+  uintptr_t unsafe_sp = stack->unsafe_stack() + stack->stack_size();
+  // Align stack.
+  unsafe_sp = (unsafe_sp & (~15));
+
   context->registers[REG_UNSAFE_SP] = unsafe_sp;
+#endif
 }
 
 }  // namespace context

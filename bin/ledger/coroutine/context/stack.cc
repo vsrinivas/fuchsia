@@ -14,6 +14,12 @@ namespace context {
 constexpr size_t kStackGuardSize = PAGE_SIZE;
 
 namespace {
+#if __has_feature(safe_stack)
+constexpr size_t kVmoSizeMultiplier = 2u;
+#else
+constexpr size_t kVmoSizeMultiplier = 1u;
+#endif
+
 size_t ToFullPages(size_t value) {
   return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 }
@@ -41,25 +47,30 @@ void AllocateStack(const zx::vmo& vmo,
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
 
-  zx_status_t status = zx::vmo::create(2 * stack_size_, 0, &vmo_);
+  zx_status_t status =
+      zx::vmo::create(kVmoSizeMultiplier * stack_size_, 0, &vmo_);
   FXL_DCHECK(status == ZX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
+  FXL_DCHECK(safe_stack_);
+
+#if __has_feature(safe_stack)
   AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_,
                 &unsafe_stack_);
-
-  FXL_DCHECK(safe_stack_);
   FXL_DCHECK(unsafe_stack_);
+#endif
 }
 
 Stack::~Stack() {
   safe_stack_mapping_.destroy();
+#if __has_feature(safe_stack)
   unsafe_stack_mapping_.destroy();
+#endif
 }
 
 void Stack::Release() {
-  zx_status_t status =
-      vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, 2 * stack_size_, nullptr, 0);
+  zx_status_t status = vmo_.op_range(
+      ZX_VMO_OP_DECOMMIT, 0, kVmoSizeMultiplier * stack_size_, nullptr, 0);
   FXL_DCHECK(status == ZX_OK);
 }
 

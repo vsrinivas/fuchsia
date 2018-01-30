@@ -241,16 +241,9 @@ package("ledger_tests") {
 }
 
 config("ledger_config") {
-  safe_stack_flags = [
-    # The coroutine code needs to be correct both with and without safe stack. Keeping this here
-    # to easily check until safe stack is enabled globally on fuchsia.
-    "-fsanitize=safe-stack",
-    "-fstack-protector-strong",
-  ]
+  asmflags = []
 
-  asmflags = safe_stack_flags
-
-  cflags = safe_stack_flags + [
+  cflags = [
              # Remove when enabled globally by TO-99.
              "-Wunused-lambda-capture",
 
@@ -261,7 +254,7 @@ config("ledger_config") {
              "-Wunreachable-code",
            ]
 
-  ldflags = safe_stack_flags + [
+  ldflags = [
               # Use a 1M stack.
               "-Wl,-z,stack-size=0x100000",
             ]

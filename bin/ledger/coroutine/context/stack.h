@@ -33,17 +33,23 @@ class Stack {
                           Stack* stack,
                           void (*func)(void*),
                           void* data);
+#if __has_feature(safe_stack)
   friend char* GetUnsafeStackForTest(const Stack& stack);
+#endif
 
   uintptr_t safe_stack() const { return safe_stack_; }
+#if __has_feature(safe_stack)
   uintptr_t unsafe_stack() const { return unsafe_stack_; };
+#endif
 
   const size_t stack_size_;
   zx::vmo vmo_;
   zx::vmar safe_stack_mapping_;
   uintptr_t safe_stack_;
+#if __has_feature(safe_stack)
   zx::vmar unsafe_stack_mapping_;
   uintptr_t unsafe_stack_;
+#endif
 };
 }  // namespace context
 

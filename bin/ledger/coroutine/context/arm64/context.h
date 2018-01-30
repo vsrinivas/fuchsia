@@ -28,7 +28,10 @@
 #define D14_O 152
 #define D15_O 160
 #define X0_O 168
+
+#if __has_feature(safe_stack)
 #define UNSAFE_SP_O 176
+#endif
 
 #ifndef __ASSEMBLER__
 
@@ -60,7 +63,9 @@ enum Register {
   REG_D14,
   REG_D15,
   REG_X0,
+#if __has_feature(safe_stack)
   REG_UNSAFE_SP,
+#endif
   NUM_REGISTERS,
 
   // Special registers.
@@ -101,7 +106,9 @@ ASSERT_REGISTER_OFFSET(D13);
 ASSERT_REGISTER_OFFSET(D14);
 ASSERT_REGISTER_OFFSET(D15);
 ASSERT_REGISTER_OFFSET(X0);
+#if __has_feature(safe_stack)
 ASSERT_REGISTER_OFFSET(UNSAFE_SP);
+#endif
 
 }  // namespace context
 
