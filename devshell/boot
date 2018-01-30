@@ -20,8 +20,22 @@ declare -a disks=()
 ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
 add_fvm=true
 
+usage() {
+    fx-command-help
+    fx-machine-types
+    echo
+    echo "Additional bootserver arguments:"
+    exec "${ZIRCON_TOOLS_DIR}/bootserver" --help
+}
+
 if [[ "$1" =~ ^- ]]; then
+  case "$1" in
+  -h|--help)
+    usage
+  ;;
+  esac
   machine_type=""
+
 else
   machine_type="$1"
   # passing no arguments is valid, but shift will terminate with set -e
@@ -31,6 +45,9 @@ else
 fi
 
 case "${machine_type}" in
+  help)
+    usage
+  ;;
   zedboot)
     ramdisk="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.bin"
     disks=()
