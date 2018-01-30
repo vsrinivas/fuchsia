@@ -13,6 +13,35 @@
 
 __BEGIN_CDECLS
 
+// Kernel counters are a facility designed to help field diagnostics and
+// to help devs properly dimension the load/clients/size of the kernel
+// constructs. It answers questions like:
+//   - after N seconds how many outstanding <x> things are allocated?
+//   - up to this point has <Y> ever happened?
+//
+// Currently the only query interface to the counters is the console
+// k counters command. Issue 'k counters help' to learn what it can do.
+//
+// Kernel counters public API:
+// 1- define a new counter.
+//      KCOUNTER(counter_name, "<counter name>");
+//
+// 2- counters start at zero, increment the counter:
+//      kcounter_add(counter_name, 1u);
+//
+//
+// Naming the counters
+// The naming convention is "kernel.subsystem.thing_or_action"
+// for example "kernel.dispatcher.destroy"
+//             "kernel.exceptions.fpu"
+//             "kernel.handles.new"
+//
+//  Reading the counters in code
+//  Don't. The counters are mantained in a per-cpu arena and
+//  atomic operations are never used to set their value so
+//  they are both imprecise and reflect only the operations
+//  on a particular core.
+
 struct k_counter_desc {
     const char* name;
 };

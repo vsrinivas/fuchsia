@@ -10,6 +10,7 @@
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <lib/counters.h>
 #include <pow2.h>
 
 using fbl::AutoLock;
@@ -22,6 +23,10 @@ constexpr size_t kMaxHandleCount = 256 * 1024u;
 // Warning level: high_handle_count() is called when
 // there are this many outstanding handles.
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
+
+KCOUNTER(handle_count_new, "kernel.handles.new");
+KCOUNTER(handle_count_duped, "kernel.handles.duped");
+KCOUNTER(handle_count_freed, "kernel.handles.freed");
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
 // uses to create zx_handle_t values.
@@ -111,6 +116,7 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher,
     void* addr = Alloc(dispatcher, "new", &base_value);
     if (unlikely(!addr))
         return nullptr;
+    kcounter_add(handle_count_new, 1u);
     return HandleOwner(new (addr) Handle(fbl::move(dispatcher),
                                          rights, base_value));
 }
@@ -129,6 +135,7 @@ HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
     void* addr = Alloc(source->dispatcher(), "duplicate", &base_value);
     if (unlikely(!addr))
         return nullptr;
+    kcounter_add(handle_count_duped, 1u);
     return HandleOwner(new (addr) Handle(source, rights, base_value));
 }
 
@@ -186,6 +193,7 @@ void Handle::Delete() {
 
     // If |disp| is the last reference then the dispatcher object
     // gets destroyed here.
+    kcounter_add(handle_count_freed, 1u);
 }
 
 Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {

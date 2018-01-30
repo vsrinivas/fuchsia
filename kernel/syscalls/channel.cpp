@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <trace.h>
 
+#include <lib/counters.h>
 #include <lib/ktrace.h>
 
 #include <object/channel_dispatcher.h>
@@ -26,6 +27,29 @@
 using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(channel_msg_0_bytes,   "kernel.channel.bytes.0");
+KCOUNTER(channel_msg_64_bytes,  "kernel.channel.bytes.64");
+KCOUNTER(channel_msg_256_bytes, "kernel.channel.bytes.256");
+KCOUNTER(channel_msg_1k_bytes,  "kernel.channel.bytes.1k");
+KCOUNTER(channel_msg_4k_bytes,  "kernel.channel.bytes.4k");
+KCOUNTER(channel_msg_16k_bytes, "kernel.channel.bytes.16k");
+KCOUNTER(channel_msg_64k_bytes, "kernel.channel.bytes.64k");
+KCOUNTER(channel_msg_received,  "kernel.channel.messages");
+
+static void record_recv_msg_sz(uint32_t size) {
+    kcounter_add(channel_msg_received, 1u);
+
+    switch(size) {
+        case     0          : kcounter_add(channel_msg_0_bytes, 1u);   break;
+        case     1 ...    64: kcounter_add(channel_msg_64_bytes, 1u);  break;
+        case    65 ...   256: kcounter_add(channel_msg_256_bytes, 1u); break;
+        case   257 ...  1024: kcounter_add(channel_msg_1k_bytes, 1u);  break;
+        case  1025 ...  4096: kcounter_add(channel_msg_4k_bytes, 1u);  break;
+        case  4097 ... 16384: kcounter_add(channel_msg_16k_bytes, 1u); break;
+        case 16385 ... 65536: kcounter_add(channel_msg_64k_bytes, 1u); break;
+    }
+}
 
 zx_status_t sys_channel_create(uint32_t options,
                                user_out_handle* out0, user_out_handle* out1) {
@@ -106,6 +130,7 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
         if (status != ZX_OK)
             return status;
     }
+
     if (actual_handles) {
         zx_status_t status = actual_handles.copy_to_user(num_handles);
         if (status != ZX_OK)
@@ -125,6 +150,7 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
         msg_get_handles(up, msg.get(), handles, num_handles);
     }
 
+    record_recv_msg_sz(num_bytes);
     ktrace(TAG_CHANNEL_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
@@ -173,6 +199,8 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
         return call_status;
     }
 
+    auto bytes = reply? reply->data_size() : 0u;
+
     if (call_status == ZX_OK) {
         call_status = channel_read_out(up, fbl::move(reply), args, actual_bytes, actual_handles);
     }
@@ -184,6 +212,7 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
         return ZX_ERR_CALL_FAILED;
     }
 
+    record_recv_msg_sz(bytes);
     return ZX_OK;
 }
 
