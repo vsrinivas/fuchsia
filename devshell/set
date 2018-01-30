@@ -125,6 +125,7 @@ function main {
         ;;
       --bootfs)
         extra_packages="${extra_packages},build/packages/bootfs"
+        gen_args="${gen_args} --args bootfs_packages=true"
         ;;
       --build-dir)
         if [[ $# -lt 2 ]]; then
