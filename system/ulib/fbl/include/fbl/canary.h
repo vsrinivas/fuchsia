@@ -24,9 +24,9 @@ static constexpr bool magic_validate(const char* str) {
 } // namespace internal
 
 // Function for generating canary magic values from strings
-static constexpr uint64_t magic(const char* str) {
+static constexpr uint32_t magic(const char* str) {
     if (!internal::magic_validate(str))
-        return -1;
+        return UINT32_MAX;
     uint32_t res = 0;
     for (size_t i = 0; i < 4; ++i) {
         res = (res << 8) + str[i];
@@ -50,10 +50,10 @@ static constexpr uint64_t magic(const char* str) {
 // example, we'll use 0x12345678.  Add a member of type fbl::Canary<0x12345678>
 // to the class you'd like to guard.  As above, it will be automatically checked
 // on destruction and can be manually asserted against.
-template <uint64_t magic>
+template <uint32_t magic>
 class Canary {
 public:
-    static_assert(magic <= UINT32_MAX, "Invalid canary value, must be 32-bit");
+    static_assert(magic < UINT32_MAX, "Invalid canary value, must not be UINT32_MAX");
 
     constexpr Canary() : magic_(magic) { }
 
