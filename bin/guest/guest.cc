@@ -272,13 +272,7 @@ int main(int argc, char** argv) {
   auto initialize_vcpu = [boot_ptr, &interrupt_controller](Guest* guest,
                                                            uintptr_t guest_ip,
                                                            uint64_t id, Vcpu* vcpu) {
-    zx_vcpu_create_args_t vcpu_args = {
-      guest_ip,
-#if __x86_64__
-      0 /* cr3 */,
-#endif  // __x86_64__
-    };
-    zx_status_t status = vcpu->Create(guest, &vcpu_args, id);
+    zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create VCPU.";
       return status;
@@ -304,11 +298,6 @@ int main(int argc, char** argv) {
 
 
 #if __aarch64__
-  status = interrupt_controller.RegisterVcpu(0, &vcpu);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to register VCPU with GIC distributor";
-    return status;
-  }
   machina::Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
