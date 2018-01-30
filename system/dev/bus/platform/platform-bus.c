@@ -100,19 +100,19 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
     }
     case ZX_PROTOCOL_USB_MODE_SWITCH:
         if (bus->ums.ops) {
-            memcpy(protocol, &bus->ums.ops, sizeof(bus->ums.ops));
+            memcpy(protocol, &bus->ums, sizeof(bus->ums));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_GPIO:
         if (bus->gpio.ops) {
-            memcpy(protocol, &bus->gpio.ops, sizeof(bus->gpio.ops));
+            memcpy(protocol, &bus->gpio, sizeof(bus->gpio));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_I2C:
         if (bus->i2c.ops) {
-            memcpy(protocol, &bus->i2c.ops, sizeof(bus->i2c.ops));
+            memcpy(protocol, &bus->i2c, sizeof(bus->i2c));
             return ZX_OK;
         }
         break;
