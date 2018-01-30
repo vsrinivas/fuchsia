@@ -108,12 +108,15 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         // returning the value of a direct read of the field.
         //
         // Therefore if SCTLR_EL1.M is set to 1, we need to set HCR_EL2.DC to 0.
-        // Additionally, once the guest has set SCTLR_EL1.M to 1, we no longer
-        // need to trap writes to virtual memory control registers, so we can
-        // set HCR_EL2.TVM to 0 to improve performance.
         uint32_t sctlr_el1 = reg & UINT32_MAX;
         if (sctlr_el1 & SCTLR_ELX_M) {
-            *hcr &= ~(HCR_EL2_DC | HCR_EL2_TVM);
+            *hcr &= ~HCR_EL2_DC;
+            // Additionally, if the guest has also set SCTLR_EL1.C to 1, we no
+            // longer need to trap writes to virtual memory control registers,
+            // so we can set HCR_EL2.TVM to 0 to improve performance.
+            if (sctlr_el1 & SCTLR_ELX_C) {
+                *hcr &= ~HCR_EL2_TVM;
+            }
         }
         guest_state->system_state.sctlr_el1 = sctlr_el1;
 
