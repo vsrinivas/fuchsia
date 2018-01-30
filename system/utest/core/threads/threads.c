@@ -865,14 +865,14 @@ static bool test_writing_register_state(void) {
 
     struct {
         // A small stack that is used for calling zx_thread_exit().
-        char stack[1024];
+        char stack[1024] __ALIGNED(16);
         zx_general_regs_t regs_got;
     } stack;
 
     zx_general_regs_t regs_to_set;
     regs_fill_test_values(&regs_to_set);
     regs_to_set.REG_PC = (uintptr_t)save_regs_and_exit_thread;
-    regs_to_set.REG_STACK_PTR = (uintptr_t)&stack.regs_got;
+    regs_to_set.REG_STACK_PTR = (uintptr_t)(stack.stack + sizeof(stack.stack));
     ASSERT_EQ(zx_thread_write_state(
                   thread_handle, ZX_THREAD_STATE_REGSET0,
                   &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
