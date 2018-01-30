@@ -9,9 +9,9 @@
 #include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 
-#include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
-
 namespace root_presenter {
+
+class Presentation;
 
 // This class plugs in "Display flip" behavior to the Presenter; i.e. the
 // display gets flipped when a particular key (volume down) is pressed.
@@ -21,27 +21,17 @@ class DisplayFlipper {
   // Modifies |scene| if a volume down key press is detected by rotating it 180
   // degrees.
   //
-  // If display is flipped and |event| is a touch, modifies |event|'s x and y to
-  // account for display rotation.
-  //
-  // |display_metrics| is the metrics for the display.
-  // |scene| is the root Scene node.
+  // |Presentation| is the root presenter.
   // |continue_dispatch_out| is set to false if the event should no longer be
   // dispatched.
   //
   // Returns true if the scene should be invalidated.
   bool OnEvent(const mozart::InputEventPtr& event,
-               scenic_lib::Scene* scene,
-               const DisplayMetrics& display_metrics,
+               Presentation* presentation,
                bool* continue_dispatch_out);
 
  private:
-  void FlipDisplay(scenic_lib::Scene* scene,
-                   const DisplayMetrics& display_metrics);
-  static std::pair<float, float> FlipPointerCoordinates(
-      float x,
-      float y,
-      const DisplayMetrics& display_metrics);
+  void FlipDisplay(Presentation* presentation);
 
   bool display_flipped_ = false;
 

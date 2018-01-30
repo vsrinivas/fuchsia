@@ -25,6 +25,17 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
+#if defined(countof)
+// Workaround for compiler error due to Zircon defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
 
 namespace root_presenter {
 
@@ -71,6 +82,9 @@ class Presentation : private mozart::ViewTreeListener,
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
+  friend class DisplayFlipper;
+  friend class DisplayUsageSwitcher;
+
   // Gets the DisplayMetrics for the given |model|. If |display_usage_override|
   // is not UNKNOWN, uses that value for purpose of calculating metrics.
   static DisplayMetrics CalculateDisplayMetrics(
@@ -106,7 +120,6 @@ class Presentation : private mozart::ViewTreeListener,
       ::fidl::Array<scenic::RendererParamPtr> params) override;
 
   // |Presentation|
-  friend class DisplayUsageSwitcher;
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
 
   void CreateViewTree(
@@ -142,6 +155,7 @@ class Presentation : private mozart::ViewTreeListener,
   scenic_lib::Scene scene_;
   scenic_lib::Camera camera_;
   scenic_lib::AmbientLight ambient_light_;
+  glm::vec3 light_direction_;
   scenic_lib::DirectionalLight directional_light_;
   scenic_lib::EntityNode root_view_host_node_;
   zx::eventpair root_view_host_import_token_;

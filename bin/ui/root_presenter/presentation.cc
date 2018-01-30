@@ -90,7 +90,9 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
   scene_.AddLight(directional_light_);
   ambient_light_.SetColor(0.3f, 0.3f, 0.3f);
   directional_light_.SetColor(0.7f, 0.7f, 0.7f);
-  directional_light_.SetDirection(1.f, 1.f, -2.f);
+  light_direction_ = glm::vec3(1.f, 1.f, -2.f);
+  directional_light_.SetDirection(light_direction_.x, light_direction_.y,
+                                  light_direction_.z);
 
   layer_.SetRenderer(renderer_);
   layer_stack_.AddLayer(layer_);
@@ -339,8 +341,7 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
 
   // First, allow DisplayFlipper to handle event.
   if (dispatch_event) {
-    invalidate |= display_flipper_.OnEvent(event, &scene_, display_metrics_,
-                                           &dispatch_event);
+    invalidate |= display_flipper_.OnEvent(event, this, &dispatch_event);
   }
 
   if (dispatch_event) {
