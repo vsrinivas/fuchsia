@@ -48,7 +48,6 @@ typedef struct tftp_data_msg_t {
 #define DEFAULT_MODE MODE_OCTET
 #define DEFAULT_MAX_TIMEOUTS 5
 #define DEFAULT_USE_OPCODE_PREFIX true
-#define DEFAULT_USE_HOST_BLOCK_ENDIANNESS false
 
 typedef struct tftp_options_t {
     // A bitmask of the options that have been set
@@ -172,12 +171,6 @@ struct tftp_session_t {
     // adapters (they send 0 checksums when they should send 0xffff, which is a
     // no-no in IPv6). This modification is not RFC-compatible.
     bool use_opcode_prefix;
-
-    // When true, uses host endianness for block values in ACK and DATA packets,
-    // allowing for behavior that is backwards-compatible with targets suffering
-    // from NET-186. When false, uses network endianness for standards-compliant
-    // behavior.
-    bool use_host_block_endianness;
 
     // "Negotiated" values
     size_t file_size;

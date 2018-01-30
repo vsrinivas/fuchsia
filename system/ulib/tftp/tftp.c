@@ -185,11 +185,7 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
     if (session->offset <= session->file_size) {
         session->window_index++;
         OPCODE(session, resp, OPCODE_DATA);
-        if (session->use_host_block_endianness) {
-            resp->block = session->block_number + session->window_index;
-        } else {
-            resp->block = htons(session->block_number + session->window_index);
-        }
+        resp->block = htons(session->block_number + session->window_index);
         size_t len = MIN(session->file_size - session->offset, session->block_size);
         xprintf(" -> Copying block #%" PRIu64 " (size:%zu/%d) from %zu/%zu [%d/%d]\n",
                 session->block_number + session->window_index, len, session->block_size,
@@ -243,7 +239,6 @@ int tftp_init(tftp_session** session, void* buffer, size_t size) {
     s->mode = DEFAULT_MODE;
     s->max_timeouts = DEFAULT_MAX_TIMEOUTS;
     s->use_opcode_prefix = DEFAULT_USE_OPCODE_PREFIX;
-    s->use_host_block_endianness = DEFAULT_USE_HOST_BLOCK_ENDIANNESS;
 
     return TFTP_NO_ERROR;
 }
@@ -687,11 +682,7 @@ static void tftp_prepare_ack(tftp_session* session,
     xprintf(" -> Ack %" PRIu64 "\n", session->block_number);
     session->window_index = 0;
     OPCODE(session, ack_data, OPCODE_ACK);
-    if (session->use_host_block_endianness) {
-        ack_data->block = session->block_number & 0xffff;
-    } else {
-        ack_data->block = htons(session->block_number & 0xffff);
-    }
+    ack_data->block = htons(session->block_number & 0xffff);
     *msg_len = sizeof(*ack_data);
 }
 
@@ -714,12 +705,7 @@ tftp_status tftp_handle_data(tftp_session* session,
 
     tftp_data_msg* data = (tftp_data_msg*)msg;
 
-    uint16_t block_num;
-    if (session->use_host_block_endianness) {
-        block_num = data->block;
-    } else {
-        block_num = ntohs(data->block);
-    }
+    uint16_t block_num = ntohs(data->block);
 
     // The block field of the message is only 16 bits wide. To support large files
     // (> 65535 * blocksize bytes), we allow the block number to wrap. We use signed modulo
@@ -792,12 +778,7 @@ tftp_status tftp_handle_ack(tftp_session* session,
     tftp_data_msg* ack_data = (void*)ack;
     tftp_data_msg* resp_data = (void*)resp;
 
-    uint16_t ack_block;
-    if (session->use_host_block_endianness) {
-        ack_block = ack_data->block;
-    } else {
-        ack_block = ntohs(ack_data->block);
-    }
+    uint16_t ack_block = ntohs(ack_data->block);
     xprintf(" <- Ack %d\n", ack_block);
 
     // Since we track blocks in 32 bits, but the packets only support 16 bits, calculate the
@@ -1035,11 +1016,6 @@ void tftp_session_set_max_timeouts(tftp_session* session,
 void tftp_session_set_opcode_prefix_use(tftp_session* session,
                                         bool enable) {
     session->use_opcode_prefix = enable;
-}
-
-void tftp_session_set_block_host_endianness(tftp_session* session,
-                                            bool enable) {
-    session->use_host_block_endianness = enable;
 }
 
 tftp_status tftp_timeout(tftp_session* session,

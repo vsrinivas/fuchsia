@@ -238,12 +238,6 @@ void tftp_session_set_max_timeouts(tftp_session* session,
 void tftp_session_set_opcode_prefix_use(tftp_session* session,
                                         bool enable);
 
-// Specify whether to use host endianness for the block value in ACK and
-// DATA packets. When set, this provides backwards-compatible behavior
-// with clients suffering from NET-186.
-void tftp_session_set_block_host_endianness(tftp_session* session,
-                                            bool enable);
-
 // When acting as a server, the options that will be overridden when a
 // value is requested by the client. Note that if the client does not
 // specify a setting, the default will be used regardless of server
