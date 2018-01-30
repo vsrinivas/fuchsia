@@ -249,6 +249,175 @@ TEST_F(GATT_ServerTest, FindInformation128) {
   EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
 }
 
+TEST_F(GATT_ServerTest, FindByTypeValueSuccess) {
+  // handle: 1 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // handle: 2 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue2)->set_active(true);
+
+  // handle: 3 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x01, 0x00,    // start: 0x0001
+      0xFF, 0xFF,    // end: 0xFFFF
+      0x00, 0x28,    // uuid: primary service group type
+      'f', 'o', 'o'  // value: foo
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x07,        // opcode: find by type value response
+      0x01, 0x00,  // handle: 0x0001
+      0x01, 0x00,  // group handle: 0x0001
+      0x03, 0x00,  // handle: 0x0003
+      0x03, 0x00   // group handle: 0x0003
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueFail) {
+  // handle: 1 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x01, 0x00,    // start: 0x0001
+      0xFF, 0xFF,    // end: 0xFFFF
+      0x00, 0x28,    // uuid: primary service group type
+      'n', 'o'       // value: no
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x0a           // Attribute Not Found
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueEmptyDB) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x01, 0x00,    // start: 0x0001
+      0xFF, 0xFF,    // end: 0xFFFF
+      0x00, 0x28,    // uuid: primary service group type
+      'n', 'o'       // value: no
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x0a           // Attribute Not Found
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueInvalidHandle) {
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x02, 0x00,    // start: 0x0002
+      0x01, 0x00,    // end: 0x0001
+      0x00, 0x28,    // uuid: primary service group type
+      'n', 'o'       // value: no
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x01           // Invalid Handle
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueInvalidPDUError) {
+  // handle: 1 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kInvalidPDU = common::CreateStaticByteBuffer(0x06);
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x04           // Invalid PDU
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kInvalidPDU, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueZeroLengthValueError) {
+  // handle: 1 (active)
+  db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x01, 0x00,    // start: 0x0001
+      0xFF, 0xFF,    // end: 0xFFFF
+      0x00, 0x28     // uuid: primary service group type
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x0a           // Attribute Not Found
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
+TEST_F(GATT_ServerTest, FindByTypeValueOutsideRangeError) {
+  // handle: 1 (active)
+  auto* grp = db()->NewGrouping(kTestType16, 2, kTestValue2);
+
+  // handle: 2 - value: "long"
+  grp->AddAttribute(kTestType16, AllowedNoSecurity())->SetValue(kTestValue2);
+
+  // handle: 3 - value: "foo"
+  grp->AddAttribute(kTestType16, AllowedNoSecurity())->SetValue(kTestValue1);
+  grp->set_active(true);
+
+  // clang-format off
+  const auto kRequest = common::CreateStaticByteBuffer(
+      0x06,          // opcode: find by type value request
+      0x01, 0x00,    // start: 0x0001
+      0x02, 0x00,    // end: 0xFFFF
+      0x00, 0x28,    // uuid: primary service group type
+      'f', 'o', 'o'  // value: foo
+  );
+
+  const auto kExpected = common::CreateStaticByteBuffer(
+      0x01,          // Error
+      0x06,          // opcode: find by type value
+      0x00, 0x00,    // group handle: 0x0000
+      0x0a           // Attribute Not Found
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kExpected));
+}
+
 TEST_F(GATT_ServerTest, FindInfomationInactive) {
   // handle: 1 (active)
   db()->NewGrouping(types::kPrimaryService, 0, kTestValue1)->set_active(true);

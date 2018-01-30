@@ -63,7 +63,8 @@ class Server final {
                       const att::PacketReader& packet);
   void OnReadBlobRequest(att::Bearer::TransactionId tid,
                          const att::PacketReader& packet);
-
+  void OnFindByTypeValueRequest(att::Bearer::TransactionId tid,
+                                const att::PacketReader& packet);
   // Helper function to serve the Read By Type and Read By Group Type requests.
   // This searches |db| for attributes with the given |type| and adds as many
   // attributes as it can fit within the given |max_data_list_size|. The
@@ -99,6 +100,7 @@ class Server final {
   att::Bearer::HandlerId write_req_id_;
   att::Bearer::HandlerId write_cmd_id_;
   att::Bearer::HandlerId read_blob_req_id_;
+  att::Bearer::HandlerId find_by_type_value_;
 
   fxl::WeakPtrFactory<Server> weak_ptr_factory_;
 
