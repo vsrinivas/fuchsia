@@ -1079,8 +1079,6 @@ MODULE := system/ulib/c
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
-MODULE_SRCDEPS := $(LOCAL_DIR)/exported.map
-MODULE_LDFLAGS := --version-script=$(LOCAL_DIR)/exported.map
 MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_LIBS := system/ulib/zircon

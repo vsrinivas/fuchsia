@@ -6,10 +6,8 @@ TODO(ZX-1598) Type more here.
 
 ### C11
 
-Fuchsia's libc supports most of the [C11][c11std] standard. This
-in particular includes the atomic and threading portions of the
-standard library. A detailed list of C11 supported functions can
-be found [here](c11.md).
+Fuchsia's libc supports the [C11][c11] standard. This in particular includes
+the atomic and threading portions of the standard library.
 
 ### POSIX
 
@@ -40,6 +38,6 @@ Statically linking libc is not supported. Everything dynamically links libc.so.
 
 libc.so is also the dynamic linker.
 
-[c11std]: https://en.wikipedia.org/wiki/C11_(C_standard_revision)
+[c11]: https://en.wikipedia.org/wiki/C11_(C_standard_revision)
 [dotdot]: https://fuchsia.googlesource.com/docs/+/master/dotdot.md
 [fdio]: ../system/ulib/fdio
