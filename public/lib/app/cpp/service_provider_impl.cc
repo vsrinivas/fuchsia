@@ -26,7 +26,7 @@ void ServiceProviderImpl::AddBinding(
 }
 
 void ServiceProviderImpl::Close() {
-  bindings_.CloseAllBindings();
+  bindings_.CloseAll();
 }
 
 void ServiceProviderImpl::AddServiceForName(ServiceConnector connector,

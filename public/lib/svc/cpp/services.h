@@ -32,7 +32,7 @@ inline void ConnectToService(
     const zx::channel& directory,
     fidl::InterfaceRequest<Interface> request,
     const std::string& service_path = Interface::Name_) {
-  ConnectToService(directory, request.PassChannel(), service_path);
+  ConnectToService(directory, request.TakeChannel(), service_path);
 }
 
 // Connects to a service located at a path within the directory and returns a

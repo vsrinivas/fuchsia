@@ -56,10 +56,10 @@ class InterfacePtrState {
     ZX_DEBUG_ASSERT(!(bool)handle_);
     ZX_DEBUG_ASSERT(info.is_valid());
 
-    handle_ = info.PassHandle();
+    handle_ = info.TakeChannel();
   }
 
-  bool WaitForIncomingResponseUntil(zx::time deadline) {
+  bool WaitForResponseUntil(zx::time deadline) {
     ConfigureProxyIfNecessary();
 
     ZX_DEBUG_ASSERT(router_);
@@ -68,9 +68,9 @@ class InterfacePtrState {
 
   // After this method is called, the object is in an invalid state and
   // shouldn't be reused.
-  InterfaceHandle<Interface> PassInterfaceHandle() {
+  InterfaceHandle<Interface> Unbind() {
     return InterfaceHandle<Interface>(
-        router_ ? router_->PassChannel() : std::move(handle_));
+        router_ ? router_->TakeChannel() : std::move(handle_));
   }
 
   bool is_bound() const { return (bool)handle_ || router_; }
@@ -79,11 +79,11 @@ class InterfacePtrState {
     return router_ ? router_->encountered_error() : false;
   }
 
-  void set_connection_error_handler(std::function<void()> error_handler) {
+  void set_error_handler(std::function<void()> error_handler) {
     ConfigureProxyIfNecessary();
 
     ZX_DEBUG_ASSERT(router_);
-    router_->set_connection_error_handler(std::move(error_handler));
+    router_->set_error_handler(std::move(error_handler));
   }
 
   Router* router_for_testing() {

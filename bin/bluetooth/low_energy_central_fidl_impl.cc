@@ -27,7 +27,7 @@ LowEnergyCentralFidlImpl::LowEnergyCentralFidlImpl(
   FXL_DCHECK(adapter_manager_);
   FXL_DCHECK(connection_error_handler);
   adapter_manager_->AddObserver(this);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
 
@@ -42,9 +42,8 @@ void LowEnergyCentralFidlImpl::SetDelegate(
     return;
   }
 
-  delegate_ =
-      ::btfidl::low_energy::CentralDelegatePtr::Create(std::move(delegate));
-  delegate_.set_connection_error_handler([this] {
+  delegate_ = delegate.Bind();
+  delegate_.set_error_handler([this] {
     FXL_VLOG(1) << "LowEnergyCentral delegate disconnected";
     delegate_ = nullptr;
   });

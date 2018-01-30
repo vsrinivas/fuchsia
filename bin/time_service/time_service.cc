@@ -164,10 +164,9 @@ void TimeServiceImpl::ReleaseWatcher(TimeServiceWatcher* watcher) {
 }
 
 void TimeServiceImpl::Watch(fidl::InterfaceHandle<TimeServiceWatcher> watcher) {
-  TimeServiceWatcherPtr watcher_proxy =
-      TimeServiceWatcherPtr::Create(std::move(watcher));
+  TimeServiceWatcherPtr watcher_proxy = watcher.Bind();
   TimeServiceWatcher* proxy_raw_ptr = watcher_proxy.get();
-  watcher_proxy.set_connection_error_handler(
+  watcher_proxy.set_error_handler(
       [this, proxy_raw_ptr] { ReleaseWatcher(proxy_raw_ptr); });
   watchers_.push_back(std::move(watcher_proxy));
 }

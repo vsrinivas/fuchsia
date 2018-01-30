@@ -200,10 +200,10 @@ void FxProcessor::Startup() {
   audio_server_->CreateRenderer(output_audio_.NewRequest(),
                                 output_media_.NewRequest());
 
-  output_audio_.set_connection_error_handler(
+  output_audio_.set_error_handler(
       [this]() { Shutdown("AudioRenderer connection closed"); });
 
-  output_media_.set_connection_error_handler(
+  output_media_.set_error_handler(
       [this]() { Shutdown("MediaRenderer connection closed"); });
 
   // Set the media type
@@ -214,15 +214,15 @@ void FxProcessor::Startup() {
   output_media_->GetPacketConsumer(output_consumer_.NewRequest());
   output_media_->GetTimelineControlPoint(output_timeline_cp_.NewRequest());
 
-  output_consumer_.set_connection_error_handler(
+  output_consumer_.set_error_handler(
       [this]() { Shutdown("MediaConsumer connection closed"); });
 
-  output_timeline_cp_.set_connection_error_handler(
+  output_timeline_cp_.set_error_handler(
       [this]() { Shutdown("TimelineControlPoint connection closed"); });
 
   output_timeline_cp_->GetTimelineConsumer(
       output_timeline_consumer_.NewRequest());
-  output_timeline_consumer_.set_connection_error_handler(
+  output_timeline_consumer_.set_error_handler(
       [this]() { Shutdown("TimelineConsumer connection closed"); });
 
   // Construct the VMO we will use as our mixing buffer and that we will use
@@ -456,12 +456,12 @@ void FxProcessor::Shutdown(const char* reason) {
 
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
-  output_timeline_cp_.reset();
-  output_timeline_consumer_.reset();
-  output_consumer_.reset();
-  output_audio_.reset();
-  output_media_.reset();
-  audio_server_.reset();
+  output_timeline_cp_.Unbind();
+  output_timeline_consumer_.Unbind();
+  output_consumer_.Unbind();
+  output_audio_.Unbind();
+  output_media_.Unbind();
+  audio_server_.Unbind();
   input_.reset();
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

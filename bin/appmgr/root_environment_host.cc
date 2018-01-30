@@ -56,7 +56,7 @@ RootEnvironmentHost::RootEnvironmentHost(
     fs::Vfs* vfs)
     : loader_(application_path), host_binding_(this), vfs_(vfs) {
   fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
-  host_binding_.Bind(&host);
+  host_binding_.Bind(host.NewRequest());
   root_job_ =
       std::make_unique<JobHolder>(nullptr, vfs_, std::move(host), kRootLabel);
 

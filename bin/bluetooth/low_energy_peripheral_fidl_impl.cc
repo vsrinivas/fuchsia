@@ -66,7 +66,7 @@ LowEnergyPeripheralFidlImpl::LowEnergyPeripheralFidlImpl(
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
   adapter_manager_->AddObserver(this);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
 
@@ -133,8 +133,7 @@ void LowEnergyPeripheralFidlImpl::StartAdvertising(
 
         // This will be an unbound interface pointer if there's no delegate, but
         // we keep it to track the current advertisements.
-        auto delegate_ptr = ::btfidl::low_energy::PeripheralDelegatePtr::Create(
-            std::move(delegate));
+        auto delegate_ptr = delegate.Bind();
         self->instances_[advertisement_id] =
             InstanceData(advertisement_id, std::move(delegate_ptr));
         callback(::btfidl::Status::New(), advertisement_id);

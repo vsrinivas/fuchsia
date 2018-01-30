@@ -117,7 +117,7 @@ class NetworkServiceImpl::UrlLoaderContainer
     url_loader_ = std::make_unique<URLLoaderImpl>(this);
     binding_ = std::make_unique<fidl::Binding<URLLoader>>(url_loader_.get(),
                                                           std::move(request_));
-    binding_->set_connection_error_handler([this] { StopOnIOThread(); });
+    binding_->set_error_handler([this] { StopOnIOThread(); });
   }
 
   void StopOnIOThread() {

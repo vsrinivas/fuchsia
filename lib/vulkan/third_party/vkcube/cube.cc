@@ -2775,7 +2775,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
                                        fidl::InterfaceHandle<scenic::ImagePipe> interface_handle) {
                 demo->width = width;
                 demo->height = height;
-                demo->fuchsia_state->image_pipe_handle = interface_handle.PassHandle().release();
+                demo->fuchsia_state->image_pipe_handle = interface_handle.TakeChannel().release();
                 if (demo->prepared) {
                     demo_resize(demo);
                 } else {
@@ -2805,7 +2805,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
         demo->width = info->width;
         demo->height = info->height;
         demo->fuchsia_state->image_pipe_handle =
-            demo->fuchsia_state->pipe.PassInterfaceHandle().PassHandle().release();
+            demo->fuchsia_state->pipe.Unbind().TakeChannel().release();
 
         demo_init_vk_swapchain(demo);
         demo_prepare(demo);

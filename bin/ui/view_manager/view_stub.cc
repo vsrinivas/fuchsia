@@ -35,14 +35,14 @@ ViewStub::ViewStub(ViewRegistry* registry,
                    fidl::InterfaceHandle<mozart::ViewOwner> owner,
                    zx::eventpair host_import_token)
     : registry_(registry),
-      owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
+      owner_(owner.Bind()),
       host_import_token_(std::move(host_import_token)),
       weak_factory_(this) {
   FXL_DCHECK(registry_);
   FXL_DCHECK(owner_);
   FXL_DCHECK(host_import_token_);
 
-  owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
+  owner_.set_error_handler([this] { OnViewResolved(nullptr); });
 
   owner_->GetToken([this](mozart::ViewTokenPtr view_token) {
     OnViewResolved(std::move(view_token));
@@ -139,9 +139,9 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     FXL_DCHECK(!container());  // Make sure we're removed from the view tree
     FXL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
     FXL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
-                   .is_pending());
+                   .is_valid());
     FXL_DCHECK(owner_);
-    owner_.reset();
+    owner_.Unbind();
 
     registry_->TransferViewOwner(
         std::move(view_token),
@@ -160,7 +160,7 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     // 2. Or, the ViewOwner was closed before the GetToken() callback (in
     // which case view_token is null).
     FXL_DCHECK(owner_);
-    owner_.reset();
+    owner_.Unbind();
     registry_->OnViewResolved(this, std::move(view_token));
   }
 }

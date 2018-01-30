@@ -77,7 +77,7 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
       view_container_listener_binding_(this),
       view_listener_binding_(this),
       weak_factory_(this) {
-  session_.set_connection_error_handler([this] {
+  session_.set_error_handler([this] {
     FXL_LOG(ERROR)
         << "Root presenter: Scene manager session died unexpectedly.";
     Shutdown();
@@ -140,14 +140,14 @@ void Presentation::CreateViewTree(
   tree_listener_binding_.Bind(tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
                                 "Presentation");
-  tree_.set_connection_error_handler([this] {
+  tree_.set_error_handler([this] {
     FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
     Shutdown();
   });
 
   // Prepare the view container for the root.
   tree_->GetContainer(tree_container_.NewRequest());
-  tree_container_.set_connection_error_handler([this] {
+  tree_container_.set_error_handler([this] {
     FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
     Shutdown();
   });
@@ -160,12 +160,12 @@ void Presentation::CreateViewTree(
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
   input_dispatcher_ = app::ConnectToService<mozart::InputDispatcher>(
       tree_service_provider.get());
-  input_dispatcher_.set_connection_error_handler([this] {
+  input_dispatcher_.set_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
     // to be able to test a view system that has graphics but no input.
     FXL_LOG(WARNING)
         << "Input dispatcher connection error, input will not work.";
-    input_dispatcher_.reset();
+    input_dispatcher_.Unbind();
   });
 
   // Create root view.

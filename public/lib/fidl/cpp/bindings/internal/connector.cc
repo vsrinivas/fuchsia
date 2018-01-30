@@ -45,7 +45,7 @@ void Connector::CloseChannel() {
   channel_.reset();
 }
 
-zx::channel Connector::PassChannel() {
+zx::channel Connector::TakeChannel() {
   wait_.Cancel();
   wait_.set_object(ZX_HANDLE_INVALID);
   return std::move(channel_);

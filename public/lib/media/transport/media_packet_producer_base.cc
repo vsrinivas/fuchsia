@@ -38,8 +38,8 @@ void MediaPacketProducerBase::Connect(
   allocator_.Reset();
 
   consumer_ = std::move(consumer);
-  consumer_.set_connection_error_handler([this]() {
-    consumer_.reset();
+  consumer_.set_error_handler([this]() {
+    consumer_.Unbind();
     OnFailure();
   });
 

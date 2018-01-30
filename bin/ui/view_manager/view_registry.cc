@@ -114,12 +114,12 @@ ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
   // TODO(MZ-128): Register session listener and destroy views if their
   // content nodes become unavailable.
 
-  scene_manager_.set_connection_error_handler([] {
+  scene_manager_.set_error_handler([] {
     FXL_LOG(ERROR) << "Exiting due to scene manager connection error.";
     exit(1);
   });
 
-  session_.set_connection_error_handler([] {
+  session_.set_error_handler([] {
     FXL_LOG(ERROR) << "Exiting due to session connection error.";
     exit(1);
   });
@@ -143,8 +143,8 @@ void ViewRegistry::CreateView(
     mozart::ViewListenerPtr view_listener,
     zx::eventpair parent_export_token,
     const fidl::String& label) {
-  FXL_DCHECK(view_request.is_pending());
-  FXL_DCHECK(view_owner_request.is_pending());
+  FXL_DCHECK(view_request.is_valid());
+  FXL_DCHECK(view_owner_request.is_valid());
   FXL_DCHECK(view_listener);
   FXL_DCHECK(parent_export_token);
 
@@ -204,7 +204,7 @@ void ViewRegistry::CreateViewTree(
     fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
     mozart::ViewTreeListenerPtr view_tree_listener,
     const fidl::String& label) {
-  FXL_DCHECK(view_tree_request.is_pending());
+  FXL_DCHECK(view_tree_request.is_valid());
   FXL_DCHECK(view_tree_listener);
 
   auto view_tree_token = mozart::ViewTreeToken::New();
@@ -431,7 +431,7 @@ void ViewRegistry::TransferViewOwner(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FXL_DCHECK(view_token);
-  FXL_DCHECK(transferred_view_owner_request.is_pending());
+  FXL_DCHECK(transferred_view_owner_request.is_valid());
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
   if (view_state) {
@@ -493,7 +493,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FXL_DCHECK(view_stub);
 
-  if (transferred_view_owner_request.is_pending()) {
+  if (transferred_view_owner_request.is_valid()) {
     ReleaseViewStubChildHost(view_stub.get());
 
     if (view_stub->state()) {
@@ -825,7 +825,7 @@ void ViewRegistry::GetSoftKeyboardContainer(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
   FXL_DCHECK(view_token);
-  FXL_DCHECK(container.is_pending());
+  FXL_DCHECK(container.is_valid());
   FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
   auto provider = FindViewServiceProvider(view_token->value,
@@ -839,7 +839,7 @@ void ViewRegistry::GetImeService(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::ImeService> ime_service) {
   FXL_DCHECK(view_token);
-  FXL_DCHECK(ime_service.is_pending());
+  FXL_DCHECK(ime_service.is_valid());
   FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
 
   auto provider =
@@ -939,7 +939,7 @@ void ViewRegistry::CreateInputConnection(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::InputConnection> request) {
   FXL_DCHECK(view_token);
-  FXL_DCHECK(request.is_pending());
+  FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
 
   const uint32_t view_token_value = view_token->value;
@@ -965,7 +965,7 @@ void ViewRegistry::CreateInputDispatcher(
     mozart::ViewTreeTokenPtr view_tree_token,
     fidl::InterfaceRequest<mozart::InputDispatcher> request) {
   FXL_DCHECK(view_tree_token);
-  FXL_DCHECK(request.is_pending());
+  FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
 
   const uint32_t view_tree_token_value = view_tree_token->value;

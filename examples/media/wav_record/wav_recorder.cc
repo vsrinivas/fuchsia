@@ -65,7 +65,7 @@ void WavRecorder::Run(app::ApplicationContext* app_context) {
       app_context->ConnectToEnvironmentService<media::AudioServer>();
 
   audio_server->CreateCapturer(capturer_.NewRequest(), loopback_);
-  capturer_.set_connection_error_handler([this]() {
+  capturer_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "Connection lost unexpectedly, shutting down.";
     Shutdown();
   });
@@ -98,13 +98,13 @@ void WavRecorder::Usage() {
 
 void WavRecorder::Shutdown() {
   if (async_binding_.is_bound()) {
-    async_binding_.set_connection_error_handler(nullptr);
-    async_binding_.Close();
+    async_binding_.set_error_handler(nullptr);
+    async_binding_.Unbind();
   }
 
   if (capturer_.is_bound()) {
-    capturer_.set_connection_error_handler(nullptr);
-    capturer_.reset();
+    capturer_.set_error_handler(nullptr);
+    capturer_.Unbind();
   }
 
   if (clean_shutdown_) {
@@ -274,8 +274,8 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaTypePtr type) {
     FXL_DCHECK(capture_frames_per_chunk_);
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
     fidl::InterfaceHandle<AudioCapturerClient> endpoint;
-    async_binding_.Bind(&endpoint);
-    async_binding_.set_connection_error_handler([this]() {
+    async_binding_.Bind(endpoint.NewRequest());
+    async_binding_.set_error_handler([this]() {
       FXL_LOG(ERROR)
           << "Async callback connection lost unexpectedly, shutting down.";
       Shutdown();

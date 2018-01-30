@@ -48,18 +48,18 @@ TimelineControlPoint::~TimelineControlPoint() {
   // destroy any callbacks that are pending on open channels.
 
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   if (consumer_binding_.is_bound()) {
-    consumer_binding_.Close();
+    consumer_binding_.Unbind();
   }
 }
 
 void TimelineControlPoint::Bind(
     fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   control_point_binding_.Bind(std::move(request));
@@ -68,11 +68,11 @@ void TimelineControlPoint::Bind(
 
 void TimelineControlPoint::Reset() {
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   if (consumer_binding_.is_bound()) {
-    consumer_binding_.Close();
+    consumer_binding_.Unbind();
   }
 
   {
@@ -135,7 +135,7 @@ void TimelineControlPoint::GetStatus(uint64_t version_last_seen,
 void TimelineControlPoint::GetTimelineConsumer(
     fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
-    consumer_binding_.Close();
+    consumer_binding_.Unbind();
   }
 
   consumer_binding_.Bind(std::move(timeline_consumer));

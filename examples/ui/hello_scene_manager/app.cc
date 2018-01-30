@@ -46,7 +46,7 @@ App::App()
   // Connect to the SceneManager service.
   scene_manager_ =
       application_context_->ConnectToEnvironmentService<scenic::SceneManager>();
-  scene_manager_.set_connection_error_handler([this] {
+  scene_manager_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to SceneManager service.";
     loop_->QuitNow();
   });
@@ -202,7 +202,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<scenic_lib::Session>(scene_manager_.get());
-  session_->set_connection_error_handler([this] {
+  session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->QuitNow();
   });

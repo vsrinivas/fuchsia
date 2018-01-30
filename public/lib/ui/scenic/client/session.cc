@@ -14,7 +14,7 @@ Session::Session(
     fidl::InterfaceRequest<scenic::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
   FXL_DCHECK(session_);
-  if (session_listener.is_pending())
+  if (session_listener.is_valid())
     session_listener_binding_.Bind(std::move(session_listener));
 }
 

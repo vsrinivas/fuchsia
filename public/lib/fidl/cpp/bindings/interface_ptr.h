@@ -31,7 +31,7 @@ class InterfaceRequest;
 // this class or the proxy should be from the same thread that created it. If
 // you need to move the proxy to a different thread, extract the
 // InterfaceHandle (containing just the channel and any version
-// information) using PassInterfaceHandle(), pass it to a different thread, and
+// information) using Unbind(), pass it to a different thread, and
 // create and bind a new InterfacePtr from that thread.
 template <typename Interface>
 class InterfacePtr {
@@ -48,22 +48,13 @@ class InterfacePtr {
   // Takes over the binding of another InterfacePtr, and closes any channel
   // already bound to this pointer.
   InterfacePtr& operator=(InterfacePtr&& other) {
-    reset();
+    Unbind();
     internal_state_.Swap(&other.internal_state_);
     return *this;
   }
 
   // Closes the bound channel (if any) on destruction.
   ~InterfacePtr() {}
-
-  // If |info| is valid (containing a valid channel handle), returns an
-  // InterfacePtr bound to it. Otherwise, returns an unbound InterfacePtr.
-  static InterfacePtr<Interface> Create(InterfaceHandle<Interface> info) {
-    InterfacePtr<Interface> ptr;
-    if (info.is_valid())
-      ptr.Bind(std::move(info));
-    return ptr;
-  }
 
   // Creates a new pair of channels, one end bound to this InterfacePtr<>, and
   // returns the other end as a InterfaceRequest<>. InterfaceRequest<> should
@@ -99,7 +90,7 @@ class InterfacePtr {
   // has the same effect as reset(). In this case, the InterfacePtr is not
   // considered as bound.
   void Bind(InterfaceHandle<Interface> handle) {
-    reset();
+    Unbind();
     if (handle.is_valid())
       internal_state_.Bind(std::move(handle));
   }
@@ -115,27 +106,6 @@ class InterfacePtr {
   Interface* operator->() const { return get(); }
   Interface& operator*() const { return *get(); }
 
-  // Returns the version number of the interface that the remote side supports.
-  uint32_t version() const { return internal_state_.version(); }
-
-  // If the remote side doesn't support the specified version, it will close its
-  // end of the channel asynchronously. This does nothing if it's already
-  // known that the remote side supports the specified version, i.e., if
-  // |version <= this->version()|.
-  //
-  // After calling RequireVersion() with a version not supported by the remote
-  // side, all subsequent calls to interface methods will be ignored.
-  void RequireVersion(uint32_t version) {
-    internal_state_.RequireVersion(version);
-  }
-
-  // Closes the bound channel (if any) and returns the pointer to the
-  // unbound state.
-  void reset() {
-    State doomed;
-    internal_state_.Swap(&doomed);
-  }
-
   // Tests as true if bound, false if not.
   explicit operator bool() const { return internal_state_.is_bound(); }
 
@@ -145,8 +115,8 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  bool WaitForIncomingResponse() {
-    return WaitForIncomingResponseUntil(zx::time::infinite());
+  bool WaitForResponse() {
+    return WaitForResponseUntil(zx::time::infinite());
   }
 
   // Blocks the current thread until the next incoming response callback
@@ -156,8 +126,8 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  bool WaitForIncomingResponseUntil(zx::time deadline) {
-    return internal_state_.WaitForIncomingResponseUntil(deadline);
+  bool WaitForResponseUntil(zx::time deadline) {
+    return internal_state_.WaitForResponseUntil(deadline);
   }
 
   // Indicates whether the channel has encountered an error. If true,
@@ -170,18 +140,17 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  void set_connection_error_handler(std::function<void()> error_handler) {
-    internal_state_.set_connection_error_handler(std::move(error_handler));
+  void set_error_handler(std::function<void()> error_handler) {
+    internal_state_.set_error_handler(std::move(error_handler));
   }
 
   // Unbinds the InterfacePtr and returns the information which could be used
   // to setup an InterfacePtr again. This method may be used to move the proxy
   // to a different thread (see class comments for details).
-  InterfaceHandle<Interface> PassInterfaceHandle() {
+  InterfaceHandle<Interface> Unbind() {
     State state;
     internal_state_.Swap(&state);
-
-    return state.PassInterfaceHandle();
+    return state.Unbind();
   }
 
   // DO NOT USE. Exposed only for internal use and for testing.

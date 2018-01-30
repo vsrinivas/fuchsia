@@ -19,11 +19,11 @@ App::App(escher::Escher* escher)
         // TODO(MZ-270): Support multiple simultaneous Canvas clients.
         bindings_.AddBinding(canvas_.get(), std::move(request));
       });
-  session_->set_connection_error_handler([this] {
+  session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Sketchy service lost connection to Session.";
     loop_->QuitNow();
   });
-  scene_manager_.set_connection_error_handler([this] {
+  scene_manager_.set_error_handler([this] {
     FXL_LOG(INFO) << "Sketchy service lost connection to SceneManager.";
     loop_->QuitNow();
   });

@@ -94,8 +94,8 @@ TEST(StrongBindingSetTest, FullLifeCycle) {
     EXPECT_EQ(2, impls[i]->call_count());
   }
 
-  // Invoke CloseAllBindings
-  binding_set.CloseAllBindings();
+  // Invoke CloseAll
+  binding_set.CloseAll();
   EXPECT_EQ(0u, binding_set.size());
 
   // Invoke method foo() on the second five InterfacePointers.

@@ -227,7 +227,7 @@ template <typename T>
 zx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
   FXL_DCHECK(request != nullptr);
   FXL_DCHECK(*request);
-  zx::channel channel = request->PassChannel();
+  zx::channel channel = request->TakeChannel();
   zx_koid_t result = fsl::GetKoid(channel.get());
   request->Bind(std::move(channel));
   return result;
@@ -237,7 +237,7 @@ template <typename T>
 zx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
   FXL_DCHECK(ptr != nullptr);
   FXL_DCHECK(*ptr);
-  fidl::InterfaceHandle<T> handle = ptr->PassInterfaceHandle();
+  fidl::InterfaceHandle<T> handle = ptr->Unbind();
   zx_koid_t result = fsl::GetRelatedKoid(handle.handle().get());
   ptr->Bind(std::move(handle));
   return result;

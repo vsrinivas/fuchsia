@@ -27,9 +27,9 @@ class MathCalculatorImpl : public math::Calculator {
       : total_(0.0), binding_(this, std::move(request)) {}
   ~MathCalculatorImpl() override {}
 
-  void CloseMessagePipe() { binding_.Close(); }
+  void CloseMessagePipe() { binding_.Unbind(); }
 
-  bool WaitForIncomingMethodCall() { return binding_.WaitForIncomingMethodCall(); }
+  bool WaitForMessage() { return binding_.WaitForMessage(); }
 
   void Clear(const CalcCallback& callback) override {
     total_ = 0.0;
@@ -58,12 +58,12 @@ class MathCalculatorUI {
         output_(0.0),
         callback_(std::bind(&MathCalculatorUI::Output, this, _1)) {}
 
-  bool WaitForIncomingResponse() {
-    return calculator_.WaitForIncomingResponse();
+  bool WaitForResponse() {
+    return calculator_.WaitForResponse();
   }
 
-  bool WaitForIncomingResponseUntil(zx::time deadline) {
-    return calculator_.WaitForIncomingResponseUntil(deadline);
+  bool WaitForResponseUntil(zx::time deadline) {
+    return calculator_.WaitForResponseUntil(deadline);
   }
 
   bool encountered_error() const { return calculator_.encountered_error(); }
@@ -139,7 +139,7 @@ class ReentrantServiceImpl : public sample::Service {
                  const sample::Service::FrobinateCallback& callback) override {
     max_call_depth_ = std::max(++call_depth_, max_call_depth_);
     if (call_depth_ == 1) {
-      EXPECT_TRUE(binding_.WaitForIncomingMethodCall());
+      EXPECT_TRUE(binding_.WaitForMessage());
     }
     call_depth_--;
     callback(5);
@@ -215,21 +215,21 @@ TEST_F(InterfacePtrTest, EndToEnd_Synchronous) {
 
   calculator_ui.Add(2.0);
   EXPECT_EQ(0.0, calculator_ui.GetOutput());
-  calc_impl.WaitForIncomingMethodCall();
-  calculator_ui.WaitForIncomingResponse();
+  calc_impl.WaitForMessage();
+  calculator_ui.WaitForResponse();
   EXPECT_EQ(2.0, calculator_ui.GetOutput());
 
   calculator_ui.Multiply(5.0);
   EXPECT_EQ(2.0, calculator_ui.GetOutput());
-  calc_impl.WaitForIncomingMethodCall();
-  calculator_ui.WaitForIncomingResponse();
+  calc_impl.WaitForMessage();
+  calculator_ui.WaitForResponse();
   EXPECT_EQ(10.0, calculator_ui.GetOutput());
 
-  EXPECT_FALSE(calculator_ui.WaitForIncomingResponseUntil(zx::time()));
+  EXPECT_FALSE(calculator_ui.WaitForResponseUntil(zx::time()));
   EXPECT_FALSE(calculator_ui.encountered_error());
   calculator_ui.Multiply(3.0);
-  EXPECT_TRUE(calc_impl.WaitForIncomingMethodCall());
-  EXPECT_TRUE(calculator_ui.WaitForIncomingResponseUntil(zx::time::infinite()));
+  EXPECT_TRUE(calc_impl.WaitForMessage());
+  EXPECT_TRUE(calculator_ui.WaitForResponseUntil(zx::time::infinite()));
   EXPECT_EQ(30.0, calculator_ui.GetOutput());
 }
 
@@ -258,12 +258,11 @@ TEST_F(InterfacePtrTest, Resettable) {
   // Save this so we can test it later.
   zx_handle_t handle = handle0.get();
 
-  a = math::CalculatorPtr::Create(
-      InterfaceHandle<math::Calculator>(std::move(handle0)));
+  a = InterfaceHandle<math::Calculator>(std::move(handle0)).Bind();
 
   EXPECT_FALSE(!a);
 
-  a.reset();
+  a.Unbind();
 
   EXPECT_TRUE(!a);
   EXPECT_FALSE(a.internal_state()->router_for_testing());
@@ -313,7 +312,7 @@ TEST_F(InterfacePtrTest, EncounteredErrorCallback) {
   MathCalculatorImpl calc_impl(proxy.NewRequest());
 
   bool encountered_error = false;
-  proxy.set_connection_error_handler(
+  proxy.set_error_handler(
       [&encountered_error]() { encountered_error = true; });
 
   MathCalculatorUI calculator_ui(std::move(proxy));
@@ -372,7 +371,7 @@ TEST_F(InterfacePtrTest, NestedDestroyInterfacePtrOnMethodResponse) {
   EXPECT_EQ(0, SelfDestructingMathCalculatorUI::num_instances());
 }
 
-TEST_F(InterfacePtrTest, ReentrantWaitForIncomingMethodCall) {
+TEST_F(InterfacePtrTest, ReentrantWaitForMessage) {
   sample::ServicePtr proxy;
   ReentrantServiceImpl impl(proxy.NewRequest());
 
@@ -394,7 +393,7 @@ class StrongMathCalculatorImpl : public math::Calculator {
       : error_received_(error_received),
         destroyed_(destroyed),
         binding_(this, std::move(handle)) {
-    binding_.set_connection_error_handler(
+    binding_.set_error_handler(
         [this]() { *error_received_ = true; delete this; });
   }
   ~StrongMathCalculatorImpl() override { *destroyed_ = true; }
@@ -463,7 +462,7 @@ class WeakMathCalculatorImpl : public math::Calculator {
       : error_received_(error_received),
         destroyed_(destroyed),
         binding_(this, std::move(handle)) {
-    binding_.set_connection_error_handler(
+    binding_.set_error_handler(
         [this]() { *error_received_ = true; });
   }
   ~WeakMathCalculatorImpl() override { *destroyed_ = true; }
@@ -526,7 +525,7 @@ class CImpl : public C {
  public:
   CImpl(bool* d_called, InterfaceRequest<C> request)
       : d_called_(d_called), binding_(this, std::move(request)) {
-     binding_.set_connection_error_handler([this] { delete this; });
+     binding_.set_error_handler([this] { delete this; });
   }
   ~CImpl() override {}
 
@@ -541,7 +540,7 @@ class BImpl : public B {
  public:
   BImpl(bool* d_called, InterfaceRequest<B> request)
       : d_called_(d_called), binding_(this, std::move(request)) {
-    binding_.set_connection_error_handler([this] { delete this; });
+    binding_.set_error_handler([this] { delete this; });
   }
   ~BImpl() override {}
 

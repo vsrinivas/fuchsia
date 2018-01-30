@@ -49,7 +49,7 @@ class Binding {
   // The binding may be completed with a subsequent call to the |Bind| method.
   // Does not take ownership of |impl|, which must outlive the binding.
   explicit Binding(ImplPtr impl) : impl_(std::forward<ImplPtr>(impl)) {
-    stub_.set_sink(this->impl());
+    stub_.set_sink(&*this->impl());
   }
 
   // Constructs a completed binding of channel |handle| to implementation
@@ -59,22 +59,12 @@ class Binding {
     Bind(std::move(handle));
   }
 
-  // Constructs a completed binding of |impl| to a new channel, passing the
-  // client end to |ptr|, which takes ownership of it. The caller is expected to
-  // pass |ptr| on to the client of the service. Does not take ownership of any
-  // of the parameters. |impl| must outlive the binding. |ptr| only needs to
-  // last until the constructor returns.
-  Binding(ImplPtr impl, InterfaceHandle<Interface>* interface_handle)
-      : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(interface_handle);
-  }
-
   // Constructs a completed binding of |impl| to the channel endpoint in
   // |request|, taking ownership of the endpoint. Does not take ownership of
   // |impl|, which must outlive the binding.
   Binding(ImplPtr impl, InterfaceRequest<Interface> request)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(request.PassChannel());
+    Bind(request.TakeChannel());
   }
 
   // Tears down the binding, closing the channel and leaving the interface
@@ -88,7 +78,7 @@ class Binding {
   // the previously specified implementation and returning the other end.
   InterfaceHandle<Interface> NewBinding() {
     InterfaceHandle<Interface> client;
-    Bind(client.NewRequest().PassChannel());
+    Bind(client.NewRequest().TakeChannel());
     return client;
   }
 
@@ -107,45 +97,25 @@ class Binding {
     internal_router_.reset(
         new internal::Router(std::move(handle), std::move(validators)));
     internal_router_->set_incoming_receiver(&stub_);
-    internal_router_->set_connection_error_handler([this]() {
+    internal_router_->set_error_handler([this]() {
       if (connection_error_handler_)
         connection_error_handler_();
     });
   }
 
   // Completes a binding that was constructed with only an interface
-  // implementation by creating a new channel, binding one end of it to the
-  // previously specified implementation, and passing the other to |ptr|, which
-  // takes ownership of it. The caller is expected to pass |ptr| on to the
-  // eventual client of the service. Does not take ownership of |ptr|.
-  void Bind(InterfaceHandle<Interface>* interface_handle) {
-    zx::channel endpoint0;
-    zx::channel endpoint1;
-    zx::channel::create(0, &endpoint0, &endpoint1);
-    *interface_handle = InterfaceHandle<Interface>(std::move(endpoint0));
-    Bind(std::move(endpoint1));
-  }
-
-  // Completes a binding that was constructed with only an interface
   // implementation by removing the channel endpoint from |request| and
   // binding it to the previously specified implementation.
   void Bind(InterfaceRequest<Interface> request) {
-    Bind(request.PassChannel());
+    Bind(request.TakeChannel());
   }
 
   // Blocks the calling thread until either a call arrives on the previously
   // bound channel, the timeout is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
-  bool WaitForIncomingMethodCall() {
+  bool WaitForMessage() {
     ZX_DEBUG_ASSERT(internal_router_);
     return internal_router_->WaitForIncomingMessageUntil(zx::time::infinite());
-  }
-
-  // Closes the channel that was previously bound. Put this object into a
-  // state where it can be rebound to a new channel.
-  void Close() {
-    ZX_DEBUG_ASSERT(internal_router_);
-    internal_router_.reset();
   }
 
   // Unbinds the underlying channel from this binding and returns it so it can
@@ -153,33 +123,24 @@ class Binding {
   // implementation. Put this object into a state where it can be rebound to a
   // new channel.
   InterfaceRequest<Interface> Unbind() {
-    auto request = InterfaceRequest<Interface>(internal_router_->PassChannel());
+    auto request = InterfaceRequest<Interface>(internal_router_->TakeChannel());
     internal_router_.reset();
     return request;
   }
 
   // Sets an error handler that will be called if a connection error occurs on
   // the bound channel.
-  void set_connection_error_handler(std::function<void()> error_handler) {
+  void set_error_handler(std::function<void()> error_handler) {
     connection_error_handler_ = std::move(error_handler);
   }
 
   // Returns the interface implementation that was previously specified. Caller
   // does not take ownership.
-  Interface* impl() { return &*impl_; }
+  const ImplPtr& impl() const { return impl_; }
 
   // Indicates whether the binding has been completed (i.e., whether a channel
   // has been bound to the implementation).
   bool is_bound() const { return !!internal_router_; }
-
-  // Returns the value of the handle currently bound to this Binding which can
-  // be used to make explicit Wait/WaitMany calls. Requires that the Binding be
-  // bound. Ownership of the handle is retained by the Binding, it is not
-  // transferred to the caller.
-  zx_handle_t handle() const {
-    ZX_DEBUG_ASSERT(is_bound());
-    return internal_router_->handle();
-  }
 
   // Exposed for testing, should not generally be used.
   internal::Router* internal_router() { return internal_router_.get(); }

@@ -30,25 +30,25 @@ NetMediaPlayerImpl::NetMediaPlayerImpl(
           this,
           std::move(net_media_player_request),
           owner),
-      media_player_(MediaPlayerPtr::Create(std::move(media_player))),
+      media_player_(media_player.Bind()),
       responder_(this, service_name, owner->application_context()) {
   FXL_DCHECK(owner);
 
-  media_player_.set_connection_error_handler([this]() {
-    media_player_.reset();
+  media_player_.set_error_handler([this]() {
+    media_player_.Unbind();
     UnbindAndReleaseFromOwner();
   });
 
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
-  media_service_.set_connection_error_handler([this]() {
-    media_service_.reset();
+  media_service_.set_error_handler([this]() {
+    media_service_.Unbind();
     UnbindAndReleaseFromOwner();
   });
 }
 
 NetMediaPlayerImpl::~NetMediaPlayerImpl() {
-  media_service_.reset();
-  media_player_.reset();
+  media_service_.Unbind();
+  media_player_.Unbind();
 }
 
 void NetMediaPlayerImpl::SetUrl(const fidl::String& url_as_string) {

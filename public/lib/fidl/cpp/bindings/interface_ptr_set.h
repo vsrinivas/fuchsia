@@ -31,7 +31,7 @@ class InterfacePtrSet {
     Interface* pointer = intrfc_ptr.get();
     // Set the connection error handler for the newly added InterfacePtr to be a
     // function that will erase it from the vector.
-    intrfc_ptr.set_connection_error_handler([pointer, this]() {
+    intrfc_ptr.set_error_handler([pointer, this]() {
       // Since InterfacePtr itself is a movable type, the thing that uniquely
       // identifies the InterfacePtr we wish to erase is its Interface*.
       auto it = std::find_if(ptrs_.begin(), ptrs_.end(),
@@ -57,7 +57,7 @@ class InterfacePtrSet {
   void CloseAll() {
     for (auto& it : ptrs_) {
       if (it)
-        it.reset();
+        it.Unbind();
     }
     ptrs_.clear();
   }

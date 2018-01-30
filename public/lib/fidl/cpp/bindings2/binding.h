@@ -63,7 +63,7 @@ class Binding {
   // The binding may be completed with a subsequent call to the |Bind| method.
   // Does not take ownership of |impl|, which must outlive the binding.
   explicit Binding(ImplPtr impl)
-      : impl_(std::forward<ImplPtr>(impl)), stub_(this->impl()) {
+      : impl_(std::forward<ImplPtr>(impl)), stub_(&*this->impl()) {
     controller_.set_stub(&stub_);
   }
 

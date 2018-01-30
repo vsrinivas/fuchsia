@@ -35,7 +35,7 @@ void ServiceNamespace::AddBinding(
 }
 
 void ServiceNamespace::Close() {
-  bindings_.CloseAllBindings();
+  bindings_.CloseAll();
 }
 
 void ServiceNamespace::AddServiceForName(ServiceConnector connector,

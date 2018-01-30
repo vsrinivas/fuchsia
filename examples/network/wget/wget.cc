@@ -88,7 +88,7 @@ class WGetApp {
     }
     printf("Loading: %s\n", url.c_str());
 
-    network_service_->CreateURLLoader(GetProxy(&url_loader_));
+    network_service_->CreateURLLoader(url_loader_.NewRequest());
 
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;

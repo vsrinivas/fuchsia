@@ -54,7 +54,7 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
     counter_->Detach();
 
     if (binding_.is_bound()) {
-      binding_.Close();
+      binding_.Unbind();
     }
   }
 }
@@ -63,7 +63,7 @@ void MediaPacketConsumerBase::Bind(
     fidl::InterfaceRequest<MediaPacketConsumer> request) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
-  binding_.set_connection_error_handler([this]() { Reset(); });
+  binding_.set_error_handler([this]() { Reset(); });
   is_reset_ = false;
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
@@ -71,8 +71,8 @@ void MediaPacketConsumerBase::Bind(
 void MediaPacketConsumerBase::Bind(
     fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  binding_.Bind(handle);
-  binding_.set_connection_error_handler([this]() { Reset(); });
+  binding_.Bind(handle->NewRequest());
+  binding_.set_error_handler([this]() { Reset(); });
   is_reset_ = false;
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
@@ -112,8 +112,8 @@ void MediaPacketConsumerBase::Reset() {
   bool unbind = binding_.is_bound();
 
   if (unbind) {
-    binding_.set_connection_error_handler(nullptr);
-    binding_.Close();
+    binding_.set_error_handler(nullptr);
+    binding_.Unbind();
   }
 
   demand_.min_packets_outstanding = 0;

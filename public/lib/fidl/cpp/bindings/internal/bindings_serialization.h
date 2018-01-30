@@ -75,7 +75,7 @@ inline void Decode(T* obj, std::vector<zx_handle_t>* handles) {
 template <typename T>
 inline void InterfaceHandleToData(InterfaceHandle<T> input,
                                   Interface_Data* output) {
-  output->handle = WrappedHandle{input.PassHandle().release()};
+  output->handle = WrappedHandle{input.TakeChannel().release()};
 }
 
 template <typename T>

@@ -41,7 +41,7 @@ class InterfaceHandle {
   // less fragile.
   template <typename SameInterfaceAsAbove = Interface>
   InterfaceHandle(InterfacePtr<SameInterfaceAsAbove>&& ptr) {
-    *this = ptr.PassInterfaceHandle();
+    *this = ptr.Unbind();
   }
 
   // Making this constructor templated ensures that it is not type-instantiated
@@ -49,7 +49,7 @@ class InterfaceHandle {
   // codependency less fragile.
   template <typename SameInterfaceAsAbove = Interface>
   InterfaceHandle(SynchronousInterfacePtr<SameInterfaceAsAbove>&& ptr) {
-    *this = ptr.PassInterfaceHandle();
+    *this = ptr.Unbind();
   }
 
   ~InterfaceHandle() {}
@@ -73,13 +73,33 @@ class InterfaceHandle {
     return InterfaceRequest<Interface>(std::move(request_endpoint));
   }
 
+  // Creates an |InterfacePtr| bound to the channel in this |InterfaceHandle|.
+  //
+  // This function transfers ownership of the underlying channel to the
+  // returned |InterfacePtr|, which means the |is_valid()| method will return
+  // false after this method returns.
+  //
+  // Requires the current thread to have a default async_t (e.g., a message
+  // loop) in order to read messages from the channel and to monitor the
+  // channel for |ZX_CHANNEL_PEER_CLOSED|.
+  //
+  // Making this method templated ensures that it is not type-instantiated
+  // unless it is used, making the InterfacePtr<->InterfaceHandle codependency
+  // less fragile.
+  template <typename InterfacePtr = InterfacePtr<Interface>>
+  inline InterfacePtr Bind() {
+    InterfacePtr ptr;
+    ptr.Bind(std::move(handle_));
+    return ptr;
+  }
+
   // Tests as true if we have a valid handle.
   explicit operator bool() const { return is_valid(); }
   bool is_valid() const { return !!handle_; }
 
-  zx::channel PassHandle() { return std::move(handle_); }
-  const zx::channel& handle() const { return handle_; }
-  void set_handle(zx::channel handle) { handle_ = std::move(handle); }
+  zx::channel TakeChannel() { return std::move(handle_); }
+  const zx::channel& channel() const { return handle_; }
+  void set_channel(zx::channel handle) { handle_ = std::move(handle); }
 
  private:
   zx::channel handle_;

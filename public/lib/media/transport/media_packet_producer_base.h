@@ -35,7 +35,7 @@ class MediaPacketProducerBase {
                const MediaPacketProducer::ConnectCallback& callback);
 
   // Disconnects from the consumer.
-  void Disconnect() { consumer_.reset(); }
+  void Disconnect() { consumer_.Unbind(); }
 
   // Determines if we are connected to a consumer.
   bool is_connected() { return consumer_.is_bound(); }

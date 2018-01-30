@@ -43,7 +43,7 @@ void App::Present(
   auto presentation =
       std::make_unique<Presentation>(view_manager_.get(), scene_manager_.get());
   presentation->Present(
-      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle)),
+      view_owner_handle.Bind(),
       std::move(presentation_request),
       [ this, presentation = presentation.get() ] {
         auto it = std::find_if(
@@ -107,13 +107,13 @@ void App::InitializeServices() {
   if (!view_manager_) {
     application_context_->ConnectToEnvironmentService(
         view_manager_.NewRequest());
-    view_manager_.set_connection_error_handler([this] {
+    view_manager_.set_error_handler([this] {
       FXL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();
     });
 
     view_manager_->GetSceneManager(scene_manager_.NewRequest());
-    scene_manager_.set_connection_error_handler([this] {
+    scene_manager_.set_error_handler([this] {
       FXL_LOG(ERROR) << "SceneManager died, destroying view trees.";
       Reset();
     });
@@ -122,8 +122,8 @@ void App::InitializeServices() {
 
 void App::Reset() {
   presentations_.clear();  // must be first, holds pointers to services
-  view_manager_.reset();
-  scene_manager_.reset();
+  view_manager_.Unbind();
+  scene_manager_.Unbind();
 }
 
 }  // namespace root_presenter

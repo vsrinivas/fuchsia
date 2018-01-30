@@ -24,7 +24,7 @@ AdapterManagerFidlImpl::AdapterManagerFidlImpl(
   FXL_DCHECK(app_);
   FXL_DCHECK(connection_error_handler);
   app_->adapter_manager()->AddObserver(this);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
 
@@ -45,9 +45,8 @@ void AdapterManagerFidlImpl::SetDelegate(
     return;
   }
 
-  delegate_ =
-      ::btfidl::control::AdapterManagerDelegatePtr::Create(std::move(delegate));
-  delegate_.set_connection_error_handler([this] {
+  delegate_ = delegate.Bind();
+  delegate_.set_error_handler([this] {
     FXL_VLOG(1) << "AdapterManager delegate disconnected";
     delegate_ = nullptr;
   });

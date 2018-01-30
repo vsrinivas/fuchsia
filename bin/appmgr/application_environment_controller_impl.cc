@@ -15,9 +15,9 @@ ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
     fidl::InterfaceRequest<ApplicationEnvironmentController> request,
     std::unique_ptr<JobHolder> job_holder)
     : binding_(this), job_holder_(std::move(job_holder)) {
-  if (request.is_pending()) {
+  if (request.is_valid()) {
     binding_.Bind(std::move(request));
-    binding_.set_connection_error_handler([this] {
+    binding_.set_error_handler([this] {
       job_holder_->parent()->ExtractChild(job_holder_.get());
       // The destructor of the temporary returned by ExtractChild destroys
       // |this| at the end of the previous statement.
@@ -37,7 +37,7 @@ void ApplicationEnvironmentControllerImpl::Kill(const KillCallback& callback) {
 }
 
 void ApplicationEnvironmentControllerImpl::Detach() {
-  binding_.set_connection_error_handler(fxl::Closure());
+  binding_.set_error_handler(fxl::Closure());
 }
 
 }  // namespace app

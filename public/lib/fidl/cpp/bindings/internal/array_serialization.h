@@ -218,7 +218,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the WrappedHandle.
-      output->at(i) = WrappedHandle{it->PassChannel().release()};
+      output->at(i) = WrappedHandle{it->TakeChannel().release()};
       if (!validate_params->element_is_nullable &&
           output->at(i).value == ZX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(

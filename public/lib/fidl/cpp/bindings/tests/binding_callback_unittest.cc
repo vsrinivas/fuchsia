@@ -252,7 +252,7 @@ TEST_F(BindingCallbackTest, CloseBindingBeforeDeletingCallback) {
   EXPECT_EQ(0, last_client_callback_value_seen_);
 
   // Now close the Binding.
-  binding.Close();
+  binding.Unbind();
 
   // Delete the callback without running it. This should not
   // cause a crash because the insfrastructure can detect that the

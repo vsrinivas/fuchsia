@@ -53,7 +53,7 @@ class DevTokenManagerAppTest : public ::auth::TestWithMessageLoop {
   }
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), app_controller_.NewRequest());
-  app_controller_.set_connection_error_handler(
+  app_controller_.set_error_handler(
       [] { FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service."; });
 
   app::ConnectToService(services.get(), token_mgr_factory_.NewRequest());

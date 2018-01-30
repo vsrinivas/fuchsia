@@ -325,8 +325,8 @@ void Record::LaunchApp() {
 
   out() << "Launching " << launch_info->url << std::endl;
   context()->launcher()->CreateApplication(std::move(launch_info),
-                                           GetProxy(&application_controller_));
-  application_controller_.set_connection_error_handler([this] {
+                                           application_controller_.NewRequest());
+  application_controller_.set_error_handler([this] {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In

@@ -34,7 +34,7 @@ TokenManagerImpl::TokenManagerImpl(
     app::ApplicationControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                controller.NewRequest());
-    controller.set_connection_error_handler([this, &config] {
+    controller.set_error_handler([this, &config] {
       FXL_LOG(INFO) << "Auth provider " << config->url << " disconnected";
       auth_providers_.erase(config->auth_provider_type);
       auth_provider_controllers_.erase(config->auth_provider_type);
@@ -55,7 +55,7 @@ TokenManagerImpl::TokenManagerImpl(
                            << status;
           }
         });
-    auth_provider_ptr.set_connection_error_handler([this, &config] {
+    auth_provider_ptr.set_error_handler([this, &config] {
       FXL_LOG(INFO) << "Auth provider " << config->url << " disconnected";
       auth_providers_.erase(config->auth_provider_type);
       auth_provider_controllers_.erase(config->auth_provider_type);

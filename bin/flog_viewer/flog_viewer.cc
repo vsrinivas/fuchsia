@@ -23,9 +23,9 @@ void FlogViewer::Initialize(app::ApplicationContext* application_context,
                             const std::function<void()>& terminate_callback) {
   terminate_callback_ = terminate_callback;
   service_ = application_context->ConnectToEnvironmentService<FlogService>();
-  service_.set_connection_error_handler([this]() {
+  service_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "FlogService connection failed";
-    service_.reset();
+    service_.Unbind();
     terminate_callback_();
   });
 }

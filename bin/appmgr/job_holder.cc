@@ -63,7 +63,7 @@ std::vector<const char*> GetArgv(const std::string& argv0,
 
 zx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
   if (launch_info->services)
-    return launch_info->services.PassChannel();
+    return launch_info->services.TakeChannel();
   return zx::channel();
 }
 
@@ -559,7 +559,7 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
     CreateApplication(std::move(runner_launch_info),
                       runner_controller.NewRequest());
 
-    runner_controller.set_connection_error_handler(
+    runner_controller.set_error_handler(
         [this, runner] { runners_.erase(runner); });
 
     result.first->second = std::make_unique<ApplicationRunnerHolder>(

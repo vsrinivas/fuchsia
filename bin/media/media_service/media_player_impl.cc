@@ -191,7 +191,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
         source_->GetPacketProducer(index, producer.NewRequest());
 
         // Capture producer so it survives through the callback.
-        producer->Connect(MediaPacketConsumerPtr::Create(std::move(consumer)),
+        producer->Connect(consumer.Bind(),
                           fxl::MakeCopyable([
                             this, callback, producer = std::move(producer)
                           ]() { callback(); }));
@@ -253,7 +253,7 @@ void MediaPlayerImpl::Update() {
           // We need to switch to a new reader. Destroy the current source.
           reader_transition_pending_ = false;
           state_ = State::kInactive;
-          source_.reset();
+          source_.Unbind();
           stream_types_.reset();
           source_status_.reset();
           for (auto& pair : streams_by_medium_) {

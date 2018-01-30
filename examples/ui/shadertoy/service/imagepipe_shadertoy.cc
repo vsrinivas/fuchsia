@@ -22,8 +22,8 @@ ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app,
     ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe)
     : ShadertoyState(app),
-      image_pipe_(scenic::ImagePipePtr::Create(std::move(image_pipe))) {
-  image_pipe_.set_connection_error_handler([this] { this->Close(); });
+      image_pipe_(image_pipe.Bind()) {
+  image_pipe_.set_error_handler([this] { this->Close(); });
 }
 
 ShadertoyStateForImagePipe::~ShadertoyStateForImagePipe() = default;

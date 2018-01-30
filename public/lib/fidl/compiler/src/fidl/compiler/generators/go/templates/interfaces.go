@@ -67,9 +67,9 @@ const interfaceOtherDeclTmplText = `
 {{- $interface := . -}}
 type {{$interface.Name}}_Request bindings.InterfaceRequest
 
-func (r {{$interface.Name}}_Request) PassChannel() zx.Handle {
+func (r {{$interface.Name}}_Request) TakeChannel() zx.Handle {
 	i := bindings.InterfaceRequest(r)
-	return i.PassChannel()
+	return i.TakeChannel()
 }
 
 func (r {{$interface.Name}}_Request) NewStub(impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
@@ -105,7 +105,7 @@ type {{$interface.Name}}_Proxy struct {
 
 func NewProxyFor{{$interface.Name}}(p {{$interface.Name}}_Pointer, waiter bindings.AsyncWaiter) *{{$interface.Name}}_Proxy {
 	return &{{$interface.Name}}_Proxy{
-		bindings.NewRouter(p.PassChannel(), waiter),
+		bindings.NewRouter(p.TakeChannel(), waiter),
 		bindings.NewCounter(),
 	}
 }
@@ -129,7 +129,7 @@ type {{$interface.PrivateName}}_Stub struct {
 }
 
 func NewStubFor{{$interface.Name}}(r {{$interface.Name}}_Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
-	connector := bindings.NewConnector(r.PassChannel(), waiter)
+	connector := bindings.NewConnector(r.TakeChannel(), waiter)
 	return bindings.NewStub(connector, &{{$interface.PrivateName}}_Stub{connector, impl})
 }
 
@@ -230,7 +230,7 @@ const methodSignatureTmplText = `
 {{- $method := . -}}
 {{$method.MethodName}}(
 {{- range $field := $method.Params.Fields -}}
-in{{$field.Name}} {{$field.Type}}, 
+in{{$field.Name}} {{$field.Type}},
 {{- end -}}
 ) (
 {{- if $method.ResponseParams -}}

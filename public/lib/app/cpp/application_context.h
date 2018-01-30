@@ -100,7 +100,7 @@ class ApplicationContext {
       const std::string& interface_name = Interface::Name_) {
     fidl::InterfacePtr<Interface> interface_ptr;
     ConnectToEnvironmentService(interface_name,
-                                interface_ptr.NewRequest().PassChannel());
+                                interface_ptr.NewRequest().TakeChannel());
     return interface_ptr;
   }
 
@@ -110,7 +110,7 @@ class ApplicationContext {
   void ConnectToEnvironmentService(
       fidl::InterfaceRequest<Interface> request,
       const std::string& interface_name = Interface::Name_) {
-    ConnectToEnvironmentService(interface_name, request.PassChannel());
+    ConnectToEnvironmentService(interface_name, request.TakeChannel());
   }
 
   // Connects to a service provided by the application's environment,

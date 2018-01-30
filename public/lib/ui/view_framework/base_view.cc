@@ -65,7 +65,7 @@ ViewContainer* BaseView::GetViewContainer() {
 }
 
 void BaseView::SetReleaseHandler(fxl::Closure callback) {
-  view_listener_binding_.set_connection_error_handler(callback);
+  view_listener_binding_.set_error_handler(callback);
 }
 
 void BaseView::InvalidateScene() {

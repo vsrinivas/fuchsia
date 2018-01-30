@@ -122,10 +122,10 @@ void App::RegisterSingleton(std::string service_name,
           dup_launch_info->service_request = services.NewRequest();
           env_launcher_->CreateApplication(std::move(dup_launch_info),
                                            controller.NewRequest());
-          controller.set_connection_error_handler(
+          controller.set_error_handler(
               [ this, url = launch_info->url, &controller ] {
                 FXL_LOG(ERROR) << "Singleton " << url << " died";
-                controller.reset();  // kills the singleton application
+                controller.Unbind();  // kills the singleton application
                 services_.erase(url);
               });
 

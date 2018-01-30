@@ -29,7 +29,7 @@ void ViewManagerImpl::CreateView(
     const fidl::String& label) {
   registry_->CreateView(
       std::move(view_request), std::move(view_owner_request),
-      mozart::ViewListenerPtr::Create(std::move(view_listener)),
+      view_listener.Bind(),
       std::move(parent_export_token), label);
 }
 
@@ -39,7 +39,7 @@ void ViewManagerImpl::CreateViewTree(
     const fidl::String& label) {
   registry_->CreateViewTree(
       std::move(view_tree_request),
-      mozart::ViewTreeListenerPtr::Create(std::move(view_tree_listener)),
+      view_tree_listener.Bind(),
       label);
 }
 

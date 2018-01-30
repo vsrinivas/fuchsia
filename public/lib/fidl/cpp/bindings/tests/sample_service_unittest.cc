@@ -249,7 +249,7 @@ class ServiceImpl : public Service {
       int depth = 1;
       Print(depth, "foo", foo);
       Print(depth, "baz", static_cast<int32_t>(baz));
-      auto portptr = PortPtr::Create(std::move(port));
+      auto portptr = port.Bind();
       Print(depth, "port", portptr.get());
     }
     callback(5);

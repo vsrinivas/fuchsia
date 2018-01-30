@@ -28,13 +28,13 @@ ViewState::ViewState(ViewRegistry* registry,
   FXL_DCHECK(view_token_);
   FXL_DCHECK(view_listener_);
 
-  view_binding_.set_connection_error_handler([this, registry] {
+  view_binding_.set_error_handler([this, registry] {
     registry->OnViewDied(this, "View connection closed");
   });
-  owner_binding_.set_connection_error_handler([this, registry] {
+  owner_binding_.set_error_handler([this, registry] {
     registry->OnViewDied(this, "ViewOwner connection closed");
   });
-  view_listener_.set_connection_error_handler([this, registry] {
+  view_listener_.set_error_handler([this, registry] {
     registry->OnViewDied(this, "ViewListener connection closed");
   });
 }
@@ -53,7 +53,7 @@ void ViewState::BindOwner(
 
 void ViewState::ReleaseOwner() {
   FXL_DCHECK(owner_binding_.is_bound());
-  owner_binding_.Close();
+  owner_binding_.Unbind();
 }
 
 ViewState* ViewState::AsViewState() {
@@ -84,12 +84,11 @@ void ViewState::SetServiceProvider(
     fidl::InterfaceHandle<app::ServiceProvider> service_provider,
     fidl::Array<fidl::String> service_names) {
   if (service_provider) {
-    service_provider_ =
-        app::ServiceProviderPtr::Create(std::move(service_provider));
+    service_provider_ = service_provider.Bind();
     service_names_ = std::move(service_names);
 
   } else {
-    service_provider_.reset();
+    service_provider_.Unbind();
     service_names_.reset();
   }
 }

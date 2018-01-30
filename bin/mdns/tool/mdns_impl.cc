@@ -24,9 +24,9 @@ MdnsImpl::MdnsImpl(app::ApplicationContext* application_context,
   mdns_service_ =
       application_context->ConnectToEnvironmentService<MdnsService>();
 
-  mdns_service_.set_connection_error_handler([this]() {
-    mdns_service_.set_connection_error_handler(nullptr);
-    mdns_service_.reset();
+  mdns_service_.set_error_handler([this]() {
+    mdns_service_.set_error_handler(nullptr);
+    mdns_service_.Unbind();
     subscriber_.Reset();
     std::cout << "mDNS service disconnected unexpectedly\n";
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -99,8 +99,8 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
           std::cout << "not found\n";
         }
 
-        mdns_service_.set_connection_error_handler(nullptr);
-        mdns_service_.reset();
+        mdns_service_.set_error_handler(nullptr);
+        mdns_service_.Unbind();
         fsl::MessageLoop::GetCurrent()->PostQuitTask();
       });
 }
@@ -159,10 +159,10 @@ void MdnsImpl::Respond(const std::string& service_name,
   std::cout << "press escape key to quit\n";
   fidl::InterfaceHandle<MdnsResponder> responder_handle;
 
-  binding_.Bind(&responder_handle);
-  binding_.set_connection_error_handler([this]() {
-    binding_.set_connection_error_handler(nullptr);
-    binding_.Close();
+  binding_.Bind(responder_handle.NewRequest());
+  binding_.set_error_handler([this]() {
+    binding_.set_error_handler(nullptr);
+    binding_.Unbind();
     std::cout << "mDNS service disconnected from responder unexpectedly\n";
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });

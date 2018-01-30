@@ -16,10 +16,10 @@ type ChannelHandleOwner struct {
 	handle zx.Handle
 }
 
-// PassChannel passes ownership of the underlying channel handle to
+// TakeChannel passes ownership of the underlying channel handle to
 // the newly created handle object, invalidating the underlying handle object
 // in the process.
-func (o *ChannelHandleOwner) PassChannel() zx.Handle {
+func (o *ChannelHandleOwner) TakeChannel() zx.Handle {
 	if o.handle == zx.HANDLE_INVALID {
 		return zx.HANDLE_INVALID
 	}
@@ -44,14 +44,14 @@ func NewChannelHandleOwner(handle zx.Handle) ChannelHandleOwner {
 // InterfaceRequest represents a request from a remote client for an
 // implementation of fidl interface over a specified channel. The
 // implementor of the interface should remove the channel by calling
-// PassChannel() and attach it to the implementation.
+// TakeChannel() and attach it to the implementation.
 type InterfaceRequest struct {
 	ChannelHandleOwner
 }
 
 // InterfacePointer owns a channel handle with an implementation of fidl
 // interface attached to the other end of the channel. The client of the
-// interface should remove the channel by calling PassChannel() and
+// interface should remove the channel by calling TakeChannel() and
 // attach it to the proxy.
 type InterfacePointer struct {
 	ChannelHandleOwner

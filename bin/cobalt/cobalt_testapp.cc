@@ -245,7 +245,7 @@ bool CobaltTestApp::RunAllTestingStrategies() {
 
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
-  app_controller_.reset();
+  app_controller_.Unbind();
   app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "cobalt";
@@ -269,7 +269,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   }
   context_->launcher()->CreateApplication(std::move(launch_info),
                                           app_controller_.NewRequest());
-  app_controller_.set_connection_error_handler([] {
+  app_controller_.set_error_handler([] {
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 

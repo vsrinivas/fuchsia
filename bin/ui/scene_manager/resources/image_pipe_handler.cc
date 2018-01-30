@@ -10,7 +10,7 @@ ImagePipeHandler::ImagePipeHandler(
     ::fidl::InterfaceRequest<scenic::ImagePipe> request,
     scene_manager::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [image_pipe] { image_pipe->OnConnectionError(); });
 }
 

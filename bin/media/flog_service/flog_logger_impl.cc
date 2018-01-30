@@ -30,10 +30,10 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
       label_(label),
       fd_(directory->GetFile(log_id, label, true)) {
   fidl::internal::MessageValidatorList validators;
-  router_.reset(new fidl::internal::Router(request.PassChannel(),
+  router_.reset(new fidl::internal::Router(request.TakeChannel(),
                                            std::move(validators)));
   router_->set_incoming_receiver(this);
-  router_->set_connection_error_handler([this]() {
+  router_->set_error_handler([this]() {
     router_.reset();
     ReleaseFromOwner();
   });

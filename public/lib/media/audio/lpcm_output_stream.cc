@@ -66,25 +66,25 @@ LpcmOutputStream::LpcmOutputStream(app::ApplicationContext* application_context,
 
   media_service->CreateAudioRenderer(audio_renderer_.NewRequest(),
                                      media_renderer_.NewRequest());
-  audio_renderer_.set_connection_error_handler([this]() {
-    audio_renderer_.reset();
+  audio_renderer_.set_error_handler([this]() {
+    audio_renderer_.Unbind();
     SetError(MediaResult::CONNECTION_LOST);
   });
-  media_renderer_.set_connection_error_handler([this]() {
-    media_renderer_.reset();
+  media_renderer_.set_error_handler([this]() {
+    media_renderer_.Unbind();
     SetError(MediaResult::CONNECTION_LOST);
   });
 
   media_renderer_->GetTimelineControlPoint(
       timeline_control_point_.NewRequest());
-  timeline_control_point_.set_connection_error_handler([this]() {
-    timeline_control_point_.reset();
+  timeline_control_point_.set_error_handler([this]() {
+    timeline_control_point_.Unbind();
     SetError(MediaResult::CONNECTION_LOST);
   });
 
   timeline_control_point_->GetTimelineConsumer(timeline_consumer_.NewRequest());
-  timeline_consumer_.set_connection_error_handler([this]() {
-    timeline_consumer_.reset();
+  timeline_consumer_.set_error_handler([this]() {
+    timeline_consumer_.Unbind();
     SetError(MediaResult::CONNECTION_LOST);
   });
 
@@ -105,7 +105,7 @@ void LpcmOutputStream::Init() {
 
   HandleStatusUpdates();
 
-  producer_.Connect(MediaPacketConsumerPtr::Create(std::move(packet_consumer)),
+  producer_.Connect(std::move(packet_consumer),
                     [this_ptr = ref_ptr()]() {
                       if (!this_ptr->is_valid()) {
                         return;
@@ -122,10 +122,10 @@ void LpcmOutputStream::Reset() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(is_valid());
 
-  audio_renderer_.reset();
-  media_renderer_.reset();
-  timeline_control_point_.reset();
-  timeline_consumer_.reset();
+  audio_renderer_.Unbind();
+  media_renderer_.Unbind();
+  timeline_control_point_.Unbind();
+  timeline_consumer_.Unbind();
 
   LpcmPayload::Owner::Reset();
   frames_per_second_ = 0;

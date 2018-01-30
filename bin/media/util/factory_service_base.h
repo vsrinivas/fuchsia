@@ -61,9 +61,9 @@ class FactoryServiceBase {
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FXL_DCHECK(impl);
       Retain();
-      binding_.set_connection_error_handler([this]() {
-        binding_.set_connection_error_handler(nullptr);
-        binding_.Close();
+      binding_.set_error_handler([this]() {
+        binding_.set_error_handler(nullptr);
+        binding_.Unbind();
         Release();
       });
     }
@@ -86,7 +86,7 @@ class FactoryServiceBase {
     // Closes the binding.
     void Unbind() {
       if (binding_.is_bound()) {
-        binding_.Close();
+        binding_.Unbind();
       }
     }
 

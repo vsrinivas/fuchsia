@@ -33,7 +33,7 @@ void App::GetInputMethodEditor(
     fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
   FXL_DCHECK(initial_state);
   FXL_DCHECK(client);
-  FXL_DCHECK(editor_request.is_pending());
+  FXL_DCHECK(editor_request.is_valid());
 
   FXL_VLOG(1) << "GetInputMethodEditor: "
               << ", keyboard_type=" << keyboard_type << ", action=" << action

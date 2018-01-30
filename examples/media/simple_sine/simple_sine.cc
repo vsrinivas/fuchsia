@@ -73,7 +73,7 @@ void MediaApp::AcquireRenderer(app::ApplicationContext* app_context) {
   audio_server->CreateRenderer(audio_renderer.NewRequest(),
                                media_renderer_.NewRequest());
 
-  media_renderer_.set_connection_error_handler([this]() {
+  media_renderer_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "MediaRenderer connection lost. Quitting.";
     Shutdown();
   });
@@ -124,7 +124,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 
   media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest());
 
-  packet_consumer_.set_connection_error_handler([this]() {
+  packet_consumer_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "PacketConsumer connection lost. Quitting.";
     Shutdown();
   });

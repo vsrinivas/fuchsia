@@ -56,7 +56,7 @@ TestRunnerImpl::TestRunnerImpl(
     fidl::InterfaceRequest<TestRunner> request,
     TestRunContext* test_run_context)
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
-  binding_.set_connection_error_handler([this] {
+  binding_.set_error_handler([this] {
     if (waiting_for_termination_) {
       FXL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
@@ -121,7 +121,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
                              FXL_LOG(ERROR) << program_name_
                                             << " termination timed out after "
                                             << withinSeconds << "s.";
-                             binding_.set_connection_error_handler(nullptr);
+                             binding_.set_error_handler(nullptr);
                              Fail("Termination timed out.");
                              if (teardown_after_termination_) {
                                Teardown([]{});
@@ -187,7 +187,7 @@ TestRunContext::TestRunContext(
                               child_app_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
-  child_app_controller_.set_connection_error_handler([this] {
+  child_app_controller_.set_error_handler([this] {
     FXL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
                         "TestRunner clients = "
                      << test_runner_clients_.size();
@@ -272,7 +272,7 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
     // app controller connection closes. If this is not reset, a connection
     // close may call test_runner_connection_->Teardown() again and override the
     // success status set here.
-    child_app_controller_.set_connection_error_handler(nullptr);
+    child_app_controller_.set_error_handler(nullptr);
     test_runner_connection_->Teardown(test_id_, success_);
   }
 }

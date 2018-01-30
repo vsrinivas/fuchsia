@@ -48,8 +48,8 @@ class Session : private scenic::SessionListener {
   ~Session();
 
   // Sets a callback which is invoked if the session dies.
-  void set_connection_error_handler(fxl::Closure closure) {
-    session_.set_connection_error_handler(std::move(closure));
+  void set_error_handler(fxl::Closure closure) {
+    session_.set_error_handler(std::move(closure));
   }
 
   // Sets a callback which is invoked when events are received.

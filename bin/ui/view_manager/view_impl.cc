@@ -38,8 +38,7 @@ void ViewImpl::GetContainer(
 
 void ViewImpl::SetListener(
     fidl::InterfaceHandle<mozart::ViewContainerListener> listener) {
-  state_->set_view_container_listener(
-      mozart::ViewContainerListenerPtr::Create(std::move(listener)));
+  state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewImpl::AddChild(

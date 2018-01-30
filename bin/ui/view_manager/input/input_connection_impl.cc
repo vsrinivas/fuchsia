@@ -25,7 +25,7 @@ InputConnectionImpl::InputConnectionImpl(
       client_binding_(this) {
   FXL_DCHECK(inspector_);
   FXL_DCHECK(view_token_);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this] { owner_->OnInputConnectionDied(this); });
 }
 
@@ -49,7 +49,7 @@ void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
 
 void InputConnectionImpl::SetEventListener(
     fidl::InterfaceHandle<mozart::InputListener> listener) {
-  event_listener_ = mozart::InputListenerPtr::Create(std::move(listener));
+  event_listener_ = listener.Bind();
 }
 
 void InputConnectionImpl::GetInputMethodEditor(
@@ -60,7 +60,7 @@ void InputConnectionImpl::GetInputMethodEditor(
     fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
   FXL_DCHECK(initial_state);
   FXL_DCHECK(client);
-  FXL_DCHECK(editor_request.is_pending());
+  FXL_DCHECK(editor_request.is_valid());
 
   FXL_VLOG(1) << "GetInputMethodEditor: view_token=" << *view_token_
               << ", keyboard_type=" << keyboard_type
@@ -81,19 +81,19 @@ void InputConnectionImpl::GetInputMethodEditor(
           return;
 
         editor_binding_.Bind(std::move(editor_request));
-        editor_binding_.set_connection_error_handler(
+        editor_binding_.set_error_handler(
             [this] { OnEditorDied(); });
 
-        client_ = mozart::InputMethodEditorClientPtr::Create(std::move(client));
+        client_ = client.Bind();
 
         if (hardware_keyboard_connected()) {
           ConnectWithImeService(keyboard_type, action,
                                 std::move(initial_state));
         } else {
-          container_.reset();
+          container_.Unbind();
           inspector_->GetSoftKeyboardContainer(view_token_.Clone(),
                                                container_.NewRequest());
-          container_.set_connection_error_handler([this] {
+          container_.set_error_handler([this] {
             FXL_VLOG(1) << "SoftKeyboardContainer died.";
             // TODO if HW Keyboard available, we should fallback to HW IME
             Reset();
@@ -130,7 +130,7 @@ void InputConnectionImpl::ConnectWithImeService(
               << ", initial_state=" << *state;
   // Retrieve IME Service from the view tree
   inspector_->GetImeService(view_token_.Clone(), ime_service_.NewRequest());
-  ime_service_.set_connection_error_handler([this] {
+  ime_service_.set_error_handler([this] {
     FXL_LOG(ERROR) << "IME Service Died.";
     Reset();
   });
@@ -138,7 +138,7 @@ void InputConnectionImpl::ConnectWithImeService(
   // GetInputMethodEditor from IME service
   mozart::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
-  client_binding_.set_connection_error_handler([this] { OnClientDied(); });
+  client_binding_.set_error_handler([this] { OnClientDied(); });
   ime_service_->GetInputMethodEditor(keyboard_type, action, std::move(state),
                                      std::move(client_ptr),
                                      editor_.NewRequest());
@@ -156,22 +156,22 @@ void InputConnectionImpl::OnClientDied() {
 
 void InputConnectionImpl::Reset() {
   if (ime_service_)
-    ime_service_.reset();
+    ime_service_.Unbind();
 
   if (container_) {
     container_->Hide();
-    container_.reset();
+    container_.Unbind();
   }
 
   if (editor_binding_.is_bound())
-    editor_binding_.Close();
+    editor_binding_.Unbind();
   if (client_)
-    client_.reset();
+    client_.Unbind();
 
   if (editor_)
-    editor_.reset();
+    editor_.Unbind();
   if (client_binding_.is_bound())
-    client_binding_.Close();
+    client_binding_.Unbind();
 }
 
 void InputConnectionImpl::SetState(mozart::TextInputStatePtr state) {

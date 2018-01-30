@@ -166,15 +166,15 @@ void FakeRenderer::OnFlushRequested(bool hold_frame,
 
 void FakeRenderer::OnFailure() {
   if (renderer_binding_.is_bound()) {
-    renderer_binding_.Close();
+    renderer_binding_.Unbind();
   }
 
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   if (timeline_consumer_binding_.is_bound()) {
-    timeline_consumer_binding_.Close();
+    timeline_consumer_binding_.Unbind();
   }
 
   MediaPacketConsumerBase::OnFailure();

@@ -47,19 +47,18 @@ MediaTimelineControllerImpl::~MediaTimelineControllerImpl() {
   // try to destroy any callbacks that are pending on open channels.
 
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   if (consumer_binding_.is_bound()) {
-    consumer_binding_.Close();
+    consumer_binding_.Unbind();
   }
 }
 
 void MediaTimelineControllerImpl::AddControlPoint(
     fidl::InterfaceHandle<MediaTimelineControlPoint> control_point) {
   control_point_states_.push_back(std::unique_ptr<ControlPointState>(
-      new ControlPointState(this, MediaTimelineControlPointPtr::Create(
-                                      std::move(control_point)))));
+      new ControlPointState(this, control_point.Bind())));
 
   control_point_states_.back()->HandleStatusUpdates();
 }
@@ -67,7 +66,7 @@ void MediaTimelineControllerImpl::AddControlPoint(
 void MediaTimelineControllerImpl::GetControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> control_point) {
   if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
+    control_point_binding_.Unbind();
   }
 
   control_point_binding_.Bind(std::move(control_point));
@@ -81,7 +80,7 @@ void MediaTimelineControllerImpl::GetStatus(uint64_t version_last_seen,
 void MediaTimelineControllerImpl::GetTimelineConsumer(
     fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
-    consumer_binding_.Close();
+    consumer_binding_.Unbind();
   }
 
   consumer_binding_.Bind(std::move(timeline_consumer));

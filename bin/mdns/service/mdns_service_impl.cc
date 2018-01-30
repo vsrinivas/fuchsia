@@ -134,7 +134,7 @@ void MdnsServiceImpl::AddResponder(
     fidl::InterfaceHandle<MdnsResponder> responder_handle) {
   FXL_DCHECK(responder_handle);
 
-  auto responder_ptr = MdnsResponderPtr::Create(std::move(responder_handle));
+  auto responder_ptr = responder_handle.Bind();
   FXL_DCHECK(responder_ptr);
 
   if (!MdnsNames::IsValidServiceName(service_name)) {
@@ -215,8 +215,8 @@ MdnsServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceRequest<MdnsServiceSubscription> request,
     const fxl::Closure& deleter)
     : binding_(this, std::move(request)) {
-  binding_.set_connection_error_handler([this, deleter]() {
-    binding_.set_connection_error_handler(nullptr);
+  binding_.set_error_handler([this, deleter]() {
+    binding_.set_error_handler(nullptr);
     deleter();
   });
 
@@ -299,8 +299,8 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
     : responder_(std::move(responder)) {
   FXL_DCHECK(responder_);
 
-  responder_.set_connection_error_handler([this, deleter]() {
-    responder_.set_connection_error_handler(nullptr);
+  responder_.set_error_handler([this, deleter]() {
+    responder_.set_error_handler(nullptr);
     deleter();
   });
 }

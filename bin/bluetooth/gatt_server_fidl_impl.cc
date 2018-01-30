@@ -192,8 +192,8 @@ class GattServerFidlImpl::ServiceImpl : public ::bluetooth::gatt::Service {
         delegate_(std::move(delegate)),
         adapter_(adapter) {
     FXL_DCHECK(owner_);
-    binding_.set_connection_error_handler(connection_error_handler);
-    delegate_.set_connection_error_handler(connection_error_handler);
+    binding_.set_error_handler(connection_error_handler);
+    delegate_.set_error_handler(connection_error_handler);
   }
 
   // The destructor removes the GATT service
@@ -289,7 +289,7 @@ GattServerFidlImpl::GattServerFidlImpl(
   FXL_DCHECK(adapter_manager_);
   FXL_DCHECK(connection_error_handler);
   adapter_manager_->AddObserver(this);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
 
@@ -427,7 +427,7 @@ void GattServerFidlImpl::PublishService(
   };
 
   services_[id] = std::make_unique<ServiceImpl>(
-      this, id, ::btfidl::gatt::ServiceDelegatePtr::Create(std::move(delegate)),
+      this, id, delegate.Bind(),
       std::move(service_iface), adapter, connection_error_cb);
 
   callback(::btfidl::Status::New());

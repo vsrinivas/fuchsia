@@ -48,7 +48,7 @@ class SampleNamedObjectImpl : public sample::NamedObject {
  public:
   explicit SampleNamedObjectImpl(InterfaceRequest<sample::NamedObject> request)
       : binding_(this, std::move(request)) {
-    binding_.set_connection_error_handler([this](){ delete this; });
+    binding_.set_error_handler([this](){ delete this; });
   }
   void SetName(const fidl::String& name) override { name_ = name; }
 
@@ -93,13 +93,12 @@ class SampleFactoryImpl : public sample::Factory {
     callback(std::move(response), text1);
 
     if (request->obj)
-      imported::ImportedInterfacePtr::Create(std::move(request->obj))
-          ->DoSomething();
+      request->obj.Bind()->DoSomething();
   }
 
   void CreateNamedObject(
       InterfaceRequest<sample::NamedObject> object_request) override {
-    EXPECT_TRUE(object_request.is_pending());
+    EXPECT_TRUE(object_request.is_valid());
     new SampleNamedObjectImpl(std::move(object_request));
   }
 
@@ -243,9 +242,9 @@ TEST_F(HandlePassingTest, CreateNamedObject) {
   EXPECT_FALSE(object1);
 
   InterfaceRequest<sample::NamedObject> object1_request = object1.NewRequest();
-  EXPECT_TRUE(object1_request.is_pending());
+  EXPECT_TRUE(object1_request.is_valid());
   factory->CreateNamedObject(std::move(object1_request));
-  EXPECT_FALSE(object1_request.is_pending());  // We've passed the request.
+  EXPECT_FALSE(object1_request.is_valid());  // We've passed the request.
 
   ASSERT_TRUE(object1);
   object1->SetName("object1");

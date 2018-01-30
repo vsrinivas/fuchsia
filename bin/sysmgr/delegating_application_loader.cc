@@ -53,10 +53,10 @@ void DelegatingApplicationLoader::StartDelegate(
                                         record->controller.NewRequest());
 
   record->loader = services.ConnectToService<app::ApplicationLoader>();
-  record->loader.set_connection_error_handler([this, record] {
+  record->loader.set_error_handler([this, record] {
     // proactively kill the loader app entirely if its ApplicationLoader died on
     // us
-    record->controller.reset();
+    record->controller.Unbind();
   });
 }
 

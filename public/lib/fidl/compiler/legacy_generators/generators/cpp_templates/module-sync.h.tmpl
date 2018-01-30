@@ -53,7 +53,7 @@ class {{interface.name}}_SynchronousProxy
       ::fidl::internal::MessageValidatorList&& validators);
 
   bool is_bound() const { return !!channel_; }
-  zx::channel PassHandle_();
+  zx::channel TakeChannel_();
 
 {%-   for method in interface.methods %}
   bool {{method.name}}({{interface_macros.declare_sync_request_params(method)}})

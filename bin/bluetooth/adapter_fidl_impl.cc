@@ -26,7 +26,7 @@ AdapterFidlImpl::AdapterFidlImpl(
       weak_ptr_factory_(this) {
   FXL_DCHECK(adapter_);
   FXL_DCHECK(connection_error_handler);
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this, connection_error_handler] { connection_error_handler(this); });
 }
 
@@ -37,13 +37,12 @@ void AdapterFidlImpl::GetInfo(const GetInfoCallback& callback) {
 void AdapterFidlImpl::SetDelegate(
     ::fidl::InterfaceHandle<::btfidl::control::AdapterDelegate> delegate) {
   if (delegate) {
-    delegate_ =
-        ::btfidl::control::AdapterDelegatePtr::Create(std::move(delegate));
+    delegate_ = delegate.Bind();
   } else {
     delegate_ = nullptr;
   }
   if (delegate_) {
-    delegate_.set_connection_error_handler([this] {
+    delegate_.set_error_handler([this] {
       FXL_VLOG(1) << "Adapter delegate disconnected";
       delegate_ = nullptr;
 

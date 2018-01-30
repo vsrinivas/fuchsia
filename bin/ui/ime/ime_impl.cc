@@ -26,8 +26,8 @@ ImeImpl::ImeImpl(
               << ", keyboard_type=" << keyboard_type
               << ", initial_state=" << *state_;
 
-  editor_binding_.set_connection_error_handler([this] { OnEditorDied(); });
-  client_ = mozart::InputMethodEditorClientPtr::Create(std::move(client));
+  editor_binding_.set_error_handler([this] { OnEditorDied(); });
+  client_ = client.Bind();
 }
 
 ImeImpl::~ImeImpl() {}

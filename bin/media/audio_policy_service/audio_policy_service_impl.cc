@@ -169,9 +169,9 @@ void AudioPolicyServiceImpl::EnsureAudioService() {
   audio_service_ =
       application_context_->ConnectToEnvironmentService<AudioServer>();
 
-  audio_service_.set_connection_error_handler([this]() {
-    audio_service_.set_connection_error_handler(nullptr);
-    audio_service_.reset();
+  audio_service_.set_error_handler([this]() {
+    audio_service_.set_error_handler(nullptr);
+    audio_service_.Unbind();
   });
 }
 

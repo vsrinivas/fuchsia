@@ -343,7 +343,7 @@ class FidlTest {
  public:
   FidlTest(MultiProc multiproc) {
     zx_handle_t server =
-        GetSynchronousProxy(&service_ptr_).PassChannel().release();
+        GetSynchronousProxy(&service_ptr_).TakeChannel().release();
     thread_or_process_.Launch("FidlTest::ThreadFunc", &server, 1, multiproc);
   }
 
@@ -354,7 +354,7 @@ class FidlTest {
     fsl::MessageLoop loop;
     RoundTripServiceImpl service_impl;
     fidl::Binding<RoundTripService> binding(&service_impl, std::move(channel));
-    binding.set_connection_error_handler(
+    binding.set_error_handler(
         [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
     loop.Run();
   }

@@ -24,7 +24,7 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
     const std::string& interface_name = Interface::Name_) {
   fidl::InterfacePtr<Interface> interface_ptr;
   service_provider->ConnectToService(interface_name,
-                                     interface_ptr.NewRequest().PassChannel());
+                                     interface_ptr.NewRequest().TakeChannel());
   return interface_ptr;
 }
 
@@ -36,7 +36,7 @@ inline void ConnectToService(
     fidl::InterfaceRequest<Interface> interface_request,
     const std::string& interface_name = Interface::Name_) {
   service_provider->ConnectToService(interface_name,
-                                     interface_request.PassChannel());
+                                     interface_request.TakeChannel());
 }
 
 }  // namespace app

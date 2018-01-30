@@ -24,10 +24,10 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
 
   fidl::InterfaceHandle<netstack::NotificationListener> listener_handle;
 
-  binding_.Bind(&listener_handle);
-  binding_.set_connection_error_handler([this]() {
-    binding_.set_connection_error_handler(nullptr);
-    binding_.Close();
+  binding_.Bind(listener_handle.NewRequest());
+  binding_.set_error_handler([this]() {
+    binding_.set_error_handler(nullptr);
+    binding_.Unbind();
     FXL_LOG(ERROR) << "Connection to netstack dropped.";
   });
 
@@ -41,8 +41,8 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
 
 FidlInterfaceMonitor::~FidlInterfaceMonitor() {
   if (binding_.is_bound()) {
-    binding_.set_connection_error_handler(nullptr);
-    binding_.Close();
+    binding_.set_error_handler(nullptr);
+    binding_.Unbind();
   }
 }
 

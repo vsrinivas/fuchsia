@@ -23,7 +23,7 @@ namespace fidl {
 // class uses the generated synchronous versions of the mojo interfaces.
 //
 // To make a SynchronousInterfacePtr, use the |Create()| factory method and
-// supply the InterfaceHandle to it. Use |PassInterfaceHandle()| to extract the
+// supply the InterfaceHandle to it. Use |Unbind()| to extract the
 // InterfaceHandle.
 //
 // SynchronousInterfacePtr is thread-compatible (but not thread-safe).
@@ -71,8 +71,8 @@ class SynchronousInterfacePtr {
 
   // Unbinds the SynchronousInterfacePtr and returns the underlying
   // InterfaceHandle for the interface.
-  InterfaceHandle<Interface> PassInterfaceHandle() {
-    InterfaceHandle<Interface> handle(proxy_->PassHandle_());
+  InterfaceHandle<Interface> Unbind() {
+    InterfaceHandle<Interface> handle(proxy_->TakeChannel_());
     reset();
     return handle;
   }
@@ -88,7 +88,7 @@ class SynchronousInterfacePtr {
         new typename Interface::ResponseValidator_));
 
         proxy_.reset(new typename Interface::Synchronous_::Proxy_(
-      handle.PassHandle(), std::move(validators)));
+      handle.TakeChannel(), std::move(validators)));
   }
 
   FIDL_MOVE_ONLY_TYPE(SynchronousInterfacePtr);
@@ -118,13 +118,12 @@ class SynchronousInterfacePtr {
 //   fidl::String out;
 //   client->EchoString("hello!", &out);
 //
-// TODO(vardhan): Consider renaming this function, along with her sister
-// |GetProxy()| functions. Maybe `MakeSyncProxy()`?
+// TODO(abarth): Delete this function in favor of NewRequest().
 template <typename Interface>
 InterfaceRequest<Interface> GetSynchronousProxy(
     SynchronousInterfacePtr<Interface>* ptr) {
   InterfaceHandle<Interface> iface_handle;
-  auto retval = GetProxy(&iface_handle);
+  auto retval = iface_handle.NewRequest();
   *ptr = SynchronousInterfacePtr<Interface>::Create(std::move(iface_handle));
   return retval;
 }

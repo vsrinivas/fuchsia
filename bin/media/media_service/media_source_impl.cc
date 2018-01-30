@@ -70,7 +70,7 @@ MediaSourceImpl::MediaSourceImpl(
     }
 
     callback_joiner->WhenJoined([this]() {
-      media_service_.reset();
+      media_service_.Unbind();
 
       // Remove invalid streams.
       for (auto iter = streams_.begin(); iter != streams_.end();) {

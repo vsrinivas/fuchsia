@@ -32,8 +32,7 @@ ApplicationNamespace::ApplicationNamespace(
 
   if (!service_list.is_null()) {
     auto& names = service_list->names;
-    additional_services_ =
-        ServiceProviderPtr::Create(std::move(service_list->provider));
+    additional_services_ = service_list->provider.Bind();
     for (auto& name : names) {
       services_.AddServiceForName(
           [this, name](zx::channel channel) {

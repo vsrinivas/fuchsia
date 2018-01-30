@@ -1186,8 +1186,7 @@ TEST(UnionTest, InterfaceInUnion) {
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_small_cache(bindings.NewBinding());
 
-  auto small_cache =
-      SmallCachePtr::Create(std::move(handle->get_f_small_cache()));
+  auto small_cache = handle->get_f_small_cache().Bind();
   small_cache->SetIntValue(10);
   WaitForAsyncWaiter();
   EXPECT_EQ(10, impl.int_value());
@@ -1214,8 +1213,7 @@ TEST(UnionTest, InterfaceInUnionSerialization) {
   HandleUnionPtr handle2(HandleUnion::New());
   Deserialize_(data, handle2.get());
 
-  auto small_cache =
-      SmallCachePtr::Create(std::move(handle2->get_f_small_cache()));
+  auto small_cache = handle2->get_f_small_cache().Bind();
   small_cache->SetIntValue(10);
   WaitForAsyncWaiter();
   EXPECT_EQ(10, impl.int_value());

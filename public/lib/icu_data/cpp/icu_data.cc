@@ -63,7 +63,7 @@ bool Initialize(app::ApplicationContext* context) {
   icu_data_provider->ICUDataWithSha1(
       kDataHash,
       [&response](icu_data::ICUDataPtr r) { response = std::move(r); });
-  icu_data_provider.WaitForIncomingResponse();
+  icu_data_provider.WaitForResponse();
 
   if (!response) {
     return false;

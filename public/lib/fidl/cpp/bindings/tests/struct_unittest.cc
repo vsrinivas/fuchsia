@@ -272,14 +272,14 @@ TEST(StructTest, Serialization_InterfaceRequest) {
 
   SomeInterfacePtr i_ptr;
   iface_req_struct.req = i_ptr.NewRequest();
-  EXPECT_TRUE(iface_req_struct.req.is_pending());
+  EXPECT_TRUE(iface_req_struct.req.is_valid());
 
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(&iface_req_struct, &buf, &data));
-  EXPECT_FALSE(iface_req_struct.req.is_pending());
+  EXPECT_FALSE(iface_req_struct.req.is_valid());
 
   Deserialize_(data, &iface_req_struct);
-  EXPECT_TRUE(iface_req_struct.req.is_pending());
+  EXPECT_TRUE(iface_req_struct.req.is_valid());
 }
 
 // Tests deserializing structs as a newer version.

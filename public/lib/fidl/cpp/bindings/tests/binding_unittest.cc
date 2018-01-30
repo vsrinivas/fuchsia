@@ -61,11 +61,11 @@ TEST_F(BindingTest, Close) {
   bool called = false;
   sample::ServicePtr ptr;
   auto request = ptr.NewRequest();
-  ptr.set_connection_error_handler([&called]() { called = true; });
+  ptr.set_error_handler([&called]() { called = true; });
   ServiceImpl impl;
   Binding<sample::Service> binding(&impl, std::move(request));
 
-  binding.Close();
+  binding.Unbind();
   EXPECT_FALSE(called);
   PumpMessages();
   EXPECT_TRUE(called);
@@ -77,7 +77,7 @@ TEST_F(BindingTest, DestroyClosesMessagePipe) {
   ServiceImpl impl;
   sample::ServicePtr ptr;
   auto request = ptr.NewRequest();
-  ptr.set_connection_error_handler(
+  ptr.set_error_handler(
       [&encountered_error]() { encountered_error = true; });
   bool called = false;
   auto called_cb = [&called](int32_t result) { called = true; };
@@ -110,8 +110,8 @@ TEST_F(BindingTest, ConnectionError) {
     ServiceImpl impl;
     sample::ServicePtr ptr;
     Binding<sample::Service> binding(&impl, ptr.NewRequest());
-    binding.set_connection_error_handler([&called]() { called = true; });
-    ptr.reset();
+    binding.set_error_handler([&called]() { called = true; });
+    ptr.Unbind();
     EXPECT_FALSE(called);
     PumpMessages();
     EXPECT_TRUE(called);
@@ -128,14 +128,14 @@ TEST_F(BindingTest, CloseDoesntCallConnectionErrorHandler) {
   sample::ServicePtr ptr;
   Binding<sample::Service> binding(&impl, ptr.NewRequest());
   bool called = false;
-  binding.set_connection_error_handler([&called]() { called = true; });
-  binding.Close();
+  binding.set_error_handler([&called]() { called = true; });
+  binding.Unbind();
   PumpMessages();
   EXPECT_FALSE(called);
 
   // We can also close the other end, and the error handler still won't be
   // called.
-  ptr.reset();
+  ptr.Unbind();
   PumpMessages();
   EXPECT_FALSE(called);
 }
@@ -145,7 +145,7 @@ class ServiceImplWithBinding : public ServiceImpl {
   ServiceImplWithBinding(bool* was_deleted,
                          InterfaceRequest<sample::Service> request)
       : ServiceImpl(was_deleted), binding_(this, std::move(request)) {
-    binding_.set_connection_error_handler([this]() { delete this; });
+    binding_.set_error_handler([this]() { delete this; });
   }
 
   ServiceImplWithBinding(const ServiceImplWithBinding&) = delete;
@@ -161,7 +161,7 @@ TEST_F(BindingTest, SelfDeleteOnConnectionError) {
   sample::ServicePtr ptr;
   // This should delete itself on connection error.
   new ServiceImplWithBinding(&was_deleted, ptr.NewRequest());
-  ptr.reset();
+  ptr.Unbind();
   EXPECT_FALSE(was_deleted);
   PumpMessages();
   EXPECT_TRUE(was_deleted);

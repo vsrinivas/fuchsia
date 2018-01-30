@@ -119,10 +119,10 @@ void TraceManager::RegisterTraceProvider(
 
   auto it = providers_.emplace(
       providers_.end(),
-      TraceProviderBundle{TraceProviderPtr::Create(std::move(handle)),
+      TraceProviderBundle{handle.Bind(),
                           next_provider_id_++, SanitizeLabel(label)});
 
-  it->provider.set_connection_error_handler([this, it]() {
+  it->provider.set_error_handler([this, it]() {
     if (session_)
       session_->RemoveDeadProvider(&(*it));
     providers_.erase(it);

@@ -39,9 +39,9 @@ ApplicationControllerImpl::ApplicationControllerImpl(
   wait_.set_handler(fbl::BindMember(this, &ApplicationControllerImpl::Handler));
   auto status = wait_.Begin();
   FXL_DCHECK(status == ZX_OK);
-  if (request.is_pending()) {
+  if (request.is_valid()) {
     binding_.Bind(std::move(request));
-    binding_.set_connection_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this] { Kill(); });
   }
 
   info_dir_ = fbl::AdoptRef(new fs::PseudoDir());
@@ -79,7 +79,7 @@ void ApplicationControllerImpl::Kill() {
 }
 
 void ApplicationControllerImpl::Detach() {
-  binding_.set_connection_error_handler(fxl::Closure());
+  binding_.set_error_handler(fxl::Closure());
 }
 
 bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {

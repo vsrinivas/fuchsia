@@ -30,8 +30,7 @@ void ViewTreeImpl::GetContainer(
 
 void ViewTreeImpl::SetListener(
     fidl::InterfaceHandle<mozart::ViewContainerListener> listener) {
-  state_->set_view_container_listener(
-      mozart::ViewContainerListenerPtr::Create(std::move(listener)));
+  state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewTreeImpl::AddChild(

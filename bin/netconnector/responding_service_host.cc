@@ -48,7 +48,7 @@ void RespondingServiceHost::RegisterSingleton(
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 
-          controller.set_connection_error_handler(
+          controller.set_error_handler(
               [this, service_name] {
                 FXL_LOG(INFO)
                     << "Service " << service_name << " provider disconnected";
@@ -68,10 +68,9 @@ void RespondingServiceHost::RegisterSingleton(
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
     fidl::InterfaceHandle<app::ServiceProvider> handle) {
-  app::ServiceProviderPtr service_provider =
-      app::ServiceProviderPtr::Create(std::move(handle));
+  app::ServiceProviderPtr service_provider = handle.Bind();
 
-  service_provider.set_connection_error_handler([this, service_name] {
+  service_provider.set_error_handler([this, service_name] {
     FXL_LOG(INFO) << "Service " << service_name << " provider disconnected";
     service_providers_by_name_.erase(service_name);
   });

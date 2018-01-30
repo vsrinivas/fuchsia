@@ -45,7 +45,7 @@ format_ (a required step); furthermore we need it to start playback (via the
 TimelineControlPoint and TimelineConsumer interfaces). For this reason, we
 retain our MediaRenderer.
 
-We must **set_connection_error_handler** on every interface before using it.
+We must **set_error_handler** on every interface before using it.
 These interfaces represent FIDL channels, which can close asynchronously. The
 system notifies us of these closures via this error handler callback. In this
 example, if an unexpected channel closure occurs we log the problem and begin

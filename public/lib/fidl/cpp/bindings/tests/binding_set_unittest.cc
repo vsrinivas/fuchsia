@@ -45,9 +45,7 @@ TEST(BindingSetTest, FullLifeCycle) {
     if (i % 2 == 0)
       binding_set.AddBinding(&impls[i], interface_pointers[i].NewRequest());
     else
-      interface_pointers[i] =
-          fidl::InterfacePtr<MinimalInterface>::Create(
-              binding_set.AddBinding(&impls[i]));
+      interface_pointers[i] = binding_set.AddBinding(&impls[i]).Bind();
   }
   EXPECT_EQ(kNumObjects, binding_set.size());
 
@@ -70,7 +68,7 @@ TEST(BindingSetTest, FullLifeCycle) {
   // Close the first 5 channels and destroy the first five
   // InterfacePtrs.
   for (size_t i = 0; i < kNumObjects / 2; i++) {
-    interface_pointers[i].reset();
+    interface_pointers[i].Unbind();
   }
 
   // Check that the set contains only five elements now.
@@ -90,8 +88,8 @@ TEST(BindingSetTest, FullLifeCycle) {
     EXPECT_EQ(expected, impls[i].call_count());
   }
 
-  // Invoke CloseAllBindings
-  binding_set.CloseAllBindings();
+  // Invoke CloseAll
+  binding_set.CloseAll();
   EXPECT_EQ(0u, binding_set.size());
 
   // Invoke method foo() on the second five InterfacePointers.
@@ -115,19 +113,16 @@ TEST(BindingSetTest, Iterator) {
   MinimalInterfaceImpl impls[kNumObjects];
 
   BindingSet<MinimalInterface> binding_set;
-  for (size_t i = 0; i < kNumObjects; i++) {
-    interface_pointers[i] =
-        fidl::InterfacePtr<MinimalInterface>::Create(
-            binding_set.AddBinding(&impls[i]));
-  }
+  for (size_t i = 0; i < kNumObjects; i++)
+    interface_pointers[i] = binding_set.AddBinding(&impls[i]).Bind();
   EXPECT_EQ(kNumObjects, binding_set.size());
 
-  auto it = binding_set.begin();
+  auto it = binding_set.bindings().begin();
   EXPECT_EQ((*it)->impl(), &impls[0]);
   ++it;
   EXPECT_EQ((*it)->impl(), &impls[1]);
   ++it;
-  EXPECT_EQ(it, binding_set.end());
+  EXPECT_EQ(it, binding_set.bindings().end());
 }
 
 }  // namespace

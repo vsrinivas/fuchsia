@@ -31,8 +31,8 @@ class BindingSet {
   using iterator = typename StorageType::iterator;
   using const_iterator = typename StorageType::const_iterator;
 
-  BindingSet() {}
-  ~BindingSet() { CloseAllBindings(); }
+  BindingSet() = default;
+  ~BindingSet() = default;
 
   BindingSet(const BindingSet&) = delete;
   BindingSet& operator=(const BindingSet&) = delete;
@@ -46,7 +46,7 @@ class BindingSet {
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
-    binding->set_connection_error_handler(
+    binding->set_error_handler(
         std::bind(&BindingSet::RemoveOnError, this, binding));
   }
 
@@ -57,36 +57,29 @@ class BindingSet {
     bindings_.emplace_back(new Binding(std::forward<ImplPtr>(impl)));
     auto* binding = bindings_.back().get();
     InterfaceHandle<Interface> interface;
-    binding->Bind(&interface);
+    binding->Bind(interface.NewRequest());
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
-    binding->set_connection_error_handler(
+    binding->set_error_handler(
         std::bind(&BindingSet::RemoveOnError, this, binding));
 
     return std::move(interface);
   }
 
-  void CloseAllBindings() { bindings_.clear(); }
+  void CloseAll() { bindings_.clear(); }
 
   size_t size() const { return bindings_.size(); }
 
-  void set_on_empty_set_handler(std::function<void()> on_empty_set_handler) {
-    on_empty_set_handler_ = std::move(on_empty_set_handler);
+  void set_empty_set_handler(std::function<void()> empty_set_handler) {
+    empty_set_handler_ = std::move(empty_set_handler);
   }
 
-  // NOTE: These iterators return a ref to a std::unique_ptr<fidl::Binding<>>.
-  // The ImplPtr type is available by calling fidl::Binding<>::impl(). For
-  // example:
+  // The bindings stored in this set.
   //
-  // auto impl_ptr = (*it)->impl();
-  //
-  // Iterators may be invalidated when a Binding in the set encounters a
-  // connection error, as that causes removal from internal storage which is
-  // backed by a std::vector<>.
-  iterator begin() { return bindings_.begin(); }
-  const_iterator begin() const { return bindings_.begin(); }
-  iterator end() { return bindings_.end(); }
-  const_iterator end() const { return bindings_.end(); }
+  // This collection of bindings can be invalidated when a |Binding| in the
+  // set encounters a connection error because connection errors causes the
+  // |BindingSet| to remove the |Binding| from the set.
+  const StorageType& bindings() const { return bindings_; }
 
  private:
   void RemoveOnError(Binding* binding) {
@@ -96,12 +89,12 @@ class BindingSet {
                            });
     assert(it != bindings_.end());
     bindings_.erase(it);
-    if (bindings_.empty() && on_empty_set_handler_)
-      on_empty_set_handler_();
+    if (bindings_.empty() && empty_set_handler_)
+      empty_set_handler_();
   }
 
   StorageType bindings_;
-  std::function<void()> on_empty_set_handler_;
+  std::function<void()> empty_set_handler_;
 };
 
 }  // namespace fidl

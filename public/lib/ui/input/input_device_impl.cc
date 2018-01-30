@@ -13,7 +13,7 @@ InputDeviceImpl::InputDeviceImpl(
       descriptor_(std::move(descriptor)),
       input_device_binding_(this, std::move(input_device_request)),
       listener_(listener) {
-  input_device_binding_.set_connection_error_handler([this] {
+  input_device_binding_.set_error_handler([this] {
     FXL_LOG(INFO) << "Device disconnected";
     listener_->OnDeviceDisconnected(this);
   });

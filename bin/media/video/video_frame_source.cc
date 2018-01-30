@@ -55,7 +55,7 @@ VideoFrameSource::~VideoFrameSource() {
   // destroy any callbacks that are pending on open channels.
 
   if (media_renderer_binding_.is_bound()) {
-    media_renderer_binding_.Close();
+    media_renderer_binding_.Unbind();
   }
 
   timeline_control_point_.Reset();
@@ -241,7 +241,7 @@ void VideoFrameSource::OnFlushRequested(bool hold_frame,
 
 void VideoFrameSource::OnFailure() {
   if (media_renderer_binding_.is_bound()) {
-    media_renderer_binding_.Close();
+    media_renderer_binding_.Unbind();
   }
 
   timeline_control_point_.Reset();

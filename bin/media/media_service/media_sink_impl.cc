@@ -27,7 +27,7 @@ MediaSinkImpl::MediaSinkImpl(
     : MediaServiceImpl::Product<MediaSink>(this,
                                            std::move(sink_request),
                                            owner),
-      renderer_(MediaRendererPtr::Create(std::move(renderer_handle))) {
+      renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));

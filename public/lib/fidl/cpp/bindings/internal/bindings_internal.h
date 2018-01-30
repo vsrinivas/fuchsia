@@ -318,7 +318,7 @@ template <typename I>
 struct ValueTraits<InterfaceRequest<I>> {
   static bool Equals(const InterfaceRequest<I>& a,
                      const InterfaceRequest<I>& b) {
-    return (&a == &b) || (!a.is_pending() && !b.is_pending());
+    return (&a == &b) || (!a.is_valid() && !b.is_valid());
   }
 };
 

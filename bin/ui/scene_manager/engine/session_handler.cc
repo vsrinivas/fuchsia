@@ -20,11 +20,10 @@ SessionHandler::SessionHandler(
           engine_,
           this,
           static_cast<ErrorReporter*>(this))),
-      listener_(::fidl::InterfacePtr<scenic::SessionListener>::Create(
-          std::move(listener))) {
+      listener_(listener.Bind()) {
   FXL_DCHECK(engine);
 
-  bindings_.set_on_empty_set_handler([this]() { BeginTearDown(); });
+  bindings_.set_empty_set_handler([this]() { BeginTearDown(); });
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -94,8 +93,8 @@ void SessionHandler::BeginTearDown() {
 }
 
 void SessionHandler::TearDown() {
-  bindings_.CloseAllBindings();
-  listener_.reset();
+  bindings_.CloseAll();
+  listener_.Unbind();
   session_->TearDown();
 }
 

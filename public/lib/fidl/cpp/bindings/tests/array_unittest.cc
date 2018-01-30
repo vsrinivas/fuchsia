@@ -549,16 +549,16 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
   //  2. Adding in a valid InterfacePtr<> will let it serialize.
   TestInterfacePtr iface_ptr;
   struct_arr_iface_req.req_array[0] = iface_ptr.NewRequest();
-  EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_pending());
+  EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_valid());
 
   EXPECT_EQ(
       fidl::internal::ValidationError::NONE,
       Serialize_(&struct_arr_iface_req, &buf, &struct_arr_iface_req_data));
 
-  EXPECT_FALSE(struct_arr_iface_req.req_array[0].is_pending());
+  EXPECT_FALSE(struct_arr_iface_req.req_array[0].is_valid());
 
   Deserialize_(struct_arr_iface_req_data, &struct_arr_iface_req);
-  EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_pending());
+  EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_valid());
 }
 
 TEST(ArrayTest, Resize_Copyable) {

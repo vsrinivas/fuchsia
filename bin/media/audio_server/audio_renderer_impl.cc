@@ -62,9 +62,9 @@ AudioRendererImpl::AudioRendererImpl(
               FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(&pipe_)),
               FLOG_ADDRESS(&timeline_control_point_)));
 
-  audio_renderer_binding_.set_connection_error_handler([this]() -> void {
-    audio_renderer_binding_.set_connection_error_handler(nullptr);
-    audio_renderer_binding_.Close();
+  audio_renderer_binding_.set_error_handler([this]() -> void {
+    audio_renderer_binding_.set_error_handler(nullptr);
+    audio_renderer_binding_.Unbind();
 
     // If the media_renderer binding has also been closed, it is time to shut
     // down.
@@ -73,9 +73,9 @@ AudioRendererImpl::AudioRendererImpl(
     }
   });
 
-  media_renderer_binding_.set_connection_error_handler([this]() -> void {
-    media_renderer_binding_.set_connection_error_handler(nullptr);
-    media_renderer_binding_.Close();
+  media_renderer_binding_.set_error_handler([this]() -> void {
+    media_renderer_binding_.set_error_handler(nullptr);
+    media_renderer_binding_.Unbind();
 
     // If the audio_renderer binding has also been closed, it is time to shut
     // down.
@@ -127,13 +127,13 @@ void AudioRendererImpl::Shutdown() {
   Unlink();
 
   if (audio_renderer_binding_.is_bound()) {
-    audio_renderer_binding_.set_connection_error_handler(nullptr);
-    audio_renderer_binding_.Close();
+    audio_renderer_binding_.set_error_handler(nullptr);
+    audio_renderer_binding_.Unbind();
   }
 
   if (media_renderer_binding_.is_bound()) {
-    media_renderer_binding_.set_connection_error_handler(nullptr);
-    media_renderer_binding_.Close();
+    media_renderer_binding_.set_error_handler(nullptr);
+    media_renderer_binding_.Unbind();
   }
 
   // reset all of our internal state and close any other client connections in

@@ -45,7 +45,7 @@ zx_status_t TtsServiceImpl::Init() {
 TtsServiceImpl::Client::Client(TtsServiceImpl* owner,
                                fidl::InterfaceRequest<TtsService> request)
     : owner_(owner), binding_(this, std::move(request)) {
-  binding_.set_connection_error_handler([this] { Shutdown(); });
+  binding_.set_error_handler([this] { Shutdown(); });
 }
 
 TtsServiceImpl::Client::~Client() {
@@ -58,7 +58,7 @@ void TtsServiceImpl::Client::Shutdown() {
     speaker->Shutdown();
   }
 
-  binding_.Close();
+  binding_.Unbind();
   active_speakers_.clear();
   owner_->clients_.erase(owner_->clients_.find(this));
 }

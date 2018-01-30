@@ -49,7 +49,7 @@ InputDispatcherImpl::InputDispatcherImpl(
   FXL_DCHECK(inspector_);
   FXL_DCHECK(view_tree_token_);
 
-  binding_.set_connection_error_handler(
+  binding_.set_error_handler(
       [this] { owner_->OnInputDispatcherDied(this); });
 }
 

@@ -125,7 +125,7 @@ class PostFileApp {
                                   }
                                 });
 
-    network_service_->CreateURLLoader(GetProxy(&url_loader_));
+    network_service_->CreateURLLoader(url_loader_.NewRequest());
 
     url_loader_->Start(std::move(request),
                        [this](network::URLResponsePtr response) {

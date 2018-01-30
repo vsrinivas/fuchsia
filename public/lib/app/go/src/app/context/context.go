@@ -91,11 +91,11 @@ func (c *Context) Serve() {
 
 type interfaceRequest interface {
 	Name() string
-	PassChannel() zx.Handle
+	TakeChannel() zx.Handle
 }
 
 func (c *Context) ConnectToEnvService(r interfaceRequest) {
-	c.ConnectToEnvServiceAt(r.Name(), r.PassChannel())
+	c.ConnectToEnvServiceAt(r.Name(), r.TakeChannel())
 }
 
 func (c *Context) ConnectToEnvServiceAt(name string, h zx.Handle) {

@@ -81,7 +81,7 @@ class MWGetApp {
 
     num_done_ = 0;
     for (int i = 0; i < num_loaders_; i++) {
-      network_service_->CreateURLLoader(GetProxy(&url_loader_[i]));
+      network_service_->CreateURLLoader(url_loader_[i].NewRequest());
 
       network::URLRequestPtr request(network::URLRequest::New());
       request->url = url;

@@ -24,7 +24,7 @@ class MinimalInterfaceImpl : public MinimalInterface {
 
   void Message() override { call_count_++; }
 
-  void CloseMessagePipe() { binding_.Close(); }
+  void CloseMessagePipe() { binding_.Unbind(); }
 
   int call_count() { return call_count_; }
 

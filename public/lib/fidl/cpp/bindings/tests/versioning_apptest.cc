@@ -44,7 +44,7 @@ TEST_F(VersioningApplicationTest, Struct) {
                              EXPECT_TRUE(employee->Equals(*returned_employee));
                              EXPECT_FALSE(returned_finger_print.is_null());
                            });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
 
   // Passing a struct of older version to the service side works.
   EmployeePtr new_employee(Employee::New());
@@ -54,7 +54,7 @@ TEST_F(VersioningApplicationTest, Struct) {
 
   database_->AddEmployee(new_employee.Clone(),
                          [](bool success) { EXPECT_TRUE(success); });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
 
   database_->QueryEmployee(
       2, false, [&new_employee](EmployeePtr returned_employee,
@@ -62,13 +62,13 @@ TEST_F(VersioningApplicationTest, Struct) {
         EXPECT_TRUE(new_employee->Equals(*returned_employee));
         EXPECT_TRUE(returned_finger_print.is_null());
       });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
 }
 
 TEST_F(VersioningApplicationTest, QueryVersion) {
   EXPECT_EQ(0u, database_.version());
   database_.QueryVersion([](uint32_t version) { EXPECT_EQ(1u, version); });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
   EXPECT_EQ(1u, database_.version());
 }
 
@@ -80,7 +80,7 @@ TEST_F(VersioningApplicationTest, RequireVersion) {
   database_->QueryEmployee(3, false,
                            [](EmployeePtr returned_employee,
                               Array<uint8_t> returned_finger_print) {});
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
   EXPECT_FALSE(database_.encountered_error());
 
   // Requiring a version higher than what the service side implements will close
@@ -90,7 +90,7 @@ TEST_F(VersioningApplicationTest, RequireVersion) {
   database_->QueryEmployee(1, false,
                            [](EmployeePtr returned_employee,
                               Array<uint8_t> returned_finger_print) {});
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
   EXPECT_TRUE(database_.encountered_error());
 }
 
@@ -106,12 +106,12 @@ TEST_F(VersioningApplicationTest, CallNonexistentMethod) {
   // supports version 1.
   database_->AttachFingerPrint(1, new_finger_print.Clone(),
                                [](bool success) { EXPECT_TRUE(success); });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
 
   // Calling a version 2 method (which the service side doesn't support) closes
   // the pipe.
   database_->ListEmployeeIds([](Array<uint64_t> ids) { EXPECT_TRUE(false); });
-  database_.WaitForIncomingResponse();
+  database_.WaitForResponse();
   EXPECT_TRUE(database_.encountered_error());
 }
 

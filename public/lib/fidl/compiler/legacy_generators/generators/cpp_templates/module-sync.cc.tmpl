@@ -44,7 +44,7 @@ namespace {{namespace}} {
           : channel_(std::move(channel)), validators_(std::move(validators)) {
 }
 
-zx::channel {{interface.name}}_SynchronousProxy::PassHandle_() {
+zx::channel {{interface.name}}_SynchronousProxy::TakeChannel_() {
   return std::move(channel_);
 }
 
