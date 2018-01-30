@@ -687,8 +687,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     zx_status_t status = local_apic_state_.interrupt_tracker.Interrupt(vector, &signaled);
     if (status != ZX_OK) {
         return status;
-    }
-    if (!signaled && running_.load()) {
+    } else if (!signaled && running_.load()) {
         mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;

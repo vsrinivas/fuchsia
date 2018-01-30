@@ -9,7 +9,6 @@
 #include <arch/hypervisor.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/ops.h>
-#include <dev/timer/arm_generic.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
@@ -24,16 +23,9 @@
 #include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"
 
-static constexpr uint32_t kSpsrIrq = 0b0010 << 6;
 static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
-static constexpr uint32_t kTimerVector = 27;
-
-enum TimerControl : uint64_t {
-    ENABLE = 1u << 0,
-    IMASK = 1u << 1,
-};
 
 // static
 zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
@@ -112,15 +104,12 @@ static void gich_active_interrupts(InterruptBitmap* active_interrupts) {
     active_interrupts->ClearAll();
     uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
     for (uint32_t i = 0; i < lr_limit; i++) {
-        uint32_t vector = gic_read_gich_lr(i) & GICH_LR_ID_MASK;
+        uint32_t vector = gic_read_gich_lr(i) & GICH_LR_VIRTUAL_ID_MASK;
         active_interrupts->SetOne(vector);
     }
 }
 
 static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-    if (guest_state->system_state.spsr_el2 & kSpsrIrq) {
-        return false;
-    }
     uint64_t prev_elrs = gic_read_gich_elrs();
     uint64_t elrs = prev_elrs;
     while (elrs != 0) {
@@ -128,40 +117,16 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
         zx_status_t status = gich_state->interrupt_tracker.Pop(&vector);
         if (status != ZX_OK) {
             break;
-        } else if (gich_state->active_interrupts.GetOne(vector)) {
-            continue;
         }
         uint32_t lr_index = __builtin_ctzl(elrs);
         elrs &= ~(1u << lr_index);
-        gic_write_gich_lr(lr_index, GICH_LR_PENDING | (vector & GICH_LR_ID_MASK));
+        if (gich_state->active_interrupts.GetOne(vector)) {
+            continue;
+        }
+        uint32_t lr = GICH_LR_PENDING | (vector & GICH_LR_VIRTUAL_ID_MASK);
+        gic_write_gich_lr(lr_index, lr);
     }
     return elrs != prev_elrs;
-}
-
-static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
-    auto vcpu = static_cast<Vcpu*>(arg);
-    vcpu->Interrupt(kTimerVector);
-}
-
-static void timer_maybe_set(GuestState* guest_state, GichState* gich_state, Vcpu* vcpu) {
-    if (gich_state->active_interrupts.GetOne(kTimerVector)) {
-        return;
-    }
-    bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
-    bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
-    if (!enabled || masked) {
-        return;
-    }
-    timer_cancel(&gich_state->timer);
-
-    uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
-    zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
-    if (deadline <= current_time()) {
-        __UNUSED zx_status_t status = gich_state->interrupt_tracker.Track(kTimerVector);
-        DEBUG_ASSERT(status == ZX_OK);
-    } else {
-        timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, vcpu);
-    }
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
@@ -191,16 +156,16 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
-        timer_maybe_set(guest_state, &gich_state_, this);
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
-    zx_status_t status = gich_state_.interrupt_tracker.Track(vector);
+    bool signaled = false;
+    zx_status_t status = gich_state_.interrupt_tracker.Interrupt(vector, &signaled);
     if (status != ZX_OK) {
         return status;
-    } else if (running_.load()) {
+    } else if (!signaled && running_.load()) {
         mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;

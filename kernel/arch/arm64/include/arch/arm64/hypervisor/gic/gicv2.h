@@ -9,10 +9,8 @@
 // clang-format off
 
 #define GICH_HCR_EN                 (1u << 0)
-#define GICH_LR_HW                  (1u << 31)
 #define GICH_LR_PENDING             (0b01 << 28)
-#define GICH_LR_PHYSICAL_ID_SHIFT   10
-#define GICH_LR_ID_MASK             0x3ff
+#define GICH_LR_VIRTUAL_ID_MASK     0x3ff
 #define GICH_VTR_LIST_REGS_MASK     0x3f
 
 // clang-format on

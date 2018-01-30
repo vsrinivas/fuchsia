@@ -16,7 +16,7 @@
 #include <kernel/timer.h>
 #include <zircon/types.h>
 
-static const uint16_t kNumInterrupts = 256;
+static constexpr uint16_t kNumInterrupts = 256;
 
 typedef struct zx_port_packet zx_port_packet_t;
 using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;
