@@ -46,26 +46,24 @@ class EncryptionServiceImpl : public EncryptionService {
 
  private:
   class KeyService;
+  using DeletionScopeSeed = std::pair<size_t, std::string>;
 
   uint32_t GetCurrentKeyIndex();
-  void GetReferenceKey(uint32_t deletion_scope_id,
-                       const std::string& digest,
+  void GetReferenceKey(storage::ObjectIdentifier object_identifier,
                        const std::function<void(const std::string&)>& callback);
 
-  void FetchMasterKey(std::function<void(Status, std::string)> callback);
-  void FetchNamespaceKey(std::function<void(Status, std::string)> callback);
-  void FetchReferenceKey(std::string deletion_scope_seed,
+  void FetchNamespaceKey(size_t key_index,
+                         std::function<void(Status, std::string)> callback);
+  void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
                          std::function<void(Status, std::string)> callback);
 
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;
 
-  // Lazy value for the master key.
-  cache::LazyValue<std::string, Status> master_key_;
-  // Lazy value for the namespace key.
-  cache::LazyValue<std::string, Status> namespace_key_;
+  // Namespace keys indexed by key_index.
+  cache::LRUCache<uint32_t, std::string, Status> namespace_keys_;
   // Reference keys indexed by deletion scope seed.
-  cache::LRUCache<std::string, std::string, Status> reference_keys_;
+  cache::LRUCache<DeletionScopeSeed, std::string, Status> reference_keys_;
 
   // This must be the last member of this class.
   callback::ScopedTaskRunner task_runner_;

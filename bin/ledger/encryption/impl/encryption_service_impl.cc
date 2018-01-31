@@ -40,6 +40,7 @@ constexpr size_t kDerivedKeySize = 32u;
 
 // Cache size values.
 constexpr size_t kNamespaceKeysCacheSize = 10u;
+constexpr size_t kReferenceKeysCacheSize = 10u;
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted commit.
@@ -63,9 +64,11 @@ class EncryptionServiceImpl::KeyService {
       : task_runner_(std::move(task_runner)) {}
 
   // Retrieves the master key.
-  void GetMasterKey(std::function<void(std::string)> callback) {
-    task_runner_.PostTask([callback = std::move(callback)]() {
+  void GetMasterKey(uint32_t key_index,
+                    std::function<void(std::string)> callback) {
+    task_runner_.PostTask([key_index, callback = std::move(callback)]() {
       std::string master_key(16u, 0);
+      memcpy(&master_key[0], &key_index, sizeof(key_index));
       callback(std::move(master_key));
     });
   }
@@ -95,10 +98,12 @@ EncryptionServiceImpl::EncryptionServiceImpl(
     std::string namespace_id)
     : namespace_id_(std::move(namespace_id)),
       key_service_(std::make_unique<KeyService>(task_runner)),
-      master_key_(Status::OK, [this](auto c) { FetchMasterKey(std::move(c)); }),
-      namespace_key_(Status::OK,
-                     [this](auto c) { FetchNamespaceKey(std::move(c)); }),
-      reference_keys_(kNamespaceKeysCacheSize,
+      namespace_keys_(kNamespaceKeysCacheSize,
+                      Status::OK,
+                      [this](auto k, auto c) {
+                        FetchNamespaceKey(std::move(k), std::move(c));
+                      }),
+      reference_keys_(kReferenceKeysCacheSize,
                       Status::OK,
                       [this](auto k, auto c) {
                         FetchReferenceKey(std::move(k), std::move(c));
@@ -162,9 +167,8 @@ void EncryptionServiceImpl::GetObjectName(
     storage::ObjectIdentifier object_identifier,
     std::function<void(Status, std::string)> callback) {
   GetReferenceKey(
-      object_identifier.deletion_scope_id, object_identifier.object_digest,
-      [object_identifier,
-       callback = std::move(callback)](const std::string& reference_key) {
+      object_identifier, [object_identifier, callback = std::move(callback)](
+                             const std::string& reference_key) {
         callback(Status::OK,
                  HMAC256KDF(fxl::Concatenate({reference_key,
                                               object_identifier.object_digest}),
@@ -206,38 +210,29 @@ uint32_t EncryptionServiceImpl::GetCurrentKeyIndex() {
 }
 
 void EncryptionServiceImpl::GetReferenceKey(
-    uint32_t deletion_scope_id,
-    const std::string& digest,
+    storage::ObjectIdentifier object_identifier,
     const std::function<void(const std::string&)>& callback) {
   std::string deletion_scope_seed;
-  if (deletion_scope_id == kPerObjectDeletionScopedId) {
-    deletion_scope_seed = digest;
+  if (object_identifier.deletion_scope_id == kPerObjectDeletionScopedId) {
+    deletion_scope_seed = object_identifier.object_digest;
   } else {
     deletion_scope_seed = std::string(
-        reinterpret_cast<char*>(&deletion_scope_id), sizeof(deletion_scope_id));
+        reinterpret_cast<char*>(&object_identifier.deletion_scope_id),
+        sizeof(object_identifier.deletion_scope_id));
   }
+  DeletionScopeSeed seed = {object_identifier.key_index,
+                            std::move(deletion_scope_seed)};
   reference_keys_.Get(
-      deletion_scope_seed,
+      std::move(seed),
       [callback = std::move(callback)](
           Status status, const std::string& value) { callback(value); });
 }
 
-void EncryptionServiceImpl::FetchMasterKey(
-    std::function<void(Status, std::string)> callback) {
-  key_service_->GetMasterKey(
-      [callback = std::move(callback)](std::string master_key) {
-        callback(Status::OK, std::move(master_key));
-      });
-}
-
 void EncryptionServiceImpl::FetchNamespaceKey(
+    size_t key_index,
     std::function<void(Status, std::string)> callback) {
-  master_key_.Get([this, callback = std::move(callback)](
-                      Status status, const std::string& master_key) {
-    if (status != Status::OK) {
-      callback(status, "");
-      return;
-    }
+  key_service_->GetMasterKey(key_index, [this, callback = std::move(callback)](
+                                            std::string master_key) {
     callback(Status::OK,
              HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}),
                         kDerivedKeySize));
@@ -245,24 +240,26 @@ void EncryptionServiceImpl::FetchNamespaceKey(
 }
 
 void EncryptionServiceImpl::FetchReferenceKey(
-    std::string deletion_scope_seed,
+    DeletionScopeSeed deletion_scope_seed,
     std::function<void(Status, std::string)> callback) {
-  namespace_key_.Get([this,
-                      deletion_scope_seed = std::move(deletion_scope_seed),
-                      callback = std::move(callback)](
-                         Status status, const std::string& namespace_key) {
-    if (status != Status::OK) {
-      callback(status, "");
-      return;
-    }
-    key_service_->GetReferenceKey(
-        namespace_id_,
-        HMAC256KDF(fxl::Concatenate({namespace_key, deletion_scope_seed}),
-                   kDerivedKeySize),
-        [callback = std::move(callback)](std::string reference_key) {
-          callback(Status::OK, std::move(reference_key));
-        });
-  });
+  namespace_keys_.Get(
+      deletion_scope_seed.first,
+      [this, deletion_scope_seed = std::move(deletion_scope_seed),
+       callback = std::move(callback)](Status status,
+                                       const std::string& namespace_key) {
+        if (status != Status::OK) {
+          callback(status, "");
+          return;
+        }
+        key_service_->GetReferenceKey(
+            namespace_id_,
+            HMAC256KDF(
+                fxl::Concatenate({namespace_key, deletion_scope_seed.second}),
+                kDerivedKeySize),
+            [callback = std::move(callback)](std::string reference_key) {
+              callback(Status::OK, std::move(reference_key));
+            });
+      });
 }
 
 }  // namespace encryption
