@@ -227,7 +227,11 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
     for entry in manifest:
         try:
-            info = binary_info(entry.source)
+            info = None
+            # Don't inspect data resources in the manifest. Regardless of the
+            # bits in these files, we treat them as opaque data.
+            if not entry.target.startswith('data/'):
+                info = binary_info(entry.source)
         except IOError as e:
             raise Exception('%s from %s' % (e, entry))
         if info:
