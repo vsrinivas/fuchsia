@@ -6,6 +6,7 @@
 
 #include "lib/action_log/fidl/factory.fidl.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/bluetooth/fidl/low_energy.fidl.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/context/fidl/debug.fidl.h"
@@ -19,6 +20,8 @@
 #include "peridot/bin/user/intelligence_services_impl.h"
 
 namespace maxwell {
+
+constexpr char kMIDashboardUrl[] = "agents/mi_dashboard";
 
 namespace {
 
@@ -59,19 +62,17 @@ modular::AgentControllerPtr StartStoryInfoAgent(
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     app::ApplicationContext* app_context,
     const Config& config,
-    fidl::InterfaceHandle<modular::ComponentContext> component_context_handle,
     fidl::InterfaceHandle<maxwell::ContextEngine> context_engine_handle,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
     fidl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider_handle)
     : app_context_(app_context),
-      kronk_restart_(kKronkRetryLimit),
-      agent_launcher_(app_context_->environment().get()) {
-  component_context_.Bind(std::move(component_context_handle));
+      config_(config),
+      kronk_restart_(kKronkRetryLimit) {
   context_engine_.Bind(std::move(context_engine_handle));
-  auto story_provider = story_provider_handle.Bind();
-  auto focus_provider = focus_provider_handle.Bind();
+  story_provider_.Bind(std::move(story_provider_handle));
+  focus_provider_.Bind(std::move(focus_provider_handle));
   visible_stories_provider_.Bind(std::move(visible_stories_provider_handle));
 
   // Start dependent processes. We get some component-scope services from
@@ -86,50 +87,11 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   scope->set_global_scope(GlobalScope::New());
   context_engine_->GetWriter(std::move(scope), context_writer.NewRequest());
 
-  suggestion_engine_->Initialize(Duplicate(story_provider),
-                                 Duplicate(focus_provider),
+  suggestion_engine_->Initialize(Duplicate(story_provider_),
+                                 Duplicate(focus_provider_),
                                  std::move(context_writer));
 
-  if (!config.kronk.empty()) {
-    // TODO(rosswang): We are in the process of switching to in-tree Kronk.
-    // (This comment is left at the request of the security team.)
-    kronk_url_ = config.kronk;
-    StartKronk();
-  }
-
   StartActionLog(suggestion_engine_.get());
-
-  for (const auto& agent : config.startup_agents) {
-    StartAgent(agent);
-  }
-
-  if (config.mi_dashboard) {
-    StartAgent(
-        "agents/mi_dashboard",
-        [this](const std::string& url, app::ServiceNamespace* agent_host) {
-          AddStandardServices(url, agent_host);
-          agent_host->AddService<maxwell::ContextDebug>(
-              [this](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
-                context_engine_->GetContextDebug(std::move(request));
-              });
-          agent_host->AddService<maxwell::SuggestionDebug>(
-              [this](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
-                suggestion_services_.ConnectToService(std::move(request));
-              });
-          agent_host->AddService<maxwell::UserActionLog>(
-              [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
-                user_action_log_->Duplicate(std::move(request));
-              });
-        });
-  }
-
-  // Start privileged local Framework-style Agents.
-  {
-    auto controller = StartStoryInfoAgent(
-        component_context_.get(), Duplicate(story_provider),
-        Duplicate(focus_provider), Duplicate(visible_stories_provider_));
-    agent_controllers_.push_back(std::move(controller));
-  }
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
@@ -162,6 +124,40 @@ void UserIntelligenceProviderImpl::GetResolver(
   // topaz.
 }
 
+void UserIntelligenceProviderImpl::StartAgents(
+    fidl::InterfaceHandle<modular::ComponentContext> component_context_handle) {
+  component_context_.Bind(std::move(component_context_handle));
+
+  if (!config_.kronk.empty()) {
+    // TODO(rosswang): We are in the process of switching to in-tree Kronk.
+    // (This comment is left at the request of the security team.)
+    kronk_url_ = config_.kronk;
+    StartKronk();
+  }
+
+  if (config_.mi_dashboard) {
+   StartAgent(kMIDashboardUrl);
+  }
+
+  for (const auto& agent : config_.startup_agents) {
+    StartAgent(agent);
+ }
+
+  auto controller = StartStoryInfoAgent(
+      component_context_.get(), Duplicate(story_provider_),
+      Duplicate(focus_provider_), Duplicate(visible_stories_provider_));
+  agent_controllers_.push_back(std::move(controller));
+}
+
+void UserIntelligenceProviderImpl::GetServicesForAgent(
+    const fidl::String& url,
+    const GetServicesForAgentCallback& callback) {
+  auto service_list = app::ServiceList::New();
+  agent_namespaces_.emplace_back(service_list->provider.NewRequest());
+  service_list->names = AddStandardServices(url, &agent_namespaces_.back());
+  callback(std::move(service_list));
+}
+
 app::Services UserIntelligenceProviderImpl::StartTrustedApp(
     const std::string& url) {
   app::Services services;
@@ -170,6 +166,14 @@ app::Services UserIntelligenceProviderImpl::StartTrustedApp(
   launch_info->service_request = services.NewRequest();
   app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
   return services;
+}
+
+void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
+  modular::AgentControllerPtr controller;
+  app::ServiceProviderPtr services;
+  component_context_->ConnectToAgent(url, services.NewRequest(),
+                                     controller.NewRequest());
+  agent_controllers_.push_back(std::move(controller));
 }
 
 void UserIntelligenceProviderImpl::StartActionLog(
@@ -215,72 +219,74 @@ void UserIntelligenceProviderImpl::StartKronk() {
   });
 }
 
-void UserIntelligenceProviderImpl::AddStandardServices(
+fidl::Array<fidl::String> UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
     app::ServiceNamespace* agent_host) {
   auto agent_info = ComponentScope::New();
   auto agent_scope = AgentScope::New();
   agent_scope->url = url;
   agent_info->set_agent_scope(std::move(agent_scope));
+  fidl::Array<fidl::String> service_names;
 
-  agent_host->AddService<cobalt::CobaltEncoderFactory>(
-      [this,
-       url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
-        app_context_->ConnectToEnvironmentService(std::move(request));
-      });
+  service_names.push_back(maxwell::ContextWriter::Name_);
   agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
        url](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
         context_engine_->GetWriter(client_info.Clone(), std::move(request));
       }));
+
+  service_names.push_back(maxwell::ContextReader::Name_);
   agent_host->AddService<maxwell::ContextReader>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
        url](fidl::InterfaceRequest<maxwell::ContextReader> request) {
         context_engine_->GetReader(client_info.Clone(), std::move(request));
       }));
+
+  service_names.push_back(maxwell::IntelligenceServices::Name_);
   agent_host->AddService<maxwell::IntelligenceServices>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
        url](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
         this->GetComponentIntelligenceServices(client_info.Clone(),
                                                std::move(request));
       }));
+
+  service_names.push_back(maxwell::ProposalPublisher::Name_);
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
         suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
 
+  service_names.push_back(modular::VisibleStoriesProvider::Name_);
   agent_host->AddService<modular::VisibleStoriesProvider>(
       [this](fidl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
         visible_stories_provider_->Duplicate(std::move(request));
       });
 
-  agent_host->AddService<network::NetworkService>(
-      [this](fidl::InterfaceRequest<network::NetworkService> request) {
-        app_context_->ConnectToEnvironmentService(std::move(request));
-      });
-  agent_host->AddService<bluetooth::low_energy::Central>(
-      [this](fidl::InterfaceRequest<bluetooth::low_energy::Central> request) {
-        app_context_->ConnectToEnvironmentService(std::move(request));
-      });
+  service_names.push_back(resolver::Resolver::Name_);
   agent_host->AddService<resolver::Resolver>(std::bind(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
-}
 
-app::Services UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
-  return StartAgent(
-      url, std::bind(&UserIntelligenceProviderImpl::AddStandardServices, this,
-                     std::placeholders::_1, std::placeholders::_2));
-}
+  if (url == kMIDashboardUrl) {
+    service_names.push_back(maxwell::ContextDebug::Name_);
+    agent_host->AddService<maxwell::ContextDebug>(
+        [this](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
+          context_engine_->GetContextDebug(std::move(request));
+        });
 
-app::Services UserIntelligenceProviderImpl::StartAgent(
-    const std::string& url,
-    ServiceProviderInitializer services) {
-  auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
-      app_context_->environment().get());
+    service_names.push_back(maxwell::SuggestionDebug::Name_);
+    agent_host->AddService<maxwell::SuggestionDebug>(
+        [this](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
+          suggestion_services_.ConnectToService(std::move(request));
+        });
 
-  services(url, agent_host.get());
+    service_names.push_back(maxwell::UserActionLog::Name_);
+    agent_host->AddService<maxwell::UserActionLog>(
+        [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
+          user_action_log_->Duplicate(std::move(request));
+        });
+  }
 
-  return agent_launcher_.StartAgent(url, std::move(agent_host));
+  return service_names;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -291,7 +297,6 @@ UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
     : app_context_(app_context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
-    fidl::InterfaceHandle<modular::ComponentContext> component_context,
     fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
@@ -303,7 +308,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   // UserIntelligenceProvider.
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
-      app_context_, config_, std::move(component_context),
+      app_context_, config_,
       std::move(context_engine), std::move(story_provider),
       std::move(focus_provider), std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));

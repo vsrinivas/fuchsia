@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
+#include <deque>
+
 #include "lib/action_log/fidl/user.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/fidl/context_engine.fidl.h"
@@ -25,7 +27,6 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   UserIntelligenceProviderImpl(
       app::ApplicationContext* app_context,
       const Config& config,
-      fidl::InterfaceHandle<modular::ComponentContext> component_context,
       fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
@@ -45,29 +46,35 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
 
+  void StartAgents(
+      fidl::InterfaceHandle<modular::ComponentContext> component_context)
+      override;
+
+  void GetServicesForAgent(const fidl::String& url,
+                           const GetServicesForAgentCallback& callback)
+      override;
+
  private:
   using ServiceProviderInitializer =
       std::function<void(const std::string& url,
                          app::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
-  // attributed context and suggestion service entry points.
-  void AddStandardServices(const std::string& url,
-                           app::ServiceNamespace* agent_host);
+  // attributed context and suggestion service entry points. Returns the names
+  // of the services added.
+  fidl::Array<fidl::String> AddStandardServices(
+      const std::string& url, app::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment
   // services.
   app::Services StartTrustedApp(const std::string& url);
-  // Starts an app in a child environment, with access only to standard agent
-  // services (see AddStandardServices).
-  app::Services StartAgent(const std::string& url);
-  // Starts an app in a child environment, with access only to services added by
-  // the given ServiceProviderInitializer.
-  app::Services StartAgent(const std::string& url,
-                           ServiceProviderInitializer services);
+
+  void StartAgent(const std::string& url);
+
   void StartActionLog(SuggestionEngine* suggestion_engine);
   void StartKronk();
 
   app::ApplicationContext* app_context_;  // Not owned.
+  const Config config_;
 
   ContextEnginePtr context_engine_;
   app::Services suggestion_services_;
@@ -79,17 +86,21 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   app::ServiceProviderPtr kronk_services_;
   modular::AgentControllerPtr kronk_controller_;
 
-  AgentLauncher agent_launcher_;
-
   fidl::BindingSet<IntelligenceServices, std::unique_ptr<IntelligenceServices>>
       intelligence_services_bindings_;
 
   fidl::InterfacePtr<modular::ComponentContext> component_context_;
+  fidl::InterfacePtr<modular::StoryProvider> story_provider_;
+  fidl::InterfacePtr<modular::FocusProvider> focus_provider_;
   fidl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
 
   // Framework Agent controllers. Hanging onto these tells the Framework we
   // want the Agents to keep running.
   std::vector<modular::AgentControllerPtr> agent_controllers_;
+
+  // ServiceNamespace(s) backing the services provided to these agents via its
+  // namespace.
+  std::deque<app::ServiceNamespace> agent_namespaces_;
 };
 
 class UserIntelligenceProviderFactoryImpl
@@ -101,7 +112,6 @@ class UserIntelligenceProviderFactoryImpl
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
-      fidl::InterfaceHandle<modular::ComponentContext> component_context,
       fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,

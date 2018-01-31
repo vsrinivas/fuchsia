@@ -4,6 +4,7 @@
 
 module maxwell;
 
+import "lib/app/fidl/application_launcher.fidl";
 import "lib/resolver/fidl/resolver.fidl";
 import "lib/speech/fidl/speech_to_text.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl";
@@ -17,14 +18,11 @@ import "scope.fidl";
 
 [ServiceName="maxwell.UserIntelligenceProviderFactory"]
 interface UserIntelligenceProviderFactory {
-  // Creates and returns a |UserIntelligenceProvider|. The |ComponentContext|
-  // is used to allow intelligence services to use |MessageQueue|s to
-  // communicate with clients.
+  // Creates and returns a |UserIntelligenceProvider|.
   //
   // NOTE: Any future dependencies needed are provided here, and are assumed to
   // be scoped to the user.
   GetUserIntelligenceProvider@0(
-      modular.ComponentContext user_intelligence_context,
       maxwell.ContextEngine context_engine,
       modular.StoryProvider story_provider,
       modular.FocusProvider focus_provider,
@@ -52,4 +50,10 @@ interface UserIntelligenceProvider {
   GetSpeechToText@2(speech.SpeechToText& speech_to_text);
 
   GetResolver@3(resolver.Resolver& resolver);
+
+  // The |ComponentContext| is used to create agents and use message queues.
+  StartAgents@4(modular.ComponentContext user_intelligence_context);
+
+  // A standard set of services provided to all agents at startup.
+  GetServicesForAgent(string url) => (app.ServiceList service_list);
 };

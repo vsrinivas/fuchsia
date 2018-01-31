@@ -138,10 +138,11 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
-  EXPECT_EQ(1, agent_launch_count);
 
   RunLoopUntil(
-      [&dummy_agent] { return dummy_agent->GetCallCount("Connect") > 0; });
+      [&dummy_agent] {
+        return dummy_agent && dummy_agent->GetCallCount("Connect") > 0; });
+  EXPECT_EQ(1, agent_launch_count);
   dummy_agent->ExpectCalledOnce("Connect");
   dummy_agent->ExpectNoOtherCalls();
 
@@ -155,7 +156,8 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
 
-  RunLoopUntil([&dummy_agent] { return dummy_agent->GetCallCount("Connect"); });
+  RunLoopUntil([&dummy_agent] {
+    return dummy_agent && dummy_agent->GetCallCount("Connect"); });
   EXPECT_EQ(1, agent_launch_count);
   dummy_agent->ExpectCalledOnce("Connect");
   dummy_agent->ExpectNoOtherCalls();
@@ -180,6 +182,7 @@ TEST_F(AgentRunnerTest, AgentController) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
+  RunLoopUntil([&dummy_agent] { return !!dummy_agent; });
   dummy_agent->KillApplication();
 
   // Agent application died, so check that AgentController dies here.

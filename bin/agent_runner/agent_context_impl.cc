@@ -35,12 +35,16 @@ std::string HashAgentUrl(const std::string& agent_url) {
 class AgentContextImpl::InitializeCall : Operation<> {
  public:
   InitializeCall(OperationContainer* const container,
-                 AgentContextImpl* const agent_context_impl)
+                 AgentContextImpl* const agent_context_impl,
+                 app::ApplicationLauncher* const app_launcher,
+                 AppConfigPtr agent_config)
       : Operation("AgentContextImpl::InitializeCall",
                   container,
                   [] {},
                   agent_context_impl->url_),
-        agent_context_impl_(agent_context_impl) {
+        agent_context_impl_(agent_context_impl),
+        app_launcher_(app_launcher),
+        agent_config_(std::move(agent_config)) {
     Ready();
   }
 
@@ -49,6 +53,36 @@ class AgentContextImpl::InitializeCall : Operation<> {
     FXL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
 
     FlowToken flow{this};
+
+    // No user intelligence provider is available during testing. We want to
+    // keep going without it.
+    if (!agent_context_impl_->user_intelligence_provider_) {
+      auto service_list = app::ServiceList::New();
+      Continue(std::move(service_list), flow);
+      return;
+    }
+
+    agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
+        agent_context_impl_->url_,
+        [this, flow] (app::ServiceListPtr maxwell_service_list) {
+          auto service_list = app::ServiceList::New();
+          service_list->names = std::move(maxwell_service_list->names);
+          agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
+              maxwell_service_list->provider.Bind());
+          Continue(std::move(service_list), flow);
+    });
+  }
+
+  void Continue(app::ServiceListPtr service_list, FlowToken flow) {
+    service_list->names.push_back(AgentContext::Name_);
+    agent_context_impl_->service_provider_impl_.AddBinding(
+        service_list->provider.NewRequest());
+    agent_context_impl_->app_client_ =
+        std::make_unique<AppClient<Lifecycle>>(
+            app_launcher_, std::move(agent_config_),
+            std::string(kAppStoragePath) +
+                HashAgentUrl(agent_context_impl_->url_),
+            std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
@@ -79,6 +113,8 @@ class AgentContextImpl::InitializeCall : Operation<> {
   }
 
   AgentContextImpl* const agent_context_impl_;
+  app::ApplicationLauncher* const app_launcher_;
+  AppConfigPtr agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
@@ -150,16 +186,11 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<AgentContext>(
       [this](fidl::InterfaceRequest<AgentContext> request) {
-        agent_context_bindings_.AddBinding(this, std::move(request));
+        agent_context_bindings_.AddBinding(
+            this, std::move(request));
       });
-  auto service_list = app::ServiceList::New();
-  service_list->names.push_back(AgentContext::Name_);
-  service_provider_impl_.AddBinding(service_list->provider.NewRequest());
-  app_client_ = std::make_unique<AppClient<Lifecycle>>(
-      info.app_launcher, std::move(agent_config),
-      std::string(kAppStoragePath) + HashAgentUrl(url_),
-      std::move(service_list));
-  new InitializeCall(&operation_queue_, this);
+  new InitializeCall(&operation_queue_, this, info.app_launcher,
+                     std::move(agent_config));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;

@@ -386,6 +386,9 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
+  fidl::InterfaceHandle<maxwell::ContextEngine> context_engine;
+  auto context_engine_request = context_engine.NewRequest();
+
   fidl::InterfaceHandle<StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
 
@@ -394,6 +397,25 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
 
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
+
+  // Start kMaxwellUrl
+  auto maxwell_config = AppConfig::New();
+  maxwell_config->url = kMaxwellUrl;
+  if (test_) {
+    maxwell_config->args.push_back(
+        "--config=/system/data/maxwell/test_config.json");
+  }
+
+  maxwell_app_ =
+      std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
+          user_scope_->GetLauncher(), std::move(maxwell_config));
+  maxwell_app_->primary_service()->GetUserIntelligenceProvider(
+      std::move(context_engine),
+      std::move(story_provider), std::move(focus_provider_maxwell),
+      std::move(visible_stories_provider),
+      std::move(intelligence_provider_request));
+  AtEnd(Reset(&maxwell_app_));
+  AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_app_.get()));
 
   entity_provider_runner_ = std::make_unique<EntityProviderRunner>(
       static_cast<EntityProviderLauncher*>(this));
@@ -438,37 +460,19 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
     context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(context_engine_config),
         "" /* data_origin */, std::move(service_list));
+    context_engine_app_->services().ConnectToService(std::move(
+        context_engine_request));
     AtEnd(Reset(&context_engine_app_));
     AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
   }
 
-  // Start kMaxwellUrl
-  auto maxwell_config = AppConfig::New();
-  maxwell_config->url = kMaxwellUrl;
-  if (test_) {
-    maxwell_config->args.push_back(
-        "--config=/system/data/maxwell/test_config.json");
-  }
-
-  maxwell_app_ =
-      std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
-          user_scope_->GetLauncher(), std::move(maxwell_config));
-
-  maxwell::ContextEnginePtr context_engine;
-  context_engine_app_->services().ConnectToService(context_engine.NewRequest());
   auto maxwell_app_component_context =
       maxwell_component_context_bindings_->AddBinding(
           std::make_unique<ComponentContextImpl>(component_context_info,
                                                  kMaxwellComponentNamespace,
                                                  kMaxwellUrl, kMaxwellUrl));
-  maxwell_app_->primary_service()->GetUserIntelligenceProvider(
-      std::move(maxwell_app_component_context), std::move(context_engine),
-      std::move(story_provider), std::move(focus_provider_maxwell),
-      std::move(visible_stories_provider),
-      std::move(intelligence_provider_request));
-
-  AtEnd(Reset(&maxwell_app_));
-  AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_app_.get()));
+  user_intelligence_provider_->StartAgents(
+      std::move(maxwell_app_component_context));
 
   auto component_scope = maxwell::ComponentScope::New();
   component_scope->set_global_scope(maxwell::GlobalScope::New());

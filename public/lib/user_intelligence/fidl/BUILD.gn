@@ -18,6 +18,7 @@ fidl("fidl") {
 
   deps = [
     ":scope",
+    "//garnet/public/lib/app/fidl",
     "//peridot/public/lib/action_log/fidl",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/context/fidl",
