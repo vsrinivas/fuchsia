@@ -12,6 +12,7 @@ rust_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl",
+    "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
   ]
 }
 

@@ -73,6 +73,10 @@ struct BandInfo {
 };
 
 struct WlanPhyInfo {
+  // The id is not set by the device node, as it has no way of knowing what its id is, but this
+  // field may be used by external systems to provide an identifier for a WlanPhy.
+  uint16 id;
+
   array<SupportedPhy> supported_phys;
   array<DriverFeature> driver_features;
   array<MacRole> mac_roles;

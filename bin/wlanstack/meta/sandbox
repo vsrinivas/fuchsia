@@ -1,4 +1,4 @@
 {
-    "dev": [ "class/ethernet" ],
+    "dev": [ "class/wlanphy", "class/wlanif" ],
     "system": [ "data/wlanstack2" ]
 }

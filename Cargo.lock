@@ -1022,8 +1022,14 @@ name = "wlanstack2"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fidl 0.1.0",
+ "fuchsia-app 0.1.0",
  "fuchsia-vfs-watcher 0.1.0",
+ "fuchsia-wlan-dev 0.1.0",
+ "fuchsia-zircon 0.3.4",
  "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "garnet_lib_wlan_fidl 0.1.0",
+ "garnet_lib_wlan_fidl_service 0.1.0",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.12",
  "wlan-sme 0.1.0",
