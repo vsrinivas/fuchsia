@@ -35,6 +35,8 @@ class AudioServerImpl : public AudioServer {
   void CreateRenderer(
       f1dl::InterfaceRequest<AudioRenderer> audio_renderer,
       f1dl::InterfaceRequest<MediaRenderer> media_renderer) final;
+  void CreateRendererV2(
+      f1dl::InterfaceRequest<AudioRenderer2> audio_renderer) final;
   void CreateCapturer(
       f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
       bool loopback) final;

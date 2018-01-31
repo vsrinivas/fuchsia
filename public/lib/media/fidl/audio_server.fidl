@@ -11,6 +11,7 @@ import "lib/media/fidl/media_renderer.fidl";
 [ServiceName="media::AudioServer"]
 interface AudioServer {
   CreateRenderer@0(AudioRenderer& audio_renderer, MediaRenderer& media_renderer);
+  CreateRendererV2@4(AudioRenderer2& audio_renderer);
 
   // Create an audio capturer which either captures from the current default
   // audio input device, or loops-back from the current default audio output

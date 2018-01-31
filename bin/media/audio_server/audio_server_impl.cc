@@ -7,6 +7,7 @@
 #include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
+#include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/media/flog/flog.h"
 
@@ -68,6 +69,12 @@ void AudioServerImpl::CreateRenderer(
     f1dl::InterfaceRequest<MediaRenderer> media_renderer) {
   device_manager_.AddRenderer(AudioRenderer1Impl::Create(
       std::move(audio_renderer), std::move(media_renderer), this));
+}
+
+void AudioServerImpl::CreateRendererV2(
+    f1dl::InterfaceRequest<AudioRenderer2> audio_renderer) {
+  device_manager_.AddRenderer(AudioRenderer2Impl::Create(
+      std::move(audio_renderer), this));
 }
 
 void AudioServerImpl::CreateCapturer(
