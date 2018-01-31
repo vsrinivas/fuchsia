@@ -19,7 +19,7 @@ use std::path::Path;
 mod sys;
 
 const DEV_TEST: &str = "/dev/misc/test";
-const DEV_WLANPHY: &str = "wlanphy-test";
+const DEV_WLANPHY: &str = "/dev/misc/test/wlan/wlanphy-test";
 const WLAN: &str = "wlan";
 const WLAN_DRIVER_NAME: &str = "/system/driver/wlanphy-testdev.so";
 
@@ -31,14 +31,9 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
 }
 
-fn open_wlanphy_device() -> Result<File, Error> {
-    let path = Path::new(DEV_TEST).join(WLAN).join(DEV_WLANPHY);
-    open_rdwr(path)
-}
-
 fn add_wlanphy() -> Result<(), Error> {
     let devpath = sys::create_test_device(DEV_TEST, WLAN)?;
-    eprintln!("created test device at {:?}", devpath.to_string_lossy());
+    println!("created test device at {:?}", devpath);
 
     // The device created above might not show up in the /dev filesystem right away. Loop until we
     // have the device opened (or we give up).
@@ -54,7 +49,7 @@ fn add_wlanphy() -> Result<(), Error> {
             }
         }
     }
-    let dev = dev.ok_or(format_err!("could not open {:?}", devpath.to_string_lossy()))?;
+    let dev = dev.ok_or(format_err!("could not open {:?}", devpath))?;
 
     sys::bind_test_device(&dev, WLAN_DRIVER_NAME)
 }
@@ -63,23 +58,28 @@ fn rm_wlanphy() -> Result<(), Error> {
     let path = Path::new(DEV_TEST).join(WLAN);
     let dev = open_rdwr(path.clone())?;
 
-    sys::destroy_test_device(&dev).map(|_| eprintln!("{:?} destroyed", path))
+    sys::destroy_test_device(&dev)
+        .map(|_| println!("{:?} destroyed", path))
 }
 
 fn query_wlanphy() -> Result<(), Error> {
-    let dev = open_wlanphy_device()?;
-    wlan_dev::sys::query_wlanphy_device(&dev).map(|info| eprintln!("query results: {:?}", info))
+    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
+        .query()
+        .map(|info| println!("query results: {:?}", info))
+        .map_err(|e| e.into())
 }
 
 fn create_wlanintf() -> Result<(), Error> {
-    let dev = open_wlanphy_device()?;
-    wlan_dev::sys::create_wlaniface(&dev, wlan::MacRole::Client).map(|i| eprintln!("create results: {:?}", i))
+    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
+        .create_iface(wlan::MacRole::Client)
+        .map(|i| println!("create results: {:?}", i))
+        .map_err(|e| e.into())
 }
 
 fn destroy_wlanintf(id: u16) -> Result<(), Error> {
-    let dev = open_wlanphy_device()?;
-    wlan_dev::sys::destroy_wlaniface(&dev, id)
-        .map(|_| eprintln!("destroyed intf {}", id))
+    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
+        .destroy_iface(id)
+        .map(|_| println!("destroyed intf {}", id))
         .map_err(|e| e.into())
 }
 
