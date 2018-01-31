@@ -1,0 +1,32 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("cache") {
+  sources = [
+    "lru_cache.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "lru_cache_unittest.cc",
+  ]
+
+  deps = [
+    ":cache",
+    "//peridot/lib/callback",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
