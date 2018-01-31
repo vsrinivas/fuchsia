@@ -308,6 +308,7 @@
     getpgrp;
     getpid;
     getppid;
+    getpriority;
     getpwnam;
     getpwnam_r;
     getpwuid;
@@ -461,6 +462,7 @@
     modff;
     modfl;
     mprotect;
+    msync;
     mtx_destroy;
     mtx_init;
     mtx_lock;
@@ -495,6 +497,7 @@
     optind;
     optopt;
     optreset;
+    pathconf;
     pause;
     pclose;
     perror;
@@ -536,12 +539,15 @@
     pthread_equal;
     pthread_exit;
     pthread_getattr_np;
+    pthread_getschedparam;
     pthread_getspecific;
     pthread_join;
     pthread_key_create;
     pthread_key_delete;
+    pthread_kill;
     pthread_mutexattr_destroy;
     pthread_mutexattr_init;
+    pthread_mutexattr_setprotocol;
     pthread_mutexattr_settype;
     pthread_mutex_destroy;
     pthread_mutex_init;
@@ -555,6 +561,7 @@
     pthread_rwlock_unlock;
     pthread_rwlock_wrlock;
     pthread_self;
+    pthread_setschedparam;
     pthread_setspecific;
     pthread_sigmask;
     ptsname;
@@ -645,6 +652,7 @@
     setlinebuf;
     setlocale;
     setpgid;
+    setpriority;
     setregid;
     setresgid;
     setresuid;
@@ -768,6 +776,7 @@
     thrd_join;
     thrd_yield;
     time;
+    timegm;
     times;
     timespec_get;
     timezone;
@@ -809,6 +818,7 @@
     warn;
     warnx;
     wcrtomb;
+    wcschr;
     wcscmp;
     wcscoll;
     wcslen;
