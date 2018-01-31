@@ -1839,7 +1839,100 @@ bool unmap_large_uncommitted_test() {
     END_TEST;
 }
 
+bool partial_unmap_and_read() {
+    BEGIN_TEST;
+
+    // Map a two-page VMO.
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
+    uintptr_t mapping_addr;
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE * 2,
+                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              ZX_OK);
+    EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+    char* ptr = (char*)mapping_addr;
+    memset(ptr, 0, PAGE_SIZE * 2);
+
+    // Unmap the second page.
+    zx_vmar_unmap(zx_vmar_root_self(), mapping_addr + PAGE_SIZE, PAGE_SIZE);
+
+    char buffer[PAGE_SIZE * 2];
+    size_t actual_read;
+
+    // First page succeeds.
+    EXPECT_EQ(zx_process_read_memory(zx_process_self(), mapping_addr, buffer, PAGE_SIZE, &actual_read),
+              ZX_OK);
+    EXPECT_EQ(actual_read, PAGE_SIZE);
+
+    // Second page fails.
+    EXPECT_EQ(zx_process_read_memory(zx_process_self(), mapping_addr + PAGE_SIZE, buffer, PAGE_SIZE, &actual_read),
+              ZX_ERR_NO_MEMORY);
+
+    // Reading the whole region succeeds, but only reads the first page.
+    EXPECT_EQ(zx_process_read_memory(zx_process_self(), mapping_addr, buffer, PAGE_SIZE * 2, &actual_read),
+              ZX_OK);
+    EXPECT_EQ(actual_read, PAGE_SIZE);
+
+    // Read at the boundary straddling the pages.
+    EXPECT_EQ(zx_process_read_memory(zx_process_self(), mapping_addr + PAGE_SIZE - 1, buffer, 2, &actual_read), ZX_OK);
+    EXPECT_EQ(actual_read, 1);
+
+    // Unmap the left over first page.
+    EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
+
+    END_TEST;
 }
+
+bool partial_unmap_and_write() {
+    BEGIN_TEST;
+
+    // Map a two-page VMO.
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
+    uintptr_t mapping_addr;
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE * 2,
+                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              ZX_OK);
+    EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+    char* ptr = (char*)mapping_addr;
+    memset(ptr, 0, PAGE_SIZE * 2);
+
+    // Unmap the second page.
+    zx_vmar_unmap(zx_vmar_root_self(), mapping_addr + PAGE_SIZE, PAGE_SIZE);
+
+    char buffer[PAGE_SIZE * 2];
+    size_t actual_written;
+    memset(buffer, 0, PAGE_SIZE * 2);
+
+    // First page succeeds.
+    EXPECT_EQ(zx_process_write_memory(zx_process_self(), mapping_addr, buffer, PAGE_SIZE, &actual_written),
+              ZX_OK);
+    EXPECT_EQ(actual_written, PAGE_SIZE);
+
+    // Second page fails.
+    EXPECT_EQ(zx_process_write_memory(zx_process_self(), mapping_addr + PAGE_SIZE, buffer, PAGE_SIZE, &actual_written),
+              ZX_ERR_NO_MEMORY);
+
+    // Writing to the whole region succeeds, but only writes the first page.
+    EXPECT_EQ(zx_process_write_memory(zx_process_self(), mapping_addr, buffer, PAGE_SIZE * 2, &actual_written),
+              ZX_OK);
+    EXPECT_EQ(actual_written, PAGE_SIZE);
+
+    // Write at the boundary straddling the pages.
+    EXPECT_EQ(zx_process_write_memory(zx_process_self(), mapping_addr + PAGE_SIZE - 1, buffer, 2, &actual_written), ZX_OK);
+    EXPECT_EQ(actual_written, 1);
+
+    // Unmap the left over first page.
+    EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
+
+    END_TEST;
+}
+
+} // namespace
 
 BEGIN_TEST_CASE(vmar_tests)
 RUN_TEST(destroy_root_test);
@@ -1866,6 +1959,8 @@ RUN_TEST(protect_multiple_test);
 RUN_TEST(protect_over_demand_paged_test);
 RUN_TEST(protect_large_uncommitted_test);
 RUN_TEST(unmap_large_uncommitted_test);
+RUN_TEST(partial_unmap_and_read);
+RUN_TEST(partial_unmap_and_write);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

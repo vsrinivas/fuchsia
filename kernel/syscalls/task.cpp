@@ -429,9 +429,6 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
     if (!vmo)
         return ZX_ERR_NO_MEMORY;
 
-    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
-    size_t read = 0;
-
     // Force map the range, even if it crosses multiple mappings.
     // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
     // things, the bug will come back.  We should fix this more properly.
@@ -452,6 +449,12 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
         }
     }
 
+    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
+    size_t read = 0;
+    // TODO(ZX-1631): While this limits reading to the mapped address space of
+    // this VMO, it should be reading from multiple VMOs, not a single one.
+    // Additionally, it is racy with the mapping going away.
+    len = MIN(len, vm_mapping->size() - offset);
     zx_status_t st = vmo->ReadUser(_buffer, offset, len, &read);
 
     if (st == ZX_OK) {
@@ -517,7 +520,10 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
 
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t written = 0;
-
+    // TODO(ZX-1631): While this limits writing to the mapped address space of
+    // this VMO, it should be writing to multiple VMOs, not a single one.
+    // Additionally, it is racy with the mapping going away.
+    len = MIN(len, vm_mapping->size() - offset);
     zx_status_t st = vmo->WriteUser(_buffer, offset, len, &written);
 
     if (st == ZX_OK) {
