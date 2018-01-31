@@ -189,6 +189,9 @@ class Binding {
   // Whether this |Binding| is currently listening to a channel.
   bool is_bound() const { return controller_.reader().is_bound(); }
 
+  // The underlying channel.
+  const zx::channel& channel() const { return controller_.reader().channel(); }
+
  private:
   const ImplPtr impl_;
   typename Interface::Stub_ stub_;

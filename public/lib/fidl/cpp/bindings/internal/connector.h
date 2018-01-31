@@ -81,6 +81,9 @@ class Connector : public MessageReceiver {
 
   zx_handle_t handle() const { return channel_.get(); }
 
+  // The underlying channel.
+  const zx::channel& channel() const { return channel_; }
+
  private:
   async_wait_result_t OnHandleReady(async_t* async,
                                     zx_status_t status,

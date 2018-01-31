@@ -70,6 +70,9 @@ class Router : public MessageReceiverWithResponder {
 
   zx_handle_t handle() const { return connector_.handle(); }
 
+  // The underlying channel.
+  const zx::channel& channel() const { return connector_.channel(); }
+
  private:
   typedef std::map<uint64_t, MessageReceiver*> ResponderMap;
 

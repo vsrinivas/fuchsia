@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_BINDING_H_
 #define LIB_FIDL_CPP_BINDINGS_BINDING_H_
 
-#include <zx/channel.h>
 #include <zircon/assert.h>
+#include <zx/channel.h>
 
 #include <memory>
 #include <utility>
@@ -141,6 +141,12 @@ class Binding {
   // Indicates whether the binding has been completed (i.e., whether a channel
   // has been bound to the implementation).
   bool is_bound() const { return !!internal_router_; }
+
+  // The underlying channel.
+  const zx::channel& channel() const {
+    ZX_DEBUG_ASSERT(is_bound());
+    return internal_router_->channel();
+  }
 
   // Exposed for testing, should not generally be used.
   internal::Router* internal_router() { return internal_router_.get(); }

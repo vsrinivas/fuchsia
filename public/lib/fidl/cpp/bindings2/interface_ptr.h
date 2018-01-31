@@ -237,6 +237,9 @@ class InterfacePtr {
     controller_.reader().set_error_handler(std::move(error_handler));
   }
 
+  // The underlying channel.
+  const zx::channel& channel() const { return controller_.reader().channel(); }
+
  private:
   internal::ProxyController controller_;
   mutable typename Interface::Proxy_ proxy_;

@@ -158,6 +158,9 @@ class InterfacePtr {
     return &internal_state_;
   }
 
+  // The underlying channel.
+  const zx::channel& channel() const { return internal_state_.channel(); }
+
  private:
   typedef internal::InterfacePtrState<Interface> State;
   mutable State internal_state_;

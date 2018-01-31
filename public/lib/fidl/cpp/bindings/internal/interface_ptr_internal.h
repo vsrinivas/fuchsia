@@ -8,9 +8,9 @@
 #include <zircon/assert.h>
 
 #include <algorithm>  // For |std::swap()|.
+#include <functional>
 #include <memory>
 #include <utility>
-#include <functional>
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
@@ -90,6 +90,9 @@ class InterfacePtrState {
     ConfigureProxyIfNecessary();
     return router_;
   }
+
+  // The underlying channel.
+  const zx::channel& channel() const { return handle_; }
 
  private:
   using Proxy = typename Interface::Proxy_;
