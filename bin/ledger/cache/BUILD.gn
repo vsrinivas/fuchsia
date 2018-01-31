@@ -6,6 +6,7 @@ visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("cache") {
   sources = [
+    "lazy_value.h",
     "lru_cache.h",
   ]
 
@@ -19,6 +20,7 @@ source_set("cache") {
 source_set("unittests") {
   testonly = true
   sources = [
+    "lazy_value_unittest.cc",
     "lru_cache_unittest.cc",
   ]
 
