@@ -16,8 +16,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/lib/fidl/json_xdr.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "peridot/lib/module_manifest_source/json.h"
 
 namespace modular {
 
@@ -127,21 +126,6 @@ zx_status_t WatcherHandler(const int dirfd,
   return ZX_OK;
 }
 
-void XdrNounConstraint(
-    modular::XdrContext* const xdr,
-    ModuleManifestSource::Entry::NounConstraint* const data) {
-  xdr->Field("name", &data->name);
-  xdr->Field("types", &data->types);
-}
-
-void XdrEntry(modular::XdrContext* const xdr,
-              ModuleManifestSource::Entry* const data) {
-  xdr->Field("binary", &data->binary);
-  xdr->Field("local_name", &data->local_name);
-  xdr->Field("verb", &data->verb);
-  xdr->Field("noun_constraints", &data->noun_constraints, XdrNounConstraint);
-}
-
 }  // namespace
 
 DirectoryModuleManifestSource::DirectoryModuleManifestSource(std::string dir,
@@ -230,24 +214,8 @@ void DirectoryModuleManifestSource::OnNewFile(const std::string& name,
   bool read_result = files::ReadFileToString(path, &data);
   FXL_CHECK(read_result) << "Couldn't read file: " << path;
 
-  rapidjson::Document doc;
-  // Schema validation of the JSON is happening at publish time. By the time we
-  // get here, we assume it's valid manifest JSON.
-  doc.Parse(data.c_str());
-
-  // Handle bad manifests, including older files expressed as an array.
-  // Any mismatch causes XdrRead to DCHECK.
-  if (!doc.IsObject()) {
-    FXL_LOG(WARNING) << "Ignored invalid manifest: " << path;
-    return;
-  }
-
-  // Our tooling validates |doc|'s JSON schema so that we don't have to here.
-  // It may be good to do this, though.
-  // TODO(thatguy): Do this if it becomes a problem.
-
   Entry entry;
-  if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
+  if (!ModuleManifestEntryFromJson(data, &entry)) {
     FXL_LOG(WARNING) << "Could not parse Module manifest from: " << path;
     return;
   }

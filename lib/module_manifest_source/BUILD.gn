@@ -14,6 +14,20 @@ source_set("module_manifest_source") {
   ]
 }
 
+source_set("json") {
+  sources = [
+    "json.h",
+    "json.cc",
+  ]
+
+  deps = [
+    ":module_manifest_source",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/rapidjson",
+    "//third_party/rapidjson",
+  ]
+}
+
 group("unittests") {
   testonly = true
 
@@ -29,6 +43,7 @@ source_set("directory_source") {
   ]
 
   public_deps = [
+    ":json",
     ":module_manifest_source",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
