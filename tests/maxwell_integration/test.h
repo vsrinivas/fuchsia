@@ -119,6 +119,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   }
 
  private:
+  std::unique_ptr<app::ApplicationContext> startup_context_;
   std::unique_ptr<ApplicationEnvironmentHostImpl> test_environment_host_;
   std::unique_ptr<fidl::Binding<app::ApplicationEnvironmentHost>>
       test_environment_host_binding_;

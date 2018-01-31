@@ -65,16 +65,8 @@ void Sleep() {
 
 namespace maxwell {
 
-// Docs for app::ApplicationContext::CreateFromStartupInfo() say we should only
-// call it one time. Although things functioned fine calling it many times in a
-// test, for correctness we just keep a global around and initialize it once in
-// the MaxwellTestBase() constructor.
-std::unique_ptr<app::ApplicationContext> startup_context_;
-
 MaxwellTestBase::MaxwellTestBase() {
-  if (!startup_context_) {
-    startup_context_ = app::ApplicationContext::CreateFromStartupInfo();
-  }
+  startup_context_ = app::ApplicationContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
