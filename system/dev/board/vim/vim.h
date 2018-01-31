@@ -6,15 +6,18 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-bus.h>
-//#include <soc/aml-a113/a113-gpio.h>
-//#include <soc/aml-a113/a113-i2c.h>
+#include <ddk/protocol/gpio.h>
 
 typedef struct {
     platform_bus_protocol_t pbus;
-//    a113_gpio_t gpio;
-//    a113_i2c_t i2c;
+    gpio_protocol_t gpio;
+    zx_device_t* parent;
     io_buffer_t usb_phy;
+    uint32_t soc_pid;
 } vim_bus_t;
+
+// vim-gpio.c
+zx_status_t vim_gpio_init(vim_bus_t* bus);
 
 // vim-usb.c
 zx_status_t vim_usb_init(vim_bus_t* bus);

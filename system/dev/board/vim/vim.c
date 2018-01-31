@@ -44,8 +44,6 @@ static const pbus_dev_t display_dev = {
 
 static void vim_bus_release(void* ctx) {
     vim_bus_t* bus = ctx;
-
-//    a113_gpio_release(&bus->gpio);
     free(bus);
 }
 
@@ -54,6 +52,31 @@ static zx_protocol_device_t vim_bus_device_protocol = {
     .release = vim_bus_release,
 };
 
+static int vim_start_thread(void* arg) {
+    vim_bus_t* bus = arg;
+    zx_status_t status;
+
+    if ((status = vim_gpio_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
+        goto fail;
+    }
+
+    if ((status = vim_usb_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
+        goto fail;
+    }
+
+    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
+        goto fail;
+    }
+
+    return ZX_OK;
+fail:
+    zxlogf(ERROR, "vim_start_thread failed, not all devices have been initialized\n");
+    return status;
+}
+
 static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
@@ -61,22 +84,22 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
     }
+    bus->parent = parent;
 
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus)) != ZX_OK) {
         goto fail;
     }
 
-/*
-    if ((status = a113_gpio_init(&bus->gpio)) != ZX_OK) {
-        zxlogf(ERROR, "a113_gpio_init failed: %d\n", status);
+    const char* board_name = pbus_get_board_name(&bus->pbus);
+    if (!strcmp(board_name, "vim")) {
+        bus->soc_pid = PDEV_PID_AMLOGIC_S905X;
+    } else if (!strcmp(board_name, "vim2")) {
+        bus->soc_pid = PDEV_PID_AMLOGIC_S912;
+    } else {
+        zxlogf(ERROR, "unsupported board %s\n", board_name);
+        status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
-
-    if ((status = a113_i2c_init(&bus->i2c)) != ZX_OK) {
-        zxlogf(ERROR, "a113_i2c_init failed: %d\n", status);
-        goto fail;
-    }
-*/
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -91,15 +114,11 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    if ((status = vim_usb_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
+    thrd_t t;
+    int thrd_rc = thrd_create_with_name(&t, vim_start_thread, bus, "vim_start_thread");
+    if (thrd_rc != thrd_success) {
+        goto fail;
     }
-
-    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "vim_bus_bind could not add display_dev: %d\n", status);
-        return status;
-    }
-
     return ZX_OK;
 
 fail:

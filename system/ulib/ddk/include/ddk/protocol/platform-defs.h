@@ -45,6 +45,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_VIM2               2
 
 #define PDEV_DID_VIM_DISPLAY        1
+#define PDEV_DID_VIM_GPIO_TEST      2
 
 // Amlogic
 #define PDEV_VID_AMLOGIC            5
