@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+$VerifiedPlatform linux-amd64
+$VerifiedPlatform mac-amd64
+
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877557408
 
