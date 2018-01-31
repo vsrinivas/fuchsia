@@ -122,22 +122,22 @@ namespace flog {
 // Returns the koid of the local channel associated with a pending
 // InterfaceRequest. This value is identical to the value returned by
 // FLOG_PTR_ID(pointer) where the request was created from pointer.
-#define FLOG_REQUEST_KOID(request) flog::GetInterfaceRequestKoid(&request)
+#define FLOG_REQUEST_KOID(request) fsl::GetKoid(request.channel().get())
 
 // Returns the koid of the local channel associated with a binding. This value
 // is identical to the value returned by FLOG_PTR_ID(pointer) where pointer is
 // the client end of the binding.
-#define FLOG_BINDING_KOID(binding) fsl::GetKoid(binding.handle())
+#define FLOG_BINDING_KOID(binding) fsl::GetKoid(binding.channel().get())
 
 // Returns the koid of the remote channel associated with a bound InterfacePtr.
 // This value is identical to the value return by FLOG_REQUEST_ID(request)
 // where request was created from the pointer.
-#define FLOG_PTR_KOID(ptr) flog::GetInterfacePtrRelatedKoid(&ptr)
+#define FLOG_PTR_KOID(ptr) fsl::GetRelatedKoid(ptr.channel().get())
 
 // Returns the koid of the remote channel associated with a bound
 // InterfaceHandle. This value is identical to the value return by
 // FLOG_REQUEST_ID(request) where request was created from the handle.
-#define FLOG_HANDLE_KOID(h) fsl::GetRelatedKoid(h.handle().get())
+#define FLOG_HANDLE_KOID(h) fsl::GetRelatedKoid(h.channel().get())
 
 // Same as FLOG_CHANNEL_WITH_SUBJECT but supplies the address of |this| as
 // the subject address. This is the preferred form for declaring channels that
@@ -158,7 +158,7 @@ class Flog {
   // Deletes the flog logger singleton.
   static void Destroy() {
     FXL_DCHECK(logger_);
-    logger_.reset();
+    logger_.Unbind();
   }
 
   // Allocates a unique id for a new channel. Never returns 0.
@@ -222,26 +222,6 @@ class FlogProxy : public T::Proxy_ {
 
   std::unique_ptr<FlogChannel> channel_;
 };
-
-template <typename T>
-zx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
-  FXL_DCHECK(request != nullptr);
-  FXL_DCHECK(*request);
-  zx::channel channel = request->TakeChannel();
-  zx_koid_t result = fsl::GetKoid(channel.get());
-  request->Bind(std::move(channel));
-  return result;
-}
-
-template <typename T>
-zx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
-  FXL_DCHECK(ptr != nullptr);
-  FXL_DCHECK(*ptr);
-  fidl::InterfaceHandle<T> handle = ptr->Unbind();
-  zx_koid_t result = fsl::GetRelatedKoid(handle.handle().get());
-  ptr->Bind(std::move(handle));
-  return result;
-}
 
 #else  // FLOG_ENABLED
 
