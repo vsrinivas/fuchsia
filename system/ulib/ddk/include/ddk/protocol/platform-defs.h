@@ -43,10 +43,15 @@ __BEGIN_CDECLS;
 #define PDEV_VID_KHADAS             4
 #define PDEV_PID_VIM                1
 #define PDEV_PID_VIM2               2
+
 #define PDEV_DID_VIM_DISPLAY        1
 
 // Amlogic
 #define PDEV_VID_AMLOGIC            5
+#define PDEV_PID_AMLOGIC_A113       1
+#define PDEV_PID_AMLOGIC_S905X      2
+#define PDEV_PID_AMLOGIC_S912       3
+
 #define PDEV_DID_AMLOGIC_GPIO       1
 #define PDEV_DID_AMLOGIC_I2C        2
 

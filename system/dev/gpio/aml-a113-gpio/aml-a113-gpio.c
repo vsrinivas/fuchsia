@@ -419,7 +419,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "aml-gpio",
+        .name = "aml-a113-gpio",
         .ctx = gpio,
         .ops = &gpio_device_proto,
         .proto_id = ZX_PROTOCOL_GPIO,
@@ -451,6 +451,6 @@ static zx_driver_ops_t aml_gpio_driver_ops = {
 ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
 ZIRCON_DRIVER_END(aml_gpio)
