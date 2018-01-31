@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_H_
-#define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_H_
+#ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
+#define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
@@ -31,7 +31,7 @@ class FakeNetConnector : public netconnector::NetConnector {
         f1dl::InterfaceRequest<app::ServiceProvider> request) = 0;
   };
 
-  FakeNetConnector(Delegate* delegate);
+  explicit FakeNetConnector(Delegate* delegate);
   ~FakeNetConnector() override {}
 
   // Connects to the service provider of this (virtual) host
@@ -58,4 +58,4 @@ class FakeNetConnector : public netconnector::NetConnector {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
