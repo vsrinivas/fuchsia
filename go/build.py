@@ -37,6 +37,8 @@ def main():
     parser.add_argument('--unstripped-binname', help='Unstripped output file')
     parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
                         required=False)
+    parser.add_argument('--verbose', help='Tell the go tool to be verbose about what it is doing',
+                        action='store_true')
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
@@ -115,6 +117,8 @@ def main():
       cmd += ['test', '-c']
     else:
       cmd += ['build']
+    if args.verbose:
+      cmd += ['-x']
     cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
             output_name, args.package]
 
