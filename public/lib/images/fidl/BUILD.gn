@@ -6,6 +6,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
+    "encoded_image.fidl",
     "image_info.fidl",
     "image_pipe.fidl",
     "memory_type.fidl",
