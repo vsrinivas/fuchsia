@@ -16,13 +16,14 @@ source_set("impl") {
 
   deps = [
     ":encrypted_commit",
+    "//peridot/bin/ledger/encryption/primitives",
+    "//peridot/bin/ledger/cache",
+    "//peridot/lib/callback",
   ]
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/encryption/public",
-    "//peridot/lib/callback",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

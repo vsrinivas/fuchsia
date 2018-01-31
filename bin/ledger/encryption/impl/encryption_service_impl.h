@@ -9,6 +9,8 @@
 #include <string>
 
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/ledger/cache/lazy_value.h"
+#include "peridot/bin/ledger/cache/lru_cache.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 #include "peridot/lib/convert/convert.h"
@@ -46,16 +48,24 @@ class EncryptionServiceImpl : public EncryptionService {
   class KeyService;
 
   uint32_t GetCurrentKeyIndex();
-  void GetNamespaceKey(const std::function<void(const std::string&)>& callback);
   void GetReferenceKey(uint32_t deletion_scope_id,
                        const std::string& digest,
                        const std::function<void(const std::string&)>& callback);
 
+  void FetchMasterKey(std::function<void(Status, std::string)> callback);
+  void FetchNamespaceKey(std::function<void(Status, std::string)> callback);
+  void FetchReferenceKey(std::string deletion_scope_seed,
+                         std::function<void(Status, std::string)> callback);
+
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;
 
-  std::vector<std::function<void(const std::string&)>> namespace_key_callbacks_;
-  std::string namespace_key_;
+  // Lazy value for the master key.
+  cache::LazyValue<std::string, Status> master_key_;
+  // Lazy value for the namespace key.
+  cache::LazyValue<std::string, Status> namespace_key_;
+  // Reference keys indexed by deletion scope seed.
+  cache::LRUCache<std::string, std::string, Status> reference_keys_;
 
   // This must be the last member of this class.
   callback::ScopedTaskRunner task_runner_;
