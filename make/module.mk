@@ -30,7 +30,8 @@
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
 # MODULE_GROUP: tag for manifest file entry
 # MODULE_PACKAGE: package type (src, so, a) for module to export to SDK
-# MODULE_PACKAGE_SRCS: override automated package source file selection
+# MODULE_PACKAGE_SRCS: override automated package source file selection, or the special
+#                      value "none" for header-only libraries
 # MODULE_PACKAGE_INCS: override automated package include file selection
 
 # the minimum module rules.mk file is as follows:

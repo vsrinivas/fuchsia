@@ -16,7 +16,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS =
 
-MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
+MODULE_PACKAGE_SRCS := none
 MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/dispatcher.h \
     $(LOCAL_INC)/receiver.h \

@@ -177,7 +177,7 @@ MODULE_PKG_DEPS := $(subst .,-,$(foreach dep,$(MODULE_LIBS),$(lastword $(subst /
 
 ifeq ($(filter src,$(MODULE_PACKAGE)),src)
 ifneq ($(MODULE_PACKAGE_SRCS),)
-MODULE_PKG_SRCS := $(MODULE_PACKAGE_SRCS)
+MODULE_PKG_SRCS := $(filter-out none,$(MODULE_PACKAGE_SRCS))
 else
 MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
 endif
