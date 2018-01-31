@@ -205,7 +205,9 @@ void Controller::HandleHotplug(registers::Ddi ddi) {
             return;
         }
 
-        AddDisplay(fbl::move(device));
+        if (AddDisplay(fbl::move(device)) != ZX_OK) {
+            zxlogf(INFO, "Failed to add display %d\n", ddi);
+        }
     }
 }
 
@@ -500,7 +502,7 @@ zx_status_t Controller::InitDisplays() {
             auto disp_device = InitDisplay(registers::kDdis[i]);
             if (disp_device) {
                 if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
-                    return ZX_ERR_INTERNAL;
+                    zxlogf(INFO, "Failed to add display %d\n", i);
                 }
             }
         }
