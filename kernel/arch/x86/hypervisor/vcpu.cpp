@@ -20,6 +20,7 @@
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
 #include "vmx_cpu_state_priv.h"
+#include "pvclock_priv.h"
 
 extern uint8_t _gdt[];
 
@@ -654,6 +655,10 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             vmx_state_.host_state.xcr0 = x86_xgetbv(0);
             x86_xsetbv(0, vmx_state_.guest_state.xcr0);
         }
+
+        // Updates guest system time if the guest subscribed to updates.
+        pvclock_update_system_time(&pvclock_state_, guest_->AddressSpace());
+
         running_.store(true);
         status = vmx_enter(&vmx_state_);
         running_.store(false);
@@ -668,7 +673,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         } else {
             vmx_state_.resume = true;
             status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_,
-                                    guest_->AddressSpace(), guest_->Traps(), packet);
+                                    &pvclock_state_, guest_->AddressSpace(), guest_->Traps(),
+                                    packet);
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;

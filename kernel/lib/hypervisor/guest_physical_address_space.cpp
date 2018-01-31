@@ -23,6 +23,11 @@ static const uint kInterruptMmuFlags =
     ARCH_MMU_FLAG_PERM_READ |
     ARCH_MMU_FLAG_PERM_WRITE;
 
+static const uint kGuestMmuFlags =
+    ARCH_MMU_FLAG_CACHED |
+    ARCH_MMU_FLAG_PERM_READ |
+    ARCH_MMU_FLAG_PERM_WRITE;
+
 namespace {
 // Locate a VMO for a given vaddr.
 struct AspaceVmoLocator final : public VmEnumerator {
@@ -65,7 +70,7 @@ zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_m
     // Initialize our VMAR with the provided VMO, mapped at address 0.
     fbl::RefPtr<VmMapping> mapping;
     zx_status_t status = gpas->paspace_->RootVmar()->CreateVmMapping(
-        0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0, VMAR_FLAG_SPECIFIC,
+        0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ false, VMAR_FLAG_SPECIFIC,
         guest_phys_mem, /* vmo_offset */ 0, kMmuFlags, "guest_phys_mem_vmo", &mapping);
     if (status != ZX_OK)
         return status;
@@ -130,4 +135,41 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* hos
     // Lookup the physical address of this page in the VMO.
     vaddr_t offset = guest_paddr - vmo_locator.base;
     return vmo->Lookup(offset, PAGE_SIZE, kPfFlags, guest_lookup_page, host_paddr);
+}
+
+zx_status_t GuestMapping::Create(fbl::RefPtr<VmObject> guest_phys_mem, zx_vaddr_t guest_base,
+                                 size_t size, const char* name,
+                                 fbl::unique_ptr<GuestMapping>* guest_mapping) {
+    // Overflow check.
+    if (guest_base > fbl::numeric_limits<zx_vaddr_t>::max() - size)
+        return ZX_ERR_INVALID_ARGS;
+
+    // Boundaries check.
+    if (guest_base + size > guest_phys_mem->size())
+        return ZX_ERR_INVALID_ARGS;
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<GuestMapping> mapping(new (&ac) GuestMapping);
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+
+    // GuestMapping destroys mapping_ in destructor, so we allocate GuestMapping first
+    // and then initizlize all the members.
+    fbl::RefPtr<VmAddressRegion> vmar = VmAspace::kernel_aspace()->RootVmar();
+    zx_status_t status = vmar->CreateVmMapping(/* mapping_offset (ignored) */ 0,
+                                               size,
+                                               /* align_pow2 */ false,
+                                               /* vmar_flags */ 0,
+                                               guest_phys_mem,
+                                               guest_base,
+                                               kGuestMmuFlags,
+                                               name,
+                                               &mapping->mapping_);
+    if (status != ZX_OK)
+        return status;
+
+    mapping->guest_base_ = guest_base;
+    mapping->size_ = size;
+    *guest_mapping = fbl::move(mapping);
+    return ZX_OK;
 }

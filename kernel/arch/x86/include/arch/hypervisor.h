@@ -24,6 +24,7 @@
 typedef struct vm_page vm_page_t;
 
 class GuestPhysicalAddressSpace;
+class HostMapping;
 class VmObject;
 struct VmxInfo;
 
@@ -89,6 +90,15 @@ struct LocalApicState {
     uint32_t lvt_divide_config;
 };
 
+// System time is time since boot time and boot time is some fixed point in the past. This
+// structure keeps track of the state required to update system time in guest.
+struct pvclock_system_time;
+struct PvClockState {
+    uint32_t version = 0;
+    pvclock_system_time* system_time = nullptr;
+    fbl::unique_ptr<GuestMapping> guest_mapping;
+};
+
 // Represents a virtual CPU within a guest.
 class Vcpu {
 public:
@@ -107,6 +117,7 @@ private:
     const thread_t* thread_;
     fbl::atomic_bool running_;
     LocalApicState local_apic_state_;
+    PvClockState pvclock_state_;
     VmxState vmx_state_;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;

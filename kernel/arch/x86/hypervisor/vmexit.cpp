@@ -28,6 +28,7 @@
 #include <zircon/types.h>
 
 #include "vcpu_priv.h"
+#include "pvclock_priv.h"
 
 #define LOCAL_TRACE 0
 
@@ -268,8 +269,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_OK;
     }
     case X86_CPUID_KVM_FEATURES:
-        // We do not support KVM paravitualization interface yet.
-        guest_state->rax = 0;
+        // We support KVM clock.
+        guest_state->rax = kKvmFeatureClockSourceOld | kKvmFeatureClockSource;
         guest_state->rbx = 0;
         guest_state->rcx = 0;
         guest_state->rdx = 0;
@@ -542,8 +543,32 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     }
 }
 
+static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                    GuestState* guest_state, LocalApicState* local_apic_state,
+                                    PvClockState* pvclock, GuestPhysicalAddressSpace* gpas) {
+    zx_paddr_t guest_paddr = BITS(guest_state->rax, 31, 0) | (BITS(guest_state->rdx, 31, 0) << 32);
+
+    next_rip(exit_info, vmcs);
+    switch (guest_state->rcx) {
+    case kKvmSystemTimeMsrOld:
+    case kKvmSystemTimeMsr:
+        if ((guest_paddr & 1) != 0)
+            return pvclock_reset_clock(pvclock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1));
+        else
+            pvclock_stop_clock(pvclock);
+        return ZX_OK;
+    case kKvmBootTimeOld:
+    case kKvmBootTime:
+        return pvclock_update_boot_time(gpas, guest_paddr);
+    default:
+        local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        return ZX_OK;
+    }
+}
+
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                                LocalApicState* local_apic_state, zx_port_packet* packet) {
+                                LocalApicState* local_apic_state, PvClockState* pvclock,
+                                GuestPhysicalAddressSpace* gpas, zx_port_packet* packet) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rax != kLocalApicPhysBase || guest_state->rdx != 0)
@@ -573,6 +598,11 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     }
     case kX2ApicMsrBase... kX2ApicMsrMax:
         return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
+    case kKvmSystemTimeMsrOld:
+    case kKvmSystemTimeMsr:
+    case kKvmBootTimeOld:
+    case kKvmBootTime:
+        return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
         return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
@@ -751,8 +781,9 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap* traps, zx_port_packet_t* packet) {
+                           LocalApicState* local_apic_state, PvClockState* pvclock,
+                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           zx_port_packet_t* packet) {
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {
@@ -774,7 +805,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         return handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     case ExitReason::WRMSR:
         LTRACEF("handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
-        return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
+        return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas, packet);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         LTRACEF("handling VM entry failure\n\n");

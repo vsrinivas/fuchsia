@@ -14,5 +14,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/vmexit.cpp \
 	$(LOCAL_DIR)/vmx.S \
 	$(LOCAL_DIR)/vmx_cpu_state.cpp \
+	$(LOCAL_DIR)/pvclock.cpp \
 
 include make/module.mk

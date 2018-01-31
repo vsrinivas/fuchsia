@@ -221,6 +221,7 @@ class AutoVmcs;
 class GuestPhysicalAddressSpace;
 struct GuestState;
 struct LocalApicState;
+struct PvClockState;
 class TrapMap;
 
 // Stores VM exit info from VMCS fields.
@@ -275,5 +276,6 @@ struct InterruptCommandRegister {
 };
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap* traps, zx_port_packet_t* packet);
+                           LocalApicState* local_apic_state, PvClockState* pvclock,
+                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           zx_port_packet_t* packet);
