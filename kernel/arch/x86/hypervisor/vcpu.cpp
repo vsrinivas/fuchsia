@@ -623,11 +623,13 @@ Vcpu::~Vcpu() {
 static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
     uint32_t vector;
     zx_status_t status = local_apic_state->interrupt_tracker.Pop(&vector);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return;
+    }
 
-    if (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
-        // If interrupts are enabled, we inject an interrupt.
+    if (vector <= X86_INT_MAX_INTEL_DEFINED || vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
+        // If the vector is non-maskable or interrupts are enabled, we inject
+        // an interrupt.
         vmcs->IssueInterrupt(vector);
     } else {
         local_apic_state->interrupt_tracker.Track(vector);

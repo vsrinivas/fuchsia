@@ -382,8 +382,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         // Issue a general protection fault for write only and unimplemented
         // registers.
         dprintf(INFO, "Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
-        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-        return ZX_OK;
+        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
 
@@ -425,8 +424,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
         dprintf(INFO, "Unhandled rdmsr %#lx\n", guest_state->rcx);
-        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-        return ZX_OK;
+        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
 
@@ -497,8 +495,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::ESR:
         if (guest_state->rax != 0) {
             // Non-zero writes to EOI and ESR cause GP fault. See Volume 3 Section 10.12.1.2.
-            vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-            return ZX_OK;
+            return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
         }
     // Fall through.
     case X2ApicMsr::TPR:
@@ -542,8 +539,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         // Issue a general protection fault for read only and unimplemented
         // registers.
         dprintf(INFO, "Unhandled x2APIC wrmsr %#lx\n", guest_state->rcx);
-        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-        return ZX_OK;
+        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
 
@@ -580,8 +576,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return handle_apic_wrmsr(exit_info, vmcs, guest_state, local_apic_state, packet);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
-        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-        return ZX_OK;
+        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
 
