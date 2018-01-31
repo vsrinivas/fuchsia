@@ -162,6 +162,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MGMT(AssociationResponse)
     WLAN_DECL_FUNC_HANDLE_MGMT(Disassociation)
     WLAN_DECL_FUNC_HANDLE_MGMT(AddBaRequestFrame)
+    WLAN_DECL_FUNC_HANDLE_MGMT(AddBaResponseFrame)
 
    private:
     // Internal Service Message handlers.
@@ -200,6 +201,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AssociationResponse)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Disassociation)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaRequestFrame)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaResponseFrame)
 
     // Internal Ethernet frame handlers.
     zx_status_t HandleFrameInternal(const ImmutableBaseFrame<EthernetII>& frame) {

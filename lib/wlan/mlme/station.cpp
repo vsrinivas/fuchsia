@@ -492,6 +492,11 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
           bss_->ssid.data(), bssid.ToString().c_str(), common::ChanStr(channel()).c_str(),
           common::BandStr(channel()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
 
+    // TODO(porce): Time when to establish BlockAck session
+    // Handle MLME-level retry, if MAC-level retry ultimately fails
+    // Wrap this as EstablishBlockAckSession(peer_mac_addr)
+    // Signal to lower MAC for proper session handling
+    SendAddBaRequestFrame();
     return ZX_OK;
 }
 
@@ -577,6 +582,25 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
         return status;
     }
 
+    return ZX_OK;
+}
+
+zx_status_t Station::HandleAddBaResponseFrame(
+    const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame, const wlan_rx_info& rxinfo) {
+    debugfn();
+    ZX_DEBUG_ASSERT(rx_frame.hdr != nullptr);
+    ZX_DEBUG_ASSERT(rx_frame.body != nullptr);
+    ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
+    ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaResponse);
+
+    auto hdr = rx_frame.hdr;
+    auto addba_resp = rx_frame.body;
+    fishark("Inbound ADDBA Resp frame: len %zu\n", hdr->len() + rx_frame.body_len);
+    fishark("  addba resp: %s\n", debug::Describe(*addba_resp).c_str());
+
+    // TODO(porce): Keep the result of negotiation.
     return ZX_OK;
 }
 
@@ -978,6 +1002,54 @@ zx_status_t Station::SendDisassociateIndication(uint16_t code) {
     }
 
     return status;
+}
+
+zx_status_t Station::SendAddBaRequestFrame() {
+    debugfn();
+
+    if (state_ != WlanState::kAssociated) {
+        errorf("won't send ADDBA Request in other than Associated state. Current state: %d\n",
+               state_);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    fbl::unique_ptr<Packet> packet = nullptr;
+    auto frame = BuildMgmtFrame<AddBaRequestFrame>(&packet, 0);
+    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto hdr = frame.hdr;
+    auto req = frame.body;
+    const common::MacAddr& mymac = device_->GetState()->address();
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+    hdr->sc.set_seq(next_seq());
+    FillTxInfo(&packet, *hdr);
+
+    req->category = action::Category::kBlockAck;
+    req->action = action::BaAction::kAddBaRequest;
+    // It appears there is no particular rule to choose the value for
+    // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
+    req->dialog_token = 0x01;
+    req->params.set_amsdu(0);
+    req->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
+    req->params.set_tid(0x0);  // TODO(porce): Communicate this with lower MAC.
+    // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
+    req->params.set_buffer_size(64);
+    req->timeout = 0;               // Disables the timeout
+    req->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
+    req->seq_ctrl.set_starting_seq(0);
+
+    fishark("Outbound ADDBA Req frame: len %zu\n", packet->len());
+    fishark("  addba req: %s\n", debug::Describe(*req).c_str());
+
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
+        errorf("could not send AddBaRequest: %d\n", status);
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Station::SendSignalReportIndication(uint8_t rssi) {

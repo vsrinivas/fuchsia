@@ -131,7 +131,8 @@ element_id::ElementId kValidAssociationRequestIds[] = {
 bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, ElementReader* r) {
     if (!ids || !r) return false;
     size_t idx = 0;
-    // Iterate through the elements of the reader, ensuring that each element is in the ids list and that they appear in the proper order.
+    // Iterate through the elements of the reader, ensuring that each element is in the ids list and
+    // that they appear in the proper order.
     // TODO(tkilbourn): handle required vs optional elements
     while (r->is_valid()) {
         const ElementHeader* hdr = r->peek();

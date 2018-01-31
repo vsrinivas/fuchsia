@@ -365,8 +365,16 @@ zx_status_t Dispatcher::HandleActionPacket(const Packet* packet, const MgmtFrame
         return mlme_->HandleFrame(frame, *rxinfo);
         break;
     }
-    case action::BaAction::kAddBaResponse:
-    // fall-through
+    case action::BaAction::kAddBaResponse: {
+        auto addba_resp = packet->field<AddBaResponseFrame>(hdr->len());
+        if (addba_resp == nullptr) {
+            errorf("addba_resp packet too small (len=%zd)\n", payload_len);
+            return ZX_ERR_IO;
+        }
+        auto frame = ImmutableMgmtFrame<AddBaResponseFrame>(hdr, addba_resp, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
+        break;
+    }
     case action::BaAction::kDelBa:
     // fall-through
     default:

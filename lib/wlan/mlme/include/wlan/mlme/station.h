@@ -93,6 +93,8 @@ class Station : public FrameHandler {
                                      const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& frame,
                                         const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& frame,
+                                         const wlan_rx_info& rxinfo) override;
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& frame,
@@ -117,6 +119,7 @@ class Station : public FrameHandler {
     zx_status_t SendDeauthIndication(uint16_t code);
     zx_status_t SendAssocResponse(AssociateResultCodes code);
     zx_status_t SendDisassociateIndication(uint16_t code);
+    zx_status_t SendAddBaRequestFrame();
 
     zx_status_t SendSignalReportIndication(uint8_t rssi);
     zx_status_t SendEapolResponse(EapolResultCodes result_code);
