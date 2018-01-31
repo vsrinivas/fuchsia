@@ -1120,7 +1120,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
-        pending_t* pending = list_remove_tail_type(&dev->pending, pending_t, node);
+        pending_t* pending = list_remove_head_type(&dev->pending, pending_t, node);
         if (pending == NULL) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
             return ZX_OK;
