@@ -4,46 +4,30 @@
 
 #pragma once
 
-#include <deque>
-#include <set>
-
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
-#include "garnet/bin/media/audio_server/audio_pipe.h"
-#include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "garnet/bin/media/util/timeline_control_point.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
-#include "lib/media/fidl/media_renderer.fidl.h"
-#include "lib/media/flog/flog.h"
+#include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {
 
 class AudioRendererImpl
     : public AudioObject,
-      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
-      public AudioRenderer,
-      public MediaRenderer {
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>> {
  public:
-  ~AudioRendererImpl() override;
-  static fbl::RefPtr<AudioRendererImpl> Create(
-      f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-      AudioServerImpl* owner);
+  virtual void Shutdown() = 0;
 
-  // Shutdown the audio renderer, unlinking it from all outputs, closing
-  // connections to all clients and removing it from its owner server's list.
-  void Shutdown();
+  // Used by the output to report packet usage.
+  virtual void OnRenderRange(int64_t presentation_time, uint32_t duration) = 0;
+
+  virtual void SnapshotCurrentTimelineFunction(
+      int64_t reference_time,
+      TimelineFunction* out,
+      uint32_t* generation = nullptr) = 0;
 
   void SetThrottleOutput(
       std::shared_ptr<AudioLinkPacketSource> throttle_output_link);
-
-  // Used by the output to report packet usage.
-  void OnRenderRange(int64_t presentation_time, uint32_t duration);
 
   // Note: format_info() is subject to change and must only be accessed from the
   // main message loop thread.  Outputs which are running on mixer threads
@@ -56,56 +40,13 @@ class AudioRendererImpl
   bool format_info_valid() const { return (format_info_ != nullptr); }
 
   float db_gain() const { return db_gain_; }
-  TimelineControlPoint& timeline_control_point() {
-    return timeline_control_point_;
-  }
 
- private:
-  friend class AudioPipe;
+ protected:
+  AudioRendererImpl();
 
-  AudioRendererImpl(
-      f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-      AudioServerImpl* owner);
-
-  // AudioObject overrides.
-  zx_status_t InitializeDestLink(const AudioLinkPtr& link) final;
-
-  // Implementation of AudioRenderer interface.
-  void SetGain(float db_gain) override;
-  void GetMinDelay(const GetMinDelayCallback& callback) override;
-
-  // MediaRenderer implementation.
-  void GetSupportedMediaTypes(
-      const GetSupportedMediaTypesCallback& callback) override;
-  void SetMediaType(MediaTypePtr media_type) override;
-  void GetPacketConsumer(
-      f1dl::InterfaceRequest<MediaPacketConsumer> consumer_request) override;
-  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
-                                   control_point_request) override;
-
-  // Methods called by our AudioPipe.
-  //
-  // TODO(johngro): MI is banned by style, but multiple interface inheritance
-  // (inheriting for one or more base classes consisting only of pure virtual
-  // methods) is allowed.  Consider defining an interface for AudioPipe
-  // encapsulation so that AudioPipe does not have to know that we are an
-  // AudioRendererImpl (just that we implement its interface).
-  void OnPacketReceived(AudioPipe::AudioPacketRefPtr packet);
-  bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
-  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
-
-  AudioServerImpl* owner_;
-  f1dl::Binding<AudioRenderer> audio_renderer_binding_;
-  f1dl::Binding<MediaRenderer> media_renderer_binding_;
-  AudioPipe pipe_;
-  TimelineControlPoint timeline_control_point_;
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
-  std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
   float db_gain_ = 0.0;
-  bool is_shutdown_ = false;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaRendererChannel, log_channel_);
+  std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
 };
 
 }  // namespace audio

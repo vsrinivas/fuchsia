@@ -9,8 +9,10 @@
 #include <memory>
 
 #include "garnet/bin/media/audio_server/audio_link.h"
+#include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "garnet/bin/media/audio_server/pending_flush_token.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
@@ -21,8 +23,6 @@ namespace audio {
 //
 class AudioLinkPacketSource : public AudioLink {
  public:
-  using PacketQueue = std::deque<AudioPipe::AudioPacketRefPtr>;
-  using PacketQueuePtr = std::unique_ptr<PacketQueue>;
 
   static std::shared_ptr<AudioLinkPacketSource> Create(
       fbl::RefPtr<AudioObject> source,
@@ -42,14 +42,15 @@ class AudioLinkPacketSource : public AudioLink {
 
   // Common pending queue ops.
   bool pending_queue_empty() const {
-    fxl::MutexLocker locker(&pending_queue_mutex_);
-    return pending_queue_->empty();
+    fxl::MutexLocker locker(&pending_mutex_);
+    return pending_packet_queue_.empty();
   }
 
   // PendingQueue operations used by the packet source.  Never call these from
   // the destination.
-  void PushToPendingQueue(const AudioPipe::AudioPacketRefPtr& pkt);
-  void FlushPendingQueue();
+  void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& pkt);
+  void FlushPendingQueue(
+      const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
   void CopyPendingQueue(const std::shared_ptr<AudioLinkPacketSource>& other);
 
   // PendingQueue operations used by the destination.  Never call these from the
@@ -65,15 +66,10 @@ class AudioLinkPacketSource : public AudioLink {
   // operation.  This, in turn, guarantees that audio packets are always
   // returned to the user in the order which they were queued in without forcing
   // AudioRenderers to wait to queue new data if a mix operation is in progress.
-  AudioPipe::AudioPacketRefPtr LockPendingQueueFront(bool* was_flushed)
-      FXL_ACQUIRE(flush_mutex_);
-  void UnlockPendingQueueFront(AudioPipe::AudioPacketRefPtr* pkt,
-                               bool release_packet)
-      FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(flush_mutex_));
+  fbl::RefPtr<AudioPacketRef> LockPendingQueueFront(bool* was_flushed);
+  void UnlockPendingQueueFront(bool release_packet);
 
  private:
-  void ReleaseQueue(const PacketQueuePtr& queue);
-
   AudioLinkPacketSource(fbl::RefPtr<AudioObject> source,
                         fbl::RefPtr<AudioObject> dest,
                         fbl::RefPtr<AudioRendererFormatInfo> format_info);
@@ -81,9 +77,16 @@ class AudioLinkPacketSource : public AudioLink {
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
 
   fxl::Mutex flush_mutex_;
-  mutable fxl::Mutex pending_queue_mutex_;
-  PacketQueuePtr pending_queue_ FXL_GUARDED_BY(pending_queue_mutex_);
-  bool flushed_ FXL_GUARDED_BY(flush_mutex_) = true;
+  mutable fxl::Mutex pending_mutex_;
+
+  std::deque<fbl::RefPtr<AudioPacketRef>> pending_packet_queue_
+    FXL_GUARDED_BY(pending_mutex_);
+  std::deque<fbl::RefPtr<AudioPacketRef>> pending_flush_packet_queue_
+    FXL_GUARDED_BY(pending_mutex_);
+  std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_
+    FXL_GUARDED_BY(pending_mutex_);
+  bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
+  bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
 };
 
 }  // namespace audio

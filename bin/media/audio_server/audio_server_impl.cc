@@ -6,7 +6,7 @@
 
 #include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
-#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/media/flog/flog.h"
 
@@ -16,8 +16,7 @@ namespace audio {
 AudioServerImpl::AudioServerImpl(
     std::unique_ptr<app::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
-      device_manager_(this),
-      cleanup_queue_(new CleanupQueue) {
+      device_manager_(this) {
   FXL_DCHECK(application_context_);
 
   FLOG_INITIALIZE(application_context_.get(), "audio_server");
@@ -54,8 +53,8 @@ AudioServerImpl::AudioServerImpl(
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
-  FXL_DCHECK(cleanup_queue_);
-  FXL_DCHECK(cleanup_queue_->empty());
+  FXL_DCHECK(packet_cleanup_queue_.is_empty());
+  FXL_DCHECK(flush_cleanup_queue_.is_empty());
 }
 
 void AudioServerImpl::Shutdown() {
@@ -67,7 +66,7 @@ void AudioServerImpl::Shutdown() {
 void AudioServerImpl::CreateRenderer(
     f1dl::InterfaceRequest<AudioRenderer> audio_renderer,
     f1dl::InterfaceRequest<MediaRenderer> media_renderer) {
-  device_manager_.AddRenderer(AudioRendererImpl::Create(
+  device_manager_.AddRenderer(AudioRenderer1Impl::Create(
       std::move(audio_renderer), std::move(media_renderer), this));
 }
 
@@ -87,44 +86,59 @@ void AudioServerImpl::GetMasterGain(const GetMasterGainCallback& cbk) {
 }
 
 void AudioServerImpl::DoPacketCleanup() {
-  // In order to minimize the time we spend in the lock, we allocate a new
-  // queue, then lock, swap and clear the sched flag, and finally clean out the
-  // queue (which has the side effect of triggering all of the send packet
-  // callbacks).
+  // In order to minimize the time we spend in the lock we obtain the lock, swap
+  // the contents of the cleanup queue with a local queue and clear the sched
+  // flag, and finally unlock clean out the queue (which has the side effect of
+  // triggering all of the send packet callbacks).
   //
   // Note: this is only safe because we know that we are executing on a single
   // threaded task runner.  Without this guarantee, it might be possible call
-  // the send packet callbacks for a media pipe in a different order than the
-  // packets were sent in the first place.  If the task_runner for the audio
-  // server ever loses this serialization guarantee (because it becomes
-  // multi-threaded, for example) we will need to introduce another lock
-  // (different from the cleanup lock) in order to keep the cleanup tasks
-  // properly ordered while guaranteeing minimal contention of the cleanup lock
-  // (which is being acquired by the high priority mixing threads).
-  std::unique_ptr<CleanupQueue> tmp_queue(new CleanupQueue());
+  // the send packet callbacks in a different order than the packets were sent
+  // in the first place.  If the task_runner for the audio server ever loses
+  // this serialization guarantee (because it becomes multi-threaded, for
+  // example) we will need to introduce another lock (different from the cleanup
+  // lock) in order to keep the cleanup tasks properly ordered while
+  // guaranteeing minimal contention of the cleanup lock (which is being
+  // acquired by the high priority mixing threads).
+  fbl::DoublyLinkedList<fbl::unique_ptr<AudioPacketRef>> tmp_packet_queue;
+  fbl::DoublyLinkedList<fbl::unique_ptr<PendingFlushToken>> tmp_token_queue;
 
   {
     fxl::MutexLocker locker(&cleanup_queue_mutex_);
-    cleanup_queue_.swap(tmp_queue);
+    packet_cleanup_queue_.swap(tmp_packet_queue);
+    flush_cleanup_queue_.swap(tmp_token_queue);
     cleanup_scheduled_ = false;
   }
 
-  // The clear method of standard containers do not guarantee any ordering of
-  // destruction of the objects they hold.  In order to guarantee proper
-  // sequencing of the callbacks, go over the container front-to-back, nulling
-  // out the std::unique_ptrs they hold as we go (which will trigger the
-  // callbacks).  Afterwards, just let tmp_queue go out of scope and clear()
-  // itself automatically.
-  for (auto iter = tmp_queue->begin(); iter != tmp_queue->end(); ++iter) {
-    (*iter) = nullptr;
+  // Call the Cleanup method for each of the packets in order, then let the tmp
+  // queue go out of scope cleaning up all of the packet references.
+  for (auto& packet_ref : tmp_packet_queue) {
+    packet_ref.Cleanup();
+  }
+
+  for (auto& token : tmp_token_queue) {
+    token.Cleanup();
   }
 }
 
 void AudioServerImpl::SchedulePacketCleanup(
-    std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet) {
+    fbl::unique_ptr<AudioPacketRef> packet) {
   fxl::MutexLocker locker(&cleanup_queue_mutex_);
 
-  cleanup_queue_->emplace_back(std::move(supplied_packet));
+  packet_cleanup_queue_.push_back(std::move(packet));
+
+  if (!cleanup_scheduled_ && !shutting_down_) {
+    FXL_DCHECK(task_runner_);
+    task_runner_->PostTask([this]() { DoPacketCleanup(); });
+    cleanup_scheduled_ = true;
+  }
+}
+
+void AudioServerImpl::ScheduleFlushCleanup(
+    fbl::unique_ptr<PendingFlushToken> token) {
+  fxl::MutexLocker locker(&cleanup_queue_mutex_);
+
+  flush_cleanup_queue_.push_back(std::move(token));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
     FXL_DCHECK(task_runner_);

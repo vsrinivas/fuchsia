@@ -240,7 +240,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     info->UpdateRendererTrans(renderer, packet_link->format_info());
 
     bool setup_done = false;
-    AudioPipe::AudioPacketRefPtr pkt_ref;
+    fbl::RefPtr<AudioPacketRef> pkt_ref;
 
 #ifdef FLOG_ENABLED
     if (task_type == TaskType::Mix) {
@@ -294,13 +294,16 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       if (!process_result) {
         break;
       }
-      packet_link->UnlockPendingQueueFront(&pkt_ref, true);
+
+      pkt_ref.reset();
+      packet_link->UnlockPendingQueueFront(true);
     }
 
     // Unlock the queue and proceed to the next renderer.
-    packet_link->UnlockPendingQueueFront(&pkt_ref, false);
+    pkt_ref.reset();
+    packet_link->UnlockPendingQueueFront(false);
 
-    // Note: there is no point in doing this for the trim task, but it dosn't
+    // Note: there is no point in doing this for the trim task, but it doesn't
     // hurt anything, and its easier then introducing another function to the
     // ForeachLink arguments to run after each renderer is processed just for
     // the purpose of setting this flag.
@@ -323,7 +326,7 @@ bool StandardOutputBase::SetupMix(
 bool StandardOutputBase::ProcessMix(
     const fbl::RefPtr<AudioRendererImpl>& renderer,
     RendererBookkeeping* info,
-    const AudioPipe::AudioPacketRefPtr& packet) {
+    const fbl::RefPtr<AudioPacketRef>& packet) {
   // Sanity check our parameters.
   FXL_DCHECK(info);
   FXL_DCHECK(packet);
@@ -423,7 +426,7 @@ bool StandardOutputBase::ProcessMix(
     frac_input_offset -= packet->frac_frame_len();
   } else {
     bool consumed_source = info->mixer->Mix(
-        buf, frames_left, &output_offset, packet->supplied_packet()->payload(),
+        buf, frames_left, &output_offset, packet->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
         info->amplitude_scale, cur_mix_job_.accumulate);
     FXL_DCHECK(output_offset <= frames_left);
@@ -468,7 +471,7 @@ bool StandardOutputBase::SetupTrim(
 bool StandardOutputBase::ProcessTrim(
     const fbl::RefPtr<AudioRendererImpl>& renderer,
     RendererBookkeeping* info,
-    const AudioPipe::AudioPacketRefPtr& pkt_ref) {
+    const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
@@ -484,33 +487,22 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
     const AudioRendererFormatInfo& format_info) {
   FXL_DCHECK(renderer != nullptr);
   TimelineFunction timeline_function;
-  uint32_t gen;
+  uint32_t gen = local_time_to_renderer_subframes_gen;
 
-  renderer->timeline_control_point().SnapshotCurrentFunction(
-      Timeline::local_now(), &timeline_function, &gen);
+  renderer->SnapshotCurrentTimelineFunction(
+      Timeline::local_now(), &local_time_to_renderer_subframes, &gen);
 
   // If the local time -> media time transformation has not changed since the
-  // last time we examines it, just get out now.
+  // last time we examined it, just get out now.
   if (local_time_to_renderer_subframes_gen == gen) {
     return;
   }
 
-  // The control point works in ns units. We want the rate in frames per
-  // nanosecond, so we convert here.
-  TimelineRate rate_in_frames_per_ns =
-      timeline_function.rate() * format_info.frames_per_ns();
-
-  local_time_to_renderer_frames = TimelineFunction(
-      timeline_function.reference_time(),
-      timeline_function.subject_time() * format_info.frames_per_ns(),
-      rate_in_frames_per_ns.reference_delta(),
-      rate_in_frames_per_ns.subject_delta());
-
   // The transformation has changed, re-compute the local time -> renderer frame
   // transformation.
-  local_time_to_renderer_subframes =
-      TimelineFunction(format_info.frame_to_media_ratio()) *
-      local_time_to_renderer_frames;
+  local_time_to_renderer_frames =
+      local_time_to_renderer_subframes *
+      TimelineFunction(TimelineRate(1u, 1u << kPtsFractionalBits));
 
   // Update the generation, and invalidate the output to renderer generation.
   local_time_to_renderer_subframes_gen = gen;

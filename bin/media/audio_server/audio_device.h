@@ -22,6 +22,7 @@
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_point.h"
+#include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 namespace audio {

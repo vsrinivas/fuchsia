@@ -17,11 +17,12 @@ AudioLinkPacketSource::AudioLinkPacketSource(
     fbl::RefPtr<AudioObject> dest,
     fbl::RefPtr<AudioRendererFormatInfo> format_info)
     : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
-      format_info_(std::move(format_info)),
-      pending_queue_(new PacketQueue) {}
+      format_info_(std::move(format_info)) {}
 
 AudioLinkPacketSource::~AudioLinkPacketSource() {
-  ReleaseQueue(pending_queue_);
+  pending_flush_packet_queue_.clear();
+  pending_packet_queue_.clear();
+  pending_flush_token_queue_.clear();
 }
 
 // static
@@ -47,42 +48,52 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
 }
 
 void AudioLinkPacketSource::PushToPendingQueue(
-    const AudioPipe::AudioPacketRefPtr& pkt) {
-  fxl::MutexLocker locker(&pending_queue_mutex_);
-  pending_queue_->emplace_back(pkt);
+    const fbl::RefPtr<AudioPacketRef>& pkt) {
+  fxl::MutexLocker locker(&pending_mutex_);
+  pending_packet_queue_.emplace_back(pkt);
 }
 
-void AudioLinkPacketSource::FlushPendingQueue() {
-  // Create a new (empty) queue before obtaining any locks.  This will allow us
-  // to quickly swap the empty queue for the current queue and get out of all
-  // the locks, and then release the packets at our leisure instead of
-  // potentially holding off a high priority mixing thread while releasing
-  // packets.
-  //
-  // Note: the safety of this technique depends on Flush only ever being called
-  // from the AudioRenderer, and the AudioRenderer's actions being serialized on
-  // the AudioServer's message loop thread.  If multiple flushes are allowed to
-  // be invoked simultaneously, or if a packet is permitted to be added to the
-  // queue while a flush operation is in progress, it is possible to return
-  // packets to the user in an order different than the one that they were
-  // queued in.
-  PacketQueuePtr new_queue(new PacketQueue);
+void AudioLinkPacketSource::FlushPendingQueue(
+    const fbl::RefPtr<PendingFlushToken>& flush_token) {
+  std::deque<fbl::RefPtr<AudioPacketRef>> flushed_packets;
 
   {
-    fxl::MutexLocker locker(&flush_mutex_);
-    {
-      // TODO(johngro): Assuming that it is impossible to push a new packet
-      // while a flush is in progress, it's pretty easy to show that this lock
-      // can never be contended.  Because of this, we could consider removing
-      // this lock operation (although, flush is a relatively rare operation, so
-      // the extra overhead is pretty insignificant.
-      fxl::MutexLocker locker(&pending_queue_mutex_);
-      pending_queue_.swap(new_queue);
-    }
+    fxl::MutexLocker locker(&pending_mutex_);
+
     flushed_ = true;
+
+    if (processing_in_progress_) {
+      // Is the sink currently mixing?  If so, the flush cannot complete until
+      // the mix operation has finished.  Move the 'waiting to be rendered'
+      // packets to the back of the 'waiting to be flushed queue', and append
+      // our flush token (if any) to the pending flush token queue.  The sink's
+      // thread will take are of releasing these objects back to the server
+      // thread for cleanup when it has finished it's current job.
+      while (!pending_packet_queue_.size()) {
+        pending_flush_packet_queue_.emplace_back(
+            std::move(pending_packet_queue_[0]));
+      }
+      pending_packet_queue_.clear();
+
+      if (flush_token != nullptr) {
+        pending_flush_token_queue_.emplace_back(flush_token);
+      }
+
+      return;
+    } else {
+      // If the sink is not currently mixing, then we just swap the contents the
+      // pending packet queues with out local queue and release the packets in
+      // the proper order once we have left the pending mutex lock.
+      FXL_DCHECK(pending_flush_packet_queue_.empty());
+      FXL_DCHECK(pending_flush_token_queue_.empty());
+      flushed_packets.swap(pending_packet_queue_);
+    }
   }
 
-  ReleaseQueue(new_queue);
+  // Release the packets, front to back.
+  for (auto& ptr : flushed_packets) {
+    ptr.reset();
+  }
 }
 
 void AudioLinkPacketSource::CopyPendingQueue(
@@ -90,67 +101,70 @@ void AudioLinkPacketSource::CopyPendingQueue(
   FXL_DCHECK(other != nullptr);
   FXL_DCHECK(this != other.get());
 
-  fxl::MutexLocker source_locker(&other->pending_queue_mutex_);
-  if (other->pending_queue_->empty())
+  fxl::MutexLocker source_locker(&other->pending_mutex_);
+  if (other->pending_packet_queue_.empty())
     return;
 
-  fxl::MutexLocker locker(&pending_queue_mutex_);
-  FXL_DCHECK(pending_queue_->empty());
-  *pending_queue_ = *other->pending_queue_;
+  fxl::MutexLocker locker(&pending_mutex_);
+  FXL_DCHECK(pending_packet_queue_.empty());
+  pending_packet_queue_ = other->pending_packet_queue_;
 }
 
-AudioPipe::AudioPacketRefPtr AudioLinkPacketSource::LockPendingQueueFront(
+fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(
     bool* was_flushed) {
-  flush_mutex_.Lock();
-
   FXL_DCHECK(was_flushed);
+  fxl::MutexLocker locker(&pending_mutex_);
+
+  FXL_DCHECK(!processing_in_progress_);
+  processing_in_progress_ = true;
+
   *was_flushed = flushed_;
   flushed_ = false;
 
-  {
-    fxl::MutexLocker locker(&pending_queue_mutex_);
-    if (pending_queue_->size()) {
-      return pending_queue_->front();
-    } else {
-      return nullptr;
-    }
+  if (pending_packet_queue_.size()) {
+    return pending_packet_queue_.front();
+  } else {
+    return nullptr;
   }
 }
 
-void AudioLinkPacketSource::UnlockPendingQueueFront(
-    AudioPipe::AudioPacketRefPtr* pkt,
-    bool release_packet) {
+void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
   {
-    fxl::MutexLocker locker(&pending_queue_mutex_);
+    fxl::MutexLocker locker(&pending_mutex_);
+    FXL_DCHECK(processing_in_progress_);
+    processing_in_progress_ = false;
+
+    // Did a flush take place while we were working?  If so release each of the
+    // packets waiting to be flushed back to the server thread, then release
+    // each of the flush tokens.
+    if (!pending_flush_packet_queue_.empty() ||
+        !pending_flush_token_queue_.empty()) {
+      for (auto& ptr : pending_flush_packet_queue_) {
+        ptr.reset();
+      }
+
+      for (auto& ptr : pending_flush_token_queue_) {
+        ptr.reset();
+      }
+
+      pending_flush_packet_queue_.clear();
+      pending_flush_token_queue_.clear();
+
+      return;
+    }
+
+    // If the sink wants us to release the front of the pending queue, and no
+    // flush operation happened while they were processing, then there had
+    // better be a packet at the front of the queue to release.
 
     // Assert that the user either got no packet when they locked the queue
     // (because the queue was empty), or that they got the front of the queue
     // and that the front of the queue has not changed.
-    FXL_DCHECK(pkt);
-    FXL_DCHECK((*pkt == nullptr) ||
-               (pending_queue_->size() && (*pkt == pending_queue_->front())));
-
-    if (*pkt) {
-      *pkt = nullptr;
-      if (release_packet) {
-        pending_queue_->pop_front();
-      }
+    FXL_DCHECK(!release_packet || !pending_packet_queue_.empty());
+    if (release_packet) {
+      pending_packet_queue_.pop_front();
     }
   }
-
-  flush_mutex_.Unlock();
-}
-
-void AudioLinkPacketSource::ReleaseQueue(const PacketQueuePtr& queue) {
-  if (!queue) {
-    return;
-  }
-
-  for (auto iter = queue->begin(); iter != queue->end(); ++iter) {
-    (*iter).reset();
-  }
-
-  queue->clear();
 }
 
 }  // namespace audio
