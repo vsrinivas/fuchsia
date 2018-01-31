@@ -19,5 +19,9 @@ std::string Describe(const DataFrameHeader& hdr);
 std::string HexDump(const uint8_t bytes[], size_t bytes_len);
 std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len);
 
+std::string Describe(const BlockAckParameters& param);
+std::string Describe(const AddBaRequestFrame& req);
+std::string Describe(const AddBaResponseFrame& resp);
+
 }  // namespace debug
 }  // namespace wlan

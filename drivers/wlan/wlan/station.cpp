@@ -540,13 +540,8 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaRequest);
 
     auto addbar = rx_frame.body;
-    debugf(
-        "Rxed ADDBAR: token %3u, amsdu %u policy %u tid %u buffer_size %u, timeout %u, "
-        "fragment "
-        "%u starting_seq %u",
-        addbar->dialog_token, addbar->params.amsdu(), addbar->params.policy(), addbar->params.tid(),
-        addbar->params.buffer_size(), addbar->timeout, addbar->seq_ctrl.fragment(),
-        addbar->seq_ctrl.starting_seq());
+    fishark("Inbound ADDBA Req frame: len %zu\n", rx_frame.body_len);
+    fishark("  addba req: %s\n", debug::Describe(*addbar).c_str());
 
     // Construct AddBaResponse frame
     fbl::unique_ptr<Packet> packet = nullptr;

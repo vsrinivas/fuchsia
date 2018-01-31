@@ -196,5 +196,40 @@ std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len) {
     return std::string(buf);
 }
 
+std::string Describe(const BlockAckParameters& params) {
+    char buf[128];
+    size_t offset = 0;
+    BUFFER("amsdu:%u", params.amsdu());
+    BUFFER("policy:%u", params.policy());
+    BUFFER("tid:0x%x", params.tid());
+    BUFFER("buffer_size:%u", params.buffer_size());
+    return std::string(buf);
+}
+
+std::string Describe(const AddBaRequestFrame& req) {
+    char buf[256];
+    size_t offset = 0;
+    BUFFER("category:%u", req.category);
+    BUFFER("action:%u", req.action);
+    BUFFER("dialog_token:0x%02x", req.dialog_token);
+    BUFFER("params: %s", Describe(req.params).c_str());
+    BUFFER("timeout:%u", req.timeout);
+    BUFFER("fragment:%u", req.seq_ctrl.fragment());
+    BUFFER("starting_seq:%u", req.seq_ctrl.starting_seq());
+    return std::string(buf);
+}
+
+std::string Describe(const AddBaResponseFrame& resp) {
+    char buf[256];
+    size_t offset = 0;
+    BUFFER("category:%u", resp.category);
+    BUFFER("action:%u", resp.action);
+    BUFFER("dialog_token:0x%02x", resp.dialog_token);
+    BUFFER("status_code:%u", resp.status_code);
+    BUFFER("params: %s", Describe(resp.params).c_str());
+    BUFFER("timeout:%u", resp.timeout);
+    return std::string(buf);
+}
+
 }  // namespace debug
 }  // namespace wlan
