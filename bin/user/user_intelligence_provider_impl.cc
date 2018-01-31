@@ -91,6 +91,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
                                  std::move(context_writer));
 
   if (!config.kronk.empty()) {
+    // TODO(rosswang): We are in the process of switching to in-tree Kronk.
+    // (This comment is left at the request of the security team.)
     kronk_url_ = config.kronk;
     StartKronk();
   }

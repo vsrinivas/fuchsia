@@ -7,6 +7,6 @@
     "agents/maxwell_proposal_maker",
     "usage_log"
   ],
-  "kronk": "https://storage.googleapis.com/maxwell-agents/kronk-2017.12.16.21.27",
+  "kronk": "https://storage.googleapis.com/maxwell-agents/kronk-2018.01.30.20.59",
   "mi_dashboard": true
 }
