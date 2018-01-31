@@ -212,7 +212,7 @@ func PrintDeauthenticateIndication(ind *mlme.DeauthenticateIndication) {
 
 func PrintSignalReportIndication(ind *mlme_ext.SignalReportIndication) {
 	log.Print("SignalReportIndication")
-	log.Printf("  RSSI: %d", ind.Rssi)
+	log.Printf("  RSSI: %d", int8(ind.Rssi))
 }
 
 func PrintDeviceQueryResponse(resp *mlme_ext.DeviceQueryResponse) {

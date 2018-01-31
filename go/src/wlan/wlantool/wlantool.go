@@ -60,12 +60,12 @@ func (a *ToolApp) Scan(seconds uint8) {
 
 }
 
-func (a *ToolApp) Connect(ssid string, passPhrase string, seconds uint8) {
+func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string, seconds uint8) {
 	if len(ssid) > 32 {
 		fmt.Println("ssid is too long")
 		return
 	}
-	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{ssid, passPhrase, seconds})
+	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{ssid, passPhrase, seconds, bssid})
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else if werr.Code != wlan_service.ErrCode_Ok {
@@ -84,7 +84,7 @@ func (a *ToolApp) Disconnect() {
 
 var Usage = func() {
 	fmt.Printf("Usage: %v %v [-t <timeout>]\n", os.Args[0], cmdScan)
-	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] ssid\n", os.Args[0], cmdConnect)
+	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] [-b <bssid>] ssid\n", os.Args[0], cmdConnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdDisconnect)
 }
 
@@ -95,6 +95,7 @@ func main() {
 	connectFlagSet := flag.NewFlagSet("connect", flag.ExitOnError)
 	connectScanTimeout := connectFlagSet.Int("t", 0, "scan timeout (1 to 255 seconds)")
 	connectPassPhrase := connectFlagSet.String("p", "", "pass-phrase (8 to 63 ASCII characters")
+	connectBSSID := connectFlagSet.String("b", "", "BSSID")
 
 	a := &ToolApp{ctx: context.CreateFromStartupInfo()}
 	r, p := a.wlan.NewRequest(bindings.GetAsyncWaiter())
@@ -130,12 +131,16 @@ func main() {
 			connectFlagSet.PrintDefaults()
 			return
 		}
-		if connectFlagSet.NArg() != 1 {
-			Usage()
+		if *connectBSSID != "" && !IsValidBSSID(*connectBSSID) {
+			connectFlagSet.PrintDefaults()
 			return
 		}
+		if connectFlagSet.NArg() != 1 {
+				Usage()
+				return
+		}
 		ssid := connectFlagSet.Arg(0)
-		a.Connect(ssid, *connectPassPhrase, uint8(*connectScanTimeout))
+		a.Connect(ssid, *connectBSSID, *connectPassPhrase, uint8(*connectScanTimeout))
 	case cmdDisconnect:
 		disconnectFlagSet := flag.NewFlagSet("disconnect", flag.ExitOnError)
 		disconnectFlagSet.Parse(os.Args[2:])
@@ -167,6 +172,27 @@ func IsValidPSKPassPhrase(passPhrase string) bool {
 		if c < 32 || c > 126 {
 			fmt.Println("Pass phrase must be ASCII characters")
 			return false
+		}
+	}
+	return true
+}
+
+func IsValidBSSID(bssid string) bool {
+	if len(bssid) != 17 {
+		fmt.Println("BSSID must be 17 characters")
+		return false
+	}
+	for i, c := range bssid {
+		if (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+			if c < '0' || c > '9' {
+				if c != ':' {
+					fmt.Println("BSSID must be hexadecimal")
+					return false
+				} else if i % 3 != 2 {
+					fmt.Println("BSSID must be of the form xx:xx:xx:xx:xx:xx")
+					return false
+				}
+			}
 		}
 	}
 	return true

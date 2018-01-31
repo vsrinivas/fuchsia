@@ -38,6 +38,7 @@ struct ConnectConfig {
   string ssid;
   string passPhrase;
   uint8  scanInterval; // seconds
+  string bssid;
 };
 
 // Stub interface; eventually to be replaced by something based on the 802.11
