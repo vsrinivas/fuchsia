@@ -117,6 +117,7 @@ static void sdmmc_release(void* ctx) {
 static zx_protocol_device_t sdmmc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = sdmmc_ioctl,
+    .get_size = sdmmc_get_size,
     .unbind = sdmmc_unbind,
     .release = sdmmc_release,
 };
