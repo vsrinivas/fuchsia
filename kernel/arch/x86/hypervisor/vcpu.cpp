@@ -545,14 +545,20 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                         fbl::unique_ptr<Vcpu>* out) {
+zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out) {
+    GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
+    if (entry >= gpas->size())
+        return ZX_ERR_INVALID_ARGS;
+
     uint16_t vpid;
-    zx_status_t status = alloc_vpid(&vpid);
-    if (status != ZX_OK)
+    zx_status_t status = guest->AllocVpid(&vpid);
+    if (status != ZX_OK) {
         return status;
-    auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
+    }
+
+    auto auto_call = fbl::MakeAutoCall([guest, vpid]() {
+        guest->FreeVpid(vpid);
+    });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
     // on the VPID. The VCPU must always be run on the current thread and the
@@ -567,7 +573,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
     thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vpid, thread, gpas, traps));
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -593,7 +599,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry,
-                       msr_bitmaps_address, gpas->table_phys(), &vcpu->vmx_state_,
+                       guest->MsrBitmapsAddress(), gpas->table_phys(), &vcpu->vmx_state_,
                        &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
     if (status != ZX_OK)
         return status;
@@ -602,9 +608,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
     return ZX_OK;
 }
 
-Vcpu::Vcpu(uint16_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
-    : vpid_(vpid), thread_(thread), running_(false), gpas_(gpas), traps_(traps),
-      vmx_state_(/* zero-init */) {}
+Vcpu::Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread)
+    : guest_(guest), vpid_(vpid), thread_(thread), running_(false), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -614,7 +619,7 @@ Vcpu::~Vcpu() {
     // pin the current thread to the same CPU as the VCPU.
     AutoPin pin(vpid_);
     vmclear(vmcs_page_.PhysicalAddress());
-    __UNUSED zx_status_t status = free_vpid(vpid_);
+    __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
     DEBUG_ASSERT(status == ZX_OK);
 }
 
@@ -662,8 +667,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             dprintf(INFO, "VCPU resume failed: %#lx\n", error);
         } else {
             vmx_state_.resume = true;
-            status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, gpas_,
-                                    traps_, packet);
+            status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_,
+                                    guest_->AddressSpace(), guest_->Traps(), packet);
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
@@ -759,26 +764,4 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     }
     }
     return ZX_ERR_INVALID_ARGS;
-}
-
-zx_status_t x86_vcpu_create(zx_vaddr_t entry, paddr_t msr_bitmaps_address,
-                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                            fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(entry, msr_bitmaps_address, gpas, traps, out);
-}
-
-zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {
-    return vcpu->Resume(packet);
-}
-
-zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
-    return vcpu->Interrupt(vector);
-}
-
-zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
-    return vcpu->ReadState(kind, buffer, len);
-}
-
-zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
-    return vcpu->WriteState(kind, buffer, len);
 }

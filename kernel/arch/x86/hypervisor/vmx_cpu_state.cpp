@@ -18,9 +18,9 @@
 
 #include <fbl/mutex.h>
 
-static fbl::Mutex vcpu_mutex;
-static size_t num_vcpus TA_GUARDED(vcpu_mutex) = 0;
-static fbl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vcpu_mutex);
+static fbl::Mutex guest_mutex;
+static size_t num_guests TA_GUARDED(guest_mutex) = 0;
+static fbl::Array<VmxPage> vmxon_pages TA_GUARDED(guest_mutex);
 
 static zx_status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -184,66 +184,42 @@ static void vmxoff_task(void* arg) {
     x86_set_cr4(x86_get_cr4() & ~X86_CR4_VMXE);
 }
 
-// static
-zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
-    // Allocate a VMXON page for each CPU.
-    fbl::AllocChecker ac;
-    size_t num_cpus = arch_max_num_cpus();
-    VmxPage* pages = new (&ac) VmxPage[num_cpus];
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-    fbl::Array<VmxPage> vmxon_pages(pages, num_cpus);
-    VmxInfo vmx_info;
-    for (auto& page : vmxon_pages) {
-        zx_status_t status = page.Alloc(vmx_info, 0);
-        if (status != ZX_OK)
-            return status;
-    }
+zx_status_t alloc_vmx_state() {
+    fbl::AutoLock lock(&guest_mutex);
+    if (num_guests == 0) {
+        fbl::AllocChecker ac;
+        size_t num_cpus = arch_max_num_cpus();
+        VmxPage* pages_ptr = new (&ac) VmxPage[num_cpus];
+        if (!ac.check())
+            return ZX_ERR_NO_MEMORY;
+        fbl::Array<VmxPage> pages(pages_ptr, num_cpus);
+        VmxInfo vmx_info;
+        for (auto& page : pages) {
+            zx_status_t status = page.Alloc(vmx_info, 0);
+            if (status != ZX_OK)
+                return status;
+        }
 
-    // Enable VMX for all online CPUs.
-    cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &vmxon_pages);
-    if (cpu_mask != mp_get_online_mask()) {
-        mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+        // Enable VMX for all online CPUs.
+        cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &pages);
+        if (cpu_mask != mp_get_online_mask()) {
+            mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
 
-    fbl::unique_ptr<VmxCpuState> cpu_state(new (&ac) VmxCpuState);
-    if (!ac.check()) {
-        mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
-        return ZX_ERR_NO_MEMORY;
+        num_guests++;
+        vmxon_pages = fbl::move(pages);
     }
-    zx_status_t status = cpu_state->Init();
-    if (status != ZX_OK)
-        return status;
-
-    cpu_state->vmxon_pages_ = fbl::move(vmxon_pages);
-    *out = fbl::move(cpu_state);
     return ZX_OK;
 }
 
-VmxCpuState::~VmxCpuState() {
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
-}
-
-zx_status_t alloc_vpid(uint16_t* vpid) {
-    fbl::AutoLock lock(&vcpu_mutex);
-    if (num_vcpus == 0) {
-        zx_status_t status = VmxCpuState::Create(&vmx_cpu_state);
-        if (status != ZX_OK)
-            return status;
+zx_status_t free_vmx_state() {
+    fbl::AutoLock lock(&guest_mutex);
+    num_guests--;
+    if (num_guests == 0) {
+        mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
+        vmxon_pages.reset();
     }
-    num_vcpus++;
-    return vmx_cpu_state->AllocId(vpid);
-}
-
-zx_status_t free_vpid(uint16_t vpid) {
-    fbl::AutoLock lock(&vcpu_mutex);
-    zx_status_t status = vmx_cpu_state->FreeId(vpid);
-    if (status != ZX_OK)
-        return status;
-    num_vcpus--;
-    if (num_vcpus == 0)
-        vmx_cpu_state.reset();
     return ZX_OK;
 }
 

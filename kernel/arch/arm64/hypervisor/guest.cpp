@@ -17,6 +17,9 @@ static const size_t kGicvSize = 0x2000;
 
 // static
 zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
+    if (arm64_get_boot_el() < 2)
+        return ZX_ERR_NOT_SUPPORTED;
+
     uint8_t vmid;
     zx_status_t status = alloc_vmid(&vmid);
     if (status != ZX_OK)
@@ -28,6 +31,11 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
         free_vmid(vmid);
         return ZX_ERR_NO_MEMORY;
     }
+
+    fbl::AutoLock lock(&guest->vcpu_mutex_);
+    status = guest->vpid_allocator_.Init();
+    if (status != ZX_OK)
+        return status;
 
     status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), vmid, &guest->gpas_);
     if (status != ZX_OK)
@@ -83,13 +91,12 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 
-zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {
-    if (arm64_get_boot_el() < 2)
-        return ZX_ERR_NOT_SUPPORTED;
-    return Guest::Create(fbl::move(physmem), guest);
+zx_status_t Guest::AllocVpid(uint8_t* vpid) {
+    fbl::AutoLock lock(&vcpu_mutex_);
+    return vpid_allocator_.AllocId(vpid);
 }
 
-zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
-                                fbl::RefPtr<PortDispatcher> port, uint64_t key) {
-    return guest->SetTrap(kind, addr, len, port, key);
+zx_status_t Guest::FreeVpid(uint8_t vpid) {
+    fbl::AutoLock lock(&vcpu_mutex_);
+    return vpid_allocator_.FreeId(vpid);
 }

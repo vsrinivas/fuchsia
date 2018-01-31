@@ -7,7 +7,6 @@
 #pragma once
 
 #include <arch/hypervisor.h>
-#include <hypervisor/id_allocator.h>
 
 // clang-format off
 
@@ -56,19 +55,6 @@ struct VmxRegion {
     uint32_t revision_id;
 };
 
-/* Maintains the VMX state for each CPU. */
-class VmxCpuState : public hypervisor::IdAllocator<uint16_t, 64> {
-public:
-    static zx_status_t Create(fbl::unique_ptr<VmxCpuState>* out);
-    ~VmxCpuState();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmxCpuState);
-
-private:
-    fbl::Array<VmxPage> vmxon_pages_;
-
-    VmxCpuState() = default;
-};
-
-zx_status_t alloc_vpid(uint16_t* vpid);
-zx_status_t free_vpid(uint16_t vpid);
+zx_status_t alloc_vmx_state();
+zx_status_t free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);

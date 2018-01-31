@@ -32,19 +32,22 @@ uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
-                         TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
+zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out) {
+    GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
+    if (entry >= gpas->size())
+        return ZX_ERR_INVALID_ARGS;
+
     uint8_t vpid;
-    zx_status_t status = alloc_vpid(&vpid);
+    zx_status_t status = guest->AllocVpid(&vpid);
     if (status != ZX_OK)
         return status;
-    auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
+    auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
     // For efficiency, we pin the thread to the CPU.
     thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vmid, vpid, thread, gpas, traps));
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
     auto_call.cancel();
@@ -70,15 +73,13 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpa
     return ZX_OK;
 }
 
-Vcpu::Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
-           TrapMap* traps)
-    : vmid_(vmid), vpid_(vpid), thread_(thread), running_(false), gpas_(gpas), traps_(traps),
-      el2_state_(/* zero-init */) {
+Vcpu::Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread)
+    : guest_(guest), vpid_(vpid), thread_(thread), running_(false), el2_state_(/* zero-init */) {
     (void)thread_;
 }
 
 Vcpu::~Vcpu() {
-    __UNUSED zx_status_t status = free_vpid(vpid_);
+    __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
     DEBUG_ASSERT(status == ZX_OK);
 }
 
@@ -139,7 +140,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
-    zx_paddr_t vttbr = arm64_vttbr(vmid_, gpas_->table_phys());
+    zx_paddr_t vttbr = arm64_vttbr(guest_->Vmid(), guest_->AddressSpace()->table_phys());
     zx_paddr_t state = vaddr_to_paddr(&el2_state_);
     GuestState* guest_state = &el2_state_.guest_state;
     zx_status_t status;
@@ -159,7 +160,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;
         } else if (status == ZX_OK) {
-            status = vmexit_handler(&hcr_, guest_state, &gich_state_, gpas_, traps_, packet);
+            status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
+                                    guest_->Traps(), packet);
         } else {
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
@@ -202,25 +204,4 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     el2_state_.guest_state.system_state.sp_el1 = state->sp;
     el2_state_.guest_state.system_state.spsr_el2 |= state->cpsr & kSpsrNzcv;
     return ZX_OK;
-}
-
-zx_status_t arm_vcpu_create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
-                            TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(entry, vmid, gpas, traps, out);
-}
-
-zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {
-    return vcpu->Resume(packet);
-}
-
-zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt) {
-    return vcpu->Interrupt(interrupt);
-}
-
-zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
-    return vcpu->ReadState(kind, buffer, len);
-}
-
-zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
-    return vcpu->WriteState(kind, buffer, len);
 }

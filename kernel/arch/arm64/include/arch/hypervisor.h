@@ -9,6 +9,7 @@
 #include <arch/arm64/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
@@ -38,10 +39,17 @@ public:
     TrapMap* Traps() { return &traps_; }
     uint8_t Vmid() const { return vmid_; }
 
+    zx_status_t AllocVpid(uint8_t* vpid);
+    zx_status_t FreeVpid(uint8_t vpid);
+
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     TrapMap traps_;
     const uint8_t vmid_;
+
+    fbl::Mutex vcpu_mutex_;
+    // TODO(alexlegg): Find a good place for this constant to live (max vcpus).
+    hypervisor::IdAllocator<uint8_t, 8> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 
     explicit Guest(uint8_t vmid);
 };
@@ -74,8 +82,7 @@ private:
 
 class Vcpu {
 public:
-    static zx_status_t Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
-                              TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
+    static zx_status_t Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
@@ -85,18 +92,15 @@ public:
     zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
 private:
-    const uint8_t vmid_;
+    Guest* guest_;
     const uint8_t vpid_;
     const thread_t* thread_;
     fbl::atomic_bool running_;
     GichState gich_state_;
-    GuestPhysicalAddressSpace* gpas_;
-    TrapMap* traps_;
     El2State el2_state_;
     uint64_t hcr_;
 
-    Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
-         TrapMap* traps);
+    Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread);
 };
 
 /* Create a guest. */
@@ -105,10 +109,6 @@ zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Gue
 /* Set a trap within a guest. */
 zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, size_t len,
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key);
-
-/* Create a VCPU. */
-zx_status_t arm_vcpu_create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
-                            TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);

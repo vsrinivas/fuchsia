@@ -17,19 +17,9 @@
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
-    GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
-    if (entry >= gpas->size())
-        return ZX_ERR_INVALID_ARGS;
 
     fbl::unique_ptr<Vcpu> vcpu;
-#if ARCH_ARM64
-    zx_status_t status = arm_vcpu_create(entry, guest->Vmid(), gpas, guest->Traps(), &vcpu);
-#elif ARCH_X86_64
-    zx_status_t status = x86_vcpu_create(entry, guest->MsrBitmapsAddress(), gpas, guest->Traps(),
-                                         &vcpu);
-#else
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-#endif
+    zx_status_t status = Vcpu::Create(guest, entry, &vcpu);
     if (status != ZX_OK)
         return status;
 
@@ -50,24 +40,20 @@ VcpuDispatcher::~VcpuDispatcher() {}
 
 zx_status_t VcpuDispatcher::Resume(zx_port_packet_t* packet) {
     canary_.Assert();
-
-    return arch_vcpu_resume(vcpu_.get(), packet);
+    return vcpu_->Resume(packet);
 }
 
 zx_status_t VcpuDispatcher::Interrupt(uint32_t vector) {
     canary_.Assert();
-
-    return arch_vcpu_interrupt(vcpu_.get(), vector);
+    return vcpu_->Interrupt(vector);
 }
 
 zx_status_t VcpuDispatcher::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     canary_.Assert();
-
-    return arch_vcpu_read_state(vcpu_.get(), kind, buffer, len);
+    return vcpu_->ReadState(kind, buffer, len);
 }
 
 zx_status_t VcpuDispatcher::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     canary_.Assert();
-
-    return arch_vcpu_write_state(vcpu_.get(), kind, buffer, len);
+    return vcpu_->WriteState(kind, buffer, len);
 }
