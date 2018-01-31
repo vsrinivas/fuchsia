@@ -48,7 +48,7 @@
 
 #define FLAGS_BACKLIGHT 1
 
-#define ENABLE_MODESETTING 0
+#define ENABLE_MODESETTING 1
 
 namespace {
 static int irq_handler(void* arg) {
