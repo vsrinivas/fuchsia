@@ -7,5 +7,6 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
-nom = "3.2"
 failure = "0.1"
+futures = "0.1"
+nom = "3.2"
