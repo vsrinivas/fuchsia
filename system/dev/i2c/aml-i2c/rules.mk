@@ -20,6 +20,6 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
 
-MODULE_HEADER_DEPS := system/dev/soc/aml-a113
+MODULE_HEADER_DEPS := system/dev/soc/amlogic
 
 include make/module.mk

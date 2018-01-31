@@ -21,6 +21,6 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_HEADER_DEPS := \
-    system/dev/soc/aml-s912
+    system/dev/soc/amlogic
 
 include make/module.mk

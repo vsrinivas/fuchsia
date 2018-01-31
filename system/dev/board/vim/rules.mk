@@ -13,7 +13,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-usb.c \
 
 MODULE_STATIC_LIBS := \
-    system/dev/soc/aml-a113 \
     system/ulib/ddk \
     system/ulib/sync
 
@@ -23,6 +22,6 @@ MODULE_LIBS := \
     system/ulib/zircon
 
 MODULE_HEADER_DEPS := \
-    system/dev/soc/aml-s912
+    system/dev/soc/amlogic
 
 include make/module.mk

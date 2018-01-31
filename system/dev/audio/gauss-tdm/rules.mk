@@ -19,7 +19,6 @@ MODULE_LIBS := \
   system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
-  system/dev/soc/aml-a113 \
   system/ulib/audio-proto-utils \
   system/ulib/audio-driver-proto \
   system/ulib/ddk \
@@ -29,5 +28,7 @@ MODULE_STATIC_LIBS := \
   system/ulib/sync \
   system/ulib/zx \
   system/ulib/zxcpp \
+
+MODULE_HEADER_DEPS := system/dev/soc/amlogic
 
 include make/module.mk
