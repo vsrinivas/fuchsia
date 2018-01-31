@@ -45,15 +45,6 @@ void DisplayDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t DisplayDevice::DdkSuspend(uint32_t hint) {
-    if ((hint & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC) {
-        // If we're mexecing, drop the reference to the GttRegion so it gets
-        // cleaned up and no longer references regular memory.
-        fb_gfx_addr_ = nullptr;
-    }
-    return ZX_OK;
-}
-
 // implement display protocol
 
 zx_status_t DisplayDevice::SetMode(zx_display_info_t* info) {

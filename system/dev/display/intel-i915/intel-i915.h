@@ -20,7 +20,7 @@
 namespace i915 {
 
 class Controller;
-using DeviceType = ddk::Device<Controller, ddk::Unbindable>;
+using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable>;
 
 class Controller : public DeviceType {
 public:
@@ -29,6 +29,7 @@ public:
 
     void DdkUnbind();
     void DdkRelease();
+    zx_status_t DdkSuspend(uint32_t reason);
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
     pci_protocol_t* pci() { return &pci_; }

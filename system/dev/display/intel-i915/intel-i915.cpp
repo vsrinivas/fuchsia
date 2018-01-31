@@ -559,6 +559,58 @@ void Controller::DdkRelease() {
     delete this;
 }
 
+zx_status_t Controller::DdkSuspend(uint32_t hint) {
+    if ((hint & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC) {
+        uint32_t format, width, height, stride;
+        if (zx_bootloader_fb_get_info(&format, &width, &height, &stride) != ZX_OK) {
+            return ZX_OK;
+        }
+
+        // The bootloader framebuffer is most likely at the start of the display
+        // controller's bar 2. Try to get that buffer working again across the
+        // mexec by mapping gfx stolen memory to gaddr 0.
+
+        auto bdsm_reg = registers::BaseDsm::Get().FromValue(0);
+        zx_status_t status =
+                pci_config_read32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
+        if (status != ZX_OK) {
+            zxlogf(TRACE, "i915: failed to read dsm base\n");
+            return ZX_OK;
+        }
+
+        // The Intel docs say that the first page should be reserved for the gfx
+        // hardware, but a lot of BIOSes seem to ignore that.
+        uintptr_t fb = bdsm_reg.base_phys_addr() << bdsm_reg.base_phys_addr_shift;
+        uint32_t fb_size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
+
+        gtt_.SetupForMexec(fb, fb_size, registers::PlaneSurface::kTrailingPtePadding);
+
+        // Try to map the framebuffer and clear it. If not, oh well.
+        void* gmadr;
+        uint64_t gmadr_size;
+        zx_handle_t gmadr_handle;
+        if (pci_map_bar(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING,
+                        &gmadr, &gmadr_size, &gmadr_handle) == ZX_OK) {
+            memset(reinterpret_cast<void*>(gmadr), 0, fb_size);
+            zx_handle_close(gmadr_handle);
+        }
+
+        for (auto* display : display_devices_) {
+            // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
+            registers::PipeRegs pipe_regs(display->pipe());
+
+            auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
+            plane_stride.set_stride(stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+            plane_stride.WriteTo(mmio_space_.get());
+
+            auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());
+            plane_surface.set_surface_base_addr(0);
+            plane_surface.WriteTo(mmio_space_.get());
+        }
+    }
+    return ZX_OK;
+}
+
 zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
     zxlogf(TRACE, "i915: binding to display controller\n");
 

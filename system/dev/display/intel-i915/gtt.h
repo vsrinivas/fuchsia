@@ -34,10 +34,10 @@ public:
     fbl::unique_ptr<const GttRegion> Insert(zx::vmo* buffer,
                                             uint32_t length, uint32_t align_pow2,
                                             uint32_t pte_padding);
+    void SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding);
 private:
     Controller* controller_;
     RegionAllocator region_allocator_;
-    uintptr_t scratch_buffer_;
 
     friend class GttRegion;
 };

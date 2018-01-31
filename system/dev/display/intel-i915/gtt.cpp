@@ -18,6 +18,8 @@
 
 namespace {
 
+static const uint8_t scratch_buffer[PAGE_SIZE] __ALIGNED(PAGE_SIZE) = {};
+
 inline uint64_t gen_pte_encode(uint64_t bus_addr, bool valid)
 {
     return bus_addr | (valid ? PAGE_PRESENT : 0);
@@ -37,44 +39,10 @@ Gtt::Gtt() :
 
 zx_status_t Gtt::Init(Controller* controller) {
     controller_ = controller;
-
-    // We want a scratch buffer to back unpopulated graphics addresses since the display
-    // hardware can actually still access those addresses. It's convenient to use stolen
-    // graphics memory for that because nothing else uses that memory and it won't be used
-    // for something else after mexec-ing.
-    auto bdsm_reg = registers::BaseDsm::Get().FromValue(0);
-    zx_status_t status =
-            pci_config_read32(controller_->pci(), bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to read dsm base\n");
-        return status;
-    }
-
-    // Add PAGE_SIZE as the first page is reserved for hardware per the docs.
-    scratch_buffer_ = (bdsm_reg.base_phys_addr() << bdsm_reg.base_phys_addr_shift) + PAGE_SIZE;
-
-    // The only way to access stolen memory is through bar #2.
-    uint64_t pte = gen_pte_encode(scratch_buffer_, true);
-    controller_->mmio_space()->Write<uint64_t>(get_pte_offset(0), pte);
-
-    void* gmadr;
-    uint64_t gmadr_size;
-    zx_handle_t gmadr_handle;
-    status = pci_map_bar(controller_->pci(), 2, ZX_CACHE_POLICY_WRITE_COMBINING,
-                         &gmadr, &gmadr_size, &gmadr_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to map gmadr space\n");
-        return ZX_ERR_INTERNAL;
-    }
-
-    memset(reinterpret_cast<void*>(gmadr), 0, PAGE_SIZE);
-
-    zx_handle_close(gmadr_handle);
-
     // Calculate the size of the gtt.
     auto gmch_gfx_ctrl = registers::GmchGfxControl::Get().FromValue(0);
-    status = pci_config_read16(controller_->pci(), gmch_gfx_ctrl.kAddr,
-                               gmch_gfx_ctrl.reg_value_ptr());
+    zx_status_t status = pci_config_read16(controller_->pci(), gmch_gfx_ctrl.kAddr,
+                                           gmch_gfx_ctrl.reg_value_ptr());
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to read GfxControl\n");
         return status;
@@ -83,7 +51,7 @@ zx_status_t Gtt::Init(Controller* controller) {
     zxlogf(SPEW, "i915: Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
 
     // Populate the gtt with the scratch buffer.
-    pte = gen_pte_encode(scratch_buffer_, false);
+    uint64_t pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), false);
     unsigned i;
     for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(i), pte);
@@ -122,7 +90,7 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
             controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
         }
     }
-    uint64_t padding_pte = gen_pte_encode(paddrs[0], true);
+    uint64_t padding_pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), true);
     for (i = 0; i < pte_padding; i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
@@ -131,12 +99,26 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
     return fbl::make_unique<const GttRegion>(fbl::move(r), this);
 }
 
+void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding) {
+    // Just clobber everything to get the bootloader framebuffer to work.
+    unsigned pte_idx = 0;
+    for (unsigned i = 0; i < ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
+        uint64_t pte = gen_pte_encode(stolen_fb, true);
+        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
+    }
+    uint64_t padding_pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), true);
+    for (unsigned i = 0; i < pte_padding; i++) {
+        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
+    }
+    controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
+}
+
 GttRegion::GttRegion(fbl::unique_ptr<const RegionAllocator::Region> region, Gtt* gtt)
         : region_(fbl::move(region)), gtt_(gtt) {}
 
 GttRegion::~GttRegion() {
     uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
-    uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_, false);
+    uint64_t pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), false);
     for (unsigned i = 0; i < region_->size / PAGE_SIZE; i++) {
         gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
     }
