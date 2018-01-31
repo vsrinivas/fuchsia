@@ -33,6 +33,7 @@
 #include "garnet/lib/machina/uart.h"
 #include "garnet/lib/machina/virtio_balloon.h"
 #include "garnet/lib/machina/virtio_block.h"
+#include "garnet/lib/machina/virtio_console.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
@@ -378,6 +379,17 @@ int main(int argc, char** argv) {
       return status;
     }
     block_devices.push_back(fbl::move(block));
+  }
+
+  // Setup console
+  machina::VirtioConsole console(guest.phys_mem());
+  status = console.Start();
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = bus.Connect(console.pci_device());
+  if (status != ZX_OK) {
+    return status;
   }
 
   machina::InputDispatcher input_dispatcher(kInputQueueDepth);

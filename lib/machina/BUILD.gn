@@ -28,6 +28,8 @@ shared_library("machina") {
     "virtio_balloon.h",
     "virtio_block.cc",
     "virtio_block.h",
+    "virtio_console.cc",
+    "virtio_console.h",
     "virtio_gpu.cc",
     "virtio_gpu.h",
     "virtio_input.cc",

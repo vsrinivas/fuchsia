@@ -66,9 +66,9 @@ guest_app("linux-guest") {
   ]
 
   if (target_cpu == "arm64") {
-    cmdline = "earlycon=pl011,0xfff32000 console=ttyAMA0 console=tty0"
+    cmdline = "earlycon=pl011,0xfff32000 console=hvc0 console=tty0"
   } else if (target_cpu == "x64") {
-    cmdline = "earlycon=uart,io,0x3f8 console=ttyS0 console=tty0 io_delay=none clocksource=tsc"
+    cmdline = "earlycon=uart,io,0x3f8 console=hvc0 console=tty0 io_delay=none clocksource=tsc"
   }
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "target_out_dir")
