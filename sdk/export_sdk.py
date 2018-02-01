@@ -43,6 +43,9 @@ def main():
     parser.add_argument('--depfile',
                         help='Path to the depfile to generate',
                         required=True)
+    parser.add_argument('--old-school',
+                        help='Turns the SDK into a big sysroot',
+                        action='store_true')
     args = parser.parse_args()
 
     if len(args.domains) != 1 and args.domains[0] != 'c-pp':
@@ -56,9 +59,14 @@ def main():
         manifest = json.load(manifest_file)
     atoms = filter(lambda a: a['id']['domain'] == 'c-pp', manifest['atoms'])
 
-    base_dir = os.path.join(args.out_dir, 'pkg')
+    def get_atom_dir(atom_name):
+        if args.old_school:
+            return os.path.join(args.out_dir, 'sysroot')
+        else:
+            return os.path.join(args.out_dir, 'pkg', atom_name)
+
     for atom in atoms:
-        dir = os.path.join(base_dir, atom['id']['name'])
+        dir = get_atom_dir(atom['id']['name'])
         for relative_destination, source in atom['files'].iteritems():
             destination = os.path.join(dir, relative_destination)
             make_dir(destination)

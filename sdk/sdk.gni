@@ -20,6 +20,14 @@ import("sdk_molecule.gni")
 #     on an official SDK.
 #     Defaults to false.
 #
+#   old_school (optional)
+#     If `export` is true, controls the layout of the produced SDK.
+#     An old-school SDK will essentially be a sysroot containing all the
+#     C/C++ packages.
+#     Note: this is a stop-gap measure to port runtimes to the new sysroot
+#     shape.
+#     Defaults to true.
+#
 #   domains (optional)
 #     If `export` is true, specifies the domains of SDK elements to export.
 #     Only the "c-pp" domain is currently supported.
@@ -46,6 +54,7 @@ template("sdk") {
     forward_variables_from(invoker, "*", [
       "domains",
       "export",
+      "old_school",
     ])
 
     metadata = [
@@ -147,6 +156,12 @@ template("sdk") {
         rebase_path(stamp_file, root_build_dir),
       ]
 
+      if (invoker.old_school) {
+        args += [
+          "--old-school",
+        ]
+      }
+
       deps = [
         ":$copy_target_name",
         ":$verification_target_name",
@@ -155,6 +170,9 @@ template("sdk") {
   } else { # Not exported.
     if (defined(invoker.domains)) {
       assert(false, "A domain list may only be set if export = true.")
+    }
+    if (defined(invoker.old_school)) {
+      assert(false, "Only exported SDKs may be old-school.")
     }
   }
 }
