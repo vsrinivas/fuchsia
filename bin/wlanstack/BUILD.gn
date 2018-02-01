@@ -9,6 +9,10 @@ rust_binary("bin") {
   with_tests = true
 
   name = "wlanstack2"
+
+  deps = [
+    "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl",
+  ]
 }
 
 package("wlanstack2") {
