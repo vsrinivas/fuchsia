@@ -16,7 +16,6 @@ source_set("mlme") {
     "debug.cpp",
     "device_interface.cpp",
     "hw_beacon_sender.cpp",
-    "include/wlan/mlme/action_frame.h",
     "include/wlan/mlme/ap_mlme.h",
     "include/wlan/mlme/beacon_sender.h",
     "include/wlan/mlme/bss.h",

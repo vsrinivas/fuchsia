@@ -16,7 +16,7 @@ source_set("common") {
     "include/wlan/common/cipher.h",
     "include/wlan/common/element.h",
     "include/wlan/common/element_id.h",
-    "include/wlan/common/loggging.h",
+    "include/wlan/common/logging.h",
     "include/wlan/common/mac_frame.h",
     "include/wlan/common/macaddr.h",
     "include/wlan/common/moving_average.h",
