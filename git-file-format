@@ -18,21 +18,18 @@ import sys
 import git_utils
 import paths
 
-clang_platform = "%s-%s" % (
+host_platform = "%s-%s" % (
     platform.system().lower().replace("darwin", "mac"),
     {
         "x86_64": "x64",
         "aarch64": "arm64",
     }[platform.machine()],
 )
-CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, clang_platform, "clang", "bin",
+CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, host_platform, "clang", "bin",
                           "clang-format")
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
-gotoolos = "linux64"
-if platform.platform().startswith("Darwin"):
-    gotoolos = "mac"
-GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, gotoolos, "go", "bin", "gofmt")
+GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, host_platform, "go", "bin", "gofmt")
 CHECK_HEADER_GUARDS_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
                                         "check-header-guards.py")
 
