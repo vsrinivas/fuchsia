@@ -930,26 +930,22 @@ static bool suspended_in_exception_handler(zx_handle_t inferior,
         ASSERT_TRUE(packet->key != data->process_id, "");
         zx_koid_t pkt_tid = packet->key;
 
-        zx_signals_t expected_mask =
-            ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-        switch (packet->signal.observed & expected_mask) {
-            case ZX_THREAD_TERMINATED:
-                // Nothing to do.
-                break;
-            case ZX_THREAD_RUNNING:
-                ASSERT_EQ(pkt_tid, data->thread_id, "");
-                atomic_fetch_add(&data->resume_count, 1);
-                break;
-            case ZX_THREAD_SUSPENDED:
-                ASSERT_EQ(pkt_tid, data->thread_id, "");
-                atomic_fetch_add(&data->suspend_count, 1);
-                ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK, "");
-                // At this point we should get ZX_THREAD_RUNNING, we'll
-                // process it later.
-                break;
-            default:
-                ASSERT_TRUE(false, "unexpected signal");
-                break;
+        // The following signals are expected here.  Note that
+        // ZX_THREAD_RUNNING and ZX_THREAD_TERMINATED can be reported
+        // together in the same zx_port_packet_t.
+        if (packet->signal.observed & ZX_THREAD_TERMINATED) {
+            // Nothing to do.
+        }
+        if (packet->signal.observed & ZX_THREAD_RUNNING) {
+            ASSERT_EQ(pkt_tid, data->thread_id, "");
+            atomic_fetch_add(&data->resume_count, 1);
+        }
+        if (packet->signal.observed & ZX_THREAD_SUSPENDED) {
+            ASSERT_EQ(pkt_tid, data->thread_id, "");
+            atomic_fetch_add(&data->suspend_count, 1);
+            ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK, "");
+            // At this point we should get ZX_THREAD_RUNNING, we'll
+            // process it later.
         }
     } else {
         ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type), "");
