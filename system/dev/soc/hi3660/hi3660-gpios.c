@@ -31,7 +31,7 @@ static pl061_gpios_t* find_gpio(hi3660_t* hi3660, uint32_t index) {
     return NULL;
 }
 
-static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
+static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     hi3660_t* hi3660 = ctx;
     pl061_gpios_t* gpios = find_gpio(hi3660, index);
     if (!gpios) {

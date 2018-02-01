@@ -22,7 +22,7 @@
 
 #define GPIOS_PER_PAGE  8
 
-static zx_status_t pl061_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
+static zx_status_t pl061_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     pl061_gpios_t* gpios = ctx;
     index -= gpios->gpio_start;
     volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (index / GPIOS_PER_PAGE);

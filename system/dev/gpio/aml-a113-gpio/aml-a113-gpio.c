@@ -197,7 +197,7 @@ static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pinid, aml_
 
 static zx_status_t aml_gpio_set_direction(aml_gpio_block_t* block,
                                            const uint32_t index,
-                                           const gpio_config_flags_t flags) {
+                                           const uint32_t flags) {
 
     const uint32_t pinid = index - block->pin_block;
 
@@ -221,7 +221,7 @@ static zx_status_t aml_gpio_set_direction(aml_gpio_block_t* block,
     return ZX_OK;
 }
 
-static zx_status_t aml_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
+static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     aml_gpio_t* gpio = ctx;
     zx_status_t status;
 

@@ -10,7 +10,7 @@
 __BEGIN_CDECLS;
 
 // flags for gpio_config()
-typedef enum {
+enum {
     GPIO_DIR_IN             = 0 << 0,
     GPIO_DIR_OUT            = 1 << 0,
     GPIO_DIR_MASK           = 1 << 0,
@@ -26,7 +26,7 @@ typedef enum {
     // for level triggered
     GPIO_TRIGGER_HIGH       = 1 << 2,
     GPIO_TRIGGER_LOW        = 1 << 3,
-} gpio_config_flags_t;
+};
 
 // In the functions below, the GPIO index is relative to the list of GPIOs for the device.
 // For example, the list of GPIOs a platform device has access to would likely be a small
@@ -34,7 +34,7 @@ typedef enum {
 // have access to the complete set of GPIOs.
 
 typedef struct {
-    zx_status_t (*config)(void* ctx, uint32_t index, gpio_config_flags_t flags);
+    zx_status_t (*config)(void* ctx, uint32_t index, uint32_t flags);
     zx_status_t (*set_alt_function)(void* ctx, uint32_t index, uint32_t function);
     zx_status_t (*read)(void* ctx, uint32_t index, uint8_t* out_value);
     zx_status_t (*write)(void* ctx, uint32_t index, uint8_t value);
@@ -47,7 +47,7 @@ typedef struct {
 
 // configures a GPIO
 static inline zx_status_t gpio_config(gpio_protocol_t* gpio, uint32_t index,
-                                      gpio_config_flags_t flags) {
+                                      uint32_t flags) {
     return gpio->ops->config(gpio->ctx, index, flags);
 }
 

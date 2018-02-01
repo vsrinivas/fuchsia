@@ -74,7 +74,7 @@ typedef struct {
     union {
         pdev_config_vmo_t contig_vmo;
         usb_mode_t usb_mode;
-        gpio_config_flags_t gpio_flags;
+        uint32_t gpio_flags;
         uint32_t gpio_alt_function;
         uint8_t gpio_value;
         pdev_i2c_req_t i2c;

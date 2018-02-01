@@ -116,7 +116,7 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
     .set_mode = pdev_ums_set_mode,
 };
 
-static zx_status_t pdev_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
+static zx_status_t pdev_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_GPIO_CONFIG,

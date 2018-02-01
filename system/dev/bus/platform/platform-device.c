@@ -229,7 +229,7 @@ static zx_status_t pdev_rpc_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
 }
 
 static zx_status_t pdev_rpc_gpio_config(platform_dev_t* dev, uint32_t index,
-                                        gpio_config_flags_t flags) {
+                                        uint32_t flags) {
     platform_bus_t* bus = dev->bus;
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
