@@ -1703,10 +1703,10 @@ TEST_F(PageStorageTest, NoOpCommit) {
 // Check that receiving a remote commit and commiting locally at the same time
 // do not prevent the commit to be marked as unsynced.
 TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
-  bool called;
+  bool sync_delegate_called;
   fxl::Closure sync_delegate_call;
-  DelayingFakeSyncDelegate sync(
-      callback::Capture(callback::SetWhenCalled(&called), &sync_delegate_call));
+  DelayingFakeSyncDelegate sync(callback::Capture(
+      callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);
 
   // We need to create new nodes for the storage to be asynchronous. The empty
@@ -1731,37 +1731,49 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   CommitId id = commit->GetId();
 
   // Start adding the remote commit.
-  Status status;
+  bool commits_from_sync_called;
+  Status commits_from_sync_status;
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
   storage_->AddCommitsFromSync(
       std::move(commits_and_bytes),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
+                        &commits_from_sync_status));
 
   // Make the loop run until GetObject is called in sync, and before
   // AddCommitsFromSync finishes.
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(sync_delegate_called);
+  EXPECT_FALSE(commits_from_sync_called);
 
   // Add the local commit.
+  bool commits_from_local_called;
+  Status commits_from_local_status;
   storage_->AddCommitFromLocal(
       std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&commits_from_local_called),
+                        &commits_from_local_status));
 
-  EXPECT_TRUE(sync_delegate_call);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(commits_from_sync_called);
+  // TODO(etiennej): |commits_from_local_called| should be true once LE-391 is
+  // fixed.
+  EXPECT_FALSE(commits_from_local_called)
+      << "See LE-391. |commits_from_local_called| should be true.";
+  ASSERT_TRUE(sync_delegate_call);
   sync_delegate_call();
 
   // Let the two AddCommit finish.
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(commits_from_sync_called);
+  EXPECT_TRUE(commits_from_local_called);
+  EXPECT_EQ(Status::OK, commits_from_sync_status);
+  EXPECT_EQ(Status::OK, commits_from_local_status);
 
   // Verify that the commit is added correctly.
+  bool called;
+  Status status;
   storage_->GetCommit(id, callback::Capture(callback::SetWhenCalled(&called),
                                             &status, &commit));
   RunLoopUntilIdle();
