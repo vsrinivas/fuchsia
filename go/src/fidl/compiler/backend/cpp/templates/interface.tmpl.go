@@ -19,25 +19,25 @@ const Interface = `
 
 {{- define "MethodSignature" -}}
   {{- if .HasResponse -}}
-{{ .Name }}({{ template "Params" .Request }}, {{ .Name }}Callback callback)
+{{ .Name }}({{ template "Params" .Request }}, {{ .CallbackType }} callback)
   {{- else -}}
 {{ .Name }}({{ template "Params" .Request }})
   {{- end -}}
 {{ end -}}
 
 {{- define "InterfaceDeclaration" -}}
-class {{ .Name }}Proxy;
-class {{ .Name }}Stub;
+class {{ .ProxyName }};
+class {{ .StubName }};
 
 class {{ .Name }} {
  public:
-  using Proxy_ = {{ .Name }}Proxy;
-  using Stub_ = {{ .Name }}Stub;
+  using Proxy_ = {{ .ProxyName }};
+  using Stub_ = {{ .StubName }};
   virtual ~{{ .Name }}();
 
   {{ range $method := .Methods -}}
     {{- if $method.HasResponse -}}
-  using {{ $method.Name }}Callback =
+  using {{ $method.CallbackType }} =
       std::function<void({{ template "Params" .Response }})>;
     {{- end }}
   virtual void {{ template "MethodSignature" . }} = 0;
@@ -46,26 +46,26 @@ class {{ .Name }} {
 
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 
-class {{ .Name }}Proxy : public {{ .Name }} {
+class {{ .ProxyName }} : public {{ .Name }} {
  public:
-  explicit {{ .Name }}Proxy(::fidl::internal::ProxyController* controller);
-  ~{{ .Name }}Proxy() override;
+  explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
+  ~{{ .ProxyName }}() override;
 
   {{- range $method := .Methods }}
   void {{ template "MethodSignature" . }} override;
   {{- end }}
 
  private:
-  {{ .Name }}Proxy(const {{ .Name }}Proxy&) = delete;
-  {{ .Name }}Proxy& operator=(const {{ .Name }}Proxy&) = delete;
+  {{ .ProxyName }}(const {{ .ProxyName }}&) = delete;
+  {{ .ProxyName }}& operator=(const {{ .ProxyName }}&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class {{ .Name }}Stub : public ::fidl::internal::Stub {
+class {{ .StubName }} : public ::fidl::internal::Stub {
  public:
-  explicit {{ .Name }}Stub({{ .Name }}* impl);
-  ~{{ .Name }}Stub() override;
+  explicit {{ .StubName }}({{ .Name }}* impl);
+  ~{{ .StubName }}() override;
 
   zx_status_t Dispatch(::fidl::Message message,
                        ::fidl::internal::PendingResponse response) override;
@@ -78,35 +78,35 @@ class {{ .Name }}Stub : public ::fidl::internal::Stub {
 {{- define "InterfaceDefinition" -}}
 namespace {
 {{ range $method := .Methods }}
-constexpr uint32_t k{{ .Name }}_{{ $method.Name }}_Ordinal = {{ $method.Ordinal }}u;
+constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
 {{- end }}
 
 }  // namespace
 
 {{ .Name }}::~{{ .Name }}() = default;
 
-{{ .Name }}Proxy::{{ .Name }}Proxy(::fidl::internal::ProxyController* controller)
+{{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
     : controller_(controller) {}
 
-{{ .Name }}Proxy::~{{ .Name }}Proxy() = default;
+{{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
 {{ range $method := .Methods }}
-void {{ .Name }}Proxy::{{ template "MethodSignature" . }} {
+void {{ $.ProxyName }}::{{ template "MethodSignature" . }} {
   // TODO(abarth): Implement method.
 }
 {{- end }}
 
-{{ .Name }}Stub::{{ .Name }}Stub({{ .Name }}* impl) : impl_(impl) {}
+{{ .StubName }}::{{ .StubName }}({{ .Name }}* impl) : impl_(impl) {}
 
-{{ .Name }}Stub::~{{ .Name }}Stub() = default;
+{{ .StubName }}::~{{ .StubName }}() = default;
 
-zx_status_t {{ .Name }}Stub::Dispatch(
+zx_status_t {{ .StubName }}::Dispatch(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     {{- range $method := .Methods }}
-    case k{{ .Name }}_{{ $method.Name }}_Ordinal: {
+    case {{ .OrdinalName }}: {
       // TODO(abarth): Dispatch method.
       break;
     }

@@ -5,11 +5,12 @@
 package cpp
 
 import (
+	"fidl/compiler/backend/cpp/ir"
+	"fidl/compiler/backend/cpp/templates"
+	"fidl/compiler/backend/types"
 	"os"
 	"path/filepath"
 	"text/template"
-	"fidl/compiler/backend/types"
-	"fidl/compiler/backend/cpp/templates"
 )
 
 type FidlGenerator struct{}
@@ -28,7 +29,7 @@ const headerFileTemplate = `
 #include "lib/fidl/cpp/bindings2/internal/proxy_controller.h"
 #include "lib/fidl/cpp/bindings2/internal/stub_controller.h"
 #include "lib/fidl/cpp/bindings2/string.h"
-    {{ range $interface := .InterfaceDeclarations }}
+    {{ range $interface := .Interfaces }}
 {{ template "InterfaceDeclaration" $interface }}
 	{{- end }}
 {{- end -}}
@@ -47,27 +48,30 @@ const implementationFileTemplate = `
 
 #include "lib/fidl/cpp/bindings2/test/fidl_types.h"
 
-{{ range $interface := .InterfaceDeclarations }}
+{{ range $interface := .Interfaces }}
 {{ template "InterfaceDefinition" $interface }}
 	{{ end }}
 {{- end -}}
 `
 
 func writeFile(outputFilename string,
-			   templateName string,
-			   tmpls *template.Template,
-			   fidlData types.Root) error {
+	templateName string,
+	tmpls *template.Template,
+	tree ir.Root) error {
 	f, err := os.Create(outputFilename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return tmpls.ExecuteTemplate(f, templateName, fidlData)
+	return tmpls.ExecuteTemplate(f, templateName, tree)
 }
 
 func (_ FidlGenerator) GenerateFidl(
-	fidlData types.Root, _args []string,
+	data types.Root, _args []string,
 	outputDir string, srcRootPath string) error {
+
+	tree := ir.Compile(data)
+
 	parentDir := filepath.Join(outputDir, srcRootPath)
 	err := os.MkdirAll(parentDir, ownerReadWriteNoExecute)
 	if err != nil {
@@ -80,11 +84,11 @@ func (_ FidlGenerator) GenerateFidl(
 	template.Must(tmpls.Parse(templates.Interface))
 
 	outputFilename := filepath.Join(parentDir, "generated.h")
-	err = writeFile(outputFilename, "GenerateHeaderFile", tmpls, fidlData)
+	err = writeFile(outputFilename, "GenerateHeaderFile", tmpls, tree)
 	if err != nil {
 		return err
 	}
 
 	outputFilename = filepath.Join(parentDir, "generated.cc")
-	return writeFile(outputFilename, "GenerateImplementationFile", tmpls, fidlData)
+	return writeFile(outputFilename, "GenerateImplementationFile", tmpls, tree)
 }
