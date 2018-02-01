@@ -14,7 +14,7 @@
 #include <crypto/cipher.h>
 #include <crypto/hkdf.h>
 #include <ddk/device.h>
-#include <ddk/iotxn.h>
+#include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
@@ -28,6 +28,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+#include <zx/vmo.h>
 #include <zxcrypt/volume.h>
 
 #define ZXDEBUG 0
@@ -67,60 +68,78 @@ const char* kWrapIvLabel = "wrap iv %" PRIu64;
 // Header is type GUID | instance GUID | version.
 const size_t kHeaderLen = GUID_LEN + GUID_LEN + sizeof(uint32_t);
 
-// Completes synchronous iotxns queued using |SyncIO||.
-void SyncComplete(iotxn_t* txn, void* cookie) {
-    completion_signal((completion_t*)cookie);
+void SyncComplete(block_op_t* block, zx_status_t status) {
+    // Use the 32bit command field to shuttle the response back to the callsite that's waiting on
+    // the completion
+    block->command = status;
+    completion_signal(static_cast<completion_t*>(block->cookie));
 }
 
 // Performs synchronous I/O
-zx_status_t SyncIO(zx_device_t* dev, uint32_t op, void* buf, size_t off, size_t len) {
+zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t len) {
     zx_status_t rc;
-    ssize_t res;
 
     if (!dev || !buf || len == 0) {
         xprintf("bad parameter(s): dev=%p, buf=%p, len=%zu\n", dev, buf, len);
         return ZX_ERR_INVALID_ARGS;
     }
 
-    iotxn_t* txn;
-    if ((rc = iotxn_alloc(&txn, 0, len)) != ZX_OK) {
-        xprintf("iotxn_alloc(%p, 0, %zu) failed: %s\n", &txn, len, zx_status_get_string(rc));
+    block_protocol_t proto;
+    if ((rc = device_get_protocol(dev, ZX_PROTOCOL_BLOCK, &proto)) != ZX_OK) {
+        xprintf("block protocol not support\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx::vmo vmo;
+    if ((rc = zx::vmo::create(len, 0, &vmo)) != ZX_OK) {
+        xprintf("zx::vmo::create failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
-    txn->opcode = op;
-    txn->offset = off;
-    txn->length = len;
-    txn->complete_cb = SyncComplete;
+    block_info_t info;
+    size_t op_size;
+    proto.ops->query(proto.ctx, &info, &op_size);
 
-    if (op == IOTXN_OP_WRITE && (res = iotxn_copyto(txn, buf, len, 0)) < 0) {
-        rc = static_cast<zx_status_t>(res);
-        xprintf("iotxn_copyto(%p, %p, 0, %zu) failed: %s\n", txn, buf, len,
-                zx_status_get_string(rc));
-        iotxn_release(txn);
-        return rc;
-    }
+    size_t bsz = info.block_size;
+    ZX_DEBUG_ASSERT(off / bsz <= UINT32_MAX);
+    ZX_DEBUG_ASSERT(len / bsz <= UINT32_MAX);
+
+    char raw[op_size];
+    block_op_t* block = reinterpret_cast<block_op_t*>(raw);
 
     completion_t completion;
-    txn->cookie = &completion;
-    iotxn_queue(dev, txn);
+    completion_reset(&completion);
+
+    block->command = cmd;
+    block->rw.vmo = vmo.get();
+    block->rw.length = static_cast<uint32_t>(len / bsz);
+    block->rw.offset_dev = static_cast<uint32_t>(off / bsz);
+    block->rw.offset_vmo = 0;
+    block->rw.pages = nullptr;
+    block->completion_cb = SyncComplete;
+    block->cookie = &completion;
+
+    size_t actual;
+    if (cmd == BLOCK_OP_WRITE && (rc = vmo.write(buf, 0, len, &actual)) != ZX_OK) {
+        xprintf("zx::vmo::write failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    proto.ops->queue(proto.ctx, block);
     completion_wait(&completion, ZX_TIME_INFINITE);
 
-    if (txn->status != ZX_OK) {
-        xprintf("iotxn_queue(%p, %p) failed: %s\n", dev, txn, zx_status_get_string(txn->status));
-        rc = txn->status;
-    } else if (txn->actual < txn->length) {
-        xprintf("incomplete I/O: have %zu, need %zu\n", txn->actual, txn->length);
-        rc = ZX_ERR_IO;
-    } else if (op == IOTXN_OP_READ && (res = iotxn_copyfrom(txn, buf, len, 0)) < 0) {
-        rc = static_cast<zx_status_t>(res);
-        xprintf("iotxn_copyfrom(%p, %p, 0, %zu) failed: %s\n", txn, buf, len,
-                zx_status_get_string(rc));
-    } else {
-        rc = ZX_OK;
+    rc = block->command;
+    if (rc != ZX_OK) {
+        xprintf("Block I/O failed: %s\n", zx_status_get_string(rc));
+        return rc;
     }
-    iotxn_release(txn);
-    return rc;
+
+    if (cmd == BLOCK_OP_READ && (rc = vmo.read(buf, 0, len, &actual)) != ZX_OK) {
+        xprintf("zx::vmo::read failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
 }
 
 } // namespace

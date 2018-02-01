@@ -30,16 +30,9 @@
 
 namespace zxcrypt {
 
-// TODO(aarongreen): Remove IotxnQueueable, DdkIotxnQueue once block protocol transition is complete
-#define IOTXN_LEGACY_SUPPORT
-
 // See ddk::Device in ddktl/device.h
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable,
-#ifdef IOTXN_LEGACY_SUPPORT
-                               ddk::IotxnQueueable,
-#endif // IOTXN_LEGACY_SUPPORT
-                               ddk::Unbindable>;
+using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
 
 // |zxcrypt::Device| is an encrypted block device filter driver.  It binds to a block device and
 // transparently encrypts writes to/decrypts reads from that device.  It shadows incoming requests
@@ -66,9 +59,6 @@ public:
     zx_status_t DdkIoctl(uint32_t op, const void* in, size_t in_len, void* out, size_t out_len,
                          size_t* actual) __TA_EXCLUDES(mtx_);
     zx_off_t DdkGetSize() __TA_EXCLUDES(mtx_);
-#ifdef IOTXN_LEGACY_SUPPORT
-    void DdkIotxnQueue(iotxn_t* txn);
-#endif // IOTXN_LEGACY_SUPPORT
     void DdkUnbind() __TA_EXCLUDES(mtx_);
     void DdkRelease() __TA_EXCLUDES(mtx_);
 
@@ -96,12 +86,6 @@ private:
     // TODO(aarongreen): Investigate performance impact of changing this.
     // Number of encrypting/decrypting workers
     static const size_t kNumWorkers = 2;
-
-#ifdef IOTXN_LEGACY_SUPPORT
-    // Indicates the number of "adapter" |iotxn_t|s and |block_op_t|s available in the pools below
-    // for translating between the legacy and current interface.
-    static const size_t kNumAdapters = 256;
-#endif // IOTXN_LEGACY_SUPPORT
 
     // Increments the amount of work this device has outstanding.  This should be called at the
     // start of any method that shouldn't be invoked after the device has been unbound.  It notably
@@ -139,33 +123,6 @@ private:
     // resources available.  This differs from |EnqueueBlock| as |block| will be the next item
     // returned by |DequeueBlock|.
     void RequeueBlock(block_op_t* block) __TA_EXCLUDES(mtx_);
-
-#ifdef IOTXN_LEGACY_SUPPORT
-    // Scans the block adapters for a |block_op_t| not currently associated with an |iotxn_t| and
-    // associates it with |txn|.  Returns ZX_ERR_BAD_STATE if the |DdkUnbind| has been called,
-    // ZX_ERR_SHOULD_WAIT if no block adapters are available, and ZX_OK otherwise.
-    zx_status_t AcquireBlockAdapter(iotxn_t* txn, block_op_t** out) __TA_EXCLUDES(mtx_);
-
-    // Callback to a client using the legacy |DdkIotxnQueue| interface.  Translates the completed
-    // |block_op_t| back into the original |iotxn_t| and completes it.
-    static void BlockAdapterComplete(block_op_t* block, zx_status_t rc) __TA_EXCLUDES(mtx_);
-
-    // Disassociates the |block| from its |iotxn_t|.
-    void ReleaseBlockAdapter(block_op_t* block) __TA_EXCLUDES(mtx_);
-
-    // Scans the block adapters for a |iotxn_t| not currently associated with an |block_op_t| and
-    // associates it with |block|.  Returns ZX_ERR_BAD_STATE if the |DdkUnbind| has been called,
-    // ZX_ERR_SHOULD_WAIT if no block adapters are available, and ZX_OK otherwise.
-    zx_status_t AcquireIotxnAdapter(block_op_t* block, iotxn_t** out) __TA_EXCLUDES(mtx_);
-
-    // Callback for a parent device using the legacy |iotxn_queue| interface.  Translates the
-    // completed |iotxn_t| back into a corresponding |block_op_t| and completes it.
-    static void IotxnAdapterComplete(iotxn_t* txn, void* cookie) __TA_EXCLUDES(mtx_);
-
-    // Disassociates the |txn| from its |block_op_t|.
-    void ReleaseIotxnAdapter(iotxn_t* txn) __TA_EXCLUDES(mtx_);
-
-#endif // IOTXN_LEGACY_SUPPORT
 
     // Unsynchronized fields
 
@@ -224,20 +181,6 @@ private:
     // Describes a queue of deferred block requests.
     extra_op_t* head_ __TA_GUARDED(mtx_);
     extra_op_t* tail_ __TA_GUARDED(mtx_);
-
-#ifdef IOTXN_LEGACY_SUPPORT
-    // A pool of |iotxn_t|s that can be borrowed to wrap |block_op_t|s when using the legacy
-    // interface to the parent.
-    fbl::unique_ptr<iotxn_t[]> iotxns_ __TA_GUARDED(mtx_);
-    // Offset of the expected next available |iotxn_t|.
-    size_t iotxns_head_ __TA_GUARDED(mtx_);
-    // A pool of |block_op_t|s that can be borrowed to wrap |iotxn_t|s when supporting the legacy
-    // interface to clients.  Note this is treated as a byte array to leave room for the overhead
-    // described by |info_->op_size|.
-    fbl::unique_ptr<uint8_t[]> blocks_ __TA_GUARDED(mtx_);
-    // Offset of the expected next available |block_op_t|.
-    size_t blocks_head_ __TA_GUARDED(mtx_);
-#endif // IOTXN_LEGACY_SUPPORT
 };
 
 } // namespace zxcrypt

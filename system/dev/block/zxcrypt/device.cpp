@@ -117,18 +117,11 @@ zx_status_t Device::Init() {
 
     // Get the parent device's block interface
     block_info_t blk;
-    if ((rc = device_get_protocol(parent(), ZX_PROTOCOL_BLOCK, &info->proto)) == ZX_OK) {
-        info->proto.ops->query(info->proto.ctx, &blk, &info->op_size);
-    } else {
-// TODO(aarongreen): Remove once all devices ported to block_op_t.
-#ifdef IOTXN_LEGACY_SUPPORT
-        memcpy(&blk, &info->blk, sizeof(blk));
-        info->op_size = sizeof(block_op_t);
-#else  // IOTXN_LEGACY_SUPPORT
+    if ((rc = device_get_protocol(parent(), ZX_PROTOCOL_BLOCK, &info->proto)) != ZX_OK) {
         xprintf("failed to get block protocol: %s\n", zx_status_get_string(rc));
         return rc;
-#endif // IOTXN_LEGACY_SUPPORT
     }
+    info->proto.ops->query(info->proto.ctx, &blk, &info->op_size);
 
     // Save device sizes
     if (info->blk.max_transfer_size == 0 || info->blk.max_transfer_size > kVmoSize / 4) {
@@ -165,28 +158,6 @@ zx_status_t Device::Init() {
             return rc;
         }
     }
-
-// TODO(aarongreen): Remove once all devices ported to block_op_t.
-#ifdef IOTXN_LEGACY_SUPPORT
-    // Initialize block_op_t adapters
-    blocks_head_ = 0;
-    size_t size = info->op_size * kNumAdapters;
-    blocks_.reset(new (&ac) uint8_t[size]);
-    if (!ac.check()) {
-        xprintf("allocation failed: %zu bytes\n", size);
-        return ZX_ERR_NO_MEMORY;
-    }
-    memset(blocks_.get(), 0, size);
-
-    // Initialize iotxn_t adapters
-    iotxns_head_ = 0;
-    iotxns_.reset(new (&ac) iotxn_t[kNumAdapters]);
-    if (!ac.check()) {
-        xprintf("allocation failed: %zu bytes\n", kNumAdapters * sizeof(iotxn_t));
-        return ZX_ERR_NO_MEMORY;
-    }
-    memset(iotxns_.get(), 0, kNumAdapters * sizeof(iotxn_t));
-#endif // IOTXN_LEGACY_SUPPORT
 
     // Make the pointer const
     info_ = info.release();
@@ -288,20 +259,6 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
 zx_off_t Device::DdkGetSize() {
     return info_->blk.block_count * info_->blk.block_size;
 }
-
-// TODO(aarongreen): Remove once all devices ported to block_op_t.
-#ifdef IOTXN_LEGACY_SUPPORT
-void Device::DdkIotxnQueue(iotxn_t* txn) {
-    zx_status_t rc;
-
-    block_op_t* block;
-    if ((rc = AcquireBlockAdapter(txn, &block)) != ZX_OK) {
-        iotxn_complete(txn, rc, 0);
-    }
-
-    BlockQueue(block);
-}
-#endif // IOTXN_LEGACY_SUPPORT
 
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
 // this on demand.
@@ -409,20 +366,7 @@ void Device::BlockQueue(block_op_t* block) {
 }
 
 void Device::BlockForward(block_op_t* block) {
-// TODO(aarongreen): Remove once all devices ported to block_op_t.
-#ifdef IOTXN_LEGACY_SUPPORT
-    zx_status_t rc;
-    iotxn_t* txn;
-    if (info_->proto.ctx) {
-        info_->proto.ops->queue(info_->proto.ctx, block);
-    } else if ((rc = AcquireIotxnAdapter(block, &txn)) != ZX_OK) {
-        BlockComplete(block, rc);
-    } else {
-        iotxn_queue(parent(), txn);
-    }
-#else  // IOTXN_LEGACY_SUPPORT
     info_->proto.ops->queue(info_->proto.ctx, block);
-#endif // IOTXN_LEGACY_SUPPORT
 }
 
 void Device::BlockComplete(block_op_t* block, zx_status_t rc) {
@@ -608,126 +552,6 @@ void Device::RequeueBlock(block_op_t* block) {
         tail_ = extra;
     }
 }
-
-// TODO(aarongreen): Remove once all devices ported to block_op_t.
-#ifdef IOTXN_LEGACY_SUPPORT
-zx_status_t Device::AcquireBlockAdapter(iotxn_t* txn, block_op_t** out) {
-    zx_status_t rc;
-    fbl::AutoLock lock(&mtx_);
-    if ((rc = AddTaskLocked()) != ZX_OK) {
-        return rc;
-    }
-
-    // Check validity
-    uint32_t bs = info_->blk.block_size;
-    if ((txn->offset % bs) != 0 || (txn->length % bs) != 0 || (txn->vmo_offset % bs) != 0) {
-        xprintf("txn is not block aligned: .offset=%" PRIu64 ", .length=%" PRIu64
-                ", .vmo_offset=%" PRIu64 "\n",
-                txn->offset, txn->length, txn->vmo_offset);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (txn->length / bs > UINT32_MAX) {
-        xprintf("cannot represent iotxn length in block_op_t: %" PRIu64 "\n", txn->length);
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    uint32_t command;
-    switch (txn->opcode) {
-    case IOTXN_OP_READ:
-        command = BLOCK_OP_READ;
-        break;
-    case IOTXN_OP_WRITE:
-        command = BLOCK_OP_WRITE;
-        break;
-    default:
-        xprintf("unsupported operation: %u\n", txn->opcode);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    block_op_t* block;
-    size_t i = blocks_head_;
-    size_t op_size = info_->op_size;
-    do {
-        block = reinterpret_cast<block_op_t*>(&blocks_[i * op_size]);
-        i = (i + 1) % kNumAdapters;
-        if (i == blocks_head_) {
-            xprintf("out of block_op_t adapters\n");
-            return ZX_ERR_NO_RESOURCES;
-        }
-    } while (block->cookie);
-
-    txn->context = this;
-    block->rw.command = command;
-    block->rw.vmo = txn->vmo_handle;
-    block->rw.length = static_cast<uint32_t>(txn->length / bs);
-    block->rw.offset_dev = txn->offset / bs;
-    block->rw.offset_vmo = txn->vmo_offset / bs;
-    block->completion_cb = BlockAdapterComplete;
-    block->cookie = txn;
-    blocks_head_ = i;
-
-    *out = block;
-    return ZX_OK;
-}
-
-void Device::BlockAdapterComplete(block_op_t* block, zx_status_t rc) {
-    iotxn_t* txn = static_cast<iotxn_t*>(block->cookie);
-    Device* device = static_cast<Device*>(txn->context);
-    iotxn_complete(txn, rc, rc == ZX_OK ? txn->length : 0);
-    device->ReleaseBlockAdapter(block);
-}
-
-void Device::ReleaseBlockAdapter(block_op_t* block) {
-    fbl::AutoLock lock(&mtx_);
-    iotxn_t* txn = static_cast<iotxn_t*>(block->cookie);
-    txn->context = nullptr;
-    block->cookie = nullptr;
-    FinishTaskLocked();
-}
-
-zx_status_t Device::AcquireIotxnAdapter(block_op_t* block, iotxn_t** out) {
-    zx_status_t rc;
-    fbl::AutoLock lock(&mtx_);
-    if ((rc = AddTaskLocked()) != ZX_OK) {
-        return rc;
-    }
-
-    iotxn_t* txn;
-    size_t i = iotxns_head_;
-    do {
-        txn = &iotxns_[i];
-        i = (i + 1) % kNumAdapters;
-        if (i == iotxns_head_) {
-            xprintf("out of iotxn_t adapters\n");
-            return ZX_ERR_NO_RESOURCES;
-        }
-    } while (txn->cookie);
-
-    uint32_t bs = info_->blk.block_size;
-    iotxn_init(txn, block->rw.vmo, block->rw.offset_vmo * bs, block->rw.length * bs);
-    txn->opcode = block->rw.command;
-    txn->offset = block->rw.offset_dev * bs;
-    txn->complete_cb = IotxnAdapterComplete;
-    txn->cookie = block;
-    iotxns_head_ = i;
-
-    *out = txn;
-    return ZX_OK;
-}
-
-void Device::IotxnAdapterComplete(iotxn_t* txn, void* cookie) {
-    block_op_t* block = static_cast<block_op_t*>(cookie);
-    Device* device = static_cast<Device*>(block->cookie);
-    BlockComplete(block, txn->status);
-    device->ReleaseIotxnAdapter(txn);
-}
-
-void Device::ReleaseIotxnAdapter(iotxn_t* txn) {
-    fbl::AutoLock lock(&mtx_);
-    txn->cookie = nullptr;
-    FinishTaskLocked();
-}
-#endif // IOTXN_LEGACY_SUPPORT
 
 } // namespace zxcrypt
 
