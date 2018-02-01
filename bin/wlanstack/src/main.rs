@@ -29,11 +29,9 @@ fn main() {
 }
 
 fn main_res() -> Result<(), Error> {
-    let mut logger = logger::Logger::new();
-    logger.set_prefix("wlanstack2: ");
     log::set_logger(|max_level| {
         max_level.set(MAX_LOG_LEVEL);
-        Box::new(logger)
+        Box::new(logger::Logger)
     })?;
     info!("Starting");
 
