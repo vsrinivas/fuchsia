@@ -60,7 +60,10 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
         goto fail;
     }
-
+    if ((status = vim_i2c_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_i2c_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = vim_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
         goto fail;

@@ -15,3 +15,28 @@
 #define DC_CAV_LUT_ADDR_RD_EN       (1 << 8)
 #define DC_CAV_LUT_ADDR_WR_EN       (2 << 8)
 
+// Alternate Functions for I2C
+#define S912_I2C_SDA_A      S912_GPIODV(24)
+#define S912_I2C_SDA_A_FN   2
+#define S912_I2C_SCK_A      S912_GPIODV(25)
+#define S912_I2C_SCK_A_FN   2
+
+#define S912_I2C_SDA_B      S912_GPIODV(26)
+#define S912_I2C_SDA_B_FN   2
+#define S912_I2C_SCK_B      S912_GPIODV(27)
+#define S912_I2C_SCK_B_FN   2
+
+#define S912_I2C_SDA_C      S912_GPIODV(28)
+#define S912_I2C_SDA_C_FN   2
+#define S912_I2C_SCK_C      S912_GPIODV(29)
+#define S912_I2C_SCK_C_FN   2
+
+#define S912_I2C_SDA_D      S912_GPIOX(10)
+#define S912_I2C_SDA_D_FN   3
+#define S912_I2C_SCK_D      S912_GPIOX(11)
+#define S912_I2C_SCK_D_FN   3
+
+#define S912_I2C_SDA_AO     S912_GPIOAO(4)
+#define S912_I2C_SDA_AO_FN  2
+#define S912_I2C_SCK_AO     S912_GPIOAO(5)
+#define S912_I2C_SCK_AO_FN  2

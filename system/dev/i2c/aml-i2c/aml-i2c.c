@@ -438,7 +438,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
     status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &device->regs_iobuff);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_dev_init: io_buffer_init_physical failed %d\n", status);
+        zxlogf(ERROR, "aml_i2c_dev_init: pdev_map_mmio_buffer failed %d\n", status);
         goto init_fail;
     }
 
@@ -611,8 +611,7 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-i2c",
         .ctx = i2c,
         .ops = &i2c_device_proto,
-        .proto_id = ZX_PROTOCOL_I2C,
-        .proto_ops = &i2c_ops,
+        .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     status = device_add(parent, &args, &i2c->zxdev);
