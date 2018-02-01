@@ -57,8 +57,6 @@ struct GichState {
     timer_t timer;
     // Tracks active interrupts.
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
-    // Virtual GICH address.
-    volatile Gich* gich;
 
     // GICH state to be restored between VM exits.
     uint32_t num_lrs;

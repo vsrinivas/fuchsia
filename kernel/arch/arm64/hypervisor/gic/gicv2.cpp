@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors
+// Copyright 2018 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -8,6 +8,32 @@
 #include <vm/pmm.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
+
+// Representation of GICH registers.
+typedef struct Gich {
+    uint32_t hcr;
+    uint32_t vtr;
+    uint32_t vmcr;
+    uint32_t reserved0;
+    uint32_t misr;
+    uint32_t reserved1[3];
+    uint64_t eisr;
+    uint32_t reserved2[2];
+    uint64_t elrs;
+    uint32_t reserved3[46];
+    uint32_t apr;
+    uint32_t reserved4[3];
+    uint32_t lr[64];
+} __attribute__((__packed__)) Gich;
+
+static_assert(__offsetof(Gich, hcr) == 0x00, "");
+static_assert(__offsetof(Gich, vtr) == 0x04, "");
+static_assert(__offsetof(Gich, vmcr) == 0x08, "");
+static_assert(__offsetof(Gich, misr) == 0x10, "");
+static_assert(__offsetof(Gich, eisr) == 0x20, "");
+static_assert(__offsetof(Gich, elrs) == 0x30, "");
+static_assert(__offsetof(Gich, apr) == 0xf0, "");
+static_assert(__offsetof(Gich, lr) == 0x100, "");
 
 static volatile Gich* gich = NULL;
 
@@ -84,7 +110,6 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
 };
 
 void gicv2_hw_interface_register(void) {
-
     // Populate GICH
     gich = reinterpret_cast<volatile Gich*>(GICH_ADDRESS + 0x1000);
     arm_gic_hw_interface_register(&gic_hw_register_ops);
