@@ -55,7 +55,7 @@
       "name": "Echo",
       "methods": [
         {
-          "name": "echo_things",
+          "name": "EchoThings",
           "ordinal": 5,
           "has_request": true,
           "maybe_request": [
@@ -67,6 +67,16 @@
             { "name": "retval1", "type": "rettype1" },
             { "name": "retval2", "type": "rettype2" }
           ]
+        },
+        {
+          "name": "DoThings",
+          "ordinal": 6,
+          "has_request": true,
+          "maybe_request": [
+            { "name": "val1", "type": "type1" },
+            { "name": "val2", "type": "type2" }
+          ],
+          "has_response": false
         }
       ]
     }

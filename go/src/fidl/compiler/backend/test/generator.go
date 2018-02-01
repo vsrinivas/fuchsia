@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package test
 
 import (
 	"os"
 	"path/filepath"
 	"text/template"
+	"fidl/compiler/backend/types"
 )
 
-type TestFidlGenerator struct{}
+type FidlGenerator struct{}
 
 const ownerReadWriteNoExecute = 0644
 
@@ -36,6 +37,7 @@ const sourceFileTemplate = `
 	{{ end }}
 {{- end -}}
 `
+
 const literalTemplate = `
 {{- define "Literal" -}}
 	{{- if .IsString -}}
@@ -116,8 +118,8 @@ const moduleDepTemplate = `
 {{end}}
 `
 
-func (_ TestFidlGenerator) GenerateFidl(
-	fidlData Root, _args []string,
+func (_ FidlGenerator) GenerateFidl(
+	fidlData types.Root, _args []string,
 	outputDir string, srcRootPath string) error {
 	parentDir := filepath.Join(outputDir, srcRootPath)
 	err := os.MkdirAll(parentDir, ownerReadWriteNoExecute)

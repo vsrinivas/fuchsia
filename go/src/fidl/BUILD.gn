@@ -5,21 +5,22 @@
 import("//build/go/go_binary.gni")
 import("//build/host.gni")
 
-go_binary("fidl2_generators") {
-  gopackage = "fidl2_generators"
+go_binary("fidl_backend_bin") {
+  gopackage = "fidl/compiler/backend"
+  output_name = "fidl_backend"
 
   go_dependencies = [
     {
-      package = "fidl2_generators"
+      package = "fidl"
     },
   ]
 }
 
-install_host_tools("host") {
+install_host_tools("fidl_backend") {
   deps = [
-    ":fidl2_generators",
+    ":fidl_backend_bin",
   ]
   outputs = [
-    "fidl2_generators",
+    "fidl_backend",
   ]
 }

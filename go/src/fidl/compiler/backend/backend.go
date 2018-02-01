@@ -11,17 +11,21 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"fidl/compiler/backend/cpp"
+	"fidl/compiler/backend/test"
+	"fidl/compiler/backend/types"
 )
 
 type FileWriter interface {
 }
 
 type GenerateFidl interface {
-	GenerateFidl(fidlData Root, args []string, outputDir string, srcRootPath string) error
+	GenerateFidl(fidlData types.Root, args []string, outputDir string, srcRootPath string) error
 }
 
 var generators = map[string]GenerateFidl{
-	"test": TestFidlGenerator{},
+	"cpp": cpp.FidlGenerator{},
+	"test": test.FidlGenerator{},
 }
 
 func main() {
@@ -41,6 +45,11 @@ func main() {
 		"Argument to be passed to the generators. (e.g. --gen-arg fo=bar --gen-arg blah)")
 	flag.Parse()
 
+	if !flag.Parsed() {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
 	// The fidlJsonPath is not an optional argument, so we error if it was omitted.
 	if *fidlJsonPath == "" {
 		flag.PrintDefaults()
@@ -53,7 +62,7 @@ func main() {
 		log.Fatalf("Error reading from %s: %v", *fidlJsonPath, err)
 	}
 
-	var fidlData Root
+	var fidlData types.Root
 	err = json.Unmarshal(bytes, &fidlData)
 	if err != nil {
 		log.Fatalf("Error parsing JSON as FIDL data: %v", err)
