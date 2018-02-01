@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
+#include <sync/completion.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
@@ -33,6 +34,12 @@ typedef struct blkdev {
 
     BlockServer* bs;
     bool dead; // Release has been called; we should free memory and leave.
+
+    mtx_t iolock;
+    zx_handle_t iovmo;
+    zx_status_t iostatus;
+    completion_t iosignal;
+    block_op_t* iobop;
 } blkdev_t;
 
 static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
@@ -56,6 +63,8 @@ static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
     blockserver_free(bs);
 
     if (cleanup) {
+        zx_handle_close(bdev->iovmo);
+        free(bdev->iobop);
         free(bdev);
     }
     return 0;
@@ -210,56 +219,94 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
 }
 
 static void block_completion_cb(block_op_t* bop, zx_status_t status) {
-    iotxn_t* txn = bop->cookie;
-    iotxn_complete(txn, status, (status == ZX_OK) ? txn->length : 0);
-    free(bop);
+    blkdev_t* bdev = bop->cookie;
+    bdev->iostatus = status;
+    completion_signal(&bdev->iosignal);
 }
 
-static void blkdev_iotxn_queue(void* ctx, iotxn_t* txn) {
-    blkdev_t* blkdev = ctx;
-    if (blkdev->bp.ops == NULL) {
-        iotxn_queue(blkdev->parent, txn);
-    } else {
-        if (txn->length == 0) {
-            iotxn_complete(txn, ZX_OK, 0);
-            return;
-        }
+// Adapter from read/write to block_op_t
+// This is technically incorrect because the read/write hooks should not block,
+// but the old adapter in devhost was *also* blocking, so we're no worse off
+// than before, but now localized to the block middle layer.
+// TODO(swetland) plumbing in devhosts to do deferred replies
 
-        size_t bsz = blkdev->info.block_size;
-        size_t bmask = bsz - 1;
-        size_t blocks = txn->length / bsz;
+// This matches RIO's max payload
+#define MAX_XFER 8192
 
-        if ((txn->offset & bmask) ||
-            (txn->length & bmask) ||
-            (txn->vmo_offset & bmask) ||
-            (blocks < 1) ||
-            (txn->vmo_handle == ZX_HANDLE_INVALID)) {
-            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-            return;
-        }
+static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
+                             zx_off_t off, bool write) {
+    size_t bsz = bdev->info.block_size;
 
-        block_op_t* bop = malloc(blkdev->block_op_size);
-        if (bop == NULL) {
-            iotxn_complete(txn, ZX_ERR_NO_MEMORY, 0);
-            return;
-        }
-
-        bop->command = (txn->opcode == IOTXN_OP_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
-        bop->rw.length = blocks;
-        bop->rw.vmo = txn->vmo_handle;
-        bop->rw.offset_dev = txn->offset / bsz;
-        bop->rw.offset_vmo = txn->vmo_offset / bsz;
-        bop->rw.pages = NULL;
-        bop->completion_cb = block_completion_cb;
-        bop->cookie = txn;
-
-        blkdev->bp.ops->queue(blkdev->bp.ctx, bop);
+    if (count == 0) {
+        return ZX_OK;
     }
+    if ((count % bsz) || (off % bsz) || (count > MAX_XFER)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (bdev->iovmo == ZX_HANDLE_INVALID) {
+        if (zx_vmo_create(MAX_XFER, 0, &bdev->iovmo) != ZX_OK) {
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    size_t actual;
+    if (write) {
+        if ((zx_vmo_write(bdev->iovmo, buf, 0, count, &actual) != ZX_OK) ||
+            (count != actual)) {
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    block_op_t* bop = bdev->iobop;
+    bop->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
+    bop->rw.length = count / bsz;
+    bop->rw.vmo = bdev->iovmo;
+    bop->rw.offset_dev = off / bsz;
+    bop->rw.offset_vmo = 0;
+    bop->rw.pages = NULL;
+    bop->completion_cb = block_completion_cb;
+    bop->cookie = bdev;
+
+    completion_reset(&bdev->iosignal);
+    bdev->bp.ops->queue(bdev->bp.ctx, bop);
+    completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
+
+    if (!write && (bdev->iostatus == ZX_OK)) {
+        if ((zx_vmo_read(bdev->iovmo, buf, 0, count, &actual) != ZX_OK) ||
+            (count != actual)) {
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    return bdev->iostatus;
+}
+
+static zx_status_t blkdev_read(void* ctx, void* buf, size_t count,
+                               zx_off_t off, size_t* actual) {
+    blkdev_t* bdev = ctx;
+    mtx_lock(&bdev->iolock);
+    zx_status_t status = blkdev_io(bdev, buf, count, off, false);
+    mtx_unlock(&bdev->iolock);
+    *actual = (status == ZX_OK) ? count : 0;
+    return status;
+}
+
+static zx_status_t blkdev_write(void* ctx, const void* buf, size_t count,
+                                zx_off_t off, size_t* actual) {
+    blkdev_t* bdev = ctx;
+    mtx_lock(&bdev->iolock);
+    zx_status_t status = blkdev_io(bdev, (void*) buf, count, off, true);
+    mtx_unlock(&bdev->iolock);
+    *actual = (status == ZX_OK) ? count : 0;
+    return status;
 }
 
 static zx_off_t blkdev_get_size(void* ctx) {
-    blkdev_t* blkdev = ctx;
-    return device_get_size(blkdev->parent);
+    blkdev_t* bdev = ctx;
+    //TODO: use query() results, *but* fvm returns different query and getsize
+    // results, and the latter are dynamic...
+    return device_get_size(bdev->parent);
+    //return bdev->info.block_count * bdev->info.block_size;
 }
 
 static void blkdev_unbind(void* ctx) {
@@ -280,6 +327,8 @@ static void blkdev_release(void* ctx) {
         // Otherwise, it'll free blkdev's memory when it's done,
         // since (1) no one else can call get_fifos anymore, and
         // (2) it'll clean up when it sees that blkdev is dead.
+        zx_handle_close(blkdev->iovmo);
+        free(blkdev->iobop);
         free(blkdev);
     }
 }
@@ -303,7 +352,8 @@ static block_protocol_ops_t block_ops = {
 static zx_protocol_device_t blkdev_ops = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = blkdev_ioctl,
-    .iotxn_queue = blkdev_iotxn_queue,
+    .read = blkdev_read,
+    .write = blkdev_write,
     .get_size = blkdev_get_size,
     .unbind = blkdev_unbind,
     .release = blkdev_release,
@@ -314,28 +364,29 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
-    bdev->threadcount = 0;
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
     if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_CORE, &bdev->bp) != ZX_OK) {
-        printf("WARNING: block device '%s': does not support new protocol\n",
+        printf("ERROR: block device '%s': does not support block protocol\n",
                device_get_name(dev));
-        size_t actual;
-        if (device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &bdev->info,
-                         sizeof(block_info_t), &actual) != ZX_OK) {
-            printf("block: failed to get block info.\n");
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    } else {
-        bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
+        free(bdev);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
+
+    zx_status_t status;
+    if ((bdev->iobop = malloc(bdev->block_op_size)) == NULL) {
+        status = ZX_ERR_NO_MEMORY;
+        goto fail;
     }
 
     size_t bsz = bdev->info.block_size;
     if ((bsz < 512) || (bsz & (bsz - 1))){
         printf("block: device '%s': invalid block size: %zu\n",
                device_get_name(dev), bsz);
-        return ZX_ERR_NOT_SUPPORTED;
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
     }
 
     device_add_args_t args = {
@@ -344,10 +395,10 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
         .ctx = bdev,
         .ops = &blkdev_ops,
         .proto_id = ZX_PROTOCOL_BLOCK,
-        .proto_ops = (bdev->bp.ops == NULL) ? NULL : &block_ops,
+        .proto_ops = &block_ops,
     };
 
-    zx_status_t status = device_add(dev, &args, &bdev->zxdev);
+    status = device_add(dev, &args, &bdev->zxdev);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -355,6 +406,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 
 fail:
+    free(bdev->iobop);
     free(bdev);
     return status;
 }
