@@ -1756,10 +1756,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
 
   RunLoopUntilIdle();
   EXPECT_FALSE(commits_from_sync_called);
-  // TODO(etiennej): |commits_from_local_called| should be true once LE-391 is
-  // fixed.
-  EXPECT_FALSE(commits_from_local_called)
-      << "See LE-391. |commits_from_local_called| should be true.";
+  // The local commit should be commited.
+  EXPECT_TRUE(commits_from_local_called);
   ASSERT_TRUE(sync_delegate_call);
   sync_delegate_call();
 

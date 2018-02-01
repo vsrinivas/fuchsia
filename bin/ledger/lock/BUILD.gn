@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("lock") {
+  sources = [
+    "lock.cc",
+    "lock.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/coroutine",
+    "//peridot/lib/callback",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "lock_unittest.cc",
+  ]
+
+  deps = [
+    ":lock",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

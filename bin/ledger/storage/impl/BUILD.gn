@@ -104,6 +104,7 @@ source_set("lib") {
     "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/encryption/public",
+    "//peridot/bin/ledger/lock",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/base64url",

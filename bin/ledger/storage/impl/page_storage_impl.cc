@@ -29,6 +29,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/bin/ledger/lock/lock.h"
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
@@ -181,19 +182,14 @@ void PageStorageImpl::AddCommitFromLocal(
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
-  commit_serializer_.Serialize<Status>(
-      std::move(callback),
-      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes)](
-                            std::function<void(Status)> callback) mutable {
-        coroutine_service_->StartCoroutine(
-            fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
-                               final_callback = std::move(callback)](
-                                  CoroutineHandler* handler) mutable {
-              auto callback = UpdateActiveHandlersCallback(
-                  handler, std::move(final_callback));
-              callback(SynchronousAddCommitsFromSync(handler,
-                                                     std::move(ids_and_bytes)));
-            }));
+  coroutine_service_->StartCoroutine(
+      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
+                         final_callback = std::move(callback)](
+                            CoroutineHandler* handler) mutable {
+        auto callback =
+            UpdateActiveHandlersCallback(handler, std::move(final_callback));
+        callback(
+            SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes)));
       }));
 }
 
@@ -1112,6 +1108,17 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
   commits.reserve(ids_and_bytes.size());
 
+  // The locked section below contains asynchronous operations reading the
+  // database, and branches depending on those reads. This section is thus a
+  // critical section and we need to ensure it is not executed concurrently by
+  // several coroutines. The locked sections (and only those) are thus executed
+  // serially.
+  std::unique_ptr<lock::Lock> lock;
+  if (lock::AcquireLock(handler, &commit_serializer_, &lock) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+
   for (auto& id_and_bytes : ids_and_bytes) {
     CommitId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
@@ -1151,6 +1158,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     return Status::OK;
   }
 
+  lock.reset();
+
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
@@ -1172,6 +1181,10 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     return waiter_status;
   }
 
+  if (lock::AcquireLock(handler, &commit_serializer_, &lock) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
                                std::vector<ObjectIdentifier>());
 }

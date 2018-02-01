@@ -274,6 +274,7 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/encryption/impl:unittests",
     "//peridot/bin/ledger/encryption/primitives:unittests",
     "//peridot/bin/ledger/environment:unittests",
+    "//peridot/bin/ledger/lock:unittests",
     "//peridot/bin/ledger/storage/impl:unittests",
     "//peridot/bin/ledger/storage/impl/btree:unittests",
     "//peridot/bin/ledger/storage/public:unittests",
