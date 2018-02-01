@@ -300,11 +300,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
       proposal->display->headline =
           std::string("Go go gadget ") + last_part.ToString();
       proposal->display->subheadline = entry.binary;
-      proposal->display->details = "";
       proposal->display->color = 0xffffffff;
-      proposal->display->image_url = "";
-      proposal->display->image_type = SuggestionImageType::OTHER;
-      proposal->display->icon_urls = fidl::Array<fidl::String>::New(0);
       proposal->display->annoyance = AnnoyanceType::NONE;
 
       proposal->confidence = 1.0;  // Yeah, super confident.

@@ -41,6 +41,8 @@ void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
 
 void UserActionLogImpl::MaybeProposeSharingVideo(
     const ActionData& action_data) {
+/* TODO: Either remove this code altogether or refactor it to use a vmo for the
+        suggestion image.
   if (action_data.story_id.empty() || action_data.module_path.empty()) {
     return;
   }
@@ -123,18 +125,21 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   action->set_add_module_to_story(std::move(add_module));
   proposal->on_selected.push_back(std::move(action));
 
+  action->set_add_module_to_story(std::move(add_module));
+  proposal->on_selected.push_back(std::move(action));
+
+  SuggestionDisplayImagePtr displayImage(SuggestionDisplayImage::New());
+  displayImage->url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
+  displayImage->image_type = SuggestionImageType::OTHER;
+  
   SuggestionDisplayPtr display(SuggestionDisplay::New());
   if (has_title) {
     display->headline = "Share \"" + video_title + "\" Video via email";
   } else {
     display->headline = "Share Video via email";
   }
-  display->subheadline = "";
-  display->details = "";
   display->color = 0xff42ebf4;
-  display->icon_urls.push_back("");
-  display->image_url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
-  display->image_type = SuggestionImageType::OTHER;
+  display->image = std::move(displayImage);
   // If there is an email recipient already available, set an interrupt
   // suggestion.
   if (!last_email_rcpt_.empty()) {
@@ -151,6 +156,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   // We clear any existing proposal for this story.
   proposal_publisher_->Remove(proposal_id);
   proposal_publisher_->Propose(std::move(proposal));
+*/
 }
 
 void UserActionLogImpl::MaybeRecordEmailRecipient(

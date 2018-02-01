@@ -31,6 +31,10 @@ fidl("suggestion_provider") {
     "suggestion_provider.fidl",
     "user_input.fidl",
   ]
+
+  deps = [
+    "//garnet/public/lib/images/fidl",
+  ]
 }
 
 fidl("debug") {

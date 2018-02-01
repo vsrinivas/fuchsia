@@ -62,13 +62,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
         auto d = SuggestionDisplay::New();
 
         d->headline = idea;
-        d->subheadline = "";
-        d->details = "";
         d->color = 0x00aaaa00;  // argb yellow
-        d->icon_urls = fidl::Array<fidl::String>::New(1);
-        d->icon_urls[0] = "";
-        d->image_url = "";
-        d->image_type = SuggestionImageType::PERSON;
 
         p->display = std::move(d);
 

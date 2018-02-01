@@ -55,9 +55,6 @@ class SuggestionApp {
           suggestion_display->subheadline = "bar";
           suggestion_display->details = "baz";
           suggestion_display->color = 0xffff0000;
-          suggestion_display->icon_urls.resize(0);
-          suggestion_display->image_url = "";
-          suggestion_display->image_type = maxwell::SuggestionImageType::OTHER;
 
           auto proposal = maxwell::Proposal::New();
           proposal->id = kProposalId;

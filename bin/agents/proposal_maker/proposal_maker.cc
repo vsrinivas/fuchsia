@@ -33,12 +33,7 @@ ProposalPtr MkUrlProposal(const std::string& query) {
 
   auto d = SuggestionDisplay::New();
   d->headline = "Compose email to: " + query;
-  d->subheadline = "";
-  d->details = "";
   d->color = 0xff4285f4;
-  d->icon_urls.push_back("");
-  d->image_url = "";
-  d->image_type = SuggestionImageType::OTHER;
 
   p->display = std::move(d);
   return p;

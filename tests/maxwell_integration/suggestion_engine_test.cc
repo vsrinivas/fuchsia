@@ -51,13 +51,7 @@ ProposalPtr CreateProposal(const std::string& id,
   auto d = SuggestionDisplay::New();
 
   d->headline = headline;
-  d->subheadline = "";
-  d->details = "";
   d->color = 0x00aa00aa;  // argb purple
-  d->icon_urls = fidl::Array<fidl::String>::New(1);
-  d->icon_urls[0] = "";
-  d->image_url = "";
-  d->image_type = SuggestionImageType::PERSON;
   d->annoyance = annoyance;
 
   p->display = std::move(d);
