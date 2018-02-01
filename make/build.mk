@@ -100,8 +100,23 @@ $(BUILDDIR)/%.id: $(BUILDDIR)/%
 	$(call BUILDECHO,generating id file $@)
 	$(NOECHO)env READELF="$(READELF)" scripts/get-build-id $< > $@
 
+# EXTRA_USER_MANIFEST_LINES is a space-separated list of
+# </boot-relative-path>=<local-host-path> entries to add to USER_MANIFEST.
+# This lets users add files to the bootfs via make without needing to edit the
+# manifest or call mkbootfs directly.
+ifneq ($(EXTRA_USER_MANIFEST_LINES),)
+USER_MANIFEST_LINES += $(EXTRA_USER_MANIFEST_LINES)
+$(info EXTRA_USER_MANIFEST_LINES = $(EXTRA_USER_MANIFEST_LINES))
+endif
+
+# TODO(INTK-33): Remove USER_AUTORUN once the infra recipes have moved
+# to zircon.autorun.boot.
 ifneq ($(USER_AUTORUN),)
 USER_MANIFEST_LINES += autorun=$(USER_AUTORUN)
+$(warning USER_AUTORUN=$(USER_AUTORUN) is deprecated)
+$(warning - Use EXTRA_USER_MANIFEST_LINES="autorun=$(USER_AUTORUN)")
+$(warning - Ensure that $(USER_AUTORUN) starts with "#!/boot/bin/sh")
+$(warning - Add "zircon.autorun.boot=/boot/autorun" to the kernel cmdline)
 endif
 
 # generate a new manifest and compare to see if it differs from the previous one
