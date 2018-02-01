@@ -11,14 +11,9 @@
 #include <zx/socket.h>
 #include <zx/thread.h>
 
-#include "fx_logger.h"
+#include "syslog/logger.h"
 
-namespace syslog {
 namespace {
-
-// This thread's koid.
-// Initialized on first use.
-thread_local zx_koid_t tls_thread_koid{ZX_KOID_INVALID};
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
@@ -33,15 +28,7 @@ zx_koid_t GetCurrentProcessKoid() {
   return koid;
 }
 
-zx_koid_t GetCurrentThreadKoid() {
-  if (unlikely(tls_thread_koid == ZX_KOID_INVALID)) {
-    tls_thread_koid = GetKoid(zx::thread::self().get());
-  }
-  ZX_DEBUG_ASSERT(tls_thread_koid != ZX_KOID_INVALID);
-  return tls_thread_koid;
-}
 }  // namespace
-}  // namespace syslog
 
 struct fx_logger {
  public:
@@ -49,7 +36,7 @@ struct fx_logger {
   // will not store all the tags and global tag behaviour would be undefined.
   // So they should be validated before calling this constructor.
   fx_logger(const fx_logger_config_t* config) {
-    pid_ = syslog::GetCurrentProcessKoid();
+    pid_ = GetCurrentProcessKoid();
     // TODO: set socket if available
     console_fd_.reset(config->console_fd);
     SetSeverity(config->min_severity);

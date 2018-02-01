@@ -9,6 +9,22 @@
 
 #include "fx_logger.h"
 
+namespace {
+
+// This thread's koid.
+// Initialized on first use.
+thread_local zx_koid_t tls_thread_koid{ZX_KOID_INVALID};
+
+zx_koid_t GetCurrentThreadKoid() {
+  if (unlikely(tls_thread_koid == ZX_KOID_INVALID)) {
+    tls_thread_koid = GetKoid(zx::thread::self().get());
+  }
+  ZX_DEBUG_ASSERT(tls_thread_koid != ZX_KOID_INVALID);
+  return tls_thread_koid;
+}
+
+}  // namespace
+
 zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
                                  const char* msg, va_list args) {
   if (msg == NULL) {
@@ -31,7 +47,7 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
   fbl::StringBuffer<kMaxMessageSize + kEllipsisSize + 1 /*\n*/> buf;
   buf.AppendPrintf("[%ld]", time);
   buf.AppendPrintf("[%ld]", pid_);
-  buf.AppendPrintf("[%ld]", syslog::GetCurrentThreadKoid());
+  buf.AppendPrintf("[%ld]", GetCurrentThreadKoid());
 
   buf.Append("[");
   if (!tagstr_.empty()) {
