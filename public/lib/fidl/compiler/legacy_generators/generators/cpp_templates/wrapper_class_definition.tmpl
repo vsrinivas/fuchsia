@@ -29,6 +29,8 @@
 {%-   for field in struct.fields %}
 {%-     if field.kind|is_object_kind and not field.kind|is_string_kind %}
   rv->{{field.name}} = {{field.name}}.Clone();
+{%-     elif field.kind|is_any_handle_kind and field.kind|is_cloneable_kind %}
+  {{field.name}}.duplicate(ZX_RIGHT_SAME_RIGHTS, &rv->{{field.name}});
 {%-     else %}
   rv->{{field.name}} = {{field.name}};
 {%-     endif %}

@@ -608,34 +608,40 @@ def IsAnyHandleKind(kind):
           IsEventPairKind(kind) or
           IsInterfaceRequestKind(kind))
 
+# Please note that interface is not considered as handle kind, since it is an
+# aggregate type consisting of a handle and a version number.
+# TODO: Socket is also cloneable but currently causes a compilation issue.
+def IsAnyUncloneableHandleKind(kind):
+  return (IsChannelKind(kind) or
+          IsSocketKind(kind) or
+          IsInterfaceRequestKind(kind))
 
 def IsMoveOnlyKind(kind):
   return (not IsStringKind(kind) and IsObjectKind(kind)) or \
       IsAnyHandleKind(kind) or IsInterfaceKind(kind)
 
-
-def ContainsHandles(kind, visited_kinds):
+def ContainsUncloneableHandles(kind, visited_kinds):
   if kind in visited_kinds:
     # No need to examine the kind again.
     return False
   visited_kinds.add(kind)
-  if IsAnyHandleKind(kind) or IsInterfaceKind(kind):
+  if IsAnyUncloneableHandleKind(kind) or IsInterfaceKind(kind):
     return True
   if IsArrayKind(kind):
-    return ContainsHandles(kind.kind, visited_kinds)
+    return ContainsUncloneableHandles(kind.kind, visited_kinds)
   if IsStructKind(kind) or IsUnionKind(kind):
     for field in kind.fields:
-      if ContainsHandles(field.kind, visited_kinds):
+      if ContainsUncloneableHandles(field.kind, visited_kinds):
         return True
   if IsMapKind(kind):
     # No need to examine the key kind, only primitive kinds and non-nullable
     # string are allowed to be key kinds.
-    return ContainsHandles(kind.value_kind, visited_kinds)
+    return ContainsUncloneableHandles(kind.value_kind, visited_kinds)
   return False
 
 
 def IsCloneableKind(kind):
-  return not ContainsHandles(kind, set())
+  return not ContainsUncloneableHandles(kind, set())
 
 
 def HasCallbacks(interface):

@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_INTERNAL_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_INTERNAL_H_
 
+#include <zx/object.h>
+
 #include <map>
 
 #include "lib/fidl/cpp/bindings/array.h"
@@ -51,6 +53,28 @@ struct MapTraits<Key, Value, true> {
       dst->insert(std::make_pair(it->first, it->second.Clone()));
   }
 };
+
+// Defines traits of a map for which Value is a move-only type and a zx::object.
+template <typename Key, typename Value>
+struct MapTraits<Key, zx::object<Value>, true> {
+  typedef zx::object<Value> ValueForwardType;
+
+  static inline void Insert(std::map<Key, zx::object<Value>>* m,
+                            const Key& key,
+                            zx::object<Value>& value) {
+    m->insert(std::make_pair(key, std::move(value)));
+  }
+  static inline void Clone(const std::map<Key, zx::object<Value>>& src,
+                           std::map<Key, zx::object<Value>>* dst) {
+    dst->clear();
+    for (auto it = src.begin(); it != src.end(); ++it) {
+      zx::object<Value> duplicate;
+      it->second.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
+      dst->insert(std::make_pair(it->first, std::move(duplicate)));
+    }
+  }
+};
+
 
 }  // namespace internal
 }  // namespace fidl

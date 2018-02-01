@@ -6,6 +6,13 @@
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_INTERNAL_H_
 
 #include <zircon/assert.h>
+#include <zx/event.h>
+#include <zx/eventpair.h>
+#include <zx/job.h>
+#include <zx/port.h>
+#include <zx/process.h>
+#include <zx/thread.h>
+#include <zx/vmo.h>
 
 #include <new>
 #include <string>
@@ -536,6 +543,47 @@ struct ArrayTraits<T, true> {
       dest_vec->at(i) = src_vec.at(i).Clone();
   }
 };
+
+
+// TODO: Combine this template and those that use it into one template once
+//       someone figures out how to do so.
+template <typename T>
+struct ArrayHandleTraits {
+  typedef T ForwardType;
+  static inline void PushBack(std::vector<T>* vec, T& value) {
+    vec->push_back(std::move(value));
+  }
+  static inline void Clone(const std::vector<T>& src_vec,
+                           std::vector<T>* dest_vec) {
+    dest_vec->resize(src_vec.size());
+    for (size_t i = 0; i < src_vec.size(); ++i)
+      src_vec.at(i).duplicate(ZX_RIGHT_SAME_RIGHTS, &dest_vec->at(i));
+  }
+};
+
+template<>
+struct ArrayTraits<zx::handle, true> : public ArrayHandleTraits<zx::handle> {};
+
+template<>
+struct ArrayTraits<zx::event, true> : public ArrayHandleTraits<zx::event> {};
+
+template<>
+struct ArrayTraits<zx::eventpair, true> : public ArrayHandleTraits<zx::eventpair> {};
+
+template<>
+struct ArrayTraits<zx::job, true> : public ArrayHandleTraits<zx::job> {};
+
+template<>
+struct ArrayTraits<zx::port, true> : public ArrayHandleTraits<zx::port> {};
+
+template<>
+struct ArrayTraits<zx::process, true> : public ArrayHandleTraits<zx::process> {};
+
+template<>
+struct ArrayTraits<zx::thread, true> : public ArrayHandleTraits<zx::thread> {};
+
+template<>
+struct ArrayTraits<zx::vmo, true> : public ArrayHandleTraits<zx::vmo> {};
 
 template <>
 struct WrapperTraits<String, false> {
