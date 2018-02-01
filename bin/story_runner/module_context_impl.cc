@@ -41,15 +41,19 @@ ResolverQueryPtr DaisyToResolverQuery(const DaisyPtr& daisy) {
     const auto& name = entry.GetKey();
     const auto& noun = entry.GetValue();
 
+    auto noun_constraint = ResolverNounConstraint::New();
     if (noun->is_json()) {
-      query->noun_constraints[name]->set_json(noun->get_json());
+      noun_constraint->set_json(noun->get_json());
+      query->noun_constraints[name] = std::move(noun_constraint);
     } else if (noun->is_link_name()) {
       // TODO(thatguy): Resolve the noun->link_name() to the absolute LinkPath,
       // grab a content snapshot and populate the NounConstraint.
     } else if (noun->is_entity_type()) {
-      query->noun_constraints[name]->set_entity_type(noun->get_entity_type().Clone());
+      noun_constraint->set_entity_type(noun->get_entity_type().Clone());
+      query->noun_constraints[name] = std::move(noun_constraint);
     } else if (noun->is_entity_reference()) {
-      query->noun_constraints[name]->set_entity_reference(noun->get_entity_reference());
+      noun_constraint->set_entity_reference(noun->get_entity_reference());
+      query->noun_constraints[name] = std::move(noun_constraint);
     }
   }
 
@@ -128,8 +132,8 @@ void ModuleContextImpl::StartDaisy(
       fxl::MakeCopyable([this, name, link_name,
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
-                         view_owner = std::move(view_owner), callback](
-                            FindModulesResultPtr result) mutable {
+                         view_owner = std::move(view_owner),
+                         callback](FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
         // module in story shell.
         // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing the
@@ -182,8 +186,7 @@ void ModuleContextImpl::StartDaisyInShell(
                          incoming_services = std::move(incoming_services),
                          module_controller = std::move(module_controller),
                          surface_relation = std::move(surface_relation),
-                         callback](
-                            FindModulesResultPtr result) mutable {
+                         callback](FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
         // module in story shell.
         // TODO(alhaad/thatguy): Revisit the assumption.
