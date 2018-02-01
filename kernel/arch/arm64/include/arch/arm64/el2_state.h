@@ -105,7 +105,6 @@ struct FpState {
 };
 
 struct SystemState {
-    // TODO(abdulla): Re-evaluate what registers are required.
     uint64_t sp_el0;
     uint64_t tpidr_el0;
     uint64_t tpidrro_el0;

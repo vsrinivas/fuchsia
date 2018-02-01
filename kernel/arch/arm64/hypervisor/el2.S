@@ -143,6 +143,13 @@
     \inst x8, \reg, [x9, GS_X(8)]
 .endm
 
+.macro guest_enter_state
+    ldr x10, [x9, GS_CNTV_CVAL_EL0]
+    msr cntv_cval_el0, x10
+    ldr x10, [x9, GS_CNTV_CTL_EL0]
+    msr cntv_ctl_el0, x10
+.endm
+
 .macro guest_exit_state
     mrs x10, cntv_ctl_el0
     str x10, [x9, GS_CNTV_CTL_EL0]
@@ -467,6 +474,7 @@ FUNCTION_LABEL(el2_hvc_resume)
 
     host_state stp, HS_X18
     system_state str, HS_SYSTEM_STATE
+    guest_enter_state
     system_state ldr, GS_SYSTEM_STATE
     guest_state ldp
     guest_x9_state ldp, x9
