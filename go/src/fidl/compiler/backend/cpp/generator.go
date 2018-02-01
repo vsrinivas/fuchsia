@@ -17,43 +17,6 @@ type FidlGenerator struct{}
 
 const ownerReadWriteNoExecute = 0644
 
-const headerFileTemplate = `
-{{- define "GenerateHeaderFile" -}}
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-#include <functional>
-
-#include "lib/fidl/cpp/bindings2/interface_ptr.h"
-#include "lib/fidl/cpp/bindings2/internal/proxy_controller.h"
-#include "lib/fidl/cpp/bindings2/internal/stub_controller.h"
-#include "lib/fidl/cpp/bindings2/string.h"
-    {{ range $interface := .Interfaces }}
-{{ template "InterfaceDeclaration" $interface }}
-	{{- end }}
-{{- end -}}
-`
-
-const implementationFileTemplate = `
-{{- define "GenerateImplementationFile" -}}
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-#include <stdint.h>
-#include <zircon/assert.h>
-
-#include <memory>
-
-#include "lib/fidl/cpp/bindings2/test/fidl_types.h"
-
-{{ range $interface := .Interfaces }}
-{{ template "InterfaceDefinition" $interface }}
-	{{ end }}
-{{- end -}}
-`
-
 func writeFile(outputFilename string,
 	templateName string,
 	tmpls *template.Template,
@@ -79,9 +42,12 @@ func (_ FidlGenerator) GenerateFidl(
 	}
 
 	tmpls := template.New("CPPTemplates")
-	template.Must(tmpls.Parse(headerFileTemplate))
-	template.Must(tmpls.Parse(implementationFileTemplate))
+	template.Must(tmpls.Parse(templates.Enum))
+	template.Must(tmpls.Parse(templates.Header))
+	template.Must(tmpls.Parse(templates.Implementation))
 	template.Must(tmpls.Parse(templates.Interface))
+	template.Must(tmpls.Parse(templates.Struct))
+	template.Must(tmpls.Parse(templates.Union))
 
 	outputFilename := filepath.Join(parentDir, "generated.h")
 	err = writeFile(outputFilename, "GenerateHeaderFile", tmpls, tree)
@@ -90,5 +56,10 @@ func (_ FidlGenerator) GenerateFidl(
 	}
 
 	outputFilename = filepath.Join(parentDir, "generated.cc")
-	return writeFile(outputFilename, "GenerateImplementationFile", tmpls, tree)
+	err = writeFile(outputFilename, "GenerateImplementationFile", tmpls, tree)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

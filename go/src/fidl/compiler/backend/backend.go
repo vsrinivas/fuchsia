@@ -6,18 +6,14 @@ package main
 
 import (
 	"encoding/json"
+	"fidl/compiler/backend/cpp"
+	"fidl/compiler/backend/types"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/test"
-	"fidl/compiler/backend/types"
 )
-
-type FileWriter interface {
-}
 
 type GenerateFidl interface {
 	GenerateFidl(fidlData types.Root, args []string, outputDir string, srcRootPath string) error
@@ -25,13 +21,12 @@ type GenerateFidl interface {
 
 var generators = map[string]GenerateFidl{
 	"cpp": cpp.FidlGenerator{},
-	"test": test.FidlGenerator{},
 }
 
 func main() {
 	// TODO(cramertj): replace with path to FIDL definition, then make
 	// this tool generate the JSON by running the compiler.
-	fidlJsonPath := flag.String("fidl-json", "",
+	fidlJSONPath := flag.String("fidl-json", "",
 		"relative path to the FIDL JSON representation")
 	outputDir := flag.String("output-dir", ".",
 		"output directory for generated files.")
@@ -51,15 +46,15 @@ func main() {
 	}
 
 	// The fidlJsonPath is not an optional argument, so we error if it was omitted.
-	if *fidlJsonPath == "" {
+	if *fidlJSONPath == "" {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	fmt.Println(*fidlJsonPath)
+	fmt.Println(*fidlJSONPath)
 
-	bytes, err := ioutil.ReadFile(*fidlJsonPath)
+	bytes, err := ioutil.ReadFile(*fidlJSONPath)
 	if err != nil {
-		log.Fatalf("Error reading from %s: %v", *fidlJsonPath, err)
+		log.Fatalf("Error reading from %s: %v", *fidlJSONPath, err)
 	}
 
 	var fidlData types.Root

@@ -7,13 +7,13 @@ package templates
 const Interface = `
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{if $index}}, {{end}}{{$param.Type}} {{$param.Name}}
+    {{if $index}}, {{end}}{{$param.Name|$param.Type.Decorate}}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{if $index}}, {{end}}{{$param.Type}}
+    {{if $index}}, {{end}}{{""|$param.Type.Decorate}}
   {{- end -}}
 {{ end }}
 

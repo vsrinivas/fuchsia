@@ -8,55 +8,49 @@ import (
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
-	"regexp"
+	"strings"
 )
 
-type EnumValue struct {
+type Type struct {
+	prefix string
+	suffix string
+}
+
+func (t *Type) Decorate(identifer string) string {
+	return t.prefix + " " + identifer + t.suffix
+}
+
+type Enum struct {
+	Name    string
+	Type    string
+	Members []EnumMember
+}
+
+type EnumMember struct {
 	Name  string
 	Value string
 }
 
-type Enum struct {
-	Name               string
-	UnderlyingDeclType string
-	Values             []EnumValue
-}
-
-type UnionField struct {
-	Name     string
-	DeclType string
-}
-
 type Union struct {
-	Name   string
-	Fields []UnionField
-	Size   types.SizeNum
+	Name    string
+	Members []UnionMember
 }
 
-type StructField struct {
-	Name     string
-	DeclType string
+type UnionMember struct {
+	Type Type
+	Name string
 }
 
 type Struct struct {
-	Name   string
-	Fields []StructField
+	Name    string
+	CName   string
+	Members []StructMember
 }
 
-type Parameter struct {
-	Name string
-	Type string
-}
-
-type Method struct {
-	Name         string
-	Ordinal      types.SizeNum
-	OrdinalName  string
-	HasRequest   bool
-	Request      []Parameter
-	HasResponse  bool
-	Response     []Parameter
-	CallbackType string
+type StructMember struct {
+	Type        Type
+	Name        string
+	StorageName string
 }
 
 type Interface struct {
@@ -64,6 +58,22 @@ type Interface struct {
 	ProxyName string
 	StubName  string
 	Methods   []Method
+}
+
+type Method struct {
+	Ordinal      types.Ordinal
+	OrdinalName  string
+	Name         string
+	HasRequest   bool
+	Request      []Parameter
+	HasResponse  bool
+	Response     []Parameter
+	CallbackType string
+}
+
+type Parameter struct {
+	Type Type
+	Name string
 }
 
 type Root struct {
@@ -171,18 +181,19 @@ var reservedWords = map[string]bool{
 	"xor_eq":           true,
 }
 
-var primitiveTypes = map[string]string{
-	"int8":    "int8_t",
-	"int16":   "int16_",
-	"int32":   "int32_t",
-	"int64":   "int64_t",
-	"uint8":   "uint8_t",
-	"uint16":  "uint16_t",
-	"uint32":  "uint32_t",
-	"uint64":  "uint64_t",
-	"float32": "float",
-	"float64": "double",
-	"status":  "zx_status_t",
+var primitiveTypes = map[types.PrimitiveSubtype]string{
+	types.Bool:    "bool",
+	types.Status:  "zx_status_t",
+	types.Int8:    "int8_t",
+	types.Int16:   "int16_t",
+	types.Int32:   "int32_t",
+	types.Int64:   "int64_t",
+	types.Uint8:   "uint8_t",
+	types.Uint16:  "uint16_t",
+	types.Uint32:  "uint32_t",
+	types.Uint64:  "uint64_t",
+	types.Float32: "float",
+	types.Float64: "double",
 }
 
 func isReservedWord(str string) bool {
@@ -190,142 +201,105 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func isPrimitiveType(str string) bool {
-	_, ok := primitiveTypes[str]
-	return ok
-}
-
-func compilePrimitiveType(val string) string {
-	t, ok := primitiveTypes[val]
-	if ok {
-		return t
-	}
-	log.Fatal("Unknown primitive type:", val)
-	return ""
-}
-
-var handleRegexp = regexp.MustCompile("handle<([a-z]+)>")
-var requestRegexp = regexp.MustCompile("request<(.+)>")
-var stringRegexp = regexp.MustCompile("string(:.+)?")
-var vectorRegexp = regexp.MustCompile("vector<(.+)>")
-
-func compileHandleType(val string) (string, bool) {
-	match := handleRegexp.FindStringSubmatch(val)
-	if len(match) == 0 {
-		return "", false
-	}
-	return "zx::" + match[1], true
-}
-
-func compileRequestType(val string) (string, bool) {
-	match := requestRegexp.FindStringSubmatch(val)
-	if len(match) == 0 {
-		return "", false
-	}
-	return fmt.Sprintf("::fidl::InterfaceRequest<%s>", match[1]), true
-}
-
-func compileStringType(val string) (string, bool) {
-	if stringRegexp.MatchString(val) {
-		return "::fidl::StringPtr", true
-	}
-	return "", false
-}
-
-func compileVectorType(val string) (string, bool) {
-	match := vectorRegexp.FindStringSubmatch(val)
-	if len(match) == 0 {
-		return "", false
-	}
-	t := compileType(types.TypeT(match[1]))
-	return fmt.Sprintf("::fidl::VectorPtr<%s>", t), true
-}
-
-func compileType(val types.TypeT) string {
-	// TODO(abarth): This would be much easier if TypeT had more structure so
-	// we didn't need to parse it here.
-
+func compileIdentier(val types.Identifier) string {
 	str := string(val)
-
-	if isPrimitiveType(str) {
-		return compilePrimitiveType(str)
-	}
-
-	if t, ok := compileHandleType(str); ok {
-		return t
-	}
-
-	if t, ok := compileRequestType(str); ok {
-		return t
-	}
-
-	if t, ok := compileStringType(str); ok {
-		return t
-	}
-
-	if t, ok := compileVectorType(str); ok {
-		return t
-	}
-
-	// TODO(abarth): How to distinguish between interfaces and structs?
-	return str
-}
-
-func compileEnumType(val types.EnumType) string {
-	// The enum types are a subset of the primitive types.
-	return compilePrimitiveType(string(val))
-}
-
-func compileName(name types.NameT) string {
-	str := string(name)
 	if isReservedWord(str) {
 		return str + "_"
 	}
 	return str
 }
 
+func compileCompoundIdentifier(val types.CompoundIdentifier) string {
+	strs := []string{}
+	for _, v := range val {
+		strs = append(strs, compileIdentier(v))
+	}
+	return strings.Join(strs, "::")
+}
+
 func compileLiteral(val types.Literal) string {
-	if val.IsString {
+	switch val.Kind {
+	case types.StringLiteral:
 		// TODO(abarth): Escape more characters (e.g., newline).
-		return fmt.Sprintf("\"%q\"", val.String)
-	}
-	if val.IsNumeric {
-		return string(val.Numeric)
-	}
-	if val.IsBoolean {
-		if val.Boolean {
-			return "true"
-		} else {
-			return "false"
-		}
-	}
-	if val.IsDefault {
+		return fmt.Sprintf("\"%q\"", val.Value)
+	case types.NumericLiteral:
+		return val.Value
+	case types.TrueLiteral:
+		return "true"
+	case types.FalseLiteral:
+		return "false"
+	case types.DefaultLiteral:
 		return "default"
+	default:
+		log.Fatal("Unknown literal kind:", val.Kind)
+		return ""
 	}
 	log.Fatal("Unknown literal:", val)
 	return ""
 }
 
 func compileConstant(val types.Constant) string {
-	if val.IsLiteral {
-		return compileLiteral(val.LiteralValue)
+	switch val.Kind {
+	case types.IdentifierConstant:
+		return compileCompoundIdentifier(val.Identifier)
+	case types.LiteralConstant:
+		return compileLiteral(val.Literal)
+	default:
+		log.Fatal("Unknown constant kind:", val.Kind)
+		return ""
 	}
-	if val.IsIdentifier {
-		return compileName(val.Identifier)
+}
+
+func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
+	if t, ok := primitiveTypes[val]; ok {
+		return t
 	}
-	log.Fatal("Unknown constant:", val)
+	log.Fatal("Unknown primitive type:", val)
 	return ""
 }
 
-func compileEnum(val types.EnumDeclaration) Enum {
-	e := Enum{
-		compileName(val.Name),
-		compileEnumType(val.UnderlyingType),
-		[]EnumValue{},
+func compileType(val types.Type) Type {
+	prefix := ""
+	suffix := ""
+	switch val.Kind {
+	case types.ArrayType:
+		t := compileType(*val.ElementType)
+		prefix = t.prefix
+		suffix = fmt.Sprintf("%s[%s]", t.suffix, compileConstant(val.ElementCount))
+	case types.VectorType:
+		t := compileType(*val.ElementType)
+		if len(t.suffix) > 0 {
+			log.Fatal("Cannot compile a vector that contains an array:", val)
+		}
+		prefix = fmt.Sprintf("::fidl::VectorPtr<%s>", t.prefix)
+	case types.StringType:
+		prefix = "::fidl::StringPtr"
+	case types.HandleType:
+		prefix = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+	case types.RequestType:
+		t := compileCompoundIdentifier(val.RequestSubtype)
+		prefix = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+	case types.PrimitiveType:
+		prefix = compilePrimitiveSubtype(val.PrimitiveSubtype)
+	case types.IdentifierType:
+		t := compileCompoundIdentifier(val.Identifier)
+		// TODO(abarth): Need to distguish between interfaces and structs.
+		prefix = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+	default:
+		log.Fatal("Unknown type kind:", val.Kind)
 	}
-	for _, v := range val.Values {
-		e.Values = append(e.Values, EnumValue{
-			compileName(v.Name),
+	return Type{prefix, suffix}
+}
+
+func compileEnum(val types.Enum) Enum {
+	e := Enum{
+		compileIdentier(val.Name),
+		compilePrimitiveSubtype(val.Type),
+		[]EnumMember{},
+	}
+	for _, v := range val.Members {
+		e.Members = append(e.Members, EnumMember{
+			compileIdentier(v.Name),
 			compileConstant(v.Value),
 		})
 	}
@@ -337,8 +311,8 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 
 	for _, v := range val {
 		p := Parameter{
-			compileName(v.Name),
 			compileType(v.Type),
+			compileIdentier(v.Name),
 		}
 		r = append(r, p)
 	}
@@ -346,24 +320,24 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 	return r
 }
 
-func compileInterface(val types.InterfaceDeclaration) Interface {
+func compileInterface(val types.Interface) Interface {
 	r := Interface{
-		compileName(val.Name),
-		compileName(val.Name + "Proxy"),
-		compileName(val.Name + "Stub"),
+		compileIdentier(val.Name),
+		compileIdentier(val.Name + "Proxy"),
+		compileIdentier(val.Name + "Stub"),
 		[]Method{},
 	}
 
 	for _, v := range val.Methods {
-		name := compileName(v.Name)
+		name := compileIdentier(v.Name)
 		callbackType := ""
-		if v.HasRequest {
-			callbackType = compileName(v.Name + "Callback")
+		if v.HasResponse {
+			callbackType = compileIdentier(v.Name + "Callback")
 		}
 		m := Method{
-			name,
 			v.Ordinal,
-			fmt.Sprintf("k%s_%s_Ordinal", r.Name, name),
+			fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+			name,
 			v.HasRequest,
 			compileParameterArray(v.Request),
 			v.HasResponse,
@@ -376,30 +350,67 @@ func compileInterface(val types.InterfaceDeclaration) Interface {
 	return r
 }
 
-func compileStruct(val types.StructDeclaration) Struct {
-	return Struct{}
+func compileStructMember(val types.StructMember) StructMember {
+	return StructMember{
+		compileType(val.Type),
+		compileIdentier(val.Name + "Ptr"),
+		compileIdentier(val.Name + "_"),
+	}
 }
 
-func compileUnion(val types.UnionDeclaration) Union {
-	return Union{}
+func compileStruct(val types.Struct) Struct {
+	name := compileIdentier(val.Name)
+	r := Struct{
+		name,
+		"::" + name,
+		[]StructMember{},
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, compileStructMember(v))
+	}
+
+	return r
+}
+
+func compileUnionMember(val types.UnionMember) UnionMember {
+	return UnionMember{
+		compileType(val.Type),
+		compileIdentier(val.Name),
+	}
+}
+
+func compileUnion(val types.Union) Union {
+	r := Union{
+		compileIdentier(val.Name),
+		[]UnionMember{},
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, compileUnionMember(v))
+	}
+
+	return r
 }
 
 func Compile(fidlData types.Root) Root {
 	root := Root{}
 
-	for _, v := range fidlData.EnumDeclarations {
+	// TODO(abarth): Constants.
+
+	for _, v := range fidlData.Enums {
 		root.Enums = append(root.Enums, compileEnum(v))
 	}
 
-	for _, v := range fidlData.InterfaceDeclarations {
+	for _, v := range fidlData.Interfaces {
 		root.Interfaces = append(root.Interfaces, compileInterface(v))
 	}
 
-	for _, v := range fidlData.StructDeclarations {
+	for _, v := range fidlData.Structs {
 		root.Structs = append(root.Structs, compileStruct(v))
 	}
 
-	for _, v := range fidlData.UnionDeclarations {
+	for _, v := range fidlData.Unions {
 		root.Unions = append(root.Unions, compileUnion(v))
 	}
 
