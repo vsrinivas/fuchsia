@@ -51,6 +51,8 @@ class URLLoaderImpl::HTTPClient {
  private:
   using TransferBuffer = char[64 * 1024];
 
+  void SetHostName(const std::string& server);
+
   void OnResolve(const asio::error_code& err,
                  tcp::resolver::iterator endpoint_iterator);
   bool OnVerifyCertificate(bool preverified, asio::ssl::verify_context& ctx);
@@ -150,6 +152,8 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     return ZX_ERR_INVALID_ARGS;
   }
 
+  SetHostName(server);
+
   std::ostream request_header_stream(&request_header_buf_);
 
   bool has_accept = false;
@@ -181,6 +185,17 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
 
   return ZX_OK;
 }
+
+template <>
+void URLLoaderImpl::HTTPClient<ssl_socket_t>::SetHostName(
+    const std::string& server) {
+  ::SSL_set_tlsext_host_name(socket_.native_handle(), server.c_str());
+  asio::detail::throw_error(asio::error_code(), "set_tlsext_host_name");
+}
+
+template <>
+void URLLoaderImpl::HTTPClient<nonssl_socket_t>::SetHostName(
+    const std::string& server) {}
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::Start(const std::string& server,
