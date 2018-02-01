@@ -69,10 +69,10 @@ read_mem (zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len)
 }
 
 static zx_status_t
-get_inferior_greg_buf_size (zx_handle_t thread, uint32_t* regset_size)
+get_inferior_greg_buf_size (zx_handle_t thread, size_t* regset_size)
 {
   // The general regs are defined to be in regset zero.
-  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_REGSET0,
+  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_GENERAL_REGS,
                                              NULL, 0, regset_size);
   assert (status != ZX_OK);
   if (status == ZX_ERR_BUFFER_TOO_SMALL)
@@ -83,10 +83,7 @@ get_inferior_greg_buf_size (zx_handle_t thread, uint32_t* regset_size)
 static zx_status_t
 read_inferior_gregs (zx_handle_t thread, void* buf, size_t regset_size)
 {
-  uint32_t buf_size = (uint32_t) regset_size;
-  // By convention the general regs are in regset 0.
-  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
-  return status;
+  return zx_thread_read_state (thread, ZX_THREAD_STATE_GENERAL_REGS, buf, regset_size, &regset_size);
 }
 
 static uint32_t
@@ -293,7 +290,7 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
     Debug (3, "bad regnum: %d\n", (int) reg);
     return -UNW_EBADREG;
   }
-  uint32_t regset_size;
+  size_t regset_size;
   zx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
   if (status != ZX_OK)
   {

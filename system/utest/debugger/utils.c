@@ -84,185 +84,72 @@ bool recv_msg(zx_handle_t handle, enum message* msg)
     END_HELPER;
 }
 
-typedef struct {
-    const char* name;
-    unsigned offset;
-    unsigned count;
-    unsigned size;
-} regspec_t;
-
-#ifdef __x86_64__
-
-#define R(reg) { #reg, offsetof(zx_x86_64_general_regs_t, reg), 1, 64 }
-
-static const regspec_t general_regs[] =
-{
-    R(rax),
-    R(rbx),
-    R(rcx),
-    R(rdx),
-    R(rsi),
-    R(rdi),
-    R(rbp),
-    R(rsp),
-    R(r8),
-    R(r9),
-    R(r10),
-    R(r11),
-    R(r12),
-    R(r13),
-    R(r14),
-    R(r15),
-    R(rip),
-    R(rflags),
-};
-
-#undef R
-
-#endif
-
-#ifdef __aarch64__
-
-#define R(reg) { #reg, offsetof(zx_arm64_general_regs_t, reg), 1, 64 }
-
-static const regspec_t general_regs[] =
-{
-    { "r", offsetof(zx_arm64_general_regs_t, r), 30, 64 },
-    R(lr),
-    R(sp),
-    R(pc),
-    R(cpsr),
-};
-
-#undef R
-
-#endif
-
-void dump_gregs(zx_handle_t thread_handle, void* buf)
-{
-#if defined(__x86_64__) || defined(__aarch64__)
+void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs) {
     unittest_printf("Registers for thread %d\n", thread_handle);
-    for (unsigned i = 0; i < countof(general_regs); ++i) {
-        const regspec_t* r = &general_regs[i];
-        uint64_t val;
-        for (unsigned j = 0; j < r->count; ++j)
-        {
-            if (r->size == 32)
-            {
-                void* value_ptr = (char*) buf + r->offset + j * sizeof(uint32_t);
-                val = get_uint32(value_ptr);
-            }
-            else
-            {
-                void* value_ptr = (char*) buf + r->offset + j * sizeof(uint64_t);
-                val = get_uint64(value_ptr);
-            }
-            if (r->count == 1)
-                unittest_printf("  %8s      %24ld  0x%lx\n", r->name, (long) val, (long) val);
-            else
-                unittest_printf("  %8s[%2u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
-        }
+
+#define DUMP_NAMED_REG(name) \
+    unittest_printf("  %8s      %24ld  0x%lx\n", #name, (long)regs->name, (long)regs->name)
+
+#if defined(__x86_64__)
+
+    DUMP_NAMED_REG(rax);
+    DUMP_NAMED_REG(rbx);
+    DUMP_NAMED_REG(rcx);
+    DUMP_NAMED_REG(rdx);
+    DUMP_NAMED_REG(rsi);
+    DUMP_NAMED_REG(rdi);
+    DUMP_NAMED_REG(rbp);
+    DUMP_NAMED_REG(rsp);
+    DUMP_NAMED_REG(r8);
+    DUMP_NAMED_REG(r9);
+    DUMP_NAMED_REG(r10);
+    DUMP_NAMED_REG(r11);
+    DUMP_NAMED_REG(r12);
+    DUMP_NAMED_REG(r13);
+    DUMP_NAMED_REG(r14);
+    DUMP_NAMED_REG(r15);
+    DUMP_NAMED_REG(rip);
+    DUMP_NAMED_REG(rflags);
+
+#elif defined(__aarch64__)
+
+    for (int i = 0; i < 30; i++) {
+        unittest_printf(
+            "  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
     }
+    DUMP_NAMED_REG(lr);
+    DUMP_NAMED_REG(sp);
+    DUMP_NAMED_REG(pc);
+    DUMP_NAMED_REG(cpsr);
+
 #endif
+
+#undef DUMP_NAMED_REG
 }
 
-void dump_arch_regs (zx_handle_t thread_handle, int regset, void* buf)
-{
-    switch (regset)
-    {
-    case 0:
-        dump_gregs(thread_handle, buf);
-        break;
-    default:
-        break;
-    }
-}
-
-bool dump_inferior_regs(zx_handle_t thread)
-{
-    BEGIN_HELPER;
-
-    zx_status_t status;
-    uint32_t num_regsets = get_uint32_property(thread, ZX_PROP_NUM_STATE_KINDS);
-    for (unsigned i = 0; i < num_regsets; ++i) {
-        uint32_t regset_size = 0;
-        status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
-        ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "getting regset size failed");
-        void* buf = tu_malloc(regset_size);
-        status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
-        // Regset reads can fail for legitimate reasons:
-        // ZX_ERR_NOT_SUPPORTED - the regset is not supported on this chip
-        // ZX_ERR_UNAVAILABLE - the regset may be currently unavailable
-        switch (status) {
-        case ZX_OK:
-            dump_arch_regs(thread, i, buf);
-            break;
-        case ZX_ERR_NOT_SUPPORTED:
-            unittest_printf("Regset %u not supported\n", i);
-            break;
-        case ZX_ERR_UNAVAILABLE:
-            unittest_printf("Regset %u unavailable\n", i);
-            break;
-        default:
-            ASSERT_EQ(status, ZX_OK, "getting regset failed");
-        }
-        free(buf);
-    }
-
-    END_HELPER;
-}
-
-uint32_t get_inferior_greg_buf_size(zx_handle_t thread)
-{
-    // The general regs are defined to be in regset zero.
-    uint32_t regset_size = 0;
-    zx_status_t status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
-    // It's easier to just terminate if this fails.
-    if (status != ZX_ERR_BUFFER_TOO_SMALL)
-        tu_fatal("get_inferior_greg_buf_size: zx_thread_read_state", status);
-    return regset_size;
+void dump_inferior_regs(zx_handle_t thread) {
+    zx_thread_state_general_regs_t regs;
+    read_inferior_gregs(thread, &regs);
+    dump_gregs(thread, &regs);
 }
 
 // N.B. It is assumed |buf_size| is large enough.
 
-void read_inferior_gregs(zx_handle_t thread, void* buf, unsigned buf_size)
-{
-    // By convention the general regs are in regset 0.
-    zx_status_t status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
+void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* in) {
+    size_t buf_size = sizeof(zx_thread_state_general_regs_t);
+    zx_status_t status = zx_thread_read_state(
+        thread, ZX_THREAD_STATE_GENERAL_REGS, in, buf_size, &buf_size);
     // It's easier to just terminate if this fails.
     if (status != ZX_OK)
         tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
 }
 
-void write_inferior_gregs(zx_handle_t thread, const void* buf, unsigned buf_size)
-{
-    // By convention the general regs are in regset 0.
-    zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0, buf, buf_size);
+void write_inferior_gregs(zx_handle_t thread, const zx_thread_state_general_regs_t* out) {
+    zx_status_t status = zx_thread_write_state(
+        thread, ZX_THREAD_STATE_GENERAL_REGS, out, sizeof(zx_thread_state_general_regs_t));
     // It's easier to just terminate if this fails.
     if (status != ZX_OK)
         tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
-}
-
-// This assumes |regno| is in an array of uint64_t values.
-
-uint64_t get_uint64_register(zx_handle_t thread, size_t offset) {
-    unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
-    char* buf = tu_malloc(greg_buf_size);
-    read_inferior_gregs(thread, buf, greg_buf_size);
-    uint64_t value = get_uint64(buf + offset);
-    free(buf);
-    return value;
-}
-
-// This assumes |regno| is in an array of uint64_t values.
-
-void set_uint64_register(zx_handle_t thread, size_t offset, uint64_t value) {
-    unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
-    char* buf = tu_malloc(greg_buf_size);
-    read_inferior_gregs(thread, buf, greg_buf_size);
-    set_uint64(buf + offset, value);
-    write_inferior_gregs(thread, buf, greg_buf_size);
-    free(buf);
 }
 
 size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len)

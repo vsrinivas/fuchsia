@@ -881,13 +881,9 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
     return ZX_OK;
 }
 
-uint32_t ThreadDispatcher::get_num_state_kinds() const {
-    return arch_num_regsets();
-}
-
 // Note: buffer must be sufficiently aligned
 
-zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, size_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -901,8 +897,10 @@ zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint3
 
     switch (state_kind)
     {
-    case ZX_THREAD_STATE_REGSET0 ... ZX_THREAD_STATE_REGSET9:
-        return arch_get_regset(&thread_, state_kind - ZX_THREAD_STATE_REGSET0, buffer, buffer_len);
+    case ZX_THREAD_STATE_GENERAL_REGS:
+        if (buffer_len != sizeof(zx_thread_state_general_regs))
+            return ZX_ERR_INVALID_ARGS;
+        return arch_get_general_regs(&thread_, static_cast<zx_thread_state_general_regs*>(buffer));
     default:
         return ZX_ERR_INVALID_ARGS;
     }
@@ -910,7 +908,7 @@ zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint3
 
 // Note: buffer must be sufficiently aligned
 
-zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
+zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, size_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -924,8 +922,10 @@ zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer
 
     switch (state_kind)
     {
-    case ZX_THREAD_STATE_REGSET0 ... ZX_THREAD_STATE_REGSET9:
-        return arch_set_regset(&thread_, state_kind - ZX_THREAD_STATE_REGSET0, buffer, buffer_len);
+    case ZX_THREAD_STATE_GENERAL_REGS:
+        if (buffer_len != sizeof(zx_thread_state_general_regs))
+            return ZX_ERR_INVALID_ARGS;
+        return arch_set_general_regs(&thread_, static_cast<const zx_thread_state_general_regs*>(buffer));
     default:
         return ZX_ERR_INVALID_ARGS;
     }

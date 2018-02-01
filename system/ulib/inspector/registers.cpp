@@ -13,10 +13,9 @@
 
 zx_status_t inspector_read_general_regs(zx_handle_t thread,
                                         inspector_general_regs_t* regs) {
-    // The syscall takes a uint32_t.
-    auto to_xfer = static_cast<uint32_t>(sizeof(*regs));
-    uint32_t bytes_read;
-    auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_REGSET0, regs, to_xfer, &bytes_read);
+    size_t to_xfer = sizeof(*regs);
+    size_t bytes_read;
+    auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, to_xfer, &bytes_read);
     if (status < 0) {
         print_zx_error("unable to access general regs", status);
         return status;

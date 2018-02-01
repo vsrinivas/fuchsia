@@ -45,18 +45,6 @@ Property values have the prefix **ZX_PROP_**, and are defined in
 #include <zircon/syscalls/object.h>
 ```
 
-### ZX_PROP_NUM_STATE_KINDS
-
-*handle* type: **Thread**
-
-*value* type: **uint32_t**
-
-Allowed operations: **get**
-
-For debugger usage.
-
-TODO: Describe the details of this property.
-
 ### ZX_PROP_NAME
 
 *handle* type: **(Most types)**

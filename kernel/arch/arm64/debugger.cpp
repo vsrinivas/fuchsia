@@ -17,17 +17,7 @@
 // readable and writable by userland on ARM64.
 static uint32_t kUserVisibleFlags = 0xf0000000;
 
-uint arch_num_regsets(void) {
-    return 1; // TODO(dje): Just the general regs for now.
-}
-
-static zx_status_t arch_get_general_regs(struct thread* thread, zx_arm64_general_regs_t* out, uint32_t* buf_size) {
-    uint32_t provided_buf_size = *buf_size;
-    *buf_size = sizeof(*out);
-
-    if (provided_buf_size < sizeof(*out))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
+zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
@@ -53,10 +43,7 @@ static zx_status_t arch_get_general_regs(struct thread* thread, zx_arm64_general
     return ZX_OK;
 }
 
-static zx_status_t arch_set_general_regs(struct thread* thread, const zx_arm64_general_regs_t* in, uint32_t buf_size) {
-    if (buf_size != sizeof(*in))
-        return ZX_ERR_INVALID_ARGS;
-
+zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs_t* in) {
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
@@ -80,26 +67,4 @@ static zx_status_t arch_set_general_regs(struct thread* thread, const zx_arm64_g
     out->spsr = (out->spsr & ~kUserVisibleFlags) | (in->cpsr & kUserVisibleFlags);
 
     return ZX_OK;
-}
-
-// The caller is responsible for making sure the thread is in an exception
-// or is suspended, and stays so.
-zx_status_t arch_get_regset(struct thread* thread, uint regset, void* regs, uint32_t* buf_size) {
-    switch (regset) {
-    case 0:
-        return arch_get_general_regs(thread, (zx_arm64_general_regs_t*)regs, buf_size);
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-}
-
-// The caller is responsible for making sure the thread is in an exception
-// or is suspended, and stays so.
-zx_status_t arch_set_regset(struct thread* thread, uint regset, const void* regs, uint32_t buf_size) {
-    switch (regset) {
-    case 0:
-        return arch_set_general_regs(thread, (zx_arm64_general_regs_t*)regs, buf_size);
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
 }

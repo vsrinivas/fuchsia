@@ -151,11 +151,8 @@ public:
     zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
 
     // For debugger usage.
-    // TODO(dje): The term "state" here conflicts with "state tracker".
-    uint32_t get_num_state_kinds() const;
-    // TODO(dje): Consider passing an Array<uint8_t> here and in WriteState.
-    zx_status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
-    zx_status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
+    zx_status_t ReadState(uint32_t state_kind, void* buffer, size_t buffer_len);
+    zx_status_t WriteState(uint32_t state_kind, const void* buffer, size_t buffer_len);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }

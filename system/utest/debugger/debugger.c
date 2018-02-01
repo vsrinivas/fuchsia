@@ -41,16 +41,6 @@ typedef bool (wait_inferior_exception_handler_t)(zx_handle_t inferior,
 // Produce a backtrace of sufficient size to be interesting but not excessive.
 #define TEST_SEGFAULT_DEPTH 4
 
-// Offsets of $pc,$sp.
-#ifdef __x86_64__
-#define PC_REG_OFFSET offsetof(zx_x86_64_general_regs_t, rip)
-#define SP_REG_OFFSET offsetof(zx_x86_64_general_regs_t, rsp)
-#endif
-#ifdef __aarch64__
-#define PC_REG_OFFSET offsetof(zx_arm64_general_regs_t, pc)
-#define SP_REG_OFFSET offsetof(zx_arm64_general_regs_t, sp)
-#endif
-
 static const char test_inferior_child_name[] = "inferior";
 // The segfault child is not used by the test.
 // It exists for debugging purposes.
@@ -60,16 +50,34 @@ static const char test_swbreak_child_name[] = "swbreak";
 
 static atomic_int extra_thread_count = ATOMIC_VAR_INIT(0);
 
+static uint64_t extract_pc_reg(const zx_thread_state_general_regs_t* regs) {
+#if defined(__x86_64__)
+    return regs->rip;
+#elif defined(__aarch64__)
+    return regs->pc;
+#endif
+}
+
+static uint64_t extract_sp_reg(const zx_thread_state_general_regs_t* regs) {
+#if defined(__x86_64__)
+    return regs->rsp;
+#elif defined(__aarch64__)
+    return regs->sp;
+#endif
+}
+
 static void test_memory_ops(zx_handle_t inferior, zx_handle_t thread)
 {
     uint64_t test_data_addr = 0;
     uint8_t test_data[TEST_MEMORY_SIZE];
 
-#ifdef __x86_64__
-    test_data_addr = get_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r9));
-#endif
-#ifdef __aarch64__
-    test_data_addr = get_uint64_register(thread, offsetof(zx_arm64_general_regs_t, r[9]));
+    zx_thread_state_general_regs_t regs;
+    read_inferior_gregs(thread, &regs);
+
+#if defined(__x86_64__)
+    test_data_addr = regs.r9;
+#elif defined(__aarch64__)
+    test_data_addr = regs.r[9];
 #endif
 
     size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
@@ -79,8 +87,9 @@ static void test_memory_ops(zx_handle_t inferior, zx_handle_t thread)
         EXPECT_EQ(test_data[i], i, "test_memory_ops");
     }
 
-    for (unsigned i = 0; i < sizeof(test_data); ++i)
+    for (unsigned i = 0; i < sizeof(test_data); ++i) {
         test_data[i] += TEST_DATA_ADJUST;
+    }
 
     size = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
     EXPECT_EQ(size, sizeof(test_data), "write_inferior_memory: short write");
@@ -88,38 +97,31 @@ static void test_memory_ops(zx_handle_t inferior, zx_handle_t thread)
     // Note: Verification of the write is done in the inferior.
 }
 
-static void fix_inferior_segv(zx_handle_t thread)
-{
+static void fix_inferior_segv(zx_handle_t thread) {
     unittest_printf("Fixing inferior segv\n");
 
-    uint64_t sp = get_uint64_register(thread, SP_REG_OFFSET);
+    zx_thread_state_general_regs_t regs;
+    read_inferior_gregs(thread, &regs);
 
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-#ifdef __x86_64__
-    set_uint64_register(thread, offsetof(zx_x86_64_general_regs_t, r8), sp);
+#if defined(__x86_64__)
+    regs.r8 = regs.rsp;
+#elif defined(__aarch64__)
+    regs.r[8] = regs.sp;
 #endif
-#ifdef __aarch64__
-    set_uint64_register(thread, offsetof(zx_arm64_general_regs_t, r[8]), sp);
-#endif
+    write_inferior_gregs(thread, &regs);
 }
 
-static bool test_segv_pc(zx_handle_t thread)
-{
-    uint64_t pc = get_uint64_register(thread, PC_REG_OFFSET);
+static bool test_segv_pc(zx_handle_t thread) {
+    zx_thread_state_general_regs_t regs;
+    read_inferior_gregs(thread, &regs);
 
-#ifdef __x86_64__
-    uint64_t r10 = get_uint64_register(
-        thread, offsetof(zx_x86_64_general_regs_t, r10));
-    ASSERT_EQ(pc, r10, "fault PC does not match r10");
+#if defined(__x86_64__)
+    ASSERT_EQ(regs.rip, regs.r10, "fault PC does not match r10");
+#elif defined(__aarch64__)
+    ASSERT_EQ(regs.pc, regs.r[10], "fault PC does not match x10");
 #endif
-
-#ifdef __aarch64__
-    uint64_t x10 = get_uint64_register(
-        thread, offsetof(zx_arm64_general_regs_t, r[10]));
-    ASSERT_EQ(pc, x10, "fault PC does not match x10");
-#endif
-
     return true;
 }
 
@@ -555,13 +557,12 @@ static bool write_text_segment(void)
 }
 
 // These are "call-saved" registers used in the test.
-#ifdef __x86_64__
+#if defined(__x86_64__)
+#define REG_ACCESS_TEST_REG r15
 #define REG_ACCESS_TEST_REG_NAME "r15"
-#define REG_ACCESS_TEST_REG_OFFSET offsetof(zx_x86_64_general_regs_t, r15)
-#endif
-#ifdef __aarch64__
+#elif defined(__aarch64__)
+#define REG_ACCESS_TEST_REG r[28]
 #define REG_ACCESS_TEST_REG_NAME "x28"
-#define REG_ACCESS_TEST_REG_OFFSET offsetof(zx_arm64_general_regs_t, r[28])
 #endif
 
 // Note: Neither of these can be zero.
@@ -674,23 +675,24 @@ static bool suspended_reg_access_test(void)
         ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
     tu_object_wait_async(thread, eport, signals);
 
-    const size_t test_reg_offset = REG_ACCESS_TEST_REG_OFFSET;
-
     // Keep looping until we know the thread is stopped in the assembler.
     // This is the only place we can guarantee particular registers have
     // particular values.
+    zx_thread_state_general_regs_t regs;
     uint64_t test_reg = 0;
     while (test_reg != reg_access_initial_value) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
         ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
         ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
-        test_reg = get_uint64_register(thread, test_reg_offset);
+
+        read_inferior_gregs(thread, &regs);
+        test_reg = regs.REG_ACCESS_TEST_REG;
     }
 
-    uint64_t pc_value = get_uint64_register(thread, PC_REG_OFFSET);
-    uint64_t sp_value = get_uint64_register(thread, SP_REG_OFFSET);
-
-    set_uint64_register(thread, test_reg_offset, reg_access_write_test_value);
+    uint64_t pc_value = extract_pc_reg(&regs);
+    uint64_t sp_value = extract_sp_reg(&regs);
+    regs.REG_ACCESS_TEST_REG = reg_access_write_test_value;
+    write_inferior_gregs(thread, &regs);
 
     ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
     thrd_join(thread_c11, NULL);
@@ -837,14 +839,17 @@ static bool suspended_in_syscall_reg_access_worker(bool do_channel_call)
 
     ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
 
+    zx_thread_state_general_regs_t regs;
+    read_inferior_gregs(thread, &regs);
+
     // Verify the pc is somewhere within the vdso.
-    uint64_t pc_value = get_uint64_register(thread, PC_REG_OFFSET);
+    uint64_t pc_value = extract_pc_reg(&regs);
     EXPECT_GE(pc_value, vdso_start, "");
     EXPECT_LE(pc_value, vdso_end, "");
 
     // The stack pointer is somewhere within the syscall.
     // Just verify the value we have is within range.
-    uint64_t sp_value = get_uint64_register(thread, SP_REG_OFFSET);
+    uint64_t sp_value = extract_sp_reg(&regs);
     uint64_t arg_sp = atomic_load(&arg.sp);
     EXPECT_LE(sp_value, arg_sp, "");
     EXPECT_GE(sp_value + 1024, arg_sp, "");

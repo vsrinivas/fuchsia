@@ -9,10 +9,10 @@
 
 __BEGIN_CDECLS
 
-// The format of data for r/w of x86_64 general regs.
-// By convention this is ZX_THREAD_STATE_REGSET0.
+#if defined(__x86_64__)
 
-typedef struct zx_x86_64_general_regs {
+// Value for ZX_THREAD_STATE_GENERAL_REGS on x86-64 platforms.
+typedef struct zx_thread_state_general_regs {
     uint64_t rax;
     uint64_t rbx;
     uint64_t rcx;
@@ -31,35 +31,34 @@ typedef struct zx_x86_64_general_regs {
     uint64_t r15;
     uint64_t rip;
     uint64_t rflags;
-} zx_x86_64_general_regs_t;
+} zx_thread_state_general_regs_t;
 
-// The format of data for r/w of arm64 general regs.
-// By convention this is ZX_THREAD_STATE_REGSET0.
+// Backwards-compatible definition.
+// TODO(ZX-1648) remove when callers are updated.
+typedef struct zx_thread_state_general_regs zx_x86_64_general_regs_t;
 
-typedef struct zx_arm64_general_regs {
+#elif defined(__aarch64__)
+
+// Value for ZX_THREAD_STATE_GENERAL_REGS on ARM64 platforms.
+typedef struct zx_thread_state_general_regs {
     uint64_t r[30];
     uint64_t lr;
     uint64_t sp;
     uint64_t pc;
     uint64_t cpsr;
-} zx_arm64_general_regs_t;
+} zx_thread_state_general_regs_t;
 
-// zx_thread_read_state, zx_thread_write_state
-// The maximum size of thread state, in bytes, that can be processed by the
-// read_state/write_state syscalls. It exists so code can expect a sane limit
-// on the amount of memory needed to process the request.
-#define ZX_MAX_THREAD_STATE_SIZE 4096u
+// Backwards-compatible definition.
+// TODO(ZX-1648) remove when callers are updated.
+typedef struct zx_thread_state_general_regs zx_arm64_general_regs_t;
 
-// The "general regs" are by convention in regset 0.
-#define ZX_THREAD_STATE_REGSET0 0u
-#define ZX_THREAD_STATE_REGSET1 1u
-#define ZX_THREAD_STATE_REGSET2 2u
-#define ZX_THREAD_STATE_REGSET3 3u
-#define ZX_THREAD_STATE_REGSET4 4u
-#define ZX_THREAD_STATE_REGSET5 5u
-#define ZX_THREAD_STATE_REGSET6 6u
-#define ZX_THREAD_STATE_REGSET7 7u
-#define ZX_THREAD_STATE_REGSET8 8u
-#define ZX_THREAD_STATE_REGSET9 9u
+#endif
+
+// Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
+#define ZX_THREAD_STATE_GENERAL_REGS 0u
+
+// Backwards-compatible enum for general registers.
+// TODO(ZX-1648) remove when callers are updated.
+#define ZX_THREAD_STATE_REGSET0 0
 
 __END_CDECLS

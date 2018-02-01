@@ -246,17 +246,13 @@ static bool get_koid(zx_handle_t handle, zx_koid_t* koid) {
 
 #if defined(__x86_64__)
 
-typedef struct zx_x86_64_general_regs zx_general_regs_t;
-
-static uint64_t get_syscall_result(zx_general_regs_t* regs) {
+static uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) {
     return regs->rax;
 }
 
 #elif defined(__aarch64__)
 
-typedef struct zx_arm64_general_regs zx_general_regs_t;
-
-static uint64_t get_syscall_result(zx_general_regs_t* regs) {
+static uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) {
     return regs->r[0];
 }
 
@@ -312,9 +308,9 @@ static bool test_invoking_policy_with_exception(
     ASSERT_EQ(packet.exception.tid, tid);
 
     // Check that we can read the thread's register state.
-    zx_general_regs_t regs;
-    uint32_t size_read;
-    ASSERT_EQ(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_REGSET0,
+    zx_thread_state_general_regs_t regs;
+    size_t size_read;
+    ASSERT_EQ(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs), &size_read),
               ZX_OK);
     ASSERT_EQ(size_read, sizeof(regs));

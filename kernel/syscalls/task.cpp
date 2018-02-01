@@ -42,13 +42,6 @@
 #include <lk/init.h>
 #endif
 
-// For reading general purpose integer registers, we can allocate in
-// an inline array and save the malloc. Assume 64 registers as a
-// conservative estimate for an architecture with 32 general purpose
-// integer registers.
-constexpr uint32_t kInlineThreadStateSize = sizeof(void*) * 64;
-constexpr uint32_t kMaxThreadStateSize = ZX_MAX_THREAD_STATE_SIZE;
-
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
@@ -169,7 +162,7 @@ void sys_thread_exit() {
 
 zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
                                   user_out_ptr<void> _buffer,
-                                  uint32_t buffer_len, user_out_ptr<uint32_t> _actual) {
+                                  size_t buffer_len, user_out_ptr<size_t> _actual) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -180,36 +173,32 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
     if (status != ZX_OK)
         return status;
 
-    // avoid malloc'ing insane amounts
-    if (buffer_len > kMaxThreadStateSize)
+    // Currently only "general regs" is supported.
+    if (state_kind != ZX_THREAD_STATE_GENERAL_REGS)
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AllocChecker ac;
-    fbl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-
-    status = thread->ReadState(state_kind, bytes.get(), &buffer_len);
+    zx_thread_state_general_regs local_buffer;
+    size_t local_buffer_len = sizeof(local_buffer);
 
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is ZX_OK or ZX_ERR_BUFFER_TOO_SMALL.
-    if (status == ZX_OK || status == ZX_ERR_BUFFER_TOO_SMALL) {
-        zx_status_t status = _actual.copy_to_user(buffer_len);
-        if (status != ZX_OK)
-            return status;
-    }
+    status = _actual.copy_to_user(local_buffer_len);
+    if (status != ZX_OK)
+        return status;
+    if (buffer_len < local_buffer_len)
+        return ZX_ERR_BUFFER_TOO_SMALL;
 
+    status = thread->ReadState(state_kind, &local_buffer, local_buffer_len);
     if (status != ZX_OK)
         return status;
 
-    if (_buffer.copy_array_to_user(bytes.get(), buffer_len) != ZX_OK)
+    if (_buffer.copy_array_to_user(&local_buffer, local_buffer_len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
-
     return ZX_OK;
 }
 
 zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
-                                   user_in_ptr<const void> _buffer, uint32_t buffer_len) {
+                                   user_in_ptr<const void> _buffer, size_t buffer_len) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -220,21 +209,20 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
     if (status != ZX_OK)
         return status;
 
-    // avoid malloc'ing insane amounts
-    if (buffer_len > kMaxThreadStateSize)
+    // Currently only "general regs" is supported.
+    if (state_kind != ZX_THREAD_STATE_GENERAL_REGS ||
+        buffer_len != sizeof(zx_thread_state_general_regs)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    fbl::AllocChecker ac;
-    fbl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
+    zx_thread_state_general_regs local_buffer;
+    size_t local_buffer_len = sizeof(local_buffer);
 
-    status = _buffer.copy_array_from_user(bytes.get(), buffer_len);
+    status = _buffer.copy_array_from_user(&local_buffer, local_buffer_len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    status = thread->WriteState(state_kind, bytes.get(), buffer_len);
-    return status;
+    return thread->WriteState(state_kind, &local_buffer, local_buffer_len);
 }
 
 // See ZX-940

@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
 enum message {
@@ -57,21 +58,13 @@ extern void send_msg(zx_handle_t handle, enum message msg);
 
 extern bool recv_msg(zx_handle_t handle, enum message* msg);
 
-extern void dump_gregs(zx_handle_t thread_handle, void* buf);
+extern void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs);
 
-extern void dump_arch_regs (zx_handle_t thread_handle, int regset, void* buf);
+extern void dump_inferior_regs(zx_handle_t thread);
 
-extern bool dump_inferior_regs(zx_handle_t thread);
+extern void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* out);
 
-extern uint32_t get_inferior_greg_buf_size(zx_handle_t thread);
-
-extern void read_inferior_gregs(zx_handle_t thread, void* buf, unsigned buf_size);
-
-extern void write_inferior_gregs(zx_handle_t thread, const void* buf, unsigned buf_size);
-
-extern uint64_t get_uint64_register(zx_handle_t thread, size_t offset);
-
-extern void set_uint64_register(zx_handle_t thread, size_t offset, uint64_t value);
+extern void write_inferior_gregs(zx_handle_t thread, const zx_thread_state_general_regs_t* out);
 
 extern size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len);
 

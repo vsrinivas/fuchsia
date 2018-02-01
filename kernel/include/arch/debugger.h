@@ -9,20 +9,16 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
 
 struct thread;
 
-// Regset #0 is defined to be the general regs.
-// The remaining regsets are architecture-specific.
-// By convention the "general regs" are, generally, the integer regs + pc
-// + ALU flags.
-
-uint arch_num_regsets(void);
-
-zx_status_t arch_get_regset(struct thread *thread, uint regset, void* regs, uint* buf_size);
-zx_status_t arch_set_regset(struct thread *thread, uint regset, const void* regs, uint buf_size);
+// The caller is responsible for making sure the thread is in an exception
+// or is suspended, and stays so.
+zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs* out);
+zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs* in);
 
 __END_CDECLS

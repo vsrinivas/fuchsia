@@ -831,8 +831,8 @@ static bool test_reading_register_state(void) {
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
     zx_general_regs_t regs;
-    uint32_t size_read;
-    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    size_t size_read;
+    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs), &size_read), ZX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
     ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
@@ -874,7 +874,7 @@ static bool test_writing_register_state(void) {
     regs_to_set.REG_PC = (uintptr_t)save_regs_and_exit_thread;
     regs_to_set.REG_STACK_PTR = (uintptr_t)(stack.stack + sizeof(stack.stack));
     ASSERT_EQ(zx_thread_write_state(
-                  thread_handle, ZX_THREAD_STATE_REGSET0,
+                  thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                   &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
     ASSERT_EQ(zx_task_resume(thread_handle, 0), ZX_OK, "");
     ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED,
@@ -923,9 +923,9 @@ static bool test_noncanonical_rip_address(void) {
 
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
-    struct zx_x86_64_general_regs regs;
-    uint32_t size_read;
-    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    zx_thread_state_general_regs_t regs;
+    size_t size_read;
+    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs), &size_read), ZX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
 
@@ -935,16 +935,16 @@ static bool test_noncanonical_rip_address(void) {
     uintptr_t canonical_addr = noncanonical_addr - 1;
     uint64_t kKernelAddr = 0xffff800000000000;
 
-    struct zx_x86_64_general_regs regs_modified = regs;
+    zx_thread_state_general_regs_t regs_modified = regs;
 
     // This RIP address must be disallowed.
     regs_modified.rip = noncanonical_addr;
-    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                     &regs_modified, sizeof(regs_modified)),
               ZX_ERR_INVALID_ARGS, "");
 
     regs_modified.rip = canonical_addr;
-    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                     &regs_modified, sizeof(regs_modified)),
               ZX_OK, "");
 
@@ -952,12 +952,12 @@ static bool test_noncanonical_rip_address(void) {
     // disallowed because this simplifies the check and it's not useful to
     // allow this address.
     regs_modified.rip = kKernelAddr;
-    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                     &regs_modified, sizeof(regs_modified)),
               ZX_ERR_INVALID_ARGS, "");
 
     // Clean up: Restore the original register state.
-    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                     &regs, sizeof(regs)), ZX_OK, "");
     // Allow the child thread to resume and exit.
     ASSERT_EQ(zx_task_resume(thread_handle, 0), ZX_OK, "");
@@ -996,8 +996,8 @@ static bool test_writing_arm_flags_register(void) {
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
     zx_general_regs_t regs;
-    uint32_t size_read;
-    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    size_t size_read;
+    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs), &size_read), ZX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
 
@@ -1009,12 +1009,12 @@ static bool test_writing_arm_flags_register(void) {
     // Try setting more flag bits.
     uint64_t original_cpsr = regs.cpsr;
     regs.cpsr |= ~kUserVisibleFlags;
-    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_write_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                     &regs, sizeof(regs)), ZX_OK, "");
 
     // Firstly, if we read back the register flag, the extra flag bits
     // should have been ignored and should not be reported as set.
-    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_REGSET0,
+    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs), &size_read), ZX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
     EXPECT_EQ(regs.cpsr, original_cpsr, "");

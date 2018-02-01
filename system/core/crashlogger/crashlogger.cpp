@@ -162,7 +162,7 @@ uint32_t crashed_thread_excp_type;
 bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     // The syscall takes a uint32_t.
     auto to_xfer = static_cast<uint32_t> (buf_size);
-    auto status = zx_thread_write_state(thread, ZX_THREAD_STATE_REGSET0, buf, to_xfer);
+    auto status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, buf, to_xfer);
     if (status < 0) {
         print_zx_error("unable to access general regs", status);
         return false;

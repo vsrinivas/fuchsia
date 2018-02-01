@@ -559,18 +559,6 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         return status;
 
     switch (property) {
-        case ZX_PROP_NUM_STATE_KINDS: {
-            if (size != sizeof(uint32_t))
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
-            if (!thread)
-                return ZX_ERR_WRONG_TYPE;
-            uint32_t value = thread->get_num_state_kinds();
-            zx_status_t status = _value.reinterpret<uint32_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
-        }
         case ZX_PROP_NAME: {
             if (size < ZX_MAX_NAME_LEN)
                 return ZX_ERR_BUFFER_TOO_SMALL;
