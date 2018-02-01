@@ -22,7 +22,9 @@ static const pbus_mmio_t i2c_mmios[] = {
         .base = 0xffd1e000,
         .length = PAGE_SIZE,
     },
-    {
+ // Gauss only uses I2C_A and I2C_B
+/*
+     {
         // AML_I2C_C
         .base = 0xffd1d000,
         .length = PAGE_SIZE,
@@ -32,6 +34,7 @@ static const pbus_mmio_t i2c_mmios[] = {
         .base = 0xffd1e000,
         .length = 0xffd1c000,
     },
+*/
 };
 
 static const pbus_irq_t i2c_irqs[] = {
@@ -43,6 +46,8 @@ static const pbus_irq_t i2c_irqs[] = {
         .irq = 214 + 32,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+ // Gauss only uses I2C_A and I2C_B
+/*
     {
         .irq = 215 + 32,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
@@ -51,6 +56,7 @@ static const pbus_irq_t i2c_irqs[] = {
         .irq = 39 + 32,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+*/
 };
 
 static const pbus_dev_t i2c_dev = {

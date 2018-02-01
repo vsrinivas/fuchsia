@@ -92,6 +92,7 @@ typedef struct {
     i2c_protocol_t i2c;
     zx_device_t* zxdev;
     aml_i2c_dev_t i2c_devs[AML_I2C_COUNT];
+    size_t dev_count;
 } aml_i2c_t;
 
 static zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len);
@@ -513,7 +514,7 @@ static zx_status_t aml_i2c_get_channel_by_address(void* ctx, uint32_t bus_id, ui
                                                    i2c_channel_t* channel) {
     aml_i2c_t* i2c = ctx;
 
-    if (bus_id >= countof(i2c->i2c_devs)) {
+    if (bus_id >= i2c->dev_count) {
         return ZX_ERR_INVALID_ARGS;
     }
     aml_i2c_dev_t* dev = &i2c->i2c_devs[bus_id];
@@ -543,7 +544,7 @@ static i2c_protocol_ops_t i2c_ops = {
 
 static void aml_i2c_release(void* ctx) {
     aml_i2c_t* i2c = ctx;
-    for (unsigned i = 0; i < countof(i2c->i2c_devs); i++) {
+    for (unsigned i = 0; i < i2c->dev_count; i++) {
         aml_i2c_dev_t* device = &i2c->i2c_devs[i];
         pdev_vmo_buffer_release(&device->regs_iobuff);
         zx_handle_close(device->event);
@@ -576,7 +577,28 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    for (unsigned i = 0; i < countof(i2c->i2c_devs); i++) {
+    pdev_device_info_t info;
+    status = pdev_get_device_info(&i2c->pdev, &info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_i2c_bind: pdev_get_device_info failed\n");
+        goto fail;
+    }
+
+    if (info.mmio_count != info.irq_count) {
+        zxlogf(ERROR, "aml_i2c_bind: mmio_count %u does not matchirq_count %u\n",
+               info.mmio_count, info.irq_count);
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
+    if (info.mmio_count > countof(i2c->i2c_devs)) {
+        zxlogf(ERROR, "aml_i2c_bind: mmio_count %u too large\n", info.mmio_count);
+        status = ZX_ERR_OUT_OF_RANGE;
+        goto fail;
+    }
+
+    i2c->dev_count = info.mmio_count;
+
+    for (unsigned i = 0; i < i2c->dev_count; i++) {
         zx_status_t status = aml_i2c_dev_init(i2c, i);
         if (status != ZX_OK) {
             zxlogf(ERROR, "aml_i2c_bind: aml_i2c_dev_init failed: %d\n", status);
