@@ -139,7 +139,8 @@ BUILD_ARGS=
 
 if (( $ASAN )); then
     BUILDDIR_SUFFIX+=-asan
-    BUILD_ARGS+=' USE_ASAN=true'
+    # at the moment asan implies clang
+    BUILD_ARGS+=' USE_ASAN=true USE_CLANG=true'
 elif (( $LTO )); then
     BUILDDIR_SUFFIX+=-lto
     BUILD_ARGS+=' USE_LTO=true'
