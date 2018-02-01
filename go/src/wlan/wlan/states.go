@@ -189,6 +189,7 @@ const ScanSlice = 1
 type scanState struct {
 	pause             bool
 	running           bool
+	completed         bool
 	cmdPending        *commandRequest
 	supportedChannels []uint8
 	channelScanOffset int
@@ -253,11 +254,8 @@ func (s *scanState) getChannelsSlice() []uint8 {
 	}
 
 	s.channelScanOffset += length
+	s.completed = s.channelScanOffset >= len(s.supportedChannels)
 	return channels
-}
-
-func (s *scanState) completed() bool {
-	return s.channelScanOffset >= len(s.supportedChannels);
 }
 
 func (s *scanState) run(c *Client) (time.Duration, error) {
@@ -353,7 +351,7 @@ func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 		if debug {
 			PrintScanResponse(v)
 		}
-		s.running = !s.completed()
+		s.running = !s.completed
 
 		if s.cmdPending != nil && s.cmdPending.id == CmdScan {
 			aps := CollectScanResults(v, "", "")
@@ -700,10 +698,11 @@ func (s *assocState) timerExpired(c *Client) (state, error) {
 // Associated
 
 type associatedState struct {
+	scanner *scanState
 }
 
 func newAssociatedState() *associatedState {
-	return &associatedState{}
+	return &associatedState{scanner:nil}
 }
 
 func (s *associatedState) String() string {
@@ -711,6 +710,9 @@ func (s *associatedState) String() string {
 }
 
 func (s *associatedState) run(c *Client) (time.Duration, error) {
+	if s.scanner != nil {
+		return s.scanner.run(c)
+	}
 	return InfiniteTimeout, nil
 }
 
@@ -720,7 +722,6 @@ func (s *associatedState) commandIsDisabled() bool {
 }
 
 func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
-	// TODO(toshik): handle Scan command
 	switch cmd.id {
 	case CmdDisconnect:
 		req := &mlme.DeauthenticateRequest{
@@ -738,6 +739,11 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 			res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
 		}
 		cmd.respC <- res
+	case CmdScan:
+		if s.scanner == nil {
+			s.scanner = newScanState(c)
+		}
+		s.scanner.handleCommand(cmd, c)
 	default:
 		cmd.respC <- &CommandResult{nil,
 			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
@@ -780,18 +786,36 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		// TODO(hahnr): Evaluate response code.
 		return s, nil
 	default:
+		if s.scanner != nil {
+			_, err := s.scanner.handleMLMEMsg(msg, c)
+			if s.scanner.completed {
+				s.scanner = nil
+			}
+			return s, err
+		}
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
 }
 
 func (s *associatedState) handleMLMETimeout(c *Client) (state, error) {
+	if s.scanner != nil {
+		_, err := s.scanner.handleMLMETimeout(c)
+		return s, err
+	}
 	return s, nil
 }
 
 func (s *associatedState) needTimer(c *Client) (bool, time.Duration) {
+	if s.scanner != nil {
+		return s.scanner.needTimer(c)
+	}
 	return false, 0
 }
 
 func (s *associatedState) timerExpired(c *Client) (state, error) {
+	if s.scanner != nil {
+		_, err := s.scanner.timerExpired(c)
+		return s, err
+	}
 	return s, nil
 }

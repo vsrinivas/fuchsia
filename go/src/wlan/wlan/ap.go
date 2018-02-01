@@ -23,7 +23,7 @@ type ByRSSI []AP
 
 func (a ByRSSI) Len() int           { return len(a) }
 func (a ByRSSI) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByRSSI) Less(i, j int) bool { return a[i].LastRSSI > a[j].LastRSSI }
+func (a ByRSSI) Less(i, j int) bool { return int8(a[i].LastRSSI) > int8(a[j].LastRSSI) }
 
 func NewAP(bssDesc *mlme.BssDescription) *AP {
 	b := *bssDesc // make a copy.
