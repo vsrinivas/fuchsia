@@ -12,8 +12,7 @@ infra/tools/luci/led/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877
 infra/ninja/${platform} version:1.8.2
 
 # GN
-infra/tools/gn/${os=linux}-${arch} gn_version:507254
-infra/tools/gn/${os=mac}-${arch} gn_version:499403
+infra/tools/gn/${platform} gn_version:533454
 
 # godepfile
 fuchsia/tools/godepfile/${platform} git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
