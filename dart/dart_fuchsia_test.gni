@@ -67,6 +67,7 @@ template("dart_fuchsia_test") {
     forward_variables_from(invoker,
                            [
                              "disable_analysis",
+                             "sandbox",
                            ])
     source_dir = test_source_dir
 
