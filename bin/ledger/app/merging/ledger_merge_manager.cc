@@ -7,11 +7,11 @@
 #include <memory>
 #include <string>
 
+#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
@@ -46,7 +46,7 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
       [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
       std::make_unique<backoff::ExponentialBackoff>(
           fxl::TimeDelta::FromMilliseconds(10), 2u,
-          fxl::TimeDelta::FromSeconds(60 * 60), encryption::RandUint64));
+          fxl::TimeDelta::FromSeconds(60 * 60), fxl::RandUint64));
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(
       page_id,

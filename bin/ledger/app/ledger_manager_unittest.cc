@@ -11,10 +11,10 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/lib/callback/capture.h"
@@ -29,7 +29,7 @@ namespace {
 storage::PageId RandomId() {
   std::string result;
   result.resize(kPageIdSize);
-  encryption::RandBytes(&result[0], kPageIdSize);
+  fxl::RandBytes(&result[0], kPageIdSize);
   return result;
 }
 

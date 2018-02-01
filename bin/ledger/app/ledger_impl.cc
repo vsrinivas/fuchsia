@@ -11,10 +11,10 @@
 #include <trace/event.h>
 
 #include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/lib/callback/trace_callback.h"
 
 namespace ledger {
@@ -23,7 +23,7 @@ namespace {
 
 void GenerateRandomId(fidl::Array<uint8_t>* id) {
   id->resize(kPageIdSize);
-  encryption::RandBytes(id->data(), kPageIdSize);
+  fxl::RandBytes(id->data(), kPageIdSize);
 }
 
 }  // namespace

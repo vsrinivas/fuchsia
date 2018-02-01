@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"

@@ -13,7 +13,6 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {

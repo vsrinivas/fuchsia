@@ -7,9 +7,9 @@
 #include <algorithm>
 
 #include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
 namespace ledger {
@@ -96,7 +96,7 @@ void PageManager::BindPageSnapshot(
 ReferencePtr PageManager::CreateReference(
     storage::ObjectIdentifier object_identifier) {
   uint64_t index;
-  encryption::RandBytes(&index, sizeof(index));
+  fxl::RandBytes(&index, sizeof(index));
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
   ReferencePtr reference = Reference::New();

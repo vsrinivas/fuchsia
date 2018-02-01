@@ -10,7 +10,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"

@@ -14,8 +14,6 @@ source_set("primitives") {
     "hmac.h",
     "kdf.cc",
     "kdf.h",
-    "rand.cc",
-    "rand.h",
   ]
 
   deps = [

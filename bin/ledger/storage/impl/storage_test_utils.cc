@@ -8,9 +8,9 @@
 
 #include <numeric>
 
+#include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
-#include "peridot/bin/ledger/encryption/primitives/rand.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -103,7 +103,7 @@ ObjectIdentifier MakeObjectIdentifier(std::string content,
 std::string RandomString(size_t size) {
   std::string value;
   value.resize(size);
-  encryption::RandBytes(&value[0], value.size());
+  fxl::RandBytes(&value[0], value.size());
   return value;
 }
 
