@@ -33,6 +33,10 @@ typedef struct {
 } pbus_i2c_channel_t;
 
 typedef struct {
+    uint32_t    port;
+} pbus_uart_t;
+
+typedef struct {
     const char* name;
     uint32_t vid;
     uint32_t pid;
@@ -45,6 +49,8 @@ typedef struct {
     uint32_t gpio_count;
     const pbus_i2c_channel_t* i2c_channels;
     uint32_t i2c_channel_count;
+    const pbus_uart_t* uarts;
+    uint32_t uart_count;
 } pbus_dev_t;
 
 // flags for pbus_device_add()

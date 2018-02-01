@@ -23,6 +23,7 @@ typedef struct {
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
+    uint32_t uart_count;
     uint32_t reserved[8];
 } pdev_device_info_t;
 
