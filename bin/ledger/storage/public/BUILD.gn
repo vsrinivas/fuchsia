@@ -39,7 +39,7 @@ source_set("public") {
     "//peridot/lib/convert",
     "//peridot/lib/util:ptr",
     "//third_party/flatbuffers",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

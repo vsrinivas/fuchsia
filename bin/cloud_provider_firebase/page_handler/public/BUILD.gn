@@ -20,7 +20,7 @@ source_set("public") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/gcs",
     "//peridot/lib/firebase",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

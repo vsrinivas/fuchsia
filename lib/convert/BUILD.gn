@@ -24,7 +24,7 @@ source_set("convert") {
     "//third_party/flatbuffers",
     "//third_party/leveldb",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 }
 

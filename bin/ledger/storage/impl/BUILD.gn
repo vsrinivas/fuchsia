@@ -108,7 +108,7 @@ source_set("lib") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/base64url",
     "//peridot/lib/callback",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   public_deps = [

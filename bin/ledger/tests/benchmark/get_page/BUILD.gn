@@ -23,7 +23,7 @@ executable("ledger_benchmark_get_page") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/public/lib/ledger/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   sources = [

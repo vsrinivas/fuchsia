@@ -30,7 +30,7 @@ source_set("testing") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/callback",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

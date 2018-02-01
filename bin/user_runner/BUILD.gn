@@ -90,7 +90,7 @@ executable("user_runner_bin") {
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl:private",
     "//peridot/public/lib/user_intelligence/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 

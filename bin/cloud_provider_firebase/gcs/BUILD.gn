@@ -25,7 +25,7 @@ source_set("gcs") {
     "//peridot/lib/callback",
     "//peridot/lib/network",
     "//peridot/lib/socket",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

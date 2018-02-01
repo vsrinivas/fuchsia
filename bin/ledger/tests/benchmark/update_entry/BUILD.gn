@@ -24,7 +24,7 @@ executable("ledger_benchmark_update_entry") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   sources = [

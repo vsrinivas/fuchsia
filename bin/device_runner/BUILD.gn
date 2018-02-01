@@ -62,7 +62,7 @@ executable("device_runner_bin") {
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/device/fidl",
     "//peridot/public/lib/user/fidl:private",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 
@@ -94,7 +94,7 @@ source_set("lib") {
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/device/fidl",
     "//peridot/public/lib/user/fidl:private",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 }
 

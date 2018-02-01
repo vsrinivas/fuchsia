@@ -25,7 +25,7 @@ executable("ledger_benchmark_delete_entry") {
     "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   sources = [

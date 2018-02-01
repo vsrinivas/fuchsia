@@ -19,6 +19,6 @@ executable("demo") {
     "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/lib/callback",
     "//peridot/public/lib/lifecycle/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }

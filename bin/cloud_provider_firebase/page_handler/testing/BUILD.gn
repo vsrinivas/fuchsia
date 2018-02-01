@@ -23,7 +23,7 @@ source_set("testing") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

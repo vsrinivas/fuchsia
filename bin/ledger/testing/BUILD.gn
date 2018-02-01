@@ -39,7 +39,7 @@ source_set("lib") {
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/gtest",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   deps = [

@@ -23,7 +23,7 @@ executable("app") {
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/backoff",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -94,7 +94,7 @@ source_set("lib") {
     "//peridot/lib/socket",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

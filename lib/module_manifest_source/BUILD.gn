@@ -34,7 +34,7 @@ source_set("directory_source") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 }
 

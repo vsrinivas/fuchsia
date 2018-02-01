@@ -13,6 +13,6 @@ executable("dev_token_manager") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/auth/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 }

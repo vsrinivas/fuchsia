@@ -27,7 +27,7 @@ executable("modular_benchmark_story_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//zircon/system/ulib/trace-provider",
+    "//zircon/public/lib/trace-provider",
   ]
 
   sources = [

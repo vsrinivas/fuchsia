@@ -19,7 +19,7 @@ source_set("network") {
     "//garnet/public/lib/network/fidl",
     "//peridot/lib/backoff",
     "//peridot/lib/callback",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 }
 

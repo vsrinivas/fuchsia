@@ -18,7 +18,7 @@ source_set("context") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

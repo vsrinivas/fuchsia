@@ -29,7 +29,7 @@ source_set("impl") {
     "//peridot/bin/cloud_provider_firebase/gcs",
     "//peridot/bin/ledger/storage/public",  # For serialization version constant.
     "//peridot/lib/firebase",
-    "//zircon/system/ulib/zx",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

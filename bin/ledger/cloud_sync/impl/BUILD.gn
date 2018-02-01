@@ -38,7 +38,7 @@ source_set("impl") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/encryption/primitives",
-    "//zircon/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
