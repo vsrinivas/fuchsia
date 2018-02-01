@@ -21,9 +21,8 @@ class TestApp {
   TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) :
-    module_context_(module_host->module_context())
-  {
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      : module_context_(module_host->module_context()) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
     module_context_->GetChain(chain_.NewRequest());
@@ -38,7 +37,7 @@ class TestApp {
 
  private:
   void GetKeys() {
-    chain_->GetKeys([this] (const fidl::Array<fidl::String>& keys) {
+    chain_->GetKeys([this](const fidl::Array<fidl::String>& keys) {
       if (keys.empty()) {
         getkeys_.Pass();
       }

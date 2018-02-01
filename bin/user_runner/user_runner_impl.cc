@@ -87,7 +87,8 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
 template <typename X>
-std::function<void(std::function<void()>)> Reset(std::unique_ptr<X>* const field) {
+std::function<void(std::function<void()>)> Reset(
+    std::unique_ptr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
     cont();
@@ -95,7 +96,8 @@ std::function<void(std::function<void()>)> Reset(std::unique_ptr<X>* const field
 }
 
 template <typename X>
-std::function<void(std::function<void()>)> Reset(fidl::StructPtr<X>* const field) {
+std::function<void(std::function<void()>)> Reset(
+    fidl::StructPtr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
     cont();
@@ -103,7 +105,8 @@ std::function<void(std::function<void()>)> Reset(fidl::StructPtr<X>* const field
 }
 
 template <typename X>
-std::function<void(std::function<void()>)> Reset(fidl::InterfacePtr<X>* const field) {
+std::function<void(std::function<void()>)> Reset(
+    fidl::InterfacePtr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->Unbind();
     cont();
@@ -410,9 +413,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
       std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
           user_scope_->GetLauncher(), std::move(maxwell_config));
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
-      std::move(context_engine),
-      std::move(story_provider), std::move(focus_provider_maxwell),
-      std::move(visible_stories_provider),
+      std::move(context_engine), std::move(story_provider),
+      std::move(focus_provider_maxwell), std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
   AtEnd(Reset(&maxwell_app_));
   AtEnd(Teardown(kBasicTimeout, "Maxwell", maxwell_app_.get()));
@@ -460,8 +462,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::String& user_shell_url,
     context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(context_engine_config),
         "" /* data_origin */, std::move(service_list));
-    context_engine_app_->services().ConnectToService(std::move(
-        context_engine_request));
+    context_engine_app_->services().ConnectToService(
+        std::move(context_engine_request));
     AtEnd(Reset(&context_engine_app_));
     AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
   }
@@ -669,8 +671,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path->link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
                                                 fidl::Array<uint8_t>::New(16),
-                                                std::move(link_path),
-                                                nullptr);
+                                                std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request));
 }
 

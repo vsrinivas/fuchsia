@@ -93,8 +93,7 @@ class ParentApp {
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(),
-                     agent_service_.NewRequest());
+    ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",

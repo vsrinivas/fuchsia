@@ -139,9 +139,9 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntil(
-      [&dummy_agent] {
-        return dummy_agent && dummy_agent->GetCallCount("Connect") > 0; });
+  RunLoopUntil([&dummy_agent] {
+    return dummy_agent && dummy_agent->GetCallCount("Connect") > 0;
+  });
   EXPECT_EQ(1, agent_launch_count);
   dummy_agent->ExpectCalledOnce("Connect");
   dummy_agent->ExpectNoOtherCalls();
@@ -157,7 +157,8 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  agent_controller2.NewRequest());
 
   RunLoopUntil([&dummy_agent] {
-    return dummy_agent && dummy_agent->GetCallCount("Connect"); });
+    return dummy_agent && dummy_agent->GetCallCount("Connect");
+  });
   EXPECT_EQ(1, agent_launch_count);
   dummy_agent->ExpectCalledOnce("Connect");
   dummy_agent->ExpectNoOtherCalls();

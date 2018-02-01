@@ -61,7 +61,8 @@ void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
-void XdrChainKeyToLinkData(XdrContext* const xdr, ChainKeyToLinkData* const data) {
+void XdrChainKeyToLinkData(XdrContext* const xdr,
+                           ChainKeyToLinkData* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("link_path", &data->link_path, XdrLinkPath);
 }
@@ -86,9 +87,10 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_stopped", &data->module_stopped);
 
   xdr->ReadErrorHandler([data] {
-    data->chain_data = ChainData::New();
-    data->chain_data->key_to_link_map.resize(0);
-  })->Field("chain_data", &data->chain_data, XdrChainData);
+       data->chain_data = ChainData::New();
+       data->chain_data->key_to_link_map.resize(0);
+     })
+      ->Field("chain_data", &data->chain_data, XdrChainData);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
@@ -277,9 +279,9 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // If the Chain already exists, remove it and re-create it appropriately.
     story_controller_impl_->chains_.erase(
         i, story_controller_impl_->chains_.end());
-    story_controller_impl_->chains_.emplace_back(
-        new ChainImpl(module_data_->module_path.Clone(),
-                      module_data_->chain_data.Clone(), story_controller_impl_));
+    story_controller_impl_->chains_.emplace_back(new ChainImpl(
+        module_data_->module_path.Clone(), module_data_->chain_data.Clone(),
+        story_controller_impl_));
 
     // ModuleControllerImpl's constructor launches the child application.
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
@@ -749,10 +751,10 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
       return;
     }
 
-    link_impl_ = new LinkImpl(story_controller_impl_->ledger_client_,
-                              story_controller_impl_->story_page_id_.Clone(),
-                              std::move(link_path_),
-                              std::move(create_link_info_));
+    link_impl_ =
+        new LinkImpl(story_controller_impl_->ledger_client_,
+                     story_controller_impl_->story_page_id_.Clone(),
+                     std::move(link_path_), std::move(create_link_info_));
     link_impl_->Connect(std::move(request_));
     story_controller_impl_->links_.emplace_back(link_impl_);
     // This orphaned handler will be called after this operation has been
@@ -1696,21 +1698,21 @@ void StoryControllerImpl::GetActiveModules(
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a module being created and inserted in the connections collection
   // during some Operation.
-  new SyncCall(
-      &operation_queue_, fxl::MakeCopyable([this, watcher = std::move(watcher),
-                                            callback]() mutable {
-        if (watcher) {
-          auto ptr = watcher.Bind();
-          modules_watchers_.AddInterfacePtr(std::move(ptr));
-        }
+  new SyncCall(&operation_queue_,
+               fxl::MakeCopyable(
+                   [this, watcher = std::move(watcher), callback]() mutable {
+                     if (watcher) {
+                       auto ptr = watcher.Bind();
+                       modules_watchers_.AddInterfacePtr(std::move(ptr));
+                     }
 
-        fidl::Array<ModuleDataPtr> result;
-        result.resize(0);
-        for (auto& connection : connections_) {
-          result.push_back(connection.module_data.Clone());
-        }
-        callback(std::move(result));
-      }));
+                     fidl::Array<ModuleDataPtr> result;
+                     result.resize(0);
+                     for (auto& connection : connections_) {
+                       result.push_back(connection.module_data.Clone());
+                     }
+                     callback(std::move(result));
+                   }));
 }
 
 // |StoryController|
@@ -1748,25 +1750,25 @@ void StoryControllerImpl::GetActiveLinks(
   // some Operation. (Right now Links are not created in an Operation, but we
   // don't want to rely on it.)
   new SyncCall(&operation_queue_,
-               fxl::MakeCopyable([this, watcher = std::move(watcher),
-                                  callback]() mutable {
-                 if (watcher) {
-                   auto ptr = watcher.Bind();
-                   links_watchers_.AddInterfacePtr(std::move(ptr));
-                 }
+               fxl::MakeCopyable(
+                   [this, watcher = std::move(watcher), callback]() mutable {
+                     if (watcher) {
+                       auto ptr = watcher.Bind();
+                       links_watchers_.AddInterfacePtr(std::move(ptr));
+                     }
 
-                 // Only active links, i.e. links currently in use by a module,
-                 // are returned here. Eventually we might want to list all
-                 // links, but this requires some changes to how links are
-                 // stored to make it nice. (Right now we need to parse keys,
-                 // which we don't want to.)
-                 fidl::Array<LinkPathPtr> result;
-                 result.resize(0);
-                 for (auto& link : links_) {
-                   result.push_back(link->link_path().Clone());
-                 }
-                 callback(std::move(result));
-               }));
+                     // Only active links, i.e. links currently in use by a
+                     // module, are returned here. Eventually we might want to
+                     // list all links, but this requires some changes to how
+                     // links are stored to make it nice. (Right now we need to
+                     // parse keys, which we don't want to.)
+                     fidl::Array<LinkPathPtr> result;
+                     result.resize(0);
+                     for (auto& link : links_) {
+                       result.push_back(link->link_path().Clone());
+                     }
+                     callback(std::move(result));
+                   }));
 }
 
 // |StoryController|

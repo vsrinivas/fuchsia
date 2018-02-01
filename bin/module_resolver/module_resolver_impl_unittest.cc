@@ -375,8 +375,8 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
   // First try matching "module1" for a query that describes a Link that
   // already allows "foo" in the Link.
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddLinkInfoNounWithTypeConstraints("start",
-                       { {"a", "b"}, "c"}, {"foo"})
+                   .AddLinkInfoNounWithTypeConstraints(
+                       "start", {{"a", "b"}, "c"}, {"foo"})
                    .build();
   FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
@@ -386,9 +386,9 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
   // content encodes an Entity reference.
   fidl::String entity_reference = AddEntity({{"foo", ""}});
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddLinkInfoNounWithContent("start",
-                       { {"a", "b"}, "c"}, entity_reference)
-                   .build();
+              .AddLinkInfoNounWithContent("start", {{"a", "b"}, "c"},
+                                          entity_reference)
+              .build();
   FindModules(std::move(query));
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);

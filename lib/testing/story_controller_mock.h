@@ -58,9 +58,7 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void Stop(const StopCallback& done) override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void Stop(const StopCallback& done) override { FXL_NOTIMPLEMENTED(); }
 
   // |StoryController|
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {

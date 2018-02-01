@@ -20,8 +20,7 @@ constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
 SocketWriter::SocketWriter(Client* client, async_t* async)
     : client_(client), wait_(async) {
   wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
-  wait_.set_handler([this](async_t* async,
-                           zx_status_t status,
+  wait_.set_handler([this](async_t* async, zx_status_t status,
                            const zx_packet_signal_t* signal) {
     WriteData(data_view_);
     return ASYNC_WAIT_FINISHED;

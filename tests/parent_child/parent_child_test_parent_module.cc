@@ -63,8 +63,7 @@ class ParentApp {
     // link. This stops the previous module instance and starts a new one.
     modular::testing::GetStore()->Get(
         "child_module_init", [this](const fidl::String&) {
-          child_module_.set_error_handler(
-              [this] { OnChildModuleStopped(); });
+          child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
           module_host_->module_context()->StartModuleInShell(
               kChildModuleName, kChildModule, kChildLinkAlternate, nullptr,

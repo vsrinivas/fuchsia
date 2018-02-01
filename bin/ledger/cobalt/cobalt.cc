@@ -20,8 +20,8 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     app::ApplicationContext* app_context) {
   return cobalt::InitializeCobalt(task_runner, app_context,
-      kLedgerCobaltProjectId, kCobaltMetricId, kCobaltEncodingId,
-      &g_cobalt_context);
+                                  kLedgerCobaltProjectId, kCobaltMetricId,
+                                  kCobaltEncodingId, &g_cobalt_context);
 }
 
 void ReportEvent(CobaltEvent event) {

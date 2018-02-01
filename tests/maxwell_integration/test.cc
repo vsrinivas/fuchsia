@@ -78,7 +78,8 @@ MaxwellTestBase::MaxwellTestBase() {
 
   fidl::InterfaceHandle<app::ApplicationEnvironmentHost>
       test_environment_host_handle;
-  test_environment_host_binding_->Bind(test_environment_host_handle.NewRequest());
+  test_environment_host_binding_->Bind(
+      test_environment_host_handle.NewRequest());
   root_environment->CreateNestedEnvironment(
       std::move(test_environment_host_handle), test_environment_.NewRequest(),
       test_environment_controller_.NewRequest(), "maxwell-test");

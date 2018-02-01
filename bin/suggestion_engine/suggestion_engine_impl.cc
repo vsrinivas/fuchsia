@@ -425,40 +425,37 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
                                       media_renderer.NewRequest());
 
   media_sink_.Unbind();
-  media_service_->CreateSink(media_renderer.Unbind(),
-                             media_sink_.NewRequest());
+  media_service_->CreateSink(media_renderer.Unbind(), media_sink_.NewRequest());
 
-  media_packet_producer_ =
-      media_response->media_packet_producer.Bind();
+  media_packet_producer_ = media_response->media_packet_producer.Bind();
   media_sink_->ConsumeMediaType(
       std::move(media_response->media_type),
       [this](fidl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
-        media_packet_producer_->Connect(
-            consumer.Bind(), [this] {
-              time_lord_.Unbind();
-              media_timeline_consumer_.Unbind();
+        media_packet_producer_->Connect(consumer.Bind(), [this] {
+          time_lord_.Unbind();
+          media_timeline_consumer_.Unbind();
 
-              speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-                listener->OnStatusChanged(SpeechStatus::RESPONDING);
-              });
+          speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
+            listener->OnStatusChanged(SpeechStatus::RESPONDING);
+          });
 
-              media_sink_->GetTimelineControlPoint(time_lord_.NewRequest());
-              time_lord_->GetTimelineConsumer(
-                  media_timeline_consumer_.NewRequest());
-              time_lord_->Prime([this] {
-                auto tt = media::TimelineTransform::New();
-                tt->reference_time = media::Timeline::local_now() +
-                                     media::Timeline::ns_from_ms(30);
-                tt->subject_time = media::kUnspecifiedTime;
-                tt->reference_delta = tt->subject_delta = 1;
+          media_sink_->GetTimelineControlPoint(time_lord_.NewRequest());
+          time_lord_->GetTimelineConsumer(
+              media_timeline_consumer_.NewRequest());
+          time_lord_->Prime([this] {
+            auto tt = media::TimelineTransform::New();
+            tt->reference_time =
+                media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
+            tt->subject_time = media::kUnspecifiedTime;
+            tt->reference_delta = tt->subject_delta = 1;
 
-                HandleMediaUpdates(
-                    media::MediaTimelineControlPoint::kInitialStatus, nullptr);
+            HandleMediaUpdates(media::MediaTimelineControlPoint::kInitialStatus,
+                               nullptr);
 
-                media_timeline_consumer_->SetTimelineTransform(
-                    std::move(tt), [](bool completed) {});
-              });
-            });
+            media_timeline_consumer_->SetTimelineTransform(
+                std::move(tt), [](bool completed) {});
+          });
+        });
       });
 
   media_packet_producer_.set_error_handler([this] {

@@ -29,7 +29,8 @@ constexpr char kOneAgentUrl[] =
     "file:///system/test/modular_tests/component_context_test_one_agent";
 
 constexpr char kUnstoppableAgent[] =
-    "file:///system/test/modular_tests/component_context_test_unstoppable_agent";
+    "file:///system/test/modular_tests/"
+    "component_context_test_unstoppable_agent";
 
 constexpr int kTotalSimultaneousTests = 2;
 
@@ -93,7 +94,8 @@ class ParentApp {
     component_context_->ConnectToAgent(kOneAgentUrl,
                                        one_agent_services.NewRequest(),
                                        one_agent_controller.NewRequest());
-    ConnectToService(one_agent_services.get(), one_agent_interface_.NewRequest());
+    ConnectToService(one_agent_services.get(),
+                     one_agent_interface_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "one_agent_connected", [this](const fidl::String&) {

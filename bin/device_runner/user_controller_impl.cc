@@ -28,9 +28,8 @@ UserControllerImpl::UserControllerImpl(
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
-      device_shell_services_(device_shell_services
-                                 ? device_shell_services.Bind()
-                                 : nullptr),
+      device_shell_services_(
+          device_shell_services ? device_shell_services.Bind() : nullptr),
       done_(std::move(done)) {
   // 0. Generate the path to map '/data' for the user runner we are starting.
   std::string data_origin;

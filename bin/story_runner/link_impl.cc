@@ -803,8 +803,7 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
                                fidl::InterfaceRequest<Link> link_request)
     : impl_(impl), binding_(this, std::move(link_request)), id_(id) {
   impl_->AddConnection(this);
-  binding_.set_error_handler(
-      [this] { impl_->RemoveConnection(this); });
+  binding_.set_error_handler([this] { impl_->RemoveConnection(this); });
 }
 
 LinkConnection::~LinkConnection() = default;
@@ -863,8 +862,7 @@ LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
                                              LinkWatcherPtr watcher,
                                              const uint32_t conn)
     : impl_(impl), watcher_(std::move(watcher)), conn_(conn) {
-  watcher_.set_error_handler(
-      [this] { impl_->RemoveConnection(this); });
+  watcher_.set_error_handler([this] { impl_->RemoveConnection(this); });
 }
 
 LinkWatcherConnection::~LinkWatcherConnection() = default;

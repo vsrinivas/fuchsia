@@ -156,7 +156,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
         impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                               data_->json);
       } else {
-        FXL_LOG(WARNING) << trace_name() << " " << "ApplyChange() failed ";
+        FXL_LOG(WARNING) << trace_name() << " "
+                         << "ApplyChange() failed ";
       }
       impl_->latest_key_ = data_->key;
       Cont1(flow, src_);

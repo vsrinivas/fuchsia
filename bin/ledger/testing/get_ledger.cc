@@ -48,8 +48,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
   repository_factory->GetRepository(
       ledger_repository_path, std::move(cloud_provider),
       repository.NewRequest(), callback::Capture([] {}, &status));
-  if (!repository_factory.WaitForResponseUntil(
-          zx::deadline_after(kTimeout))) {
+  if (!repository_factory.WaitForResponseUntil(zx::deadline_after(kTimeout))) {
     FXL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;
   }

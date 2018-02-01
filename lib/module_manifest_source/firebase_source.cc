@@ -167,11 +167,10 @@ FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
-      network_service_(
-          new ledger::NetworkServiceImpl(
-              std::move(task_runner),
-              std::make_unique<backoff::ExponentialBackoff>(),
-              std::move(network_service_factory))),
+      network_service_(new ledger::NetworkServiceImpl(
+          std::move(task_runner),
+          std::make_unique<backoff::ExponentialBackoff>(),
+          std::move(network_service_factory))),
       client_(
           new firebase::FirebaseImpl(network_service_.get(), db_id, prefix)),
       weak_factory_(this) {}

@@ -44,16 +44,15 @@ std::string ResizeForBehavior(std::string value,
 ObjectIdentifier GetObjectIdentifier(std::string value) {
   std::string result;
   auto data_source = DataSource::Create(std::move(value));
-  SplitDataSource(
-      data_source.get(),
-      [&result](IterationStatus status, ObjectDigest object_digest,
-                std::unique_ptr<DataSource::DataChunk> chunk) {
-        if (status == IterationStatus::DONE) {
-          result = object_digest;
-        }
-        return encryption::MakeDefaultObjectIdentifier(
-            std::move(object_digest));
-      });
+  SplitDataSource(data_source.get(),
+                  [&result](IterationStatus status, ObjectDigest object_digest,
+                            std::unique_ptr<DataSource::DataChunk> chunk) {
+                    if (status == IterationStatus::DONE) {
+                      result = object_digest;
+                    }
+                    return encryption::MakeDefaultObjectIdentifier(
+                        std::move(object_digest));
+                  });
   return encryption::MakeDefaultObjectIdentifier(std::move(result));
 }
 

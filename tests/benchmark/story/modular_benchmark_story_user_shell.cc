@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+#include <memory>
 #include <utility>
 
 #include "lib/app/cpp/application_context.h"
@@ -28,8 +28,8 @@ namespace {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    auto story_count_str = command_line.GetOptionValueWithDefault(
-        "story_count", "1");
+    auto story_count_str =
+        command_line.GetOptionValueWithDefault("story_count", "1");
     if (!fxl::StringToNumberWithError(story_count_str, &story_count)) {
       FXL_LOG(ERROR) << "Unrecognized value [--story_count=" << story_count_str
                      << "]: Using 0.";
@@ -77,13 +77,12 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-  }
+  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
 
   fidl::Binding<modular::StoryWatcher> binding_;
 
   modular::StoryState continue_state_{modular::StoryState::DONE};
-  std::function<void()> continue_{[]{}};
+  std::function<void()> continue_{[] {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
@@ -95,8 +94,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
 class TestApp : public modular::SingleServiceApp<modular::UserShell> {
  public:
   using Base = modular::SingleServiceApp<modular::UserShell>;
-  TestApp(app::ApplicationContext* const application_context,
-          Settings settings)
+  TestApp(app::ApplicationContext* const application_context, Settings settings)
       : Base(application_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;
@@ -143,8 +141,8 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
   void Loop() {
     if (story_count_ < settings_.story_count) {
-      FXL_LOG(INFO) << "Loop at " << story_count_
-                    << " of " << settings_.story_count;
+      FXL_LOG(INFO) << "Loop at " << story_count_ << " of "
+                    << settings_.story_count;
       fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           [this] { StoryCreate(); });
 
@@ -156,11 +154,11 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
   void StoryCreate() {
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
-    story_provider_->CreateStory(settings_.module_url,
-                                 [this](const fidl::String& story_id) {
-                                   TRACE_ASYNC_END("benchmark", "story/create", 0);
-                                   StoryInfo(story_id);
-                                 });
+    story_provider_->CreateStory(
+        settings_.module_url, [this](const fidl::String& story_id) {
+          TRACE_ASYNC_END("benchmark", "story/create", 0);
+          StoryInfo(story_id);
+        });
   }
 
   void StoryInfo(const fidl::String& story_id) {
@@ -177,9 +175,9 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void StoryStart() {
     TRACE_ASYNC_BEGIN("benchmark", "story/start", 0);
     story_watcher_.Continue(modular::StoryState::RUNNING, [this] {
-        TRACE_ASYNC_END("benchmark", "story/start", 0);
-        StoryStop();
-      });
+      TRACE_ASYNC_END("benchmark", "story/start", 0);
+      StoryStop();
+    });
 
     story_watcher_.Watch(&story_controller_);
 
@@ -190,9 +188,9 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void StoryStop() {
     TRACE_ASYNC_BEGIN("benchmark", "story/stop", 0);
     story_controller_->Stop([this] {
-        TRACE_ASYNC_END("benchmark", "story/stop", 0);
-        MaybeRepeat();
-      });
+      TRACE_ASYNC_END("benchmark", "story/stop", 0);
+      MaybeRepeat();
+    });
   }
 
   void MaybeRepeat() {

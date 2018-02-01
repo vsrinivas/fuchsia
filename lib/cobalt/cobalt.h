@@ -9,8 +9,8 @@
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
 
@@ -60,6 +60,6 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 // Report an event to Cobalt.
 void ReportEvent(uint32_t event, CobaltContext* cobalt_context);
 
-};  // namespace ledger
+};  // namespace cobalt
 
 #endif  // PERIDOT_LIB_COBALT_COBALT_H_

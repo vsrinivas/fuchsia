@@ -197,9 +197,7 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
       [this, &received_response,
        destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
          callback_destroyed = true;
-       })](network::URLResponsePtr) {
-        received_response = true;
-      });
+       })](network::URLResponsePtr) { received_response = true; });
 
   message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;

@@ -55,27 +55,29 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       std::map<std::string, PageClient::Conflict>* conflicts,
                       LedgerPageKey token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable([
-    result, conflicts, callback = std::move(callback)
-  ](ledger::Status status, fidl::Array<ledger::DiffEntryPtr> change_delta,
-    LedgerPageKey token) mutable {
-    if (status != ledger::Status::OK &&
-        status != ledger::Status::PARTIAL_RESULT) {
-      callback(status);
-      return;
-    }
+  auto cont = fxl::MakeCopyable(
+      [result, conflicts, callback = std::move(callback)](
+          ledger::Status status, fidl::Array<ledger::DiffEntryPtr> change_delta,
+          LedgerPageKey token) mutable {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status);
+          return;
+        }
 
-    for (auto& diff_entry : change_delta) {
-      (*conflicts)[to_string(diff_entry->key)] = ToConflict(diff_entry.get());
-    }
+        for (auto& diff_entry : change_delta) {
+          (*conflicts)[to_string(diff_entry->key)] =
+              ToConflict(diff_entry.get());
+        }
 
-    if (status == ledger::Status::OK) {
-      callback(ledger::Status::OK);
-      return;
-    }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK);
+          return;
+        }
 
-    GetDiffRecursive(result, conflicts, std::move(token), std::move(callback));
-  });
+        GetDiffRecursive(result, conflicts, std::move(token),
+                         std::move(callback));
+      });
 
   result->GetConflictingDiff(std::move(token), cont);
 }
@@ -456,12 +458,9 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
     fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
-  new ResolveCall(
-      &operation_queue_, this,
-      result_provider.Bind(),
-      left_version.Bind(),
-      right_version.Bind(),
-      common_version.Bind());
+  new ResolveCall(&operation_queue_, this, result_provider.Bind(),
+                  left_version.Bind(), right_version.Bind(),
+                  common_version.Bind());
 }
 
 void LedgerClient::ConflictResolverImpl::GetPageClients(

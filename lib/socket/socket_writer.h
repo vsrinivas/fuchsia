@@ -33,9 +33,7 @@ class SocketWriter {
     virtual ~Client() {}
   };
 
-  explicit SocketWriter(
-      Client* client,
-      async_t* async = async_get_default());
+  explicit SocketWriter(Client* client, async_t* async = async_get_default());
   ~SocketWriter();
 
   void Start(zx::socket destination);

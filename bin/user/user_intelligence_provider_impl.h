@@ -46,13 +46,12 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
 
-  void StartAgents(
-      fidl::InterfaceHandle<modular::ComponentContext> component_context)
-      override;
+  void StartAgents(fidl::InterfaceHandle<modular::ComponentContext>
+                       component_context) override;
 
-  void GetServicesForAgent(const fidl::String& url,
-                           const GetServicesForAgentCallback& callback)
-      override;
+  void GetServicesForAgent(
+      const fidl::String& url,
+      const GetServicesForAgentCallback& callback) override;
 
  private:
   using ServiceProviderInitializer =
@@ -62,7 +61,8 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
   fidl::Array<fidl::String> AddStandardServices(
-      const std::string& url, app::ServiceNamespace* agent_host);
+      const std::string& url,
+      app::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment
   // services.

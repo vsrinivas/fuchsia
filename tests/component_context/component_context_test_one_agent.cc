@@ -31,7 +31,8 @@ class TestAgentApp : modular::ComponentContextTestService {
 
     // Connecting to the agent should start it up.
     app::ServiceProviderPtr agent_services;
-    component_context_->ConnectToAgent(kTwoAgentUrl, agent_services.NewRequest(),
+    component_context_->ConnectToAgent(kTwoAgentUrl,
+                                       agent_services.NewRequest(),
                                        two_agent_controller_.NewRequest());
   }
 

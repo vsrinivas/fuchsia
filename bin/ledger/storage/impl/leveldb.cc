@@ -103,7 +103,6 @@ class BatchImpl : public Db::Batch {
     return callback_(std::move(batch_));
   }
 
-
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::unique_ptr<leveldb::WriteBatch> batch_;

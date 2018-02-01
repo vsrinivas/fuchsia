@@ -93,8 +93,7 @@ class ConflictResolverImpl : public ConflictResolver {
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {
-    binding_.set_error_handler(
-        [this] { this->disconnected = true; });
+    binding_.set_error_handler([this] { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
 

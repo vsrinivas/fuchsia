@@ -18,7 +18,8 @@
 
 namespace {
 
-constexpr char kModuleUrl[] = "file:///system/test/modular_tests/common_null_module";
+constexpr char kModuleUrl[] =
+    "file:///system/test/modular_tests/common_null_module";
 
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
@@ -73,12 +74,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(
-        kModuleUrl,
-        [this](const fidl::String& story_id) {
-          story_create_.Pass();
-          GetController(story_id);
-        });
+    story_provider_->CreateStory(kModuleUrl,
+                                 [this](const fidl::String& story_id) {
+                                   story_create_.Pass();
+                                   GetController(story_id);
+                                 });
   }
 
   void GetController(const fidl::String& story_id) {

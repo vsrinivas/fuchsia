@@ -23,8 +23,10 @@ CobaltContext::CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
                              int32_t project_id,
                              int32_t metric_id,
                              int32_t encoding_id)
-    : task_runner_(std::move(task_runner)), app_context_(app_context),
-      project_id_(project_id), metric_id_(metric_id),
+    : task_runner_(std::move(task_runner)),
+      app_context_(app_context),
+      project_id_(project_id),
+      metric_id_(metric_id),
       encoding_id_(encoding_id) {
   ConnectToCobaltApplication();
 }
@@ -43,8 +45,8 @@ void CobaltContext::ReportEvent(uint32_t event) {
   }
 
   // Hop to the main thread, and go back to the global object dispatcher.
-  task_runner_->PostTask([event, this]() {
-      ::cobalt::ReportEvent(event, this); });
+  task_runner_->PostTask(
+      [event, this]() { ::cobalt::ReportEvent(event, this); });
 }
 
 void CobaltContext::ConnectToCobaltApplication() {
@@ -99,9 +101,8 @@ void CobaltContext::SendEvents() {
               FXL_DCHECK(false) << "Unexpected status: " << status;
             case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
               // Log the failure.
-              FXL_LOG(WARNING)
-                  << "Cobalt rejected event: " << event
-                  << " with status: " << status;
+              FXL_LOG(WARNING) << "Cobalt rejected event: " << event
+                               << " with status: " << status;
             case cobalt::Status::OK:  // fall through
               // Remove the event from the set of
               // events to send.
@@ -147,9 +148,8 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
   auto context = std::make_unique<CobaltContext>(
       std::move(task_runner), app_context, project_id, metric_id, encoding_id);
   *cobalt_context = context.get();
-  return fxl::MakeAutoCall<fxl::Closure>(
-      fxl::MakeCopyable(
-          [context = std::move(context), cobalt_context]() mutable {
+  return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
+      [context = std::move(context), cobalt_context]() mutable {
         context.reset();
         *cobalt_context = nullptr;
       }));

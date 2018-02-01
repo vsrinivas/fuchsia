@@ -217,14 +217,10 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
 
   uint8_t calls = 0;
   ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
-                   [&calls](Status) {
-                     calls++;
-                   });
+                   [&calls](Status) { calls++; });
   page.Unbind();
   ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
-                   [&calls](Status) {
-                     calls++;
-                   });
+                   [&calls](Status) { calls++; });
   page.Unbind();
   RunLoopUntilIdle();
   EXPECT_EQ(2u, calls);

@@ -64,35 +64,32 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
     agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
         agent_context_impl_->url_,
-        [this, flow] (app::ServiceListPtr maxwell_service_list) {
+        [this, flow](app::ServiceListPtr maxwell_service_list) {
           auto service_list = app::ServiceList::New();
           service_list->names = std::move(maxwell_service_list->names);
           agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
               maxwell_service_list->provider.Bind());
           Continue(std::move(service_list), flow);
-    });
+        });
   }
 
   void Continue(app::ServiceListPtr service_list, FlowToken flow) {
     service_list->names.push_back(AgentContext::Name_);
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
-    agent_context_impl_->app_client_ =
-        std::make_unique<AppClient<Lifecycle>>(
-            app_launcher_, std::move(agent_config_),
-            std::string(kAppStoragePath) +
-                HashAgentUrl(agent_context_impl_->url_),
-            std::move(service_list));
+    agent_context_impl_->app_client_ = std::make_unique<AppClient<Lifecycle>>(
+        app_launcher_, std::move(agent_config_),
+        std::string(kAppStoragePath) + HashAgentUrl(agent_context_impl_->url_),
+        std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
 
     // We only want to use Lifecycle if it exists.
-    agent_context_impl_->app_client_->primary_service()
-        .set_error_handler(
-            [agent_context_impl = agent_context_impl_] {
-              agent_context_impl->app_client_->primary_service().Unbind();
-            });
+    agent_context_impl_->app_client_->primary_service().set_error_handler(
+        [agent_context_impl = agent_context_impl_] {
+          agent_context_impl->app_client_->primary_service().Unbind();
+        });
 
     // When the agent process dies, we remove it.
     // TODO(alhaad): In the future we would want to detect a crashing agent and
@@ -186,8 +183,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<AgentContext>(
       [this](fidl::InterfaceRequest<AgentContext> request) {
-        agent_context_bindings_.AddBinding(
-            this, std::move(request));
+        agent_context_bindings_.AddBinding(this, std::move(request));
       });
   new InitializeCall(&operation_queue_, this, info.app_launcher,
                      std::move(agent_config));

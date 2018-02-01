@@ -1773,7 +1773,8 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
   // Now conflict_resolved_callback can run.
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(conflicts_resolved_callback_called);
-  EXPECT_EQ(ledger::ConflictResolutionWaitStatus::CONFLICTS_RESOLVED, wait_status);
+  EXPECT_EQ(ledger::ConflictResolutionWaitStatus::CONFLICTS_RESOLVED,
+            wait_status);
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {

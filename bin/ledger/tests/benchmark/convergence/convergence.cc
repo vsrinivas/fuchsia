@@ -168,11 +168,9 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   alpha_controller_->Kill();
-  alpha_controller_.WaitForResponseUntil(
-      zx::deadline_after(zx::sec(5)));
+  alpha_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   beta_controller_->Kill();
-  beta_controller_.WaitForResponseUntil(
-      zx::deadline_after(zx::sec(5)));
+  beta_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

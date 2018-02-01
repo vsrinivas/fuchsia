@@ -104,9 +104,10 @@ class ModuleResolverImpl::FindModulesCall
 
     candidates_ = verb_it->second;
 
-    // For each noun in the ResolverQuery, try to find Modules that provide the types in
-    // the noun as constraints.
-    if (query_->noun_constraints.is_null() || query_->noun_constraints.size() == 0) {
+    // For each noun in the ResolverQuery, try to find Modules that provide the
+    // types in the noun as constraints.
+    if (query_->noun_constraints.is_null() ||
+        query_->noun_constraints.size() == 0) {
       Finally(flow);
       return;
     }
@@ -117,7 +118,8 @@ class ModuleResolverImpl::FindModulesCall
       const auto& noun_constraints = noun_entry.GetValue();
 
       module_resolver_impl_->type_helper_.GetNounTypes(
-          noun_constraints, [noun_name, flow, this](std::vector<std::string> types) {
+          noun_constraints,
+          [noun_name, flow, this](std::vector<std::string> types) {
             ProcessNounTypes(noun_name, std::move(types));
             if (--num_nouns_countdown_ == 0) {
               Finally(flow);

@@ -59,12 +59,12 @@ void ClipboardStorage::Peek(const std::function<void(fidl::String)>& callback) {
   page()->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                       LedgerErrorReportingCallback(
                           "Failed to get the latest snapshot from page."));
-  snapshot->Get(
-      ToArray(kCurrentValueKey),
-      fxl::MakeCopyable([ callback, snapshot = std::move(snapshot) ](
-          ledger::Status status, fsl::SizedVmoTransportPtr value) mutable {
-        callback(ToString(std::move(value)));
-      }));
+  snapshot->Get(ToArray(kCurrentValueKey),
+                fxl::MakeCopyable([callback, snapshot = std::move(snapshot)](
+                                      ledger::Status status,
+                                      fsl::SizedVmoTransportPtr value) mutable {
+                  callback(ToString(std::move(value)));
+                }));
   ;
 }
 

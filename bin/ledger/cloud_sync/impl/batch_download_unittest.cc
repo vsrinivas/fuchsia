@@ -85,9 +85,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
-                               [&done_calls] {
-                                 done_calls++;
-                               },
+                               [&done_calls] { done_calls++; },
                                [&error_calls] { error_calls++; });
   batch_download.Start();
 
@@ -107,9 +105,7 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("43"),
-                               [&done_calls] {
-                                 done_calls++;
-                               },
+                               [&done_calls] { done_calls++; },
                                [&error_calls] { error_calls++; });
   batch_download.Start();
 
@@ -130,9 +126,7 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
                                [&done_calls] { done_calls++; },
-                               [&error_calls] {
-                                 error_calls++;
-                               });
+                               [&error_calls] { error_calls++; });
   storage_.should_fail_add_commit_from_sync = true;
   batch_download.Start();
 

@@ -36,8 +36,8 @@ class TestAgentApp : modular::QueuePersistenceTestService {
         });
 
     services_.AddService<modular::QueuePersistenceTestService>(
-        [this](fidl::InterfaceRequest<
-               modular::QueuePersistenceTestService> request) {
+        [this](fidl::InterfaceRequest<modular::QueuePersistenceTestService>
+                   request) {
           services_bindings_.AddBinding(this, std::move(request));
         });
 
@@ -82,8 +82,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   app::ServiceNamespace services_;
-  fidl::BindingSet<modular::QueuePersistenceTestService>
-      services_bindings_;
+  fidl::BindingSet<modular::QueuePersistenceTestService> services_bindings_;
 };
 
 }  // namespace

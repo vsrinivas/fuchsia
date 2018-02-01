@@ -71,7 +71,7 @@ bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
 }
 
 void TestWithMessageLoop::RunLoopUntilIdle() {
-    message_loop_.RunUntilIdle();
+  message_loop_.RunUntilIdle();
 }
 
 fxl::Closure TestWithMessageLoop::MakeQuitTask() {

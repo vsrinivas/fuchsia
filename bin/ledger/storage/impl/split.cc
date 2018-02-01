@@ -311,35 +311,34 @@ void CollectPiecesInternal(ObjectIdentifier root,
     return;
   }
 
-  state->data_accessor(
-      root, [state, on_done = std::move(on_done)](
-                Status status, fxl::StringView data) mutable {
-        if (!state->running) {
-          on_done();
-          return;
-        }
+  state->data_accessor(root, [state, on_done = std::move(on_done)](
+                                 Status status, fxl::StringView data) mutable {
+    if (!state->running) {
+      on_done();
+      return;
+    }
 
-        if (status != Status::OK) {
-          FXL_LOG(WARNING) << "Unable to read object content.";
-          state->running = false;
-          on_done();
-          return;
-        }
+    if (status != Status::OK) {
+      FXL_LOG(WARNING) << "Unable to read object content.";
+      state->running = false;
+      on_done();
+      return;
+    }
 
-        auto waiter = callback::CompletionWaiter::Create();
-        status = ForEachPiece(data, [&](ObjectIdentifier identifier) {
-          CollectPiecesInternal(std::move(identifier), state,
-                                waiter->NewCallback());
-          return Status::OK;
-        });
-        if (status != Status::OK) {
-          state->running = false;
-          on_done();
-          return;
-        }
+    auto waiter = callback::CompletionWaiter::Create();
+    status = ForEachPiece(data, [&](ObjectIdentifier identifier) {
+      CollectPiecesInternal(std::move(identifier), state,
+                            waiter->NewCallback());
+      return Status::OK;
+    });
+    if (status != Status::OK) {
+      state->running = false;
+      on_done();
+      return;
+    }
 
-        waiter->Finalize(std::move(on_done));
-      });
+    waiter->Finalize(std::move(on_done));
+  });
 }
 
 }  // namespace

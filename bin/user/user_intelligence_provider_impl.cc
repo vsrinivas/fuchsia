@@ -136,12 +136,12 @@ void UserIntelligenceProviderImpl::StartAgents(
   }
 
   if (config_.mi_dashboard) {
-   StartAgent(kMIDashboardUrl);
+    StartAgent(kMIDashboardUrl);
   }
 
   for (const auto& agent : config_.startup_agents) {
     StartAgent(agent);
- }
+  }
 
   auto controller = StartStoryInfoAgent(
       component_context_.get(), Duplicate(story_provider_),
@@ -183,8 +183,8 @@ void UserIntelligenceProviderImpl::StartActionLog(
   maxwell::UserActionLogFactoryPtr action_log_factory =
       action_log_services.ConnectToService<maxwell::UserActionLogFactory>();
   maxwell::ProposalPublisherPtr proposal_publisher;
-  suggestion_engine->RegisterProposalPublisher(
-      url, proposal_publisher.NewRequest());
+  suggestion_engine->RegisterProposalPublisher(url,
+                                               proposal_publisher.NewRequest());
   action_log_factory->GetUserActionLog(std::move(proposal_publisher),
                                        user_action_log_.NewRequest());
 }
@@ -308,9 +308,9 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   // UserIntelligenceProvider.
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
-      app_context_, config_,
-      std::move(context_engine), std::move(story_provider),
-      std::move(focus_provider), std::move(visible_stories_provider)));
+      app_context_, config_, std::move(context_engine),
+      std::move(story_provider), std::move(focus_provider),
+      std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));
 }

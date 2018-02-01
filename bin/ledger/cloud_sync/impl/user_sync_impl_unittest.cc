@@ -39,9 +39,8 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
 
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
-        std::make_unique<backoff::TestBackoff>(), &sync_state_watcher_, [this] {
-          on_version_mismatch_calls_++;
-        });
+        std::make_unique<backoff::TestBackoff>(), &sync_state_watcher_,
+        [this] { on_version_mismatch_calls_++; });
   }
   ~UserSyncImplTest() override {}
 

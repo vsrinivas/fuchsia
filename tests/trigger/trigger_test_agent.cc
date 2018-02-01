@@ -37,8 +37,7 @@ class TestAgentApp : modular::TriggerTestService {
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
     agent_services_.AddService<modular::TriggerTestService>(
-        [this](fidl::InterfaceRequest<modular::TriggerTestService>
-                   request) {
+        [this](fidl::InterfaceRequest<modular::TriggerTestService> request) {
           service_bindings_.AddBinding(this, std::move(request));
         });
 

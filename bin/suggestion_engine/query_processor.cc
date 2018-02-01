@@ -72,7 +72,8 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
     // TODO(rosswang): allow falling back on natural language text response
     // without a spoken response
     fidl::String text_response = std::move(response->natural_language_response);
-    if (!text_response) text_response = "";
+    if (!text_response)
+      text_response = "";
     engine_->speech_listeners_.ForAllPtrs([&](FeedbackListener* listener) {
       listener->OnTextResponse(text_response);
     });

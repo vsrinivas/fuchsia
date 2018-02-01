@@ -51,8 +51,7 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   ledger::Status status;
   repository->GetLedger(test_ledger_name_.Clone(), ledger.NewRequest(),
                         [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(
-      repository.WaitForResponseUntil(zx::deadline_after(kTimeout)));
+  EXPECT_TRUE(repository.WaitForResponseUntil(zx::deadline_after(kTimeout)));
   EXPECT_EQ(ledger::Status::OK, status);
   return ledger;
 }
@@ -63,8 +62,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->GetPage(nullptr, page.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(
-      ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_TRUE(ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(ledger::Status::OK, status);
 
   return page.Bind();
@@ -78,8 +76,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->GetPage(page_id.Clone(), page_ptr.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(
-      ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_TRUE(ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -93,8 +90,7 @@ void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->DeletePage(page_id.Clone(),
                      [&status](ledger::Status s) { status = s; });
-  EXPECT_TRUE(
-      ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_TRUE(ledger.WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   EXPECT_EQ(expected_status, status);
 }
 

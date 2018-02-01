@@ -89,17 +89,21 @@ TEST_F(ChainImplTest, GetLink) {
 
   LinkPtr link;
   chain_->GetLink("key1", link.NewRequest());
-  ASSERT_TRUE(RunLoopUntil([this] () { return story_controller_.get_link_calls.size() > 0; }));
+  ASSERT_TRUE(RunLoopUntil(
+      [this]() { return story_controller_.get_link_calls.size() > 0; }));
   ASSERT_EQ(1lu, story_controller_.get_link_calls.size());
-  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(fidl::Array<fidl::String>{"link", "path1"}));
+  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(
+      fidl::Array<fidl::String>{"link", "path1"}));
   EXPECT_FALSE(story_controller_.get_link_calls[0].name);
 
   link.Unbind();
   story_controller_.get_link_calls.clear();
   chain_->GetLink("key2", link.NewRequest());
-  ASSERT_TRUE(RunLoopUntil([this] () { return story_controller_.get_link_calls.size() > 0; }));
+  ASSERT_TRUE(RunLoopUntil(
+      [this]() { return story_controller_.get_link_calls.size() > 0; }));
   ASSERT_EQ(1lu, story_controller_.get_link_calls.size());
-  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(fidl::Array<fidl::String>{"link", "path2"}));
+  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(
+      fidl::Array<fidl::String>{"link", "path2"}));
   EXPECT_FALSE(story_controller_.get_link_calls[0].name);
 }
 

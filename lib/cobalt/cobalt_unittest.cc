@@ -4,8 +4,8 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
-#include "lib/fxl/macros.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cobalt {
@@ -23,8 +23,8 @@ class FakeTaskRunner : public fxl::TaskRunner {
 
   void PostTask(fxl::Closure task) override {}
 
-  void PostTaskForTime(fxl::Closure task,
-                       fxl::TimePoint target_time) override {}
+  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) override {
+  }
 
   void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) override {}
 
@@ -38,18 +38,14 @@ class FakeTaskRunner : public fxl::TaskRunner {
 
 class CobaltTest : public gtest::TestWithMessageLoop {
  public:
-  CobaltTest() :
-    app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-    task_runner_(FakeTaskRunner::Create()) {}
+  CobaltTest()
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        task_runner_(FakeTaskRunner::Create()) {}
   ~CobaltTest() override {}
 
-  app::ApplicationContext* app_context() {
-    return app_context_.get();
-  }
+  app::ApplicationContext* app_context() { return app_context_.get(); }
 
-  fxl::RefPtr<FakeTaskRunner> task_runner() {
-    return task_runner_;
-  }
+  fxl::RefPtr<FakeTaskRunner> task_runner() { return task_runner_; }
 
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;

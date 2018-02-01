@@ -21,15 +21,14 @@ class DataSourceTest : public gtest::TestWithMessageLoop {
     std::string result;
     DataSource::Status status;
 
-    source->Get(
-        [&result, &status](std::unique_ptr<DataSource::DataChunk> data,
-                                 DataSource::Status received_status) {
-          status = received_status;
-          if (received_status == DataSource::Status::ERROR) {
-            return;
-          }
-          result += data->Get().ToString();
-        });
+    source->Get([&result, &status](std::unique_ptr<DataSource::DataChunk> data,
+                                   DataSource::Status received_status) {
+      status = received_status;
+      if (received_status == DataSource::Status::ERROR) {
+        return;
+      }
+      result += data->Get().ToString();
+    });
 
     RunLoopUntilIdle();
 
@@ -104,7 +103,7 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
 
   data_source->Get(
       [&chunks, &status](std::unique_ptr<DataSource::DataChunk> chunk,
-                               DataSource::Status new_status) {
+                         DataSource::Status new_status) {
         EXPECT_NE(DataSource::Status::ERROR, new_status);
         if (new_status == DataSource::Status::TO_BE_CONTINUED) {
           chunks.push_back(chunk->Get().ToString());
