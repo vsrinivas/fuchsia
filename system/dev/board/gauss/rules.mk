@@ -45,7 +45,7 @@ MODULE_LIBS := \
 
 include make/module.mk
 
-
+ifeq (PLEASE_DISCUSS_WITH_SWETLAND,)
 MODULE := $(LOCAL_DIR).led
 
 MODULE_NAME := gauss-led
@@ -60,3 +60,4 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 include make/module.mk
+endif
