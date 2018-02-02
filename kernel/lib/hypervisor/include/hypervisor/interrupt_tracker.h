@@ -35,8 +35,9 @@ public:
         {
             AutoSpinLock lock(&lock_);
             value = static_cast<uint32_t>(bitmap_.Scan(0, N, false));
-            if (value == N)
+            if (value == N) {
                 return ZX_ERR_NOT_FOUND;
+            }
             bitmap_.ClearOne(value);
         }
         // Reverse the value to get the actual interrupt.
@@ -46,8 +47,9 @@ public:
 
     // Tracks the given interrupt.
     zx_status_t Track(uint32_t vector) {
-        if (vector >= N)
+        if (vector >= N) {
             return ZX_ERR_OUT_OF_RANGE;
+        }
         AutoSpinLock lock(&lock_);
         // We reverse the value, as RawBitmapGeneric::Scan will return the
         // lowest priority interrupt, but we need the highest priority.
@@ -57,25 +59,26 @@ public:
     // Tracks the given interrupt, and signals any waiters.
     zx_status_t Interrupt(uint32_t vector, bool* signaled) {
         zx_status_t status = Track(vector);
-        if (status != ZX_OK)
+        if (status != ZX_OK) {
             return status;
-        return Signal(signaled);
-    }
-
-    // Signals any waiters.
-    zx_status_t Signal(bool* signaled) {
-        *signaled = event_signal(&event_, true) > 0;
+        }
+        int threads_unblocked = event_signal(&event_, true);
+        if (signaled != nullptr) {
+            *signaled = threads_unblocked > 0;
+        }
         return ZX_OK;
     }
 
     // Waits for an interrupt.
     zx_status_t Wait(StateInvalidator* invalidator) {
-        if (invalidator != nullptr)
+        if (invalidator != nullptr) {
             invalidator->Invalidate();
+        }
         do {
             zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return ZX_ERR_CANCELED;
+            }
         } while (!Pending());
         return ZX_OK;
     }

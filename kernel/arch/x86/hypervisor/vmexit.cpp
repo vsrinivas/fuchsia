@@ -452,8 +452,7 @@ static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
         update_timer(local_apic_state, lvt_deadline(local_apic_state));
     }
     uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
-    bool signaled;
-    local_apic_state->interrupt_tracker.Interrupt(vector, &signaled);
+    local_apic_state->interrupt_tracker.Interrupt(vector, nullptr);
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
