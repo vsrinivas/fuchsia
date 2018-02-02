@@ -154,21 +154,42 @@ static bool run_test(const char* path, FILE* out) {
     int argc = verbosity >= 0 ? 2 : 1;
 
     launchpad_t* lp;
-    launchpad_create(0, path, &lp);
-    launchpad_load_from_file(lp, argv[0]);
-    launchpad_clone(lp, LP_CLONE_ALL);
+    zx_status_t status;
+    status = launchpad_create(0, path, &lp);
+    if (status != ZX_OK) {
+      printf("FAILURE: launchpad_create() returned %d\n", status);
+      return false;
+    }
+    status = launchpad_load_from_file(lp, argv[0]);
+    if (status != ZX_OK) {
+      printf("FAILURE: launchpad_load_from_file() returned %d\n", status);
+      return false;
+    }
+    status = launchpad_clone(lp, LP_CLONE_ALL);
+    if (status != ZX_OK) {
+      printf("FAILURE: launchpad_clone() returned %d\n", status);
+      return false;
+    }
     if (out != NULL) {
         if (pipe(fds)) {
             printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
             return false;
         }
-        launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
-        launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
+        status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
+        if (status != ZX_OK) {
+          printf("FAILURE: launchpad_clone_fd() returned %d\n", status);
+          return false;
+        }
+        status = launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
+        if (status != ZX_OK) {
+          printf("FAILURE: launchpad_transfer_fd() returned %d\n", status);
+          return false;
+        }
     }
     launchpad_set_args(lp, argc, argv);
     const char* errmsg;
     zx_handle_t handle;
-    zx_status_t status = launchpad_go(lp, &handle, &errmsg);
+    status = launchpad_go(lp, &handle, &errmsg);
     if (status != ZX_OK) {
         printf("FAILURE: Failed to launch %s: %d: %s\n", path, status, errmsg);
         record_test_result(&tests, path, FAILED_TO_LAUNCH, 0);
