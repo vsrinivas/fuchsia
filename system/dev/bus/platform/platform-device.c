@@ -376,6 +376,31 @@ static void pdev_rpc_i2c_channel_release(platform_dev_t* dev, pdev_i2c_req_t* re
     return i2c_channel_release(channel);
 }
 
+static zx_status_t pdev_rpc_serial_config(platform_dev_t* dev, uint32_t index, uint32_t baud_rate,
+                                          uint32_t flags) {
+    if (index >= dev->uart_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    pbus_uart_t* uart = &dev->uarts[index];
+
+    return platform_serial_config(dev->bus, uart->port, baud_rate, flags);
+}
+
+static zx_status_t pdev_rpc_serial_open_socket(platform_dev_t* dev, uint32_t index,
+                                               zx_handle_t* out_handle,
+                                               uint32_t* out_handle_count) {
+    if (index >= dev->uart_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    pbus_uart_t* uart = &dev->uarts[index];
+
+    zx_status_t status = platform_serial_open_socket(dev->bus, uart->port, out_handle);
+    if (status == ZX_OK) {
+        *out_handle_count = 1;
+    }
+    return status;
+}
+
 static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
@@ -452,6 +477,13 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     case PDEV_I2C_CHANNEL_RELEASE:
         pdev_rpc_i2c_channel_release(dev, &req->i2c);
         break;
+    case PDEV_SERIAL_CONFIG:
+        resp.status = pdev_rpc_serial_config(dev, req->index, req->serial_config.baud_rate,
+                                             req->serial_config.flags);
+        break;
+    case PDEV_SERIAL_OPEN_SOCKET:
+        resp.status = pdev_rpc_serial_open_socket(dev, req->index, &handle, &handle_count);
+        break;
     default:
         zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);
         return ZX_ERR_INTERNAL;
@@ -484,6 +516,7 @@ void platform_dev_free(platform_dev_t* dev) {
     free(dev->irqs);
     free(dev->gpios);
     free(dev->i2c_channels);
+    free(dev->uarts);
     free(dev);
 }
 
@@ -545,6 +578,16 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         }
         memcpy(dev->i2c_channels, pdev->i2c_channels, size);
         dev->i2c_channel_count = pdev->i2c_channel_count;
+    }
+    if (pdev->uart_count) {
+        size_t size = pdev->uart_count * sizeof(*pdev->uarts);
+        dev->uarts = malloc(size);
+        if (!dev->uarts) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->uarts, pdev->uarts, size);
+        dev->uart_count = pdev->uart_count;
     }
 
     dev->bus = bus;

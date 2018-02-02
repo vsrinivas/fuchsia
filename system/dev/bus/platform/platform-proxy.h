@@ -36,6 +36,10 @@ enum {
     PDEV_I2C_TRANSACT,
     PDEV_I2C_SET_BITRATE,
     PDEV_I2C_CHANNEL_RELEASE,
+
+    // ZX_PROTOCOL_SERIAL
+    PDEV_SERIAL_CONFIG,
+    PDEV_SERIAL_OPEN_SOCKET,
 };
 
 // context for i2c_transact
@@ -78,6 +82,10 @@ typedef struct {
         uint32_t gpio_alt_function;
         uint8_t gpio_value;
         pdev_i2c_req_t i2c;
+        struct {
+            uint32_t baud_rate;
+            uint32_t flags;
+        } serial_config;
     };
 } pdev_req_t;
 

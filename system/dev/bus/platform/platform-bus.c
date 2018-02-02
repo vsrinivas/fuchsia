@@ -33,6 +33,14 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_I2C:
         memcpy(&bus->i2c, protocol, sizeof(bus->i2c));
         break;
+    case ZX_PROTOCOL_SERIAL_DRIVER: {
+        zx_status_t status = platform_serial_init(bus, (serial_driver_protocol_t *)protocol);
+        if (status != ZX_OK) {
+            return status;
+         }
+        memcpy(&bus->serial, protocol, sizeof(bus->serial));
+        break;
+    }
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -116,6 +124,12 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
             return ZX_OK;
         }
         break;
+    case ZX_PROTOCOL_SERIAL_DRIVER:
+        if (bus->serial.ops) {
+            memcpy(protocol, &bus->serial, sizeof(bus->serial));
+            return ZX_OK;
+        }
+        break;
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -137,6 +151,8 @@ static void platform_bus_release(void* ctx) {
     list_for_every_entry_safe(&bus->i2c_txns, txn, temp, i2c_txn_t, node) {
         free(txn);
     }
+
+    platform_serial_release(bus);
 
     free(bus);
 }
