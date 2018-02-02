@@ -303,8 +303,8 @@ std::ostream& operator<<(std::ostream& os, const InputReport& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const TextSelection& value) {
-  return os << "{TextSelection: base=" << value.base
-            << ", extent=" << value.extent << ", affinity=";
+  os << "{TextSelection: base=" << value.base << ", extent=" << value.extent
+     << ", affinity=";
   switch (value.affinity) {
     case mozart::TextAffinity::UPSTREAM:
       os << "UPSTREAM";

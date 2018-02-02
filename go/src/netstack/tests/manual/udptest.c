@@ -128,36 +128,31 @@ int server(const char* service) {
     return -1;
   }
 
-#define NTIMES 4
+  printf("waiting for a connection on port %d...\n", port);
 
-  for (int i = 0; i < NTIMES; i++) {
-    printf("waiting for a connection on port %d...\n", port);
-
-    for (;;) {
-      char buf[128];
-      int nrecv;
-      socklen_t addrlen = sizeof(addr);
-      nrecv =
-          recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlen);
-      if (nrecv < 0) {
-        printf("recvfrom failed (%d) (errno = %d)\n", nrecv, errno);
-        close(s);
-        return -1;
-      }
-      char str[INET6_ADDRSTRLEN];
-      printf("connected from %s\n",
-             sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
-
-      int n = write(1, buf, nrecv);
-      if (n < 0) {
-        printf("write failed (%d) (errno = %d)\n", n, errno);
-        close(s);
-        return -1;
-      }
-      printf("\n");
+  for (;;) {
+    char buf[128];
+    int nrecv;
+    socklen_t addrlen = sizeof(addr);
+    nrecv =
+        recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlen);
+    if (nrecv < 0) {
+      printf("recvfrom failed (%d) (errno = %d)\n", nrecv, errno);
+      close(s);
+      return -1;
     }
+    char str[INET6_ADDRSTRLEN];
+    printf("connected from %s\n",
+           sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
+
+    int n = write(1, buf, nrecv);
+    if (n < 0) {
+      printf("write failed (%d) (errno = %d)\n", n, errno);
+      close(s);
+      return -1;
+    }
+    printf("\n");
   }
-  close(s);
 
   return 0;
 }
