@@ -106,12 +106,38 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-TEST_F(NetStreamTest, LoopbackStream) {
+TEST_F(NetStreamTest, BlockingAcceptWrite) {
   int ret = listen(acptfd_, 10);
   ASSERT_EQ(0, ret) << "listen failed: " << errno;
 
   std::string out;
   std::thread thrd(StreamConnectRead, &addr_, &out, ntfyfd_[1]);
+
+  int connfd = accept(acptfd_, nullptr, nullptr);
+  ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+
+  const char* msg = "hello";
+  ASSERT_EQ(write(connfd, msg, strlen(msg)), (ssize_t)strlen(msg));
+  ASSERT_EQ(close(connfd), 0);
+
+  ASSERT_EQ(WaitSuccess(ntfyfd_[0], kTimeout), true);
+  thrd.join();
+
+  EXPECT_STREQ(msg, out.c_str());
+}
+
+TEST_F(NetStreamTest, NonblockingAcceptWrite) {
+  int ret = listen(acptfd_, 10);
+  ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+  std::string out;
+  std::thread thrd(StreamConnectRead, &addr_, &out, ntfyfd_[1]);
+
+  int status = fcntl(acptfd_, F_GETFL, 0);
+  ASSERT_EQ(fcntl(acptfd_, F_SETFL, status | O_NONBLOCK), 0);
+
+  struct pollfd pfd = {acptfd_, POLLIN, 0};
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1);
 
   int connfd = accept(acptfd_, nullptr, nullptr);
   ASSERT_GE(connfd, 0) << "accept failed: " << errno;
