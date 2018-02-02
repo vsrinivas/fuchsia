@@ -142,7 +142,7 @@ std::string TypeName(const ast::Type* type) {
 }
 
 CGenerator::Member MessageHeader() {
-    return {"fidl_message_header_t", "header"};
+    return {"fidl_message_header_t", "header", {}};
 }
 
 // Functions "Emit..." are called to actually emit to an std::ostream
