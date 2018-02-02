@@ -17,6 +17,8 @@ source_set("compiler") {
     "lib/c_generator.h",
     "lib/identifier_table.cpp",
     "lib/identifier_table.h",
+    "lib/json_generator.cpp",
+    "lib/json_generator.h",
     "lib/lexer.cpp",
     "lib/lexer.h",
     "lib/library.cpp",

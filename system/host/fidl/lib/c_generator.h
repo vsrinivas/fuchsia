@@ -21,7 +21,7 @@ namespace fidl {
 // Methods named "Generate..." directly generate C output, to either
 // the header or source file, via the "Emit" routines.
 
-// Methods name "Produce..." indirectly generate C output by calling
+// Methods named "Produce..." indirectly generate C output by calling
 // the Generate methods, and should not call the "Emit" functions
 // directly.
 

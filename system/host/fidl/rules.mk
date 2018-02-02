@@ -14,6 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/c_generator.cpp \
     $(LOCAL_DIR)/lib/error_reporter.cpp \
     $(LOCAL_DIR)/lib/identifier_table.cpp \
+    $(LOCAL_DIR)/lib/json_generator.cpp \
     $(LOCAL_DIR)/lib/lexer.cpp \
     $(LOCAL_DIR)/lib/library.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \

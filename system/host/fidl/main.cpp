@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lib/c_generator.h"
+#include "lib/json_generator.h"
 #include "lib/identifier_table.h"
 #include "lib/lexer.h"
 #include "lib/library.h"
@@ -26,6 +27,10 @@ namespace {
     std::cout << "    fidl c-structs HEADER_PATH [FIDL_FILE...]\n";
     std::cout << "        Parses the FIDL_FILEs and generates C structures\n";
     std::cout << "        into HEADER_PATH.\n";
+    std::cout << "\n";
+    std::cout << "    fidl json JSON_PATH [FIDL_FILE...]\n";
+    std::cout << "        Parses the FIDL_FILEs and generates JSON intermediate data\n";
+    std::cout << "        into JSON_PATH.\n";
     std::cout.flush();
     exit(1);
 }
@@ -60,6 +65,7 @@ std::fstream Open(std::string filename) {
 
 enum struct Behavior {
     CStructs,
+    JSON,
 };
 
 bool Parse(Arguments* args, fidl::SourceManager* source_manager,
@@ -108,6 +114,18 @@ bool GenerateC(fidl::Library* library, std::fstream header_output) {
     return true;
 }
 
+bool GenerateJSON(fidl::Library* library, std::fstream json_output) {
+    std::ostringstream json_file;
+    fidl::JSONGenerator json_generator(library);
+
+    json_generator.ProduceJSON(&json_file);
+
+    json_output << json_file.str();
+    json_output.flush();
+
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -117,14 +135,21 @@ int main(int argc, char* argv[]) {
 
     std::string behavior_argument = args.Claim();
     Behavior behavior;
-    std::fstream header_file;
+    std::fstream output_file;
     if (behavior_argument == "c-structs") {
         behavior = Behavior::CStructs;
         // Parse a file name to write output to.
         if (argc < 2) {
             return 1;
         }
-        header_file = Open(args.Claim());
+        output_file = Open(args.Claim());
+    } else if (behavior_argument == "json") {
+        behavior = Behavior::JSON;
+        // Parse a file name to write output to.
+        if (argc < 2) {
+            return 1;
+        }
+        output_file = Open(args.Claim());
     } else {
         Usage();
     }
@@ -139,9 +164,16 @@ int main(int argc, char* argv[]) {
 
     switch (behavior) {
     case Behavior::CStructs: {
-        if (!GenerateC(&library, std::move(header_file))) {
+        if (!GenerateC(&library, std::move(output_file))) {
             return 1;
         }
+        break;
+    }
+    case Behavior::JSON: {
+        if (!GenerateJSON(&library, std::move(output_file))) {
+            return 1;
+        }
+        break;
     }
     }
 }

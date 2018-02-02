@@ -145,7 +145,7 @@ CGenerator::Member MessageHeader() {
     return {"fidl_message_header_t", "header", {}};
 }
 
-// Functions "Emit..." are called to actually emit to an std::ostream
+// Functions named "Emit..." are called to actually emit to an std::ostream
 // is here. No other functions should directly emit to the streams.
 
 std::ostream& operator<<(std::ostream& stream, StringView view) {

@@ -1,0 +1,531 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "const_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/const"
+            }
+        },
+        "enum_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/enum"
+            }
+        },
+        "interface_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/interface"
+            }
+        },
+        "struct_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/struct"
+            }
+        },
+        "union_declarations": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/union"
+            }
+        },
+        "module_dependencies": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/module"
+            }
+        }
+    },
+    "definitions": {
+        "const": {
+            "type": "object",
+            "required": [ "name", "type", "value" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "value": {
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "enum": {
+            "type": "object",
+            "required": [ "name", "type", "members" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/enum-member"
+                    }
+                }
+            }
+        },
+        "enum-member": {
+            "type": "object",
+            "required": [ "name", "value" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "value": {
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "interface": {
+            "type": "object",
+            "required": [ "name", "methods" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method"
+                    }
+                }
+            }
+        },
+        "interface-method": {
+            "type": "object",
+            "required": [ "ordinal", "name", "has_request", "has_response" ],
+            "properties": {
+                "ordinal": {
+                    "$ref": "#/definitions/ordinal"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "has_request": {
+                    "type": "boolean"
+                },
+                "maybe_request": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    }
+                },
+                "has_response": {
+                    "type": "boolean"
+                },
+                "maybe_response": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    }
+                }
+            }
+        },
+        "interface-method-parameter": {
+            "type": "object",
+            "required": [ "type", "name" ],
+            "properties": {
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                }
+            }
+        },
+        "struct": {
+            "type": "object",
+            "required": [ "name", "members" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/struct-member"
+                    }
+                }
+            }
+        },
+        "struct-member": {
+            "type": "object",
+            "required": [ "type", "name" ],
+            "properties": {
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "maybe_default_value": {
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "union": {
+            "type": "object",
+            "required": [ "name", "members" ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/union-member"
+                    }
+                }
+            }
+        },
+        "union-member": {
+            "type": "object",
+            "required": [ "type", "name" ],
+            "properties": {
+                "type": {
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                }
+            }
+        },
+        "module": {
+            "type": "object",
+            "properties": {
+            }
+        },
+        "type": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/array-type"
+                },
+                {
+                    "$ref": "#/definitions/vector-type"
+                },
+                {
+                    "$ref": "#/definitions/string-type"
+                },
+                {
+                    "$ref": "#/definitions/handle-type"
+                },
+                {
+                    "$ref": "#/definitions/request-type"
+                },
+                {
+                    "$ref": "#/definitions/primitive-type"
+                },
+                {
+                    "$ref": "#/definitions/identifier-type"
+                }
+            ]
+        },
+        "array-type": {
+            "type": "object",
+            "required": [ "kind", "element_type", "element_count" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "array" ]
+                },
+                "element_type": {
+                    "$ref": "#/definitions/type"
+                },
+                "element_count": {
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "vector-type": {
+            "type": "object",
+            "required": [ "kind", "element_type", "nullability" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "vector" ]
+                },
+                "element_type": {
+                    "$ref": "#/definitions/type"
+                },
+                "maybe_element_count": {
+                    "$ref": "#/definitions/constant"
+                },
+                "nullability": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "string-type": {
+            "type": "object",
+            "required": [ "kind", "nullability" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "string" ]
+                },
+                "maybe_element_count": {
+                    "$ref": "#/definitions/constant"
+                },
+                "nullability": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handle-type": {
+            "type": "object",
+            "required": [ "kind", "subtype", "nullability" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "handle" ]
+                },
+                "subtype": {
+                    "$ref": "#/definitions/handle-subtype"
+                },
+                "nullability": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "request-type": {
+            "type": "object",
+            "required": [ "kind", "subtype", "nullability" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "request" ]
+                },
+                "subtype": {
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "nullability": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "primitive-type": {
+            "type": "object",
+            "required": [ "kind", "subtype" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "primitive" ]
+                },
+                "subtype": {
+                    "$ref": "#/definitions/primitive-subtype"
+                }
+            }
+        },
+        "identifier-type": {
+            "type": "object",
+            "required": [ "kind", "identifier", "nullability" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "identifier" ]
+                },
+                "identifier": {
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "nullability": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "constant": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/identifier-constant"
+                },
+                {
+                    "$ref": "#/definitions/literal-constant"
+                }
+            ]
+        },
+        "identifier-constant": {
+            "type": "object",
+            "required": [ "kind", "identifier" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "identifier" ]
+                },
+                "identifier": {
+                    "$ref": "#/definitions/compound-identifier"
+                }
+            }
+        },
+        "literal-constant": {
+            "type": "object",
+            "required": [ "kind", "literal" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "literal" ]
+                },
+                "literal": {
+                    "$ref": "#/definitions/literal"
+                }
+            }
+        },
+        "literal": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/string-literal"
+                },
+                {
+                    "$ref": "#/definitions/numeric-literal"
+                },
+                {
+                    "$ref": "#/definitions/true-literal"
+                },
+                {
+                    "$ref": "#/definitions/false-literal"
+                },
+                {
+                    "$ref": "#/definitions/default-literal"
+                }
+            ]
+        },
+        "string-literal": {
+            "type": "object",
+            "required": [ "kind", "value" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "string" ]
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "numeric-literal": {
+            "type": "object",
+            "required": [ "kind", "value" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "numeric" ]
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "true-literal": {
+            "type": "object",
+            "required": [ "kind" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "true" ]
+                }
+            }
+        },
+        "false-literal": {
+            "type": "object",
+            "required": [ "kind" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "false" ]
+                }
+            }
+        },
+        "default-literal": {
+            "type": "object",
+            "required": [ "kind" ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [ "default" ]
+                }
+            }
+        },
+        "handle-subtype": {
+            "type": "string",
+            "enum": [
+                "handle",
+                "process",
+                "thread",
+                "vmo",
+                "channel",
+                "event",
+                "port",
+                "interrupt",
+                "iomap",
+                "pci",
+                "log",
+                "socket",
+                "resource",
+                "eventpair",
+                "job",
+                "vmar",
+                "fifo",
+                "hypervisor",
+                "guest",
+                "timer"
+            ]
+        },
+        "primitive-subtype": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "bool",
+                        "status",
+                        "float32",
+                        "float64"
+                    ]
+                },
+                {
+                    "$ref": "#/definitions/integer-type"
+                }
+            ]
+        },
+        "integer-type": {
+            "type": "string",
+            "enum": [
+                "int8",
+                "int16",
+                "int32",
+                "int64",
+                "uint8",
+                "uint16",
+                "uint32",
+                "uint64"
+            ]
+        },
+        "ordinal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+        },
+        "compound-identifier": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/identifier"
+            }
+        },
+        "identifier": {
+            "type": "string",
+            "pattern": "^[_A-Za-z][_A-Za-z0-9]*$"
+        },
+        "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+        }
+    }
+}
