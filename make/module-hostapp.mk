@@ -23,6 +23,42 @@ $(MODULE_HOSTAPP_BIN): $(MODULE_OBJS) $(MODULE_ALIBS)
 	$(NOECHO)$(HOST_CXX) -o $@ $(HOST_COMPILEFLAGS) $(_LDFLAGS) $(HOST_LDFLAGS) \
 		$(_OBJS) $(_LIBS)
 
+ifeq ($(filter bin,$(MODULE_PACKAGE)),bin)
+MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
+MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
+
+MODULE_PKG_BIN := $(MODULE_NAME)=$(patsubst $(BUILDDIR)/%,BUILD/%,$(MODULE_HOSTAPP_BIN))
+
+$(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
+$(MODULE_PKG_FILE): _BIN := $(MODULE_PKG_BIN)
+$(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-hostapp.mk
+	@$(call BUILDECHO,creating package $@ ;)\
+	$(MKDIR) ;\
+	echo "[package]" > $@ ;\
+	echo "name=$(_NAME)" >> $@ ;\
+	echo "type=tool" >> $@ ;\
+	echo "arch=host" >> $@ ;\
+	echo "[bin]" >> $@ ;\
+	echo "$(_BIN)" >> $@
+
+$(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
+	@$(MKDIR) ;\
+	if [ -f "$@" ]; then \
+		if ! cmp "$<" "$@" >/dev/null 2>&1; then \
+			$(if $(BUILDECHO),echo installing $@ ;)\
+			cp -f $< $@; \
+		fi \
+	else \
+		$(if $(BUILDECHO),echo installing $@ ;)\
+		cp -f $< $@; \
+	fi
+
+GENERATED += $(MODULE_EXP_FILE) $(MODULE_PKG_FILE)
+ALLPKGS += $(MODULE_EXP_FILE)
+
+endif
+
+
 ALLHOST_APPS += $(MODULE_HOSTAPP_BIN)
 
 GENERATED += $(MODULE_HOSTAPP_BIN)

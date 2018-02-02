@@ -22,4 +22,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/source_manager.cpp \
     $(LOCAL_DIR)/main.cpp \
 
+MODULE_PACKAGE := bin
+
 include make/module.mk
