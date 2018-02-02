@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
-#include "garnet/bin/media/audio_server/audio_server_impl.h"
 
 #include <fbl/auto_call.h>
 
+#include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 
@@ -57,6 +57,7 @@ void AudioRenderer2Impl::Shutdown() {
   }
 
   gain_control_bindings_.CloseAll();
+  payload_buffer_.reset();
 }
 
 void AudioRenderer2Impl::SnapshotCurrentTimelineFunction(
@@ -93,7 +94,7 @@ bool AudioRenderer2Impl::ValidateConfig() {
     return true;
   }
 
-  if (!format_info_valid()) {
+  if (!format_info_valid() || (payload_buffer_ == nullptr)) {
     return false;
   }
 
@@ -201,7 +202,22 @@ void AudioRenderer2Impl::SetPayloadBuffer(zx::vmo payload_buffer) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  // TODO(johngro) : MTWN-69
+  // Map this into a sub-vmar instead of defaulting to the root
+  // once teisenbe@ provides guidance on the best-practice for doing this.
+  zx_status_t res;
+  payload_buffer_ = fbl::AdoptRef(new fbl::RefCountedVmoMapper());
+  res = payload_buffer_->Map(payload_buffer, 0, ZX_VM_FLAG_PERM_READ);
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
+    return;
+  }
+
+  // Things went well, cancel the cleanup hook.  If our config had been
+  // validated previously, it will have to be revalidated as we move into the
+  // operational phase of our life.
+  config_validated_ = false;
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SetPtsUnits(uint32_t tick_per_second_numerator,

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <fbl/vmo_mapper.h>
 
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
@@ -108,6 +109,7 @@ class AudioRenderer2Impl : public AudioRendererImpl,
                    fbl::unique_ptr<GainControlBinding>> gain_control_bindings_;
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
+  fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;
   bool config_validated_ = false;
 };
 
