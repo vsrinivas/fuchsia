@@ -128,7 +128,7 @@ int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
 }
 
 struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
-                                     const u8* addr) {
+                                     const uint8_t* addr) {
     struct ath10k_peer* peer;
 
     lockdep_assert_held(&ar->data_lock);
@@ -161,7 +161,7 @@ struct ath10k_peer* ath10k_peer_find_by_id(struct ath10k* ar, int peer_id) {
 }
 
 static int ath10k_wait_for_peer_common(struct ath10k* ar, int vdev_id,
-                                       const u8* addr, bool expect_mapped) {
+                                       const uint8_t* addr, bool expect_mapped) {
     long time_left;
 
     time_left = wait_event_timeout(ar->peer_mapping_wq, ({
@@ -182,11 +182,11 @@ static int ath10k_wait_for_peer_common(struct ath10k* ar, int vdev_id,
     return 0;
 }
 
-int ath10k_wait_for_peer_created(struct ath10k* ar, int vdev_id, const u8* addr) {
+int ath10k_wait_for_peer_created(struct ath10k* ar, int vdev_id, const uint8_t* addr) {
     return ath10k_wait_for_peer_common(ar, vdev_id, addr, true);
 }
 
-int ath10k_wait_for_peer_deleted(struct ath10k* ar, int vdev_id, const u8* addr) {
+int ath10k_wait_for_peer_deleted(struct ath10k* ar, int vdev_id, const uint8_t* addr) {
     return ath10k_wait_for_peer_common(ar, vdev_id, addr, false);
 }
 

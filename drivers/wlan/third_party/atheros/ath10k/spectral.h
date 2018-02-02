@@ -26,8 +26,8 @@
  * @fft_size: number of bins to be requested = 2^(fft_size - bin_scale)
  */
 struct ath10k_spec_scan {
-    u8 count;
-    u8 fft_size;
+    uint8_t count;
+    uint8_t fft_size;
 };
 
 /* enum ath10k_spectral_mode:
@@ -49,7 +49,7 @@ enum ath10k_spectral_mode {
 int ath10k_spectral_process_fft(struct ath10k* ar,
                                 struct wmi_phyerr_ev_arg* phyerr,
                                 const struct phyerr_fft_report* fftr,
-                                size_t bin_len, u64 tsf);
+                                size_t bin_len, uint64_t tsf);
 int ath10k_spectral_start(struct ath10k* ar);
 int ath10k_spectral_vif_stop(struct ath10k_vif* arvif);
 int ath10k_spectral_create(struct ath10k* ar);
@@ -61,7 +61,7 @@ static inline int
 ath10k_spectral_process_fft(struct ath10k* ar,
                             struct wmi_phyerr_ev_arg* phyerr,
                             const struct phyerr_fft_report* fftr,
-                            size_t bin_len, u64 tsf) {
+                            size_t bin_len, uint64_t tsf) {
     return 0;
 }
 

@@ -60,11 +60,11 @@ enum htt_h2t_msg_type { /* host-to-target */
 };
 
 struct htt_cmd_hdr {
-    u8 msg_type;
+    uint8_t msg_type;
 } __packed;
 
 struct htt_ver_req {
-    u8 pad[sizeof(u32) - sizeof(struct htt_cmd_hdr)];
+    uint8_t pad[sizeof(uint32_t) - sizeof(struct htt_cmd_hdr)];
 } __packed;
 
 /*
@@ -102,8 +102,8 @@ struct htt_data_tx_desc_frag {
 struct htt_msdu_ext_desc {
     __le32 tso_flag[3];
     __le16 ip_identification;
-    u8 flags;
-    u8 reserved;
+    uint8_t flags;
+    uint8_t reserved;
     struct htt_data_tx_desc_frag frags[6];
 };
 
@@ -164,7 +164,7 @@ enum htt_data_tx_ext_tid {
  *       freq: 0 means home channel of given vdev. intended for offchannel
  */
 struct htt_data_tx_desc {
-    u8 flags0; /* %HTT_DATA_TX_DESC_FLAGS0_ */
+    uint8_t flags0; /* %HTT_DATA_TX_DESC_FLAGS0_ */
     __le16 flags1; /* %HTT_DATA_TX_DESC_FLAGS1_ */
     __le16 len;
     __le16 id;
@@ -176,7 +176,7 @@ struct htt_data_tx_desc {
             __le16 freq;
         } __packed offchan_tx;
     } __packed;
-    u8 prefetch[0]; /* start of frame, for FW classification engine */
+    uint8_t prefetch[0]; /* start of frame, for FW classification engine */
 } __packed;
 
 enum htt_rx_ring_flags {
@@ -223,7 +223,7 @@ struct htt_rx_ring_setup_ring {
 } __packed;
 
 struct htt_rx_ring_setup_hdr {
-    u8 num_rings; /* supported values: 1, 2 */
+    uint8_t num_rings; /* supported values: 1, 2 */
     __le16 rsvd0;
 } __packed;
 
@@ -246,15 +246,15 @@ struct htt_rx_ring_setup {
  * @cookie_msb: ditto as %cookie
  */
 struct htt_stats_req {
-    u8 upload_types[3];
-    u8 rsvd0;
-    u8 reset_types[3];
+    uint8_t upload_types[3];
+    uint8_t rsvd0;
+    uint8_t reset_types[3];
     struct {
-        u8 mpdu_bytes;
-        u8 mpdu_num_msdus;
-        u8 msdu_bytes;
+        uint8_t mpdu_bytes;
+        uint8_t mpdu_num_msdus;
+        uint8_t msdu_bytes;
     } __packed;
-    u8 stat_type;
+    uint8_t stat_type;
     __le32 cookie_lsb;
     __le32 cookie_msb;
 } __packed;
@@ -281,14 +281,14 @@ struct htt_stats_req {
  * as 0 < (in-band sync counter - out-of-band sync counter) & 0xff < 128.
  */
 struct htt_oob_sync_req {
-    u8 sync_count;
+    uint8_t sync_count;
     __le16 rsvd0;
 } __packed;
 
 struct htt_aggr_conf {
-    u8 max_num_ampdu_subframes;
+    uint8_t max_num_ampdu_subframes;
     /* amsdu_subframes is limited by 0x1F mask */
-    u8 max_num_amsdu_subframes;
+    uint8_t max_num_amsdu_subframes;
 } __packed;
 
 #define HTT_MGMT_FRM_HDR_DOWNLOAD_LEN 32
@@ -297,12 +297,12 @@ struct htt_mgmt_tx_desc_qca99x0 {
 } __packed;
 
 struct htt_mgmt_tx_desc {
-    u8 pad[sizeof(u32) - sizeof(struct htt_cmd_hdr)];
+    uint8_t pad[sizeof(uint32_t) - sizeof(struct htt_cmd_hdr)];
     __le32 msdu_paddr;
     __le32 desc_id;
     __le32 len;
     __le32 vdev_id;
-    u8 hdr[HTT_MGMT_FRM_HDR_DOWNLOAD_LEN];
+    uint8_t hdr[HTT_MGMT_FRM_HDR_DOWNLOAD_LEN];
     union {
         struct htt_mgmt_tx_desc_qca99x0 qca99x0;
     } __packed;
@@ -466,7 +466,7 @@ enum htt_t2h_msg_type {
  * msg_type: see htt_t2h_msg_type
  */
 struct htt_resp_hdr {
-    u8 msg_type;
+    uint8_t msg_type;
 } __packed;
 
 #define HTT_RESP_HDR_MSG_TYPE_OFFSET 0
@@ -475,15 +475,15 @@ struct htt_resp_hdr {
 
 /* htt_ver_resp - response sent for htt_ver_req */
 struct htt_ver_resp {
-    u8 minor;
-    u8 major;
-    u8 rsvd0;
+    uint8_t minor;
+    uint8_t major;
+    uint8_t rsvd0;
 } __packed;
 
 struct htt_mgmt_tx_completion {
-    u8 rsvd0;
-    u8 rsvd1;
-    u8 rsvd2;
+    uint8_t rsvd0;
+    uint8_t rsvd1;
+    uint8_t rsvd2;
     __le32 desc_id;
     __le32 status;
 } __packed;
@@ -505,7 +505,7 @@ struct htt_mgmt_tx_completion {
 #define HTT_RX_INDICATION_INFO1_NUM_MPDU_RANGES_LSB      24
 
 struct htt_rx_indication_hdr {
-    u8 info0; /* %HTT_RX_INDICATION_INFO0_ */
+    uint8_t info0; /* %HTT_RX_INDICATION_INFO0_ */
     __le16 peer_id;
     __le32 info1; /* %HTT_RX_INDICATION_INFO1_ */
 } __packed;
@@ -572,15 +572,15 @@ enum htt_rx_preamble_type {
  * ..are valid only if start_valid == 1;
  */
 struct htt_rx_indication_ppdu {
-    u8 combined_rssi;
-    u8 sub_usec_timestamp;
-    u8 phy_err_code;
-    u8 info0; /* HTT_RX_INDICATION_INFO0_ */
+    uint8_t combined_rssi;
+    uint8_t sub_usec_timestamp;
+    uint8_t phy_err_code;
+    uint8_t info0; /* HTT_RX_INDICATION_INFO0_ */
     struct {
-        u8 pri20_db;
-        u8 ext20_db;
-        u8 ext40_db;
-        u8 ext80_db;
+        uint8_t pri20_db;
+        uint8_t ext20_db;
+        uint8_t ext40_db;
+        uint8_t ext80_db;
     } __packed rssi_chains[4];
     __le32 tsf;
     __le32 usec_timestamp;
@@ -614,16 +614,16 @@ enum htt_rx_mpdu_status {
 };
 
 struct htt_rx_indication_mpdu_range {
-    u8 mpdu_count;
-    u8 mpdu_range_status; /* %htt_rx_mpdu_status */
-    u8 pad0;
-    u8 pad1;
+    uint8_t mpdu_count;
+    uint8_t mpdu_range_status; /* %htt_rx_mpdu_status */
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct htt_rx_indication_prefix {
     __le16 fw_rx_desc_bytes;
-    u8 pad0;
-    u8 pad1;
+    uint8_t pad0;
+    uint8_t pad1;
 };
 
 struct htt_rx_indication {
@@ -670,23 +670,23 @@ enum htt_rx_flush_mpdu_status {
  */
 struct htt_rx_flush {
     __le16 peer_id;
-    u8 tid;
-    u8 rsvd0;
-    u8 mpdu_status; /* %htt_rx_flush_mpdu_status */
-    u8 seq_num_start; /* it is 6 LSBs of 802.11 seq no */
-    u8 seq_num_end; /* it is 6 LSBs of 802.11 seq no */
+    uint8_t tid;
+    uint8_t rsvd0;
+    uint8_t mpdu_status; /* %htt_rx_flush_mpdu_status */
+    uint8_t seq_num_start; /* it is 6 LSBs of 802.11 seq no */
+    uint8_t seq_num_end; /* it is 6 LSBs of 802.11 seq no */
 };
 
 struct htt_rx_peer_map {
-    u8 vdev_id;
+    uint8_t vdev_id;
     __le16 peer_id;
-    u8 addr[6];
-    u8 rsvd0;
-    u8 rsvd1;
+    uint8_t addr[6];
+    uint8_t rsvd0;
+    uint8_t rsvd1;
 } __packed;
 
 struct htt_rx_peer_unmap {
-    u8 rsvd0;
+    uint8_t rsvd0;
     __le16 peer_id;
 } __packed;
 
@@ -712,15 +712,15 @@ enum htt_security_flags {
 struct htt_security_indication {
     union {
         /* dont use bitfields; undefined behaviour */
-        u8 flags; /* %htt_security_flags */
+        uint8_t flags; /* %htt_security_flags */
         struct {
-            u8 security_type:7, /* %htt_security_types */
+            uint8_t security_type:7, /* %htt_security_types */
             is_unicast:1;
         } __packed;
     } __packed;
     __le16 peer_id;
-    u8 michael_key[8];
-    u8 wapi_rsc[16];
+    uint8_t michael_key[8];
+    uint8_t wapi_rsc[16];
 } __packed;
 
 #define HTT_RX_BA_INFO0_TID_MASK     0x000F
@@ -729,12 +729,12 @@ struct htt_security_indication {
 #define HTT_RX_BA_INFO0_PEER_ID_LSB  4
 
 struct htt_rx_addba {
-    u8 window_size;
+    uint8_t window_size;
     __le16 info0; /* %HTT_RX_BA_INFO0_ */
 } __packed;
 
 struct htt_rx_delba {
-    u8 rsvd0;
+    uint8_t rsvd0;
     __le16 info0; /* %HTT_RX_BA_INFO0_ */
 } __packed;
 
@@ -758,50 +758,50 @@ enum htt_data_tx_flags {
 
 struct htt_data_tx_completion {
     union {
-        u8 flags;
+        uint8_t flags;
         struct {
-            u8 status:3,
+            uint8_t status:3,
             tid:4,
             tid_invalid:1;
         } __packed;
     } __packed;
-    u8 num_msdus;
-    u8 rsvd0;
+    uint8_t num_msdus;
+    uint8_t rsvd0;
     __le16 msdus[0]; /* variable length based on %num_msdus */
 } __packed;
 
 struct htt_tx_compl_ind_base {
-    u32 hdr;
-    u16 payload[1/*or more*/];
+    uint32_t hdr;
+    uint16_t payload[1/*or more*/];
 } __packed;
 
 struct htt_rc_tx_done_params {
-    u32 rate_code;
-    u32 rate_code_flags;
-    u32 flags;
-    u32 num_enqued; /* 1 for non-AMPDU */
-    u32 num_retries;
-    u32 num_failed; /* for AMPDU */
-    u32 ack_rssi;
-    u32 time_stamp;
-    u32 is_probe;
+    uint32_t rate_code;
+    uint32_t rate_code_flags;
+    uint32_t flags;
+    uint32_t num_enqued; /* 1 for non-AMPDU */
+    uint32_t num_retries;
+    uint32_t num_failed; /* for AMPDU */
+    uint32_t ack_rssi;
+    uint32_t time_stamp;
+    uint32_t is_probe;
 };
 
 struct htt_rc_update {
-    u8 vdev_id;
+    uint8_t vdev_id;
     __le16 peer_id;
-    u8 addr[6];
-    u8 num_elems;
-    u8 rsvd0;
+    uint8_t addr[6];
+    uint8_t num_elems;
+    uint8_t rsvd0;
     struct htt_rc_tx_done_params params[0]; /* variable length %num_elems */
 } __packed;
 
 /* see htt_rx_indication for similar fields and descriptions */
 struct htt_rx_fragment_indication {
     union {
-        u8 info0; /* %HTT_RX_FRAG_IND_INFO0_ */
+        uint8_t info0; /* %HTT_RX_FRAG_IND_INFO0_ */
         struct {
-            u8 ext_tid:5,
+            uint8_t ext_tid:5,
             flush_valid:1;
         } __packed;
     } __packed;
@@ -810,7 +810,7 @@ struct htt_rx_fragment_indication {
     __le16 fw_rx_desc_bytes;
     __le16 rsvd0;
 
-    u8 fw_msdu_rx_desc[0];
+    uint8_t fw_msdu_rx_desc[0];
 } __packed;
 
 #define HTT_RX_FRAG_IND_INFO0_EXT_TID_MASK     0x1F
@@ -825,40 +825,40 @@ struct htt_rx_fragment_indication {
 
 struct htt_rx_pn_ind {
     __le16 peer_id;
-    u8 tid;
-    u8 seqno_start;
-    u8 seqno_end;
-    u8 pn_ie_count;
-    u8 reserved;
-    u8 pn_ies[0];
+    uint8_t tid;
+    uint8_t seqno_start;
+    uint8_t seqno_end;
+    uint8_t pn_ie_count;
+    uint8_t reserved;
+    uint8_t pn_ies[0];
 } __packed;
 
 struct htt_rx_offload_msdu {
     __le16 msdu_len;
     __le16 peer_id;
-    u8 vdev_id;
-    u8 tid;
-    u8 fw_desc;
-    u8 payload[0];
+    uint8_t vdev_id;
+    uint8_t tid;
+    uint8_t fw_desc;
+    uint8_t payload[0];
 } __packed;
 
 struct htt_rx_offload_ind {
-    u8 reserved;
+    uint8_t reserved;
     __le16 msdu_count;
 } __packed;
 
 struct htt_rx_in_ord_msdu_desc {
     __le32 msdu_paddr;
     __le16 msdu_len;
-    u8 fw_desc;
-    u8 reserved;
+    uint8_t fw_desc;
+    uint8_t reserved;
 } __packed;
 
 struct htt_rx_in_ord_ind {
-    u8 info;
+    uint8_t info;
     __le16 peer_id;
-    u8 vdev_id;
-    u8 reserved;
+    uint8_t vdev_id;
+    uint8_t reserved;
     __le16 msdu_count;
     struct htt_rx_in_ord_msdu_desc msdu_descs[0];
 } __packed;
@@ -905,21 +905,21 @@ struct htt_rx_in_ord_ind {
  *     Purpose: indicate how many 8-bit characters follow the series of integers
  */
 struct htt_rx_test {
-    u8 num_ints;
+    uint8_t num_ints;
     __le16 num_chars;
 
     /* payload consists of 2 lists:
      *  a) num_ints * sizeof(__le32)
-     *  b) num_chars * sizeof(u8) aligned to 4bytes
+     *  b) num_chars * sizeof(uint8_t) aligned to 4bytes
      */
-    u8 payload[0];
+    uint8_t payload[0];
 } __packed;
 
 static inline __le32* htt_rx_test_get_ints(struct htt_rx_test* rx_test) {
     return (__le32*)rx_test->payload;
 }
 
-static inline u8* htt_rx_test_get_chars(struct htt_rx_test* rx_test) {
+static inline uint8_t* htt_rx_test_get_chars(struct htt_rx_test* rx_test) {
     return rx_test->payload + (rx_test->num_ints * sizeof(__le32));
 }
 
@@ -943,8 +943,8 @@ static inline u8* htt_rx_test_get_chars(struct htt_rx_test* rx_test) {
  *     Value: HTT_MSG_TYPE_PACKETLOG
  */
 struct htt_pktlog_msg {
-    u8 pad[3];
-    u8 payload[0];
+    uint8_t pad[3];
+    uint8_t payload[0];
 } __packed;
 
 struct htt_dbg_stats_rx_reorder_stats {
@@ -1225,19 +1225,19 @@ enum htt_dbg_stats_status {
 
 struct htt_stats_conf_item {
     union {
-        u8 info;
+        uint8_t info;
         struct {
-            u8 stat_type:5; /* %HTT_DBG_STATS_ */
-            u8 status:3; /* %HTT_DBG_STATS_STATUS_ */
+            uint8_t stat_type:5; /* %HTT_DBG_STATS_ */
+            uint8_t status:3; /* %HTT_DBG_STATS_STATUS_ */
         } __packed;
     } __packed;
-    u8 pad;
+    uint8_t pad;
     __le16 length;
-    u8 payload[0]; /* roundup(length, 4) long */
+    uint8_t payload[0]; /* roundup(length, 4) long */
 } __packed;
 
 struct htt_stats_conf {
-    u8 pad[3];
+    uint8_t pad[3];
     __le32 cookie_lsb;
     __le32 cookie_msb;
 
@@ -1342,15 +1342,15 @@ struct htt_q_state_conf {
     __le32 paddr;
     __le16 num_peers;
     __le16 num_tids;
-    u8 record_size;
-    u8 record_multiplier;
-    u8 pad[2];
+    uint8_t record_size;
+    uint8_t record_multiplier;
+    uint8_t pad[2];
 } __packed;
 
 struct htt_frag_desc_bank_cfg {
-    u8 info; /* HTT_FRAG_DESC_BANK_CFG_INFO_ */
-    u8 num_banks;
-    u8 desc_size;
+    uint8_t info; /* HTT_FRAG_DESC_BANK_CFG_INFO_ */
+    uint8_t num_banks;
+    uint8_t desc_size;
     __le32 bank_base_addrs[HTT_FRAG_DESC_BANK_MAX];
     struct htt_frag_desc_bank_id bank_id[HTT_FRAG_DESC_BANK_MAX];
     struct htt_q_state_conf q_state;
@@ -1384,8 +1384,8 @@ struct htt_frag_desc_bank_cfg {
  * FIXME: Is the q_state map[] size calculation really correct?
  */
 struct htt_q_state {
-    u8 count[HTT_TX_Q_STATE_NUM_TIDS][HTT_TX_Q_STATE_NUM_PEERS];
-    u32 map[HTT_TX_Q_STATE_NUM_TIDS][(HTT_TX_Q_STATE_NUM_PEERS + 31) / 32];
+    uint8_t count[HTT_TX_Q_STATE_NUM_TIDS][HTT_TX_Q_STATE_NUM_PEERS];
+    uint32_t map[HTT_TX_Q_STATE_NUM_TIDS][(HTT_TX_Q_STATE_NUM_PEERS + 31) / 32];
     __le32 seq;
 } __packed;
 
@@ -1401,7 +1401,7 @@ struct htt_tx_fetch_record {
 } __packed;
 
 struct htt_tx_fetch_ind {
-    u8 pad0;
+    uint8_t pad0;
     __le16 fetch_seq_num;
     __le32 token;
     __le16 num_resp_ids;
@@ -1416,7 +1416,7 @@ ath10k_htt_get_tx_fetch_ind_resp_ids(struct htt_tx_fetch_ind* ind) {
 }
 
 struct htt_tx_fetch_resp {
-    u8 pad0;
+    uint8_t pad0;
     __le16 resp_id;
     __le16 fetch_seq_num;
     __le16 num_records;
@@ -1425,7 +1425,7 @@ struct htt_tx_fetch_resp {
 } __packed;
 
 struct htt_tx_fetch_confirm {
-    u8 pad0;
+    uint8_t pad0;
     __le16 num_resp_ids;
     __le32 resp_ids[0];
 } __packed;
@@ -1455,15 +1455,15 @@ struct htt_tx_mode_switch_record {
 } __packed;
 
 struct htt_tx_mode_switch_ind {
-    u8 pad0;
+    uint8_t pad0;
     __le16 info0; /* HTT_TX_MODE_SWITCH_IND_INFO0_ */
     __le16 info1; /* HTT_TX_MODE_SWITCH_IND_INFO1_ */
-    u8 pad1[2];
+    uint8_t pad1[2];
     struct htt_tx_mode_switch_record records[0];
 } __packed;
 
 struct htt_channel_change {
-    u8 pad[3];
+    uint8_t pad[3];
     __le32 freq;
     __le32 center_freq1;
     __le32 center_freq2;
@@ -1474,8 +1474,8 @@ struct htt_per_peer_tx_stats_ind {
     __le32  succ_bytes;
     __le32  retry_bytes;
     __le32  failed_bytes;
-    u8  ratecode;
-    u8  flags;
+    uint8_t ratecode;
+    uint8_t flags;
     __le16  peer_id;
     __le16  succ_pkts;
     __le16  retry_pkts;
@@ -1486,21 +1486,21 @@ struct htt_per_peer_tx_stats_ind {
 } __packed;
 
 struct htt_peer_tx_stats {
-    u8 num_ppdu;
-    u8 ppdu_len;
-    u8 version;
-    u8 payload[0];
+    uint8_t num_ppdu;
+    uint8_t ppdu_len;
+    uint8_t version;
+    uint8_t payload[0];
 } __packed;
 
 union htt_rx_pn_t {
     /* WEP: 24-bit PN */
-    u32 pn24;
+    uint32_t pn24;
 
     /* TKIP or CCMP: 48-bit PN */
-    u64 pn48;
+    uint64_t pn48;
 
     /* WAPI: 128-bit PN */
-    u64 pn128[2];
+    uint64_t pn128[2];
 };
 
 struct htt_cmd {
@@ -1550,8 +1550,8 @@ struct htt_resp {
 /*** host side structures follow ***/
 
 struct htt_tx_done {
-    u16 msdu_id;
-    u16 status;
+    uint16_t msdu_id;
+    uint16_t status;
 };
 
 enum htt_tx_compl_state {
@@ -1562,13 +1562,13 @@ enum htt_tx_compl_state {
 };
 
 struct htt_peer_map_event {
-    u8 vdev_id;
-    u16 peer_id;
-    u8 addr[ETH_ALEN];
+    uint8_t vdev_id;
+    uint16_t peer_id;
+    uint8_t addr[ETH_ALEN];
 };
 
 struct htt_peer_unmap_event {
-    u16 peer_id;
+    uint16_t peer_id;
 };
 
 struct ath10k_htt_txbuf {
@@ -1582,14 +1582,14 @@ struct ath10k_htt {
     struct ath10k* ar;
     enum ath10k_htc_ep_id eid;
 
-    u8 target_version_major;
-    u8 target_version_minor;
+    uint8_t target_version_major;
+    uint8_t target_version_minor;
     struct completion target_version_received;
-    u8 max_num_amsdu;
-    u8 max_num_ampdu;
+    uint8_t max_num_amsdu;
+    uint8_t max_num_ampdu;
 
     const enum htt_t2h_msg_type* t2h_msg_types;
-    u32 t2h_msg_types_max;
+    uint32_t t2h_msg_types_max;
 
     struct {
         /*
@@ -1711,9 +1711,9 @@ struct ath10k_htt {
         bool enabled;
         struct htt_q_state* vaddr;
         dma_addr_t paddr;
-        u16 num_push_allowed;
-        u16 num_peers;
-        u16 num_tids;
+        uint16_t num_push_allowed;
+        uint16_t num_peers;
+        uint16_t num_tids;
         enum htt_tx_mode_switch_mode mode;
         enum htt_q_depth_type type;
     } tx_q_state;
@@ -1733,7 +1733,7 @@ struct htt_rx_desc {
          * from htt_rx_indication
          */
         struct fw_rx_desc_base fw_desc;
-        u32 pad;
+        uint32_t pad;
     } __packed;
     struct {
         struct rx_attention attention;
@@ -1745,8 +1745,8 @@ struct htt_rx_desc {
         struct rx_ppdu_start ppdu_start;
         struct rx_ppdu_end ppdu_end;
     } __packed;
-    u8 rx_hdr_status[RX_HTT_HDR_STATUS_LEN];
-    u8 msdu_payload[0];
+    uint8_t rx_hdr_status[RX_HTT_HDR_STATUS_LEN];
+    uint8_t msdu_payload[0];
 };
 
 #define HTT_RX_DESC_ALIGN 8
@@ -1797,12 +1797,12 @@ void ath10k_htt_htc_tx_complete(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb);
 bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb);
 int ath10k_htt_h2t_ver_req_msg(struct ath10k_htt* htt);
-int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, u8 mask, u64 cookie);
+int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cookie);
 int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt);
 int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt);
 int ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
-                                u8 max_subfrms_ampdu,
-                                u8 max_subfrms_amsdu);
+                                uint8_t max_subfrms_ampdu,
+                                uint8_t max_subfrms_amsdu);
 void ath10k_htt_hif_tx_complete(struct ath10k* ar, struct sk_buff* skb);
 int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
                              __le32 token,
@@ -1822,7 +1822,7 @@ int ath10k_htt_tx_mgmt_inc_pending(struct ath10k_htt* htt, bool is_mgmt,
                                    bool is_presp);
 
 int ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt, struct sk_buff* skb);
-void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, u16 msdu_id);
+void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id);
 int ath10k_htt_mgmt_tx(struct ath10k_htt* htt, struct sk_buff* msdu);
 int ath10k_htt_tx(struct ath10k_htt* htt,
                   enum ath10k_hw_txrx_mode txmode,

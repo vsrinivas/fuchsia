@@ -254,7 +254,7 @@ ath10k_htc_process_lookahead(struct ath10k_htc* htc,
                    report->pre_valid, report->post_valid);
 
         /* look ahead bytes are valid, copy them over */
-        memcpy((u8*)next_lookaheads, report->lookahead, 4);
+        memcpy((uint8_t*)next_lookaheads, report->lookahead, 4);
 
         *next_lookaheads_len = 1;
     }
@@ -282,7 +282,7 @@ ath10k_htc_process_lookahead_bundle(struct ath10k_htc* htc,
         int i;
 
         for (i = 0; i < bundle_cnt; i++) {
-            memcpy(((u8*)next_lookaheads) + 4 * i,
+            memcpy(((uint8_t*)next_lookaheads) + 4 * i,
                    report->lookahead, 4);
             report++;
         }
@@ -294,7 +294,7 @@ ath10k_htc_process_lookahead_bundle(struct ath10k_htc* htc,
 }
 
 int ath10k_htc_process_trailer(struct ath10k_htc* htc,
-                               u8* buffer,
+                               uint8_t* buffer,
                                int length,
                                enum ath10k_htc_ep_id src_eid,
                                void* next_lookaheads,
@@ -303,7 +303,7 @@ int ath10k_htc_process_trailer(struct ath10k_htc* htc,
     struct ath10k* ar = htc->ar;
     int status = 0;
     struct ath10k_htc_record* record;
-    u8* orig_buffer;
+    uint8_t* orig_buffer;
     int orig_length;
     size_t len;
 
@@ -390,10 +390,10 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb) {
     struct ath10k_htc* htc = &ar->htc;
     struct ath10k_htc_hdr* hdr;
     struct ath10k_htc_ep* ep;
-    u16 payload_len;
-    u32 trailer_len = 0;
+    uint16_t payload_len;
+    uint32_t trailer_len = 0;
     size_t min_len;
-    u8 eid;
+    uint8_t eid;
     bool trailer_present;
 
     hdr = (struct ath10k_htc_hdr*)skb->data;
@@ -432,7 +432,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb) {
     /* get flags to check for trailer */
     trailer_present = hdr->flags & ATH10K_HTC_FLAG_TRAILER_PRESENT;
     if (trailer_present) {
-        u8* trailer;
+        uint8_t* trailer;
 
         trailer_len = hdr->trailer_len;
         min_len = sizeof(struct ath10k_ath10k_htc_record_hdr);
@@ -444,7 +444,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb) {
             goto out;
         }
 
-        trailer = (u8*)hdr;
+        trailer = (uint8_t*)hdr;
         trailer += sizeof(*hdr);
         trailer += payload_len;
         trailer -= trailer_len;
@@ -562,9 +562,9 @@ static void ath10k_htc_reset_endpoint_states(struct ath10k_htc* htc) {
     }
 }
 
-static u8 ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
-        u16 service_id) {
-    u8 allocation = 0;
+static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
+                                                uint16_t service_id) {
+    uint8_t allocation = 0;
 
     /* The WMI control service is the only service with flow control.
      * Let it have all transmit credits.
@@ -581,7 +581,7 @@ int ath10k_htc_wait_target(struct ath10k_htc* htc) {
     int i, status = 0;
     unsigned long time_left;
     struct ath10k_htc_msg* msg;
-    u16 message_id;
+    uint16_t message_id;
 
     time_left = wait_for_completion_timeout(&htc->ctl_resp,
                                             ATH10K_HTC_WAIT_TIMEOUT_HZ);
@@ -646,7 +646,7 @@ int ath10k_htc_wait_target(struct ath10k_htc* htc) {
     if (htc->control_resp_len >=
             sizeof(msg->hdr) + sizeof(msg->ready_ext)) {
         htc->max_msgs_per_htc_bundle =
-            min_t(u8, msg->ready_ext.max_msgs_per_htc_bundle,
+            min_t(uint8_t, msg->ready_ext.max_msgs_per_htc_bundle,
                   HTC_HOST_MAX_MSG_PER_BUNDLE);
         ath10k_dbg(ar, ATH10K_DBG_HTC,
                    "Extended ready message. RX bundle size: %d\n",
@@ -671,8 +671,8 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     int length, status;
     unsigned long time_left;
     bool disable_credit_flow_ctrl = false;
-    u16 message_id, service_id, flags = 0;
-    u8 tx_alloc = 0;
+    uint16_t message_id, service_id, flags = 0;
+    uint8_t tx_alloc = 0;
 
     /* special case for HTC pseudo control service */
     if (conn_req->service_id == ATH10K_HTC_SVC_ID_RSVD_CTRL) {

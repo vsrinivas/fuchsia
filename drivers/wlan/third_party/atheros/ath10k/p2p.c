@@ -19,15 +19,15 @@
 #include "mac.h"
 #include "p2p.h"
 
-static void ath10k_p2p_noa_ie_fill(u8* data, size_t len,
+static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
                                    const struct wmi_p2p_noa_info* noa) {
     struct ieee80211_p2p_noa_attr* noa_attr;
-    u8  ctwindow_oppps = noa->ctwindow_oppps;
-    u8 ctwindow = ctwindow_oppps >> WMI_P2P_OPPPS_CTWINDOW_OFFSET;
+    uint8_t  ctwindow_oppps = noa->ctwindow_oppps;
+    uint8_t ctwindow = ctwindow_oppps >> WMI_P2P_OPPPS_CTWINDOW_OFFSET;
     bool oppps = !!(ctwindow_oppps & WMI_P2P_OPPPS_ENABLE_BIT);
     __le16* noa_attr_len;
-    u16 attr_len;
-    u8 noa_descriptors = noa->num_descriptors;
+    uint16_t attr_len;
+    uint8_t noa_descriptors = noa->num_descriptors;
     int i;
 
     /* P2P IE */
@@ -124,11 +124,11 @@ void ath10k_p2p_noa_update(struct ath10k_vif* arvif,
 }
 
 struct ath10k_p2p_noa_arg {
-    u32 vdev_id;
+    uint32_t vdev_id;
     const struct wmi_p2p_noa_info* noa;
 };
 
-static void ath10k_p2p_noa_update_vdev_iter(void* data, u8* mac,
+static void ath10k_p2p_noa_update_vdev_iter(void* data, uint8_t* mac,
         struct ieee80211_vif* vif) {
     struct ath10k_vif* arvif = (void*)vif->drv_priv;
     struct ath10k_p2p_noa_arg* arg = data;
@@ -140,7 +140,7 @@ static void ath10k_p2p_noa_update_vdev_iter(void* data, u8* mac,
     ath10k_p2p_noa_update(arvif, arg->noa);
 }
 
-void ath10k_p2p_noa_update_by_vdev_id(struct ath10k* ar, u32 vdev_id,
+void ath10k_p2p_noa_update_by_vdev_id(struct ath10k* ar, uint32_t vdev_id,
                                       const struct wmi_p2p_noa_info* noa) {
     struct ath10k_p2p_noa_arg arg = {
         .vdev_id = vdev_id,

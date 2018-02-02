@@ -22,7 +22,7 @@
 #include "txrx.h"
 #include "debug.h"
 
-static u8 ath10k_htt_tx_txq_calc_size(size_t count) {
+static uint8_t ath10k_htt_tx_txq_calc_size(size_t count) {
     int exp;
     int factor;
 
@@ -54,10 +54,10 @@ static void __ath10k_htt_tx_txq_recalc(struct ieee80211_hw* hw,
     unsigned long frame_cnt;
     unsigned long byte_cnt;
     int idx;
-    u32 bit;
-    u16 peer_id;
-    u8 tid;
-    u8 count;
+    uint32_t bit;
+    uint16_t peer_id;
+    uint8_t tid;
+    uint8_t count;
 
     lockdep_assert_held(&ar->htt.tx_lock);
 
@@ -99,7 +99,7 @@ static void __ath10k_htt_tx_txq_recalc(struct ieee80211_hw* hw,
 }
 
 static void __ath10k_htt_tx_txq_sync(struct ath10k* ar) {
-    u32 seq;
+    uint32_t seq;
     size_t size;
 
     lockdep_assert_held(&ar->htt.tx_lock);
@@ -219,7 +219,7 @@ int ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt, struct sk_buff* skb) {
     return ret;
 }
 
-void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, u16 msdu_id) {
+void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id) {
     struct ath10k* ar = htt->ar;
 
     lockdep_assert_held(&htt->tx_lock);
@@ -497,7 +497,7 @@ int ath10k_htt_h2t_ver_req_msg(struct ath10k_htt* htt) {
     return 0;
 }
 
-int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, u8 mask, u64 cookie) {
+int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cookie) {
     struct ath10k* ar = htt->ar;
     struct htt_stats_req* req;
     struct sk_buff* skb;
@@ -546,7 +546,7 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
     struct htt_cmd* cmd;
     struct htt_frag_desc_bank_cfg* cfg;
     int ret, size;
-    u8 info;
+    uint8_t info;
 
     if (!ar->hw_params.continuous_frag_desc) {
         return 0;
@@ -610,8 +610,8 @@ int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
     struct htt_cmd* cmd;
     struct htt_rx_ring_setup_ring* ring;
     const int num_rx_ring = 1;
-    u16 flags;
-    u32 fw_idx;
+    uint16_t flags;
+    uint32_t fw_idx;
     int len;
     int ret;
 
@@ -691,8 +691,8 @@ int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
 }
 
 int ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
-                                u8 max_subfrms_ampdu,
-                                u8 max_subfrms_amsdu) {
+                                uint8_t max_subfrms_ampdu,
+                                uint8_t max_subfrms_amsdu) {
     struct ath10k* ar = htt->ar;
     struct htt_aggr_conf* aggr_conf;
     struct sk_buff* skb;
@@ -746,7 +746,7 @@ int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
                              size_t num_records) {
     struct sk_buff* skb;
     struct htt_cmd* cmd;
-    const u16 resp_id = 0;
+    const uint16_t resp_id = 0;
     int len = 0;
     int ret;
 
@@ -788,7 +788,7 @@ err_free_skb:
     return ret;
 }
 
-static u8 ath10k_htt_tx_get_vdev_id(struct ath10k* ar, struct sk_buff* skb) {
+static uint8_t ath10k_htt_tx_get_vdev_id(struct ath10k* ar, struct sk_buff* skb) {
     struct ieee80211_tx_info* info = IEEE80211_SKB_CB(skb);
     struct ath10k_skb_cb* cb = ATH10K_SKB_CB(skb);
     struct ath10k_vif* arvif;
@@ -805,7 +805,7 @@ static u8 ath10k_htt_tx_get_vdev_id(struct ath10k* ar, struct sk_buff* skb) {
     }
 }
 
-static u8 ath10k_htt_tx_get_tid(struct sk_buff* skb, bool is_eth) {
+static uint8_t ath10k_htt_tx_get_tid(struct sk_buff* skb, bool is_eth) {
     struct ieee80211_hdr* hdr = (void*)skb->data;
     struct ath10k_skb_cb* cb = ATH10K_SKB_CB(skb);
 
@@ -824,7 +824,7 @@ int ath10k_htt_mgmt_tx(struct ath10k_htt* htt, struct sk_buff* msdu) {
     struct sk_buff* txdesc = NULL;
     struct htt_cmd* cmd;
     struct ath10k_skb_cb* skb_cb = ATH10K_SKB_CB(msdu);
-    u8 vdev_id = ath10k_htt_tx_get_vdev_id(ar, msdu);
+    uint8_t vdev_id = ath10k_htt_tx_get_vdev_id(ar, msdu);
     int len = 0;
     int msdu_id = -1;
     int res;
@@ -905,15 +905,15 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
     struct ath10k_htt_txbuf* txbuf;
     struct htt_data_tx_desc_frag* frags;
     bool is_eth = (txmode == ATH10K_HW_TXRX_ETHERNET);
-    u8 vdev_id = ath10k_htt_tx_get_vdev_id(ar, msdu);
-    u8 tid = ath10k_htt_tx_get_tid(msdu, is_eth);
+    uint8_t vdev_id = ath10k_htt_tx_get_vdev_id(ar, msdu);
+    uint8_t tid = ath10k_htt_tx_get_tid(msdu, is_eth);
     int prefetch_len;
     int res;
-    u8 flags0 = 0;
-    u16 msdu_id, flags1 = 0;
-    u16 freq = 0;
-    u32 frags_paddr = 0;
-    u32 txbuf_paddr;
+    uint8_t flags0 = 0;
+    uint16_t msdu_id, flags1 = 0;
+    uint16_t freq = 0;
+    uint32_t frags_paddr = 0;
+    uint32_t txbuf_paddr;
     struct htt_msdu_ext_desc* ext_desc = NULL;
 
     spin_lock_bh(&htt->tx_lock);
@@ -1022,8 +1022,8 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
         flags0 |= HTT_DATA_TX_DESC_FLAGS0_NO_ENCRYPT;
     }
 
-    flags1 |= SM((u16)vdev_id, HTT_DATA_TX_DESC_FLAGS1_VDEV_ID);
-    flags1 |= SM((u16)tid, HTT_DATA_TX_DESC_FLAGS1_EXT_TID);
+    flags1 |= SM((uint16_t)vdev_id, HTT_DATA_TX_DESC_FLAGS1_VDEV_ID);
+    flags1 |= SM((uint16_t)tid, HTT_DATA_TX_DESC_FLAGS1_EXT_TID);
     if (msdu->ip_summed == CHECKSUM_PARTIAL &&
             !test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags)) {
         flags1 |= HTT_DATA_TX_DESC_FLAGS1_CKSUM_L3_OFFLOAD;
@@ -1059,7 +1059,7 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
     ath10k_dbg(ar, ATH10K_DBG_HTT,
                "htt tx flags0 %hhu flags1 %hu len %d id %hu frags_paddr %08x, msdu_paddr %08x vdev %hhu tid %hhu freq %hu\n",
                flags0, flags1, msdu->len, msdu_id, frags_paddr,
-               (u32)skb_cb->paddr, vdev_id, tid, freq);
+               (uint32_t)skb_cb->paddr, vdev_id, tid, freq);
     ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt tx msdu: ",
                     msdu->data, msdu->len);
     trace_ath10k_tx_hdr(ar, msdu->data, msdu->len);

@@ -27,10 +27,10 @@ MODULE_DESCRIPTION("Shared library for Atheros wireless LAN cards.");
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
-                                u32 len,
+                                uint32_t len,
                                 gfp_t gfp_mask) {
     struct sk_buff* skb;
-    u32 off;
+    uint32_t off;
 
     /*
      * Cache-line-align.  This is important (for the

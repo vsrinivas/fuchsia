@@ -39,8 +39,8 @@
 /* Key Cache Management */
 /************************/
 
-bool ath_hw_keyreset(struct ath_common* common, u16 entry) {
-    u32 keyType;
+bool ath_hw_keyreset(struct ath_common* common, uint16_t entry) {
+    uint32_t keyType;
     void* ah = common->ah;
 
     if (entry >= common->keymax) {
@@ -63,7 +63,7 @@ bool ath_hw_keyreset(struct ath_common* common, u16 entry) {
     REG_WRITE(ah, AR_KEYTABLE_MAC1(entry), 0);
 
     if (keyType == AR_KEYTABLE_TYPE_TKIP) {
-        u16 micentry = entry + 64;
+        uint16_t micentry = entry + 64;
 
         REG_WRITE(ah, AR_KEYTABLE_KEY0(micentry), 0);
         REG_WRITE(ah, AR_KEYTABLE_KEY1(micentry), 0);
@@ -84,9 +84,9 @@ bool ath_hw_keyreset(struct ath_common* common, u16 entry) {
 EXPORT_SYMBOL(ath_hw_keyreset);
 
 static bool ath_hw_keysetmac(struct ath_common* common,
-                             u16 entry, const u8* mac) {
-    u32 macHi, macLo;
-    u32 unicast_flag = AR_KEYTABLE_VALID;
+                             uint16_t entry, const uint8_t* mac) {
+    uint32_t macHi, macLo;
+    uint32_t unicast_flag = AR_KEYTABLE_VALID;
     void* ah = common->ah;
 
     if (entry >= common->keymax) {
@@ -125,12 +125,12 @@ static bool ath_hw_keysetmac(struct ath_common* common,
     return true;
 }
 
-static bool ath_hw_set_keycache_entry(struct ath_common* common, u16 entry,
+static bool ath_hw_set_keycache_entry(struct ath_common* common, uint16_t entry,
                                       const struct ath_keyval* k,
-                                      const u8* mac) {
+                                      const uint8_t* mac) {
     void* ah = common->ah;
-    u32 key0, key1, key2, key3, key4;
-    u32 keyType;
+    uint32_t key0, key1, key2, key3, key4;
+    uint32_t keyType;
 
     if (entry >= common->keymax) {
         ath_err(common, "set-entry: keycache entry %u out of range\n",
@@ -197,7 +197,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, u16 entry,
      */
 
     if (keyType == AR_KEYTABLE_TYPE_TKIP) {
-        u16 micentry = entry + 64;
+        uint16_t micentry = entry + 64;
 
         /*
          * Write inverted key[47:0] first to avoid Michael MIC errors
@@ -232,7 +232,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, u16 entry,
              * key3 [31:16] = reserved
              * key4 [31:0] = TX key [63:32]
              */
-            u32 mic0, mic1, mic2, mic3, mic4;
+            uint32_t mic0, mic1, mic2, mic3, mic4;
 
             mic0 = get_unaligned_le32(k->kv_mic + 0);
             mic2 = get_unaligned_le32(k->kv_mic + 4);
@@ -274,7 +274,7 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, u16 entry,
              * for TX and RX keys when these registers offsets are
              * used.
              */
-            u32 mic0, mic2;
+            uint32_t mic0, mic2;
 
             mic0 = get_unaligned_le32(k->kv_mic + 0);
             mic2 = get_unaligned_le32(k->kv_mic + 4);
@@ -336,11 +336,11 @@ static bool ath_hw_set_keycache_entry(struct ath_common* common, u16 entry,
     return true;
 }
 
-static int ath_setkey_tkip(struct ath_common* common, u16 keyix, const u8* key,
-                           struct ath_keyval* hk, const u8* addr,
+static int ath_setkey_tkip(struct ath_common* common, uint16_t keyix, const uint8_t* key,
+                           struct ath_keyval* hk, const uint8_t* addr,
                            bool authenticator) {
-    const u8* key_rxmic;
-    const u8* key_txmic;
+    const uint8_t* key_rxmic;
+    const uint8_t* key_txmic;
 
     key_txmic = key + NL80211_TKIP_DATA_OFFSET_TX_MIC_KEY;
     key_rxmic = key + NL80211_TKIP_DATA_OFFSET_RX_MIC_KEY;
@@ -403,7 +403,7 @@ static int ath_reserve_key_cache_slot_tkip(struct ath_common* common) {
 }
 
 static int ath_reserve_key_cache_slot(struct ath_common* common,
-                                      u32 cipher) {
+                                      uint32_t cipher) {
     int i;
 
     if (cipher == WLAN_CIPHER_SUITE_TKIP) {
@@ -485,8 +485,8 @@ int ath_key_config(struct ath_common* common,
                    struct ieee80211_sta* sta,
                    struct ieee80211_key_conf* key) {
     struct ath_keyval hk;
-    const u8* mac = NULL;
-    u8 gmac[ETH_ALEN];
+    const uint8_t* mac = NULL;
+    uint8_t gmac[ETH_ALEN];
     int ret = 0;
     int idx;
 

@@ -28,8 +28,8 @@ struct ath10k_thermal {
     struct completion wmi_sync;
 
     /* protected by conf_mutex */
-    u32 throttle_state;
-    u32 quiet_period;
+    uin32_t throttle_state;
+    uin32_t quiet_period;
     /* temperature value in Celcius degree
      * protected by data_lock
      */

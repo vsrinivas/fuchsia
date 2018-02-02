@@ -420,7 +420,7 @@ static void ath10k_send_suspend_complete(struct ath10k* ar) {
 }
 
 static void ath10k_init_sdio(struct ath10k* ar) {
-    u32 param = 0;
+    uint32_t param = 0;
 
     ath10k_bmi_write32(ar, hi_mbox_io_block_sz, 256);
     ath10k_bmi_write32(ar, hi_mbox_isr_yield_limit, 99);
@@ -434,7 +434,7 @@ static void ath10k_init_sdio(struct ath10k* ar) {
 }
 
 static int ath10k_init_configure_target(struct ath10k* ar) {
-    u32 param_host;
+    uint32_t param_host;
     int ret;
 
     /* tell target which HTC version it is used*/
@@ -529,9 +529,9 @@ static const struct firmware* ath10k_fetch_fw_file(struct ath10k* ar,
 
 static int ath10k_push_board_ext_data(struct ath10k* ar, const void* data,
                                       size_t data_len) {
-    u32 board_data_size = ar->hw_params.fw.board_size;
-    u32 board_ext_data_size = ar->hw_params.fw.board_ext_size;
-    u32 board_ext_data_addr;
+    uint32_t board_data_size = ar->hw_params.fw.board_size;
+    uint32_t board_ext_data_size = ar->hw_params.fw.board_ext_size;
+    uint32_t board_ext_data_addr;
     int ret;
 
     ret = ath10k_bmi_read32(ar, hi_board_ext_data, &board_ext_data_addr);
@@ -576,8 +576,8 @@ static int ath10k_push_board_ext_data(struct ath10k* ar, const void* data,
 
 static int ath10k_download_board_data(struct ath10k* ar, const void* data,
                                       size_t data_len) {
-    u32 board_data_size = ar->hw_params.fw.board_size;
-    u32 address;
+    uint32_t board_data_size = ar->hw_params.fw.board_size;
+    uint32_t address;
     int ret;
 
     ret = ath10k_push_board_ext_data(ar, data, data_len);
@@ -593,7 +593,7 @@ static int ath10k_download_board_data(struct ath10k* ar, const void* data,
     }
 
     ret = ath10k_bmi_write_memory(ar, address, data,
-                                  min_t(u32, board_data_size,
+                                  min_t(uint32_t, board_data_size,
                                         data_len));
     if (ret) {
         ath10k_err(ar, "could not write board data (%d)\n", ret);
@@ -717,8 +717,8 @@ out_free:
 }
 
 static int ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
-    u32 result, address;
-    u8 board_id, chip_id;
+    uint32_t result, address;
+    uint8_t board_id, chip_id;
     int ret, bmi_board_id_param;
 
     address = ar->hw_params.patch_load_addr;
@@ -782,7 +782,7 @@ static void ath10k_core_check_bdfext(const struct dmi_header* hdr, void* data) {
     struct ath10k* ar = data;
     const char* bdf_ext;
     const char* magic = ATH10K_SMBIOS_BDF_EXT_MAGIC;
-    u8 bdf_enabled;
+    uint8_t bdf_enabled;
     int i;
 
     if (hdr->type != ATH10K_SMBIOS_BDF_EXT_TYPE) {
@@ -796,7 +796,7 @@ static void ath10k_core_check_bdfext(const struct dmi_header* hdr, void* data) {
         return;
     }
 
-    bdf_enabled = *((u8*)hdr + ATH10K_SMBIOS_BDF_EXT_OFFSET);
+    bdf_enabled = *((uint8_t*)hdr + ATH10K_SMBIOS_BDF_EXT_OFFSET);
     if (!bdf_enabled) {
         ath10k_dbg(ar, ATH10K_DBG_BOOT, "bdf variant name not found.\n");
         return;
@@ -845,8 +845,8 @@ static int ath10k_core_check_smbios(struct ath10k* ar) {
 }
 
 static int ath10k_download_and_run_otp(struct ath10k* ar) {
-    u32 result, address = ar->hw_params.patch_load_addr;
-    u32 bmi_otp_exe_param = ar->hw_params.otp_exe_param;
+    uint32_t result, address = ar->hw_params.patch_load_addr;
+    uint32_t bmi_otp_exe_param = ar->hw_params.otp_exe_param;
     int ret;
 
     ret = ath10k_download_board_data(ar,
@@ -903,7 +903,7 @@ static int ath10k_download_and_run_otp(struct ath10k* ar) {
 }
 
 static int ath10k_download_fw(struct ath10k* ar) {
-    u32 address, data_len;
+    uint32_t address, data_len;
     const void* data;
     int ret;
 
@@ -1104,7 +1104,7 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
         const char* filename) {
     size_t len, magic_len, ie_len;
     struct ath10k_fw_ie* hdr;
-    const u8* data;
+    const uint8_t* data;
     int ret, ie_id;
 
     ar->normal_mode_fw.board = ath10k_fetch_fw_file(ar,
@@ -1282,7 +1282,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
     size_t magic_len, len, ie_len;
     int ie_id, i, index, bit, ret;
     struct ath10k_fw_ie* hdr;
-    const u8* data;
+    const uint8_t* data;
     __le32* timestamp, *version;
 
     /* first fetch the firmware file (firmware-*.bin) */
@@ -1348,7 +1348,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                        fw_file->fw_version);
             break;
         case ATH10K_FW_IE_TIMESTAMP:
-            if (ie_len != sizeof(u32)) {
+            if (ie_len != sizeof(uint32_t)) {
                 break;
             }
 
@@ -1401,7 +1401,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
 
             break;
         case ATH10K_FW_IE_WMI_OP_VERSION:
-            if (ie_len != sizeof(u32)) {
+            if (ie_len != sizeof(uint32_t)) {
                 break;
             }
 
@@ -1413,7 +1413,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                        fw_file->wmi_op_version);
             break;
         case ATH10K_FW_IE_HTT_OP_VERSION:
-            if (ie_len != sizeof(u32)) {
+            if (ie_len != sizeof(uint32_t)) {
                 break;
             }
 
@@ -1937,7 +1937,7 @@ static int ath10k_core_reset_rx_filter(struct ath10k* ar) {
     int vdev_id;
     int vdev_type;
     int vdev_subtype;
-    const u8* vdev_addr;
+    const uint8_t* vdev_addr;
 
     vdev_id = 0;
     vdev_type = WMI_VDEV_TYPE_STA;
@@ -1983,7 +1983,7 @@ static int ath10k_core_reset_rx_filter(struct ath10k* ar) {
 int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
                       const struct ath10k_fw_components* fw) {
     int status;
-    u32 val;
+    uint32_t val;
 
     lockdep_assert_held(&ar->conf_mutex);
 
@@ -2229,7 +2229,7 @@ err:
 }
 EXPORT_SYMBOL(ath10k_core_start);
 
-int ath10k_wait_for_suspend(struct ath10k* ar, u32 suspend_opt) {
+int ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
     int ret;
     unsigned long time_left;
 
@@ -2444,7 +2444,7 @@ err:
     return;
 }
 
-int ath10k_core_register(struct ath10k* ar, u32 chip_id) {
+int ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
     ar->chip_id = chip_id;
     queue_work(ar->workqueue, &ar->register_work);
 

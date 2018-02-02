@@ -113,7 +113,7 @@ struct ath10k_sdio_bus_request {
     struct list_head list;
 
     /* sdio address */
-    u32 address;
+    uin32_t address;
 
     struct sk_buff* skb;
     enum ath10k_htc_ep_id eid;
@@ -141,23 +141,23 @@ struct ath10k_sdio_rx_data {
 };
 
 struct ath10k_sdio_irq_proc_regs {
-    u8 host_int_status;
-    u8 cpu_int_status;
-    u8 error_int_status;
-    u8 counter_int_status;
-    u8 mbox_frame;
-    u8 rx_lookahead_valid;
-    u8 host_int_status2;
-    u8 gmbox_rx_avail;
+    uint8_t host_int_status;
+    uint8_t cpu_int_status;
+    uint8_t error_int_status;
+    uint8_t counter_int_status;
+    uint8_t mbox_frame;
+    uint8_t rx_lookahead_valid;
+    uint8_t host_int_status2;
+    uint8_t gmbox_rx_avail;
     __le32 rx_lookahead[2];
     __le32 rx_gmbox_lookahead_alias[2];
 };
 
 struct ath10k_sdio_irq_enable_regs {
-    u8 int_status_en;
-    u8 cpu_int_status_en;
-    u8 err_int_status_en;
-    u8 cntr_int_status_en;
+    uint8_t int_status_en;
+    uint8_t cpu_int_status_en;
+    uint8_t err_int_status_en;
+    uint8_t cntr_int_status_en;
 };
 
 struct ath10k_sdio_irq_data {
@@ -173,17 +173,17 @@ struct ath10k_sdio_irq_data {
 };
 
 struct ath10k_mbox_ext_info {
-    u32 htc_ext_addr;
-    u32 htc_ext_sz;
+    uin32_t htc_ext_addr;
+    uin32_t htc_ext_sz;
 };
 
 struct ath10k_mbox_info {
-    u32 htc_addr;
+    uin32_t htc_addr;
     struct ath10k_mbox_ext_info ext_info[2];
-    u32 block_size;
-    u32 block_mask;
-    u32 gmbox_addr;
-    u32 gmbox_sz;
+    uin32_t block_size;
+    uin32_t block_mask;
+    uin32_t gmbox_addr;
+    uin32_t gmbox_sz;
 };
 
 struct ath10k_sdio {
@@ -191,8 +191,8 @@ struct ath10k_sdio {
 
     struct ath10k_mbox_info mbox_info;
     bool swap_mbox;
-    u32 mbox_addr[ATH10K_HTC_EP_COUNT];
-    u32 mbox_size[ATH10K_HTC_EP_COUNT];
+    uin32_t mbox_addr[ATH10K_HTC_EP_COUNT];
+    uin32_t mbox_size[ATH10K_HTC_EP_COUNT];
 
     /* available bus requests */
     struct ath10k_sdio_bus_request bus_req[ATH10K_SDIO_BUS_REQUEST_MAX_NUM];
@@ -208,7 +208,7 @@ struct ath10k_sdio {
     struct ath10k_sdio_irq_data irq_data;
 
     /* temporary buffer for BMI requests */
-    u8* bmi_buf;
+    uint8_t* bmi_buf;
 
     wait_queue_head_t irq_wq;
 

@@ -41,7 +41,7 @@ static inline int ath10k_sdio_calc_txrx_padded_len(struct ath10k_sdio* ar_sdio,
     return __ALIGN_MASK((len), ar_sdio->mbox_info.block_mask);
 }
 
-static inline enum ath10k_htc_ep_id pipe_id_to_eid(u8 pipe_id) {
+static inline enum ath10k_htc_ep_id pipe_id_to_eid(uint8_t pipe_id) {
     return (enum ath10k_htc_ep_id)pipe_id;
 }
 
@@ -75,7 +75,7 @@ static inline bool is_trailer_only_msg(struct ath10k_sdio_rx_data* pkt) {
     bool trailer_only = false;
     struct ath10k_htc_hdr* htc_hdr =
         (struct ath10k_htc_hdr*)pkt->skb->data;
-    u16 len = __le16_to_cpu(htc_hdr->len);
+    uint16_t len = __le16_to_cpu(htc_hdr->len);
 
     if (len == htc_hdr->trailer_len) {
         trailer_only = true;
@@ -86,7 +86,7 @@ static inline bool is_trailer_only_msg(struct ath10k_sdio_rx_data* pkt) {
 
 /* sdio/mmc functions */
 
-static inline void ath10k_sdio_set_cmd52_arg(u32* arg, u8 write, u8 raw,
+static inline void ath10k_sdio_set_cmd52_arg(uin32_t* arg, uint8_t write, uint8_t raw,
         unsigned int address,
         unsigned char val) {
     *arg = FIELD_PREP(BIT(31), write) |
@@ -213,7 +213,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_write32(struct ath10k* ar, u32 addr, u32 val) {
+static int ath10k_sdio_write32(struct ath10k* ar, uin32_t addr, uin32_t val) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     int ret;
@@ -236,7 +236,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_writesb32(struct ath10k* ar, u32 addr, u32 val) {
+static int ath10k_sdio_writesb32(struct ath10k* ar, uin32_t addr, uin32_t val) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     __le32* buf;
@@ -269,7 +269,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_read32(struct ath10k* ar, u32 addr, u32* val) {
+static int ath10k_sdio_read32(struct ath10k* ar, uin32_t addr, uin32_t* val) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     int ret;
@@ -291,7 +291,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_read(struct ath10k* ar, u32 addr, void* buf, size_t len) {
+static int ath10k_sdio_read(struct ath10k* ar, uin32_t addr, void* buf, size_t len) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     int ret;
@@ -315,7 +315,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_write(struct ath10k* ar, u32 addr, const void* buf, size_t len) {
+static int ath10k_sdio_write(struct ath10k* ar, uin32_t addr, const void* buf, size_t len) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     int ret;
@@ -342,7 +342,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_readsb(struct ath10k* ar, u32 addr, void* buf, size_t len) {
+static int ath10k_sdio_readsb(struct ath10k* ar, uin32_t addr, void* buf, size_t len) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
     int ret;
@@ -372,15 +372,15 @@ out:
 
 static int ath10k_sdio_mbox_rx_process_packet(struct ath10k* ar,
         struct ath10k_sdio_rx_data* pkt,
-        u32* lookaheads,
+        uin32_t* lookaheads,
         int* n_lookaheads) {
     struct ath10k_htc* htc = &ar->htc;
     struct sk_buff* skb = pkt->skb;
     struct ath10k_htc_hdr* htc_hdr = (struct ath10k_htc_hdr*)skb->data;
     bool trailer_present = htc_hdr->flags & ATH10K_HTC_FLAG_TRAILER_PRESENT;
     enum ath10k_htc_ep_id eid;
-    u16 payload_len;
-    u8* trailer;
+    uint16_t payload_len;
+    uint8_t* trailer;
     int ret;
 
     payload_len = le16_to_cpu(htc_hdr->len);
@@ -414,7 +414,7 @@ static int ath10k_sdio_mbox_rx_process_packet(struct ath10k* ar,
 }
 
 static int ath10k_sdio_mbox_rx_process_packets(struct ath10k* ar,
-        u32 lookaheads[],
+        uin32_t lookaheads[],
         int* n_lookahead) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_htc* htc = &ar->htc;
@@ -422,7 +422,7 @@ static int ath10k_sdio_mbox_rx_process_packets(struct ath10k* ar,
     struct ath10k_htc_ep* ep;
     enum ath10k_htc_ep_id id;
     int ret, i, *n_lookahead_local;
-    u32* lookaheads_local;
+    uin32_t* lookaheads_local;
 
     for (i = 0; i < ar_sdio->n_rx_pkts; i++) {
         lookaheads_local = lookaheads;
@@ -525,7 +525,7 @@ static int ath10k_sdio_mbox_alloc_pkt_bundle(struct ath10k* ar,
 }
 
 static int ath10k_sdio_mbox_rx_alloc(struct ath10k* ar,
-                                     u32 lookaheads[], int n_lookaheads) {
+                                     uin32_t lookaheads[], int n_lookaheads) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_htc_hdr* htc_hdr;
     size_t full_len, act_len;
@@ -660,9 +660,9 @@ err:
 #define SDIO_MBOX_PROCESSING_TIMEOUT_HZ (20 * HZ)
 
 static int ath10k_sdio_mbox_rxmsg_pending_handler(struct ath10k* ar,
-        u32 msg_lookahead, bool* done) {
+        uin32_t msg_lookahead, bool* done) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
-    u32 lookaheads[ATH10K_SDIO_MAX_RX_MSGS];
+    uin32_t lookaheads[ATH10K_SDIO_MAX_RX_MSGS];
     int n_lookaheads = 1;
     unsigned long timeout;
     int ret;
@@ -725,7 +725,7 @@ static int ath10k_sdio_mbox_rxmsg_pending_handler(struct ath10k* ar,
 }
 
 static int ath10k_sdio_mbox_proc_dbg_intr(struct ath10k* ar) {
-    u32 val;
+    uin32_t val;
     int ret;
 
     /* TODO: Add firmware crash handling */
@@ -745,7 +745,7 @@ static int ath10k_sdio_mbox_proc_dbg_intr(struct ath10k* ar) {
 static int ath10k_sdio_mbox_proc_counter_intr(struct ath10k* ar) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_irq_data* irq_data = &ar_sdio->irq_data;
-    u8 counter_int_status;
+    uint8_t counter_int_status;
     int ret;
 
     mutex_lock(&irq_data->mtx);
@@ -770,7 +770,7 @@ static int ath10k_sdio_mbox_proc_counter_intr(struct ath10k* ar) {
 static int ath10k_sdio_mbox_proc_err_intr(struct ath10k* ar) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_irq_data* irq_data = &ar_sdio->irq_data;
-    u8 error_int_status;
+    uint8_t error_int_status;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_SDIO, "sdio error interrupt\n");
@@ -818,7 +818,7 @@ static int ath10k_sdio_mbox_proc_err_intr(struct ath10k* ar) {
 static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k* ar) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_irq_data* irq_data = &ar_sdio->irq_data;
-    u8 cpu_int_status;
+    uint8_t cpu_int_status;
     int ret;
 
     mutex_lock(&irq_data->mtx);
@@ -854,13 +854,13 @@ out:
 }
 
 static int ath10k_sdio_mbox_read_int_status(struct ath10k* ar,
-        u8* host_int_status,
-        u32* lookahead) {
+        uint8_t* host_int_status,
+        uin32_t* lookahead) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_irq_data* irq_data = &ar_sdio->irq_data;
     struct ath10k_sdio_irq_proc_regs* irq_proc_reg = irq_data->irq_proc_reg;
     struct ath10k_sdio_irq_enable_regs* irq_en_reg = irq_data->irq_en_reg;
-    u8 htc_mbox = FIELD_PREP(ATH10K_HTC_MAILBOX_MASK, 1);
+    uint8_t htc_mbox = FIELD_PREP(ATH10K_HTC_MAILBOX_MASK, 1);
     int ret;
 
     mutex_lock(&irq_data->mtx);
@@ -920,8 +920,8 @@ out:
 
 static int ath10k_sdio_mbox_proc_pending_irqs(struct ath10k* ar,
         bool* done) {
-    u8 host_int_status;
-    u32 lookahead;
+    uint8_t host_int_status;
+    uin32_t lookahead;
     int ret;
 
     /* NOTE: HIF implementation guarantees that the context of this
@@ -1008,7 +1008,7 @@ out:
 static void ath10k_sdio_set_mbox_info(struct ath10k* ar) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_mbox_info* mbox_info = &ar_sdio->mbox_info;
-    u16 device = ar_sdio->func->device, dev_id_base, dev_id_chiprev;
+    uint16_t device = ar_sdio->func->device, dev_id_base, dev_id_chiprev;
 
     mbox_info->htc_addr = ATH10K_HIF_MBOX_BASE_ADDR;
     mbox_info->block_size = ATH10K_HIF_MBOX_BLOCK_SIZE;
@@ -1051,7 +1051,7 @@ static void ath10k_sdio_set_mbox_info(struct ath10k* ar) {
 /* BMI functions */
 
 static int ath10k_sdio_bmi_credits(struct ath10k* ar) {
-    u32 addr, cmd_credits;
+    uin32_t addr, cmd_credits;
     unsigned long timeout;
     int ret;
 
@@ -1090,7 +1090,7 @@ static int ath10k_sdio_bmi_credits(struct ath10k* ar) {
 
 static int ath10k_sdio_bmi_get_rx_lookahead(struct ath10k* ar) {
     unsigned long timeout;
-    u32 rx_word;
+    uin32_t rx_word;
     int ret;
 
     timeout = jiffies + BMI_COMMUNICATION_TIMEOUT_HZ;
@@ -1118,10 +1118,10 @@ static int ath10k_sdio_bmi_get_rx_lookahead(struct ath10k* ar) {
 }
 
 static int ath10k_sdio_bmi_exchange_msg(struct ath10k* ar,
-                                        void* req, u32 req_len,
-                                        void* resp, u32* resp_len) {
+                                        void* req, uin32_t req_len,
+                                        void* resp, uin32_t* resp_len) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
-    u32 addr;
+    uin32_t addr;
     int ret;
 
     if (req) {
@@ -1287,7 +1287,7 @@ static void ath10k_sdio_write_async_work(struct work_struct* work) {
     spin_unlock_bh(&ar_sdio->wr_async_lock);
 }
 
-static int ath10k_sdio_prep_async_req(struct ath10k* ar, u32 addr,
+static int ath10k_sdio_prep_async_req(struct ath10k* ar, uin32_t addr,
                                       struct sk_buff* skb,
                                       struct completion* comp,
                                       bool htc_msg, enum ath10k_htc_ep_id eid) {
@@ -1429,7 +1429,7 @@ static void ath10k_sdio_hif_power_down(struct ath10k* ar) {
     ar_sdio->is_disabled = true;
 }
 
-static int ath10k_sdio_hif_tx_sg(struct ath10k* ar, u8 pipe_id,
+static int ath10k_sdio_hif_tx_sg(struct ath10k* ar, uint8_t pipe_id,
                                  struct ath10k_hif_sg_item* items, int n_items) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     enum ath10k_htc_ep_id eid;
@@ -1440,7 +1440,7 @@ static int ath10k_sdio_hif_tx_sg(struct ath10k* ar, u8 pipe_id,
 
     for (i = 0; i < n_items; i++) {
         size_t padded_len;
-        u32 address;
+        uin32_t address;
 
         skb = items[i].transfer_context;
         padded_len = ath10k_sdio_calc_txrx_padded_len(ar_sdio,
@@ -1508,7 +1508,7 @@ static int ath10k_sdio_hif_enable_intrs(struct ath10k* ar) {
 }
 
 static int ath10k_sdio_hif_set_mbox_sleep(struct ath10k* ar, bool enable_sleep) {
-    u32 val;
+    uin32_t val;
     int ret;
 
     ret = ath10k_sdio_read32(ar, ATH10K_FIFO_TIMEOUT_AND_CHIP_CONTROL, &val);
@@ -1536,7 +1536,7 @@ static int ath10k_sdio_hif_set_mbox_sleep(struct ath10k* ar, bool enable_sleep) 
 
 /* HIF diagnostics */
 
-static int ath10k_sdio_hif_diag_read(struct ath10k* ar, u32 address, void* buf,
+static int ath10k_sdio_hif_diag_read(struct ath10k* ar, uin32_t address, void* buf,
                                      size_t buf_len) {
     int ret;
 
@@ -1558,8 +1558,8 @@ static int ath10k_sdio_hif_diag_read(struct ath10k* ar, u32 address, void* buf,
     return 0;
 }
 
-static int ath10k_sdio_hif_diag_read32(struct ath10k* ar, u32 address,
-                                       u32* value) {
+static int ath10k_sdio_hif_diag_read32(struct ath10k* ar, uin32_t address,
+                                       uin32_t* value) {
     __le32* val;
     int ret;
 
@@ -1581,7 +1581,7 @@ out:
     return ret;
 }
 
-static int ath10k_sdio_hif_diag_write_mem(struct ath10k* ar, u32 address,
+static int ath10k_sdio_hif_diag_write_mem(struct ath10k* ar, uin32_t address,
         const void* data, int nbytes) {
     int ret;
 
@@ -1608,7 +1608,7 @@ static int ath10k_sdio_hif_diag_write_mem(struct ath10k* ar, u32 address,
 
 static int ath10k_sdio_hif_start(struct ath10k* ar) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
-    u32 addr, val;
+    uin32_t addr, val;
     int ret;
 
     /* Sleep 20 ms before HIF interrupts are disabled.
@@ -1783,11 +1783,11 @@ static int ath10k_sdio_hif_resume(struct ath10k* ar) {
 #endif
 
 static int ath10k_sdio_hif_map_service_to_pipe(struct ath10k* ar,
-        u16 service_id,
-        u8* ul_pipe, u8* dl_pipe) {
+        uint16_t service_id,
+        uint8_t* ul_pipe, uint8_t* dl_pipe) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_htc* htc = &ar->htc;
-    u32 htt_addr, wmi_addr, htt_mbox_size, wmi_mbox_size;
+    uin32_t htt_addr, wmi_addr, htt_mbox_size, wmi_mbox_size;
     enum ath10k_htc_ep_id eid;
     bool ep_found = false;
     int i;
@@ -1812,7 +1812,7 @@ static int ath10k_sdio_hif_map_service_to_pipe(struct ath10k* ar,
     /* Then we create the simplest mapping possible between pipeid
      * and eid
      */
-    *ul_pipe = *dl_pipe = (u8)eid;
+    *ul_pipe = *dl_pipe = (uint8_t)eid;
 
     /* Normally, HTT will use the upper part of the extended
      * mailbox address space (ext_info[1].htc_ext_addr) and WMI ctrl
@@ -1861,7 +1861,7 @@ static int ath10k_sdio_hif_map_service_to_pipe(struct ath10k* ar,
 }
 
 static void ath10k_sdio_hif_get_default_pipe(struct ath10k* ar,
-        u8* ul_pipe, u8* dl_pipe) {
+        uint8_t* ul_pipe, uint8_t* dl_pipe) {
     ath10k_dbg(ar, ATH10K_DBG_SDIO, "sdio hif get default pipe\n");
 
     /* HTC ctrl ep (SVC id 1) always has eid (and pipe_id in our
@@ -1878,7 +1878,7 @@ static void ath10k_sdio_hif_get_default_pipe(struct ath10k* ar,
  * hif op wrapper.
  */
 static void ath10k_sdio_hif_send_complete_check(struct ath10k* ar,
-        u8 pipe, int force) {
+        uint8_t pipe, int force) {
 }
 
 static const struct ath10k_hif_ops ath10k_sdio_hif_ops = {
@@ -1928,7 +1928,7 @@ static int ath10k_sdio_probe(struct sdio_func* func,
     struct ath10k_sdio* ar_sdio;
     struct ath10k* ar;
     enum ath10k_hw_rev hw_rev;
-    u32 chip_id, dev_id_base;
+    uin32_t chip_id, dev_id_base;
     int ret, i;
 
     /* Assumption: All SDIO based chipsets (so far) are QCA6174 based.

@@ -63,19 +63,19 @@ enum ath10k_htc_rx_flags {
 };
 
 struct ath10k_htc_hdr {
-    u8 eid; /* @enum ath10k_htc_ep_id */
-    u8 flags; /* @enum ath10k_htc_tx_flags, ath10k_htc_rx_flags */
+    uint8_t eid; /* @enum ath10k_htc_ep_id */
+    uint8_t flags; /* @enum ath10k_htc_tx_flags, ath10k_htc_rx_flags */
     __le16 len;
     union {
-        u8 trailer_len; /* for rx */
-        u8 control_byte0;
+        uint8_t trailer_len; /* for rx */
+        uint8_t control_byte0;
     } __packed;
     union {
-        u8 seq_no; /* for tx */
-        u8 control_byte1;
+        uint8_t seq_no; /* for tx */
+        uint8_t control_byte1;
     } __packed;
-    u8 pad0;
-    u8 pad1;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed __aligned(4);
 
 enum ath10k_ath10k_htc_msg_id {
@@ -121,47 +121,47 @@ struct ath10k_ath10k_htc_msg_hdr {
 } __packed;
 
 struct ath10k_htc_unknown {
-    u8 pad0;
-    u8 pad1;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_ready {
     __le16 credit_count;
     __le16 credit_size;
-    u8 max_endpoints;
-    u8 pad0;
+    uint8_t max_endpoints;
+    uint8_t pad0;
 } __packed;
 
 struct ath10k_htc_ready_extended {
     struct ath10k_htc_ready base;
-    u8 htc_version; /* @enum ath10k_htc_version */
-    u8 max_msgs_per_htc_bundle;
-    u8 pad0;
-    u8 pad1;
+    uint8_t htc_version; /* @enum ath10k_htc_version */
+    uint8_t max_msgs_per_htc_bundle;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_conn_svc {
     __le16 service_id;
     __le16 flags; /* @enum ath10k_htc_conn_flags */
-    u8 pad0;
-    u8 pad1;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_conn_svc_response {
     __le16 service_id;
-    u8 status; /* @enum ath10k_htc_conn_svc_status */
-    u8 eid;
+    uint8_t status; /* @enum ath10k_htc_conn_svc_status */
+    uint8_t eid;
     __le16 max_msg_size;
 } __packed;
 
 struct ath10k_htc_setup_complete_extended {
-    u8 pad0;
-    u8 pad1;
+    uint8_t pad0;
+    uint8_t pad1;
     __le32 flags; /* @enum htc_setup_complete_flags */
-    u8 max_msgs_per_bundled_recv;
-    u8 pad2;
-    u8 pad3;
-    u8 pad4;
+    uint8_t max_msgs_per_bundled_recv;
+    uint8_t pad2;
+    uint8_t pad3;
+    uint8_t pad4;
 } __packed;
 
 struct ath10k_htc_msg {
@@ -187,33 +187,33 @@ enum ath10k_ath10k_htc_record_id {
 };
 
 struct ath10k_ath10k_htc_record_hdr {
-    u8 id; /* @enum ath10k_ath10k_htc_record_id */
-    u8 len;
-    u8 pad0;
-    u8 pad1;
+    uint8_t id; /* @enum ath10k_ath10k_htc_record_id */
+    uint8_t len;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_credit_report {
-    u8 eid; /* @enum ath10k_htc_ep_id */
-    u8 credits;
-    u8 pad0;
-    u8 pad1;
+    uint8_t eid; /* @enum ath10k_htc_ep_id */
+    uint8_t credits;
+    uint8_t pad0;
+    uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_lookahead_report {
-    u8 pre_valid;
-    u8 pad0;
-    u8 pad1;
-    u8 pad2;
-    u8 lookahead[4];
-    u8 post_valid;
-    u8 pad3;
-    u8 pad4;
-    u8 pad5;
+    uint8_t pre_valid;
+    uint8_t pad0;
+    uint8_t pad1;
+    uint8_t pad2;
+    uint8_t lookahead[4];
+    uint8_t post_valid;
+    uint8_t pad3;
+    uint8_t pad4;
+    uint8_t pad5;
 } __packed;
 
 struct ath10k_htc_lookahead_bundle {
-    u8 lookahead[4];
+    uint8_t lookahead[4];
 } __packed;
 
 struct ath10k_htc_record {
@@ -222,7 +222,7 @@ struct ath10k_htc_record {
         struct ath10k_htc_credit_report credit_report[0];
         struct ath10k_htc_lookahead_report lookahead_report[0];
         struct ath10k_htc_lookahead_bundle lookahead_bundle[0];
-        u8 pauload[0];
+        uint8_t pauload[0];
     };
 } __packed __aligned(4);
 
@@ -234,7 +234,7 @@ struct ath10k_htc_frame {
     struct ath10k_htc_hdr hdr;
     union {
         struct ath10k_htc_msg msg;
-        u8 payload[0];
+        uint8_t payload[0];
     };
     struct ath10k_htc_record trailer[0];
 } __packed __aligned(4);
@@ -305,18 +305,18 @@ struct ath10k_htc_ep_ops {
 
 /* service connection information */
 struct ath10k_htc_svc_conn_req {
-    u16 service_id;
+    uint16_t service_id;
     struct ath10k_htc_ep_ops ep_ops;
     int max_send_queue_depth;
 };
 
 /* service connection response information */
 struct ath10k_htc_svc_conn_resp {
-    u8 buffer_len;
-    u8 actual_len;
+    uint8_t buffer_len;
+    uint8_t actual_len;
     enum ath10k_htc_ep_id eid;
     unsigned int max_msg_len;
-    u8 connect_resp_code;
+    uint8_t connect_resp_code;
 };
 
 #define ATH10K_NUM_CONTROL_TX_BUFFERS 2
@@ -335,17 +335,17 @@ struct ath10k_htc_ep {
 
     int max_tx_queue_depth;
     int max_ep_message_len;
-    u8 ul_pipe_id;
-    u8 dl_pipe_id;
+    uint8_t ul_pipe_id;
+    uint8_t dl_pipe_id;
 
-    u8 seq_no; /* for debugging */
+    uint8_t seq_no; /* for debugging */
     int tx_credits;
     bool tx_credit_flow_enabled;
 };
 
 struct ath10k_htc_svc_tx_credits {
-    u16 service_id;
-    u8  credit_allocation;
+    uint16_t service_id;
+    uint8_t  credit_allocation;
 };
 
 struct ath10k_htc {
@@ -357,14 +357,14 @@ struct ath10k_htc {
 
     struct ath10k_htc_ops htc_ops;
 
-    u8 control_resp_buffer[ATH10K_HTC_MAX_CTRL_MSG_LEN];
+    uint8_t control_resp_buffer[ATH10K_HTC_MAX_CTRL_MSG_LEN];
     int control_resp_len;
 
     struct completion ctl_resp;
 
     int total_transmit_credits;
     int target_credit_size;
-    u8 max_msgs_per_htc_bundle;
+    uint8_t max_msgs_per_htc_bundle;
 };
 
 int ath10k_htc_init(struct ath10k* ar);
@@ -381,7 +381,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_htc_notify_tx_completion(struct ath10k_htc_ep* ep,
                                      struct sk_buff* skb);
 int ath10k_htc_process_trailer(struct ath10k_htc* htc,
-                               u8* buffer,
+                               uint8_t* buffer,
                                int length,
                                enum ath10k_htc_ep_id src_eid,
                                void* next_lookaheads,

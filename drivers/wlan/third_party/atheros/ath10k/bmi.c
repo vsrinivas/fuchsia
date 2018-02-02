@@ -37,7 +37,7 @@ void ath10k_bmi_start(struct ath10k* ar) {
 
 int ath10k_bmi_done(struct ath10k* ar) {
     struct bmi_cmd cmd;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.done);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.done);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi done\n");
@@ -63,8 +63,8 @@ int ath10k_bmi_get_target_info(struct ath10k* ar,
                                struct bmi_target_info* target_info) {
     struct bmi_cmd cmd;
     union bmi_resp resp;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.get_target_info);
-    u32 resplen = sizeof(resp.get_target_info);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.get_target_info);
+    uint32_t resplen = sizeof(resp.get_target_info);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi get target info\n");
@@ -100,8 +100,8 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
                                     struct bmi_target_info* target_info) {
     struct bmi_cmd cmd;
     union bmi_resp resp;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.get_target_info);
-    u32 resplen, ver_len;
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.get_target_info);
+    uint32_t resplen, ver_len;
     __le32 tmp;
     int ret;
 
@@ -118,7 +118,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
      * the special sentinal version word or the first word in the
      * version response.
      */
-    resplen = sizeof(u32);
+    resplen = sizeof(uint32_t);
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, &tmp, &resplen);
     if (ret) {
         ath10k_warn(ar, "unable to read from device\n");
@@ -130,7 +130,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
      */
     if (__le32_to_cpu(tmp) == TARGET_VERSION_SENTINAL) {
         /* Step 1b: Read the version length */
-        resplen = sizeof(u32);
+        resplen = sizeof(uint32_t);
         ret = ath10k_hif_exchange_bmi_msg(ar, NULL, 0, &tmp,
                                           &resplen);
         if (ret) {
@@ -149,7 +149,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
     }
 
     /* Step 3: Read the rest of the version response */
-    resplen = sizeof(resp.get_target_info) - sizeof(u32);
+    resplen = sizeof(resp.get_target_info) - sizeof(uint32_t);
     ret = ath10k_hif_exchange_bmi_msg(ar, NULL, 0,
                                       &resp.get_target_info.version,
                                       &resplen);
@@ -165,11 +165,11 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
 }
 
 int ath10k_bmi_read_memory(struct ath10k* ar,
-                           u32 address, void* buffer, u32 length) {
+                           uint32_t address, void* buffer, uint32_t length) {
     struct bmi_cmd cmd;
     union bmi_resp resp;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.read_mem);
-    u32 rxlen;
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.read_mem);
+    uint32_t rxlen;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi read address 0x%x length %d\n",
@@ -181,7 +181,7 @@ int ath10k_bmi_read_memory(struct ath10k* ar,
     }
 
     while (length) {
-        rxlen = min_t(u32, length, BMI_MAX_DATA_SIZE);
+        rxlen = min_t(uint32_t, length, BMI_MAX_DATA_SIZE);
 
         cmd.id            = __cpu_to_le32(BMI_READ_MEMORY);
         cmd.read_mem.addr = __cpu_to_le32(address);
@@ -204,9 +204,9 @@ int ath10k_bmi_read_memory(struct ath10k* ar,
     return 0;
 }
 
-int ath10k_bmi_write_soc_reg(struct ath10k* ar, u32 address, u32 reg_val) {
+int ath10k_bmi_write_soc_reg(struct ath10k* ar, uint32_t address, uint32_t reg_val) {
     struct bmi_cmd cmd;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.write_soc_reg);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.write_soc_reg);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI,
@@ -232,11 +232,11 @@ int ath10k_bmi_write_soc_reg(struct ath10k* ar, u32 address, u32 reg_val) {
     return 0;
 }
 
-int ath10k_bmi_read_soc_reg(struct ath10k* ar, u32 address, u32* reg_val) {
+int ath10k_bmi_read_soc_reg(struct ath10k* ar, uint32_t address, uint32_t* reg_val) {
     struct bmi_cmd cmd;
     union bmi_resp resp;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.read_soc_reg);
-    u32 resplen = sizeof(resp.read_soc_reg);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.read_soc_reg);
+    uint32_t resplen = sizeof(resp.read_soc_reg);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi read soc register 0x%08x\n",
@@ -266,10 +266,10 @@ int ath10k_bmi_read_soc_reg(struct ath10k* ar, u32 address, u32* reg_val) {
 }
 
 int ath10k_bmi_write_memory(struct ath10k* ar,
-                            u32 address, const void* buffer, u32 length) {
+                            uint32_t address, const void* buffer, uint32_t length) {
     struct bmi_cmd cmd;
-    u32 hdrlen = sizeof(cmd.id) + sizeof(cmd.write_mem);
-    u32 txlen;
+    uint32_t hdrlen = sizeof(cmd.id) + sizeof(cmd.write_mem);
+    uint32_t txlen;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi write address 0x%x length %d\n",
@@ -310,11 +310,11 @@ int ath10k_bmi_write_memory(struct ath10k* ar,
     return 0;
 }
 
-int ath10k_bmi_execute(struct ath10k* ar, u32 address, u32 param, u32* result) {
+int ath10k_bmi_execute(struct ath10k* ar, uint32_t address, uint32_t param, uint32_t* result) {
     struct bmi_cmd cmd;
     union bmi_resp resp;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.execute);
-    u32 resplen = sizeof(resp.execute);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.execute);
+    uint32_t resplen = sizeof(resp.execute);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi execute address 0x%x param 0x%x\n",
@@ -348,10 +348,10 @@ int ath10k_bmi_execute(struct ath10k* ar, u32 address, u32 param, u32* result) {
     return 0;
 }
 
-int ath10k_bmi_lz_data(struct ath10k* ar, const void* buffer, u32 length) {
+int ath10k_bmi_lz_data(struct ath10k* ar, const void* buffer, uint32_t length) {
     struct bmi_cmd cmd;
-    u32 hdrlen = sizeof(cmd.id) + sizeof(cmd.lz_data);
-    u32 txlen;
+    uint32_t hdrlen = sizeof(cmd.id) + sizeof(cmd.lz_data);
+    uint32_t txlen;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi lz data buffer 0x%pK length %d\n",
@@ -385,9 +385,9 @@ int ath10k_bmi_lz_data(struct ath10k* ar, const void* buffer, u32 length) {
     return 0;
 }
 
-int ath10k_bmi_lz_stream_start(struct ath10k* ar, u32 address) {
+int ath10k_bmi_lz_stream_start(struct ath10k* ar, uint32_t address) {
     struct bmi_cmd cmd;
-    u32 cmdlen = sizeof(cmd.id) + sizeof(cmd.lz_start);
+    uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.lz_start);
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi lz stream start address 0x%x\n",
@@ -411,10 +411,10 @@ int ath10k_bmi_lz_stream_start(struct ath10k* ar, u32 address) {
 }
 
 int ath10k_bmi_fast_download(struct ath10k* ar,
-                             u32 address, const void* buffer, u32 length) {
-    u8 trailer[4] = {};
-    u32 head_len = rounddown(length, 4);
-    u32 trailer_len = length - head_len;
+                             uint32_t address, const void* buffer, uint32_t length) {
+    uint8_t trailer[4] = {};
+    uint32_t head_len = rounddown(length, 4);
+    uint32_t trailer_len = length - head_len;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI,

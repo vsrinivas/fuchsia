@@ -129,7 +129,7 @@ static struct attribute* ath10k_hwmon_attrs[] = {
 ATTRIBUTE_GROUPS(ath10k_hwmon);
 
 void ath10k_thermal_set_throttling(struct ath10k* ar) {
-    u32 period, duration, enabled;
+    uint32_t period, duration, enabled;
     int ret;
 
     lockdep_assert_held(&ar->conf_mutex);

@@ -113,7 +113,7 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
     }
 
     for (i = 0; i < wowlan->n_patterns; i++) {
-        u8 bitmask[WOW_MAX_PATTERN_SIZE] = {};
+        uint8_t bitmask[WOW_MAX_PATTERN_SIZE] = {};
         int j;
 
         if (patterns[i].pattern_len > WOW_MAX_PATTERN_SIZE) {

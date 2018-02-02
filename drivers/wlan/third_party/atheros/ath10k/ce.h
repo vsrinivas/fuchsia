@@ -86,7 +86,7 @@ struct ath10k_ce_ring {
     /* Host address space */
     void* base_addr_owner_space_unaligned;
     /* CE address space */
-    u32 base_addr_ce_space_unaligned;
+    uint32_t base_addr_ce_space_unaligned;
 
     /*
      * Actual start of descriptors.
@@ -97,7 +97,7 @@ struct ath10k_ce_ring {
     void* base_addr_owner_space;
 
     /* CE address space */
-    u32 base_addr_ce_space;
+    uint32_t base_addr_ce_space;
 
     /* keep last */
     void* per_transfer_context[0];
@@ -109,7 +109,7 @@ struct ath10k_ce_pipe {
 
     unsigned int attr_flags;
 
-    u32 ctrl_addr;
+    uint32_t ctrl_addr;
 
     void (*send_cb)(struct ath10k_ce_pipe*);
     void (*recv_cb)(struct ath10k_ce_pipe*);
@@ -142,7 +142,7 @@ struct ce_attr;
  */
 int ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
                    void* per_transfer_send_context,
-                   u32 buffer,
+                   uint32_t buffer,
                    unsigned int nbytes,
                    /* 14 bits */
                    unsigned int transfer_id,
@@ -150,7 +150,7 @@ int ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
 
 int ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
                           void* per_transfer_context,
-                          u32 buffer,
+                          uint32_t buffer,
                           unsigned int nbytes,
                           unsigned int transfer_id,
                           unsigned int flags);
@@ -162,9 +162,9 @@ int ath10k_ce_num_free_src_entries(struct ath10k_ce_pipe* pipe);
 /*==================Recv=======================*/
 
 int __ath10k_ce_rx_num_free_bufs(struct ath10k_ce_pipe* pipe);
-int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, u32 paddr);
-int ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, u32 paddr);
-void ath10k_ce_rx_update_write_idx(struct ath10k_ce_pipe* pipe, u32 nentries);
+int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
+int ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
+void ath10k_ce_rx_update_write_idx(struct ath10k_ce_pipe* pipe, uint32_t nentries);
 
 /* recv flags */
 /* Data is byte-swapped */
@@ -204,7 +204,7 @@ void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id);
  */
 int ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
                                void** per_transfer_contextp,
-                               u32* bufferp);
+                               uint32_t* bufferp);
 
 int ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
         void** per_transfer_contextp,
@@ -217,7 +217,7 @@ int ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
  */
 int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
                                void** per_transfer_contextp,
-                               u32* bufferp,
+                               uint32_t* bufferp,
                                unsigned int* nbytesp,
                                unsigned int* transfer_idp);
 
@@ -263,7 +263,7 @@ struct ce_attr {
     void (*recv_cb)(struct ath10k_ce_pipe*);
 };
 
-static inline u32 ath10k_ce_base_address(struct ath10k* ar, unsigned int ce_id) {
+static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce_id) {
     return CE0_BASE_ADDRESS + (CE1_BASE_ADDRESS - CE0_BASE_ADDRESS) * ce_id;
 }
 

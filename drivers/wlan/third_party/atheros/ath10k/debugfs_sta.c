@@ -32,7 +32,7 @@ static void ath10k_sta_update_extd_stats_rx_duration(struct ath10k* ar,
             continue;
         }
         arsta = (struct ath10k_sta*)sta->drv_priv;
-        arsta->rx_duration += (u64)peer->rx_duration;
+        arsta->rx_duration += (uint64_t)peer->rx_duration;
     }
     rcu_read_unlock();
 }
@@ -51,7 +51,7 @@ static void ath10k_sta_update_stats_rx_duration(struct ath10k* ar,
             continue;
         }
         arsta = (struct ath10k_sta*)sta->drv_priv;
-        arsta->rx_duration += (u64)peer->rx_duration;
+        arsta->rx_duration += (uint64_t)peer->rx_duration;
     }
     rcu_read_unlock();
 }
@@ -117,7 +117,7 @@ static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file,
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
-    u32 aggr_mode;
+    uint32_t aggr_mode;
     int ret;
 
     if (kstrtouint_from_user(user_buf, count, 0, &aggr_mode)) {
@@ -161,7 +161,7 @@ static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
-    u32 tid, buf_size;
+    uint32_t tid, buf_size;
     int ret;
     char buf[64];
 
@@ -213,7 +213,7 @@ static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
-    u32 tid, status;
+    uint32_t tid, status;
     int ret;
     char buf[64];
 
@@ -264,7 +264,7 @@ static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
-    u32 tid, initiator, reason;
+    uint32_t tid, initiator, reason;
     int ret;
     char buf[64];
 
@@ -335,7 +335,7 @@ ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
     struct ieee80211_sta* sta = file->private_data;
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
     struct ath10k* ar = arsta->arvif->ar;
-    u8 peer_debug_trigger;
+    uint8_t peer_debug_trigger;
     int ret;
 
     if (kstrtou8_from_user(user_buf, count, 0, &peer_debug_trigger)) {

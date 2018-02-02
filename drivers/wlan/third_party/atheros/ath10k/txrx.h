@@ -23,12 +23,12 @@ int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
                          const struct htt_tx_done* tx_done);
 
 struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
-                                     const u8* addr);
+                                     const uint8_t* addr);
 struct ath10k_peer* ath10k_peer_find_by_id(struct ath10k* ar, int peer_id);
 int ath10k_wait_for_peer_created(struct ath10k* ar, int vdev_id,
-                                 const u8* addr);
+                                 const uint8_t* addr);
 int ath10k_wait_for_peer_deleted(struct ath10k* ar, int vdev_id,
-                                 const u8* addr);
+                                 const uint8_t* addr);
 
 void ath10k_peer_map_event(struct ath10k_htt* htt,
                            struct htt_peer_map_event* ev);

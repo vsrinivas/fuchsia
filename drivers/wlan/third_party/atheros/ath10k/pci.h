@@ -33,7 +33,7 @@ struct bmi_xfer {
     bool tx_done;
     bool rx_done;
     bool wait_for_resp;
-    u32 resp_len;
+    uin32_t resp_len;
 };
 
 /*
@@ -50,36 +50,36 @@ struct bmi_xfer {
 struct pcie_state {
     /* Pipe configuration Target address */
     /* NB: ce_pipe_config[CE_COUNT] */
-    u32 pipe_cfg_addr;
+    uin32_t pipe_cfg_addr;
 
     /* Service to pipe map Target address */
     /* NB: service_to_pipe[PIPE_TO_CE_MAP_CN] */
-    u32 svc_to_pipe_map;
+    uin32_t svc_to_pipe_map;
 
     /* number of MSI interrupts requested */
-    u32 msi_requested;
+    uin32_t msi_requested;
 
     /* number of MSI interrupts granted */
-    u32 msi_granted;
+    uin32_t msi_granted;
 
     /* Message Signalled Interrupt address */
-    u32 msi_addr;
+    uin32_t msi_addr;
 
     /* Base data */
-    u32 msi_data;
+    uin32_t msi_data;
 
     /*
      * Data for firmware interrupt;
      * MSI data for other interrupts are
      * in various SoC registers
      */
-    u32 msi_fw_intr_data;
+    uin32_t msi_fw_intr_data;
 
     /* PCIE_PWR_METHOD_* */
-    u32 power_mgmt_method;
+    uin32_t power_mgmt_method;
 
     /* PCIE_CONFIG_FLAG_* */
-    u32 config_flags;
+    uin32_t config_flags;
 };
 
 /* PCIE_CONFIG_FLAG definitions */
@@ -133,7 +133,7 @@ struct ath10k_pci_pipe {
     struct ath10k_ce_pipe* ce_hdl;
 
     /* Our pipe number; facilitiates use of pipe_info ptrs. */
-    u8 pipe_num;
+    uint8_t pipe_num;
 
     /* Convenience back pointer to hif_ce_state. */
     struct ath10k* hif_ce_state;
@@ -145,13 +145,13 @@ struct ath10k_pci_pipe {
 };
 
 struct ath10k_pci_supp_chip {
-    u32 dev_id;
-    u32 rev_id;
+    uin32_t dev_id;
+    uin32_t rev_id;
 };
 
 struct ath10k_bus_ops {
-    u32 (*read32)(struct ath10k* ar, u32 offset);
-    void (*write32)(struct ath10k* ar, u32 offset, u32 value);
+    uin32_t (*read32)(struct ath10k* ar, uin32_t offset);
+    void (*write32)(struct ath10k* ar, uin32_t offset, uin32_t value);
     int (*get_num_banks)(struct ath10k* ar);
 };
 
@@ -187,7 +187,7 @@ struct ath10k_pci {
      * bootup. To do that the original PCI-E Link Control is stored before
      * device bootup is executed and re-programmed later.
      */
-    u16 link_ctl;
+    uint16_t link_ctl;
 
     /* Protects ps_awake and ps_wake_refcount */
     spinlock_t ps_lock;
@@ -235,7 +235,7 @@ struct ath10k_pci {
     /* chip specific methods for converting target CPU virtual address
      * space to CE address space
      */
-    u32 (*targ_cpu_to_ce_addr)(struct ath10k* ar, u32 addr);
+    uin32_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uin32_t addr);
 
     /* Keep this entry in the last, memory for struct ath10k_ahb is
      * allocated (ahb support enabled case) in the continuation of
@@ -261,29 +261,29 @@ static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
 /* Wait up to this many Ms for a Diagnostic Access CE operation to complete */
 #define DIAG_ACCESS_CE_TIMEOUT_MS 10
 
-void ath10k_pci_write32(struct ath10k* ar, u32 offset, u32 value);
-void ath10k_pci_soc_write32(struct ath10k* ar, u32 addr, u32 val);
-void ath10k_pci_reg_write32(struct ath10k* ar, u32 addr, u32 val);
+void ath10k_pci_write32(struct ath10k* ar, uin32_t offset, uin32_t value);
+void ath10k_pci_soc_write32(struct ath10k* ar, uin32_t addr, uin32_t val);
+void ath10k_pci_reg_write32(struct ath10k* ar, uin32_t addr, uin32_t val);
 
-u32 ath10k_pci_read32(struct ath10k* ar, u32 offset);
-u32 ath10k_pci_soc_read32(struct ath10k* ar, u32 addr);
-u32 ath10k_pci_reg_read32(struct ath10k* ar, u32 addr);
+uin32_t ath10k_pci_read32(struct ath10k* ar, uin32_t offset);
+uin32_t ath10k_pci_soc_read32(struct ath10k* ar, uin32_t addr);
+uin32_t ath10k_pci_reg_read32(struct ath10k* ar, uin32_t addr);
 
-int ath10k_pci_hif_tx_sg(struct ath10k* ar, u8 pipe_id,
+int ath10k_pci_hif_tx_sg(struct ath10k* ar, uint8_t pipe_id,
                          struct ath10k_hif_sg_item* items, int n_items);
-int ath10k_pci_hif_diag_read(struct ath10k* ar, u32 address, void* buf,
+int ath10k_pci_hif_diag_read(struct ath10k* ar, uin32_t address, void* buf,
                              size_t buf_len);
-int ath10k_pci_diag_write_mem(struct ath10k* ar, u32 address,
+int ath10k_pci_diag_write_mem(struct ath10k* ar, uin32_t address,
                               const void* data, int nbytes);
-int ath10k_pci_hif_exchange_bmi_msg(struct ath10k* ar, void* req, u32 req_len,
-                                    void* resp, u32* resp_len);
-int ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, u16 service_id,
-                                       u8* ul_pipe, u8* dl_pipe);
-void ath10k_pci_hif_get_default_pipe(struct ath10k* ar, u8* ul_pipe,
-                                     u8* dl_pipe);
-void ath10k_pci_hif_send_complete_check(struct ath10k* ar, u8 pipe,
+int ath10k_pci_hif_exchange_bmi_msg(struct ath10k* ar, void* req, uin32_t req_len,
+                                    void* resp, uin32_t* resp_len);
+int ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t service_id,
+                                       uint8_t* ul_pipe, uint8_t* dl_pipe);
+void ath10k_pci_hif_get_default_pipe(struct ath10k* ar, uint8_t* ul_pipe,
+                                     uint8_t* dl_pipe);
+void ath10k_pci_hif_send_complete_check(struct ath10k* ar, uint8_t pipe,
                                         int force);
-u16 ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, u8 pipe);
+uint16_t ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, uint8_t pipe);
 void ath10k_pci_hif_power_down(struct ath10k* ar);
 int ath10k_pci_alloc_pipes(struct ath10k* ar);
 void ath10k_pci_free_pipes(struct ath10k* ar);

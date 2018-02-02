@@ -40,7 +40,7 @@ enum ath_fft_sample_type {
 };
 
 struct fft_sample_tlv {
-    u8 type;    /* see ath_fft_sample */
+    uint8_t type;    /* see ath_fft_sample */
     __be16 length;
     /* type dependent data follows */
 } __packed;
@@ -48,52 +48,52 @@ struct fft_sample_tlv {
 struct fft_sample_ht20 {
     struct fft_sample_tlv tlv;
 
-    u8 max_exp;
+    uint8_t max_exp;
 
     __be16 freq;
-    s8 rssi;
-    s8 noise;
+    int8_t rssi;
+    int8_t noise;
 
     __be16 max_magnitude;
-    u8 max_index;
-    u8 bitmap_weight;
+    uint8_t max_index;
+    uint8_t bitmap_weight;
 
     __be64 tsf;
 
-    u8 data[SPECTRAL_HT20_NUM_BINS];
+    uint8_t data[SPECTRAL_HT20_NUM_BINS];
 } __packed;
 
 struct fft_sample_ht20_40 {
     struct fft_sample_tlv tlv;
 
-    u8 channel_type;
+    uint8_t channel_type;
     __be16 freq;
 
-    s8 lower_rssi;
-    s8 upper_rssi;
+    int8_t lower_rssi;
+    int8_t upper_rssi;
 
     __be64 tsf;
 
-    s8 lower_noise;
-    s8 upper_noise;
+    int8_t lower_noise;
+    int8_t upper_noise;
 
     __be16 lower_max_magnitude;
     __be16 upper_max_magnitude;
 
-    u8 lower_max_index;
-    u8 upper_max_index;
+    uint8_t lower_max_index;
+    uint8_t upper_max_index;
 
-    u8 lower_bitmap_weight;
-    u8 upper_bitmap_weight;
+    uint8_t lower_bitmap_weight;
+    uint8_t upper_bitmap_weight;
 
-    u8 max_exp;
+    uint8_t max_exp;
 
-    u8 data[SPECTRAL_HT20_40_NUM_BINS];
+    uint8_t data[SPECTRAL_HT20_40_NUM_BINS];
 } __packed;
 
 struct fft_sample_ath10k {
     struct fft_sample_tlv tlv;
-    u8 chan_width_mhz;
+    uint8_t chan_width_mhz;
     __be16 freq1;
     __be16 freq2;
     __be16 noise;
@@ -101,13 +101,13 @@ struct fft_sample_ath10k {
     __be16 total_gain_db;
     __be16 base_pwr_db;
     __be64 tsf;
-    s8 max_index;
-    u8 rssi;
-    u8 relpwr_db;
-    u8 avgpwr_db;
-    u8 max_exp;
+    int8_t max_index;
+    uint8_t rssi;
+    uint8_t relpwr_db;
+    uint8_t avgpwr_db;
+    uint8_t max_exp;
 
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 #endif /* SPECTRAL_COMMON_H */

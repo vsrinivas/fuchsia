@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/types.h>
+#include <stdint.h>
 #include <linux/bitops.h>
 #include "core.h"
 #include "hw.h"
@@ -396,9 +396,9 @@ const struct ath10k_hw_clk_params qca6174_clk[ATH10K_HW_REFCLK_COUNT] = {
 };
 
 void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey,
-                                u32 cc, u32 rcc, u32 cc_prev, u32 rcc_prev) {
-    u32 cc_fix = 0;
-    u32 rcc_fix = 0;
+                                uint32_t cc, uint32_t rcc, uint32_t cc_prev, uint32_t rcc_prev) {
+    uint32_t cc_fix = 0;
+    uint32_t rcc_fix = 0;
     enum ath10k_hw_cc_wraparound_type wraparound_type;
 
     survey->filled |= SURVEY_INFO_TIME |
@@ -438,17 +438,16 @@ void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey,
 /* The firmware does not support setting the coverage class. Instead this
  * function monitors and modifies the corresponding MAC registers.
  */
-static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar,
-        s16 value) {
-    u32 slottime_reg;
-    u32 slottime;
-    u32 timeout_reg;
-    u32 ack_timeout;
-    u32 cts_timeout;
-    u32 phyclk_reg;
-    u32 phyclk;
-    u64 fw_dbglog_mask;
-    u32 fw_dbglog_level;
+static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar, int16_t value) {
+    uint32_t slottime_reg;
+    uint32_t slottime;
+    uint32_t timeout_reg;
+    uint32_t ack_timeout;
+    uint32_t cts_timeout;
+    uint32_t phyclk_reg;
+    uint32_t phyclk;
+    uint64_t fw_dbglog_mask;
+    uint32_t fw_dbglog_level;
 
     mutex_lock(&ar->conf_mutex);
 
@@ -520,20 +519,20 @@ static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar,
 
     slottime = MS(slottime_reg, WAVE1_PCU_GBL_IFS_SLOT);
     slottime += value * 3 * phyclk;
-    slottime = min_t(u32, slottime, WAVE1_PCU_GBL_IFS_SLOT_MAX);
+    slottime = min_t(uint32_t, slottime, WAVE1_PCU_GBL_IFS_SLOT_MAX);
     slottime = SM(slottime, WAVE1_PCU_GBL_IFS_SLOT);
     slottime_reg = (slottime_reg & ~WAVE1_PCU_GBL_IFS_SLOT_MASK) | slottime;
 
     /* Update ack timeout (lower halfword). */
     ack_timeout = MS(timeout_reg, WAVE1_PCU_ACK_CTS_TIMEOUT_ACK);
     ack_timeout += 3 * value * phyclk;
-    ack_timeout = min_t(u32, ack_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_MAX);
+    ack_timeout = min_t(uint32_t, ack_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_MAX);
     ack_timeout = SM(ack_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_ACK);
 
     /* Update cts timeout (upper halfword). */
     cts_timeout = MS(timeout_reg, WAVE1_PCU_ACK_CTS_TIMEOUT_CTS);
     cts_timeout += 3 * value * phyclk;
-    cts_timeout = min_t(u32, cts_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_MAX);
+    cts_timeout = min_t(uint32_t, cts_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_MAX);
     cts_timeout = SM(cts_timeout, WAVE1_PCU_ACK_CTS_TIMEOUT_CTS);
 
     timeout_reg = ack_timeout | cts_timeout;
@@ -589,8 +588,8 @@ unlock:
  */
 static int ath10k_hw_qca6174_enable_pll_clock(struct ath10k* ar) {
     int ret, wait_limit;
-    u32 clk_div_addr, pll_init_addr, speed_addr;
-    u32 addr, reg_val, mem_val;
+    uint32_t clk_div_addr, pll_init_addr, speed_addr;
+    uint32_t addr, reg_val, mem_val;
     struct ath10k_hw_params* hw;
     const struct ath10k_hw_clk_params* hw_clk;
 

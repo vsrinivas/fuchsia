@@ -196,13 +196,13 @@ static bool ath_reg_dyn_country_user_allow(struct ath_regulatory* reg) {
     return true;
 }
 
-static inline bool is_wwr_sku(u16 regd) {
+static inline bool is_wwr_sku(uint16_t regd) {
     return ((regd & COUNTRY_ERD_FLAG) != COUNTRY_ERD_FLAG) &&
            (((regd & WORLD_SKU_MASK) == WORLD_SKU_PREFIX) ||
             (regd == WORLD));
 }
 
-static u16 ath_regd_get_eepromRD(struct ath_regulatory* reg) {
+static uint16_t ath_regd_get_eepromRD(struct ath_regulatory* reg) {
     return reg->current_rd & ~WORLDWIDE_ROAMING_FLAG;
 }
 
@@ -242,14 +242,14 @@ ieee80211_regdomain* ath_world_regdomain(struct ath_regulatory* reg) {
     }
 }
 
-bool ath_is_49ghz_allowed(u16 regdomain) {
+bool ath_is_49ghz_allowed(uint16_t regdomain) {
     /* possibly more */
     return regdomain == MKK9_MKKC;
 }
 EXPORT_SYMBOL(ath_is_49ghz_allowed);
 
 /* Frequency is one where radar detection is required */
-static bool ath_is_radar_freq(u16 center_freq,
+static bool ath_is_radar_freq(uint16_t center_freq,
                               struct ath_regulatory* reg)
 
 {
@@ -274,7 +274,7 @@ static void ath_force_clear_no_ir_chan(struct wiphy* wiphy,
         }
 }
 
-static void ath_force_clear_no_ir_freq(struct wiphy* wiphy, u16 center_freq) {
+static void ath_force_clear_no_ir_freq(struct wiphy* wiphy, uint16_t center_freq) {
     struct ieee80211_channel* ch;
 
     ch = ieee80211_get_channel(wiphy, center_freq);
@@ -289,7 +289,7 @@ static void ath_force_no_ir_chan(struct ieee80211_channel* ch) {
     ch->flags |= IEEE80211_CHAN_NO_IR;
 }
 
-static void ath_force_no_ir_freq(struct wiphy* wiphy, u16 center_freq) {
+static void ath_force_no_ir_freq(struct wiphy* wiphy, uint16_t center_freq) {
     struct ieee80211_channel* ch;
 
     ch = ieee80211_get_channel(wiphy, center_freq);
@@ -454,7 +454,7 @@ static void ath_reg_apply_world_flags(struct wiphy* wiphy,
     }
 }
 
-u16 ath_regd_find_country_by_name(char* alpha2) {
+uint16_t ath_regd_find_country_by_name(char* alpha2) {
     unsigned int i;
 
     for (i = 0; i < ARRAY_SIZE(allCountries); i++) {
@@ -470,7 +470,7 @@ EXPORT_SYMBOL(ath_regd_find_country_by_name);
 static int __ath_reg_dyn_country(struct wiphy* wiphy,
                                  struct ath_regulatory* reg,
                                  struct regulatory_request* request) {
-    u16 country_code;
+    uint16_t country_code;
 
     if (request->initiator == NL80211_REGDOM_SET_BY_COUNTRY_IE &&
             !ath_is_world_regd(reg)) {
@@ -478,7 +478,7 @@ static int __ath_reg_dyn_country(struct wiphy* wiphy,
     }
 
     country_code = ath_regd_find_country_by_name(request->alpha2);
-    if (country_code == (u16) -1) {
+    if (country_code == (uint16_t) -1) {
         return -EINVAL;
     }
 
@@ -551,12 +551,12 @@ void ath_reg_notifier_apply(struct wiphy* wiphy,
 EXPORT_SYMBOL(ath_reg_notifier_apply);
 
 static bool ath_regd_is_eeprom_valid(struct ath_regulatory* reg) {
-    u16 rd = ath_regd_get_eepromRD(reg);
+    uint16_t rd = ath_regd_get_eepromRD(reg);
     int i;
 
     if (rd & COUNTRY_ERD_FLAG) {
         /* EEPROM value is a country code */
-        u16 cc = rd & ~COUNTRY_ERD_FLAG;
+        uint16_t cc = rd & ~COUNTRY_ERD_FLAG;
         printk(KERN_DEBUG
                "ath: EEPROM indicates we should expect "
                "a country code\n");
@@ -581,7 +581,7 @@ static bool ath_regd_is_eeprom_valid(struct ath_regulatory* reg) {
 
 /* EEPROM country code to regpair mapping */
 static struct country_code_to_enum_rd*
-ath_regd_find_country(u16 countryCode) {
+ath_regd_find_country(uint16_t countryCode) {
     int i;
 
     for (i = 0; i < ARRAY_SIZE(allCountries); i++) {
@@ -606,10 +606,10 @@ ath_regd_find_country_by_rd(int regdmn) {
 }
 
 /* Returns the map of the EEPROM set RD to a country code */
-static u16 ath_regd_get_default_country(u16 rd) {
+static uint16_t ath_regd_get_default_country(uint16_t rd) {
     if (rd & COUNTRY_ERD_FLAG) {
         struct country_code_to_enum_rd* country = NULL;
-        u16 cc = rd & ~COUNTRY_ERD_FLAG;
+        uint16_t cc = rd & ~COUNTRY_ERD_FLAG;
 
         country = ath_regd_find_country(cc);
         if (country != NULL) {
@@ -685,7 +685,7 @@ static void ath_regd_sanitize(struct ath_regulatory* reg) {
 
 static int __ath_regd_init(struct ath_regulatory* reg) {
     struct country_code_to_enum_rd* country = NULL;
-    u16 regdmn;
+    uint16_t regdmn;
 
     if (!reg) {
         return -EINVAL;
@@ -782,8 +782,8 @@ ath_regd_init(struct ath_regulatory* reg,
 }
 EXPORT_SYMBOL(ath_regd_init);
 
-u32 ath_regd_get_band_ctl(struct ath_regulatory* reg,
-                          enum nl80211_band band) {
+uint32_t ath_regd_get_band_ctl(struct ath_regulatory* reg,
+                               enum nl80211_band band) {
     if (!reg->regpair ||
             (reg->country_code == CTRY_DEFAULT &&
              is_wwr_sku(ath_regd_get_eepromRD(reg)))) {

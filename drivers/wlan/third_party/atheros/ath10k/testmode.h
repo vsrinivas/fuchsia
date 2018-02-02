@@ -20,7 +20,7 @@
 
 void ath10k_testmode_destroy(struct ath10k* ar);
 
-bool ath10k_tm_event_wmi(struct ath10k* ar, u32 cmd_id, struct sk_buff* skb);
+bool ath10k_tm_event_wmi(struct ath10k* ar, uin32_t cmd_id, struct sk_buff* skb);
 int ath10k_tm_cmd(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                   void* data, int len);
 
@@ -29,7 +29,7 @@ int ath10k_tm_cmd(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
 static inline void ath10k_testmode_destroy(struct ath10k* ar) {
 }
 
-static inline bool ath10k_tm_event_wmi(struct ath10k* ar, u32 cmd_id,
+static inline bool ath10k_tm_event_wmi(struct ath10k* ar, uin32_t cmd_id,
                                        struct sk_buff* skb) {
     return false;
 }

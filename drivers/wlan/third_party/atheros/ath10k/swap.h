@@ -28,11 +28,11 @@ struct ath10k_fw_file;
 struct ath10k_swap_code_seg_tlv {
     __le32 address;
     __le32 length;
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 struct ath10k_swap_code_seg_tail {
-    u8 magic_signature[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ];
+    uint8_t magic_signature[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ];
     __le32 bmi_write_addr;
 } __packed;
 
@@ -56,7 +56,7 @@ struct ath10k_swap_code_seg_hw_info {
 struct ath10k_swap_code_seg_info {
     struct ath10k_swap_code_seg_hw_info seg_hw_info;
     void* virt_address[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
-    u32 target_addr;
+    uint32_t target_addr;
     dma_addr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
 };
 

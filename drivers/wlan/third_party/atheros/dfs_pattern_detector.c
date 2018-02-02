@@ -29,7 +29,7 @@
  */
 struct radar_types {
     enum nl80211_dfs_regions region;
-    u32 num_radar_types;
+    uint32_t num_radar_types;
     const struct radar_detector_specs* radar_types;
 };
 
@@ -138,7 +138,7 @@ static const struct radar_types* dfs_domains[] = {
  */
 static const struct radar_types*
 get_dfs_domain_radar_types(enum nl80211_dfs_regions region) {
-    u32 i;
+    uint32_t i;
     for (i = 0; i < ARRAY_SIZE(dfs_domains); i++) {
         if (dfs_domains[i]->region == region) {
             return dfs_domains[i];
@@ -159,14 +159,14 @@ get_dfs_domain_radar_types(enum nl80211_dfs_regions region) {
  */
 struct channel_detector {
     struct list_head head;
-    u16 freq;
+    uint16_t freq;
     struct pri_detector** detectors;
 };
 
 /* channel_detector_reset() - reset detector lines for a given channel */
 static void channel_detector_reset(struct dfs_pattern_detector* dpd,
                                    struct channel_detector* cd) {
-    u32 i;
+    uint32_t i;
     if (cd == NULL) {
         return;
     }
@@ -178,7 +178,7 @@ static void channel_detector_reset(struct dfs_pattern_detector* dpd,
 /* channel_detector_exit() - destructor */
 static void channel_detector_exit(struct dfs_pattern_detector* dpd,
                                   struct channel_detector* cd) {
-    u32 i;
+    uint32_t i;
     if (cd == NULL) {
         return;
     }
@@ -194,8 +194,8 @@ static void channel_detector_exit(struct dfs_pattern_detector* dpd,
 }
 
 static struct channel_detector*
-channel_detector_create(struct dfs_pattern_detector* dpd, u16 freq) {
-    u32 sz, i;
+channel_detector_create(struct dfs_pattern_detector* dpd, uint16_t freq) {
+    uint32_t sz, i;
     struct channel_detector* cd;
 
     cd = kmalloc(sizeof(*cd), GFP_ATOMIC);
@@ -239,7 +239,7 @@ fail:
  * newly create one.
  */
 static struct channel_detector*
-channel_detector_get(struct dfs_pattern_detector* dpd, u16 freq) {
+channel_detector_get(struct dfs_pattern_detector* dpd, uint16_t freq) {
     struct channel_detector* cd;
     list_for_each_entry(cd, &dpd->channel_detectors, head) {
         if (cd->freq == freq) {
@@ -271,7 +271,7 @@ static void dpd_exit(struct dfs_pattern_detector* dpd) {
 
 static bool
 dpd_add_pulse(struct dfs_pattern_detector* dpd, struct pulse_event* event) {
-    u32 i;
+    uint32_t i;
     struct channel_detector* cd;
 
     /*

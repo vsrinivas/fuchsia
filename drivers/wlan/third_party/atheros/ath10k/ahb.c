@@ -41,37 +41,37 @@ static inline struct ath10k_ahb* ath10k_ahb_priv(struct ath10k* ar) {
     return &((struct ath10k_pci*)ar->drv_priv)->ahb[0];
 }
 
-static void ath10k_ahb_write32(struct ath10k* ar, u32 offset, u32 value) {
+static void ath10k_ahb_write32(struct ath10k* ar, uint32_t offset, uint32_t value) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
     iowrite32(value, ar_ahb->mem + offset);
 }
 
-static u32 ath10k_ahb_read32(struct ath10k* ar, u32 offset) {
+static uint32_t ath10k_ahb_read32(struct ath10k* ar, uint32_t offset) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
     return ioread32(ar_ahb->mem + offset);
 }
 
-static u32 ath10k_ahb_gcc_read32(struct ath10k* ar, u32 offset) {
+static uint32_t ath10k_ahb_gcc_read32(struct ath10k* ar, uint32_t offset) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
     return ioread32(ar_ahb->gcc_mem + offset);
 }
 
-static void ath10k_ahb_tcsr_write32(struct ath10k* ar, u32 offset, u32 value) {
+static void ath10k_ahb_tcsr_write32(struct ath10k* ar, uint32_t offset, uint32_t value) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
     iowrite32(value, ar_ahb->tcsr_mem + offset);
 }
 
-static u32 ath10k_ahb_tcsr_read32(struct ath10k* ar, u32 offset) {
+static uint32_t ath10k_ahb_tcsr_read32(struct ath10k* ar, uint32_t offset) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
 
     return ioread32(ar_ahb->tcsr_mem + offset);
 }
 
-static u32 ath10k_ahb_soc_read32(struct ath10k* ar, u32 addr) {
+static uint32_t ath10k_ahb_soc_read32(struct ath10k* ar, uint32_t addr) {
     return ath10k_ahb_read32(ar, RTC_SOC_BASE_ADDRESS + addr);
 }
 
@@ -276,10 +276,10 @@ static int ath10k_ahb_release_reset(struct ath10k* ar) {
     return 0;
 }
 
-static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, u32 haltreq_reg,
-                                    u32 haltack_reg) {
+static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, uint32_t haltreq_reg,
+                                    uint32_t haltack_reg) {
     unsigned long timeout;
-    u32 val;
+    uint32_t val;
 
     /* Issue halt axi bus request */
     val = ath10k_ahb_tcsr_read32(ar, haltreq_reg);
@@ -307,8 +307,8 @@ static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, u32 haltreq_reg,
 
 static void ath10k_ahb_halt_chip(struct ath10k* ar) {
     struct ath10k_ahb* ar_ahb = ath10k_ahb_priv(ar);
-    u32 core_id, glb_cfg_reg, haltreq_reg, haltack_reg;
-    u32 val;
+    uint32_t core_id, glb_cfg_reg, haltreq_reg, haltack_reg;
+    uint32_t val;
     int ret;
 
     if (IS_ERR_OR_NULL(ar_ahb->core_cold_rst) ||
@@ -562,7 +562,7 @@ static void ath10k_ahb_resource_deinit(struct ath10k* ar) {
 }
 
 static int ath10k_ahb_prepare_device(struct ath10k* ar) {
-    u32 val;
+    uint32_t val;
     int ret;
 
     ret = ath10k_ahb_clock_enable(ar);
@@ -621,7 +621,7 @@ static int ath10k_ahb_chip_reset(struct ath10k* ar) {
 }
 
 static int ath10k_ahb_wake_target_cpu(struct ath10k* ar) {
-    u32 addr, val;
+    uint32_t addr, val;
 
     addr = SOC_CORE_BASE_ADDRESS | CORE_CTRL_ADDRESS;
     val = ath10k_ahb_read32(ar, addr);
@@ -694,8 +694,8 @@ out:
     return ret;
 }
 
-static u32 ath10k_ahb_qca4019_targ_cpu_to_ce_addr(struct ath10k* ar, u32 addr) {
-    u32 val = 0, region = addr & 0xfffff;
+static uint32_t ath10k_ahb_qca4019_targ_cpu_to_ce_addr(struct ath10k* ar, uint32_t addr) {
+    uint32_t val = 0, region = addr & 0xfffff;
 
     val = ath10k_pci_read32(ar, PCIE_BAR_REG_ADDRESS);
 
@@ -743,7 +743,7 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
     enum ath10k_hw_rev hw_rev;
     size_t size;
     int ret;
-    u32 chip_id;
+    uint32_t chip_id;
 
     of_id = of_match_device(ath10k_ahb_of_match, &pdev->dev);
     if (!of_id) {

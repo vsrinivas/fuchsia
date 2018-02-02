@@ -36,7 +36,7 @@
 static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb);
 
 static struct sk_buff*
-ath10k_htt_rx_find_skb_paddr(struct ath10k* ar, u32 paddr) {
+ath10k_htt_rx_find_skb_paddr(struct ath10k* ar, uint32_t paddr) {
     struct ath10k_skb_rxcb* rxcb;
 
     hash_for_each_possible(ar->htt.rx_ring.skb_table, rxcb, hlist, paddr)
@@ -134,7 +134,7 @@ static int __ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) {
         if (htt->rx_ring.in_ord_rx) {
             hash_add(htt->rx_ring.skb_table,
                      &ATH10K_SKB_RXCB(skb)->hlist,
-                     (u32)paddr);
+                     (uint32_t)paddr);
         }
 
         num--;
@@ -351,7 +351,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
                     RX_MSDU_END_INFO0_LAST_MSDU;
 
         trace_ath10k_htt_rx_desc(ar, &rx_desc->attention,
-                                 sizeof(*rx_desc) - sizeof(u32));
+                                 sizeof(*rx_desc) - sizeof(uint32_t));
 
         if (last_msdu) {
             break;
@@ -378,8 +378,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
     return msdu_chaining;
 }
 
-static struct sk_buff* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt,
-        u32 paddr) {
+static struct sk_buff* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, uint32_t paddr) {
     struct ath10k* ar = htt->ar;
     struct ath10k_skb_rxcb* rxcb;
     struct sk_buff* msdu;
@@ -413,7 +412,7 @@ static int ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
     struct sk_buff* msdu;
     int msdu_count;
     bool is_offload;
-    u32 paddr;
+    uint32_t paddr;
 
     lockdep_assert_held(&htt->rx_ring.lock);
 
@@ -580,8 +579,8 @@ static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar,
 }
 
 struct amsdu_subframe_hdr {
-    u8 dst[ETH_ALEN];
-    u8 src[ETH_ALEN];
+    uint8_t dst[ETH_ALEN];
+    uint8_t src[ETH_ALEN];
     __be16 len;
 } __packed;
 
@@ -591,10 +590,10 @@ static void ath10k_htt_rx_h_rates(struct ath10k* ar,
                                   struct ieee80211_rx_status* status,
                                   struct htt_rx_desc* rxd) {
     struct ieee80211_supported_band* sband;
-    u8 cck, rate, bw, sgi, mcs, nss;
-    u8 preamble = 0;
-    u8 group_id;
-    u32 info1, info2, info3;
+    uint8_t cck, rate, bw, sgi, mcs, nss;
+    uint8_t preamble = 0;
+    uint8_t group_id;
+    uint32_t info1, info2, info3;
 
     info1 = __le32_to_cpu(rxd->ppdu_start.info1);
     info2 = __le32_to_cpu(rxd->ppdu_start.info2);
@@ -721,7 +720,7 @@ ath10k_htt_rx_h_peer_channel(struct ath10k* ar, struct htt_rx_desc* rxd) {
     struct ath10k_peer* peer;
     struct ath10k_vif* arvif;
     struct cfg80211_chan_def def;
-    u16 peer_id;
+    uint16_t peer_id;
 
     lockdep_assert_held(&ar->data_lock);
 
@@ -760,7 +759,7 @@ ath10k_htt_rx_h_peer_channel(struct ath10k* ar, struct htt_rx_desc* rxd) {
 }
 
 static struct ieee80211_channel*
-ath10k_htt_rx_h_vdev_channel(struct ath10k* ar, u32 vdev_id) {
+ath10k_htt_rx_h_vdev_channel(struct ath10k* ar, uint32_t vdev_id) {
     struct ath10k_vif* arvif;
     struct cfg80211_chan_def def;
 
@@ -799,7 +798,7 @@ ath10k_htt_rx_h_any_channel(struct ath10k* ar) {
 static bool ath10k_htt_rx_h_channel(struct ath10k* ar,
                                     struct ieee80211_rx_status* status,
                                     struct htt_rx_desc* rxd,
-                                    u32 vdev_id) {
+                                    uint32_t vdev_id) {
     struct ieee80211_channel* ch;
 
     spin_lock_bh(&ar->data_lock);
@@ -869,7 +868,7 @@ static void ath10k_htt_rx_h_mactime(struct ath10k* ar,
 static void ath10k_htt_rx_h_ppdu(struct ath10k* ar,
                                  struct sk_buff_head* amsdu,
                                  struct ieee80211_rx_status* status,
-                                 u32 vdev_id) {
+                                 uint32_t vdev_id) {
     struct sk_buff* first;
     struct htt_rx_desc* rxd;
     bool is_first_ppdu;
@@ -919,7 +918,7 @@ static const char* const tid_to_ac[] = {
 };
 
 static char* ath10k_get_tid(struct ieee80211_hdr* hdr, char* out, size_t size) {
-    u8* qc;
+    uint8_t* qc;
     int tid;
 
     if (!ieee80211_is_data_qos(hdr->frame_control)) {
@@ -1073,12 +1072,12 @@ static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
 static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar,
         struct sk_buff* msdu,
         struct ieee80211_rx_status* status,
-        const u8 first_hdr[64]) {
+        const uint8_t first_hdr[64]) {
     struct ieee80211_hdr* hdr;
     struct htt_rx_desc* rxd;
     size_t hdr_len;
-    u8 da[ETH_ALEN];
-    u8 sa[ETH_ALEN];
+    uint8_t da[ETH_ALEN];
+    uint8_t sa[ETH_ALEN];
     int l3_pad_bytes;
 
     /* Delivered decapped frame:
@@ -1157,14 +1156,14 @@ static void* ath10k_htt_rx_h_find_rfc1042(struct ath10k* ar,
 static void ath10k_htt_rx_h_undecap_eth(struct ath10k* ar,
                                         struct sk_buff* msdu,
                                         struct ieee80211_rx_status* status,
-                                        const u8 first_hdr[64],
+                                        const uint8_t first_hdr[64],
                                         enum htt_rx_mpdu_encrypt_type enctype) {
     struct ieee80211_hdr* hdr;
     struct ethhdr* eth;
     size_t hdr_len;
     void* rfc1042;
-    u8 da[ETH_ALEN];
-    u8 sa[ETH_ALEN];
+    uint8_t da[ETH_ALEN];
+    uint8_t sa[ETH_ALEN];
     int l3_pad_bytes;
     struct htt_rx_desc* rxd;
 
@@ -1209,7 +1208,7 @@ static void ath10k_htt_rx_h_undecap_eth(struct ath10k* ar,
 static void ath10k_htt_rx_h_undecap_snap(struct ath10k* ar,
         struct sk_buff* msdu,
         struct ieee80211_rx_status* status,
-        const u8 first_hdr[64]) {
+        const uint8_t first_hdr[64]) {
     struct ieee80211_hdr* hdr;
     size_t hdr_len;
     int l3_pad_bytes;
@@ -1235,7 +1234,7 @@ static void ath10k_htt_rx_h_undecap_snap(struct ath10k* ar,
 static void ath10k_htt_rx_h_undecap(struct ath10k* ar,
                                     struct sk_buff* msdu,
                                     struct ieee80211_rx_status* status,
-                                    u8 first_hdr[64],
+                                    uint8_t first_hdr[64],
                                     enum htt_rx_mpdu_encrypt_type enctype,
                                     bool is_decrypted) {
     struct htt_rx_desc* rxd;
@@ -1275,7 +1274,7 @@ static void ath10k_htt_rx_h_undecap(struct ath10k* ar,
 
 static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb) {
     struct htt_rx_desc* rxd;
-    u32 flags, info;
+    uint32_t flags, info;
     bool is_ip4, is_ip6;
     bool is_tcp, is_udp;
     bool ip_csum_ok, tcpudp_csum_ok;
@@ -1320,8 +1319,8 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar,
     struct htt_rx_desc* rxd;
     struct ieee80211_hdr* hdr;
     enum htt_rx_mpdu_encrypt_type enctype;
-    u8 first_hdr[64];
-    u8* qos;
+    uint8_t first_hdr[64];
+    uint8_t* qos;
     size_t hdr_len;
     bool has_fcs_err;
     bool has_crypto_err;
@@ -1329,7 +1328,7 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar,
     bool has_peer_idx_invalid;
     bool is_decrypted;
     bool is_mgmt;
-    u32 attention;
+    uint32_t attention;
 
     if (skb_queue_empty(amsdu)) {
         return;
@@ -1667,7 +1666,7 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
     struct htt_rx_addba* ev = &resp->rx_addba;
     struct ath10k_peer* peer;
     struct ath10k_vif* arvif;
-    u16 info0, tid, peer_id;
+    uint16_t info0, tid, peer_id;
 
     info0 = __le16_to_cpu(ev->info0);
     tid = MS(info0, HTT_RX_BA_INFO0_TID);
@@ -1706,7 +1705,7 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
     struct htt_rx_delba* ev = &resp->rx_delba;
     struct ath10k_peer* peer;
     struct ath10k_vif* arvif;
-    u16 info0, tid, peer_id;
+    uint16_t info0, tid, peer_id;
 
     info0 = __le16_to_cpu(ev->info0);
     tid = MS(info0, HTT_RX_BA_INFO0_TID);
@@ -1852,10 +1851,10 @@ static int ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct sk_buff* skb) {
     struct ieee80211_rx_status* status = &htt->rx_status;
     struct sk_buff_head list;
     struct sk_buff_head amsdu;
-    u16 peer_id;
-    u16 msdu_count;
-    u8 vdev_id;
-    u8 tid;
+    uint16_t peer_id;
+    uint16_t msdu_count;
+    uint8_t vdev_id;
+    uint8_t tid;
     bool offload;
     bool frag;
     int ret, num_msdus = 0;
@@ -1938,7 +1937,7 @@ static void ath10k_htt_rx_tx_fetch_resp_id_confirm(struct ath10k* ar,
         const __le32* resp_ids,
         int num_resp_ids) {
     int i;
-    u32 resp_id;
+    uint32_t resp_id;
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx tx fetch confirm num_resp_ids %d\n",
                num_resp_ids);
@@ -1964,10 +1963,10 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
     size_t num_bytes;
     size_t num_msdus;
     const __le32* resp_ids;
-    u16 num_records;
-    u16 num_resp_ids;
-    u16 peer_id;
-    u8 tid;
+    uint16_t num_records;
+    uint16_t num_resp_ids;
+    uint16_t peer_id;
+    uint8_t tid;
     int ret;
     int i;
 
@@ -2115,11 +2114,11 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
     size_t num_records;
     enum htt_tx_mode_switch_mode mode;
     bool enable;
-    u16 info0;
-    u16 info1;
-    u16 threshold;
-    u16 peer_id;
-    u8 tid;
+    uint16_t info0;
+    uint16_t info1;
+    uint16_t threshold;
+    uint16_t peer_id;
+    uint8_t tid;
     int i;
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx tx mode switch ind\n");
@@ -2218,10 +2217,10 @@ void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
     }
 }
 
-static inline bool is_valid_legacy_rate(u8 rate) {
-    static const u8 legacy_rates[] = {1, 2, 5, 11, 6, 9, 12,
-                                      18, 24, 36, 48, 54
-                                     };
+static inline bool is_valid_legacy_rate(uint8_t rate) {
+    static const uint8_t legacy_rates[] = {1, 2, 5, 11, 6, 9, 12,
+                                           18, 24, 36, 48, 54
+                                          };
     int i;
 
     for (i = 0; i < ARRAY_SIZE(legacy_rates); i++) {
@@ -2238,7 +2237,7 @@ ath10k_update_per_peer_tx_stats(struct ath10k* ar,
                                 struct ieee80211_sta* sta,
                                 struct ath10k_per_peer_tx_stats* peer_stats) {
     struct ath10k_sta* arsta = (struct ath10k_sta*)sta->drv_priv;
-    u8 rate = 0, sgi;
+    uint8_t rate = 0, sgi;
     struct rate_info txrate;
 
     lockdep_assert_held(&ar->data_lock);
@@ -2303,7 +2302,7 @@ static void ath10k_htt_fetch_peer_stats(struct ath10k* ar,
     struct ieee80211_sta* sta;
     struct ath10k_peer* peer;
     int peer_id, i;
-    u8 ppdu_len, num_ppdu;
+    uint8_t ppdu_len, num_ppdu;
 
     num_ppdu = resp->peer_tx_stats.num_ppdu;
     ppdu_len = resp->peer_tx_stats.ppdu_len * sizeof(__le32);
@@ -2481,8 +2480,8 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
     case HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND:
         break;
     case HTT_T2H_MSG_TYPE_CHAN_CHANGE: {
-        u32 phymode = __le32_to_cpu(resp->chan_change.phymode);
-        u32 freq = __le32_to_cpu(resp->chan_change.freq);
+        uint32_t phymode = __le32_to_cpu(resp->chan_change.phymode);
+        uint32_t freq = __le32_to_cpu(resp->chan_change.freq);
 
         ar->tgt_oper_chan = ieee80211_get_channel(ar->hw->wiphy, freq);
         ath10k_dbg(ar, ATH10K_DBG_HTT,

@@ -41,7 +41,7 @@ static const struct nla_policy ath10k_tm_policy[ATH10K_TM_ATTR_MAX + 1] = {
 /* Returns true if callee consumes the skb and the skb should be discarded.
  * Returns false if skb is not used. Does not sleep.
  */
-bool ath10k_tm_event_wmi(struct ath10k* ar, u32 cmd_id, struct sk_buff* skb) {
+bool ath10k_tm_event_wmi(struct ath10k* ar, uin32_t cmd_id, struct sk_buff* skb) {
     struct sk_buff* nl_skb;
     bool consumed;
     int ret;
@@ -66,7 +66,7 @@ bool ath10k_tm_event_wmi(struct ath10k* ar, u32 cmd_id, struct sk_buff* skb) {
     consumed = true;
 
     nl_skb = cfg80211_testmode_alloc_event_skb(ar->hw->wiphy,
-             2 * sizeof(u32) + skb->len,
+             2 * sizeof(uin32_t) + skb->len,
              GFP_ATOMIC);
     if (!nl_skb) {
         ath10k_warn(ar,
@@ -119,7 +119,7 @@ static int ath10k_tm_cmd_get_version(struct ath10k* ar, struct nlattr* tb[]) {
                ATH10K_TESTMODE_VERSION_MINOR);
 
     skb = cfg80211_testmode_alloc_reply_skb(ar->hw->wiphy,
-                                            nla_total_size(sizeof(u32)));
+                                            nla_total_size(sizeof(uin32_t)));
     if (!skb) {
         return -ENOMEM;
     }
@@ -364,7 +364,7 @@ out:
 static int ath10k_tm_cmd_wmi(struct ath10k* ar, struct nlattr* tb[]) {
     struct sk_buff* skb;
     int ret, buf_len;
-    u32 cmd_id;
+    uin32_t cmd_id;
     void* buf;
 
     mutex_lock(&ar->conf_mutex);

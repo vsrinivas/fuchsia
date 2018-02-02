@@ -206,10 +206,10 @@ struct rx_attention {
  */
 
 struct rx_frag_info {
-    u8 ring0_more_count;
-    u8 ring1_more_count;
-    u8 ring2_more_count;
-    u8 ring3_more_count;
+    uint8_t ring0_more_count;
+    uint8_t ring1_more_count;
+    uint8_t ring2_more_count;
+    uint8_t ring3_more_count;
 } __packed;
 
 /*
@@ -265,7 +265,7 @@ struct rx_mpdu_start {
             __le32 info1; /* %RX_MPDU_START_INFO1_ */
         } __packed;
         struct {
-            u8 pn[6];
+            uint8_t pn[6];
         } __packed;
     } __packed;
 } __packed;
@@ -563,9 +563,9 @@ struct rx_msdu_start {
 struct rx_msdu_end_common {
     __le16 ip_hdr_cksum;
     __le16 tcp_hdr_cksum;
-    u8 key_id_octet;
-    u8 classification_filter;
-    u8 wapi_pn[10];
+    uint8_t key_id_octet;
+    uint8_t classification_filter;
+    uint8_t wapi_pn[10];
     __le32 info0;
 } __packed;
 
@@ -696,14 +696,14 @@ struct rx_msdu_end {
 
 struct rx_ppdu_start {
     struct {
-        u8 pri20_mhz;
-        u8 ext20_mhz;
-        u8 ext40_mhz;
-        u8 ext80_mhz;
+        uint8_t pri20_mhz;
+        uint8_t ext20_mhz;
+        uint8_t ext40_mhz;
+        uint8_t ext80_mhz;
     } rssi_chains[4];
-    u8 rssi_comb;
+    uint8_t rssi_comb;
     __le16 rsvd0;
-    u8 info0; /* %RX_PPDU_START_INFO0_ */
+    uint8_t info0; /* %RX_PPDU_START_INFO0_ */
     __le32 info1; /* %RX_PPDU_START_INFO1_ */
     __le32 info2; /* %RX_PPDU_START_INFO2_ */
     __le32 info3; /* %RX_PPDU_START_INFO3_ */
@@ -909,8 +909,8 @@ struct rx_ppdu_end_common {
 } __packed;
 
 struct rx_ppdu_end_qca988x {
-    u8 locationing_timestamp;
-    u8 phy_err_code;
+    uint8_t locationing_timestamp;
+    uint8_t phy_err_code;
     __le16 flags; /* %RX_PPDU_END_FLAGS_ */
     __le32 info0; /* %RX_PPDU_END_INFO0_ */
     __le16 bb_length;
@@ -924,8 +924,8 @@ struct rx_ppdu_end_qca988x {
 #define RX_PPDU_END_RTT_NORMAL_MODE            BIT(31)
 
 struct rx_ppdu_end_qca6174 {
-    u8 locationing_timestamp;
-    u8 phy_err_code;
+    uint8_t locationing_timestamp;
+    uint8_t phy_err_code;
     __le16 flags; /* %RX_PPDU_END_FLAGS_ */
     __le32 info0; /* %RX_PPDU_END_INFO0_ */
     __le32 rtt; /* %RX_PPDU_END_RTT_ */
@@ -1219,7 +1219,7 @@ struct rx_ppdu_end {
 #define FW_RX_DESC_INFO0_EXT_LSB  6
 
 struct fw_rx_desc_base {
-    u8 info0;
+    uint8_t info0;
 } __packed;
 
 #endif /* _RX_DESC_H_ */

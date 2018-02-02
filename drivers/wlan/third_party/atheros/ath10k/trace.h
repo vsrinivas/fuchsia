@@ -21,7 +21,7 @@
 #include "core.h"
 
 #if !defined(_TRACE_H_)
-static inline u32 ath10k_frm_hdr_len(const void* buf, size_t len) {
+static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
     const struct ieee80211_hdr* hdr = buf;
 
     /* In some rare cases (e.g. fcs error) device reports frame buffer
@@ -29,7 +29,7 @@ static inline u32 ath10k_frm_hdr_len(const void* buf, size_t len) {
      * can still be accessed so do a simple min() to guarantee caller
      * doesn't get value greater than len.
      */
-    return min_t(u32, len, ieee80211_hdrlen(hdr->frame_control));
+    return min_t(uint32_t, len, ieee80211_hdrlen(hdr->frame_control));
 }
 #endif
 
@@ -129,7 +129,7 @@ TRACE_EVENT(ath10k_log_dbg_dump,
                 __string(msg, msg)
                 __string(prefix, prefix)
                 __field(size_t, buf_len)
-                __dynamic_array(u8, buf, buf_len)
+                __dynamic_array(uint8_t, buf, buf_len)
             ),
 
             TP_fast_assign(
@@ -161,7 +161,7 @@ TRACE_EVENT(ath10k_wmi_cmd,
                 __string(driver, dev_driver_string(ar->dev))
                 __field(unsigned int, id)
                 __field(size_t, buf_len)
-                __dynamic_array(u8, buf, buf_len)
+                __dynamic_array(uint8_t, buf, buf_len)
                 __field(int, ret)
             ),
 
@@ -194,7 +194,7 @@ TRACE_EVENT(ath10k_wmi_event,
                 __string(driver, dev_driver_string(ar->dev))
                 __field(unsigned int, id)
                 __field(size_t, buf_len)
-                __dynamic_array(u8, buf, buf_len)
+                __dynamic_array(uint8_t, buf, buf_len)
             ),
 
             TP_fast_assign(
@@ -223,7 +223,7 @@ TRACE_EVENT(ath10k_htt_stats,
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
                 __field(size_t, buf_len)
-                __dynamic_array(u8, buf, buf_len)
+                __dynamic_array(uint8_t, buf, buf_len)
             ),
 
             TP_fast_assign(
@@ -249,9 +249,9 @@ TRACE_EVENT(ath10k_wmi_dbglog,
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u8, hw_type);
+                __field(uint8_t, hw_type);
                 __field(size_t, buf_len)
-                __dynamic_array(u8, buf, buf_len)
+                __dynamic_array(uint8_t, buf, buf_len)
             ),
 
             TP_fast_assign(
@@ -272,16 +272,16 @@ TRACE_EVENT(ath10k_wmi_dbglog,
            );
 
 TRACE_EVENT(ath10k_htt_pktlog,
-            TP_PROTO(struct ath10k* ar, const void* buf, u16 buf_len),
+            TP_PROTO(struct ath10k* ar, const void* buf, uint16_t buf_len),
 
             TP_ARGS(ar, buf, buf_len),
 
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u8, hw_type);
-                __field(u16, buf_len)
-                __dynamic_array(u8, pktlog, buf_len)
+                __field(uint8_t, hw_type);
+                __field(uint16_t, buf_len)
+                __dynamic_array(uint8_t, pktlog, buf_len)
             ),
 
             TP_fast_assign(
@@ -302,18 +302,18 @@ TRACE_EVENT(ath10k_htt_pktlog,
            );
 
 TRACE_EVENT(ath10k_htt_tx,
-            TP_PROTO(struct ath10k* ar, u16 msdu_id, u16 msdu_len,
-                     u8 vdev_id, u8 tid),
+            TP_PROTO(struct ath10k* ar, uint16_t msdu_id, uint16_t msdu_len,
+                     uint8_t vdev_id, uint8_t tid),
 
             TP_ARGS(ar, msdu_id, msdu_len, vdev_id, tid),
 
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u16, msdu_id)
-                __field(u16, msdu_len)
-                __field(u8, vdev_id)
-                __field(u8, tid)
+                __field(uint16_t, msdu_id)
+                __field(uint16_t, msdu_len)
+                __field(uint8_t, vdev_id)
+                __field(uint8_t, tid)
             ),
 
             TP_fast_assign(
@@ -337,14 +337,14 @@ TRACE_EVENT(ath10k_htt_tx,
            );
 
 TRACE_EVENT(ath10k_txrx_tx_unref,
-            TP_PROTO(struct ath10k* ar, u16 msdu_id),
+            TP_PROTO(struct ath10k* ar, uint16_t msdu_id),
 
             TP_ARGS(ar, msdu_id),
 
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u16, msdu_id)
+                __field(uint16_t, msdu_id)
             ),
 
             TP_fast_assign(
@@ -370,7 +370,7 @@ DECLARE_EVENT_CLASS(ath10k_hdr_event,
                         __string(device, dev_name(ar->dev))
                         __string(driver, dev_driver_string(ar->dev))
                         __field(size_t, len)
-                        __dynamic_array(u8, data, ath10k_frm_hdr_len(data, len))
+                        __dynamic_array(uint8_t, data, ath10k_frm_hdr_len(data, len))
                     ),
 
                     TP_fast_assign(
@@ -397,7 +397,7 @@ DECLARE_EVENT_CLASS(ath10k_payload_event,
                         __string(device, dev_name(ar->dev))
                         __string(driver, dev_driver_string(ar->dev))
                         __field(size_t, len)
-                        __dynamic_array(u8, payload, (len -
+                        __dynamic_array(uint8_t, payload, (len -
                                         ath10k_frm_hdr_len(data, len)))
                     ),
 
@@ -445,9 +445,9 @@ TRACE_EVENT(ath10k_htt_rx_desc,
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u8, hw_type);
-                __field(u16, len)
-                __dynamic_array(u8, rxdesc, len)
+                __field(uint8_t, hw_type);
+                __field(uint16_t, len)
+                __dynamic_array(uint8_t, rxdesc, len)
             ),
 
             TP_fast_assign(
@@ -469,10 +469,10 @@ TRACE_EVENT(ath10k_htt_rx_desc,
 
 TRACE_EVENT(ath10k_wmi_diag_container,
             TP_PROTO(struct ath10k* ar,
-                     u8 type,
-                     u32 timestamp,
-                     u32 code,
-                     u16 len,
+                     uint8_t type,
+                     uint32_t timestamp,
+                     uint32_t code,
+                     uint16_t len,
                      const void* data),
 
             TP_ARGS(ar, type, timestamp, code, len, data),
@@ -480,11 +480,11 @@ TRACE_EVENT(ath10k_wmi_diag_container,
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u8, type)
-                __field(u32, timestamp)
-                __field(u32, code)
-                __field(u16, len)
-                __dynamic_array(u8, data, len)
+                __field(uint8_t, type)
+                __field(uint32_t, timestamp)
+                __field(uint32_t, code)
+                __field(uint16_t, len)
+                __dynamic_array(uint8_t, data, len)
             ),
 
             TP_fast_assign(
@@ -516,8 +516,8 @@ TRACE_EVENT(ath10k_wmi_diag,
             TP_STRUCT__entry(
                 __string(device, dev_name(ar->dev))
                 __string(driver, dev_driver_string(ar->dev))
-                __field(u16, len)
-                __dynamic_array(u8, data, len)
+                __field(uint16_t, len)
+                __dynamic_array(uint8_t, data, len)
             ),
 
             TP_fast_assign(

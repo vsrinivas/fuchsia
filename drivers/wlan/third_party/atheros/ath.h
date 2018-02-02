@@ -33,7 +33,7 @@
  */
 #define ATH_KEYMAX          128     /* max key cache size we handle */
 
-static const u8 ath_bcast_mac[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static const uint8_t ath_bcast_mac[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 struct ath_ani {
     bool caldone;
@@ -45,10 +45,10 @@ struct ath_ani {
 };
 
 struct ath_cycle_counters {
-    u32 cycles;
-    u32 rx_busy;
-    u32 rx_frame;
-    u32 tx_frame;
+    uint32_t cycles;
+    uint32_t rx_busy;
+    uint32_t rx_frame;
+    uint32_t tx_frame;
 };
 
 enum ath_device_state {
@@ -74,17 +74,17 @@ enum ath_bus_type {
 };
 
 struct reg_dmn_pair_mapping {
-    u16 reg_domain;
-    u16 reg_5ghz_ctl;
-    u16 reg_2ghz_ctl;
+    uint16_t reg_domain;
+    uint16_t reg_5ghz_ctl;
+    uint16_t reg_2ghz_ctl;
 };
 
 struct ath_regulatory {
     char alpha2[2];
     enum nl80211_dfs_regions region;
-    u16 country_code;
-    u16 max_power_level;
-    u16 current_rd;
+    uint16_t country_code;
+    uint16_t max_power_level;
+    uint16_t current_rd;
     int16_t power_limit;
     struct reg_dmn_pair_mapping* regpair;
 };
@@ -95,12 +95,12 @@ enum ath_crypt_caps {
 };
 
 struct ath_keyval {
-    u8 kv_type;
-    u8 kv_pad;
-    u16 kv_len;
-    u8 kv_val[16];  /* TK */
-    u8 kv_mic[8];   /* Michael MIC key */
-    u8 kv_txmic[8]; /* Michael MIC TX key (used only if the hardware
+    uint8_t kv_type;
+    uint8_t kv_pad;
+    uint16_t kv_len;
+    uint8_t kv_val[16];  /* TK */
+    uint8_t kv_mic[8];   /* Michael MIC key */
+    uint8_t kv_txmic[8]; /* Michael MIC TX key (used only if the hardware
                      * supports both MIC keys in the same key cache entry;
                      * in that case, kv_mic is the RX key) */
 };
@@ -125,12 +125,12 @@ enum ath_cipher {
  * @write_flush: flush buffered register writes and disable buffering
  */
 struct ath_ops {
-    unsigned int (*read)(void*, u32 reg_offset);
-    void (*multi_read)(void*, u32* addr, u32* val, u16 count);
-    void (*write)(void*, u32 val, u32 reg_offset);
+    unsigned int (*read)(void*, uint32_t reg_offset);
+    void (*multi_read)(void*, uint32_t* addr, uint32_t* val, uint16_t count);
+    void (*write)(void*, uint32_t val, uint32_t reg_offset);
     void (*enable_write_buffer)(void*);
     void (*write_flush) (void*);
-    u32 (*rmw)(void*, u32 reg_offset, u32 set, u32 clr);
+    uint32_t (*rmw)(void*, uint32_t reg_offset, uint32_t set, uint32_t clr);
     void (*enable_rmw_buffer)(void*);
     void (*rmw_flush) (void*);
 
@@ -154,15 +154,15 @@ struct ath_common {
 
     struct ath_ani ani;
 
-    u16 cachelsz;
-    u16 curaid;
-    u8 macaddr[ETH_ALEN];
-    u8 curbssid[ETH_ALEN] __aligned(2);
-    u8 bssidmask[ETH_ALEN];
+    uint16_t cachelsz;
+    uint16_t curaid;
+    uint8_t macaddr[ETH_ALEN];
+    uint8_t curbssid[ETH_ALEN] __aligned(2);
+    uint8_t bssidmask[ETH_ALEN];
 
-    u32 rx_bufsize;
+    uint32_t rx_bufsize;
 
-    u32 keymax;
+    uint32_t keymax;
     DECLARE_BITMAP(keymap, ATH_KEYMAX);
     DECLARE_BITMAP(tkip_keymap, ATH_KEYMAX);
     DECLARE_BITMAP(ccmp_keymap, ATH_KEYMAX);
@@ -193,7 +193,7 @@ static inline const struct ath_ps_ops* ath_ps_ops(struct ath_common* common) {
 }
 
 struct sk_buff* ath_rxbuf_alloc(struct ath_common* common,
-                                u32 len,
+                                uint32_t len,
                                 gfp_t gfp_mask);
 bool ath_is_mybeacon(struct ath_common* common, struct ieee80211_hdr* hdr);
 
@@ -203,7 +203,7 @@ int ath_key_config(struct ath_common* common,
                    struct ieee80211_vif* vif,
                    struct ieee80211_sta* sta,
                    struct ieee80211_key_conf* key);
-bool ath_hw_keyreset(struct ath_common* common, u16 entry);
+bool ath_hw_keyreset(struct ath_common* common, uint16_t entry);
 void ath_hw_cycle_counters_update(struct ath_common* common);
 int32_t ath_hw_get_listen_time(struct ath_common* common);
 

@@ -54,7 +54,7 @@ struct ath10k_tlv_dump_data {
     __le32 tlv_len;
 
     /* pad to 32-bit boundaries as needed */
-    u8 tlv_data[];
+    uint8_t tlv_data[];
 } __packed;
 
 struct ath10k_dump_file_data {
@@ -70,7 +70,7 @@ struct ath10k_dump_file_data {
 
     /* some info we can get from ath10k struct that might help */
 
-    u8 uuid[16];
+    uint8_t uuid[16];
 
     __le32 chip_id;
 
@@ -107,10 +107,10 @@ struct ath10k_dump_file_data {
     char kernel_ver[64];
 
     /* room for growth w/out changing binary format */
-    u8 unused[128];
+    uint8_t unused[128];
 
     /* struct ath10k_tlv_dump_data + more */
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 void ath10k_info(struct ath10k* ar, const char* fmt, ...) {
@@ -130,7 +130,7 @@ EXPORT_SYMBOL(ath10k_info);
 void ath10k_debug_print_hwfw_info(struct ath10k* ar) {
     const struct firmware* firmware;
     char fw_features[128] = {};
-    u32 crc = 0;
+    uint32_t crc = 0;
 
     ath10k_core_get_fw_features_str(ar, fw_features, sizeof(fw_features));
 
@@ -811,7 +811,7 @@ static struct ath10k_dump_file_data* ath10k_build_dump_file(struct ath10k* ar,
 int ath10k_debug_fw_devcoredump(struct ath10k* ar) {
     struct ath10k_dump_file_data* dump;
     void* dump_ptr;
-    u32 dump_len;
+    uint32_t dump_len;
 
     /* To keep the dump file available also for debugfs don't mark the
      * file read, only debugfs should do that.
@@ -886,9 +886,9 @@ static ssize_t ath10k_reg_addr_read(struct file* file,
                                     char __user* user_buf,
                                     size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u8 buf[32];
+    uint8_t buf[32];
     size_t len = 0;
-    u32 reg_addr;
+    uint32_t reg_addr;
 
     mutex_lock(&ar->conf_mutex);
     reg_addr = ar->debug.reg_addr;
@@ -903,7 +903,7 @@ static ssize_t ath10k_reg_addr_write(struct file* file,
                                      const char __user* user_buf,
                                      size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u32 reg_addr;
+    uint32_t reg_addr;
     int ret;
 
     ret = kstrtou32_from_user(user_buf, count, 0, &reg_addr);
@@ -934,9 +934,9 @@ static ssize_t ath10k_reg_value_read(struct file* file,
                                      char __user* user_buf,
                                      size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u8 buf[48];
+    uint8_t buf[48];
     size_t len;
-    u32 reg_addr, reg_val;
+    uint32_t reg_addr, reg_val;
     int ret;
 
     mutex_lock(&ar->conf_mutex);
@@ -964,7 +964,7 @@ static ssize_t ath10k_reg_value_write(struct file* file,
                                       const char __user* user_buf,
                                       size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u32 reg_addr, reg_val;
+    uint32_t reg_addr, reg_val;
     int ret;
 
     mutex_lock(&ar->conf_mutex);
@@ -1004,7 +1004,7 @@ static ssize_t ath10k_mem_value_read(struct file* file,
                                      char __user* user_buf,
                                      size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u8* buf;
+    uint8_t* buf;
     int ret;
 
     if (*ppos < 0) {
@@ -1032,7 +1032,7 @@ static ssize_t ath10k_mem_value_read(struct file* file,
     ret = ath10k_hif_diag_read(ar, *ppos, buf, count);
     if (ret) {
         ath10k_warn(ar, "failed to read address 0x%08x via diagnose window fnrom debugfs: %d\n",
-                    (u32)(*ppos), ret);
+                    (uint32_t)(*ppos), ret);
         goto exit;
     }
 
@@ -1057,7 +1057,7 @@ static ssize_t ath10k_mem_value_write(struct file* file,
                                       const char __user* user_buf,
                                       size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u8* buf;
+    uint8_t* buf;
     int ret;
 
     if (*ppos < 0) {
@@ -1091,7 +1091,7 @@ static ssize_t ath10k_mem_value_write(struct file* file,
     ret = ath10k_hif_diag_write(ar, *ppos, buf, count);
     if (ret) {
         ath10k_warn(ar, "failed to write address 0x%08x via diagnose window from debugfs: %d\n",
-                    (u32)(*ppos), ret);
+                    (uint32_t)(*ppos), ret);
         goto exit;
     }
 
@@ -1114,7 +1114,7 @@ static const struct file_operations fops_mem_value = {
 };
 
 static int ath10k_debug_htt_stats_req(struct ath10k* ar) {
-    u64 cookie;
+    uint64_t cookie;
     int ret;
 
     lockdep_assert_held(&ar->conf_mutex);
@@ -1214,7 +1214,7 @@ static ssize_t ath10k_read_htt_max_amsdu_ampdu(struct file* file,
         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     char buf[64];
-    u8 amsdu, ampdu;
+    uint8_t amsdu, ampdu;
     size_t len;
 
     mutex_lock(&ar->conf_mutex);
@@ -1291,7 +1291,7 @@ static ssize_t ath10k_write_fw_dbglog(struct file* file,
     int ret;
     char buf[96];
     unsigned int log_level;
-    u64 mask;
+    uint64_t mask;
 
     simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 
@@ -1392,7 +1392,7 @@ static const char ath10k_gstrings_stats[][ETH_GSTRING_LEN] = {
 
 void ath10k_debug_get_et_strings(struct ieee80211_hw* hw,
                                  struct ieee80211_vif* vif,
-                                 u32 sset, u8* data) {
+                                 uint32_t sset, uint8_t* data) {
     if (sset == ETH_SS_STATS)
         memcpy(data, *ath10k_gstrings_stats,
                sizeof(ath10k_gstrings_stats));
@@ -1409,7 +1409,7 @@ int ath10k_debug_get_et_sset_count(struct ieee80211_hw* hw,
 
 void ath10k_debug_get_et_stats(struct ieee80211_hw* hw,
                                struct ieee80211_vif* vif,
-                               struct ethtool_stats* stats, u64* data) {
+                               struct ethtool_stats* stats, uint64_t* data) {
     struct ath10k* ar = hw->priv;
     static const struct ath10k_fw_stats_pdev zero_stats = {};
     const struct ath10k_fw_stats_pdev* pdev_stats;
@@ -1500,7 +1500,7 @@ static const struct file_operations fops_fw_dbglog = {
 };
 
 static int ath10k_debug_cal_data_fetch(struct ath10k* ar) {
-    u32 hi_addr;
+    uint32_t hi_addr;
     __le32 addr;
     int ret;
 
@@ -1566,7 +1566,7 @@ static ssize_t ath10k_write_ani_enable(struct file* file,
                                        size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
     int ret;
-    u8 enable;
+    uint8_t enable;
 
     if (kstrtou8_from_user(user_buf, count, 0, &enable)) {
         return -EINVAL;
@@ -2074,7 +2074,7 @@ static ssize_t ath10k_write_pktlog_filter(struct file* file,
         const char __user* ubuf,
         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u32 filter;
+    uint32_t filter;
     int ret;
 
     if (kstrtouint_from_user(ubuf, count, 0, &filter)) {
@@ -2141,7 +2141,7 @@ static ssize_t ath10k_write_quiet_period(struct file* file,
         const char __user* ubuf,
         size_t count, loff_t* ppos) {
     struct ath10k* ar = file->private_data;
-    u32 period;
+    uint32_t period;
 
     if (kstrtouint_from_user(ubuf, count, 0, &period)) {
         return -EINVAL;
@@ -2188,7 +2188,7 @@ static ssize_t ath10k_write_btcoex(struct file* file,
     size_t buf_size;
     int ret;
     bool val;
-    u32 pdev_param;
+    uint32_t pdev_param;
 
     buf_size = min(count, (sizeof(buf) - 1));
     if (copy_from_user(buf, ubuf, buf_size)) {

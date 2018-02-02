@@ -18,7 +18,7 @@
 #ifndef _DEBUG_H_
 #define _DEBUG_H_
 
-#include <linux/types.h>
+#include <stdint.h>
 #include "trace.h"
 
 enum ath10k_debug_mask {
@@ -85,7 +85,7 @@ void ath10k_debug_tpc_stats_process(struct ath10k* ar,
 struct ath10k_fw_crash_data*
 ath10k_debug_get_new_fw_crash_data(struct ath10k* ar);
 
-void ath10k_debug_dbglog_add(struct ath10k* ar, u8* buffer, int len);
+void ath10k_debug_dbglog_add(struct ath10k* ar, uint8_t* buffer, int len);
 
 int ath10k_debug_fw_devcoredump(struct ath10k* ar);
 
@@ -93,18 +93,18 @@ int ath10k_debug_fw_devcoredump(struct ath10k* ar);
 
 void ath10k_debug_get_et_strings(struct ieee80211_hw* hw,
                                  struct ieee80211_vif* vif,
-                                 u32 sset, u8* data);
+                                 uint32_t sset, uint8_t* data);
 int ath10k_debug_get_et_sset_count(struct ieee80211_hw* hw,
                                    struct ieee80211_vif* vif, int sset);
 void ath10k_debug_get_et_stats(struct ieee80211_hw* hw,
                                struct ieee80211_vif* vif,
-                               struct ethtool_stats* stats, u64* data);
+                               struct ethtool_stats* stats, uint64_t* data);
 
-static inline u64 ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
+static inline uint64_t ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
     return ar->debug.fw_dbglog_mask;
 }
 
-static inline u32 ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
+static inline uint32_t ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
     return ar->debug.fw_dbglog_level;
 }
 
@@ -140,7 +140,7 @@ static inline void ath10k_debug_tpc_stats_process(struct ath10k* ar,
     kfree(tpc_stats);
 }
 
-static inline void ath10k_debug_dbglog_add(struct ath10k* ar, u8* buffer,
+static inline void ath10k_debug_dbglog_add(struct ath10k* ar, uint8_t* buffer,
         int len) {
 }
 
@@ -149,11 +149,11 @@ ath10k_debug_get_new_fw_crash_data(struct ath10k* ar) {
     return NULL;
 }
 
-static inline u64 ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
+static inline uint64_t ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
     return 0;
 }
 
-static inline u32 ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
+static inline uint32_t ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
     return 0;
 }
 

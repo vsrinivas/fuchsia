@@ -117,7 +117,7 @@
  */
 void ath_hw_setbssidmask(struct ath_common* common) {
     void* ah = common->ah;
-    u32 id1;
+    uint32_t id1;
 
     REG_WRITE(ah, AR_STA_ID0, get_unaligned_le32(common->macaddr));
     id1 = REG_READ(ah, AR_STA_ID1) & ~AR_STA_ID1_SADH_MASK;
@@ -139,7 +139,7 @@ EXPORT_SYMBOL(ath_hw_setbssidmask);
  * It has to be called while holding common->cc_lock!
  */
 void ath_hw_cycle_counters_update(struct ath_common* common) {
-    u32 cycles, busy, rx, tx;
+    uint32_t cycles, busy, rx, tx;
     void* ah = common->ah;
 
     /* freeze */

@@ -18,9 +18,10 @@
 #ifndef _CORE_H_
 #define _CORE_H_
 
+#include <stdint.h>
+
 #include <linux/completion.h>
 #include <linux/if_ether.h>
-#include <linux/types.h>
 #include <linux/pci.h>
 #include <linux/uuid.h>
 #include <linux/time.h>
@@ -117,9 +118,9 @@ enum ath10k_skb_flags {
 
 struct ath10k_skb_cb {
     dma_addr_t paddr;
-    u8 flags;
-    u8 eid;
-    u16 msdu_id;
+    uint8_t flags;
+    uint8_t eid;
+    uint16_t msdu_id;
     struct ieee80211_vif* vif;
     struct ieee80211_txq* txq;
 } __packed;
@@ -143,7 +144,7 @@ static inline struct ath10k_skb_rxcb* ATH10K_SKB_RXCB(struct sk_buff* skb) {
 #define ATH10K_RXCB_SKB(rxcb) \
         container_of((void *)rxcb, struct sk_buff, cb)
 
-static inline u32 host_interest_item_address(u32 item_offset) {
+static inline uint32_t host_interest_item_address(uint32_t item_offset) {
     return QCA988X_HOST_INTEREST_ADDRESS + item_offset;
 }
 
@@ -154,8 +155,8 @@ struct ath10k_bmi {
 struct ath10k_mem_chunk {
     void* vaddr;
     dma_addr_t paddr;
-    u32 len;
-    u32 req_id;
+    uint32_t len;
+    uint32_t req_id;
 };
 
 struct ath10k_wmi {
@@ -171,116 +172,116 @@ struct ath10k_wmi {
     const struct wmi_ops* ops;
     const struct wmi_peer_flags_map* peer_flags;
 
-    u32 num_mem_chunks;
-    u32 rx_decap_mode;
+    uint32_t num_mem_chunks;
+    uint32_t rx_decap_mode;
     struct ath10k_mem_chunk mem_chunks[WMI_MAX_MEM_REQS];
 };
 
 struct ath10k_fw_stats_peer {
     struct list_head list;
 
-    u8 peer_macaddr[ETH_ALEN];
-    u32 peer_rssi;
-    u32 peer_tx_rate;
-    u32 peer_rx_rate; /* 10x only */
-    u32 rx_duration;
+    uint8_t peer_macaddr[ETH_ALEN];
+    uint32_t peer_rssi;
+    uint32_t peer_tx_rate;
+    uint32_t peer_rx_rate; /* 10x only */
+    uint32_t rx_duration;
 };
 
 struct ath10k_fw_extd_stats_peer {
     struct list_head list;
 
-    u8 peer_macaddr[ETH_ALEN];
-    u32 rx_duration;
+    uint8_t peer_macaddr[ETH_ALEN];
+    uint32_t rx_duration;
 };
 
 struct ath10k_fw_stats_vdev {
     struct list_head list;
 
-    u32 vdev_id;
-    u32 beacon_snr;
-    u32 data_snr;
-    u32 num_tx_frames[4];
-    u32 num_rx_frames;
-    u32 num_tx_frames_retries[4];
-    u32 num_tx_frames_failures[4];
-    u32 num_rts_fail;
-    u32 num_rts_success;
-    u32 num_rx_err;
-    u32 num_rx_discard;
-    u32 num_tx_not_acked;
-    u32 tx_rate_history[10];
-    u32 beacon_rssi_history[10];
+    uint32_t vdev_id;
+    uint32_t beacon_snr;
+    uint32_t data_snr;
+    uint32_t num_tx_frames[4];
+    uint32_t num_rx_frames;
+    uint32_t num_tx_frames_retries[4];
+    uint32_t num_tx_frames_failures[4];
+    uint32_t num_rts_fail;
+    uint32_t num_rts_success;
+    uint32_t num_rx_err;
+    uint32_t num_rx_discard;
+    uint32_t num_tx_not_acked;
+    uint32_t tx_rate_history[10];
+    uint32_t beacon_rssi_history[10];
 };
 
 struct ath10k_fw_stats_pdev {
     struct list_head list;
 
     /* PDEV stats */
-    s32 ch_noise_floor;
-    u32 tx_frame_count; /* Cycles spent transmitting frames */
-    u32 rx_frame_count; /* Cycles spent receiving frames */
-    u32 rx_clear_count; /* Total channel busy time, evidently */
-    u32 cycle_count; /* Total on-channel time */
-    u32 phy_err_count;
-    u32 chan_tx_power;
-    u32 ack_rx_bad;
-    u32 rts_bad;
-    u32 rts_good;
-    u32 fcs_bad;
-    u32 no_beacons;
-    u32 mib_int_count;
+    int32_t ch_noise_floor;
+    uint32_t tx_frame_count; /* Cycles spent transmitting frames */
+    uint32_t rx_frame_count; /* Cycles spent receiving frames */
+    uint32_t rx_clear_count; /* Total channel busy time, evidently */
+    uint32_t cycle_count; /* Total on-channel time */
+    uint32_t phy_err_count;
+    uint32_t chan_tx_power;
+    uint32_t ack_rx_bad;
+    uint32_t rts_bad;
+    uint32_t rts_good;
+    uint32_t fcs_bad;
+    uint32_t no_beacons;
+    uint32_t mib_int_count;
 
     /* PDEV TX stats */
-    s32 comp_queued;
-    s32 comp_delivered;
-    s32 msdu_enqued;
-    s32 mpdu_enqued;
-    s32 wmm_drop;
-    s32 local_enqued;
-    s32 local_freed;
-    s32 hw_queued;
-    s32 hw_reaped;
-    s32 underrun;
-    u32 hw_paused;
-    s32 tx_abort;
-    s32 mpdus_requed;
-    u32 tx_ko;
-    u32 data_rc;
-    u32 self_triggers;
-    u32 sw_retry_failure;
-    u32 illgl_rate_phy_err;
-    u32 pdev_cont_xretry;
-    u32 pdev_tx_timeout;
-    u32 pdev_resets;
-    u32 phy_underrun;
-    u32 txop_ovf;
-    u32 seq_posted;
-    u32 seq_failed_queueing;
-    u32 seq_completed;
-    u32 seq_restarted;
-    u32 mu_seq_posted;
-    u32 mpdus_sw_flush;
-    u32 mpdus_hw_filter;
-    u32 mpdus_truncated;
-    u32 mpdus_ack_failed;
-    u32 mpdus_expired;
+    int32_t comp_queued;
+    int32_t comp_delivered;
+    int32_t msdu_enqued;
+    int32_t mpdu_enqued;
+    int32_t wmm_drop;
+    int32_t local_enqued;
+    int32_t local_freed;
+    int32_t hw_queued;
+    int32_t hw_reaped;
+    int32_t underrun;
+    uint32_t hw_paused;
+    int32_t tx_abort;
+    int32_t mpdus_requed;
+    uint32_t tx_ko;
+    uint32_t data_rc;
+    uint32_t self_triggers;
+    uint32_t sw_retry_failure;
+    uint32_t illgl_rate_phy_err;
+    uint32_t pdev_cont_xretry;
+    uint32_t pdev_tx_timeout;
+    uint32_t pdev_resets;
+    uint32_t phy_underrun;
+    uint32_t txop_ovf;
+    uint32_t seq_posted;
+    uint32_t seq_failed_queueing;
+    uint32_t seq_completed;
+    uint32_t seq_restarted;
+    uint32_t mu_seq_posted;
+    uint32_t mpdus_sw_flush;
+    uint32_t mpdus_hw_filter;
+    uint32_t mpdus_truncated;
+    uint32_t mpdus_ack_failed;
+    uint32_t mpdus_expired;
 
     /* PDEV RX stats */
-    s32 mid_ppdu_route_change;
-    s32 status_rcvd;
-    s32 r0_frags;
-    s32 r1_frags;
-    s32 r2_frags;
-    s32 r3_frags;
-    s32 htt_msdus;
-    s32 htt_mpdus;
-    s32 loc_msdus;
-    s32 loc_mpdus;
-    s32 oversize_amsdu;
-    s32 phy_errs;
-    s32 phy_err_drop;
-    s32 mpdu_errs;
-    s32 rx_ovfl_errs;
+    int32_t mid_ppdu_route_change;
+    int32_t status_rcvd;
+    int32_t r0_frags;
+    int32_t r1_frags;
+    int32_t r2_frags;
+    int32_t r3_frags;
+    int32_t htt_msdus;
+    int32_t htt_mpdus;
+    int32_t loc_msdus;
+    int32_t loc_mpdus;
+    int32_t oversize_amsdu;
+    int32_t phy_errs;
+    int32_t phy_err_drop;
+    int32_t mpdu_errs;
+    int32_t rx_ovfl_errs;
 };
 
 struct ath10k_fw_stats {
@@ -295,32 +296,32 @@ struct ath10k_fw_stats {
 #define ATH10K_TPC_PREAM_TABLE_END  0xFFFF
 
 struct ath10k_tpc_table {
-    u32 pream_idx[WMI_TPC_RATE_MAX];
-    u8 rate_code[WMI_TPC_RATE_MAX];
+    uint32_t pream_idx[WMI_TPC_RATE_MAX];
+    uint8_t rate_code[WMI_TPC_RATE_MAX];
     char tpc_value[WMI_TPC_RATE_MAX][WMI_TPC_TX_N_CHAIN * WMI_TPC_BUF_SIZE];
 };
 
 struct ath10k_tpc_stats {
-    u32 reg_domain;
-    u32 chan_freq;
-    u32 phy_mode;
-    u32 twice_antenna_reduction;
-    u32 twice_max_rd_power;
-    s32 twice_antenna_gain;
-    u32 power_limit;
-    u32 num_tx_chain;
-    u32 ctl;
-    u32 rate_max;
-    u8 flag[WMI_TPC_FLAG];
+    uint32_t reg_domain;
+    uint32_t chan_freq;
+    uint32_t phy_mode;
+    uint32_t twice_antenna_reduction;
+    uint32_t twice_max_rd_power;
+    int32_t twice_antenna_gain;
+    uint32_t power_limit;
+    uint32_t num_tx_chain;
+    uint32_t ctl;
+    uint32_t rate_max;
+    uint8_t flag[WMI_TPC_FLAG];
     struct ath10k_tpc_table tpc_table[WMI_TPC_FLAG];
 };
 
 struct ath10k_dfs_stats {
-    u32 phy_errors;
-    u32 pulses_total;
-    u32 pulses_detected;
-    u32 pulses_discarded;
-    u32 radar_detected;
+    uint32_t phy_errors;
+    uint32_t pulses_total;
+    uint32_t pulses_detected;
+    uint32_t pulses_discarded;
+    uint32_t radar_detected;
 };
 
 #define ATH10K_MAX_NUM_PEER_IDS (1 << 11) /* htt rx_desc limit */
@@ -332,7 +333,7 @@ struct ath10k_peer {
 
     bool removed;
     int vdev_id;
-    u8 addr[ETH_ALEN];
+    uint8_t addr[ETH_ALEN];
     DECLARE_BITMAP(peer_ids, ATH10K_MAX_NUM_PEER_IDS);
 
     /* protected by ar->data_lock */
@@ -349,11 +350,11 @@ struct ath10k_sta {
     struct ath10k_vif* arvif;
 
     /* the following are protected by ar->data_lock */
-    u32 changed; /* IEEE80211_RC_* */
-    u32 bw;
-    u32 nss;
-    u32 smps;
-    u16 peer_id;
+    uint32_t changed; /* IEEE80211_RC_* */
+    uint32_t bw;
+    uint32_t nss;
+    uint32_t smps;
+    uint16_t peer_id;
     struct rate_info txrate;
 
     struct work_struct update_wk;
@@ -361,7 +362,7 @@ struct ath10k_sta {
 #ifdef CONFIG_MAC80211_DEBUGFS
     /* protected by conf_mutex */
     bool aggr_mode;
-    u64 rx_duration;
+    uint64_t rx_duration;
 #endif
 };
 
@@ -376,12 +377,12 @@ enum ath10k_beacon_state {
 struct ath10k_vif {
     struct list_head list;
 
-    u32 vdev_id;
-    u16 peer_id;
+    uint32_t vdev_id;
+    uint16_t peer_id;
     enum wmi_vdev_type vdev_type;
     enum wmi_vdev_subtype vdev_subtype;
-    u32 beacon_interval;
-    u32 dtim_period;
+    uint32_t beacon_interval;
+    uint32_t dtim_period;
     struct sk_buff* beacon;
     /* protected by data_lock */
     enum ath10k_beacon_state beacon_state;
@@ -396,28 +397,28 @@ struct ath10k_vif {
     bool is_up;
     bool spectral_enabled;
     bool ps;
-    u32 aid;
-    u8 bssid[ETH_ALEN];
+    uint32_t aid;
+    uint8_t bssid[ETH_ALEN];
 
     struct ieee80211_key_conf* wep_keys[WMI_MAX_KEY_INDEX + 1];
-    s8 def_wep_key_idx;
+    int8_t def_wep_key_idx;
 
-    u16 tx_seq_no;
+    uint16_t tx_seq_no;
 
     union {
         struct {
-            u32 uapsd;
+            uint32_t uapsd;
         } sta;
         struct {
             /* 512 stations */
-            u8 tim_bitmap[64];
-            u8 tim_len;
-            u32 ssid_len;
-            u8 ssid[IEEE80211_MAX_SSID_LEN];
+            uint8_t tim_bitmap[64];
+            uint8_t tim_len;
+            uint32_t ssid_len;
+            uint8_t ssid[IEEE80211_MAX_SSID_LEN];
             bool hidden_ssid;
             /* P2P_IE with NoA attribute for P2P_GO case */
-            u32 noa_len;
-            u8* noa_data;
+            uint32_t noa_len;
+            uint8_t* noa_data;
         } ap;
     } u;
 
@@ -432,7 +433,7 @@ struct ath10k_vif {
 };
 
 struct ath10k_vif_iter {
-    u32 vdev_id;
+    uint32_t vdev_id;
     struct ath10k_vif* arvif;
 };
 
@@ -479,11 +480,11 @@ struct ath10k_debug {
     struct completion tpc_complete;
 
     /* protected by conf_mutex */
-    u64 fw_dbglog_mask;
-    u32 fw_dbglog_level;
-    u32 pktlog_filter;
-    u32 reg_addr;
-    u32 nf_cal_period;
+    uint64_t fw_dbglog_mask;
+    uint32_t fw_dbglog_level;
+    uint32_t pktlog_filter;
+    uint32_t reg_addr;
+    uint32_t nf_cal_period;
     void* cal_data;
 
     struct ath10k_fw_crash_data* fw_crash_data;
@@ -735,18 +736,18 @@ struct ath10k_fw_components {
 };
 
 struct ath10k_per_peer_tx_stats {
-    u32 succ_bytes;
-    u32 retry_bytes;
-    u32 failed_bytes;
-    u8  ratecode;
-    u8  flags;
-    u16 peer_id;
-    u16 succ_pkts;
-    u16 retry_pkts;
-    u16 failed_pkts;
-    u16 duration;
-    u32 reserved1;
-    u32 reserved2;
+    uint32_t succ_bytes;
+    uint32_t retry_bytes;
+    uint32_t failed_bytes;
+    uint8_t  ratecode;
+    uint8_t  flags;
+    uint16_t peer_id;
+    uint16_t succ_pkts;
+    uint16_t retry_pkts;
+    uint16_t failed_pkts;
+    uint16_t duration;
+    uint32_t reserved1;
+    uint32_t reserved2;
 };
 
 struct ath10k {
@@ -754,28 +755,28 @@ struct ath10k {
     struct ieee80211_hw* hw;
     struct ieee80211_ops* ops;
     struct device* dev;
-    u8 mac_addr[ETH_ALEN];
+    uint8_t mac_addr[ETH_ALEN];
 
     enum ath10k_hw_rev hw_rev;
-    u16 dev_id;
-    u32 chip_id;
-    u32 target_version;
-    u8 fw_version_major;
-    u32 fw_version_minor;
-    u16 fw_version_release;
-    u16 fw_version_build;
-    u32 fw_stats_req_mask;
-    u32 phy_capability;
-    u32 hw_min_tx_power;
-    u32 hw_max_tx_power;
-    u32 hw_eeprom_rd;
-    u32 ht_cap_info;
-    u32 vht_cap_info;
-    u32 num_rf_chains;
-    u32 max_spatial_stream;
+    uint16_t dev_id;
+    uint32_t chip_id;
+    uint32_t target_version;
+    uint8_t fw_version_major;
+    uint32_t fw_version_minor;
+    uint16_t fw_version_release;
+    uint16_t fw_version_build;
+    uint32_t fw_stats_req_mask;
+    uint32_t phy_capability;
+    uint32_t hw_min_tx_power;
+    uint32_t hw_max_tx_power;
+    uint32_t hw_eeprom_rd;
+    uint32_t ht_cap_info;
+    uint32_t vht_cap_info;
+    uint32_t num_rf_chains;
+    uint32_t max_spatial_stream;
     /* protected by conf_mutex */
-    u32 low_5ghz_chan;
-    u32 high_5ghz_chan;
+    uint32_t low_5ghz_chan;
+    uint32_t high_5ghz_chan;
     bool ani_enabled;
 
     bool p2p;
@@ -809,14 +810,14 @@ struct ath10k {
     const struct firmware* cal_file;
 
     struct {
-        u32 vendor;
-        u32 device;
-        u32 subsystem_vendor;
-        u32 subsystem_device;
+        uint32_t vendor;
+        uint32_t device;
+        uint32_t subsystem_vendor;
+        uint32_t subsystem_device;
 
         bool bmi_ids_valid;
-        u8 bmi_board_id;
-        u8 bmi_chip_id;
+        uint8_t bmi_board_id;
+        uint8_t bmi_chip_id;
 
         char bdf_ext[ATH10K_SMBIOS_BDF_EXT_STR_LENGTH];
     } id;
@@ -867,8 +868,8 @@ struct ath10k {
     int num_started_vdevs;
 
     /* Protected by conf-mutex */
-    u8 cfg_tx_chainmask;
-    u8 cfg_rx_chainmask;
+    uint8_t cfg_tx_chainmask;
+    uint8_t cfg_rx_chainmask;
 
     struct completion install_key_done;
 
@@ -922,8 +923,8 @@ struct ath10k {
     /* cycle count is reported twice for each visited channel during scan.
      * access protected by data_lock
      */
-    u32 survey_last_rx_clear_count;
-    u32 survey_last_cycle_count;
+    uint32_t survey_last_rx_clear_count;
+    uint32_t survey_last_cycle_count;
     struct survey_info survey[ATH10K_NUM_CHANS];
 
     /* Channel info events are expected to come in pairs without and with
@@ -961,9 +962,9 @@ struct ath10k {
 
     struct {
         /* protected by data_lock */
-        u32 fw_crash_counter;
-        u32 fw_warm_reset_counter;
-        u32 fw_cold_reset_counter;
+        uint32_t fw_crash_counter;
+        uint32_t fw_warm_reset_counter;
+        uint32_t fw_cold_reset_counter;
     } stats;
 
     struct ath10k_thermal thermal;
@@ -978,17 +979,17 @@ struct ath10k {
     /* protected by conf_mutex */
     struct {
         /* writing also protected by data_lock */
-        s16 coverage_class;
+        int16_t coverage_class;
 
-        u32 reg_phyclk;
-        u32 reg_slottime_conf;
-        u32 reg_slottime_orig;
-        u32 reg_ack_cts_timeout_conf;
-        u32 reg_ack_cts_timeout_orig;
+        uint32_t reg_phyclk;
+        uint32_t reg_slottime_conf;
+        uint32_t reg_slottime_orig;
+        uint32_t reg_ack_cts_timeout_conf;
+        uint32_t reg_ack_cts_timeout_orig;
     } fw_coverage;
 
     /* must be last */
-    u8 drv_priv[0] __aligned(sizeof(void*));
+    uint8_t drv_priv[0] __aligned(sizeof(void*));
 };
 
 static inline bool ath10k_peer_stats_enabled(struct ath10k* ar) {
@@ -1013,9 +1014,9 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
 
 int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
                       const struct ath10k_fw_components* fw_components);
-int ath10k_wait_for_suspend(struct ath10k* ar, u32 suspend_opt);
+int ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt);
 void ath10k_core_stop(struct ath10k* ar);
-int ath10k_core_register(struct ath10k* ar, u32 chip_id);
+int ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
 void ath10k_core_unregister(struct ath10k* ar);
 
 #endif /* _CORE_H_ */

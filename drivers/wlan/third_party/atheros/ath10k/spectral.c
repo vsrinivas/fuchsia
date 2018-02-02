@@ -32,10 +32,10 @@ static void send_fft_sample(struct ath10k* ar,
     relay_write(ar->spectral.rfs_chan_spec_scan, fft_sample_tlv, length);
 }
 
-static uint8_t get_max_exp(s8 max_index, u16 max_magnitude, size_t bin_len,
-                           u8* data) {
+static uint8_t get_max_exp(int8_t max_index, uint16_t max_magnitude, size_t bin_len,
+                           uint8_t* data) {
     int dc_pos;
-    u8 max_exp;
+    uint8_t max_exp;
 
     dc_pos = bin_len / 2;
 
@@ -76,12 +76,12 @@ static inline size_t ath10k_spectral_fix_bin_size(struct ath10k* ar,
 int ath10k_spectral_process_fft(struct ath10k* ar,
                                 struct wmi_phyerr_ev_arg* phyerr,
                                 const struct phyerr_fft_report* fftr,
-                                size_t bin_len, u64 tsf) {
+                                size_t bin_len, uint64_t tsf) {
     struct fft_sample_ath10k* fft_sample;
-    u8 buf[sizeof(*fft_sample) + SPECTRAL_ATH10K_MAX_NUM_BINS];
-    u16 freq1, freq2, total_gain_db, base_pwr_db, length, peak_mag;
-    u32 reg0, reg1;
-    u8 chain_idx, *bins;
+    uint8_t buf[sizeof(*fft_sample) + SPECTRAL_ATH10K_MAX_NUM_BINS];
+    uint16_t freq1, freq2, total_gain_db, base_pwr_db, length, peak_mag;
+    uin32_t reg0, reg1;
+    uint8_t chain_idx, *bins;
     int dc_pos;
 
     fft_sample = (struct fft_sample_ath10k*)&buf;
@@ -147,7 +147,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
 
     fft_sample->noise = __cpu_to_be16(phyerr->nf_chains[chain_idx]);
 
-    bins = (u8*)fftr;
+    bins = (uint8_t*)fftr;
     bins += sizeof(*fftr);
 
     fft_sample->tsf = __cpu_to_be64(tsf);
@@ -258,7 +258,7 @@ static int ath10k_spectral_scan_config(struct ath10k* ar,
     if (mode == SPECTRAL_BACKGROUND) {
         count = WMI_SPECTRAL_COUNT_DEFAULT;
     } else {
-        count = max_t(u8, 1, ar->spectral.config.count);
+        count = max_t(uint8_t, 1, ar->spectral.config.count);
     }
 
     arg.vdev_id = vdev_id;
@@ -387,7 +387,7 @@ static ssize_t read_file_spectral_count(struct file* file,
     struct ath10k* ar = file->private_data;
     char buf[32];
     size_t len;
-    u8 spectral_count;
+    uint8_t spectral_count;
 
     mutex_lock(&ar->conf_mutex);
     spectral_count = ar->spectral.config.count;

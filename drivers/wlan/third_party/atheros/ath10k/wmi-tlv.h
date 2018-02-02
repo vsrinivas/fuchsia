@@ -969,8 +969,8 @@ enum wmi_tlv_service {
 
 #define WMI_SERVICE_IS_ENABLED(wmi_svc_bmap, svc_id, len) \
     ((svc_id) < (len) && \
-     __le32_to_cpu((wmi_svc_bmap)[(svc_id) / (sizeof(u32))]) & \
-     BIT((svc_id) % (sizeof(u32))))
+     __le32_to_cpu((wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))]) & \
+     BIT((svc_id) % (sizeof(uint32_t))))
 
 #define SVCMAP(x, y, len) \
     do { \
@@ -1127,7 +1127,7 @@ wmi_tlv_svc_map(const __le32* in, unsigned long* out, size_t len) {
 struct wmi_tlv {
     __le16 len;
     __le16 tag;
-    u8 value[0];
+    uint8_t value[0];
 } __packed;
 
 #define WMI_TLV_MGMT_RX_NUM_RSSI 4
@@ -1158,10 +1158,10 @@ enum wmi_tlv_hw_bd_id {
 };
 
 struct wmi_tlv_hw_bd_info {
-    u8 rev;
-    u8 project_id;
-    u8 custom_id;
-    u8 reference_design_id;
+    uint8_t rev;
+    uint8_t project_id;
+    uint8_t custom_id;
+    uint8_t reference_design_id;
 } __packed;
 
 struct wmi_tlv_svc_rdy_ev {
@@ -1418,7 +1418,7 @@ struct wmi_tlv_bcn_tx_status_ev {
 struct wmi_tlv_bcn_prb_info {
     __le32 caps;
     __le32 erp;
-    u8 ies[0];
+    uint8_t ies[0];
 } __packed;
 
 struct wmi_tlv_bcn_tmpl_cmd {
@@ -1444,12 +1444,12 @@ enum wmi_tlv_diag_item_type {
 };
 
 struct wmi_tlv_diag_item {
-    u8 type;
-    u8 reserved;
+    uint8_t type;
+    uint8_t reserved;
     __le16 len;
     __le32 timestamp;
     __le32 code;
-    u8 payload[0];
+    uint8_t payload[0];
 } __packed;
 
 struct wmi_tlv_diag_data_ev {
@@ -1521,8 +1521,8 @@ enum wmi_tlv_pattern_type {
 #define WOW_DEFAULT_BITMASK_SIZE        148
 
 struct wmi_tlv_wow_bitmap_pattern {
-    u8 patternbuf[WOW_DEFAULT_BITMAP_PATTERN_SIZE];
-    u8 bitmaskbuf[WOW_DEFAULT_BITMASK_SIZE];
+    uint8_t patternbuf[WOW_DEFAULT_BITMAP_PATTERN_SIZE];
+    uint8_t bitmaskbuf[WOW_DEFAULT_BITMASK_SIZE];
     __le32 pattern_offset;
     __le32 pattern_len;
     __le32 bitmask_len;
@@ -1588,7 +1588,7 @@ struct wmi_tdls_peer_capab {
     __le32 self_curr_operclass;
     __le32 peer_chan_len;
     __le32 peer_operclass_len;
-    u8 peer_operclass[WMI_TDLS_MAX_SUPP_OPER_CLASSES];
+    uint8_t peer_operclass[WMI_TDLS_MAX_SUPP_OPER_CLASSES];
     __le32 is_peer_responder;
     __le32 pref_offchan_num;
     __le32 pref_offchan_bw;
