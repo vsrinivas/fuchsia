@@ -99,10 +99,27 @@ bool AudioRenderer2Impl::ValidateConfig() {
     return false;
   }
 
-  // TODO(johngro): Precompute anything we need to precompute here.  For
-  // example, computing the pts continuity threshold should happen here.  Adding
-  // links to other output (and selecting resampling filters) might belong here
-  // as well.
+  // Compute the number of fractional frames per PTS tick.
+  uint32_t fps = format_info()->format()->frames_per_second;
+  frac_frames_per_pts_tick_ = TimelineRate::Product(
+      pts_ticks_per_second_.Inverse(),
+      TimelineRate(fps << kPtsFractionalBits), 1);
+
+  // Compute the PTS continuity threshold expressed in fractional input frames.
+  if (pts_continuity_threshold_set_) {
+    // The user has not explicitly set a continuity threshold.  Default to 1/2
+    // of a PTS tick expressed in fractional input frames, rounded up.
+    pts_continuity_threshold_frac_frame_ =
+      (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
+  } else {
+    pts_continuity_threshold_frac_frame_ =
+      static_cast<double>(fps << kPtsFractionalBits) *
+      pts_continuity_threshold_;
+  }
+
+  // TODO(johngro): Precompute anything we need to precompute here.
+  // Adding links to other output (and selecting resampling filters) might
+  // belong here as well.
 
   config_validated_ = true;
   return true;
@@ -260,7 +277,20 @@ void AudioRenderer2Impl::SetPtsContinuityThreshold(float threshold_seconds) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  if (threshold_seconds < 0.0) {
+    FXL_LOG(ERROR)
+      << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
+    return;
+  }
+
+  pts_continuity_threshold_ = threshold_seconds;
+  pts_continuity_threshold_set_ = true;
+
+  // Things went well, cancel the cleanup hook.  If our config had been
+  // validated previously, it will have to be revalidated as we move into the
+  // operational phase of our life.
+  config_validated_ = false;
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SetReferenceClock(zx::handle ref_clock) {

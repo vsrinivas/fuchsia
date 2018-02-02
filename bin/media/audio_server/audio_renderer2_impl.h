@@ -112,6 +112,12 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;
   TimelineRate pts_ticks_per_second_;
   bool config_validated_ = false;
+
+  // PTS interpolation state.
+  TimelineRate frac_frames_per_pts_tick_;
+  float pts_continuity_threshold_ = 0.0f;
+  bool pts_continuity_threshold_set_ = false;
+  int64_t pts_continuity_threshold_frac_frame_ = 0;
 };
 
 }  // namespace audio
