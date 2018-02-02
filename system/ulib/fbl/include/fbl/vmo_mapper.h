@@ -6,6 +6,8 @@
 
 #include <fbl/macros.h>
 #include <fbl/vmar_manager.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/ref_counted.h>
 #include <zx/vmo.h>
 
 namespace fbl {
@@ -68,6 +70,12 @@ private:
     RefPtr<VmarManager> vmar_manager_;
     void* start_ = nullptr;
     uint64_t size_ = 0;
+};
+
+class RefCountedVmoMapper : public VmoMapper,
+                            public RefCounted<VmoMapper> {
+public:
+    RefCountedVmoMapper() = default;
 };
 
 }  // namespace fbl
