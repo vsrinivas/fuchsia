@@ -223,6 +223,10 @@ void* adopt_and_reset(void* arg) {
 
 static bool upgrade_fail_test() {
     BEGIN_TEST;
+    // Skip this test, because it's flaky.
+    // https://fuchsia.atlassian.net/browse/ZX-1606
+    unittest_printf_critical(" [SKIPPING]");
+    return true;
 
     fbl::Mutex mutex;
     fbl::AllocChecker ac;
