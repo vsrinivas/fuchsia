@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
+#include "garnet/bin/media/audio_server/audio_server_impl.h"
 
 #include <fbl/auto_call.h>
 
+#include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -67,6 +69,22 @@ void AudioRenderer2Impl::SnapshotCurrentTimelineFunction(
 // IsOperating is true any time we have any packets in flight.  Most
 // configuration functions cannot be called any time we are operational.
 bool AudioRenderer2Impl::IsOperating() {
+  if (throttle_output_link_ && !throttle_output_link_->pending_queue_empty()) {
+    return true;
+  }
+
+  fbl::AutoLock links_lock(&links_lock_);
+  // Renderers should never be linked to sources.
+  FXL_DCHECK(source_links_.empty());
+
+  for (const auto& link : dest_links_) {
+    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+    if (!packet_link->pending_queue_empty()) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -101,7 +119,77 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormatPtr format) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  // Sanity check the requested format
+  switch (format->sample_format) {
+    case AudioSampleFormat::UNSIGNED_8:
+    case AudioSampleFormat::SIGNED_16:
+      break;
+
+    // TODO(johngro): Add more sample formats (24 bit, float, etc..) as the
+    // mixer core learns to handle them.
+    default:
+      FXL_LOG(ERROR) << "Unsupported sample format ("
+                     << format->sample_format
+                     << ") in AudioRenderer::SetPcmFormat.";
+      return;
+  }
+
+  if ((format->channels < AudioPcmFormat::kMinChannelCount) ||
+      (format->channels > AudioPcmFormat::kMaxChannelCount)) {
+      FXL_LOG(ERROR)
+        << "Invalid channel count (" << format->channels
+        << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
+        << AudioPcmFormat::kMinChannelCount << ", "
+        << AudioPcmFormat::kMaxChannelCount << "]";
+      return;
+  }
+
+  if ((format->frames_per_second < AudioPcmFormat::kMinFramesPerSecond) ||
+      (format->frames_per_second > AudioPcmFormat::kMaxFramesPerSecond)) {
+      FXL_LOG(ERROR)
+        << "Invalid frame rate (" << format->frames_per_second
+        << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
+        << AudioPcmFormat::kMinFramesPerSecond << ", "
+        << AudioPcmFormat::kMaxFramesPerSecond << "]";
+      return;
+  }
+
+  // Everything checks out.  Discard any existing links we are holding
+  // onto.  New links need to be created with our new format.
+  Unlink();
+
+  // Create a new format info object so we can create links to outputs.
+  // TODO(johngro): Look into eliminating most of the format_info class when we
+  // finish removing the old audio renererer interface.  At the very least,
+  // switch to using the AudioPcmFormat struct instead of AudioMediaTypeDetails
+  AudioMediaTypeDetailsPtr cfg = AudioMediaTypeDetails::New();
+  cfg->sample_format = format->sample_format;
+  cfg->channels = format->channels;
+  cfg->frames_per_second = format->frames_per_second;
+  format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
+
+  // Have the audio output manager initialize our set of outputs.  Note; there
+  // is currently no need for a lock here.  Methods called from our user-facing
+  // interfaces are seriailzed by nature of the fidl framework, and none of the
+  // output manager's threads should ever need to manipulate the set.  Cleanup
+  // of outputs which have gone away is currently handled in a lazy fashion when
+  // the renderer fails to promote its weak reference during an operation
+  // involving its outputs.
+  //
+  // TODO(johngro): someday, we will need to deal with recalculating properties
+  // which depend on a renderer's current set of outputs (for example, the
+  // minimum latency).  This will probably be done using a dirty flag in the
+  // renderer implementations, and scheduling a job to recalculate the
+  // properties for the dirty renderers and notify the users as appropriate.
+
+  // If we cannot promote our own weak pointer, something is seriously wrong.
+  owner_->GetDeviceManager().SelectOutputsForRenderer(this);
+
+  // Things went well, cancel the cleanup hook.  If our config had been
+  // validated previously, it will have to be revalidated as we move into the
+  // operational phase of our life.
+  config_validated_ = false;
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SetPayloadBuffer(zx::vmo payload_buffer) {
