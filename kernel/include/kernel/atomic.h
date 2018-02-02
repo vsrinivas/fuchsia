@@ -164,4 +164,12 @@ static inline void atomic_signal_fence(void) {
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
 }
 
+static inline int64_t atomic_add_64_relaxed(volatile int64_t* ptr, int64_t val) {
+    return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline uint64_t atomic_add_u64_relaxed(volatile uint64_t* ptr, uint64_t val) {
+    return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);
+}
+
 __END_CDECLS

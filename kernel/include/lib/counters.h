@@ -7,6 +7,7 @@
 #pragma once
 
 #include <arch/ops.h>
+#include <kernel/atomic.h>
 #include <kernel/percpu.h>
 
 #include <zircon/compiler.h>
@@ -80,7 +81,16 @@ static inline uint64_t* kcounter_slot(const struct k_counter_desc* var) {
 
 static inline void kcounter_add(const struct k_counter_desc* var,
                                 uint64_t add) {
+#if defined(__aarch64__)
+    // use a relaxed atomic load/store for arm64 to avoid a potentially nasty
+    // race between the regular load/store operations on for a +1. Relaxed
+    // atomic load/stores are about as efficient as a regular load/store.
+    atomic_add_u64_relaxed(kcounter_slot(var), add);
+#else
+    // x86 can do the add in a single non atomic instruction, so the data loss
+    // of a preemption in the middle of this sequence is fairly minimal.
     *kcounter_slot(var) += add;
+#endif
 }
 
 __END_CDECLS
