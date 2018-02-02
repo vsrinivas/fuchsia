@@ -110,6 +110,7 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
   fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;
+  TimelineRate pts_ticks_per_second_;
   bool config_validated_ = false;
 };
 

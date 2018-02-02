@@ -24,7 +24,8 @@ AudioRenderer2Impl::AudioRenderer2Impl(
     f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
     AudioServerImpl* owner)
   : owner_(owner),
-    audio_renderer_binding_(this, std::move(audio_renderer_request)) {
+    audio_renderer_binding_(this, std::move(audio_renderer_request)),
+    pts_ticks_per_second_(1000000000, 1) {
 
   audio_renderer_binding_.set_error_handler([this]() {
     audio_renderer_binding_.Unbind();
@@ -230,7 +231,24 @@ void AudioRenderer2Impl::SetPtsUnits(uint32_t tick_per_second_numerator,
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  if (!tick_per_second_numerator || !tick_per_second_denominator) {
+    FXL_LOG(ERROR)
+      << "Bad PTS ticks per second ("
+      << tick_per_second_numerator
+      << "/"
+      << tick_per_second_denominator
+      << ")";
+    return;
+  }
+
+  pts_ticks_per_second_ = TimelineRate(tick_per_second_numerator,
+                                       tick_per_second_denominator);
+
+  // Things went well, cancel the cleanup hook.  If our config had been
+  // validated previously, it will have to be revalidated as we move into the
+  // operational phase of our life.
+  config_validated_ = false;
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SetPtsContinuityThreshold(float threshold_seconds) {
