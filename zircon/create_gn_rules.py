@@ -280,8 +280,9 @@ def main():
         'packages',
         'BUILDDIR=%s' % zircon_dir,
     ]
-    subprocess.check_call(make_args, cwd=ZIRCON_ROOT,
-                          env={} if debug else {'QUIET': '1'})
+    # TODO(dglazkov): This fails on Mac when passing an empty env. Determine and
+    # whitelist the variables that need to be passed.
+    subprocess.check_call(make_args, cwd=ZIRCON_ROOT)
 
     # Parse package definitions.
     packages = []
