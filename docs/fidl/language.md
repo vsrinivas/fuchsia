@@ -5,8 +5,7 @@ Status: DRAFT
 Author: jeffbrown@google.com
 
 This document is a specification of the Fuchsia Interface Definition Language
-(FIDL) v2.0 syntax. Once ratified, it will be transformed into a Markdown file
-stored in the source tree.
+(FIDL) v2.0 syntax.
 
 See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
@@ -57,13 +56,11 @@ other tools.
 
 The following keywords are reserved in FIDL.
 
-    **as, bool, const, float32, float64, handle,**
-
-
-    **int8, int16, int32, int64, interface, library, string, struct,**
-
-
-    **uint8, uint16, uint32, uint64, union, using, vector**
+```
+as, bool, const, enum, event, float32, float64, handle, int8, int16,
+int32, int64, interface, library, request, string, struct, uint8,
+uint16, uint32, uint64, union, using, vector
+```
 
 To use these words as identifiers, they must be escaped by prepending an "@".
 For example "interface" is a reserved word but "@interface" is an identifier
@@ -97,7 +94,7 @@ library. To reference symbols in other libraries, they must be qualified by
 prefixing the identifier with the library name or alias.
 
 Names may also require qualification when they refer to symbols which have been
-declared within the scope of a **struct**, **union**, or **interface**.
+declared within the scope of a **struct**, **union**, **enum**, or **interface**.
 
 **objects.fidl:**
 
@@ -579,9 +576,9 @@ optionality:
     endpoint of channel)
 *   <strong><code>Interface?</code></strong> : nullable FIDL interface (client
     endpoint of channel)
-*   <strong><code>Interface&</code></strong> : non-nullable FIDL interface
+*   <strong><code>request<Interface></code></strong> : non-nullable FIDL interface
     request (server endpoint of channel)
-*   <strong><code>Interface&?</code></strong> : nullable FIDL interface request
+*   <strong><code>request<Interface>?</code></strong> : nullable FIDL interface request
     (server endpoint of channel)
 
     ```
@@ -591,7 +588,7 @@ optionality:
         Calculator c;
 
         // server endpoint of a channel bound to the Science interface
-        Science& s;
+        request<Science> s;
 
         // optional client endpoint of a channel bound to the
         // RealCalculator interface

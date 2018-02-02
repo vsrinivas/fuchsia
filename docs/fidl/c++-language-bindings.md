@@ -5,8 +5,7 @@ Status: DRAFT
 Author: jeffbrown@google.com
 
 This document is a description of the Fuchsia Interface Definition Language v2.0
-(FIDL) implementation for C++, including its libraries and code generator. Once
-ratified, it will be transformed into a Markdown file stored in the source tree.
+(FIDL) implementation for C++, including its libraries and code generator.
 
 See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
@@ -390,7 +389,7 @@ produces.
    </td>
   </tr>
   <tr>
-   <td><em>Interface&, Interface&?</em>
+   <td><em>request<Interface>, request<Interface>?</em>
    </td>
    <td><em>interface_request named typedef to zx_handle_t</em>
 <p>

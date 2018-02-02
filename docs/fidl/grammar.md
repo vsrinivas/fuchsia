@@ -71,8 +71,8 @@ interface-member = interface-method | const-declaration | enum-declaration ;
 
 interface-method = ordinal , ":" , interface-parameters
 
-interface-parameters = parameter-list ( "->" , parameter-list )
-                     | "event" parameter-list
+interface-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
+                     | "event" , IDENTIFIER , parameter-list
 
 parameter-list = "(" , parameters , ")" ;
 
@@ -119,6 +119,8 @@ integer-type = "int8" | "int16" | "int32" | "int64" |
                "uint8" | "uint16" | "uint32" | "uint64" ;
 
 constant = compound-identifier | literal ;
+
+ordinal = NUMERIC-LITERAL ;
 
 literal = STRING-LITERAL | NUMERIC-LITERAL | TRUE | FALSE | DEFAULT ;
 ```

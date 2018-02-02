@@ -335,9 +335,9 @@ Handles are denoted:
     (client endpoint of channel)
 *   <strong><code>Interface?</code></strong> : nullable FIDL interface (client
     endpoint of channel)
-*   <strong><code>Interface&</code></strong> : non-nullable FIDL interface
+*   <strong><code>request<Interface></code></strong> : non-nullable FIDL interface
     request (server endpoint of channel)
-*   <strong><code>Interface&?</code></strong> : nullable FIDL interface request
+*   <strong><code>request<Interface>?</code></strong> : nullable FIDL interface request
     (server endpoint of channel)
 
 <em>H</em> can be one of[^3]: <strong><code>channel, event, eventpair, fifo,
@@ -764,7 +764,7 @@ vector<T>:N?
   <tr>
    <td>handle, handle?, handle<H>, handle<H>?,
 <p>
-Interface, Interface?, Interface&, Interface&?
+Interface, Interface?, request<Interface>, request<Interface>?
    </td>
    <td>4
    </td>

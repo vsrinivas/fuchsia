@@ -5,8 +5,7 @@ Status: DRAFT
 Author: jeffbrown@google.com
 
 This document is a description of the Fuchsia Interface Definition Language v2.0
-(FIDL) purpose, high-level goals, and requirements. Once ratified, it will be
-transformed into a Markdown file stored in the source tree.
+(FIDL) purpose, high-level goals, and requirements.
 
 ## Related Documents
 
