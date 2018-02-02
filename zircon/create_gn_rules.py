@@ -280,10 +280,15 @@ def main():
         'packages',
         'BUILDDIR=%s' % zircon_dir,
     ]
-    # TODO(dglazkov): This fails on Mac when passing an empty env. Determine and
-    # whitelist the variables that need to be passed.
-    subprocess.check_call(make_args, cwd=ZIRCON_ROOT)
 
+    env = {}
+    if sys.platform == 'darwin':
+        # The Darwin bash does not know the path to its built-in commands in an
+        # empty environment. Thus, we always pass the PATH.
+        env['PATH'] = os.environ['PATH']
+    if not debug:
+        env['QUIET'] = '1'
+    subprocess.check_call(make_args, cwd=ZIRCON_ROOT, env=env)
     # Parse package definitions.
     packages = []
     with open(os.path.join(zircon_dir, 'export', 'manifest'), 'r') as manifest:
