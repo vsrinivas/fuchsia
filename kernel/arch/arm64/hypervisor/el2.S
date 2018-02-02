@@ -207,19 +207,7 @@
     exception_return ZX_ERR_INVALID_ARGS
 .endm
 
-.macro entry_init
-.align 7
-    hvc_jump .Linit_table 5
-.Linit_table:
-    b el2_hvc_psci
-    b el2_hvc_mexec
-    b el2_hvc_on
-    b el2_hvc_tlbi_ipa
-    b el2_hvc_tlbi_vmid
-.endm
-
-.macro entry_exec name return_code
-.align 7
+.macro guest_exit return_code
     // We push X9 onto the stack so we have one scratch register. We only use
     // X9 here, so that we don't accidentally trample the guest state.
     str x9, [sp, -16]!
@@ -233,7 +221,24 @@
 
     // The exception came from the host, so there is no guest state to preserve.
     pop_stack
+.endm
 
+.macro entry_init
+.align 7
+    hvc_jump .Linit_table 5
+.Linit_table:
+    b el2_hvc_psci
+    b el2_hvc_mexec
+    b el2_hvc_on
+    b el2_hvc_tlbi_ipa
+    b el2_hvc_tlbi_vmid
+.endm
+
+.macro entry_exec name return_code
+.align 7
+    guest_exit \return_code
+
+    // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
     hvc_jump .L\name\()_exec_table 6
 .L\name\()_exec_table:
@@ -247,9 +252,11 @@
 
 .macro entry_invalid_exception
 .align 7
-    // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
-    // VMID was not 0, terminate guest.
-    hlt 0
+    guest_exit ZX_ERR_INTERNAL
+
+    // If we got to here, the exception came from the host or EL2.
+    // Return to the host.
+    exception_return ZX_ERR_INTERNAL
 .endm
 
 // We have two vector tables that we switch between, init and exec. The reason
