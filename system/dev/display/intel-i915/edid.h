@@ -102,6 +102,7 @@ struct StandardTimingDescriptor {
             return horizontal_resolution() * 9 / 16;
         } else {
             ZX_DEBUG_ASSERT(false);
+            return 0;
         }
     }
 
