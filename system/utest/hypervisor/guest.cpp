@@ -88,7 +88,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
     return true;
 }
 
-static bool setup_interrupt_test(test_t* test, const char* start, const char* end) {
+static bool setup_and_interrupt(test_t* test, const char* start, const char* end) {
     ASSERT_TRUE(setup(test, start, end));
     if (!test->supported) {
         // The hypervisor isn't supported, so don't run the test.
@@ -131,7 +131,7 @@ static bool vcpu_interrupt(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+    ASSERT_TRUE(setup_and_interrupt(&test, vcpu_interrupt_start, vcpu_interrupt_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
@@ -151,7 +151,7 @@ static bool vcpu_hlt(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup_interrupt_test(&test, vcpu_hlt_start, vcpu_hlt_end));
+    ASSERT_TRUE(setup_and_interrupt(&test, vcpu_hlt_start, vcpu_hlt_end));
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
