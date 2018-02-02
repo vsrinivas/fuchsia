@@ -160,22 +160,15 @@ void PageStorageImpl::AddCommitFromLocal(
     std::vector<ObjectIdentifier> new_objects,
     std::function<void(Status)> callback) {
   FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest));
-  commit_serializer_.Serialize<Status>(
-      std::move(callback),
-      fxl::MakeCopyable([this, commit = std::move(commit),
-                         new_objects = std::move(new_objects)](
-                            std::function<void(Status)> callback) mutable {
-        coroutine_service_->StartCoroutine(
-            fxl::MakeCopyable([this, commit = std::move(commit),
-                               new_objects = std::move(new_objects),
-                               final_callback = std::move(callback)](
-                                  CoroutineHandler* handler) mutable {
-              auto callback = UpdateActiveHandlersCallback(
-                  handler, std::move(final_callback));
+  coroutine_service_->StartCoroutine(fxl::MakeCopyable(
+      [this, commit = std::move(commit), new_objects = std::move(new_objects),
+       final_callback =
+           std::move(callback)](CoroutineHandler* handler) mutable {
+        auto callback =
+            UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-              callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
-                                                     std::move(new_objects)));
-            }));
+        callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
+                                               std::move(new_objects)));
       }));
 }
 
@@ -1081,17 +1074,6 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
     std::vector<ObjectIdentifier> new_objects) {
-  Status status = ContainsCommit(handler, commit->GetId());
-
-  // If the commit is already present, do nothing.
-  if (status == Status::OK) {
-    return Status::OK;
-  }
-
-  if (status != Status::NOT_FOUND) {
-    return status;
-  }
-
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
@@ -1181,10 +1163,6 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     return waiter_status;
   }
 
-  if (lock::AcquireLock(handler, &commit_serializer_, &lock) ==
-      coroutine::ContinuationStatus::INTERRUPTED) {
-    return Status::INTERRUPTED;
-  }
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
                                std::vector<ObjectIdentifier>());
 }
@@ -1231,17 +1209,16 @@ Status PageStorageImpl::SynchronousAddCommits(
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
     std::vector<ObjectIdentifier> new_objects) {
-#ifndef NDEBUG
   // Make sure that only one AddCommits operation is executed at a time.
   // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
   // return NOT_FOUND while another commit is added, and batch->Execute() will
   // break the invariants of this system (in particular, that synced commits
   // cannot become unsynced).
-  FXL_DCHECK(!commit_in_progress_);
-  commit_in_progress_ = true;
-
-  auto cleanup = fxl::MakeAutoCall([this] { commit_in_progress_ = false; });
-#endif
+  std::unique_ptr<lock::Lock> lock;
+  if (lock::AcquireLock(handler, &commit_serializer_, &lock) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
 
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch;
@@ -1264,7 +1241,26 @@ Status PageStorageImpl::SynchronousAddCommits(
     std::vector<std::unique_ptr<const Commit>> remaining_commits;
 
     for (auto& commit : commits) {
-      Status s;
+      // We need to check if we are adding an already present remote commit here
+      // because we might both download and locally commit the same commit at
+      // roughly the same time. As commit writing is asynchronous, the previous
+      // check in AddCommitsFromSync may have not matched any commit, while a
+      // commit got added in between.
+      Status s = ContainsCommit(handler, commit->GetId());
+      if (s == Status::OK) {
+        if (source == ChangeSource::SYNC) {
+          s = batch->MarkCommitIdSynced(handler, commit->GetId());
+          if (s != Status::OK) {
+            return s;
+          }
+        }
+        // The commit is already here. We can safely skip it.
+        continue;
+      }
+      if (s != Status::NOT_FOUND) {
+        return s;
+      }
+      // Now, we know we are adding a new commit.
 
       // Commits should arrive in order. Check that the parents are either
       // present in PageDb or in the list of already processed commits.
@@ -1305,40 +1301,25 @@ Status PageStorageImpl::SynchronousAddCommits(
 
       continue_trying = true;
 
-      s = ContainsCommit(handler, commit->GetId());
-      if (s == Status::NOT_FOUND) {
-        s = batch->AddCommitStorageBytes(handler, commit->GetId(),
-                                         commit->GetStorageBytes());
-        if (s != Status::OK) {
-          return s;
-        }
-
-        if (source == ChangeSource::LOCAL) {
-          s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
-                                          commit->GetGeneration());
-          if (s != Status::OK) {
-            return s;
-          }
-        }
-
-        // Update heads_to_add.
-        heads_to_add[commit->GetId()] = commit->GetTimestamp();
-
-        added_commits.insert(&commit->GetId());
-        commits_to_send.push_back(std::move(commit));
-      } else if (s != Status::OK) {
+      s = batch->AddCommitStorageBytes(handler, commit->GetId(),
+                                       commit->GetStorageBytes());
+      if (s != Status::OK) {
         return s;
-      } else if (source == ChangeSource::SYNC) {
-        // We need to check again if we are adding an already present remote
-        // commit here because we might both download and locally commit the
-        // same commit at roughly the same time. As commit writing is
-        // asynchronous, the previous check in AddCommitsFromSync may have not
-        // matched any commit, while a commit got added in between.
-        s = batch->MarkCommitIdSynced(handler, commit->GetId());
+      }
+
+      if (source == ChangeSource::LOCAL) {
+        s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
+                                        commit->GetGeneration());
         if (s != Status::OK) {
           return s;
         }
       }
+
+      // Update heads_to_add.
+      heads_to_add[commit->GetId()] = commit->GetTimestamp();
+
+      added_commits.insert(&commit->GetId());
+      commits_to_send.push_back(std::move(commit));
     }
 
     if (!remaining_commits.empty()) {
