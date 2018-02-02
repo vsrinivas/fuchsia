@@ -8,25 +8,8 @@
 
 #include <limits.h>
 #include <zircon/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sync/completion.h>
-#include <threads.h>
 
 #include "fvm-private.h"
-
-static void fvm_read_sync_complete(iotxn_t* txn, void* cookie) {
-    completion_signal((completion_t*)cookie);
-}
-
-void iotxn_synchronous_op(zx_device_t* dev, iotxn_t* txn) {
-    completion_t completion = COMPLETION_INIT;
-    txn->complete_cb = fvm_read_sync_complete;
-    txn->cookie = &completion;
-
-    iotxn_queue(dev, txn);
-    completion_wait(&completion, ZX_TIME_INFINITE);
-}
 
 static zx_status_t fvm_bind_c(void* ctx, zx_device_t* dev) {
     return fvm_bind(dev);

@@ -30,15 +30,8 @@ namespace fvm {
 class VPartitionManager;
 using ManagerDeviceType = ddk::Device<VPartitionManager, ddk::Ioctlable, ddk::Unbindable>;
 
-// TODO(smklein): Remove once block protocol transition is complete
-#define IOTXN_LEGACY_SUPPORT
-
 class VPartition;
-using PartitionDeviceType = ddk::Device<VPartition, ddk::Ioctlable, ddk::GetSizable,
-#ifdef IOTXN_LEGACY_SUPPORT
-                                        ddk::IotxnQueueable,
-#endif // IOTXN_LEGACY_SUPPORT
-                                        ddk::Unbindable>;
+using PartitionDeviceType = ddk::Device<VPartition, ddk::Ioctlable, ddk::GetSizable, ddk::Unbindable>;
 
 class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>> {
 public:
@@ -195,6 +188,8 @@ private:
         return metadata_size_;
     }
 
+    zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
+
     fbl::Mutex lock_;
     fbl::unique_ptr<MappedVmo> metadata_ TA_GUARDED(lock_);
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
@@ -216,9 +211,6 @@ public:
     zx_off_t DdkGetSize();
     void DdkUnbind();
     void DdkRelease();
-#ifdef IOTXN_LEGACY_SUPPORT
-    void DdkIotxnQueue(iotxn_t* txn);
-#endif // IOTXN_LEGACY_SUPPORT
 
     // Block Protocol
     void BlockQuery(block_info_t* info_out, size_t* block_op_size_out);
@@ -288,16 +280,6 @@ private:
 #endif // ifdef __cplusplus
 
 __BEGIN_CDECLS
-
-/////////////////// C++-compatibility definitions (Provided to C++ from C)
-
-// Completions don't exist in C++, thanks to an incompatibility of atomics.
-// This function allows C++ functions to synchronously execute iotxns using
-// C completions.
-//
-// Modifies "completion_cb" and "cookie" fields of txn; doesn't free or
-// allocate any memory.
-void iotxn_synchronous_op(zx_device_t* dev, iotxn_t* txn);
 
 /////////////////// C-compatibility definitions (Provided to C from C++)
 

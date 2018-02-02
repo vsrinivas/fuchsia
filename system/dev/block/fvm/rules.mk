@@ -19,6 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fvm \
     system/ulib/gpt \
     system/ulib/digest \
+    system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/sync \
