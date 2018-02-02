@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 #![feature(test)]
 
+extern crate crypto;
 #[macro_use]
 extern crate failure;
+extern crate hex;
 #[macro_use]
 extern crate nom;
 extern crate test;
 extern crate futures;
 
+mod crypto_utils;
 pub mod rsne;
 mod integrity;
 mod keywrap;
@@ -37,4 +40,6 @@ pub enum Error {
     InvalidPassphraseChar(u8),
     #[fail(display = "the config `{:?}` is incompatible with the auth method `{:?}`", _0, _1)]
     IncompatibleConfig(auth::config::Config, String),
+    #[fail(display = "invalid bit size; must be a multiple of 8 but was {}", _0)]
+    InvalidBitSize(usize),
 }

@@ -9,4 +9,6 @@ license = "BSD-3-Clause"
 [dependencies]
 failure = "0.1"
 futures = "0.1"
+hex = "0.3"
 nom = "3.2"
+rust-crypto = "0.2"
