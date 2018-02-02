@@ -125,7 +125,8 @@ def main():
         else:
             gn_command.append("--list")
     else:
-        gn_command = ["gen", build_dir, "--check"]
+        # TODO(TO-734): reenable --check.
+        gn_command = ["gen", build_dir]
 
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = [
