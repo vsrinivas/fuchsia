@@ -407,7 +407,10 @@ void JSONGenerator::Generate(const flat::Const& value) {
 void JSONGenerator::Generate(const flat::Enum& value) {
     EmitObjectBegin(&json_file_, ++indent_level_);
     GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("type", value.type);
+    if (value.type->kind == ast::Type::Kind::Primitive) {
+        auto type = static_cast<const ast::PrimitiveType*>(value.type.get());
+        GenerateObjectMember("type", type->subtype);
+    }
     GenerateObjectMember("members", value.members);
     EmitObjectEnd(&json_file_, --indent_level_);
 }

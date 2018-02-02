@@ -63,7 +63,7 @@
                     "$ref": "#/definitions/identifier"
                 },
                 "type": {
-                    "$ref": "#/definitions/type"
+                    "$ref": "#/definitions/integer-type"
                 },
                 "members": {
                     "type": "array",
