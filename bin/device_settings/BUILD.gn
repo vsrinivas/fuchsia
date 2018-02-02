@@ -11,6 +11,7 @@ rust_binary("bin") {
   name = "device_settings_manager"
 
   deps = [
+    "//garnet/public/rust/fidl_crates/garnet_examples_fidl_services",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_device_settings_fidl",
   ]
