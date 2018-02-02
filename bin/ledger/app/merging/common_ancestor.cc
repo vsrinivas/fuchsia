@@ -70,7 +70,7 @@ storage::Status FindCommonAncestorSync(
     std::vector<std::unique_ptr<const storage::Commit>> parents;
     if (coroutine::SyncCall(
             handler, [waiter](auto callback) { waiter->Finalize(callback); },
-            &status, &parents)) {
+            &status, &parents) == coroutine::ContinuationStatus::INTERRUPTED) {
       return storage::Status::INTERRUPTED;
     }
     if (status != storage::Status::OK) {

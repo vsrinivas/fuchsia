@@ -23,7 +23,7 @@ Status SynchronousStorage::TreeNodeFromIdentifier(
             TreeNode::FromIdentifier(page_storage_, object_identifier,
                                      std::move(callback));
           },
-          &status, result)) {
+          &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return status;
@@ -45,7 +45,7 @@ Status SynchronousStorage::TreeNodesFromIdentifiers(
           [waiter](std::function<void(
                        Status, std::vector<std::unique_ptr<const TreeNode>>)>
                        callback) { waiter->Finalize(std::move(callback)); },
-          &status, result)) {
+          &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return status;
@@ -64,7 +64,7 @@ Status SynchronousStorage::TreeNodeFromEntries(
             TreeNode::FromEntries(page_storage_, level, entries, children,
                                   std::move(callback));
           },
-          &status, result)) {
+          &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return status;

@@ -20,13 +20,13 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate)
       : delegate_(delegate) {}
 
-  bool Yield() override { return delegate_->Yield(); }
+  coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
 
-  void Continue(bool interrupt) override {
+  void Continue(coroutine::ContinuationStatus status) override {
     // If interrupting, no need to delay the call as the test will not run the
     // loop itself.
-    if (interrupt) {
-      delegate_->Continue(interrupt);
+    if (status == coroutine::ContinuationStatus::INTERRUPTED) {
+      delegate_->Continue(status);
       return;
     }
     fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -37,7 +37,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   void ContinueIfNeeded() {
     if (need_to_continue_) {
       need_to_continue_ = false;
-      delegate_->Continue(false);
+      delegate_->Continue(coroutine::ContinuationStatus::OK);
     }
   }
 

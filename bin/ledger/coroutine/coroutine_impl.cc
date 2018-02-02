@@ -19,8 +19,8 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   ~CoroutineHandlerImpl() override;
 
   // CoroutineHandler.
-  bool Yield() override;
-  void Continue(bool interrupt) override;
+  ContinuationStatus Yield() override;
+  void Continue(ContinuationStatus status) override;
 
   void Start();
   void set_cleanup(
@@ -31,7 +31,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
  private:
   static void StaticRun(void* data);
   void Run();
-  bool DoYield();
+  ContinuationStatus DoYield();
 
   std::unique_ptr<context::Stack> stack_;
   std::function<void(CoroutineHandler*)> runnable_;
@@ -56,20 +56,21 @@ CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() {
   FXL_DCHECK(!stack_);
 }
 
-bool CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
+ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
   FXL_DCHECK(!interrupted_);
 
   if (interrupted_) {
-    return true;
+    return ContinuationStatus::INTERRUPTED;
   }
 
   return DoYield();
 }
 
-void CoroutineServiceImpl::CoroutineHandlerImpl::Continue(bool interrupt) {
+void CoroutineServiceImpl::CoroutineHandlerImpl::Continue(
+    ContinuationStatus status) {
   FXL_DCHECK(!finished_);
 
-  interrupted_ = interrupted_ || interrupt;
+  interrupted_ = interrupted_ || (status == ContinuationStatus::INTERRUPTED);
   context::SwapContext(&main_context_, &routine_context_);
 
   if (finished_) {
@@ -83,7 +84,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Start() {
   context::MakeContext(&routine_context_, stack_.get(),
                        &CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun,
                        this);
-  Continue(false);
+  Continue(ContinuationStatus::OK);
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun(void* data) {
@@ -100,16 +101,17 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
   FXL_NOTREACHED() << "Last yield should never return.";
 }
 
-bool CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
+ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
   context::SwapContext(&routine_context_, &main_context_);
-  return interrupted_;
+  return interrupted_ ? ContinuationStatus::INTERRUPTED
+                      : ContinuationStatus::OK;
 }
 
 CoroutineServiceImpl::CoroutineServiceImpl() {}
 
 CoroutineServiceImpl::~CoroutineServiceImpl() {
   while (!handlers_.empty()) {
-    handlers_.back()->Continue(true);
+    handlers_.back()->Continue(ContinuationStatus::INTERRUPTED);
   }
 }
 

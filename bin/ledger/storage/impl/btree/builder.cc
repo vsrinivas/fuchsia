@@ -341,8 +341,9 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
                             [&waiter](std::function<void(Status)> callback) {
                               waiter->Finalize(std::move(callback));
                             },
-                            &status)) {
-      return Status::ILLEGAL_STATE;
+                            &status) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
     }
     if (status != Status::OK) {
       return status;

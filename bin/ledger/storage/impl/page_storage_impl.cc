@@ -100,7 +100,7 @@ PageStorageImpl::PageStorageImpl(
 PageStorageImpl::~PageStorageImpl() {
   // Interrupt any active handlers.
   while (!handlers_.empty()) {
-    (*handlers_.begin())->Continue(true);
+    (*handlers_.begin())->Continue(coroutine::ContinuationStatus::INTERRUPTED);
   }
 }
 
@@ -1049,7 +1049,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
           [waiter = std::move(waiter)](std::function<void(Status)> callback) {
             waiter->Finalize(std::move(callback));
           },
-          &s)) {
+          &s) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return s;
@@ -1067,7 +1067,7 @@ Status PageStorageImpl::SynchronousGetCommit(
                        callback) {
               CommitImpl::Empty(this, std::move(callback));
             },
-            &s, commit)) {
+            &s, commit) == coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return s;
@@ -1165,7 +1165,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
           [waiter = std::move(waiter)](std::function<void(Status)> callback) {
             waiter->Finalize(std::move(callback));
           },
-          &waiter_status)) {
+          &waiter_status) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   if (waiter_status != Status::OK) {
@@ -1198,7 +1198,7 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
               std::function<void(Status,
                                  std::vector<std::unique_ptr<const Commit>>)>
                   callback) { waiter->Finalize(std::move(callback)); },
-          &s, &result)) {
+          &s, &result) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   if (s != Status::OK) {

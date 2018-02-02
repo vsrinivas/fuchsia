@@ -21,11 +21,15 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-bool MakeEmptySyncCallAndCheck(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-                               coroutine::CoroutineHandler* handler) {
-  return coroutine::SyncCall(handler, [&task_runner](fxl::Closure on_done) {
-    task_runner->PostTask(std::move(on_done));
-  });
+Status MakeEmptySyncCallAndCheck(
+    const fxl::RefPtr<fxl::TaskRunner>& task_runner,
+    coroutine::CoroutineHandler* handler) {
+  if (coroutine::SyncCall(handler, [&task_runner](fxl::Closure on_done) {
+        task_runner->PostTask(std::move(on_done));
+      }) == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  return Status::OK;
 }
 
 Status ConvertStatus(leveldb::Status s) {
@@ -64,7 +68,8 @@ class BatchImpl : public Db::Batch {
              convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
+    if (MakeEmptySyncCallAndCheck(task_runner_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     batch_->Put(key, convert::ToSlice(value));
@@ -75,10 +80,7 @@ class BatchImpl : public Db::Batch {
                 convert::ExtendedStringView key) override {
     FXL_DCHECK(batch_);
     batch_->Delete(key);
-    if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-      return Status::INTERRUPTED;
-    }
-    return Status::OK;
+    return MakeEmptySyncCallAndCheck(task_runner_, handler);
   }
 
   Status DeleteByPrefix(CoroutineHandler* handler,
@@ -89,7 +91,8 @@ class BatchImpl : public Db::Batch {
          it->Next()) {
       batch_->Delete(it->key());
     }
-    if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
+    if (MakeEmptySyncCallAndCheck(task_runner_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return ConvertStatus(it->status());
@@ -97,7 +100,8 @@ class BatchImpl : public Db::Batch {
 
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
+    if (MakeEmptySyncCallAndCheck(task_runner_, handler) ==
+        Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return callback_(std::move(batch_));
@@ -234,16 +238,13 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
         }
         return Status::OK;
       });
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 Status LevelDb::Get(CoroutineHandler* handler,
                     convert::ExtendedStringView key,
                     std::string* value) {
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
+  if (MakeEmptySyncCallAndCheck(task_runner_, handler) == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return ConvertStatus(db_->Get(read_options_, key, value));
@@ -256,10 +257,7 @@ Status LevelDb::HasKey(CoroutineHandler* handler,
   iterator->Seek(key);
 
   *has_key = iterator->Valid() && iterator->key() == key;
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 Status LevelDb::GetObject(CoroutineHandler* handler,
@@ -277,10 +275,7 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
     *object = std::make_unique<LevelDBObject>(std::move(object_identifier),
                                               std::move(iterator));
   }
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 Status LevelDb::GetByPrefix(CoroutineHandler* handler,
@@ -298,10 +293,7 @@ Status LevelDb::GetByPrefix(CoroutineHandler* handler,
     return ConvertStatus(it->status());
   }
   key_suffixes->swap(result);
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 Status LevelDb::GetEntriesByPrefix(
@@ -320,10 +312,7 @@ Status LevelDb::GetEntriesByPrefix(
     return ConvertStatus(it->status());
   }
   entries->swap(result);
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 Status LevelDb::GetIteratorAtPrefix(
@@ -343,10 +332,7 @@ Status LevelDb::GetIteratorAtPrefix(
                                                      prefix.ToString());
     iterator->swap(row_iterator);
   }
-  if (MakeEmptySyncCallAndCheck(task_runner_, handler)) {
-    return Status::INTERRUPTED;
-  }
-  return Status::OK;
+  return MakeEmptySyncCallAndCheck(task_runner_, handler);
 }
 
 }  // namespace storage

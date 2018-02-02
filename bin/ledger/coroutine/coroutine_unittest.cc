@@ -35,7 +35,7 @@ TEST(Coroutine, SingleRoutine) {
         handler = current_handler;
         UseStack();
         do {
-          EXPECT_FALSE(current_handler->Yield());
+          EXPECT_EQ(ContinuationStatus::OK, current_handler->Yield());
           UseStack();
           --result;
         } while (result);
@@ -45,7 +45,7 @@ TEST(Coroutine, SingleRoutine) {
   EXPECT_EQ(kLoopCount, result);
 
   for (int i = kLoopCount - 1; i >= 0; --i) {
-    handler->Continue(false);
+    handler->Continue(ContinuationStatus::OK);
     EXPECT_EQ(i, result);
   }
 }
@@ -63,7 +63,7 @@ TEST(Coroutine, ManyRoutines) {
       UseStack();
 
       for (size_t i = 0; i < 3; ++i) {
-        EXPECT_FALSE(handler->Yield());
+        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
         UseStack();
       }
 
@@ -75,14 +75,14 @@ TEST(Coroutine, ManyRoutines) {
 
   for (size_t i = 0; i < 2; ++i) {
     for (CoroutineHandler* handler : handlers) {
-      handler->Continue(false);
+      handler->Continue(ContinuationStatus::OK);
     }
   }
 
   EXPECT_EQ(nb_routines, handlers.size());
 
   for (size_t i = 0; i < nb_routines; ++i) {
-    (*handlers.begin())->Continue(false);
+    (*handlers.begin())->Continue(ContinuationStatus::OK);
   }
 
   EXPECT_TRUE(handlers.empty());
@@ -101,7 +101,7 @@ TEST(Coroutine, AsyncCall) {
       [callable, &received_value](CoroutineHandler* handler) {
         UseStack();
         size_t value;
-        EXPECT_FALSE(SyncCall(handler, callable, &value));
+        EXPECT_EQ(ContinuationStatus::OK, SyncCall(handler, callable, &value));
         UseStack();
         received_value = value;
       });
@@ -121,9 +121,11 @@ TEST(Coroutine, SynchronousAsyncCall) {
   coroutine_service.StartCoroutine(
       [&received_value](CoroutineHandler* handler) {
         UseStack();
-        EXPECT_FALSE(SyncCall(
-            handler, [](std::function<void(size_t)> callback) { callback(1); },
-            &received_value));
+        EXPECT_EQ(
+            ContinuationStatus::OK,
+            SyncCall(handler,
+                     [](std::function<void(size_t)> callback) { callback(1); },
+                     &received_value));
         UseStack();
       });
   EXPECT_EQ(1u, received_value);
@@ -134,9 +136,10 @@ TEST(Coroutine, DroppedAsyncCall) {
 
   bool ended = false;
   coroutine_service.StartCoroutine([&ended](CoroutineHandler* handler) {
-    EXPECT_TRUE(SyncCall(handler, [](std::function<void()> callback) {
-      // |callback| is dropped here.
-    }));
+    EXPECT_EQ(ContinuationStatus::INTERRUPTED,
+              SyncCall(handler, [](std::function<void()> callback) {
+                // |callback| is dropped here.
+              }));
     ended = true;
   });
   EXPECT_TRUE(ended);
@@ -148,14 +151,15 @@ TEST(Coroutine, DroppedAsyncCallAsynchronously) {
   bool ended = false;
   std::function<void()> callback;
 
-  coroutine_service.StartCoroutine(
-      [&ended, &callback](CoroutineHandler* handler) {
-        EXPECT_TRUE(SyncCall(
-            handler, [&callback](std::function<void()> received_callback) {
-              callback = received_callback;
-            }));
-        ended = true;
-      });
+  coroutine_service.StartCoroutine([&ended,
+                                    &callback](CoroutineHandler* handler) {
+    EXPECT_EQ(
+        ContinuationStatus::INTERRUPTED,
+        SyncCall(handler, [&callback](std::function<void()> received_callback) {
+          callback = received_callback;
+        }));
+    ended = true;
+  });
 
   EXPECT_FALSE(ended);
   EXPECT_TRUE(callback);
@@ -170,14 +174,15 @@ TEST(Coroutine, RunAndDroppedAsyncCallAfterCoroutineDeletion) {
   {
     CoroutineServiceImpl coroutine_service;
 
-    coroutine_service.StartCoroutine(
-        [&ended, &callback](CoroutineHandler* handler) {
-          EXPECT_TRUE(SyncCall(
-              handler, [&callback](std::function<void()> received_callback) {
-                callback = received_callback;
-              }));
-          ended = true;
-        });
+    coroutine_service.StartCoroutine([&ended,
+                                      &callback](CoroutineHandler* handler) {
+      EXPECT_EQ(ContinuationStatus::INTERRUPTED,
+                SyncCall(handler,
+                         [&callback](std::function<void()> received_callback) {
+                           callback = received_callback;
+                         }));
+      ended = true;
+    });
 
     EXPECT_FALSE(ended);
     EXPECT_TRUE(callback);
@@ -188,21 +193,21 @@ TEST(Coroutine, RunAndDroppedAsyncCallAfterCoroutineDeletion) {
 }
 
 TEST(Coroutine, Interrupt) {
-  bool interrupted = false;
+  ContinuationStatus status = ContinuationStatus::OK;
 
   {
     CoroutineServiceImpl coroutine_service;
 
-    coroutine_service.StartCoroutine([&interrupted](CoroutineHandler* handler) {
+    coroutine_service.StartCoroutine([&status](CoroutineHandler* handler) {
       UseStack();
-      interrupted = handler->Yield();
+      status = handler->Yield();
       UseStack();
     });
 
-    EXPECT_FALSE(interrupted);
+    EXPECT_EQ(ContinuationStatus::OK, status);
   }
 
-  EXPECT_TRUE(interrupted);
+  EXPECT_EQ(ContinuationStatus::INTERRUPTED, status);
 }
 
 TEST(Coroutine, ReuseStack) {
@@ -223,12 +228,12 @@ TEST(Coroutine, ReuseStack) {
           }
           EXPECT_EQ(addr, stack_pointer);
           handler = called_handler;
-          EXPECT_FALSE(called_handler->Yield());
+          EXPECT_EQ(ContinuationStatus::OK, called_handler->Yield());
           UseStack();
 
           ++nb_coroutines_calls;
         });
-    handler->Continue(false);
+    handler->Continue(ContinuationStatus::OK);
   }
 
   EXPECT_EQ(2u, nb_coroutines_calls);
@@ -243,19 +248,20 @@ TEST(Coroutine, ContinueCoroutineInOtherCoroutineDestructor) {
 
   coroutine_service.StartCoroutine([&](CoroutineHandler* local_handler1) {
     handler1 = local_handler1;
-    auto autocall = fxl::MakeAutoCall([&] { handler1->Continue(false); });
+    auto autocall =
+        fxl::MakeAutoCall([&] { handler1->Continue(ContinuationStatus::OK); });
     coroutine_service.StartCoroutine(fxl::MakeCopyable(
         [&handler2, &routine2_done,
          autocall = std::move(autocall)](CoroutineHandler* local_handler2) {
           handler2 = local_handler2;
-          EXPECT_FALSE(handler2->Yield());
+          EXPECT_EQ(ContinuationStatus::OK, handler2->Yield());
           routine2_done = true;
         }));
-    EXPECT_FALSE(handler1->Yield());
+    EXPECT_EQ(ContinuationStatus::OK, handler1->Yield());
     routine1_done = true;
   });
 
-  handler2->Continue(false);
+  handler2->Continue(ContinuationStatus::OK);
 
   EXPECT_TRUE(routine1_done);
   EXPECT_TRUE(routine2_done);

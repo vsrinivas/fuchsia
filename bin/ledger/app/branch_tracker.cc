@@ -34,7 +34,7 @@ class BranchTracker::PageWatcherContainer {
         weak_factory_(this) {
     interface_.set_error_handler([this] {
       if (handler_) {
-        handler_->Continue(true);
+        handler_->Continue(coroutine::ContinuationStatus::INTERRUPTED);
       }
       FXL_DCHECK(!handler_);
       if (on_empty_callback_) {
@@ -48,7 +48,7 @@ class BranchTracker::PageWatcherContainer {
       on_drained_();
     }
     if (handler_) {
-      handler_->Continue(true);
+      handler_->Continue(coroutine::ContinuationStatus::INTERRUPTED);
     }
     FXL_DCHECK(!handler_);
   }
@@ -241,7 +241,8 @@ class BranchTracker::PageWatcherContainer {
                                     SendChange(std::move(change), state,
                                                std::move(new_commit),
                                                std::move(on_done));
-                                  }))) {
+                                  })) ==
+                          coroutine::ContinuationStatus::INTERRUPTED) {
                         return;
                       }
                     }

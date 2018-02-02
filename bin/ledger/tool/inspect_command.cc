@@ -216,7 +216,8 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
                             storage::PageStorage::Location::LOCAL,
                             std::move(callback));
                       },
-                      &status, &object)) {
+                      &status,
+                      &object) == coroutine::ContinuationStatus::INTERRUPTED) {
                 FXL_NOTREACHED();
               }
               std::string priority_str =
@@ -280,7 +281,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                      callback) {
             storage_->GetUnsyncedCommits(std::move(callback));
           },
-          &status, &unsynced_commits)) {
+          &status,
+          &unsynced_commits) == coroutine::ContinuationStatus::INTERRUPTED) {
     FXL_NOTREACHED();
   }
 
@@ -298,7 +300,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                                     std::vector<storage::CommitId>)> callback) {
             storage_->GetHeadCommitIds(std::move(callback));
           },
-          &status, &heads)) {
+          &status, &heads) == coroutine::ContinuationStatus::INTERRUPTED) {
     FXL_NOTREACHED();
   }
   std::set<storage::CommitId> commit_ids;
@@ -331,7 +333,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                     callback) {
               storage_->GetCommit(commit_id, std::move(callback));
             },
-            &status, &commit)) {
+            &status, &commit) == coroutine::ContinuationStatus::INTERRUPTED) {
       FXL_NOTREACHED();
     }
     std::vector<storage::CommitIdView> parents = commit->GetParentIds();
