@@ -1,0 +1,14 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### generate a compilation database for the current build configuration
+
+## usage: fx compdb
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+"${FUCHSIA_DIR}/buildtools/ninja" -C "${FUCHSIA_BUILD_DIR}" -t compdb cc cxx > "${FUCHSIA_BUILD_DIR}/compile_commands.json"
+ln -sf "${FUCHSIA_BUILD_DIR}/compile_commands.json" "${FUCHSIA_DIR}/compile_commands.json"
