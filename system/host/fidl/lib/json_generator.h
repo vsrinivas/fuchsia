@@ -44,6 +44,9 @@ public:
     template<typename Collection>
     void GenerateArray(const Collection& collection);
 
+    template<typename Callback>
+    void GenerateObject(Callback callback);
+
     template<typename Type>
     void GenerateObjectMember(StringView key, const Type& value,
                               Position position = Position::Subsequent);

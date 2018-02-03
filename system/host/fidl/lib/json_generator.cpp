@@ -170,22 +170,22 @@ void EmitUint32(std::ostream* file, uint32_t value) {
     *file << value;
 }
 
-void EmitObjectBegin(std::ostream* file, int indent_level) {
-    *file << "{\n";
-    while (indent_level--)
-        *file << kIndent;
-}
-
-void EmitObjectSeparator(std::ostream* file, int indent_level) {
-    *file << ",\n";
-    while (indent_level--)
-        *file << kIndent;
-}
-
-void EmitObjectEnd(std::ostream* file, int indent_level) {
+void EmitNewlineAndIndent(std::ostream* file, int indent_level) {
     *file << "\n";
     while (indent_level--)
         *file << kIndent;
+}
+
+void EmitObjectBegin(std::ostream* file) {
+    *file << "{";
+}
+
+void EmitObjectSeparator(std::ostream* file, int indent_level) {
+    *file << ",";
+    EmitNewlineAndIndent(file, indent_level);
+}
+
+void EmitObjectEnd(std::ostream* file) {
     *file << "}";
 }
 
@@ -194,22 +194,16 @@ void EmitObjectKey(std::ostream* file, int indent_level, StringView key) {
     *file << ": ";
 }
 
-void EmitArrayBegin(std::ostream* file, int indent_level) {
-    *file << "[\n";
-    while (indent_level--)
-        *file << kIndent;
+void EmitArrayBegin(std::ostream* file) {
+    *file << "[";
 }
 
 void EmitArraySeparator(std::ostream* file, int indent_level) {
-    *file << ",\n";
-    while (indent_level--)
-        *file << kIndent;
+    *file << ",";
+    EmitNewlineAndIndent(file, indent_level);
 }
 
-void EmitArrayEnd(std::ostream* file, int indent_level) {
-    *file << "\n";
-    while (indent_level--)
-        *file << kIndent;
+void EmitArrayEnd(std::ostream* file) {
     *file << "]";
 }
 
@@ -217,20 +211,47 @@ void EmitArrayEnd(std::ostream* file, int indent_level) {
 
 template<typename Collection>
 void JSONGenerator::GenerateArray(const Collection& collection) {
-    EmitArrayBegin(&json_file_, ++indent_level_);
+    EmitArrayBegin(&json_file_);
+
+    if (!collection.empty())
+        EmitNewlineAndIndent(&json_file_, ++indent_level_);
+
     for (size_t i = 0; i < collection.size(); ++i) {
-        const auto& element = collection[i];
         if (i)
             EmitArraySeparator(&json_file_, indent_level_);
-        Generate(element);
+        Generate(collection[i]);
     }
-    EmitArrayEnd(&json_file_, --indent_level_);
+
+    if (!collection.empty())
+        EmitNewlineAndIndent(&json_file_, --indent_level_);
+
+    EmitArrayEnd(&json_file_);
+}
+
+template<typename Callback>
+void JSONGenerator::GenerateObject(Callback callback) {
+    int original_indent_level = indent_level_;
+
+    EmitObjectBegin(&json_file_);
+
+    callback();
+
+    if (indent_level_ > original_indent_level)
+        EmitNewlineAndIndent(&json_file_, --indent_level_);
+
+    EmitObjectEnd(&json_file_);
 }
 
 template<typename Type>
 void JSONGenerator::GenerateObjectMember(StringView key, const Type& value, Position position) {
-    if (position == Position::Subsequent)
+    switch (position) {
+    case Position::First:
+        EmitNewlineAndIndent(&json_file_, ++indent_level_);
+        break;
+    case Position::Subsequent:
         EmitObjectSeparator(&json_file_, indent_level_);
+        break;
+    }
     EmitObjectKey(&json_file_, indent_level_, key);
     Generate(value);
 }
@@ -281,111 +302,105 @@ void JSONGenerator::Generate(const ast::CompoundIdentifier& value) {
 }
 
 void JSONGenerator::Generate(const ast::Literal& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    EmitObjectKey(&json_file_, indent_level_, "kind");
-    EmitString(&json_file_, LiteralKindName(value.kind));
+    GenerateObject([&]() {
+        GenerateObjectMember("kind", LiteralKindName(value.kind), Position::First);
 
-    switch (value.kind) {
-    case ast::Literal::Kind::String: {
-        auto type = static_cast<const ast::StringLiteral*>(&value);
-        EmitObjectSeparator(&json_file_, indent_level_);
-        EmitObjectKey(&json_file_, indent_level_, "value");
-        EmitLiteral(&json_file_, type->location.data());
-        break;
-    }
-    case ast::Literal::Kind::Numeric: {
-        auto type = static_cast<const ast::NumericLiteral*>(&value);
-        GenerateObjectMember("value", type->location.data());
-        break;
-    }
-    case ast::Literal::Kind::True: {
-        break;
-    }
-    case ast::Literal::Kind::False: {
-        break;
-    }
-    case ast::Literal::Kind::Default: {
-        break;
-    }
-    }
-
-    EmitObjectEnd(&json_file_, --indent_level_);
+        switch (value.kind) {
+        case ast::Literal::Kind::String: {
+            auto type = static_cast<const ast::StringLiteral*>(&value);
+            EmitObjectSeparator(&json_file_, indent_level_);
+            EmitObjectKey(&json_file_, indent_level_, "value");
+            EmitLiteral(&json_file_, type->location.data());
+            break;
+        }
+        case ast::Literal::Kind::Numeric: {
+            auto type = static_cast<const ast::NumericLiteral*>(&value);
+            GenerateObjectMember("value", type->location.data());
+            break;
+        }
+        case ast::Literal::Kind::True: {
+            break;
+        }
+        case ast::Literal::Kind::False: {
+            break;
+        }
+        case ast::Literal::Kind::Default: {
+            break;
+        }
+        }
+    });
 }
 
 void JSONGenerator::Generate(const ast::Type& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    EmitObjectKey(&json_file_, indent_level_, "kind");
-    EmitString(&json_file_, TypeKindName(value.kind));
+    GenerateObject([&]() {
+        GenerateObjectMember("kind", TypeKindName(value.kind), Position::First);
 
-    switch (value.kind) {
-    case ast::Type::Kind::Array: {
-        auto type = static_cast<const ast::ArrayType*>(&value);
-        GenerateObjectMember("element_type", type->element_type);
-        GenerateObjectMember("element_count", type->element_count);
-        break;
-    }
-    case ast::Type::Kind::Vector: {
-        auto type = static_cast<const ast::VectorType*>(&value);
-        GenerateObjectMember("element_type", type->element_type);
-        if (type->maybe_element_count)
-            GenerateObjectMember("maybe_element_count", type->maybe_element_count);
-        GenerateObjectMember("nullability", type->nullability);
-        break;
-    }
-    case ast::Type::Kind::String: {
-        auto type = static_cast<const ast::StringType*>(&value);
-        if (type->maybe_element_count)
-            GenerateObjectMember("maybe_element_count", type->maybe_element_count);
-        GenerateObjectMember("nullability", type->nullability);
-        break;
-    }
-    case ast::Type::Kind::Handle: {
-        auto type = static_cast<const ast::HandleType*>(&value);
-        GenerateObjectMember("subtype", type->subtype);
-        GenerateObjectMember("nullability", type->nullability);
-        break;
-    }
-    case ast::Type::Kind::Request: {
-        auto type = static_cast<const ast::RequestType*>(&value);
-        GenerateObjectMember("subtype", type->subtype);
-        GenerateObjectMember("nullability", type->nullability);
-        break;
-    }
-    case ast::Type::Kind::Primitive: {
-        auto type = static_cast<const ast::PrimitiveType*>(&value);
-        GenerateObjectMember("subtype", type->subtype);
-        break;
-    }
-    case ast::Type::Kind::Identifier: {
-        auto type = static_cast<const ast::IdentifierType*>(&value);
-        GenerateObjectMember("identifier", type->identifier);
-        GenerateObjectMember("nullability", type->nullability);
-        break;
-    }
-    }
-
-    EmitObjectEnd(&json_file_, --indent_level_);
+        switch (value.kind) {
+        case ast::Type::Kind::Array: {
+            auto type = static_cast<const ast::ArrayType*>(&value);
+            GenerateObjectMember("element_type", type->element_type);
+            GenerateObjectMember("element_count", type->element_count);
+            break;
+        }
+        case ast::Type::Kind::Vector: {
+            auto type = static_cast<const ast::VectorType*>(&value);
+            GenerateObjectMember("element_type", type->element_type);
+            if (type->maybe_element_count)
+                GenerateObjectMember("maybe_element_count", type->maybe_element_count);
+            GenerateObjectMember("nullability", type->nullability);
+            break;
+        }
+        case ast::Type::Kind::String: {
+            auto type = static_cast<const ast::StringType*>(&value);
+            if (type->maybe_element_count)
+                GenerateObjectMember("maybe_element_count", type->maybe_element_count);
+            GenerateObjectMember("nullability", type->nullability);
+            break;
+        }
+        case ast::Type::Kind::Handle: {
+            auto type = static_cast<const ast::HandleType*>(&value);
+            GenerateObjectMember("subtype", type->subtype);
+            GenerateObjectMember("nullability", type->nullability);
+            break;
+        }
+        case ast::Type::Kind::Request: {
+            auto type = static_cast<const ast::RequestType*>(&value);
+            GenerateObjectMember("subtype", type->subtype);
+            GenerateObjectMember("nullability", type->nullability);
+            break;
+        }
+        case ast::Type::Kind::Primitive: {
+            auto type = static_cast<const ast::PrimitiveType*>(&value);
+            GenerateObjectMember("subtype", type->subtype);
+            break;
+        }
+        case ast::Type::Kind::Identifier: {
+            auto type = static_cast<const ast::IdentifierType*>(&value);
+            GenerateObjectMember("identifier", type->identifier);
+            GenerateObjectMember("nullability", type->nullability);
+            break;
+        }
+        }
+    });
 }
 
 void JSONGenerator::Generate(const ast::Constant& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    EmitObjectKey(&json_file_, indent_level_, "kind");
-    EmitString(&json_file_, ConstantKindName(value.kind));
+    GenerateObject([&]() {
+        GenerateObjectMember("kind", ConstantKindName(value.kind), Position::First);
 
-    switch (value.kind) {
-    case ast::Constant::Kind::Identifier: {
-        auto type = static_cast<const ast::IdentifierConstant*>(&value);
-        GenerateObjectMember("identifier", type->identifier);
-        break;
-    }
-    case ast::Constant::Kind::Literal: {
-        auto type = static_cast<const ast::LiteralConstant*>(&value);
-        GenerateObjectMember("literal", type->literal);
-        break;
-    }
-    }
-
-    EmitObjectEnd(&json_file_, --indent_level_);
+        switch (value.kind) {
+        case ast::Constant::Kind::Identifier: {
+            auto type = static_cast<const ast::IdentifierConstant*>(&value);
+            GenerateObjectMember("identifier", type->identifier);
+            break;
+        }
+        case ast::Constant::Kind::Literal: {
+            auto type = static_cast<const ast::LiteralConstant*>(&value);
+            GenerateObjectMember("literal", type->literal);
+            break;
+        }
+        }
+    });
 }
 
 void JSONGenerator::Generate(const flat::Ordinal& value) {
@@ -397,103 +412,99 @@ void JSONGenerator::Generate(const flat::Name& value) {
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("type", value.type);
-    GenerateObjectMember("value", value.value);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("type", value.type);
+        GenerateObjectMember("value", value.value);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Enum& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    if (value.type->kind == ast::Type::Kind::Primitive) {
-        auto type = static_cast<const ast::PrimitiveType*>(value.type.get());
-        GenerateObjectMember("type", type->subtype);
-    }
-    GenerateObjectMember("members", value.members);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        if (value.type->kind == ast::Type::Kind::Primitive) {
+            auto type = static_cast<const ast::PrimitiveType*>(value.type.get());
+            GenerateObjectMember("type", type->subtype);
+        }
+        GenerateObjectMember("members", value.members);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Enum::Member& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("value", value.value);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("value", value.value);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Interface& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("methods", value.methods);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("methods", value.methods);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Interface::Method& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("ordinal", value.ordinal, Position::First);
-    GenerateObjectMember("name", value.name);
-    GenerateObjectMember("has_request", value.has_request);
-    if (value.has_request)
-        GenerateObjectMember("maybe_request", value.maybe_request);
-    GenerateObjectMember("has_response", value.has_response);
-    if (value.has_response)
-        GenerateObjectMember("maybe_response", value.maybe_response);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("ordinal", value.ordinal, Position::First);
+        GenerateObjectMember("name", value.name);
+        GenerateObjectMember("has_request", value.has_request);
+        if (value.has_request)
+            GenerateObjectMember("maybe_request", value.maybe_request);
+        GenerateObjectMember("has_response", value.has_response);
+        if (value.has_response)
+            GenerateObjectMember("maybe_response", value.maybe_response);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("type", value.type, Position::First);
-    GenerateObjectMember("name", value.name);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("name", value.name);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Struct& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("members", value.members);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("members", value.members);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("type", value.type, Position::First);
-    GenerateObjectMember("name", value.name);
-    if (value.default_value)
-        GenerateObjectMember("maybe_default_value", value.default_value);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("name", value.name);
+        if (value.default_value)
+            GenerateObjectMember("maybe_default_value", value.default_value);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Union& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("name", value.name, Position::First);
-    GenerateObjectMember("members", value.members);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("members", value.members);
+    });
 }
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
-    EmitObjectBegin(&json_file_, ++indent_level_);
-    GenerateObjectMember("type", value.type, Position::First);
-    GenerateObjectMember("name", value.name);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("name", value.name);
+    });
 }
 
 void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
     indent_level_ = 0;
-    EmitObjectBegin(&json_file_, ++indent_level_);
-
-    // TODO(abarth): Produce module-dependencies data.
-    EmitObjectKey(&json_file_, ++indent_level_, "module_dependencies");
-    EmitArrayBegin(&json_file_, indent_level_);
-    EmitArrayEnd(&json_file_, --indent_level_);
-
-    GenerateObjectMember("const_declarations", library_->const_declarations_);
-    GenerateObjectMember("enum_declarations", library_->enum_declarations_);
-    GenerateObjectMember("interface_declarations", library_->interface_declarations_);
-    GenerateObjectMember("struct_declarations", library_->struct_declarations_);
-    GenerateObjectMember("union_declarations", library_->union_declarations_);
-    EmitObjectEnd(&json_file_, --indent_level_);
+    GenerateObject([&]() {
+        // TODO(abarth): Produce module-dependencies data.
+        GenerateObjectMember("module_dependencies", std::vector<bool>(), Position::First);
+        GenerateObjectMember("const_declarations", library_->const_declarations_);
+        GenerateObjectMember("enum_declarations", library_->enum_declarations_);
+        GenerateObjectMember("interface_declarations", library_->interface_declarations_);
+        GenerateObjectMember("struct_declarations", library_->struct_declarations_);
+        GenerateObjectMember("union_declarations", library_->union_declarations_);
+    });
 
     *json_file_out = std::move(json_file_);
 }
