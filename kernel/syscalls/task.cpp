@@ -161,8 +161,7 @@ void sys_thread_exit() {
 }
 
 zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
-                                  user_out_ptr<void> _buffer,
-                                  size_t buffer_len, user_out_ptr<size_t> _actual) {
+                                  user_out_ptr<void> _buffer, size_t buffer_len) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -179,12 +178,6 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
 
     zx_thread_state_general_regs local_buffer;
     size_t local_buffer_len = sizeof(local_buffer);
-
-    // Always set the actual size so the caller can provide larger buffers.
-    // The value is only usable if the status is ZX_OK or ZX_ERR_BUFFER_TOO_SMALL.
-    status = _actual.copy_to_user(local_buffer_len);
-    if (status != ZX_OK)
-        return status;
     if (buffer_len < local_buffer_len)
         return ZX_ERR_BUFFER_TOO_SMALL;
 

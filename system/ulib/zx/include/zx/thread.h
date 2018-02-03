@@ -40,8 +40,12 @@ public:
         return zx_thread_start(get(), thread_entry, stack, arg1, arg2);
     }
 
-    // TODO(abarth): zx_thread_read_state
-    // TODO(abarth): zx_thread_write_state
+    zx_status_t read_state(uint32_t kind, void* buffer, size_t len) {
+        return zx_thread_read_state(get(), kind, buffer, len);
+    }
+    zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) {
+        return zx_thread_write_state(get(), kind, buffer, len);
+    }
 
     static inline const unowned<thread> self() {
         return unowned<thread>(zx_thread_self());

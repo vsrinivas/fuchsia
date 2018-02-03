@@ -15,7 +15,7 @@
 #include <zircon/types.h>
 
 #define SYSCALL_OFFSETS_EQUAL(reg)                \
-    (__offsetof(zx_x86_64_general_regs_t, reg) == \
+    (__offsetof(zx_thread_state_general_regs_t, reg) == \
      __offsetof(x86_syscall_general_regs_t, reg))
 
 static_assert(SYSCALL_OFFSETS_EQUAL(rax), "");
@@ -34,15 +34,15 @@ static_assert(SYSCALL_OFFSETS_EQUAL(r12), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r13), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r14), "");
 static_assert(SYSCALL_OFFSETS_EQUAL(r15), "");
-static_assert(sizeof(zx_x86_64_general_regs_t) == sizeof(x86_syscall_general_regs_t), "");
+static_assert(sizeof(zx_thread_state_general_regs_t) == sizeof(x86_syscall_general_regs_t), "");
 
-static void x86_fill_in_gregs_from_syscall(zx_x86_64_general_regs_t* out,
+static void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out,
                                            const x86_syscall_general_regs_t* in) {
     memcpy(out, in, sizeof(*in));
 }
 
 static void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
-                                           const zx_x86_64_general_regs_t* in) {
+                                           const zx_thread_state_general_regs_t* in) {
     // Don't allow overriding privileged fields of rflags, and ignore writes
     // to reserved fields.
     const uint64_t orig_rflags = out->rflags;
@@ -71,7 +71,7 @@ static void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
         COPY_REG(out, in, r15);          \
     } while (0)
 
-static void x86_fill_in_gregs_from_iframe(zx_x86_64_general_regs_t* out,
+static void x86_fill_in_gregs_from_iframe(zx_thread_state_general_regs_t* out,
                                           const x86_iframe_t* in) {
     COPY_COMMON_IFRAME_REGS(out, in);
     out->rsp = in->user_sp;
@@ -80,7 +80,7 @@ static void x86_fill_in_gregs_from_iframe(zx_x86_64_general_regs_t* out,
 }
 
 static void x86_fill_in_iframe_from_gregs(x86_iframe_t* out,
-                                          const zx_x86_64_general_regs_t* in) {
+                                          const zx_thread_state_general_regs_t* in) {
     COPY_COMMON_IFRAME_REGS(out, in);
     out->user_sp = in->rsp;
     out->ip = in->rip;

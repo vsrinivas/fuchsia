@@ -926,20 +926,11 @@ static bool check_read_or_write_regs_is_rejected(zx_handle_t process,
                                                  zx_handle_t tid)
 {
     zx_handle_t thread;
-    ASSERT_EQ(zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS,
-                                  &thread), ZX_OK, "");
-    size_t regs_size = 0;
-    // First find the size of the register buffer.
-    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, NULL, 0,
-                                   &regs_size),
-              ZX_ERR_BUFFER_TOO_SMALL, "");
-    EXPECT_EQ(sizeof(zx_thread_state_general_regs_t), regs_size, "");
-    uint8_t regs_buffer[regs_size];
-    EXPECT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
-                                   regs_buffer, regs_size, &regs_size),
+    ASSERT_EQ(zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread), ZX_OK, "");
+    zx_thread_state_general_regs_t regs;
+    EXPECT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
               ZX_ERR_NOT_SUPPORTED, "");
-    EXPECT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
-                                    regs_buffer, regs_size),
+    EXPECT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
               ZX_ERR_NOT_SUPPORTED, "");
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
     return true;

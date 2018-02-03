@@ -11,25 +11,18 @@
 #include "inspector/inspector.h"
 #include "utils-impl.h"
 
-zx_status_t inspector_read_general_regs(zx_handle_t thread,
-                                        inspector_general_regs_t* regs) {
-    size_t to_xfer = sizeof(*regs);
-    size_t bytes_read;
-    auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, to_xfer, &bytes_read);
+zx_status_t inspector_read_general_regs(zx_handle_t thread, zx_thread_state_general_regs_t* regs) {
+    auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(*regs));
     if (status < 0) {
         print_zx_error("unable to access general regs", status);
         return status;
-    }
-    if (bytes_read != to_xfer) {
-        print_error("general regs size mismatch: %u != %u\n", bytes_read, to_xfer);
-        return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
 }
 
 #if defined(__x86_64__)
 
-void inspector_print_general_regs(FILE* f, const inspector_general_regs_t* regs,
+void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data) {
     fprintf(f, " CS:  %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64,
             0ull, regs->rip, regs->rflags);
@@ -53,7 +46,7 @@ void inspector_print_general_regs(FILE* f, const inspector_general_regs_t* regs,
 
 #elif defined(__aarch64__)
 
-void inspector_print_general_regs(FILE* f, const inspector_general_regs_t* regs,
+void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data) {
     fprintf(f, " x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
             regs->r[0], regs->r[1], regs->r[2], regs->r[3]);
@@ -77,7 +70,7 @@ void inspector_print_general_regs(FILE* f, const inspector_general_regs_t* regs,
 
 #else   // unsupported arch
 
-void inspector_print_general_regs(const inspector_general_regs_t* regs,
+void inspector_print_general_regs(const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data) {
     printf("unsupported architecture\n");
 }

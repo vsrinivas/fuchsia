@@ -101,19 +101,19 @@ static bool is_resumable_swbreak(uint32_t excp_type) {
 
 #if defined(__x86_64__)
 
-int have_swbreak_magic(const inspector_general_regs_t* regs) {
+int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
     return regs->rax == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #elif defined(__aarch64__)
 
-int have_swbreak_magic(const inspector_general_regs_t* regs) {
+int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
     return regs->r[0] == CRASHLOGGER_RESUME_MAGIC;
 }
 
 #else
 
-int have_swbreak_magic(const inspector_general_regs_t* regs) {
+int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
     return 0;
 }
 
@@ -198,14 +198,14 @@ void resume_thread(zx_handle_t thread, bool handled) {
 
 void resume_thread_from_exception(zx_handle_t thread,
                                   uint32_t excp_type,
-                                  const inspector_general_regs_t* gregs) {
+                                  const zx_thread_state_general_regs_t* gregs) {
     if (is_resumable_swbreak(excp_type) &&
         gregs != nullptr && have_swbreak_magic(gregs)) {
 #if defined(__x86_64__)
         // On x86, the pc is left at one past the s/w break insn,
         // so there's nothing more we need to do.
 #elif defined(__aarch64__)
-        inspector_general_regs_t regs = *gregs;
+        zx_thread_state_general_regs_t regs = *gregs;
         // Skip past the brk instruction.
         regs.pc += 4;
         if (!write_general_regs(thread, &regs, sizeof(regs)))
@@ -269,8 +269,8 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     }
     auto context = report.context;
 
-    inspector_general_regs_t reg_buf;
-    inspector_general_regs_t *regs = nullptr;
+    zx_thread_state_general_regs_t reg_buf;
+    zx_thread_state_general_regs_t *regs = nullptr;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
     const char* fatal = "fatal ";

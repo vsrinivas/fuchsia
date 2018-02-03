@@ -68,26 +68,8 @@ read_mem (zx_handle_t h, zx_vaddr_t vaddr, void* ptr, size_t len)
   return ZX_OK;
 }
 
-static zx_status_t
-get_inferior_greg_buf_size (zx_handle_t thread, size_t* regset_size)
-{
-  // The general regs are defined to be in regset zero.
-  zx_status_t status = zx_thread_read_state (thread, ZX_THREAD_STATE_GENERAL_REGS,
-                                             NULL, 0, regset_size);
-  assert (status != ZX_OK);
-  if (status == ZX_ERR_BUFFER_TOO_SMALL)
-    status = ZX_OK;
-  return status;
-}
-
-static zx_status_t
-read_inferior_gregs (zx_handle_t thread, void* buf, size_t regset_size)
-{
-  return zx_thread_read_state (thread, ZX_THREAD_STATE_GENERAL_REGS, buf, regset_size, &regset_size);
-}
-
 static uint32_t
-get_uint32 (void* buf)
+get_uint32 (const void* buf)
 {
   uint32_t value = 0;
   memcpy (&value, buf, sizeof (value));
@@ -95,7 +77,7 @@ get_uint32 (void* buf)
 }
 
 static uint64_t
-get_uint64 (void* buf)
+get_uint64 (const void* buf)
 {
   uint64_t value = 0;
   memcpy (&value, buf, sizeof (value));
@@ -290,32 +272,22 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
     Debug (3, "bad regnum: %d\n", (int) reg);
     return -UNW_EBADREG;
   }
-  size_t regset_size;
-  zx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
-  if (status != ZX_OK)
-  {
-    Debug (3, "unable to get greg buf size: %d\n", status);
-    return -UNW_EUNSPEC;
-  }
-  char* buf = malloc (regset_size);
-  if (buf == NULL)
-  {
-    Debug (3, "malloc failed\n");
-    return -UNW_ENOMEM;
-  }
-  zx_status_t r = read_inferior_gregs (thread, buf, regset_size);
+
+  zx_thread_state_general_regs_t regs;
+  zx_status_t r =
+      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
   if (r < 0)
   {
     Debug (3, "error reading gregs: %d\n", r);
-    free (buf);
     return -UNW_EUNSPEC;
   }
+
+  const char* buf = (const char*)&regs;
   if (sizeof(*val) == sizeof(uint32_t))
     *val = get_uint32 (buf + fuchsia_greg_offset[reg]);
   else
     *val = get_uint64 (buf + fuchsia_greg_offset[reg]);
   Debug (3, "reg val: 0x%llx\n", (long long) *val);
-  free (buf);
   return 0;
 }
 

@@ -815,7 +815,7 @@ static bool test_suspend_repeating_wait_async_signal_delivery(void) {
 static bool test_reading_register_state(void) {
     BEGIN_TEST;
 
-    zx_general_regs_t regs_expected;
+    zx_thread_state_general_regs_t regs_expected;
     regs_fill_test_values(&regs_expected);
     regs_expected.REG_PC = (uintptr_t)spin_with_regs_spin_address;
 
@@ -830,11 +830,9 @@ static bool test_reading_register_state(void) {
 
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
-    zx_general_regs_t regs;
-    size_t size_read;
+    zx_thread_state_general_regs_t regs;
     ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(regs), &size_read), ZX_OK, "");
-    ASSERT_EQ(size_read, sizeof(regs), "");
+                                   &regs, sizeof(regs)), ZX_OK, "");
     ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
 
     // Clean up.
@@ -866,10 +864,10 @@ static bool test_writing_register_state(void) {
     struct {
         // A small stack that is used for calling zx_thread_exit().
         char stack[1024] __ALIGNED(16);
-        zx_general_regs_t regs_got;
+        zx_thread_state_general_regs_t regs_got;
     } stack;
 
-    zx_general_regs_t regs_to_set;
+    zx_thread_state_general_regs_t regs_to_set;
     regs_fill_test_values(&regs_to_set);
     regs_to_set.REG_PC = (uintptr_t)save_regs_and_exit_thread;
     regs_to_set.REG_STACK_PTR = (uintptr_t)(stack.stack + sizeof(stack.stack));
@@ -924,10 +922,8 @@ static bool test_noncanonical_rip_address(void) {
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
     zx_thread_state_general_regs_t regs;
-    size_t size_read;
     ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(regs), &size_read), ZX_OK, "");
-    ASSERT_EQ(size_read, sizeof(regs), "");
+                                   &regs, sizeof(regs)), ZX_OK, "");
 
     // Example addresses to test.
     uintptr_t noncanonical_addr =
@@ -995,11 +991,9 @@ static bool test_writing_arm_flags_register(void) {
     }
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle), "");
 
-    zx_general_regs_t regs;
-    size_t size_read;
+    zx_thread_state_general_regs_t regs;
     ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(regs), &size_read), ZX_OK, "");
-    ASSERT_EQ(size_read, sizeof(regs), "");
+                                   &regs, sizeof(regs)), ZX_OK, "");
 
     // Check that zx_thread_read_state() does not report any more flag bits
     // than are readable via userland instructions.
@@ -1015,8 +1009,7 @@ static bool test_writing_arm_flags_register(void) {
     // Firstly, if we read back the register flag, the extra flag bits
     // should have been ignored and should not be reported as set.
     ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(regs), &size_read), ZX_OK, "");
-    ASSERT_EQ(size_read, sizeof(regs), "");
+                                   &regs, sizeof(regs)), ZX_OK, "");
     EXPECT_EQ(regs.cpsr, original_cpsr, "");
 
     // Secondly, if we resume the thread, we should be able to kill it.  If

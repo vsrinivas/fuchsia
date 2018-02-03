@@ -309,11 +309,8 @@ static bool test_invoking_policy_with_exception(
 
     // Check that we can read the thread's register state.
     zx_thread_state_general_regs_t regs;
-    size_t size_read;
-    ASSERT_EQ(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(regs), &size_read),
+    ASSERT_EQ(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
               ZX_OK);
-    ASSERT_EQ(size_read, sizeof(regs));
     ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
     // TODO(mseaborn): Check the values of other registers.  We could check
     // that rip/pc is within the VDSO, which will require figuring out

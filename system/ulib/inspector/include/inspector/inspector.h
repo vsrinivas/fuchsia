@@ -22,13 +22,10 @@ typedef struct inspector_dsoinfo inspector_dsoinfo_t;
 
 // The type of the buffer that holds the general registers, and exception info.
 #if defined(__x86_64__)
-typedef zx_x86_64_general_regs_t inspector_general_regs_t;
 typedef zx_x86_64_exc_data_t inspector_excp_data_t;
 #elif defined(__aarch64__)
-typedef zx_arm64_general_regs_t inspector_general_regs_t;
 typedef zx_arm64_exc_data_t inspector_excp_data_t;
 #else   // unsupported arch
-typedef int inspector_general_regs_t;
 typedef int inspector_excp_data_t;
 #endif
 
@@ -70,13 +67,13 @@ extern zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
 
 // Fetch the general registers of |thread|.
 zx_status_t inspector_read_general_regs(zx_handle_t thread,
-                                        inspector_general_regs_t* regs);
+                                        zx_thread_state_general_regs_t* regs);
 
 // Print general registers |regs| to |f|.
 // If |excp_data| is non-NULL then print useful related exception data
 // along with the registers.
 void inspector_print_general_regs(FILE* f,
-                                  const inspector_general_regs_t* regs,
+                                  const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data);
 
 __END_CDECLS

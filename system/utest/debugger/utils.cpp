@@ -129,9 +129,8 @@ void dump_inferior_regs(zx_handle_t thread) {
 // N.B. It is assumed |buf_size| is large enough.
 
 void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* in) {
-    size_t buf_size = sizeof(zx_thread_state_general_regs_t);
-    zx_status_t status =
-        zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, in, buf_size, &buf_size);
+    zx_status_t status = zx_thread_read_state(
+        thread, ZX_THREAD_STATE_GENERAL_REGS, in, sizeof(zx_thread_state_general_regs_t));
     // It's easier to just terminate if this fails.
     if (status != ZX_OK)
         tu_fatal("read_inferior_gregs: zx_thread_read_state", status);

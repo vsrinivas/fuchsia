@@ -233,7 +233,7 @@ syscall thread_start
 syscall thread_read_state
     (handle: zx_handle_t, kind: uint32_t,
         buffer: any[len] OUT, len: size_t)
-    returns (zx_status_t, actual: size_t);
+    returns (zx_status_t);
 
 syscall thread_write_state
     (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_len] IN, buffer_len: size_t)

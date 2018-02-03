@@ -14,8 +14,7 @@ zx_status_t zx_thread_read_state(
     zx_handle_t handle,
     uint32_t kind,
     void* buffer,
-    size_t len,
-    size_t actual[1]);
+    size_t len);
 ```
 
 ## DESCRIPTION
@@ -46,14 +45,12 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* lacks *ZX_RIGHT_READ*.
 
-**ZX_ERR_INVALID_ARGS**  *kind* is not valid,
-or *buffer* or *actual* are invalid pointers,
-or the provided *buffer_len* is too large.
+**ZX_ERR_INVALID_ARGS**  *kind* is not valid or *buffer* is an invalid pointer.
 
 **ZX_ERR_NO_MEMORY**  Temporary out of memory failure.
 
-**ZX_ERR_BUFFER_TOO_SMALL**  The provided buffer is too small to hold *kind*.
-The required size is returned in *actual[0]*.
+**ZX_ERR_BUFFER_TOO_SMALL**  The buffer length *len* is too small to hold
+the data required by *kind*.
 
 **ZX_ERR_BAD_STATE**  The thread is not stopped at a point where state
 is available. The thread state may only be read when the thread is stopped due

@@ -103,7 +103,7 @@ void resume_thread_from_exception(zx_handle_t thread) {
 
 void dump_thread(zx_handle_t process, inspector_dsoinfo_t* dso_list,
                  uint64_t tid, zx_handle_t thread) {
-    inspector_general_regs_t regs;
+    zx_thread_state_general_regs_t regs;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
 
     if (inspector_read_general_regs(thread, &regs) != ZX_OK) {
