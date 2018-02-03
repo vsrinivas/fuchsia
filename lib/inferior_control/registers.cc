@@ -45,7 +45,7 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
     return true;
   }
 
-  uint32_t regset_size;
+  size_t regset_size;
   zx_status_t status = zx_thread_read_state(
     thread()->handle(), regset, buf, buf_size, &regset_size);
   if (status < 0) {

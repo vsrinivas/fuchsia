@@ -235,8 +235,8 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        len: u32,
-        actual: *mut u32
+        len: u64,
+        actual: *mut u64
         ) -> zx_status_t;
 
     pub fn zx_thread_write_state(
