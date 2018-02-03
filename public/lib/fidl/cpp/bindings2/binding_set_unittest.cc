@@ -145,5 +145,45 @@ TEST(BindingSet, EmptyHandler) {
   EXPECT_EQ(0u, binding_set.size());
 }
 
+TEST(BindingSet, EmptyHandlerOnManualClose) {
+  test::FrobinatorPtr ptr;
+  test::FrobinatorImpl impl;
+
+  BindingSet<test::Frobinator> binding_set;
+
+  int empty_count = 0;
+  binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
+
+  async::Loop loop(&kTestLoopConfig);
+
+  // Add the binding.
+  binding_set.AddBinding(&impl, ptr.NewRequest());
+  EXPECT_EQ(1u, binding_set.size());
+  EXPECT_EQ(0, empty_count);
+
+  // Run till idle, nothing should change.
+  loop.RunUntilIdle();
+  EXPECT_EQ(1u, binding_set.size());
+  EXPECT_EQ(0, empty_count);
+
+  // Remove the binding manually by finding it in the set.
+  auto found = binding_set.bindings().begin();
+  ASSERT_NE(found, binding_set.bindings().end());
+  binding_set.CloseAndCheckForEmpty(found);
+  EXPECT_EQ(0u, binding_set.size());
+  EXPECT_EQ(1, empty_count);
+
+  // Run till idle, nothing should change.
+  loop.RunUntilIdle();
+  EXPECT_EQ(0u, binding_set.size());
+  EXPECT_EQ(1, empty_count);
+
+  // Unbinding should not do anything since it is already not part of the set.
+  ptr.Unbind();
+  loop.RunUntilIdle();
+  EXPECT_EQ(0u, binding_set.size());
+  EXPECT_EQ(1, empty_count);
+}
+
 }  // namespace
 }  // namespace fidl

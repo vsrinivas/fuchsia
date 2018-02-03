@@ -68,6 +68,15 @@ class BindingSet {
 
   void CloseAll() { bindings_.clear(); }
 
+  // Close a binding at the given iterator. The iterator must be valid and
+  // dereferenceable.
+  void CloseAndCheckForEmpty(const_iterator iterator) {
+    (*iterator)->set_error_handler(nullptr);
+    bindings_.erase(iterator);
+    if (bindings_.empty() && empty_set_handler_)
+      empty_set_handler_();
+  }
+
   size_t size() const { return bindings_.size(); }
 
   void set_empty_set_handler(std::function<void()> empty_set_handler) {
@@ -88,9 +97,7 @@ class BindingSet {
                              return (b.get() == binding);
                            });
     assert(it != bindings_.end());
-    bindings_.erase(it);
-    if (bindings_.empty() && empty_set_handler_)
-      empty_set_handler_();
+    CloseAndCheckForEmpty(it);
   }
 
   StorageType bindings_;

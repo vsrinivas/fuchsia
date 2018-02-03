@@ -89,6 +89,15 @@ class BindingSet {
   // Closes all the channels associated with this |BindingSet|.
   void CloseAll() { bindings_.clear(); }
 
+  // Close a binding at the given iterator. The iterator must be valid and
+  // dereferenceable.
+  void CloseAndCheckForEmpty(const_iterator iterator) {
+    (*iterator)->set_error_handler(nullptr);
+    bindings_.erase(iterator);
+    if (bindings_.empty() && empty_set_handler_)
+      empty_set_handler_();
+  }
+
   // The number of bindings in this |BindingSet|.
   size_t size() const { return bindings_.size(); }
 
@@ -114,9 +123,7 @@ class BindingSet {
                              return b.get() == binding;
                            });
     ZX_DEBUG_ASSERT(it != bindings_.end());
-    bindings_.erase(it);
-    if (bindings_.empty() && empty_set_handler_)
-      empty_set_handler_();
+    CloseAndCheckForEmpty(it);
   }
 
   StorageType bindings_;
