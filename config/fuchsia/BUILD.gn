@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/sysroot.gni")
+import("//build/gn/config.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
@@ -127,6 +128,14 @@ config("compiler_cpu") {
 
 config("shared_library_config") {
   cflags = [ "-fPIC" ]
+}
+
+config("fdio_config") {
+  libs = [ "fdio" ]
+  # TODO(pylaligand): find a better way to let executables link in fdio.
+  # Ideally their dependencies should be set up in such a way that it would get
+  # inherited from them.
+  lib_dirs = [ "//out/build-zircon/build-user-${zircon_cpu}/system/ulib/fdio" ]
 }
 
 config("executable_config") {
