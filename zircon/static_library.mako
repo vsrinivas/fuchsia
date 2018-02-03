@@ -1,5 +1,6 @@
 <%include file="header.mako" />
 
+import("//build/gn/config.gni")
 import("//build/sdk/sdk_atom.gni")
 
 _lib = "$target_out_dir/${data.lib_name}"

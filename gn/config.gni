@@ -68,9 +68,6 @@ if (zircon_boot_groups == "all") {
          "zircon_system_groups cannot include core (or all)")
 }
 
-# Permit dependencies on testonly targets from packages.
-testonly = true
-
 if (current_cpu == "x64") {
   zircon_cpu = "x86-64"
 } else {

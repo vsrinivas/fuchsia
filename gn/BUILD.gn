@@ -8,6 +8,9 @@ import("//build/gn/packages.gni")
 import("//build/package.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
+# Permit dependencies on testonly targets from packages.
+testonly = true
+
 # TODO(TO-471): The toolchain package will provide this file
 # but it doesn't yet, so generate it with this kludge.
 toolchain_manifests[0] = "${root_out_dir}/clang_toolchain.manifest"
@@ -915,7 +918,7 @@ exec_script("//build/zircon/create_gn_rules.py",
               "--staging",
               rebase_path("$root_out_dir/zircon-gn"),
               "--zircon-build",
-              rebase_path("//out/build-zircon/build-user-${zircon_cpu}"),
+              rebase_path("//out/build-zircon/build-user-\${zircon_cpu}"),
             ],
             "",
             zircon_files + supporting_templates)
