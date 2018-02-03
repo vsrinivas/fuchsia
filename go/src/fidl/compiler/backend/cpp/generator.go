@@ -9,7 +9,6 @@ import (
 	"fidl/compiler/backend/cpp/templates"
 	"fidl/compiler/backend/types"
 	"os"
-	"path/filepath"
 	"text/template"
 )
 
@@ -29,17 +28,8 @@ func writeFile(outputFilename string,
 	return tmpls.ExecuteTemplate(f, templateName, tree)
 }
 
-func (_ FidlGenerator) GenerateFidl(
-	data types.Root, _args []string,
-	outputDir string, srcRootPath string) error {
-
+func (_ FidlGenerator) GenerateFidl(data types.Root, _args []string, fildStem string) error {
 	tree := ir.Compile(data)
-
-	parentDir := filepath.Join(outputDir, srcRootPath)
-	err := os.MkdirAll(parentDir, ownerReadWriteNoExecute)
-	if err != nil {
-		return err
-	}
 
 	tmpls := template.New("CPPTemplates")
 	template.Must(tmpls.Parse(templates.Enum))
@@ -49,13 +39,13 @@ func (_ FidlGenerator) GenerateFidl(
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 
-	outputFilename := filepath.Join(parentDir, "generated.h")
-	err = writeFile(outputFilename, "GenerateHeaderFile", tmpls, tree)
+	outputFilename := fildStem + ".h"
+	err := writeFile(outputFilename, "GenerateHeaderFile", tmpls, tree)
 	if err != nil {
 		return err
 	}
 
-	outputFilename = filepath.Join(parentDir, "generated.cc")
+	outputFilename = fildStem + ".cc"
 	err = writeFile(outputFilename, "GenerateImplementationFile", tmpls, tree)
 	if err != nil {
 		return err

@@ -9,14 +9,13 @@ import (
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/types"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 )
 
 type GenerateFidl interface {
-	GenerateFidl(fidlData types.Root, args []string, outputDir string, srcRootPath string) error
+	GenerateFidl(fidlData types.Root, args []string, fildStem string) error
 }
 
 var generators = map[string]GenerateFidl{
@@ -28,10 +27,8 @@ func main() {
 	// this tool generate the JSON by running the compiler.
 	fidlJSONPath := flag.String("fidl-json", "",
 		"relative path to the FIDL JSON representation")
-	outputDir := flag.String("output-dir", ".",
+	fildStem := flag.String("fidl-stem", "",
 		"output directory for generated files.")
-	srcRootPath := flag.String("src-root-path", ".",
-		"relative path to the root of the source tree.")
 	var generatorNames CommaSeparatedList
 	flag.Var(&generatorNames, "generators",
 		"Comma-separated list of names of generators to run")
@@ -45,12 +42,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// The fidlJsonPath is not an optional argument, so we error if it was omitted.
-	if *fidlJSONPath == "" {
+	if *fidlJSONPath == "" || *fildStem == "" {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	fmt.Println(*fidlJSONPath)
 
 	bytes, err := ioutil.ReadFile(*fidlJSONPath)
 	if err != nil {
@@ -73,7 +68,7 @@ func main() {
 		if generator, ok := generators[generatorName]; ok {
 			running++
 			go func() {
-				results <- generator.GenerateFidl(fidlData, generatorArgs, *outputDir, *srcRootPath)
+				results <- generator.GenerateFidl(fidlData, generatorArgs, *fildStem)
 			}()
 		} else {
 			log.Printf("Error: generator %s not found", generatorName)

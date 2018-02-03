@@ -3,6 +3,7 @@
         "go"
     ],
     "labels": [
-        "//garnet/go/src/fidl:fidl_backend"
+        "//garnet/go/src/fidl",
+        "//garnet/go/src/fidl/examples"
     ]
 }

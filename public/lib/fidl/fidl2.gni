@@ -1,0 +1,112 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Generate source files from FIDL files.
+#
+# The output files will go under the generated file directory tree with the same
+# path as each input file.
+#
+# TODO(abarth): Document the parameters.
+template("fidl2") {
+  assert(
+      defined(invoker.sources) || defined(invoker.deps) ||
+          defined(invoker.public_deps),
+      "\"sources\" or \"deps\" must be defined for the $target_name template.")
+
+  library_name = target_name
+  if (defined(invoker.library_name)) {
+    library_name = invoker.library_name
+  }
+
+  fidl_stem = "${target_gen_dir}/${library_name}.fidl"
+
+  fidl_json = "${fidl_stem}.json"
+
+  fidl_json_target_name = target_name + "__fidl_json"
+  validate_schema_target_name = target_name + "__validate_schema"
+  fidl_backend_target_name = target_name + "__fidl_backend"
+
+  compiled_action(fidl_json_target_name) {
+    visibility = [":*"]
+
+    tool = "//zircon/system/host/fidl:fidl2"
+
+    forward_variables_from(invoker, [
+      "deps",
+      "public_deps",
+    ])
+
+    fidl_json = "${target_gen_dir}/${library_name}.fidl.json"
+
+    inputs = invoker.sources
+
+    outputs = [ fidl_json ]
+
+    args = [
+      "json",
+      rebase_path(fidl_json, root_build_dir),
+    ] + rebase_path(inputs, root_build_dir)
+  }
+
+  compiled_action(validate_schema_target_name) {
+    visibility = [":*"]
+
+    tool = "//build/tools/json_validator"
+
+    inputs = [
+      "//zircon/system/host/fidl/schema.json",
+      fidl_json,
+    ]
+
+    outputs = [ "${fidl_json}.stamp" ]
+
+    args = rebase_path(inputs, root_build_dir) + rebase_path(outputs, root_build_dir)
+
+    deps = [
+      ":${fidl_json_target_name}",
+    ]
+  }
+
+  compiled_action(fidl_backend_target_name) {
+    visibility = [":*"]
+
+    tool = "//garnet/go/src/fidl:fidl_backend"
+
+    inputs = [
+      fidl_json,
+    ]
+
+    outputs = [
+      "${fidl_stem}.h",
+      "${fidl_stem}.cc",
+    ]
+
+    rebased_fidl_json = rebase_path(fidl_json, root_build_dir)
+    rebased_fidl_stem = rebase_path(fidl_stem, root_build_dir)
+
+    args = [
+      "-fidl-json=${rebased_fidl_json}",
+      "-fidl-stem=${rebased_fidl_stem}",
+      "-generators=cpp",
+    ]
+
+    deps = [
+      ":${fidl_json_target_name}",
+      ":${validate_schema_target_name}",
+    ]
+  }
+
+  # TODO(abarth): Actually compile the generated code and split the final
+  # target by languge.
+  group(target_name) {
+    forward_variables_from(invoker, [
+      "testonly",
+      "visibility",
+    ])
+
+    deps = [ ":${fidl_backend_target_name}" ]
+  }
+}
