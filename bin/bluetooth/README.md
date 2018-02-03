@@ -1,71 +1,44 @@
 Bluetooth
 =========
 
-The Fuchsia Bluetooth stack is an implementation of the Bluetooth 5.0 Host Subsystem. It intends to
-provide a dual-mode implementation of the Generic Access Profile, a module framework for developing
-Bluetooth Low Energy applications, a limited set of Bluetooth Classic profiles, and a framework for
-building HCI transport drivers.
+The Fuchsia Bluetooth system aims to provide a dual-mode implementation of the
+Bluetooth Host Subsystem (5.0+) supporting a framework for developing Low Energy
+and Traditional profiles.
 
-## Packages
+- [Public API](../../public/lib/bluetooth/fidl)
+- [Tools](../bluetooth_tools)
+- [System Architecture](../../docs/bluetooth_architecture.md)
+- [Host Library](../../drivers/bluetooth/lib)
+- [Host Bus Driver](../../drivers/bluetooth/host)
+- [HCI Drivers](../../drivers/bluetooth/hci)
+- [HCI Transport Drivers](https://fuchsia.googlesource.com/zircon/+/master/system/dev/bluetooth?autodive=0)
 
-The
-[bluetooth](https://fuchsia.googlesource.com/garnet/+/master/packages/bluetooth) package contains
-the Bluetooth process, some command-line tools, and unit tests. The
-[bluetooth_examples](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth)
-package contains various example applications that interact with the Bluetooth FIDL interfaces.
+## Getting Started
+### API Examples
 
-You generally do not need to build the entire Fuchsia tree for Bluetooth development. The following
-configures a minimal build that includes Bluetooth unit tests and command-line tools (useful for
-quick iteration times when developing unit tests on QEMU):
+Examples using Fuchsia's Bluetooth Low Energy APIs for all four LE roles can be
+found in Garnet and Topaz. All of these are currently compiled into Fuchsia by
+default.
 
-```
-./build/gn/gen.py --packages garnet/packages/fxl,garnet/packages/mtl,garnet/packages/bluetooth
-```
+- __LE scanner__: see [`eddystone_agent`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_agent/).
+This is a suggestion agent that proposes URL links that are obtained from
+Eddystone beacons. This is built in topaz by default.
+- __LE broadcaster__: see [`eddystone_advertiser`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_advertiser/).
+This is a Flutter module that can advertise any entered URL as an Eddystone
+beacon.
+- __LE peripheral__: see the [`ble_rect`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_rect/)
+and [`ble_battery_service`](../../examples/bluetooth/ble_battery_service) examples.
+- __LE central__: see [`ble_scanner`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_scanner/).
 
-*NOTE: You may see warnings related to skia which are safe to ignore. The warnings can be muted by
-passing `--ignore-skia` to gen.py.*
+### Control API
 
-To build the entire Fuchsia tree and also include the FIDL examples:
+Dual-mode (LE + Classic) GAP operations that are typically exposed to privileged
+clients are performed using the [control.fidl](../../public/lib/bluetooth/fidl/control.fidl)
+API. This API is intended for managing local adapters, device discovery & discoverability,
+pairing/bonding, and other settings.
 
-```
-./build/gn/gen.py --packages topaz/packages/examples,topaz/packages/default
-```
-
-## Development
-
-A `bt-hci` device is published for each local Bluetooth controller under `/dev/class/bt-hci/`. The
-Bluetooth host-subsystem process and the command-line tools that interact with a Bluetooth
-controller obtain
-[channel](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md) handles from a
-bt-hci device using the ioctls defined
-[here](https://fuchsia.googlesource.com/zircon/+/master/system/public/zircon/device/bt-hci.h).
-
-### The bluetooth process
-
-Bluetooth functionality is currently exposed via FIDL services that are provided by the Bluetooth
-process (currently installed at `/system/pkgs/bluetooth`). This process implements the core
-Bluetooth protocols required for the Generic Access Profile (HCI state machines, L2CAP, GATT,
-SDP, SM, etc).
-
-The process is launched by
-[sysmgr](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/) when an application
-requests one of the Bluetooth services. The service-to-binary mapping for Bluetooth services is
-currently defined in sysmgr's
-[`services.config`](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/services.config)
-file.
-
-[`bluetoothcli`](https://fuchsia.googlesource.com/garnet/+/master/bin/bluetooth_tools/bluetoothcli/) and
-the [Flutter examples](examples) provide examples that interact with the Bluetooth services.
-
-### Tools & Testing
-
-#### bluetoothcli
-
-This is a command-line client for the
-[control](https://fuchsia.googlesource.com/garnet/+/master/public/lib/bluetooth/fidl/control.fidl) FIDL
-interfaces. The `bluetooth` process does not need to launched directly before using `bluetoothcli`
-since sysmgr will launch a new `bluetooth` process during the service request if one isn't
-already running.
+[`bluetoothcli`](../bluetooth_tools/bluetoothcli) is a command-line front-end
+for this API:
 
 ```
 $ bluetoothcli
@@ -73,55 +46,70 @@ bluetooth> list-adapters
   Adapter 0
     id: bf004a8b-d691-4298-8c79-130b83e047a1
     address: 00:1A:7D:DA:0A
-    powered: yes
+bluetooth>
 ```
 
-#### hcitool
+We also have a Flutter [module](https://fuchsia.googlesource.com/docs/+/HEAD/glossary.md#module)
+that acts as a Bluetooth system menu based on this API at
+[topaz/app/bluetooth_settings](https://fuchsia.googlesource.com/topaz/+/master/app/bluetooth_settings/).
 
-`hcitool` can be used to directly send HCI commands to a bt-hci device:
+### Tools
+
+See the [bluetooth_tools](../bluetooth_tools) package for more information on
+available command line tools for testing/debugging.
+
+### Testing
+
+The `bluetooth_tests` package contains Bluetooth test binaries. This package is
+defined in the [top level BUILD file](BUILD.gn).
+
+Host subsystem tests are compiled into a single [GoogleTest](https://github.com/google/googletest) binary,
+which gets installed at `/system/test/bluetooth_unittests`.
+
+To run all tests:
 
 ```
-$ hcitool reset
-  Sent HCI_Reset (id=1)
-  Command Complete - status 0x00 (id=1)
-$ hcitool read-bdaddr
-  Sent HCI_Read_BDADDR (id=1)
-  Command Complete - status 0x00 (id=1)
-  BD_ADDR: 00:1A:7D:DA:71:0A
+$ /system/test/bluetooth_unittests
 ```
 
-hcitool binds the control channel of the specified bt-hci device (`/dev/class/bt-hci/000` by
-default) provided that it has not already been bound by another process.
+Use the `--gtest_filter`
+[flag](https://github.com/google/googletest/blob/master/googletest/docs/AdvancedGuide.md#running-a-subset-of-the-tests)
+to run a subset of the tests:
 
-#### btsnoop
-
-`btsnoop` binds the snoop channel of a specified bt-hci device (`/dev/class/bt-hci/000` by
-default) and writes HCI traffic to a specified file using the [BTSnoop file
-format](http://www.fte.com/webhelp/bpa600/Content/Technical_Information/BT_Snoop_File_Format.htm).
-The captured packets can be visualized using any protocol analyzer that supports BTSnoop (e.g.
-Wireshark).
-
-The following command will sniff all HCI traffic to/from `/dev/class/bt-hci/001` and write it to
-/tmp/btsnoop.log (on a Fuchsia device):
 ```
-$ btsnoop --path=/tmp/btsnoop.log --dev=/dev/class/bt-hci/001
+# This only runs the L2CAP unit tests.
+$ /system/test/bluetooth_unittests --gtest_filter=L2CAP_*
 ```
 
-Logs can then be copied from the Fuchsia device and passed directly to Wireshark:
+Use the `--verbose` flag to set log verbosity:
+
 ```
-$ netcp :/tmp/btsnoop.log ./
-$ wireshark ./btsnoop.log
+# This logs all messages logged using FXL_VLOG (up to level 2)
+$ /system/test/bluetooth_unittests --verbose=2
 ```
 
-#### bluetooth_unittests
+TODO(armansito): Describe integration tests
 
-All Bluetooth unit tests are currently compiled into a single GTest binary installed at
-`/system/test/bluetooth_unittests`.
+### Log Verbosity
 
-## Links
+#### bin/bluetooth
 
-+ [Architecture](docs/architecture.md)
-+ [Libraries](lib/README.md)
-+ [FIDL Interfaces](service/interfaces)
-+ [Tools](tools)
-+ [Examples](examples)
+The Bluetooth system service is invoked by sysmgr to resolve service requests.
+The mapping between environment service names and their handlers is defined in
+[bin/sysmgr/services.config](../../bin/sysmgr/services.config). Add the
+`--verbose` option to the Bluetooth entries to increase verbosity, for example:
+
+```
+...
+    "bluetooth::control::AdapterManager": [ "bluetooth", "--verbose=2" ],
+    "bluetooth::gatt::Server": [ "bluetooth", "--verbose=2" ],
+    "bluetooth::low_energy::Central": [ "bluetooth", "--verbose=2" ],
+    "bluetooth::low_energy::Peripheral": [ "bluetooth", "--verbose=2" ],
+...
+
+```
+
+#### bthost
+
+The bthost driver currently uses the FXL logging system. To enable maximum log
+verbosity, set the `BT_DEBUG` macro to `1` in [drivers/bluetooth/host/driver.cc](../../drivers/bluetooth/host/driver.cc).
