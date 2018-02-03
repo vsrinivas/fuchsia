@@ -60,14 +60,14 @@ type Client struct {
 func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error) {
 	success := false
 	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("wlan: client open: %v", err)
+	}
 	defer func() {
 		if !success {
 			f.Close()
 		}
 	}()
-	if err != nil {
-		return nil, fmt.Errorf("wlan: client open: %v", err)
-	}
 	m := syscall.FDIOForFD(int(f.Fd()))
 	if m == nil {
 		return nil, fmt.Errorf("wlan: no fdio for %s fd: %d", path, f.Fd())

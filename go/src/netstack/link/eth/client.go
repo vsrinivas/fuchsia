@@ -87,10 +87,16 @@ type Client struct {
 // NewClient creates a new ethernet Client, connecting to the driver
 // described by path.
 func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*Client, error) {
+	success := false
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("eth: client open: %v", err)
 	}
+	defer func() {
+		if !success {
+			f.Close()
+		}
+	}()
 	m := syscall.FDIOForFD(int(f.Fd()))
 	if m == nil {
 		return nil, fmt.Errorf("eth: no fdio for %s fd: %d", path, f.Fd())
@@ -155,6 +161,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	}
 	c.changeStateLocked(StateStarted)
 
+	success = true
 	return c, nil
 }
 
