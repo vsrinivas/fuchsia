@@ -37,7 +37,7 @@ started in the `fuchsia` job by the [DevMgr](#DevMgr).
 
 An implementation of a user shell.
 
-- [Source](https://fuchsia.googlesource.com/sysui/+/master/armadillo_user_shell/)
+- [Source](https://fuchsia.googlesource.com/topaz/+/master/shell/armadillo_user_shell/)
 
 #### **Base shell**
 
