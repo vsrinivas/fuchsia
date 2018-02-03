@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod nonce;
+
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::sha1::Sha1;
-use super::{Error, Result};
+use {Error, Result};
 
 const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 

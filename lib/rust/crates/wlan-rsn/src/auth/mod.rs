@@ -4,4 +4,3 @@
 
 pub mod config;
 pub mod psk;
-use super::{Result, Error};

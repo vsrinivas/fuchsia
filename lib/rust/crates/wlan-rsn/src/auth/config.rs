@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use auth::psk;
-use super::Result;
+use Result;
 
 #[derive(Debug)]
 pub enum Config {

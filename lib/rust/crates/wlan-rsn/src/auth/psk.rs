@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use {Error, Result};
 use futures;
-use super::{Error, Result};
 
 #[derive(Debug)]
 pub struct Psk {
