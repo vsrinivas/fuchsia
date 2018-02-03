@@ -9,7 +9,8 @@ use integrity;
 use keywrap;
 use std::fmt;
 use suite_selector;
-use super::{Error, Result};
+use {Error, Result};
+use crypto_utils;
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {
@@ -117,6 +118,16 @@ impl<'a> Akm<'a> {
                 },
                 _ => Err(Error::IncompatibleConfig(config, "PSK".to_string()))
             }),
+            _ => None
+        }
+    }
+
+    pub fn prf(&self, k: &[u8], a: &str, b: &[u8], bits: usize) -> Option<Result<Vec<u8>>> {
+        return_none_if_unknown_algo!(self);
+
+        // IEEE 802.11-2016, 12.7.1.2
+        match self.suite_type {
+            1 ... 4 | 8 | 9 => Some(crypto_utils::prf(k, a, b, bits)),
             _ => None
         }
     }

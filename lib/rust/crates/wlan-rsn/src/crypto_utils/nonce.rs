@@ -4,7 +4,6 @@
 #[allow(dead_code)]
 use bytes::{BufMut, BytesMut, LittleEndian};
 use crypto_utils::prf;
-use num::traits::One;
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
 use Result;

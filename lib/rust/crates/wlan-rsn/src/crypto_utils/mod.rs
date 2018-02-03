@@ -12,7 +12,7 @@ use {Error, Result};
 const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 
 // IEEE Std 802.11-2016, 12.7.1.2
-fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>> {
+pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>> {
     if !VALID_PRF_BIT_SIZES.contains(&bits) {
         Err(Error::InvalidBitSize(bits))
     } else {
