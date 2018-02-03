@@ -11,10 +11,12 @@ MODULE_TYPE := usertest
 MODULE_NAME := debugger-test
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/debugger.c \
-    $(LOCAL_DIR)/utils.c
+    $(LOCAL_DIR)/debugger.cpp \
+    $(LOCAL_DIR)/utils.cpp
 
-MODULE_STATIC_LIBS := system/ulib/runtime
+MODULE_STATIC_LIBS := \
+    system/ulib/runtime \
+    system/ulib/fbl
 MODULE_LIBS := \
     system/ulib/test-utils \
     system/ulib/unittest \

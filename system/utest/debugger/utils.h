@@ -70,19 +70,14 @@ extern size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf,
 
 extern size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len);
 
-extern zx_status_t create_inferior(const char* name,
-                                   int argc, const char* const* argv,
-                                   const char* const* envp,
-                                   size_t hnds_count, zx_handle_t* handles,
+extern zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
+                                   const char* const* envp, size_t hnds_count, zx_handle_t* handles,
                                    uint32_t* ids, launchpad_t** out_launchpad);
 
-extern bool setup_inferior(const char* name,
-                           launchpad_t** out_lp,
-                           zx_handle_t* out_inferior,
+extern bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
                            zx_handle_t* out_channel);
 
-extern inferior_data_t* attach_inferior(zx_handle_t inferior,
-                                        zx_handle_t eport,
+extern inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
                                         size_t max_threads);
 
 extern void detach_inferior(inferior_data_t* data, bool unbind_eport);

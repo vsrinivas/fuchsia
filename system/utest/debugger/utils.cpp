@@ -10,6 +10,8 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -17,8 +19,6 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 
 #include "utils.h"
 
@@ -27,27 +27,23 @@ const char* program_path;
 
 static const uint64_t exception_port_key = 0x6b6579; // "key"
 
-uint32_t get_uint32(char* buf)
-{
+uint32_t get_uint32(char* buf) {
     uint32_t value = 0;
-    memcpy(&value, buf, sizeof (value));
+    memcpy(&value, buf, sizeof(value));
     return value;
 }
 
-uint64_t get_uint64(char* buf)
-{
+uint64_t get_uint64(char* buf) {
     uint64_t value = 0;
-    memcpy(&value, buf, sizeof (value));
+    memcpy(&value, buf, sizeof(value));
     return value;
 }
 
-void set_uint64(char* buf, uint64_t value)
-{
-    memcpy(buf, &value, sizeof (value));
+void set_uint64(char* buf, uint64_t value) {
+    memcpy(buf, &value, sizeof(value));
 }
 
-uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop)
-{
+uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
     uint32_t value;
     zx_status_t status = zx_object_get_property(handle, prop, &value, sizeof(value));
     if (status != ZX_OK)
@@ -55,8 +51,7 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop)
     return value;
 }
 
-void send_msg(zx_handle_t handle, enum message msg)
-{
+void send_msg(zx_handle_t handle, message msg) {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
     tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
@@ -64,8 +59,7 @@ void send_msg(zx_handle_t handle, enum message msg)
 
 // This returns "bool" because it uses ASSERT_*.
 
-bool recv_msg(zx_handle_t handle, enum message* msg)
-{
+bool recv_msg(zx_handle_t handle, message* msg) {
     BEGIN_HELPER;
 
     uint64_t data;
@@ -78,7 +72,7 @@ bool recv_msg(zx_handle_t handle, enum message* msg)
     tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
 
-    *msg = data;
+    *msg = static_cast<message>(data);
     unittest_printf("received message %d\n", *msg);
 
     END_HELPER;
@@ -87,7 +81,7 @@ bool recv_msg(zx_handle_t handle, enum message* msg)
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs) {
     unittest_printf("Registers for thread %d\n", thread_handle);
 
-#define DUMP_NAMED_REG(name) \
+#define DUMP_NAMED_REG(name)                                                                       \
     unittest_printf("  %8s      %24ld  0x%lx\n", #name, (long)regs->name, (long)regs->name)
 
 #if defined(__x86_64__)
@@ -114,8 +108,7 @@ void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t*
 #elif defined(__aarch64__)
 
     for (int i = 0; i < 30; i++) {
-        unittest_printf(
-            "  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
+        unittest_printf("  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
     }
     DUMP_NAMED_REG(lr);
     DUMP_NAMED_REG(sp);
@@ -137,31 +130,29 @@ void dump_inferior_regs(zx_handle_t thread) {
 
 void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* in) {
     size_t buf_size = sizeof(zx_thread_state_general_regs_t);
-    zx_status_t status = zx_thread_read_state(
-        thread, ZX_THREAD_STATE_GENERAL_REGS, in, buf_size, &buf_size);
+    zx_status_t status =
+        zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, in, buf_size, &buf_size);
     // It's easier to just terminate if this fails.
     if (status != ZX_OK)
         tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
 }
 
 void write_inferior_gregs(zx_handle_t thread, const zx_thread_state_general_regs_t* out) {
-    zx_status_t status = zx_thread_write_state(
-        thread, ZX_THREAD_STATE_GENERAL_REGS, out, sizeof(zx_thread_state_general_regs_t));
+    zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, out,
+                                               sizeof(zx_thread_state_general_regs_t));
     // It's easier to just terminate if this fails.
     if (status != ZX_OK)
         tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
 }
 
-size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len)
-{
+size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len) {
     zx_status_t status = zx_process_read_memory(proc, vaddr, buf, len, &len);
     if (status < 0)
         tu_fatal("read_inferior_memory", status);
     return len;
 }
 
-size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len)
-{
+size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len) {
     zx_status_t status = zx_process_write_memory(proc, vaddr, buf, len, &len);
     if (status < 0)
         tu_fatal("write_inferior_memory", status);
@@ -174,12 +165,9 @@ size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf,
 // Plus there's a fair bit of code here. IWBN to not have to update it as
 // launchpad_launch_fdio_etc changes.
 
-zx_status_t create_inferior(const char* name,
-                            int argc, const char* const* argv,
-                            const char* const* envp,
-                            size_t hnds_count, zx_handle_t* handles,
-                            uint32_t* ids, launchpad_t** out_launchpad)
-{
+zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
+                            const char* const* envp, size_t hnds_count, zx_handle_t* handles,
+                            uint32_t* ids, launchpad_t** out_launchpad) {
     launchpad_t* lp = NULL;
 
     const char* filename = argv[0];
@@ -202,24 +190,25 @@ zx_status_t create_inferior(const char* name,
     return status;
 }
 
-bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior, zx_handle_t* out_channel)
-{
+bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
+                    zx_handle_t* out_channel) {
     BEGIN_HELPER;
 
     zx_status_t status;
     zx_handle_t channel1, channel2;
     tu_channel_create(&channel1, &channel2);
 
-    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'),
+                                     '\0'};
     const char* test_child_path = program_path;
-    const char* const argv[] = { test_child_path, name, verbosity_string };
-    zx_handle_t handles[1] = { channel2 };
-    uint32_t handle_ids[1] = { PA_USER0 };
+    const char* const argv[] = {test_child_path, name, verbosity_string};
+    zx_handle_t handles[1] = {channel2};
+    uint32_t handle_ids[1] = {PA_USER0};
 
     launchpad_t* lp;
     unittest_printf("Creating process \"%s\"\n", name);
-    status = create_inferior(name, countof(argv), argv, NULL,
-                             countof(handles), handles, handle_ids, &lp);
+    status = create_inferior(name, countof(argv), argv, NULL, countof(handles), handles, handle_ids,
+                             &lp);
     ASSERT_EQ(status, ZX_OK, "failed to create inferior");
 
     // Note: |inferior| is a borrowed handle here.
@@ -228,7 +217,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
 
     zx_info_handle_basic_t process_info;
     tu_handle_get_basic_info(inferior, &process_info);
-    unittest_printf("Inferior pid = %llu\n", (long long) process_info.koid);
+    unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
 
     // |inferior| is given to the child by launchpad_go.
     // We need our own copy, and launchpad_go will give us one, but we need
@@ -254,14 +243,12 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
 // That handle is passed to the inferior when started and thus is lost to us.
 // Returns a boolean indicating success.
 
-inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
-                                 size_t max_threads)
-{
+inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport, size_t max_threads) {
     // Fetch all current threads and attach async-waiters to them.
     // N.B. We assume threads aren't being created as we're running.
     // This is just a testcase so we can assume that. A real debugger
     // would not have this assumption.
-    zx_koid_t* thread_koids = tu_malloc(max_threads * sizeof(zx_koid_t));
+    zx_koid_t* thread_koids = static_cast<zx_koid_t*>(tu_malloc(max_threads * sizeof(zx_koid_t)));
     size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
     // For now require |max_threads| to be big enough.
     if (num_threads > max_threads)
@@ -270,8 +257,8 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
     tu_set_exception_port(inferior, eport, exception_port_key, ZX_EXCEPTION_PORT_DEBUGGER);
     tu_object_wait_async(inferior, eport, ZX_PROCESS_TERMINATED);
 
-    inferior_data_t* data = tu_malloc(sizeof(*data));
-    data->threads = tu_calloc(max_threads, sizeof(data->threads[0]));
+    inferior_data_t* data = static_cast<inferior_data_t*>(tu_malloc(sizeof(*data)));
+    data->threads = static_cast<thread_data_t*>(tu_calloc(max_threads, sizeof(data->threads[0])));
     data->inferior = inferior;
     data->eport = eport;
     data->max_num_threads = max_threads;
@@ -281,8 +268,7 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
     // for inferior status change notification, install async-waiters
     // for each thread.
     size_t j = 0;
-    zx_signals_t thread_signals =
-        ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+    zx_signals_t thread_signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
     for (size_t i = 0; i < num_threads; ++i) {
         zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
         if (thread != ZX_HANDLE_INVALID) {
@@ -298,8 +284,7 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
     return data;
 }
 
-void detach_inferior(inferior_data_t* data, bool unbind_eport)
-{
+void detach_inferior(inferior_data_t* data, bool unbind_eport) {
     if (unbind_eport) {
         tu_set_exception_port(data->inferior, ZX_HANDLE_INVALID, exception_port_key,
                               ZX_EXCEPTION_PORT_DEBUGGER);
@@ -312,8 +297,7 @@ void detach_inferior(inferior_data_t* data, bool unbind_eport)
     free(data);
 }
 
-bool start_inferior(launchpad_t* lp)
-{
+bool start_inferior(launchpad_t* lp) {
     zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
     unittest_printf("Inferior started\n");
     // launchpad_go returns a dup of |inferior|. The original inferior
@@ -323,8 +307,7 @@ bool start_inferior(launchpad_t* lp)
     return true;
 }
 
-bool verify_inferior_running(zx_handle_t channel)
-{
+bool verify_inferior_running(zx_handle_t channel) {
     BEGIN_HELPER;
 
     enum message msg;
@@ -336,9 +319,7 @@ bool verify_inferior_running(zx_handle_t channel)
     END_HELPER;
 }
 
-static bool recv_msg_handle(zx_handle_t channel, enum message expected_msg,
-                            zx_handle_t* handle)
-{
+static bool recv_msg_handle(zx_handle_t channel, message expected_msg, zx_handle_t* handle) {
     BEGIN_HELPER;
 
     unittest_printf("waiting for message on channel %u\n", channel);
@@ -351,7 +332,7 @@ static bool recv_msg_handle(zx_handle_t channel, enum message expected_msg,
     ASSERT_EQ(num_bytes, sizeof(data), "");
     ASSERT_EQ(num_handles, 1u, "");
 
-    enum message msg = data;
+    message msg = static_cast<message>(data);
     ASSERT_EQ(msg, expected_msg, "");
 
     unittest_printf("received handle %d\n", *handle);
@@ -359,8 +340,7 @@ static bool recv_msg_handle(zx_handle_t channel, enum message expected_msg,
     END_HELPER;
 }
 
-bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread)
-{
+bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
     BEGIN_HELPER;
 
     send_msg(channel, MSG_GET_THREAD_HANDLE);
@@ -369,8 +349,7 @@ bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread)
     END_HELPER;
 }
 
-bool resume_inferior(zx_handle_t inferior, zx_koid_t tid)
-{
+bool resume_inferior(zx_handle_t inferior, zx_koid_t tid) {
     BEGIN_HELPER;
 
     zx_handle_t thread;
@@ -399,8 +378,7 @@ bool resume_inferior(zx_handle_t inferior, zx_koid_t tid)
     END_HELPER;
 }
 
-bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior)
-{
+bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
     BEGIN_HELPER;
 
     unittest_printf("Shutting down inferior\n");
@@ -408,16 +386,14 @@ bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior)
     send_msg(channel, MSG_DONE);
 
     tu_process_wait_signaled(inferior);
-    EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
-              "unexpected inferior return code");
+    EXPECT_EQ(tu_process_get_return_code(inferior), 1234, "unexpected inferior return code");
 
     END_HELPER;
 }
 
 // Wait for and read an exception/signal on |eport|.
 
-bool read_exception(zx_handle_t eport, zx_port_packet_t* packet)
-{
+bool read_exception(zx_handle_t eport, zx_port_packet_t* packet) {
     BEGIN_HELPER;
 
     unittest_printf("Waiting for exception/signal on eport %d\n", eport);
@@ -465,10 +441,11 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
             ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type), "");
             zx_koid_t report_tid = packet.exception.tid;
             ASSERT_NE(report_tid, tid, "");
-            ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_EXITING, "");
+            ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING, "");
             // Note the thread may be completely gone by now.
             zx_handle_t other_thread;
-            zx_status_t status = zx_object_get_child(proc, report_tid, ZX_RIGHT_SAME_RIGHTS, &other_thread);
+            zx_status_t status =
+                zx_object_get_child(proc, report_tid, ZX_RIGHT_SAME_RIGHTS, &other_thread);
             if (status == ZX_OK) {
                 // And even if it's not gone it may be dead now.
                 status = zx_task_resume(other_thread, ZX_RESUME_EXCEPTION);
@@ -489,9 +466,8 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
     END_HELPER;
 }
 
-static int phdr_info_callback(struct dl_phdr_info* info, size_t size,
-                              void* data) {
-    struct dl_phdr_info* key = data;
+static int phdr_info_callback(dl_phdr_info* info, size_t size, void* data) {
+    dl_phdr_info* key = static_cast<dl_phdr_info*>(data);
     if (info->dlpi_addr == key->dlpi_addr) {
         *key = *info;
         return 1;
@@ -508,21 +484,20 @@ bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
 
     uintptr_t prop_vdso_base;
     zx_status_t status =
-        zx_object_get_property(zx_process_self(),
-                               ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
+        zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                &prop_vdso_base, sizeof(prop_vdso_base));
     snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
-    struct dl_phdr_info info = { .dlpi_addr = prop_vdso_base };
+    dl_phdr_info info;
+    info.dlpi_addr = prop_vdso_base;
     int ret = dl_iterate_phdr(&phdr_info_callback, &info);
     ASSERT_EQ(ret, 1, "dl_iterate_phdr didn't see vDSO?");
 
     uintptr_t vdso_code_start = 0;
     size_t vdso_code_len = 0;
     for (unsigned i = 0; i < info.dlpi_phnum; ++i) {
-        if (info.dlpi_phdr[i].p_type == PT_LOAD &&
-            (info.dlpi_phdr[i].p_flags & PF_X)) {
+        if (info.dlpi_phdr[i].p_type == PT_LOAD && (info.dlpi_phdr[i].p_flags & PF_X)) {
             vdso_code_start = info.dlpi_addr + info.dlpi_phdr[i].p_vaddr;
             vdso_code_len = info.dlpi_phdr[i].p_memsz;
             break;
