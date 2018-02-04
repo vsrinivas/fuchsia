@@ -9,10 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <future>
+#include <thread>
 #include <vector>
 
 #include <blobstore/fsck.h>
@@ -63,39 +62,39 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
         return -1;
     }
 
-    struct rlimit rlp;
-    if (getrlimit(RLIMIT_NOFILE, &rlp) != 0) {
-        perror("warning: getrlimit failed, can't get open file limits");
-    } else {
-        if (rlp.rlim_cur < 1024) {
-#if defined(__APPLE__)
-            rlp.rlim_cur = OPEN_MAX < rlp.rlim_max ? OPEN_MAX : rlp.rlim_max;
-#else
-            rlp.rlim_cur = rlp.rlim_max;
-#endif
-        }
-        if (setrlimit(RLIMIT_NOFILE, &rlp) != 0) {
-            perror("setrlimit failed, can't set open file limits");
-            return -1;
-        }
+    std::vector<std::thread> threads;
+    std::mutex mtx;
+    unsigned bi = 0;
+    int res = 0;
+
+    unsigned n_threads = std::thread::hardware_concurrency();
+    if (!n_threads) {
+        n_threads = 4;
     }
-
-    std::vector<std::future<int>> futures;
-
-    for (unsigned i = 0; i < options.blob_list.size(); i++) {
-        const char *filename = options.blob_list[i].c_str();
-        futures.push_back(std::async(std::launch::async, [bs, filename] {
-            return do_blobstore_add_blob(bs.get(), filename);
+    for (unsigned j = n_threads; j > 0; j--) {
+        threads.push_back(std::thread([&] {
+            unsigned i = 0;
+            while (true) {
+                mtx.lock();
+                i = bi++;
+                mtx.unlock();
+                if (i >= options.blob_list.size()) {
+                    return;
+                }
+                if (do_blobstore_add_blob(bs.get(), options.blob_list[i].c_str()) < 0) {
+                    mtx.lock();
+                    res = -1;
+                    mtx.unlock();
+                }
+            }
         }));
     }
 
-    for (unsigned i = 0; i < options.blob_list.size(); i++) {
-        if (futures[i].get() < 0) {
-            return -1;
-        }
+    for (unsigned i = 0; i < threads.size(); i++) {
+        threads[i].join();
     }
 
-    return 0;
+    return res;
 }
 
 int do_blobstore_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
