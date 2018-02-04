@@ -17,6 +17,9 @@ template("fidl_example") {
   }
 }
 
+fidl_example("alignment") {}
+fidl_example("enums") {}
+fidl_example("example-0") {}
 fidl_example("example-1") {}
 fidl_example("example-2") {}
 fidl_example("example-3") {}
@@ -26,9 +29,15 @@ fidl_example("example-6") {}
 fidl_example("example-7") {}
 fidl_example("example-8") {}
 fidl_example("example-9") {}
+fidl_example("interface-ordinals") {}
+fidl_example("test") {}
+fidl_example("types") {}
 
 group("examples") {
   deps = [
+    ":alignment",
+    ":enums",
+    ":example-0",
     ":example-1",
     ":example-2",
     ":example-3",
@@ -38,5 +47,8 @@ group("examples") {
     ":example-7",
     ":example-8",
     ":example-9",
+    ":interface-ordinals",
+    ":test",
+    ":types",
   ]
 }
