@@ -61,7 +61,8 @@
 #define SS_PAR_EL1          (SS_MDSCR_EL1 + 8)
 #define SS_SCTLR_EL1        (SS_PAR_EL1 + 8)
 #define SS_SP_EL1           (SS_SCTLR_EL1 + 8)
-#define SS_TCR_EL1          (SS_SP_EL1 + 8)
+#define SS_SPSR_EL1         (SS_SP_EL1 + 8)
+#define SS_TCR_EL1          (SS_SPSR_EL1 + 8)
 #define SS_TPIDR_EL1        (SS_TCR_EL1 + 8)
 #define SS_TTBR0_EL1        (SS_TPIDR_EL1 + 8)
 #define SS_TTBR1_EL1        (SS_TTBR0_EL1 + 8)
@@ -82,7 +83,7 @@
 #define GS_FAR_EL2          (GS_ESR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
 
-#define HS_X18              (GS_HPFAR_EL2 + 16)
+#define HS_X18              (GS_HPFAR_EL2 + 8)
 // NOTE(abdulla): This differs from GS_X in that it calculates a value relative
 // to host_state.x, and not relative to El2State.
 #define HS_X(num)           ((num) * 8)
@@ -121,6 +122,7 @@ struct SystemState {
     uint64_t par_el1;
     algn32_t sctlr_el1;
     uint64_t sp_el1;
+    algn32_t spsr_el1;
     uint64_t tcr_el1;
     uint64_t tpidr_el1;
     uint64_t ttbr0_el1;
@@ -178,6 +180,7 @@ static_assert(__offsetof(SystemState, mdscr_el1) == SS_MDSCR_EL1, "");
 static_assert(__offsetof(SystemState, par_el1) == SS_PAR_EL1, "");
 static_assert(__offsetof(SystemState, sctlr_el1) == SS_SCTLR_EL1, "");
 static_assert(__offsetof(SystemState, sp_el1) == SS_SP_EL1, "");
+static_assert(__offsetof(SystemState, spsr_el1) == SS_SPSR_EL1, "");
 static_assert(__offsetof(SystemState, tcr_el1) == SS_TCR_EL1, "");
 static_assert(__offsetof(SystemState, tpidr_el1) == SS_TPIDR_EL1, "");
 static_assert(__offsetof(SystemState, ttbr0_el1) == SS_TTBR0_EL1, "");

@@ -92,6 +92,7 @@
     system_register \inst, SS_PAR_EL1, par_el1
     system_register \inst, SS_SCTLR_EL1, sctlr_el1
     system_register \inst, SS_SP_EL1, sp_el1
+    system_register \inst, SS_SPSR_EL1, spsr_el1
     system_register \inst, SS_TCR_EL1, tcr_el1
     system_register \inst, SS_TPIDR_EL1, tpidr_el1
     system_register \inst, SS_TTBR0_EL1, ttbr0_el1
