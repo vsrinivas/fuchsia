@@ -255,8 +255,9 @@
     guest_exit ZX_ERR_INTERNAL
 
     // If we got to here, the exception came from the host or EL2.
-    // Return to the host.
-    exception_return ZX_ERR_INTERNAL
+    // We reset, as something unexpected happened.
+    mov x0, xzr
+    b psci_system_reset
 .endm
 
 // We have two vector tables that we switch between, init and exec. The reason
