@@ -99,6 +99,7 @@ const IPPROTO_TCP = 6
 const IPPROTO_UDP = 17
 const IPPROTO_ICMPV6 = 58
 
+const AF_UNSPEC = 0
 const AF_INET = 2
 const AF_INET6 = 10
 
