@@ -75,7 +75,6 @@ build_dash() {
   pushd $dash_src
   ./autogen.sh
   ./configure CC="${CROSS_COMPILE}gcc" LDFLAGS="-static" --host=arm64-linux-gnueabi
-  make clean  # Required for rebuilds that change arch.
   make -j100
   popd
 
