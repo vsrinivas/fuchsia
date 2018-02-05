@@ -69,6 +69,12 @@ static thread_local struct Ctor {
 } ctor;
 static thread_local uint8_t big_array[1 << 20];
 
+// Test that large alignments work correctly with thread-local variables.
+// TODO(ZX-1646): Make this work on ARM64.
+#if !defined(__aarch64__)
+__attribute__((aligned(0x1000))) thread_local int aligned_var = 123;
+#endif
+
 bool check_initializers() {
     BEGIN_TEST;
 
@@ -112,6 +118,12 @@ bool check_initializers() {
     for (auto& byte : big_array)
         sum |= byte;
     ASSERT_EQ(sum, 0u, "unexpected initialized value");
+
+    // TODO(ZX-1646): Make this work on ARM64.
+#if !defined(__aarch64__)
+    EXPECT_EQ((uintptr_t)&aligned_var % 0x1000, 0);
+    EXPECT_EQ(aligned_var, 123);
+#endif
 
     END_TEST;
 }
