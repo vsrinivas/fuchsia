@@ -40,7 +40,7 @@ namespace {
 // In the GDB RSP, cpsr is 32 bits, which throws a wrench into the works.
 
 struct RspArm64GeneralRegs {
-  // same as zx_arm64_general_regs_t except cpsr is 32 bits
+  // same as zx_thread_state_general_regs except cpsr is 32 bits
   uint64_t r[30];
   uint64_t lr;
   uint64_t sp;
@@ -173,7 +173,7 @@ class RegistersArm64 final : public Registers {
     gregs_.cpsr = rsp_gregs->cpsr;
   }
 
-  zx_arm64_general_regs_t gregs_;
+  zx_thread_state_general_regs gregs_;
 };
 
 }  // namespace

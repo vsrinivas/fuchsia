@@ -23,19 +23,19 @@ Registers::Registers(Thread* thread) : thread_(thread) {
 }
 
 bool Registers::RefreshGeneralRegisters() {
-  return RefreshRegset(ZX_THREAD_STATE_REGSET0);
+  return RefreshRegset(ZX_THREAD_STATE_GENERAL_REGS);
 }
 
 bool Registers::WriteGeneralRegisters() {
-  return WriteRegset(ZX_THREAD_STATE_REGSET0);
+  return WriteRegset(ZX_THREAD_STATE_GENERAL_REGS);
 }
 
 std::string Registers::GetGeneralRegistersAsString() {
-  return GetRegsetAsString(ZX_THREAD_STATE_REGSET0);
+  return GetRegsetAsString(ZX_THREAD_STATE_GENERAL_REGS);
 }
 
 bool Registers::SetGeneralRegistersFromString(const fxl::StringView& value) {
-  return SetRegsetFromString(ZX_THREAD_STATE_REGSET0, value);
+  return SetRegsetFromString(ZX_THREAD_STATE_GENERAL_REGS, value);
 }
 
 bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
@@ -45,16 +45,12 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
     return true;
   }
 
-  size_t regset_size;
-  zx_status_t status = zx_thread_read_state(
-    thread()->handle(), regset, buf, buf_size, &regset_size);
+  zx_status_t status = zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
                    << util::ZxErrorString(status);
     return false;
   }
-
-  FXL_DCHECK(regset_size == buf_size);
 
   FXL_VLOG(1) << "Regset " << regset << " refreshed";
   return true;
@@ -62,8 +58,7 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
 
 bool Registers::WriteRegsetHelper(int regset, const void* buf,
                                   size_t buf_size) {
-  zx_status_t status = zx_thread_write_state(thread()->handle(), regset,
-                                             buf, buf_size);
+  zx_status_t status = zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
                    << util::ZxErrorString(status);

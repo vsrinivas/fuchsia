@@ -38,7 +38,7 @@ namespace {
 
 // Includes all registers if |register_number| is -1.
 // TODO: Here as elsewhere: more regsets.
-std::string GetRegisterAsStringHelper(const zx_x86_64_general_regs_t& gregs,
+std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
                                       int regno) {
   FXL_DCHECK(regno >= -1 &&
              regno < static_cast<int>(Amd64Register::NUM_REGISTERS));
@@ -169,7 +169,7 @@ class RegistersAmd64 final : public Registers {
     return result;
   }
 
-  zx_x86_64_general_regs_t gregs_;
+  zx_thread_state_general_regs gregs_;
 };
 
 }  // namespace
@@ -181,7 +181,7 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 
 // static
 std::string Registers::GetUninitializedGeneralRegistersAsString() {
-  return std::string(sizeof(zx_x86_64_general_regs_t) * 2, '0');
+  return std::string(sizeof(zx_thread_state_general_regs) * 2, '0');
 }
 
 // static
