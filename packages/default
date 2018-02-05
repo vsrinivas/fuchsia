@@ -17,6 +17,7 @@
         "garnet/packages/fidl_backend",
         "garnet/packages/fidl_examples",
         "garnet/packages/fidl_tests",
+        "garnet/packages/syslog_cpp_tests",
         "garnet/packages/fonts",
         "garnet/packages/fortune",
         "garnet/packages/fxl",

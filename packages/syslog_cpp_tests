@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "syslog_cpp_tests": "//garnet/public/lib/syslog/cpp:tests"
+    }
+}

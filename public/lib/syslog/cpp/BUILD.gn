@@ -1,0 +1,50 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/package.gni")
+
+sdk_source_set("cpp") {
+  sources = [
+    "logger.cc",
+    "logger.h",
+    "logger_init.cc",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/syslog",
+  ]
+  public_configs = [ "//garnet/public:config" ]
+}
+
+executable("syslog_cpp_unittests") {
+  testonly = true
+
+  sources = [
+    "logger_unittest.cc",
+    "run_all_unittests.cc",
+  ]
+  deps = [
+    ":cpp",
+    "//third_party/gtest",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("tests") {
+  testonly = true
+  system_image = true
+
+  package_name = "syslog_cpp_tests"
+
+  deps = [
+    ":syslog_cpp_unittests",
+  ]
+  tests = [
+    {
+      name = "syslog_cpp_unittests"
+    },
+  ]
+}
