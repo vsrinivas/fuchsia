@@ -20,8 +20,8 @@ namespace fidl {
 // Methods or functions named "Emit..." are the actual interface to
 // the JSON output.
 
-// Methods named "Generate..." directly generate JSON output, to either
-// the header or source file, via the "Emit" routines.
+// Methods named "Generate..." directly generate JSON output via the
+// "Emit" routines.
 
 // Methods named "Produce..." indirectly generate JSON output by calling
 // the Generate methods, and should not call the "Emit" functions
