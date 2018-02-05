@@ -613,9 +613,14 @@ bool DpDisplay::LinkTrainingSetup() {
         ddi_buf_trans_high.WriteTo(mmio_space());
         ddi_buf_trans_low.WriteTo(mmio_space());
     }
+
+    uint8_t i_boost_val = i_boost_override ? i_boost_override : i_boost;
     auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
     disio_cr_tx_bmu.set_disable_balance_leg(!i_boost && !i_boost_override);
-    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_override ? i_boost_override : i_boost);
+    disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_val);
+    if (ddi() == registers::DDI_A && dp_lane_count_ == 4) {
+        disio_cr_tx_bmu.tx_balance_leg_select(registers::DDI_E).set(i_boost_val);
+    }
     disio_cr_tx_bmu.WriteTo(mmio_space());
 
     // Enable and wait for DDI_BUF_CTL
@@ -632,13 +637,12 @@ bool DpDisplay::LinkTrainingSetup() {
     dpcd::LaneCount lc_setting;
     lc_setting.set_lane_count_set(dp_lane_count_);
     lc_setting.set_enhanced_frame_enabled(max_lc.enhanced_frame_enabled());
-    uint8_t settings[2];
-    settings[0] = static_cast<uint8_t>(bw_setting.reg_value());
-    settings[1] = static_cast<uint8_t>(lc_setting.reg_value());
-    if (!DpcdWrite(dpcd::DPCD_LINK_BW_SET, settings, 2)) {
+    if (!DpcdWrite(dpcd::DPCD_LINK_BW_SET, bw_setting.reg_value_ptr(), 1)
+            || !DpcdWrite(dpcd::DPCD_COUNT_SET, lc_setting.reg_value_ptr(), 1)) {
         zxlogf(ERROR, "DP: Link training: failed to configure settings\n");
         return false;
     }
+
     return true;
 }
 
@@ -837,54 +841,16 @@ static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
 namespace i915 {
 
 DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, select_dpll(ddi), select_trans(ddi, pipe), pipe) { }
+        : DisplayDevice(controller, ddi, select_dpll(ddi), select_trans(ddi, pipe), pipe)
+        , edid_(this) { }
 
-bool DpDisplay::Init(zx_display_info* info) {
-    ResetPipe();
-    if (!ResetTrans() || !ResetDdi()) {
-        return false;
-    }
-
-    if (pipe() == registers::PIPE_A && ddi() == registers::DDI_A && !EnablePowerWell2()) {
-        return false;
-    }
-
-    if (controller()->igd_opregion().IsEdp(ddi())) {
-        auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
-        auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
-
-        if (!panel_status.on_status()
-                || panel_status.pwr_seq_progress() == panel_status.kPrwSeqPwrDown) {
-            panel_ctrl.set_power_state_target(1).set_pwr_down_on_reset(1).WriteTo(mmio_space());
-        }
-        // Per eDP 1.4, the panel must be on and ready to accept AUX messages
-        // within T1 + T3, which is at most 90 ms.
-        // TODO(ZX-1416): Read the hardware's actual value for T1 + T3.
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(90)));
-
-        if (!panel_status.ReadFrom(mmio_space()).on_status()
-                || panel_status.pwr_seq_progress() != panel_status.kPrwSeqNone) {
-             zxlogf(ERROR, "Failed to enable panel!\n");
-             return false;
-         }
-    }
-
-    // If the device is in a low power state, the first write can fail. It should be ready
-    // within 1ms, but try a few extra times to be safe.
-    dpcd::SetPower set_pwr;
-    set_pwr.set_set_power_state(set_pwr.kOn);
-    int count = 0;
-    while (!DpcdWrite(dpcd::DPCD_SET_POWER, set_pwr.reg_value_ptr(), 1) && ++count < 5) {
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-    }
-    if (count >= 5) {
-        zxlogf(ERROR, "Failed to set dp power state\n");
-        return ZX_ERR_INTERNAL;
-    }
-
-    edid::Edid edid(this);
+bool DpDisplay::QueryDevice(zx_display_info* info) {
+    // For eDP displays, assume that the BIOS has enabled panel power, given
+    // that we need to rely on it properly configuring panel power anyway. For
+    // general DP displays, the default power state is D0, so we don't have to
+    // worry about AUX failures because of power saving mode.
     edid::timing_params_t timing;
-    if (!edid.Init() || !edid.GetPreferredTiming(&timing)) {
+    if (!edid_.Init() || !edid_.GetPreferredTiming(&timing)) {
         return false;
     }
     zxlogf(TRACE, "Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
@@ -906,9 +872,64 @@ bool DpDisplay::Init(zx_display_info* info) {
         }
     }
 
+    // TODO(ZX-1416): Parameterized this
+    static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
+    info->width = timing.horizontal_addressable;
+    info->height = timing.vertical_addressable;
+    info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    info->format = kPixelFormat;
+    info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
+
+    return true;
+}
+
+bool DpDisplay::DefaultModeset() {
+    ResetPipe();
+    if (!ResetTrans() || !ResetDdi()) {
+        return false;
+    }
+
+    if (controller()->igd_opregion().IsEdp(ddi())) {
+        auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
+        auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
+
+        if (!panel_status.on_status()
+                || panel_status.pwr_seq_progress() == panel_status.kPrwSeqPwrDown) {
+            panel_ctrl.set_power_state_target(1).set_pwr_down_on_reset(1).WriteTo(mmio_space());
+        }
+
+        // Per eDP 1.4, the panel must be on and ready to accept AUX messages
+        // within T1 + T3, which is at most 90 ms.
+        // TODO(ZX-1416): Read the hardware's actual value for T1 + T3.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(90)));
+
+        if (!panel_status.ReadFrom(mmio_space()).on_status()
+                || panel_status.pwr_seq_progress() != panel_status.kPrwSeqNone) {
+            zxlogf(ERROR, "Failed to enable panel!\n");
+            return false;
+        }
+    }
+
+    if (dpcd_capabilities_[dpcd::DPCD_REV - dpcd::DPCD_CAP_START] >= 0x11) {
+        // If the device is in a low power state, the first write can fail. It should be ready
+        // within 1ms, but try a few extra times to be safe.
+        dpcd::SetPower set_pwr;
+        set_pwr.set_set_power_state(set_pwr.kOn);
+        int count = 0;
+        while (!DpcdWrite(dpcd::DPCD_SET_POWER, set_pwr.reg_value_ptr(), 1) && ++count < 5) {
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        }
+        if (count >= 5) {
+            zxlogf(ERROR, "Failed to set dp power state\n");
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    edid::timing_params_t timing;
+    edid_.GetPreferredTiming(&timing);
+
     // TODO(ZX-1416): Parameterized these and update what references them
     static constexpr uint32_t kLinkRateMhz = 2700;
-    static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
 
     registers::TranscoderRegs trans_regs(trans());
 
@@ -1049,6 +1070,9 @@ bool DpDisplay::Init(zx_display_info* info) {
     ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
     ddi_func.set_sync_polarity(timing.vertical_sync_polarity << 1 | timing.horizontal_sync_polarity);
     ddi_func.set_port_sync_mode_enable(0);
+    ddi_func.set_edp_input_select(
+            pipe() == registers::PIPE_A ? ddi_func.kPipeA :
+                    (pipe() == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
     ddi_func.set_dp_vc_payload_allocate(0);
     ddi_func.set_edp_input_select(pipe() == registers::PIPE_A ? ddi_func.kPipeA :
             (pipe() == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
@@ -1079,12 +1103,6 @@ bool DpDisplay::Init(zx_display_info* info) {
     plane_size.set_width_minus_1(h_active);
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
-
-    info->width = timing.horizontal_addressable;
-    info->height = timing.vertical_addressable;
-    info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
-    info->format = kPixelFormat;
-    info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
     if (controller()->igd_opregion().IsEdp(ddi())) {
         dpcd::EdpConfigCap config_cap;

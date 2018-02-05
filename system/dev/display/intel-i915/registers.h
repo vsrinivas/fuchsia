@@ -241,6 +241,12 @@ public:
     static auto Get() { return hwreg::RegisterAddr<SouthBacklightCtl2>(0xc8254); }
 };
 
+// SCHICKEN_1
+class SChicken1 : public hwreg::RegisterBase<SChicken1, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<SChicken1>(0xc2000); }
+};
+
 // PP_CONTROL
 class PanelPowerCtrl : public hwreg::RegisterBase<PanelPowerCtrl, uint32_t> {
 public:
@@ -251,6 +257,24 @@ public:
     DEF_BIT(0, power_state_target);
 
     static auto Get() { return hwreg::RegisterAddr<PanelPowerCtrl>(0xc7204); }
+};
+
+// PP_DIVISOR
+class PanelPowerDivisor : public hwreg::RegisterBase<PanelPowerDivisor, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<PanelPowerDivisor>(0xc7210); }
+};
+
+// PP_OFF_DELAYS
+class PanelPowerOffDelay: public hwreg::RegisterBase<PanelPowerOffDelay, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<PanelPowerOffDelay>(0xc720c); }
+};
+
+// PP_ON_DELAYS
+class PanelPowerOnDelay: public hwreg::RegisterBase<PanelPowerOnDelay, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<PanelPowerOnDelay>(0xc7208); }
 };
 
 // PP_STATUS

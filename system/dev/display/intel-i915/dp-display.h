@@ -17,7 +17,8 @@ public:
     DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
-    bool Init(zx_display_info* info) final;
+    bool QueryDevice(zx_display_info_t* info) final;
+    bool DefaultModeset() final;
     bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
     bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
@@ -48,6 +49,7 @@ private:
     // brightness, then |val| will be clamped to [min, 1].
     bool SetBacklightBrightness(double val);
 
+    edid::Edid edid_;
     uint8_t dp_lane_count_;
 
     uint8_t dpcd_capabilities_[16];

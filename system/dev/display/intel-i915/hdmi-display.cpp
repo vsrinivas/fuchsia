@@ -167,7 +167,8 @@ HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::
         : DisplayDevice(controller, ddi,
                         // TODO(ZX-1413): Do a smarter mapping for stuff like HDPORT or sharing
                         static_cast<registers::Dpll>(ddi + 1),
-                        static_cast<registers::Trans>(pipe), pipe) { }
+                        static_cast<registers::Trans>(pipe), pipe)
+        , edid_(this) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -453,7 +454,7 @@ static bool calculate_params(uint32_t symbol_clock_khz,
 
 namespace i915 {
 
-bool HdmiDisplay::Init(zx_display_info* info) {
+bool HdmiDisplay::QueryDevice(zx_display_info* info) {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
@@ -463,19 +464,30 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
     registers::GMBus4::Get().FromValue(0).WriteTo(mmio_space());
 
+    edid::timing_params_t timing_params;
+    if (!edid_.Init() || !edid_.GetPreferredTiming(&timing_params)
+            || !edid_.CheckForHdmi(&is_hdmi_display_)) {
+        return false;
+    }
+    zxlogf(TRACE, "Found a %s monitor\n", is_hdmi_display_ ? "hdmi" : "dvi");
+
+    info->width = timing_params.horizontal_addressable;
+    info->height = timing_params.vertical_addressable;
+    info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    info->format = ZX_PIXEL_FORMAT_ARGB_8888;
+    info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
+
+    return true;
+}
+
+bool HdmiDisplay::DefaultModeset() {
     ResetPipe();
     if (!ResetTrans() || !ResetDdi()) {
         return false;
     }
 
-    edid::Edid edid(this);
     edid::timing_params_t timing_params;
-    bool is_hdmi;
-    if (!edid.Init() || !edid.GetPreferredTiming(&timing_params)
-            || !edid.CheckForHdmi(&is_hdmi) || !EnablePowerWell2()) {
-        return false;
-    }
-    zxlogf(TRACE, "Found a %s monitor\n", is_hdmi ? "hdmi" : "dvi");
+    edid_.GetPreferredTiming(&timing_params);
 
     // Set the the DPLL control settings
     auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
@@ -608,7 +620,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
     ddi_func.set_trans_ddi_function_enable(1);
     ddi_func.set_ddi_select(ddi());
-    ddi_func.set_trans_ddi_mode_select(is_hdmi ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
+    ddi_func.set_trans_ddi_mode_select(is_hdmi_display_ ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
     ddi_func.set_bits_per_color(ddi_func.k8bbc);
     ddi_func.set_sync_polarity(timing_params.vertical_sync_polarity << 1
                                 | timing_params.horizontal_sync_polarity);
@@ -683,12 +695,6 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     plane_size.set_width_minus_1(h_active);
     plane_size.set_height_minus_1(v_active);
     plane_size.WriteTo(mmio_space());
-
-    info->width = timing_params.horizontal_addressable;
-    info->height = timing_params.vertical_addressable;
-    info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
-    info->format = ZX_PIXEL_FORMAT_ARGB_8888;
-    info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
     return true;
 }

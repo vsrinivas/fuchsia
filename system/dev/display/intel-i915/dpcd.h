@@ -12,6 +12,7 @@ namespace dpcd {
 // DPCD register numbers.
 enum {
     DPCD_CAP_START = 0x0,
+    DPCD_REV = 0x0,
     DPCD_MAX_LANE_COUNT = 0x2,
     DPCD_EDP_CONFIG = 0xd,
     DPCD_LINK_BW_SET = 0x100,

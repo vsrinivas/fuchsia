@@ -148,6 +148,12 @@ zx_status_t Controller::InitHotplug() {
         return status;
     }
 
+    EnableHotplugInterrupts();
+
+    return ZX_OK;
+}
+
+void Controller::EnableHotplugInterrupts() {
     auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_.get());
     for (uint32_t i = 0; i < registers::kDdiCount; i++) {
         registers::Ddi ddi = registers::kDdis[i];
@@ -169,8 +175,6 @@ zx_status_t Controller::InitHotplug() {
         enable.ddi_bit(ddi).set(enabled);
         enable.WriteTo(mmio_space_.get());
     }
-
-    return ZX_OK;
 }
 
 void Controller::HandleHotplug(registers::Ddi ddi) {
@@ -333,6 +337,25 @@ bool Controller::BringUpDisplayEngine() {
         vga_ctl.WriteTo(mmio_space());
     }
 
+    // TODO(ZX-1413): Only enable power well 2 when necessary.
+    if (!EnablePowerWell2()) {
+        return false;
+    }
+
+    for (unsigned i = 0; i < registers::kPipeCount; i++) {
+        ResetPipe(registers::kPipes[i]);
+    }
+
+    for (unsigned i = 0; i < registers::kTransCount; i++) {
+        ResetTrans(registers::kTrans[i]);
+    }
+
+    for (unsigned i = 0; i < registers::kDdiCount; i++) {
+        ResetDdi(registers::kDdis[i]);
+    }
+
+    AllocDisplayBuffers();
+
     return true;
 }
 
@@ -412,7 +435,7 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     registers::Dpll dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
     if (dpll != registers::DPLL_0) {
         auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-        dpll_enable.set_enable_dpll(1);
+        dpll_enable.set_enable_dpll(0);
         dpll_enable.WriteTo(mmio_space());
     }
 
@@ -458,6 +481,27 @@ void Controller::AllocDisplayBuffers() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
 }
 
+bool Controller::EnablePowerWell2() {
+    // Enable Power Wells
+    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    power_well.set_power_well_2_request(1);
+    power_well.WriteTo(mmio_space());
+
+    // Wait for PWR_WELL_CTL Power Well 2 state and distribution status
+    power_well.ReadFrom(mmio_space());
+    if (!WAIT_ON_US(registers::PowerWellControl2
+            ::Get().ReadFrom(mmio_space()).power_well_2_state(), 20)) {
+        zxlogf(ERROR, "i915: failed to enable Power Well 2\n");
+        return false;
+    }
+    if (!WAIT_ON_US(registers::FuseStatus
+            ::Get().ReadFrom(mmio_space()).pg2_dist_status(), 1)) {
+        zxlogf(ERROR, "i915: Power Well 2 distribution failed\n");
+        return false;
+    }
+    return true;
+}
+
 fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     registers::Pipe pipe;
     if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
@@ -494,20 +538,6 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
 zx_status_t Controller::InitDisplays() {
     if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         BringUpDisplayEngine();
-
-        for (unsigned i = 0; i < registers::kPipeCount; i++) {
-            ResetPipe(registers::kPipes[i]);
-        }
-
-        for (unsigned i = 0; i < registers::kTransCount; i++) {
-            ResetTrans(registers::kTrans[i]);
-        }
-
-        for (unsigned i = 0; i < registers::kDdiCount; i++) {
-            ResetDdi(registers::kDdis[i]);
-        }
-
-        AllocDisplayBuffers();
 
         for (uint32_t i = 0; i < registers::kDdiCount; i++) {
             auto disp_device = InitDisplay(registers::kDdis[i]);
@@ -622,6 +652,32 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
     return ZX_OK;
 }
 
+zx_status_t Controller::DdkResume(uint32_t hint) {
+    BringUpDisplayEngine();
+
+    registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space_.get());
+    registers::PanelPowerOffDelay::Get().FromValue(pp_off_delay_val_).WriteTo(mmio_space_.get());
+    registers::PanelPowerOnDelay::Get().FromValue(pp_on_delay_val_).WriteTo(mmio_space_.get());
+    registers::SouthBacklightCtl1::Get().FromValue(0)
+            .set_polarity(sblc_polarity_).WriteTo(mmio_space_.get());
+    registers::SouthBacklightCtl2::Get().FromValue(sblc_ctrl2_val_).WriteTo(mmio_space_.get());
+    registers::SChicken1::Get().FromValue(schicken1_val_).WriteTo(mmio_space_.get());
+
+    registers::DdiRegs(registers::DDI_A).DdiBufControl().ReadFrom(mmio_space_.get())
+            .set_ddi_a_lane_capability_control(ddi_a_lane_capability_control_)
+            .WriteTo(mmio_space_.get());
+
+    for (auto& disp : display_devices_) {
+        if (!disp->Resume()) {
+            zxlogf(ERROR, "Failed to resume display\n");
+        }
+    }
+
+    EnableHotplugInterrupts();
+
+    return ZX_OK;
+}
+
 zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
     zxlogf(TRACE, "i915: binding to display controller\n");
 
@@ -664,6 +720,17 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return ZX_ERR_NO_MEMORY;
     }
     mmio_space_ = fbl::move(mmio_space);
+
+    pp_divisor_val_ = registers::PanelPowerDivisor::Get().ReadFrom(mmio_space_.get()).reg_value();
+    pp_off_delay_val_ =
+            registers::PanelPowerOffDelay::Get().ReadFrom(mmio_space_.get()).reg_value();
+    pp_on_delay_val_  = registers::PanelPowerOnDelay::Get().ReadFrom(mmio_space_.get()).reg_value();
+    sblc_ctrl2_val_ = registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space_.get()).reg_value();
+    schicken1_val_ = registers::SChicken1::Get().ReadFrom(mmio_space_.get()).reg_value();
+
+    sblc_polarity_ = registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space_.get()).polarity();
+    ddi_a_lane_capability_control_ = registers::DdiRegs(registers::DDI_A).DdiBufControl()
+            .ReadFrom(mmio_space_.get()).ddi_a_lane_capability_control();
 
     if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");

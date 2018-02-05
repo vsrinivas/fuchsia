@@ -38,6 +38,7 @@ public:
     void Flush();
 
     bool Init();
+    bool Resume();
 
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
@@ -49,10 +50,13 @@ public:
     const Controller* controller() { return controller_; }
 
 protected:
-    virtual bool Init(zx_display_info_t* info) = 0;
+    // Queries the DisplayDevice to see if there is a supported display attached. If
+    // there is, then returns true and populates |info|.
+    virtual bool QueryDevice(zx_display_info_t* info) = 0;
+    // Configures the hardware to display a framebuffer at the preferred resolution.
+    virtual bool DefaultModeset() = 0;
 
     hwreg::RegisterIo* mmio_space() const;
-    bool EnablePowerWell2();
     void ResetPipe();
     bool ResetTrans();
     bool ResetDdi();

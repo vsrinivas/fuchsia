@@ -82,27 +82,6 @@ void DisplayDevice::Flush() {
     }
 }
 
-bool DisplayDevice::EnablePowerWell2() {
-    // Enable Power Wells
-    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-    power_well.set_power_well_2_request(1);
-    power_well.WriteTo(mmio_space());
-
-    // Wait for PWR_WELL_CTL Power Well 2 state and distribution status
-    power_well.ReadFrom(mmio_space());
-    if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space()).power_well_2_state(), 20)) {
-        zxlogf(ERROR, "i915: failed to enable Power Well 2\n");
-        return false;
-    }
-    if (!WAIT_ON_US(registers::FuseStatus
-            ::Get().ReadFrom(mmio_space()).pg2_dist_status(), 1)) {
-        zxlogf(ERROR, "i915: Power Well 2 distribution failed\n");
-        return false;
-    }
-    return true;
-}
-
 void DisplayDevice::ResetPipe() {
     controller_->ResetPipe(pipe_);
 }
@@ -116,7 +95,7 @@ bool DisplayDevice::ResetDdi() {
 }
 
 bool DisplayDevice::Init() {
-    if (!Init(&info_)) {
+    if (!QueryDevice(&info_) || !DefaultModeset()) {
         return false;
     }
     inited_ = true;
@@ -167,6 +146,25 @@ bool DisplayDevice::Init() {
     memset(reinterpret_cast<void*>(framebuffer_), 0xff, framebuffer_size_);
 #endif // USE_FB_TEST_PATTERN
     Flush();
+
+    auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
+    plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    plane_stride.WriteTo(controller_->mmio_space());
+
+    auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
+    plane_surface.set_surface_base_addr(
+            static_cast<uint32_t>(fb_gfx_addr_->base() >> plane_surface.kRShiftCount));
+    plane_surface.WriteTo(controller_->mmio_space());
+
+    return true;
+}
+
+bool DisplayDevice::Resume() {
+    if (!DefaultModeset()) {
+        return false;
+    }
+
+    registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
     plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);

@@ -13,7 +13,8 @@ public:
     BootloaderDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
-    bool Init(zx_display_info_t* info) final;
+    bool QueryDevice(zx_display_info_t* info) final;
+    bool DefaultModeset() final;
 };
 
 } // namespace i915

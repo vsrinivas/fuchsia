@@ -14,7 +14,8 @@ public:
     HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
-    bool Init(zx_display_info* info) final;
+    bool QueryDevice(zx_display_info_t* info) final;
+    bool DefaultModeset() final;
     bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
     bool I2cFinish();
@@ -23,6 +24,9 @@ private:
     bool SetDdcSegment(uint8_t block_num);
     bool GMBusRead(uint8_t addr, uint8_t* buf, uint8_t size);
     bool GMBusWrite(uint8_t addr, uint8_t* buf, uint8_t size);
+
+    edid::Edid edid_;
+    bool is_hdmi_display_;
 };
 
 } // namespace i915
