@@ -119,13 +119,18 @@ def main():
     args = parser.parse_args()
 
     env = os.environ.copy()
+    clang_c_compiler = args.clang_prefix + '/clang'
     if args.sysroot is not None:
-        env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = args.clang_prefix + '/clang'
+        env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = clang_c_compiler
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
     env["FUCHSIA_GEN_ROOT"] = args.root_gen_dir
+    env["CC"] = clang_c_compiler
+    env["CXX"] = args.clang_prefix + '/clang++'
+    env["AR"] = args.clang_prefix + '/llvm-ar'
+    env["RANLIB"] = args.clang_prefix + '/llvm-ranlib'
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     # Generate Cargo.toml.
