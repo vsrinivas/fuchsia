@@ -116,6 +116,15 @@ void virtio_queue_signal(virtio_queue_t* queue) {
 }
 
 zx_status_t VirtioDevice::NotifyGuest() {
+  bool interrupt = false;
+  {
+    fbl::AutoLock lock(&mutex_);
+    interrupt = isr_status_ > 0;
+  }
+
+  if (!interrupt) {
+    return ZX_OK;
+  }
   return pci_.Interrupt();
 }
 
@@ -131,12 +140,13 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
   // Send an interrupt back to the guest if we've generated one while
   // processing the queue.
-  fbl::AutoLock lock(&mutex_);
-  if (isr_status_ > 0) {
-    return NotifyGuest();
+  status = NotifyGuest();
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Notify threads waiting on a descriptor.
+  fbl::AutoLock lock(&mutex_);
   virtio_queue_signal(&queues_[kicked_queue]);
   return ZX_OK;
 }
@@ -259,9 +269,14 @@ void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
 
   mtx_unlock(&queue->mutex);
 
-  // Set the queue bit in the device ISR so that the driver knows to check
-  // the queues on the next interrupt.
-  queue->virtio_device->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
+  // Virtio 1.0 Section 2.4.7.2: Virtqueue Interrupt Suppression
+  //  - If flags is 1, the device SHOULD NOT send an interrupt.
+  //  - If flags is 0, the device MUST send an interrupt.
+  if (queue->used->flags == 0) {
+    // Set the queue bit in the device ISR so that the driver knows to check
+    // the queues on the next interrupt.
+    queue->virtio_device->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
+  }
 }
 
 zx_status_t virtio_queue_handler(virtio_queue_t* queue,
