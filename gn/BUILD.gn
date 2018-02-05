@@ -905,6 +905,7 @@ zircon_files =
 
 supporting_templates = [
   "//build/zircon/header.mako",
+  "//build/zircon/host_tool.mako",
   "//build/zircon/shared_library.mako",
   "//build/zircon/source_library.mako",
   "//build/zircon/static_library.mako",

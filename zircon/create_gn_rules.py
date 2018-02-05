@@ -239,6 +239,33 @@ def generate_sysroot(package, context):
     generate_build_file(build_path, 'sysroot.mako', data, context)
 
 
+class HostTool(object):
+    """Represents a host tool.
+
+       Convenience storage object to be consumed by Mako templates."""
+
+    def __init__(self, name):
+        self.name = name
+        self.executable = ''
+
+
+def generate_host_tool(package, context):
+    """Generates the build glue for a host tool."""
+    name = package['package']['name']
+    data = HostTool(name)
+
+    bins = package.get('bin', {})
+    if len(bins) != 1 or name not in bins:
+        raise Exception('Host tool %s has unexpected binaries %s.'
+                        % (name, bins))
+    (file, _) = extract_file(name, bins[name], context)
+    data.executable = '//%s' % file
+
+    # Generate the build file.
+    build_path = os.path.join(context.out_dir, 'tool', name, 'BUILD.gn')
+    generate_build_file(build_path, 'host_tool.mako', data, context)
+
+
 class GenerationContext(object):
     """Describes the context in which GN rules should be generated."""
 
@@ -268,6 +295,7 @@ def main():
     out_dir = os.path.abspath(args.out)
     shutil.rmtree(os.path.join(out_dir, 'lib'), True)
     shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
+    shutil.rmtree(os.path.join(out_dir, 'tool'), True)
     debug = args.debug
 
     # Generate package descriptions through Zircon's build.
@@ -320,16 +348,19 @@ def main():
         if name in SYSROOT_PACKAGES:
             print('Ignoring sysroot part: %s' % name)
             continue
-        if type != 'lib':
+        if type == 'tool':
+            generate_host_tool(package, context)
+        elif type == 'lib':
+            if arch == 'src':
+                type = 'source'
+                generate_source_library(package, context)
+            else:
+                type = 'prebuilt'
+                generate_compiled_library(package, context)
+        else:
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))
             continue
-        if arch == 'src':
-            type = 'source'
-            generate_source_library(package, context)
-        else:
-            type = 'prebuilt'
-            generate_compiled_library(package, context)
         if debug:
             print('Processed %s (%s)' % (name, type))
 
