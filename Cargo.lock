@@ -301,6 +301,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "garnet_lib_wlan_fidl_service"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "garnet_lib_wlan_fidl 0.1.0",
+ "tokio-core 0.1.12",
+ "tokio-fuchsia 0.1.0",
+]
+
+[[package]]
 name = "garnet_public_lib_app_fidl"
 version = "0.1.0"
 dependencies = [

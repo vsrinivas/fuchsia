@@ -12,6 +12,7 @@ members =  [
   "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/fidl_crates/garnet_lib_wlan_fidl",
+  "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/ddk-rs",
   "public/rust/crates/ddk-rs/examples/ddk_toy",
@@ -52,6 +53,7 @@ fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
 garnet_examples_fidl_services = { path = "public/rust/fidl_crates/garnet_examples_fidl_services" }
 garnet_lib_wlan_fidl = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl" }
+garnet_lib_wlan_fidl_service = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service" }
 garnet_public_lib_app_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl" }
 garnet_public_lib_app_fidl_service_provider = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider" }
 garnet_public_lib_bluetooth_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl" }

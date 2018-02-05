@@ -1,0 +1,38 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module wlan.service;
+
+import "garnet/lib/wlan/fidl/phy.fidl";
+import "garnet/lib/wlan/fidl/iface.fidl";
+
+struct ListPhysResponse {
+    array<wlan.phy.WlanInfo> phys;
+};
+
+struct ListIfacesResponse {
+    array<wlan.iface.WlanIface> ifaces;
+};
+
+struct CreateIfaceRequest {
+    uint16 phy_id;
+    wlan.phy.MacRole role;
+};
+
+struct CreateIfaceResponse {
+    uint16 iface_id;
+};
+
+struct DestroyIfaceRequest {
+    uint16 phy_id;
+    uint16 iface_id;
+};
+
+[ServiceName="wlan::DeviceService"]
+interface DeviceService {
+  ListPhys@0() => (ListPhysResponse resp);
+  ListIfaces@1() => (ListIfacesResponse resp);
+  CreateIface@2(CreateIfaceRequest req) => (CreateIfaceResponse resp);
+  DestroyIface@3(DestroyIfaceRequest req);
+};

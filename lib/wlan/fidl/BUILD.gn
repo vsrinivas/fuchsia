@@ -10,3 +10,13 @@ fidl("fidl") {
     "phy.fidl",
   ]
 }
+
+fidl("service") {
+  sources = [
+    "service.fidl",
+  ]
+
+  public_deps = [
+    ":fidl",
+  ]
+}
