@@ -7,13 +7,13 @@ package templates
 const Interface = `
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{if $index}}, {{end}}{{$param.Name|$param.Type.Decorate}}
+    {{- if $index }}, {{ end -}}{{ $param.Name|$param.Type.Decorate }}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{if $index}}, {{end}}{{""|$param.Type.Decorate}}
+    {{- if $index }}, {{ end -}}{{ ""|$param.Type.Decorate }}
   {{- end -}}
 {{ end }}
 
@@ -35,10 +35,10 @@ class {{ .Name }} {
   using Stub_ = {{ .StubName }};
   virtual ~{{ .Name }}();
 
-  {{- range $method := .Methods }}
-    {{- if $method.HasRequest }}
-      {{- if $method.HasResponse }}
-  using {{ $method.CallbackType }} =
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+      {{- if .HasResponse }}
+  using {{ .CallbackType }} =
       std::function<void({{ template "Params" .Response }})>;
       {{- end }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
@@ -53,8 +53,8 @@ class {{ .ProxyName }} : public {{ .Name }} {
   explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
   ~{{ .ProxyName }}() override;
 
-  {{- range $method := .Methods }}
-    {{- if $method.HasRequest }}
+  {{- range .Methods }}
+    {{- if .HasRequest }}
   void {{ template "RequestMethodSignature" . }} override;
     {{- end }}
 {{- end }}
@@ -81,9 +81,9 @@ class {{ .StubName }} : public ::fidl::internal::Stub {
 
 {{- define "InterfaceDefinition" -}}
 namespace {
-{{ range $method := .Methods }}
-  {{- if $method.HasRequest }}
-constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
+{{ range .Methods }}
+  {{- if .HasRequest }}
+constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
   {{- end }}
 {{- end }}
 
@@ -96,7 +96,7 @@ constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
 
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
-{{ range $method := .Methods }}
+{{ range .Methods }}
   {{- if .HasRequest }}
     {{- if .HasResponse }}
 namespace {
@@ -114,8 +114,12 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
     zx_status_t status = message.Decode(nullptr, &error_msg);
     if (status != ZX_OK)
       return status;
-    // TODO(abarth): Actually call |callback_|.
-    (void) callback_;
+    // TODO(TO-490): Actually unpack the arguments from the message.
+    callback_(
+      {{- range $index, $param := .Response -}}
+        {{- if $index }}, {{ end }}{{ $param.Type.Decl }}()
+      {{- end -}}
+    );
     return ZX_OK;
   }
 
@@ -133,8 +137,8 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::MessageBuilder builder(nullptr);
   builder.header()->ordinal = {{ .OrdinalName }};
     {{- range .Request }}
-  ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<{{ .Type.Decl }}>::type>(), &{{ .Name }});
-  {{- end -}}
+  ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
+    {{- end -}}
     {{- if .HasResponse }}
   controller_->Send(&builder, std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
     {{- else }}
@@ -148,16 +152,55 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
 
 {{ .StubName }}::~{{ .StubName }}() = default;
 
+namespace {
+{{- range .Methods }}
+  {{- if .HasRequest }}
+    {{- if .HasResponse }}
+
+class {{ .ResponderType }} {
+ public:
+ {{ .ResponderType }}(::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()({{ template "Params" .Response }}) {
+    ::fidl::MessageBuilder builder(nullptr);
+    builder.header()->ordinal = {{ .OrdinalName }};
+      {{- range .Response }}
+    ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
+      {{- end }}
+    response_.Send(&builder);
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+}  // namespace
+
 zx_status_t {{ .StubName }}::Dispatch(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    {{- range $method := .Methods }}
-      {{- if $method.HasRequest }}
+    {{- range .Methods }}
+      {{- if .HasRequest }}
     case {{ .OrdinalName }}: {
-      // TODO(abarth): Dispatch method.
-      (void) impl_;
+      const char* error_msg = nullptr;
+      status = message.Decode(nullptr, &error_msg);
+      if (status != ZX_OK)
+        break;
+      // TODO(TO-490): Actually unpack the arguments from the message.
+      impl_->{{ .Name }}(
+        {{- range $index, $param := .Request -}}
+          {{- if $index }}, {{ end }}{{ $param.Type.Decl }}()
+        {{- end -}}
+        {{- if .HasResponse -}}
+          {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
+        {{- end -}}
+      );
       break;
     }
       {{- end }}

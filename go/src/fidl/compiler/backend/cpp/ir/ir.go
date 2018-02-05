@@ -71,6 +71,7 @@ type Method struct {
 	Response            []Parameter
 	CallbackType        string
 	ResponseHandlerType string
+	ResponderType       string
 }
 
 type Parameter struct {
@@ -353,6 +354,7 @@ func compileInterface(val types.Interface) Interface {
 			compileParameterArray(v.Response),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
+			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
 		}
 		r.Methods = append(r.Methods, m)
 	}
