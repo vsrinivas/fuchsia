@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <wlan/common/channel.h>
+#include <wlan/common/logging.h>
 
 #include <zircon/assert.h>
 
@@ -86,7 +87,12 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
 }
 
 bool IsValidChan(const wlan_channel_t& chan) {
-    return Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
+    auto result = Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
+
+    // TODO(porce): Revisit if wlan library may have active logging
+    // Prefer logging in the caller only
+    if (!result) { errorf("invalid channel value: %s\n", ChanStr(chan).c_str()); }
+    return result;
 }
 
 Mhz GetCenterFreq(const wlan_channel_t& chan) {
