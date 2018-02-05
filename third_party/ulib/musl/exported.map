@@ -613,8 +613,15 @@
     round;
     roundf;
     roundl;
+    __sanitizer_before_thread_create_hook;
     __sanitizer_get_configuration;
+    __sanitizer_log_write;
     __sanitizer_publish_data;
+    __sanitizer_shadow_bounds;
+    __sanitizer_startup_hook;
+    __sanitizer_thread_create_hook;
+    __sanitizer_thread_exit_hook;
+    __sanitizer_thread_start_hook;
     scalb;
     scalbf;
     scalbln;
@@ -801,6 +808,9 @@
     unlink;
     unlinkat;
     unlockpt;
+    __unsanitized_memcpy;
+    __unsanitized_memmove;
+    __unsanitized_memset;
     unsetenv;
     uselocale;
     usleep;

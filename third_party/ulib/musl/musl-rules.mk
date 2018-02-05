@@ -1081,6 +1081,14 @@ MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCDEPS := $(LOCAL_DIR)/exported.map
 MODULE_LDFLAGS := --version-script=$(LOCAL_DIR)/exported.map
+
+# Extra symbols for ASAN builds which shouldn't be included
+# in normal builds.
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+  MODULE_LDFLAGS += --version-script=$(LOCAL_DIR)/sanitizers/asan.map
+  MODULE_SRCDEPS += $(LOCAL_DIR)/sanitizers/asan.map
+endif
+
 MODULE_LDFLAGS += --no-undefined-version
 MODULE_SRCS := $(LOCAL_SRCS)
 
