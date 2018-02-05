@@ -90,6 +90,8 @@ void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   PushDirectoryFromPathIfNotPresent("/data");
   PushDirectoryFromPathIfNotPresent("/system");
   PushDirectoryFromPathIfNotPresent("/tmp");
+  // TODO(jmatt): Remove access to /pkgfs once F5-3 is resolved
+  PushDirectoryFromPathIfNotPresent("/pkgfs/packages");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
