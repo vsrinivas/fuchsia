@@ -61,8 +61,8 @@ action("kernel") {
 
 guest_app("linux-guest") {
   deps = [
-    ":sysroot",
-    ":kernel",
+    ":sysroot($host_toolchain)",
+    ":kernel($host_toolchain)",
   ]
 
   if (target_cpu == "arm64") {
@@ -71,12 +71,13 @@ guest_app("linux-guest") {
     cmdline = "earlycon=uart,io,0x3f8 console=ttyS0 console=tty0 io_delay=none clocksource=tsc"
   }
 
-  kernel = linux_image
-  ramdisk = initrd_image
+  host_out_dir = get_label_info(":bogus($host_toolchain)", "target_out_dir")
+  kernel = "$host_out_dir/linux/Image"
+  ramdisk = "$host_out_dir/linux/initrd.img"
 
   disk_name = "filesystem.img"
   resources = [ {
-        path = rebase_path(disk_image)
+        path = rebase_path("$host_out_dir/linux/disk.img")
         dest = "${disk_name}"
       } ]
   block_devices = [ "/pkg/data/${disk_name},ro" ]
