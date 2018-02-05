@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-namespace scenic_lib {
+namespace escher {
+namespace hmd {
 
 struct Pose {
   // Quaternion
@@ -20,4 +21,5 @@ struct Pose {
   uint8_t reserved[4];
 };
 
-}  // namespace scenic_lib
+}  // namespace hmd
+}  // namespace escher

@@ -7,7 +7,7 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
-#include "garnet/lib/scenic/pose_buffer.h"
+
 #include "garnet/lib/ui/scenic/engine/hit_tester.h"
 #include "garnet/lib/ui/scenic/engine/session_handler.h"
 #include "garnet/lib/ui/scenic/resources/buffer.h"
@@ -36,6 +36,7 @@
 #include "garnet/lib/ui/scenic/util/unwrap.h"
 #include "garnet/lib/ui/scenic/util/wrap.h"
 
+#include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/util/type_utils.h"
@@ -570,7 +571,7 @@ bool Session::ApplySetCameraPoseBufferOp(
     return false;
   }
 
-  if (buffer->size() < op->num_entries * sizeof(scenic_lib::Pose)) {
+  if (buffer->size() < op->num_entries * sizeof(escher::hmd::Pose)) {
     error_reporter_->ERROR()
         << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
            "buffer is not large enough";
