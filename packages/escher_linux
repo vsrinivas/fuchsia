@@ -2,8 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "packages": {
-        "escher_examples": "//garnet/public/lib/escher/build_linux:examples",
-        "escher_tests": "//garnet/public/lib/escher/build_linux:tests"
-    }
+    "labels": [
+        "//garnet/public/lib/escher/build_linux:examples",
+        "//garnet/public/lib/escher/build_linux:tests"
+    ]
 }

@@ -36,28 +36,18 @@ Escher can also build on Linux.  In order to do so, you need to:
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VULKAN_SDK/lib
     export VK_LAYER_PATH=$VULKAN_SDK/etc/explicit_layer.d
     ```
-  * pull down dependencies for the waterfall example:
-    ```
-    (cd examples/common/third_party; git submodule init; git submodule update)
-    ```
-  * build Fuchsia normally.
-    ```
-    cd $FUCHSIA_DIR
-    fx set x86-64 --release
-    fx full-build
-    ```
-    * This shouldn't be necessary, but Escher is probably the only
-    package that is built as a standalone Linux artifact (everything
-    else built for Linux is a tool to help the Fuchsia build).
   * specify that you want to build only the Escher module, for Linux:
     ```
     cd $FUCHSIA_DIR
-    fx set x86-64 --release --packages garnet/packages/escher_linux
+    fx set x86-64 --release --packages garnet/packages/escher_linux,garnet/packages/cobalt_client
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
     * There may be a spurious error regarding `skia_use_sfntly`; ignore it.
+    * `cobalt_client` shouldn't be necessary; it only is due to a bug where the build system expects there to be a non-empty system image.
     * NOTE!! These commands may conflict with the Vulkan SDK on your LD_LIBRARY_PATH.  It is probably best to run these commands in one terminal window, then switch to another and setting LD_LIBRARY_PATH before Building
     and running.
+  * Do this once only: `fx full-build`
+    * Note: you can exit via Ctrl-C once Zircon is finished building.  
   * BUILD!! AND RUN!!!
     ```
     buildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall
