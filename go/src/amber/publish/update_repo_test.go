@@ -114,14 +114,13 @@ func TestPopulateKeys(t *testing.T) {
 }
 
 func TestInitRepo(t *testing.T) {
-	srcDir := createFakeKeys(t)
-	defer os.RemoveAll(srcDir)
-
-	f, err := os.Create(filepath.Join(srcDir, rootJSONName))
+	keysPath, err := ioutil.TempDir("", "publish-test-keys")
 	if err != nil {
-		t.Fatalf("Couldn't create fake root json manifest %v", err)
+		t.Fatalf("Couldn't creating test directory %v", err)
 	}
-	f.Close()
+	defer os.RemoveAll(keysPath)
+
+	genKeys(keysPath, t)
 
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
@@ -134,7 +133,7 @@ func TestInitRepo(t *testing.T) {
 		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
 	}
 
-	_, err = InitRepo(repoDir, srcDir)
+	_, err = InitRepo(repoDir, keysPath)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -148,46 +147,14 @@ func TestInitRepo(t *testing.T) {
 }
 
 func TestAddTUFFile(t *testing.T) {
-	// use the TUF library directly to create a set of keys and empty root
-	// manifest
-	storePath, err := ioutil.TempDir("", "publish-test-repo")
+	keysPath, err := ioutil.TempDir("", "publish-test-keys")
 	if err != nil {
 		t.Fatalf("Couldn't creating test directory %v", err)
 	}
+	defer os.RemoveAll(keysPath)
 
-	store := tuf.FileSystemStore(storePath, func(role string, confirm bool) ([]byte, error) { return []byte(""), nil })
-	tufRepo, err := tuf.NewRepo(store, "sha512")
-	if err != nil {
-		t.Fatalf("Repository couldn't be created")
-	}
+	genKeys(keysPath, t)
 
-	err = tufRepo.Init(true)
-	if err != nil {
-		t.Fatalf("Error initializing repository %v", err)
-	}
-	defer os.RemoveAll(storePath)
-
-	// create all the keys
-	for _, k := range []string{"root", "timestamp", "targets", "snapshot"} {
-		_, err = tufRepo.GenKey(k)
-		if err != nil {
-			fmt.Printf("Error creating key %s: %s\n", k, err)
-		}
-	}
-
-	keysSrc := filepath.Join(storePath, "keys")
-
-	// copy the root.json, which is the manifest for the empty repo into the keys
-	// directory. The InitRepo method will want to ingest this.
-	err = copyFile(filepath.Join(keysSrc, rootJSONName),
-	   filepath.Join(storePath, "staged", "root.json"))
-
-	if err != nil {
-		t.Fatalf("Couldn't copy root json manifest %v", err)
-	}
-
-
-	// Now that we've created the keys, start testing our code.
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
 		t.Fatalf("Couldn't create test repo directory.")
@@ -199,7 +166,7 @@ func TestAddTUFFile(t *testing.T) {
 		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
 	}
 
-	amberRepo, err := InitRepo(repoDir, keysSrc)
+	amberRepo, err := InitRepo(repoDir, keysPath)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -264,14 +231,13 @@ func TestAddTUFFile(t *testing.T) {
 }
 
 func TestAddBlob(t *testing.T) {
-	srcDir := createFakeKeys(t)
-	defer os.RemoveAll(srcDir)
-
-	f, err := os.Create(filepath.Join(srcDir, rootJSONName))
+	keysPath, err := ioutil.TempDir("", "publish-test-keys")
 	if err != nil {
-		t.Fatalf("Couldn't create fake root json manifest %v", err)
+		t.Fatalf("Couldn't creating test directory %v", err)
 	}
-	f.Close()
+	defer os.RemoveAll(keysPath)
+
+	genKeys(keysPath, t)
 
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
@@ -284,7 +250,7 @@ func TestAddBlob(t *testing.T) {
 		checkPaths = append(checkPaths, filepath.Join(repoDir, "keys", k))
 	}
 
-	repo, err := InitRepo(repoDir, srcDir)
+	repo, err := InitRepo(repoDir, keysPath)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -341,4 +307,50 @@ func createFakeKeys(t *testing.T) string {
 		f.Close()
 	}
 	return srcDir
+}
+
+// genKeys uses go-tuf client methods directly to create a set of keys which
+// our wrapper client is expected to ingest
+func genKeys(keysDst string, t *testing.T) {
+	// use the TUF library directly to create a set of keys and empty root
+	// manifest
+	storePath, err := ioutil.TempDir("", "publish-test-genkeys")
+	if err != nil {
+		t.Fatalf("Couldn't creating test directory %v", err)
+	}
+	defer os.RemoveAll(storePath)
+
+	store := tuf.FileSystemStore(storePath, func(role string, confirm bool) ([]byte, error) { return []byte(""), nil })
+	tufRepo, err := tuf.NewRepo(store, "sha512")
+	if err != nil {
+		t.Fatalf("Repository couldn't be created")
+	}
+
+	err = tufRepo.Init(true)
+	if err != nil {
+		t.Fatalf("Error initializing repository %v", err)
+	}
+
+	// create all the keys
+	for _, k := range []string{"root", "timestamp", "targets", "snapshot"} {
+		_, err = tufRepo.GenKey(k)
+		if err != nil {
+			fmt.Printf("Error creating key %s: %s\n", k, err)
+		}
+		filename := k + ".json"
+		err = copyFile(filepath.Join(keysDst, filename),
+			filepath.Join(storePath, "keys", filename))
+		if err != nil {
+			t.Fatalf("Failed to copy key to output path %v", err)
+		}
+	}
+
+	// copy the root.json, which is the manifest for the empty repo into the keys
+	// directory. The InitRepo method will want to ingest this.
+	err = copyFile(filepath.Join(keysDst, rootJSONName),
+		filepath.Join(storePath, "staged", "root.json"))
+
+	if err != nil {
+		t.Fatalf("Couldn't copy root json manifest %v", err)
+	}
 }

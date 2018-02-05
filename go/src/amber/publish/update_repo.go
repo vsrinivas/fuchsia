@@ -63,7 +63,23 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		return nil, e
 	}
 
-	return &UpdateRepo{repo: repo, path: r}, nil
+	u := &UpdateRepo{repo: repo, path: r}
+
+	// do a commit of the empty repository so that we are
+	// always have a valid repository
+	if e := os.MkdirAll(u.stagedFilesPath(), os.ModePerm); e != nil {
+		return nil, e
+	}
+
+	if e := repo.AddTargets([]string{}, nil); e != nil {
+		return nil, e
+	}
+
+	if e := u.CommitUpdates(); e != nil {
+		return nil, e
+	}
+
+	return u, nil
 }
 
 func (u *UpdateRepo) AddPackageFile(src string, name string) error {
