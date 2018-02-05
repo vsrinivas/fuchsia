@@ -51,7 +51,7 @@ source_set("src") {
   }
 
   if (msd_arm_enable_cache_coherency) {
-    defines += ["MSD_ARM_ENABLE_CACHE_COHERENCY"]
+    defines += [ "MSD_ARM_ENABLE_CACHE_COHERENCY" ]
   }
 
   deps = [
@@ -63,58 +63,5 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("main") {
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/magma/src/magma_util",
-    "//garnet/lib/magma/src/magma_util:command_buffer",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/sys_driver",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/zx",
-  ]
-
-  libs = [
-    "zircon",
-  ]
-}
-
-source_set("test_driver") {
-  testonly = true
-
-  configs += [ "$magma_build_root:magma_tests_include_config" ]
-
-  sources = [
-    "driver_test_gtest.cc",
-    "main.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/magma/src/magma_util",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/sys_driver",
-    "//garnet/lib/magma/tests/helper:platform_device_helper",
-    "//zircon/public/lib/zx",
-  ]
-
-  defines = [ "MAGMA_TEST_DRIVER=1" ]
-  deps += [
-    "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
-    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
-    "//third_party/gtest",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/fdio",
-  ]
-
-  libs = [
-    "zircon",
   ]
 }

@@ -7,12 +7,14 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
+ARM_MALI_DEVICE_ID = "PDEV_DID_ARM_MALI"
+
 driver_module("msd_arm") {
   output_name = "libmsd_arm"
 
   deps = [
+    ":msd_arm_entry",
     "src",
-    "src:main",
   ]
 
   ldflags = [ shared_ldflags ]
@@ -23,12 +25,21 @@ driver_module("msd_arm_test") {
   output_name = "libmsd_arm_test"
 
   deps = [
+    ":msd_arm_test_entry",
     "src",
-    "src:test_driver",
     "tests:gtest",
   ]
 
   ldflags = [ shared_ldflags ]
+}
+
+magma_pdev_entry("msd_arm_entry") {
+  pdev_device_id = ARM_MALI_DEVICE_ID
+}
+
+magma_pdev_entry("msd_arm_test_entry") {
+  pdev_device_id = ARM_MALI_DEVICE_ID
+  test_entry = true
 }
 
 group("tests") {

@@ -47,6 +47,8 @@ template("magma_pci_entry") {
     assert(defined(invoker.pci_vendor_id), "pci_vendor_id not defined")
     if (!defined(invoker.test_entry)) {
       test_entry = false
+    } else {
+      testonly = true
     }
 
     forward_variables_from(invoker, "*")
@@ -66,6 +68,36 @@ template("magma_pci_entry") {
       deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
     } else {
       deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pci" ]
+    }
+  }
+}
+
+template("magma_pdev_entry") {
+  source_set(target_name) {
+    assert(defined(invoker.pdev_device_id), "pdev_device_id not defined")
+    if (!defined(invoker.test_entry)) {
+      test_entry = false
+    } else {
+      testonly = true
+    }
+
+    forward_variables_from(invoker, "*")
+
+    sources = [
+      "//garnet/lib/magma/src/sys_driver/pdev_entry.cc",
+    ]
+    defines = [ "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [ "//zircon/public/lib/ddk" ]
+
+    if (!test_entry) {
+      deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
+    } else {
+      deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pdev" ]
     }
   }
 }

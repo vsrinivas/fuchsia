@@ -1,161 +1,62 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "zx/channel.h"
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/display.h>
-#include <ddk/protocol/pci.h>
-#include <hw/pci.h>
+#include <ddk/protocol/platform-defs.h>
+#include <ddk/protocol/platform-device.h>
 
-#include <atomic>
 #include <zircon/process.h>
 #include <zircon/types.h>
-#include <thread>
 
-#include "magma_util/cache_flush.h"
-#include "magma_util/dlog.h"
+#include <memory>
+
+#include "magma_util/macros.h"
 #include "magma_util/platform/zircon/zircon_platform_ioctl.h"
-#include "magma_util/platform/zircon/zircon_platform_trace.h"
+#include "platform_trace.h"
 #include "sys_driver/magma_driver.h"
-#include "sys_driver/magma_system_buffer.h"
+#include "sys_driver/magma_system_device.h"
 
 #if MAGMA_TEST_DRIVER
 void magma_indriver_test(zx_device_t* device);
 #endif
 
-struct sysdrv_device_t {
+struct gpu_device {
     zx_device_t* parent_device;
-    zx_device_t* zx_device_display;
-    zx_device_t* zx_device_gpu;
-
-    void* framebuffer_addr;
-    uint64_t framebuffer_size;
-
-    zx_display_info_t info;
-    uint32_t flags;
-
-    zx_display_cb_t ownership_change_callback{nullptr};
-    void* ownership_change_cookie{nullptr};
-
-    std::unique_ptr<magma::PlatformBuffer> console_buffer;
-    std::unique_ptr<magma::PlatformBuffer> placeholder_buffer;
+    zx_device_t* zx_device;
     std::unique_ptr<MagmaDriver> magma_driver;
     std::shared_ptr<MagmaSystemDevice> magma_system_device;
-    std::shared_ptr<MagmaSystemBuffer> console_framebuffer;
-    std::shared_ptr<MagmaSystemBuffer> placeholder_framebuffer;
     std::mutex magma_mutex;
-    std::atomic_bool console_visible{true};
 };
 
-static magma::CacheFlush g_cache_flush;
+gpu_device* get_gpu_device(void* context) { return static_cast<gpu_device*>(context); }
 
-static int magma_start(sysdrv_device_t* dev);
-
-#if MAGMA_TEST_DRIVER
-static int magma_stop(sysdrv_device_t* dev);
-#endif
-
-sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
-
-// implement display protocol
-
-static zx_status_t sysdrv_display_set_mode(void* ctx, zx_display_info_t* info)
+static zx_status_t magma_start(gpu_device* gpu)
 {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t sysdrv_display_get_mode(void* ctx, zx_display_info_t* info)
-{
-    assert(info);
-    sysdrv_device_t* device = get_device(ctx);
-    memcpy(info, &device->info, sizeof(zx_display_info_t));
+    gpu->magma_system_device = gpu->magma_driver->CreateDevice(gpu->parent_device);
+    if (!gpu->magma_system_device)
+        return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
     return ZX_OK;
 }
 
-static zx_status_t sysdrv_display_get_framebuffer(void* ctx, void** framebuffer)
+static zx_status_t magma_stop(gpu_device* gpu)
 {
-    assert(framebuffer);
-    sysdrv_device_t* device = get_device(ctx);
-    (*framebuffer) = device->framebuffer_addr;
+    gpu->magma_system_device->Shutdown();
+    gpu->magma_system_device.reset();
     return ZX_OK;
 }
 
-static void sysdrv_display_flush(void* ctx)
+static zx_status_t device_open(void* context, zx_device_t** out, uint32_t flags) { return ZX_OK; }
+
+static zx_status_t device_close(void* context, uint32_t flags) { return ZX_OK; }
+
+static zx_status_t device_ioctl(void* context, uint32_t op, const void* in_buf, size_t in_len,
+                                void* out_buf, size_t out_len, size_t* out_actual)
 {
-    sysdrv_device_t* device = get_device(ctx);
-    // Don't incur overhead of flushing when console's not visible
-    if (device->console_visible)
-        g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
-}
-
-static void sysdrv_display_acquire_or_release_display(void* ctx, bool acquire)
-{
-    sysdrv_device_t* device = get_device(ctx);
-    DLOG("sysdrv_i915_acquire_or_release_display");
-
-    std::unique_lock<std::mutex> lock(device->magma_mutex);
-
-    if (acquire && device->magma_system_device->page_flip_enabled()) {
-        DLOG("flipping to console");
-        // Ensure any software writes to framebuffer are visible
-        device->console_visible = true;
-        if (device->ownership_change_callback)
-            device->ownership_change_callback(true, device->ownership_change_cookie);
-        g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
-        magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
-        auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
-            device->console_framebuffer, &image_desc, false);
-        if (last_framebuffer) {
-            void* data;
-            if (last_framebuffer->platform_buffer()->MapCpu(&data)) {
-                g_cache_flush.clflush_range(data, last_framebuffer->size());
-                last_framebuffer->platform_buffer()->UnmapCpu();
-            }
-            device->placeholder_framebuffer = last_framebuffer;
-        }
-    } else if (!acquire && !device->magma_system_device->page_flip_enabled()) {
-        DLOG("flipping to placeholder_framebuffer");
-        magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
-        device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer, &image_desc,
-                                                       true);
-        device->console_visible = false;
-        if (device->ownership_change_callback)
-            device->ownership_change_callback(false, device->ownership_change_cookie);
-    }
-}
-
-static void sysdrv_display_set_ownership_change_callback(void* ctx, zx_display_cb_t callback,
-                                                        void* cookie)
-{
-    sysdrv_device_t* device = get_device(ctx);
-    std::unique_lock<std::mutex> lock(device->magma_mutex);
-    device->ownership_change_callback = callback;
-    device->ownership_change_cookie = cookie;
-}
-
-static display_protocol_ops_t sysdrv_display_proto = {
-    .set_mode = sysdrv_display_set_mode,
-    .get_mode = sysdrv_display_get_mode,
-    .get_framebuffer = sysdrv_display_get_framebuffer,
-    .acquire_or_release_display = sysdrv_display_acquire_or_release_display,
-    .set_ownership_change_callback = sysdrv_display_set_ownership_change_callback,
-    .flush = sysdrv_display_flush,
-};
-
-// implement device protocol
-
-static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual)
-{
-    sysdrv_device_t* device = get_device(ctx);
+    gpu_device* device = get_gpu_device(context);
 
     DASSERT(device->magma_system_device);
 
@@ -184,11 +85,37 @@ static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_bu
             result = ZX_OK;
             break;
         }
+        case IOCTL_MAGMA_CONNECT: {
+            DLOG("IOCTL_MAGMA_CONNECT");
+            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+            if (!in_buf || in_len < sizeof(*request))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            if (request->capabilities != MAGMA_CAPABILITY_RENDERING)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
+                                                      request->client_id, request->capabilities);
+            if (!connection)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            device_handle_out[0] = connection->GetHandle();
+            device_handle_out[1] = connection->GetNotificationChannel();
+            *out_actual = sizeof(*device_handle_out) * 2;
+            result = ZX_OK;
+
+            device->magma_system_device->StartConnectionThread(std::move(connection));
+
+            break;
+        }
 
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
-            sysdrv_device_t* device = get_device(ctx);
             if (device->magma_system_device)
                 device->magma_system_device->DumpStatus();
             result = ZX_OK;
@@ -206,359 +133,71 @@ static zx_status_t sysdrv_common_ioctl(void* ctx, uint32_t op, const void* in_bu
             break;
         }
 #endif
-    }
-
-    return result;
-}
-
-static zx_status_t sysdrv_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual)
-{
-    DLOG("sysdrv_gpu_ioctl");
-    zx_status_t result = sysdrv_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-    if (result == ZX_OK)
-        return ZX_OK;
-
-    if (result != ZX_ERR_NOT_SUPPORTED)
-        return result;
-
-    sysdrv_device_t* device = get_device(ctx);
-    DASSERT(device->magma_system_device);
-
-    switch (op) {
-        case IOCTL_MAGMA_CONNECT: {
-            DLOG("IOCTL_MAGMA_CONNECT");
-            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
-            if (!in_buf || in_len < sizeof(*request))
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            if ((request->capabilities & MAGMA_CAPABILITY_DISPLAY) ||
-                (request->capabilities & MAGMA_CAPABILITY_RENDERING) == 0)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto connection = MagmaSystemDevice::Open(
-                device->magma_system_device, request->client_id, MAGMA_CAPABILITY_RENDERING);
-            if (!connection)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            device_handle_out[0] = connection->GetHandle();
-            device_handle_out[1] = connection->GetNotificationChannel();
-            *out_actual = sizeof(*device_handle_out) * 2;
-            result = ZX_OK;
-
-            device->magma_system_device->StartConnectionThread(std::move(connection));
-
-            break;
-        }
 
         default:
-            DLOG("sysdrv_gpu_ioctl unhandled op 0x%x", op);
+            DLOG("device_ioctl unhandled op 0x%x", op);
     }
 
     return result;
 }
 
-static int reset_placeholder(sysdrv_device_t* device)
+static void device_release(void* context)
 {
-    void* addr;
-    if (device->placeholder_buffer->MapCpu(&addr)) {
-        memset(addr, 0, device->placeholder_buffer->size());
-        g_cache_flush.clflush_range(addr, device->placeholder_buffer->size());
-        device->placeholder_buffer->UnmapCpu();
+    gpu_device* device = get_gpu_device(context);
+    {
+        std::unique_lock<std::mutex> lock(device->magma_mutex);
+        magma_stop(device);
     }
 
-    uint32_t buffer_handle;
-    if (!device->placeholder_buffer->duplicate_handle(&buffer_handle))
-        return DRET_MSG(ZX_ERR_NO_RESOURCES, "duplicate_handle failed");
-
-    device->placeholder_framebuffer =
-        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
-    if (!device->placeholder_framebuffer)
-        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to created magma system buffer");
-
-    return ZX_OK;
+    delete device;
 }
 
-static zx_status_t sysdrv_display_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len, size_t* out_actual)
-{
-    DLOG("sysdrv_display_ioctl");
-    zx_status_t result = sysdrv_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-    if (result == ZX_OK)
-        return ZX_OK;
-
-    if (result != ZX_ERR_NOT_SUPPORTED)
-        return result;
-
-    sysdrv_device_t* device = get_device(ctx);
-    DASSERT(device->magma_system_device);
-
-    switch (op) {
-        case IOCTL_DISPLAY_GET_FB: {
-            DLOG("MAGMA IOCTL_DISPLAY_GET_FB");
-            if (out_len < sizeof(ioctl_display_get_fb_t))
-                return DRET(ZX_ERR_INVALID_ARGS);
-            ioctl_display_get_fb_t* description = static_cast<ioctl_display_get_fb_t*>(out_buf);
-            device->console_buffer->duplicate_handle(
-                reinterpret_cast<uint32_t*>(&description->vmo));
-            description->info = device->info;
-            *out_actual = sizeof(ioctl_display_get_fb_t);
-            result = ZX_OK;
-            break;
-        }
-
-        case IOCTL_MAGMA_DISPLAY_GET_SIZE: {
-            DLOG("IOCTL_MAGMA_DISPLAY_GET_SIZE");
-            if (in_len != 0)
-                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad in_buf");
-            auto* value_out = static_cast<magma_display_size*>(out_buf);
-            if (!out_buf || out_len < sizeof(*value_out))
-                return DRET_MSG(ZX_ERR_INVALID_ARGS, "bad out_buf");
-
-            std::unique_lock<std::mutex> lock(device->magma_mutex);
-            if (device->magma_system_device) {
-                if (msd_device_display_get_size(device->magma_system_device->msd_dev(),
-                                                value_out) == MAGMA_STATUS_OK) {
-                    result = sizeof(*value_out);
-                }
-            }
-            break;
-        }
-
-        case IOCTL_MAGMA_CONNECT: {
-            DLOG("IOCTL_MAGMA_CONNECT");
-            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
-            if (!in_buf || in_len < sizeof(*request))
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_handle_out) * 2)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            if ((request->capabilities & MAGMA_CAPABILITY_RENDERING) ||
-                (request->capabilities & MAGMA_CAPABILITY_DISPLAY) == 0)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            reset_placeholder(device);
-            magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
-            device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,
-                                                           &image_desc, true);
-            device->console_visible = false;
-            if (device->ownership_change_callback)
-                device->ownership_change_callback(false, device->ownership_change_cookie);
-
-            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
-                                                      request->client_id, MAGMA_CAPABILITY_DISPLAY);
-            if (!connection)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            device_handle_out[0] = connection->GetHandle();
-            device_handle_out[1] = connection->GetNotificationChannel();
-            *out_actual = sizeof(*device_handle_out) * 2;
-            result = ZX_OK;
-
-            device->magma_system_device->StartConnectionThread(std::move(connection));
-
-            break;
-        }
-
-        default:
-            DLOG("sysdrv_display_ioctl unhandled op 0x%x", op);
-    }
-
-    return result;
-}
-
-static void sysdrv_display_release(void* ctx)
-{
-    // TODO(ZX-1170) - when testable:
-    // Perform magma_stop but don't free the context unless sysdrv_gpu_release has already been
-    // called
-    DASSERT(false);
-}
-
-static zx_protocol_device_t sysdrv_display_device_proto = {
-    .version = DEVICE_OPS_VERSION, .ioctl = sysdrv_display_ioctl, .release = sysdrv_display_release,
+static zx_protocol_device_t device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .open = device_open,
+    .close = device_close,
+    .ioctl = device_ioctl,
+    .release = device_release,
 };
 
-static void sysdrv_gpu_release(void* ctx)
+static zx_status_t driver_bind(void* context, zx_device_t* parent)
 {
-    // TODO(ZX-1170) - when testable:
-    // Free context if sysdrv_display_release has already been called
-    DASSERT(false);
-}
-
-static zx_protocol_device_t sysdrv_gpu_device_proto = {
-    .version = DEVICE_OPS_VERSION, .ioctl = sysdrv_gpu_ioctl, .release = sysdrv_gpu_release,
-};
-
-// implement driver object:
-
-static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
-{
-    DLOG("sysdrv_bind start zx_device %p", zx_device);
-
-    // map resources and initialize the device
-    auto device = std::make_unique<sysdrv_device_t>();
-
-    zx_display_info_t* di = &device->info;
-    uint32_t format, width, height, stride, pitch;
-    zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
-    if (status == ZX_OK) {
-        di->format = format;
-        di->width = width;
-        di->height = height;
-        di->stride = stride;
-    } else {
-        di->format = ZX_PIXEL_FORMAT_ARGB_8888;
-        di->width = 2560 / 2;
-        di->height = 1700 / 2;
-        di->stride = 2560 / 2;
-    }
-
-    switch (di->format) {
-        case ZX_PIXEL_FORMAT_RGB_565:
-            pitch = di->stride * sizeof(uint16_t);
-            break;
-        default:
-            DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
-        case ZX_PIXEL_FORMAT_ARGB_8888:
-        case ZX_PIXEL_FORMAT_RGB_x888:
-            pitch = di->stride * sizeof(uint32_t);
-            break;
-    }
-
-    device->framebuffer_size = pitch * di->height;
-
-    device->console_buffer =
-        magma::PlatformBuffer::Create(device->framebuffer_size, "console-buffer");
-
-    if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
-        return DRET_MSG(ZX_ERR_NO_MEMORY, "Failed to map framebuffer");
-
-    // Placeholder is in tiled format
-    device->placeholder_buffer = magma::PlatformBuffer::Create(
-        magma::round_up(pitch, 512) * di->height, "placeholder-buffer");
-
-    di->flags = ZX_DISPLAY_FLAG_HW_FRAMEBUFFER;
-
-    // Tell the kernel about the console framebuffer so it can display a kernel
-    // panic screen.
-    // If other display clients come along and change the scanout address, then
-    // the panic
-    // won't be visible; however the plan is to move away from onscreen panics,
-    // instead
-    // writing the log somewhere it can be recovered then triggering a reboot.
-    uint32_t handle;
-    if (!device->console_buffer->duplicate_handle(&handle))
-        return DRET_MSG(ZX_ERR_INTERNAL, "Failed to duplicate framebuffer handle");
-
-    status = zx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, format,
-                                    width, height, stride);
-    if (status != ZX_OK)
-        magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to zircon: %d", status);
+    magma::log(magma::LOG_INFO, "driver_bind: binding\n");
+    auto gpu = std::make_unique<gpu_device>();
+    if (!gpu)
+        return ZX_ERR_NO_MEMORY;
+    gpu->parent_device = parent;
 
     if (magma::PlatformTrace::Get())
         magma::PlatformTrace::Get()->Initialize();
 
-    device->magma_driver = MagmaDriver::Create();
-    if (!device->magma_driver)
-        return DRET_MSG(ZX_ERR_INTERNAL, "MagmaDriver::Create failed");
+    gpu->magma_driver = MagmaDriver::Create();
 
 #if MAGMA_TEST_DRIVER
     DLOG("running magma indriver test");
-    magma_indriver_test(zx_device);
+    magma_indriver_test(parent);
 #endif
 
-    device->parent_device = zx_device;
-
-    status = magma_start(device.get());
+    zx_status_t status = magma_start(gpu.get());
     if (status != ZX_OK)
-        return DRET_MSG(status, "magma_start failed");
+        return status;
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "magma_display";
-    args.ctx = device.get();
-    args.ops = &sysdrv_display_device_proto;
-    args.proto_id = ZX_PROTOCOL_DISPLAY;
-    args.proto_ops = &sysdrv_display_proto;
-
-    status = device_add(zx_device, &args, &device->zx_device_display);
-    if (status != ZX_OK)
-        return DRET_MSG(status, "display device_add failed: %d", status);
-
-    args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "magma_gpu";
-    args.ctx = device.get();
-    args.ops = &sysdrv_gpu_device_proto;
+    args.ctx = gpu.get();
+    args.ops = &device_proto;
     args.proto_id = ZX_PROTOCOL_GPU;
-    args.proto_ops = nullptr;
 
-    status = device_add(zx_device, &args, &device->zx_device_gpu);
+    status = device_add(parent, &args, &gpu->zx_device);
     if (status != ZX_OK)
-        return DRET_MSG(status, "gpu device_add failed: %d", status);
+        return DRET_MSG(status, "device_add failed");
 
-    device.release();
-
-    DLOG("initialized magma system driver");
-
+    gpu.release();
     return ZX_OK;
 }
 
 zx_driver_ops_t msd_driver_ops = {
-    .version = DRIVER_OPS_VERSION, .bind = sysdrv_bind,
+    .version = DRIVER_OPS_VERSION,
+    .bind = driver_bind,
 };
-
-static int magma_start(sysdrv_device_t* device)
-{
-    DLOG("magma_start");
-
-    device->magma_system_device = device->magma_driver->CreateDevice(device->parent_device);
-    if (!device->magma_system_device)
-        return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
-
-    DLOG("Created device %p", device->magma_system_device.get());
-
-    DASSERT(device->console_buffer);
-    DASSERT(device->placeholder_buffer);
-
-    uint32_t buffer_handle;
-
-    if (!device->console_buffer->duplicate_handle(&buffer_handle))
-        return DRET_MSG(ZX_ERR_NO_RESOURCES, "duplicate_handle failed");
-
-    device->console_framebuffer =
-        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
-    if (!device->console_framebuffer)
-        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to created magma system buffer");
-
-    int result = reset_placeholder(device);
-    if (result != 0)
-        return result;
-
-    magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
-    device->magma_system_device->PageFlipAndEnable(device->console_framebuffer, &image_desc, false);
-
-    return ZX_OK;
-}
-
-#if MAGMA_TEST_DRIVER
-static int magma_stop(sysdrv_device_t* device)
-{
-    DLOG("magma_stop");
-
-    device->console_framebuffer.reset();
-    device->placeholder_framebuffer.reset();
-
-    device->magma_system_device->Shutdown();
-    device->magma_system_device.reset();
-
-    return ZX_OK;
-}
-#endif
