@@ -4,10 +4,10 @@
 
 import("//garnet/bin/guest/guest.gni")
 
-if (target_cpu == "arm64") {
-  linux_platform = "arm64"
-} else if (current_cpu == "x64") {
+if (target_cpu == "x64") {
   linux_platform = "x86"
+} else {
+  linux_platform = target_cpu
 }
 
 linux_dir = "$target_out_dir/linux/source"
@@ -67,7 +67,7 @@ guest_app("linux-guest") {
 
   if (target_cpu == "arm64") {
     cmdline = "earlycon=pl011,0xfff32000 console=ttyAMA0 console=tty0"
-  } else if (current_cpu == "x64") {
+  } else if (target_cpu == "x64") {
     cmdline = "earlycon=uart,io,0x3f8 console=ttyS0 console=tty0 io_delay=none clocksource=tsc"
   }
 
