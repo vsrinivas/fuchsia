@@ -184,7 +184,7 @@ func (s *queryState) timerExpired(c *Client) (state, error) {
 
 const DefaultScanInterval = 5 * time.Second
 const ScanTimeout = 30 * time.Second
-const ScanSlice = 5
+const ScanSlice = 1
 
 type scanState struct {
 	pause             bool
