@@ -331,7 +331,59 @@ func TestSpecificGatewayBeforeAnyGateway(t *testing.T) {
 
 	sort.Slice(routes, func(i, j int) bool {
 		r := Less(&routes[i], &routes[j], indexedByID(nics))
-		t.Logf("Comparing:\n\t%+v\n\t%+v\n\tLess:%b", &routes[i], &routes[j], r)
+		t.Logf("Comparing:\n\t%+v\n\t%+v\n\tLess:%v", &routes[i], &routes[j], r)
+		return r
+	})
+
+	if !reflect.DeepEqual(expected, routes) {
+		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	}
+}
+
+func TestSpecificMaskFirst(t *testing.T) {
+	nics := []*NIC{
+		&NIC{
+			ID: 1,
+			Routes: []tcpip.Route{
+				{
+					Gateway: tcpip.Parse("192.168.0.1"),
+					Mask:    tcpip.Parse("255.255.0.0"),
+					NIC:     1,
+				},
+			},
+		},
+		&NIC{
+			ID: 1,
+			Routes: []tcpip.Route{
+				{
+					Gateway: tcpip.Parse("192.168.42.1"),
+					Mask:    tcpip.Parse("255.255.255.0"),
+					NIC:     1,
+				},
+			},
+		},
+	}
+
+	expected := []tcpip.Route{
+		{
+			Gateway: tcpip.Parse("192.168.42.1"),
+			Mask:    tcpip.Parse("255.255.255.0"),
+			NIC:     1,
+		},
+		{
+			Gateway: tcpip.Parse("192.168.0.1"),
+			Mask:    tcpip.Parse("255.255.0.0"),
+			NIC:     1,
+		},
+	}
+	routes := make([]tcpip.Route, 0)
+	for i := 0; i < len(nics); i++ {
+		routes = append(routes, nics[i].Routes...)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		r := Less(&routes[i], &routes[j], indexedByID(nics))
+		t.Logf("Comparing:\n\t%+v\n\t%+v\n\tLess:%v", &routes[i], &routes[j], r)
 		return r
 	})
 

@@ -57,6 +57,42 @@ type ifState struct {
 	statsEP stats.StatsEndpoint
 }
 
+func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
+	return []tcpip.Route{
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Gateway:     gateway,
+			NIC:         nicid,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
+			NIC:         nicid,
+		},
+	}
+}
+
+func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
+	return tcpip.Route{
+		Destination: applyMask(addr, mask),
+		Mask:        tcpip.Address(mask),
+		Gateway:     gateway,
+		NIC:         nicid,
+	}
+}
+
+func applyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
+	if len(addr) != len(mask) {
+		return ""
+	}
+	subnet := []byte(addr)
+	for i := 0; i < len(subnet); i++ {
+		subnet[i] &= mask[i]
+	}
+	return tcpip.Address(subnet)
+}
+
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
 	if oldAddr != "" && oldAddr != newAddr {
 		log.Printf("NIC %d: DHCP IP %s expired", ifs.nic.ID, oldAddr)
@@ -75,6 +111,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	// Update default route with new gateway.
 	ifs.ns.mu.Lock()
 	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, config.Gateway)
+	ifs.nic.Routes = append(ifs.nic.Routes, subnetRoute(newAddr, config.SubnetMask, ifs.nic.ID, config.Gateway))
 	ifs.nic.Netmask = config.SubnetMask
 	ifs.nic.Addr = newAddr
 	ifs.nic.DNSServers = config.DNS

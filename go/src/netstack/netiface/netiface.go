@@ -31,6 +31,20 @@ func hasGateway(r *tcpip.Route) bool {
 	return r.Gateway != ""
 }
 
+func prefixLength(mask tcpip.Address) (len int) {
+	for _, b := range []byte(mask) {
+		for i := uint(0); i < 8; i++ {
+			if b&(1<<i) != 0 {
+				len++
+			} else {
+				return len
+			}
+		}
+	}
+	return len
+}
+
+// Less is the sorting function used for routes.
 func Less(ri, rj *tcpip.Route, nics map[tcpip.NICID]*NIC) bool {
 	ni, nj := nics[ri.NIC], nics[rj.NIC]
 	// If only one of them has a route for specific address (i.e. not a route
@@ -53,6 +67,12 @@ func Less(ri, rj *tcpip.Route, nics map[tcpip.NICID]*NIC) bool {
 	if (ni.Addr != "") != (nj.Addr != "") {
 		return ni.Addr != ""
 	}
+	// If one has a more specific netmask (longer prefix len), that element
+	// should sort before the other.
+	li, lj := prefixLength(ri.Mask), prefixLength(rj.Mask)
+	if len(ri.Mask) == len(rj.Mask) && li != lj {
+		return li > lj
+	}
 	// Otherwise, sort them by the IDs of their NICs.
-	return ni.ID < nj.ID
+	return ri.NIC < rj.NIC
 }

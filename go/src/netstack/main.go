@@ -6,7 +6,6 @@ package main
 
 import (
 	"log"
-	"strings"
 
 	"app/context"
 
@@ -82,21 +81,5 @@ func main() {
 		if err := ns.addEth(path); err != nil {
 			log.Printf("failed to add ethernet device %s: %v", path, err)
 		}
-	}
-}
-
-func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
-	return []tcpip.Route{
-		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
-			Gateway:     gateway,
-			NIC:         nicid,
-		},
-		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
-			NIC:         nicid,
-		},
 	}
 }
