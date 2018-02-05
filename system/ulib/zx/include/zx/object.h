@@ -13,30 +13,77 @@ namespace zx {
 
 class port;
 
-// Wraps and takes ownership of a handle to an object to provide type-safe
-// access to its operations.  The handle is automatically closed when the
-// wrapper is destroyed.
-template <typename T> class object {
+// Wraps and takes ownership of a handle to an object.
+//
+// Used for code that wants to operate generically on the zx_handle_t value
+// inside a |zx::object| and doesn't otherwise need a template parameter.
+//
+// The handle is automatically closed when the wrapper is destroyed.
+class object_base {
 public:
-    constexpr object() : value_(ZX_HANDLE_INVALID) {}
-
-    explicit object(zx_handle_t value) : value_(value) {}
-
-    template <typename U> object(object<U>&& other) : value_(other.release()) {
-        static_assert(is_same<T, void>::value, "Receiver must be compatible.");
+    void reset(zx_handle_t value = ZX_HANDLE_INVALID) {
+        close();
+        value_ = value;
     }
 
-    ~object() { close(); }
+    bool is_valid() const { return value_ != ZX_HANDLE_INVALID; }
+    explicit operator bool() const { return is_valid(); }
+
+    zx_handle_t get() const { return value_; }
+
+    // Reset the underlying handle, and then get the address of the
+    // underlying internal handle storage.
+    //
+    // Note: The intended purpose is to facilitate interactions with C
+    // APIs which expect to be provided a pointer to a handle used as
+    // an out parameter.
+    zx_handle_t* reset_and_get_address() {
+        reset();
+        return &value_;
+    }
+
+    __attribute__((warn_unused_result)) zx_handle_t release() {
+        zx_handle_t result = value_;
+        value_ = ZX_HANDLE_INVALID;
+        return result;
+    }
+
+protected:
+    constexpr object_base() : value_(ZX_HANDLE_INVALID) {}
+
+    explicit object_base(zx_handle_t value) : value_(value) {}
+
+    ~object_base() { close(); }
+
+    object_base(const object_base&) = delete;
+
+    void operator=(const object_base&) = delete;
+
+    void close() {
+        if (value_ != ZX_HANDLE_INVALID) {
+            zx_handle_close(value_);
+            value_ = ZX_HANDLE_INVALID;
+        }
+    }
+
+    zx_handle_t value_;
+};
+
+// Provides type-safe access to operations on a handle.
+template <typename T> class object : public object_base {
+public:
+    constexpr object() : object_base(ZX_HANDLE_INVALID) {}
+
+    explicit object(zx_handle_t value) : object_base(value) {}
+
+    template <typename U> object(object<U>&& other) : object_base(other.release()) {
+        static_assert(is_same<T, void>::value, "Receiver must be compatible.");
+    }
 
     template <typename U> object<T>& operator=(object<U>&& other) {
         static_assert(is_same<T, void>::value, "Receiver must be compatible.");
         reset(other.release());
         return *this;
-    }
-
-    void reset(zx_handle_t value = ZX_HANDLE_INVALID) {
-        close();
-        value_ = value;
     }
 
     void swap(object<T>& other) {
@@ -129,28 +176,6 @@ public:
         return zx_object_set_cookie(get(), scope, cookie);
     }
 
-    bool is_valid() const { return value_ != ZX_HANDLE_INVALID; }
-    explicit operator bool() const { return is_valid(); }
-
-    zx_handle_t get() const { return value_; }
-
-    // Reset the underlying handle, and then get the address of the
-    // underlying internal handle storage.
-    //
-    // Note: The intended purpose is to facilitate interactions with C
-    // APIs which expect to be provided a pointer to a handle used as
-    // an out parameter.
-    zx_handle_t* reset_and_get_address() {
-        reset();
-        return &value_;
-    }
-
-    __attribute__((warn_unused_result)) zx_handle_t release() {
-        zx_handle_t result = value_;
-        value_ = ZX_HANDLE_INVALID;
-        return result;
-    }
-
 private:
     template <typename A, typename B> struct is_same {
         static const bool value = false;
@@ -159,19 +184,6 @@ private:
     template <typename A> struct is_same<A, A> {
         static const bool value = true;
     };
-
-    object(const object<T>&) = delete;
-
-    void operator=(const object<T>&) = delete;
-
-    void close() {
-        if (value_ != ZX_HANDLE_INVALID) {
-            zx_handle_close(value_);
-            value_ = ZX_HANDLE_INVALID;
-        }
-    }
-
-    zx_handle_t value_;
 };
 
 template <typename T> bool operator==(const object<T>& a, const object<T>& b) {
