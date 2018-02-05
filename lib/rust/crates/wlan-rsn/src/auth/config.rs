@@ -10,6 +10,6 @@ pub enum Config {
     Psk(psk::Config),
 }
 
-pub fn for_psk(ssid: &[u8], passphrase: &[u8]) -> Result<Config> {
-    psk::Config::new(ssid, passphrase).map(|c| Config::Psk(c))
+pub(crate) fn for_psk(passphrase: &[u8], ssid: &[u8]) -> Result<Config> {
+    psk::Config::new(passphrase, ssid).map(|c| Config::Psk(c))
 }
