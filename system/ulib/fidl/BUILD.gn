@@ -11,6 +11,7 @@ config("fidl_config") {
 sdk_source_set("fidl") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
+    "include/fidl/cpp/array.h",
     "include/fidl/cpp/builder.h",
     "include/fidl/cpp/message_buffer.h",
     "include/fidl/cpp/message_builder.h",
