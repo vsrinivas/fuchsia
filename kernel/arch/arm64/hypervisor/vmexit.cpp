@@ -164,6 +164,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         return SET_SYSREG(ttbr1_el1);
     }
 
+    dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
     return ZX_ERR_NOT_SUPPORTED;
 }
 
