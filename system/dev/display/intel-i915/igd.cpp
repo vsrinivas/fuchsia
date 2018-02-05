@@ -310,17 +310,26 @@ bool IgdOpRegion::CheckForLowVoltageEdp(pci_protocol_t* pci) {
         return false;
     }
 
-    uint8_t panel_type;
-    if (!GetPanelType(pci, &panel_type)) {
+    if (!GetPanelType(pci, &panel_type_)) {
         zxlogf(TRACE, "i915: no panel type\n");
         return false;
     }
     edp_is_low_voltage_ =
-            !((edp->vswing_preemphasis[panel_type / 2] >> (4 * panel_type % 2)) & 0xf);
+            !((edp->vswing_preemphasis[panel_type_ / 2] >> (4 * panel_type_ % 2)) & 0xf);
 
     zxlogf(TRACE, "i915: low voltage edp? %d\n", edp_is_low_voltage_);
 
     return true;
+}
+
+void IgdOpRegion::ProcessBacklightData() {
+    uint16_t size;
+    lfp_backlight_t* data = GetSection<lfp_backlight_t>(&size);
+
+    if (data) {
+        lfp_backlight_entry_t* e = &data->entries[panel_type_];
+        min_backlight_brightness_ = e->min_brightness / 255.0;
+    }
 }
 
 zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
@@ -383,7 +392,13 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
         return ZX_ERR_INTERNAL;
     }
 
-    return ProcessDdiConfigs() && CheckForLowVoltageEdp(pci) ? ZX_OK : ZX_ERR_INTERNAL;
+    if (!ProcessDdiConfigs() || !CheckForLowVoltageEdp(pci)) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    ProcessBacklightData();
+
+    return ZX_OK;
 }
 
 }

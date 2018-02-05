@@ -20,15 +20,15 @@ private:
     bool Init(zx_display_info* info) final;
     bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
-    bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size);
+    bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
     bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
-                        uint32_t* size_out);
-    bool DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, uint32_t size);
+                        size_t* size_out);
+    bool DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size);
     bool SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply, bool* timeout_result);
     bool SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply);
 
-    bool DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size);
-    bool DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size);
+    bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
+    bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
 
     bool DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
                                  const dpcd::TrainingLaneSet lanes[]);
@@ -42,7 +42,21 @@ private:
     // For optimizing equalization, determining symbol  boundary, and achieving inter-lane alignment
     bool LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes);
 
-    uint32_t dp_lane_count_;
+    bool SetBacklightOn(bool on);
+    // Sets the backlight brightness with |val| as a coefficient on the maximum
+    // brightness. |val| must be in [0, 1]. If the panel has a minimum fractional
+    // brightness, then |val| will be clamped to [min, 1].
+    bool SetBacklightBrightness(double val);
+
+    uint8_t dp_lane_count_;
+
+    uint8_t dpcd_capabilities_[16];
+    uint8_t dpcd_edp_capabilities_[5];
+    bool backlight_aux_brightness_;
+    bool backlight_aux_power_;
+
+    // The backlight brightness coefficient, in the range [min brightness, 1].
+    double backlight_brightness_ = 1.0f;
 };
 
 } // namespace i915

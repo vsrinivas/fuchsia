@@ -221,4 +221,51 @@ public:
     static auto Get() { return hwreg::RegisterAddr<HdportState>(0x45050); }
 };
 
+// SBLC_PWM_CTL1
+class SouthBacklightCtl1 : public hwreg::RegisterBase<SouthBacklightCtl1, uint32_t> {
+public:
+    DEF_BIT(31, enable);
+    DEF_RSVDZ_BIT(30);
+    DEF_BIT(29, polarity);
+    DEF_RSVDZ_FIELD(28, 0);
+
+    static auto Get() { return hwreg::RegisterAddr<SouthBacklightCtl1>(0xc8250); }
+};
+
+// SBLC_PWM_CTL2
+class SouthBacklightCtl2 : public hwreg::RegisterBase<SouthBacklightCtl2, uint32_t> {
+public:
+    DEF_FIELD(31, 16, modulation_freq);
+    DEF_FIELD(15, 0, duty_cycle);
+
+    static auto Get() { return hwreg::RegisterAddr<SouthBacklightCtl2>(0xc8254); }
+};
+
+// PP_CONTROL
+class PanelPowerCtrl : public hwreg::RegisterBase<PanelPowerCtrl, uint32_t> {
+public:
+    DEF_RSVDZ_FIELD(15, 4);
+    DEF_BIT(3, vdd_override);
+    DEF_BIT(2, backlight_enable);
+    DEF_BIT(1, pwr_down_on_reset);
+    DEF_BIT(0, power_state_target);
+
+    static auto Get() { return hwreg::RegisterAddr<PanelPowerCtrl>(0xc7204); }
+};
+
+// PP_STATUS
+class PanelPowerStatus: public hwreg::RegisterBase<PanelPowerStatus, uint32_t> {
+public:
+    DEF_BIT(31, on_status);
+    DEF_RSVDZ_BIT(30);
+    DEF_FIELD(29, 28, pwr_seq_progress);
+    static constexpr uint32_t kPrwSeqNone = 0;
+    static constexpr uint32_t kPrwSeqPwrUp = 1;
+    static constexpr uint32_t kPrwSeqPwrDown = 2;
+    DEF_BIT(27, pwr_cycle_delay_active);
+    DEF_RSVDZ_FIELD(26, 4);
+
+    static auto Get() { return hwreg::RegisterAddr<PanelPowerStatus>(0xc7200); }
+};
+
 } // namespace registers

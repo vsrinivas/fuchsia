@@ -158,7 +158,6 @@ typedef struct ddi_config {
     DEF_SUBFIELD(iboost_levels, 7, 4, hdmi_iboost_override);
     DEF_SUBFIELD(iboost_levels, 3, 0, dp_iboost_override);
 } ddi_config_t;
-
 static_assert(offsetof(ddi_config_t, ddi_flags) == 2, "Bad ddi_flags offset");
 static_assert(offsetof(ddi_config_t, hdmi_cfg) == 7, "Bad hdmi_cfg offset");
 static_assert(offsetof(ddi_config_t, port_type) == 16, "Bad port_type offset");
@@ -186,6 +185,24 @@ typedef struct lvds_config {
     // A bunch of other unused stuff
 } lvds_config_t;
 
+typedef struct lfp_backlight_entry {
+    uint8_t flags;
+    uint8_t pwm_freq_hz_low;
+    uint8_t pwm_freq_hz_high;
+    uint8_t min_brightness;
+    uint8_t unused[2];
+} lfp_backlight_entry_t;
+static_assert(sizeof(lfp_backlight_entry_t) == 6, "Bad struct size");
+
+typedef struct lfp_backlight {
+    static constexpr uint32_t kBlockType = 43;
+
+    uint8_t entry_size;
+    lfp_backlight_entry_t entries[16];
+    uint8_t level[16];
+} lfp_backlight_t;
+static_assert(sizeof(lfp_backlight_t) == 113, "Bad struct size");
+
 class IgdOpRegion {
 public:
     IgdOpRegion();
@@ -200,6 +217,9 @@ public:
     }
     bool SupportsDp(registers::Ddi ddi) const {
         return ddi_supports_dp_[ddi];
+    }
+    bool IsEdp(registers::Ddi ddi) const {
+        return ddi_is_edp_[ddi];
     }
 
     bool IsLowVoltageEdp(registers::Ddi ddi) const {
@@ -218,6 +238,10 @@ public:
         return hdmi_buffer_translation_idx_[ddi];
     }
 
+    double GetMinBacklightBrightness() const {
+        return min_backlight_brightness_;
+    }
+
 private:
     template<typename T> T* GetSection(uint16_t* size);
     uint8_t* GetSection(uint8_t tag, uint16_t* size);
@@ -226,6 +250,7 @@ private:
     bool GetPanelType(pci_protocol_t* pci, uint8_t* type);
     bool Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunction,
                uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res);
+    void ProcessBacklightData();
 
     zx::vmo igd_opregion_pages_;
     uintptr_t igd_opregion_pages_base_;
@@ -239,6 +264,8 @@ private:
     bool ddi_is_edp_[registers::kDdiCount];
 
     bool edp_is_low_voltage_;
+    uint8_t panel_type_;
+    double min_backlight_brightness_;
 
     struct {
         uint8_t hdmi_iboost;

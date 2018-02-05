@@ -393,10 +393,10 @@ bool DpDisplay::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage*
     }
 }
 
-bool DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size) {
+bool DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
     while (size > 0) {
-        uint32_t chunk_size = MIN(size, DpAuxMessage::kMaxBodySize);
-        uint32_t bytes_read = 0;
+        uint32_t chunk_size = static_cast<uint32_t>(MIN(size, DpAuxMessage::kMaxBodySize));
+        size_t bytes_read = 0;
         if (!DpAuxReadChunk(dp_cmd, addr, buf, chunk_size, &bytes_read)) {
             return false;
         }
@@ -413,13 +413,13 @@ bool DpDisplay::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t
 }
 
 bool DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
-                               uint32_t* size_out) {
+                               size_t * size_out) {
     DpAuxMessage msg;
     DpAuxMessage reply;
     if (!msg.SetDpAuxHeader(addr, dp_cmd, size_in) || !SendDpAuxMsgWithRetry(msg, &reply)) {
         return false;
     }
-    uint32_t bytes_read = reply.size - 1;
+    size_t bytes_read = reply.size - 1;
     if (bytes_read > size_in) {
         zxlogf(ERROR, "DP aux read: Reply was larger than requested\n");
         return false;
@@ -429,17 +429,17 @@ bool DpDisplay::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uin
     return true;
 }
 
-bool DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, uint32_t size) {
+bool DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size) {
     // Implement this if it's ever needed
-    ZX_DEBUG_ASSERT_MSG(size <= 16, "message too large");
+    ZX_ASSERT_MSG(size <= 16, "message too large");
 
     DpAuxMessage msg;
     DpAuxMessage reply;
-    if (!msg.SetDpAuxHeader(addr, dp_cmd, size)) {
+    if (!msg.SetDpAuxHeader(addr, dp_cmd, static_cast<uint32_t>(size))) {
         return false;
     }
     memcpy(&msg.data[4], buf, size);
-    msg.size = size + 4;
+    msg.size = msg.size + 4;
     if (!SendDpAuxMsgWithRetry(msg, &reply)) {
         return false;
     }
@@ -460,11 +460,11 @@ bool DpDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t 
             && DpAuxRead(DP_REQUEST_I2C_READ, kDdcDataI2cAddress, buf, len);
 }
 
-bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size) {
+bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
     return DpAuxRead(DP_REQUEST_NATIVE_READ, addr, buf, size);
 }
 
-bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size) {
+bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
     return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size);
 }
 
@@ -571,8 +571,6 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
 
 bool DpDisplay::LinkTrainingSetup() {
     registers::DdiRegs ddi_regs(ddi());
-
-    // TODO(ZX-1416): set SET_POWER dpcd field (0x600)
 
     uint8_t max_lc_byte;
     if (!DpcdRead(dpcd::DPCD_MAX_LANE_COUNT, &max_lc_byte, 1)) {
@@ -847,15 +845,65 @@ bool DpDisplay::Init(zx_display_info* info) {
         return false;
     }
 
+    if (pipe() == registers::PIPE_A && ddi() == registers::DDI_A && !EnablePowerWell2()) {
+        return false;
+    }
+
+    if (controller()->igd_opregion().IsEdp(ddi())) {
+        auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
+        auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
+
+        if (!panel_status.on_status()
+                || panel_status.pwr_seq_progress() == panel_status.kPrwSeqPwrDown) {
+            panel_ctrl.set_power_state_target(1).set_pwr_down_on_reset(1).WriteTo(mmio_space());
+        }
+        // Per eDP 1.4, the panel must be on and ready to accept AUX messages
+        // within T1 + T3, which is at most 90 ms.
+        // TODO(ZX-1416): Read the hardware's actual value for T1 + T3.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(90)));
+
+        if (!panel_status.ReadFrom(mmio_space()).on_status()
+                || panel_status.pwr_seq_progress() != panel_status.kPrwSeqNone) {
+             zxlogf(ERROR, "Failed to enable panel!\n");
+             return false;
+         }
+    }
+
+    // If the device is in a low power state, the first write can fail. It should be ready
+    // within 1ms, but try a few extra times to be safe.
+    dpcd::SetPower set_pwr;
+    set_pwr.set_set_power_state(set_pwr.kOn);
+    int count = 0;
+    while (!DpcdWrite(dpcd::DPCD_SET_POWER, set_pwr.reg_value_ptr(), 1) && ++count < 5) {
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    }
+    if (count >= 5) {
+        zxlogf(ERROR, "Failed to set dp power state\n");
+        return ZX_ERR_INTERNAL;
+    }
+
     edid::Edid edid(this);
     edid::timing_params_t timing;
     if (!edid.Init() || !edid.GetPreferredTiming(&timing)) {
         return false;
     }
-    zxlogf(TRACE, "Found a displayport monitor\n");
+    zxlogf(TRACE, "Found %s monitor\n", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
 
-    if (pipe() == registers::PIPE_A && ddi() == registers::DDI_A && !EnablePowerWell2()) {
+    if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, fbl::count_of(dpcd_capabilities_))) {
+        zxlogf(ERROR, "Failed to read dpcd capabilities\n");
         return false;
+    }
+
+    if (controller()->igd_opregion().IsEdp(ddi())) {
+        dpcd::EdpConfigCap edp_caps;
+        edp_caps.set_reg_value(dpcd_capabilities_[dpcd::DPCD_EDP_CONFIG]);
+
+        if (edp_caps.dpcd_display_ctrl_capable() &&
+                !DpcdRead(dpcd::DPCD_EDP_CAP_START, dpcd_edp_capabilities_,
+                          fbl::count_of(dpcd_edp_capabilities_))) {
+            zxlogf(ERROR, "Failed to read edp capabilities\n");
+            return false;
+        }
     }
 
     // TODO(ZX-1416): Parameterized these and update what references them
@@ -1038,7 +1086,85 @@ bool DpDisplay::Init(zx_display_info* info) {
     info->format = kPixelFormat;
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
+    if (controller()->igd_opregion().IsEdp(ddi())) {
+        dpcd::EdpConfigCap config_cap;
+        dpcd::EdpGeneralCap1 general_cap;
+        dpcd::EdpBacklightCap backlight_cap;
+
+        config_cap.set_reg_value(dpcd_capabilities_[dpcd::DPCD_EDP_CONFIG]);
+        general_cap.set_reg_value(dpcd_edp_capabilities_[
+                dpcd::DPCD_EDP_GENERAL_CAP1 - dpcd::DPCD_EDP_CAP_START]);
+        backlight_cap.set_reg_value(dpcd_edp_capabilities_[
+                dpcd::DPCD_EDP_BACKLIGHT_CAP - dpcd::DPCD_EDP_CAP_START]);
+
+        backlight_aux_power_ = config_cap.dpcd_display_ctrl_capable()
+                && general_cap.tcon_backlight_adjustment_cap()
+                && general_cap.backlight_aux_enable_cap();
+        backlight_aux_brightness_ = config_cap.dpcd_display_ctrl_capable()
+                && general_cap.tcon_backlight_adjustment_cap()
+                && backlight_cap.brightness_aux_set_cap();
+
+        if (backlight_aux_brightness_) {
+            dpcd::EdpBacklightModeSet mode;
+            mode.set_brightness_ctrl_mode(mode.kAux);
+            if (!DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_MODE_SET, mode.reg_value_ptr(), 1)) {
+                zxlogf(ERROR, "Failed to init backlight\n");
+                return false;
+            }
+        }
+        return SetBacklightOn(true);
+    }
+
     return true;
 }
 
+bool DpDisplay::SetBacklightOn(bool on) {
+    if (!controller()->igd_opregion().IsEdp(ddi())) {
+        return true;
+    }
+
+    if (backlight_aux_power_) {
+        dpcd::EdpDisplayCtrl ctrl;
+        ctrl.set_backlight_enable(true);
+        if (!DpcdWrite(dpcd::DPCD_EDP_DISPLAY_CTRL, ctrl.reg_value_ptr(), 1)) {
+            zxlogf(ERROR, "Failed to enable backlight\n");
+            return false;
+        }
+    } else {
+        registers::PanelPowerCtrl::Get().ReadFrom(mmio_space())
+                .set_backlight_enable(on).WriteTo(mmio_space());
+        registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space())
+                .set_enable(on).WriteTo(mmio_space());
+    }
+
+    return !on || SetBacklightBrightness(backlight_brightness_);
+}
+
+bool DpDisplay::SetBacklightBrightness(double val) {
+    if (!controller()->igd_opregion().IsEdp(ddi())) {
+        return true;
+    }
+
+    backlight_brightness_ = fbl::max(val, controller()->igd_opregion().GetMinBacklightBrightness());
+    backlight_brightness_ = fbl::min(backlight_brightness_, 1.0);
+
+    if (backlight_aux_brightness_) {
+        uint16_t percent = static_cast<uint16_t>(0xffff * backlight_brightness_ + .5);
+
+        uint8_t lsb = static_cast<uint8_t>(percent & 0xff);
+        uint8_t msb = static_cast<uint8_t>(percent >> 8);
+        if (!DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_MSB, &msb, 1)
+                || !DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_LSB, &lsb, 1)) {
+            zxlogf(ERROR, "Failed to set backlight brightness\n");
+            return false;
+        }
+    } else {
+        auto backlight_ctrl = registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space());
+        uint16_t max = static_cast<uint16_t>(backlight_ctrl.modulation_freq());
+        backlight_ctrl.set_duty_cycle(static_cast<uint16_t>(max * backlight_brightness_ + .5));
+        backlight_ctrl.WriteTo(mmio_space());
+    }
+
+    return true;
+}
 } // namespace i915
