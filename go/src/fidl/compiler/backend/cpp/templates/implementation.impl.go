@@ -17,6 +17,9 @@ const Implementation = `
 
 #include <memory>
 
+#include "lib/fidl/cpp/bindings2/put.h"
+#include "lib/fidl/cpp/bindings2/traits.h"
+
 {{ range $interface := .Interfaces }}
 {{ template "InterfaceDefinition" $interface }}
 {{ end }}

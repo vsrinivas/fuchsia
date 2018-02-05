@@ -24,6 +24,7 @@ source_set("bindings2") {
     "internal/stub_controller.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
+    "put.cc",
     "put.h",
     "string.cc",
     "string.h",

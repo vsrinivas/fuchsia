@@ -48,5 +48,21 @@ TEST(InterfaceRequest, Control) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h1.write(0, "a", 1, nullptr, 0));
 }
 
+TEST(InterfaceRequest, PutAt) {
+  uint8_t buffer[1024];
+  Builder builder(buffer, sizeof(buffer));
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  zx_handle_t saved = h1.get();
+  InterfaceRequest<test::Frobinator> request(std::move(h1));
+  zx_handle_t* view = builder.New<ViewOf<decltype(request)>::type>();
+  EXPECT_EQ(ZX_HANDLE_INVALID, *view);
+  EXPECT_TRUE(PutAt(&builder, view, &request));
+  EXPECT_EQ(ZX_HANDLE_INVALID, h1.get());
+  EXPECT_EQ(saved, *view);
+  EXPECT_EQ(ZX_OK, zx_handle_close(*view));
+}
+
 }  // namespace
 }  // namespace fidl

@@ -59,5 +59,21 @@ TEST(InterfaceHandle, Channel) {
   EXPECT_EQ(saved, handle.channel().get());
 }
 
+TEST(InterfaceHandle, PutAt) {
+  uint8_t buffer[1024];
+  Builder builder(buffer, sizeof(buffer));
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  zx_handle_t saved = h1.get();
+  InterfaceHandle<test::Frobinator> handle(std::move(h1));
+  zx_handle_t* view = builder.New<ViewOf<decltype(handle)>::type>();
+  EXPECT_EQ(ZX_HANDLE_INVALID, *view);
+  EXPECT_TRUE(PutAt(&builder, view, &handle));
+  EXPECT_EQ(ZX_HANDLE_INVALID, h1.get());
+  EXPECT_EQ(saved, *view);
+  EXPECT_EQ(ZX_OK, zx_handle_close(*view));
+}
+
 }  // namespace
 }  // namespace fidl

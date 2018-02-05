@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/bindings2/interface_request.h"
 
 namespace fidl {
-
+class Builder;
 template <typename Interface>
 class InterfacePtr;
 
@@ -35,6 +35,8 @@ class InterfacePtr;
 template <typename Interface>
 class InterfaceHandle {
  public:
+  using View = zx_handle_t;
+
   // Creates an |InterfaceHandle| whose underlying channel is invalid.
   InterfaceHandle() = default;
 
@@ -118,6 +120,21 @@ class InterfaceHandle {
  private:
   zx::channel channel_;
 };
+
+// Transfers ownership of the underlying handle from the |InterfaceHandle|
+// into |*view| and returns true.
+//
+// After this function returns |handle->is_valid()| is false and the ownership
+// of the handle that was previously stored in |handle| (if any) has been
+// transferred to |*view|.
+//
+// The |builder| argument is ignored but accepted to make it easier to generate
+// code that calls this function.
+template <typename T>
+bool PutAt(Builder* builder, zx_handle_t* view, InterfaceHandle<T>* handle) {
+  *view = handle->TakeChannel().release();
+  return true;
+}
 
 }  // namespace fidl
 

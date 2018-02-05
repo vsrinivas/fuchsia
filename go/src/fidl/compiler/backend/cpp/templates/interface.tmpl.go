@@ -97,10 +97,49 @@ constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
 {{ range $method := .Methods }}
-  {{- if $method.HasRequest }}
+  {{- if .HasRequest }}
+    {{- if .HasResponse }}
+namespace {
+
+class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
+  public:
+  {{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for {{ $.Name }}::{{ .Name }}\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(nullptr, &error_msg);
+    if (status != ZX_OK)
+      return status;
+    // TODO(abarth): Actually call |callback_|.
+    (void) callback_;
+    return ZX_OK;
+  }
+
+  private:
+  {{ $.Name }}::{{ .CallbackType }} callback_;
+
+  {{ .ResponseHandlerType }}(const {{ .ResponseHandlerType }}&) = delete;
+  {{ .ResponseHandlerType }}& operator=(const {{ .ResponseHandlerType }}&) = delete;
+};
+
+}  // namespace
+
+{{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  // TODO(abarth): Implement method.
-  (void) controller_;
+  ::fidl::MessageBuilder builder(nullptr);
+  builder.header()->ordinal = {{ .OrdinalName }};
+    {{- range .Request }}
+  ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<{{ .Type.Decl }}>::type>(), &{{ .Name }});
+  {{- end -}}
+    {{- if .HasResponse }}
+  controller_->Send(&builder, std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
+    {{- else }}
+  controller_->Send(&builder, nullptr);
+    {{- end }}
 }
   {{- end }}
 {{- end }}

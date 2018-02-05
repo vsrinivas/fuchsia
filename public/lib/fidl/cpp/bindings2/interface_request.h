@@ -11,6 +11,7 @@
 #include <utility>
 
 namespace fidl {
+class Builder;
 
 // The server endpoint of a FIDL channel.
 //
@@ -56,6 +57,8 @@ namespace fidl {
 template <typename Interface>
 class InterfaceRequest {
  public:
+  using View = zx_handle_t;
+
   // Creates an |InterfaceHandle| whose underlying channel is invalid.
   //
   // Some protocols contain messages that permit such |InterfaceRequest|
@@ -96,6 +99,21 @@ class InterfaceRequest {
  private:
   zx::channel channel_;
 };
+
+// Transfers ownership of the underlying handle from the |InterfaceRequest|
+// into |*view| and returns true.
+//
+// After this function returns |request->is_valid()| is false and the ownership
+// of the handle that was previously stored in |request| (if any) has been
+// transferred to |*view|.
+//
+// The |builder| argument is ignored but accepted to make it easier to generate
+// code that calls this function.
+template <typename T>
+bool PutAt(Builder* builder, zx_handle_t* view, InterfaceRequest<T>* request) {
+  *view = request->TakeChannel().release();
+  return true;
+}
 
 }  // namespace fidl
 

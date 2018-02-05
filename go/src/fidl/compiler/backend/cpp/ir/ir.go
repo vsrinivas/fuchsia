@@ -14,6 +14,7 @@ import (
 type Type struct {
 	prefix string
 	suffix string
+	Decl   string
 }
 
 func (t *Type) Decorate(identifer string) string {
@@ -61,14 +62,15 @@ type Interface struct {
 }
 
 type Method struct {
-	Ordinal      types.Ordinal
-	OrdinalName  string
-	Name         string
-	HasRequest   bool
-	Request      []Parameter
-	HasResponse  bool
-	Response     []Parameter
-	CallbackType string
+	Ordinal             types.Ordinal
+	OrdinalName         string
+	Name                string
+	HasRequest          bool
+	Request             []Parameter
+	HasResponse         bool
+	Response            []Parameter
+	CallbackType        string
+	ResponseHandlerType string
 }
 
 type Parameter struct {
@@ -260,36 +262,42 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 }
 
 func compileType(val types.Type) Type {
-	prefix := ""
-	suffix := ""
+	r := Type{}
 	switch val.Kind {
 	case types.ArrayType:
 		t := compileType(*val.ElementType)
-		prefix = t.prefix
-		suffix = fmt.Sprintf("%s[%s]", t.suffix, compileConstant(val.ElementCount))
+		r.prefix = t.prefix
+		r.suffix = fmt.Sprintf("%s[%s]", t.suffix, compileConstant(val.ElementCount))
+		r.Decl = t.Decl + "[]"
 	case types.VectorType:
 		t := compileType(*val.ElementType)
 		if len(t.suffix) > 0 {
 			log.Fatal("Cannot compile a vector that contains an array:", val)
 		}
-		prefix = fmt.Sprintf("::fidl::VectorPtr<%s>", t.prefix)
+		r.prefix = fmt.Sprintf("::fidl::VectorPtr<%s>", t.prefix)
+		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
 	case types.StringType:
-		prefix = "::fidl::StringPtr"
+		r.prefix = "::fidl::StringPtr"
+		r.Decl = r.prefix
 	case types.HandleType:
-		prefix = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.prefix = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.Decl = r.prefix
 	case types.RequestType:
 		t := compileCompoundIdentifier(val.RequestSubtype)
-		prefix = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+		r.prefix = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+		r.Decl = r.prefix
 	case types.PrimitiveType:
-		prefix = compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.prefix = compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.Decl = r.prefix
 	case types.IdentifierType:
 		t := compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
-		prefix = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+		r.prefix = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+		r.Decl = r.prefix
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
-	return Type{prefix, suffix}
+	return r
 }
 
 func compileEnum(val types.Enum) Enum {
@@ -344,6 +352,7 @@ func compileInterface(val types.Interface) Interface {
 			v.HasResponse,
 			compileParameterArray(v.Response),
 			callbackType,
+			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -354,7 +363,7 @@ func compileInterface(val types.Interface) Interface {
 func compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		compileType(val.Type),
-		compileIdentier(val.Name + "Ptr"),
+		compileIdentier(val.Name),
 		compileIdentier(val.Name + "_"),
 	}
 }

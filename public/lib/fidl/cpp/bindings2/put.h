@@ -24,17 +24,13 @@ PutAt(Builder* builder, T* view, T* value) {
 
 // Transfers ownership of |*object| to |*view| and returns true.
 //
-// After this function returns |object->get()| is  ZX_HANDLE_INVALID and the ownership
+// After this function returns |object->get()| is ZX_HANDLE_INVALID and the ownership
 // of the handle that was previously stored in |*object| (if any) has been
 // transferred to |*view|.
 //
 // The |builder| argument is ignored but accepted to make it easier to generate
 // code that calls this function.
-template<typename T>
-bool PutAt(Builder* builder, zx_handle_t* view, zx::object<T>* object) {
-  *view = object->release();
-  return true;
-}
+bool PutAt(Builder* builder, zx_handle_t* view, zx::object_base* object);
 
 }  // namespace fidl
 

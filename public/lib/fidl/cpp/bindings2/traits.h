@@ -37,7 +37,7 @@ template<> struct IsPrimitive<double> : public std::true_type {};
 //
 // Typically, a type that has a wire representation will define a type in its
 // scope with the name |View|.
-template<typename T>
+template<typename T, class Enable = void>
 struct ViewOf {
   // The wire representaion of |T|.
   using type = typename T::View;
@@ -56,7 +56,10 @@ template<> struct ViewOf<float> { using type = float; };
 template<> struct ViewOf<double> { using type = double; };
 
 template<typename T>
-struct ViewOf<zx::object<T>> { using type = zx_handle_t; };
+struct ViewOf<T, typename std::enable_if<
+                     std::is_base_of<zx::object_base, T>::value>::type> {
+  using type = zx_handle_t;
+};
 
 }  // namespace fidl
 
