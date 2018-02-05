@@ -8,6 +8,7 @@ import("//third_party/protobuf/proto_library.gni")
 package("cobalt") {
   deps = [
     ":bin",
+    "//third_party/cobalt_config",
   ]
 
   binary = "cobalt"
@@ -16,6 +17,11 @@ package("cobalt") {
         path = rebase_path("meta/sandbox")
         dest = "sandbox"
       } ]
+
+  resources = [ {
+    path = rebase_path(get_label_info("//third_party/cobalt_config", "target_gen_dir") + "/cobalt_config.binproto")
+    dest = "cobalt_config.binproto"
+  } ]
 }
 
 package("cobalt_system_metrics") {
@@ -76,7 +82,6 @@ executable("bin") {
 
   sources = [
     "cobalt_main.cc",
-    "config.h",
   ]
 
   deps = [
@@ -84,6 +89,7 @@ executable("bin") {
     "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
     "//third_party/grpc:grpc++",
 

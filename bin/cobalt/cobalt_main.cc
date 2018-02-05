@@ -5,12 +5,15 @@
 #include <stdlib.h>
 
 #include <chrono>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
 
-#include "garnet/bin/cobalt/config.h"
+#include "config/cobalt_config.pb.h"
+#include "config/encodings.pb.h"
+#include "config/metrics.pb.h"
 #include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
@@ -81,6 +84,8 @@ const std::chrono::seconds kMinIntervalDefault(1);
 // two parameters configure the SendRetryer.
 const std::chrono::seconds kInitialRpcDeadline(10);
 const std::chrono::seconds kDeadlinePerSendAttempt(60);
+
+const char* kConfigBinProtoPath = "/pkg/data/cobalt_config.binproto";
 
 // Maps a ShippingManager::Status to a cobalt::Status.
 cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
@@ -430,16 +435,34 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                                 &shipping_manager_)) {
   shipping_manager_.Start();
 
+  // Open the cobalt config file.
+  std::ifstream config_file_stream;
+  config_file_stream.open(kConfigBinProtoPath);
+  FXL_CHECK(config_file_stream)
+      << "Could not open cobalt config proto file: " << kConfigBinProtoPath;
+
+  // Parse the cobalt config file.
+  cobalt::CobaltConfig cobalt_config;
+  FXL_CHECK(cobalt_config.ParseFromIstream(&config_file_stream))
+      << "Could not parse the cobalt config proto file: "
+      << kConfigBinProtoPath;
+
   // Parse the metric config string
+  cobalt::RegisteredMetrics registered_metrics;
+  registered_metrics.mutable_element()->Swap(
+      cobalt_config.mutable_metric_configs());
   auto metric_parse_result =
-      MetricRegistry::FromString(cobalt::kMetricConfigText, nullptr);
+      MetricRegistry::FromProto(&registered_metrics, nullptr);
   // TODO(rudominer) Checkfailing is probably not the right thing to do.
   FXL_CHECK(cobalt::config::kOK == metric_parse_result.second);
   metric_registry_.reset(metric_parse_result.first.release());
 
   // Parse the encoding config string
+  cobalt::RegisteredEncodings registered_encodings;
+  registered_encodings.mutable_element()->Swap(
+      cobalt_config.mutable_encoding_configs());
   auto encoding_parse_result =
-      EncodingRegistry::FromString(cobalt::kEncodingConfigText, nullptr);
+      EncodingRegistry::FromProto(&registered_encodings, nullptr);
   FXL_CHECK(cobalt::config::kOK == encoding_parse_result.second);
   encoding_registry_.reset(encoding_parse_result.first.release());
 
