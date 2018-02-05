@@ -72,6 +72,26 @@ zx_status_t HwBeaconSender::SendBeaconFrame(const StartRequest& req) {
         return ZX_ERR_IO;
     }
 
+    // Rates (in Mbps): 1 (basic), 2 (basic), 5.5 (basic), 6, 9, 11 (basic), 12, 18
+    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
+    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+        errorf("[bcn-sender] could not write supported rates\n");
+        return ZX_ERR_IO;
+    }
+
+    // TODO(hahnr): Replace hardcoded channel.
+    if (!w.write<DsssParamSetElement>(1)) {
+        errorf("[bcn-sender] could not write extended supported rates\n");
+        return ZX_ERR_IO;
+    }
+
+    // Rates (in Mbps): 24, 36, 48, 54
+    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
+    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+        errorf("[bcn-sender] could not write extended supported rates\n");
+        return ZX_ERR_IO;
+    }
+
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
     // TODO(hahnr): Write TIM.
 
