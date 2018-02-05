@@ -16,6 +16,12 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 2)
 #define IOCTL_RAMDISK_SET_FLAGS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 3)
+#define IOCTL_RAMDISK_WAKE_UP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 4)
+#define IOCTL_RAMDISK_SLEEP_AFTER \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 5)
+#define IOCTL_RAMDISK_GET_TXN_COUNT \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 6)
 
 typedef struct ramdisk_ioctl_config {
     uint64_t blk_size;
@@ -43,3 +49,20 @@ IOCTL_WRAPPER(ioctl_ramdisk_unlink, IOCTL_RAMDISK_UNLINK);
 // The flags to set match block_info_t.flags. This is intended to simulate the behavior
 // of other block devices, so it should be used only for tests.
 IOCTL_WRAPPER_IN(ioctl_ramdisk_set_flags, IOCTL_RAMDISK_SET_FLAGS, uint32_t);
+
+// ssize_t ioctl_ramdisk_wake_up(int fd);
+// "Wakes" the ramdisk, if it was sleeping.
+// Transactions are no longer expected to fail after this point, and the ramdisk will not sleep
+// again until the next call to SLEEP_AFTER.
+// This will reset the current transaction count.
+IOCTL_WRAPPER(ioctl_ramdisk_wake_up, IOCTL_RAMDISK_WAKE_UP);
+
+// ssize_t ioctl_ramdisk_sleep_after(int fd, uint64_t* in);
+// Tell the ramdisk to "sleep" after |in| transactions.
+// After this point, all incoming transactions will fail.
+// This will reset the current transaction count.
+IOCTL_WRAPPER_IN(ioctl_ramdisk_sleep_after, IOCTL_RAMDISK_SLEEP_AFTER, uint64_t);
+
+// ssize_t ioctl_ramdisk_get_txn_count(int fd, uint64_t* out);
+// Retrieve the number of successful transactions since the last call to sleep/wake.
+IOCTL_WRAPPER_OUT(ioctl_ramdisk_get_txn_count, IOCTL_RAMDISK_GET_TXN_COUNT, uint64_t);

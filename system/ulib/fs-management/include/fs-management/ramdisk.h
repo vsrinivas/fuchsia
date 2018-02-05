@@ -27,6 +27,17 @@ int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path);
 // The handle is always consumed, and must be the only handle to this VMO.
 int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path);
 
+// Puts the ramdisk at |ramdisk_path| to sleep after |txn_count| transactions
+// After this, transactions will no longer be successfully persisted to disk.
+int sleep_ramdisk(const char* ramdisk_path, uint64_t txn_count);
+
+// Wake the ramdisk at |ramdisk_path| from a sleep state.
+int wake_ramdisk(const char* ramdisk_path);
+
+// Return the number of transactions completed by ramdisk at |ramdisk_path| since
+// the ramdisk has been awake.
+int get_ramdisk_txns(const char* ramdisk_path, uint64_t* txn_count);
+
 // Destroys a ramdisk, given the "ramdisk_path" returned from "create_ramdisk".
 //
 // Return 0 on success, -1 on error.

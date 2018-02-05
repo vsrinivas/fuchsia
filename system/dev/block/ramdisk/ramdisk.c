@@ -41,6 +41,11 @@ typedef struct ramdisk_device {
 
     uint32_t flags;
     zx_handle_t vmo;
+
+    bool asleep; // true if the ramdisk is "sleeping"
+    uint64_t txn_count; // current count of successful transactions
+    uint64_t sa_txn_count; // number of transactions to sleep after
+
     thrd_t worker;
     char name[NAME_MAX];
 } ramdisk_device_t;
@@ -78,17 +83,28 @@ static int worker_thread(void* arg) {
         size_t len = txn->op.rw.length * dev->blk_size;
         size_t actual;
 
-        if (txn->op.command == BLOCK_OP_READ) {
+        // Put the ramdisk to sleep if we have reached the required # of transactions
+        if (dev->sa_txn_count > 0 && dev->txn_count >= dev->sa_txn_count) {
+            dev->asleep = true;
+        }
+
+        if (dev->asleep) {
+            status = ZX_ERR_UNAVAILABLE;
+        } else if (txn->op.command == BLOCK_OP_READ) {
             if ((zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
                               len, &actual) != ZX_OK) ||
                 (actual != len)) {
                 status = ZX_ERR_IO;
+            } else {
+                dev->txn_count++;
             }
-        } else {
+        } else { // BLOCK_OP_WRITE
             if ((zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
                              len, &actual) != ZX_OK) ||
                 (actual != len)) {
                 status = ZX_ERR_IO;
+            } else {
+                dev->txn_count++;
             }
         }
 
@@ -148,6 +164,38 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         }
         uint32_t* flags = (uint32_t*)cmd;
         ramdev->flags = *flags;
+        return ZX_OK;
+    }
+    case IOCTL_RAMDISK_WAKE_UP: {
+        // Reset state and transaction counts
+        ramdev->asleep = false;
+        ramdev->txn_count = 0;
+        ramdev->sa_txn_count = 0;
+        return ZX_OK;
+    }
+    case IOCTL_RAMDISK_SLEEP_AFTER: {
+        if (cmd_len < sizeof(uint64_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        uint64_t* txn_count = (uint64_t*)cmd;
+        ramdev->asleep = false;
+        ramdev->txn_count = 0;
+        ramdev->sa_txn_count = *txn_count;
+
+        if (*txn_count == 0) {
+            ramdev->asleep = true;
+        }
+        return ZX_OK;
+    }
+    case IOCTL_RAMDISK_GET_TXN_COUNT: {
+        if (max < sizeof(uint64_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        uint64_t* txn_count = reply;
+        *txn_count = ramdev->txn_count;
+        *out_actual = sizeof(uint64_t);
         return ZX_OK;
     }
     // Block Protocol
