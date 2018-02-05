@@ -4,44 +4,6 @@
 #
 visibility = [ "//garnet/bin/auth/*" ]
 
-source_set("lib") {
-  testonly = true
-
-  sources = [
-    "capture.h",
-    "test_with_message_loop.h",
-    "test_with_message_loop.cc",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//third_party/gtest",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/auth/fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "capture_unittest.cc",
-    "test_with_message_loop_unittest.cc",
-  ]
-
-  deps = [
-    ":lib",
-  ]
-}
-
 executable("e2e_dev") {
   output_name = "dev_token_manager_e2e_test"
 
@@ -52,11 +14,37 @@ executable("e2e_dev") {
   ]
 
   public_deps = [
-    ":lib",
     "//garnet/public/lib/app/cpp",
   ]
 
   deps = [
+    "//garnet/lib/callback",
+    "//garnet/lib/gtest",
+    "//garnet/public/lib/auth/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/cpp/reporting",
+    "//third_party/gtest",
+  ]
+}
+
+executable("e2e_google_local") {
+  output_name = "google_token_manager_e2e_local_test"
+
+  testonly = true
+
+  sources = [
+    "google_token_manager_local_apptest.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//garnet/lib/callback",
+    "//garnet/lib/gtest",
+    "//garnet/public/lib/auth/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp/reporting",

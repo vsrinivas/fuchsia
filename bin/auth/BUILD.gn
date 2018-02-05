@@ -26,6 +26,7 @@ package("tests") {
   deps = [
     ":token_manager_unittests",
     "//garnet/bin/auth/test:e2e_dev",
+    "//garnet/bin/auth/test:e2e_google_local",
     "//garnet/bin/auth/token_manager/test:dev_auth_provider",
   ]
 
@@ -45,6 +46,12 @@ package("tests") {
       # Disabled because it fails when fvm.blk is used instead of bootfs.
       disabled = true
     },
+    {
+      name = "google_token_manager_e2e_local_test"
+
+      # Disabled because it fails when fvm.blk is used instead of bootfs.
+      disabled = true
+    },
   ]
 }
 
@@ -56,6 +63,5 @@ executable("token_manager_unittests") {
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/bin/auth/cache:unittests",
     "//garnet/bin/auth/store:unittests",
-    "//garnet/bin/auth/test:unittests",
   ]
 }
