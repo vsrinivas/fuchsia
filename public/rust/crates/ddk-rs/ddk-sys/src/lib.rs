@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![allow(non_camel_case_types,non_snake_case)]
+#![deny(warnings)]
 
 extern crate fuchsia_zircon as zircon;
 
@@ -66,10 +67,10 @@ const DRIVER_OPS_VERSION: u64 = 0x2b3490fa40d9f452;
 pub struct zx_driver_ops_t {
     pub __version: u64,
 
-    pub init: Option<extern "C" fn (out_ctx: *mut *mut u8) -> sys::zx_status_t>,
-    pub bind: Option<extern "C" fn (ctx: *mut u8, device: *mut zx_device_t) -> sys::zx_status_t>,
-    pub create: Option<extern "C" fn (ctx: *mut u8, parent: *mut zx_device_t, name: *const c_char, args: *const c_char, rpc_channel: sys::zx_handle_t) -> sys::zx_status_t>,
-    pub release: Option<extern "C" fn (ctx: *mut u8)>,
+    pub init: Option<unsafe extern "C" fn (out_ctx: *mut *mut u8) -> sys::zx_status_t>,
+    pub bind: Option<unsafe extern "C" fn (ctx: *mut u8, device: *mut zx_device_t) -> sys::zx_status_t>,
+    pub create: Option<unsafe extern "C" fn (ctx: *mut u8, parent: *mut zx_device_t, name: *const c_char, args: *const c_char, rpc_channel: sys::zx_handle_t) -> sys::zx_status_t>,
+    pub release: Option<unsafe extern "C" fn (ctx: *mut u8)>,
 }
 
 // This is needed instead of Default::default() because the latter can't be called in a static
@@ -124,9 +125,9 @@ pub struct iotxn_t {
     pub node: list_node_t,
     pub context: *mut u8,
     pub virt: *mut u8,
-    pub complete_cb: Option<extern "C" fn (txn: *mut iotxn_t, cookie: *mut u8)>,
+    pub complete_cb: Option<unsafe extern "C" fn (txn: *mut iotxn_t, cookie: *mut u8)>,
     pub cookie: *mut u8,
-    pub release_cb: Option<extern "C" fn (txn: *mut iotxn_t)>,
+    pub release_cb: Option<unsafe extern "C" fn (txn: *mut iotxn_t)>,
     pub phys_inline: [sys::zx_paddr_t; 3],
 }
 
@@ -136,20 +137,20 @@ const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
 pub struct zx_protocol_device_t {
     pub __version: u64,
 
-    pub get_protocol: Option<extern "C" fn (ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t>,
-    pub open: Option<extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, flags: u32) -> sys::zx_status_t>,
-    pub open_at: Option<extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t>,
-    pub close: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
-    pub unbind: Option<extern "C" fn (ctx: *mut u8)>,
-    pub release: Option<extern "C" fn (ctx: *mut u8)>,
-    pub read: Option<extern "C" fn (ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
-    pub write: Option<extern "C" fn (ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
-    pub iotxn_queue: Option<extern "C" fn (ctx: *mut u8, txn: *mut iotxn_t)>,
-    pub get_size: Option<extern "C" fn (ctx: *mut u8) -> sys::zx_off_t>,
-    pub ioctl: Option<extern "C" fn (ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t>,
-    pub suspend: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
-    pub resume: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
-    pub rxrpc: Option<extern "C" fn (ctx: *mut u8, channel: sys::zx_handle_t) -> sys::zx_status_t>,
+    pub get_protocol: Option<unsafe extern "C" fn (ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t>,
+    pub open: Option<unsafe extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, flags: u32) -> sys::zx_status_t>,
+    pub open_at: Option<unsafe extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t>,
+    pub close: Option<unsafe extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
+    pub unbind: Option<unsafe extern "C" fn (ctx: *mut u8)>,
+    pub release: Option<unsafe extern "C" fn (ctx: *mut u8)>,
+    pub read: Option<unsafe extern "C" fn (ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
+    pub write: Option<unsafe extern "C" fn (ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
+    pub iotxn_queue: Option<unsafe extern "C" fn (ctx: *mut u8, txn: *mut iotxn_t)>,
+    pub get_size: Option<unsafe extern "C" fn (ctx: *mut u8) -> sys::zx_off_t>,
+    pub ioctl: Option<unsafe extern "C" fn (ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t>,
+    pub suspend: Option<unsafe extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
+    pub resume: Option<unsafe extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
+    pub rxrpc: Option<unsafe extern "C" fn (ctx: *mut u8, channel: sys::zx_handle_t) -> sys::zx_status_t>,
 }
 
 // This is needed instead of Default::default() because the latter can't be called in a static
@@ -193,7 +194,7 @@ const DEVICE_ADD_ARGS_VERSION: u64 = 0x96a64134d56e88e3;
 
 #[repr(C)]
 pub struct device_add_args_t {
-    version: u64,
+    pub version: u64,
     pub name: *const c_char,
     pub ctx: *mut u8,
     pub ops: *mut zx_protocol_device_t,
@@ -205,8 +206,8 @@ pub struct device_add_args_t {
     pub flags: device_add_flags_t,
 }
 
-impl device_add_args_t {
-    pub fn new() -> device_add_args_t {
+impl Default for device_add_args_t {
+    fn default() -> Self {
         device_add_args_t {
             version: DEVICE_ADD_ARGS_VERSION,
             name: std::ptr::null_mut(),
@@ -320,7 +321,6 @@ pub enum usb_request_t {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct usb_device_descriptor_t {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -339,7 +339,6 @@ pub struct usb_device_descriptor_t {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct usb_configuration_descriptor_t {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -352,7 +351,6 @@ pub struct usb_configuration_descriptor_t {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct usb_interface_descriptor_t {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -366,7 +364,6 @@ pub struct usb_interface_descriptor_t {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct usb_endpoint_descriptor_t {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -378,24 +375,24 @@ pub struct usb_endpoint_descriptor_t {
 
 #[repr(C)]
 pub struct usb_protocol_ops_t {
-    pub control: extern "C" fn (ctx: *mut u8, request_type: usb_request_type_t, request: u8,
+    pub control: unsafe extern "C" fn (ctx: *mut u8, request_type: usb_request_type_t, request: u8,
         value: u16, index: u16, data: *mut u8, length: usize, timeout: sys::zx_time_t,
         out_length: *mut usize) -> sys::zx_status_t,
-    pub request_queue: extern "C" fn (ctx: *mut u8, usb_request: *mut usb_request_t),
-    pub get_speed: extern "C" fn (ctx: *mut u8) -> usb_speed_t,
-    pub set_interface: extern "C" fn (ctx: *mut u8, interface_number: i32, alt_setting: i32)
+    pub request_queue: unsafe extern "C" fn (ctx: *mut u8, usb_request: *mut usb_request_t),
+    pub get_speed: unsafe extern "C" fn (ctx: *mut u8) -> usb_speed_t,
+    pub set_interface: unsafe extern "C" fn (ctx: *mut u8, interface_number: i32, alt_setting: i32)
         -> sys::zx_status_t,
-    pub set_configuration: extern "C" fn (ctx: *mut u8, configuration: i32) -> sys::zx_status_t,
-    pub reset_endpoint: extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
-    pub get_max_transfer_size: extern "C" fn (ctx: *mut u8, ep_address: u8) -> usize,
-    pub get_device_id: extern "C" fn (ctx: *mut u8) -> u32,
-    pub get_descriptor_list: extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
+    pub set_configuration: unsafe extern "C" fn (ctx: *mut u8, configuration: i32) -> sys::zx_status_t,
+    pub reset_endpoint: unsafe extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
+    pub get_max_transfer_size: unsafe extern "C" fn (ctx: *mut u8, ep_address: u8) -> usize,
+    pub get_device_id: unsafe extern "C" fn (ctx: *mut u8) -> u32,
+    pub get_descriptor_list: unsafe extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
         out_length: *mut usize) -> sys::zx_status_t,
-    pub get_additional_descriptor_list: extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
+    pub get_additional_descriptor_list: unsafe extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
         out_length: *mut usize) -> sys::zx_status_t,
-    pub claim_interface: extern "C" fn (ctx: *mut u8, intf: *mut usb_interface_descriptor_t,
+    pub claim_interface: unsafe extern "C" fn (ctx: *mut u8, intf: *mut usb_interface_descriptor_t,
         length: usize) -> sys::zx_status_t,
-    pub cancel_all: extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
+    pub cancel_all: unsafe extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
 }
 
 #[repr(C)]

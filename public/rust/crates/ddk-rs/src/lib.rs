@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 pub extern crate ddk_sys as sys;
 
 extern crate byteorder;
@@ -29,8 +31,22 @@ pub struct Device {
     device: *mut sys::zx_device_t,
 }
 
+fn ctx_from_device_and_ops(device_and_ops: Box<DeviceAndOps>) -> *mut u8 {
+    Box::into_raw(device_and_ops) as *mut u8
+}
+
+// `ctx` must be a unique, borrowed pointer to a `DeviceAndOps`
+unsafe fn ctx_borrow_mut_device_and_ops<'a>(ctx: *mut u8) -> &'a mut DeviceAndOps {
+    &mut *(ctx as *mut DeviceAndOps)
+}
+
+// `ctx` must be an owned pointer to a `DeviceAndOps`
+unsafe fn ctx_into_device_and_ops(ctx: *mut u8) -> Box<DeviceAndOps> {
+    Box::from_raw(ctx as *mut DeviceAndOps)
+}
+
 impl Device {
-    pub fn wrap(device: *mut sys::zx_device_t) -> Device {
+    pub unsafe fn wrap(device: *mut sys::zx_device_t) -> Device {
         Device { device: device }
     }
 
@@ -42,42 +58,50 @@ impl Device {
             return Err(Status::INVALID_ARGS)
         }
 
+        // Bind the CString to a local variable to ensure it lives long enough for the call below.
+        let name_cstring = CString::new(device_name).map_err(|_| Status::INVALID_ARGS)?;
+
         let raw_parent = match parent {
             None => std::ptr::null_mut(),
             Some(device) => device.device,
         };
 
-        let mut device_add_args: sys::device_add_args_t = sys::device_add_args_t::new();
-
         // Create the Device with a null pointer initially; device_add_from_driver below will fill it
         // in.
-        let device = Device::wrap(std::ptr::null_mut());
+        let device = unsafe { Device::wrap(std::ptr::null_mut()) };
         let device_and_ops = DeviceAndOps { device: device, ops: device_ops };
-        device_add_args.ctx = Box::into_raw(Box::new(device_and_ops)) as *mut u8;
-        let mut context: Box<DeviceAndOps> = unsafe {
-            Box::from_raw(device_add_args.ctx as *mut DeviceAndOps)
+
+
+        let mut device_add_args = sys::device_add_args_t {
+            name: name_cstring.as_ptr(),
+            flags,
+            ctx: ctx_from_device_and_ops(Box::new(device_and_ops)),
+            // TODO: mutable static? is this actually safe?
+            ops: unsafe { &mut DEVICE_OPS },
+            ..Default::default()
         };
 
-        // Bind the CString to a local variable to ensure it lives long enough for the call below.
-        let name_cstring = CString::new(device_name)?;
-        device_add_args.name = name_cstring.as_ptr();
-        device_add_args.flags = flags;
 
         unsafe {
-            device_add_args.ops = &mut DEVICE_OPS;
-            let status = sys::device_add_from_driver(sys::__zircon_driver_rec__.driver, raw_parent,
-                &mut device_add_args, &mut context.device.device);
+            let context: &mut DeviceAndOps = ctx_borrow_mut_device_and_ops(device_add_args.ctx);
+            let status = sys::device_add_from_driver(
+                sys::__zircon_driver_rec__.driver,
+                raw_parent,
+                &mut device_add_args,
+                &mut context.device.device);
+
             match status {
                 zsys::ZX_OK => {
                     // Take a copy of the Device, which should now contain a valid zx_device_t*.
                     let device = context.device.clone();
-                    // Make sure the context doesn't get freed by Rust yet.
-                    let _ = Box::into_raw(context);
                     Ok(device)
                 },
                 // Note that in this error case the context will be freed, as there shouldn't be any
                 // callbacks with it.
-                _ => Err(Status::from_raw(status)),
+                _ => {
+                    drop(ctx_into_device_and_ops(device_add_args.ctx));
+                    Err(Status::from_raw(status))
+                }
             }
         }
     }
@@ -103,8 +127,9 @@ impl Device {
         }
     }
 
+    // TODO: is this actually safe? is there always a valid parent?
     pub fn get_parent(&mut self) -> Device {
-        Self::wrap(unsafe { sys::device_get_parent(self.device) })
+        unsafe { Self::wrap(sys::device_get_parent(self.device)) }
     }
 
     pub fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Status> {
@@ -236,105 +261,88 @@ fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut sys::zx_d
     }
 }
 
-extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, flags: u32) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+unsafe extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, flags: u32) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
     let ret = context.ops.open(flags);
-    let _ = Box::into_raw(context);
     open_result(ret, dev_out)
 }
 
-extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, path: *const c_char, flags: u32) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    let path = unsafe { CStr::from_ptr(path).to_str().unwrap() };
+unsafe extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, path: *const c_char, flags: u32) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    let path = CStr::from_ptr(path).to_str().unwrap();
     let ret = context.ops.open_at(path, flags);
-    let _ = Box::into_raw(context);
     open_result(ret, dev_out)
 }
 
-extern fn ddk_close(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+unsafe extern fn ddk_close(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
     let ret = context.ops.close(flags);
-    let _ = Box::into_raw(context);
     ret.into_raw()
 }
 
-extern fn ddk_unbind(ctx: *mut u8) {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    {
-        let unboxed = &mut *context;
-        unboxed.ops.unbind(&mut unboxed.device);
-    }
-    let _ = Box::into_raw(context);
+unsafe extern fn ddk_unbind(ctx: *mut u8) {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    let unboxed = &mut *context;
+    unboxed.ops.unbind(&mut unboxed.device);
 }
 
-extern fn ddk_release(ctx: *mut u8) {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+unsafe extern fn ddk_release(ctx: *mut u8) {
+    let mut context = ctx_into_device_and_ops(ctx);
     context.ops.release();
-    // Don't Box::into_raw the device so it can be freed by Rust
+    drop(context);
 }
 
-extern fn ddk_read(ctx: *mut u8, buf: *mut u8, count: usize, off: zsys::zx_off_t, actual: *mut usize) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    let rust_buf = unsafe { slice::from_raw_parts_mut(buf, count) };
-    let ret = match context.ops.read(rust_buf, off) {
+unsafe extern fn ddk_read(ctx: *mut u8, buf: *mut u8, count: usize, off: zsys::zx_off_t, actual: *mut usize) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    let rust_buf = slice::from_raw_parts_mut(buf, count);
+    match context.ops.read(rust_buf, off) {
         Ok(r) => {
-                unsafe { *actual = r };
-                zsys::ZX_OK
-            },
-        // TODO(qwandor): Investigate adding a to_raw method for Status.
-        Err(status) => status.into_raw()
-    };
-    let _ = Box::into_raw(context);
-    ret
-}
-
-extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: zsys::zx_off_t, actual: *mut usize) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    let rust_buf = unsafe { slice::from_raw_parts(buf, count) };
-    let ret = match context.ops.write(rust_buf, off) {
-        Ok(r) => {
-                unsafe { *actual = r };
-                zsys::ZX_OK
-            },
-        Err(status) => status.into_raw()
-    };
-    let _ = Box::into_raw(context);
-    ret
-}
-
-extern fn ddk_get_size(ctx: *mut u8) -> u64 {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    let size = context.ops.get_size();
-    let _ = Box::into_raw(context);
-    size
-}
-
-extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
-    let rust_in_buf = unsafe { slice::from_raw_parts(in_buf, in_len) };
-    let rust_out_buf = unsafe { slice::from_raw_parts_mut(out_buf, out_len) };
-    let status = match context.ops.ioctl(op, rust_in_buf, rust_out_buf) {
-        Ok(bytes_written) => {
-            unsafe { *out_actual = bytes_written };
+            *actual = r;
             zsys::ZX_OK
         }
         Err(status) => status.into_raw()
-    };
-    let _ = Box::into_raw(context);
-    status
+    }
 }
 
-extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+unsafe extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: zsys::zx_off_t, actual: *mut usize) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    let rust_buf = slice::from_raw_parts(buf, count);
+    match context.ops.write(rust_buf, off) {
+        Ok(r) => {
+            *actual = r;
+            zsys::ZX_OK
+        }
+        Err(status) => status.into_raw()
+    }
+}
+
+unsafe extern fn ddk_get_size(ctx: *mut u8) -> u64 {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    context.ops.get_size()
+}
+
+unsafe extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
+    let rust_in_buf = slice::from_raw_parts(in_buf, in_len);
+    let rust_out_buf = slice::from_raw_parts_mut(out_buf, out_len);
+    match context.ops.ioctl(op, rust_in_buf, rust_out_buf) {
+        Ok(bytes_written) => {
+            *out_actual = bytes_written;
+            zsys::ZX_OK
+        }
+        Err(status) => status.into_raw()
+    }
+}
+
+unsafe extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
     let status = context.ops.suspend(flags);
-    let _ = Box::into_raw(context);
     status.into_raw()
 }
 
-extern fn ddk_resume(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
-    let mut context: Box<DeviceAndOps> = unsafe { Box::from_raw(ctx as *mut DeviceAndOps) };
+unsafe extern fn ddk_resume(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
+    let context = ctx_borrow_mut_device_and_ops(ctx);
     let status = context.ops.resume(flags);
-    let _ = Box::into_raw(context);
     status.into_raw()
 }
 
@@ -357,37 +365,56 @@ static mut DEVICE_OPS: sys::zx_protocol_device_t = sys::zx_protocol_device_t {
 
 extern "Rust" {
     // This is the entry point for us to call the driver, implemented by the driver writer.
+    #![allow(improper_ctypes)]
     fn init() -> Result<Box<DriverOps>, Status>;
 }
 
-extern fn driver_init(out_ctx: *mut *mut u8) -> zsys::zx_status_t {
+// Requires that `ctx` is an owned pointer to a `Box<DriverOps>`.
+unsafe fn ctx_into_driver_ops(ctx: *mut u8) -> Box<Box<DriverOps>> {
+    Box::from_raw(ctx as *mut Box<DriverOps>)
+}
+
+// Requires that `ctx` is a unique, borrowed pointer to a `Box<DriverOps>`.
+unsafe fn ctx_borrow_mut_driver_ops<'a>(ctx: *mut u8) -> &'a mut Box<DriverOps> {
+    &mut *(ctx as *mut Box<DriverOps>)
+}
+
+fn ctx_from_driver_ops(ctx: Box<Box<DriverOps>>) -> *mut u8 {
+    Box::into_raw(ctx) as *mut u8
+}
+
+// `out_ctx` must be a pointer to a pointer to a region in which a
+// `Box<Box<DriverOps>>` can be stored.
+unsafe extern fn driver_init(out_ctx: *mut *mut u8) -> zsys::zx_status_t {
     println!("driver_init called");
-    match unsafe { init() } {
+    match init() {
         Ok(ops) => {
-            unsafe { *out_ctx = Box::into_raw(Box::new(ops)) as *mut u8 };
+            *out_ctx = ctx_from_driver_ops(Box::new(ops));
             Status::OK
         },
         Err(e) => e,
     }.into_raw()
 }
 
-extern fn driver_bind(ctx: *mut u8, parent: *mut sys::zx_device_t) -> zsys::zx_status_t {
+// `ctx` must be a pointer to a `Box<DriverOps>`.
+// `parent` must be a valid pointer to a device.
+unsafe extern fn driver_bind(ctx: *mut u8, parent: *mut sys::zx_device_t) -> zsys::zx_status_t {
     println!("driver_bind called");
-    let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
+    let ops = ctx_borrow_mut_driver_ops(ctx);
     let parent_wrapped = Device::wrap(parent);
     let status = match ops.bind(parent_wrapped) {
         Ok(_) => Status::OK,
         Err(e) => e,
     };
-    let _ = Box::into_raw(ops);
     status.into_raw()
 }
 
-extern fn driver_release(ctx: *mut u8) {
+// `ctx` must be a pointer to a `Box<DriverOps>`
+unsafe extern fn driver_release(ctx: *mut u8) {
     println!("driver_release called");
-    let mut ops = unsafe { Box::from_raw(ctx as *mut Box<DriverOps>) };
+    let mut ops = ctx_into_driver_ops(ctx);
     ops.release();
-    // Don't Box::into_raw the ops in this case, so it can be freed by Rust.
+    drop(ops);
 }
 
 #[no_mangle]

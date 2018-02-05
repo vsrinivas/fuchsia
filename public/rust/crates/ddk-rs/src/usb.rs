@@ -41,7 +41,7 @@ impl UsbProtocol {
         into_result(status, || out_length)
     }
 
-    fn control_struct<T: Sized>(&mut self, request_type: usb_request_type_t, request: u8,
+    pub fn control_struct<T: Sized>(&mut self, request_type: usb_request_type_t, request: u8,
         value: u16, index: u16, data: &mut T, timeout: Time) -> Result<usize, Status>
     {
         let mut out_length: usize = 0;
