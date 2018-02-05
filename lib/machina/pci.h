@@ -122,7 +122,7 @@ class PciDevice {
   zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
   // Send the configured interrupt for this device.
-  zx_status_t Interrupt() const;
+  zx_status_t Interrupt();
 
   // Determines if the given base address register is implemented for this
   // device.
@@ -169,6 +169,8 @@ class PciDevice {
   const Attributes attrs_;
   // Command register.
   uint16_t command_ __TA_GUARDED(mutex_) = 0;
+  // An IRQ was asserted while INT signalling is suppressed.
+  bool pending_irq_ __TA_GUARDED(mutex_) = false;
   // Array of capabilities for this device.
   const pci_cap_t* capabilities_ = nullptr;
   // Size of |capabilities|.
@@ -225,7 +227,7 @@ class PciBus {
   zx_status_t WriteIoPort(uint64_t port, const IoValue& value);
 
   // Raise an interrupt for the given device.
-  zx_status_t Interrupt(const PciDevice& device);
+  zx_status_t Interrupt(PciDevice& device);
 
   // Returns true if |bus|, |device|, |function| corresponds to a valid
   // device address.

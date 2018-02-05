@@ -25,6 +25,14 @@
 
 namespace machina {
 
+// PCI command register bits.
+constexpr uint16_t kPciCommandIoEnable = 1 << 0;
+constexpr uint16_t kPciCommandMemEnable = 1 << 1;
+constexpr uint16_t kPciCommandIntEnable = 1 << 10;
+constexpr bool pci_irq_enabled(uint16_t command_register) {
+  return (command_register & kPciCommandIntEnable) == 0;
+}
+
 // PCI config relative IO port addresses (typically at 0xcf8).
 constexpr uint16_t kPciConfigAddressPortBase = 0;
 constexpr uint16_t kPciConfigAddressPortTop = 3;
@@ -185,7 +193,7 @@ zx_status_t PciBus::Connect(PciDevice* device) {
     }
   }
 
-  device->command_ = PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN;
+  device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
 
@@ -317,7 +325,15 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
   }
 }
 
-zx_status_t PciBus::Interrupt(const PciDevice& device) {
+zx_status_t PciBus::Interrupt(PciDevice& device) {
+  {
+    fbl::AutoLock lock(&device.mutex_);
+    if (!pci_irq_enabled(device.command_)) {
+      device.pending_irq_ = true;
+      return ZX_OK;
+    }
+    device.pending_irq_ = false;
+  }
   return interrupt_controller_->Interrupt(device.global_irq_);
 }
 
@@ -499,10 +515,21 @@ zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) const {
 zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   switch (reg) {
     case PCI_CONFIG_COMMAND: {
-      if (value.access_size != 2)
+      if (value.access_size != 2) {
         return ZX_ERR_NOT_SUPPORTED;
-      fbl::AutoLock lock(&mutex_);
-      command_ = value.u16;
+      }
+
+      bool fire_pending_irq = false;
+      {
+        fbl::AutoLock lock(&mutex_);
+        command_ = value.u16;
+        // If we have a pending IRQ and this write will enable interrupts for
+        // this device, we'll inject that pending IRQ now.
+        fire_pending_irq = pending_irq_ && pci_irq_enabled(command_);
+      }
+      if (fire_pending_irq) {
+        return Interrupt();
+      }
       return ZX_OK;
     }
     case PCI_REGISTER_BAR_0:
@@ -550,7 +577,7 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest) {
   return ZX_OK;
 }
 
-zx_status_t PciDevice::Interrupt() const {
+zx_status_t PciDevice::Interrupt() {
   if (!bus_)
     return ZX_ERR_BAD_STATE;
   return bus_->Interrupt(*this);
