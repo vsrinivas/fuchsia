@@ -145,6 +145,7 @@ template("rust_artifact") {
 
     inputs = [
       "${source_dir}/Cargo.toml",
+      "//garnet/Cargo.lock",
     ]
 
     outputs = [
