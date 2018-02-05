@@ -165,14 +165,8 @@ bool executable_tls_test() {
     END_TEST;
 }
 
-bool dso_tls_test() {
-    BEGIN_TEST;
-    END_TEST;
-}
-
 BEGIN_TEST_CASE(elf_tls_tests)
 RUN_TEST(executable_tls_test)
-RUN_TEST(dso_tls_test)
 END_TEST_CASE(elf_tls_tests)
 
 #ifndef BUILD_COMBINED_TESTS
