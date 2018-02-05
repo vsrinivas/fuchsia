@@ -35,6 +35,7 @@ class InfraBss : public BssInterface, public FrameHandler {
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
    private:
+    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;

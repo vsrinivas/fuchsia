@@ -10,7 +10,6 @@
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
-#include <typeinfo>
 #include <unordered_map>
 
 namespace wlan {

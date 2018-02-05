@@ -12,9 +12,8 @@
 namespace wlan {
 
 zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
-    if (clients_.Has(client_addr)) {
-        // TODO(hahnr): Notify remote client about timeout.
-    }
+    ZX_DEBUG_ASSERT(clients_.Has(client_addr));
+    if (clients_.Has(client_addr)) { clients_.GetClient(client_addr)->HandleTimeout(); }
     return ZX_OK;
 }
 
@@ -22,6 +21,15 @@ zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     // Drop management frames which are not targeted towards this BSS.
     // TODO(hahnr): Need to support wildcard BSSID for ProbeRequests.
     if (bssid_ != hdr.addr1 || bssid_ != hdr.addr3) { return ZX_ERR_STOP; }
+
+    // Let the correct RemoteClient instance process the received frame.
+    auto& client_addr = hdr.addr2;
+    if (clients_.Has(client_addr)) { ForwardCurrentFrameTo(clients_.GetClient(client_addr)); }
+    return ZX_OK;
+}
+
+zx_status_t InfraBss::HandleDataFrame(const DataFrameHeader& hdr) {
+    if (bssid_ != hdr.addr1) { return ZX_ERR_STOP; }
 
     // Let the correct RemoteClient instance process the received frame.
     auto& client_addr = hdr.addr2;
@@ -74,7 +82,7 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
     zx_status_t status =
         device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), out_timer);
     if (status != ZX_OK) {
-        errorf("could not create scan timer: %d\n", status);
+        errorf("could not create bss timer: %d\n", status);
         return status;
     }
     return ZX_OK;

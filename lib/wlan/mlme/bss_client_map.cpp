@@ -10,7 +10,8 @@ bool BssClientMap::Has(const common::MacAddr& addr) {
     return clients_.find(addr) != clients_.end();
 }
 
-zx_status_t BssClientMap::Add(const common::MacAddr& addr, fbl::unique_ptr<FrameHandler> handler) {
+zx_status_t BssClientMap::Add(const common::MacAddr& addr,
+                              fbl::unique_ptr<RemoteClientInterface> handler) {
     if (Has(addr)) { return ZX_ERR_ALREADY_EXISTS; }
     clients_.emplace(addr, RemoteClient{.handler = std::move(handler)});
     return ZX_OK;
@@ -29,7 +30,7 @@ zx_status_t BssClientMap::Remove(const common::MacAddr& addr) {
     return ZX_OK;
 }
 
-FrameHandler* BssClientMap::GetClient(const common::MacAddr& addr) {
+RemoteClientInterface* BssClientMap::GetClient(const common::MacAddr& addr) {
     if (!Has(addr)) { return nullptr; }
 
     auto iter = clients_.find(addr);
@@ -54,9 +55,12 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
 
     // Retrieve next available AID. Return if all AIDs are already taken.
     aid_t available_aid;
-    if (aid_bitmap_.Get(0, kMaxClients - 1, &available_aid)) { return ZX_ERR_NO_RESOURCES; }
+    auto status = aid_bitmap_.Get(kMinClientAid, kMaxClients, &available_aid);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    auto status = aid_bitmap_.SetOne(available_aid);
+    status = aid_bitmap_.SetOne(available_aid);
     if (status != ZX_OK) { return status; }
     client.aid = available_aid;
     *out_aid = client.aid;
@@ -76,7 +80,7 @@ zx_status_t BssClientMap::ReleaseAid(const common::MacAddr& addr) {
 }
 
 bool BssClientMap::HasAidAvailable() {
-    return !aid_bitmap_.Get(0, kMaxClients - 1);
+    return !aid_bitmap_.Get(kMinClientAid, kMaxClients);
 }
 
 void BssClientMap::ClearAid(aid_t aid) {

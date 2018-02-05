@@ -22,9 +22,16 @@ template <typename S> class StateMachine {
     }
 
     void MoveToState(fbl::unique_ptr<S> state) {
-        state_->OnExit();
-        state_ = fbl::move(state);
-        state_->OnEnter();
+        ZX_DEBUG_ASSERT(state != nullptr);
+
+        if (state_ != nullptr) { state_->OnExit(); }
+
+        if (state != nullptr) {
+            state_ = fbl::move(state);
+            state_->OnEnter();
+        } else {
+            errorf("[fsm] state must not be null\n");
+        }
     }
 
     S* state() { return state_.get(); }

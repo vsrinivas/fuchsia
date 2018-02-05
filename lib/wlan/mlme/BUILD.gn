@@ -34,6 +34,7 @@ source_set("mlme") {
     "include/wlan/mlme/mlme.h",
     "include/wlan/mlme/packet.h",
     "include/wlan/mlme/remote_client.h",
+    "include/wlan/mlme/remote_client_interface.h",
     "include/wlan/mlme/scanner.h",
     "include/wlan/mlme/serialize.h",
     "include/wlan/mlme/station.h",

@@ -8,6 +8,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/fsm.h>
+#include <wlan/mlme/remote_client_interface.h>
 #include <wlan/mlme/timer.h>
 
 #include <zircon/types.h>
@@ -46,11 +47,14 @@ class AuthenticatedState : public BaseState {
 
     void HandleTimeout() override;
 
+    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+                                   const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     // TODO(hahnr): Move into DeauthenticatedState when Deauthentication frame was received.
 
    private:
+    // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr zx_duration_t kAuthenticationTimeoutTu = 1800000;  // 30min
     zx::time auth_timeout_;
 };
@@ -59,35 +63,48 @@ class AssociatedState : public BaseState {
    public:
     AssociatedState(RemoteClient* client, uint16_t aid);
 
+    void OnEnter() override;
     void OnExit() override;
+
+    void HandleTimeout() override;
 
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
 
     // TODO(hahnr): Move into AuthenticatedState when Disassociation frame was received.
     // TODO(hahnr): Move into DeauthenticatedState when Deauthentication frame was received.
 
    private:
+    // TODO(hahnr): Use WLAN_MIN_TU once defined.
+    static constexpr zx_duration_t kInactivityTimeoutTu = 300000;  // 5min
     const uint16_t aid_;
+    zx::time inactive_timeout_;
+    bool active_;
 };
 
-class RemoteClient : public fsm::StateMachine<BaseState>, public FrameHandler {
+class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInterface {
    public:
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
                  const common::MacAddr& addr);
 
-    void HandleTimeout();
+    // RemoteClientInterface implementation
+    void HandleTimeout() override;
 
-    zx_status_t HandleAnyFrame() override;
+    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
 
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
+    zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
 
     // Note: There can only ever by one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
-    zx::time StartTimer(zx_duration_t tus);
-    bool HasTimerTriggered(zx::time deadline);
-    void CancelTimer();
+    zx_status_t StartTimer(zx::time deadline);
+    zx_status_t CancelTimer();
+    zx::time CreateTimerDeadline(zx_duration_t tus);
+    bool IsDeadlineExceeded(zx::time deadline);
 
     uint16_t next_seq_no() { return last_seq_no_++ & kMaxSequenceNumber; }
     BssInterface* bss() { return bss_; }

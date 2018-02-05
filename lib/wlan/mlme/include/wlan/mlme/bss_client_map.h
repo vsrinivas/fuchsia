@@ -5,8 +5,8 @@
 #pragma once
 
 #include <wlan/mlme/bss_interface.h>
-#include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/macaddr_map.h>
+#include <wlan/mlme/remote_client_interface.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
@@ -26,20 +26,21 @@ static constexpr aid_t kUnknownAid = 2009;
 class BssClientMap {
    public:
     static constexpr aid_t kMaxClients = 2008;
+    static constexpr aid_t kMinClientAid = 1;
 
-    BssClientMap() { (void)clients_; }
+    BssClientMap() { aid_bitmap_.Reset(kMaxClients); }
 
     bool Has(const common::MacAddr& addr);
-    zx_status_t Add(const common::MacAddr& addr, fbl::unique_ptr<FrameHandler> client);
+    zx_status_t Add(const common::MacAddr& addr, fbl::unique_ptr<RemoteClientInterface> client);
     zx_status_t Remove(const common::MacAddr& addr);
-    FrameHandler* GetClient(const common::MacAddr& addr);
+    RemoteClientInterface* GetClient(const common::MacAddr& addr);
     zx_status_t AssignAid(const common::MacAddr& addr, aid_t* out_aid);
     zx_status_t ReleaseAid(const common::MacAddr& addr);
 
    private:
     struct RemoteClient {
         aid_t aid = kUnknownAid;
-        fbl::unique_ptr<FrameHandler> handler = nullptr;
+        fbl::unique_ptr<RemoteClientInterface> handler = nullptr;
     };
     using ClientMap = std::unordered_map<common::MacAddr, RemoteClient, common::MacAddrHasher>;
 
