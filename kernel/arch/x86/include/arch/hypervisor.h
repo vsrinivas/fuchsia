@@ -12,6 +12,7 @@
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
@@ -50,7 +51,6 @@ private:
 class Guest {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
-    ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
     zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
@@ -58,13 +58,11 @@ public:
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
     TrapMap* Traps() { return &traps_; }
-    zx_paddr_t ApicAccessAddress() const { return apic_access_page_.PhysicalAddress(); }
     zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     TrapMap traps_;
-    VmxPage apic_access_page_;
     VmxPage msr_bitmaps_page_;
 
     Guest() = default;

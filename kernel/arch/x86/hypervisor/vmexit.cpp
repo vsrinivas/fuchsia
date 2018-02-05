@@ -17,7 +17,6 @@
 #include <arch/x86/mmu.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
-#include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
 #include <platform.h>

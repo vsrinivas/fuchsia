@@ -6,7 +6,6 @@
 
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
-#include <hypervisor/guest_physical_address_space.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "vmx_cpu_state_priv.h"
@@ -40,13 +39,8 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    // Setup common APIC access.
-    VmxInfo vmx_info;
-    status = guest->apic_access_page_.Alloc(vmx_info, 0);
-    if (status != ZX_OK)
-        return status;
-
     // Setup common MSR bitmaps.
+    VmxInfo vmx_info;
     status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX);
     if (status != ZX_OK)
         return status;
@@ -66,11 +60,6 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     return ZX_OK;
 }
 
-Guest::~Guest() {
-    __UNUSED zx_status_t status = gpas_->UnmapRange(APIC_PHYS_BASE, PAGE_SIZE);
-    DEBUG_ASSERT(status == ZX_OK);
-}
-
 zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                            fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     if (len == 0)
@@ -85,21 +74,9 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_BELL: {
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return ZX_ERR_INVALID_ARGS;
-        if (addr == APIC_PHYS_BASE) {
-            // Specialise traps for the local APIC, so that we can take
-            // advantage of hardware acceleration where possible.
-            if (len != PAGE_SIZE)
-                return ZX_ERR_INVALID_ARGS;
-            zx_status_t status = gpas_->MapInterruptController(APIC_PHYS_BASE,
-                                                               apic_access_page_.PhysicalAddress(),
-                                                               PAGE_SIZE);
-            if (status != ZX_OK)
-                return status;
-        } else {
-            zx_status_t status = gpas_->UnmapRange(addr, len);
-            if (status != ZX_OK)
-                return status;
-        }
+        zx_status_t status = gpas_->UnmapRange(addr, len);
+        if (status != ZX_OK)
+            return status;
         break;
     }
     case ZX_GUEST_TRAP_IO:
