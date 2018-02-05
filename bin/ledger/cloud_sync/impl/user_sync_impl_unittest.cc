@@ -37,9 +37,16 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
     user_config.user_directory = tmp_dir.path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
 
+    auto backoff = std::make_unique<backoff::TestBackoff>();
+    backoff->SetOnGetNext([this] {
+      // Make RunLoopUntilIdle() return once a backoff is requested, to avoid an
+      // infinite loop.
+      message_loop_.PostQuitTask();
+    });
+
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
-        std::make_unique<backoff::TestBackoff>(), &sync_state_watcher_,
+        std::move(backoff), &sync_state_watcher_,
         [this] { on_version_mismatch_calls_++; });
   }
   ~UserSyncImplTest() override {}
@@ -87,8 +94,8 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   auto ledger_a = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
   auto ledger_a_ptr = static_cast<LedgerSyncImpl*>(ledger_a.get());
   EXPECT_FALSE(ledger_a_ptr->IsUploadEnabled());
-  EXPECT_TRUE(
-      RunLoopUntil([ledger_a_ptr] { return ledger_a_ptr->IsUploadEnabled(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ledger_a_ptr->IsUploadEnabled());
   EXPECT_EQ(0, on_version_mismatch_calls_);
   EXPECT_EQ("some-value", cloud_provider_.device_set.checked_fingerprint);
 
@@ -109,8 +116,8 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   auto ledger = user_sync_->CreateLedgerSync("app-id", &encryption_service_);
   auto ledger_ptr = static_cast<LedgerSyncImpl*>(ledger.get());
   EXPECT_FALSE(ledger_ptr->IsUploadEnabled());
-  EXPECT_TRUE(
-      RunLoopUntil([ledger_ptr] { return ledger_ptr->IsUploadEnabled(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ledger_ptr->IsUploadEnabled());
   EXPECT_EQ(0, on_version_mismatch_calls_);
   EXPECT_FALSE(cloud_provider_.device_set.set_fingerprint.empty());
 
@@ -125,13 +132,13 @@ TEST_F(UserSyncImplTest, WatchErase) {
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   user_sync_->Start();
 
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return cloud_provider_.device_set.set_watcher.is_bound(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(cloud_provider_.device_set.set_watcher.is_bound());
   EXPECT_EQ("some-value", cloud_provider_.device_set.watched_fingerprint);
   EXPECT_EQ(0, on_version_mismatch_calls_);
 
   cloud_provider_.device_set.set_watcher->OnCloudErased();
-  EXPECT_TRUE(RunLoopUntil([this] { return on_version_mismatch_calls_ == 1; }));
+  RunLoopUntilIdle();
   EXPECT_EQ(1, on_version_mismatch_calls_);
 }
 
@@ -142,8 +149,8 @@ TEST_F(UserSyncImplTest, WatchRetry) {
       cloud_provider::Status::NETWORK_ERROR;
   user_sync_->Start();
 
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return cloud_provider_.device_set.set_watcher_calls > 1; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, cloud_provider_.device_set.set_watcher_calls);
 }
 
 }  // namespace
