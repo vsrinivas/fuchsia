@@ -101,6 +101,7 @@
 
     system_register \inst, SS_ELR_EL2, elr_el2
     system_register \inst, SS_SPSR_EL2, spsr_el2
+    system_register \inst, SS_VMPIDR_EL2, vmpidr_el2
 .endm
 
 .macro host_state inst, off

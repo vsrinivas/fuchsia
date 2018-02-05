@@ -27,6 +27,10 @@ static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
 
+uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
+    return (vpid - 1) | (mpidr & 0xffffff00fe000000);
+}
+
 // static
 zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                          TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
@@ -56,6 +60,9 @@ zx_status_t Vcpu::Create(zx_vaddr_t entry, uint8_t vmid, GuestPhysicalAddressSpa
     vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_.guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
+    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    vcpu->el2_state_.guest_state.system_state.vmpidr_el2 = vmpidr_of(vpid, mpidr);
+    vcpu->el2_state_.host_state.system_state.vmpidr_el2 = mpidr;
     vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC |
                  HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
 
