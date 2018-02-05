@@ -152,6 +152,13 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
 
     FillTxInfo(&packet, *frame.hdr);
 
+    auto hdr = frame.hdr;
+    hdr->fc.set_from_ds(1);
+    hdr->addr1 = addr_;
+    hdr->addr2 = bss_->bssid();
+    hdr->addr3 = bss_->bssid();
+    hdr->sc.set_seq(device_->GetState()->next_seq());
+
     auto auth = frame.body;
     auth->status_code = result;
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
@@ -171,6 +178,13 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     fbl::unique_ptr<Packet> packet = nullptr;
     auto frame = BuildMgmtFrame<AssociationResponse>(&packet);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto hdr = frame.hdr;
+    hdr->fc.set_from_ds(1);
+    hdr->addr1 = addr_;
+    hdr->addr2 = bss_->bssid();
+    hdr->addr3 = bss_->bssid();
+    hdr->sc.set_seq(device_->GetState()->next_seq());
 
     auto assoc = frame.body;
     assoc->status_code = result;
