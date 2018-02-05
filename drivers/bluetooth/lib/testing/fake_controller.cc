@@ -576,6 +576,12 @@ void FakeController::OnLECreateConnectionCommandReceived(
     response.connection_handle = htole16(handle);
   }
 
+  // Don't send a connection event if we were asked to force the request to
+  // remain pending. This is used by test cases that operate during the pending
+  // state.
+  if (device->force_pending_connect())
+    return;
+
   pending_le_connect_rsp_.Reset([response, device, this] {
     le_connect_pending_ = false;
 
@@ -589,10 +595,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
     SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode,
                     common::BufferView(&response, sizeof(response)));
   });
-
-  task_runner()->PostDelayedTask(
-      [conn_cb = pending_le_connect_rsp_.callback()] { conn_cb(); },
-      fxl::TimeDelta::FromMilliseconds(device->connect_response_period_ms()));
+  task_runner()->PostTask([cb = pending_le_connect_rsp_.callback()] { cb(); });
 }
 
 void FakeController::OnLEConnectionUpdateCommandReceived(

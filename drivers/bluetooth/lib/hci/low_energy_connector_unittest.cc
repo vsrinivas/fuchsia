@@ -223,6 +223,9 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
 // Controller reports error from HCI LE Connection Complete event
 TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
+
+  // Make sure the pending connect remains pending.
+  fake_device->set_force_pending_connect(true);
   test_device()->AddLEDevice(std::move(fake_device));
 
   LowEnergyConnector::Result result;
@@ -396,6 +399,9 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
 
 TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
+
+  // Make sure the pending connect remains pending.
+  fake_device->set_force_pending_connect(true);
   test_device()->AddLEDevice(std::move(fake_device));
 
   bool ret = connector()->CreateConnection(

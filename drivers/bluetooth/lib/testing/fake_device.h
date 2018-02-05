@@ -19,8 +19,6 @@ namespace testing {
 // FakeDevice is used to emulate remote Bluetooth devices.
 class FakeDevice {
  public:
-  static constexpr int64_t kDefaultConnectResponseTimeMs = 100;
-
   // NOTE: Setting |connectable| to true will result in a "Connectable and
   // Scannable Advertisement" (i.e. ADV_IND) even if |scannable| is set to
   // false. This is OK since we use |scannable| to drive the receipt of Scan
@@ -89,10 +87,8 @@ class FakeDevice {
   hci::Status connect_status() const { return connect_status_; }
   void set_connect_status(hci::Status status) { connect_status_ = status; }
 
-  int64_t connect_response_period_ms() const { return connect_rsp_ms_; }
-  void set_connect_response_period_ms(int64_t value) {
-    connect_rsp_ms_ = value;
-  }
+  bool force_pending_connect() const { return force_pending_connect_; }
+  void set_force_pending_connect(bool value) { force_pending_connect_ = value; }
 
   void AddLink(hci::ConnectionHandle handle);
   void RemoveLink(hci::ConnectionHandle handle);
@@ -115,7 +111,7 @@ class FakeDevice {
 
   hci::Status connect_status_;
   hci::Status connect_response_;
-  int64_t connect_rsp_ms_;
+  bool force_pending_connect_;  // Causes connection requests to remain pending.
 
   hci::LEConnectionParameters le_params_;
 

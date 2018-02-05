@@ -552,8 +552,13 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   auto* dev0 = dev_cache()->NewDevice(kAddress0, true);
   auto* dev1 = dev_cache()->NewDevice(kAddress1, true);
 
+  // Connecting to this device will succeed.
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
-  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress1));
+
+  // Connecting to this device will remain pending.
+  auto pending_dev = std::make_unique<FakeDevice>(kAddress1);
+  pending_dev->set_force_pending_connect(true);
+  test_device()->AddLEDevice(std::move(pending_dev));
 
   // Below we create one connection and one pending request to have at the time
   // of destruction.

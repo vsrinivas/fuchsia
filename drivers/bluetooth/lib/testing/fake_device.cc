@@ -34,7 +34,7 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address,
       scannable_(scannable),
       connect_status_(hci::Status::kSuccess),
       connect_response_(hci::Status::kSuccess),
-      connect_rsp_ms_(kDefaultConnectResponseTimeMs),
+      force_pending_connect_(false),
       should_batch_reports_(false) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
