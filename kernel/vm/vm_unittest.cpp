@@ -969,8 +969,9 @@ static bool arch_noncontiguous_map(void* context) {
 
 UNITTEST_START_TESTCASE(vm_tests)
 VM_UNITTEST(pmm_smoke_test)
-VM_UNITTEST(pmm_large_alloc_test)
-VM_UNITTEST(pmm_oversized_alloc_test)
+// runs the system out of memory, uncomment for debugging
+//VM_UNITTEST(pmm_large_alloc_test)
+//VM_UNITTEST(pmm_oversized_alloc_test)
 VM_UNITTEST(vmm_alloc_smoke_test)
 VM_UNITTEST(vmm_alloc_contiguous_smoke_test)
 VM_UNITTEST(multiple_regions_test)
