@@ -196,29 +196,16 @@ action("pkgbuilds") {
   pm_out_dir = get_label_info(pm_label, "root_out_dir")
   pm_path = "$pm_out_dir/pm"
 
-  amber_publish_label = "//garnet/go/src/amber:amber-publish($host_toolchain)"
-
-  amber_publish_out_dir = get_label_info(amber_publish_label, "root_out_dir")
-  amber_publish_path = "$amber_publish_out_dir/amber-publish"
-
   merkleroot_bin = "//out/build-zircon/tools/merkleroot"
 
   package_signing_key = system_package_key
 
-  deps = [
-    amber_publish_label,
-    # TODO(raggi): cleanup these files, they shouldn't be in the root_build_dir
-    "//garnet/go/src/amber:amber-srv-keys",
-    pm_label,
-    ":finalize_manifests"
-  ]
+  deps = [ pm_label, ":finalize_manifests" ]
   inputs = [
     pm_path,
-    amber_publish_path,
     package_signing_key,
     merkleroot_bin,
   ]
-
   # XXX(raggi): packages_file is an input, but it's made by gen.py
   sources = [
     "build_all_fuchsia_packages.py",
@@ -227,7 +214,6 @@ action("pkgbuilds") {
   outputs = [
     packages_blobs_manifest,
     pkgsvr_index,
-    "$root_out_dir/amber-files/repository/targets.json"
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -257,17 +243,6 @@ action("pkgbuilds") {
     rebase_path(packages_blobs_manifest),
     "--pkgsvr-index",
     rebase_path(pkgsvr_index),
-    "--amber-publish",
-    rebase_path(amber_publish_path),
-    "--amber-repo",
-    # TODO(raggi): re-arrange and formalize these paths:
-    rebase_path("$root_out_dir/amber-files"),
-    "--amber-keys",
-    rebase_path("$root_out_dir"),
-    "--amber-package-list",
-    rebase_path("$root_gen_dir/amber-package-list"),
-    "--amber-blobs-manifest",
-    rebase_path("$root_gen_dir/amber-blobs-manifest"),
   ]
 }
 

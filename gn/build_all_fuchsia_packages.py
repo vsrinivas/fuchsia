@@ -18,14 +18,13 @@ per-package basis as soon as package dependencies are available.
 
 import Queue
 import argparse
-import collections
 import multiprocessing
 import os
 import subprocess
 import sys
 import threading
 
-def package_build_worker(package_queue, blob_lines, pm, signing_key, packages_dir):
+def package_build_worker(package_queue, pm, signing_key, packages_dir):
     while True:
         package = package_queue.get()
         if package is None:
@@ -36,21 +35,6 @@ def package_build_worker(package_queue, blob_lines, pm, signing_key, packages_di
         package_manifest = os.path.join(package_dir, "final_package_manifest")
 
         subprocess.check_call([pm, "-k", signing_key, "-o", package_dir, "-m", package_manifest, "build"])
-
-        # Parse the package file source map
-        sources = {}
-        with open(package_manifest) as s:
-            for line in s:
-                dst, src = line.strip().split("=", 2)
-                sources[dst] = src
-
-        contents_manifest = os.path.join(package_dir, "meta", "contents")
-
-        # For each blob the package needs, copy the source into the amber blobs tree
-        with open(contents_manifest) as c:
-            for line in c:
-                dst, blob = line.strip().split("=", 2)
-                blob_lines.append("%s=%s" % (sources[dst], blob))
 
         package_queue.task_done()
 
@@ -78,21 +62,6 @@ def main():
     parser.add_argument("--pkgsvr-index",
                         help="Path to the pkgsvr index to output (containing all package/version - merkleroot tuples).",
                         required=True)
-    parser.add_argument("--amber-publish",
-                        help="Path to the amber-publish tool.",
-                        required=True)
-    parser.add_argument("--amber-repo",
-                        help="Path to the amber TUF repository.",
-                        required=True)
-    parser.add_argument("--amber-keys",
-                        help="Path to the amber signing keys.",
-                        required=True)
-    parser.add_argument("--amber-package-list",
-                        help="Path to the amber package list manifest to generate.",
-                        required=True)
-    parser.add_argument("--amber-blobs-manifest",
-                        help="Path to the amber blobs manifest to generate.",
-                        required=True)
     parser.add_argument("--concurrency",
                         help="Number of concurrent package manager processes to spawn",
                         default=multiprocessing.cpu_count(),
@@ -100,9 +69,7 @@ def main():
     args = parser.parse_args()
 
     queue = Queue.Queue()
-    # blob_lines collects all lines for writing to an amber-publish blobs manifest
-    blob_lines = collections.deque()
-    worker_args=[queue, blob_lines, args.pm, args.signing_key, args.packages_dir]
+    worker_args=[queue, args.pm, args.signing_key, args.packages_dir]
     threads = [threading.Thread(target=package_build_worker, args=worker_args) for _i in range(args.concurrency)]
     for thread in threads:
         thread.start()
@@ -124,20 +91,6 @@ def main():
 
     # Note: Package versions will be utilized in the future
     package_version = 0
-
-    with open(args.amber_package_list, "w+") as amber_package_list:
-        for package in packages:
-            meta_far = os.path.join(args.packages_dir, package, "meta.far")
-            amber_package_list.write("%s/%s=%s\n" % (package, package_version, meta_far))
-
-    subprocess.check_call([args.amber_publish, "-ps", "-f", args.amber_package_list, "-r", args.amber_repo, "-k", args.amber_keys])
-
-    with open(args.amber_blobs_manifest, "w+") as amber_blobs_manifest:
-        for line in blob_lines:
-            amber_blobs_manifest.write("%s\n" % line)
-
-    subprocess.check_call([args.amber_publish, "-bs", "-f", args.amber_blobs_manifest, "-r", args.amber_repo, "-k", args.amber_keys])
-
 
     blobstore_manifest_dir = os.path.dirname(args.blobstore_manifest)
     with open(args.blobstore_manifest, "w+") as blobstore_manifest:
