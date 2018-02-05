@@ -5,6 +5,13 @@
 package templates
 
 const Interface = `
+{{- define "InterfaceForwardDeclaration" -}}
+class {{ .Name }};
+using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
+class {{ .ProxyName }};
+class {{ .StubName }};
+{{- end }}
+
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Name|$param.Type.Decorate }}
@@ -26,9 +33,6 @@ const Interface = `
 {{ end -}}
 
 {{- define "InterfaceDeclaration" -}}
-class {{ .ProxyName }};
-class {{ .StubName }};
-
 class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
@@ -45,8 +49,6 @@ class {{ .Name }} {
     {{- end }}
   {{- end }}
 };
-
-using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 
 class {{ .ProxyName }} : public {{ .Name }} {
  public:

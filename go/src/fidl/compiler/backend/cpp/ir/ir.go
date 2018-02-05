@@ -12,13 +12,11 @@ import (
 )
 
 type Type struct {
-	prefix string
-	suffix string
-	Decl   string
+	Decl string
 }
 
 func (t *Type) Decorate(identifer string) string {
-	return t.prefix + " " + identifer + t.suffix
+	return t.Decl + " " + identifer
 }
 
 type Enum struct {
@@ -267,34 +265,23 @@ func compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := compileType(*val.ElementType)
-		r.prefix = t.prefix
-		r.suffix = fmt.Sprintf("%s[%s]", t.suffix, compileConstant(val.ElementCount))
-		r.Decl = t.Decl + "[]"
+		r.Decl = fmt.Sprintf("::fidl::Array<%s, %s>", t.Decl, compileConstant(val.ElementCount))
 	case types.VectorType:
 		t := compileType(*val.ElementType)
-		if len(t.suffix) > 0 {
-			log.Fatal("Cannot compile a vector that contains an array:", val)
-		}
-		r.prefix = fmt.Sprintf("::fidl::VectorPtr<%s>", t.prefix)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
 	case types.StringType:
-		r.prefix = "::fidl::StringPtr"
-		r.Decl = r.prefix
+		r.Decl = "::fidl::StringPtr"
 	case types.HandleType:
-		r.prefix = fmt.Sprintf("::zx::%s", val.HandleSubtype)
-		r.Decl = r.prefix
+		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 	case types.RequestType:
 		t := compileCompoundIdentifier(val.RequestSubtype)
-		r.prefix = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
-		r.Decl = r.prefix
+		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
 	case types.PrimitiveType:
-		r.prefix = compilePrimitiveSubtype(val.PrimitiveSubtype)
-		r.Decl = r.prefix
+		r.Decl = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
-		r.prefix = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
-		r.Decl = r.prefix
+		r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}

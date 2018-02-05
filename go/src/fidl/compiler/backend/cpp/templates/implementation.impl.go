@@ -12,13 +12,7 @@ const Implementation = `
 
 #include "{{ .PrimaryHeader }}"
 
-#include <stdint.h>
-#include <zircon/assert.h>
-
-#include <memory>
-
-#include "lib/fidl/cpp/bindings2/put.h"
-#include "lib/fidl/cpp/bindings2/traits.h"
+#include "lib/fidl/cpp/bindings2/internal/implementation.h"
 
 {{ range $interface := .Interfaces }}
 {{ template "InterfaceDefinition" $interface }}

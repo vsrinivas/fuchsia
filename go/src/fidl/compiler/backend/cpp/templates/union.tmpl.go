@@ -5,7 +5,11 @@
 package templates
 
 const Union = `
-{{- define "UnionDeclaration" -}}
+{{- define "UnionForwardDeclaration" -}}
+struct {{ .Name }};
+{{- end }}
+
+{{- define "UnionDeclaration" }}
 struct {{ .Name }} {
   ::fidl_union_tag_t tag;
   union {
@@ -14,5 +18,5 @@ struct {{ .Name }} {
     {{- end }}
   };
 };
-{{end}}
+{{- end }}
 `

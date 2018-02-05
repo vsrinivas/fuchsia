@@ -34,10 +34,7 @@ fidl_example("example-7") {}
 fidl_example("example-8") {}
 fidl_example("example-9") {}
 fidl_example("interface-ordinals") {}
-fidl_example("test") {
-  # TODO(TO-745): Build this example.
-  skip_build = true
-}
+fidl_example("test") {}
 fidl_example("types") {
   # TODO(TO-746): Build this example.
   skip_build = true

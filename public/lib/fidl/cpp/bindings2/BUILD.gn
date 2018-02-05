@@ -10,6 +10,8 @@ source_set("bindings2") {
     "interface_ptr.h",
     "interface_ptr_set.h",
     "interface_request.h",
+    "internal/header.h",
+    "internal/implementation.h",
     "internal/message_reader.cc",
     "internal/message_reader.h",
     "internal/message_handler.cc",

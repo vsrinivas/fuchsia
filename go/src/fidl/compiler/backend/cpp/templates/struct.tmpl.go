@@ -5,15 +5,19 @@
 package templates
 
 const Struct = `
-{{- define "StructDeclaration" -}}
-class {{ .Name }}Ptr  {
+{{- define "StructForwardDeclaration" -}}
+class {{ .Name }};
+{{- end -}}
+
+{{- define "StructDeclaration" }}
+class {{ .Name }}  {
  public:
   // TODO(TO-747): Generate the C headers and depend on them.
   // using View = {{ .CName }};
 
   {{- range .Members }}
 
-  const {{ ""|.Type.Decorate }}& {{ .Name }}() const { return {{ .StorageName }}; }
+  const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
   void set_{{ .Name }}({{ "value"|.Type.Decorate }}) { {{ .StorageName }} = std::move(value); }
   {{- end }}
 
@@ -22,5 +26,5 @@ class {{ .Name }}Ptr  {
   {{ .StorageName|.Type.Decorate }};
   {{- end }}
 };
-{{end}}
+{{- end }}
 `
