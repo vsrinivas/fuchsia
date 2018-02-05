@@ -5,11 +5,6 @@
 #ifndef MSD_ARM_DEVICE_H
 #define MSD_ARM_DEVICE_H
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/display.h>
-#include <ddk/protocol/platform-device.h>
-
 #include "address_manager.h"
 #include "device_request.h"
 #include "gpu_features.h"
