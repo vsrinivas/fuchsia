@@ -155,8 +155,9 @@ void MdnsTransceiver::OnLinkChange() {
 
     if (interface_transceiver == nullptr) {
       // New interface.
-      AddInterfaceTransceiver(index, *interface_descr);
-      link_change = true;
+      if (AddInterfaceTransceiver(index, *interface_descr)) {
+        link_change = true;
+      }
     } else if (interface_transceiver->name() != interface_descr->name_ ||
                interface_transceiver->address() != interface_descr->address_) {
       // Existing interface has wrong name and/or address.
@@ -179,7 +180,7 @@ void MdnsTransceiver::OnLinkChange() {
   }
 }  // namespace mdns
 
-void MdnsTransceiver::AddInterfaceTransceiver(
+bool MdnsTransceiver::AddInterfaceTransceiver(
     size_t index,
     const InterfaceDescriptor& interface_descr) {
   FXL_DCHECK(GetInterfaceTransceiver(index) == nullptr);
@@ -189,7 +190,7 @@ void MdnsTransceiver::AddInterfaceTransceiver(
 
   if (!interface_transceiver->Start(inbound_message_callback_)) {
     // Couldn't start the transceiver.
-    return;
+    return false;
   }
 
   for (auto& i : interface_transceivers_) {
@@ -200,6 +201,8 @@ void MdnsTransceiver::AddInterfaceTransceiver(
   }
 
   SetInterfaceTransceiver(index, std::move(interface_transceiver));
+
+  return true;
 }
 
 void MdnsTransceiver::ReplaceInterfaceTransceiver(
@@ -218,7 +221,9 @@ void MdnsTransceiver::ReplaceInterfaceTransceiver(
 
   // Replace the interface transceiver with a new one.
   RemoveInterfaceTransceiver(index);
-  AddInterfaceTransceiver(index, interface_descr);
+  if (!AddInterfaceTransceiver(index, interface_descr)) {
+    return;
+  }
 
   // If the address has changed, send a message with the new address.
   if (address_changed) {

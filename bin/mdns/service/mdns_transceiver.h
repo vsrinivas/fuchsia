@@ -77,8 +77,10 @@ class MdnsTransceiver {
   void OnLinkChange();
 
   // Adds an interface transceiver for the described interface at the given
-  // index. The interface transceiver must not exist already.
-  void AddInterfaceTransceiver(size_t index,
+  // index. The interface transceiver must not exist already. Returns true if
+  // the interface transceiver was added successfully, false if it couldn't be
+  // started.
+  bool AddInterfaceTransceiver(size_t index,
                                const InterfaceDescriptor& interface_descr);
 
   // Replace an interface transceiver for the described interface at the given
