@@ -271,9 +271,7 @@ zx_status_t Scanner::SendProbeRequest() {
 
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    // TODO(porce): Use frame mutability
-    // audo hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
     uint16_t seq = device_->GetState()->next_seq();
@@ -284,8 +282,7 @@ zx_status_t Scanner::SendProbeRequest() {
     hdr->sc.set_seq(seq);
     FillTxInfo(&packet, *hdr);
 
-    // auto body = frame.body;
-    ProbeRequest* body = (ProbeRequest*)frame.body;
+    auto body = frame.body;
     ElementWriter w(body->elements, body_payload_len);
 
     if (!w.write<SsidElement>(req_->ssid.data())) {

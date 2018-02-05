@@ -141,9 +141,7 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    // TODO(porce): Use mutable frame when ready
-    // auto hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
@@ -152,8 +150,7 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     FillTxInfo(&packet, *hdr);
 
     // TODO(tkilbourn): this assumes Open System authentication
-    // auto auth = frame.body;
-    Authentication* auth = (Authentication*)frame.body;
+    auto auth = frame.body;
     auth->auth_algorithm_number = auth_alg_;
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved, so set to 0
@@ -195,9 +192,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     auto frame = BuildMgmtFrame<Deauthentication>(&packet, 0);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    // TODO(porce): Use mutable frame when ready
-    // auto hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
@@ -205,8 +200,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     hdr->sc.set_seq(next_seq());
     FillTxInfo(&packet, *hdr);
 
-    // auto deauth = frame.body;
-    Deauthentication* deauth = (Deauthentication*)frame.body;
+    auto deauth = frame.body;
     deauth->reason_code = req.reason_code;
 
     zx_status_t status = device_->SendWlan(std::move(packet));
@@ -253,9 +247,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
-    // TODO(porce): Use mutable frame when ready
-    // auto hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
@@ -263,8 +255,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     hdr->sc.set_seq(next_seq());
     FillTxInfo(&packet, *hdr);
 
-    // auto assoc = frame.body;
-    AssociationRequest* assoc = (AssociationRequest*)frame.body;
+    auto assoc = frame.body;
     assoc->cap.set_ess(1);
     assoc->cap.set_short_preamble(1);
     assoc->listen_interval = 0;
@@ -547,9 +538,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     auto frame = BuildMgmtFrame<AddBaResponseFrame>(&packet, 0);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    // TODO(porce): Use mutable frame when ready
-    // auto hdr = frame.hdr;
-    MgmtFrameHeader* hdr = (MgmtFrameHeader*)frame.hdr;
+    auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
@@ -557,8 +546,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     hdr->sc.set_seq(next_seq());
     FillTxInfo(&packet, *hdr);
 
-    // auto resp = frme.body;
-    AddBaResponseFrame* resp = (AddBaResponseFrame*)frame.body;
+    auto resp = frame.body;
     resp->category = action::Category::kBlockAck;
     resp->action = action::BaAction::kAddBaResponse;
     resp->dialog_token = addbar->dialog_token;

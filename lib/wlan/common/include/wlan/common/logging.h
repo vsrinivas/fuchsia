@@ -37,9 +37,8 @@ LOG_CATEGORY(kLogFishark, 23);  // Packet decoder log
 #undef LOG_CATEGORY
 
 // Set this to tune log output
-// TODO(porce): Will revert before merge
 constexpr uint64_t kLogLevel = kLogInfos;
-constexpr bool kFisharkEnabled = kLogLevel | kLogFishark;
+constexpr bool kFisharkEnabled = kLogLevel & kLogFishark;
 
 #define fishark(args...) wlogf(kLogFishark, "[fishark] ", args)
 
