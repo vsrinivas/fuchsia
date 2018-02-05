@@ -8,7 +8,8 @@ const Struct = `
 {{- define "StructDeclaration" -}}
 class {{ .Name }}Ptr  {
  public:
-  using View = {{ .CName }};
+  // TODO(TO-747): Generate the C headers and depend on them.
+  // using View = {{ .CName }};
 
   {{- range .Members }}
 

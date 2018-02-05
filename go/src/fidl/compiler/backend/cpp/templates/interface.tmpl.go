@@ -17,9 +17,9 @@ const Interface = `
   {{- end -}}
 {{ end }}
 
-{{- define "MethodSignature" -}}
+{{- define "RequestMethodSignature" -}}
   {{- if .HasResponse -}}
-{{ .Name }}({{ template "Params" .Request }}, {{ .CallbackType }} callback)
+{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ .CallbackType }} callback)
   {{- else -}}
 {{ .Name }}({{ template "Params" .Request }})
   {{- end -}}
@@ -35,12 +35,14 @@ class {{ .Name }} {
   using Stub_ = {{ .StubName }};
   virtual ~{{ .Name }}();
 
-  {{ range $method := .Methods -}}
-    {{- if $method.HasResponse -}}
+  {{- range $method := .Methods }}
+    {{- if $method.HasRequest }}
+      {{- if $method.HasResponse }}
   using {{ $method.CallbackType }} =
       std::function<void({{ template "Params" .Response }})>;
+      {{- end }}
+  virtual void {{ template "RequestMethodSignature" . }} = 0;
     {{- end }}
-  virtual void {{ template "MethodSignature" . }} = 0;
   {{- end }}
 };
 
@@ -52,8 +54,10 @@ class {{ .ProxyName }} : public {{ .Name }} {
   ~{{ .ProxyName }}() override;
 
   {{- range $method := .Methods }}
-  void {{ template "MethodSignature" . }} override;
-  {{- end }}
+    {{- if $method.HasRequest }}
+  void {{ template "RequestMethodSignature" . }} override;
+    {{- end }}
+{{- end }}
 
  private:
   {{ .ProxyName }}(const {{ .ProxyName }}&) = delete;
@@ -78,7 +82,9 @@ class {{ .StubName }} : public ::fidl::internal::Stub {
 {{- define "InterfaceDefinition" -}}
 namespace {
 {{ range $method := .Methods }}
+  {{- if $method.HasRequest }}
 constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
+  {{- end }}
 {{- end }}
 
 }  // namespace
@@ -91,9 +97,12 @@ constexpr uint32_t {{ .OrdinalName }} = {{ $method.Ordinal }}u;
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
 {{ range $method := .Methods }}
-void {{ $.ProxyName }}::{{ template "MethodSignature" . }} {
+  {{- if $method.HasRequest }}
+void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   // TODO(abarth): Implement method.
+  (void) controller_;
 }
+  {{- end }}
 {{- end }}
 
 {{ .StubName }}::{{ .StubName }}({{ .Name }}* impl) : impl_(impl) {}
@@ -106,10 +115,13 @@ zx_status_t {{ .StubName }}::Dispatch(
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     {{- range $method := .Methods }}
+      {{- if $method.HasRequest }}
     case {{ .OrdinalName }}: {
       // TODO(abarth): Dispatch method.
+      (void) impl_;
       break;
     }
+      {{- end }}
     {{- end }}
     default: {
       status = ZX_ERR_NOT_SUPPORTED;

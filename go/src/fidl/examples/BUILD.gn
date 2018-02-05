@@ -9,6 +9,7 @@ template("fidl_example") {
     forward_variables_from(invoker, [
       "deps",
       "public_deps",
+      "skip_build",
     ])
 
     sources = [
@@ -23,15 +24,24 @@ fidl_example("example-0") {}
 fidl_example("example-1") {}
 fidl_example("example-2") {}
 fidl_example("example-3") {}
-fidl_example("example-4") {}
+fidl_example("example-4") {
+  # TODO(TO-748): Build this example.
+  skip_build = true
+}
 fidl_example("example-5") {}
 fidl_example("example-6") {}
 fidl_example("example-7") {}
 fidl_example("example-8") {}
 fidl_example("example-9") {}
 fidl_example("interface-ordinals") {}
-fidl_example("test") {}
-fidl_example("types") {}
+fidl_example("test") {
+  # TODO(TO-745): Build this example.
+  skip_build = true
+}
+fidl_example("types") {
+  # TODO(TO-746): Build this example.
+  skip_build = true
+}
 
 group("examples") {
   deps = [

@@ -10,12 +10,12 @@ const Implementation = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "{{ .PrimaryHeader }}"
+
 #include <stdint.h>
 #include <zircon/assert.h>
 
 #include <memory>
-
-#include "lib/fidl/cpp/bindings2/test/fidl_types.h"
 
 {{ range $interface := .Interfaces }}
 {{ template "InterfaceDefinition" $interface }}

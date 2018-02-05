@@ -15,7 +15,7 @@ import (
 )
 
 type GenerateFidl interface {
-	GenerateFidl(fidlData types.Root, args []string, fildStem string) error
+	GenerateFidl(fidl types.Root, config *types.Config) error
 }
 
 var generators = map[string]GenerateFidl{
@@ -27,8 +27,10 @@ func main() {
 	// this tool generate the JSON by running the compiler.
 	fidlJSONPath := flag.String("fidl-json", "",
 		"relative path to the FIDL JSON representation")
-	fildStem := flag.String("fidl-stem", "",
-		"output directory for generated files.")
+	fidlStem := flag.String("fidl-stem", "",
+		"base file name for files generated from this FIDL JSON.")
+	rootGenDir := flag.String("root-gen-dir", "",
+		"root directory for all generated files.")
 	var generatorNames CommaSeparatedList
 	flag.Var(&generatorNames, "generators",
 		"Comma-separated list of names of generators to run")
@@ -42,7 +44,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *fidlJSONPath == "" || *fildStem == "" {
+	if *fidlJSONPath == "" || *fidlStem == "" || *rootGenDir == "" {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -62,13 +64,18 @@ func main() {
 	results := make(chan error)
 	didError := false
 	generatorNames = []string(generatorNames)
-	generatorArgs = []string(generatorArgs)
+
+	config := &types.Config{
+		[]string(generatorArgs),
+		*fidlStem,
+		*rootGenDir,
+	}
 
 	for _, generatorName := range generatorNames {
 		if generator, ok := generators[generatorName]; ok {
 			running++
 			go func() {
-				results <- generator.GenerateFidl(fidlData, generatorArgs, *fildStem)
+				results <- generator.GenerateFidl(fidlData, config)
 			}()
 		} else {
 			log.Printf("Error: generator %s not found", generatorName)

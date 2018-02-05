@@ -84,13 +84,11 @@ template("fidl2") {
       "${fidl_stem}.cc",
     ]
 
-    rebased_fidl_json = rebase_path(fidl_json, root_build_dir)
-    rebased_fidl_stem = rebase_path(fidl_stem, root_build_dir)
-
     args = [
-      "-fidl-json=${rebased_fidl_json}",
-      "-fidl-stem=${rebased_fidl_stem}",
-      "-generators=cpp",
+      "-fidl-json", rebase_path(fidl_json, root_build_dir),
+      "-fidl-stem", rebase_path(fidl_stem, root_build_dir),
+      "-root-gen-dir", rebase_path(root_gen_dir, root_build_dir),
+      "-generators", "cpp",
     ]
 
     deps = [
@@ -99,14 +97,34 @@ template("fidl2") {
     ]
   }
 
-  # TODO(abarth): Actually compile the generated code and split the final
-  # target by languge.
-  group(target_name) {
-    forward_variables_from(invoker, [
-      "testonly",
-      "visibility",
-    ])
+  # TODO(abarth): Build all the FIDL2!
+  skip_build = defined(invoker.skip_build) && invoker.skip_build
 
-    deps = [ ":${fidl_backend_target_name}" ]
+  if (skip_build) {
+    group(target_name) {
+      forward_variables_from(invoker, [
+        "testonly",
+        "visibility",
+      ])
+
+      deps = [ ":${fidl_backend_target_name}" ]
+    }
+  } else {
+    source_set(target_name) {
+      forward_variables_from(invoker, [
+        "testonly",
+        "visibility",
+      ])
+
+      sources = [
+        "${fidl_stem}.h",
+        "${fidl_stem}.cc",
+      ]
+
+      deps = [
+        ":${fidl_backend_target_name}",
+        "//garnet/public/lib/fidl/cpp/bindings2",
+      ]
+    }
   }
 }

@@ -77,10 +77,11 @@ type Parameter struct {
 }
 
 type Root struct {
-	Enums      []Enum
-	Interfaces []Interface
-	Structs    []Struct
-	Unions     []Union
+	PrimaryHeader string
+	Enums         []Enum
+	Interfaces    []Interface
+	Structs       []Struct
+	Unions        []Union
 }
 
 var reservedWords = map[string]bool{
