@@ -19,10 +19,10 @@ import 'dart:typed_data';
 {%- if module.structs or module.unions or module.interfaces or module.enums or should_gen_fidl_types%}
 import 'package:lib.fidl.dart/bindings.dart' as bindings;
 {%- endif %}
-{%- if module.interfaces or has_handles %}
+
 // ignore: UNUSED_IMPORT
 import 'package:zircon/zircon.dart' as zircon;
-{%- endif %}
+
 {%- if should_gen_fidl_types %}
 {{fidl_types_import}}
 {%- endif %}
