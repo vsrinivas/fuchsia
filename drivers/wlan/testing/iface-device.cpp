@@ -22,7 +22,9 @@ static zx_protocol_device_t wlanmac_test_device_ops = {
     .release = [](void* ctx) { DEV(ctx)->Release(); },
     .read = nullptr,
     .write = nullptr,
+#if DDK_WITH_IOTXN
     .iotxn_queue = nullptr,
+#endif
     .get_size = nullptr,
     .ioctl = nullptr,
     .suspend = nullptr,

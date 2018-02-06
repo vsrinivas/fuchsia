@@ -29,7 +29,9 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
     .release = [](void* ctx) { DEV(ctx)->Release(); },
     .read = nullptr,
     .write = nullptr,
+#if DDK_WITH_IOTXN
     .iotxn_queue = nullptr,
+#endif
     .get_size = nullptr,
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
