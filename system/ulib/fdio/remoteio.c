@@ -193,12 +193,9 @@ zx_status_t zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* m
     zx_status_t r;
     uint32_t dsize = ZXRIO_HDR_SZ + msg->datalen;
     if ((r = zx_channel_write(srv, 0, msg, dsize, msg->handle, msg->hcount)) != ZX_OK) {
-        // nothing to do but inform the caller that we failed
-        struct {
-            zx_status_t status;
-            uint32_t type;
-        } error = { r, 0 };
-        zx_channel_write(reply, 0, &error, sizeof(error), NULL, 0);
+        // The caller may or may not be expecting a response. Either way,
+        // we need to close the channel, since it will not arrive at its
+        // intended destination.
         zx_handle_close(reply);
     }
     return r;
