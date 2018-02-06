@@ -1,160 +1,105 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #pragma once
 
-// clang-format off
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
-#include <cstdint>
-
-#include <zircon/compiler.h>
+#include "garnet/drivers/bluetooth/lib/l2cap/le_signaling_channel.h"
+#include "lib/fxl/macros.h"
 
 namespace btlib {
 namespace l2cap {
 
-// L2CAP channel identifier uniquely identifies fixed and connection-oriented channels over a
-// logical link.
-using ChannelId = uint16_t;
+class Channel;
 
-// Fixed channel identifiers used in BR/EDR & AMP (i.e. ACL-U, ASB-U, and AMP-U logical links)
-// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
-constexpr ChannelId kSignalingChannelId = 0x0001;
-constexpr ChannelId kConnectionlessChannelId = 0x0002;
-constexpr ChannelId kAMPManagerChannelId = 0x0003;
-constexpr ChannelId kSMChannelId = 0x0007;
-constexpr ChannelId kAMPTestManagerChannelId = 0x003F;
+// This is the root object of the L2CAP layer. It owns the internal blocks of
+// L2CAP, including:
+//
+//   * The ChannelManager which handles the ACL > Link > Channel routing and
+//     signaling;
+//
+//   * Waiting on L2CAP sockets;
+//
+// L2CAP is handed a TaskRunner on initialization which will be used to serially
+// dispatch all internal L2CAP tasks.
+//
+// L2CAP is defined as a pure-virtual interface, so that a fake can be injected
+// while testing layers that depend on it.
+//
+// L2CAP is thread-safe. All public functions are asynchronous and can be called
+// from any thread.
+class L2CAP : public fbl::RefCounted<L2CAP> {
+ public:
+  using ChannelCallback = std::function<void(fbl::RefPtr<Channel>)>;
+  using LEConnectionParameterUpdateCallback =
+      internal::LESignalingChannel::ConnectionParameterUpdateCallback;
 
-// Fixed channel identifiers used in LE
-// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
-constexpr ChannelId kATTChannelId = 0x0004;
-constexpr ChannelId kLESignalingChannelId = 0x0005;
-constexpr ChannelId kSMPChannelId = 0x0006;
+  // Constructs an uninitialized L2CAP object that can be used in production.
+  static fbl::RefPtr<L2CAP> Create(fxl::RefPtr<hci::Transport> hci,
+                                   fxl::RefPtr<fxl::TaskRunner> l2cap_runner);
 
-// Basic L2CAP header. This corresponds to the header used in a B-frame (Basic Information Frame)
-// and is the basis of all other frame types.
-struct BasicHeader {
-  uint16_t length;
-  ChannelId channel_id;
-} __PACKED;
+  // These send a Initialize/Shutdown message to the L2CAP task runner. It is
+  // safe for the caller to drop its reference after ShutDown is called.
+  //
+  // Operations on an uninitialized/shut-down L2CAP have no effect.
+  virtual void Initialize() = 0;
+  virtual void ShutDown() = 0;
 
-// The L2CAP MTU defines the maximum SDU size and is asymmetric. The following are the minimum and
-// default MTU sizes that a L2CAP implementation must support (see Core Spec v5.0, Vol 3, Part A,
-// Section 5.1).
-constexpr uint16_t kDefaultMTU = 672;
-constexpr uint16_t kMinACLMTU = 48;
-constexpr uint16_t kMinLEMTU = 23;
+  // Registers a LE connection with the L2CAP layer. L2CAP channels can be
+  // opened on the logical link represented by |handle| after a call to this
+  // method.
+  //
+  // |callback| will be used to notify the caller if new connection parameters
+  // were accepted from the remote end of the link. |callback| will be posted on
+  // the given |task_runner|.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down.
+  virtual void RegisterLE(hci::ConnectionHandle handle,
+                          hci::Connection::Role role,
+                          const LEConnectionParameterUpdateCallback& callback,
+                          fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
 
-// The maximum length of a L2CAP B-frame information payload.
-constexpr uint16_t kMaxBasicFramePayloadSize = 65535;
+  // Removes a previously registered connection. All corresponding Channels will
+  // be closed and all incoming data packets on this link will be dropped.
+  //
+  // NOTE: It is recommended that a link entry be removed AFTER the controller
+  // sends a HCI Disconnection Complete Event for the corresponding logical
+  // link. This is to prevent incorrectly buffering data if the controller has
+  // more packets to send after removing the link entry.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down.
+  virtual void Unregister(hci::ConnectionHandle handle) = 0;
 
-// Signaling packet formats (Core Spec v5.0, Vol 3, Part A, Section 4):
+  // Opens the L2CAP fixed channel with |channel_id| over the logical link
+  // identified by |connection_handle| and starts routing packets.
+  //
+  // The resulting channel will be returned asynchronously via |callback| on the
+  // requested |task_runner|. Runs |callback| with nullptr if the channel is
+  // already open.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down. |callback| will not
+  // run in this case.
+  //
+  // TODO(armansito): Replace this with a version that returns all fixed
+  // channels to avoid jumping through an asynchronous callback for each
+  // channel. Probably one for LE and one for Classic.
+  virtual void OpenFixedChannel(
+      hci::ConnectionHandle handle,
+      ChannelId id,
+      ChannelCallback callback,
+      fxl::RefPtr<fxl::TaskRunner> callback_runner) = 0;
 
-using CommandCode = uint8_t;
+ protected:
+  friend class fbl::RefPtr<L2CAP>;
+  L2CAP() = default;
+  virtual ~L2CAP() = default;
 
-enum RejectReason : uint16_t {
-  kNotUnderstood = 0x0000,
-  kSignalingMTUExceeded = 0x0001,
-  kInvalidCID = 0x0002,
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP);
 };
-
-enum ConnectionParameterUpdateResult : uint16_t {
-  kAccepted = 0x0000,
-  kRejected = 0x0001,
-};
-
-enum LECreditBasedConnectionResult : uint16_t {
-  kSuccess = 0x0000,
-  kPSMNotSupported = 0x0002,
-  kNoResources = 0x0004,
-  kInsufficientAuthentication = 0x0005,
-  kInsufficientAuthorization = 0x0006,
-  kInsufficientEncryptionKeySize = 0x0007,
-  kInsufficientEncryption = 0x0008,
-  kInvalidSourceCID = 0x0009,
-  kSourceCIDAlreadyAllocated = 0x000A,
-  kUnacceptableParameters = 0x000B,
-};
-
-// Signaling command header.
-struct CommandHeader {
-  // Command code
-  CommandCode code;
-
-  // Identifier assigned to each signaling transaction. This is used to match each signaling channel
-  // request with a response.
-  uint8_t id;
-
-  // Length of the remaining payload
-  uint16_t length;
-} __PACKED;
-
-// ACL-U & LE-U
-constexpr CommandCode kCommandRejectCode = 0x01;
-constexpr size_t kCommandRejectMaxDataLength = 4;
-struct CommandRejectPayload {
-  // See RejectReason for possible values.
-  uint16_t reason;
-
-  // Up to 4 octets of optional data (see Vol 3, Part A, Section 4.1)
-  uint8_t data[kCommandRejectMaxDataLength];
-} __PACKED;
-
-// ACL-U & LE-U
-constexpr CommandCode kDisconnectRequest = 0x06;
-struct DisconnectRequestPayload {
-  ChannelId dst_cid;
-  ChannelId src_cid;
-} __PACKED;
-
-// ACL-U & LE-U
-constexpr CommandCode kDisconnectResponse = 0x07;
-struct DisconnectResponsePayload {
-  ChannelId dst_cid;
-  ChannelId src_cid;
-} __PACKED;
-
-// LE-U
-constexpr CommandCode kConnectionParameterUpdateRequest = 0x12;
-struct ConnectionParameterUpdateRequestPayload {
-  uint16_t interval_min;
-  uint16_t interval_max;
-  uint16_t slave_latency;
-  uint16_t timeout_multiplier;
-} __PACKED;
-
-// LE-U
-constexpr CommandCode kConnectionParameterUpdateResponse = 0x13;
-struct ConnectionParameterUpdateResponsePayload {
-  ConnectionParameterUpdateResult result;
-} __PACKED;
-
-// LE-U
-constexpr CommandCode kLECreditBasedConnectionRequest = 0x14;
-struct LECreditBasedConnectionRequestPayload {
-  uint16_t le_psm;
-  ChannelId src_cid;
-  uint16_t mtu;  // Max. SDU size
-  uint16_t mps;  // Max. PDU size
-  uint16_t initial_credits;
-} __PACKED;
-
-// LE-U
-constexpr CommandCode kLECreditBasedConnectionResponse = 0x15;
-struct LECreditBasedConnectionResponsePayload {
-  ChannelId dst_cid;
-  uint16_t mtu;  // Max. SDU size
-  uint16_t mps;  // Max. PDU size
-  uint16_t initial_credits;
-  LECreditBasedConnectionResult result;
-} __PACKED;
-
-// LE-U
-constexpr CommandCode kLEFlowControlCredit = 0x16;
-struct LEFlowControlCreditParams {
-  ChannelId cid;
-  uint16_t credits;
-} __PACKED;
 
 }  // namespace l2cap
 }  // namespace btlib

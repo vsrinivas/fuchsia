@@ -27,10 +27,10 @@ driver_module("host") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
+# TODO(armansito): Enable debug assertions by default from here for all package
+# dependencies when there is a way for it.
 package("bthost") {
   system_image = true
 

@@ -12,7 +12,7 @@ namespace btlib {
 namespace gatt {
 
 Connection::Connection(const std::string& peer_id,
-                       std::unique_ptr<l2cap::Channel> att_chan,
+                       fbl::RefPtr<l2cap::Channel> att_chan,
                        fxl::RefPtr<att::Database> local_db) {
   auto att = att::Bearer::Create(std::move(att_chan));
   FXL_DCHECK(att);

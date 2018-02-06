@@ -10,7 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fragmenter.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -45,18 +45,28 @@ class FakeChannel : public Channel {
     return weak_ptr_factory_.GetWeakPtr();
   }
 
+  // Activate() always fails if true.
+  void set_activate_fails(bool value) { activate_fails_ = value; }
+
  protected:
   // Channel overrides:
+  bool Activate(RxCallback rx_callback,
+                ClosedCallback closed_callback,
+                fxl::RefPtr<fxl::TaskRunner> task_runner) override;
+  void Deactivate() override;
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
-  void SetRxHandler(const RxCallback& rx_cb,
-                    fxl::RefPtr<fxl::TaskRunner> rx_task_runner) override;
 
  private:
   Fragmenter fragmenter_;
+
+  ClosedCallback closed_cb_;
   RxCallback rx_cb_;
-  fxl::RefPtr<fxl::TaskRunner> rx_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+
   SendCallback send_cb_;
   fxl::RefPtr<fxl::TaskRunner> send_task_runner_;
+
+  bool activate_fails_;
 
   fxl::WeakPtrFactory<FakeChannel> weak_ptr_factory_;
 

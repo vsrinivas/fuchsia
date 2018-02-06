@@ -14,6 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -26,10 +27,6 @@ namespace btlib {
 namespace hci {
 class Transport;
 }  // namespace hci
-
-namespace l2cap {
-class ChannelManager;
-}  // namespace l2cap
 
 namespace gatt {
 class Connection;
@@ -65,12 +62,14 @@ class LowEnergyConnectionRef final {
   }
 
   const std::string& device_identifier() const { return device_id_; }
+  hci::ConnectionHandle handle() const { return handle_; }
 
  private:
   friend class LowEnergyConnectionManager;
   friend class internal::LowEnergyConnection;
 
   LowEnergyConnectionRef(const std::string& device_id,
+                         hci::ConnectionHandle handle,
                          fxl::WeakPtr<LowEnergyConnectionManager> manager);
 
   // Called by LowEnergyConnectionManager when the underlying connection is
@@ -79,6 +78,7 @@ class LowEnergyConnectionRef final {
 
   bool active_;
   std::string device_id_;
+  hci::ConnectionHandle handle_;
   fxl::WeakPtr<LowEnergyConnectionManager> manager_;
   fxl::Closure closed_cb_;
   fxl::ThreadChecker thread_checker_;
@@ -93,7 +93,7 @@ class LowEnergyConnectionManager final {
   LowEnergyConnectionManager(fxl::RefPtr<hci::Transport> hci,
                              hci::LowEnergyConnector* connector,
                              RemoteDeviceCache* device_cache,
-                             l2cap::ChannelManager* l2cap);
+                             fbl::RefPtr<l2cap::L2CAP> l2cap);
   ~LowEnergyConnectionManager();
 
   // Allows a caller to claim shared ownership over a connection to the
@@ -324,9 +324,10 @@ class LowEnergyConnectionManager final {
   // connetion parameters, etc). Expected to outlive this instance.
   RemoteDeviceCache* device_cache_;  // weak
 
-  // The L2CAP layer is shared between the BR/EDR and LE connection managers and
-  // it is expected to outlive both. Expected to outlive this instance.
-  l2cap::ChannelManager* l2cap_;  // weak
+  // The L2CAP layer reference, used to manage LE logical links and fixed
+  // channels. LE-specific L2CAP signaling events (e.g. connection parameter
+  // update) are received here.
+  fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
   // Local GATT service registry.
   std::unique_ptr<gatt::LocalServiceManager> gatt_registry_;

@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "lib/fxl/macros.h"
@@ -32,7 +33,9 @@ class AdapterTest : public TestingBase {
 
     SetUpTransport();
     FXL_DCHECK(transport());
-    adapter_ = std::make_unique<Adapter>(transport());
+
+    adapter_ = std::make_unique<Adapter>(transport(),
+                                         l2cap::testing::FakeLayer::Create());
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
   }

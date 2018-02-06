@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
@@ -55,9 +55,10 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     settings.ApplyLegacyLEConfig();
     test_device()->set_settings(settings);
 
+    l2cap_ = l2cap::testing::FakeLayer::Create();
+    l2cap_->Initialize();
+
     dev_cache_ = std::make_unique<RemoteDeviceCache>();
-    l2cap_ = std::make_unique<l2cap::ChannelManager>(
-        transport(), message_loop()->task_runner());
 
     // TODO(armansito): Pass a fake connector here.
     connector_ = std::make_unique<hci::LowEnergyConnector>(
@@ -65,7 +66,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
         [this](auto link) { OnIncomingConnection(std::move(link)); });
 
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
-        transport(), connector_.get(), dev_cache_.get(), l2cap_.get());
+        transport(), connector_.get(), dev_cache_.get(), l2cap_);
 
     test_device()->SetConnectionStateCallback(
         std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged,
@@ -80,8 +81,10 @@ class LowEnergyConnectionManagerTest : public TestingBase {
   void TearDown() override {
     if (conn_mgr_)
       conn_mgr_ = nullptr;
-    l2cap_ = nullptr;
     dev_cache_ = nullptr;
+
+    l2cap_->ShutDown();
+    l2cap_ = nullptr;
 
     TestingBase::TearDown();
   }
@@ -91,6 +94,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
   RemoteDeviceCache* dev_cache() const { return dev_cache_.get(); }
   LowEnergyConnectionManager* conn_mgr() const { return conn_mgr_.get(); }
+  l2cap::testing::FakeLayer* fake_l2cap() const { return l2cap_.get(); }
 
   // Addresses of currently connected fake devices.
   using DeviceList = std::unordered_set<common::DeviceAddress>;
@@ -127,8 +131,9 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     }
   }
 
+  fbl::RefPtr<l2cap::testing::FakeLayer> l2cap_;
+
   std::unique_ptr<RemoteDeviceCache> dev_cache_;
-  std::unique_ptr<l2cap::ChannelManager> l2cap_;
   std::unique_ptr<hci::LowEnergyConnector> connector_;
   std::unique_ptr<LowEnergyConnectionManager> conn_mgr_;
 
@@ -767,7 +772,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   };
   conn_mgr()->SetConnectionParametersCallbackForTesting(conn_params_cb);
 
-  test_device()->L2CAPConnectionParameterUpdate(kAddress0, preferred);
+  fake_l2cap()->TriggerLEConnectionParameterUpdate(conn_ref->handle(),
+                                                   preferred);
 
   RunUntilIdle();
 

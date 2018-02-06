@@ -78,7 +78,8 @@ zx_status_t HostDevice::Bind() {
     return status;
   }
 
-  std::thread host_thread = fsl::CreateThread(&host_thread_runner_, "bt-host");
+  std::thread host_thread =
+      fsl::CreateThread(&host_thread_runner_, "bt-host (gap)");
 
   // Send the bootstrap message to Host. The Host object can only be accessed on
   // the Host thread.

@@ -49,6 +49,13 @@ class FakeControllerTest : public TestBase {
   }
 
   void TearDown() override {
+    if (!transport_)
+      return;
+
+    if (transport_->IsInitialized()) {
+      transport_->ShutDown();
+    }
+
     transport_ = nullptr;
     test_device_ = nullptr;
   }

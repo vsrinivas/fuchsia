@@ -24,12 +24,15 @@
 namespace btlib {
 namespace gap {
 
-Adapter::Adapter(fxl::RefPtr<hci::Transport> hci)
+Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
+                 fbl::RefPtr<l2cap::L2CAP> l2cap)
     : identifier_(fxl::GenerateUUID()),
       hci_(hci),
       init_state_(State::kNotInitialized),
+      l2cap_(l2cap),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
+  FXL_DCHECK(l2cap_);
 
   auto message_loop = fsl::MessageLoop::GetCurrent();
   FXL_DCHECK(message_loop)
@@ -290,6 +293,10 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
     return;
   }
 
+  // Set up the L2CAP system. This must be done after |hci_| is initialized as
+  // L2CAP needs to interact with the ACL channel.
+  l2cap_->Initialize();
+
   FXL_DCHECK(init_seq_runner_->IsReady());
   FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
 
@@ -396,9 +403,8 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
 
-  l2cap_ = std::make_unique<l2cap::ChannelManager>(hci_, task_runner_);
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
-      hci_, hci_le_connector_.get(), &device_cache_, l2cap_.get());
+      hci_, hci_le_connector_.get(), &device_cache_, l2cap_);
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
@@ -443,6 +449,8 @@ void Adapter::CleanUp() {
 
   hci_le_connector_ = nullptr;
   hci_le_advertiser_ = nullptr;
+
+  l2cap_->ShutDown();
 
   // TODO(armansito): hci::Transport::ShutDown() should send a shutdown message
   // to the bt-hci device, which would be responsible for sending HCI_Reset upon

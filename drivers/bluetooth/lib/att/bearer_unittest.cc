@@ -50,6 +50,14 @@ class ATT_BearerTest : public l2cap::testing::FakeChannelTest {
   FXL_DISALLOW_COPY_AND_ASSIGN(ATT_BearerTest);
 };
 
+TEST_F(ATT_BearerTest, CreateFailsToActivate) {
+  ChannelOptions options(l2cap::kATTChannelId);
+  auto fake_chan = CreateFakeChannel(options);
+  fake_chan->set_activate_fails(true);
+
+  EXPECT_FALSE(Bearer::Create(std::move(fake_chan)));
+}
+
 TEST_F(ATT_BearerTest, ShutDown) {
   ASSERT_TRUE(bearer()->is_open());
 

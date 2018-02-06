@@ -26,6 +26,9 @@ using ::btlib::testing::TestController;
 
 using TestingBase = ::btlib::testing::FakeControllerTest<TestController>;
 
+void DoNothing() {}
+void NopRxCallback(const SDU&) {}
+
 class L2CAP_ChannelManagerTest : public TestingBase {
  public:
   L2CAP_ChannelManagerTest() = default;
@@ -56,16 +59,15 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     TestingBase::TearDown();
   }
 
-  std::unique_ptr<Channel> OpenFixedChannel(
+  fbl::RefPtr<Channel> ActivateNewFixedChannel(
       ChannelId id,
       hci::ConnectionHandle conn_handle = kTestHandle1,
-      const Channel::ClosedCallback& closed_cb = {},
-      const Channel::RxCallback& rx_cb = {}) {
+      const Channel::ClosedCallback& closed_cb = DoNothing,
+      const Channel::RxCallback& rx_cb = NopRxCallback) {
     auto chan = chanmgr()->OpenFixedChannel(conn_handle, id);
-    if (chan) {
-      chan->set_channel_closed_callback(closed_cb);
-      chan->SetRxHandler(rx_cb,
-                         rx_cb ? message_loop()->task_runner() : nullptr);
+    if (!chan ||
+        !chan->Activate(rx_cb, closed_cb, message_loop()->task_runner())) {
+      return nullptr;
     }
 
     return chan;
@@ -81,12 +83,13 @@ class L2CAP_ChannelManagerTest : public TestingBase {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorNoConn) {
   // This should fail as the ChannelManager has no entry for |kTestHandle1|.
-  EXPECT_EQ(nullptr, OpenFixedChannel(kATTChannelId));
+  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId));
 
-  // This should fail as the ChannelManager has no entry for |kTestHandle2|.
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
-  EXPECT_EQ(nullptr, OpenFixedChannel(kATTChannelId, kTestHandle2));
+
+  // This should fail as the ChannelManager has no entry for |kTestHandle2|.
+  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId, kTestHandle2));
 }
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
@@ -99,10 +102,23 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
                       hci::Connection::Role::kMaster);
 
   // This should fail as kSMChannelId is ACL-U only.
-  EXPECT_EQ(nullptr, OpenFixedChannel(kSMChannelId, kTestHandle1));
+  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kSMChannelId, kTestHandle1));
 
   // This should fail as kATTChannelId is LE-U only.
-  EXPECT_EQ(nullptr, OpenFixedChannel(kATTChannelId, kTestHandle2));
+  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId, kTestHandle2));
+}
+
+TEST_F(L2CAP_ChannelManagerTest, ActivateFailsAfterDeactivate) {
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  ASSERT_TRUE(chan);
+
+  chan->Deactivate();
+
+  // Activate should fail.
+  EXPECT_FALSE(
+      chan->Activate(NopRxCallback, DoNothing, message_loop()->task_runner()));
 }
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
@@ -113,7 +129,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
 
-  auto chan = OpenFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
   ASSERT_TRUE(chan);
 
   // This should notify the channel.
@@ -132,12 +148,12 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
 
-  auto chan = OpenFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
   ASSERT_TRUE(chan);
 
   // Close the channel before unregistering the link. |closed_cb| should not get
   // called.
-  chan = nullptr;
+  chan->Deactivate();
   chanmgr()->Unregister(kTestHandle1);
   EXPECT_FALSE(closed_called);
 }
@@ -153,13 +169,15 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   bool smp_closed = false;
   auto smp_closed_cb = [&smp_closed] { smp_closed = true; };
 
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, att_closed_cb);
+  auto att_chan =
+      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, att_closed_cb);
   ASSERT_TRUE(att_chan);
 
-  auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, smp_closed_cb);
+  auto smp_chan =
+      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, smp_closed_cb);
   ASSERT_TRUE(smp_chan);
 
-  smp_chan = nullptr;
+  smp_chan->Deactivate();
   chanmgr()->Unregister(kTestHandle1);
 
   EXPECT_TRUE(att_closed);
@@ -188,9 +206,9 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   };
 
   auto att_chan =
-      OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   auto smp_chan =
-      OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(smp_chan);
 
@@ -264,7 +282,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
       // L2CAP B-frame (empty)
       0x00, 0x00, 0x06, 0x00));
 
-  std::unique_ptr<Channel> att_chan, smp_chan;
+  fbl::RefPtr<Channel> att_chan, smp_chan;
 
   // Run the loop so all packets are received.
   RunUntilIdle();
@@ -273,11 +291,11 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
                       hci::Connection::Role::kMaster);
 
   att_chan =
-      OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   FXL_DCHECK(att_chan);
 
   smp_chan =
-      OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   FXL_DCHECK(smp_chan);
 
   RunUntilIdle();
@@ -323,15 +341,17 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
       // L2CAP B-frame (empty)
       0x00, 0x00, 0x06, 0x00));
 
-  std::unique_ptr<Channel> att_chan, smp_chan;
+  fbl::RefPtr<Channel> att_chan, smp_chan;
 
   // Run the loop so all packets are received.
   RunUntilIdle();
 
-  att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  att_chan =
+      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   FXL_DCHECK(att_chan);
 
-  smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  smp_chan =
+      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   FXL_DCHECK(smp_chan);
 
   RunUntilIdle();
@@ -347,10 +367,10 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
+  auto att_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kATTChannelId);
   FXL_DCHECK(att_chan);
 
-  auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1);
+  auto smp_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kSMPChannelId);
   FXL_DCHECK(smp_chan);
 
   common::StaticByteBuffer<255> buffer;
@@ -387,8 +407,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   // Run the loop so all packets are received.
   RunUntilIdle();
 
-  att_chan->SetRxHandler(att_rx_cb, message_loop()->task_runner());
-  smp_chan->SetRxHandler(smp_rx_cb, message_loop()->task_runner());
+  att_chan->Activate(att_rx_cb, DoNothing, message_loop()->task_runner());
+  smp_chan->Activate(smp_rx_cb, DoNothing, message_loop()->task_runner());
 
   RunUntilIdle();
 
@@ -399,7 +419,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
+  auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   FXL_DCHECK(att_chan);
 
   chanmgr()->Unregister(kTestHandle1);
@@ -410,7 +430,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
 TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
+  auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
   FXL_DCHECK(att_chan);
 
   std::unique_ptr<common::ByteBuffer> received;
@@ -472,8 +492,8 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
                       hci::Connection::Role::kMaster);
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
-  auto sm_chan = OpenFixedChannel(kSMChannelId, kTestHandle2);
+  auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  auto sm_chan = ActivateNewFixedChannel(kSMChannelId, kTestHandle2);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 
@@ -572,8 +592,8 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
                       hci::Connection::Role::kMaster);
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
-  auto sm_chan = OpenFixedChannel(kSMChannelId, kTestHandle2);
+  auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  auto sm_chan = ActivateNewFixedChannel(kSMChannelId, kTestHandle2);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 

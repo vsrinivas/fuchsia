@@ -116,6 +116,13 @@ OpCode MatchingTransactionCode(OpCode transaction_end_code) {
 
 }  // namespace
 
+// static
+fxl::RefPtr<Bearer> Bearer::Create(fbl::RefPtr<l2cap::Channel> chan,
+                                   uint32_t timeout) {
+  auto bearer = fxl::AdoptRef(new Bearer(std::move(chan), timeout));
+  return bearer->Activate() ? bearer : nullptr;
+}
+
 Bearer::PendingTransaction::PendingTransaction(OpCode opcode,
                                                TransactionCallback callback,
                                                ErrorCallback error_callback,
@@ -182,7 +189,7 @@ void Bearer::TransactionQueue::InvokeErrorAll(bool timeout,
   }
 }
 
-Bearer::Bearer(std::unique_ptr<l2cap::Channel> chan,
+Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan,
                uint32_t transaction_timeout_ms)
     : chan_(std::move(chan)),
       transaction_timeout_ms_(transaction_timeout_ms),
@@ -199,12 +206,6 @@ Bearer::Bearer(std::unique_ptr<l2cap::Channel> chan,
   mtu_ = min_mtu();
   preferred_mtu_ =
       std::max(min_mtu(), std::min(chan_->tx_mtu(), chan_->rx_mtu()));
-
-  chan_->set_channel_closed_callback(std::bind(&Bearer::OnChannelClosed, this));
-
-  rx_task_.Reset(std::bind(&Bearer::OnRxBFrame, this, std::placeholders::_1));
-  chan_->SetRxHandler(rx_task_.callback(),
-                      fsl::MessageLoop::GetCurrent()->task_runner());
 }
 
 Bearer::~Bearer() {
@@ -215,6 +216,13 @@ Bearer::~Bearer() {
 
   request_queue_.Reset();
   indication_queue_.Reset();
+}
+
+bool Bearer::Activate() {
+  rx_task_.Reset(fbl::BindMember(this, &Bearer::OnRxBFrame));
+  return chan_->Activate(rx_task_.callback(),
+                         fbl::BindMember(this, &Bearer::OnChannelClosed),
+                         fsl::MessageLoop::GetCurrent()->task_runner());
 }
 
 void Bearer::ShutDown() {

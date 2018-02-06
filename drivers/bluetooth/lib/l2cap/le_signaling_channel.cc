@@ -13,7 +13,7 @@ namespace btlib {
 namespace l2cap {
 namespace internal {
 
-LESignalingChannel::LESignalingChannel(std::unique_ptr<Channel> chan,
+LESignalingChannel::LESignalingChannel(fbl::RefPtr<Channel> chan,
                                        hci::Connection::Role role)
     : SignalingChannel(std::move(chan), role) {
   set_mtu(kMinLEMTU);

@@ -45,13 +45,17 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
                          hci::Connection::Role role,
+                         fxl::RefPtr<fxl::TaskRunner> task_runner,
                          fxl::RefPtr<hci::Transport> hci)
     : hci_(hci),
+      task_runner_(task_runner),
       handle_(handle),
       type_(type),
       role_(role),
-      fragmenter_(handle) {
+      fragmenter_(handle),
+      weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
+  FXL_DCHECK(task_runner_);
   FXL_DCHECK(type_ == hci::Connection::LinkType::kLE ||
              type_ == hci::Connection::LinkType::kACL);
 
@@ -76,12 +80,11 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
 }
 
 LogicalLink::~LogicalLink() {
-  cancelable_callback_factory_.CancelAll();
   Close();
 }
 
-std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
@@ -89,8 +92,6 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
         "l2cap: Cannot open fixed channel with id 0x%04x", id);
     return nullptr;
   }
-
-  std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = channels_.find(id);
   if (iter != channels_.end()) {
@@ -100,43 +101,22 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
     return nullptr;
   }
 
-  auto chan = std::unique_ptr<ChannelImpl>(new ChannelImpl(id, this));
-
-  // We grab a raw pointer and store it internally, weakly owning all channels
-  // that we create. We avoid dangling pointers by relying on the fact that each
-  // Channel notifies on destruction by calling RemoveChannel().
-  channels_[id] = chan.get();
-
-  // Handle pending packets on the channel, if any.
+  std::list<PDU> pending;
   auto pp_iter = pending_pdus_.find(id);
   if (pp_iter != pending_pdus_.end()) {
-    hci_->io_task_runner()->PostTask(
-        cancelable_callback_factory_.MakeTask([this, id] {
-          std::lock_guard<std::mutex> lock(mtx_);
-
-          // Make sure the channel is still open.
-          auto iter = channels_.find(id);
-          if (iter == channels_.end())
-            return;
-
-          auto pp_iter = pending_pdus_.find(id);
-          FXL_DCHECK(pp_iter != pending_pdus_.end());
-
-          auto chan = iter->second;
-          auto& pdus = pp_iter->second;
-          while (!pdus.empty()) {
-            chan->HandleRxPdu(std::move(pdus.front()));
-            pdus.pop_front();
-          }
-          pending_pdus_.erase(pp_iter);
-        }));
+    pending = std::move(pp_iter->second);
+    pending_pdus_.erase(pp_iter);
   }
+
+  auto chan = fbl::AdoptRef(
+      new ChannelImpl(id, weak_ptr_factory_.GetWeakPtr(), std::move(pending)));
+  channels_[id] = chan;
 
   return chan;
 }
 
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
-  FXL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(!recombiner_.ready());
   FXL_DCHECK(packet);
 
@@ -162,8 +142,6 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
 
   FXL_DCHECK(pdu.is_valid());
 
-  std::lock_guard<std::mutex> lock(mtx_);
-
   uint16_t channel_id = pdu.channel_id();
   auto iter = channels_.find(channel_id);
   PendingPduMap::iterator pp_iter;
@@ -173,33 +151,31 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   // careful management of the timing between channel destruction and data
   // buffering. Probably only buffer data for fixed channels?
 
-  // If a ChannelImpl does not exist, we buffer its packets to be delivered
-  // later. If one DOES exist, we buffer it only if the task to drain the
-  // pending packets has not yet run. (See LogicalLink::OpenFixedChannel above).
   if (iter == channels_.end()) {
     // The packet was received on a channel for which no ChannelImpl currently
     // exists. Buffer packets for the channel to receive when it gets created.
     pp_iter = pending_pdus_.emplace(channel_id, std::list<PDU>()).first;
   } else {
+    // A channel exists. |pp_iter| will be valid only if the drain task has not
+    // run yet (see LogicalLink::OpenFixedChannel()).
     pp_iter = pending_pdus_.find(channel_id);
   }
 
   if (pp_iter != pending_pdus_.end()) {
     pp_iter->second.emplace_back(std::move(pdu));
 
-    FXL_VLOG(1) << fxl::StringPrintf(
+    FXL_VLOG(2) << fxl::StringPrintf(
         "l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x)", channel_id,
         handle_);
     return;
   }
 
-  // Off it goes.
   iter->second->HandleRxPdu(std::move(pdu));
 }
 
 void LogicalLink::SendBasicFrame(ChannelId id,
                                  const common::ByteBuffer& payload) {
-  FXL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   // TODO(armansito): The following makes a copy of |payload| when constructing
   // |pdu|. Think about how this could be optimized, especially when |payload|
@@ -223,36 +199,32 @@ bool LogicalLink::AllowsFixedChannel(ChannelId id) {
              : IsValidBREDRFixedChannel(id);
 }
 
-void LogicalLink::RemoveChannel(ChannelImpl* channel) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(channel);
+void LogicalLink::RemoveChannel(Channel* chan) {
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(chan);
 
-  std::lock_guard<std::mutex> lock(mtx_);
+  auto iter = channels_.find(chan->id());
+  if (iter == channels_.end())
+    return;
 
-  auto iter = channels_.find(channel->id());
-  FXL_DCHECK(iter != channels_.end()) << fxl::StringPrintf(
-      "l2cap: Attempted to remove unknown channel (id: 0x%04x, handle: 0x%04x)",
-      channel->id(), handle_);
-  FXL_DCHECK(iter->first == channel->id());
+  // Ignore if the found channel doesn't match the requested one (even though
+  // their IDs are the same).
+  if (iter->second.get() != chan)
+    return;
 
+  pending_pdus_.erase(chan->id());
   channels_.erase(iter);
-  pending_pdus_.erase(channel->id());
 }
 
 void LogicalLink::Close() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  ChannelMap channels;
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
-  // Clear |channels_| before notifying each entry to avoid holding our |mtx_|
-  // while Channel's own internal mutex is locked.
-  {
-    std::lock_guard<std::mutex> lock(mtx_);
-    channels.swap(channels_);
-  }
-
+  auto channels = std::move(channels_);
   for (auto& iter : channels) {
-    iter.second->OnLinkClosed();
+    static_cast<ChannelImpl*>(iter.second.get())->OnLinkClosed();
   }
+
+  FXL_DCHECK(channels_.empty());
 }
 
 }  // namespace internal

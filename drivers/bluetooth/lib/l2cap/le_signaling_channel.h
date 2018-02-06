@@ -16,7 +16,7 @@ namespace internal {
 // Implements the L2CAP LE signaling fixed channel.
 class LESignalingChannel : public SignalingChannel {
  public:
-  LESignalingChannel(std::unique_ptr<Channel> chan, hci::Connection::Role role);
+  LESignalingChannel(fbl::RefPtr<Channel> chan, hci::Connection::Role role);
   ~LESignalingChannel() override = default;
 
   // Sets a |callback| to be invoked when a Connection Parameter Update request

@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <fbl/ref_ptr.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -33,7 +35,7 @@ class Connection final {
   // |local_db| is the local attribute database that the GATT server will
   // operate on. |att_chan| must correspond to an open L2CAP Attribute channel.
   Connection(const std::string& peer_id,
-             std::unique_ptr<l2cap::Channel> att_chan,
+             fbl::RefPtr<l2cap::Channel> att_chan,
              fxl::RefPtr<att::Database> local_db);
   ~Connection();
 

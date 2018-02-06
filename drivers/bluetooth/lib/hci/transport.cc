@@ -27,8 +27,8 @@ Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
 }
 
 Transport::~Transport() {
-  if (IsInitialized())
-    ShutDown();
+  // Do nothing. Since Transport is shared across threads, this can be called
+  // from any thread and calling ShutDown() would be unsafe.
 }
 
 bool Transport::Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner) {

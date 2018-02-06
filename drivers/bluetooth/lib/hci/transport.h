@@ -31,14 +31,13 @@ class DeviceWrapper;
 // and receive HCI packets from the underlying Bluetooth controller.
 //
 // Transport expects to be initialized and shut down (via Initialize() and
-// ShutDown()) on the thread it was created on. Initialize()/ShutDown() are NOT
-// thread-safe.
+// ShutDown()) on the same thread. ShutDown() MUST be called to guarantee clean
+// up.
 //
-// TODO(armansito): This class is ref-counted to prevent potential
-// use-after-free errors though vending weak ptrs would have been more suitable
-// since this class is intended to be uniquely owned by its creator.
-// fxl::WeakPtr is not thread-safe which is why we use
-// fxl::RefCountedThreadSafe. Consider making fxl::WeakPtr thread-safe.
+// TODO(armansito): This object has become too heavy-weight. I think it will be
+// cleaner to have CommandChannel and ACLDataChannel each be owned directly by
+// the main and L2CAP domains. Transport should go away as part of the HCI layer
+// clean up (and also NET-388).
 class Transport final : public fxl::RefCountedThreadSafe<Transport> {
  public:
   static fxl::RefPtr<Transport> Create(

@@ -16,6 +16,7 @@
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 #include "lib/fxl/functional/cancelable_callback.h"
@@ -46,11 +47,11 @@ namespace att {
 // thread. All callbacks will be invoked on a Bearer's creation thread.
 class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
  public:
-  inline static fxl::RefPtr<Bearer> Create(
-      std::unique_ptr<l2cap::Channel>&& chan,
-      uint32_t transaction_timeout_ms = kDefaultTransactionTimeoutMs) {
-    return fxl::AdoptRef(new Bearer(std::move(chan), transaction_timeout_ms));
-  }
+  // Creates a new ATT Bearer. Returns nullptr if |chan| cannot be activated.
+  // This can happen if the link is closed.
+  static fxl::RefPtr<Bearer> Create(
+      fbl::RefPtr<l2cap::Channel> chan,
+      uint32_t transaction_timeout_ms = kDefaultTransactionTimeoutMs);
 
   // Returns true if the underlying channel is open.
   bool is_open() const { return static_cast<bool>(chan_); }
@@ -165,8 +166,11 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Bearer);
 
-  Bearer(std::unique_ptr<l2cap::Channel> chan, uint32_t transaction_timeout_ms);
+  Bearer(fbl::RefPtr<l2cap::Channel> chan, uint32_t transaction_timeout_ms);
   ~Bearer();
+
+  // Returns false if activation fails. This is called by the factory method.
+  bool Activate();
 
   // Represents a locally initiated pending request or indication transaction.
   struct PendingTransaction : common::LinkedListable<PendingTransaction> {
@@ -278,7 +282,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   void OnChannelClosed();
   void OnRxBFrame(const l2cap::SDU& sdu);
 
-  std::unique_ptr<l2cap::Channel> chan_;
+  l2cap::ScopedChannel chan_;
   uint16_t mtu_;
   uint16_t preferred_mtu_;
   uint16_t min_mtu_;

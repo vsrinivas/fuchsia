@@ -20,7 +20,7 @@ constexpr uint16_t kTestMTU = 100;
 
 class TestSignalingChannel : public SignalingChannel {
  public:
-  explicit TestSignalingChannel(std::unique_ptr<Channel> chan)
+  explicit TestSignalingChannel(fbl::RefPtr<Channel> chan)
       : SignalingChannel(std::move(chan), hci::Connection::Role::kMaster) {
     set_mtu(kTestMTU);
   }

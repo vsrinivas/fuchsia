@@ -10,10 +10,10 @@ namespace btlib {
 namespace l2cap {
 namespace testing {
 
-std::unique_ptr<Channel> FakeChannelTest::CreateFakeChannel(
+fbl::RefPtr<FakeChannel> FakeChannelTest::CreateFakeChannel(
     const ChannelOptions& options) {
-  auto fake_chan = std::make_unique<FakeChannel>(
-      options.id, options.conn_handle, options.link_type);
+  auto fake_chan = fbl::AdoptRef(
+      new FakeChannel(options.id, options.conn_handle, options.link_type));
   fake_chan_ = fake_chan->AsWeakPtr();
   return fake_chan;
 }

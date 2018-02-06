@@ -10,7 +10,9 @@ static_library("l2cap") {
     "channel_manager.h",
     "fragmenter.cc",
     "fragmenter.h",
+    "l2cap.cc",
     "l2cap.h",
+    "l2cap_defs.h",
     "le_signaling_channel.cc",
     "le_signaling_channel.h",
     "logical_link.cc",
@@ -19,6 +21,8 @@ static_library("l2cap") {
     "pdu.h",
     "recombiner.cc",
     "recombiner.h",
+    "scoped_channel.cc",
+    "scoped_channel.h",
     "sdu.h",
     "signaling_channel.cc",
     "signaling_channel.h",
@@ -38,11 +42,14 @@ source_set("testing") {
     "fake_channel.h",
     "fake_channel_test.cc",
     "fake_channel_test.h",
+    "fake_layer.cc",
+    "fake_layer.h",
   ]
 
   deps = [
     ":l2cap",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/testing:test_base",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -19,10 +20,25 @@ namespace bthost {
 
 class HostServer;
 
+// TODO(armansito): Move GATT into its own domain.
+//
 // Host is the top-level object of this driver and it is responsible for
 // managing the host subsystem stack. It owns the core gap::Adapter object, and
 // the FIDL server implementations. A Host's core responsibility is to relay
 // messages from the devhost environment to the stack.
+//
+// The Host initializes 2 distinct serialization domains (with dedicated
+// threads) in which the core Bluetooth tasks are processed:
+//
+// - GAP: The thread the host is created on. This thread handles:
+//     * GAP-related FIDL control messaging,
+//     * HCI command/event processing (gap::Adapter),
+//     * L2CAP fixed channel protocols that are handled internally (e.g. SMP),
+//     * GATT
+//
+// - L2CAP:
+//     * Channel <-> ACL routing
+//     * Sockets
 //
 // THREAD SAFETY: This class IS NOT thread-safe. All of its public methods
 // should be called on the Host thread only.
@@ -44,6 +60,10 @@ class Host final : public fxl::RefCountedThreadSafe<Host> {
 
   explicit Host(const bt_hci_protocol_t& hci_proto);
   ~Host();
+
+  // The L2CAP layer.
+  fxl::RefPtr<fxl::TaskRunner> l2cap_runner_;
+  fbl::RefPtr<::btlib::l2cap::L2CAP> l2cap_;
 
   // Represents the host subsystem stack for this Host's Bluetooth controller.
   std::unique_ptr<::btlib::gap::Adapter> adapter_;

@@ -29,10 +29,16 @@ class LowEnergyConnection {
  public:
   LowEnergyConnection(const std::string& id,
                       std::unique_ptr<hci::Connection> link,
+                      fxl::RefPtr<fxl::TaskRunner> task_runner,
                       fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr)
-      : id_(id), link_(std::move(link)), conn_mgr_(conn_mgr) {
+      : id_(id),
+        link_(std::move(link)),
+        task_runner_(task_runner),
+        conn_mgr_(conn_mgr),
+        weak_ptr_factory_(this) {
     FXL_DCHECK(!id_.empty());
     FXL_DCHECK(link_);
+    FXL_DCHECK(task_runner_);
     FXL_DCHECK(conn_mgr_);
   }
 
@@ -47,7 +53,7 @@ class LowEnergyConnection {
 
   LowEnergyConnectionRefPtr AddRef() {
     LowEnergyConnectionRefPtr conn_ref(
-        new LowEnergyConnectionRef(id_, conn_mgr_));
+        new LowEnergyConnectionRef(id_, handle(), conn_mgr_));
     FXL_CHECK(conn_ref);
 
     refs_.insert(conn_ref.get());
@@ -72,14 +78,28 @@ class LowEnergyConnection {
         handle(), ref_count());
   }
 
-  void InitializeGATT(fxl::RefPtr<att::Database> local_db,
-                      std::unique_ptr<l2cap::Channel> att_chan) {
+  // Initializes the fixed channels. Packets will start being processed
+  // asynchronously.
+  void InitializeFixedChannels(fbl::RefPtr<l2cap::L2CAP> l2cap,
+                               fxl::RefPtr<att::Database> local_db) {
     FXL_DCHECK(!gatt_);
+    FXL_DCHECK(l2cap);
     FXL_DCHECK(local_db);
-    FXL_DCHECK(att_chan);
 
-    gatt_ =
-        std::make_unique<gatt::Connection>(id_, std::move(att_chan), local_db);
+    auto weak = weak_ptr_factory_.GetWeakPtr();
+    auto callback = [weak, this, local_db](fbl::RefPtr<l2cap::Channel> chan) {
+      if (!weak || !chan) {
+        FXL_VLOG(1) << "gap: link was closed before opening fixed channels";
+        return;
+      }
+
+      FXL_DCHECK(!gatt_);
+      gatt_ =
+          std::make_unique<gatt::Connection>(id_, std::move(chan), local_db);
+    };
+
+    l2cap->OpenFixedChannel(link_->handle(), l2cap::kATTChannelId, callback,
+                            task_runner_);
   }
 
   size_t ref_count() const { return refs_.size(); }
@@ -100,6 +120,7 @@ class LowEnergyConnection {
 
   std::string id_;
   std::unique_ptr<hci::Connection> link_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
 
   std::unique_ptr<gatt::Connection> gatt_;
@@ -108,6 +129,8 @@ class LowEnergyConnection {
   // pointers are always valid.
   std::unordered_set<LowEnergyConnectionRef*> refs_;
 
+  fxl::WeakPtrFactory<LowEnergyConnection> weak_ptr_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnection);
 };
 
@@ -115,10 +138,12 @@ class LowEnergyConnection {
 
 LowEnergyConnectionRef::LowEnergyConnectionRef(
     const std::string& device_id,
+    hci::ConnectionHandle handle,
     fxl::WeakPtr<LowEnergyConnectionManager> manager)
-    : active_(true), device_id_(device_id), manager_(manager) {
+    : active_(true), device_id_(device_id), handle_(handle), manager_(manager) {
   FXL_DCHECK(!device_id_.empty());
   FXL_DCHECK(manager_);
+  FXL_DCHECK(handle_);
 }
 
 LowEnergyConnectionRef::~LowEnergyConnectionRef() {
@@ -159,7 +184,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     fxl::RefPtr<hci::Transport> hci,
     hci::LowEnergyConnector* connector,
     RemoteDeviceCache* device_cache,
-    l2cap::ChannelManager* l2cap)
+    fbl::RefPtr<l2cap::L2CAP> l2cap)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
@@ -453,6 +478,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
     const std::string& device_id,
     std::unique_ptr<hci::Connection> link) {
   FXL_DCHECK(link);
+  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
 
   // TODO(armansito): For now reject having more than one link with the same
   // peer. This should change once this has more context on the local
@@ -465,28 +491,21 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
 
   // Add the connection to the L2CAP table. Incoming data will be buffered until
   // the channels are open.
-  if (link->ll_type() == hci::Connection::LinkType::kLE) {
-    auto self = weak_ptr_factory_.GetWeakPtr();
-    auto conn_param_update_cb = [self, handle = link->handle(),
-                                 device_id](const auto& params) {
-      if (self) {
-        self->OnNewLEConnectionParams(device_id, handle, params);
-      }
-    };
-    l2cap_->RegisterLE(link->handle(), link->role(), conn_param_update_cb,
-                       task_runner_);
-  } else {
-    l2cap_->Register(link->handle(), link->ll_type(), link->role());
-  }
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto conn_param_update_cb = [self, handle = link->handle(),
+                               device_id](const auto& params) {
+    if (self) {
+      self->OnNewLEConnectionParams(device_id, handle, params);
+    }
+  };
 
-  // Open fixed channels.
-  auto att = l2cap_->OpenFixedChannel(link->handle(), l2cap::kATTChannelId);
-  FXL_DCHECK(att);
+  l2cap_->RegisterLE(link->handle(), link->role(), conn_param_update_cb,
+                     task_runner_);
 
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
-      device_id, std::move(link), weak_ptr_factory_.GetWeakPtr());
-  conn->InitializeGATT(gatt_registry_->database(), std::move(att));
+      device_id, std::move(link), task_runner_, weak_ptr_factory_.GetWeakPtr());
+  conn->InitializeFixedChannels(l2cap_, gatt_registry_->database());
 
   auto first_ref = conn->AddRef();
   connections_[device_id] = std::move(conn);
@@ -526,7 +545,7 @@ void LowEnergyConnectionManager::CleanUpConnection(
   FXL_DCHECK(peer);
   peer->set_connection_state(RemoteDevice::ConnectionState::kNotConnected);
 
-  // This will notify all open L2CAP channels about the severed link.
+  // This will disable L2CAP on this link.
   l2cap_->Unregister(conn->handle());
 
   if (!close_link) {

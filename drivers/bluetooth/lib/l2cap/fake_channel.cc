@@ -13,13 +13,16 @@ namespace testing {
 FakeChannel::FakeChannel(ChannelId id,
                          hci::ConnectionHandle handle,
                          hci::Connection::LinkType link_type)
-    : Channel(id, link_type), fragmenter_(handle), weak_ptr_factory_(this) {}
+    : Channel(id, link_type),
+      fragmenter_(handle),
+      activate_fails_(false),
+      weak_ptr_factory_(this) {}
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
-  FXL_DCHECK(rx_cb_ && rx_task_runner_);
+  FXL_DCHECK(rx_cb_ && task_runner_);
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
-  rx_task_runner_->PostTask(
+  task_runner_->PostTask(
       fxl::MakeCopyable([cb = rx_cb_, pdu = std::move(pdu)] { cb(pdu); }));
 }
 
@@ -32,8 +35,32 @@ void FakeChannel::SetSendCallback(const SendCallback& callback,
 }
 
 void FakeChannel::Close() {
-  if (closed_callback())
-    closed_callback()();
+  if (closed_cb_)
+    closed_cb_();
+}
+
+bool FakeChannel::Activate(RxCallback rx_callback,
+                           ClosedCallback closed_callback,
+                           fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(rx_callback);
+  FXL_DCHECK(closed_callback);
+  FXL_DCHECK(task_runner);
+  FXL_DCHECK(!task_runner_);
+
+  if (activate_fails_)
+    return false;
+
+  task_runner_ = task_runner;
+  closed_cb_ = closed_callback;
+  rx_cb_ = rx_callback;
+
+  return true;
+}
+
+void FakeChannel::Deactivate() {
+  task_runner_ = nullptr;
+  closed_cb_ = {};
+  rx_cb_ = {};
 }
 
 bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
@@ -47,13 +74,6 @@ bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
       [cb = send_cb_, sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); }));
 
   return true;
-}
-
-void FakeChannel::SetRxHandler(const RxCallback& rx_cb,
-                               fxl::RefPtr<fxl::TaskRunner> rx_task_runner) {
-  FXL_DCHECK(static_cast<bool>(rx_cb) == static_cast<bool>(rx_task_runner));
-  rx_cb_ = rx_cb;
-  rx_task_runner_ = rx_task_runner;
 }
 
 }  // namespace testing

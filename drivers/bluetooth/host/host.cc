@@ -7,6 +7,8 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
+#include "lib/fsl/threading/create_thread.h"
+
 #include "fidl/host_server.h"
 
 using namespace btlib;
@@ -17,8 +19,17 @@ Host::Host(const bt_hci_protocol_t& hci_proto) {
   auto dev = std::make_unique<hci::DdkDeviceWrapper>(hci_proto);
   auto hci = hci::Transport::Create(std::move(dev));
 
-  adapter_ = std::make_unique<gap::Adapter>(hci);
+  std::thread l2cap_thread =
+      fsl::CreateThread(&l2cap_runner_, "bt-host (l2cap)");
+  FXL_DCHECK(l2cap_runner_);
+
+  l2cap_ = l2cap::L2CAP::Create(hci, l2cap_runner_);
+  FXL_DCHECK(l2cap_);
+
+  adapter_ = std::make_unique<gap::Adapter>(hci, l2cap_);
   FXL_DCHECK(adapter_);
+
+  l2cap_thread.detach();
 }
 
 Host::~Host() {
@@ -28,6 +39,7 @@ Host::~Host() {
 bool Host::Initialize(InitCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
+  // This will also initialize the L2CAP layer.
   return adapter_->Initialize(callback, [] {
     FXL_VLOG(1) << "bthost: adapter closed";
 
@@ -36,8 +48,13 @@ bool Host::Initialize(InitCallback callback) {
 }
 
 void Host::ShutDown() {
+  // Closes all FIDL channels owned by |host_server_|.
   host_server_ = nullptr;
+
+  // This also shuts down L2CAP (to mirror initialization).
   adapter_->ShutDown();
+
+  l2cap_runner_->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 }
 
 void Host::BindHostInterface(zx::channel channel) {

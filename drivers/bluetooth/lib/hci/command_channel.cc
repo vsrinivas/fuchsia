@@ -53,7 +53,8 @@ CommandChannel::CommandChannel(Transport* transport,
 }
 
 CommandChannel::~CommandChannel() {
-  ShutDown();
+  // Do nothing. Since Transport is shared across threads, this can be called
+  // from any thread and calling ShutDown() would be unsafe.
 }
 
 void CommandChannel::Initialize() {

@@ -9,6 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -23,10 +24,6 @@ class LowEnergyConnector;
 class SequentialCommandRunner;
 class Transport;
 }  // namespace hci
-
-namespace l2cap {
-class ChannelManager;
-}  // namespace l2cap
 
 namespace gap {
 
@@ -50,7 +47,8 @@ class Adapter final {
   // all of its asynchronous tasks.
   //
   // This will take ownership of |hci_device|.
-  explicit Adapter(fxl::RefPtr<hci::Transport> hci);
+  explicit Adapter(fxl::RefPtr<hci::Transport> hci,
+                   fbl::RefPtr<l2cap::L2CAP> l2cap);
   ~Adapter();
 
   // Returns a 128-bit UUID that uniquely identifies this adapter on the current
@@ -170,8 +168,9 @@ class Adapter final {
   // devices.
   RemoteDeviceCache device_cache_;
 
-  // The L2CAP layer.
-  std::unique_ptr<l2cap::ChannelManager> l2cap_;
+  // The L2CAP layer. We use this reference to manage logical links and obtain
+  // fixed channels.
+  fbl::RefPtr<l2cap::L2CAP> l2cap_;
 
   // Objects that abstract the controller for connection and advertising
   // procedures.

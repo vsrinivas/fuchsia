@@ -8,7 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
 
@@ -42,7 +42,7 @@ class FakeChannelTest : public ::btlib::testing::TestBase {
   // Creates a new FakeChannel and returns it. A fxl::WeakPtr to the returned
   // channel is stored internally so that the returned channel can be accessed
   // by tests even if its ownership is passed outside of the test harness.
-  std::unique_ptr<Channel> CreateFakeChannel(const ChannelOptions& options);
+  fbl::RefPtr<FakeChannel> CreateFakeChannel(const ChannelOptions& options);
 
   // Runs the event loop and returns true if |expected| is received within a 10
   // second period.
