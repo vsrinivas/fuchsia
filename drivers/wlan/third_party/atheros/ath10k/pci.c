@@ -19,6 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #if 0 // NEEDS PORTING
 #include "core.h"
@@ -475,7 +476,7 @@ static int ath10k_pci_wake_wait(struct ath10k* ar) {
             return 0;
         }
 
-        udelay(curr_delay);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(curr_delay)));
         tot_delay += curr_delay;
 
         if (curr_delay < 50) {
@@ -2229,14 +2230,14 @@ static void ath10k_pci_warm_reset_si0(struct ath10k* ar) {
                            val | SOC_RESET_CONTROL_SI0_RST_MASK);
     val = ath10k_pci_soc_read32(ar, SOC_RESET_CONTROL_ADDRESS);
 
-    msleep(10);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     val = ath10k_pci_soc_read32(ar, SOC_RESET_CONTROL_ADDRESS);
     ath10k_pci_soc_write32(ar, SOC_RESET_CONTROL_ADDRESS,
                            val & ~SOC_RESET_CONTROL_SI0_RST_MASK);
     val = ath10k_pci_soc_read32(ar, SOC_RESET_CONTROL_ADDRESS);
 
-    msleep(10);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 }
 
 static void ath10k_pci_warm_reset_cpu(struct ath10k* ar) {
@@ -2258,7 +2259,7 @@ static void ath10k_pci_warm_reset_ce(struct ath10k* ar) {
 
     ath10k_pci_write32(ar, RTC_SOC_BASE_ADDRESS + SOC_RESET_CONTROL_ADDRESS,
                        val | SOC_RESET_CONTROL_CE_RST_MASK);
-    msleep(10);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     ath10k_pci_write32(ar, RTC_SOC_BASE_ADDRESS + SOC_RESET_CONTROL_ADDRESS,
                        val & ~SOC_RESET_CONTROL_CE_RST_MASK);
 }
@@ -2646,7 +2647,7 @@ static int ath10k_pci_read_eeprom(struct ath10k* ar, uint16_t addr, uint8_t* out
         }
 
         wait_limit--;
-        udelay(10);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
     } while (wait_limit > 0);
 
     if (!MS(reg, SI_CS_DONE_INT)) {
@@ -2996,13 +2997,13 @@ static int ath10k_pci_cold_reset(struct ath10k* ar) {
      * for any immediate pcie register access and cause bus error,
      * add delay before any pcie access request to fix this issue.
      */
-    msleep(20);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
     /* Pull Target, including PCIe, out of RESET. */
     val &= ~1;
     ath10k_pci_reg_write32(ar, SOC_GLOBAL_RESET_ADDRESS, val);
 
-    msleep(20);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot cold reset complete\n");
 

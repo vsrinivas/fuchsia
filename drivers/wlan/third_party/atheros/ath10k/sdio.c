@@ -16,6 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <zircon/syscalls.h>
 #include <linux/module.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
@@ -1386,7 +1387,7 @@ static int ath10k_sdio_hif_power_up(struct ath10k* ar) {
     /* Wait for hardware to initialise. It should take a lot less than
      * 20 ms but let's be conservative here.
      */
-    msleep(20);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
     ar_sdio->is_disabled = false;
 
@@ -1604,7 +1605,7 @@ static int ath10k_sdio_hif_start(struct ath10k* ar) {
      * This will give target plenty of time to process the BMI done
      * request before interrupts are disabled.
      */
-    msleep(20);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
     ret = ath10k_sdio_hif_disable_intrs(ar);
     if (ret) {
         return ret;
@@ -1654,7 +1655,7 @@ static int ath10k_sdio_hif_start(struct ath10k* ar) {
     }
 
     /* Wait for 20ms for the written value to take effect */
-    msleep(20);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
     ret = ath10k_sdio_hif_set_mbox_sleep(ar, false);
     if (ret) {

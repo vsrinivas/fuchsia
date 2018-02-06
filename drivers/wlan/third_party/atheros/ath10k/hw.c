@@ -15,6 +15,7 @@
  */
 
 #include <stdint.h>
+#include <zircon/syscalls.h>
 #include <linux/bitops.h>
 #include "core.h"
 #include "hw.h"
@@ -697,7 +698,7 @@ static int ath10k_hw_qca6174_enable_pll_clock(struct ath10k* ar) {
         }
 
         wait_limit--;
-        udelay(10);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
     } while (wait_limit > 0);
 
@@ -733,7 +734,7 @@ static int ath10k_hw_qca6174_enable_pll_clock(struct ath10k* ar) {
         }
 
         wait_limit--;
-        udelay(10);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
     } while (wait_limit > 0);
 

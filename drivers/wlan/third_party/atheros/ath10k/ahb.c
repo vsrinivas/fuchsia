@@ -14,6 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <zircon/syscalls.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -349,31 +350,31 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
     if (ret) {
         ath10k_err("failed to assert core cold rst: %d\n", ret);
     }
-    msleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_cold_rst);
     if (ret) {
         ath10k_err("failed to assert radio cold rst: %d\n", ret);
     }
-    msleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_warm_rst);
     if (ret) {
         ath10k_err("failed to assert radio warm rst: %d\n", ret);
     }
-    msleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->radio_srif_rst);
     if (ret) {
         ath10k_err("failed to assert radio srif rst: %d\n", ret);
     }
-    msleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
     ret = reset_control_assert(ar_ahb->cpu_init_rst);
     if (ret) {
         ath10k_err("failed to assert cpu init rst: %d\n", ret);
     }
-    msleep(10);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     /* Clear halt req and core clock disable req before
      * deasserting wifi core reset.
