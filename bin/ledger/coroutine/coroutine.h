@@ -64,7 +64,8 @@ class CoroutineService {
 // Allows to execute an asynchronous call in a coroutine. The coroutine will
 // yield until the asynchronous call terminates, it will then be continued and
 // will store the results of the asynchronous calls in |parameters|. If
-// |SyncCall| returns |true|, the coroutine must unwind its stack and terminate.
+// |SyncCall| returns |INTERRUPTED|, the coroutine must unwind its stack and
+// terminate.
 //
 // |async_call| will be never be called after this method returns. As such, it
 // can capture local variables by reference.
