@@ -170,6 +170,42 @@ options:
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LTO=OFF -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia-stage2.cmake ${LLVM_SRCDIR}
 ```
 
+## Building Fuchsia with your custom Clang
+
+You can start building test binaries right away by using the Clang in
+`${LLVM_OBJDIR}/bin/`, or in `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/`
+(depending on whether you did the two-stage build or the single-stage build,
+the binaries will be in a different location). However, if you want to use
+your Clang to build Fuchsia, you'll need to set some more arguments/variables.
+
+If you're only interested in building Zircon, set the following environment
+variables:
+
+```
+export USE_CLANG=true
+export CLANG_TOOLCHAIN_PREFIX=${CLANG_DIR}
+```
+
+...where CLANG_DIR is the path to the "bin" directory for your Clang build,
+e.g. `${LLVM_OBJDIR}/bin/`.  Note that *it is important you include the trailing
+slash*.
+
+Then run `fx build-zircon` as usual.
+
+For layers-above-Zircon, it should be sufficient to pass
+`--args clang_prefix="${CLANG_DIR}"` to `fx set`, then run `fx build` as usual.
+
+Note that, since `fx full-build` implicitly builds Zircon, for a full build,
+you also need to set the environment variables necessary for Zircon.
+
+To ensure the environment variables are set every time you build, you may want
+to run `fx set`, and then manually edit your `${FUCHSIA_SOURCE}/.config` file,
+adding the following line:
+
+```
+export USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/bin/
+```
+
 ## Building sanitized versions of LLVM tools
 
 Most sanitizers can be used on LLVM tools by adding
