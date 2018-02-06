@@ -22,4 +22,6 @@ MODULE_LIBS := \
 
 MODULE_HEADER_DEPS := system/ulib/ddk
 
+MODULE_PACKAGE = static
+
 include make/module.mk

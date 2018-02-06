@@ -24,4 +24,6 @@ MODULE_LIBS := system/ulib/fdio
 
 MODULE_CFLAGS := -I$(LOCAL_DIR)/include/linenoise
 
+MODULE_PACKAGE := static
+
 include make/module.mk
