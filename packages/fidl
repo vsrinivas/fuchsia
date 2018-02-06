@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp",
-        "go"
-    ],
-    "labels": [
-        "//zircon/system/host/fidl:fidl2(//build/toolchain:host_x64)"
-    ]
-}

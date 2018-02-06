@@ -14,7 +14,6 @@
         "garnet/packages/device_settings",
         "garnet/packages/drivers",
         "garnet/packages/escher",
-        "garnet/packages/fidl",
         "garnet/packages/fidl_backend",
         "garnet/packages/fidl_examples",
         "garnet/packages/fidl_tests",

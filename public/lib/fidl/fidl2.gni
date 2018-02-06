@@ -32,7 +32,7 @@ template("fidl2") {
   compiled_action(fidl_json_target_name) {
     visibility = [":*"]
 
-    tool = "//zircon/system/host/fidl:fidl2"
+    tool = "//zircon/public/tool/fidl2"
 
     forward_variables_from(invoker, [
       "deps",
