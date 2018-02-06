@@ -95,57 +95,57 @@ enum bmi_cmd_id {
 #define ATH10K_BMI_BOARD_ID_STATUS_MASK 0xff
 
 struct bmi_cmd {
-    __le32 id; /* enum bmi_cmd_id */
+    uint32_t id; /* enum bmi_cmd_id */
     union {
         struct {
         } done;
         struct {
-            __le32 addr;
-            __le32 len;
+            uint32_t addr;
+            uint32_t len;
         } read_mem;
         struct {
-            __le32 addr;
-            __le32 len;
+            uint32_t addr;
+            uint32_t len;
             uint8_t payload[0];
         } write_mem;
         struct {
-            __le32 addr;
-            __le32 param;
+            uint32_t addr;
+            uint32_t param;
         } execute;
         struct {
-            __le32 addr;
+            uint32_t addr;
         } set_app_start;
         struct {
-            __le32 addr;
+            uint32_t addr;
         } read_soc_reg;
         struct {
-            __le32 addr;
-            __le32 value;
+            uint32_t addr;
+            uint32_t value;
         } write_soc_reg;
         struct {
         } get_target_info;
         struct {
-            __le32 rom_addr;
-            __le32 ram_addr; /* or value */
-            __le32 size;
-            __le32 activate; /* 0=install, but dont activate */
+            uint32_t rom_addr;
+            uint32_t ram_addr; /* or value */
+            uint32_t size;
+            uint32_t activate; /* 0=install, but dont activate */
         } rompatch_install;
         struct {
-            __le32 patch_id;
+            uint32_t patch_id;
         } rompatch_uninstall;
         struct {
-            __le32 count;
-            __le32 patch_ids[0]; /* length of @count */
+            uint32_t count;
+            uint32_t patch_ids[0]; /* length of @count */
         } rompatch_activate;
         struct {
-            __le32 count;
-            __le32 patch_ids[0]; /* length of @count */
+            uint32_t count;
+            uint32_t patch_ids[0]; /* length of @count */
         } rompatch_deactivate;
         struct {
-            __le32 addr;
+            uint32_t addr;
         } lz_start;
         struct {
-            __le32 len; /* max BMI_MAX_DATA_SIZE */
+            uint32_t len; /* max BMI_MAX_DATA_SIZE */
             uint8_t payload[0]; /* length of @len */
         } lz_data;
         struct {
@@ -160,27 +160,27 @@ union bmi_resp {
         uint8_t payload[0];
     } read_mem;
     struct {
-        __le32 result;
+        uint32_t result;
     } execute;
     struct {
-        __le32 value;
+        uint32_t value;
     } read_soc_reg;
     struct {
-        __le32 len;
-        __le32 version;
-        __le32 type;
+        uint32_t len;
+        uint32_t version;
+        uint32_t type;
     } get_target_info;
     struct {
-        __le32 patch_id;
+        uint32_t patch_id;
     } rompatch_install;
     struct {
-        __le32 patch_id;
+        uint32_t patch_id;
     } rompatch_uninstall;
     struct {
         /* 0 = nothing executed
          * otherwise = NVRAM segment return value
          */
-        __le32 result;
+        uint32_t result;
     } nvram_process;
     uint8_t payload[BMI_MAX_CMDBUF_SIZE];
 } __packed;
@@ -211,12 +211,12 @@ int ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address,
     ({                              \
         int ret;                        \
         uint32_t addr;                       \
-        __le32 tmp;                     \
+        uint32_t tmp;                     \
                                     \
         addr = host_interest_item_address(HI_ITEM(item));   \
         ret = ath10k_bmi_read_memory(ar, addr, (uint8_t *)&tmp, 4); \
         if (!ret)                       \
-            *val = __le32_to_cpu(tmp);          \
+            *val = tmp;          \
         ret;                            \
      })
 
@@ -224,7 +224,7 @@ int ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address,
     ({                              \
         int ret;                        \
         uint32_t address;                        \
-        __le32 v = __cpu_to_le32(val);              \
+        uint32_t v = val;              \
                                     \
         address = host_interest_item_address(HI_ITEM(item));    \
         ret = ath10k_bmi_write_memory(ar, address,      \

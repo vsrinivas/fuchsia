@@ -95,8 +95,8 @@ static inline void ath10k_tx_h_seq_no(struct ieee80211_vif* vif,
         if (info->flags & IEEE80211_TX_CTL_FIRST_FRAGMENT) {
             arvif->tx_seq_no += 0x10;
         }
-        hdr->seq_ctrl &= cpu_to_le16(IEEE80211_SCTL_FRAG);
-        hdr->seq_ctrl |= cpu_to_le16(arvif->tx_seq_no);
+        hdr->seq_ctrl &= IEEE80211_SCTL_FRAG;
+        hdr->seq_ctrl |= arvif->tx_seq_no;
     }
 }
 

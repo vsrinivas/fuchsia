@@ -315,9 +315,9 @@ int ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
         desc_flags |= CE_DESC_FLAGS_BYTE_SWAP;
     }
 
-    sdesc.addr   = __cpu_to_le32(buffer);
-    sdesc.nbytes = __cpu_to_le16(nbytes);
-    sdesc.flags  = __cpu_to_le16(desc_flags);
+    sdesc.addr   = buffer;
+    sdesc.nbytes = nbytes;
+    sdesc.flags  = desc_flags;
 
     *desc = sdesc;
 
@@ -427,7 +427,7 @@ int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t pad
         return -ENOSPC;
     }
 
-    desc->addr = __cpu_to_le32(paddr);
+    desc->addr = paddr;
     desc->nbytes = 0;
 
     dest_ring->per_transfer_context[write_index] = ctx;
@@ -489,7 +489,7 @@ int ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
     /* Copy in one go for performance reasons */
     sdesc = *desc;
 
-    nbytes = __le16_to_cpu(sdesc.nbytes);
+    nbytes = sdesc.nbytes;
     if (nbytes == 0) {
         /*
          * This closes a relatively unusual race where the Host
@@ -569,7 +569,7 @@ int ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
         struct ce_desc* desc = CE_DEST_RING_TO_DESC(base, sw_index);
 
         /* Return data from completed destination descriptor */
-        *bufferp = __le32_to_cpu(desc->addr);
+        *bufferp = desc->addr;
 
         if (per_transfer_contextp)
             *per_transfer_contextp =
@@ -681,9 +681,9 @@ int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
         struct ce_desc* desc = CE_SRC_RING_TO_DESC(base, sw_index);
 
         /* Return data from completed source descriptor */
-        *bufferp = __le32_to_cpu(desc->addr);
-        *nbytesp = __le16_to_cpu(desc->nbytes);
-        *transfer_idp = MS(__le16_to_cpu(desc->flags),
+        *bufferp = desc->addr;
+        *nbytesp = desc->nbytes;
+        *transfer_idp = MS(desc->flags,
                            CE_DESC_FLAGS_META_DATA);
 
         if (per_transfer_contextp)
@@ -1145,27 +1145,27 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
     spin_lock_bh(&ar_pci->ce_lock);
     for (id = 0; id < CE_COUNT; id++) {
         addr = ath10k_ce_base_address(ar, id);
-        ce.base_addr = cpu_to_le32(addr);
+        ce.base_addr = addr;
 
         ce.src_wr_idx =
-            cpu_to_le32(ath10k_ce_src_ring_write_index_get(ar, addr));
+            ath10k_ce_src_ring_write_index_get(ar, addr);
         ce.src_r_idx =
-            cpu_to_le32(ath10k_ce_src_ring_read_index_get(ar, addr));
+            ath10k_ce_src_ring_read_index_get(ar, addr);
         ce.dst_wr_idx =
-            cpu_to_le32(ath10k_ce_dest_ring_write_index_get(ar, addr));
+            ath10k_ce_dest_ring_write_index_get(ar, addr);
         ce.dst_r_idx =
-            cpu_to_le32(ath10k_ce_dest_ring_read_index_get(ar, addr));
+            ath10k_ce_dest_ring_read_index_get(ar, addr);
 
         if (crash_data) {
             crash_data->ce_crash_data[id] = ce;
         }
 
         ath10k_err(ar, "[%02d]: 0x%08x %3u %3u %3u %3u", id,
-                   le32_to_cpu(ce.base_addr),
-                   le32_to_cpu(ce.src_wr_idx),
-                   le32_to_cpu(ce.src_r_idx),
-                   le32_to_cpu(ce.dst_wr_idx),
-                   le32_to_cpu(ce.dst_r_idx));
+                   ce.base_addr,
+                   ce.src_wr_idx,
+                   ce.src_r_idx,
+                   ce.dst_wr_idx,
+                   ce.dst_r_idx);
     }
 
     spin_unlock_bh(&ar_pci->ce_lock);

@@ -25,7 +25,7 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
     uint8_t  ctwindow_oppps = noa->ctwindow_oppps;
     uint8_t ctwindow = ctwindow_oppps >> WMI_P2P_OPPPS_CTWINDOW_OFFSET;
     bool oppps = !!(ctwindow_oppps & WMI_P2P_OPPPS_ENABLE_BIT);
-    __le16* noa_attr_len;
+    uint16_t* noa_attr_len;
     uint16_t attr_len;
     uint8_t noa_descriptors = noa->num_descriptors;
     int i;
@@ -40,7 +40,7 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
 
     /* NOA ATTR */
     data[6] = IEEE80211_P2P_ATTR_ABSENCE_NOTICE;
-    noa_attr_len = (__le16*)&data[7];  /* 2 bytes */
+    noa_attr_len = (uint16_t*)&data[7];  /* 2 bytes */
     noa_attr = (struct ieee80211_p2p_noa_attr*)&data[9];
 
     noa_attr->index = noa->index;
@@ -50,8 +50,7 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
     }
 
     for (i = 0; i < noa_descriptors; i++) {
-        noa_attr->desc[i].count =
-            __le32_to_cpu(noa->descriptors[i].type_count);
+        noa_attr->desc[i].count = noa->descriptors[i].type_count;
         noa_attr->desc[i].duration = noa->descriptors[i].duration;
         noa_attr->desc[i].interval = noa->descriptors[i].interval;
         noa_attr->desc[i].start_time = noa->descriptors[i].start_time;
@@ -59,7 +58,7 @@ static void ath10k_p2p_noa_ie_fill(uint8_t* data, size_t len,
 
     attr_len = 2; /* index + oppps_ctwindow */
     attr_len += noa_descriptors * sizeof(struct ieee80211_p2p_noa_desc);
-    *noa_attr_len = __cpu_to_le16(attr_len);
+    *noa_attr_len = attr_len;
 }
 
 static size_t ath10k_p2p_noa_ie_len_compute(const struct wmi_p2p_noa_info* noa) {

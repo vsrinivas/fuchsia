@@ -81,7 +81,7 @@ static void ath10k_htc_prepare_tx_skb(struct ath10k_htc_ep* ep,
     hdr = (struct ath10k_htc_hdr*)skb->data;
 
     hdr->eid = ep->eid;
-    hdr->len = __cpu_to_le16(skb->len - sizeof(*hdr));
+    hdr->len = skb->len - sizeof(*hdr);
     hdr->flags = 0;
     hdr->flags |= ATH10K_HTC_FLAG_NEED_CREDIT_UPDATE;
 
@@ -410,7 +410,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb) {
 
     ep = &htc->endpoint[eid];
 
-    payload_len = __le16_to_cpu(hdr->len);
+    payload_len = hdr->len;
 
     if (payload_len + sizeof(*hdr) > ATH10K_HTC_MAX_LEN) {
         ath10k_warn(ar, "HTC rx frame too long, len: %zu\n",
@@ -480,7 +480,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar,
     struct ath10k_htc* htc = &ar->htc;
     struct ath10k_htc_msg* msg = (struct ath10k_htc_msg*)skb->data;
 
-    switch (__le16_to_cpu(msg->hdr.message_id)) {
+    switch (msg->hdr.message_id) {
     case ATH10K_HTC_MSG_READY_ID:
     case ATH10K_HTC_MSG_CONNECT_SERVICE_RESP_ID:
         /* handle HTC control message */
@@ -619,15 +619,15 @@ int ath10k_htc_wait_target(struct ath10k_htc* htc) {
     }
 
     msg = (struct ath10k_htc_msg*)htc->control_resp_buffer;
-    message_id   = __le16_to_cpu(msg->hdr.message_id);
+    message_id   = msg->hdr.message_id;
 
     if (message_id != ATH10K_HTC_MSG_READY_ID) {
         ath10k_err(ar, "Invalid HTC ready msg: 0x%x\n", message_id);
         return -ECOMM;
     }
 
-    htc->total_transmit_credits = __le16_to_cpu(msg->ready.credit_count);
-    htc->target_credit_size = __le16_to_cpu(msg->ready.credit_size);
+    htc->total_transmit_credits = msg->ready.credit_count;
+    htc->target_credit_size = msg->ready.credit_size;
 
     ath10k_dbg(ar, ATH10K_DBG_HTC,
                "Target ready! transmit resources: %d size:%d\n",
@@ -702,7 +702,7 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
 
     msg = (struct ath10k_htc_msg*)skb->data;
     msg->hdr.message_id =
-        __cpu_to_le16(ATH10K_HTC_MSG_CONNECT_SERVICE_ID);
+        ATH10K_HTC_MSG_CONNECT_SERVICE_ID;
 
     flags |= SM(tx_alloc, ATH10K_HTC_CONN_FLAGS_RECV_ALLOC);
 
@@ -713,8 +713,8 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     }
 
     req_msg = &msg->connect_service;
-    req_msg->flags = __cpu_to_le16(flags);
-    req_msg->service_id = __cpu_to_le16(conn_req->service_id);
+    req_msg->flags = flags;
+    req_msg->service_id = conn_req->service_id;
 
     reinit_completion(&htc->ctl_resp);
 
@@ -735,8 +735,8 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     /* we controlled the buffer creation, it's aligned */
     msg = (struct ath10k_htc_msg*)htc->control_resp_buffer;
     resp_msg = &msg->connect_service_response;
-    message_id = __le16_to_cpu(msg->hdr.message_id);
-    service_id = __le16_to_cpu(resp_msg->service_id);
+    message_id = msg->hdr.message_id;
+    service_id = resp_msg->service_id;
 
     if ((message_id != ATH10K_HTC_MSG_CONNECT_SERVICE_RESP_ID) ||
             (htc->control_resp_len < sizeof(msg->hdr) +
@@ -761,7 +761,7 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     }
 
     assigned_eid = (enum ath10k_htc_ep_id)resp_msg->eid;
-    max_msg_size = __le16_to_cpu(resp_msg->max_msg_size);
+    max_msg_size = resp_msg->max_msg_size;
 
 setup:
 
@@ -782,12 +782,12 @@ setup:
 
     /* return assigned endpoint to caller */
     conn_resp->eid = assigned_eid;
-    conn_resp->max_msg_len = __le16_to_cpu(resp_msg->max_msg_size);
+    conn_resp->max_msg_len = resp_msg->max_msg_size;
 
     /* setup the endpoint */
     ep->service_id = conn_req->service_id;
     ep->max_tx_queue_depth = conn_req->max_send_queue_depth;
-    ep->max_ep_message_len = __le16_to_cpu(resp_msg->max_msg_size);
+    ep->max_ep_message_len = resp_msg->max_msg_size;
     ep->tx_credits = tx_alloc;
 
     /* copy all the callbacks */
@@ -850,12 +850,12 @@ int ath10k_htc_start(struct ath10k_htc* htc) {
 
     msg = (struct ath10k_htc_msg*)skb->data;
     msg->hdr.message_id =
-        __cpu_to_le16(ATH10K_HTC_MSG_SETUP_COMPLETE_EX_ID);
+        ATH10K_HTC_MSG_SETUP_COMPLETE_EX_ID;
 
     if (ar->hif.bus == ATH10K_BUS_SDIO) {
         /* Extra setup params used by SDIO */
         msg->setup_complete_ext.flags =
-            __cpu_to_le32(ATH10K_HTC_SETUP_COMPLETE_FLAGS_RX_BNDL_EN);
+            ATH10K_HTC_SETUP_COMPLETE_FLAGS_RX_BNDL_EN;
         msg->setup_complete_ext.max_msgs_per_bundled_recv =
             htc->max_msgs_per_htc_bundle;
     }

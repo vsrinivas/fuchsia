@@ -75,7 +75,7 @@ static inline bool is_trailer_only_msg(struct ath10k_sdio_rx_data* pkt) {
     bool trailer_only = false;
     struct ath10k_htc_hdr* htc_hdr =
         (struct ath10k_htc_hdr*)pkt->skb->data;
-    uint16_t len = __le16_to_cpu(htc_hdr->len);
+    uint16_t len = htc_hdr->len;
 
     if (len == htc_hdr->trailer_len) {
         trailer_only = true;
@@ -239,7 +239,7 @@ out:
 static int ath10k_sdio_writesb32(struct ath10k* ar, uint32_t addr, uint32_t val) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct sdio_func* func = ar_sdio->func;
-    __le32* buf;
+    uint32_t* buf;
     int ret;
 
     buf = kzalloc(sizeof(*buf), GFP_KERNEL);
@@ -247,7 +247,7 @@ static int ath10k_sdio_writesb32(struct ath10k* ar, uint32_t addr, uint32_t val)
         return -ENOMEM;
     }
 
-    *buf = cpu_to_le32(val);
+    *buf = val;
 
     sdio_claim_host(func);
 
@@ -383,7 +383,7 @@ static int ath10k_sdio_mbox_rx_process_packet(struct ath10k* ar,
     uint8_t* trailer;
     int ret;
 
-    payload_len = le16_to_cpu(htc_hdr->len);
+    payload_len = htc_hdr->len;
 
     if (trailer_present) {
         trailer = skb->data + sizeof(*htc_hdr) +
@@ -499,7 +499,7 @@ static int ath10k_sdio_mbox_alloc_pkt_bundle(struct ath10k* ar,
     if (*bndl_cnt > HTC_HOST_MAX_MSG_PER_BUNDLE) {
         ath10k_warn(ar,
                     "HTC bundle length %u exceeds maximum %u\n",
-                    le16_to_cpu(htc_hdr->len),
+                    htc_hdr->len,
                     HTC_HOST_MAX_MSG_PER_BUNDLE);
         return -ENOMEM;
     }
@@ -545,24 +545,24 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k* ar,
         htc_hdr = (struct ath10k_htc_hdr*)&lookaheads[i];
         last_in_bundle = false;
 
-        if (le16_to_cpu(htc_hdr->len) >
+        if (htc_hdr->len >
                 ATH10K_HTC_MBOX_MAX_PAYLOAD_LENGTH) {
             ath10k_warn(ar,
                         "payload length %d exceeds max htc length: %zu\n",
-                        le16_to_cpu(htc_hdr->len),
+                        htc_hdr->len,
                         ATH10K_HTC_MBOX_MAX_PAYLOAD_LENGTH);
             ret = -ENOMEM;
             goto err;
         }
 
-        act_len = le16_to_cpu(htc_hdr->len) + sizeof(*htc_hdr);
+        act_len = htc_hdr->len + sizeof(*htc_hdr);
         full_len = ath10k_sdio_calc_txrx_padded_len(ar_sdio, act_len);
 
         if (full_len > ATH10K_SDIO_MAX_BUFFER_SIZE) {
             ath10k_warn(ar,
                         "rx buffer requested with invalid htc_hdr length (%d, 0x%x): %d\n",
                         htc_hdr->eid, htc_hdr->flags,
-                        le16_to_cpu(htc_hdr->len));
+                        htc_hdr->len);
             ret = -EINVAL;
             goto err;
         }
@@ -906,8 +906,7 @@ static int ath10k_sdio_mbox_read_int_status(struct ath10k* ar,
      */
     *host_int_status &= ~htc_mbox;
     if (irq_proc_reg->rx_lookahead_valid & htc_mbox) {
-        *lookahead = le32_to_cpu(
-                         irq_proc_reg->rx_lookahead[ATH10K_HTC_MAILBOX]);
+        *lookahead = irq_proc_reg->rx_lookahead[ATH10K_HTC_MAILBOX];
         if (!*lookahead) {
             ath10k_warn(ar, "sdio mbox lookahead is zero\n");
         }
@@ -1560,7 +1559,7 @@ static int ath10k_sdio_hif_diag_read(struct ath10k* ar, uint32_t address, void* 
 
 static int ath10k_sdio_hif_diag_read32(struct ath10k* ar, uint32_t address,
                                        uint32_t* value) {
-    __le32* val;
+    uint32_t* val;
     int ret;
 
     val = kzalloc(sizeof(*val), GFP_KERNEL);
@@ -1573,7 +1572,7 @@ static int ath10k_sdio_hif_diag_read32(struct ath10k* ar, uint32_t address,
         goto out;
     }
 
-    *value = __le32_to_cpu(*val);
+    *value = *val;
 
 out:
     kfree(val);

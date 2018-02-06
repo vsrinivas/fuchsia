@@ -439,16 +439,16 @@ struct ath10k_vif_iter {
 
 /* Copy Engine register dump, protected by ce-lock */
 struct ath10k_ce_crash_data {
-    __le32 base_addr;
-    __le32 src_wr_idx;
-    __le32 src_r_idx;
-    __le32 dst_wr_idx;
-    __le32 dst_r_idx;
+    uint32_t base_addr;
+    uint32_t src_wr_idx;
+    uint32_t src_r_idx;
+    uint32_t dst_wr_idx;
+    uint32_t dst_r_idx;
 };
 
 struct ath10k_ce_crash_hdr {
-    __le32 ce_count;
-    __le32 reserved[3]; /* for future use */
+    uint32_t ce_count;
+    uint32_t reserved[3]; /* for future use */
     struct ath10k_ce_crash_data entries[];
 };
 
@@ -458,7 +458,7 @@ struct ath10k_fw_crash_data {
 
     uuid_le uuid;
     struct timespec timestamp;
-    __le32 registers[REG_DUMP_COUNT_QCA988X];
+    uint32_t registers[REG_DUMP_COUNT_QCA988X];
     struct ath10k_ce_crash_data ce_crash_data[CE_COUNT_MAX];
 };
 

@@ -149,8 +149,8 @@ struct ath10k_sdio_irq_proc_regs {
     uint8_t rx_lookahead_valid;
     uint8_t host_int_status2;
     uint8_t gmbox_rx_avail;
-    __le32 rx_lookahead[2];
-    __le32 rx_gmbox_lookahead_alias[2];
+    uint32_t rx_lookahead[2];
+    uint32_t rx_gmbox_lookahead_alias[2];
 };
 
 struct ath10k_sdio_irq_enable_regs {

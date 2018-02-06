@@ -224,104 +224,104 @@ static struct ce_attr host_ce_config_wlan[] = {
 static struct ce_pipe_config target_ce_config_wlan[] = {
     /* CE0: host->target HTC control and raw streams */
     {
-        .pipenum = __cpu_to_le32(0),
-        .pipedir = __cpu_to_le32(PIPEDIR_OUT),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(256),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 0,
+        .pipedir = PIPEDIR_OUT,
+        .nentries = 32,
+        .nbytes_max = 256,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE1: target->host HTT + HTC control */
     {
-        .pipenum = __cpu_to_le32(1),
-        .pipedir = __cpu_to_le32(PIPEDIR_IN),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(2048),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 1,
+        .pipedir = PIPEDIR_IN,
+        .nentries = 32,
+        .nbytes_max = 2048,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE2: target->host WMI */
     {
-        .pipenum = __cpu_to_le32(2),
-        .pipedir = __cpu_to_le32(PIPEDIR_IN),
-        .nentries = __cpu_to_le32(64),
-        .nbytes_max = __cpu_to_le32(2048),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 2,
+        .pipedir = PIPEDIR_IN,
+        .nentries = 64,
+        .nbytes_max = 2048,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE3: host->target WMI */
     {
-        .pipenum = __cpu_to_le32(3),
-        .pipedir = __cpu_to_le32(PIPEDIR_OUT),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(2048),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 3,
+        .pipedir = PIPEDIR_OUT,
+        .nentries = 32,
+        .nbytes_max = 2048,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE4: host->target HTT */
     {
-        .pipenum = __cpu_to_le32(4),
-        .pipedir = __cpu_to_le32(PIPEDIR_OUT),
-        .nentries = __cpu_to_le32(256),
-        .nbytes_max = __cpu_to_le32(256),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 4,
+        .pipedir = PIPEDIR_OUT,
+        .nentries = 256,
+        .nbytes_max = 256,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* NB: 50% of src nentries, since tx has 2 frags */
 
     /* CE5: target->host HTT (HIF->HTT) */
     {
-        .pipenum = __cpu_to_le32(5),
-        .pipedir = __cpu_to_le32(PIPEDIR_IN),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(512),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 5,
+        .pipedir = PIPEDIR_IN,
+        .nentries = 32,
+        .nbytes_max = 512,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE6: Reserved for target autonomous hif_memcpy */
     {
-        .pipenum = __cpu_to_le32(6),
-        .pipedir = __cpu_to_le32(PIPEDIR_INOUT),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(4096),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 6,
+        .pipedir = PIPEDIR_INOUT,
+        .nentries = 32,
+        .nbytes_max = 4096,
+        .flags = CE_ATTR_FLAGS,
+        .reserved = 0,
     },
 
     /* CE7 used only by Host */
     {
-        .pipenum = __cpu_to_le32(7),
-        .pipedir = __cpu_to_le32(PIPEDIR_INOUT),
-        .nentries = __cpu_to_le32(0),
-        .nbytes_max = __cpu_to_le32(0),
-        .flags = __cpu_to_le32(0),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 7,
+        .pipedir = PIPEDIR_INOUT,
+        .nentries = 0,
+        .nbytes_max = 0,
+        .flags = 0,
+        .reserved = 0,
     },
 
     /* CE8 target->host packtlog */
     {
-        .pipenum = __cpu_to_le32(8),
-        .pipedir = __cpu_to_le32(PIPEDIR_IN),
-        .nentries = __cpu_to_le32(64),
-        .nbytes_max = __cpu_to_le32(2048),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS | CE_ATTR_DIS_INTR),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 8,
+        .pipedir = PIPEDIR_IN,
+        .nentries = 64,
+        .nbytes_max = 2048,
+        .flags = CE_ATTR_FLAGS | CE_ATTR_DIS_INTR,
+        .reserved = 0,
     },
 
     /* CE9 target autonomous qcache memcpy */
     {
-        .pipenum = __cpu_to_le32(9),
-        .pipedir = __cpu_to_le32(PIPEDIR_INOUT),
-        .nentries = __cpu_to_le32(32),
-        .nbytes_max = __cpu_to_le32(2048),
-        .flags = __cpu_to_le32(CE_ATTR_FLAGS | CE_ATTR_DIS_INTR),
-        .reserved = __cpu_to_le32(0),
+        .pipenum = 9,
+        .pipedir = PIPEDIR_INOUT,
+        .nentries = 32,
+        .nbytes_max = 2048,
+        .flags = CE_ATTR_FLAGS | CE_ATTR_DIS_INTR,
+        .reserved = 0,
     },
 
     /* It not necessary to send target wlan configuration for CE10 & CE11
@@ -336,95 +336,95 @@ static struct ce_pipe_config target_ce_config_wlan[] = {
  */
 static struct service_to_pipe target_service_to_ce_map_wlan[] = {
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_VO),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(3),
+        ATH10K_HTC_SVC_ID_WMI_DATA_VO,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        3,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_VO),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(2),
+        ATH10K_HTC_SVC_ID_WMI_DATA_VO,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        2,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_BK),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(3),
+        ATH10K_HTC_SVC_ID_WMI_DATA_BK,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        3,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_BK),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(2),
+        ATH10K_HTC_SVC_ID_WMI_DATA_BK,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        2,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_BE),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(3),
+        ATH10K_HTC_SVC_ID_WMI_DATA_BE,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        3,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_BE),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(2),
+        ATH10K_HTC_SVC_ID_WMI_DATA_BE,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        2,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_VI),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(3),
+        ATH10K_HTC_SVC_ID_WMI_DATA_VI,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        3,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_DATA_VI),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(2),
+        ATH10K_HTC_SVC_ID_WMI_DATA_VI,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        2,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_CONTROL),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(3),
+        ATH10K_HTC_SVC_ID_WMI_CONTROL,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        3,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_WMI_CONTROL),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(2),
+        ATH10K_HTC_SVC_ID_WMI_CONTROL,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        2,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_RSVD_CTRL),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(0),
+        ATH10K_HTC_SVC_ID_RSVD_CTRL,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        0,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_RSVD_CTRL),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(1),
-    },
-    {
-        /* not used */
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_TEST_RAW_STREAMS),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(0),
+        ATH10K_HTC_SVC_ID_RSVD_CTRL,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        1,
     },
     {
         /* not used */
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_TEST_RAW_STREAMS),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(1),
+        ATH10K_HTC_SVC_ID_TEST_RAW_STREAMS,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        0,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_HTT_DATA_MSG),
-        __cpu_to_le32(PIPEDIR_OUT), /* out = UL = host -> target */
-        __cpu_to_le32(4),
+        /* not used */
+        ATH10K_HTC_SVC_ID_TEST_RAW_STREAMS,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        1,
     },
     {
-        __cpu_to_le32(ATH10K_HTC_SVC_ID_HTT_DATA_MSG),
-        __cpu_to_le32(PIPEDIR_IN),  /* in = DL = target -> host */
-        __cpu_to_le32(5),
+        ATH10K_HTC_SVC_ID_HTT_DATA_MSG,
+        PIPEDIR_OUT, /* out = UL = host -> target */
+        4,
+    },
+    {
+        ATH10K_HTC_SVC_ID_HTT_DATA_MSG,
+        PIPEDIR_IN,  /* in = DL = target -> host */
+        5,
     },
 
     /* (Additions here) */
 
     {
         /* must be last */
-        __cpu_to_le32(0),
-        __cpu_to_le32(0),
-        __cpu_to_le32(0),
+        0,
+        0,
+        0,
     },
 };
 
@@ -985,11 +985,11 @@ done:
 }
 
 static int ath10k_pci_diag_read32(struct ath10k* ar, uint32_t address, uint32_t* value) {
-    __le32 val = 0;
+    uint32_t val = 0;
     int ret;
 
     ret = ath10k_pci_diag_read_mem(ar, address, &val, sizeof(val));
-    *value = __le32_to_cpu(val);
+    *value = val;
 
     return ret;
 }
@@ -1145,7 +1145,7 @@ done:
 }
 
 static int ath10k_pci_diag_write32(struct ath10k* ar, uint32_t address, uint32_t value) {
-    __le32 val = __cpu_to_le32(value);
+    uint32_t val = value;
 
     return ath10k_pci_diag_write_mem(ar, address, &val, sizeof(val));
 }
@@ -1409,14 +1409,14 @@ uint16_t ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, uint8_t pipe) {
 
 static void ath10k_pci_dump_registers(struct ath10k* ar,
                                       struct ath10k_fw_crash_data* crash_data) {
-    __le32 reg_dump_values[REG_DUMP_COUNT_QCA988X] = {};
+    uint32_t reg_dump_values[REG_DUMP_COUNT_QCA988X] = {};
     int i, ret;
 
     lockdep_assert_held(&ar->data_lock);
 
     ret = ath10k_pci_diag_read_hi(ar, &reg_dump_values[0],
                                   hi_failure_state,
-                                  REG_DUMP_COUNT_QCA988X * sizeof(__le32));
+                                  REG_DUMP_COUNT_QCA988X * sizeof(uint32_t));
     if (ret) {
         ath10k_err(ar, "failed to read firmware dump area: %d\n", ret);
         return;
@@ -1428,10 +1428,10 @@ static void ath10k_pci_dump_registers(struct ath10k* ar,
     for (i = 0; i < REG_DUMP_COUNT_QCA988X; i += 4)
         ath10k_err(ar, "[%02d]: 0x%08X 0x%08X 0x%08X 0x%08X\n",
                    i,
-                   __le32_to_cpu(reg_dump_values[i]),
-                   __le32_to_cpu(reg_dump_values[i + 1]),
-                   __le32_to_cpu(reg_dump_values[i + 2]),
-                   __le32_to_cpu(reg_dump_values[i + 3]));
+                   reg_dump_values[i],
+                   reg_dump_values[i + 1],
+                   reg_dump_values[i + 2],
+                   reg_dump_values[i + 3]);
 
     if (!crash_data) {
         return;
@@ -1511,28 +1511,28 @@ int ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t service_id,
     for (i = 0; i < ARRAY_SIZE(target_service_to_ce_map_wlan); i++) {
         entry = &target_service_to_ce_map_wlan[i];
 
-        if (__le32_to_cpu(entry->service_id) != service_id) {
+        if (entry->service_id != service_id) {
             continue;
         }
 
-        switch (__le32_to_cpu(entry->pipedir)) {
+        switch (entry->pipedir) {
         case PIPEDIR_NONE:
             break;
         case PIPEDIR_IN:
             WARN_ON(dl_set);
-            *dl_pipe = __le32_to_cpu(entry->pipenum);
+            *dl_pipe = entry->pipenum;
             dl_set = true;
             break;
         case PIPEDIR_OUT:
             WARN_ON(ul_set);
-            *ul_pipe = __le32_to_cpu(entry->pipenum);
+            *ul_pipe = entry->pipenum;
             ul_set = true;
             break;
         case PIPEDIR_INOUT:
             WARN_ON(dl_set);
             WARN_ON(ul_set);
-            *dl_pipe = __le32_to_cpu(entry->pipenum);
-            *ul_pipe = __le32_to_cpu(entry->pipenum);
+            *dl_pipe = entry->pipenum;
+            *ul_pipe = entry->pipenum;
             dl_set = true;
             ul_set = true;
             break;
@@ -2140,11 +2140,11 @@ static void ath10k_pci_override_ce_config(struct ath10k* ar) {
 
     /* Override Target firmware's Copy Engine configuration */
     config = &target_ce_config_wlan[5];
-    config->pipedir = __cpu_to_le32(PIPEDIR_OUT);
-    config->nbytes_max = __cpu_to_le32(2048);
+    config->pipedir = PIPEDIR_OUT;
+    config->nbytes_max = 2048;
 
     /* Map from service/endpoint to Copy Engine */
-    target_service_to_ce_map_wlan[15].pipenum = __cpu_to_le32(1);
+    target_service_to_ce_map_wlan[15].pipenum = 1;
 }
 
 int ath10k_pci_alloc_pipes(struct ath10k* ar) {
@@ -2570,7 +2570,7 @@ static int ath10k_pci_hif_resume(struct ath10k* ar) {
 #endif
 
 static bool ath10k_pci_validate_cal(void* data, size_t size) {
-    __le16* cal_words = data;
+    uint16_t* cal_words = data;
     uint16_t checksum = 0;
     size_t i;
 
@@ -2579,7 +2579,7 @@ static bool ath10k_pci_validate_cal(void* data, size_t size) {
     }
 
     for (i = 0; i < size / 2; i++) {
-        checksum ^= le16_to_cpu(cal_words[i]);
+        checksum ^= cal_words[i];
     }
 
     return checksum == 0xffff;

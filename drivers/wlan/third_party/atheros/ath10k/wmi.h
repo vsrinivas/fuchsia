@@ -62,7 +62,7 @@
 
 /* Control Path */
 struct wmi_cmd_hdr {
-    __le32 cmd_id;
+    uint32_t cmd_id;
 } __packed;
 
 #define WMI_CMD_HDR_CMD_ID_MASK   0x00FFFFFF
@@ -72,23 +72,6 @@ struct wmi_cmd_hdr {
 
 #define HTC_PROTOCOL_VERSION    0x0002
 #define WMI_PROTOCOL_VERSION    0x0002
-
-/*
- * There is no signed version of __le32, so for a temporary solution come
- * up with our own version. The idea is from fs/ntfs/endian.h.
- *
- * Use a_ prefix so that it doesn't conflict if we get proper support to
- * linux/types.h.
- */
-typedef __s32 __bitwise a_sle32;
-
-static inline a_sle32 a_cpu_to_sle32(int32_t val) {
-    return (__force a_sle32)cpu_to_le32(val);
-}
-
-static inline int32_t a_sle32_to_cpu(a_sle32 val) {
-    return le32_to_cpu((__force __le32)val);
-}
 
 enum wmi_service {
     WMI_SERVICE_BEACON_OFFLOAD = 0,
@@ -414,7 +397,7 @@ static inline char* wmi_service_name(int service_id) {
 
 #define WMI_SERVICE_IS_ENABLED(wmi_svc_bmap, svc_id, len) \
     ((svc_id) < (len) && \
-     __le32_to_cpu((wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))]) & \
+     (wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))] & \
      BIT((svc_id) % (sizeof(uint32_t))))
 
 #define SVCMAP(x, y, len) \
@@ -423,7 +406,7 @@ static inline char* wmi_service_name(int service_id) {
             __set_bit(y, out); \
     } while (0)
 
-static inline void wmi_10x_svc_map(const __le32* in, unsigned long* out,
+static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
                                    size_t len) {
     SVCMAP(WMI_10X_SERVICE_BEACON_OFFLOAD,
            WMI_SERVICE_BEACON_OFFLOAD, len);
@@ -485,7 +468,7 @@ static inline void wmi_10x_svc_map(const __le32* in, unsigned long* out,
            WMI_SERVICE_PEER_STATS, len);
 }
 
-static inline void wmi_main_svc_map(const __le32* in, unsigned long* out,
+static inline void wmi_main_svc_map(const uint32_t* in, unsigned long* out,
                                     size_t len) {
     SVCMAP(WMI_MAIN_SERVICE_BEACON_OFFLOAD,
            WMI_SERVICE_BEACON_OFFLOAD, len);
@@ -553,7 +536,7 @@ static inline void wmi_main_svc_map(const __le32* in, unsigned long* out,
            WMI_SERVICE_TX_ENCAP, len);
 }
 
-static inline void wmi_10_4_svc_map(const __le32* in, unsigned long* out,
+static inline void wmi_10_4_svc_map(const uint32_t* in, unsigned long* out,
                                     size_t len) {
     SVCMAP(WMI_10_4_SERVICE_BEACON_OFFLOAD,
            WMI_SERVICE_BEACON_OFFLOAD, len);
@@ -1781,17 +1764,17 @@ static inline const char* ath10k_wmi_phymode_str(enum wmi_phy_mode mode) {
 #define WMI_IE_TAG      0x4
 
 struct wmi_channel {
-    __le32 mhz;
-    __le32 band_center_freq1;
-    __le32 band_center_freq2; /* valid for 11ac, 80plus80 */
+    uint32_t mhz;
+    uint32_t band_center_freq1;
+    uint32_t band_center_freq2; /* valid for 11ac, 80plus80 */
     union {
-        __le32 flags; /* WMI_CHAN_FLAG_ */
+        uint32_t flags; /* WMI_CHAN_FLAG_ */
         struct {
             uint8_t mode; /* only 6 LSBs */
         } __packed;
     } __packed;
     union {
-        __le32 reginfo0;
+        uint32_t reginfo0;
         struct {
             /* note: power unit is 0.5 dBm */
             uint8_t min_power;
@@ -1801,7 +1784,7 @@ struct wmi_channel {
         } __packed;
     } __packed;
     union {
-        __le32 reginfo1;
+        uint32_t reginfo1;
         struct {
             uint8_t antenna_max;
             uint8_t max_tx_power;
@@ -1956,19 +1939,19 @@ enum {
 
 struct hal_reg_capabilities {
     /* regdomain value specified in EEPROM */
-    __le32 eeprom_rd;
+    uint32_t eeprom_rd;
     /*regdomain */
-    __le32 eeprom_rd_ext;
+    uint32_t eeprom_rd_ext;
     /* CAP1 capabilities bit map. */
-    __le32 regcap1;
+    uint32_t regcap1;
     /* REGDMN EEPROM CAP. */
-    __le32 regcap2;
+    uint32_t regcap2;
     /* REGDMN MODE */
-    __le32 wireless_modes;
-    __le32 low_2ghz_chan;
-    __le32 high_2ghz_chan;
-    __le32 low_5ghz_chan;
-    __le32 high_5ghz_chan;
+    uint32_t wireless_modes;
+    uint32_t low_2ghz_chan;
+    uint32_t high_2ghz_chan;
+    uint32_t low_5ghz_chan;
+    uint32_t high_5ghz_chan;
 } __packed;
 
 enum wlan_mode_capability {
@@ -1980,14 +1963,14 @@ enum wlan_mode_capability {
 /* structure used by FW for requesting host memory */
 struct wlan_host_mem_req {
     /* ID of the request */
-    __le32 req_id;
+    uint32_t req_id;
     /* size of the  of each unit */
-    __le32 unit_size;
+    uint32_t unit_size;
     /* flags to  indicate that
      * the number units is dependent
      * on number of resources(num vdevs num peers .. etc)
      */
-    __le32 num_unit_info;
+    uint32_t num_unit_info;
     /*
      * actual number of units to allocate . if flags in the num_unit_info
      * indicate that number of units is tied to number of a particular
@@ -1995,7 +1978,7 @@ struct wlan_host_mem_req {
      * will derive the number units from number of the resources it is
      * requesting.
      */
-    __le32 num_units;
+    uint32_t num_units;
 } __packed;
 
 /*
@@ -2004,69 +1987,69 @@ struct wlan_host_mem_req {
  * device capability to the host.
  */
 struct wmi_service_ready_event {
-    __le32 sw_version;
-    __le32 sw_version_1;
-    __le32 abi_version;
+    uint32_t sw_version;
+    uint32_t sw_version_1;
+    uint32_t abi_version;
     /* WMI_PHY_CAPABILITY */
-    __le32 phy_capability;
+    uint32_t phy_capability;
     /* Maximum number of frag table entries that SW will populate less 1 */
-    __le32 max_frag_entry;
-    __le32 wmi_service_bitmap[16];
-    __le32 num_rf_chains;
+    uint32_t max_frag_entry;
+    uint32_t wmi_service_bitmap[16];
+    uint32_t num_rf_chains;
     /*
      * The following field is only valid for service type
      * WMI_SERVICE_11AC
      */
-    __le32 ht_cap_info; /* WMI HT Capability */
-    __le32 vht_cap_info; /* VHT capability info field of 802.11ac */
-    __le32 vht_supp_mcs; /* VHT Supported MCS Set field Rx/Tx same */
-    __le32 hw_min_tx_power;
-    __le32 hw_max_tx_power;
+    uint32_t ht_cap_info; /* WMI HT Capability */
+    uint32_t vht_cap_info; /* VHT capability info field of 802.11ac */
+    uint32_t vht_supp_mcs; /* VHT Supported MCS Set field Rx/Tx same */
+    uint32_t hw_min_tx_power;
+    uint32_t hw_max_tx_power;
     struct hal_reg_capabilities hal_reg_capabilities;
-    __le32 sys_cap_info;
-    __le32 min_pkt_size_enable; /* Enterprise mode short pkt enable */
+    uint32_t sys_cap_info;
+    uint32_t min_pkt_size_enable; /* Enterprise mode short pkt enable */
     /*
      * Max beacon and Probe Response IE offload size
      * (includes optional P2P IEs)
      */
-    __le32 max_bcn_ie_size;
+    uint32_t max_bcn_ie_size;
     /*
      * request to host to allocate a chuck of memory and pss it down to FW
      * via WM_INIT. FW uses this as FW extesnsion memory for saving its
      * data structures. Only valid for low latency interfaces like PCIE
      * where FW can access this memory directly (or) by DMA.
      */
-    __le32 num_mem_reqs;
+    uint32_t num_mem_reqs;
     struct wlan_host_mem_req mem_reqs[0];
 } __packed;
 
 /* This is the definition from 10.X firmware branch */
 struct wmi_10x_service_ready_event {
-    __le32 sw_version;
-    __le32 abi_version;
+    uint32_t sw_version;
+    uint32_t abi_version;
 
     /* WMI_PHY_CAPABILITY */
-    __le32 phy_capability;
+    uint32_t phy_capability;
 
     /* Maximum number of frag table entries that SW will populate less 1 */
-    __le32 max_frag_entry;
-    __le32 wmi_service_bitmap[16];
-    __le32 num_rf_chains;
+    uint32_t max_frag_entry;
+    uint32_t wmi_service_bitmap[16];
+    uint32_t num_rf_chains;
 
     /*
      * The following field is only valid for service type
      * WMI_SERVICE_11AC
      */
-    __le32 ht_cap_info; /* WMI HT Capability */
-    __le32 vht_cap_info; /* VHT capability info field of 802.11ac */
-    __le32 vht_supp_mcs; /* VHT Supported MCS Set field Rx/Tx same */
-    __le32 hw_min_tx_power;
-    __le32 hw_max_tx_power;
+    uint32_t ht_cap_info; /* WMI HT Capability */
+    uint32_t vht_cap_info; /* VHT capability info field of 802.11ac */
+    uint32_t vht_supp_mcs; /* VHT Supported MCS Set field Rx/Tx same */
+    uint32_t hw_min_tx_power;
+    uint32_t hw_max_tx_power;
 
     struct hal_reg_capabilities hal_reg_capabilities;
 
-    __le32 sys_cap_info;
-    __le32 min_pkt_size_enable; /* Enterprise mode short pkt enable */
+    uint32_t sys_cap_info;
+    uint32_t min_pkt_size_enable; /* Enterprise mode short pkt enable */
 
     /*
      * request to host to allocate a chuck of memory and pss it down to FW
@@ -2074,7 +2057,7 @@ struct wmi_10x_service_ready_event {
      * data structures. Only valid for low latency interfaces like PCIE
      * where FW can access this memory directly (or) by DMA.
      */
-    __le32 num_mem_reqs;
+    uint32_t num_mem_reqs;
 
     struct wlan_host_mem_req mem_reqs[0];
 } __packed;
@@ -2083,18 +2066,18 @@ struct wmi_10x_service_ready_event {
 #define WMI_UNIFIED_READY_TIMEOUT_HZ (5 * HZ)
 
 struct wmi_ready_event {
-    __le32 sw_version;
-    __le32 abi_version;
+    uint32_t sw_version;
+    uint32_t abi_version;
     struct wmi_mac_addr mac_addr;
-    __le32 status;
+    uint32_t status;
 } __packed;
 
 struct wmi_resource_config {
     /* number of virtual devices (VAPs) to support */
-    __le32 num_vdevs;
+    uint32_t num_vdevs;
 
     /* number of peer nodes to support */
-    __le32 num_peers;
+    uint32_t num_peers;
 
     /*
      * In offload mode target supports features like WOW, chatter and
@@ -2103,16 +2086,16 @@ struct wmi_resource_config {
      * done in target. This determines maximum number of peers supported
      * by target in offload mode
      */
-    __le32 num_offload_peers;
+    uint32_t num_offload_peers;
 
     /* For target-based RX reordering */
-    __le32 num_offload_reorder_bufs;
+    uint32_t num_offload_reorder_bufs;
 
     /* number of keys per peer */
-    __le32 num_peer_keys;
+    uint32_t num_peer_keys;
 
     /* total number of TX/RX data TIDs */
-    __le32 num_tids;
+    uint32_t num_tids;
 
     /*
      * max skid for resolving hash collisions
@@ -2124,7 +2107,7 @@ struct wmi_resource_config {
      *   specifies the upper bound on how many subsequent indices to search
      *   over to find an unoccupied space.
      */
-    __le32 ast_skid_limit;
+    uint32_t ast_skid_limit;
 
     /*
      * the nominal chain mask for transmit
@@ -2134,7 +2117,7 @@ struct wmi_resource_config {
      *   This configuration parameter specifies the nominal chain-mask that
      *   should be used when not operating with a reduced set of tx chains.
      */
-    __le32 tx_chain_mask;
+    uint32_t tx_chain_mask;
 
     /*
      * the nominal chain mask for receive
@@ -2146,7 +2129,7 @@ struct wmi_resource_config {
      *   This configuration parameter specifies the nominal chain-mask that
      *   should be used when not operating with a reduced set of rx chains.
      */
-    __le32 rx_chain_mask;
+    uint32_t rx_chain_mask;
 
     /*
      * what rx reorder timeout (ms) to use for the AC
@@ -2158,10 +2141,10 @@ struct wmi_resource_config {
      *   This parameter specifies the timeout in milliseconds for each
      *   class.
      */
-    __le32 rx_timeout_pri_vi;
-    __le32 rx_timeout_pri_vo;
-    __le32 rx_timeout_pri_be;
-    __le32 rx_timeout_pri_bk;
+    uint32_t rx_timeout_pri_vi;
+    uint32_t rx_timeout_pri_vo;
+    uint32_t rx_timeout_pri_be;
+    uint32_t rx_timeout_pri_bk;
 
     /*
      * what mode the rx should decap packets to
@@ -2170,19 +2153,19 @@ struct wmi_resource_config {
      *   THis setting also determines the default TX behavior, however TX
      *   behavior can be modified on a per VAP basis during VAP init
      */
-    __le32 rx_decap_mode;
+    uint32_t rx_decap_mode;
 
     /* what is the maximum number of scan requests that can be queued */
-    __le32 scan_max_pending_reqs;
+    uint32_t scan_max_pending_reqs;
 
     /* maximum VDEV that could use BMISS offload */
-    __le32 bmiss_offload_max_vdev;
+    uint32_t bmiss_offload_max_vdev;
 
     /* maximum VDEV that could use offload roaming */
-    __le32 roam_offload_max_vdev;
+    uint32_t roam_offload_max_vdev;
 
     /* maximum AP profiles that would push to offload roaming */
-    __le32 roam_offload_max_ap_profiles;
+    uint32_t roam_offload_max_ap_profiles;
 
     /*
      * how many groups to use for mcast->ucast conversion
@@ -2196,7 +2179,7 @@ struct wmi_resource_config {
      *   many multicast groups to provide storage for within its multicast
      *   group membership table.
      */
-    __le32 num_mcast_groups;
+    uint32_t num_mcast_groups;
 
     /*
      * size to alloc for the mcast membership table
@@ -2207,7 +2190,7 @@ struct wmi_resource_config {
      *   These multicast group membership table elements are shared by the
      *   multicast groups stored within the table.
      */
-    __le32 num_mcast_table_elems;
+    uint32_t num_mcast_table_elems;
 
     /*
      * whether/how to do multicast->unicast conversion
@@ -2227,7 +2210,7 @@ struct wmi_resource_config {
      *        membership table.  If the IP multicast address is not found,
      *        transmit the frame as multicast.
      */
-    __le32 mcast2ucast_mode;
+    uint32_t mcast2ucast_mode;
 
     /*
      * how much memory to allocate for a tx PPDU dbg log
@@ -2236,22 +2219,22 @@ struct wmi_resource_config {
      *   to store a log of tx PPDU meta-information (how large the PPDU
      *   was, when it was sent, whether it was successful, etc.)
      */
-    __le32 tx_dbg_log_size;
+    uint32_t tx_dbg_log_size;
 
     /* how many AST entries to be allocated for WDS */
-    __le32 num_wds_entries;
+    uint32_t num_wds_entries;
 
     /*
      * MAC DMA burst size, e.g., For target PCI limit can be
      * 0 -default, 1 256B
      */
-    __le32 dma_burst_size;
+    uint32_t dma_burst_size;
 
     /*
      * Fixed delimiters to be inserted after every MPDU to
      * account for interface latency to avoid underrun.
      */
-    __le32 mac_aggr_delim;
+    uint32_t mac_aggr_delim;
 
     /*
      *   determine whether target is responsible for detecting duplicate
@@ -2262,20 +2245,20 @@ struct wmi_resource_config {
      *   0: target responsible for frag timeout and dup checking
      *   1: host responsible for frag timeout and dup checking
      */
-    __le32 rx_skip_defrag_timeout_dup_detection_check;
+    uint32_t rx_skip_defrag_timeout_dup_detection_check;
 
     /*
      * Configuration for VoW :
      * No of Video Nodes to be supported
      * and Max no of descriptors for each Video link (node).
      */
-    __le32 vow_config;
+    uint32_t vow_config;
 
     /* maximum VDEV that could use GTK offload */
-    __le32 gtk_offload_max_vdev;
+    uint32_t gtk_offload_max_vdev;
 
     /* Number of msdu descriptors target should use */
-    __le32 num_msdu_desc;
+    uint32_t num_msdu_desc;
 
     /*
      * Max. number of Tx fragments per MSDU
@@ -2283,21 +2266,21 @@ struct wmi_resource_config {
      *  This is sent by the target as part of the WMI_SERVICE_READY event
      *  and is overridden by the OS shim as required.
      */
-    __le32 max_frag_entries;
+    uint32_t max_frag_entries;
 } __packed;
 
 struct wmi_resource_config_10x {
     /* number of virtual devices (VAPs) to support */
-    __le32 num_vdevs;
+    uint32_t num_vdevs;
 
     /* number of peer nodes to support */
-    __le32 num_peers;
+    uint32_t num_peers;
 
     /* number of keys per peer */
-    __le32 num_peer_keys;
+    uint32_t num_peer_keys;
 
     /* total number of TX/RX data TIDs */
-    __le32 num_tids;
+    uint32_t num_tids;
 
     /*
      * max skid for resolving hash collisions
@@ -2309,7 +2292,7 @@ struct wmi_resource_config_10x {
      *   specifies the upper bound on how many subsequent indices to search
      *   over to find an unoccupied space.
      */
-    __le32 ast_skid_limit;
+    uint32_t ast_skid_limit;
 
     /*
      * the nominal chain mask for transmit
@@ -2319,7 +2302,7 @@ struct wmi_resource_config_10x {
      *   This configuration parameter specifies the nominal chain-mask that
      *   should be used when not operating with a reduced set of tx chains.
      */
-    __le32 tx_chain_mask;
+    uint32_t tx_chain_mask;
 
     /*
      * the nominal chain mask for receive
@@ -2331,7 +2314,7 @@ struct wmi_resource_config_10x {
      *   This configuration parameter specifies the nominal chain-mask that
      *   should be used when not operating with a reduced set of rx chains.
      */
-    __le32 rx_chain_mask;
+    uint32_t rx_chain_mask;
 
     /*
      * what rx reorder timeout (ms) to use for the AC
@@ -2343,10 +2326,10 @@ struct wmi_resource_config_10x {
      *   This parameter specifies the timeout in milliseconds for each
      *   class.
      */
-    __le32 rx_timeout_pri_vi;
-    __le32 rx_timeout_pri_vo;
-    __le32 rx_timeout_pri_be;
-    __le32 rx_timeout_pri_bk;
+    uint32_t rx_timeout_pri_vi;
+    uint32_t rx_timeout_pri_vo;
+    uint32_t rx_timeout_pri_be;
+    uint32_t rx_timeout_pri_bk;
 
     /*
      * what mode the rx should decap packets to
@@ -2355,19 +2338,19 @@ struct wmi_resource_config_10x {
      *   THis setting also determines the default TX behavior, however TX
      *   behavior can be modified on a per VAP basis during VAP init
      */
-    __le32 rx_decap_mode;
+    uint32_t rx_decap_mode;
 
     /* what is the maximum number of scan requests that can be queued */
-    __le32 scan_max_pending_reqs;
+    uint32_t scan_max_pending_reqs;
 
     /* maximum VDEV that could use BMISS offload */
-    __le32 bmiss_offload_max_vdev;
+    uint32_t bmiss_offload_max_vdev;
 
     /* maximum VDEV that could use offload roaming */
-    __le32 roam_offload_max_vdev;
+    uint32_t roam_offload_max_vdev;
 
     /* maximum AP profiles that would push to offload roaming */
-    __le32 roam_offload_max_ap_profiles;
+    uint32_t roam_offload_max_ap_profiles;
 
     /*
      * how many groups to use for mcast->ucast conversion
@@ -2381,7 +2364,7 @@ struct wmi_resource_config_10x {
      *   many multicast groups to provide storage for within its multicast
      *   group membership table.
      */
-    __le32 num_mcast_groups;
+    uint32_t num_mcast_groups;
 
     /*
      * size to alloc for the mcast membership table
@@ -2392,7 +2375,7 @@ struct wmi_resource_config_10x {
      *   These multicast group membership table elements are shared by the
      *   multicast groups stored within the table.
      */
-    __le32 num_mcast_table_elems;
+    uint32_t num_mcast_table_elems;
 
     /*
      * whether/how to do multicast->unicast conversion
@@ -2412,7 +2395,7 @@ struct wmi_resource_config_10x {
      *        membership table.  If the IP multicast address is not found,
      *        transmit the frame as multicast.
      */
-    __le32 mcast2ucast_mode;
+    uint32_t mcast2ucast_mode;
 
     /*
      * how much memory to allocate for a tx PPDU dbg log
@@ -2421,22 +2404,22 @@ struct wmi_resource_config_10x {
      *   to store a log of tx PPDU meta-information (how large the PPDU
      *   was, when it was sent, whether it was successful, etc.)
      */
-    __le32 tx_dbg_log_size;
+    uint32_t tx_dbg_log_size;
 
     /* how many AST entries to be allocated for WDS */
-    __le32 num_wds_entries;
+    uint32_t num_wds_entries;
 
     /*
      * MAC DMA burst size, e.g., For target PCI limit can be
      * 0 -default, 1 256B
      */
-    __le32 dma_burst_size;
+    uint32_t dma_burst_size;
 
     /*
      * Fixed delimiters to be inserted after every MPDU to
      * account for interface latency to avoid underrun.
      */
-    __le32 mac_aggr_delim;
+    uint32_t mac_aggr_delim;
 
     /*
      *   determine whether target is responsible for detecting duplicate
@@ -2447,17 +2430,17 @@ struct wmi_resource_config_10x {
      *   0: target responsible for frag timeout and dup checking
      *   1: host responsible for frag timeout and dup checking
      */
-    __le32 rx_skip_defrag_timeout_dup_detection_check;
+    uint32_t rx_skip_defrag_timeout_dup_detection_check;
 
     /*
      * Configuration for VoW :
      * No of Video Nodes to be supported
      * and Max no of descriptors for each Video link (node).
      */
-    __le32 vow_config;
+    uint32_t vow_config;
 
     /* Number of msdu descriptors target should use */
-    __le32 num_msdu_desc;
+    uint32_t num_msdu_desc;
 
     /*
      * Max. number of Tx fragments per MSDU
@@ -2465,7 +2448,7 @@ struct wmi_resource_config_10x {
      *  This is sent by the target as part of the WMI_SERVICE_READY event
      *  and is overridden by the OS shim as required.
      */
-    __le32 max_frag_entries;
+    uint32_t max_frag_entries;
 } __packed;
 
 enum wmi_10_2_feature_mask {
@@ -2478,13 +2461,13 @@ enum wmi_10_2_feature_mask {
 
 struct wmi_resource_config_10_2 {
     struct wmi_resource_config_10x common;
-    __le32 max_peer_ext_stats;
-    __le32 smart_ant_cap; /* 0-disable, 1-enable */
-    __le32 bk_min_free;
-    __le32 be_min_free;
-    __le32 vi_min_free;
-    __le32 vo_min_free;
-    __le32 feature_mask;
+    uint32_t max_peer_ext_stats;
+    uint32_t smart_ant_cap; /* 0-disable, 1-enable */
+    uint32_t bk_min_free;
+    uint32_t be_min_free;
+    uint32_t vi_min_free;
+    uint32_t vo_min_free;
+    uint32_t feature_mask;
 } __packed;
 
 #define NUM_UNITS_IS_NUM_VDEVS         BIT(0)
@@ -2493,13 +2476,13 @@ struct wmi_resource_config_10_2 {
 
 struct wmi_resource_config_10_4 {
     /* Number of virtual devices (VAPs) to support */
-    __le32 num_vdevs;
+    uint32_t num_vdevs;
 
     /* Number of peer nodes to support */
-    __le32 num_peers;
+    uint32_t num_peers;
 
     /* Number of active peer nodes to support */
-    __le32 num_active_peers;
+    uint32_t num_active_peers;
 
     /* In offload mode, target supports features like WOW, chatter and other
      * protocol offloads. In order to support them some functionalities like
@@ -2507,18 +2490,18 @@ struct wmi_resource_config_10_4 {
      * This determines maximum number of peers supported by target in
      * offload mode.
      */
-    __le32 num_offload_peers;
+    uint32_t num_offload_peers;
 
     /* Number of reorder buffers available for doing target based reorder
      * Rx reorder buffering
      */
-    __le32 num_offload_reorder_buffs;
+    uint32_t num_offload_reorder_buffs;
 
     /* Number of keys per peer */
-    __le32 num_peer_keys;
+    uint32_t num_peer_keys;
 
     /* Total number of TX/RX data TIDs */
-    __le32 num_tids;
+    uint32_t num_tids;
 
     /* Max skid for resolving hash collisions.
      * The address search table is sparse, so that if two MAC addresses
@@ -2528,7 +2511,7 @@ struct wmi_resource_config_10_4 {
      * specifies the upper bound on how many subsequent indices to search
      * over to find an unoccupied space.
      */
-    __le32 ast_skid_limit;
+    uint32_t ast_skid_limit;
 
     /* The nominal chain mask for transmit.
      * The chain mask may be modified dynamically, e.g. to operate AP tx
@@ -2536,7 +2519,7 @@ struct wmi_resource_config_10_4 {
      * This configuration parameter specifies the nominal chain-mask that
      * should be used when not operating with a reduced set of tx chains.
      */
-    __le32 tx_chain_mask;
+    uint32_t tx_chain_mask;
 
     /* The nominal chain mask for receive.
      * The chain mask may be modified dynamically, e.g. for a client to use
@@ -2546,7 +2529,7 @@ struct wmi_resource_config_10_4 {
      * chain-mask that should be used when not operating with a reduced
      * set of rx chains.
      */
-    __le32 rx_chain_mask;
+    uint32_t rx_chain_mask;
 
     /* What rx reorder timeout (ms) to use for the AC.
      * Each WMM access class (voice, video, best-effort, background) will
@@ -2555,22 +2538,22 @@ struct wmi_resource_config_10_4 {
      * been received. This parameter specifies the timeout in milliseconds
      * for each class.
      */
-    __le32 rx_timeout_pri[4];
+    uint32_t rx_timeout_pri[4];
 
     /* What mode the rx should decap packets to.
      * MAC can decap to RAW (no decap), native wifi or Ethernet types.
      * This setting also determines the default TX behavior, however TX
      * behavior can be modified on a per VAP basis during VAP init
      */
-    __le32 rx_decap_mode;
+    uint32_t rx_decap_mode;
 
-    __le32 scan_max_pending_req;
+    uint32_t scan_max_pending_req;
 
-    __le32 bmiss_offload_max_vdev;
+    uint32_t bmiss_offload_max_vdev;
 
-    __le32 roam_offload_max_vdev;
+    uint32_t roam_offload_max_vdev;
 
-    __le32 roam_offload_max_ap_profiles;
+    uint32_t roam_offload_max_ap_profiles;
 
     /* How many groups to use for mcast->ucast conversion.
      * The target's WAL maintains a table to hold information regarding
@@ -2581,7 +2564,7 @@ struct wmi_resource_config_10_4 {
      * parameter tells the target how many multicast groups to provide
      * storage for within its multicast group membership table.
      */
-    __le32 num_mcast_groups;
+    uint32_t num_mcast_groups;
 
     /* Size to alloc for the mcast membership table.
      * This num_mcast_table_elems configuration parameter tells the target
@@ -2590,7 +2573,7 @@ struct wmi_resource_config_10_4 {
      * table elements are shared by the multicast groups stored within
      * the table.
      */
-    __le32 num_mcast_table_elems;
+    uint32_t num_mcast_table_elems;
 
     /* Whether/how to do multicast->unicast conversion.
      * This configuration parameter specifies whether the target should
@@ -2607,25 +2590,25 @@ struct wmi_resource_config_10_4 {
      *      table.  If the IP multicast address is not found, transmit the
      *      frame as multicast.
      */
-    __le32 mcast2ucast_mode;
+    uint32_t mcast2ucast_mode;
 
     /* How much memory to allocate for a tx PPDU dbg log.
      * This parameter controls how much memory the target will allocate to
      * store a log of tx PPDU meta-information (how large the PPDU was,
      * when it was sent, whether it was successful, etc.)
      */
-    __le32 tx_dbg_log_size;
+    uint32_t tx_dbg_log_size;
 
     /* How many AST entries to be allocated for WDS */
-    __le32 num_wds_entries;
+    uint32_t num_wds_entries;
 
     /* MAC DMA burst size. 0 -default, 1 -256B */
-    __le32 dma_burst_size;
+    uint32_t dma_burst_size;
 
     /* Fixed delimiters to be inserted after every MPDU to account for
      * interface latency to avoid underrun.
      */
-    __le32 mac_aggr_delim;
+    uint32_t mac_aggr_delim;
 
     /* Determine whether target is responsible for detecting duplicate
      * non-aggregate MPDU and timing out stale fragments. A-MPDU reordering
@@ -2634,70 +2617,70 @@ struct wmi_resource_config_10_4 {
      * 0: target responsible for frag timeout and dup checking
      * 1: host responsible for frag timeout and dup checking
      */
-    __le32 rx_skip_defrag_timeout_dup_detection_check;
+    uint32_t rx_skip_defrag_timeout_dup_detection_check;
 
     /* Configuration for VoW : No of Video nodes to be supported and max
      * no of descriptors for each video link (node).
      */
-    __le32 vow_config;
+    uint32_t vow_config;
 
     /* Maximum vdev that could use gtk offload */
-    __le32 gtk_offload_max_vdev;
+    uint32_t gtk_offload_max_vdev;
 
     /* Number of msdu descriptors target should use */
-    __le32 num_msdu_desc;
+    uint32_t num_msdu_desc;
 
     /* Max number of tx fragments per MSDU.
      * This parameter controls the max number of tx fragments per MSDU.
      * This will passed by target as part of the WMI_SERVICE_READY event
      * and is overridden by the OS shim as required.
      */
-    __le32 max_frag_entries;
+    uint32_t max_frag_entries;
 
     /* Max number of extended peer stats.
      * This parameter controls the max number of peers for which extended
      * statistics are supported by target
      */
-    __le32 max_peer_ext_stats;
+    uint32_t max_peer_ext_stats;
 
     /* Smart antenna capabilities information.
      * 1 - Smart antenna is enabled
      * 0 - Smart antenna is disabled
      * In future this can contain smart antenna specific capabilities.
      */
-    __le32 smart_ant_cap;
+    uint32_t smart_ant_cap;
 
     /* User can configure the buffers allocated for each AC (BE, BK, VI, VO)
      * during init.
      */
-    __le32 bk_minfree;
-    __le32 be_minfree;
-    __le32 vi_minfree;
-    __le32 vo_minfree;
+    uint32_t bk_minfree;
+    uint32_t be_minfree;
+    uint32_t vi_minfree;
+    uint32_t vo_minfree;
 
     /* Rx batch mode capability.
      * 1 - Rx batch mode enabled
      * 0 - Rx batch mode disabled
      */
-    __le32 rx_batchmode;
+    uint32_t rx_batchmode;
 
     /* Thermal throttling capability.
      * 1 - Capable of thermal throttling
      * 0 - Not capable of thermal throttling
      */
-    __le32 tt_support;
+    uint32_t tt_support;
 
     /* ATF configuration.
      * 1  - Enable ATF
      * 0  - Disable ATF
      */
-    __le32 atf_config;
+    uint32_t atf_config;
 
     /* Configure padding to manage IP header un-alignment
      * 1  - Enable padding
      * 0  - Disable padding
      */
-    __le32 iphdr_pad_config;
+    uint32_t iphdr_pad_config;
 
     /* qwrap configuration (bits 15-0)
      * 1  - This is qwrap configuration
@@ -2708,7 +2691,7 @@ struct wmi_resource_config_10_4 {
      * individual frames, this option must be enabled.  This uses an extra
      * 4 bytes per tx-msdu descriptor, so don't enable it unless you need it.
      */
-    __le32 qwrap_config;
+    uint32_t qwrap_config;
 } __packed;
 
 /**
@@ -2731,23 +2714,23 @@ enum wmi_10_4_feature_mask {
 
 struct wmi_ext_resource_config_10_4_cmd {
     /* contains enum wmi_host_platform_type */
-    __le32 host_platform_config;
+    uint32_t host_platform_config;
     /* see enum wmi_10_4_feature_mask */
-    __le32 fw_feature_bitmap;
+    uint32_t fw_feature_bitmap;
 };
 
 /* strucutre describing host memory chunk. */
 struct host_memory_chunk {
     /* id of the request that is passed up in service ready */
-    __le32 req_id;
+    uint32_t req_id;
     /* the physical address the memory chunk */
-    __le32 ptr;
+    uint32_t ptr;
     /* size of the chunk */
-    __le32 size;
+    uint32_t size;
 } __packed;
 
 struct wmi_host_mem_chunks {
-    __le32 count;
+    uint32_t count;
     /* some fw revisions require at least 1 chunk regardless of count */
     struct host_memory_chunk items[1];
 } __packed;
@@ -2774,38 +2757,38 @@ struct wmi_init_cmd_10_4 {
 } __packed;
 
 struct wmi_chan_list_entry {
-    __le16 freq;
+    uint16_t freq;
     uint8_t phy_mode; /* valid for 10.2 only */
     uint8_t reserved;
 } __packed;
 
 /* TLV for channel list */
 struct wmi_chan_list {
-    __le32 tag; /* WMI_CHAN_LIST_TAG */
-    __le32 num_chan;
+    uint32_t tag; /* WMI_CHAN_LIST_TAG */
+    uint32_t num_chan;
     struct wmi_chan_list_entry channel_list[0];
 } __packed;
 
 struct wmi_bssid_list {
-    __le32 tag; /* WMI_BSSID_LIST_TAG */
-    __le32 num_bssid;
+    uint32_t tag; /* WMI_BSSID_LIST_TAG */
+    uint32_t num_bssid;
     struct wmi_mac_addr bssid_list[0];
 } __packed;
 
 struct wmi_ie_data {
-    __le32 tag; /* WMI_IE_TAG */
-    __le32 ie_len;
+    uint32_t tag; /* WMI_IE_TAG */
+    uint32_t ie_len;
     uint8_t ie_data[0];
 } __packed;
 
 struct wmi_ssid {
-    __le32 ssid_len;
+    uint32_t ssid_len;
     uint8_t ssid[32];
 } __packed;
 
 struct wmi_ssid_list {
-    __le32 tag; /* WMI_SSID_LIST_TAG */
-    __le32 num_ssids;
+    uint32_t tag; /* WMI_SSID_LIST_TAG */
+    uint32_t num_ssids;
     struct wmi_ssid ssids[0];
 } __packed;
 
@@ -2837,24 +2820,24 @@ enum wmi_scan_priority {
 
 struct wmi_start_scan_common {
     /* Scan ID */
-    __le32 scan_id;
+    uint32_t scan_id;
     /* Scan requestor ID */
-    __le32 scan_req_id;
+    uint32_t scan_req_id;
     /* VDEV id(interface) that is requesting scan */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* Scan Priority, input to scan scheduler */
-    __le32 scan_priority;
+    uint32_t scan_priority;
     /* Scan events subscription */
-    __le32 notify_scan_events;
+    uint32_t notify_scan_events;
     /* dwell time in msec on active channels */
-    __le32 dwell_time_active;
+    uint32_t dwell_time_active;
     /* dwell time in msec on passive channels */
-    __le32 dwell_time_passive;
+    uint32_t dwell_time_passive;
     /*
      * min time in msec on the BSS channel,only valid if atleast one
      * VDEV is active
      */
-    __le32 min_rest_time;
+    uint32_t min_rest_time;
     /*
      * max rest time in msec on the BSS channel,only valid if at least
      * one VDEV is active
@@ -2868,7 +2851,7 @@ struct wmi_start_scan_common {
      * max_rest_time scanner will switch to off channel irrespective of
      * activity. activity is determined by the idle_time parameter.
      */
-    __le32 max_rest_time;
+    uint32_t max_rest_time;
     /*
      * time before sending next set of probe requests.
      * The scanner keeps repeating probe requests transmission with
@@ -2876,23 +2859,23 @@ struct wmi_start_scan_common {
      * The number of probe requests specified depends on the ssid_list
      * and bssid_list
      */
-    __le32 repeat_probe_time;
+    uint32_t repeat_probe_time;
     /* time in msec between 2 consequetive probe requests with in a set. */
-    __le32 probe_spacing_time;
+    uint32_t probe_spacing_time;
     /*
      * data inactivity time in msec on bss channel that will be used by
      * scanner for measuring the inactivity.
      */
-    __le32 idle_time;
+    uint32_t idle_time;
     /* maximum time in msec allowed for scan  */
-    __le32 max_scan_time;
+    uint32_t max_scan_time;
     /*
      * delay in msec before sending first probe request after switching
      * to a channel
      */
-    __le32 probe_delay;
+    uint32_t probe_delay;
     /* Scan control flags */
-    __le32 scan_ctrl_flags;
+    uint32_t scan_ctrl_flags;
 } __packed;
 
 struct wmi_start_scan_tlvs {
@@ -2904,7 +2887,7 @@ struct wmi_start_scan_tlvs {
 
 struct wmi_start_scan_cmd {
     struct wmi_start_scan_common common;
-    __le32 burst_duration_ms;
+    uint32_t burst_duration_ms;
     struct wmi_start_scan_tlvs tlvs;
 } __packed;
 
@@ -2983,10 +2966,10 @@ enum wmi_stop_scan_type {
 };
 
 struct wmi_stop_scan_cmd {
-    __le32 scan_req_id;
-    __le32 scan_id;
-    __le32 req_type;
-    __le32 vdev_id;
+    uint32_t scan_req_id;
+    uint32_t scan_id;
+    uint32_t req_type;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_stop_scan_arg {
@@ -2999,7 +2982,7 @@ struct wmi_stop_scan_arg {
 };
 
 struct wmi_scan_chan_list_cmd {
-    __le32 num_scan_chans;
+    uint32_t num_scan_chans;
     struct wmi_channel chan_info[0];
 } __packed;
 
@@ -3043,12 +3026,12 @@ enum wmi_scan_completion_reason {
 };
 
 struct wmi_scan_event {
-    __le32 event_type; /* %WMI_SCAN_EVENT_ */
-    __le32 reason; /* %WMI_SCAN_REASON_ */
-    __le32 channel_freq; /* only valid for WMI_SCAN_EVENT_FOREIGN_CHANNEL */
-    __le32 scan_req_id;
-    __le32 scan_id;
-    __le32 vdev_id;
+    uint32_t event_type; /* %WMI_SCAN_EVENT_ */
+    uint32_t reason; /* %WMI_SCAN_REASON_ */
+    uint32_t channel_freq; /* only valid for WMI_SCAN_EVENT_FOREIGN_CHANNEL */
+    uint32_t scan_req_id;
+    uint32_t scan_id;
+    uint32_t vdev_id;
 } __packed;
 
 /*
@@ -3069,17 +3052,17 @@ struct wmi_scan_event {
  * descriptor up to the host.
  */
 struct wmi_mgmt_rx_hdr_v1 {
-    __le32 channel;
-    __le32 snr;
-    __le32 rate;
-    __le32 phy_mode;
-    __le32 buf_len;
-    __le32 status; /* %WMI_RX_STATUS_ */
+    uint32_t channel;
+    uint32_t snr;
+    uint32_t rate;
+    uint32_t phy_mode;
+    uint32_t buf_len;
+    uint32_t status; /* %WMI_RX_STATUS_ */
 } __packed;
 
 struct wmi_mgmt_rx_hdr_v2 {
     struct wmi_mgmt_rx_hdr_v1 v1;
-    __le32 rssi_ctl[4];
+    uint32_t rssi_ctl[4];
 } __packed;
 
 struct wmi_mgmt_rx_event_v1 {
@@ -3093,13 +3076,13 @@ struct wmi_mgmt_rx_event_v2 {
 } __packed;
 
 struct wmi_10_4_mgmt_rx_hdr {
-    __le32 channel;
-    __le32 snr;
+    uint32_t channel;
+    uint32_t snr;
     uint8_t rssi_ctl[4];
-    __le32 rate;
-    __le32 phy_mode;
-    __le32 buf_len;
-    __le32 status;
+    uint32_t rate;
+    uint32_t phy_mode;
+    uint32_t buf_len;
+    uint32_t status;
 } __packed;
 
 struct wmi_10_4_mgmt_rx_event {
@@ -3108,7 +3091,7 @@ struct wmi_10_4_mgmt_rx_event {
 } __packed;
 
 struct wmi_mgmt_rx_ext_info {
-    __le64 rx_mac_timestamp;
+    uint64_t rx_mac_timestamp;
 } __packed __aligned(4);
 
 #define WMI_RX_STATUS_OK            0x00
@@ -3134,40 +3117,40 @@ enum phy_err_type {
 };
 
 struct wmi_phyerr {
-    __le32 tsf_timestamp;
-    __le16 freq1;
-    __le16 freq2;
+    uint32_t tsf_timestamp;
+    uint16_t freq1;
+    uint16_t freq2;
     uint8_t rssi_combined;
     uint8_t chan_width_mhz;
     uint8_t phy_err_code;
     uint8_t rsvd0;
-    __le32 rssi_chains[4];
-    __le16 nf_chains[4];
-    __le32 buf_len;
+    uint32_t rssi_chains[4];
+    uint16_t nf_chains[4];
+    uint32_t buf_len;
     uint8_t buf[0];
 } __packed;
 
 struct wmi_phyerr_event {
-    __le32 num_phyerrs;
-    __le32 tsf_l32;
-    __le32 tsf_u32;
+    uint32_t num_phyerrs;
+    uint32_t tsf_l32;
+    uint32_t tsf_u32;
     struct wmi_phyerr phyerrs[0];
 } __packed;
 
 struct wmi_10_4_phyerr_event {
-    __le32 tsf_l32;
-    __le32 tsf_u32;
-    __le16 freq1;
-    __le16 freq2;
+    uint32_t tsf_l32;
+    uint32_t tsf_u32;
+    uint16_t freq1;
+    uint16_t freq2;
     uint8_t rssi_combined;
     uint8_t chan_width_mhz;
     uint8_t phy_err_code;
     uint8_t rsvd0;
-    __le32 rssi_chains[4];
-    __le16 nf_chains[4];
-    __le32 phy_err_mask[2];
-    __le32 tsf_timestamp;
-    __le32 buf_len;
+    uint32_t rssi_chains[4];
+    uint16_t nf_chains[4];
+    uint32_t phy_err_mask[2];
+    uint32_t tsf_timestamp;
+    uint32_t buf_len;
     uint8_t buf[0];
 } __packed;
 
@@ -3177,8 +3160,8 @@ struct wmi_10_4_phyerr_event {
 #define PHYERR_TLV_TAG_SPECTRAL_SUMMARY_REPORT  0xF9
 
 struct phyerr_radar_report {
-    __le32 reg0; /* RADAR_REPORT_REG0_* */
-    __le32 reg1; /* RADAR_REPORT_REG1_* */
+    uint32_t reg0; /* RADAR_REPORT_REG0_* */
+    uint32_t reg1; /* RADAR_REPORT_REG1_* */
 } __packed;
 
 #define RADAR_REPORT_REG0_PULSE_IS_CHIRP_MASK       0x80000000
@@ -3215,8 +3198,8 @@ struct phyerr_radar_report {
 #define RADAR_REPORT_REG1_PULSE_DUR_LSB         0
 
 struct phyerr_fft_report {
-    __le32 reg0; /* SEARCH_FFT_REPORT_REG0_ * */
-    __le32 reg1; /* SEARCH_FFT_REPORT_REG1_ * */
+    uint32_t reg0; /* SEARCH_FFT_REPORT_REG0_ * */
+    uint32_t reg1; /* SEARCH_FFT_REPORT_REG1_ * */
 } __packed;
 
 #define SEARCH_FFT_REPORT_REG0_TOTAL_GAIN_DB_MASK   0xFF800000
@@ -3244,7 +3227,7 @@ struct phyerr_fft_report {
 #define SEARCH_FFT_REPORT_REG1_NUM_STR_BINS_IB_LSB  0
 
 struct phyerr_tlv {
-    __le16 len;
+    uint16_t len;
     uint8_t tag;
     uint8_t sig;
 } __packed;
@@ -3253,11 +3236,11 @@ struct phyerr_tlv {
 #define DFS_PEAK_MAG_THOLD_POSSIBLY_FALSE   40
 
 struct wmi_mgmt_tx_hdr {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 tx_rate;
-    __le32 tx_power;
-    __le32 buf_len;
+    uint32_t tx_rate;
+    uint32_t tx_power;
+    uint32_t buf_len;
 } __packed;
 
 struct wmi_mgmt_tx_cmd {
@@ -3266,19 +3249,19 @@ struct wmi_mgmt_tx_cmd {
 } __packed;
 
 struct wmi_echo_event {
-    __le32 value;
+    uint32_t value;
 } __packed;
 
 struct wmi_echo_cmd {
-    __le32 value;
+    uint32_t value;
 } __packed;
 
 struct wmi_pdev_set_regdomain_cmd {
-    __le32 reg_domain;
-    __le32 reg_domain_2G;
-    __le32 reg_domain_5G;
-    __le32 conformance_test_limit_2G;
-    __le32 conformance_test_limit_5G;
+    uint32_t reg_domain;
+    uint32_t reg_domain_2G;
+    uint32_t reg_domain_5G;
+    uint32_t conformance_test_limit_2G;
+    uint32_t conformance_test_limit_5G;
 } __packed;
 
 enum wmi_dfs_region {
@@ -3296,29 +3279,29 @@ enum wmi_dfs_region {
 };
 
 struct wmi_pdev_set_regdomain_cmd_10x {
-    __le32 reg_domain;
-    __le32 reg_domain_2G;
-    __le32 reg_domain_5G;
-    __le32 conformance_test_limit_2G;
-    __le32 conformance_test_limit_5G;
+    uint32_t reg_domain;
+    uint32_t reg_domain_2G;
+    uint32_t reg_domain_5G;
+    uint32_t conformance_test_limit_2G;
+    uint32_t conformance_test_limit_5G;
 
     /* dfs domain from wmi_dfs_region */
-    __le32 dfs_domain;
+    uint32_t dfs_domain;
 } __packed;
 
 /* Command to set/unset chip in quiet mode */
 struct wmi_pdev_set_quiet_cmd {
     /* period in TUs */
-    __le32 period;
+    uint32_t period;
 
     /* duration in TUs */
-    __le32 duration;
+    uint32_t duration;
 
     /* offset in TUs */
-    __le32 next_start;
+    uint32_t next_start;
 
     /* enable/disable */
-    __le32 enabled;
+    uint32_t enabled;
 } __packed;
 
 /*
@@ -3357,16 +3340,16 @@ enum wmi_csa_event_ies_present_flag {
 
 /* wmi CSA receive event from beacon frame */
 struct wmi_csa_event {
-    __le32 i_fc_dur;
+    uint32_t i_fc_dur;
     /* Bit 0-15: FC */
     /* Bit 16-31: DUR */
     struct wmi_mac_addr i_addr1;
     struct wmi_mac_addr i_addr2;
-    __le32 csa_ie[2];
-    __le32 xcsa_ie[2];
-    __le32 wb_ie[2];
-    __le32 cswarp_ie;
-    __le32 ies_present_flag; /* wmi_csa_event_ies_present_flag */
+    uint32_t csa_ie[2];
+    uint32_t xcsa_ie[2];
+    uint32_t wb_ie[2];
+    uint32_t cswarp_ie;
+    uint32_t ies_present_flag; /* wmi_csa_event_ies_present_flag */
 } __packed;
 
 /* the definition of different PDEV parameters */
@@ -3786,8 +3769,8 @@ enum wmi_10_4_pdev_param {
 };
 
 struct wmi_pdev_set_param_cmd {
-    __le32 param_id;
-    __le32 param_value;
+    uint32_t param_id;
+    uint32_t param_value;
 } __packed;
 
 /* valid period is 1 ~ 60000ms, unit in millisecond */
@@ -3795,7 +3778,7 @@ struct wmi_pdev_set_param_cmd {
 
 struct wmi_pdev_get_tpc_config_cmd {
     /* parameter   */
-    __le32 param;
+    uint32_t param;
 } __packed;
 
 #define WMI_TPC_CONFIG_PARAM        1
@@ -3818,17 +3801,17 @@ enum wmi_tpc_config_event_flag {
 };
 
 struct wmi_pdev_tpc_config_event {
-    __le32 reg_domain;
-    __le32 chan_freq;
-    __le32 phy_mode;
-    __le32 twice_antenna_reduction;
-    __le32 twice_max_rd_power;
-    a_sle32 twice_antenna_gain;
-    __le32 power_limit;
-    __le32 rate_max;
-    __le32 num_tx_chain;
-    __le32 ctl;
-    __le32 flags;
+    uint32_t reg_domain;
+    uint32_t chan_freq;
+    uint32_t phy_mode;
+    uint32_t twice_antenna_reduction;
+    uint32_t twice_max_rd_power;
+    int32_t  twice_antenna_gain;
+    uint32_t power_limit;
+    uint32_t rate_max;
+    uint32_t num_tx_chain;
+    uint32_t ctl;
+    uint32_t flags;
     int8_t max_reg_allow_pow[WMI_TPC_TX_N_CHAIN];
     int8_t max_reg_allow_pow_agcdd[WMI_TPC_TX_N_CHAIN][WMI_TPC_TX_N_CHAIN];
     int8_t max_reg_allow_pow_agstbc[WMI_TPC_TX_N_CHAIN][WMI_TPC_TX_N_CHAIN];
@@ -3848,7 +3831,7 @@ enum wmi_tp_scale {
 
 struct wmi_pdev_chanlist_update_event {
     /* number of channels */
-    __le32 num_chan;
+    uint32_t num_chan;
     /* array of channels */
     struct wmi_channel channel_list[1];
 } __packed;
@@ -3877,14 +3860,14 @@ struct wmi_pdev_set_channel_cmd {
 } __packed;
 
 struct wmi_pdev_pktlog_enable_cmd {
-    __le32 ev_bitmap;
+    uint32_t ev_bitmap;
 } __packed;
 
 /* Customize the DSCP (bit) to TID (0-7) mapping for QOS */
 #define WMI_DSCP_MAP_MAX    (64)
 struct wmi_pdev_set_dscp_tid_map_cmd {
     /* map indicating DSCP to TID conversion */
-    __le32 dscp_to_tid_map[WMI_DSCP_MAP_MAX];
+    uint32_t dscp_to_tid_map[WMI_DSCP_MAP_MAX];
 } __packed;
 
 enum mcast_bcast_rate_id {
@@ -3894,16 +3877,16 @@ enum mcast_bcast_rate_id {
 
 struct mcast_bcast_rate {
     enum mcast_bcast_rate_id rate_id;
-    __le32 rate;
+    uint32_t rate;
 } __packed;
 
 struct wmi_wmm_params {
-    __le32 cwmin;
-    __le32 cwmax;
-    __le32 aifs;
-    __le32 txop;
-    __le32 acm;
-    __le32 no_ack;
+    uint32_t cwmin;
+    uint32_t cwmax;
+    uint32_t aifs;
+    uint32_t txop;
+    uint32_t acm;
+    uint32_t no_ack;
 } __packed;
 
 struct wmi_pdev_set_wmm_params {
@@ -3931,216 +3914,216 @@ struct wmi_wmm_params_all_arg {
 
 struct wmi_pdev_stats_tx {
     /* Num HTT cookies queued to dispatch list */
-    __le32 comp_queued;
+    uint32_t comp_queued;
 
     /* Num HTT cookies dispatched */
-    __le32 comp_delivered;
+    uint32_t comp_delivered;
 
     /* Num MSDU queued to WAL */
-    __le32 msdu_enqued;
+    uint32_t msdu_enqued;
 
     /* Num MPDU queue to WAL */
-    __le32 mpdu_enqued;
+    uint32_t mpdu_enqued;
 
     /* Num MSDUs dropped by WMM limit */
-    __le32 wmm_drop;
+    uint32_t wmm_drop;
 
     /* Num Local frames queued */
-    __le32 local_enqued;
+    uint32_t local_enqued;
 
     /* Num Local frames done */
-    __le32 local_freed;
+    uint32_t local_freed;
 
     /* Num queued to HW */
-    __le32 hw_queued;
+    uint32_t hw_queued;
 
     /* Num PPDU reaped from HW */
-    __le32 hw_reaped;
+    uint32_t hw_reaped;
 
     /* Num underruns */
-    __le32 underrun;
+    uint32_t underrun;
 
     /* Num PPDUs cleaned up in TX abort */
-    __le32 tx_abort;
+    uint32_t tx_abort;
 
     /* Num MPDUs requed by SW */
-    __le32 mpdus_requed;
+    uint32_t mpdus_requed;
 
     /* excessive retries */
-    __le32 tx_ko;
+    uint32_t tx_ko;
 
     /* data hw rate code */
-    __le32 data_rc;
+    uint32_t data_rc;
 
     /* Scheduler self triggers */
-    __le32 self_triggers;
+    uint32_t self_triggers;
 
     /* frames dropped due to excessive sw retries */
-    __le32 sw_retry_failure;
+    uint32_t sw_retry_failure;
 
     /* illegal rate phy errors  */
-    __le32 illgl_rate_phy_err;
+    uint32_t illgl_rate_phy_err;
 
     /* wal pdev continuous xretry */
-    __le32 pdev_cont_xretry;
+    uint32_t pdev_cont_xretry;
 
     /* wal pdev continous xretry */
-    __le32 pdev_tx_timeout;
+    uint32_t pdev_tx_timeout;
 
     /* wal pdev resets  */
-    __le32 pdev_resets;
+    uint32_t pdev_resets;
 
     /* frames dropped due to non-availability of stateless TIDs */
-    __le32 stateless_tid_alloc_failure;
+    uint32_t stateless_tid_alloc_failure;
 
-    __le32 phy_underrun;
+    uint32_t phy_underrun;
 
     /* MPDU is more than txop limit */
-    __le32 txop_ovf;
+    uint32_t txop_ovf;
 } __packed;
 
 struct wmi_10_4_pdev_stats_tx {
     /* Num HTT cookies queued to dispatch list */
-    __le32 comp_queued;
+    uint32_t comp_queued;
 
     /* Num HTT cookies dispatched */
-    __le32 comp_delivered;
+    uint32_t comp_delivered;
 
     /* Num MSDU queued to WAL */
-    __le32 msdu_enqued;
+    uint32_t msdu_enqued;
 
     /* Num MPDU queue to WAL */
-    __le32 mpdu_enqued;
+    uint32_t mpdu_enqued;
 
     /* Num MSDUs dropped by WMM limit */
-    __le32 wmm_drop;
+    uint32_t wmm_drop;
 
     /* Num Local frames queued */
-    __le32 local_enqued;
+    uint32_t local_enqued;
 
     /* Num Local frames done */
-    __le32 local_freed;
+    uint32_t local_freed;
 
     /* Num queued to HW */
-    __le32 hw_queued;
+    uint32_t hw_queued;
 
     /* Num PPDU reaped from HW */
-    __le32 hw_reaped;
+    uint32_t hw_reaped;
 
     /* Num underruns */
-    __le32 underrun;
+    uint32_t underrun;
 
     /* HW Paused. */
-    __le32  hw_paused;
+    uint32_t  hw_paused;
 
     /* Num PPDUs cleaned up in TX abort */
-    __le32 tx_abort;
+    uint32_t tx_abort;
 
     /* Num MPDUs requed by SW */
-    __le32 mpdus_requed;
+    uint32_t mpdus_requed;
 
     /* excessive retries */
-    __le32 tx_ko;
+    uint32_t tx_ko;
 
     /* data hw rate code */
-    __le32 data_rc;
+    uint32_t data_rc;
 
     /* Scheduler self triggers */
-    __le32 self_triggers;
+    uint32_t self_triggers;
 
     /* frames dropped due to excessive sw retries */
-    __le32 sw_retry_failure;
+    uint32_t sw_retry_failure;
 
     /* illegal rate phy errors  */
-    __le32 illgl_rate_phy_err;
+    uint32_t illgl_rate_phy_err;
 
     /* wal pdev continuous xretry */
-    __le32 pdev_cont_xretry;
+    uint32_t pdev_cont_xretry;
 
     /* wal pdev tx timeouts */
-    __le32 pdev_tx_timeout;
+    uint32_t pdev_tx_timeout;
 
     /* wal pdev resets  */
-    __le32 pdev_resets;
+    uint32_t pdev_resets;
 
     /* frames dropped due to non-availability of stateless TIDs */
-    __le32 stateless_tid_alloc_failure;
+    uint32_t stateless_tid_alloc_failure;
 
-    __le32 phy_underrun;
+    uint32_t phy_underrun;
 
     /* MPDU is more than txop limit */
-    __le32 txop_ovf;
+    uint32_t txop_ovf;
 
     /* Number of Sequences posted */
-    __le32 seq_posted;
+    uint32_t seq_posted;
 
     /* Number of Sequences failed queueing */
-    __le32 seq_failed_queueing;
+    uint32_t seq_failed_queueing;
 
     /* Number of Sequences completed */
-    __le32 seq_completed;
+    uint32_t seq_completed;
 
     /* Number of Sequences restarted */
-    __le32 seq_restarted;
+    uint32_t seq_restarted;
 
     /* Number of MU Sequences posted */
-    __le32 mu_seq_posted;
+    uint32_t mu_seq_posted;
 
     /* Num MPDUs flushed by SW, HWPAUSED,SW TXABORT(Reset,channel change) */
-    __le32 mpdus_sw_flush;
+    uint32_t mpdus_sw_flush;
 
     /* Num MPDUs filtered by HW, all filter condition (TTL expired) */
-    __le32 mpdus_hw_filter;
+    uint32_t mpdus_hw_filter;
 
     /* Num MPDUs truncated by PDG
      * (TXOP, TBTT, PPDU_duration based on rate, dyn_bw)
      */
-    __le32 mpdus_truncated;
+    uint32_t mpdus_truncated;
 
     /* Num MPDUs that was tried but didn't receive ACK or BA */
-    __le32 mpdus_ack_failed;
+    uint32_t mpdus_ack_failed;
 
     /* Num MPDUs that was dropped due to expiry. */
-    __le32 mpdus_expired;
+    uint32_t mpdus_expired;
 } __packed;
 
 struct wmi_pdev_stats_rx {
     /* Cnts any change in ring routing mid-ppdu */
-    __le32 mid_ppdu_route_change;
+    uint32_t mid_ppdu_route_change;
 
     /* Total number of statuses processed */
-    __le32 status_rcvd;
+    uint32_t status_rcvd;
 
     /* Extra frags on rings 0-3 */
-    __le32 r0_frags;
-    __le32 r1_frags;
-    __le32 r2_frags;
-    __le32 r3_frags;
+    uint32_t r0_frags;
+    uint32_t r1_frags;
+    uint32_t r2_frags;
+    uint32_t r3_frags;
 
     /* MSDUs / MPDUs delivered to HTT */
-    __le32 htt_msdus;
-    __le32 htt_mpdus;
+    uint32_t htt_msdus;
+    uint32_t htt_mpdus;
 
     /* MSDUs / MPDUs delivered to local stack */
-    __le32 loc_msdus;
-    __le32 loc_mpdus;
+    uint32_t loc_msdus;
+    uint32_t loc_mpdus;
 
     /* AMSDUs that have more MSDUs than the status ring size */
-    __le32 oversize_amsdu;
+    uint32_t oversize_amsdu;
 
     /* Number of PHY errors */
-    __le32 phy_errs;
+    uint32_t phy_errs;
 
     /* Number of PHY errors drops */
-    __le32 phy_err_drop;
+    uint32_t phy_err_drop;
 
     /* Number of mpdu errors - FCS, MIC, ENC etc. */
-    __le32 mpdu_errs;
+    uint32_t mpdu_errs;
 } __packed;
 
 struct wmi_pdev_stats_peer {
     /* REMOVE THIS ONCE REAL PEER STAT COUNTERS ARE ADDED */
-    __le32 dummy;
+    uint32_t dummy;
 } __packed;
 
 enum wmi_stats_id {
@@ -4160,14 +4143,14 @@ enum wmi_10_4_stats_id {
 };
 
 struct wlan_inst_rssi_args {
-    __le16 cfg_retry_count;
-    __le16 retry_count;
+    uint16_t cfg_retry_count;
+    uint16_t retry_count;
 };
 
 struct wmi_request_stats_cmd {
-    __le32 stats_id;
+    uint32_t stats_id;
 
-    __le32 vdev_id;
+    uint32_t vdev_id;
 
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
@@ -4187,27 +4170,27 @@ enum {
 
 struct wmi_pdev_suspend_cmd {
     /* suspend option sent to target */
-    __le32 suspend_opt;
+    uint32_t suspend_opt;
 } __packed;
 
 struct wmi_stats_event {
-    __le32 stats_id; /* WMI_STAT_ */
+    uint32_t stats_id; /* WMI_STAT_ */
     /*
      * number of pdev stats event structures
      * (wmi_pdev_stats) 0 or 1
      */
-    __le32 num_pdev_stats;
+    uint32_t num_pdev_stats;
     /*
      * number of vdev stats event structures
      * (wmi_vdev_stats) 0 or max vdevs
      */
-    __le32 num_vdev_stats;
+    uint32_t num_vdev_stats;
     /*
      * number of peer stats event structures
      * (wmi_peer_stats) 0 or max peers
      */
-    __le32 num_peer_stats;
-    __le32 num_bcnflt_stats;
+    uint32_t num_peer_stats;
+    uint32_t num_bcnflt_stats;
     /*
      * followed by
      *   num_pdev_stats * size of(struct wmi_pdev_stats)
@@ -4221,12 +4204,12 @@ struct wmi_stats_event {
 } __packed;
 
 struct wmi_10_2_stats_event {
-    __le32 stats_id; /* %WMI_REQUEST_ */
-    __le32 num_pdev_stats;
-    __le32 num_pdev_ext_stats;
-    __le32 num_vdev_stats;
-    __le32 num_peer_stats;
-    __le32 num_bcnflt_stats;
+    uint32_t stats_id; /* %WMI_REQUEST_ */
+    uint32_t num_pdev_stats;
+    uint32_t num_pdev_ext_stats;
+    uint32_t num_vdev_stats;
+    uint32_t num_peer_stats;
+    uint32_t num_bcnflt_stats;
     uint8_t data[0];
 } __packed;
 
@@ -4235,13 +4218,13 @@ struct wmi_10_2_stats_event {
  * TODO: add all PDEV stats here
  */
 struct wmi_pdev_stats_base {
-    __le32 chan_nf;
-    __le32 tx_frame_count; /* Cycles spent transmitting frames */
-    __le32 rx_frame_count; /* Cycles spent receiving frames */
-    __le32 rx_clear_count; /* Total channel busy time, evidently */
-    __le32 cycle_count; /* Total on-channel time */
-    __le32 phy_err_count;
-    __le32 chan_tx_pwr;
+    uint32_t chan_nf;
+    uint32_t tx_frame_count; /* Cycles spent transmitting frames */
+    uint32_t rx_frame_count; /* Cycles spent receiving frames */
+    uint32_t rx_clear_count; /* Total channel busy time, evidently */
+    uint32_t cycle_count; /* Total on-channel time */
+    uint32_t phy_err_count;
+    uint32_t chan_tx_pwr;
 } __packed;
 
 struct wmi_pdev_stats {
@@ -4252,12 +4235,12 @@ struct wmi_pdev_stats {
 } __packed;
 
 struct wmi_pdev_stats_extra {
-    __le32 ack_rx_bad;
-    __le32 rts_bad;
-    __le32 rts_good;
-    __le32 fcs_bad;
-    __le32 no_beacons;
-    __le32 mib_int_count;
+    uint32_t ack_rx_bad;
+    uint32_t rts_bad;
+    uint32_t rts_good;
+    uint32_t fcs_bad;
+    uint32_t no_beacons;
+    uint32_t mib_int_count;
 } __packed;
 
 struct wmi_10x_pdev_stats {
@@ -4269,16 +4252,16 @@ struct wmi_10x_pdev_stats {
 } __packed;
 
 struct wmi_pdev_stats_mem {
-    __le32 dram_free;
-    __le32 iram_free;
+    uint32_t dram_free;
+    uint32_t iram_free;
 } __packed;
 
 struct wmi_10_2_pdev_stats {
     struct wmi_pdev_stats_base base;
     struct wmi_pdev_stats_tx tx;
-    __le32 mc_drop;
+    uint32_t mc_drop;
     struct wmi_pdev_stats_rx rx;
-    __le32 pdev_rx_timeout;
+    uint32_t pdev_rx_timeout;
     struct wmi_pdev_stats_mem mem;
     struct wmi_pdev_stats_peer peer;
     struct wmi_pdev_stats_extra extra;
@@ -4288,9 +4271,9 @@ struct wmi_10_4_pdev_stats {
     struct wmi_pdev_stats_base base;
     struct wmi_10_4_pdev_stats_tx tx;
     struct wmi_pdev_stats_rx rx;
-    __le32 rx_ovfl_errs;
+    uint32_t rx_ovfl_errs;
     struct wmi_pdev_stats_mem mem;
-    __le32 sram_free_size;
+    uint32_t sram_free_size;
     struct wmi_pdev_stats_extra extra;
 } __packed;
 
@@ -4299,7 +4282,7 @@ struct wmi_10_4_pdev_stats {
  * TODO: add all VDEV stats here
  */
 struct wmi_vdev_stats {
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 /*
@@ -4308,89 +4291,89 @@ struct wmi_vdev_stats {
  */
 struct wmi_peer_stats {
     struct wmi_mac_addr peer_macaddr;
-    __le32 peer_rssi;
-    __le32 peer_tx_rate;
+    uint32_t peer_rssi;
+    uint32_t peer_tx_rate;
 } __packed;
 
 struct wmi_10x_peer_stats {
     struct wmi_peer_stats old;
-    __le32 peer_rx_rate;
+    uint32_t peer_rx_rate;
 } __packed;
 
 struct wmi_10_2_peer_stats {
     struct wmi_peer_stats old;
-    __le32 peer_rx_rate;
-    __le32 current_per;
-    __le32 retries;
-    __le32 tx_rate_count;
-    __le32 max_4ms_frame_len;
-    __le32 total_sub_frames;
-    __le32 tx_bytes;
-    __le32 num_pkt_loss_overflow[4];
-    __le32 num_pkt_loss_excess_retry[4];
+    uint32_t peer_rx_rate;
+    uint32_t current_per;
+    uint32_t retries;
+    uint32_t tx_rate_count;
+    uint32_t max_4ms_frame_len;
+    uint32_t total_sub_frames;
+    uint32_t tx_bytes;
+    uint32_t num_pkt_loss_overflow[4];
+    uint32_t num_pkt_loss_excess_retry[4];
 } __packed;
 
 struct wmi_10_2_4_peer_stats {
     struct wmi_10_2_peer_stats common;
-    __le32 peer_rssi_changed;
+    uint32_t peer_rssi_changed;
 } __packed;
 
 struct wmi_10_2_4_ext_peer_stats {
     struct wmi_10_2_peer_stats common;
-    __le32 peer_rssi_changed;
-    __le32 rx_duration;
+    uint32_t peer_rssi_changed;
+    uint32_t rx_duration;
 } __packed;
 
 struct wmi_10_4_peer_stats {
     struct wmi_mac_addr peer_macaddr;
-    __le32 peer_rssi;
-    __le32 peer_rssi_seq_num;
-    __le32 peer_tx_rate;
-    __le32 peer_rx_rate;
-    __le32 current_per;
-    __le32 retries;
-    __le32 tx_rate_count;
-    __le32 max_4ms_frame_len;
-    __le32 total_sub_frames;
-    __le32 tx_bytes;
-    __le32 num_pkt_loss_overflow[4];
-    __le32 num_pkt_loss_excess_retry[4];
-    __le32 peer_rssi_changed;
+    uint32_t peer_rssi;
+    uint32_t peer_rssi_seq_num;
+    uint32_t peer_tx_rate;
+    uint32_t peer_rx_rate;
+    uint32_t current_per;
+    uint32_t retries;
+    uint32_t tx_rate_count;
+    uint32_t max_4ms_frame_len;
+    uint32_t total_sub_frames;
+    uint32_t tx_bytes;
+    uint32_t num_pkt_loss_overflow[4];
+    uint32_t num_pkt_loss_excess_retry[4];
+    uint32_t peer_rssi_changed;
 } __packed;
 
 struct wmi_10_4_peer_extd_stats {
     struct wmi_mac_addr peer_macaddr;
-    __le32 inactive_time;
-    __le32 peer_chain_rssi;
-    __le32 rx_duration;
-    __le32 reserved[10];
+    uint32_t inactive_time;
+    uint32_t peer_chain_rssi;
+    uint32_t rx_duration;
+    uint32_t reserved[10];
 } __packed;
 
 struct wmi_10_4_bss_bcn_stats {
-    __le32 vdev_id;
-    __le32 bss_bcns_dropped;
-    __le32 bss_bcn_delivered;
+    uint32_t vdev_id;
+    uint32_t bss_bcns_dropped;
+    uint32_t bss_bcn_delivered;
 } __packed;
 
 struct wmi_10_4_bss_bcn_filter_stats {
-    __le32 bcns_dropped;
-    __le32 bcns_delivered;
-    __le32 active_filters;
+    uint32_t bcns_dropped;
+    uint32_t bcns_delivered;
+    uint32_t active_filters;
     struct wmi_10_4_bss_bcn_stats bss_stats;
 } __packed;
 
 struct wmi_10_2_pdev_ext_stats {
-    __le32 rx_rssi_comb;
-    __le32 rx_rssi[4];
-    __le32 rx_mcs[10];
-    __le32 tx_mcs[10];
-    __le32 ack_rssi;
+    uint32_t rx_rssi_comb;
+    uint32_t rx_rssi[4];
+    uint32_t rx_mcs[10];
+    uint32_t tx_mcs[10];
+    uint32_t ack_rssi;
 } __packed;
 
 struct wmi_vdev_create_cmd {
-    __le32 vdev_id;
-    __le32 vdev_type;
-    __le32 vdev_subtype;
+    uint32_t vdev_id;
+    uint32_t vdev_type;
+    uint32_t vdev_subtype;
     struct wmi_mac_addr vdev_macaddr;
 } __packed;
 
@@ -4456,38 +4439,38 @@ enum wmi_vdev_subtype_10_4 {
 #define WMI_VDEV_START_PMF_ENABLED  (1 << 1)
 
 struct wmi_p2p_noa_descriptor {
-    __le32 type_count; /* 255: continuous schedule, 0: reserved */
-    __le32 duration;  /* Absent period duration in micro seconds */
-    __le32 interval;   /* Absent period interval in micro seconds */
-    __le32 start_time; /* 32 bit tsf time when in starts */
+    uint32_t type_count; /* 255: continuous schedule, 0: reserved */
+    uint32_t duration;  /* Absent period duration in micro seconds */
+    uint32_t interval;   /* Absent period interval in micro seconds */
+    uint32_t start_time; /* 32 bit tsf time when in starts */
 } __packed;
 
 struct wmi_vdev_start_request_cmd {
     /* WMI channel */
     struct wmi_channel chan;
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* requestor id identifying the caller module */
-    __le32 requestor_id;
+    uint32_t requestor_id;
     /* beacon interval from received beacon */
-    __le32 beacon_interval;
+    uint32_t beacon_interval;
     /* DTIM Period from the received beacon */
-    __le32 dtim_period;
+    uint32_t dtim_period;
     /* Flags */
-    __le32 flags;
+    uint32_t flags;
     /* ssid field. Only valid for AP/GO/IBSS/BTAmp VDEV type. */
     struct wmi_ssid ssid;
     /* beacon/probe response xmit rate. Applicable for SoftAP. */
-    __le32 bcn_tx_rate;
+    uint32_t bcn_tx_rate;
     /* beacon/probe response xmit power. Applicable for SoftAP. */
-    __le32 bcn_tx_power;
+    uint32_t bcn_tx_power;
     /* number of p2p NOA descriptor(s) from scan entry */
-    __le32 num_noa_descriptors;
+    uint32_t num_noa_descriptors;
     /*
      * Disable H/W ack. This used by WMI_VDEV_RESTART_REQUEST_CMDID.
      * During CAC, Our HW shouldn't ack ditected frames
      */
-    __le32 disable_hw_ack;
+    uint32_t disable_hw_ack;
     /* actual p2p NOA descriptor from scan entry */
     struct wmi_p2p_noa_descriptor noa_descriptors[2];
 } __packed;
@@ -4512,37 +4495,37 @@ struct wmi_vdev_start_request_arg {
 
 struct wmi_vdev_delete_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_up_cmd {
-    __le32 vdev_id;
-    __le32 vdev_assoc_id;
+    uint32_t vdev_id;
+    uint32_t vdev_assoc_id;
     struct wmi_mac_addr vdev_bssid;
 } __packed;
 
 struct wmi_vdev_stop_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_down_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_standby_response_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_resume_response_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_set_param_cmd {
-    __le32 vdev_id;
-    __le32 param_id;
-    __le32 param_value;
+    uint32_t vdev_id;
+    uint32_t param_id;
+    uint32_t param_value;
 } __packed;
 
 #define WMI_MAX_KEY_INDEX   3
@@ -4553,8 +4536,8 @@ struct wmi_vdev_set_param_cmd {
 #define WMI_KEY_TX_USAGE 0x02 /* default tx key - static wep */
 
 struct wmi_key_seq_counter {
-    __le32 key_seq_counter_l;
-    __le32 key_seq_counter_h;
+    uint32_t key_seq_counter_l;
+    uint32_t key_seq_counter_h;
 } __packed;
 
 #define WMI_CIPHER_NONE     0x0 /* clear key */
@@ -4567,19 +4550,19 @@ struct wmi_key_seq_counter {
 #define WMI_CIPHER_AES_CMAC 0x7
 
 struct wmi_vdev_install_key_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 key_idx;
-    __le32 key_flags;
-    __le32 key_cipher; /* %WMI_CIPHER_ */
+    uint32_t key_idx;
+    uint32_t key_flags;
+    uint32_t key_cipher; /* %WMI_CIPHER_ */
     struct wmi_key_seq_counter key_rsc_counter;
     struct wmi_key_seq_counter key_global_rsc_counter;
     struct wmi_key_seq_counter key_tsc_counter;
     uint8_t wpi_key_rsc_counter[16];
     uint8_t wpi_key_tsc_counter[16];
-    __le32 key_len;
-    __le32 key_txmic_len;
-    __le32 key_rxmic_len;
+    uint32_t key_len;
+    uint32_t key_txmic_len;
+    uint32_t key_rxmic_len;
 
     /* contains key followed by tx mic followed by rx mic */
     uint8_t key_data[0];
@@ -5068,25 +5051,25 @@ enum wmi_start_event_param {
 };
 
 struct wmi_vdev_start_response_event {
-    __le32 vdev_id;
-    __le32 req_id;
-    __le32 resp_type; /* %WMI_VDEV_RESP_ */
-    __le32 status;
+    uint32_t vdev_id;
+    uint32_t req_id;
+    uint32_t resp_type; /* %WMI_VDEV_RESP_ */
+    uint32_t status;
 } __packed;
 
 struct wmi_vdev_standby_req_event {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_resume_req_event {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_vdev_stopped_event {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 /*
@@ -5095,7 +5078,7 @@ struct wmi_vdev_stopped_event {
  */
 struct wmi_vdev_simple_event {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 /* VDEV start response status codes */
@@ -5110,25 +5093,25 @@ struct wmi_vdev_simple_event {
 
 /* TODO: please add more comments if you have in-depth information */
 struct wmi_vdev_spectral_conf_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
 
     /* number of fft samples to send (0 for infinite) */
-    __le32 scan_count;
-    __le32 scan_period;
-    __le32 scan_priority;
+    uint32_t scan_count;
+    uint32_t scan_period;
+    uint32_t scan_priority;
 
     /* number of bins in the FFT: 2^(fft_size - bin_scale) */
-    __le32 scan_fft_size;
-    __le32 scan_gc_ena;
-    __le32 scan_restart_ena;
-    __le32 scan_noise_floor_ref;
-    __le32 scan_init_delay;
-    __le32 scan_nb_tone_thr;
-    __le32 scan_str_bin_thr;
-    __le32 scan_wb_rpt_mode;
-    __le32 scan_rssi_rpt_mode;
-    __le32 scan_rssi_thr;
-    __le32 scan_pwr_format;
+    uint32_t scan_fft_size;
+    uint32_t scan_gc_ena;
+    uint32_t scan_restart_ena;
+    uint32_t scan_noise_floor_ref;
+    uint32_t scan_init_delay;
+    uint32_t scan_nb_tone_thr;
+    uint32_t scan_str_bin_thr;
+    uint32_t scan_wb_rpt_mode;
+    uint32_t scan_rssi_rpt_mode;
+    uint32_t scan_rssi_thr;
+    uint32_t scan_pwr_format;
 
     /* rpt_mode: Format of FFT report to software for spectral scan
      * triggered FFTs:
@@ -5141,10 +5124,10 @@ struct wmi_vdev_spectral_conf_cmd {
      *  3: 2-dword summary of metrics for each completed FFT +
      *     2x- oversampled bins (all) per FFT + spectral scan summary
      */
-    __le32 scan_rpt_mode;
-    __le32 scan_bin_scale;
-    __le32 scan_dbm_adj;
-    __le32 scan_chn_mask;
+    uint32_t scan_rpt_mode;
+    uint32_t scan_bin_scale;
+    uint32_t scan_dbm_adj;
+    uint32_t scan_chn_mask;
 } __packed;
 
 struct wmi_vdev_spectral_conf_arg {
@@ -5190,9 +5173,9 @@ struct wmi_vdev_spectral_conf_arg {
 #define WMI_SPECTRAL_CHN_MASK_DEFAULT            1
 
 struct wmi_vdev_spectral_enable_cmd {
-    __le32 vdev_id;
-    __le32 trigger_cmd;
-    __le32 enable_cmd;
+    uint32_t vdev_id;
+    uint32_t trigger_cmd;
+    uint32_t enable_cmd;
 } __packed;
 
 #define WMI_SPECTRAL_TRIGGER_CMD_TRIGGER  1
@@ -5202,10 +5185,10 @@ struct wmi_vdev_spectral_enable_cmd {
 
 /* Beacon processing related command and event structures */
 struct wmi_bcn_tx_hdr {
-    __le32 vdev_id;
-    __le32 tx_rate;
-    __le32 tx_power;
-    __le32 bcn_len;
+    uint32_t vdev_id;
+    uint32_t tx_rate;
+    uint32_t tx_power;
+    uint32_t bcn_len;
 } __packed;
 
 struct wmi_bcn_tx_cmd {
@@ -5232,18 +5215,18 @@ enum wmi_bcn_tx_ref_flags {
 #define WMI_BCN_TX_REF_DEF_ANTENNA 0
 
 struct wmi_bcn_tx_ref_cmd {
-    __le32 vdev_id;
-    __le32 data_len;
+    uint32_t vdev_id;
+    uint32_t data_len;
     /* physical address of the frame - dma pointer */
-    __le32 data_ptr;
+    uint32_t data_ptr;
     /* id for host to track */
-    __le32 msdu_id;
+    uint32_t msdu_id;
     /* frame ctrl to setup PPDU desc */
-    __le32 frame_control;
+    uint32_t frame_control;
     /* to control CABQ traffic: WMI_BCN_TX_REF_FLAG_ */
-    __le32 flags;
+    uint32_t flags;
     /* introduced in 10.2 */
-    __le32 antenna_mask;
+    uint32_t antenna_mask;
 } __packed;
 
 /* Beacon filter */
@@ -5255,11 +5238,11 @@ struct wmi_bcn_tx_ref_cmd {
 
 struct wmi_bcn_filter_rx_cmd {
     /* Filter ID */
-    __le32 bcn_filter_id;
+    uint32_t bcn_filter_id;
     /* Filter type - wmi_bcn_filter */
-    __le32 bcn_filter;
+    uint32_t bcn_filter;
     /* Buffer len */
-    __le32 bcn_filter_len;
+    uint32_t bcn_filter_len;
     /* Filter info (threshold, BSSID, RSSI) */
     uint8_t* bcn_filter_buf;
 } __packed;
@@ -5267,9 +5250,9 @@ struct wmi_bcn_filter_rx_cmd {
 /* Capabilities and IEs to be passed to firmware */
 struct wmi_bcn_prb_info {
     /* Capabilities */
-    __le32 caps;
+    uint32_t caps;
     /* ERP info */
-    __le32 erp;
+    uint32_t erp;
     /* Advanced capabilities */
     /* HT capabilities */
     /* HT Info */
@@ -5283,24 +5266,24 @@ struct wmi_bcn_prb_info {
 
 struct wmi_bcn_tmpl_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* TIM IE offset from the beginning of the template. */
-    __le32 tim_ie_offset;
+    uint32_t tim_ie_offset;
     /* beacon probe capabilities and IEs */
     struct wmi_bcn_prb_info bcn_prb_info;
     /* beacon buffer length */
-    __le32 buf_len;
+    uint32_t buf_len;
     /* variable length data */
     uint8_t data[1];
 } __packed;
 
 struct wmi_prb_tmpl_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* beacon probe capabilities and IEs */
     struct wmi_bcn_prb_info bcn_prb_info;
     /* beacon buffer length */
-    __le32 buf_len;
+    uint32_t buf_len;
     /* Variable length data */
     uint8_t data[1];
 } __packed;
@@ -5314,13 +5297,13 @@ enum wmi_sta_ps_mode {
 
 struct wmi_sta_powersave_mode_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 
     /*
      * Power save mode
      * (see enum wmi_sta_ps_mode)
      */
-    __le32 sta_ps_mode;
+    uint32_t sta_ps_mode;
 } __packed;
 
 enum wmi_csa_offload_en {
@@ -5329,12 +5312,12 @@ enum wmi_csa_offload_en {
 };
 
 struct wmi_csa_offload_enable_cmd {
-    __le32 vdev_id;
-    __le32 csa_offload_enable;
+    uint32_t vdev_id;
+    uint32_t csa_offload_enable;
 } __packed;
 
 struct wmi_csa_offload_chanswitch_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_channel chan;
 } __packed;
 
@@ -5431,17 +5414,17 @@ enum wmi_sta_ps_param_uapsd {
 #define WMI_STA_UAPSD_MAX_INTERVAL_MSEC UINT_MAX
 
 struct wmi_sta_uapsd_auto_trig_param {
-    __le32 wmm_ac;
-    __le32 user_priority;
-    __le32 service_interval;
-    __le32 suspend_interval;
-    __le32 delay_interval;
+    uint32_t wmm_ac;
+    uint32_t user_priority;
+    uint32_t service_interval;
+    uint32_t suspend_interval;
+    uint32_t delay_interval;
 };
 
 struct wmi_sta_uapsd_auto_trig_cmd_fixed_param {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 num_ac;
+    uint32_t num_ac;
 };
 
 struct wmi_sta_uapsd_auto_trig_arg {
@@ -5493,9 +5476,9 @@ enum wmi_sta_powersave_param {
 };
 
 struct wmi_sta_powersave_param_cmd {
-    __le32 vdev_id;
-    __le32 param_id; /* %WMI_STA_PS_PARAM_ */
-    __le32 param_value;
+    uint32_t vdev_id;
+    uint32_t param_id; /* %WMI_STA_PS_PARAM_ */
+    uint32_t param_value;
 } __packed;
 
 /* No MIMO power save */
@@ -5507,9 +5490,9 @@ struct wmi_sta_powersave_param_cmd {
 
 struct wmi_sta_mimo_ps_mode_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* mimo powersave mode as defined above */
-    __le32 mimo_pwrsave_mode;
+    uint32_t mimo_pwrsave_mode;
 } __packed;
 
 /* U-APSD configuration of peer station from (re)assoc request and TSPECs */
@@ -5566,35 +5549,35 @@ enum wmi_ap_ps_peer_param {
 
 struct wmi_ap_ps_peer_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
 
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
 
     /* AP powersave param (see enum wmi_ap_ps_peer_param) */
-    __le32 param_id;
+    uint32_t param_id;
 
     /* AP powersave param value */
-    __le32 param_value;
+    uint32_t param_value;
 } __packed;
 
 /* 128 clients = 4 words */
 #define WMI_TIM_BITMAP_ARRAY_SIZE 4
 
 struct wmi_tim_info {
-    __le32 tim_len;
-    __le32 tim_mcast;
-    __le32 tim_bitmap[WMI_TIM_BITMAP_ARRAY_SIZE];
-    __le32 tim_changed;
-    __le32 tim_num_ps_pending;
+    uint32_t tim_len;
+    uint32_t tim_mcast;
+    uint32_t tim_bitmap[WMI_TIM_BITMAP_ARRAY_SIZE];
+    uint32_t tim_changed;
+    uint32_t tim_num_ps_pending;
 } __packed;
 
 struct wmi_tim_info_arg {
-    __le32 tim_len;
-    __le32 tim_mcast;
-    const __le32* tim_bitmap;
-    __le32 tim_changed;
-    __le32 tim_num_ps_pending;
+    uint32_t tim_len;
+    uint32_t tim_mcast;
+    const uint32_t* tim_bitmap;
+    uint32_t tim_changed;
+    uint32_t tim_num_ps_pending;
 } __packed;
 
 /* Maximum number of NOA Descriptors supported */
@@ -5626,7 +5609,7 @@ struct wmi_bcn_info {
 } __packed;
 
 struct wmi_host_swba_event {
-    __le32 vdev_map;
+    uint32_t vdev_map;
     struct wmi_bcn_info bcn_info[0];
 } __packed;
 
@@ -5636,7 +5619,7 @@ struct wmi_10_2_4_bcn_info {
 } __packed;
 
 struct wmi_10_2_4_host_swba_event {
-    __le32 vdev_map;
+    uint32_t vdev_map;
     struct wmi_10_2_4_bcn_info bcn_info[0];
 } __packed;
 
@@ -5644,11 +5627,11 @@ struct wmi_10_2_4_host_swba_event {
 #define WMI_10_4_TIM_BITMAP_ARRAY_SIZE 17
 
 struct wmi_10_4_tim_info {
-    __le32 tim_len;
-    __le32 tim_mcast;
-    __le32 tim_bitmap[WMI_10_4_TIM_BITMAP_ARRAY_SIZE];
-    __le32 tim_changed;
-    __le32 tim_num_ps_pending;
+    uint32_t tim_len;
+    uint32_t tim_mcast;
+    uint32_t tim_bitmap[WMI_10_4_TIM_BITMAP_ARRAY_SIZE];
+    uint32_t tim_changed;
+    uint32_t tim_num_ps_pending;
 } __packed;
 
 #define WMI_10_4_P2P_MAX_NOA_DESCRIPTORS 1
@@ -5677,19 +5660,19 @@ struct wmi_10_4_bcn_info {
 } __packed;
 
 struct wmi_10_4_host_swba_event {
-    __le32 vdev_map;
+    uint32_t vdev_map;
     struct wmi_10_4_bcn_info bcn_info[0];
 } __packed;
 
 #define WMI_MAX_AP_VDEV 16
 
 struct wmi_tbtt_offset_event {
-    __le32 vdev_map;
-    __le32 tbttoffset_list[WMI_MAX_AP_VDEV];
+    uint32_t vdev_map;
+    uint32_t tbttoffset_list[WMI_MAX_AP_VDEV];
 } __packed;
 
 struct wmi_peer_create_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
 } __packed;
 
@@ -5700,14 +5683,14 @@ enum wmi_peer_type {
 };
 
 struct wmi_peer_delete_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
 } __packed;
 
 struct wmi_peer_flush_tids_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 peer_tid_bitmap;
+    uint32_t peer_tid_bitmap;
 } __packed;
 
 struct wmi_fixed_rate {
@@ -5717,23 +5700,23 @@ struct wmi_fixed_rate {
      *   2: ht20 11n rate  specified as mcs index
      *   3: ht40 11n rate  specified as mcs index
      */
-    __le32  rate_mode;
+    uint32_t  rate_mode;
     /*
      * 4 rate values for 4 rate series. series 0 is stored in byte 0 (LSB)
      * and series 3 is stored at byte 3 (MSB)
      */
-    __le32  rate_series;
+    uint32_t  rate_series;
     /*
      * 4 retry counts for 4 rate series. retry count for rate 0 is stored
      * in byte 0 (LSB) and retry count for rate 3 is stored at byte 3
      * (MSB)
      */
-    __le32  rate_retries;
+    uint32_t  rate_retries;
 } __packed;
 
 struct wmi_peer_fixed_rate_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
     /* fixed rate */
@@ -5744,53 +5727,53 @@ struct wmi_peer_fixed_rate_cmd {
 
 struct wmi_addba_clear_resp_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
 } __packed;
 
 struct wmi_addba_send_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
     /* Tid number */
-    __le32 tid;
+    uint32_t tid;
     /* Buffer/Window size*/
-    __le32 buffersize;
+    uint32_t buffersize;
 } __packed;
 
 struct wmi_delba_send_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
     /* Tid number */
-    __le32 tid;
+    uint32_t tid;
     /* Is Initiator */
-    __le32 initiator;
+    uint32_t initiator;
     /* Reason code */
-    __le32 reasoncode;
+    uint32_t reasoncode;
 } __packed;
 
 struct wmi_addba_setresponse_cmd {
     /* unique id identifying the vdev, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer mac address */
     struct wmi_mac_addr peer_macaddr;
     /* Tid number */
-    __le32 tid;
+    uint32_t tid;
     /* status code */
-    __le32 statuscode;
+    uint32_t statuscode;
 } __packed;
 
 struct wmi_send_singleamsdu_cmd {
     /* unique id identifying the vdev, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer mac address */
     struct wmi_mac_addr peer_macaddr;
     /* Tid number */
-    __le32 tid;
+    uint32_t tid;
 } __packed;
 
 enum wmi_peer_smps_state {
@@ -5818,23 +5801,23 @@ enum wmi_peer_param {
 };
 
 struct wmi_peer_set_param_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 param_id;
-    __le32 param_value;
+    uint32_t param_id;
+    uint32_t param_value;
 } __packed;
 
 #define MAX_SUPPORTED_RATES 128
 
 struct wmi_rate_set {
     /* total number of rates */
-    __le32 num_rates;
+    uint32_t num_rates;
     /*
      * rates (each 8bit value) packed into a 32 bit word.
      * the rates are filled from least significant byte to most
      * significant byte.
      */
-    __le32 rates[(MAX_SUPPORTED_RATES / 4) + 1];
+    uint32_t rates[(MAX_SUPPORTED_RATES / 4) + 1];
 } __packed;
 
 struct wmi_rate_set_arg {
@@ -5848,10 +5831,10 @@ struct wmi_rate_set_arg {
  * into multiple words for convenience
  */
 struct wmi_vht_rate_set {
-    __le32 rx_max_rate; /* Max Rx data rate */
-    __le32 rx_mcs_set;  /* Negotiated RX VHT rates */
-    __le32 tx_max_rate; /* Max Tx data rate */
-    __le32 tx_mcs_set;  /* Negotiated TX VHT rates */
+    uint32_t rx_max_rate; /* Max Rx data rate */
+    uint32_t rx_mcs_set;  /* Negotiated RX VHT rates */
+    uint32_t tx_max_rate; /* Max Tx data rate */
+    uint32_t tx_mcs_set;  /* Negotiated TX VHT rates */
 } __packed;
 
 struct wmi_vht_rate_set_arg {
@@ -5872,10 +5855,10 @@ struct wmi_peer_set_rates_cmd {
 
 struct wmi_peer_set_q_empty_callback_cmd {
     /* unique id identifying the VDEV, generated by the caller */
-    __le32 vdev_id;
+    uint32_t vdev_id;
     /* peer MAC address */
     struct wmi_mac_addr peer_macaddr;
-    __le32 callback_enable;
+    uint32_t callback_enable;
 } __packed;
 
 struct wmi_peer_flags_map {
@@ -5980,21 +5963,21 @@ enum wmi_10_2_peer_flags {
 
 struct wmi_common_peer_assoc_complete_cmd {
     struct wmi_mac_addr peer_macaddr;
-    __le32 vdev_id;
-    __le32 peer_new_assoc; /* 1=assoc, 0=reassoc */
-    __le32 peer_associd; /* 16 LSBs */
-    __le32 peer_flags;
-    __le32 peer_caps; /* 16 LSBs */
-    __le32 peer_listen_intval;
-    __le32 peer_ht_caps;
-    __le32 peer_max_mpdu;
-    __le32 peer_mpdu_density; /* 0..16 */
-    __le32 peer_rate_caps;
+    uint32_t vdev_id;
+    uint32_t peer_new_assoc; /* 1=assoc, 0=reassoc */
+    uint32_t peer_associd; /* 16 LSBs */
+    uint32_t peer_flags;
+    uint32_t peer_caps; /* 16 LSBs */
+    uint32_t peer_listen_intval;
+    uint32_t peer_ht_caps;
+    uint32_t peer_max_mpdu;
+    uint32_t peer_mpdu_density; /* 0..16 */
+    uint32_t peer_rate_caps;
     struct wmi_rate_set peer_legacy_rates;
     struct wmi_rate_set peer_ht_rates;
-    __le32 peer_nss; /* num of spatial streams */
-    __le32 peer_vht_caps;
-    __le32 peer_phymode;
+    uint32_t peer_nss; /* num of spatial streams */
+    uint32_t peer_vht_caps;
+    uint32_t peer_phymode;
     struct wmi_vht_rate_set peer_vht_rates;
 };
 
@@ -6004,7 +5987,7 @@ struct wmi_main_peer_assoc_complete_cmd {
     /* HT Operation Element of the peer. Five bytes packed in 2
      *  INT32 array and filled from lsb to msb.
      */
-    __le32 peer_ht_info[2];
+    uint32_t peer_ht_info[2];
 } __packed;
 
 struct wmi_10_1_peer_assoc_complete_cmd {
@@ -6018,14 +6001,14 @@ struct wmi_10_1_peer_assoc_complete_cmd {
 
 struct wmi_10_2_peer_assoc_complete_cmd {
     struct wmi_common_peer_assoc_complete_cmd cmd;
-    __le32 info0; /* WMI_PEER_ASSOC_INFO0_ */
+    uint32_t info0; /* WMI_PEER_ASSOC_INFO0_ */
 } __packed;
 
 #define PEER_BW_RXNSS_OVERRIDE_OFFSET  31
 
 struct wmi_10_4_peer_assoc_complete_cmd {
     struct wmi_10_2_peer_assoc_complete_cmd cmd;
-    __le32 peer_bw_rxnss_override;
+    uint32_t peer_bw_rxnss_override;
 } __packed;
 
 struct wmi_peer_assoc_complete_arg {
@@ -6070,24 +6053,24 @@ struct wmi_peer_q_empty_callback_event {
  * Channel info WMI event
  */
 struct wmi_chan_info_event {
-    __le32 err_code;
-    __le32 freq;
-    __le32 cmd_flags;
-    __le32 noise_floor;
-    __le32 rx_clear_count;
-    __le32 cycle_count;
+    uint32_t err_code;
+    uint32_t freq;
+    uint32_t cmd_flags;
+    uint32_t noise_floor;
+    uint32_t rx_clear_count;
+    uint32_t cycle_count;
 } __packed;
 
 struct wmi_10_4_chan_info_event {
-    __le32 err_code;
-    __le32 freq;
-    __le32 cmd_flags;
-    __le32 noise_floor;
-    __le32 rx_clear_count;
-    __le32 cycle_count;
-    __le32 chan_tx_pwr_range;
-    __le32 chan_tx_pwr_tp;
-    __le32 rx_frame_count;
+    uint32_t err_code;
+    uint32_t freq;
+    uint32_t cmd_flags;
+    uint32_t noise_floor;
+    uint32_t rx_clear_count;
+    uint32_t cycle_count;
+    uint32_t chan_tx_pwr_range;
+    uint32_t chan_tx_pwr_tp;
+    uint32_t rx_frame_count;
 } __packed;
 
 struct wmi_peer_sta_kickout_event {
@@ -6102,15 +6085,15 @@ struct wmi_peer_sta_kickout_event {
 #define BCN_FLT_MAX_ELEMS_IE_LIST   (BCN_FLT_MAX_SUPPORTED_IES / 32)
 
 struct bss_bcn_stats {
-    __le32 vdev_id;
-    __le32 bss_bcnsdropped;
-    __le32 bss_bcnsdelivered;
+    uint32_t vdev_id;
+    uint32_t bss_bcnsdropped;
+    uint32_t bss_bcnsdelivered;
 } __packed;
 
 struct bcn_filter_stats {
-    __le32 bcns_dropped;
-    __le32 bcns_delivered;
-    __le32 activefilters;
+    uint32_t bcns_dropped;
+    uint32_t bcns_delivered;
+    uint32_t activefilters;
     struct bss_bcn_stats bss_stats;
 } __packed;
 
@@ -6137,10 +6120,10 @@ struct wmi_sta_keepalive_arp_resp {
 } __packed;
 
 struct wmi_sta_keepalive_cmd {
-    __le32 vdev_id;
-    __le32 enabled;
-    __le32 method; /* WMI_STA_KEEPALIVE_METHOD_ */
-    __le32 interval; /* in seconds */
+    uint32_t vdev_id;
+    uint32_t enabled;
+    uint32_t method; /* WMI_STA_KEEPALIVE_METHOD_ */
+    uint32_t interval; /* in seconds */
     struct wmi_sta_keepalive_arp_resp arp_resp;
 } __packed;
 
@@ -6166,8 +6149,8 @@ enum wmi_force_fw_hang_type {
 #define WMI_FORCE_FW_HANG_RANDOM_TIME 0xFFFFFFFF
 
 struct wmi_force_fw_hang_cmd {
-    __le32 type;
-    __le32 delay_ms;
+    uint32_t type;
+    uint32_t delay_ms;
 } __packed;
 
 enum ath10k_dbglog_level {
@@ -6206,30 +6189,30 @@ enum ath10k_dbglog_level {
  */
 struct wmi_dbglog_cfg_cmd {
     /* bitmask to hold mod id config*/
-    __le32 module_enable;
+    uint32_t module_enable;
 
     /* see ATH10K_DBGLOG_CFG_ */
-    __le32 config_enable;
+    uint32_t config_enable;
 
     /* mask of module id bits to be changed */
-    __le32 module_valid;
+    uint32_t module_valid;
 
     /* mask of config bits to be changed, see ATH10K_DBGLOG_CFG_ */
-    __le32 config_valid;
+    uint32_t config_valid;
 } __packed;
 
 struct wmi_10_4_dbglog_cfg_cmd {
     /* bitmask to hold mod id config*/
-    __le64 module_enable;
+    uint64_t module_enable;
 
     /* see ATH10K_DBGLOG_CFG_ */
-    __le32 config_enable;
+    uint32_t config_enable;
 
     /* mask of module id bits to be changed */
-    __le64 module_valid;
+    uint64_t module_valid;
 
     /* mask of config bits to be changed, see ATH10K_DBGLOG_CFG_ */
-    __le32 config_valid;
+    uint32_t config_valid;
 } __packed;
 
 enum wmi_roam_reason {
@@ -6244,8 +6227,8 @@ enum wmi_roam_reason {
 };
 
 struct wmi_roam_ev {
-    __le32 vdev_id;
-    __le32 reason;
+    uint32_t vdev_id;
+    uint32_t reason;
 } __packed;
 
 #define ATH10K_FRAGMT_THRESHOLD_MIN 540
@@ -6261,41 +6244,41 @@ struct wmi_roam_ev {
 #define WMI_MAX_MEM_REQS 16
 
 struct wmi_scan_ev_arg {
-    __le32 event_type; /* %WMI_SCAN_EVENT_ */
-    __le32 reason; /* %WMI_SCAN_REASON_ */
-    __le32 channel_freq; /* only valid for WMI_SCAN_EVENT_FOREIGN_CHANNEL */
-    __le32 scan_req_id;
-    __le32 scan_id;
-    __le32 vdev_id;
+    uint32_t event_type; /* %WMI_SCAN_EVENT_ */
+    uint32_t reason; /* %WMI_SCAN_REASON_ */
+    uint32_t channel_freq; /* only valid for WMI_SCAN_EVENT_FOREIGN_CHANNEL */
+    uint32_t scan_req_id;
+    uint32_t scan_id;
+    uint32_t vdev_id;
 };
 
 struct wmi_mgmt_rx_ev_arg {
-    __le32 channel;
-    __le32 snr;
-    __le32 rate;
-    __le32 phy_mode;
-    __le32 buf_len;
-    __le32 status; /* %WMI_RX_STATUS_ */
+    uint32_t channel;
+    uint32_t snr;
+    uint32_t rate;
+    uint32_t phy_mode;
+    uint32_t buf_len;
+    uint32_t status; /* %WMI_RX_STATUS_ */
     struct wmi_mgmt_rx_ext_info ext_info;
 };
 
 struct wmi_ch_info_ev_arg {
-    __le32 err_code;
-    __le32 freq;
-    __le32 cmd_flags;
-    __le32 noise_floor;
-    __le32 rx_clear_count;
-    __le32 cycle_count;
-    __le32 chan_tx_pwr_range;
-    __le32 chan_tx_pwr_tp;
-    __le32 rx_frame_count;
+    uint32_t err_code;
+    uint32_t freq;
+    uint32_t cmd_flags;
+    uint32_t noise_floor;
+    uint32_t rx_clear_count;
+    uint32_t cycle_count;
+    uint32_t chan_tx_pwr_range;
+    uint32_t chan_tx_pwr_tp;
+    uint32_t rx_frame_count;
 };
 
 struct wmi_vdev_start_ev_arg {
-    __le32 vdev_id;
-    __le32 req_id;
-    __le32 resp_type; /* %WMI_VDEV_RESP_ */
-    __le32 status;
+    uint32_t vdev_id;
+    uint32_t req_id;
+    uint32_t resp_type; /* %WMI_VDEV_RESP_ */
+    uint32_t status;
 };
 
 struct wmi_peer_kick_ev_arg {
@@ -6303,7 +6286,7 @@ struct wmi_peer_kick_ev_arg {
 };
 
 struct wmi_swba_ev_arg {
-    __le32 vdev_map;
+    uint32_t vdev_map;
     struct wmi_tim_info_arg tim_info[WMI_MAX_AP_VDEV];
     const struct wmi_p2p_noa_info* noa_info[WMI_MAX_AP_VDEV];
 };
@@ -6330,55 +6313,55 @@ struct wmi_phyerr_hdr_arg {
 };
 
 struct wmi_svc_rdy_ev_arg {
-    __le32 min_tx_power;
-    __le32 max_tx_power;
-    __le32 ht_cap;
-    __le32 vht_cap;
-    __le32 sw_ver0;
-    __le32 sw_ver1;
-    __le32 fw_build;
-    __le32 phy_capab;
-    __le32 num_rf_chains;
-    __le32 eeprom_rd;
-    __le32 num_mem_reqs;
-    __le32 low_5ghz_chan;
-    __le32 high_5ghz_chan;
-    const __le32* service_map;
+    uint32_t min_tx_power;
+    uint32_t max_tx_power;
+    uint32_t ht_cap;
+    uint32_t vht_cap;
+    uint32_t sw_ver0;
+    uint32_t sw_ver1;
+    uint32_t fw_build;
+    uint32_t phy_capab;
+    uint32_t num_rf_chains;
+    uint32_t eeprom_rd;
+    uint32_t num_mem_reqs;
+    uint32_t low_5ghz_chan;
+    uint32_t high_5ghz_chan;
+    const uint32_t* service_map;
     size_t service_map_len;
     const struct wlan_host_mem_req* mem_reqs[WMI_MAX_MEM_REQS];
 };
 
 struct wmi_rdy_ev_arg {
-    __le32 sw_version;
-    __le32 abi_version;
-    __le32 status;
+    uint32_t sw_version;
+    uint32_t abi_version;
+    uint32_t status;
     const uint8_t* mac_addr;
 };
 
 struct wmi_roam_ev_arg {
-    __le32 vdev_id;
-    __le32 reason;
-    __le32 rssi;
+    uint32_t vdev_id;
+    uint32_t reason;
+    uint32_t rssi;
 };
 
 struct wmi_echo_ev_arg {
-    __le32 value;
+    uint32_t value;
 };
 
 struct wmi_pdev_temperature_event {
     /* temperature value in Celcius degree */
-    __le32 temperature;
+    uint32_t temperature;
 } __packed;
 
 struct wmi_pdev_bss_chan_info_event {
-    __le32 freq;
-    __le32 noise_floor;
-    __le64 cycle_busy;
-    __le64 cycle_total;
-    __le64 cycle_tx;
-    __le64 cycle_rx;
-    __le64 cycle_rx_bss;
-    __le32 reserved;
+    uint32_t freq;
+    uint32_t noise_floor;
+    uint64_t cycle_busy;
+    uint64_t cycle_total;
+    uint64_t cycle_tx;
+    uint64_t cycle_rx;
+    uint64_t cycle_rx_bss;
+    uint32_t reserved;
 } __packed;
 
 /* WOW structures */
@@ -6572,9 +6555,9 @@ enum wmi_txbf_conf {
 #define WMI_CCA_DETECT_MARGIN_AUTO  0
 
 struct wmi_pdev_set_adaptive_cca_params {
-    __le32 enable;
-    __le32 cca_detect_level;
-    __le32 cca_detect_margin;
+    uint32_t enable;
+    uint32_t cca_detect_level;
+    uint32_t cca_detect_margin;
 } __packed;
 
 enum wmi_host_platform_type {
@@ -6588,8 +6571,8 @@ enum wmi_bss_survey_req_type {
 };
 
 struct wmi_pdev_chan_info_req_cmd {
-    __le32 type;
-    __le32 reserved;
+    uint32_t type;
+    uint32_t reserved;
 } __packed;
 
 struct ath10k;

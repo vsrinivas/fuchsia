@@ -112,9 +112,9 @@ static void __ath10k_htt_tx_txq_sync(struct ath10k* ar) {
         return;
     }
 
-    seq = le32_to_cpu(ar->htt.tx_q_state.vaddr->seq);
+    seq = ar->htt.tx_q_state.vaddr->seq;
     seq++;
-    ar->htt.tx_q_state.vaddr->seq = cpu_to_le32(seq);
+    ar->htt.tx_q_state.vaddr->seq = seq;
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx txq state update commit seq %u\n",
                seq);
@@ -526,8 +526,8 @@ int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cook
     req->upload_types[0] = mask;
     req->reset_types[0] = mask;
     req->stat_type = HTT_STATS_REQ_CFG_STAT_TYPE_INVALID;
-    req->cookie_lsb = cpu_to_le32(cookie & 0xffffffff);
-    req->cookie_msb = cpu_to_le32((cookie & 0xffffffff00000000ULL) >> 32);
+    req->cookie_lsb = cookie & 0xffffffff;
+    req->cookie_msb = (cookie & 0xffffffff00000000ULL) >> 32;
 
     ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
     if (ret) {
@@ -580,14 +580,13 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
     cfg->info = info;
     cfg->num_banks = 1;
     cfg->desc_size = sizeof(struct htt_msdu_ext_desc);
-    cfg->bank_base_addrs[0] = __cpu_to_le32(htt->frag_desc.paddr);
+    cfg->bank_base_addrs[0] = htt->frag_desc.paddr;
     cfg->bank_id[0].bank_min_id = 0;
-    cfg->bank_id[0].bank_max_id = __cpu_to_le16(htt->max_num_pending_tx -
-                                  1);
+    cfg->bank_id[0].bank_max_id = htt->max_num_pending_tx - 1;
 
-    cfg->q_state.paddr = cpu_to_le32(htt->tx_q_state.paddr);
-    cfg->q_state.num_peers = cpu_to_le16(htt->tx_q_state.num_peers);
-    cfg->q_state.num_tids = cpu_to_le16(htt->tx_q_state.num_tids);
+    cfg->q_state.paddr = htt->tx_q_state.paddr;
+    cfg->q_state.num_peers = htt->tx_q_state.num_peers;
+    cfg->q_state.num_tids = htt->tx_q_state.num_tids;
     cfg->q_state.record_size = HTT_TX_Q_STATE_ENTRY_SIZE;
     cfg->q_state.record_multiplier = HTT_TX_Q_STATE_ENTRY_MULTIPLIER;
 
@@ -656,28 +655,28 @@ int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
     flags |= HTT_RX_RING_FLAGS_NULL_RX;
     flags |= HTT_RX_RING_FLAGS_PHY_DATA_RX;
 
-    fw_idx = __le32_to_cpu(*htt->rx_ring.alloc_idx.vaddr);
+    fw_idx = *htt->rx_ring.alloc_idx.vaddr;
 
     ring->fw_idx_shadow_reg_paddr =
-        __cpu_to_le32(htt->rx_ring.alloc_idx.paddr);
-    ring->rx_ring_base_paddr = __cpu_to_le32(htt->rx_ring.base_paddr);
-    ring->rx_ring_len = __cpu_to_le16(htt->rx_ring.size);
-    ring->rx_ring_bufsize = __cpu_to_le16(HTT_RX_BUF_SIZE);
-    ring->flags = __cpu_to_le16(flags);
-    ring->fw_idx_init_val = __cpu_to_le16(fw_idx);
+        htt->rx_ring.alloc_idx.paddr;
+    ring->rx_ring_base_paddr = htt->rx_ring.base_paddr;
+    ring->rx_ring_len = htt->rx_ring.size;
+    ring->rx_ring_bufsize = HTT_RX_BUF_SIZE;
+    ring->flags = flags;
+    ring->fw_idx_init_val = fw_idx;
 
 #define desc_offset(x) (offsetof(struct htt_rx_desc, x) / 4)
 
-    ring->mac80211_hdr_offset = __cpu_to_le16(desc_offset(rx_hdr_status));
-    ring->msdu_payload_offset = __cpu_to_le16(desc_offset(msdu_payload));
-    ring->ppdu_start_offset = __cpu_to_le16(desc_offset(ppdu_start));
-    ring->ppdu_end_offset = __cpu_to_le16(desc_offset(ppdu_end));
-    ring->mpdu_start_offset = __cpu_to_le16(desc_offset(mpdu_start));
-    ring->mpdu_end_offset = __cpu_to_le16(desc_offset(mpdu_end));
-    ring->msdu_start_offset = __cpu_to_le16(desc_offset(msdu_start));
-    ring->msdu_end_offset = __cpu_to_le16(desc_offset(msdu_end));
-    ring->rx_attention_offset = __cpu_to_le16(desc_offset(attention));
-    ring->frag_info_offset = __cpu_to_le16(desc_offset(frag_info));
+    ring->mac80211_hdr_offset = desc_offset(rx_hdr_status);
+    ring->msdu_payload_offset = desc_offset(msdu_payload);
+    ring->ppdu_start_offset = desc_offset(ppdu_start);
+    ring->ppdu_end_offset = desc_offset(ppdu_end);
+    ring->mpdu_start_offset = desc_offset(mpdu_start);
+    ring->mpdu_end_offset = desc_offset(mpdu_end);
+    ring->msdu_start_offset = desc_offset(msdu_start);
+    ring->msdu_end_offset = desc_offset(msdu_end);
+    ring->rx_attention_offset = desc_offset(attention);
+    ring->frag_info_offset = desc_offset(frag_info);
 
 #undef desc_offset
 
@@ -740,8 +739,8 @@ int ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
 }
 
 int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
-                             __le32 token,
-                             __le16 fetch_seq_num,
+                             uint32_t token,
+                             uint16_t fetch_seq_num,
                              struct htt_tx_fetch_record* records,
                              size_t num_records) {
     struct sk_buff* skb;
@@ -766,9 +765,9 @@ int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
     skb_put(skb, len);
     cmd = (struct htt_cmd*)skb->data;
     cmd->hdr.msg_type = HTT_H2T_MSG_TYPE_TX_FETCH_RESP;
-    cmd->tx_fetch_resp.resp_id = cpu_to_le16(resp_id);
+    cmd->tx_fetch_resp.resp_id = resp_id;
     cmd->tx_fetch_resp.fetch_seq_num = fetch_seq_num;
-    cmd->tx_fetch_resp.num_records = cpu_to_le16(num_records);
+    cmd->tx_fetch_resp.num_records = num_records;
     cmd->tx_fetch_resp.token = token;
 
     memcpy(cmd->tx_fetch_resp.records, records,
@@ -868,10 +867,10 @@ int ath10k_htt_mgmt_tx(struct ath10k_htt* htt, struct sk_buff* msdu) {
     memset(cmd, 0, len);
 
     cmd->hdr.msg_type         = HTT_H2T_MSG_TYPE_MGMT_TX;
-    cmd->mgmt_tx.msdu_paddr = __cpu_to_le32(ATH10K_SKB_CB(msdu)->paddr);
-    cmd->mgmt_tx.len        = __cpu_to_le32(msdu->len);
-    cmd->mgmt_tx.desc_id    = __cpu_to_le32(msdu_id);
-    cmd->mgmt_tx.vdev_id    = __cpu_to_le32(vdev_id);
+    cmd->mgmt_tx.msdu_paddr = ATH10K_SKB_CB(msdu->paddr);
+    cmd->mgmt_tx.len        = msdu->len;
+    cmd->mgmt_tx.desc_id    = msdu_id;
+    cmd->mgmt_tx.vdev_id    = vdev_id;
     memcpy(cmd->mgmt_tx.hdr, msdu->data,
            min_t(int, msdu->len, HTT_MGMT_FRM_HDR_DOWNLOAD_LEN));
 
@@ -968,17 +967,17 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
                     &htt->frag_desc.vaddr[msdu_id].frags;
             ext_desc = &htt->frag_desc.vaddr[msdu_id];
             frags[0].tword_addr.paddr_lo =
-                __cpu_to_le32(skb_cb->paddr);
+                skb_cb->paddr;
             frags[0].tword_addr.paddr_hi = 0;
-            frags[0].tword_addr.len_16 = __cpu_to_le16(msdu->len);
+            frags[0].tword_addr.len_16 = msdu->len;
 
             frags_paddr =  htt->frag_desc.paddr +
                            (sizeof(struct htt_msdu_ext_desc) * msdu_id);
         } else {
             frags = txbuf->frags;
             frags[0].dword_addr.paddr =
-                __cpu_to_le32(skb_cb->paddr);
-            frags[0].dword_addr.len = __cpu_to_le32(msdu->len);
+                skb_cb->paddr;
+            frags[0].dword_addr.len = msdu->len;
             frags[1].dword_addr.paddr = 0;
             frags[1].dword_addr.len = 0;
 
@@ -1013,7 +1012,7 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
      */
 
     txbuf->htc_hdr.eid = htt->eid;
-    txbuf->htc_hdr.len = __cpu_to_le16(sizeof(txbuf->cmd_hdr) +
+    txbuf->htc_hdr.len = sizeof(txbuf->cmd_hdr +
                                        sizeof(txbuf->cmd_tx) +
                                        prefetch_len);
     txbuf->htc_hdr.flags = 0;
@@ -1041,18 +1040,18 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
 
     txbuf->cmd_hdr.msg_type = HTT_H2T_MSG_TYPE_TX_FRM;
     txbuf->cmd_tx.flags0 = flags0;
-    txbuf->cmd_tx.flags1 = __cpu_to_le16(flags1);
-    txbuf->cmd_tx.len = __cpu_to_le16(msdu->len);
-    txbuf->cmd_tx.id = __cpu_to_le16(msdu_id);
-    txbuf->cmd_tx.frags_paddr = __cpu_to_le32(frags_paddr);
+    txbuf->cmd_tx.flags1 = flags1;
+    txbuf->cmd_tx.len = msdu->len;
+    txbuf->cmd_tx.id = msdu_id;
+    txbuf->cmd_tx.frags_paddr = frags_paddr;
     if (ath10k_mac_tx_frm_has_freq(ar)) {
         txbuf->cmd_tx.offchan_tx.peerid =
-            __cpu_to_le16(HTT_INVALID_PEERID);
+            HTT_INVALID_PEERID;
         txbuf->cmd_tx.offchan_tx.freq =
-            __cpu_to_le16(freq);
+            freq;
     } else {
         txbuf->cmd_tx.peerid =
-            __cpu_to_le32(HTT_INVALID_PEERID);
+            HTT_INVALID_PEERID;
     }
 
     trace_ath10k_htt_tx(ar, msdu_id, msdu->len, vdev_id, tid);

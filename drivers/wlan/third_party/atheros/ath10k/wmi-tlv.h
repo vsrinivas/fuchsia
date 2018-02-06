@@ -969,7 +969,7 @@ enum wmi_tlv_service {
 
 #define WMI_SERVICE_IS_ENABLED(wmi_svc_bmap, svc_id, len) \
     ((svc_id) < (len) && \
-     __le32_to_cpu((wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))]) & \
+     (wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))] & \
      BIT((svc_id) % (sizeof(uint32_t))))
 
 #define SVCMAP(x, y, len) \
@@ -979,7 +979,7 @@ enum wmi_tlv_service {
     } while (0)
 
 static inline void
-wmi_tlv_svc_map(const __le32* in, unsigned long* out, size_t len) {
+wmi_tlv_svc_map(const uint32_t* in, unsigned long* out, size_t len) {
     SVCMAP(WMI_TLV_SERVICE_BEACON_OFFLOAD,
            WMI_SERVICE_BEACON_OFFLOAD, len);
     SVCMAP(WMI_TLV_SERVICE_SCAN_OFFLOAD,
@@ -1125,30 +1125,30 @@ wmi_tlv_svc_map(const __le32* in, unsigned long* out, size_t len) {
 #undef SVCMAP
 
 struct wmi_tlv {
-    __le16 len;
-    __le16 tag;
+    uint16_t len;
+    uint16_t tag;
     uint8_t value[0];
 } __packed;
 
 #define WMI_TLV_MGMT_RX_NUM_RSSI 4
 
 struct wmi_tlv_mgmt_rx_ev {
-    __le32 channel;
-    __le32 snr;
-    __le32 rate;
-    __le32 phy_mode;
-    __le32 buf_len;
-    __le32 status;
-    __le32 rssi[WMI_TLV_MGMT_RX_NUM_RSSI];
+    uint32_t channel;
+    uint32_t snr;
+    uint32_t rate;
+    uint32_t phy_mode;
+    uint32_t buf_len;
+    uint32_t status;
+    uint32_t rssi[WMI_TLV_MGMT_RX_NUM_RSSI];
 } __packed;
 
 struct wmi_tlv_abi_version {
-    __le32 abi_ver0;
-    __le32 abi_ver1;
-    __le32 abi_ver_ns0;
-    __le32 abi_ver_ns1;
-    __le32 abi_ver_ns2;
-    __le32 abi_ver_ns3;
+    uint32_t abi_ver0;
+    uint32_t abi_ver1;
+    uint32_t abi_ver_ns0;
+    uint32_t abi_ver_ns1;
+    uint32_t abi_ver_ns2;
+    uint32_t abi_ver_ns3;
 } __packed;
 
 enum wmi_tlv_hw_bd_id {
@@ -1165,115 +1165,115 @@ struct wmi_tlv_hw_bd_info {
 } __packed;
 
 struct wmi_tlv_svc_rdy_ev {
-    __le32 fw_build_vers;
+    uint32_t fw_build_vers;
     struct wmi_tlv_abi_version abi;
-    __le32 phy_capability;
-    __le32 max_frag_entry;
-    __le32 num_rf_chains;
-    __le32 ht_cap_info;
-    __le32 vht_cap_info;
-    __le32 vht_supp_mcs;
-    __le32 hw_min_tx_power;
-    __le32 hw_max_tx_power;
-    __le32 sys_cap_info;
-    __le32 min_pkt_size_enable;
-    __le32 max_bcn_ie_size;
-    __le32 num_mem_reqs;
-    __le32 max_num_scan_chans;
-    __le32 hw_bd_id; /* 0 means hw_bd_info is invalid */
+    uint32_t phy_capability;
+    uint32_t max_frag_entry;
+    uint32_t num_rf_chains;
+    uint32_t ht_cap_info;
+    uint32_t vht_cap_info;
+    uint32_t vht_supp_mcs;
+    uint32_t hw_min_tx_power;
+    uint32_t hw_max_tx_power;
+    uint32_t sys_cap_info;
+    uint32_t min_pkt_size_enable;
+    uint32_t max_bcn_ie_size;
+    uint32_t num_mem_reqs;
+    uint32_t max_num_scan_chans;
+    uint32_t hw_bd_id; /* 0 means hw_bd_info is invalid */
     struct wmi_tlv_hw_bd_info hw_bd_info[5];
 } __packed;
 
 struct wmi_tlv_rdy_ev {
     struct wmi_tlv_abi_version abi;
     struct wmi_mac_addr mac_addr;
-    __le32 status;
+    uint32_t status;
 } __packed;
 
 struct wmi_tlv_resource_config {
-    __le32 num_vdevs;
-    __le32 num_peers;
-    __le32 num_offload_peers;
-    __le32 num_offload_reorder_bufs;
-    __le32 num_peer_keys;
-    __le32 num_tids;
-    __le32 ast_skid_limit;
-    __le32 tx_chain_mask;
-    __le32 rx_chain_mask;
-    __le32 rx_timeout_pri[4];
-    __le32 rx_decap_mode;
-    __le32 scan_max_pending_reqs;
-    __le32 bmiss_offload_max_vdev;
-    __le32 roam_offload_max_vdev;
-    __le32 roam_offload_max_ap_profiles;
-    __le32 num_mcast_groups;
-    __le32 num_mcast_table_elems;
-    __le32 mcast2ucast_mode;
-    __le32 tx_dbg_log_size;
-    __le32 num_wds_entries;
-    __le32 dma_burst_size;
-    __le32 mac_aggr_delim;
-    __le32 rx_skip_defrag_timeout_dup_detection_check;
-    __le32 vow_config;
-    __le32 gtk_offload_max_vdev;
-    __le32 num_msdu_desc;
-    __le32 max_frag_entries;
-    __le32 num_tdls_vdevs;
-    __le32 num_tdls_conn_table_entries;
-    __le32 beacon_tx_offload_max_vdev;
-    __le32 num_multicast_filter_entries;
-    __le32 num_wow_filters;
-    __le32 num_keep_alive_pattern;
-    __le32 keep_alive_pattern_size;
-    __le32 max_tdls_concurrent_sleep_sta;
-    __le32 max_tdls_concurrent_buffer_sta;
+    uint32_t num_vdevs;
+    uint32_t num_peers;
+    uint32_t num_offload_peers;
+    uint32_t num_offload_reorder_bufs;
+    uint32_t num_peer_keys;
+    uint32_t num_tids;
+    uint32_t ast_skid_limit;
+    uint32_t tx_chain_mask;
+    uint32_t rx_chain_mask;
+    uint32_t rx_timeout_pri[4];
+    uint32_t rx_decap_mode;
+    uint32_t scan_max_pending_reqs;
+    uint32_t bmiss_offload_max_vdev;
+    uint32_t roam_offload_max_vdev;
+    uint32_t roam_offload_max_ap_profiles;
+    uint32_t num_mcast_groups;
+    uint32_t num_mcast_table_elems;
+    uint32_t mcast2ucast_mode;
+    uint32_t tx_dbg_log_size;
+    uint32_t num_wds_entries;
+    uint32_t dma_burst_size;
+    uint32_t mac_aggr_delim;
+    uint32_t rx_skip_defrag_timeout_dup_detection_check;
+    uint32_t vow_config;
+    uint32_t gtk_offload_max_vdev;
+    uint32_t num_msdu_desc;
+    uint32_t max_frag_entries;
+    uint32_t num_tdls_vdevs;
+    uint32_t num_tdls_conn_table_entries;
+    uint32_t beacon_tx_offload_max_vdev;
+    uint32_t num_multicast_filter_entries;
+    uint32_t num_wow_filters;
+    uint32_t num_keep_alive_pattern;
+    uint32_t keep_alive_pattern_size;
+    uint32_t max_tdls_concurrent_sleep_sta;
+    uint32_t max_tdls_concurrent_buffer_sta;
 } __packed;
 
 struct wmi_tlv_init_cmd {
     struct wmi_tlv_abi_version abi;
-    __le32 num_host_mem_chunks;
+    uint32_t num_host_mem_chunks;
 } __packed;
 
 struct wmi_tlv_pdev_set_param_cmd {
-    __le32 pdev_id; /* not used yet */
-    __le32 param_id;
-    __le32 param_value;
+    uint32_t pdev_id; /* not used yet */
+    uint32_t param_id;
+    uint32_t param_value;
 } __packed;
 
 struct wmi_tlv_pdev_set_rd_cmd {
-    __le32 pdev_id; /* not used yet */
-    __le32 regd;
-    __le32 regd_2ghz;
-    __le32 regd_5ghz;
-    __le32 conform_limit_2ghz;
-    __le32 conform_limit_5ghz;
+    uint32_t pdev_id; /* not used yet */
+    uint32_t regd;
+    uint32_t regd_2ghz;
+    uint32_t regd_5ghz;
+    uint32_t conform_limit_2ghz;
+    uint32_t conform_limit_5ghz;
 } __packed;
 
 struct wmi_tlv_scan_chan_list_cmd {
-    __le32 num_scan_chans;
+    uint32_t num_scan_chans;
 } __packed;
 
 struct wmi_tlv_start_scan_cmd {
     struct wmi_start_scan_common common;
-    __le32 burst_duration_ms;
-    __le32 num_channels;
-    __le32 num_bssids;
-    __le32 num_ssids;
-    __le32 ie_len;
-    __le32 num_probes;
+    uint32_t burst_duration_ms;
+    uint32_t num_channels;
+    uint32_t num_bssids;
+    uint32_t num_ssids;
+    uint32_t ie_len;
+    uint32_t num_probes;
 } __packed;
 
 struct wmi_tlv_vdev_start_cmd {
-    __le32 vdev_id;
-    __le32 requestor_id;
-    __le32 bcn_intval;
-    __le32 dtim_period;
-    __le32 flags;
+    uint32_t vdev_id;
+    uint32_t requestor_id;
+    uint32_t bcn_intval;
+    uint32_t dtim_period;
+    uint32_t flags;
     struct wmi_ssid ssid;
-    __le32 bcn_tx_rate;
-    __le32 bcn_tx_power;
-    __le32 num_noa_descr;
-    __le32 disable_hw_ack;
+    uint32_t bcn_tx_rate;
+    uint32_t bcn_tx_power;
+    uint32_t num_noa_descr;
+    uint32_t disable_hw_ack;
 } __packed;
 
 enum {
@@ -1285,56 +1285,56 @@ enum {
 };
 
 struct wmi_tlv_peer_create_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_addr;
-    __le32 peer_type;
+    uint32_t peer_type;
 } __packed;
 
 struct wmi_tlv_peer_assoc_cmd {
     struct wmi_mac_addr mac_addr;
-    __le32 vdev_id;
-    __le32 new_assoc;
-    __le32 assoc_id;
-    __le32 flags;
-    __le32 caps;
-    __le32 listen_intval;
-    __le32 ht_caps;
-    __le32 max_mpdu;
-    __le32 mpdu_density;
-    __le32 rate_caps;
-    __le32 nss;
-    __le32 vht_caps;
-    __le32 phy_mode;
-    __le32 ht_info[2];
-    __le32 num_legacy_rates;
-    __le32 num_ht_rates;
+    uint32_t vdev_id;
+    uint32_t new_assoc;
+    uint32_t assoc_id;
+    uint32_t flags;
+    uint32_t caps;
+    uint32_t listen_intval;
+    uint32_t ht_caps;
+    uint32_t max_mpdu;
+    uint32_t mpdu_density;
+    uint32_t rate_caps;
+    uint32_t nss;
+    uint32_t vht_caps;
+    uint32_t phy_mode;
+    uint32_t ht_info[2];
+    uint32_t num_legacy_rates;
+    uint32_t num_ht_rates;
 } __packed;
 
 struct wmi_tlv_pdev_suspend {
-    __le32 pdev_id; /* not used yet */
-    __le32 opt;
+    uint32_t pdev_id; /* not used yet */
+    uint32_t opt;
 } __packed;
 
 struct wmi_tlv_pdev_set_wmm_cmd {
-    __le32 pdev_id; /* not used yet */
-    __le32 dg_type; /* no idea.. */
+    uint32_t pdev_id; /* not used yet */
+    uint32_t dg_type; /* no idea.. */
 } __packed;
 
 struct wmi_tlv_vdev_wmm_params {
-    __le32 dummy;
+    uint32_t dummy;
     struct wmi_wmm_params params;
 } __packed;
 
 struct wmi_tlv_vdev_set_wmm_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_tlv_vdev_wmm_params vdev_wmm_params[4];
 } __packed;
 
 struct wmi_tlv_phyerr_ev {
-    __le32 num_phyerrs;
-    __le32 tsf_l32;
-    __le32 tsf_u32;
-    __le32 buf_len;
+    uint32_t num_phyerrs;
+    uint32_t tsf_l32;
+    uint32_t tsf_u32;
+    uint32_t buf_len;
 } __packed;
 
 enum wmi_tlv_dbglog_param {
@@ -1356,51 +1356,51 @@ enum wmi_tlv_dbglog_log_level {
 
 #define WMI_TLV_DBGLOG_BITMAP_MAX_IDS 512
 #define WMI_TLV_DBGLOG_BITMAP_MAX_WORDS (WMI_TLV_DBGLOG_BITMAP_MAX_IDS / \
-                     sizeof(__le32))
+                     sizeof(uint32_t))
 #define WMI_TLV_DBGLOG_ALL_MODULES 0xffff
 #define WMI_TLV_DBGLOG_LOG_LEVEL_VALUE(module_id, log_level) \
         (((module_id << 16) & 0xffff0000) | \
          ((log_level <<  0) & 0x000000ff))
 
 struct wmi_tlv_dbglog_cmd {
-    __le32 param;
-    __le32 value;
+    uint32_t param;
+    uint32_t value;
 } __packed;
 
 struct wmi_tlv_resume_cmd {
-    __le32 reserved;
+    uint32_t reserved;
 } __packed;
 
 struct wmi_tlv_req_stats_cmd {
-    __le32 stats_id; /* wmi_stats_id */
-    __le32 vdev_id;
+    uint32_t stats_id; /* wmi_stats_id */
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
 } __packed;
 
 struct wmi_tlv_vdev_stats {
-    __le32 vdev_id;
-    __le32 beacon_snr;
-    __le32 data_snr;
-    __le32 num_tx_frames[4]; /* per-AC */
-    __le32 num_rx_frames;
-    __le32 num_tx_frames_retries[4];
-    __le32 num_tx_frames_failures[4];
-    __le32 num_rts_fail;
-    __le32 num_rts_success;
-    __le32 num_rx_err;
-    __le32 num_rx_discard;
-    __le32 num_tx_not_acked;
-    __le32 tx_rate_history[10];
-    __le32 beacon_rssi_history[10];
+    uint32_t vdev_id;
+    uint32_t beacon_snr;
+    uint32_t data_snr;
+    uint32_t num_tx_frames[4]; /* per-AC */
+    uint32_t num_rx_frames;
+    uint32_t num_tx_frames_retries[4];
+    uint32_t num_tx_frames_failures[4];
+    uint32_t num_rts_fail;
+    uint32_t num_rts_success;
+    uint32_t num_rx_err;
+    uint32_t num_rx_discard;
+    uint32_t num_tx_not_acked;
+    uint32_t tx_rate_history[10];
+    uint32_t beacon_rssi_history[10];
 } __packed;
 
 struct wmi_tlv_pktlog_enable {
-    __le32 reserved;
-    __le32 filter;
+    uint32_t reserved;
+    uint32_t filter;
 } __packed;
 
 struct wmi_tlv_pktlog_disable {
-    __le32 reserved;
+    uint32_t reserved;
 } __packed;
 
 enum wmi_tlv_bcn_tx_status {
@@ -1411,30 +1411,30 @@ enum wmi_tlv_bcn_tx_status {
 };
 
 struct wmi_tlv_bcn_tx_status_ev {
-    __le32 vdev_id;
-    __le32 tx_status;
+    uint32_t vdev_id;
+    uint32_t tx_status;
 } __packed;
 
 struct wmi_tlv_bcn_prb_info {
-    __le32 caps;
-    __le32 erp;
+    uint32_t caps;
+    uint32_t erp;
     uint8_t ies[0];
 } __packed;
 
 struct wmi_tlv_bcn_tmpl_cmd {
-    __le32 vdev_id;
-    __le32 tim_ie_offset;
-    __le32 buf_len;
+    uint32_t vdev_id;
+    uint32_t tim_ie_offset;
+    uint32_t buf_len;
 } __packed;
 
 struct wmi_tlv_prb_tmpl_cmd {
-    __le32 vdev_id;
-    __le32 buf_len;
+    uint32_t vdev_id;
+    uint32_t buf_len;
 } __packed;
 
 struct wmi_tlv_p2p_go_bcn_ie {
-    __le32 vdev_id;
-    __le32 ie_len;
+    uint32_t vdev_id;
+    uint32_t ie_len;
 } __packed;
 
 enum wmi_tlv_diag_item_type {
@@ -1446,61 +1446,61 @@ enum wmi_tlv_diag_item_type {
 struct wmi_tlv_diag_item {
     uint8_t type;
     uint8_t reserved;
-    __le16 len;
-    __le32 timestamp;
-    __le32 code;
+    uint16_t len;
+    uint32_t timestamp;
+    uint32_t code;
     uint8_t payload[0];
 } __packed;
 
 struct wmi_tlv_diag_data_ev {
-    __le32 num_items;
+    uint32_t num_items;
 } __packed;
 
 struct wmi_tlv_sta_keepalive_cmd {
-    __le32 vdev_id;
-    __le32 enabled;
-    __le32 method; /* WMI_STA_KEEPALIVE_METHOD_ */
-    __le32 interval; /* in seconds */
+    uint32_t vdev_id;
+    uint32_t enabled;
+    uint32_t method; /* WMI_STA_KEEPALIVE_METHOD_ */
+    uint32_t interval; /* in seconds */
 } __packed;
 
 struct wmi_tlv_stats_ev {
-    __le32 stats_id; /* WMI_STAT_ */
-    __le32 num_pdev_stats;
-    __le32 num_vdev_stats;
-    __le32 num_peer_stats;
-    __le32 num_bcnflt_stats;
-    __le32 num_chan_stats;
+    uint32_t stats_id; /* WMI_STAT_ */
+    uint32_t num_pdev_stats;
+    uint32_t num_vdev_stats;
+    uint32_t num_peer_stats;
+    uint32_t num_bcnflt_stats;
+    uint32_t num_chan_stats;
 } __packed;
 
 struct wmi_tlv_p2p_noa_ev {
-    __le32 vdev_id;
+    uint32_t vdev_id;
 } __packed;
 
 struct wmi_tlv_roam_ev {
-    __le32 vdev_id;
-    __le32 reason;
-    __le32 rssi;
+    uint32_t vdev_id;
+    uint32_t reason;
+    uint32_t rssi;
 } __packed;
 
 struct wmi_tlv_wow_add_del_event_cmd {
-    __le32 vdev_id;
-    __le32 is_add;
-    __le32 event_bitmap;
+    uint32_t vdev_id;
+    uint32_t is_add;
+    uint32_t event_bitmap;
 } __packed;
 
 struct wmi_tlv_wow_enable_cmd {
-    __le32 enable;
+    uint32_t enable;
 } __packed;
 
 struct wmi_tlv_wow_host_wakeup_ind {
-    __le32 reserved;
+    uint32_t reserved;
 } __packed;
 
 struct wmi_tlv_wow_event_info {
-    __le32 vdev_id;
-    __le32 flag;
-    __le32 wake_reason;
-    __le32 data_len;
+    uint32_t vdev_id;
+    uint32_t flag;
+    uint32_t wake_reason;
+    uint32_t data_len;
 } __packed;
 
 enum wmi_tlv_pattern_type {
@@ -1523,22 +1523,22 @@ enum wmi_tlv_pattern_type {
 struct wmi_tlv_wow_bitmap_pattern {
     uint8_t patternbuf[WOW_DEFAULT_BITMAP_PATTERN_SIZE];
     uint8_t bitmaskbuf[WOW_DEFAULT_BITMASK_SIZE];
-    __le32 pattern_offset;
-    __le32 pattern_len;
-    __le32 bitmask_len;
-    __le32 pattern_id;
+    uint32_t pattern_offset;
+    uint32_t pattern_len;
+    uint32_t bitmask_len;
+    uint32_t pattern_id;
 } __packed;
 
 struct wmi_tlv_wow_add_pattern_cmd {
-    __le32 vdev_id;
-    __le32 pattern_id;
-    __le32 pattern_type;
+    uint32_t vdev_id;
+    uint32_t pattern_id;
+    uint32_t pattern_type;
 } __packed;
 
 struct wmi_tlv_wow_del_pattern_cmd {
-    __le32 vdev_id;
-    __le32 pattern_id;
-    __le32 pattern_type;
+    uint32_t vdev_id;
+    uint32_t pattern_id;
+    uint32_t pattern_type;
 } __packed;
 
 /* TDLS Options */
@@ -1549,25 +1549,25 @@ enum wmi_tlv_tdls_options {
 };
 
 struct wmi_tdls_set_state_cmd {
-    __le32 vdev_id;
-    __le32 state;
-    __le32 notification_interval_ms;
-    __le32 tx_discovery_threshold;
-    __le32 tx_teardown_threshold;
-    __le32 rssi_teardown_threshold;
-    __le32 rssi_delta;
-    __le32 tdls_options;
-    __le32 tdls_peer_traffic_ind_window;
-    __le32 tdls_peer_traffic_response_timeout_ms;
-    __le32 tdls_puapsd_mask;
-    __le32 tdls_puapsd_inactivity_time_ms;
-    __le32 tdls_puapsd_rx_frame_threshold;
+    uint32_t vdev_id;
+    uint32_t state;
+    uint32_t notification_interval_ms;
+    uint32_t tx_discovery_threshold;
+    uint32_t tx_teardown_threshold;
+    uint32_t rssi_teardown_threshold;
+    uint32_t rssi_delta;
+    uint32_t tdls_options;
+    uint32_t tdls_peer_traffic_ind_window;
+    uint32_t tdls_peer_traffic_response_timeout_ms;
+    uint32_t tdls_puapsd_mask;
+    uint32_t tdls_puapsd_inactivity_time_ms;
+    uint32_t tdls_puapsd_rx_frame_threshold;
 } __packed;
 
 struct wmi_tdls_peer_update_cmd {
-    __le32 vdev_id;
+    uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-    __le32 peer_state;
+    uint32_t peer_state;
 } __packed;
 
 enum {
@@ -1581,21 +1581,21 @@ enum {
 #define WMI_TLV_TDLS_PEER_SP_LSB    5
 
 struct wmi_tdls_peer_capab {
-    __le32 peer_qos;
-    __le32 buff_sta_support;
-    __le32 off_chan_support;
-    __le32 peer_curr_operclass;
-    __le32 self_curr_operclass;
-    __le32 peer_chan_len;
-    __le32 peer_operclass_len;
+    uint32_t peer_qos;
+    uint32_t buff_sta_support;
+    uint32_t off_chan_support;
+    uint32_t peer_curr_operclass;
+    uint32_t self_curr_operclass;
+    uint32_t peer_chan_len;
+    uint32_t peer_operclass_len;
     uint8_t peer_operclass[WMI_TDLS_MAX_SUPP_OPER_CLASSES];
-    __le32 is_peer_responder;
-    __le32 pref_offchan_num;
-    __le32 pref_offchan_bw;
+    uint32_t is_peer_responder;
+    uint32_t pref_offchan_num;
+    uint32_t pref_offchan_bw;
 } __packed;
 
 struct wmi_tlv_adaptive_qcs {
-    __le32 enable;
+    uint32_t enable;
 } __packed;
 
 /**
@@ -1633,11 +1633,11 @@ enum wmi_tlv_tx_pause_action {
 };
 
 struct wmi_tlv_tx_pause_ev {
-    __le32 pause_id;
-    __le32 action;
-    __le32 vdev_map;
-    __le32 peer_id;
-    __le32 tid_map;
+    uint32_t pause_id;
+    uint32_t action;
+    uint32_t vdev_map;
+    uint32_t peer_id;
+    uint32_t tid_map;
 } __packed;
 
 void ath10k_wmi_tlv_attach(struct ath10k* ar);

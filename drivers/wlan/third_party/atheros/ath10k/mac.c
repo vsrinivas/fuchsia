@@ -2542,7 +2542,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
      * supports VHT.
      */
     for (i = 0, max_nss = 0, vht_mcs = 0; i < NL80211_VHT_NSS_MAX; i++) {
-        vht_mcs = __le16_to_cpu(vht_cap->vht_mcs.rx_mcs_map) >>
+        vht_mcs = vht_cap->vht_mcs.rx_mcs_map >>
                   (2 * i) & 3;
 
         if ((vht_mcs != IEEE80211_VHT_MCS_NOT_SUPPORTED) &&
@@ -2552,13 +2552,13 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
     }
     arg->peer_num_spatial_streams = min(sta->rx_nss, max_nss);
     arg->peer_vht_rates.rx_max_rate =
-        __le16_to_cpu(vht_cap->vht_mcs.rx_highest);
+        vht_cap->vht_mcs.rx_highest;
     arg->peer_vht_rates.rx_mcs_set =
-        __le16_to_cpu(vht_cap->vht_mcs.rx_mcs_map);
+        vht_cap->vht_mcs.rx_mcs_map;
     arg->peer_vht_rates.tx_max_rate =
-        __le16_to_cpu(vht_cap->vht_mcs.tx_highest);
+        vht_cap->vht_mcs.tx_highest;
     arg->peer_vht_rates.tx_mcs_set = ath10k_peer_assoc_h_vht_limit(
-                                         __le16_to_cpu(vht_cap->vht_mcs.tx_mcs_map), vht_mcs_mask);
+                                         vht_cap->vht_mcs.tx_mcs_map, vht_mcs_mask);
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vht peer %pM max_mpdu %d flags 0x%x\n",
                sta->addr, arg->peer_max_mpdu, arg->peer_flags);
@@ -3405,7 +3405,7 @@ ath10k_mac_tx_h_get_txmode(struct ath10k* ar,
                            struct ieee80211_sta* sta,
                            struct sk_buff* skb) {
     const struct ieee80211_hdr* hdr = (void*)skb->data;
-    __le16 fc = hdr->frame_control;
+    uint16_t fc = hdr->frame_control;
 
     if (!vif || vif->type == NL80211_IFTYPE_MONITOR) {
         return ATH10K_HW_TXRX_RAW;
@@ -3505,7 +3505,7 @@ static void ath10k_tx_h_nwifi(struct ieee80211_hw* hw, struct sk_buff* skb) {
         cb->flags &= ~ATH10K_SKB_F_QOS;
     }
 
-    hdr->frame_control &= ~__cpu_to_le16(IEEE80211_STYPE_QOS_DATA);
+    hdr->frame_control &= ~IEEE80211_STYPE_QOS_DATA;
 }
 
 static void ath10k_tx_h_8023(struct sk_buff* skb) {
@@ -4489,8 +4489,8 @@ static struct ieee80211_sta_vht_cap ath10k_create_vht_cap(struct ath10k* ar) {
         vht_cap.cap &= ~IEEE80211_VHT_CAP_TXSTBC;
     }
 
-    vht_cap.vht_mcs.rx_mcs_map = cpu_to_le16(mcs_map);
-    vht_cap.vht_mcs.tx_mcs_map = cpu_to_le16(mcs_map);
+    vht_cap.vht_mcs.rx_mcs_map = mcs_map;
+    vht_cap.vht_mcs.tx_mcs_map = mcs_map;
 
     /* If we are supporting 160Mhz or 80+80, then the NIC may be able to do
      * a restricted NSS for 160 or 80+80 vs what it can do for 80Mhz.  Give
@@ -4499,8 +4499,8 @@ static struct ieee80211_sta_vht_cap ath10k_create_vht_cap(struct ath10k* ar) {
     if ((vht_cap.cap & IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK) &&
             (hw->vht160_mcs_rx_highest != 0 ||
              hw->vht160_mcs_tx_highest != 0)) {
-        vht_cap.vht_mcs.rx_highest = cpu_to_le16(hw->vht160_mcs_rx_highest);
-        vht_cap.vht_mcs.tx_highest = cpu_to_le16(hw->vht160_mcs_tx_highest);
+        vht_cap.vht_mcs.rx_highest = hw->vht160_mcs_rx_highest;
+        vht_cap.vht_mcs.tx_highest = hw->vht160_mcs_tx_highest;
     }
 
     return vht_cap;
@@ -6892,7 +6892,7 @@ ath10k_mac_bitrate_mask_get_single_nss(struct ath10k* ar,
                                        const struct cfg80211_bitrate_mask* mask,
                                        int* nss) {
     struct ieee80211_supported_band* sband = &ar->mac.sbands[band];
-    uint16_t vht_mcs_map = le16_to_cpu(sband->vht_cap.vht_mcs.tx_mcs_map);
+    uint16_t vht_mcs_map = sband->vht_cap.vht_mcs.tx_mcs_map;
     uint8_t ht_nss_mask = 0;
     uint8_t vht_nss_mask = 0;
     int i;

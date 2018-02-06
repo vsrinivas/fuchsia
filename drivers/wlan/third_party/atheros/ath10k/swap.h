@@ -26,14 +26,14 @@
 struct ath10k_fw_file;
 
 struct ath10k_swap_code_seg_tlv {
-    __le32 address;
-    __le32 length;
+    uint32_t address;
+    uint32_t length;
     uint8_t data[0];
 } __packed;
 
 struct ath10k_swap_code_seg_tail {
     uint8_t magic_signature[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ];
-    __le32 bmi_write_addr;
+    uint32_t bmi_write_addr;
 } __packed;
 
 union ath10k_swap_code_seg_item {
@@ -43,14 +43,14 @@ union ath10k_swap_code_seg_item {
 
 struct ath10k_swap_code_seg_hw_info {
     /* Swap binary image size */
-    __le32 swap_size;
-    __le32 num_segs;
+    uint32_t swap_size;
+    uint32_t num_segs;
 
     /* Swap data size */
-    __le32 size;
-    __le32 size_log2;
-    __le32 bus_addr[ATH10K_SWAP_CODE_SEG_NUM_MAX];
-    __le64 reserved[ATH10K_SWAP_CODE_SEG_NUM_MAX];
+    uint32_t size;
+    uint32_t size_log2;
+    uint32_t bus_addr[ATH10K_SWAP_CODE_SEG_NUM_MAX];
+    uint64_t reserved[ATH10K_SWAP_CODE_SEG_NUM_MAX];
 } __packed;
 
 struct ath10k_swap_code_seg_info {

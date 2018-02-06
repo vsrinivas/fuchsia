@@ -23,7 +23,7 @@ struct sk_buff;
 
 struct wmi_ops {
     void (*rx)(struct ath10k* ar, struct sk_buff* skb);
-    void (*map_svc)(const __le32* in, unsigned long* out, size_t len);
+    void (*map_svc)(const uint32_t* in, unsigned long* out, size_t len);
 
     int (*pull_scan)(struct ath10k* ar, struct sk_buff* skb,
                      struct wmi_scan_ev_arg* arg);
@@ -212,7 +212,7 @@ ath10k_wmi_rx(struct ath10k* ar, struct sk_buff* skb) {
 }
 
 static inline int
-ath10k_wmi_map_svc(struct ath10k* ar, const __le32* in, unsigned long* out,
+ath10k_wmi_map_svc(struct ath10k* ar, const uint32_t* in, unsigned long* out,
                    size_t len) {
     if (!ar->wmi.ops->map_svc) {
         return -EOPNOTSUPP;

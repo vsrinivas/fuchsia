@@ -793,8 +793,7 @@ const struct ath10k_hw_ops qca988x_ops = {
 };
 
 static int ath10k_qca99x0_rx_desc_get_l3_pad_bytes(struct htt_rx_desc* rxd) {
-    return MS(__le32_to_cpu(rxd->msdu_end.qca99x0.info1),
-              RX_MSDU_END_INFO1_L3_HDR_PAD);
+    return MS(rxd->msdu_end.qca99x0.info1, RX_MSDU_END_INFO1_L3_HDR_PAD);
 }
 
 const struct ath10k_hw_ops qca99x0_ops = {

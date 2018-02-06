@@ -48,7 +48,7 @@ int ath10k_bmi_done(struct ath10k* ar) {
     }
 
     ar->bmi.done_sent = true;
-    cmd.id = __cpu_to_le32(BMI_DONE);
+    cmd.id = BMI_DONE;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, NULL, NULL);
     if (ret) {
@@ -74,7 +74,7 @@ int ath10k_bmi_get_target_info(struct ath10k* ar,
         return -EBUSY;
     }
 
-    cmd.id = __cpu_to_le32(BMI_GET_TARGET_INFO);
+    cmd.id = BMI_GET_TARGET_INFO;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, &resp, &resplen);
     if (ret) {
@@ -88,8 +88,8 @@ int ath10k_bmi_get_target_info(struct ath10k* ar,
         return -EIO;
     }
 
-    target_info->version = __le32_to_cpu(resp.get_target_info.version);
-    target_info->type    = __le32_to_cpu(resp.get_target_info.type);
+    target_info->version = resp.get_target_info.version;
+    target_info->type    = resp.get_target_info.type;
 
     return 0;
 }
@@ -102,7 +102,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
     union bmi_resp resp;
     uint32_t cmdlen = sizeof(cmd.id) + sizeof(cmd.get_target_info);
     uint32_t resplen, ver_len;
-    __le32 tmp;
+    uint32_t tmp;
     int ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi get target info SDIO\n");
@@ -112,7 +112,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
         return -EBUSY;
     }
 
-    cmd.id = __cpu_to_le32(BMI_GET_TARGET_INFO);
+    cmd.id = BMI_GET_TARGET_INFO;
 
     /* Step 1: Read 4 bytes of the target info and check if it is
      * the special sentinal version word or the first word in the
@@ -128,7 +128,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
     /* Some SDIO boards have a special sentinal byte before the real
      * version response.
      */
-    if (__le32_to_cpu(tmp) == TARGET_VERSION_SENTINAL) {
+    if (tmp == TARGET_VERSION_SENTINAL) {
         /* Step 1b: Read the version length */
         resplen = sizeof(uint32_t);
         ret = ath10k_hif_exchange_bmi_msg(ar, NULL, 0, &tmp,
@@ -139,7 +139,7 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
         }
     }
 
-    ver_len = __le32_to_cpu(tmp);
+    ver_len = tmp;
 
     /* Step 2: Check the target info length */
     if (ver_len != sizeof(resp.get_target_info)) {
@@ -158,8 +158,8 @@ int ath10k_bmi_get_target_info_sdio(struct ath10k* ar,
         return ret;
     }
 
-    target_info->version = __le32_to_cpu(resp.get_target_info.version);
-    target_info->type    = __le32_to_cpu(resp.get_target_info.type);
+    target_info->version = resp.get_target_info.version;
+    target_info->type    = resp.get_target_info.type;
 
     return 0;
 }
@@ -183,9 +183,9 @@ int ath10k_bmi_read_memory(struct ath10k* ar,
     while (length) {
         rxlen = min_t(uint32_t, length, BMI_MAX_DATA_SIZE);
 
-        cmd.id            = __cpu_to_le32(BMI_READ_MEMORY);
-        cmd.read_mem.addr = __cpu_to_le32(address);
-        cmd.read_mem.len  = __cpu_to_le32(rxlen);
+        cmd.id            = BMI_READ_MEMORY;
+        cmd.read_mem.addr = address;
+        cmd.read_mem.len  = rxlen;
 
         ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen,
                                           &resp, &rxlen);
@@ -218,9 +218,9 @@ int ath10k_bmi_write_soc_reg(struct ath10k* ar, uint32_t address, uint32_t reg_v
         return -EBUSY;
     }
 
-    cmd.id = __cpu_to_le32(BMI_WRITE_SOC_REGISTER);
-    cmd.write_soc_reg.addr = __cpu_to_le32(address);
-    cmd.write_soc_reg.value = __cpu_to_le32(reg_val);
+    cmd.id = BMI_WRITE_SOC_REGISTER;
+    cmd.write_soc_reg.addr = address;
+    cmd.write_soc_reg.value = reg_val;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, NULL, NULL);
     if (ret) {
@@ -247,8 +247,8 @@ int ath10k_bmi_read_soc_reg(struct ath10k* ar, uint32_t address, uint32_t* reg_v
         return -EBUSY;
     }
 
-    cmd.id = __cpu_to_le32(BMI_READ_SOC_REGISTER);
-    cmd.read_soc_reg.addr = __cpu_to_le32(address);
+    cmd.id = BMI_READ_SOC_REGISTER;
+    cmd.read_soc_reg.addr = address;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, &resp, &resplen);
     if (ret) {
@@ -257,7 +257,7 @@ int ath10k_bmi_read_soc_reg(struct ath10k* ar, uint32_t address, uint32_t* reg_v
         return ret;
     }
 
-    *reg_val = __le32_to_cpu(resp.read_soc_reg.value);
+    *reg_val = resp.read_soc_reg.value;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi read soc register value 0x%08x\n",
                *reg_val);
@@ -287,9 +287,9 @@ int ath10k_bmi_write_memory(struct ath10k* ar,
         memcpy(cmd.write_mem.payload, buffer, txlen);
         txlen = roundup(txlen, 4);
 
-        cmd.id             = __cpu_to_le32(BMI_WRITE_MEMORY);
-        cmd.write_mem.addr = __cpu_to_le32(address);
-        cmd.write_mem.len  = __cpu_to_le32(txlen);
+        cmd.id             = BMI_WRITE_MEMORY;
+        cmd.write_mem.addr = address;
+        cmd.write_mem.len  = txlen;
 
         ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, hdrlen + txlen,
                                           NULL, NULL);
@@ -325,9 +325,9 @@ int ath10k_bmi_execute(struct ath10k* ar, uint32_t address, uint32_t param, uint
         return -EBUSY;
     }
 
-    cmd.id            = __cpu_to_le32(BMI_EXECUTE);
-    cmd.execute.addr  = __cpu_to_le32(address);
-    cmd.execute.param = __cpu_to_le32(param);
+    cmd.id            = BMI_EXECUTE;
+    cmd.execute.addr  = address;
+    cmd.execute.param = param;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, &resp, &resplen);
     if (ret) {
@@ -341,7 +341,7 @@ int ath10k_bmi_execute(struct ath10k* ar, uint32_t address, uint32_t param, uint
         return -EIO;
     }
 
-    *result = __le32_to_cpu(resp.execute.result);
+    *result = resp.execute.result;
 
     ath10k_dbg(ar, ATH10K_DBG_BMI, "bmi execute result 0x%x\n", *result);
 
@@ -367,8 +367,8 @@ int ath10k_bmi_lz_data(struct ath10k* ar, const void* buffer, uint32_t length) {
 
         WARN_ON_ONCE(txlen & 3);
 
-        cmd.id          = __cpu_to_le32(BMI_LZ_DATA);
-        cmd.lz_data.len = __cpu_to_le32(txlen);
+        cmd.id          = BMI_LZ_DATA;
+        cmd.lz_data.len = txlen;
         memcpy(cmd.lz_data.payload, buffer, txlen);
 
         ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, hdrlen + txlen,
@@ -398,8 +398,8 @@ int ath10k_bmi_lz_stream_start(struct ath10k* ar, uint32_t address) {
         return -EBUSY;
     }
 
-    cmd.id            = __cpu_to_le32(BMI_LZ_STREAM_START);
-    cmd.lz_start.addr = __cpu_to_le32(address);
+    cmd.id            = BMI_LZ_STREAM_START;
+    cmd.lz_start.addr = address;
 
     ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, NULL, NULL);
     if (ret) {

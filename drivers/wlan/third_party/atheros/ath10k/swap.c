@@ -42,7 +42,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
     seg_info->target_addr = -1;
     while (size_left >= sizeof(*swap_item)) {
         swap_item = (union ath10k_swap_code_seg_item*)fw_data;
-        payload_len = __le32_to_cpu(swap_item->tlv.length);
+        payload_len = swap_item->tlv.length;
         if ((payload_len > size_left) ||
                 (payload_len == 0 &&
                  size_left != sizeof(struct ath10k_swap_code_seg_tail))) {
@@ -58,7 +58,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
                 return -EINVAL;
             }
             seg_info->target_addr =
-                __le32_to_cpu(swap_item->tail.bmi_write_addr);
+                swap_item->tail.bmi_write_addr;
             break;
         }
 
@@ -74,7 +74,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
         ath10k_err(ar, "failed to parse invalid swap file\n");
         return -EINVAL;
     }
-    seg_info->seg_hw_info.swap_size = __cpu_to_le32(total_payload_len);
+    seg_info->seg_hw_info.swap_size = total_payload_len;
 
     return 0;
 }
@@ -92,7 +92,7 @@ ath10k_swap_code_seg_free(struct ath10k* ar,
         return;
     }
 
-    seg_size = __le32_to_cpu(seg_info->seg_hw_info.size);
+    seg_size = seg_info->seg_hw_info.size;
     dma_free_coherent(ar->dev, seg_size, seg_info->virt_address[0],
                       seg_info->paddr[0]);
 }
@@ -122,12 +122,12 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
         return NULL;
     }
 
-    seg_info->seg_hw_info.bus_addr[0] = __cpu_to_le32(paddr);
-    seg_info->seg_hw_info.size = __cpu_to_le32(swap_bin_len);
-    seg_info->seg_hw_info.swap_size = __cpu_to_le32(swap_bin_len);
+    seg_info->seg_hw_info.bus_addr[0] = paddr;
+    seg_info->seg_hw_info.size = swap_bin_len;
+    seg_info->seg_hw_info.swap_size = swap_bin_len;
     seg_info->seg_hw_info.num_segs =
-        __cpu_to_le32(ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED);
-    seg_info->seg_hw_info.size_log2 = __cpu_to_le32(ilog2(swap_bin_len));
+        ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED;
+    seg_info->seg_hw_info.size_log2 = ilog2(swap_bin_len);
     seg_info->virt_address[0] = virt_addr;
     seg_info->paddr[0] = paddr;
 

@@ -65,7 +65,7 @@ enum ath10k_htc_rx_flags {
 struct ath10k_htc_hdr {
     uint8_t eid; /* @enum ath10k_htc_ep_id */
     uint8_t flags; /* @enum ath10k_htc_tx_flags, ath10k_htc_rx_flags */
-    __le16 len;
+    uint16_t len;
     union {
         uint8_t trailer_len; /* for rx */
         uint8_t control_byte0;
@@ -117,7 +117,7 @@ enum ath10k_htc_setup_complete_flags {
 };
 
 struct ath10k_ath10k_htc_msg_hdr {
-    __le16 message_id; /* @enum htc_message_id */
+    uint16_t message_id; /* @enum htc_message_id */
 } __packed;
 
 struct ath10k_htc_unknown {
@@ -126,8 +126,8 @@ struct ath10k_htc_unknown {
 } __packed;
 
 struct ath10k_htc_ready {
-    __le16 credit_count;
-    __le16 credit_size;
+    uint16_t credit_count;
+    uint16_t credit_size;
     uint8_t max_endpoints;
     uint8_t pad0;
 } __packed;
@@ -141,23 +141,23 @@ struct ath10k_htc_ready_extended {
 } __packed;
 
 struct ath10k_htc_conn_svc {
-    __le16 service_id;
-    __le16 flags; /* @enum ath10k_htc_conn_flags */
+    uint16_t service_id;
+    uint16_t flags; /* @enum ath10k_htc_conn_flags */
     uint8_t pad0;
     uint8_t pad1;
 } __packed;
 
 struct ath10k_htc_conn_svc_response {
-    __le16 service_id;
+    uint16_t service_id;
     uint8_t status; /* @enum ath10k_htc_conn_svc_status */
     uint8_t eid;
-    __le16 max_msg_size;
+    uint16_t max_msg_size;
 } __packed;
 
 struct ath10k_htc_setup_complete_extended {
     uint8_t pad0;
     uint8_t pad1;
-    __le32 flags; /* @enum htc_setup_complete_flags */
+    uint32_t flags; /* @enum htc_setup_complete_flags */
     uint8_t max_msgs_per_bundled_recv;
     uint8_t pad2;
     uint8_t pad3;

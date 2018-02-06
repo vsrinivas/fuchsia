@@ -1031,8 +1031,8 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
     /* go through ATH10K_BD_IE_BOARD_ elements */
     while (buf_len > sizeof(struct ath10k_fw_ie)) {
         hdr = buf;
-        board_ie_id = le32_to_cpu(hdr->id);
-        board_ie_len = le32_to_cpu(hdr->len);
+        board_ie_id = hdr->id;
+        board_ie_len = hdr->len;
         board_ie_data = hdr->data;
 
         buf_len -= sizeof(*hdr);
@@ -1146,8 +1146,8 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
 
     while (len > sizeof(struct ath10k_fw_ie)) {
         hdr = (struct ath10k_fw_ie*)data;
-        ie_id = le32_to_cpu(hdr->id);
-        ie_len = le32_to_cpu(hdr->len);
+        ie_id = hdr->id;
+        ie_len = hdr->len;
 
         len -= sizeof(*hdr);
         data = hdr->data;
@@ -1283,7 +1283,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
     int ie_id, i, index, bit, ret;
     struct ath10k_fw_ie* hdr;
     const uint8_t* data;
-    __le32* timestamp, *version;
+    uint32_t* timestamp, *version;
 
     /* first fetch the firmware file (firmware-*.bin) */
     fw_file->firmware = ath10k_fetch_fw_file(ar, ar->hw_params.fw.dir,
@@ -1321,8 +1321,8 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
     while (len > sizeof(struct ath10k_fw_ie)) {
         hdr = (struct ath10k_fw_ie*)data;
 
-        ie_id = le32_to_cpu(hdr->id);
-        ie_len = le32_to_cpu(hdr->len);
+        ie_id = hdr->id;
+        ie_len = hdr->len;
 
         len -= sizeof(*hdr);
         data += sizeof(*hdr);
@@ -1352,10 +1352,10 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                 break;
             }
 
-            timestamp = (__le32*)data;
+            timestamp = (uint32_t*)data;
 
             ath10k_dbg(ar, ATH10K_DBG_BOOT, "found fw timestamp %d\n",
-                       le32_to_cpup(timestamp));
+                       timestamp);
             break;
         case ATH10K_FW_IE_FEATURES:
             ath10k_dbg(ar, ATH10K_DBG_BOOT,
@@ -1405,9 +1405,9 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                 break;
             }
 
-            version = (__le32*)data;
+            version = (uint32_t*)data;
 
-            fw_file->wmi_op_version = le32_to_cpup(version);
+            fw_file->wmi_op_version = version;
 
             ath10k_dbg(ar, ATH10K_DBG_BOOT, "found fw ie wmi op version %d\n",
                        fw_file->wmi_op_version);
@@ -1417,9 +1417,9 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
                 break;
             }
 
-            version = (__le32*)data;
+            version = (uint32_t*)data;
 
-            fw_file->htt_op_version = le32_to_cpup(version);
+            fw_file->htt_op_version = version;
 
             ath10k_dbg(ar, ATH10K_DBG_BOOT, "found fw ie htt op version %d\n",
                        fw_file->htt_op_version);
@@ -1433,7 +1433,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
             break;
         default:
             ath10k_warn(ar, "Unknown FW IE: %u\n",
-                        le32_to_cpu(hdr->id));
+                        hdr->id);
             break;
         }
 

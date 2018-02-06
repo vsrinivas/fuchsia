@@ -95,12 +95,12 @@ struct pcie_state {
  * NOTE: Structure is shared between Host software and Target firmware!
  */
 struct ce_pipe_config {
-    __le32 pipenum;
-    __le32 pipedir;
-    __le32 nentries;
-    __le32 nbytes_max;
-    __le32 flags;
-    __le32 reserved;
+    uint32_t pipenum;
+    uint32_t pipedir;
+    uint32_t nentries;
+    uint32_t nbytes_max;
+    uint32_t flags;
+    uint32_t reserved;
 };
 
 /*
@@ -122,9 +122,9 @@ struct ce_pipe_config {
 
 /* Establish a mapping between a service/direction and a pipe. */
 struct service_to_pipe {
-    __le32 service_id;
-    __le32 pipedir;
-    __le32 pipenum;
+    uint32_t service_id;
+    uint32_t pipedir;
+    uint32_t pipenum;
 };
 
 /* Per-pipe state. */

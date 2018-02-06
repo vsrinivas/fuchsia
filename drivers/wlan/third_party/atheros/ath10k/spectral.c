@@ -92,8 +92,8 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
         return -EINVAL;
     }
 
-    reg0 = __le32_to_cpu(fftr->reg0);
-    reg1 = __le32_to_cpu(fftr->reg1);
+    reg0 = fftr->reg0;
+    reg1 = fftr->reg1;
 
     length = sizeof(*fft_sample) - sizeof(struct fft_sample_tlv) + bin_len;
     fft_sample->tlv.type = ATH_FFT_SAMPLE_ATH10K;

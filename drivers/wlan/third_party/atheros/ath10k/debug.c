@@ -48,10 +48,10 @@ enum ath10k_fw_crash_dump_type {
 
 struct ath10k_tlv_dump_data {
     /* see ath10k_fw_crash_dump_type above */
-    __le32 type;
+    uint32_t type;
 
     /* in bytes */
-    __le32 tlv_len;
+    uint32_t tlv_len;
 
     /* pad to 32-bit boundaries as needed */
     uint8_t tlv_data[];
@@ -63,31 +63,31 @@ struct ath10k_dump_file_data {
     /* "ATH10K-FW-DUMP" */
     char df_magic[16];
 
-    __le32 len;
+    uint32_t len;
 
     /* file dump version */
-    __le32 version;
+    uint32_t version;
 
     /* some info we can get from ath10k struct that might help */
 
     uint8_t uuid[16];
 
-    __le32 chip_id;
+    uint32_t chip_id;
 
     /* 0 for now, in place for later hardware */
-    __le32 bus_type;
+    uint32_t bus_type;
 
-    __le32 target_version;
-    __le32 fw_version_major;
-    __le32 fw_version_minor;
-    __le32 fw_version_release;
-    __le32 fw_version_build;
-    __le32 phy_capability;
-    __le32 hw_min_tx_power;
-    __le32 hw_max_tx_power;
-    __le32 ht_cap_info;
-    __le32 vht_cap_info;
-    __le32 num_rf_chains;
+    uint32_t target_version;
+    uint32_t fw_version_major;
+    uint32_t fw_version_minor;
+    uint32_t fw_version_release;
+    uint32_t fw_version_build;
+    uint32_t phy_capability;
+    uint32_t hw_min_tx_power;
+    uint32_t hw_max_tx_power;
+    uint32_t ht_cap_info;
+    uint32_t vht_cap_info;
+    uint32_t num_rf_chains;
 
     /* firmware version string */
     char fw_ver[ETHTOOL_FWVERS_LEN];
@@ -95,13 +95,13 @@ struct ath10k_dump_file_data {
     /* Kernel related information */
 
     /* time-of-day stamp */
-    __le64 tv_sec;
+    uint64_t tv_sec;
 
     /* time-of-day stamp, nano-seconds */
-    __le64 tv_nsec;
+    uint64_t tv_nsec;
 
     /* LINUX_VERSION_CODE */
-    __le32 kernel_ver_code;
+    uint32_t kernel_ver_code;
 
     /* VERMAGIC_STRING */
     char kernel_ver[64];
@@ -584,7 +584,7 @@ static int ath10k_debug_fw_assert(struct ath10k* ar) {
     memset(cmd, 0, sizeof(*cmd));
 
     /* big enough number so that firmware asserts */
-    cmd->vdev_id = __cpu_to_le32(0x7ffe);
+    cmd->vdev_id = 0x7ffe;
 
     return ath10k_wmi_cmd_send(ar, skb,
                                ar->wmi.cmd->vdev_install_key_cmdid);
@@ -752,24 +752,24 @@ static struct ath10k_dump_file_data* ath10k_build_dump_file(struct ath10k* ar,
     dump_data = (struct ath10k_dump_file_data*)(buf);
     strlcpy(dump_data->df_magic, "ATH10K-FW-DUMP",
             sizeof(dump_data->df_magic));
-    dump_data->len = cpu_to_le32(len);
+    dump_data->len = len;
 
-    dump_data->version = cpu_to_le32(ATH10K_FW_CRASH_DUMP_VERSION);
+    dump_data->version = ATH10K_FW_CRASH_DUMP_VERSION;
 
     memcpy(dump_data->uuid, &crash_data->uuid, sizeof(dump_data->uuid));
-    dump_data->chip_id = cpu_to_le32(ar->chip_id);
-    dump_data->bus_type = cpu_to_le32(0);
-    dump_data->target_version = cpu_to_le32(ar->target_version);
-    dump_data->fw_version_major = cpu_to_le32(ar->fw_version_major);
-    dump_data->fw_version_minor = cpu_to_le32(ar->fw_version_minor);
-    dump_data->fw_version_release = cpu_to_le32(ar->fw_version_release);
-    dump_data->fw_version_build = cpu_to_le32(ar->fw_version_build);
-    dump_data->phy_capability = cpu_to_le32(ar->phy_capability);
-    dump_data->hw_min_tx_power = cpu_to_le32(ar->hw_min_tx_power);
-    dump_data->hw_max_tx_power = cpu_to_le32(ar->hw_max_tx_power);
-    dump_data->ht_cap_info = cpu_to_le32(ar->ht_cap_info);
-    dump_data->vht_cap_info = cpu_to_le32(ar->vht_cap_info);
-    dump_data->num_rf_chains = cpu_to_le32(ar->num_rf_chains);
+    dump_data->chip_id = ar->chip_id;
+    dump_data->bus_type = 0;
+    dump_data->target_version = ar->target_version;
+    dump_data->fw_version_major = ar->fw_version_major;
+    dump_data->fw_version_minor = ar->fw_version_minor;
+    dump_data->fw_version_release = ar->fw_version_release;
+    dump_data->fw_version_build = ar->fw_version_build;
+    dump_data->phy_capability = ar->phy_capability;
+    dump_data->hw_min_tx_power = ar->hw_min_tx_power;
+    dump_data->hw_max_tx_power = ar->hw_max_tx_power;
+    dump_data->ht_cap_info = ar->ht_cap_info;
+    dump_data->vht_cap_info = ar->vht_cap_info;
+    dump_data->num_rf_chains = ar->num_rf_chains;
 
     strlcpy(dump_data->fw_ver, ar->hw->wiphy->fw_version,
             sizeof(dump_data->fw_ver));
@@ -778,23 +778,22 @@ static struct ath10k_dump_file_data* ath10k_build_dump_file(struct ath10k* ar,
     strlcpy(dump_data->kernel_ver, init_utsname()->release,
             sizeof(dump_data->kernel_ver));
 
-    dump_data->tv_sec = cpu_to_le64(crash_data->timestamp.tv_sec);
-    dump_data->tv_nsec = cpu_to_le64(crash_data->timestamp.tv_nsec);
+    dump_data->tv_sec = crash_data->timestamp.tv_sec;
+    dump_data->tv_nsec = crash_data->timestamp.tv_nsec;
 
     /* Gather crash-dump */
     dump_tlv = (struct ath10k_tlv_dump_data*)(buf + sofar);
-    dump_tlv->type = cpu_to_le32(ATH10K_FW_CRASH_DUMP_REGISTERS);
-    dump_tlv->tlv_len = cpu_to_le32(sizeof(crash_data->registers));
+    dump_tlv->type = ATH10K_FW_CRASH_DUMP_REGISTERS;
+    dump_tlv->tlv_len = sizeof(crash_data->registers);
     memcpy(dump_tlv->tlv_data, &crash_data->registers,
            sizeof(crash_data->registers));
     sofar += sizeof(*dump_tlv) + sizeof(crash_data->registers);
 
     dump_tlv = (struct ath10k_tlv_dump_data*)(buf + sofar);
-    dump_tlv->type = cpu_to_le32(ATH10K_FW_CRASH_DUMP_CE_DATA);
-    dump_tlv->tlv_len = cpu_to_le32(sizeof(*ce_hdr) +
-                                    CE_COUNT * sizeof(ce_hdr->entries[0]));
+    dump_tlv->type = ATH10K_FW_CRASH_DUMP_CE_DATA;
+    dump_tlv->tlv_len = sizeof(*ce_hdr) + CE_COUNT * sizeof(ce_hdr->entries[0]);
     ce_hdr = (struct ath10k_ce_crash_hdr*)(dump_tlv->tlv_data);
-    ce_hdr->ce_count = cpu_to_le32(CE_COUNT);
+    ce_hdr->ce_count = CE_COUNT;
     memset(ce_hdr->reserved, 0, sizeof(ce_hdr->reserved));
     memcpy(ce_hdr->entries, crash_data->ce_crash_data,
            CE_COUNT * sizeof(ce_hdr->entries[0]));
@@ -827,7 +826,7 @@ int ath10k_debug_fw_devcoredump(struct ath10k* ar) {
      * fw_crash_dump debugfs file is removed no need to have a copy
      * anymore.
      */
-    dump_len = le32_to_cpu(dump->len);
+    dump_len = dump->len;
     dump_ptr = vzalloc(dump_len);
 
     if (!dump_ptr) {
@@ -864,7 +863,7 @@ static ssize_t ath10k_fw_crash_dump_read(struct file* file,
 
     return simple_read_from_buffer(user_buf, count, ppos,
                                    dump_file,
-                                   le32_to_cpu(dump_file->len));
+                                   dump_file->len);
 }
 
 static int ath10k_fw_crash_dump_release(struct inode* inode,
@@ -1501,7 +1500,7 @@ static const struct file_operations fops_fw_dbglog = {
 
 static int ath10k_debug_cal_data_fetch(struct ath10k* ar) {
     uint32_t hi_addr;
-    __le32 addr;
+    uint32_t addr;
     int ret;
 
     lockdep_assert_held(&ar->conf_mutex);
@@ -1519,7 +1518,7 @@ static int ath10k_debug_cal_data_fetch(struct ath10k* ar) {
         return ret;
     }
 
-    ret = ath10k_hif_diag_read(ar, le32_to_cpu(addr), ar->debug.cal_data,
+    ret = ath10k_hif_diag_read(ar, addr, ar->debug.cal_data,
                                ar->hw_params.cal_data_len);
     if (ret) {
         ath10k_warn(ar, "failed to read calibration data: %d\n", ret);

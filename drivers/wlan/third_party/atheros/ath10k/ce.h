@@ -45,9 +45,9 @@ struct ath10k_ce_pipe;
 #define CE_DESC_FLAGS_META_DATA_LSB  ar->hw_values->ce_desc_meta_data_lsb
 
 struct ce_desc {
-    __le32 addr;
-    __le16 nbytes;
-    __le16 flags; /* %CE_DESC_FLAGS_ */
+    uint32_t addr;
+    uint16_t nbytes;
+    uint16_t flags; /* %CE_DESC_FLAGS_ */
 };
 
 struct ath10k_ce_ring {
