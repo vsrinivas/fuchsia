@@ -258,10 +258,10 @@ enum ath10k_htc_svc_gid {
 
 enum ath10k_htc_svc_id {
     /* NOTE: service ID of 0x0000 is reserved and should never be used */
-    ATH10K_HTC_SVC_ID_RESERVED  = 0x0000,
-    ATH10K_HTC_SVC_ID_UNUSED    = ATH10K_HTC_SVC_ID_RESERVED,
+    ATH10K_HTC_SVC_ID_RESERVED      = 0x0000,
+    ATH10K_HTC_SVC_ID_UNUSED        = ATH10K_HTC_SVC_ID_RESERVED,
 
-    ATH10K_HTC_SVC_ID_RSVD_CTRL = SVC(ATH10K_HTC_SVC_GRP_RSVD, 1),
+    ATH10K_HTC_SVC_ID_RSVD_CTRL     = SVC(ATH10K_HTC_SVC_GRP_RSVD, 1),
     ATH10K_HTC_SVC_ID_WMI_CONTROL   = SVC(ATH10K_HTC_SVC_GRP_WMI, 0),
     ATH10K_HTC_SVC_ID_WMI_DATA_BE   = SVC(ATH10K_HTC_SVC_GRP_WMI, 1),
     ATH10K_HTC_SVC_ID_WMI_DATA_BK   = SVC(ATH10K_HTC_SVC_GRP_WMI, 2),
@@ -269,7 +269,7 @@ enum ath10k_htc_svc_id {
     ATH10K_HTC_SVC_ID_WMI_DATA_VO   = SVC(ATH10K_HTC_SVC_GRP_WMI, 4),
 
     ATH10K_HTC_SVC_ID_NMI_CONTROL   = SVC(ATH10K_HTC_SVC_GRP_NMI, 0),
-    ATH10K_HTC_SVC_ID_NMI_DATA  = SVC(ATH10K_HTC_SVC_GRP_NMI, 1),
+    ATH10K_HTC_SVC_ID_NMI_DATA      = SVC(ATH10K_HTC_SVC_GRP_NMI, 1),
 
     ATH10K_HTC_SVC_ID_HTT_DATA_MSG  = SVC(ATH10K_HTC_SVC_GRP_HTT, 0),
 
@@ -324,7 +324,7 @@ struct ath10k_htc_svc_conn_resp {
 #define ATH10K_HTC_MAX_CTRL_MSG_LEN 256
 #define ATH10K_HTC_WAIT_TIMEOUT_HZ (1 * HZ)
 #define ATH10K_HTC_CONTROL_BUFFER_SIZE (ATH10K_HTC_MAX_CTRL_MSG_LEN + \
-                    sizeof(struct ath10k_htc_hdr))
+                                        sizeof(struct ath10k_htc_hdr))
 #define ATH10K_HTC_CONN_SVC_TIMEOUT_HZ (1 * HZ)
 
 struct ath10k_htc_ep {

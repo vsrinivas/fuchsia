@@ -1474,8 +1474,8 @@ struct htt_per_peer_tx_stats_ind {
     uint32_t  succ_bytes;
     uint32_t  retry_bytes;
     uint32_t  failed_bytes;
-    uint8_t ratecode;
-    uint8_t flags;
+    uint8_t   ratecode;
+    uint8_t   flags;
     uint16_t  peer_id;
     uint16_t  succ_pkts;
     uint16_t  retry_pkts;

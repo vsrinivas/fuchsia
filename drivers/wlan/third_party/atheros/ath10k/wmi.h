@@ -1831,7 +1831,7 @@ enum wmi_channel_change_cause {
 
 /* HT Capabilities*/
 #define WMI_HT_CAP_ENABLED                0x0001   /* HT Enabled/ disabled */
-#define WMI_HT_CAP_HT20_SGI       0x0002   /* Short Guard Interval with HT20 */
+#define WMI_HT_CAP_HT20_SGI               0x0002   /* Short Guard Interval with HT20 */
 #define WMI_HT_CAP_DYNAMIC_SMPS           0x0004   /* Dynamic MIMO powersave */
 #define WMI_HT_CAP_TX_STBC                0x0008   /* B3 TX STBC */
 #define WMI_HT_CAP_TX_STBC_MASK_SHIFT     3
@@ -1844,11 +1844,11 @@ enum wmi_channel_change_cause {
 #define WMI_HT_CAP_HT40_SGI               0x0800
 
 #define WMI_HT_CAP_DEFAULT_ALL (WMI_HT_CAP_ENABLED       | \
-                WMI_HT_CAP_HT20_SGI      | \
-                WMI_HT_CAP_HT40_SGI      | \
-                WMI_HT_CAP_TX_STBC       | \
-                WMI_HT_CAP_RX_STBC       | \
-                WMI_HT_CAP_LDPC)
+                                WMI_HT_CAP_HT20_SGI      | \
+                                WMI_HT_CAP_HT40_SGI      | \
+                                WMI_HT_CAP_TX_STBC       | \
+                                WMI_HT_CAP_RX_STBC       | \
+                                WMI_HT_CAP_LDPC)
 
 /*
  * WMI_VHT_CAP_* these maps to ieee 802.11ac vht capability information
@@ -1883,13 +1883,13 @@ enum wmi_channel_change_cause {
 #define WMI_VHT_CAP_MAX_MPDU_LEN_11454           0x00000002
 
 #define WMI_VHT_CAP_DEFAULT_ALL (WMI_VHT_CAP_MAX_MPDU_LEN_11454  | \
-                 WMI_VHT_CAP_RX_LDPC             | \
-                 WMI_VHT_CAP_SGI_80MHZ           | \
-                 WMI_VHT_CAP_TX_STBC             | \
-                 WMI_VHT_CAP_RX_STBC_MASK        | \
-                 WMI_VHT_CAP_MAX_AMPDU_LEN_EXP   | \
-                 WMI_VHT_CAP_RX_FIXED_ANT        | \
-                 WMI_VHT_CAP_TX_FIXED_ANT)
+                                 WMI_VHT_CAP_RX_LDPC             | \
+                                 WMI_VHT_CAP_SGI_80MHZ           | \
+                                 WMI_VHT_CAP_TX_STBC             | \
+                                 WMI_VHT_CAP_RX_STBC_MASK        | \
+                                 WMI_VHT_CAP_MAX_AMPDU_LEN_EXP   | \
+                                 WMI_VHT_CAP_RX_FIXED_ANT        | \
+                                 WMI_VHT_CAP_TX_FIXED_ANT)
 
 /*
  * Interested readers refer to Rx/Tx MCS Map definition as defined in
@@ -3806,7 +3806,7 @@ struct wmi_pdev_tpc_config_event {
     uint32_t phy_mode;
     uint32_t twice_antenna_reduction;
     uint32_t twice_max_rd_power;
-    int32_t  twice_antenna_gain;
+    int32_t twice_antenna_gain;
     uint32_t power_limit;
     uint32_t rate_max;
     uint32_t num_tx_chain;
@@ -4127,11 +4127,11 @@ struct wmi_pdev_stats_peer {
 } __packed;
 
 enum wmi_stats_id {
-    WMI_STAT_PEER = BIT(0),
-    WMI_STAT_AP = BIT(1),
-    WMI_STAT_PDEV = BIT(2),
-    WMI_STAT_VDEV = BIT(3),
-    WMI_STAT_BCNFLT = BIT(4),
+    WMI_STAT_PEER      = BIT(0),
+    WMI_STAT_AP        = BIT(1),
+    WMI_STAT_PDEV      = BIT(2),
+    WMI_STAT_VDEV      = BIT(3),
+    WMI_STAT_BCNFLT    = BIT(4),
     WMI_STAT_VDEV_RATE = BIT(5),
 };
 
@@ -4139,7 +4139,7 @@ enum wmi_10_4_stats_id {
     WMI_10_4_STAT_PEER      = BIT(0),
     WMI_10_4_STAT_AP        = BIT(1),
     WMI_10_4_STAT_INST      = BIT(2),
-    WMI_10_4_STAT_PEER_EXTD     = BIT(3),
+    WMI_10_4_STAT_PEER_EXTD = BIT(3),
 };
 
 struct wlan_inst_rssi_args {
