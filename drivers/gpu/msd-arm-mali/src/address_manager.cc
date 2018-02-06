@@ -64,7 +64,7 @@ std::shared_ptr<AddressSlotMapping> AddressManager::GetMappingForSlot(uint32_t s
 }
 
 std::shared_ptr<AddressSlotMapping>
-AddressManager::GetMappingForAddressSpaceUnlocked(AddressSpace* address_space)
+AddressManager::GetMappingForAddressSpaceUnlocked(const AddressSpace* address_space)
 {
     DASSERT(address_space);
     for (size_t i = 0; i < address_slots_.size(); ++i) {
@@ -113,7 +113,7 @@ AddressManager::AllocateMappingForAddressSpace(std::shared_ptr<MsdArmConnection>
 {
     std::lock_guard<std::mutex> lock(address_slot_lock_);
     std::shared_ptr<AddressSlotMapping> mapping =
-        GetMappingForAddressSpaceUnlocked(connection->address_space());
+        GetMappingForAddressSpaceUnlocked(connection->const_address_space());
     if (mapping)
         return mapping;
 
@@ -147,12 +147,12 @@ AddressManager::AssignToSlot(std::shared_ptr<MsdArmConnection> connection, uint3
         hardware_slot.InvalidateSlot(io);
     auto mapping = std::make_shared<AddressSlotMapping>(slot_number, connection);
     slot.mapping = mapping;
-    slot.address_space = connection->address_space();
+    slot.address_space = connection->const_address_space();
 
     registers::AsRegisters& as_reg = hardware_slot.registers;
     hardware_slot.WaitForMmuIdle(io);
 
-    uint64_t translation_table_entry = connection->address_space()->translation_table_entry();
+    uint64_t translation_table_entry = connection->const_address_space()->translation_table_entry();
     as_reg.TranslationTable().FromValue(translation_table_entry).WriteTo(io);
 
     as_reg.MemoryAttributes().FromValue(kMemoryAttributes).WriteTo(io);
@@ -161,7 +161,7 @@ AddressManager::AssignToSlot(std::shared_ptr<MsdArmConnection> connection, uint3
     return mapping;
 }
 
-void AddressManager::ReleaseSpaceMappings(AddressSpace* address_space)
+void AddressManager::ReleaseSpaceMappings(const AddressSpace* address_space)
 {
     std::lock_guard<std::mutex> lock(address_slot_lock_);
     for (size_t i = 0; i < address_slots_.size(); ++i) {

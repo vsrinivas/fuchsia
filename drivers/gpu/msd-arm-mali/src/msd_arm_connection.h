@@ -13,6 +13,7 @@
 
 #include "address_space.h"
 #include "gpu_mapping.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
@@ -43,7 +44,14 @@ public:
 
     msd_client_id_t client_id() { return client_id_; }
 
-    AddressSpace* address_space() { return address_space_.get(); }
+    AddressSpace* address_space_for_testing() FXL_NO_THREAD_SAFETY_ANALYSIS
+    {
+        return address_space_.get();
+    }
+    const AddressSpace* const_address_space() const FXL_NO_THREAD_SAFETY_ANALYSIS
+    {
+        return address_space_.get();
+    }
 
     // GpuMapping::Owner implementation.
     bool RemoveMapping(uint64_t gpu_va) override;
@@ -74,6 +82,9 @@ public:
     std::shared_ptr<MsdArmBuffer> GetBuffer(MsdArmAbiBuffer* buffer);
     void ReleaseBuffer(MsdArmAbiBuffer* buffer);
 
+    bool PageInMemory(uint64_t address);
+    bool CommitMemoryForBuffer(MsdArmAbiBuffer* buffer, uint64_t page_offset, uint64_t page_count);
+
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
@@ -82,9 +93,10 @@ private:
     bool Init();
 
     msd_client_id_t client_id_;
-    std::unique_ptr<AddressSpace> address_space_;
+    std::mutex address_lock_;
+    FXL_PT_GUARDED_BY(address_lock_) std::unique_ptr<AddressSpace> address_space_;
     // Map GPU va to a mapping.
-    std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+    FXL_GUARDED_BY(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
 
     std::unordered_map<MsdArmAbiBuffer*, std::shared_ptr<MsdArmBuffer>> buffers_;
 

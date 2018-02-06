@@ -123,66 +123,117 @@ public:
         auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
         constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+        AddressSpace* address_space = connection->address_space_for_testing();
 
         std::shared_ptr<MsdArmBuffer> buffer(
             MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
         EXPECT_TRUE(buffer);
+        MsdArmAbiBuffer abi_buffer(buffer);
 
         constexpr uint64_t kGpuOffset[] = {1000, 1100};
 
-        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
-            kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 99, 0, connection.get(), buffer)));
+        EXPECT_TRUE(connection->AddMapping(
+            std::make_unique<GpuMapping>(kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 99, 0,
+                                         connection.get(), connection->GetBuffer(&abi_buffer))));
 
-        EXPECT_TRUE(buffer->SetCommittedPages(1, 1));
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 1, 1));
         mali_pte_t pte;
         constexpr uint64_t kInvalidPte = 2u;
         // Only the first page should be committed.
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
         EXPECT_NE(kInvalidPte, pte);
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 1) * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 1) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
 
         // Should be legal to map with pages already committed.
-        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
-            kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 2, 0, connection.get(), buffer)));
+        EXPECT_TRUE(connection->AddMapping(
+            std::make_unique<GpuMapping>(kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 2, 0,
+                                         connection.get(), connection->GetBuffer(&abi_buffer))));
 
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting(kGpuOffset[1] * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting(kGpuOffset[1] * PAGE_SIZE, &pte));
         EXPECT_NE(kInvalidPte, pte);
 
-        EXPECT_TRUE(buffer->SetCommittedPages(1, 5));
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 1, 5));
 
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[1] + 1) * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[1] + 1) * PAGE_SIZE, &pte));
         EXPECT_NE(kInvalidPte, pte);
         // The mapping should be truncated because it's only for 2 pages.
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[1] + 2) * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[1] + 2) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
         EXPECT_NE(kInvalidPte, pte);
 
         EXPECT_TRUE(connection->RemoveMapping(kGpuOffset[1] * PAGE_SIZE));
 
         // Should unmap the last page.
-        EXPECT_TRUE(buffer->SetCommittedPages(1, 4));
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 1, 4));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
 
         // Should be ignored because offset isn't supported.
-        EXPECT_FALSE(buffer->SetCommittedPages(0, 6));
-        EXPECT_TRUE(
-            connection->address_space()->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
+        EXPECT_FALSE(connection->CommitMemoryForBuffer(&abi_buffer, 0, 6));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
 
         // Can decommit entire buffer.
-        EXPECT_TRUE(buffer->SetCommittedPages(1, 0));
-        EXPECT_FALSE(
-            connection->address_space()->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 1, 0));
+        EXPECT_FALSE(address_space->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+        connection->ReleaseBuffer(&abi_buffer);
+    }
+
+    void GrowableMemory()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
+        AddressSpace* address_space = connection->address_space_for_testing();
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+        MsdArmAbiBuffer abi_buffer(buffer);
+
+        constexpr uint64_t kGpuOffset[] = {1000, 1100};
+
+        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
+            kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 95, MAGMA_GPU_MAP_FLAG_GROWABLE,
+            connection.get(), connection->GetBuffer(&abi_buffer))));
+        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
+            kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 95, MAGMA_GPU_MAP_FLAG_GROWABLE,
+            connection.get(), connection->GetBuffer(&abi_buffer))));
+
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 1, 1));
+        mali_pte_t pte;
+        constexpr uint64_t kInvalidPte = 2u;
+        // Only the first page should be committed.
+        EXPECT_TRUE(address_space->ReadPteForTesting(kGpuOffset[0] * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 1) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+
+        EXPECT_FALSE(connection->PageInMemory((kGpuOffset[0] + 95) * PAGE_SIZE));
+
+        // Should grow to a 64-page boundary.
+        EXPECT_TRUE(connection->PageInMemory((kGpuOffset[0] + 1) * PAGE_SIZE));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 1) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 63) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 64) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+
+        // Second mapping should also be grown.
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[1] + 1) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+
+        // Should be growable up to last page of mapping.
+        EXPECT_TRUE(connection->PageInMemory((kGpuOffset[0] + 94) * PAGE_SIZE));
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 94) * PAGE_SIZE, &pte));
+        EXPECT_NE(kInvalidPte, pte);
+        EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 95) * PAGE_SIZE, &pte));
+        EXPECT_EQ(kInvalidPte, pte);
+        connection->ReleaseBuffer(&abi_buffer);
     }
 
     void Notification()
@@ -290,4 +341,10 @@ TEST(TestConnection, SoftwareAtom)
 {
     TestConnection test;
     test.SoftwareAtom();
+}
+
+TEST(TestConnection, GrowableMemory)
+{
+    TestConnection test;
+    test.GrowableMemory();
 }

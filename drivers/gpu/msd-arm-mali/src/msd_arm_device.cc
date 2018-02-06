@@ -412,16 +412,19 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
 magma::Status MsdArmDevice::ProcessMmuInterrupt()
 {
     auto irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-
-    magma::log(magma::LOG_WARNING, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
-
-    // All MMU interrupts are unexpected, so dump status to log to help
-    // debugging.
-    ProcessDumpStatusToLog();
+    DLOG("Received MMU IRQ status 0x%x\n", irq_status.reg_value());
 
     uint32_t faulted_slots = irq_status.pf_flags().get() | irq_status.bf_flags().get();
     while (faulted_slots) {
         uint32_t slot = ffs(faulted_slots) - 1;
+
+        // Clear all flags before attempting to page in memory, as otherwise
+        // if the atom continues executing the next interrupt may be lost.
+        auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(0);
+        clear_flags.pf_flags().set(1 << slot);
+        clear_flags.bf_flags().set(1 << slot);
+        clear_flags.WriteTo(register_io_.get());
+
         std::shared_ptr<MsdArmConnection> connection;
         {
             auto mapping = address_manager_->GetMappingForSlot(slot);
@@ -432,17 +435,35 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt()
             }
         }
         if (connection) {
-            connection->set_address_space_lost();
-            scheduler_->ReleaseMappingsForConnection(connection);
-            // This will invalidate the address slot, causing the job to die
-            // with a fault.
-            address_manager_->ReleaseSpaceMappings(connection->address_space());
+            uint64_t address = registers::AsRegisters(slot)
+                                   .FaultAddress()
+                                   .ReadFrom(register_io_.get())
+                                   .reg_value();
+            bool kill_context = true;
+            if (irq_status.bf_flags().get() & (1 << slot)) {
+                magma::log(magma::LOG_WARNING, "Bus fault at address 0x%lx on slot %d\n", address,
+                           slot);
+            } else {
+                if (connection->PageInMemory(address)) {
+                    DLOG("Paged in address %lx\n", address);
+                    kill_context = false;
+                } else {
+                    magma::log(magma::LOG_WARNING, "Failed to page in address 0x%lx on slot %d\n",
+                               address, slot);
+                }
+            }
+            if (kill_context) {
+                ProcessDumpStatusToLog();
+
+                connection->set_address_space_lost();
+                scheduler_->ReleaseMappingsForConnection(connection);
+                // This will invalidate the address slot, causing the job to die
+                // with a fault.
+                address_manager_->ReleaseSpaceMappings(connection->const_address_space());
+            }
         }
         faulted_slots &= ~(1 << slot);
     }
-
-    auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-    clear_flags.WriteTo(register_io_.get());
 
     mmu_interrupt_->Complete();
     return MAGMA_STATUS_OK;
@@ -707,6 +728,7 @@ void MsdArmDevice::HardStopAtom(MsdArmAtom* atom)
 {
     DASSERT(atom->hard_stopped());
     registers::JobSlotRegisters slot(atom->slot());
+    DLOG("Hard stopping atom slot %d\n", atom->slot());
     slot.Command()
         .FromValue(registers::JobSlotCommand::kCommandHardStop)
         .WriteTo(register_io_.get());

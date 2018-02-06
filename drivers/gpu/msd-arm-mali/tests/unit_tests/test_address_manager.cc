@@ -52,13 +52,14 @@ TEST(AddressManager, MultipleAtoms)
 
     registers::AsRegisters as_regs(0);
     EXPECT_EQ(0x8d4du, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
-    uint64_t translation_table_entry1 = connection1->address_space()->translation_table_entry();
+    uint64_t translation_table_entry1 =
+        connection1->const_address_space()->translation_table_entry();
     EXPECT_EQ(translation_table_entry1,
               as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
     registers::AsRegisters as_regs1(1);
     EXPECT_EQ(0x8d4du, as_regs1.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
-    EXPECT_EQ(connection2->address_space()->translation_table_entry(),
+    EXPECT_EQ(connection2->const_address_space()->translation_table_entry(),
               as_regs1.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
     connection1.reset();
@@ -121,7 +122,8 @@ TEST(AddressManager, ReuseSlot)
 
     registers::AsRegisters as_regs(2);
     EXPECT_EQ(0x8d4du, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
-    uint64_t translation_table_entry = connections[2]->address_space()->translation_table_entry();
+    uint64_t translation_table_entry =
+        connections[2]->const_address_space()->translation_table_entry();
     EXPECT_EQ(translation_table_entry,
               as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
@@ -134,7 +136,7 @@ TEST(AddressManager, ReuseSlot)
     EXPECT_TRUE(address_manager.AssignAddressSpace(atoms.back().get()));
 
     uint64_t new_translation_table_entry =
-        connections[8]->address_space()->translation_table_entry();
+        connections[8]->const_address_space()->translation_table_entry();
     EXPECT_EQ(new_translation_table_entry,
               as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 }
@@ -159,8 +161,8 @@ TEST(AddressManager, FlushAddressRange)
 
     EXPECT_TRUE(buffer->PinPages(0, buffer->size() / PAGE_SIZE));
 
-    EXPECT_TRUE(connection->address_space()->Insert(addr, buffer.get(), 0, buffer->size(),
-                                                    kAccessFlagRead | kAccessFlagNoExecute));
+    EXPECT_TRUE(connection->address_space_for_testing()->Insert(
+        addr, buffer.get(), 0, buffer->size(), kAccessFlagRead | kAccessFlagNoExecute));
     // 3 pages should be cleared, so it should be rounded up to 4 (and log
     // base 2 is 2).
     constexpr uint64_t kLockOffset = 13;
@@ -169,7 +171,7 @@ TEST(AddressManager, FlushAddressRange)
     EXPECT_EQ(registers::AsCommand::kCmdFlushPageTable,
               as_regs.Command().ReadFrom(reg_io.get()).reg_value());
 
-    EXPECT_TRUE(connection->address_space()->Clear(addr, buffer->size()));
+    EXPECT_TRUE(connection->address_space_for_testing()->Clear(addr, buffer->size()));
 
     EXPECT_EQ(addr | kLockOffset, as_regs.LockAddress().ReadFrom(reg_io.get()).reg_value());
     EXPECT_EQ(registers::AsCommand::kCmdFlushMem,

@@ -46,7 +46,7 @@ public:
     virtual void FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
                                           uint64_t length, bool synchronous) = 0;
 
-    virtual void ReleaseSpaceMappings(AddressSpace* address_space) = 0;
+    virtual void ReleaseSpaceMappings(const AddressSpace* address_space) = 0;
 };
 
 // This should only be accessed on the connection thread (for now).

@@ -233,7 +233,8 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
     }
     if (mapping_flags &
         ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
-          kMagmaArmMaliGpuMapFlagInnerShareable | kMagmaArmMaliGpuMapFlagBothShareable))
+          MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable |
+          kMagmaArmMaliGpuMapFlagBothShareable))
         return DRETF(false, "Unsupported map flags %lx\n", mapping_flags);
 
     if (flags_out)
@@ -243,6 +244,7 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
 
 bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
 {
+    std::lock_guard<std::mutex> lock(address_lock_);
     uint64_t gpu_va = mapping->gpu_va();
     if (!magma::is_page_aligned(gpu_va))
         return DRETF(false, "mapping not page aligned");
@@ -288,6 +290,7 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
 
 bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 {
+    std::lock_guard<std::mutex> lock(address_lock_);
     auto it = gpu_mappings_.find(gpu_va);
     if (it == gpu_mappings_.end())
         return DRETF(false, "Mapping not found");
@@ -304,7 +307,9 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
     return true;
 }
 
-bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping)
+// CommitMemoryForBuffer or PageInAddress will hold address_lock_ before calling this, but that's
+// impossible to specify for the thread safety analysis.
+bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_SAFETY_ANALYSIS
 {
     uint64_t access_flags = 0;
     if (!access_flags_from_flags(mapping->flags(),
@@ -351,6 +356,54 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping)
         mapping->set_pinned_page_count(committed_page_count);
     }
     return true;
+}
+
+bool MsdArmConnection::PageInMemory(uint64_t address)
+{
+    std::lock_guard<std::mutex> lock(address_lock_);
+    if (gpu_mappings_.empty())
+        return false;
+
+    auto it = gpu_mappings_.upper_bound(address);
+    if (it == gpu_mappings_.begin())
+        return false;
+    --it;
+    GpuMapping& mapping = *it->second.get();
+    DASSERT(address >= mapping.gpu_va());
+    if (address >= mapping.gpu_va() + mapping.size())
+        return false;
+    if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE))
+        return DRETF(false, "Buffer mapping not growable");
+    auto buffer = mapping.buffer().lock();
+    DASSERT(buffer);
+
+    // TODO(MA-417): Look into growing the buffer on a different thread.
+
+    // Try to grow in units of 64 pages to avoid needing to fault too often.
+    constexpr uint64_t kPagesToGrow = 64;
+    constexpr uint64_t kCacheLineSize = 64;
+    uint64_t offset_needed = address - mapping.gpu_va() + kCacheLineSize - 1;
+
+    // Don't shrink the amount being committed if there's a race and the
+    // client committed more memory between when the fault happened and this
+    // code.
+    uint64_t committed_page_count =
+        std::max(buffer->committed_page_count(),
+                 magma::round_up(offset_needed, PAGE_SIZE * kPagesToGrow) / PAGE_SIZE);
+    committed_page_count =
+        std::min(committed_page_count,
+                 buffer->platform_buffer()->size() / PAGE_SIZE - buffer->start_committed_pages());
+
+    // The MMU command to update the page tables should automatically cause
+    // the atom to continue executing.
+    return buffer->SetCommittedPages(buffer->start_committed_pages(), committed_page_count);
+}
+
+bool MsdArmConnection::CommitMemoryForBuffer(MsdArmAbiBuffer* buffer, uint64_t page_offset,
+                                             uint64_t page_count)
+{
+    std::lock_guard<std::mutex> lock(address_lock_);
+    return GetBuffer(buffer)->SetCommittedPages(page_offset, page_count);
 }
 
 void MsdArmConnection::SetNotificationChannel(msd_channel_send_callback_t send_callback,
@@ -434,8 +487,7 @@ void msd_connection_commit_buffer(msd_connection_t* abi_connection, msd_buffer_t
                                   uint64_t page_offset, uint64_t page_count)
 {
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-    connection->GetBuffer(MsdArmAbiBuffer::cast(abi_buffer))
-        ->SetCommittedPages(page_offset, page_count);
+    connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer), page_offset, page_count);
 }
 
 void msd_connection_set_notification_channel(msd_connection_t* abi_connection,
