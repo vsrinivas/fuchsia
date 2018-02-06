@@ -392,7 +392,7 @@ void mp_set_curr_cpu_active(bool active) {
     }
 }
 
-enum handler_return mp_mbx_generic_irq(void) {
+void mp_mbx_generic_irq(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
@@ -409,10 +409,9 @@ enum handler_return mp_mbx_generic_irq(void) {
 
         task->func(task->context);
     }
-    return INT_NO_RESCHEDULE;
 }
 
-enum handler_return mp_mbx_reschedule_irq(void) {
+void mp_mbx_reschedule_irq(void) {
     const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
@@ -421,8 +420,6 @@ enum handler_return mp_mbx_reschedule_irq(void) {
 
     if (mp.active_cpus & cpu_num_to_mask(cpu))
         thread_preempt_set_pending();
-
-    return INT_NO_RESCHEDULE;
 }
 
 __WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {

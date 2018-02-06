@@ -386,7 +386,7 @@ static int keyboard_command(uint8_t* param, int command) {
     return retval;
 }
 
-static enum handler_return i8042_interrupt(void* arg) {
+static void i8042_interrupt(void* arg) {
     // keep handling status on the keyboard controller until no bits are set we care about
     bool retry;
     do {
@@ -406,8 +406,6 @@ static enum handler_return i8042_interrupt(void* arg) {
 
         // TODO: check other status bits here
     } while (retry);
-
-    return INT_NO_RESCHEDULE;
 }
 
 int platform_read_key(char* c) {

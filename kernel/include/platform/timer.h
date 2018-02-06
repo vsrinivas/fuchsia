@@ -13,12 +13,12 @@
 
 __BEGIN_CDECLS
 
-typedef enum handler_return(*platform_timer_callback)(zx_time_t now);
+typedef void(*platform_timer_callback)(zx_time_t now);
 
 // API to set/clear a hardware timer that is responsible for calling timer_tick() when it fires
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline);
 void        platform_stop_timer(void);
 
-enum handler_return timer_tick(zx_time_t now);
+void timer_tick(zx_time_t now);
 
 __END_CDECLS

@@ -411,8 +411,8 @@ cleanup:
     return status;
 }
 
-enum handler_return apic_timer_interrupt_handler(void) {
-    return platform_handle_apic_timer_tick();
+void apic_timer_interrupt_handler(void) {
+    platform_handle_apic_timer_tick();
 }
 
 static void apic_error_init(void) {
@@ -421,7 +421,7 @@ static void apic_error_init(void) {
     lapic_reg_write(LAPIC_REG_ERROR_STATUS, 0);
 }
 
-enum handler_return apic_error_interrupt_handler(void) {
+void apic_error_interrupt_handler(void) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     // This write doesn't effect the subsequent read, but is required prior to

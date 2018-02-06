@@ -178,14 +178,13 @@ zx_time_t ticks_to_nanos(uint64_t ticks) {
 }
 
 // The PIT timer will keep track of wall time if we aren't using the TSC
-static enum handler_return pit_timer_tick(void* arg) {
+static void pit_timer_tick(void* arg) {
     pit_ticks += 1;
-    return INT_NO_RESCHEDULE;
 }
 
 // The APIC timers will call this when they fire
-enum handler_return platform_handle_apic_timer_tick(void) {
-    return timer_tick(current_time());
+void platform_handle_apic_timer_tick(void) {
+    timer_tick(current_time());
 }
 
 static void set_pit_frequency(uint32_t frequency) {

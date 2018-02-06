@@ -30,7 +30,7 @@ protected:
 private:
     explicit InterruptEventDispatcher() {}
 
-    static enum handler_return IrqHandler(void* ctx);
+    static void IrqHandler(void* ctx);
 
     fbl::Canary<fbl::magic("INED")> canary_;
 };

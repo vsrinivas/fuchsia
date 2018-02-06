@@ -252,14 +252,14 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     return ZX_OK;
 }
 
-enum handler_return x86_ipi_generic_handler(void) {
+void x86_ipi_generic_handler(void) {
     LTRACEF("cpu %u\n", arch_curr_cpu_num());
-    return mp_mbx_generic_irq();
+    mp_mbx_generic_irq();
 }
 
-enum handler_return x86_ipi_reschedule_handler(void) {
+void x86_ipi_reschedule_handler(void) {
     LTRACEF("cpu %u\n", arch_curr_cpu_num());
-    return mp_mbx_reschedule_irq();
+    mp_mbx_reschedule_irq();
 }
 
 void x86_ipi_halt_handler(void) {

@@ -44,7 +44,7 @@ static uint32_t uart_irq = 0;
 
 static cbuf_t uart_rx_buf;
 
-static enum handler_return pl011_uart_irq(void *arg)
+static void pl011_uart_irq(void *arg)
 {
     /* read interrupt status and mask */
     uint32_t isr = UARTREG(uart_base, UART_TMIS);
@@ -62,8 +62,6 @@ static enum handler_return pl011_uart_irq(void *arg)
             cbuf_write_char(&uart_rx_buf, c);
         }
     }
-
-    return INT_NO_RESCHEDULE;
 }
 
 static void pl011_uart_init(mdi_node_ref_t* node, uint level)

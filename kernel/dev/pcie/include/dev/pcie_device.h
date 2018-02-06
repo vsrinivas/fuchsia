@@ -416,8 +416,8 @@ private:
     void        LeaveMsiIrqMode();
     zx_status_t EnterMsiIrqMode(uint requested_irqs);
 
-    enum handler_return        MsiIrqHandler(pcie_irq_handler_state_t& hstate);
-    static enum handler_return MsiIrqHandlerThunk(void *arg);
+    void        MsiIrqHandler(pcie_irq_handler_state_t& hstate);
+    static void MsiIrqHandlerThunk(void *arg);
 
     // Common Internal IRQ support.
     void        ResetCommonIrqBookkeeping();

@@ -1897,10 +1897,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
     return true;
 }
 
-enum handler_return apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSIS {
+void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSIS {
     if (!atomic_load(&perfmon_active)) {
         apic_issue_eoi();
-        return INT_NO_RESCHEDULE;
+        return;
     }
 
 #if TRY_FREEZE_ON_PMI
@@ -1960,6 +1960,4 @@ enum handler_return apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD
         write_msr(IA32_PERF_GLOBAL_CTRL, state->global_ctrl);
 #endif
     }
-
-    return INT_NO_RESCHEDULE;
 }

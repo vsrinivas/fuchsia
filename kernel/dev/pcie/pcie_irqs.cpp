@@ -110,7 +110,7 @@ SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
     DEBUG_ASSERT(status == ZX_OK);
 }
 
-enum handler_return SharedLegacyIrqHandler::Handler() {
+void SharedLegacyIrqHandler::Handler() {
     /* Go over the list of device's which share this legacy IRQ and give them a
      * chance to handle any interrupts which may be pending in their device.
      * Keep track of whether or not any device has requested a re-schedule event
@@ -123,7 +123,7 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                "IRQ level to prevent meltdown.\n",
                irq_id_);
         mask_interrupt(irq_id_);
-        return INT_NO_RESCHEDULE;
+        return;
     }
 
     PcieDevice* dev;
@@ -179,8 +179,6 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
             }
         }
     }
-
-    return INT_NO_RESCHEDULE;
 }
 
 void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
@@ -490,7 +488,7 @@ bailout:
     return res;
 }
 
-enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
+void PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
     DEBUG_ASSERT(irq_.msi);
     /* No need to save IRQ state; we are in an IRQ handler at the moment. */
     AutoSpinLockNoIrqSave handler_lock(&hstate.lock);
@@ -507,7 +505,7 @@ enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) 
     /* If the IRQ was masked or the handler removed by the time we got here,
      * leave the IRQ masked, unlock and get out. */
     if (was_masked || !hstate.handler)
-        return INT_NO_RESCHEDULE;
+        return;
 
     /* Dispatch */
     pcie_irq_handler_retval_t irq_ret = hstate.handler(*this, hstate.pci_irq_id, hstate.ctx);
@@ -515,11 +513,9 @@ enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) 
     /* Re-enable the IRQ if asked to do so */
     if (!(irq_ret & PCIE_IRQRET_MASK))
         MaskUnmaskMsiIrqLocked(hstate.pci_irq_id, false);
-
-    return INT_NO_RESCHEDULE;
 }
 
-enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {
+void PcieDevice::MsiIrqHandlerThunk(void *arg) {
     DEBUG_ASSERT(arg);
     auto& hstate = *(reinterpret_cast<pcie_irq_handler_state_t*>(arg));
     DEBUG_ASSERT(hstate.dev);

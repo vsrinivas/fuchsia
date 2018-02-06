@@ -164,25 +164,22 @@ zx_status_t get_interrupt_config(unsigned int vector,
     return apic_io_fetch_irq_config(vector, tm, pol);
 }
 
-enum handler_return platform_irq(x86_iframe_t* frame) {
+void platform_irq(x86_iframe_t* frame) {
     // get the current vector
     uint64_t x86_vector = frame->vector;
     DEBUG_ASSERT(x86_vector >= X86_INT_PLATFORM_BASE &&
                  x86_vector <= X86_INT_PLATFORM_MAX);
 
     // deliver the interrupt
-    enum handler_return ret = INT_NO_RESCHEDULE;
-
     struct int_handler_struct* handler = &int_handler_table[x86_vector];
 
     {
         AutoSpinLockNoIrqSave guard(&handler->lock);
         if (handler->handler)
-            ret = handler->handler(handler->arg);
+            handler->handler(handler->arg);
     }
 
     apic_issue_eoi();
-    return ret;
 }
 
 zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {

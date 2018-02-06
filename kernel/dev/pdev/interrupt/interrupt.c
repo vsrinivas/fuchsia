@@ -81,12 +81,10 @@ static void default_init_percpu_early(void) {
 static void default_init_percpu(void) {
 }
 
-static enum handler_return default_handle_irq(iframe* frame) {
-    return INT_NO_RESCHEDULE;
+static void default_handle_irq(iframe* frame) {
 }
 
-static enum handler_return default_handle_fiq(iframe* frame) {
-    return INT_NO_RESCHEDULE;
+static void default_handle_fiq(iframe* frame) {
 }
 
 static void default_shutdown(void) {
@@ -143,12 +141,12 @@ void interrupt_init_percpu(void) {
     intr_ops->init_percpu();
 }
 
-enum handler_return platform_irq(iframe* frame) {
-    return intr_ops->handle_irq(frame);
+void platform_irq(iframe* frame) {
+    intr_ops->handle_irq(frame);
 }
 
-enum handler_return platform_fiq(iframe* frame) {
-    return intr_ops->handle_fiq(frame);
+void platform_fiq(iframe* frame) {
+    intr_ops->handle_fiq(frame);
 }
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {

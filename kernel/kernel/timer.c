@@ -349,7 +349,7 @@ bool timer_cancel(timer_t* timer) {
 }
 
 /* called at interrupt time to process any pending timers */
-enum handler_return timer_tick(zx_time_t now) {
+void timer_tick(zx_time_t now) {
     timer_t* timer;
 
     DEBUG_ASSERT(arch_ints_disabled());
@@ -418,8 +418,6 @@ enum handler_return timer_tick(zx_time_t now) {
 
     /* we're done manipulating the timer queue */
     spin_unlock(&timer_lock);
-
-    return INT_NO_RESCHEDULE;
 }
 
 zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {

@@ -36,7 +36,7 @@ struct x86_64_iframe {
 typedef struct x86_64_iframe x86_iframe_t;
 
 void x86_exception_handler(x86_iframe_t *frame);
-enum handler_return platform_irq(x86_iframe_t *frame);
+void platform_irq(x86_iframe_t *frame);
 
 struct arch_exception_context {
     bool is_page_fault;

@@ -207,10 +207,10 @@ static uint64_t read_ct(void)
     return cntpct;
 }
 
-static enum handler_return platform_tick(void *arg)
+static void platform_tick(void *arg)
 {
     write_ctl(0);
-    return timer_tick(current_time());
+    timer_tick(current_time());
 }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline)

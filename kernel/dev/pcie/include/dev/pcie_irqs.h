@@ -146,12 +146,12 @@ public:
 private:
     explicit SharedLegacyIrqHandler(uint irq_id);
 
-    static enum handler_return HandlerThunk(void *arg) {
+    static void HandlerThunk(void *arg) {
         DEBUG_ASSERT(arg);
         return reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
     }
 
-    enum handler_return Handler();
+    void Handler();
 
     struct list_node  device_handler_list_;
     SpinLock          device_handler_list_lock_;

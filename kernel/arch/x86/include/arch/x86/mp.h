@@ -126,8 +126,8 @@ static void arch_set_in_int_handler(bool in_irq)
     x86_write_gs_offset32(PERCPU_IN_IRQ_OFFSET, in_irq);
 }
 
-enum handler_return x86_ipi_generic_handler(void);
-enum handler_return x86_ipi_reschedule_handler(void);
+void x86_ipi_generic_handler(void);
+void x86_ipi_reschedule_handler(void);
 void x86_ipi_halt_handler(void) __NO_RETURN;
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
 

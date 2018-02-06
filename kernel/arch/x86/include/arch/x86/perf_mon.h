@@ -40,6 +40,6 @@ zx_status_t x86_ipm_stop();
 
 zx_status_t x86_ipm_fini();
 
-enum handler_return apic_pmi_interrupt_handler(x86_iframe_t *frame);
+void apic_pmi_interrupt_handler(x86_iframe_t *frame);
 
 #endif // __cplusplus

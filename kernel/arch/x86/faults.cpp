@@ -334,8 +334,6 @@ void x86_exception_handler(x86_iframe_t* frame) {
     bool from_user = is_from_user(frame);
 
     // deliver the interrupt
-    enum handler_return ret = INT_NO_RESCHEDULE;
-
     ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
 
     switch (frame->vector) {
@@ -399,22 +397,22 @@ void x86_exception_handler(x86_iframe_t* frame) {
         break;
     case X86_INT_APIC_ERROR: {
         kcounter_add(exceptions_apic_err, 1u);
-        ret = apic_error_interrupt_handler();
+        apic_error_interrupt_handler();
         apic_issue_eoi();
         break;
     }
     case X86_INT_APIC_TIMER: {
-        ret = apic_timer_interrupt_handler();
+        apic_timer_interrupt_handler();
         apic_issue_eoi();
         break;
     }
     case X86_INT_IPI_GENERIC: {
-        ret = x86_ipi_generic_handler();
+        x86_ipi_generic_handler();
         apic_issue_eoi();
         break;
     }
     case X86_INT_IPI_RESCHEDULE: {
-        ret = x86_ipi_reschedule_handler();
+        x86_ipi_reschedule_handler();
         apic_issue_eoi();
         break;
     }
@@ -424,14 +422,14 @@ void x86_exception_handler(x86_iframe_t* frame) {
         break;
     }
     case X86_INT_APIC_PMI: {
-        ret = apic_pmi_interrupt_handler(frame);
+        apic_pmi_interrupt_handler(frame);
         // Note: apic_pmi_interrupt_handler calls apic_issue_eoi().
         break;
     }
     /* pass all other non-Intel defined irq vectors to the platform */
     case X86_INT_PLATFORM_BASE... X86_INT_PLATFORM_MAX: {
         kcounter_add(exceptions_irq, 1u);
-        ret = platform_irq(frame);
+        platform_irq(frame);
         break;
     }
     default:
@@ -441,8 +439,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
     }
 
     /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
-    if (thread_preempt_reenable())
-        ret = INT_RESCHEDULE;
+    bool preempt_pending = thread_preempt_reenable();
     arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */
@@ -453,7 +450,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
         x86_iframe_process_pending_signals(frame);
     }
 
-    if (ret != INT_NO_RESCHEDULE)
+    if (preempt_pending)
         thread_preempt();
 
     ktrace_tiny(TAG_IRQ_EXIT, ((uint)frame->vector << 8) | arch_curr_cpu_num());

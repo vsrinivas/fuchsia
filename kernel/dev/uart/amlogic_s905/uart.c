@@ -84,7 +84,7 @@ static uint32_t s905_uart_irq = 0;
 
 
 
-static enum handler_return uart_irq(void *arg)
+static void uart_irq(void *arg)
 {
     uintptr_t base = (uintptr_t)arg;
 
@@ -97,8 +97,6 @@ static enum handler_return uart_irq(void *arg)
         char c = UARTREG(base, S905_UART_RFIFO);
         cbuf_write_char(&uart_rx_buf, c);
     }
-
-    return INT_NO_RESCHEDULE;
 }
 
 static void s905_uart_init(mdi_node_ref_t* node, uint level)

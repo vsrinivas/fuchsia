@@ -241,14 +241,14 @@ static unsigned int gic_remap_interrupt(unsigned int vector) {
     return vector;
 }
 
-static enum handler_return gic_handle_irq(struct iframe* frame) {
+static void gic_handle_irq(struct iframe* frame) {
     // get the current vector
     uint32_t iar = GICREG(0, GICC_IAR);
     unsigned int vector = iar & 0x3ff;
 
     if (vector >= 0x3fe) {
         // spurious
-        return INT_NO_RESCHEDULE;
+        return;
     }
 
     // tracking external hardware irqs in this variable
@@ -263,24 +263,19 @@ static enum handler_return gic_handle_irq(struct iframe* frame) {
                   get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
     // deliver the interrupt
-    enum handler_return ret;
-
-    ret = INT_NO_RESCHEDULE;
     struct int_handler_struct* handler = pdev_get_int_handler(vector);
     if (handler->handler) {
-        ret = handler->handler(handler->arg);
+        handler->handler(handler->arg);
     }
 
     GICREG(0, GICC_EOIR) = iar;
 
-    LTRACEF_LEVEL(2, "cpu %u exit %u\n", cpu, ret);
+    LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
 
     ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
-
-    return ret;
 }
 
-static enum handler_return gic_handle_fiq(struct iframe* frame) {
+static void gic_handle_fiq(struct iframe* frame) {
     PANIC_UNIMPLEMENTED;
 }
 
@@ -297,25 +292,23 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static enum handler_return arm_ipi_generic_handler(void* arg) {
+static void arm_ipi_generic_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
-    return mp_mbx_generic_irq();
+    mp_mbx_generic_irq();
 }
 
-static enum handler_return arm_ipi_reschedule_handler(void* arg) {
+static void arm_ipi_reschedule_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
-    return mp_mbx_reschedule_irq();
+    mp_mbx_reschedule_irq();
 }
 
-static enum handler_return arm_ipi_halt_handler(void* arg) {
+static void arm_ipi_halt_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     arch_disable_ints();
     while(true) {}
-
-    return INT_NO_RESCHEDULE;
 }
 
 static void gic_init_percpu(void) {

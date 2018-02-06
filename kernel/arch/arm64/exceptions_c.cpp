@@ -315,10 +315,9 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
     thread_preempt_disable();
 
     kcounter_add(exceptions_irq, 1u);
-    enum handler_return ret = platform_irq(iframe);
+    platform_irq(iframe);
 
-    if (thread_preempt_reenable())
-        ret = INT_RESCHEDULE;
+    bool preempt_pending = thread_preempt_reenable();
     arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */
@@ -326,13 +325,13 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
         uint32_t exit_flags = 0;
         if (thread_is_signaled(get_current_thread()))
             exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
-        if (ret != INT_NO_RESCHEDULE)
+        if (preempt_pending)
             exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
         return exit_flags;
     }
 
     /* preempt the thread if the interrupt has signaled it */
-    if (ret != INT_NO_RESCHEDULE)
+    if (preempt_pending)
         thread_preempt();
 
     /* if we're returning to kernel space, make sure we restore the correct x18 */

@@ -34,8 +34,8 @@ struct pdev_interrupt_ops {
     zx_status_t (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
     void (*init_percpu_early)(void);
     void (*init_percpu)(void);
-    enum handler_return (*handle_irq)(iframe* frame);
-    enum handler_return (*handle_fiq)(iframe* frame);
+    void (*handle_irq)(iframe* frame);
+    void (*handle_fiq)(iframe* frame);
     void (*shutdown)(void);
 };
 
