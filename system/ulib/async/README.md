@@ -208,14 +208,14 @@ for use in C++.
 `WaitMethod` is similar to `Wait` but more efficient, because it avoids the
 overhead of using fbl::Function<>.
 
-`AutoWait` in [async/auto_wait.h](include/async/auto_wait.h) is an RAII helper
-which cancels the wait when it goes out of scope.
+`AutoWait` in [async/cpp/auto_wait.h](include/async/cpp/auto_wait.h) is an RAII
+helper which cancels the wait when it goes out of scope.
 
-`AutoTask` in [async/auto_task.h](include/async/auto_task.h) is an RAII helper
-which cancels the task when it goes out of scope.
+`AutoTask` in [async/cpp/auto_task.h](include/async/cpp/auto_task.h) is an RAII
+helper which cancels the task when it goes out of scope.
 
 There is also a special `WaitWithTimeout` helper defined in
-[async/wait_with_timeout.h](include/async/wait_with_timeout.h)
+[async/cpp/wait_with_timeout.h](include/async/cpp/wait_with_timeout.h)
 which combines a wait operation together with a pending task that invokes the
 handler when the specified deadline has been exceeded.
 
