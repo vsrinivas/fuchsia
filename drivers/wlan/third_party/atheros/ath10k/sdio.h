@@ -113,7 +113,7 @@ struct ath10k_sdio_bus_request {
     struct list_head list;
 
     /* sdio address */
-    uin32_t address;
+    uint32_t address;
 
     struct sk_buff* skb;
     enum ath10k_htc_ep_id eid;
@@ -173,17 +173,17 @@ struct ath10k_sdio_irq_data {
 };
 
 struct ath10k_mbox_ext_info {
-    uin32_t htc_ext_addr;
-    uin32_t htc_ext_sz;
+    uint32_t htc_ext_addr;
+    uint32_t htc_ext_sz;
 };
 
 struct ath10k_mbox_info {
-    uin32_t htc_addr;
+    uint32_t htc_addr;
     struct ath10k_mbox_ext_info ext_info[2];
-    uin32_t block_size;
-    uin32_t block_mask;
-    uin32_t gmbox_addr;
-    uin32_t gmbox_sz;
+    uint32_t block_size;
+    uint32_t block_mask;
+    uint32_t gmbox_addr;
+    uint32_t gmbox_sz;
 };
 
 struct ath10k_sdio {
@@ -191,8 +191,8 @@ struct ath10k_sdio {
 
     struct ath10k_mbox_info mbox_info;
     bool swap_mbox;
-    uin32_t mbox_addr[ATH10K_HTC_EP_COUNT];
-    uin32_t mbox_size[ATH10K_HTC_EP_COUNT];
+    uint32_t mbox_addr[ATH10K_HTC_EP_COUNT];
+    uint32_t mbox_size[ATH10K_HTC_EP_COUNT];
 
     /* available bus requests */
     struct ath10k_sdio_bus_request bus_req[ATH10K_SDIO_BUS_REQUEST_MAX_NUM];

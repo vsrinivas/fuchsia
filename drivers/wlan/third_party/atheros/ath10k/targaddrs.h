@@ -47,54 +47,54 @@ struct host_interest {
      * Pointer to application-defined area, if any.
      * Set by Target application during startup.
      */
-    uin32_t hi_app_host_interest;           /* 0x00 */
+    uint32_t hi_app_host_interest;           /* 0x00 */
 
     /* Pointer to register dump area, valid after Target crash. */
-    uin32_t hi_failure_state;               /* 0x04 */
+    uint32_t hi_failure_state;               /* 0x04 */
 
     /* Pointer to debug logging header */
-    uin32_t hi_dbglog_hdr;                  /* 0x08 */
+    uint32_t hi_dbglog_hdr;                  /* 0x08 */
 
-    uin32_t hi_unused0c;                    /* 0x0c */
+    uint32_t hi_unused0c;                    /* 0x0c */
 
     /*
      * General-purpose flag bits, similar to SOC_OPTION_* flags.
      * Can be used by application rather than by OS.
      */
-    uin32_t hi_option_flag;                 /* 0x10 */
+    uint32_t hi_option_flag;                 /* 0x10 */
 
     /*
      * Boolean that determines whether or not to
      * display messages on the serial port.
      */
-    uin32_t hi_serial_enable;               /* 0x14 */
+    uint32_t hi_serial_enable;               /* 0x14 */
 
     /* Start address of DataSet index, if any */
-    uin32_t hi_dset_list_head;              /* 0x18 */
+    uint32_t hi_dset_list_head;              /* 0x18 */
 
     /* Override Target application start address */
-    uin32_t hi_app_start;                   /* 0x1c */
+    uint32_t hi_app_start;                   /* 0x1c */
 
     /* Clock and voltage tuning */
-    uin32_t hi_skip_clock_init;             /* 0x20 */
-    uin32_t hi_core_clock_setting;          /* 0x24 */
-    uin32_t hi_cpu_clock_setting;           /* 0x28 */
-    uin32_t hi_system_sleep_setting;        /* 0x2c */
-    uin32_t hi_xtal_control_setting;        /* 0x30 */
-    uin32_t hi_pll_ctrl_setting_24ghz;      /* 0x34 */
-    uin32_t hi_pll_ctrl_setting_5ghz;       /* 0x38 */
-    uin32_t hi_ref_voltage_trim_setting;    /* 0x3c */
-    uin32_t hi_clock_info;                  /* 0x40 */
+    uint32_t hi_skip_clock_init;             /* 0x20 */
+    uint32_t hi_core_clock_setting;          /* 0x24 */
+    uint32_t hi_cpu_clock_setting;           /* 0x28 */
+    uint32_t hi_system_sleep_setting;        /* 0x2c */
+    uint32_t hi_xtal_control_setting;        /* 0x30 */
+    uint32_t hi_pll_ctrl_setting_24ghz;      /* 0x34 */
+    uint32_t hi_pll_ctrl_setting_5ghz;       /* 0x38 */
+    uint32_t hi_ref_voltage_trim_setting;    /* 0x3c */
+    uint32_t hi_clock_info;                  /* 0x40 */
 
     /* Host uses BE CPU or not */
-    uin32_t hi_be;                          /* 0x44 */
+    uint32_t hi_be;                          /* 0x44 */
 
-    uin32_t hi_stack;   /* normal stack */  /* 0x48 */
-    uin32_t hi_err_stack; /* error stack */ /* 0x4c */
-    uin32_t hi_desired_cpu_speed_hz;        /* 0x50 */
+    uint32_t hi_stack;   /* normal stack */  /* 0x48 */
+    uint32_t hi_err_stack; /* error stack */ /* 0x4c */
+    uint32_t hi_desired_cpu_speed_hz;        /* 0x50 */
 
     /* Pointer to Board Data  */
-    uin32_t hi_board_data;                  /* 0x54 */
+    uint32_t hi_board_data;                  /* 0x54 */
 
     /*
      * Indication of Board Data state:
@@ -102,42 +102,42 @@ struct host_interest {
      *    1: board data is initialized; unknown size
      *   >1: number of bytes of initialized board data
      */
-    uin32_t hi_board_data_initialized;      /* 0x58 */
+    uint32_t hi_board_data_initialized;      /* 0x58 */
 
-    uin32_t hi_dset_ram_index_table;        /* 0x5c */
+    uint32_t hi_dset_ram_index_table;        /* 0x5c */
 
-    uin32_t hi_desired_baud_rate;           /* 0x60 */
-    uin32_t hi_dbglog_config;               /* 0x64 */
-    uin32_t hi_end_ram_reserve_sz;          /* 0x68 */
-    uin32_t hi_mbox_io_block_sz;            /* 0x6c */
+    uint32_t hi_desired_baud_rate;           /* 0x60 */
+    uint32_t hi_dbglog_config;               /* 0x64 */
+    uint32_t hi_end_ram_reserve_sz;          /* 0x68 */
+    uint32_t hi_mbox_io_block_sz;            /* 0x6c */
 
-    uin32_t hi_num_bpatch_streams;          /* 0x70 -- unused */
-    uin32_t hi_mbox_isr_yield_limit;        /* 0x74 */
+    uint32_t hi_num_bpatch_streams;          /* 0x70 -- unused */
+    uint32_t hi_mbox_isr_yield_limit;        /* 0x74 */
 
-    uin32_t hi_refclk_hz;                   /* 0x78 */
-    uin32_t hi_ext_clk_detected;            /* 0x7c */
-    uin32_t hi_dbg_uart_txpin;              /* 0x80 */
-    uin32_t hi_dbg_uart_rxpin;              /* 0x84 */
-    uin32_t hi_hci_uart_baud;               /* 0x88 */
-    uin32_t hi_hci_uart_pin_assignments;    /* 0x8C */
+    uint32_t hi_refclk_hz;                   /* 0x78 */
+    uint32_t hi_ext_clk_detected;            /* 0x7c */
+    uint32_t hi_dbg_uart_txpin;              /* 0x80 */
+    uint32_t hi_dbg_uart_rxpin;              /* 0x84 */
+    uint32_t hi_hci_uart_baud;               /* 0x88 */
+    uint32_t hi_hci_uart_pin_assignments;    /* 0x8C */
 
-    uin32_t hi_hci_uart_baud_scale_val;     /* 0x90 */
-    uin32_t hi_hci_uart_baud_step_val;      /* 0x94 */
+    uint32_t hi_hci_uart_baud_scale_val;     /* 0x90 */
+    uint32_t hi_hci_uart_baud_step_val;      /* 0x94 */
 
-    uin32_t hi_allocram_start;              /* 0x98 */
-    uin32_t hi_allocram_sz;                 /* 0x9c */
-    uin32_t hi_hci_bridge_flags;            /* 0xa0 */
-    uin32_t hi_hci_uart_support_pins;       /* 0xa4 */
+    uint32_t hi_allocram_start;              /* 0x98 */
+    uint32_t hi_allocram_sz;                 /* 0x9c */
+    uint32_t hi_hci_bridge_flags;            /* 0xa0 */
+    uint32_t hi_hci_uart_support_pins;       /* 0xa4 */
 
-    uin32_t hi_hci_uart_pwr_mgmt_params;    /* 0xa8 */
+    uint32_t hi_hci_uart_pwr_mgmt_params;    /* 0xa8 */
 
     /*
      * 0xa8 - [1]: 0 = UART FC active low, 1 = UART FC active high
      *        [31:16]: wakeup timeout in ms
      */
     /* Pointer to extended board Data  */
-    uin32_t hi_board_ext_data;              /* 0xac */
-    uin32_t hi_board_ext_data_config;       /* 0xb0 */
+    uint32_t hi_board_ext_data;              /* 0xac */
+    uint32_t hi_board_ext_data_config;       /* 0xb0 */
     /*
      * Bit [0]  :   valid
      * Bit[31:16:   size
@@ -147,52 +147,52 @@ struct host_interest {
      * such as restore app_start after warm reset or
      * preserve host Interest area, or preserve ROM data, literals etc.
      */
-    uin32_t  hi_reset_flag;                 /* 0xb4 */
+    uint32_t  hi_reset_flag;                 /* 0xb4 */
     /* indicate hi_reset_flag is valid */
-    uin32_t  hi_reset_flag_valid;           /* 0xb8 */
-    uin32_t hi_hci_uart_pwr_mgmt_params_ext;/* 0xbc */
+    uint32_t  hi_reset_flag_valid;           /* 0xb8 */
+    uint32_t hi_hci_uart_pwr_mgmt_params_ext;/* 0xbc */
     /* 0xbc - [31:0]: idle timeout in ms */
     /* ACS flags */
-    uin32_t hi_acs_flags;                   /* 0xc0 */
-    uin32_t hi_console_flags;               /* 0xc4 */
-    uin32_t hi_nvram_state;                 /* 0xc8 */
-    uin32_t hi_option_flag2;                /* 0xcc */
+    uint32_t hi_acs_flags;                   /* 0xc0 */
+    uint32_t hi_console_flags;               /* 0xc4 */
+    uint32_t hi_nvram_state;                 /* 0xc8 */
+    uint32_t hi_option_flag2;                /* 0xcc */
 
     /* If non-zero, override values sent to Host in WMI_READY event. */
-    uin32_t hi_sw_version_override;         /* 0xd0 */
-    uin32_t hi_abi_version_override;        /* 0xd4 */
+    uint32_t hi_sw_version_override;         /* 0xd0 */
+    uint32_t hi_abi_version_override;        /* 0xd4 */
 
     /*
      * Percentage of high priority RX traffic to total expected RX traffic
      * applicable only to ar6004
      */
-    uin32_t hi_hp_rx_traffic_ratio;         /* 0xd8 */
+    uint32_t hi_hp_rx_traffic_ratio;         /* 0xd8 */
 
     /* test applications flags */
-    uin32_t hi_test_apps_related;           /* 0xdc */
+    uint32_t hi_test_apps_related;           /* 0xdc */
     /* location of test script */
-    uin32_t hi_ota_testscript;              /* 0xe0 */
+    uint32_t hi_ota_testscript;              /* 0xe0 */
     /* location of CAL data */
-    uin32_t hi_cal_data;                    /* 0xe4 */
+    uint32_t hi_cal_data;                    /* 0xe4 */
 
     /* Number of packet log buffers */
-    uin32_t hi_pktlog_num_buffers;          /* 0xe8 */
+    uint32_t hi_pktlog_num_buffers;          /* 0xe8 */
 
     /* wow extension configuration */
-    uin32_t hi_wow_ext_config;              /* 0xec */
-    uin32_t hi_pwr_save_flags;              /* 0xf0 */
+    uint32_t hi_wow_ext_config;              /* 0xec */
+    uint32_t hi_pwr_save_flags;              /* 0xf0 */
 
     /* Spatial Multiplexing Power Save (SMPS) options */
-    uin32_t hi_smps_options;                /* 0xf4 */
+    uint32_t hi_smps_options;                /* 0xf4 */
 
     /* Interconnect-specific state */
-    uin32_t hi_interconnect_state;          /* 0xf8 */
+    uint32_t hi_interconnect_state;          /* 0xf8 */
 
     /* Coex configuration flags */
-    uin32_t hi_coex_config;                 /* 0xfc */
+    uint32_t hi_coex_config;                 /* 0xfc */
 
     /* Early allocation support */
-    uin32_t hi_early_alloc;                 /* 0x100 */
+    uint32_t hi_early_alloc;                 /* 0x100 */
     /* FW swap field */
     /*
      * Bits of this 32bit word will be used to pass specific swap
@@ -204,25 +204,25 @@ struct host_interest {
      * on the target processor.
      */
     /* Bit 1 - unused */
-    uin32_t hi_fw_swap;                     /* 0x104 */
+    uint32_t hi_fw_swap;                     /* 0x104 */
 
     /* global arenas pointer address, used by host driver debug */
-    uin32_t hi_dynamic_mem_arenas_addr;     /* 0x108 */
+    uint32_t hi_dynamic_mem_arenas_addr;     /* 0x108 */
 
     /* allocated bytes of DRAM use by allocated */
-    uin32_t hi_dynamic_mem_allocated;       /* 0x10C */
+    uint32_t hi_dynamic_mem_allocated;       /* 0x10C */
 
     /* remaining bytes of DRAM */
-    uin32_t hi_dynamic_mem_remaining;       /* 0x110 */
+    uint32_t hi_dynamic_mem_remaining;       /* 0x110 */
 
     /* memory track count, configured by host */
-    uin32_t hi_dynamic_mem_track_max;       /* 0x114 */
+    uint32_t hi_dynamic_mem_track_max;       /* 0x114 */
 
     /* minidump buffer */
-    uin32_t hi_minidump;                    /* 0x118 */
+    uint32_t hi_minidump;                    /* 0x118 */
 
     /* bdata's sig and key addr */
-    uin32_t hi_bd_sig_key;                  /* 0x11c */
+    uint32_t hi_bd_sig_key;                  /* 0x11c */
 } __packed;
 
 #define HI_ITEM(item)  offsetof(struct host_interest, item)

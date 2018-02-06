@@ -80,7 +80,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
     struct fft_sample_ath10k* fft_sample;
     uint8_t buf[sizeof(*fft_sample) + SPECTRAL_ATH10K_MAX_NUM_BINS];
     uint16_t freq1, freq2, total_gain_db, base_pwr_db, length, peak_mag;
-    uin32_t reg0, reg1;
+    uint32_t reg0, reg1;
     uint8_t chain_idx, *bins;
     int dc_pos;
 

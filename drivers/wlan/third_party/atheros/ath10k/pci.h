@@ -33,7 +33,7 @@ struct bmi_xfer {
     bool tx_done;
     bool rx_done;
     bool wait_for_resp;
-    uin32_t resp_len;
+    uint32_t resp_len;
 };
 
 /*
@@ -50,36 +50,36 @@ struct bmi_xfer {
 struct pcie_state {
     /* Pipe configuration Target address */
     /* NB: ce_pipe_config[CE_COUNT] */
-    uin32_t pipe_cfg_addr;
+    uint32_t pipe_cfg_addr;
 
     /* Service to pipe map Target address */
     /* NB: service_to_pipe[PIPE_TO_CE_MAP_CN] */
-    uin32_t svc_to_pipe_map;
+    uint32_t svc_to_pipe_map;
 
     /* number of MSI interrupts requested */
-    uin32_t msi_requested;
+    uint32_t msi_requested;
 
     /* number of MSI interrupts granted */
-    uin32_t msi_granted;
+    uint32_t msi_granted;
 
     /* Message Signalled Interrupt address */
-    uin32_t msi_addr;
+    uint32_t msi_addr;
 
     /* Base data */
-    uin32_t msi_data;
+    uint32_t msi_data;
 
     /*
      * Data for firmware interrupt;
      * MSI data for other interrupts are
      * in various SoC registers
      */
-    uin32_t msi_fw_intr_data;
+    uint32_t msi_fw_intr_data;
 
     /* PCIE_PWR_METHOD_* */
-    uin32_t power_mgmt_method;
+    uint32_t power_mgmt_method;
 
     /* PCIE_CONFIG_FLAG_* */
-    uin32_t config_flags;
+    uint32_t config_flags;
 };
 
 /* PCIE_CONFIG_FLAG definitions */
@@ -145,13 +145,13 @@ struct ath10k_pci_pipe {
 };
 
 struct ath10k_pci_supp_chip {
-    uin32_t dev_id;
-    uin32_t rev_id;
+    uint32_t dev_id;
+    uint32_t rev_id;
 };
 
 struct ath10k_bus_ops {
-    uin32_t (*read32)(struct ath10k* ar, uin32_t offset);
-    void (*write32)(struct ath10k* ar, uin32_t offset, uin32_t value);
+    uint32_t (*read32)(struct ath10k* ar, uint32_t offset);
+    void (*write32)(struct ath10k* ar, uint32_t offset, uint32_t value);
     int (*get_num_banks)(struct ath10k* ar);
 };
 
@@ -235,7 +235,7 @@ struct ath10k_pci {
     /* chip specific methods for converting target CPU virtual address
      * space to CE address space
      */
-    uin32_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uin32_t addr);
+    uint32_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uint32_t addr);
 
     /* Keep this entry in the last, memory for struct ath10k_ahb is
      * allocated (ahb support enabled case) in the continuation of
@@ -261,22 +261,22 @@ static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
 /* Wait up to this many Ms for a Diagnostic Access CE operation to complete */
 #define DIAG_ACCESS_CE_TIMEOUT_MS 10
 
-void ath10k_pci_write32(struct ath10k* ar, uin32_t offset, uin32_t value);
-void ath10k_pci_soc_write32(struct ath10k* ar, uin32_t addr, uin32_t val);
-void ath10k_pci_reg_write32(struct ath10k* ar, uin32_t addr, uin32_t val);
+void ath10k_pci_write32(struct ath10k* ar, uint32_t offset, uint32_t value);
+void ath10k_pci_soc_write32(struct ath10k* ar, uint32_t addr, uint32_t val);
+void ath10k_pci_reg_write32(struct ath10k* ar, uint32_t addr, uint32_t val);
 
-uin32_t ath10k_pci_read32(struct ath10k* ar, uin32_t offset);
-uin32_t ath10k_pci_soc_read32(struct ath10k* ar, uin32_t addr);
-uin32_t ath10k_pci_reg_read32(struct ath10k* ar, uin32_t addr);
+uint32_t ath10k_pci_read32(struct ath10k* ar, uint32_t offset);
+uint32_t ath10k_pci_soc_read32(struct ath10k* ar, uint32_t addr);
+uint32_t ath10k_pci_reg_read32(struct ath10k* ar, uint32_t addr);
 
 int ath10k_pci_hif_tx_sg(struct ath10k* ar, uint8_t pipe_id,
                          struct ath10k_hif_sg_item* items, int n_items);
-int ath10k_pci_hif_diag_read(struct ath10k* ar, uin32_t address, void* buf,
+int ath10k_pci_hif_diag_read(struct ath10k* ar, uint32_t address, void* buf,
                              size_t buf_len);
-int ath10k_pci_diag_write_mem(struct ath10k* ar, uin32_t address,
+int ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
                               const void* data, int nbytes);
-int ath10k_pci_hif_exchange_bmi_msg(struct ath10k* ar, void* req, uin32_t req_len,
-                                    void* resp, uin32_t* resp_len);
+int ath10k_pci_hif_exchange_bmi_msg(struct ath10k* ar, void* req, uint32_t req_len,
+                                    void* resp, uint32_t* resp_len);
 int ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t service_id,
                                        uint8_t* ul_pipe, uint8_t* dl_pipe);
 void ath10k_pci_hif_get_default_pipe(struct ath10k* ar, uint8_t* ul_pipe,

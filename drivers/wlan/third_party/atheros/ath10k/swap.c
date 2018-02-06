@@ -30,10 +30,10 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
     uint8_t swap_magic[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ] = {};
     const uint8_t* fw_data = data;
     union ath10k_swap_code_seg_item* swap_item;
-    uin32_t length = 0;
-    uin32_t payload_len;
-    uin32_t total_payload_len = 0;
-    uin32_t size_left = data_len;
+    uint32_t length = 0;
+    uint32_t payload_len;
+    uint32_t total_payload_len = 0;
+    uint32_t size_left = data_len;
 
     /* Parse swap bin and copy the content to host allocated memory.
      * The format is Address, length and value. The last 4-bytes is
@@ -82,7 +82,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
 static void
 ath10k_swap_code_seg_free(struct ath10k* ar,
                           struct ath10k_swap_code_seg_info* seg_info) {
-    uin32_t seg_size;
+    uint32_t seg_size;
 
     if (!seg_info) {
         return;
