@@ -6,9 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_NAME := fidl2
-
-MODULE_TYPE := hostapp
+MODULE_TYPE := hostlib
 
 MODULE_COMPILEFLAGS := -O0 -g
 
@@ -23,8 +21,5 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/source_file.cpp \
     $(LOCAL_DIR)/lib/source_location.cpp \
     $(LOCAL_DIR)/lib/source_manager.cpp \
-    $(LOCAL_DIR)/main.cpp \
-
-MODULE_PACKAGE := bin
 
 include make/module.mk

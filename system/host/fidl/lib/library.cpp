@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "library.h"
+#include "fidl/library.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -10,9 +10,9 @@
 #include <algorithm>
 #include <sstream>
 
-#include "ast.h"
-#include "lexer.h"
-#include "parser.h"
+#include "fidl/ast.h"
+#include "fidl/lexer.h"
+#include "fidl/parser.h"
 
 namespace fidl {
 

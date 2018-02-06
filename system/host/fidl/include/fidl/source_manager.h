@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "source_file.h"
+#include "fidl/source_file.h"
 #include "string_view.h"
 
 namespace fidl {

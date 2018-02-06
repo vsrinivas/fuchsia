@@ -8,7 +8,7 @@
 
 #include <map>
 
-#include "source_file.h"
+#include "fidl/source_file.h"
 #include "string_view.h"
 #include "token.h"
 

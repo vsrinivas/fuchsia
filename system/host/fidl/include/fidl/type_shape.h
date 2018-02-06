@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_LIB_TYPE_SHAPE_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_LIB_TYPE_SHAPE_H_
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_
 
 #include <stddef.h>
 
@@ -23,4 +23,4 @@ private:
     size_t alignment_;
 };
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_LIB_TYPE_SHAPE_H_
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_

@@ -38,12 +38,3 @@ source_set("compiler") {
     "lib/type_shape.h",
   ]
 }
-
-executable("fidl2") {
-  sources = [
-    "main.cpp",
-  ]
-  deps = [
-    ":compiler",
-  ]
-}

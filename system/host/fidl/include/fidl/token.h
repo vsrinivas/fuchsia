@@ -20,7 +20,7 @@ class Token {
 public:
     enum Kind : uint8_t {
 #define TOKEN(Name) Name,
-#include "token_definitions.inc"
+#include "fidl/token_definitions.inc"
     };
 
     Token(SourceLocation location, Kind kind)
@@ -33,7 +33,7 @@ public:
 #define TOKEN(Name)                                                                                \
     case fidl::Token::Kind::Name:                                                                  \
         return #Name;
-#include "token_definitions.inc"
+#include "fidl/token_definitions.inc"
         }
     }
 

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "identifier_table.h"
+#include "fidl/identifier_table.h"
 
-#include "source_location.h"
+#include "fidl/source_location.h"
 
 namespace fidl {
 
 IdentifierTable::IdentifierTable() {
     keyword_table_ = {
 #define KEYWORD(Name, Spelling) {Spelling, Token::Name},
-#include "token_definitions.inc"
+#include "fidl/token_definitions.inc"
     };
 }
 

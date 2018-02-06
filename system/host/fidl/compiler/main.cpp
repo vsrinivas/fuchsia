@@ -12,13 +12,13 @@
 #include <utility>
 #include <vector>
 
-#include "lib/c_generator.h"
-#include "lib/json_generator.h"
-#include "lib/identifier_table.h"
-#include "lib/lexer.h"
-#include "lib/library.h"
-#include "lib/parser.h"
-#include "lib/source_manager.h"
+#include <fidl/c_generator.h>
+#include <fidl/identifier_table.h>
+#include <fidl/json_generator.h>
+#include <fidl/lexer.h>
+#include <fidl/library.h>
+#include <fidl/parser.h>
+#include <fidl/source_manager.h>
 
 namespace {
 
