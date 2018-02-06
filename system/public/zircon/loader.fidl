@@ -4,40 +4,27 @@
 
 library ldsvc;
 
-// See //zircon/docs/program_loading.md for a more complete
-// description of this and related process bootsrapping protocols.
+// See //zircon/docs/program_loading.md for a more complete //
+// description of this and related process bootsrapping protocols, and
+// for specifics about the default global loader service's
+// interpretation of names, paths, and configurations.
 
 interface Loader {
     // Cleanly shutdown the connection to the Loader service.
     1: Done();
 
-    // The dynamic linker sends |object_name| (the absolute path to a
-    // shared library or plugin) and gets back a VMO handle containing
-    // the file.
-    //
-    // By default, |object_name| must be an absolute path rooted in
-    // one of the following directories:
-    //   - /system/lib
-    //   - /boot/lib
-    // These directory search paths can be prefixed, either optionally
-    // or not, via the Config() call.
+    // The dynamic linker sends |object_name| and gets back a VMO
+    // handle containing the file.
     2: LoadObject(string object_name) -> (status rv, handle<vmo>? object);
 
     // The program loader sends the script |interperter_name| from
     // hashbang and gets back a VMO to execute in place of the script.
-    //
-    // |interperter_name| must specify an absolute path.
     3: LoadScriptInterpreter(string interpreter_name) -> (status rv, handle<vmo>? object);
 
     // The dynamic linker sends a |config| identifying its load
     // configuration.  This is intended to affect how later
     // |LoadObject| requests decide what particular implementation
     // file to supply for a given name.
-    //
-    // An typical config is "asan". A terminal '!' is used to
-    // designate exclusitivity. That is, the "asan" config means
-    // 'search in /asan/... first', while "asan!" means 'search in
-    // /asan/... only'.
     4: Config(string config) -> (status rv);
 
     // Obtain a new loader service connection.
@@ -72,8 +59,6 @@ interface Loader {
     // configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than
     // passed directly in environment strings.
-    //
-    // |config_name| must specify an absolute path.
     //
     // This is intended to be a developer-oriented feature and might
     // not ordinarily be available in production runs.
