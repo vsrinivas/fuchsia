@@ -157,7 +157,7 @@ in the Zircon build).  For example, to use the compiler from your Fuchsia
 checkout (on Linux):
 
 ```bash
-CLANG_TOOLCHAIN_PREFIX=${HOME}/fuchsia/buildtools/toolchain/clang+llvm-x86_64-linux/bin/
+CLANG_TOOLCHAIN_PREFIX=${HOME}/fuchsia/buildtools/linux-x64/clang/bin/
 ```
 
 To build both builtins as well as runtimes (C++ library and sanitizer
