@@ -4,23 +4,78 @@
 
 library ldsvc;
 
+// See //zircon/docs/program_loading.md for a more complete
+// description of this and related process bootsrapping protocols.
+
 interface Loader {
-    // Clean shutdown of service
+    // Cleanly shutdown the connection to the Loader service.
     1: Done();
 
+    // The dynamic linker sends |object_name| (the absolute path to a
+    // shared library or plugin) and gets back a VMO handle containing
+    // the file.
+    //
+    // By default, |object_name| must be an absolute path rooted in
+    // one of the following directories:
+    //   - /system/lib
+    //   - /boot/lib
+    // These directory search paths can be prefixed, either optionally
+    // or not, via the Config() call.
     2: LoadObject(string object_name) -> (status rv, handle<vmo>? object);
 
-    3: DebugPrint(string message) -> (status rv);
+    // The program loader sends the script |interperter_name| from
+    // hashbang and gets back a VMO to execute in place of the script.
+    //
+    // |interperter_name| must specify an absolute path.
+    3: LoadScriptInterpreter(string interpreter_name) -> (status rv, handle<vmo>? object);
 
-    4: LoadScriptInterpreter(string object_name) -> (status rv, handle<vmo>? object);
+    // The dynamic linker sends a |config| identifying its load
+    // configuration.  This is intended to affect how later
+    // |LoadObject| requests decide what particular implementation
+    // file to supply for a given name.
+    //
+    // An typical config is "asan". A terminal '!' is used to
+    // designate exclusitivity. That is, the "asan" config means
+    // 'search in /asan/... first', while "asan!" means 'search in
+    // /asan/... only'.
+    4: Config(string config) -> (status rv);
 
-    5: PublishDataSink(string name, handle<vmo> data) -> (status rv);
+    // Obtain a new loader service connection.
+    5: Clone(request<Loader> loader) -> (status rv);
 
-    6: LoadDebugConfig(string config_name) -> (status rv, handle<vmo>? config);
+    // This is a simple ad hoc logging facility intended for debugging
+    // the dynamic linker and early program startup issues.  It's
+    // convenient because the early startup code is using the loader
+    // service but doesn't have access to many other handles or
+    // complex facilities yet.  This will be replaced in the future
+    // with some simple-to-use logging facility that does not go
+    // through the loader service.
+    6: DebugPrint(string message) -> (status rv);
 
-    // Configuration string to affect later loading (e.g., "asan")
-    7: Config(string config) -> (status rv);
+    // The program runtime sends a string naming a |data_sink| and
+    // transfers the sole handle to a VMO containing the |data| it
+    // wants published there.  The |data_sink| string identifies a
+    // type of data, and the VMO's object name can specifically
+    // identify the data set in this VMO.  The client must transfer
+    // the only handle to the VMO (which prevents the VMO being
+    // resized without the receiver's knowledge), but it might still
+    // have the VMO mapped in and continue to write data to it.  Code
+    // instrumentation runtimes use this to deliver large binary trace
+    // results.
+    //
+    // This is intended to be a developer-oriented feature and might
+    // not ordinarily be available in production runs.
+    7: DebugPublishDataSink(string data_sink, handle<vmo> data) -> (status rv);
 
-    // Obtain a new loader service connection
-    8: Clone(request<Loader> loader) -> (status rv);
+    // The program runtime names a |config_name| referring to a debug
+    // configuration of some kind and gets back a VMO to read
+    // configuration data from.  The sanitizer runtimes use this to
+    // allow large options text to be stored in a file rather than
+    // passed directly in environment strings.
+    //
+    // |config_name| must specify an absolute path.
+    //
+    // This is intended to be a developer-oriented feature and might
+    // not ordinarily be available in production runs.
+    8: DebugLoadConfig(string config_name) -> (status rv, handle<vmo>? config);
 };
