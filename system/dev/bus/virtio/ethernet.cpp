@@ -77,7 +77,9 @@ zx_protocol_device_t kDeviceOps = {
     virtio_net_release,
     nullptr, // read
     nullptr, // write
+#if DDK_WITH_IOTXN
     nullptr, // iotxn_queue
+#endif
     nullptr, // get_size
     nullptr, // ioctl
     nullptr, // suspend

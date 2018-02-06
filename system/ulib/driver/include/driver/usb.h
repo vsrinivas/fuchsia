@@ -11,9 +11,6 @@
 
 __BEGIN_CDECLS;
 
-// helper function for allocating iotxns for USB transfers
-iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
-
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
 zx_status_t usb_claim_additional_interfaces(usb_protocol_t *usb,

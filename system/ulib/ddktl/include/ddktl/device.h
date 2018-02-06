@@ -52,8 +52,6 @@
 // |                      |                      size_t count, zx_off_t off,   |
 // |                      |                      size_t* actual)               |
 // |                      |                                                    |
-// | ddk::IotxnQueueable  | void DdkIotxnQueue(iotxn_t* txn)                   |
-// |                      |                                                    |
 // | ddk::GetSizable      | zx_off_t DdkGetSize()                              |
 // |                      |                                                    |
 // | ddk::Ioctlable       | zx_status_t DdkIoctl(uint32_t op,                  |
@@ -219,6 +217,7 @@ class Writable : public internal::base_mixin {
     }
 };
 
+#if DDK_WITH_IOTXN
 template <typename D>
 class IotxnQueueable : public internal::base_mixin {
   protected:
@@ -230,6 +229,7 @@ class IotxnQueueable : public internal::base_mixin {
     static void IotxnQueue(void* ctx, iotxn_t* txn) {
     }
 };
+#endif
 
 template <typename D>
 class GetSizable : public internal::base_mixin {
@@ -392,7 +392,9 @@ using FullDevice = Device<D,
                           Unbindable,
                           Readable,
                           Writable,
+#if DDK_WITH_IOTXN
                           IotxnQueueable,
+#endif
                           GetSizable,
                           Ioctlable,
                           Suspendable,

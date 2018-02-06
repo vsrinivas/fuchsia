@@ -163,9 +163,11 @@ __EXPORT zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
     return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
 }
 
+#if DDK_WITH_IOTXN
 __EXPORT zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
 }
+#endif
 
 // LibDriver Misc Interfaces
 

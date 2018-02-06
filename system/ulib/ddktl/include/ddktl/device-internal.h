@@ -207,6 +207,7 @@ constexpr void CheckWritable() {
                   "'zx_status_t DdkWrite(const void*, size_t, zx_off_t, size_t*)'.");
 }
 
+#if DDK_WITH_IOTXN
 DECLARE_HAS_MEMBER_FN(has_ddk_iotxn_queue, DdkIotxnQueue);
 
 template <typename D>
@@ -219,6 +220,7 @@ constexpr void CheckIotxnQueueable() {
                   "DdkIotxnQueue must be a public non-static member function with signature "
                   "'void DdkIotxnQueue(iotxn_t*)'.");
 }
+#endif
 
 DECLARE_HAS_MEMBER_FN(has_ddk_get_size, DdkGetSize);
 

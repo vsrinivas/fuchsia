@@ -58,9 +58,11 @@ BEGIN_SUCCESS_CASE(Writable)
     }
 END_SUCCESS_CASE
 
+#if DDK_WITH_IOTXN
 BEGIN_SUCCESS_CASE(IotxnQueueable)
     void DdkIotxnQueue(iotxn_t* txn) {}
 END_SUCCESS_CASE
+#endif
 
 BEGIN_SUCCESS_CASE(GetSizable)
     zx_off_t DdkGetSize() { return 0; }
@@ -139,8 +141,10 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         return ZX_OK;
     }
 
+#if DDK_WITH_IOTXN
     void DdkIotxnQueue(iotxn_t* t) {
     }
+#endif
 
     zx_off_t DdkGetSize() {
         get_size_called = true;
@@ -307,7 +311,9 @@ RUN_NAMED_TEST("ddk::Closable", do_test<TestClosable>);
 RUN_NAMED_TEST("ddk::Unbindable", do_test<TestUnbindable>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
 RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
+#if DDK_WITH_IOTXN
 RUN_NAMED_TEST("ddk::IotxnQueueable", do_test<TestIotxnQueueable>);
+#endif
 RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
 RUN_NAMED_TEST("ddk::Ioctlable", do_test<TestIoctlable>);
 RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
