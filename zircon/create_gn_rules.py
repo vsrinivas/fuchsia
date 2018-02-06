@@ -81,13 +81,14 @@ def parse_package(lines):
     return result
 
 
-def extract_file(name, path, context):
+def extract_file(name, path, context, is_tool=False):
     """Extracts file path and base folder path from a map entry."""
     # name: foo/bar.h
     # path: <SOURCE|BUILD>/somewhere/under/zircon/foo/bar.h
     (full_path, changes) = re.subn('^SOURCE', context.source_base, path)
+    build_base = context.tool_build_base if is_tool else context.user_build_base
     if not changes:
-        (full_path, changes) = re.subn('^BUILD', context.build_base, path)
+        (full_path, changes) = re.subn('^BUILD', build_base, path)
     if not changes:
         raise Exception('Unknown pattern type: %s' % path)
     folder = None
@@ -258,7 +259,7 @@ def generate_host_tool(package, context):
     if len(bins) != 1 or name not in bins:
         raise Exception('Host tool %s has unexpected binaries %s.'
                         % (name, bins))
-    (file, _) = extract_file(name, bins[name], context)
+    (file, _) = extract_file(name, bins[name], context, is_tool=True)
     data.executable = '//%s' % file
 
     # Generate the build file.
@@ -269,10 +270,12 @@ def generate_host_tool(package, context):
 class GenerationContext(object):
     """Describes the context in which GN rules should be generated."""
 
-    def __init__(self, out_dir, source_base, build_base, templates):
+    def __init__(self, out_dir, source_base, user_build_base, tool_build_base,
+                 templates):
         self.out_dir = out_dir
         self.source_base = source_base
-        self.build_base = build_base
+        self.user_build_base = user_build_base
+        self.tool_build_base = tool_build_base
         self.templates = templates
 
 
@@ -284,8 +287,11 @@ def main():
     parser.add_argument('--staging',
                         help='Path to the staging directory',
                         required=True)
-    parser.add_argument('--zircon-build',
-                        help='Path to the Zircon build directory',
+    parser.add_argument('--zircon-user-build',
+                        help='Path to the Zircon "user" build directory',
+                        required=True)
+    parser.add_argument('--zircon-tool-build',
+                        help='Path to the Zircon "tools" build directory',
                         required=True)
     parser.add_argument('--debug',
                         help='Whether to print out debug information',
@@ -334,7 +340,8 @@ def main():
     context = GenerationContext(
         out_dir,
         ZIRCON_ROOT,
-        os.path.abspath(args.zircon_build),
+        os.path.abspath(args.zircon_user_build),
+        os.path.abspath(args.zircon_tool_build),
         TemplateLookup(directories=[SCRIPT_DIR]),
     )
     for package in packages:
