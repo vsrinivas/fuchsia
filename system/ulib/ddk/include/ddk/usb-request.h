@@ -5,8 +5,9 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <sys/types.h>
 #include <ddk/io-buffer.h>
-#include <ddk/iotxn.h>
 #include <ddk/phys-iter.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
@@ -120,7 +121,7 @@ ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, 
 zx_status_t usb_request_mmap(usb_request_t* req, void** data);
 
 // usb_request_cacheop() performs a cache maintenance op against the request's internal
-// buffer. 
+// buffer.
 zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length);
 
 // usb_request_cache_flush() performs a cache flush on a range of memory in the request's buffer

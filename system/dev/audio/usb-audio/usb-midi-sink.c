@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/midi.h>
