@@ -422,6 +422,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             break;
         }
         log(RPC_SDW, "devhost[%s] connect proxy rpc\n", path);
+        ios->dev->ops->rxrpc(ios->dev->ctx, ZX_HANDLE_INVALID);
         proxy_ios_create(ios->dev, hin[0]);
         return ZX_OK;
 

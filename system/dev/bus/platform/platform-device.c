@@ -377,6 +377,11 @@ static void pdev_rpc_i2c_channel_release(platform_dev_t* dev, pdev_i2c_req_t* re
 }
 
 static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
+    if (channel == ZX_HANDLE_INVALID) {
+        // proxy device has connected
+        return ZX_OK;
+    }
+
     platform_dev_t* dev = ctx;
     struct {
         pdev_req_t req;

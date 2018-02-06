@@ -189,6 +189,11 @@ static inline const char* rpc_op_lbl(uint32_t op) {
 }
 
 static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
+    if (ch == ZX_HANDLE_INVALID) {
+        // new proxy connection
+        return ZX_OK;
+    }
+
     kpci_device_t* device = ctx;
     const char* name = device_get_name(device->zxdev);
     pci_msg_t req;

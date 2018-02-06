@@ -194,8 +194,13 @@ typedef struct zx_protocol_device {
     // device that is shadowing is notified by the rxrpc op and
     // should attempt to read and respond to a single message on
     // the provided channel.
+    //
     // Any error return from this method will result in the channel
     // being closed and the remote "shadow" losing its connection.
+    //
+    // This method is called with ZX_HANDLE_INVALID for the channel
+    // when a new client connects -- at which point any state from
+    // the previous client should be torn down.
     zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 } zx_protocol_device_t;
 
