@@ -65,6 +65,40 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   void GetMinLeadTime(const GetMinLeadTimeCallback& callback) final;
 
  private:
+  // TODO(johngro): When AudioPipe is fully retired, eliminate the V1/V2
+  // versions of audio packet refs, and fold this definition into the global
+  // AudioPacketRef definition (eliminating all of the virtual functions as we
+  // go).
+  class AudioPacketRefV2 : public ::media::audio::AudioPacketRef {
+   public:
+    void Cleanup() final {
+      FXL_DCHECK(callback_ != nullptr);
+      callback_();
+    }
+
+    void* payload() final {
+      auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
+      return (start + packet_->payload_offset);
+    }
+
+    uint32_t flags() final { return packet_->flags; }
+
+    AudioPacketRefV2(
+        fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+        const AudioRenderer2::SendPacketCallback& callback,
+        AudioPacketPtr packet,
+        AudioServerImpl* server,
+        uint32_t frac_frame_len,
+        int64_t start_pts);
+
+   protected:
+    bool NeedsCleanup() final { return callback_ != nullptr; }
+
+    fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref_;
+    AudioRenderer2::SendPacketCallback callback_;
+    AudioPacketPtr packet_;
+  };
+
   class GainControlBinding : public AudioRendererGainControl {
    public:
     static fbl::unique_ptr<GainControlBinding> Create(
@@ -102,6 +136,7 @@ class AudioRenderer2Impl : public AudioRendererImpl,
 
   bool IsOperating();
   bool ValidateConfig();
+  void ComputePtsToFracFrames(int64_t first_pts);
 
   AudioServerImpl* owner_ = nullptr;
   f1dl::Binding<AudioRenderer2> audio_renderer_binding_;
@@ -110,11 +145,14 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
   fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;
-  TimelineRate pts_ticks_per_second_;
   bool config_validated_ = false;
 
   // PTS interpolation state.
+  int64_t next_frac_frame_pts_ = 0;
+  TimelineRate pts_ticks_per_second_;
   TimelineRate frac_frames_per_pts_tick_;
+  TimelineFunction pts_to_frac_frames_;
+  bool pts_to_frac_frames_valid_ = false;
   float pts_continuity_threshold_ = 0.0f;
   bool pts_continuity_threshold_set_ = false;
   int64_t pts_continuity_threshold_frac_frame_ = 0;

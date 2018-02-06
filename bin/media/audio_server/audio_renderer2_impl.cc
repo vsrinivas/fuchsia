@@ -125,6 +125,16 @@ bool AudioRenderer2Impl::ValidateConfig() {
   return true;
 }
 
+void AudioRenderer2Impl::ComputePtsToFracFrames(int64_t first_pts) {
+  // We should not be calling this function if the transformation is already
+  // valid.
+  FXL_DCHECK(!pts_to_frac_frames_valid_);
+  pts_to_frac_frames_ = TimelineFunction(first_pts,
+                                         next_frac_frame_pts_,
+                                         frac_frames_per_pts_tick_);
+  pts_to_frac_frames_valid_ = true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // AudioRenderer2 Interface
@@ -309,12 +319,111 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
                                     const SendPacketCallback& callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
+  // It is an error to attempt to send a packet before we have established at
+  // least a minimum valid configuration.  IOW - the format must have been
+  // configured, and we must have an established payload buffer.
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during SendPacket";
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  // Start by making sure that the region we are receiving is made from an
+  // integral number of audio frames.  Count the total number of frames in the
+  // process.
+  uint32_t frame_size = format_info()->bytes_per_frame();
+  FXL_DCHECK(frame_size != 0);
+  if (packet->payload_size % frame_size) {
+    FXL_LOG(ERROR) << "Region length (" << packet->payload_size
+                   << ") is not divisible by by audio frame size ("
+                   << frame_size << ")";
+    return;
+  }
+
+  // Make sure that we don't exceed the maximum permissible frames-per-packet.
+  static constexpr uint32_t kMaxFrames =
+      std::numeric_limits<uint32_t>::max() >> kPtsFractionalBits;
+  uint32_t frame_count = (packet->payload_size / frame_size);
+  if (frame_count > kMaxFrames) {
+    FXL_LOG(ERROR) << "Audio frame count (" << frame_count
+                   << ") exceeds maximum allowed (" << kMaxFrames << ")";
+    return;
+  }
+
+  // Make sure that the packet offset/size exists entirely within the payload
+  // buffer.
+  FXL_DCHECK(payload_buffer_ != nullptr);
+  uint64_t start = packet->payload_offset;
+  uint64_t end = start + packet->payload_size;
+  uint64_t pb_size = payload_buffer_->size();
+  if ((start >= payload_buffer_->size()) || (end > payload_buffer_->size())) {
+    FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end
+                   << ").  Payload buffer size is " << pb_size;
+    return;
+  }
+
+  // Compute the PTS values for this packet applying our interpolation and
+  // continuity thresholds as we go.  Start by checking to see if this our PTS
+  // to frames transformation needs to be computed (this should be needed after
+  // startup, and after each flush operation).
+  if (!pts_to_frac_frames_valid_) {
+    ComputePtsToFracFrames(
+      (packet->timestamp == AudioPacket::kNoTimestamp) ? 0 : packet->timestamp);
+  }
+
+  // Now compute the starting PTS expressed in fractional input frames.  If no
+  // explicit PTS was provided, interpolate using the next expected PTS.
+  int64_t start_pts;
+  if (packet->timestamp == AudioPacket::kNoTimestamp) {
+    start_pts = next_frac_frame_pts_;
+  } else {
+    // Looks like we have an explicit PTS on this packet.  Boost it into the
+    // fractional input frame domain, then apply our continuity threshold rules.
+    int64_t packet_ffpts = pts_to_frac_frames_.Apply(packet->timestamp);
+    int64_t delta = std::abs(packet_ffpts - next_frac_frame_pts_);
+    start_pts = (delta < pts_continuity_threshold_frac_frame_)
+              ? next_frac_frame_pts_
+              : packet_ffpts;
+  }
+
+  // Snap the starting pts to an input frame boundary.
+  //
+  // TODO(johngro):  Don't do this.  If a user wants to write an explicit
+  // timestamp on an input packet which schedules the packet to start at a
+  // fractional position on the input time line, we should probably permit this.
+  // We need to make sure that the mixer cores are ready to handle this case
+  // before proceeding, however.  See MTWN-88
+  constexpr auto mask = ~((static_cast<int64_t>(1) << kPtsFractionalBits) - 1);
+  start_pts &= mask;
+
+  // Create the packet.
+  auto packet_ref = fbl::AdoptRef<AudioPacketRef>(new AudioPacketRefV2(
+        payload_buffer_,
+        callback,
+        std::move(packet),
+        owner_,
+        frame_count << kPtsFractionalBits,
+        start_pts));
+
+  // The end pts is the value we will use for the next packet's start PTS, if
+  // the user does not provide an explicit PTS.
+  next_frac_frame_pts_ = packet_ref->end_pts();
+
+  // Distribute our packet to our links
+  if (throttle_output_link_ != nullptr) {
+    throttle_output_link_->PushToPendingQueue(packet_ref);
+  }
+
+  {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->PushToPendingQueue(packet_ref);
+    }
+  }
+
+  // Things went well, cancel the cleanup hook.
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SendPacketNoReply(AudioPacketPtr packet) {
@@ -391,6 +500,21 @@ void AudioRenderer2Impl::GetMinLeadTime(
     const GetMinLeadTimeCallback& callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+}
+
+AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
+        fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+        const AudioRenderer2::SendPacketCallback& callback,
+        AudioPacketPtr packet,
+        AudioServerImpl* server,
+        uint32_t frac_frame_len,
+        int64_t start_pts)
+  : AudioPacketRef(server, frac_frame_len, start_pts),
+    vmo_ref_(std::move(vmo_ref)),
+    callback_(callback),
+    packet_(std::move(packet)) {
+  FXL_DCHECK(vmo_ref_ != nullptr);
+  FXL_DCHECK(packet_.is_null() == false);
 }
 
 // Shorthand to save horizontal space for the thunks which follow.
