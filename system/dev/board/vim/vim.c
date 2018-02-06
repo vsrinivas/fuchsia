@@ -23,6 +23,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include "vim.h"
 
@@ -65,11 +66,14 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim_i2c_init failed: %d\n", status);
         goto fail;
     }
+    if ((status = vim_uart_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_uart_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = vim_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
         goto fail;
     }
-
     if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
         goto fail;
@@ -121,6 +125,7 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
     thrd_t t;
     int thrd_rc = thrd_create_with_name(&t, vim_start_thread, bus, "vim_start_thread");
     if (thrd_rc != thrd_success) {
+        status = thrd_status_to_zx_status(thrd_rc);
         goto fail;
     }
     return ZX_OK;

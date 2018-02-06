@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim.c \
     $(LOCAL_DIR)/vim-gpio.c \
     $(LOCAL_DIR)/vim-i2c.c \
+    $(LOCAL_DIR)/vim-uart.c \
     $(LOCAL_DIR)/vim-usb.c \
 
 MODULE_STATIC_LIBS := \
