@@ -54,8 +54,8 @@ In Zircon code base, raw annotations like `__attribute__((annotate("string")))` 
 
 ### Annotations in syscall declaration
 
-As header files of Zircon syscalls are generated from syscalls.sysgen, in order to add/modify annotations of syscalls, the syscalls.sysgen should be modified directly.
-Let’s use `zx_channel_create syscall` as example. This syscall will allocate two handles when it is successfully executed. Without annotations, its declaration in sysgen will be like:
+As header files of Zircon syscalls are generated from syscalls.abigen, in order to add/modify annotations of syscalls, the syscalls.abigen should be modified directly.
+Let’s use `zx_channel_create syscall` as example. This syscall will allocate two handles when it is successfully executed. Without annotations, its declaration in abigen will be like:
 
 ```c
 syscall channel_create
@@ -72,7 +72,7 @@ syscall channel_create
              out1: zx_handle_t handle_acquire);
 ```
 
-This syscall declaration will be processed by sysgen and converted to:
+This syscall declaration will be processed by abigen and converted to:
 
 ```c
 extern zx_status_t zx_channel_create(
@@ -124,7 +124,7 @@ The analyzer will suppress the warnings on the bug it discovered in `checkSuppre
 
 Similar to `zx_suppress_warning` annotation, we have `zx_create_sink` annotation which currently used to suppress warnings on assertion failures. This annotation is unlikely to be used for other purpose, however, if you would like to know how it works, please refer to the discussions in CL[46428](https://fuchsia-review.googlesource.com/c/46428).
 
-To manually annotate non-syscall functions, the "ZX_SYSCALL_PARAM_ATTR" macro can be applied to function arguments, emulating the effect of the sysgen attributes. For example, here, we annotate a regular function which might be used to call the "zx_create_channel" function without passing the "options" argument:
+To manually annotate non-syscall functions, the "ZX_SYSCALL_PARAM_ATTR" macro can be applied to function arguments, emulating the effect of the abigen attributes. For example, here, we annotate a regular function which might be used to call the "zx_create_channel" function without passing the "options" argument:
 
 ```c
 zx_status_t create_channel(

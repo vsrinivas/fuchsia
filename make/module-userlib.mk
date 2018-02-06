@@ -231,7 +231,7 @@ GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
 MODULE_PKG_INCS += $(foreach inc,$(GLOBAL_HEADERS),$(patsubst system/public/%,%,$(inc))=SOURCE/$(inc))
 
 # generated headers
-MODULE_PKG_INCS += $(foreach inc,$(sort $(SYSGEN_PUBLIC_HEADERS)),$(patsubst $(SYSGEN_BUILDDIR)/%,%,$(inc))=$(patsubst $(BUILDDIR)/%,BUILD/%,$(inc)))
+MODULE_PKG_INCS += $(foreach inc,$(sort $(ABIGEN_PUBLIC_HEADERS)),$(patsubst $(ABIGEN_BUILDDIR)/%,%,$(inc))=$(patsubst $(BUILDDIR)/%,BUILD/%,$(inc)))
 
 # libzircon headers
 ZIRCON_HEADERS := $(shell find system/ulib/zircon/include -name \*\.h)

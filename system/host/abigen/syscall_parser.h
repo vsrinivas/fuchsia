@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "abigen_generator.h"
 #include "parser/parser.h"
-#include "sysgen_generator.h"
 
-bool process_comment(SysgenGenerator* parser, TokenStream& ts);
-bool process_syscall(SysgenGenerator* parser, TokenStream& ts);
+bool process_comment(AbigenGenerator* parser, TokenStream& ts);
+bool process_syscall(AbigenGenerator* parser, TokenStream& ts);

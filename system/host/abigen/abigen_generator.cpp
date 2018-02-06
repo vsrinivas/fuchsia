@@ -9,7 +9,7 @@
 #include "header_generator.h"
 #include "vdso_wrapper_generator.h"
 
-#include "sysgen_generator.h"
+#include "abigen_generator.h"
 
 using std::string;
 using std::map;
@@ -159,7 +159,7 @@ const map<string, Generator&>& get_type_to_generator() {
     return type_to_generator;
 }
 
-bool SysgenGenerator::AddSyscall(Syscall&& syscall) {
+bool AbigenGenerator::AddSyscall(Syscall&& syscall) {
     if (!syscall.validate())
         return false;
     syscall.assign_index(&next_index_);
@@ -167,7 +167,7 @@ bool SysgenGenerator::AddSyscall(Syscall&& syscall) {
     return true;
 }
 
-bool SysgenGenerator::Generate(const map<string, string>& type_to_filename) {
+bool AbigenGenerator::Generate(const map<string, string>& type_to_filename) {
     for (auto& entry : type_to_filename) {
         if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
             return false;
@@ -175,11 +175,11 @@ bool SysgenGenerator::Generate(const map<string, string>& type_to_filename) {
     return true;
 }
 
-bool SysgenGenerator::verbose() const {
+bool AbigenGenerator::verbose() const {
     return verbose_;
 }
 
-bool SysgenGenerator::generate_one(
+bool AbigenGenerator::generate_one(
     const string& output_file, Generator& generator, const string& type) {
     std::ofstream ofile;
     ofile.open(output_file.c_str(), std::ofstream::out);
@@ -205,6 +205,6 @@ bool SysgenGenerator::generate_one(
     return true;
 }
 
-void SysgenGenerator::print_error(const char* what, const string& file) {
+void AbigenGenerator::print_error(const char* what, const string& file) {
     fprintf(stderr, "error: %s for %s\n", what, file.c_str());
 }

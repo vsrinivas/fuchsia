@@ -751,7 +751,7 @@ zx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
         thread_signal_policy_exception();
     }
     // TODO(cpu): check for the ZX_POL_KILL bit and return an error code
-    // that sysgen understands as termination.
+    // that abigen understands as termination.
     return (action & ZX_POL_ACTION_DENY) ? ZX_ERR_ACCESS_DENIED : ZX_OK;
 }
 

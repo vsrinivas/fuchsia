@@ -18,8 +18,8 @@ From the zircon shell run `k ut all` to execute all kernel tests, and
 ## Syscall generation
 
 Syscall support is generated from
-system/public/zircon/syscalls.sysgen.  A host tool called
-[sysgen](../system/host/sysgen) consumes that file and produces output
+system/public/zircon/syscalls.abigen.  A host tool called
+[abigen](../system/host/abigen) consumes that file and produces output
 for both the kernel and userspace in a variety of languages. This
 output includes C or C++ headers for both the kernel and userspace,
 syscall entry points, other language bindings, and so on.

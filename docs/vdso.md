@@ -98,17 +98,17 @@ info entry* `PA_HND(PA_VMO_VDSO, 0)`.
 
 ## vDSO Implementation Details
 
-### **sysgen** tool
+### **abigen** tool
 
-The [`sysgen` tool](../system/host/sysgen/) generates both C/C++ function
+The [`abigen` tool](../system/host/abigen/) generates both C/C++ function
 declarations that form the public [system call](syscalls.md) API, and some
 C++ and assembly code used in the implementation of the vDSO.  Both the
 public API and the private interface between the kernel and the vDSO code
 are specified by
-[`<zircon/syscalls.sysgen>`](../system/public/zircon/syscalls.sysgen),
-which is the input to `sysgen`.
+[`<zircon/syscalls.abigen>`](../system/public/zircon/syscalls.abigen),
+which is the input to `abigen`.
 
-The `syscall` entries in `syscalls.sysgen` fall into the following groups,
+The `syscall` entries in `syscalls.abigen` fall into the following groups,
 distinguished by the presence of attributes after the system call name:
 
  * Entries with neither `vdsocall` nor `internal` are the simple cases

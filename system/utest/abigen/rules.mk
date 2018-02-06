@@ -8,10 +8,10 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_NAME := sysgen-test
+MODULE_NAME := abigen-test
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/sysgen.c
+    $(LOCAL_DIR)/abigen.c
 
 MODULE_LIBS := \
     system/ulib/unittest \

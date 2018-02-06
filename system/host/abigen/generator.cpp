@@ -21,7 +21,7 @@ bool Generator::header(ofstream& os) {
 
     os << "// Copyright " << ltime->tm_year + 1900
        << " " << kAuthors << ". All rights reserved.\n";
-    os << "// This is a GENERATED file, see //zircon/system/host/sysgen.\n";
+    os << "// This is a GENERATED file, see //zircon/system/host/abigen.\n";
     os << "// The license governing this file can be found in the LICENSE file.\n\n";
 
     return os.good();

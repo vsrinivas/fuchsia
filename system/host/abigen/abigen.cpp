@@ -8,13 +8,13 @@
 #include <numeric>
 #include <string>
 
+#include "abigen_generator.h"
 #include "syscall_parser.h"
-#include "sysgen_generator.h"
 #include "types.h"
 
 using std::string;
 
-constexpr Dispatch<SysgenGenerator> sysgen_table[] = {
+constexpr Dispatch<AbigenGenerator> abigen_table[] = {
     // comments start with '#' and terminate at the end of line.
     {"#", nullptr, process_comment},
     // sycalls start with 'syscall' and terminate with ';'.
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
             argc--;
             argv++;
         } else if (command == "-h") {
-            fprintf(stderr, "usage: sysgen [-a] [-v] [-o output_prefix] "
+            fprintf(stderr, "usage: abigen [-a] [-v] [-o output_prefix] "
                             "[-<type> filename] file1 ... fileN\n");
             const string delimiter = ", ";
             const string valid_types =
@@ -88,10 +88,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    SysgenGenerator generator(verbose);
+    AbigenGenerator generator(verbose);
 
     for (int ix = 0; ix < argc; ix++) {
-        if (!run_parser(&generator, sysgen_table, argv[ix], verbose))
+        if (!run_parser(&generator, abigen_table, argv[ix], verbose))
             return 1;
     }
     return generator.Generate(type_to_filename) ? 0 : 1;

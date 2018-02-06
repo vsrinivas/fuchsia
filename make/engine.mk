@@ -400,7 +400,7 @@ BUILDID ?=
 TOOLS := $(BUILDDIR)/tools
 MDIGEN := $(TOOLS)/mdigen
 MKBOOTFS := $(TOOLS)/mkbootfs
-SYSGEN := $(TOOLS)/sysgen
+ABIGEN := $(TOOLS)/abigen
 
 # set V=1 in the environment if you want to see the full command line of every command
 ifeq ($(V),1)
@@ -431,7 +431,7 @@ endif
 include system/host/rules.mk
 include kernel/arch/$(ARCH)/rules.mk
 include kernel/top/rules.mk
-include make/sysgen.mk
+include make/abigen.mk
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += --target=$(CLANG_ARCH)-fuchsia

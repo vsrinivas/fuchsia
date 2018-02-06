@@ -123,7 +123,7 @@ bool run_parser(P* parser, const Dispatch<P>* table, const char* input, bool ver
     }
 
     if (verbose)
-        fprintf(stderr, "sysgen: processing file %s\n", input);
+        fprintf(stderr, "abigen: processing file %s\n", input);
 
     bool error = false;
     FileCtx fc(input, verbose);

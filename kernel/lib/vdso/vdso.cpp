@@ -183,7 +183,7 @@ private:
         code_window.blacklist(address, size);                           \
     } while (0)
 
-// Random attributes in syscalls.sysgen become "categories" of syscalls.
+// Random attributes in syscalls.abigen become "categories" of syscalls.
 // For each category, define a function blacklist_<category> to blacklist
 // all the syscalls in that category.  These functions can be used in
 // VDso::CreateVariant (below) to blacklist a category of syscalls for

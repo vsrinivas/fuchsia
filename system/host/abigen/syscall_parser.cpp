@@ -151,11 +151,11 @@ bool parse_argpack(TokenStream* ts, vector<TypeSpec>* v) {
     return true;
 }
 
-bool process_comment(SysgenGenerator* parser, TokenStream& ts) {
+bool process_comment(AbigenGenerator* parser, TokenStream& ts) {
     return true;
 }
 
-bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
+bool process_syscall(AbigenGenerator* parser, TokenStream& ts) {
     auto name = ts.next();
 
     if (!vet_identifier(name, ts.filectx()))

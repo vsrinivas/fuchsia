@@ -16,9 +16,9 @@
 const std::map<std::string, std::string>& get_type_to_default_suffix();
 const std::map<std::string, Generator&>& get_type_to_generator();
 
-class SysgenGenerator {
+class AbigenGenerator {
 public:
-    SysgenGenerator(bool verbose)
+    AbigenGenerator(bool verbose)
         : verbose_(verbose) {}
     bool AddSyscall(Syscall&& syscall);
     bool Generate(const std::map<std::string, std::string>& type_to_filename);
