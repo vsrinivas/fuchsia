@@ -10,7 +10,7 @@ The file is part of a Fuchsia package (**TODO: link**), is named `module` and
 placed within the `meta/` of the package.
 
 The `module` file contents are a JSON-encoded object (JSON schema [available
-here](../src/package_manager/metadata_schemas/module.json)) that defines a
+here](../../../bin/package_manager/metadata_schemas/module.json)) that defines a
 single verb implementation.
 
 ## Example `module` metadata file
