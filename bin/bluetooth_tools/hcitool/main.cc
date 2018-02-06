@@ -65,7 +65,10 @@ int main(int argc, char* argv[]) {
   auto hci_dev =
       std::make_unique<::btlib::hci::IoctlDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
-  hci->Initialize();
+  if (!hci->Initialize()) {
+    return EXIT_FAILURE;
+  }
+
   fsl::MessageLoop message_loop;
 
   bluetooth_tools::CommandDispatcher dispatcher;
