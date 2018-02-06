@@ -9,7 +9,6 @@
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <ddk/iotxn.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

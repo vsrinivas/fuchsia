@@ -7,6 +7,7 @@
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
+#include <limits.h>
 
 namespace virtio {
 

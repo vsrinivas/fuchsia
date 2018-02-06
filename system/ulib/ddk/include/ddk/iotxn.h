@@ -163,7 +163,7 @@ zx_status_t iotxn_alloc_vmo(iotxn_t** out, uint32_t alloc_flags, zx_handle_t vmo
 void iotxn_init(iotxn_t* txn, zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length);
 
 // queue an iotxn against a device
-void iotxn_queue(zx_device_t* dev, iotxn_t* txn);
+void iotxn_queue(zx_device_t* dev, iotxn_t* txn) __DEPRECATE;
 
 // iotxn_complete() must be called by the processor when the io operation has
 // completed or failed and the iotxn and any virtual or physical memory obtained

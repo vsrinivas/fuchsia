@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/driver.h>
 #include <zircon/assert.h>
 #include <zircon/device/intel-hda.h>
 #include <zircon/process.h>

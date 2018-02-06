@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include <ddk/device.h>
-#include <ddk/iotxn.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -60,11 +59,6 @@ void BlockComplete(void* cookie, zx_status_t status) {
     blktxn->Complete(msg, status);
 }
 
-void BlockCompleteIotxn(iotxn_t* txn, void* cookie) {
-    BlockComplete(cookie, txn->status);
-    iotxn_release(txn);
-}
-
 void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
     BlockComplete(bop->cookie, status);
     free(bop);
@@ -74,37 +68,20 @@ void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
 
 void BlockServer::Queue(uint32_t flags, zx_handle_t vmo, uint64_t length,
                         uint64_t vmo_offset, uint64_t dev_offset, block_msg_t* msg) {
-    if (bp_.ops == NULL) {
-        size_t bsz = info_.block_size;
-        iotxn_t* txn;
-        zx_status_t status;
-        if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo,
-                                      vmo_offset * bsz, length * bsz)) != ZX_OK) {
-            BlockComplete(msg, status);
-            return;
-        }
-        txn->flags = flags;
-        txn->opcode = msg->opcode;
-        txn->offset = dev_offset * bsz;
-        txn->cookie = msg;
-        txn->complete_cb = BlockCompleteIotxn;
-        iotxn_queue(dev_, txn);
-    } else {
-        block_op_t* bop = (block_op_t*) malloc(block_op_size_);
-        if (bop == nullptr) {
-            BlockComplete(msg, ZX_ERR_NO_MEMORY);
-            return;
-        }
-        bop->command = (msg->opcode == BLOCKIO_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
-        bop->rw.length = (uint32_t) length;
-        bop->rw.vmo = vmo;
-        bop->rw.offset_dev = dev_offset;
-        bop->rw.offset_vmo = vmo_offset;
-        bop->rw.pages = NULL;
-        bop->completion_cb = BlockCompleteCb;
-        bop->cookie = msg;
-        bp_.ops->queue(bp_.ctx, bop);
+    block_op_t* bop = (block_op_t*) malloc(block_op_size_);
+    if (bop == nullptr) {
+        BlockComplete(msg, ZX_ERR_NO_MEMORY);
+        return;
     }
+    bop->command = (msg->opcode == BLOCKIO_READ) ? BLOCK_OP_READ : BLOCK_OP_WRITE;
+    bop->rw.length = (uint32_t) length;
+    bop->rw.vmo = vmo;
+    bop->rw.offset_dev = dev_offset;
+    bop->rw.offset_vmo = vmo_offset;
+    bop->rw.pages = NULL;
+    bop->completion_cb = BlockCompleteCb;
+    bop->cookie = msg;
+    bp_.ops->queue(bp_.ctx, bop);
 }
 
 BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid) :
@@ -134,13 +111,7 @@ zx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
         goto fail;
     }
     ZX_DEBUG_ASSERT(ctr_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
-    if (ctr_ == 0) {
-        msgs_[ctr_].flags = IOTXN_SYNC_BEFORE;
-    } else if (do_respond) {
-        msgs_[ctr_].flags = IOTXN_SYNC_AFTER;
-    } else {
-        msgs_[ctr_].flags = 0;
-    }
+    msgs_[ctr_].flags = 0;
     msgs_[ctr_].sub_txns = 1;
     *msg_out = &msgs_[ctr_++];
     if (do_respond) {
@@ -408,10 +379,6 @@ zx_status_t BlockServer::Serve() {
                         len_remaining -= length;
 
                         uint32_t flags = msg->flags;
-                        // Only allow IOTXN_SYNC_AFTER to be set on the last sub-txn.
-                        flags &= ~(i == sub_txns - 1 ? 0 : IOTXN_SYNC_AFTER);
-                        // Only allow IOTXN_SYNC_BEFORE to be set on the first sub-txn.
-                        flags &= ~(i == 0 ? 0 : IOTXN_SYNC_BEFORE);
                         Queue(flags, iobuf->vmo(), length,
                               vmo_offset, dev_offset, msg);
                         vmo_offset += length;

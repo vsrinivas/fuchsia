@@ -35,7 +35,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 MODULE_SRCS := \
     $(TEST_DIR)/ddk-test.c \
     $(TEST_DIR)/ddk-test-binding.c \
-    $(TEST_DIR)/iotxn-test.c \
     $(TEST_DIR)/usb-request-test.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync

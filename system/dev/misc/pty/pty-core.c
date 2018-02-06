@@ -7,6 +7,7 @@
 #include <threads.h>
 
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include "pty-core.h"
 #include "pty-fifo.h"
 

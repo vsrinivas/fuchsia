@@ -140,7 +140,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     }
 
     void DdkIotxnQueue(iotxn_t* t) {
-        iotxn_queue_called = true;
     }
 
     zx_off_t DdkGetSize() {
@@ -172,7 +171,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     bool release_called = false;
     bool read_called = false;
     bool write_called = false;
-    bool iotxn_queue_called = false;
     bool get_size_called = false;
     bool ioctl_called = false;
     bool suspend_called = false;
@@ -198,7 +196,6 @@ static bool test_dispatch() {
     ops->release(ctx);
     EXPECT_EQ(ZX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
-    ops->iotxn_queue(ctx, nullptr);
     EXPECT_EQ(0, ops->get_size(ctx), "");
     EXPECT_EQ(ZX_OK, ops->ioctl(ctx, 0, nullptr, 0, nullptr, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->suspend(ctx, 0), "");
@@ -212,7 +209,6 @@ static bool test_dispatch() {
     EXPECT_TRUE(dev->release_called, "");
     EXPECT_TRUE(dev->read_called, "");
     EXPECT_TRUE(dev->write_called, "");
-    EXPECT_TRUE(dev->iotxn_queue_called, "");
     EXPECT_TRUE(dev->get_size_called, "");
     EXPECT_TRUE(dev->ioctl_called, "");
     EXPECT_TRUE(dev->suspend_called, "");

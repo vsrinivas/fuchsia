@@ -17,7 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <ddk/iotxn.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 
@@ -129,63 +128,22 @@ fail:
     return r;
 }
 
-static void sync_io_complete(iotxn_t* txn, void* cookie) {
-    completion_signal((completion_t*)cookie);
-}
+#define DO_READ 0
+#define DO_WRITE 1
 
 static ssize_t do_sync_io(zx_device_t* dev, uint32_t opcode, void* buf, size_t count, zx_off_t off) {
-    if (dev->ops->iotxn_queue == NULL) {
-        size_t actual;
-        zx_status_t r;
-        if (opcode == IOTXN_OP_READ) {
-            r = dev_op_read(dev, buf, count, off, &actual);
-        } else {
-            r = dev_op_write(dev, buf, count, off, &actual);
-        }
-        if (r < 0) {
-            return r;
-        } else {
-            return actual;
-        }
+    size_t actual;
+    zx_status_t r;
+    if (opcode == DO_READ) {
+        r = dev_op_read(dev, buf, count, off, &actual);
+    } else {
+        r = dev_op_write(dev, buf, count, off, &actual);
     }
-    iotxn_t* txn;
-    zx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, FDIO_CHUNK_SIZE);
-    if (status != ZX_OK) {
-        return status;
+    if (r < 0) {
+        return r;
+    } else {
+        return actual;
     }
-
-    assert(count <= FDIO_CHUNK_SIZE);
-
-    completion_t completion = COMPLETION_INIT;
-
-    txn->opcode = opcode;
-    txn->offset = off;
-    txn->length = count;
-    txn->complete_cb = sync_io_complete;
-    txn->cookie = &completion;
-
-    // if write, write the data to the iotxn
-    if (opcode == IOTXN_OP_WRITE) {
-        iotxn_copyto(txn, buf, txn->length, 0);
-    }
-
-    iotxn_queue(dev, txn);
-    completion_wait(&completion, ZX_TIME_INFINITE);
-
-    if (txn->status != ZX_OK) {
-        size_t txn_status = txn->status;
-        iotxn_release(txn);
-        return txn_status;
-    }
-
-    // if read, get the data
-    if (opcode == IOTXN_OP_READ) {
-        iotxn_copyfrom(txn, buf, txn->actual, 0);
-    }
-
-    ssize_t actual = txn->actual;
-    iotxn_release(txn);
-    return actual;
 }
 
 static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
@@ -338,7 +296,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         if (!CAN_READ(ios)) {
             return ZX_ERR_ACCESS_DENIED;
         }
-        zx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, ios->io_off);
+        zx_status_t r = do_sync_io(dev, DO_READ, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -350,7 +308,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         if (!CAN_READ(ios)) {
             return ZX_ERR_ACCESS_DENIED;
         }
-        zx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, msg->arg2.off);
+        zx_status_t r = do_sync_io(dev, DO_READ, msg->data, arg, msg->arg2.off);
         if (r >= 0) {
             msg->datalen = r;
         }
@@ -360,7 +318,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         if (!CAN_WRITE(ios)) {
             return ZX_ERR_ACCESS_DENIED;
         }
-        zx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, ios->io_off);
+        zx_status_t r = do_sync_io(dev, DO_WRITE, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -371,7 +329,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         if (!CAN_WRITE(ios)) {
             return ZX_ERR_ACCESS_DENIED;
         }
-        zx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, msg->arg2.off);
+        zx_status_t r = do_sync_io(dev, DO_WRITE, msg->data, len, msg->arg2.off);
         return r;
     }
     case ZXRIO_SEEK: {

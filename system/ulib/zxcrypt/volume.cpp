@@ -14,6 +14,7 @@
 #include <crypto/cipher.h>
 #include <crypto/hkdf.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -712,7 +713,7 @@ zx_status_t Volume::Ioctl(int op, const void* in, size_t in_len, void* out, size
 
 zx_status_t Volume::Read() {
     if (dev_) {
-        return SyncIO(dev_, IOTXN_OP_READ, block_.get(), offset_, block_.len());
+        return SyncIO(dev_, BLOCK_OP_READ, block_.get(), offset_, block_.len());
     } else {
         if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
             xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,
@@ -735,7 +736,7 @@ zx_status_t Volume::Read() {
 
 zx_status_t Volume::Write() {
     if (dev_) {
-        return SyncIO(dev_, IOTXN_OP_WRITE, block_.get(), offset_, block_.len());
+        return SyncIO(dev_, BLOCK_OP_WRITE, block_.get(), offset_, block_.len());
     } else {
         if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
             xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,

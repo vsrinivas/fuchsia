@@ -5,6 +5,7 @@
 #include "dev.h"
 
 #include <hw/inout.h>
+#include <ddk/driver.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <fdio/debug.h>

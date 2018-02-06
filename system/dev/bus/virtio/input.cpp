@@ -4,6 +4,7 @@
 
 #include "input.h"
 
+#include <limits.h>
 #include <string.h>
 
 #include <ddk/debug.h>

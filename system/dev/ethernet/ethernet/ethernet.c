@@ -16,6 +16,7 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

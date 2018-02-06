@@ -5,6 +5,7 @@
 #include <string.h>
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 
 extern zx_status_t gauss_tdm_bind(void* ctx, zx_device_t* parent);

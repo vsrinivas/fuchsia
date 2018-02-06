@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <hwreg/bitfields.h>
 #include "registers-ddi.h"
 

@@ -12,7 +12,6 @@
 #include <bitmap/storage.h>
 #include <crypto/cipher.h>
 #include <ddk/device.h>
-#include <ddk/iotxn.h>
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>

@@ -7,7 +7,6 @@
 #include <threads.h>
 
 #include <crypto/cipher.h>
-#include <ddk/iotxn.h>
 #include <fdio/debug.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>

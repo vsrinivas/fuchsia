@@ -10,6 +10,7 @@
 #include <soc/aml-a113/aml-tdm.h>
 #include <soc/aml-common/aml-i2c.h>
 #include <zircon/assert.h>
+#include <limits.h>
 
 #include "gauss.h"
 

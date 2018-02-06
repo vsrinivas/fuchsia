@@ -8,7 +8,6 @@
 #include <threads.h>
 
 #include <crypto/cipher.h>
-#include <ddk/iotxn.h>
 #include <zircon/types.h>
 #include <zx/port.h>
 #include <zxcrypt/volume.h>
