@@ -13,6 +13,7 @@
     acosl;
     alarm;
     aligned_alloc;
+    asctime_r;
     asin;
     asinf;
     asinh;
@@ -441,6 +442,7 @@
     mbrtowc;
     mbsnrtowcs;
     mbsrtowcs;
+    mbstowcs;
     mbtowc;
     memalign;
     memchr;
