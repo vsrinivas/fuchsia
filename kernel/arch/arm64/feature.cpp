@@ -177,7 +177,7 @@ void arm64_feature_init() {
         arm64_icache_size = (1u << arm64_icache_shift);
 
         // parse the ISA feature bits
-        arm64_features |= ZX_CPU_HAS_FEATURES;
+        arm64_features |= ZX_HAS_CPU_FEATURES;
         uint64_t isar0 = ARM64_READ_SYSREG(id_aa64isar0_el1);
         if (BITS_SHIFT(isar0, 7, 4) >= 1) {
             arm64_features |= ZX_ARM64_FEATURE_ISA_AES;

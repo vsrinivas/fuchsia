@@ -9,7 +9,7 @@
 #include <arch/arm64.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
-#include <zircon/cpu-features.h>
+#include <zircon/features.h>
 
 __BEGIN_CDECLS
 

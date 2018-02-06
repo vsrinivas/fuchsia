@@ -5,19 +5,20 @@
 #pragma once
 // clang-format off
 
+// types of features that can be retrieved via |zx_system_get_features|
+#define ZX_FEATURE_KIND_CPU 0
 
-// First flag is arch-independent and indicates if |zx_system_get_cpu_features|
-// is supported.
-#define ZX_CPU_HAS_FEATURES            (1u << 0)
+// arch-independent CPU features
+#define ZX_HAS_CPU_FEATURES            (1u << 0)
 
-// Architecture-specific feature flags that can be returned by
-// |zx_system_get_cpu_features|.
 #if defined(__x86_64__)
 
+// x86-64 CPU features
 // None; use cpuid instead
 
 #elif defined(__aarch64__)
 
+// arm64 CPU features
 #define ZX_ARM64_FEATURE_ISA_FP        (1u << 1)
 #define ZX_ARM64_FEATURE_ISA_ASIMD     (1u << 2)
 #define ZX_ARM64_FEATURE_ISA_AES       (1u << 3)
