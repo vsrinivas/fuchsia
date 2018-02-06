@@ -225,5 +225,38 @@ TEST_PARSE_GUID(IllegalCharacters,
                 "abcdefgh-ijkl-mnop-qrst-uvwxyz!@#$%^",
                 ZX_ERR_INVALID_ARGS);
 
+#if __x86_64__
+
+#define TEST_PARSE_MEM_SIZE(string, result)                                   \
+  TEST(GuestConfigParserTest, MemSizeTest_##string) {                         \
+    GuestConfig config;                                                       \
+    GuestConfigParser parser(&config);                                        \
+                                                                              \
+    const char* argv[] = {"exe_name", "--memory=" #string};                   \
+    ASSERT_EQ(ZX_OK,                                                          \
+              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
+    ASSERT_EQ((result), config.memory());                                     \
+  }
+
+TEST_PARSE_MEM_SIZE(1024k, 1u << 20);
+TEST_PARSE_MEM_SIZE(2M, 2ul << 20);
+TEST_PARSE_MEM_SIZE(4G, 4ul << 30);
+
+#define TEST_PARSE_MEM_SIZE_ERROR(name, string)                               \
+  TEST(GuestConfigParserTest, MemSizeTest_##name) {                           \
+    GuestConfig config;                                                       \
+    GuestConfigParser parser(&config);                                        \
+                                                                              \
+    const char* argv[] = {"exe_name", "--memory=" #string};                   \
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,                                            \
+              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
+  }
+
+TEST_PARSE_MEM_SIZE_ERROR(TooSmall, 1024);
+TEST_PARSE_MEM_SIZE_ERROR(IllegalModifier, 5l);
+TEST_PARSE_MEM_SIZE_ERROR(NonNumber, abc);
+
+#endif
+
 }  // namespace
 }  // namespace guest

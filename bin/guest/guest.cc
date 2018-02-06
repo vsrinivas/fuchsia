@@ -64,7 +64,6 @@ static const uint64_t kUartBases[kNumUarts] = {
 };
 #endif
 
-static const uint64_t kVmoSize = 1u << 30;
 static const size_t kInputQueueDepth = 64;
 
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
@@ -187,7 +186,7 @@ int main(int argc, char** argv) {
   }
 
   Guest guest;
-  status = guest.Init(kVmoSize);
+  status = guest.Init(options.memory());
   if (status != ZX_OK)
     return status;
 

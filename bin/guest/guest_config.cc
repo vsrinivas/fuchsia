@@ -25,6 +25,8 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "OPTIONS:\n";
   std::cerr << "\t--kernel=[kernel.bin]           Use file 'kernel.bin' as the kernel\n";
   std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as a ramdisk\n";
+  std::cerr << "\t--memory=[bytes]                Allocate 'bytes' of physical memory for the guest. The\n";
+  std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted (currently x64 only)\n";
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
   std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
   std::cerr << "\t                                available instead of failing.\n";
@@ -107,6 +109,52 @@ static GuestConfigParser::OptionHandler append_option(
     return ZX_OK;
   };
 }
+
+#if __x86_64__
+constexpr size_t kMinMemorySize = 1 << 20;
+
+static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
+  return [out](const std::string& key, const std::string& value) {
+    if (value.empty()) {
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
+                     << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    char modifier = 'b';
+    size_t size;
+    int ret = sscanf(value.c_str(), "%zd%c", &size, &modifier);
+    if (ret < 1) {
+      FXL_LOG(ERROR) << "Value is not a size string: " << value;
+      return ZX_ERR_INVALID_ARGS;
+    }
+    switch (modifier) {
+      case 'b':
+        break;
+      case 'k':
+        size *= (1 << 10);
+        break;
+      case 'M':
+        size *= (1 << 20);
+        break;
+      case 'G':
+        size *= (1 << 30);
+        break;
+      default:
+        FXL_LOG(ERROR) << "Invalid size modifier " << modifier;
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (size < kMinMemorySize) {
+      FXL_LOG(ERROR) << "Requested memory " << size
+                     << " is less than the minimum supported size "
+                     << kMinMemorySize;
+      return ZX_ERR_INVALID_ARGS;
+    }
+    *out = size;
+    return ZX_OK;
+  };
+}
+#endif
 
 template <typename NumberType>
 static GuestConfigParser::OptionHandler parse_number(NumberType* out) {
@@ -222,6 +270,9 @@ GuestConfigParser::GuestConfigParser(GuestConfig* config)
           {"block",
            append_option<BlockSpec>(&config_->block_specs_, parse_block_spec)},
           {"cmdline", save_option(&config_->cmdline_)},
+#if __x86_64__
+          {"memory", parse_mem_size(&config_->memory_)},
+#endif
           {"balloon-demand-page",
            set_flag(&config_->balloon_demand_page_, true)},
           {"balloon-interval",

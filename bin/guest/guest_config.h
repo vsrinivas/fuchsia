@@ -33,6 +33,7 @@ class GuestConfig {
   const std::string& ramdisk_path() const { return ramdisk_path_; }
   const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
   const std::string& cmdline() const { return cmdline_; }
+  size_t memory() const { return memory_; }
   zx_duration_t balloon_interval() const {
     return ZX_SEC(balloon_interval_seconds_);
   }
@@ -47,6 +48,7 @@ class GuestConfig {
   std::string ramdisk_path_;
   std::vector<BlockSpec> block_specs_;
   std::string cmdline_;
+  size_t memory_ = 1 << 30;
   uint32_t balloon_interval_seconds_ = 0;
   uint32_t balloon_pages_threshold_ = 0;
   bool balloon_demand_page_ = false;
