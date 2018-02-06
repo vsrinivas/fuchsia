@@ -581,7 +581,7 @@ static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t o
 
     uint32_t* status = out_buf;
     *status = edev->edev0->status;
-    *out_actual = sizeof(status);
+    *out_actual = sizeof(*status);
     return ZX_OK;
 }
 
