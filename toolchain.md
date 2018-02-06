@@ -132,7 +132,7 @@ the low-level target-specific routines) for Fuchsia, you need a few additional
 flags:
 
 ```bash
--DLLVM_BUILTIN_TARGETS=x86_64-fuchsia-none\;aarch64-fuchsia-none -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia
+-DLLVM_BUILTIN_TARGETS=x86_64-fuchsia\;aarch64-fuchsia -DBUILTINS_x86_64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia
 ```
 
 For this kind of build, the `bin` directory immediate under your main LLVM
