@@ -26,7 +26,7 @@ __BEGIN_CDECLS
 
 // Type of the hook for loader_service.  The first argument is
 // the one passed to loader_service_simple(), and the second specifies
-// which load service was requested (the opcode from zx_loader_svc_msg_t).
+// which load service was requested (the opcode from zircon/loader.fidl).
 // The remaining arguments' meaning depends on the opcode.
 typedef zx_status_t (*loader_service_fn_t)(void* loader_arg, uint32_t load_cmd,
                                            zx_handle_t request_handle, const char* file,

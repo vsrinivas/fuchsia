@@ -7,13 +7,13 @@
 
 #pragma GCC visibility push(hidden)
 
+#include <ldmsg/ldmsg.h>
+#include <string.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <string.h>
 
 #pragma GCC visibility pop
 
-#define LOADER_SVC_MSG_MAX 1024
 #define LOAD_OBJECT_FILE_PREFIX "lib/"
 
 struct loader_state {
@@ -24,8 +24,7 @@ struct loader_state {
     bool exclusive;
 };
 
-static void loader_config(struct loader_state* state, const char* string) {
-    size_t len = strlen(string);
+static void loader_config(struct loader_state* state, const char* string, size_t len) {
     state->exclusive = false;
     if (string[len - 1] == '!') {
         --len;
@@ -40,21 +39,21 @@ static void loader_config(struct loader_state* state, const char* string) {
 }
 
 static zx_handle_t try_load_object(struct loader_state* state,
-                                   const char* name, size_t prefix_len) {
-    char file[LOADER_SVC_MSG_MAX - offsetof(zx_loader_svc_msg_t, data) +
-              sizeof(LOAD_OBJECT_FILE_PREFIX) + prefix_len];
+                                   const char* name, size_t len,
+                                   size_t prefix_len) {
+    char file[len + sizeof(LOAD_OBJECT_FILE_PREFIX) + prefix_len + 1];
     memcpy(file, LOAD_OBJECT_FILE_PREFIX, sizeof(LOAD_OBJECT_FILE_PREFIX) - 1);
     memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1],
            state->prefix, prefix_len);
-    memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1 + prefix_len],
-           name, strlen(name) + 1);
+    memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1 + prefix_len], name, len);
+    file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1 + prefix_len + len] = '\0';
     return bootfs_open(state->log, "shared library", state->bootfs, file);
 }
 
-static zx_handle_t load_object(struct loader_state* state, const char* name) {
-    zx_handle_t vmo = try_load_object(state, name, state->prefix_len);
+static zx_handle_t load_object(struct loader_state* state, const char* name, size_t len) {
+    zx_handle_t vmo = try_load_object(state, name, len, state->prefix_len);
     if (vmo == ZX_HANDLE_INVALID && state->prefix_len > 0 && !state->exclusive)
-        vmo = try_load_object(state, name, 0);
+        vmo = try_load_object(state, name, len, 0);
     if (vmo == ZX_HANDLE_INVALID)
         fail(state->log, "cannot find shared library '%s'", name);
     return vmo;
@@ -62,17 +61,13 @@ static zx_handle_t load_object(struct loader_state* state, const char* name) {
 
 static bool handle_loader_rpc(struct loader_state* state,
                               zx_handle_t channel) {
-    union {
-        uint8_t buffer[1024];
-        zx_loader_svc_msg_t msg;
-    } msgbuf;
+    ldmsg_req_t req;
     zx_handle_t reqhandle;
-    const char* const string = (const char*)msgbuf.msg.data;
 
     uint32_t size;
     uint32_t hcount;
     zx_status_t status = zx_channel_read(
-        channel, 0, &msgbuf, &reqhandle, sizeof(msgbuf), 1, &size, &hcount);
+        channel, 0, &req, &reqhandle, sizeof(req), 1, &size, &hcount);
 
     // This is the normal error for the other end going away,
     // which happens when the process dies.
@@ -84,8 +79,11 @@ static bool handle_loader_rpc(struct loader_state* state,
     check(state->log, status,
           "zx_channel_read on loader-service channel failed");
 
-    if (size < sizeof(msgbuf.msg))
-        fail(state->log, "loader-service request message too small");
+    const char* string;
+    size_t string_len;
+    status = ldmsg_req_decode(&req, size, &string, &string_len);
+    if (status != ZX_OK)
+        fail(state->log, "loader-service request invalid");
 
     // no opcodes which receive a handle are supported, but
     // we need to receive (and discard) the handle to politely
@@ -93,32 +91,32 @@ static bool handle_loader_rpc(struct loader_state* state,
     if (hcount == 1)
         zx_handle_close(reqhandle);
 
-    // Forcibly null-terminate the message data argument.
-    msgbuf.buffer[sizeof(msgbuf) - 1] = 0;
+    ldmsg_rsp_t rsp;
+    memset(&rsp, 0, sizeof(rsp));
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
-    switch (msgbuf.msg.opcode) {
-    case LOADER_SVC_OP_DONE:
+    switch (req.header.ordinal) {
+    case LDMSG_OP_DONE:
         printl(state->log, "loader-service received DONE request");
         return false;
 
-    case LOADER_SVC_OP_DEBUG_PRINT:
-        printl(state->log, "loader-service: debug: %s", string);
+    case LDMSG_OP_DEBUG_PRINT:
+        printl(state->log, "loader-service: debug: %.*s", (int) string_len, string);
         break;
 
-    case LOADER_SVC_OP_CONFIG:
-        loader_config(state, string);
+    case LDMSG_OP_CONFIG:
+        loader_config(state, string, string_len);
         break;
 
-    case LOADER_SVC_OP_LOAD_OBJECT:
-        handle = load_object(state, string);
+    case LDMSG_OP_LOAD_OBJECT:
+        handle = load_object(state, string, string_len);
         break;
 
-    case LOADER_SVC_OP_CLONE:
-        msgbuf.msg.arg = ZX_ERR_NOT_SUPPORTED;
+    case LDMSG_OP_CLONE:
+        rsp.rv = ZX_ERR_NOT_SUPPORTED;
         goto error_reply;
 
-    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
         fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
 
@@ -127,13 +125,13 @@ static bool handle_loader_rpc(struct loader_state* state,
         break;
     }
 
-    // txid returned as received from the client.
-    msgbuf.msg.arg = ZX_OK;
+    rsp.rv = ZX_OK;
+    rsp.object = handle == ZX_HANDLE_INVALID ?
+        FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
 error_reply:
-    msgbuf.msg.opcode = LOADER_SVC_OP_STATUS;
-    msgbuf.msg.reserved0 = 0;
-    msgbuf.msg.reserved1 = 0;
-    status = zx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
+    rsp.header.txid = req.header.txid;
+    rsp.header.ordinal = req.header.ordinal;
+    status = zx_channel_write(channel, 0, &rsp, ldmsg_rsp_get_size(&rsp),
                               &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
           "zx_channel_write on loader-service channel failed");

@@ -4,10 +4,13 @@
 
 library ldsvc;
 
-// See //zircon/docs/program_loading.md for a more complete //
+// See //zircon/docs/program_loading.md for a more complete
 // description of this and related process bootsrapping protocols, and
 // for specifics about the default global loader service's
 // interpretation of names, paths, and configurations.
+
+// WARNING: This interface is manually implemented in libldmsg.a. Please
+// update that implmentation if you change this protocol.
 
 interface Loader {
     // Cleanly shutdown the connection to the Loader service.

@@ -163,52 +163,6 @@ struct zx_proc_args {
 #define PA_USER1                 0xF1
 #define PA_USER2                 0xF2
 
-
-// Dynamic Loader Service Messages
-// Used by dynamic loader to obtain objects to link.
-typedef struct zx_loader_svc_msg zx_loader_svc_msg_t;
-struct zx_loader_svc_msg {
-    zx_txid_t txid;
-    uint32_t opcode;
-    int32_t arg;
-    uint32_t reserved0;
-    uint32_t reserved1;
-    uint8_t data[0];
-};
-
-#define LOADER_SVC_OP_STATUS 0
-// reply message, arg=status
-
-#define LOADER_SVC_OP_DONE 1
-// Clean shutdown of service
-
-#define LOADER_SVC_OP_LOAD_OBJECT 2
-// arg=0, data[] object name (asciiz)
-// reply includes vmo handle on success
-
-#define LOADER_SVC_OP_DEBUG_PRINT 3
-// arg=0, data[] debug text (asciiz)
-
-#define LOADER_SVC_OP_LOAD_SCRIPT_INTERP 4
-// arg=0, data[] object name (asciiz)
-// reply includes vmo handle on success
-
-#define LOADER_SVC_OP_PUBLISH_DATA_SINK 5
-// arg=0, data[] sink name (asciiz)
-// Request includes a VMO handle.
-
-#define LOADER_SVC_OP_LOAD_DEBUG_CONFIG 6
-// arg=0, data[] configuration (file) name (asciiz)
-// reply includes vmo handle on success
-
-#define LOADER_SVC_OP_CONFIG 7
-// arg=0, data[] configuration string to affect later loading (asciiz)
-// e.g. "asan"
-
-#define LOADER_SVC_OP_CLONE 8
-// obtain a new loader service connection/context
-// arg=0, data[] empty, request includes channel for new connection
-
 #ifdef __cplusplus
 }
 #endif

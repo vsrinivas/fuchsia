@@ -8,7 +8,7 @@
 
 #include <fidl/cpp/builder.h>
 #include <fidl/cpp/message.h>
-#include <fidl/types.h>
+#include <zircon/fidl.h>
 #include <zircon/types.h>
 
 namespace fidl {

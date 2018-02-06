@@ -32,6 +32,7 @@
 
 #include <inttypes.h>
 
+#include <ldmsg/ldmsg.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
@@ -2160,47 +2161,46 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 static bool loader_svc_rpc_in_progress;
 static atomic_uint_fast32_t loader_svc_txid;
 
-__NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t opcode,
+__NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
                                                  const void* data, size_t len,
                                                  zx_handle_t request_handle,
                                                  zx_handle_t* result) {
     // Use a static buffer rather than one on the stack to avoid growing
     // the stack size too much.  Calls to this function are always
     // serialized anyway, so there is no danger of collision.
-    static struct {
-        zx_loader_svc_msg_t header;
-        uint8_t data[LOADER_SVC_MSG_MAX - sizeof(zx_loader_svc_msg_t)];
-    } msg;
+    ldmsg_req_t req;
 
     loader_svc_rpc_in_progress = true;
 
-    zx_status_t status;
-    if (len >= sizeof msg.data) {
+    memset(&req.header, 0, sizeof(req.header));
+    req.header.ordinal = ordinal;
+
+    size_t req_len;
+    zx_status_t status = ldmsg_req_encode(&req, &req_len, (const char*) data, len);
+    if (status != ZX_OK) {
         _zx_handle_close(request_handle);
         error("message of %zu bytes too large for loader service protocol",
               len);
-        status = ZX_ERR_OUT_OF_RANGE;
         goto out;
     }
 
-    memset(&msg.header, 0, sizeof msg.header);
-    msg.header.txid = atomic_fetch_add(&loader_svc_txid, 1);
-    msg.header.opcode = opcode;
-    memcpy(msg.data, data, len);
-    msg.data[len] = 0;
+    req.header.txid = atomic_fetch_add(&loader_svc_txid, 1);
     if (result != NULL) {
       // Don't return an uninitialized value if the channel call
       // succeeds but doesn't provide any handles.
       *result = ZX_HANDLE_INVALID;
     }
 
+    ldmsg_rsp_t rsp;
+    memset(&rsp, 0, sizeof(rsp));
+
     zx_channel_call_args_t call = {
-        .wr_bytes = &msg,
-        .wr_num_bytes = sizeof(msg.header) + len + 1,
+        .wr_bytes = &req,
+        .wr_num_bytes = req_len,
         .wr_handles = &request_handle,
         .wr_num_handles = request_handle == ZX_HANDLE_INVALID ? 0 : 1,
-        .rd_bytes = &msg,
-        .rd_num_bytes = sizeof(msg),
+        .rd_bytes = &rsp,
+        .rd_num_bytes = sizeof(rsp),
         .rd_handles = result,
         .rd_num_handles = result == NULL ? 0 : 1,
     };
@@ -2223,45 +2223,48 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t opcode,
         goto out;
     }
 
-    if (reply_size != sizeof(msg.header)) {
+    size_t expected_reply_size = ldmsg_rsp_get_size(&rsp);
+    if (reply_size != expected_reply_size) {
         error("loader service reply %u bytes != %u",
-              reply_size, sizeof(msg.header));
+              reply_size, expected_reply_size);
         status = ZX_ERR_INVALID_ARGS;
-        goto out;
+        goto err;
     }
-    if (msg.header.opcode != LOADER_SVC_OP_STATUS) {
-        if (handle_count > 0) {
-            _zx_handle_close(*result);
-            *result = ZX_HANDLE_INVALID;
-        }
+    if (rsp.header.ordinal != ordinal) {
         error("loader service reply opcode %u != %u",
-              msg.header.opcode, LOADER_SVC_OP_STATUS);
+              rsp.header.ordinal, ordinal);
         status = ZX_ERR_INVALID_ARGS;
-        goto out;
+        goto err;
     }
-    if (msg.header.arg != ZX_OK) {
+    if (rsp.rv != ZX_OK) {
         // |result| is non-null if |handle_count| > 0, because
         // |handle_count| <= |rd_num_handles|.
         if (handle_count > 0 && *result != ZX_HANDLE_INVALID) {
             error("loader service error %d reply contains handle %#x",
-                  msg.header.arg, *result);
+                  rsp.rv, *result);
             status = ZX_ERR_INVALID_ARGS;
-            goto out;
+            goto err;
         }
-        status = msg.header.arg;
+        status = rsp.rv;
     }
+    goto out;
 
+err:
+    if (handle_count > 0) {
+        _zx_handle_close(*result);
+        *result = ZX_HANDLE_INVALID;
+    }
 out:
     loader_svc_rpc_in_progress = false;
     return status;
 }
 
 __NO_SAFESTACK static void loader_svc_config(const char* config) {
-    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_CONFIG,
+    zx_status_t status = loader_svc_rpc(LDMSG_OP_CONFIG,
                                         config, strlen(config),
                                         ZX_HANDLE_INVALID, NULL);
     if (status != ZX_OK)
-        debugmsg("LOADER_SVC_OP_CONFIG(%s): %s\n",
+        debugmsg("LDMSG_OP_CONFIG(%s): %s\n",
                  config, _zx_status_get_string(status));
 }
 
@@ -2271,7 +2274,7 @@ __NO_SAFESTACK static zx_status_t get_library_vmo(const char* name,
         error("cannot look up \"%s\" with no loader service", name);
         return ZX_ERR_UNAVAILABLE;
     }
-    return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name),
+    return loader_svc_rpc(LDMSG_OP_LOAD_OBJECT, name, strlen(name),
                           ZX_HANDLE_INVALID, result);
 }
 
@@ -2285,21 +2288,28 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
         return status;
     }
     struct {
-        zx_loader_svc_msg_t hdr;
-        uint8_t data[1];
-    } msg = {
-        .hdr = {
+        fidl_message_header_t header;
+        ldmsg_clone_t clone;
+    } req = {
+        .header = {
             .txid = atomic_fetch_add(&loader_svc_txid, 1),
-            .opcode = LOADER_SVC_OP_CLONE,
-        }
+            .ordinal = LDMSG_OP_CLONE,
+        },
+        .clone = {
+            .object = FIDL_HANDLE_PRESENT,
+        },
     };
+
+    ldmsg_rsp_t rsp;
+    memset(&rsp, 0, sizeof(rsp));
+
     zx_channel_call_args_t call = {
-        .wr_bytes = &msg,
-        .wr_num_bytes = sizeof(msg.hdr) + 1,
+        .wr_bytes = &req,
+        .wr_num_bytes = sizeof(req),
         .wr_handles = &h1,
         .wr_num_handles = 1,
-        .rd_bytes = &msg,
-        .rd_num_bytes = sizeof(msg.hdr),
+        .rd_bytes = &rsp,
+        .rd_num_bytes = sizeof(rsp),
         .rd_handles = NULL,
         .rd_num_handles = 0,
     };
@@ -2313,11 +2323,11 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
             _zx_handle_close(h1);
         else if (read_status != ZX_OK)
             status = read_status;
-    } else if ((reply_size != sizeof(msg.hdr)) ||
-               (msg.hdr.opcode != LOADER_SVC_OP_STATUS)) {
+    } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
+               (rsp.header.ordinal != LDMSG_OP_CLONE)) {
         status = ZX_ERR_INVALID_ARGS;
-    } else if (msg.hdr.arg != ZX_OK) {
-        status = msg.hdr.arg;
+    } else if (rsp.rv != ZX_OK) {
+        status = rsp.rv;
     }
 
     if (status != ZX_OK) {
@@ -2338,7 +2348,7 @@ __NO_SAFESTACK static void log_write(const void* buf, size_t len) {
     if (logger != ZX_HANDLE_INVALID)
         status = _zx_log_write(logger, len, buf, 0);
     else if (!loader_svc_rpc_in_progress && loader_svc != ZX_HANDLE_INVALID)
-        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len,
+        status = loader_svc_rpc(LDMSG_OP_DEBUG_PRINT, buf, len,
                                 ZX_HANDLE_INVALID, NULL);
     else {
         int n = _zx_debug_write(buf, len);
@@ -2399,7 +2409,7 @@ __NO_SAFESTACK static void error(const char* fmt, ...) {
 // We piggy-back on the loader service to publish data from sanitizers.
 void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
     pthread_rwlock_rdlock(&lock);
-    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_PUBLISH_DATA_SINK,
+    zx_status_t status = loader_svc_rpc(LDMSG_OP_DEBUG_PUBLISH_DATA_SINK,
                                         sink_name, strlen(sink_name),
                                         vmo, NULL);
     if (status != ZX_OK) {
@@ -2414,7 +2424,7 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
 zx_status_t __sanitizer_get_configuration(const char* name,
                                           zx_handle_t *out_vmo) {
     pthread_rwlock_rdlock(&lock);
-    zx_status_t status = loader_svc_rpc(LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
+    zx_status_t status = loader_svc_rpc(LDMSG_OP_DEBUG_LOAD_CONFIG,
                                         name, strlen(name),
                                         ZX_HANDLE_INVALID, out_vmo);
     if (status != ZX_OK) {

@@ -12,6 +12,7 @@
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
 #include <launchpad/loader-service.h>
+#include <ldmsg/ldmsg.h>
 #include <fdio/io.h>
 #include <assert.h>
 #include <stdatomic.h>
@@ -414,62 +415,61 @@ zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
 
 #define LOADER_SVC_MSG_MAX 1024
 
-static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t opcode,
+static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t ordinal,
                                   const void* data, size_t len, zx_handle_t* out) {
     static _Atomic zx_txid_t next_txid;
 
-    struct {
-        zx_loader_svc_msg_t header;
-        uint8_t data[LOADER_SVC_MSG_MAX - sizeof(zx_loader_svc_msg_t)];
-    } msg;
+    ldmsg_req_t req;
+    memset(&req.header, 0, sizeof(req.header));
+    req.header.ordinal = ordinal;
 
-    if (len >= sizeof(msg.data))
-        return ZX_ERR_BUFFER_TOO_SMALL;
+    size_t req_len;
+    zx_status_t status = ldmsg_req_encode(&req, &req_len, data, len);
+    if (status != ZX_OK)
+        return status;
 
-    memset(&msg.header, 0, sizeof(msg.header));
-    msg.header.txid = atomic_fetch_add(&next_txid, 1);
-    msg.header.opcode = opcode;
-    memcpy(msg.data, data, len);
-    msg.data[len] = 0;
+    req.header.txid = atomic_fetch_add(&next_txid, 1);
+
+    ldmsg_rsp_t rsp;
+    memset(&rsp, 0, sizeof(rsp));
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
     const zx_channel_call_args_t call = {
-        .wr_bytes = &msg,
-        .wr_num_bytes = sizeof(msg.header) + len + 1,
-        .rd_bytes = &msg,
-        .rd_num_bytes = sizeof(msg),
+        .wr_bytes = &req,
+        .wr_num_bytes = req_len,
+        .rd_bytes = &rsp,
+        .rd_num_bytes = sizeof(rsp),
         .rd_handles = &handle,
         .rd_num_handles = 1,
     };
     uint32_t reply_size;
     uint32_t handle_count;
     zx_status_t read_status = ZX_OK;
-    zx_status_t status = zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
-                                         &call, &reply_size, &handle_count,
-                                         &read_status);
+    status = zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE, &call, &reply_size,
+                             &handle_count, &read_status);
     if (status != ZX_OK) {
         return status == ZX_ERR_CALL_FAILED ? read_status : status;
     }
 
     // Check for protocol violations.
-    if (reply_size != sizeof(msg.header)) {
+    if (reply_size != ldmsg_rsp_get_size(&rsp)) {
     protocol_violation:
         zx_handle_close(handle);
         return ZX_ERR_BAD_STATE;
     }
-    if (msg.header.opcode != LOADER_SVC_OP_STATUS)
+    if (rsp.header.ordinal != ordinal)
         goto protocol_violation;
 
-    if (msg.header.arg != ZX_OK) {
+    if (rsp.rv != ZX_OK) {
         if (handle != ZX_HANDLE_INVALID)
             goto protocol_violation;
-        if (msg.header.arg > 0)
+        if (rsp.rv > 0)
             goto protocol_violation;
         *out = ZX_HANDLE_INVALID;
     } else {
         *out = handle_count ? handle : ZX_HANDLE_INVALID;
     }
-    return msg.header.arg;
+    return rsp.rv;
 }
 
 static zx_status_t setup_loader_svc(launchpad_t* lp) {
@@ -532,7 +532,7 @@ static zx_status_t handle_interp(launchpad_t* lp, zx_handle_t vmo,
 
     zx_handle_t interp_vmo;
     status = loader_svc_rpc(
-        lp->special_handles[HND_LOADER_SVC], LOADER_SVC_OP_LOAD_OBJECT,
+        lp->special_handles[HND_LOADER_SVC], LDMSG_OP_LOAD_OBJECT,
         interp, interp_len, &interp_vmo);
     if (status != ZX_OK)
         return status;
@@ -748,7 +748,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
             return lp_error(lp, status, "file_load: setup_loader_svc() failed");
 
         status = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
-                             LOADER_SVC_OP_LOAD_SCRIPT_INTERP,
+                             LDMSG_OP_LOAD_SCRIPT_INTERPRETER,
                              interp_start, interp_len, &vmo);
         if (status != ZX_OK)
             return lp_error(lp, status, "file_load: loader_svc_rpc() failed");

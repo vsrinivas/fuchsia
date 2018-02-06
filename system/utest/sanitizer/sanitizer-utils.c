@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <launchpad/loader-service.h>
+#include <ldmsg/ldmsg.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/sanitizer.h>
@@ -22,7 +23,7 @@ static zx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
                                             const char* name, zx_handle_t* out) {
     ++my_loader_service_calls;
 
-    EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_PUBLISH_DATA_SINK,
+    EXPECT_EQ(load_op, (uint32_t)LDMSG_OP_DEBUG_PUBLISH_DATA_SINK,
               "called with unexpected load op");
 
     EXPECT_STR_EQ(TEST_SINK_NAME, name, sizeof(TEST_SINK_NAME) - 1,
@@ -89,7 +90,7 @@ static zx_status_t config_test_loader_service(void* arg, uint32_t load_op,
                                               zx_handle_t* out) {
     ++my_loader_service_calls;
 
-    EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
+    EXPECT_EQ(load_op, (uint32_t)LDMSG_OP_DEBUG_LOAD_CONFIG,
               "called with unexpected load op");
 
     EXPECT_EQ(request_handle, ZX_HANDLE_INVALID, "called with a handle");

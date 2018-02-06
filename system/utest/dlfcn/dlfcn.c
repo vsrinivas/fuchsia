@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <launchpad/vmo.h>
 #include <launchpad/loader-service.h>
+#include <ldmsg/ldmsg.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -68,11 +69,11 @@ static zx_status_t my_loader_service(void* arg, uint32_t load_op,
         unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
         return ZX_HANDLE_INVALID;
     }
-    EXPECT_EQ(load_op, (uint32_t) LOADER_SVC_OP_LOAD_OBJECT,
+    EXPECT_EQ(load_op, (uint32_t) LDMSG_OP_LOAD_OBJECT,
               "called with unexpected load op");
-    if (load_op != (uint32_t) LOADER_SVC_OP_LOAD_OBJECT) {
+    if (load_op != (uint32_t) LDMSG_OP_LOAD_OBJECT) {
         unittest_printf("        saw %" PRIu32 ", expected %" PRIu32, load_op,
-                        LOADER_SVC_OP_LOAD_OBJECT);
+                        LDMSG_OP_LOAD_OBJECT);
         return ZX_HANDLE_INVALID;
     }
 
