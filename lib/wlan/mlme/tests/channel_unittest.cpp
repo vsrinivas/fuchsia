@@ -20,6 +20,12 @@ struct TestVector {
     bool want;
 };
 
+struct TestVectorCbw {
+    uint8_t primary;
+    uint8_t cbw;
+    uint8_t want;
+};
+
 TEST_F(ChannelTest, ValidCombo) {
     TestVector tvs[] = {
         // clang-format off
@@ -40,8 +46,7 @@ TEST_F(ChannelTest, ValidCombo) {
     };
 
     for (uint32_t i = 0; i < sizeof(tvs) / sizeof(TestVector); i++) {
-        wlan_channel_t chan;
-        chan = wlan_channel_t{
+        wlan_channel_t chan = {
             .primary = tvs[i].primary,
             .cbw = tvs[i].cbw,
         };
@@ -70,7 +75,7 @@ TEST_F(ChannelTest, Equality) {
 }
 
 TEST_F(ChannelTest, InvalidCombo) {
-    TestVector tvs[] = {
+    std::vector<TestVector> tvs = {
         // clang-format off
         {0, CBW20, false},
         {12, CBW20, false},
@@ -89,15 +94,38 @@ TEST_F(ChannelTest, InvalidCombo) {
         // clang-format on
     };
 
-    for (uint32_t i = 0; i < sizeof(tvs) / sizeof(TestVector); i++) {
-        wlan_channel_t chan;
-        chan = wlan_channel_t{
-            .primary = tvs[i].primary,
-            .cbw = tvs[i].cbw,
+    for (TestVector tv : tvs) {
+        wlan_channel_t chan = {
+            .primary = tv.primary,
+            .cbw = tv.cbw,
         };
-        bool want = tvs[i].want;
 
-        EXPECT_EQ(want, IsValidChan(chan));
+        EXPECT_EQ(tv.want, IsValidChan(chan));
+    }
+}
+
+TEST_F(ChannelTest, GetValidCbw) {
+    std::vector<TestVectorCbw> tvs = {
+        // clang-format off
+        {1, CBW20, CBW20},
+        {1, CBW40ABOVE, CBW40ABOVE},
+        {1, CBW40BELOW, CBW40ABOVE},
+        {9, CBW40ABOVE, CBW40BELOW},
+        {9, CBW40BELOW, CBW40BELOW},
+        {36, CBW40ABOVE, CBW40ABOVE},
+        {36, CBW40BELOW, CBW40ABOVE},
+        {40, CBW40ABOVE, CBW40BELOW},
+        {40, CBW40BELOW, CBW40BELOW},
+        // Add more interesting cases
+        // clang-format on
+    };
+
+    for (TestVectorCbw tv : tvs) {
+        wlan_channel_t chan = {
+            .primary = tv.primary,
+            .cbw = tv.cbw,
+        };
+        EXPECT_EQ(tv.want, GetValidCbw(chan));
     }
 }
 

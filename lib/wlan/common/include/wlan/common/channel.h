@@ -36,6 +36,8 @@ std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
 std::string BandStr(const wlan_channel_t& chan);
 
+uint8_t GetValidCbw(const wlan_channel_t& chan);
+
 struct Channel {
     wlan_channel_t chan;
     // TODO(porce): Validation
