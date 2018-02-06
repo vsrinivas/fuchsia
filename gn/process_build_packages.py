@@ -97,7 +97,6 @@ def main():
                         default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
-    parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
     amalgamation = Amalgamation(args.build_root)
