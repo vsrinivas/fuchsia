@@ -142,7 +142,7 @@ std::string TypeName(const ast::Type* type) {
 }
 
 CGenerator::Member MessageHeader() {
-    return {"fidl_message_header_t", "header", {}};
+    return {"fidl_message_header_t", "hdr", {}};
 }
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
@@ -424,15 +424,22 @@ std::vector<CGenerator::NamedMessage> CGenerator::NameInterfaces(const std::vect
     std::vector<CGenerator::NamedMessage> named_messages;
     for (const auto& interface_info : interface_infos) {
         for (const auto& method : interface_info.methods) {
+            std::string name = LongName(interface_info.name) + ShortName(method.name);
             if (method.has_request) {
-                std::string c_name = ShortName(method.name) + "_request";
-                std::string coded_name = ShortName(method.name) + "_request_coded_type";
+                std::string c_name = name + "Msg";
+                std::string coded_name = name + "ReqCoded";
                 named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_request});
             }
             if (method.has_response) {
-                std::string c_name = ShortName(method.name) + "_response";
-                std::string coded_name = ShortName(method.name) + "_response_coded_type";
-                named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_response});
+                if (!method.has_request) {
+                    std::string c_name = name + "Evt";
+                    std::string coded_name = name + "EvtCoded";
+                    named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_response});
+                } else {
+                    std::string c_name = name + "Rsp";
+                    std::string coded_name = name + "RspCoded";
+                    named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_response});
+                }
             }
         }
     }
@@ -443,7 +450,7 @@ std::vector<CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<f
     std::vector<CGenerator::NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
         std::string c_name = LongName(struct_info.name);
-        std::string coded_name = LongName(struct_info.name) + "_coded_type";
+        std::string coded_name = LongName(struct_info.name) + "Coded";
         named_structs.push_back({std::move(c_name), std::move(coded_name), struct_info});
     }
     return named_structs;
