@@ -198,6 +198,9 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // Sets a new scan period to any future and ongoing discovery procedures.
   void set_scan_period(int64_t period_ms) { scan_period_ = period_ms; }
 
+  // Returns whether there is an active discovery session.
+  bool discovering() const { return !sessions_.empty(); }
+
  private:
   friend class LowEnergyDiscoverySession;
 

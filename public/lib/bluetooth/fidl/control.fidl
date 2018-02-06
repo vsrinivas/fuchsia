@@ -4,7 +4,8 @@
 
 library bluetooth_control;
 
-// Possible values for the LE Appearance property which describes the external appearance of a
+// Possible values for the LE Appearance property which describes the external
+// appearance of a
 // device at a high level.
 // (See the Bluetooth assigned-numbers document:
 // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
@@ -70,17 +71,39 @@ enum TechnologyType {
   DUAL_MODE = 2;
 };
 
-// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device discovered during general
-// discovery.
+// Input and Output Capabilities for pairing exchanges.
+// See Volume 3, Part C, Table 5.3 and 5.4
+enum InputCapabilityType {
+  NONE = 0;
+  CONFIRMATION = 1;
+  KEYBOARD = 2;
+};
+
+enum OutputCapabilityType {
+  NONE = 0;
+  NUMERIC = 1;
+};
+
+// Different types required by the Security Manager for pairing methods.
+// Bluetooth SIG has different requirements for different device capabilities.
+enum PairRequestType {
+  PIN_ENTRY = 0;
+  PIN_DISPLAY = 1;
+  PASSKEY_ENTRY = 2;
+  CONSENT = 3;
+};
+
+// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device discovered
+// during general discovery.
 struct RemoteDevice {
   // UUID that uniquely identifies this device on the current system.
   string identifier;
 
-  // Bluetooth device address that identifies this remote device. Clients should display this field
-  // to the user when |name| is not available.
+  // Bluetooth device address that identifies this remote device. Clients
+  // should display this field to the user when |name| is not available.
   //
-  // NOTE: Clients should use the |identifier| field to distinguish between remote devices instead
-  // of using their address.
+  // NOTE: Clients should use the |identifier| field to distinguish between
+  // remote devices instead of using their address.
   string address;
 
   // The Bluetooth technologies that are supported by this device.
@@ -89,8 +112,8 @@ struct RemoteDevice {
   // The name of the remote device if present or known.
   string? name;
 
-  // The LE appearance property. Present if this is a LE device and the appearance information was
-  // obtained over advertising and/or GATT.
+  // The LE appearance property. Present if this is a LE device and the
+  // appearance information was obtained over advertising and/or GATT.
   Appearance appearance;
 
   // The most recently obtained advertising signal strength for this device.
@@ -99,45 +122,40 @@ struct RemoteDevice {
   // The most recently obtained transmission power for this device.
   bluetooth.Int8? tx_power;
 
-  // Whether or not a BR/EDR and/or LE connection exists between the local adapter and this device.
+  // Whether or not a BR/EDR and/or LE connection exists between the local
+  // adapter and this device.
   bool connected;
 
   // Whether or not a bond exists between the local adapter and this device.
   bool bonded;
 
-  // The list of service UUIDs that are known to be published on this remote device.
+  // The list of service UUIDs known to be published on this remote device.
   vector<string> service_uuids;
 };
 
 // Contains state information for a particular Bluetooth adapter.
 struct AdapterState {
-  // Whether or not the Bluetooth radio is currently powered and ready to use.
-  bluetooth.Bool? powered;
-
-  // The complete local nae of the local adapter that is visible to other devices when
+  // The local name of the local adapter, visible to other devices when
   // discoverable.
   string? local_name;
 
-  // Shortened version of the local name used when discoverable, if available. If this is not
-  // present then |local_name| is used.
-  string? shortened_local_name;
+  // Whether or not the local adapter is currently discoverable over BR/EDR and
+  // LE physical channels.
+  bluetooth.Bool? discoverable;
 
   // Whether or not device discovery is currently being performed.
   bluetooth.Bool? discovering;
 
-  // Whether or not the local adapter is currently discoverable over BR/EDR and LE physical
-  // channels.
-  bluetooth.Bool? discoverable;
-
-  // Service UUIDs of all local services that are published and available to other
-  // devices via this adapter. These services are usually registered using the GATT
-  // and the classic profile APIs.
+  // Service UUIDs of all local services that are published and available to
+  // other devices via this adapter. These services are usually registered
+  // using the GATT and the classic profile APIs.
   vector<string>? local_service_uuids;
 };
 
-// Contains static global information about a local Bluetooth adapter, including its current state.
-// Each adapter instance represents a physical Bluetooth controller and its associated
-// host-subsystem state that is present on the current platform.
+// Contains static global information about a local Bluetooth adapter,
+// including its current state.  Each adapter instance represents a physical
+// Bluetooth controller and its associated host-subsystem state that is present
+// on the current platform.
 struct AdapterInfo {
   // UUID that uniquely identifies this adapter on the current system.
   string identifier;
@@ -145,86 +163,111 @@ struct AdapterInfo {
   // The Bluetooth technologies that are supported by this adapter.
   TechnologyType technology;
 
-  // 6-octet Bluetooth device address which can be displayed to the user.
+  // Public Bluetooth device address which can be displayed to the user.
   string address;
 
   // The current adapter state. This field is only present when an AdapterInfo
-  // is obtained via the Adapter and AdapterDelegate interfaces. If present, all
-  // optional members of |state| will also be present.
+  // is obtained via the Control and ControlDelegate interfaces. If present,
+  // all optional members of |state| will also be present.
   AdapterState? state;
 };
 
-// Delegate interface for receiving notifications from an adapter.
-interface AdapterDelegate {
-  // Called when the adapter state changes. Only the changed fields of |state|
-  // will be present; unchanged fields will be null.
-  1: OnAdapterStateChanged(AdapterState state);
+interface ControlDelegate {
+  // Called when the active adapter has been updated. If |active_adapter| is
+  // null, then no adapter is currently active.
+  1: OnActiveAdapterChanged(AdapterInfo? adapter);
 
-  // Called during device discovery to report a discovered device.
-  2: OnDeviceDiscovered(RemoteDevice device);
-};
+  // Called when an adapter has been updated. If |adapter| is null, then no
+  // adapter is currently available.
+  2: OnAdapterUpdated(AdapterInfo adapter);
 
-// bluetooth.Interface for interacting with a local Bluetooth adapter.
-interface Adapter {
-  // Returns information about this adapter, including its state.
-  1: GetInfo() -> (AdapterInfo info);
-
-  // Registers a delegate to receive adapter state notifications.
-  2: SetDelegate(AdapterDelegate delegate);
-
-  // Sets the complete and optionally the shortened local name for this adapter.
-  3: SetLocalName(string local_name, string? shortened_local_name) -> (bluetooth.Status @status);
-
-  // Powers this adapter on or off.
-  4: SetPowered(bool powered) -> (bluetooth.Status @status);
-
-  // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
-  // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
-  //
-  // On the LE transport, only general-discoverable and connectable peripherals will be reported.
-  //
-  // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
-  // Adapter gets disconnected.
-  5: StartDiscovery() -> (bluetooth.Status @status);
-
-  // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
-  // receiving device discovery notifications.
-  //
-  // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
-  // then the system will continue performing device discovery even if this method results in
-  // success.
-  6: StopDiscovery() -> (bluetooth.Status @status);
-};
-
-// Delegate interface for receiving notifications from an AdapterManager.
-interface AdapterManagerDelegate {
-  // Called when the active adapter has been updated. If |active_adapter| is null, then no adapter
-  // is currently active.
-  1: OnActiveAdapterChanged(AdapterInfo? active_adapter);
-
-  // Called when a new adapter is added to the system.
-  2: OnAdapterAdded(AdapterInfo adapter);
-
-  // Called when an adapter with the given |identifier| has been removed from the system.
+  // Called when an adapter with the given |identifier| has been removed from
+  // the system.
   3: OnAdapterRemoved(string identifier);
 };
 
-// Primary Bluetooth control service to watch for local Bluetooth adapters.
-[ServiceName="bluetooth::control::AdapterManager"]
-interface AdapterManager {
+interface PairingDelegate {
+  // If |pin| is not null, |response| must match to accept the pairing request.
+  // Otherwise if |response| is present, pairing is accepted and the response
+  // is used as the passkey or pin if necessary.
+  1: OnPairRequest(RemoteDevice device, PairRequestType type, string? pin) ->
+                  (string? response);
+};
+
+interface RemoteDeviceDelegate {
+  // Called to update the status of a known device.
+  1: OnDeviceUpdated(RemoteDevice device);
+
+  // Called to indicate a device has been removed.
+  2: OnDeviceRemoved(string identifier);
+};
+
+// Primary Bluetooth control service to access bluetooth
+[ServiceName="bluetooth::control::Control"]
+interface Control {
   // Returns whether or not Bluetooth is currently available on the system.
   1: IsBluetoothAvailable() -> (bool available);
 
-  // Registers a delegate to receive notifications from this AdapterManager.
-  2: SetDelegate(AdapterManagerDelegate delegate);
+  // Registers a delegate to receive notifications about adapters.
+  2: SetDelegate(ControlDelegate delegate);
+
+  // Registers a delegate to handle pairing requests.
+  // Indicate the capability type of the PairingDelegate using |in| and |out|.
+  // If your input/output capability is variable, call this function when it
+  // changes to update.
+  // Setting a pairing delegate closes the previously assigned pairing Delegate.
+  //
+  // To disable pairing, set |delegate| to null.
+  3: SetPairingDelegate(InputCapabilityType in, OutputCapabilityType out,
+                        PairingDelegate? delegate);
 
   // Returns information about all local adapters that are known to the system.
-  3: ListAdapters() -> (vector<AdapterInfo>? adapters);
+  4: GetAdapters() -> (vector<AdapterInfo>? adapters);
 
-  // Sets the local adapter with the given |identifier| to act as the backing adapter for all
-  // Bluetooth interfaces.
-  4: SetActiveAdapter(string identifier) -> (bluetooth.Status @status);
+  // Sets the local adapter with the given |identifier| to act as the backing
+  // adapter for all Bluetooth interfaces.
+  5: SetActiveAdapter(string identifier) -> (bluetooth.Status @status);
 
-  // Returns a handle to the current local adapter, if it exists.
-  5: GetActiveAdapter(request<Adapter> adapter);
+  // Returns information on the current active adapter, if it exists.
+  6: GetActiveAdapterInfo() -> (AdapterInfo? @adapter);
+
+  // Add a delegate to receive updates to devices as their properties change.
+  // If |include_rssi| is true, device updates will also be sent if the only
+  // thing changed is the RSSI to the remote device.
+  //
+  // To stop receiving updates, set |delegate| to null.
+  7: SetRemoteDeviceDelegate(RemoteDeviceDelegate? delegate,
+                             bool include_rssi);
+
+  // If |discovery| is true, active discovery is requested.
+  // When requesting discovery, general discovery for BR/EDR and LE will be
+  // active and newly discovered devices will be reported via
+  // RemoteDeviceDelegate.OnDeviceUpdate().
+  //
+  // Discovery may be active when not reqested.
+  // If an error occurs when starting discovery, it is reflected in |status|.
+  8: RequestDiscovery(bool discovery) -> (bluetooth.Status @status);
+
+  // Retrieve the set of known remote devices.
+  // Note: These devices are not guaranteed to still be reachable.
+  9: GetKnownRemoteDevices() -> (vector<RemoteDevice> devices);
+
+  // Sets the public Bluetooth name for this device, or resets to the default
+  // name if |name| is not present.
+  10: SetName(string? name) -> (bluetooth.Status @status);
+
+  // Set the discoverability of this device.
+  11: SetDiscoverable(bool discoverable) -> (bluetooth.Status @status);
+
+  // Attempt to connect to the remote |device_id|.
+  // If |bond| is set, try to bond to this device as well.
+  12: Connect(string device_id, bool bond) -> (bluetooth.Status @status);
+
+  // Disconnect a previously-connected device.
+  // Note: This does not remove a device bond, see Control::Forget.
+  13: Disconnect(string device_id) -> (bluetooth.Status @status);
+
+  // Forgets |device_id| completely, removing all bonding information.
+  // This will disconnect a device if it is connected.
+  14: Forget(string device_id) -> (bluetooth.Status @status);
 };

@@ -25,8 +25,8 @@ void HostServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
 }
 
-void HostServer::RequestControlAdapter(
-    fidl::InterfaceRequest<bluetooth_control::Adapter> request) {
+void HostServer::RequestAdapter(
+    fidl::InterfaceRequest<bluetooth_host::Adapter> request) {
   BindServer<AdapterServer>(std::move(request));
 }
 

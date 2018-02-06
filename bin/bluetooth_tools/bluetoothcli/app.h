@@ -7,24 +7,23 @@
 #include <memory>
 #include <unordered_map>
 
-#include "garnet/bin/bluetooth_tools/lib//command_dispatcher.h"
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/bluetooth_control.h>
+
+#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetoothcli {
 
-class App final : public bluetooth_control::AdapterManagerDelegate,
-                  public bluetooth_control::AdapterDelegate {
+class App final : public bluetooth_control::ControlDelegate,
+                  public bluetooth_control::RemoteDeviceDelegate {
  public:
   App();
 
   void ReadNextInput();
 
-  bluetooth_control::AdapterManager* adapter_manager() const {
-    return adapter_manager_.get();
-  }
-  bluetooth_control::Adapter* active_adapter() const {
+  bluetooth_control::Control* control() const { return control_.get(); }
+  const bluetooth_control::AdapterInfo* active_adapter() const {
     return active_adapter_.get();
   }
 
@@ -37,32 +36,32 @@ class App final : public bluetooth_control::AdapterManagerDelegate,
   const DeviceMap& discovered_devices() const { return discovered_devices_; }
 
  private:
-  // bluetooth_control::AdapterManagerDelegate overrides:
+  // bluetooth_control::ControlDelegate overrides:
   // TODO(armansito): since this tool is single-threaded the delegate callbacks
   // won't run immediately if ReadNextInput() is blocking to read from stdin. It
   // would be nice to make these more responsive by making this multi-threaded
   // but it's not urgent.
   void OnActiveAdapterChanged(
-      bluetooth_control::AdapterInfoPtr active_adapter) override;
-  void OnAdapterAdded(bluetooth_control::AdapterInfo adapter) override;
+      bluetooth_control::AdapterInfoPtr adapter) override;
+  void OnAdapterUpdated(bluetooth_control::AdapterInfo adapter) override;
   void OnAdapterRemoved(::fidl::StringPtr identifier) override;
 
-  // bluetooth_control::AdapterDelegate overrides:
-  void OnAdapterStateChanged(
-      bluetooth_control::AdapterState state) override;
-  void OnDeviceDiscovered(bluetooth_control::RemoteDevice device) override;
+  // bluetooth_control::RemoteDeviceDelegate overrides:
+  void OnDeviceUpdated(bluetooth_control::RemoteDevice device) override;
+  void OnDeviceRemoved(::fidl::StringPtr identifier) override;
 
   bluetooth_tools::CommandDispatcher command_dispatcher_;
 
   std::unique_ptr<component::ApplicationContext> context_;
-  bluetooth_control::AdapterManagerPtr adapter_manager_;
-  bluetooth_control::AdapterPtr active_adapter_;
+  bluetooth_control::ControlPtr control_;
+  bluetooth_control::AdapterInfoPtr active_adapter_;
 
-  // Local AdapterManagerDelegate binding.
-  fidl::Binding<bluetooth_control::AdapterManagerDelegate> manager_delegate_;
+  // Local ControlDelegate binding.
+  fidl::Binding<bluetooth_control::ControlDelegate> control_delegate_;
 
-  // Local AdapterDelegate binding.
-  fidl::Binding<bluetooth_control::AdapterDelegate> adapter_delegate_;
+  // Local RemoteDeviceDelegate bindings.
+  fidl::Binding<bluetooth_control::RemoteDeviceDelegate>
+      remote_device_delegate_;
 
   DeviceMap discovered_devices_;
 

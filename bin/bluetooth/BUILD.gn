@@ -8,10 +8,10 @@ executable("bin") {
   output_name = "bluetooth"
 
   sources = [
-    "adapter_manager.cc",
-    "adapter_manager.h",
-    "adapter_manager_server.cc",
-    "adapter_manager_server.h",
+    "bluetooth_manager.cc",
+    "bluetooth_manager.h",
+    "control_server.cc",
+    "control_server.h",
     "app.cc",
     "app.h",
     "main.cc",

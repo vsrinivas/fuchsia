@@ -15,15 +15,15 @@ using bluetooth::Bool;
 using bluetooth::ErrorCode;
 using bluetooth::Status;
 
-using bluetooth_control::AdapterDelegate;
-using bluetooth_control::AdapterDelegatePtr;
 using bluetooth_control::AdapterState;
+using bluetooth_host::AdapterDelegate;
+using bluetooth_host::AdapterDelegatePtr;
 
 namespace bthost {
 
 AdapterServer::AdapterServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<bluetooth_control::Adapter> request)
+    fidl::InterfaceRequest<bluetooth_host::Adapter> request)
     : AdapterServerBase(adapter, this, std::move(request)),
       requesting_discovery_(false),
       weak_ptr_factory_(this) {}
@@ -51,7 +51,6 @@ void AdapterServer::SetDelegate(
       // directly.
       if (le_discovery_session_) {
         le_discovery_session_ = nullptr;
-        NotifyDiscoveringChanged();
       }
     });
   }
@@ -60,18 +59,11 @@ void AdapterServer::SetDelegate(
   // with this AdapterServer.
   if (le_discovery_session_) {
     le_discovery_session_ = nullptr;
-    NotifyDiscoveringChanged();
   }
 }
 
 void AdapterServer::SetLocalName(::fidl::StringPtr local_name,
-                                 ::fidl::StringPtr shortened_local_name,
                                  SetLocalNameCallback callback) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void AdapterServer::SetPowered(bool powered,
-                               SetPoweredCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -112,7 +104,6 @@ void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {
         });
 
         self->le_discovery_session_ = std::move(session);
-        self->NotifyDiscoveringChanged();
         callback(Status());
       });
 }
@@ -127,7 +118,6 @@ void AdapterServer::StopDiscovery(StopDiscoveryCallback callback) {
   }
 
   le_discovery_session_ = nullptr;
-  NotifyDiscoveringChanged();
   callback(Status());
 }
 
@@ -143,17 +133,6 @@ void AdapterServer::OnDiscoveryResult(
   }
 
   delegate_->OnDeviceDiscovered(std::move(*fidl_device));
-}
-
-void AdapterServer::NotifyDiscoveringChanged() {
-  if (!delegate_)
-    return;
-
-  AdapterState adapter_state;
-  adapter_state.discovering = Bool::New();
-  adapter_state.discovering->value = le_discovery_session_ != nullptr;
-
-  delegate_->OnAdapterStateChanged(std::move(adapter_state));
 }
 
 }  // namespace bthost

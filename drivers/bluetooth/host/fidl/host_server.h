@@ -33,8 +33,8 @@ class HostServer : public AdapterServerBase<::bluetooth_host::Host> {
  private:
   // ::bluetooth_host::Host overrides:
   void GetInfo(GetInfoCallback callback) override;
-  void RequestControlAdapter(
-      ::fidl::InterfaceRequest<bluetooth_control::Adapter> adapter) override;
+  void RequestAdapter(
+      ::fidl::InterfaceRequest<bluetooth_host::Adapter> adapter) override;
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<bluetooth_low_energy::Central> central)
       override;

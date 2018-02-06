@@ -54,12 +54,10 @@ namespace {
   ::bluetooth_control::AdapterInfo adapter_info;
   adapter_info.state = ::bluetooth_control::AdapterState::New();
 
-  // TODO(armansito): Most of these fields have not been implemented yet. Assign
-  // the correct values when they are supported.
-  adapter_info.state->powered = ::btfidl::Bool::New();
-  adapter_info.state->powered->value = true;
-  adapter_info.state->discovering = ::btfidl::Bool::New();
   adapter_info.state->discoverable = ::btfidl::Bool::New();
+  adapter_info.state->discoverable->value = false;
+  adapter_info.state->discovering = ::btfidl::Bool::New();
+  adapter_info.state->discovering->value = adapter.IsDiscovering();
 
   adapter_info.identifier = adapter.identifier();
   adapter_info.address = adapter.state().controller_address().ToString();

@@ -167,8 +167,9 @@ void PrintAdapterInfo(const bluetooth_control::AdapterInfo& adapter_info,
                       size_t indent) {
   CLI_LOG_INDENT(indent) << "id: " << adapter_info.identifier;
   CLI_LOG_INDENT(indent) << "address: " << adapter_info.address;
-  CLI_LOG_INDENT(indent) << "powered: "
-                         << BoolToString(adapter_info.state->powered->value);
+  CLI_LOG_INDENT(indent) << "discoverable: "
+                         << BoolToString(
+                                adapter_info.state->discoverable->value);
 }
 
 void PrintRemoteDevice(const bluetooth_control::RemoteDevice& remote_device,

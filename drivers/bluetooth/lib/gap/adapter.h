@@ -112,6 +112,10 @@ class Adapter final {
     return le_advertising_manager_.get();
   }
 
+  // Returns true if any discovery process (LE or BR/EDR) is running on this
+  // adapter.
+  bool IsDiscovering() const;
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the
   // first batch of HCI commands have been sent.

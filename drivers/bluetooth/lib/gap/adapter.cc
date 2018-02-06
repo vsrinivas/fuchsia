@@ -161,6 +161,10 @@ void Adapter::ShutDown() {
   CleanUp();
 }
 
+bool Adapter::IsDiscovering() const {
+  return le_discovery_manager_ && le_discovery_manager_->discovering();
+}
+
 void Adapter::InitializeStep2(const InitializeCallback& callback) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(IsInitializing());
