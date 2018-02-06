@@ -214,8 +214,10 @@
     fdiml;
     fdopen;
     fdopendir;
+    fegetround;
     feof;
     ferror;
+    fesetround;
     fflush;
     fflush_unlocked;
     ffs;
