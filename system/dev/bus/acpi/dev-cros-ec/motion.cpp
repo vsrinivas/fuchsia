@@ -386,6 +386,57 @@ zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* 
     return ZX_OK;
 }
 
+zx_status_t AcpiCrOsEcMotionDevice::GetKbWakeAngle(int32_t* angle) {
+    zxlogf(TRACE, "acpi-cros-ec-motion: GetKbWakeAngle\n");
+
+    struct ec_params_motion_sense cmd;
+    struct ec_response_motion_sense rsp;
+    cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
+    cmd.kb_wake_angle.data = EC_MOTION_SENSE_NO_VALUE;
+
+    size_t actual;
+    zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
+                                           &rsp.kb_wake_angle, sizeof(rsp.kb_wake_angle),
+                                           &actual);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (actual != sizeof(rsp.kb_wake_angle)) {
+        return ZX_ERR_IO;
+    }
+
+    *angle = rsp.kb_wake_angle.ret;
+    zxlogf(SPEW, "acpi-cros-ec-motion: kb_wake_angle %d\n", *angle);
+    return ZX_OK;
+}
+
+zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
+    zxlogf(TRACE, "acpi-cros-ec-motion: SetKbWakeAngle %d\n", angle);
+
+    if (angle < 0 || angle > 360) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    struct ec_params_motion_sense cmd;
+    struct ec_response_motion_sense rsp;
+    cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
+    cmd.kb_wake_angle.data = angle;
+
+    size_t actual;
+    zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
+                                           &rsp.kb_wake_angle, sizeof(rsp.kb_wake_angle),
+                                           &actual);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (actual != sizeof(rsp.kb_wake_angle)) {
+        return ZX_ERR_IO;
+    }
+
+    zxlogf(SPEW, "acpi-cros-ec-motion: kb_wake_angle %d\n", rsp.kb_wake_angle.ret);
+    return ZX_OK;
+}
+
 zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_data* data) {
     zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead\n");
 

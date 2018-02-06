@@ -98,6 +98,8 @@ private:
     zx_status_t SetEcSamplingRate(uint8_t sensor_num, uint32_t milliseconds);
     zx_status_t SetSensorOutputDataRate(uint8_t sensor_num, uint32_t freq_millihertz);
     zx_status_t GetSensorRange(uint8_t sensor_num, int32_t* range);
+    zx_status_t GetKbWakeAngle(int32_t* angle);
+    zx_status_t SetKbWakeAngle(int16_t angle);
     zx_status_t FifoInterruptEnable(bool enable);
     zx_status_t FifoRead(struct ec_response_motion_sensor_data* data);
 
