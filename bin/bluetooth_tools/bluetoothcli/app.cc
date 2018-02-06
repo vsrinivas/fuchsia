@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include <linenoise.h>
+#include <linenoise/linenoise.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/auto_call.h"

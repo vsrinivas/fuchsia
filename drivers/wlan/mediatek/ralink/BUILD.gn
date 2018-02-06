@@ -22,7 +22,7 @@ driver_module("ralink_driver") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/ddktl",
+    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

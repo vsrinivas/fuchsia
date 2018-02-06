@@ -23,6 +23,6 @@ executable("bluetoothcli") {
     "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/third_party/ulib/linenoise",
+    "//zircon/public/lib/linenoise",
   ]
 }

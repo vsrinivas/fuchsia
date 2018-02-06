@@ -4,7 +4,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 
-#include <linenoise.h>
+#include <linenoise/linenoise.h>
 
 #include "app.h"
 
