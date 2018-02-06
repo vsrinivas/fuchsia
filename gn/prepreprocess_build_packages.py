@@ -38,8 +38,8 @@ def main():
     languages = language_observer.languages
     labels = language_observer.labels
 
-    if languages is None:
-        return -1
+    # Some build tools depend on Go, so we always need to include it.
+    languages.add("go")
 
     for language in ["cpp", "dart", "go", "rust"]:
         sys.stdout.write("have_%s = %s\n" %

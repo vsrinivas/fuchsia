@@ -66,9 +66,9 @@ action("finalize_manifests") {
                        "--build-root",
                        rebase_path(root_build_dir),
                      ],
-                     "list lines",
+                     "trim list lines",
                      rebase_path(packages_imported))
-  package_list = read_file(packages_file, "list lines")
+  package_list = read_file(packages_file, "trim list lines")
 
   script = "finalize_manifests.py"
   inputs = finalize_manifests_extra

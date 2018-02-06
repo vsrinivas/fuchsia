@@ -109,7 +109,8 @@ def main():
 
     packages = []
     with open(args.package_list) as package_list:
-        for package in package_list:
+        content = package_list.read().strip()
+        for package in content.splitlines():
             package = package.strip()
             # Note: This is a bad heuristic really, as we can't produce empty packages, but GN is limiting in this regard.
             if os.path.getsize(os.path.join(args.packages_dir, package, "final_package_manifest")) > 0:
@@ -129,6 +130,8 @@ def main():
         for package in packages:
             meta_far = os.path.join(args.packages_dir, package, "meta.far")
             amber_package_list.write("%s/%s=%s\n" % (package, package_version, meta_far))
+        if not packages:
+            amber_package_list.write("")
 
     subprocess.check_call([args.amber_publish, "-ps", "-f", args.amber_package_list, "-r", args.amber_repo, "-k", args.amber_keys])
 
@@ -157,9 +160,11 @@ def main():
 
                 with open(meta_far + ".merkle") as merklefile:
                     pkgsvr_index.write("%s/%d=%s\n" % (package, package_version, merklefile.readline().strip()))
+            if not packages:
+                blobstore_manifest.write("")
+                pkgsvr_index.write("")
 
     return 0
 
 if __name__ == '__main__':
     sys.exit(main())
-
