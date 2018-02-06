@@ -6,7 +6,6 @@
 
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/remote_client.h>
 #include <wlan/mlme/serialize.h>
 
 namespace wlan {
@@ -47,7 +46,10 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
     if (status != ZX_OK) { return status; }
-    auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer), this, client_addr);
+    auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
+                                                 this,     // bss
+                                                 nullptr,  // client listener
+                                                 client_addr);
     clients_.Add(client_addr, fbl::move(client));
 
     // Note: usually, HandleMgmtFrame(...) will forward incoming frames to the corresponding

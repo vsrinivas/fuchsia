@@ -17,11 +17,16 @@ class StateInterface {
 
 template <typename S> class StateMachine {
    public:
+    StateMachine() {
+        static_assert(fbl::is_base_of<StateInterface, S>::value,
+                      "State class must implement StateInterface");
+    }
+
     ~StateMachine() {
         if (state_ != nullptr) { state_->OnExit(); }
     }
 
-    void MoveToState(fbl::unique_ptr<S> state) {
+    virtual void MoveToState(fbl::unique_ptr<S> state) {
         ZX_DEBUG_ASSERT(state != nullptr);
 
         if (state_ != nullptr) { state_->OnExit(); }

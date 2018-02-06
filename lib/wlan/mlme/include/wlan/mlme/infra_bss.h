@@ -9,6 +9,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/macaddr_map.h>
+#include <wlan/mlme/remote_client.h>
 
 #include <fbl/ref_ptr.h>
 #include <wlan/common/macaddr.h>
@@ -29,12 +30,14 @@ class InfraBss : public BssInterface, public FrameHandler {
 
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
+    // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
    private:
+    // FrameHandler implementation
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,

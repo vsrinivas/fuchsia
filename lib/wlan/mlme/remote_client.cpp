@@ -15,6 +15,7 @@ namespace wlan {
 // BaseState implementation.
 
 template <typename S, typename... Args> void BaseState::MoveToState(Args&&... args) {
+    static_assert(fbl::is_base_of<BaseState, S>::value, "State class must implement BaseState");
     client_->MoveToState(fbl::make_unique<S>(client_, std::forward<Args>(args)...));
 }
 
@@ -217,10 +218,25 @@ void AssociatedState::HandleTimeout() {
 // RemoteClient implementation.
 
 RemoteClient::RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
-                           const common::MacAddr& addr)
-    : device_(device), bss_(bss), addr_(addr), timer_(std::move(timer)) {
+                           RemoteClient::Listener* listener, const common::MacAddr& addr)
+    : listener_(listener), device_(device), bss_(bss), addr_(addr), timer_(std::move(timer)) {
+    ZX_DEBUG_ASSERT(device != nullptr);
+    ZX_DEBUG_ASSERT(timer != nullptr);
+    ZX_DEBUG_ASSERT(bss != nullptr);
+    debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
+
     MoveToState(fbl::make_unique<DeauthenticatedState>(this));
     LOG_STATE_TRANSITION(addr_, "(init)", "Deauthenticated");
+}
+
+RemoteClient::~RemoteClient() {
+    debugbss("[client] [%s] destroyed\n", addr_.ToString().c_str());
+}
+
+void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
+    auto from_id = state() == nullptr ? RemoteClient::StateId::kUninitialized : state()->id();
+    fsm::StateMachine<BaseState>::MoveToState(fbl::move(to));
+    if (listener_ != nullptr) { listener_->HandleClientStateChange(addr_, from_id, to->id()); }
 }
 
 void RemoteClient::HandleTimeout() {
