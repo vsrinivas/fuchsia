@@ -316,9 +316,10 @@ Enum types are denoted by their identifier, which may be qualified if needed.
 
 ##### Use
 
-Arrays are denoted **<code>T[n]</code></strong> where <em>T</em> can be any FIDL
-type (including an array) and <em>n</em> is a constant expression which
-specified the number of elements in the array.
+Arrays are denoted **<code>T[n]</code></strong> where <em>T</em> can
+be any FIDL type (including an array) and <em>n</em> is a positive
+integer constant expression which specified the number of elements in
+the array.
 
 ```
     // A record which contains some arrays.
