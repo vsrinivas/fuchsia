@@ -1,0 +1,26 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ldsvc;
+
+interface Loader {
+    // Clean shutdown of service
+    1: Done();
+
+    2: LoadObject(string object_name) -> (status rv, handle<vmo>? object);
+
+    3: DebugPrint(string message) -> (status rv);
+
+    4: LoadScriptInterpreter(string object_name) -> (status rv, handle<vmo>? object);
+
+    5: PublishDataSink(string name, handle<vmo> data) -> (status rv);
+
+    6: LoadDebugConfig(string config_name) -> (status rv, handle<vmo>? config);
+
+    // Configuration string to affect later loading (e.g., "asan")
+    7: Config(string config) -> (status rv);
+
+    // Obtain a new loader service connection
+    8: Clone(request<Loader> loader) -> (status rv);
+};
