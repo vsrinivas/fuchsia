@@ -12,17 +12,11 @@
 
 __BEGIN_CDECLS;
 
-#define DDK_WITH_IOTXN 1
-
 typedef struct zx_device zx_device_t;
 typedef struct zx_driver zx_driver_t;
 typedef struct zx_device_prop zx_device_prop_t;
 
 typedef struct zx_protocol_device zx_protocol_device_t;
-
-#if DDK_WITH_IOTXN
-typedef struct iotxn iotxn_t;
-#endif
 
 #define ZX_DEVICE_NAME_MAX 31
 
@@ -167,10 +161,6 @@ typedef struct zx_protocol_device {
     zx_status_t (*write)(void* ctx, const void* buf, size_t count,
                          zx_off_t off, size_t* actual);
 
-#if DDK_WITH_IOTXN
-    void (*iotxn_queue)(void* ctx, iotxn_t* txn) __DEPRECATE;
-#endif
-
     //@ ## get_size
     // If the device is seekable, the get_size hook should return the size of the device.
     //
@@ -235,10 +225,6 @@ zx_off_t device_get_size(zx_device_t* dev);
 zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
                          const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
-
-#if DDK_WITH_IOTXN
-zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn) __DEPRECATE;
-#endif
 
 // Device State Change Functions
 //@ #### Device State Bits

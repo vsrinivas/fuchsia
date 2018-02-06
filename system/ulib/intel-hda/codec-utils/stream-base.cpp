@@ -30,9 +30,6 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .release      = nullptr,
     .read         = nullptr,
     .write        = nullptr,
-#if DDK_WITH_IOTXN
-    .iotxn_queue  = nullptr,
-#endif
     .get_size     = nullptr,
     .ioctl        = [](void* ctx, uint32_t op,
                        const void* in_buf, size_t in_len,

@@ -217,20 +217,6 @@ class Writable : public internal::base_mixin {
     }
 };
 
-#if DDK_WITH_IOTXN
-template <typename D>
-class IotxnQueueable : public internal::base_mixin {
-  protected:
-    explicit IotxnQueueable(zx_protocol_device_t* proto) {
-        internal::CheckIotxnQueueable<D>();
-    }
-
-  private:
-    static void IotxnQueue(void* ctx, iotxn_t* txn) {
-    }
-};
-#endif
-
 template <typename D>
 class GetSizable : public internal::base_mixin {
   protected:
@@ -392,9 +378,6 @@ using FullDevice = Device<D,
                           Unbindable,
                           Readable,
                           Writable,
-#if DDK_WITH_IOTXN
-                          IotxnQueueable,
-#endif
                           GetSizable,
                           Ioctlable,
                           Suspendable,

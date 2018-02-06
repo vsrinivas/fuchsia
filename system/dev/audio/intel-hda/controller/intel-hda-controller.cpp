@@ -40,9 +40,6 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
     .read         = nullptr,
     .write        = nullptr,
-#if DDK_WITH_IOTXN
-    .iotxn_queue  = nullptr,
-#endif
     .get_size     = nullptr,
     .ioctl        = [](void*        ctx,
                        uint32_t     op,
@@ -312,9 +309,6 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .release      = [](void* ctx) { DEV(ctx)->RootDeviceRelease(); },
     .read         = nullptr,
     .write        = nullptr,
-#if DDK_WITH_IOTXN
-    .iotxn_queue  = nullptr,
-#endif
     .get_size     = nullptr,
     .ioctl        = nullptr,
     .suspend      = nullptr,
