@@ -85,6 +85,15 @@ zx_status_t AuthenticatedState::HandleAuthentication(
     return client_->SendAuthentication(status_code::kSuccess);
 }
 
+zx_status_t AuthenticatedState::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+                                                    const wlan_rx_info_t& rxinfo) {
+    debugbss("[client] [%s] received Deauthentication request: %u\n",
+             client_->addr().ToString().c_str(), frame.body->reason_code);
+    MoveToState<DeauthenticatedState>();
+    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
+    return ZX_OK;
+}
+
 zx_status_t AuthenticatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
@@ -142,6 +151,24 @@ void AssociatedState::OnEnter() {
     inactive_timeout_ = client_->CreateTimerDeadline(kInactivityTimeoutTu);
     client_->StartTimer(inactive_timeout_);
     debugbss("[client] [%s] started inactivity timer\n", client_->addr().ToString().c_str());
+}
+
+zx_status_t AssociatedState::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+                                                    const wlan_rx_info_t& rxinfo) {
+    debugbss("[client] [%s] received Deauthentication request: %u\n",
+             client_->addr().ToString().c_str(), frame.body->reason_code);
+    MoveToState<DeauthenticatedState>();
+    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
+    return ZX_OK;
+}
+
+zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
+                                                  const wlan_rx_info_t& rxinfo) {
+    debugbss("[client] [%s] received Disassociation request: %u\n",
+             client_->addr().ToString().c_str(), frame.body->reason_code);
+    MoveToState<AuthenticatedState>();
+    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Authenticated");
+    return ZX_OK;
 }
 
 void AssociatedState::OnExit() {

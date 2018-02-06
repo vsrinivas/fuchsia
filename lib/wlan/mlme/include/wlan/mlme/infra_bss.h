@@ -39,11 +39,7 @@ class InfraBss : public BssInterface, public FrameHandler {
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    // TODO(hahnr): Remove clients when:
-    // (1) the client is inactive, no traffic, for a certain duration,
-    // (2) Deauthentication frames were received,
-    // (3) the client timed out during authentication flow and is now idle.
-    // We might be able to somehow combine (2) and (3).
+    // TODO(hahnr): Remove clients which reported to be deauthenticated.
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);

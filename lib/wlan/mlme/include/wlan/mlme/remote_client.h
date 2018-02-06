@@ -51,7 +51,8 @@ class AuthenticatedState : public BaseState {
                                    const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
-    // TODO(hahnr): Move into DeauthenticatedState when Deauthentication frame was received.
+    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+                                       const wlan_rx_info_t& rxinfo) override;
 
    private:
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
@@ -72,9 +73,10 @@ class AssociatedState : public BaseState {
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-
-    // TODO(hahnr): Move into AuthenticatedState when Disassociation frame was received.
-    // TODO(hahnr): Move into DeauthenticatedState when Deauthentication frame was received.
+    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+                                       const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
+                                     const wlan_rx_info_t& rxinfo) override;
 
    private:
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
