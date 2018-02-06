@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include <fidl/cpp/message_part.h>
-#include <fidl/types.h>
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 #include <zircon/types.h>
 
 // Declare placement allocation functions.

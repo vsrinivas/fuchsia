@@ -69,6 +69,9 @@ MODULE_HEADER_DEPS += third_party/ulib/lz4
 MODULE_SRCS += third_party/ulib/lz4/lz4.c
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 
+MODULE_HEADER_DEPS += system/ulib/ldmsg
+MODULE_SRCS += system/ulib/ldmsg/ldmsg.c
+
 # This generated header lists all the ABI symbols in the vDSO with their
 # addresses.  It's used to generate vdso-syms.ld, below.
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/system/ulib/zircon/libzircon.so

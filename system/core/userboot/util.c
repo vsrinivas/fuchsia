@@ -90,6 +90,22 @@ void vprintl(zx_handle_t log, const char* fmt, va_list ap) {
                 avail--;
             }
             break;
+        case '.':
+            fmt++;
+            if (*fmt != '*')
+                goto bad_format;
+            fmt++;
+            if (*fmt != 's')
+                goto bad_format;
+            i = va_arg(ap, int);
+            s = va_arg(ap, const char*);
+            while (avail && *s && i != 0) {
+                *p++ = *s++;
+                avail--;
+                if (i > 0)
+                    --i;
+            }
+            break;
         case 'z':
             fmt++;
             switch (*fmt) {
