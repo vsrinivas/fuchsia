@@ -451,9 +451,10 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
     } while (done < size);
 
     if (loader_->response_body_mode_ == URLRequest::ResponseBodyMode::BUFFER) {
-    response_->body->set_buffer(std::move(vmo));
+      response_->body->set_buffer(std::move(vmo));
     } else {
-      FXL_DCHECK(loader_->response_body_mode_ == URLRequest::ResponseBodyMode::SIZED_BUFFER);
+      FXL_DCHECK(loader_->response_body_mode_ ==
+                 URLRequest::ResponseBodyMode::SIZED_BUFFER);
       response_->body->set_sized_buffer(
           fsl::SizedVmo(std::move(vmo), size).ToTransport());
     }
@@ -555,7 +556,11 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
-  if (err && err != asio::ssl::error::stream_truncated) {
+  // asio::error::eof happens if the other side closed their connection.
+  if (err && err != asio::ssl::error::stream_truncated &&
+      err != asio::error::eof) {
+    // TODO: if EOF, should probably confirm we read all of the bytes (see
+    // Content-Length header).
     FXL_VLOG(1) << "OnBufferBody: " << err.message() << " (" << err << ")";
     // TODO(somebody who knows asio/network errors): real translation
     SendError(network::NETWORK_ERR_FAILED);
