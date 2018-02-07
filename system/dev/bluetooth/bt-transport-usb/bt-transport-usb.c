@@ -635,7 +635,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     usb_device_descriptor_t dev_desc;
     usb_get_device_descriptor(&usb, &dev_desc);
     zx_device_prop_t props[] = {
-      { BIND_PROTOCOL, 0, ZX_PROTOCOL_BT_HCI_TRANSPORT },
+      { BIND_PROTOCOL, 0, ZX_PROTOCOL_BT_TRANSPORT },
       { BIND_USB_VID, 0, dev_desc.idVendor },
       { BIND_USB_PID, 0, dev_desc.idProduct },
     };
@@ -645,7 +645,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
         .name = "bt_transport_usb",
         .ctx = hci,
         .ops = &hci_device_proto,
-        .proto_id = ZX_PROTOCOL_BT_HCI_TRANSPORT,
+        .proto_id = ZX_PROTOCOL_BT_TRANSPORT,
         .props = props,
         .prop_count = countof(props),
     };
