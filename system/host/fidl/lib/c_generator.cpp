@@ -198,6 +198,7 @@ CGenerator::IntegerConstantType EnumType(ast::PrimitiveType::Subtype type) {
     case ast::PrimitiveType::Subtype::Status:
     case ast::PrimitiveType::Subtype::Float32:
     case ast::PrimitiveType::Subtype::Float64:
+    default:
         assert(false && "bad primitive type for an enum");
         break;
     }
