@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
+#include "msd_intel_gen_query.h"
 #include "device_id.h"
 #include "forcewake.h"
 #include "global_context.h"
@@ -683,7 +684,7 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
             *value_out = MsdIntelDevice::cast(device)->device_id();
             return MAGMA_STATUS_OK;
 
-        case MAGMA_QUERY_VENDOR_PARAM_0:
+        case kMsdIntelGenQuerySubsliceAndEuTotal:
             *value_out = MsdIntelDevice::cast(device)->subslice_total();
             *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();
             return MAGMA_STATUS_OK;
