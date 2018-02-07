@@ -12,6 +12,7 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/processargs.h>
+#include <zircon/device/vfs.h>
 
 #include <fdio/namespace.h>
 #include <fdio/remoteio.h>
@@ -20,6 +21,7 @@
 
 #include "private.h"
 #include "private-remoteio.h"
+
 
 // A fdio namespace is a simple local filesystem that consists
 // of a tree of vnodes, each of which may contain child vnodes
@@ -59,11 +61,13 @@ struct fdio_namespace {
     mxvn_t root;
 };
 
-// The directory "subclasses" rio so that it can
-// call remoteio ops it needs to pass through to
-// the underlying remote fs.
+// The directory represents a local directory (either / or
+// some directory between / and a mount point), so it has
+// to emulate directory behavior.
 struct fdio_directory {
-    zxrio_t rio;
+    // base fdio object
+    fdio_t io;
+
     mxvn_t* vn;
     fdio_ns_t* ns;
 
@@ -72,7 +76,7 @@ struct fdio_directory {
     atomic_int_fast32_t seq;
 };
 
-static fdio_t* fdio_dir_create_locked(fdio_ns_t* fs, mxvn_t* vn, zx_handle_t h);
+static fdio_t* fdio_dir_create_locked(fdio_ns_t* fs, mxvn_t* vn);
 
 static mxvn_t* vn_lookup_locked(mxvn_t* dir, const char* name, size_t len) {
     for (mxvn_t* vn = dir->child; vn; vn = vn->next) {
@@ -96,9 +100,16 @@ static zx_status_t vn_create_locked(mxvn_t* dir, const char* name, size_t len,
     }
     mxvn_t* vn = vn_lookup_locked(dir, name, len);
     if (vn != NULL) {
-        // if there's already a vnode, that's okay as long
-        // as we don't want to override its remote
+        // if there's already vnode, we do not allow
+        // overlapping a remoted vnode:
+        if (vn->remote != ZX_HANDLE_INVALID) {
+            LOG(1, "VN-CREATE FAILED: SHADOWING REMOTE\n");
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        // And we do not allow replacing a virtual dir node
+        // with a real directory node:
         if (remote != ZX_HANDLE_INVALID) {
+            LOG(1, "VN-CREATE FAILED: SHADOWING LOCAL\n");
             return ZX_ERR_ALREADY_EXISTS;
         }
         *out = vn;
@@ -172,98 +183,108 @@ static zx_status_t mxdir_close(fdio_t* io) {
     mtx_unlock(&dir->ns->lock);
     dir->ns = NULL;
     dir->vn = NULL;
-    if (dir->rio.h != ZX_HANDLE_INVALID) {
-        zx_handle_close(dir->rio.h);
-        dir->rio.h = ZX_HANDLE_INVALID;
-    }
     return ZX_OK;
 }
 
 static zx_status_t mxdir_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    mxdir_t* dir = (mxdir_t*) io;
-    if (dir->rio.h == ZX_HANDLE_INVALID) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if ((handles[0] = fdio_service_clone(dir->rio.h)) == ZX_HANDLE_INVALID) {
-        return ZX_ERR_BAD_HANDLE;
-    }
-    mtx_lock(&dir->ns->lock);
-    dir->ns->refcount++;
-    mtx_unlock(&dir->ns->lock);
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, zx_handle_t h) {
-    mxvn_t* vn = &ns->root;
-    zx_status_t r = ZX_OK;
+static zx_status_t ns_walk_locked(mxvn_t** _vn, const char** _path) {
+    mxvn_t* vn = *_vn;
+    const char* path = *_path;
 
-    mtx_lock(&ns->lock);
-    if (path[0] != '/') {
-        r = ZX_ERR_NOT_FOUND;
-        goto done;
+    // Empty path or "." matches initial node.
+    if ((path[0] == 0) || ((path[0] == '.') && (path[1] == 0))) {
+        return ZX_OK;
     }
-    path++;
-
-    // These track the last node we descended
-    // through that has a remote fs.  We need
-    // this so we can backtrack and open relative
-    // to this point.
-    mxvn_t* save_vn = NULL;
-    const char* save_path = "";
 
     for (;;) {
-        // find the next path segment
+        // Find the next path segment.
         const char* name = path;
         const char* next = strchr(path, '/');
         size_t len = next ? (size_t)(next - path) : strlen(path);
 
-        // path segment can't be empty
+        // Path segments may not be empty.
         if (len == 0) {
-            r = ZX_ERR_BAD_PATH;
-            break;
+            return ZX_ERR_BAD_PATH;
         }
 
-        // is there a local match?
+        // look for a match
         mxvn_t* child = vn_lookup_locked(vn, name, len);
         if (child != NULL) {
             vn = child;
             if (next) {
-                // match, but more path to walk
-                // descend and continue
+                // Matched, but more path segments to walk.
+                // Descend and continue.
                 path = next + 1;
-                // but remember this node and path
-                if (child->remote != ZX_HANDLE_INVALID) {
-                    save_vn = child;
-                    save_path = path;
-                }
                 continue;
             } else {
-                // match on the last segment
-                // this is it
-                path = "";
+                // we've matched on the last segment
+                *_vn = vn;
+                *_path = ".";
+                return ZX_OK;
             }
         }
 
-        // if there's not a remote filesystem, did we pass one?
+        // If there's remaining path but this is not a mount point,
+        // we're done.
         if (vn->remote == ZX_HANDLE_INVALID) {
-            // if not, we're done
-            if (save_vn == NULL) {
-                r = ZX_ERR_NOT_FOUND;
-                break;
-            }
-            // otherwise roll back
-            vn = save_vn;
-            path = save_path;
+            return ZX_ERR_NOT_FOUND;
         }
 
-        // hand off to remote filesystem
-        r = fdio_service_connect_at(vn->remote, path, h);
-        goto done;
+        *_vn = vn;
+        *_path = path;
+        return ZX_OK;
     }
-    zx_handle_close(h);
-done:
+}
+
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path,
+                            uint32_t flags, zx_handle_t h) {
+    mxvn_t* vn = &ns->root;
+    zx_status_t r = ZX_OK;
+
+    LOG(6, "CONNECT '%s'\n", path);
+    // Require that we start at /
+    if (path[0] != '/') {
+        r = ZX_ERR_NOT_FOUND;
+        goto fail0;
+    }
+    path++;
+
+    mtx_lock(&ns->lock);
+
+    if ((r = ns_walk_locked(&vn, &path)) != ZX_OK) {
+        goto fail1;
+    }
+
+    // cannot connect via non-mountpoint nodes
+    if (vn->remote == ZX_HANDLE_INVALID) {
+        r = ZX_ERR_NOT_SUPPORTED;
+        goto fail1;
+    }
+
+    r = fdio_open_at(vn->remote, path, flags, h);
     mtx_unlock(&ns->lock);
+    return r;
+
+fail1:
+    mtx_unlock(&ns->lock);
+fail0:
+    zx_handle_close(h);
+    return r;
+}
+
+zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t* out) {
+    zx_handle_t h;
+    if (zx_channel_create(0, &h, out) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+    zx_status_t r = fdio_ns_connect(ns, path, flags, h);
+    if (r != ZX_OK) {
+        zx_handle_close(*out);
+        *out = ZX_HANDLE_INVALID;
+    }
     return r;
 }
 
@@ -276,83 +297,31 @@ static zx_status_t mxdir_open(fdio_t* io, const char* path,
     mxvn_t* vn = dir->vn;
     zx_status_t r = ZX_OK;
 
+    LOG(6, "OPEN '%s'\n", path);
     mtx_lock(&dir->ns->lock);
-    if ((path[0] == '.') && (path[1] == 0)) {
-        goto open_dot;
-    }
 
-    // These track the last node we descended
-    // through that has a remote fs.  We need
-    // this so we can backtrack and open relative
-    // to this point.
-    mxvn_t* save_vn = NULL;
-    const char* save_path = "";
-
-    for (;;) {
-        // find the next path segment
-        const char* name = path;
-        const char* next = strchr(path, '/');
-        size_t len = next ? (size_t)(next - path) : strlen(path);
-
-        // path segment can't be empty
-        if (len == 0) {
-            r = ZX_ERR_BAD_PATH;
-            break;
-        }
-
-        // is there a local match?
-        mxvn_t* child = vn_lookup_locked(vn, name, len);
-        if (child != NULL) {
-            vn = child;
-            if (next) {
-                // match, but more path to walk
-                // descend and continue
-                path = next + 1;
-                // but remember this node and path
-                if (child->remote != ZX_HANDLE_INVALID) {
-                    save_vn = child;
-                    save_path = path;
-                }
-                continue;
-            } else {
-                // match on the last segment
-                // this is it
-                r = ZX_OK;
-                break;
-            }
-        }
-
-        // if there's not a remote filesystem, give up
+    if ((r = ns_walk_locked(&vn, &path)) == ZX_OK) {
         if (vn->remote == ZX_HANDLE_INVALID) {
-            r = ZX_ERR_NOT_FOUND;
-            break;
-        }
-
-        // hand off to remote filesystem
-        mtx_unlock(&dir->ns->lock);
-        return zxrio_open_handle(vn->remote, path, flags, mode, out);
-    }
-    if (r == ZX_OK) {
-        if ((vn->remote == ZX_HANDLE_INVALID) && (save_vn != NULL)) {
-            // This node doesn't have a remote directory, but it
-            // is a child of a node that does, so we try to open
-            // relative to that directory for our remote fs
-            zx_handle_t h;
-            if (zxrio_open_handle_raw(save_vn->remote, save_path, flags, mode, &h) == ZX_OK) {
-                if ((*out = fdio_dir_create_locked(dir->ns, vn, h)) == NULL) {
-                    r = ZX_ERR_NO_MEMORY;
-                } else {
-                    r = ZX_OK;
-                }
-            }
-
-        } else {
-open_dot:
-            if ((*out = fdio_dir_create_locked(dir->ns, vn, 0)) == NULL) {
+            if ((*out = fdio_dir_create_locked(dir->ns, vn)) == NULL) {
                 r = ZX_ERR_NO_MEMORY;
             }
+        } else {
+            mtx_unlock(&dir->ns->lock);
+
+            // If we're trying to mkdir over top of a mount point,
+            // the correct error is EEXIST
+            if ((flags & ZX_FS_FLAG_CREATE) && !strcmp(path, ".")) {
+                return ZX_ERR_ALREADY_EXISTS;
+            }
+
+            // Active Namespaces are immutable, so referencing remote here
+            // is safe.  We don't want to do a blocking open under the ns lock.
+            r = zxrio_open_handle(vn->remote, path, flags, mode, out);
+            LOG(6, "OPEN REMOTE '%s': %d\n", path, r);
+            return r;
         }
     }
+
     mtx_unlock(&dir->ns->lock);
     return r;
 }
@@ -376,10 +345,15 @@ static zx_status_t fill_dirent(vdirent_t* de, size_t delen,
 static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
     void *ptr = buf;
 
+    zx_status_t r = fill_dirent(ptr, len, ".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR));
+    if (r < 0) {
+        return 0;
+    }
+    ptr += r;
+    len -= r;
+
     for (mxvn_t* vn = dir->vn->child; vn; vn = vn->next) {
-        zx_status_t r = fill_dirent(ptr, len, vn->name, vn->namelen,
-                                    VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
+        if ((r = fill_dirent(ptr, len, vn->name, vn->namelen, VTYPE_TO_DTYPE(V_TYPE_DIR))) < 0) {
             break;
         }
         ptr += r;
@@ -389,68 +363,24 @@ static zx_status_t mxdir_readdir_locked(mxdir_t* dir, void* buf, size_t len) {
     return ptr - buf;
 }
 
-// walk a set of directory entries and filter out any that match
-// our children, by setting their names to ""
-static zx_status_t mxdir_filter(mxdir_t* dir, void* ptr, size_t len) {
-    size_t r = len;
-    mtx_lock(&dir->ns->lock);
-    for (;;) {
-        if (len < sizeof(vdirent_t)) {
-            break;
-        }
-        vdirent_t* vde = ptr;
-        if (len < vde->size) {
-            break;
-        }
-        ptr += vde->size;
-        len -= vde->size;
-        size_t namelen = strlen(vde->name);
-        for (mxvn_t* vn = dir->vn->child; vn; vn = vn->next) {
-            if ((namelen == vn->namelen) &&
-                !strcmp(vn->name, vde->name)) {
-                vde->name[0] = 0;
-                break;
-            }
-        }
-    }
-    mtx_unlock(&dir->ns->lock);
-    return r;
-}
-
-
 static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     mxdir_t* dir = (mxdir_t*) io;
     zx_status_t r;
     switch (ZXRIO_OP(op)) {
     case ZXRIO_READDIR:
-        //TODO(swetland): Make more robust in the face of large
-        // numbers of local children, callers with tiny buffers (none
-        // such exist as yet, it's a private interface to fdio), and
-        // ideally integrate with a local ordering cookie w/ readdir().
+        LOG(6, "READDIR\n");
         mtx_lock(&dir->ns->lock);
-        for (;;) {
-            int n = atomic_fetch_add(&dir->seq, 1);
-            if (n > 0) {
-                mtx_unlock(&dir->ns->lock);
-                if (dir->rio.h == ZX_HANDLE_INVALID) {
-                    return 0;
-                }
-                if ((r = zxrio_misc(io, op, off, maxreply, ptr, len)) < 0) {
-                    return r;
-                }
-                return mxdir_filter(dir, ptr, r);
-            }
-            if ((r = mxdir_readdir_locked(dir, ptr, maxreply)) != 0) {
-                // if this returns 0, there are no local children,
-                // so we continue the loop where we'll try to readdir
-                // the remote fs
-                break;
-            }
+        int n = atomic_fetch_add(&dir->seq, 1);
+        if (n == 0) {
+            r = mxdir_readdir_locked(dir, ptr, maxreply);
+        } else {
+            r = 0;
         }
         mtx_unlock(&dir->ns->lock);
         return r;
     case ZXRIO_STAT:
+        LOG(6, "STAT\n");
         if (maxreply < sizeof(vnattr_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -460,9 +390,17 @@ static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
         attr->inode = 1;
         attr->nlink = 1;
         return sizeof(vnattr_t);
+    case ZXRIO_UNLINK:
+        return ZX_ERR_UNAVAILABLE;
     default:
-        return zxrio_misc(io, op, off, maxreply, ptr, len);
+        LOG(6, "MISC OP %u\n", op);
+        return ZX_ERR_NOT_SUPPORTED;
     }
+}
+
+ssize_t mxdir_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
+                    size_t in_len, void* out_buf, size_t out_len) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static fdio_ops_t dir_ops = {
@@ -479,7 +417,7 @@ static fdio_ops_t dir_ops = {
     .close = mxdir_close,
     .open = mxdir_open,
     .clone = mxdir_clone,
-    .ioctl = zxrio_ioctl,
+    .ioctl = mxdir_ioctl,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
@@ -488,26 +426,18 @@ static fdio_ops_t dir_ops = {
     .get_vmo = fdio_default_get_vmo,
 };
 
-static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn, zx_handle_t h) {
+static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn) {
     mxdir_t* dir = calloc(1, sizeof(*dir));
     if (dir == NULL) {
-        if (h != ZX_HANDLE_INVALID) {
-            zx_handle_close(h);
-        }
         return NULL;
-    }
-    dir->rio.io.ops = &dir_ops;
-    dir->rio.io.magic = FDIO_MAGIC;
-    atomic_init(&dir->rio.io.refcount, 1);
-    if (h != ZX_HANDLE_INVALID) {
-        dir->rio.h = h;
-    } else {
-        dir->rio.h = fdio_service_clone(vn->remote);
     }
     dir->ns = ns;
     dir->vn = vn;
+    dir->io.ops = &dir_ops;
+    dir->io.magic = FDIO_MAGIC;
+    atomic_init(&dir->io.refcount, 1);
     atomic_init(&dir->seq, 0);
-    return &dir->rio.io;
+    return &dir->io;
 }
 
 zx_status_t fdio_ns_create(fdio_ns_t** out) {
@@ -535,6 +465,7 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* ns) {
 }
 
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote) {
+    LOG(1, "BIND '%s' %x\n", path, remote);
     if (remote == ZX_HANDLE_INVALID) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -556,12 +487,23 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote) {
     if (path[0] == 0) {
         // the path was "/" so we're trying to bind to the root vnode
         if (vn->remote == ZX_HANDLE_INVALID) {
-            vn->remote = remote;
+            if (vn->child) {
+                // overlay remotes are disallowed
+                r = ZX_ERR_NOT_SUPPORTED;
+            } else {
+                vn->remote = remote;
+            }
         } else {
             r = ZX_ERR_ALREADY_EXISTS;
         }
-        mtx_unlock(&ns->lock);
-        return r;
+        LOG(1, "BIND ROOT: FAILED\n");
+        goto done;
+    }
+    if (vn->remote != ZX_HANDLE_INVALID) {
+        // if there's something mounted at / we can't shadow it
+        r = ZX_ERR_NOT_SUPPORTED;
+        LOG(1, "BIND: FAILED (root bound)\n");
+        goto done;
     }
     for (;;) {
         const char* next = strchr(path, '/');
@@ -629,12 +571,23 @@ zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
 }
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns) {
+    fdio_t* io;
     mtx_lock(&ns->lock);
-    fdio_t* io = fdio_dir_create_locked(ns, &ns->root, 0);
-    if (io != NULL) {
-        ns->refcount++;
+    if (ns->root.remote == ZX_HANDLE_INVALID) {
+        io = fdio_dir_create_locked(ns, &ns->root);
+        if (io != NULL) {
+            ns->refcount++;
+        }
+        mtx_unlock(&ns->lock);
+    } else {
+        mtx_unlock(&ns->lock);
+        // Active namespaces are immutable, so safe to access remote
+        // outside of the lock, avoiding blocking while holding the lock.
+        zx_status_t r = zxrio_open_handle(ns->root.remote, "", O_RDWR, 0, &io);
+        if (r != ZX_OK) {
+            io = NULL;
+        }
     }
-    mtx_unlock(&ns->lock);
     return io;
 }
 

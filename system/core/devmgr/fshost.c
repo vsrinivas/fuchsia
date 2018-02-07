@@ -15,6 +15,7 @@
 #include <loader-service/loader-service.h>
 
 #include <zircon/boot/bootdata.h>
+#include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -330,12 +331,31 @@ zx_handle_t devmgr_load_file(const char* path) {
     return ZX_HANDLE_INVALID;
 }
 
-zx_handle_t devfs_root_clone(void) {
-    return fdio_service_clone(devfs_root);
-}
+static zx_handle_t fs_root;
+static zx_handle_t devfs_root;
+static zx_handle_t svc_root;
+static zx_handle_t fshost_event;
 
-zx_handle_t svc_root_clone(void) {
-    return fdio_service_clone(svc_root);
+#define FS_DIR_FLAGS \
+    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\
+    ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+
+zx_handle_t fs_clone(const char* path) {
+    if (!strcmp(path, "svc")) {
+        return fdio_service_clone(svc_root);
+    }
+    if (!strcmp(path, "dev")) {
+        return fdio_service_clone(devfs_root);
+    }
+    zx_handle_t h0, h1;
+    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
+        return ZX_HANDLE_INVALID;
+    }
+    if (fdio_open_at(fs_root, path, FS_DIR_FLAGS, h1) != ZX_OK) {
+        zx_handle_close(h0);
+        return ZX_HANDLE_INVALID;
+    }
+    return h0;
 }
 
 void fuchsia_start(void) {
@@ -358,7 +378,7 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    zx_handle_t fs_root = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    zx_handle_t _fs_root = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     devfs_root = zx_get_startup_handle(PA_HND(PA_USER0, 1));
     svc_root = zx_get_startup_handle(PA_HND(PA_USER0, 2));
     zx_handle_t devmgr_loader = zx_get_startup_handle(PA_HND(PA_USER0, 3));
@@ -366,7 +386,7 @@ int main(int argc, char** argv) {
 
     fshost_start();
 
-    vfs_connect_global_root_handle(fs_root);
+    vfs_connect_global_root_handle(_fs_root);
 
     fdio_ns_t* ns;
     zx_status_t r;
@@ -374,11 +394,18 @@ int main(int argc, char** argv) {
         printf("fshost: cannot create namespace: %d\n", r);
         return -1;
     }
-    if ((r = fdio_ns_bind(ns, "/", fs_root_clone())) != ZX_OK) {
-        printf("fshost: cannot bind / to namespace: %d\n", r);
+
+    if ((r = fdio_ns_bind(ns, "/fs", (fs_root = fs_root_clone()))) != ZX_OK) {
+        printf("fshost: cannot bind /fs to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/dev", devfs_root_clone())) != ZX_OK) {
+    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev"))) != ZX_OK) {
         printf("fshost: cannot bind /dev to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot"))) != ZX_OK) {
+        printf("devmgr: cannot bind /boot to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_bind(ns, "/system", fs_clone("system"))) != ZX_OK) {
+        printf("devmgr: cannot bind /system to namespace: %d\n", r);
     }
     if ((r = fdio_ns_install(ns)) != ZX_OK) {
         printf("fshost: cannot install namespace: %d\n", r);

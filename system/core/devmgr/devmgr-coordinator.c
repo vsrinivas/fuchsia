@@ -558,15 +558,15 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON);
 
-    const char* nametable[2] = { "/", "/svc", };
+    const char* nametable[2] = { "/boot", "/svc", };
     size_t name_count = 0;
 
     //TODO: eventually devhosts should not have vfs access
-    launchpad_add_handle(lp, fs_root_clone(),
+    launchpad_add_handle(lp, fs_clone("boot"),
                          PA_HND(PA_NS_DIR, name_count++));
 
     //TODO: constrain to /svc/device
-    if ((h = svc_root_clone()) != ZX_HANDLE_INVALID) {
+    if ((h = fs_clone("svc")) != ZX_HANDLE_INVALID) {
         launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
     }
 

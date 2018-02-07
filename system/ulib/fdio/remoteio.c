@@ -883,7 +883,8 @@ zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h) {
     }
     // Otherwise attempt to connect through the root namespace
     if (fdio_root_ns != NULL) {
-        return fdio_ns_connect(fdio_root_ns, svcpath, h);
+        return fdio_ns_connect(fdio_root_ns, svcpath,
+                               ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
     }
     // Otherwise we fail
     zx_handle_close(h);
@@ -902,6 +903,19 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
     return zxrio_connect(dir, h, ZXRIO_OPEN, ZX_FS_RIGHT_READABLE |
                          ZX_FS_RIGHT_WRITABLE, 0755, path);
 }
+
+zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags, zx_handle_t h) {
+    if (path == NULL) {
+        zx_handle_close(h);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (dir == ZX_HANDLE_INVALID) {
+        zx_handle_close(h);
+        return ZX_ERR_UNAVAILABLE;
+    }
+    return zxrio_connect(dir, h, ZXRIO_OPEN, flags, 0755, path);
+}
+
 
 zx_handle_t fdio_service_clone(zx_handle_t svc) {
     zx_handle_t cli, srv;

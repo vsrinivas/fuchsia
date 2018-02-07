@@ -1029,7 +1029,7 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                                  zx_handle_t to_child,
                                  zx_handle_t* thread, uintptr_t* sp) {
     if (lp->entry == 0)
-        return ZX_ERR_BAD_STATE;
+        return lp_error(lp, ZX_ERR_BAD_STATE, "prepare start bad state");
 
     zx_status_t status = zx_thread_create(lp_proc(lp), thread_name,
                                           strlen(thread_name), 0, thread);
@@ -1048,7 +1048,7 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         status = launchpad_add_handle(lp, thread_copy, PA_THREAD_SELF);
         if (status != ZX_OK) {
             zx_handle_close(*thread);
-            return status;
+            return lp_error(lp, status, "cannot add thread self handle");
         }
     }
 

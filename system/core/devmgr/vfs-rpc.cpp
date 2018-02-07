@@ -149,6 +149,22 @@ zx_status_t systemfs_add_file(const char* path, zx_handle_t vmo, zx_off_t off, s
     return add_vmofile(SystemfsRoot(), path, vmo, off, len);
 }
 
+static const char* mount_points[] = {
+    "/data", "/volume", "/system", "/install", "/blob", "/pkgfs"
+};
+static fbl::RefPtr<fs::Vnode> mount_nodes[countof(mount_points)];
+
+zx_status_t vfs_install_fs(const char* path, zx_handle_t h) {
+    for (unsigned n = 0; n < countof(mount_points); n++) {
+        if (!strcmp(path, mount_points[n])) {
+            return memfs::root_vfs.InstallRemote(mount_nodes[n], fs::MountChannel(h));
+        }
+    }
+    zx_handle_close(h);
+    return ZX_ERR_NOT_FOUND;
+}
+
+
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
     if (memfs::global_root == nullptr) {
@@ -162,12 +178,14 @@ VnodeDir* vfs_create_global_root() {
         memfs::root_vfs.MountSubtree(memfs::global_root.get(), BootfsRoot());
         memfs::root_vfs.MountSubtree(memfs::global_root.get(), MemfsRoot());
 
-        fbl::RefPtr<fs::Vnode> vn;
-        fbl::StringPiece pathout;
-        ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/data"), &pathout,
-                                       ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR) == ZX_OK);
-        ZX_ASSERT(memfs::root_vfs.Open(memfs::global_root, &vn, fbl::StringPiece("/volume"), &pathout,
-                                       ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR) == ZX_OK);
+        for (unsigned n = 0; n < countof(mount_points); n++) {
+            fbl::StringPiece pathout;
+
+            r = memfs::root_vfs.Open(memfs::global_root, &mount_nodes[n],
+                                     fbl::StringPiece(mount_points[n]), &pathout,
+                                     ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR);
+            ZX_ASSERT(r == ZX_OK);
+        }
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");

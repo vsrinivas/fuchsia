@@ -101,6 +101,9 @@ zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h);
 // an error is returned and the handle is closed.
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h);
 
+// As above but allows the passing of flags
+zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t zxflags, zx_handle_t h);
+
 // Attempt to clone a sevice handle by doing a pipelined
 // CLONE operation, returning the new channel endpoint,
 // or ZX_HANDLE_INVALID.

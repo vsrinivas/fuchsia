@@ -12,10 +12,13 @@
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <fdio/util.h>
 
 #include "block-watcher.h"
 #include "devmgr.h"
+#include "memfs-private.h"
 
 static zx_handle_t job;
 static bool netboot;
@@ -29,8 +32,21 @@ void launch_blob_init() {
         printf("fshost: zircon.system.blob-init ignored due to secondary bootfs\n");
         return;
     }
-    const char* argv[2];
-    argv[0] = blob_init;
+
+    zx_handle_t proc = ZX_HANDLE_INVALID;
+
+    uint32_t type = PA_HND(PA_USER0, 0);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_handle_t pkgfs_root = ZX_HANDLE_INVALID;
+    if (zx_channel_create(0, &handle, &pkgfs_root) != ZX_OK) {
+        return;
+    }
+
+    //TODO: make blob-init a /fs/blob relative path
+    const char *argv[2];
+    char binary[strlen(blob_init) + 4];
+    sprintf(binary, "/fs%s", blob_init);
+    argv[0] = binary;
     const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
     int argc = 1;
     if (blob_init_arg != NULL) {
@@ -38,45 +54,72 @@ void launch_blob_init() {
         argv[1] = blob_init_arg;
     }
 
-    zx_handle_t proc;
-    zx_status_t status = devmgr_launch(job, "blob:init", argc, &argv[0],
-                                       NULL, -1, NULL, NULL, 0, &proc);
+    zx_status_t status = devmgr_launch(job, "blob:init", argc, &argv[0], NULL, -1,
+                                       &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
+
     if (status != ZX_OK) {
         printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
-        return;
+        goto fail0;
     }
 
     zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
     zx_signals_t observed;
-    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed);
-    if (status == ZX_OK) {
-        if (observed & ZX_USER_SIGNAL_0) {
-            fuchsia_start();
-        } else {
-            printf("fshost: '%s' terminated prematurely\n", blob_init);
-        }
-    } else {
+    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED,
+                                deadline, &observed);
+    if (status != ZX_OK) {
         printf("fshost: '%s' did not signal completion: %d\n", blob_init, status);
+        goto fail0;
     }
+    if (!(observed & ZX_USER_SIGNAL_0)) {
+        printf("fshost: '%s' terminated prematurely\n", blob_init);
+        goto fail0;
+    }
+    if (vfs_install_fs("/pkgfs", pkgfs_root) != ZX_OK) {
+        printf("fshost: failed to install /pkgfs\n");
+        goto fail1;
+    }
+
+    // re-export /pkgfs/system as /system
+    zx_handle_t h0, h1;
+    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
+        goto fail1;
+    }
+    if (fdio_open_at(pkgfs_root, "system", FS_DIR_FLAGS, h1) != ZX_OK) {
+        zx_handle_close(h0);
+        goto fail1;
+    }
+    if (vfs_install_fs("/system", h0) != ZX_OK) {
+        printf("fshost: failed to install /system\n");
+        goto fail1;
+    }
+
+    // start the appmgr
+    fuchsia_start();
+    zx_handle_close(proc);
+    return;
+
+fail0:
+    zx_handle_close(pkgfs_root);
+fail1:
     zx_handle_close(proc);
 }
 
 static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
                                  uint32_t* ids, size_t len) {
     return devmgr_launch(job, "blobfs:/blob", argc, argv, NULL, -1,
-                         hnd, ids, len, NULL);
+                         hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
     return devmgr_launch(job, "minfs:/data", argc, argv, NULL, -1,
-                         hnd, ids, len, NULL);
+                         hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
     return devmgr_launch(job, "fatfs:/volume", argc, argv, NULL, -1,
-                         hnd, ids, len, NULL);
+                         hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
 static bool data_mounted = false;
@@ -126,9 +169,8 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
             options->readonly = getenv("zircon.system.writable") == NULL;
             options->wait_until_ready = true;
-            options->create_mountpoint = true;
 
-            zx_status_t st = mount(fd, PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
+            zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
                 printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_SYSTEM, st);
             } else {
@@ -143,7 +185,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             data_mounted = true;
             options->wait_until_ready = true;
 
-            zx_status_t st = mount(fd, PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
+            zx_status_t st = mount(fd, "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
                 printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_DATA, st);
             }
@@ -156,9 +198,8 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             install_mounted = true;
             options->readonly = true;
             options->wait_until_ready = true;
-            options->create_mountpoint = true;
 
-            zx_status_t st = mount(fd, PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
+            zx_status_t st = mount(fd, "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
                 printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_INSTALL, st);
             }
@@ -235,8 +276,8 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         }
         if (!blob_mounted) {
             mount_options_t options = default_mount_options;
-            options.create_mountpoint = true;
-            zx_status_t status = mount(fd, PATH_BLOB, DISK_FORMAT_BLOBFS, &options, launch_blobfs);
+            zx_status_t status = mount(fd, "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
+                                       &options, launch_blobfs);
             if (status != ZX_OK) {
                 printf("devmgr: Failed to mount blobfs partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOB, status);
             } else {
@@ -268,7 +309,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         options.create_mountpoint = true;
         static int fat_counter = 0;
         char mountpath[FDIO_MAX_FILENAME + 64];
-        snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", PATH_VOLUME, fat_counter++);
+        snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", "/fs" PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
         printf("devmgr: fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);

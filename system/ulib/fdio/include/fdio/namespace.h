@@ -41,7 +41,10 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
 // The fd is not closed on success or failure.
 // Closing the fd after success does not affect namespace.
 //
-// Will fail with ZX_ERR_BAD_STATE if the namespace is in use.
+// Failures:
+// ZX_ERR_BAD_STATE: Namespace is already in use and immutable.
+// ZX_ERR_ALREADY_EXISTS: There is already a mounted directory there.
+// ZX_ERR_NOT_SUPPORTED: This path would shadow a mounted directory.
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd);
 
 // Open the root directory of the namespace as a file descriptor
@@ -76,5 +79,15 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out);
 // or passed to the remote service on success.
 // The path must be an absolute path starting with / and containing
 // no ".." or "." or empty segments.
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, zx_handle_t h);
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path,
+                            uint32_t zxflags, zx_handle_t h);
+
+// Attempt a pipelined open through a namespace.
+// Success only indicates that the open was sent.
+// If the remote fails, the returned handle's peer will be closed.
+// The path must be an absolute path starting with / and containing
+// no ".." or "." or empty segments.
+zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path,
+                         uint32_t zxflags, zx_handle_t* out);
+
 __END_CDECLS;

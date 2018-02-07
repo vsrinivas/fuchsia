@@ -8,6 +8,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <zircon/device/vfs.h>
 
 __BEGIN_CDECLS
 
@@ -21,11 +22,30 @@ zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t leng
 
 zx_handle_t devmgr_load_file(const char* path);
 
+#define FS_SVC      0x0001
+#define FS_DEV      0x0002
+#define FS_BOOT     0x0004
+#define FS_DATA     0x0010
+#define FS_SYSTEM   0x0020
+#define FS_BLOB     0x0040
+#define FS_VOLUME   0x0080
+#define FS_PKGFS    0x0100
+#define FS_INSTALL  0x0200
+#define FS_TMP      0x0400
+#define FS_ALL      0xFFFF
+
+#define FS_FOR_FSPROC  (FS_SVC)
+#define FS_FOR_APPMGR  (FS_ALL & (~FS_SVC))
+
+#define FS_DIR_FLAGS \
+    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\
+    ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** envp, int stdiofd,
                           zx_handle_t* handles, uint32_t* types, size_t len,
-                          zx_handle_t* proc_out);
+                          zx_handle_t* proc_out, uint32_t flags);
 void devmgr_launch_devhost(zx_handle_t job,
                            const char* name, int argc, char** argv,
                            zx_handle_t hdevice, zx_handle_t hrpc);
@@ -41,15 +61,16 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
 
 void load_system_drivers(void);
 
+void devmgr_disable_svc(void);
+
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-zx_handle_t fs_root_clone(void);
 zx_handle_t devfs_root_clone(void);
-zx_handle_t svc_root_clone(void);
+zx_handle_t fs_clone(const char* path);
 
 void block_device_watcher(zx_handle_t job, bool netboot);
 

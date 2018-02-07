@@ -100,12 +100,29 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
         UnmountHandle(root_, options.wait_until_ready);
     });
 
-    unique_fd device(open("/", O_RDONLY | O_DIRECTORY | O_ADMIN));
-    if (!device) {
+    // Open the parent path as O_ADMIN, and sent the mkdir+mount command
+    // to that directory.
+    char parent_path[PATH_MAX];
+    const char* name;
+    strcpy(parent_path, path_);
+    char *last_slash = strrchr(parent_path, '/');
+    if (last_slash == NULL) {
+        strcpy(parent_path, ".");
+        name = path_;
+    } else {
+        *last_slash = '\0';
+        name = last_slash + 1;
+        if (*name == '\0') {
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+
+    unique_fd parent(open(parent_path, O_RDONLY | O_DIRECTORY | O_ADMIN));
+    if (!parent) {
         return ZX_ERR_IO;
     }
 
-    size_t config_size = sizeof(mount_mkdir_config_t) + strlen(path_) + 1;
+    size_t config_size = sizeof(mount_mkdir_config_t) + strlen(name) + 1;
     fbl::AllocChecker checker;
     fbl::unique_ptr<char[]> config_buffer(new(&checker) char[config_size]);
     mount_mkdir_config_t* config = reinterpret_cast<mount_mkdir_config_t*>(config_buffer.get());
@@ -114,12 +131,12 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
     }
     config->fs_root = root_;
     config->flags = flags_;
-    strcpy(config->name, path_);
+    strcpy(config->name, name);
 
     cleanup.cancel();
 
     // Ioctl will close root for us if an error occurs
-    return static_cast<zx_status_t>(ioctl_vfs_mount_mkdir_fs(device.get(), config, config_size));
+    return static_cast<zx_status_t>(ioctl_vfs_mount_mkdir_fs(parent.get(), config, config_size));
 }
 
 // Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.

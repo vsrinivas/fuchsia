@@ -25,7 +25,6 @@ typedef struct {
 static nstab_t NS[] = {
     { "/bin", "/boot/bin" },
     { "/lib", "/boot/lib" },
-    { "/fake", "/tmp/fake-namespace-test" },
     { "/fake/dev", "/tmp/fake-namespace-test/dev" },
     { "/fake/tmp", "/tmp/fake-namespace-test-tmp" },
 };
@@ -54,6 +53,8 @@ static bool namespace_create_test(void) {
     // should show "bin", "lib", "fake" -- our rootdir
     ASSERT_NONNULL((dir = opendir(".")), "");
     ASSERT_NONNULL((de = readdir(dir)), "");
+    ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
+    ASSERT_NONNULL((de = readdir(dir)), "");
     ASSERT_EQ(strcmp(de->d_name, "fake"), 0, "");
     ASSERT_NONNULL((de = readdir(dir)), "");
     ASSERT_EQ(strcmp(de->d_name, "lib"), 0, "");
@@ -64,22 +65,22 @@ static bool namespace_create_test(void) {
     // should show "fake" directory, containing parent's pre-allocated tmp dir.
     ASSERT_NONNULL((dir = opendir("fake")), "");
     ASSERT_NONNULL((de = readdir(dir)), "");
+    ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
+    ASSERT_NONNULL((de = readdir(dir)), "");
     ASSERT_EQ(strcmp(de->d_name, "tmp"), 0, "");
     ASSERT_NONNULL((de = readdir(dir)), "");
     ASSERT_EQ(strcmp(de->d_name, "dev"), 0, "");
-    ASSERT_NONNULL((de = readdir(dir)), "");
-    ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
     ASSERT_EQ(closedir(dir), 0, "");
 
     // Try doing some basic file ops within the namespace
-    int fd = open("fake/newfile", O_CREAT | O_RDWR | O_EXCL);
+    int fd = open("fake/tmp/newfile", O_CREAT | O_RDWR | O_EXCL);
     ASSERT_GT(fd, 0, "");
     ASSERT_GT(write(fd, "hello", strlen("hello")), 0, "");
     ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("fake/newfile"), 0, "");
-    ASSERT_EQ(mkdir("fake/newdir", 0666), 0, "");
-    ASSERT_EQ(rename("fake/newdir", "fake/olddir"), 0, "");
-    ASSERT_EQ(rmdir("fake/olddir"), 0, "");
+    ASSERT_EQ(unlink("fake/tmp/newfile"), 0, "");
+    ASSERT_EQ(mkdir("fake/tmp/newdir", 0666), 0, "");
+    ASSERT_EQ(rename("fake/tmp/newdir", "fake/tmp/olddir"), 0, "");
+    ASSERT_EQ(rmdir("fake/tmp/olddir"), 0, "");
 
     END_TEST;
 }

@@ -51,6 +51,12 @@ Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
 This is useful for platforms lacking an RTC, where the UTC offset would
 otherwise remain at 0.
 
+## devmgr\.require-system=\<bool\>
+
+Instructs the devmgr that a /system volume is required.  Without this,
+devmgr assumes this is a standalone Zircon build and not a full Fuchsia
+system.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the

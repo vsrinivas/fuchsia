@@ -39,12 +39,33 @@ void devmgr_io_init(void) {
 #define MAX_ENVP 16
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE)
 
+static struct {
+    const char* mount;
+    const char* name;
+    uint32_t flags;
+} FSTAB[] = {
+    { "/svc",       "svc",       FS_SVC },
+    { "/dev",       "dev",       FS_DEV },
+    { "/boot",      "boot",      FS_BOOT },
+    { "/data",      "data",      FS_DATA },
+    { "/system",    "system",    FS_SYSTEM },
+    { "/install",   "install",   FS_INSTALL },
+    { "/volume",    "volume",    FS_VOLUME },
+    { "/blob",      "blob",      FS_BLOB },
+    { "/pkgfs",     "pkgfs",     FS_PKGFS },
+    { "/tmp",       "tmp",       FS_TMP },
+};
+
+void devmgr_disable_svc(void) {
+    FSTAB[0].flags = 0;
+}
+
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** _envp, int stdiofd,
                           zx_handle_t* handles, uint32_t* types, size_t hcount,
-                          zx_handle_t* proc) {
-
+                          zx_handle_t* proc, uint32_t flags) {
+    zx_status_t status;
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
 
@@ -72,32 +93,24 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
 
-    // fshost builds its own namespace because of chickens and eggs
-    // other processes get pre-assembled namespaces
-    if (strcmp(name, "fshost")) {
-        const char* nametable[3] = { "/" };
-        size_t count = 0;
-
-        zx_handle_t h = fs_root_clone();
-        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
-
-        //TODO: constrain to /svc/debug, or other as appropriate
-        if (strcmp(name, "init") && ((h = svc_root_clone()) != ZX_HANDLE_INVALID)) {
-            nametable[count] = "/svc";
+    // create namespace based on FS_* flags
+    const char* nametable[countof(FSTAB)] = { };
+    size_t count = 0;
+    zx_handle_t h;
+    for (unsigned n = 0; n < countof(FSTAB); n++) {
+        if (!(FSTAB[n].flags & flags)) {
+            continue;
+        }
+        if ((h = fs_clone(FSTAB[n].name)) != ZX_HANDLE_INVALID) {
+            nametable[count] = FSTAB[n].mount;
             launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
         }
-        if ((h = devfs_root_clone()) != ZX_HANDLE_INVALID) {
-            nametable[count] = "/dev";
-            launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
-        }
-        launchpad_set_nametable(lp, count, nametable);
     }
+    launchpad_set_nametable(lp, count, nametable);
 
     if (stdiofd < 0) {
-        zx_status_t r;
-        zx_handle_t h;
-        if ((r = zx_log_create(0, &h) < 0)) {
-            launchpad_abort(lp, r, "devmgr: cannot create debuglog handle");
+        if ((status = zx_log_create(0, &h) < 0)) {
+            launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
         } else {
             launchpad_add_handle(lp, h, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
         }
@@ -109,8 +122,7 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     launchpad_add_handles(lp, hcount, handles, types);
 
     const char* errmsg;
-    zx_status_t status = launchpad_go(lp, proc, &errmsg);
-    if (status < 0) {
+    if ((status = launchpad_go(lp, proc, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);
     } else {
