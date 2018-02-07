@@ -18,6 +18,7 @@ members =  [
   "public/rust/crates/ddk-rs/examples/microorb",
   "public/rust/crates/fdio",
   "public/rust/crates/fuchsia-app",
+  "public/rust/crates/fuchsia-llui",
   "public/rust/crates/fuchsia-vfs",
   "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
   "public/rust/crates/fuchsia-zircon",

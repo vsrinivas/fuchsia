@@ -4,10 +4,7 @@ version = "0.1.0"
 authors = ["Rob Tsuk <robtsuk@google.com>"]
 
 [dependencies]
+failure = "0.1"
 fdio = "0.2.0"
-font-rs = { git = "https://github.com/google/font-rs.git" }
 fuchsia-zircon-sys = "0.3"
-
-[dependencies.error-chain]
-version = "0.11.0"
-default-features = false
+font-rs = "0.1"

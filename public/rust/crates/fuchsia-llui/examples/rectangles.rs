@@ -124,7 +124,6 @@ fn run() -> Result<()> {
     wait_for_close();
 
     let mut fb = FrameBuffer::new(None)?;
-    println!("fb = {:?}", fb);
     let c1 = Color::from_hash_code("#D0D0D0");
     let c2 = Color::from_hash_code("#FFCC66");
     let c3 = Color::from_hash_code("#00FFFF");

@@ -4,28 +4,21 @@
 
 //! A Rust library for using the [Zircon software framebuffer](https://goo.gl/tL1Pqi).
 
-// `error_chain!` can recurse deeply
-#![recursion_limit = "1024"]
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate fuchsia_zircon_sys;
 extern crate fdio;
-
-error_chain!{
-    foreign_links {
-        Io(::std::io::Error);
-    }
-}
 
 mod color;
 
 pub use color::Color;
+use failure::Error;
 use fdio::{ioctl, make_ioctl};
 use fdio::fdio_sys::{IOCTL_FAMILY_DISPLAY, IOCTL_KIND_DEFAULT, IOCTL_KIND_GET_HANDLE};
 use fuchsia_zircon_sys::{ZX_VM_FLAG_PERM_READ, ZX_VM_FLAG_PERM_WRITE, zx_handle_t, zx_vmar_map,
                          zx_vmar_root_self};
 use std::fmt;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Read};
 use std::mem;
 use std::os::unix::io::AsRawFd;
@@ -66,9 +59,8 @@ pub enum PixelFormat {
     Unknown,
 }
 
-fn get_info_for_device(fd: i32) -> Result<ioctl_display_get_fb_t> {
+fn get_info_for_device(fd: i32) -> Result<ioctl_display_get_fb_t, Error> {
     let ioctl_display_get_fb_value = make_ioctl(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 1);
-
     let mut framebuffer: ioctl_display_get_fb_t = ioctl_display_get_fb_t {
         vmo: 0,
         info: zx_display_info_t {
@@ -123,11 +115,10 @@ impl FrameBuffer {
     /// device at /dev/class/framebufer/000 but you can pick a different index.
     /// At the time of this writing, though, there are never any other framebuffer
     /// devices.
-    pub fn new(index: Option<isize>) -> Result<FrameBuffer> {
+    pub fn new(index: Option<isize>) -> Result<FrameBuffer, Error> {
         let index = index.unwrap_or(0);
         let device_path = format!("/dev/class/framebuffer/{:03}", index);
-        // driver.usb-audio.disable
-        let file = File::open(device_path)?;
+        let file = OpenOptions::new().read(true).write(true).open(device_path)?;
         let fd = file.as_raw_fd() as i32;
         let get_fb_data = get_info_for_device(fd)?;
         let pixel_format = match get_fb_data.info.format {
@@ -177,7 +168,7 @@ impl FrameBuffer {
     }
 
     /// Call to cause changes you made to the pixel buffer to appear on screen.
-    pub fn flush(&self) -> Result<()> {
+    pub fn flush(&self) -> Result<(), Error> {
         let ioctl_display_flush_fb_value = make_ioctl(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 2);
         let status = unsafe {
             ioctl(

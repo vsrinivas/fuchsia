@@ -4,20 +4,14 @@
 
 #![recursion_limit = "1024"]
 
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate fuchsia_llui as llui;
 extern crate font_rs;
 
+use failure::Error;
 use font_rs::font::{GlyphBitmap, parse};
 use llui::{Color, FrameBuffer, wait_for_close};
 use std::{thread, time};
-
-error_chain!{
-    links {
-        LUI(::llui::Error, ::llui::ErrorKind);
-    }
-}
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../../bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
@@ -71,11 +65,10 @@ fn draw_centered_glyph(fb: &mut FrameBuffer, color: &Color, glyph: &GlyphBitmap)
     }
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<(), Error> {
     wait_for_close();
 
     let mut fb = FrameBuffer::new(None)?;
-    println!("fb = {:?}", fb);
     let black_color = Color::from_hash_code("#000000");
     let c1 = Color::from_hash_code("#FF00FF");
     let font = parse(FONT_DATA).unwrap();
@@ -94,17 +87,6 @@ fn run() -> Result<()> {
 fn main() {
     if let Err(ref e) = run() {
         println!("error: {}", e);
-
-        for e in e.iter().skip(1) {
-            println!("caused by: {}", e);
-        }
-
-        // The backtrace is not always generated. Try to run this example
-        // with `RUST_BACKTRACE=1`.
-        if let Some(backtrace) = e.backtrace() {
-            println!("backtrace: {:?}", backtrace);
-        }
-
         ::std::process::exit(1);
     }
 }
