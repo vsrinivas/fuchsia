@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <zx/bti.h>
 #include <zx/channel.h>
 #include <zx/event.h>
 #include <zx/eventpair.h>
@@ -110,6 +111,13 @@ static bool event_duplicate_test() {
     // The duplicate must be valid as well as the original.
     ASSERT_EQ(validate_handle(dup.get()), ZX_OK);
     ASSERT_EQ(validate_handle(event.get()), ZX_OK);
+    END_TEST;
+}
+
+static bool bti_compilation_test() {
+    BEGIN_TEST;
+    zx::bti bti;
+    // TODO(teisenbe): test more.
     END_TEST;
 }
 
@@ -329,6 +337,7 @@ RUN_TEST(handle_duplicate_test)
 RUN_TEST(handle_replace_test)
 RUN_TEST(event_test)
 RUN_TEST(event_duplicate_test)
+RUN_TEST(bti_compilation_test)
 RUN_TEST(channel_test)
 RUN_TEST(channel_rw_test)
 RUN_TEST(channel_rw_etc_test)

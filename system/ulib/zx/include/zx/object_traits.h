@@ -19,6 +19,7 @@ class vmo;
 // - job
 // - vmar
 // - vmo
+// - bti
 template <typename T> struct object_traits {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
