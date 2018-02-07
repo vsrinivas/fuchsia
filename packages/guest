@@ -6,7 +6,6 @@
         "garnet/packages/guest_tests",
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
-        "garnet/packages/netstack",
         "garnet/packages/zircon-guest",
         "garnet/packages/linux-guest"
     ]
