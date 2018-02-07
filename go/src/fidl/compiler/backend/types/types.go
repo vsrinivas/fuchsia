@@ -212,8 +212,8 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Module represents a FIDL2 dependency on a separate module.
-type Module struct {
+// Library represents a FIDL2 dependency on a separate library.
+type Library struct {
 	// TODO(cramertj/kulakowski)
 }
 
@@ -284,13 +284,13 @@ type Const struct {
 	Value Constant   `json:"value"`
 }
 
-// Root is the top-level object for a FIDL2 module.
-// It contains lists of all declarations and dependencies within the module.
+// Root is the top-level object for a FIDL2 library.
+// It contains lists of all declarations and dependencies within the library.
 type Root struct {
 	Consts     []Const     `json:"const_declarations,omitempty"`
 	Enums      []Enum      `json:"enum_declarations,omitempty"`
 	Interfaces []Interface `json:"interface_declarations,omitempty"`
 	Structs    []Struct    `json:"struct_declarations,omitempty"`
 	Unions     []Union     `json:"union_declarations,omitempty"`
-	Modules    []Module    `json:"module_dependencies,omitempty"`
+	Libraries  []Library   `json:"library_dependencies,omitempty"`
 }
