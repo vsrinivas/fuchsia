@@ -1692,7 +1692,7 @@ struct sk_buff* ath10k_wmi_alloc_skb(struct ath10k* ar, uint32_t len) {
 
     skb_reserve(skb, WMI_SKB_HEADROOM);
     if (!IS_ALIGNED((unsigned long)skb->data, 4)) {
-        ath10k_warn(ar, "Unaligned WMI skb\n");
+        ath10k_warn("Unaligned WMI skb\n");
     }
 
     skb_put(skb, round_len);
@@ -1811,7 +1811,7 @@ int ath10k_wmi_cmd_send(struct ath10k* ar, struct sk_buff* skb, uint32_t cmd_id)
     might_sleep();
 
     if (cmd_id == WMI_CMD_UNSUPPORTED) {
-        ath10k_warn(ar, "wmi command %d is not supported by firmware\n",
+        ath10k_warn("wmi command %d is not supported by firmware\n",
                     cmd_id);
         return ret;
     }
@@ -1904,7 +1904,7 @@ static void ath10k_wmi_event_scan_started(struct ath10k* ar) {
     case ATH10K_SCAN_IDLE:
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-        ath10k_warn(ar, "received scan started event in an invalid scan state: %s (%d)\n",
+        ath10k_warn("received scan started event in an invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -1927,7 +1927,7 @@ static void ath10k_wmi_event_scan_start_failed(struct ath10k* ar) {
     case ATH10K_SCAN_IDLE:
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
-        ath10k_warn(ar, "received scan start failed event in an invalid scan state: %s (%d)\n",
+        ath10k_warn("received scan start failed event in an invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -1952,7 +1952,7 @@ static void ath10k_wmi_event_scan_completed(struct ath10k* ar) {
          * is) ignored by the host as it may be just firmware's scan
          * state machine recovering.
          */
-        ath10k_warn(ar, "received scan completed event in an invalid scan state: %s (%d)\n",
+        ath10k_warn("received scan completed event in an invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -1969,7 +1969,7 @@ static void ath10k_wmi_event_scan_bss_chan(struct ath10k* ar) {
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
     case ATH10K_SCAN_STARTING:
-        ath10k_warn(ar, "received scan bss chan event in an invalid scan state: %s (%d)\n",
+        ath10k_warn("received scan bss chan event in an invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -1986,7 +1986,7 @@ static void ath10k_wmi_event_scan_foreign_chan(struct ath10k* ar, uint32_t freq)
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
     case ATH10K_SCAN_STARTING:
-        ath10k_warn(ar, "received scan foreign chan event in an invalid scan state: %s (%d)\n",
+        ath10k_warn("received scan foreign chan event in an invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -2073,7 +2073,7 @@ int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_scan(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse scan event: %d\n", ret);
+        ath10k_warn("failed to parse scan event: %d\n", ret);
         return ret;
     }
 
@@ -2106,7 +2106,7 @@ int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb) {
         ath10k_wmi_event_scan_foreign_chan(ar, freq);
         break;
     case WMI_SCAN_EVENT_START_FAILED:
-        ath10k_warn(ar, "received scan start failure event\n");
+        ath10k_warn("received scan start failure event\n");
         ath10k_wmi_event_scan_start_failed(ar);
         break;
     case WMI_SCAN_EVENT_DEQUEUED:
@@ -2293,7 +2293,7 @@ int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_mgmt_rx(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse mgmt rx event: %d\n", ret);
+        ath10k_warn("failed to parse mgmt rx event: %d\n", ret);
         dev_kfree_skb(skb);
         return ret;
     }
@@ -2464,7 +2464,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_ch_info(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse chan info event: %d\n", ret);
+        ath10k_warn("failed to parse chan info event: %d\n", ret);
         return;
     }
 
@@ -2485,7 +2485,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
     case ATH10K_SCAN_STARTING:
-        ath10k_warn(ar, "received chan info event without a scan request, ignoring\n");
+        ath10k_warn("received chan info event without a scan request, ignoring\n");
         goto exit;
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
@@ -2494,7 +2494,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
 
     idx = freq_to_idx(ar, freq);
     if (idx >= ARRAY_SIZE(ar->survey)) {
-        ath10k_warn(ar, "chan info: invalid frequency %d (idx %d out of bounds)\n",
+        ath10k_warn("chan info: invalid frequency %d (idx %d out of bounds)\n",
                     freq, idx);
         goto exit;
     }
@@ -2533,7 +2533,7 @@ void ath10k_wmi_event_echo(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_echo_ev(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse echo: %d\n", ret);
+        ath10k_warn("failed to parse echo: %d\n", ret);
         return;
     }
 
@@ -3132,7 +3132,7 @@ void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_vdev_start(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse vdev start event: %d\n", ret);
+        ath10k_warn("failed to parse vdev start event: %d\n", ret);
         return;
     }
 
@@ -3170,7 +3170,7 @@ void ath10k_wmi_event_peer_sta_kickout(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_peer_kick(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse peer kickout event: %d\n",
+        ath10k_warn("failed to parse peer kickout event: %d\n",
                     ret);
         return;
     }
@@ -3182,7 +3182,7 @@ void ath10k_wmi_event_peer_sta_kickout(struct ath10k* ar, struct sk_buff* skb) {
 
     sta = ieee80211_find_sta_by_ifaddr(ar->hw, arg.mac_addr, NULL);
     if (!sta) {
-        ath10k_warn(ar, "Spurious quick kickout for STA %pM\n",
+        ath10k_warn("Spurious quick kickout for STA %pM\n",
                     arg.mac_addr);
         goto exit;
     }
@@ -3240,7 +3240,7 @@ static void ath10k_wmi_update_tim(struct ath10k* ar,
         int i;
 
         if (sizeof(arvif->u.ap.tim_bitmap) < tim_len) {
-            ath10k_warn(ar, "SWBA TIM field is too big (%u), truncated it to %zu",
+            ath10k_warn("SWBA TIM field is too big (%u), truncated it to %zu",
                         tim_len, sizeof(arvif->u.ap.tim_bitmap));
             tim_len = sizeof(arvif->u.ap.tim_bitmap);
         }
@@ -3271,7 +3271,7 @@ static void ath10k_wmi_update_tim(struct ath10k* ar,
                                (uint8_t*)skb_tail_pointer(bcn) - ies);
     if (!ie) {
         if (arvif->vdev_type != WMI_VDEV_TYPE_IBSS) {
-            ath10k_warn(ar, "no tim ie found;\n");
+            ath10k_warn("no tim ie found;\n");
         }
         return;
     }
@@ -3292,12 +3292,12 @@ static void ath10k_wmi_update_tim(struct ath10k* ar,
             ie_len += expand_size;
             pvm_len += expand_size;
         } else {
-            ath10k_warn(ar, "tim expansion failed\n");
+            ath10k_warn("tim expansion failed\n");
         }
     }
 
     if (pvm_len > tim_len) {
-        ath10k_warn(ar, "tim pvm length is too great (%d)\n", pvm_len);
+        ath10k_warn("tim pvm length is too great (%d)\n", pvm_len);
         return;
     }
 
@@ -3363,7 +3363,7 @@ static int ath10k_wmi_op_pull_swba_ev(struct ath10k* ar, struct sk_buff* skb,
 
         if (ev->bcn_info[i].tim_info.tim_len >
                 sizeof(ev->bcn_info[i].tim_info.tim_bitmap)) {
-            ath10k_warn(ar, "refusing to parse invalid swba structure\n");
+            ath10k_warn("refusing to parse invalid swba structure\n");
             return -EPROTO;
         }
 
@@ -3411,7 +3411,7 @@ static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
 
         if (ev->bcn_info[i].tim_info.tim_len >
                 sizeof(ev->bcn_info[i].tim_info.tim_bitmap)) {
-            ath10k_warn(ar, "refusing to parse invalid swba structure\n");
+            ath10k_warn("refusing to parse invalid swba structure\n");
             return -EPROTO;
         }
 
@@ -3457,7 +3457,7 @@ static int ath10k_wmi_10_4_op_pull_swba_ev(struct ath10k* ar,
 
         if (ev->bcn_info[i].tim_info.tim_len >
                 sizeof(ev->bcn_info[i].tim_info.tim_bitmap)) {
-            ath10k_warn(ar, "refusing to parse invalid swba structure\n");
+            ath10k_warn("refusing to parse invalid swba structure\n");
             return -EPROTO;
         }
 
@@ -3505,7 +3505,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_swba(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse swba event: %d\n", ret);
+        ath10k_warn("failed to parse swba event: %d\n", ret);
         return;
     }
 
@@ -3522,7 +3522,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
         i++;
 
         if (i >= WMI_MAX_AP_VDEV) {
-            ath10k_warn(ar, "swba has corrupted vdev map\n");
+            ath10k_warn("swba has corrupted vdev map\n");
             break;
         }
 
@@ -3547,7 +3547,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
 
         arvif = ath10k_get_arvif(ar, vdev_id);
         if (arvif == NULL) {
-            ath10k_warn(ar, "no vif for vdev_id %d found\n",
+            ath10k_warn("no vif for vdev_id %d found\n",
                         vdev_id);
             continue;
         }
@@ -3573,7 +3573,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
 
         bcn = ieee80211_beacon_get(ar->hw, arvif->vif);
         if (!bcn) {
-            ath10k_warn(ar, "could not get mac80211 beacon\n");
+            ath10k_warn("could not get mac80211 beacon\n");
             continue;
         }
 
@@ -3588,11 +3588,11 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
             case ATH10K_BEACON_SENT:
                 break;
             case ATH10K_BEACON_SCHEDULED:
-                ath10k_warn(ar, "SWBA overrun on vdev %d, skipped old beacon\n",
+                ath10k_warn("SWBA overrun on vdev %d, skipped old beacon\n",
                             arvif->vdev_id);
                 break;
             case ATH10K_BEACON_SENDING:
-                ath10k_warn(ar, "SWBA overrun on vdev %d, skipped new beacon\n",
+                ath10k_warn("SWBA overrun on vdev %d, skipped new beacon\n",
                             arvif->vdev_id);
                 dev_kfree_skb(bcn);
                 goto skip;
@@ -3606,7 +3606,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
                                    bcn->len, DMA_TO_DEVICE);
             ret = dma_mapping_error(arvif->ar->dev, paddr);
             if (ret) {
-                ath10k_warn(ar, "failed to map beacon: %d\n",
+                ath10k_warn("failed to map beacon: %d\n",
                             ret);
                 dev_kfree_skb_any(bcn);
                 goto skip;
@@ -3615,7 +3615,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
             ATH10K_SKB_CB(bcn)->paddr = paddr;
         } else {
             if (bcn->len > IEEE80211_MAX_FRAME_LEN) {
-                ath10k_warn(ar, "trimming beacon %d -> %d bytes!\n",
+                ath10k_warn("trimming beacon %d -> %d bytes!\n",
                             bcn->len, IEEE80211_MAX_FRAME_LEN);
                 skb_trim(bcn, IEEE80211_MAX_FRAME_LEN);
             }
@@ -3686,7 +3686,7 @@ static void ath10k_dfs_radar_report(struct ath10k* ar,
     spin_unlock_bh(&ar->data_lock);
 
     if (!ch) {
-        ath10k_warn(ar, "failed to derive channel for radar pulse, treating as radar\n");
+        ath10k_warn("failed to derive channel for radar pulse, treating as radar\n");
         goto radar_detected;
     }
 
@@ -3730,7 +3730,7 @@ radar_detected:
      * dfs_block_radar_events
      */
     if (ar->dfs_block_radar_events) {
-        ath10k_info(ar, "DFS Radar detected, but ignored as requested\n");
+        ath10k_trace("DFS Radar detected, but ignored as requested\n");
         return;
     }
 
@@ -3798,7 +3798,7 @@ void ath10k_wmi_event_dfs(struct ath10k* ar,
 
     while (i < buf_len) {
         if (i + sizeof(*tlv) > buf_len) {
-            ath10k_warn(ar, "too short buf for tlv header (%d)\n",
+            ath10k_warn("too short buf for tlv header (%d)\n",
                         i);
             return;
         }
@@ -3813,7 +3813,7 @@ void ath10k_wmi_event_dfs(struct ath10k* ar,
         switch (tlv->tag) {
         case PHYERR_TLV_TAG_RADAR_PULSE_SUMMARY:
             if (i + sizeof(*tlv) + sizeof(*rr) > buf_len) {
-                ath10k_warn(ar, "too short radar pulse summary (%d)\n",
+                ath10k_warn("too short radar pulse summary (%d)\n",
                             i);
                 return;
             }
@@ -3823,7 +3823,7 @@ void ath10k_wmi_event_dfs(struct ath10k* ar,
             break;
         case PHYERR_TLV_TAG_SEARCH_FFT_REPORT:
             if (i + sizeof(*tlv) + sizeof(*fftr) > buf_len) {
-                ath10k_warn(ar, "too short fft report (%d)\n",
+                ath10k_warn("too short fft report (%d)\n",
                             i);
                 return;
             }
@@ -3853,7 +3853,7 @@ void ath10k_wmi_event_spectral_scan(struct ath10k* ar,
 
     while (i < buf_len) {
         if (i + sizeof(*tlv) > buf_len) {
-            ath10k_warn(ar, "failed to parse phyerr tlv header at byte %d\n",
+            ath10k_warn("failed to parse phyerr tlv header at byte %d\n",
                         i);
             return;
         }
@@ -3863,7 +3863,7 @@ void ath10k_wmi_event_spectral_scan(struct ath10k* ar,
         tlv_buf = &phyerr->buf[i + sizeof(*tlv)];
 
         if (i + sizeof(*tlv) + tlv_len > buf_len) {
-            ath10k_warn(ar, "failed to parse phyerr tlv payload at byte %d\n",
+            ath10k_warn("failed to parse phyerr tlv payload at byte %d\n",
                         i);
             return;
         }
@@ -3871,7 +3871,7 @@ void ath10k_wmi_event_spectral_scan(struct ath10k* ar,
         switch (tlv->tag) {
         case PHYERR_TLV_TAG_SEARCH_FFT_REPORT:
             if (sizeof(*fftr) > tlv_len) {
-                ath10k_warn(ar, "failed to parse fft report at byte %d\n",
+                ath10k_warn("failed to parse fft report at byte %d\n",
                             i);
                 return;
             }
@@ -3939,7 +3939,7 @@ int ath10k_wmi_op_pull_phyerr_ev(struct ath10k* ar,
     int i;
 
     if (left_len < sizeof(*phyerr)) {
-        ath10k_warn(ar, "wrong phyerr event head len %d (need: >=%zd)\n",
+        ath10k_warn("wrong phyerr event head len %d (need: >=%zd)\n",
                     left_len, sizeof(*phyerr));
         return -EINVAL;
     }
@@ -3984,7 +3984,7 @@ static int ath10k_wmi_10_4_op_pull_phyerr_ev(struct ath10k* ar,
     int i;
 
     if (left_len < sizeof(*phyerr)) {
-        ath10k_warn(ar, "wrong phyerr event head len %d (need: >=%zd)\n",
+        ath10k_warn("wrong phyerr event head len %d (need: >=%zd)\n",
                     left_len, sizeof(*phyerr));
         return -EINVAL;
     }
@@ -4027,7 +4027,7 @@ void ath10k_wmi_event_phyerr(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_phyerr_hdr(ar, skb, &hdr_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse phyerr event hdr: %d\n", ret);
+        ath10k_warn("failed to parse phyerr event hdr: %d\n", ret);
         return;
     }
 
@@ -4048,7 +4048,7 @@ void ath10k_wmi_event_phyerr(struct ath10k* ar, struct sk_buff* skb) {
     for (i = 0; i < count; i++) {
         ret = ath10k_wmi_pull_phyerr(ar, phyerr, left_len, &phyerr_arg);
         if (ret) {
-            ath10k_warn(ar, "failed to parse phyerr event (%d)\n",
+            ath10k_warn("failed to parse phyerr event (%d)\n",
                         i);
             return;
         }
@@ -4058,7 +4058,7 @@ void ath10k_wmi_event_phyerr(struct ath10k* ar, struct sk_buff* skb) {
         phy_err_code = phyerr_arg.phy_err_code;
 
         if (left_len < buf_len) {
-            ath10k_warn(ar, "single event (%d) wrong buf len\n", i);
+            ath10k_warn("single event (%d) wrong buf len\n", i);
             return;
         }
 
@@ -4092,7 +4092,7 @@ void ath10k_wmi_event_roam(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_roam_ev(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse roam event: %d\n", ret);
+        ath10k_warn("failed to parse roam event: %d\n", ret);
         return;
     }
 
@@ -4106,7 +4106,7 @@ void ath10k_wmi_event_roam(struct ath10k* ar, struct sk_buff* skb) {
                vdev_id, reason, rssi);
 
     if (reason >= WMI_ROAM_REASON_MAX)
-        ath10k_warn(ar, "ignoring unknown roam event reason %d on vdev %i\n",
+        ath10k_warn("ignoring unknown roam event reason %d on vdev %i\n",
                     reason, vdev_id);
 
     switch (reason) {
@@ -4117,7 +4117,7 @@ void ath10k_wmi_event_roam(struct ath10k* ar, struct sk_buff* skb) {
     case WMI_ROAM_REASON_LOW_RSSI:
     case WMI_ROAM_REASON_SUITABLE_AP_FOUND:
     case WMI_ROAM_REASON_HO_FAILED:
-        ath10k_warn(ar, "ignoring not implemented roam event reason %d on vdev %i\n",
+        ath10k_warn("ignoring not implemented roam event reason %d on vdev %i\n",
                     reason, vdev_id);
         break;
     }
@@ -4150,7 +4150,7 @@ void ath10k_wmi_event_debug_print(struct ath10k* ar, struct sk_buff* skb) {
     }
 
     if (i == sizeof(buf) - 1) {
-        ath10k_warn(ar, "wmi debug print truncated: %d\n", skb->len);
+        ath10k_warn("wmi debug print truncated: %d\n", skb->len);
     }
 
     /* for some reason the debug prints end with \n, remove that */
@@ -4194,7 +4194,7 @@ void ath10k_wmi_event_wow_wakeup_host(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_wow_event(ar, skb, &ev);
     if (ret) {
-        ath10k_warn(ar, "failed to parse wow wakeup event: %d\n", ret);
+        ath10k_warn("failed to parse wow wakeup event: %d\n", ret);
         return;
     }
 
@@ -4245,7 +4245,7 @@ static uint8_t ath10k_tpc_config_get_rate(struct ath10k* ar,
                     ev->max_reg_allow_pow_agcdd[ch - 1][stm_idx]);
         break;
     default:
-        ath10k_warn(ar, "unknown wmi tpc table type: %d\n", type);
+        ath10k_warn("unknown wmi tpc table type: %d\n", type);
         tpc = 0;
         break;
     }
@@ -4680,13 +4680,13 @@ static void ath10k_wmi_event_service_ready_work(struct work_struct* work) {
     bool allocated;
 
     if (!skb) {
-        ath10k_warn(ar, "invalid service ready event skb\n");
+        ath10k_warn("invalid service ready event skb\n");
         return;
     }
 
     ret = ath10k_wmi_pull_svc_rdy(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse service ready: %d\n", ret);
+        ath10k_warn("failed to parse service ready: %d\n", ret);
         return;
     }
 
@@ -4714,7 +4714,7 @@ static void ath10k_wmi_event_service_ready_work(struct work_struct* work) {
                     arg.service_map, arg.service_map_len);
 
     if (ar->num_rf_chains > ar->max_spatial_stream) {
-        ath10k_warn(ar, "hardware advertises support for more spatial streams than it should (%d > %d)\n",
+        ath10k_warn("hardware advertises support for more spatial streams than it should (%d > %d)\n",
                     ar->num_rf_chains, ar->max_spatial_stream);
         ar->num_rf_chains = ar->max_spatial_stream;
     }
@@ -4736,7 +4736,7 @@ static void ath10k_wmi_event_service_ready_work(struct work_struct* work) {
 
     num_mem_reqs = arg.num_mem_reqs;
     if (num_mem_reqs > WMI_MAX_MEM_REQS) {
-        ath10k_warn(ar, "requested memory chunks number (%d) exceeds the limit\n",
+        ath10k_warn("requested memory chunks number (%d) exceeds the limit\n",
                     num_mem_reqs);
         return;
     }
@@ -4884,7 +4884,7 @@ int ath10k_wmi_event_ready(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_pull_rdy(ar, skb, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to parse ready event: %d\n", ret);
+        ath10k_warn("failed to parse ready event: %d\n", ret);
         return ret;
     }
 
@@ -4941,7 +4941,7 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
     spin_lock_bh(&ar->data_lock);
     idx = freq_to_idx(ar, freq);
     if (idx >= ARRAY_SIZE(ar->survey)) {
-        ath10k_warn(ar, "bss chan info: invalid frequency %d (idx %d out of bounds)\n",
+        ath10k_warn("bss chan info: invalid frequency %d (idx %d out of bounds)\n",
                     freq, idx);
         goto exit;
     }
@@ -5097,7 +5097,7 @@ static void ath10k_wmi_op_rx(struct ath10k* ar, struct sk_buff* skb) {
         ath10k_wmi_queue_set_coverage_class_work(ar);
         break;
     default:
-        ath10k_warn(ar, "Unknown eventid: %d\n", id);
+        ath10k_warn("Unknown eventid: %d\n", id);
         break;
     }
 
@@ -5228,7 +5228,7 @@ static void ath10k_wmi_10_1_op_rx(struct ath10k* ar, struct sk_buff* skb) {
         /* ignore utf events */
         break;
     default:
-        ath10k_warn(ar, "Unknown eventid: %d\n", id);
+        ath10k_warn("Unknown eventid: %d\n", id);
         break;
     }
 
@@ -5374,7 +5374,7 @@ static void ath10k_wmi_10_2_op_rx(struct ath10k* ar, struct sk_buff* skb) {
                    "received event id %d not implemented\n", id);
         break;
     default:
-        ath10k_warn(ar, "Unknown eventid: %d\n", id);
+        ath10k_warn("Unknown eventid: %d\n", id);
         break;
     }
 
@@ -5481,7 +5481,7 @@ static void ath10k_wmi_10_4_op_rx(struct ath10k* ar, struct sk_buff* skb) {
         ath10k_wmi_event_pdev_tpc_config(ar, skb);
         break;
     default:
-        ath10k_warn(ar, "Unknown eventid: %d\n", id);
+        ath10k_warn("Unknown eventid: %d\n", id);
         break;
     }
 
@@ -5494,7 +5494,7 @@ static void ath10k_wmi_process_rx(struct ath10k* ar, struct sk_buff* skb) {
 
     ret = ath10k_wmi_rx(ar, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to process wmi rx: %d\n", ret);
+        ath10k_warn("failed to process wmi rx: %d\n", ret);
     }
 }
 
@@ -5516,7 +5516,7 @@ int ath10k_wmi_connect(struct ath10k* ar) {
 
     status = ath10k_htc_connect_service(&ar->htc, &conn_req, &conn_resp);
     if (status) {
-        ath10k_warn(ar, "failed to connect to WMI CONTROL service status: %d\n",
+        ath10k_warn("failed to connect to WMI CONTROL service status: %d\n",
                     status);
         return status;
     }
@@ -5610,7 +5610,7 @@ ath10k_wmi_op_gen_pdev_set_param(struct ath10k* ar, uint32_t id, uint32_t value)
     struct sk_buff* skb;
 
     if (id == WMI_PDEV_PARAM_UNSUPPORTED) {
-        ath10k_warn(ar, "pdev param %d not supported by firmware\n",
+        ath10k_warn("pdev param %d not supported by firmware\n",
                     id);
         return ERR_PTR(-EOPNOTSUPP);
     }
@@ -7567,7 +7567,7 @@ void ath10k_wmi_main_op_fw_stats_fill(struct ath10k* ar,
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
     if (!pdev) {
-        ath10k_warn(ar, "failed to get pdev stats\n");
+        ath10k_warn("failed to get pdev stats\n");
         goto unlock;
     }
 
@@ -7624,7 +7624,7 @@ void ath10k_wmi_10x_op_fw_stats_fill(struct ath10k* ar,
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
     if (!pdev) {
-        ath10k_warn(ar, "failed to get pdev stats\n");
+        ath10k_warn("failed to get pdev stats\n");
         goto unlock;
     }
 
@@ -7704,7 +7704,7 @@ void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
     if (!pdev) {
-        ath10k_warn(ar, "failed to get pdev stats\n");
+        ath10k_warn("failed to get pdev stats\n");
         goto unlock;
     }
 
@@ -7885,7 +7885,7 @@ ath10k_wmi_barrier(struct ath10k* ar) {
 
     ret = ath10k_wmi_echo(ar, ATH10K_WMI_BARRIER_ECHO_ID);
     if (ret) {
-        ath10k_warn(ar, "failed to submit wmi echo: %d\n", ret);
+        ath10k_warn("failed to submit wmi echo: %d\n", ret);
         return ret;
     }
 
@@ -8288,7 +8288,7 @@ int ath10k_wmi_attach(struct ath10k* ar) {
         break;
     case ATH10K_FW_WMI_OP_VERSION_UNSET:
     case ATH10K_FW_WMI_OP_VERSION_MAX:
-        ath10k_err(ar, "unsupported WMI op version: %d\n",
+        ath10k_err("unsupported WMI op version: %d\n",
                    ar->running_fw->fw_file.wmi_op_version);
         return -EINVAL;
     }

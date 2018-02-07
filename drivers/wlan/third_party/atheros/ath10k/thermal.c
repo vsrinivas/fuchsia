@@ -49,7 +49,7 @@ ath10k_thermal_set_cur_throttle_state(struct thermal_cooling_device* cdev,
     struct ath10k* ar = cdev->devdata;
 
     if (throttle_state > ATH10K_THERMAL_THROTTLE_MAX) {
-        ath10k_warn(ar, "throttle state %ld is exceeding the limit %d\n",
+        ath10k_warn("throttle state %ld is exceeding the limit %d\n",
                     throttle_state, ATH10K_THERMAL_THROTTLE_MAX);
         return -EINVAL;
     }
@@ -84,7 +84,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
     reinit_completion(&ar->thermal.wmi_sync);
     ret = ath10k_wmi_pdev_get_temperature(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to read temperature %d\n", ret);
+        ath10k_warn("failed to read temperature %d\n", ret);
         goto out;
     }
 
@@ -96,7 +96,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
     time_left = wait_for_completion_timeout(&ar->thermal.wmi_sync,
                                             ATH10K_THERMAL_SYNC_TIMEOUT_HZ);
     if (!time_left) {
-        ath10k_warn(ar, "failed to synchronize thermal read\n");
+        ath10k_warn("failed to synchronize thermal read\n");
         ret = -ETIMEDOUT;
         goto out;
     }
@@ -150,7 +150,7 @@ void ath10k_thermal_set_throttling(struct ath10k* ar) {
                                          ATH10K_QUIET_START_OFFSET,
                                          enabled);
     if (ret) {
-        ath10k_warn(ar, "failed to set quiet mode period %u duarion %u enabled %u ret %d\n",
+        ath10k_warn("failed to set quiet mode period %u duarion %u enabled %u ret %d\n",
                     period, duration, enabled, ret);
     }
 }
@@ -164,7 +164,7 @@ int ath10k_thermal_register(struct ath10k* ar) {
                                            &ath10k_thermal_ops);
 
     if (IS_ERR(cdev)) {
-        ath10k_err(ar, "failed to setup thermal device result: %ld\n",
+        ath10k_err("failed to setup thermal device result: %ld\n",
                    PTR_ERR(cdev));
         return -EINVAL;
     }
@@ -172,7 +172,7 @@ int ath10k_thermal_register(struct ath10k* ar) {
     ret = sysfs_create_link(&ar->dev->kobj, &cdev->device.kobj,
                             "cooling_device");
     if (ret) {
-        ath10k_err(ar, "failed to create cooling device symlink\n");
+        ath10k_err("failed to create cooling device symlink\n");
         goto err_cooling_destroy;
     }
 
@@ -197,7 +197,7 @@ int ath10k_thermal_register(struct ath10k* ar) {
                 "ath10k_hwmon", ar,
                 ath10k_hwmon_groups);
     if (IS_ERR(hwmon_dev)) {
-        ath10k_err(ar, "failed to register hwmon device: %ld\n",
+        ath10k_err("failed to register hwmon device: %ld\n",
                    PTR_ERR(hwmon_dev));
         ret = -EINVAL;
         goto err_remove_link;

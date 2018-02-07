@@ -46,7 +46,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
         if ((payload_len > size_left) ||
                 (payload_len == 0 &&
                  size_left != sizeof(struct ath10k_swap_code_seg_tail))) {
-            ath10k_err(ar, "refusing to parse invalid tlv length %d\n",
+            ath10k_err("refusing to parse invalid tlv length %d\n",
                        payload_len);
             return -EINVAL;
         }
@@ -54,7 +54,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
         if (payload_len == 0) {
             if (memcmp(swap_item->tail.magic_signature, swap_magic,
                        ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ)) {
-                ath10k_err(ar, "refusing an invalid swap file\n");
+                ath10k_err("refusing an invalid swap file\n");
                 return -EINVAL;
             }
             seg_info->target_addr =
@@ -71,7 +71,7 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
     }
 
     if (seg_info->target_addr == -1) {
-        ath10k_err(ar, "failed to parse invalid swap file\n");
+        ath10k_err("failed to parse invalid swap file\n");
         return -EINVAL;
     }
     seg_info->seg_hw_info.swap_size = total_payload_len;
@@ -105,7 +105,7 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
 
     swap_bin_len = roundup(swap_bin_len, 2);
     if (swap_bin_len > ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX) {
-        ath10k_err(ar, "refusing code swap bin because it is too big %zu > %d\n",
+        ath10k_err("refusing code swap bin because it is too big %zu > %d\n",
                    swap_bin_len, ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX);
         return NULL;
     }
@@ -118,7 +118,7 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     virt_addr = dma_alloc_coherent(ar->dev, swap_bin_len, &paddr,
                                    GFP_KERNEL);
     if (!virt_addr) {
-        ath10k_err(ar, "failed to allocate dma coherent memory\n");
+        ath10k_err("failed to allocate dma coherent memory\n");
         return NULL;
     }
 
@@ -151,7 +151,7 @@ int ath10k_swap_code_seg_configure(struct ath10k* ar,
                                   &seg_info->seg_hw_info,
                                   sizeof(seg_info->seg_hw_info));
     if (ret) {
-        ath10k_err(ar, "failed to write Code swap segment information (%d)\n",
+        ath10k_err("failed to write Code swap segment information (%d)\n",
                    ret);
         return ret;
     }
@@ -187,7 +187,7 @@ int ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file)
 
     seg_info = ath10k_swap_code_seg_alloc(ar, codeswap_len);
     if (!seg_info) {
-        ath10k_err(ar, "failed to allocate fw code swap segment\n");
+        ath10k_err("failed to allocate fw code swap segment\n");
         return -ENOMEM;
     }
 
@@ -195,7 +195,7 @@ int ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file)
                                     codeswap_data, codeswap_len);
 
     if (ret) {
-        ath10k_warn(ar, "failed to initialize fw code swap segment: %d\n",
+        ath10k_warn("failed to initialize fw code swap segment: %d\n",
                     ret);
         ath10k_swap_code_seg_free(ar, seg_info);
         return ret;

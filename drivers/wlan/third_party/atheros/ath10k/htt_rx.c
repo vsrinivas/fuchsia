@@ -250,7 +250,7 @@ static inline struct sk_buff* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
     lockdep_assert_held(&htt->rx_ring.lock);
 
     if (htt->rx_ring.fill_cnt == 0) {
-        ath10k_warn(ar, "tried to pop sk_buff from an empty rx ring\n");
+        ath10k_warn("tried to pop sk_buff from an empty rx ring\n");
         return NULL;
     }
 
@@ -441,7 +441,7 @@ static int ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
 
             if (!(rxd->attention.flags &
                     RX_ATTENTION_FLAGS_MSDU_DONE)) {
-                ath10k_warn(htt->ar, "tried to pop an incomplete frame, oops!\n");
+                ath10k_warn("tried to pop an incomplete frame, oops!\n");
                 return -EIO;
             }
         }
@@ -469,7 +469,7 @@ int ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     htt->rx_ring.fill_level = HTT_RX_RING_FILL_LEVEL;
 
     if (!is_power_of_2(htt->rx_ring.size)) {
-        ath10k_warn(ar, "htt rx ring size is not power of 2\n");
+        ath10k_warn("htt rx ring size is not power of 2\n");
         return -EINVAL;
     }
 
@@ -550,7 +550,7 @@ static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar,
         break;
     }
 
-    ath10k_warn(ar, "unsupported encryption type %d\n", type);
+    ath10k_warn("unsupported encryption type %d\n", type);
     return 0;
 }
 
@@ -574,7 +574,7 @@ static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar,
         break;
     }
 
-    ath10k_warn(ar, "unsupported encryption type %d\n", type);
+    ath10k_warn("unsupported encryption type %d\n", type);
     return 0;
 }
 
@@ -662,8 +662,8 @@ static void ath10k_htt_rx_h_rates(struct ath10k* ar,
         }
 
         if (mcs > 0x09) {
-            ath10k_warn(ar, "invalid MCS received %u\n", mcs);
-            ath10k_warn(ar, "rxd %08x mpdu start %08x %08x msdu start %08x %08x ppdu start %08x %08x %08x %08x %08x\n",
+            ath10k_warn("invalid MCS received %u\n", mcs);
+            ath10k_warn("rxd %08x mpdu start %08x %08x msdu start %08x %08x ppdu start %08x %08x %08x %08x %08x\n",
                         rxd->attention.flags,
                         rxd->mpdu_start.info0,
                         rxd->mpdu_start.info1,
@@ -675,7 +675,7 @@ static void ath10k_htt_rx_h_rates(struct ath10k* ar,
                         rxd->ppdu_start.info3,
                         rxd->ppdu_start.info4);
 
-            ath10k_warn(ar, "msdu end %08x mpdu end %08x\n",
+            ath10k_warn("msdu end %08x mpdu end %08x\n",
                         rxd->msdu_end.common.info0,
                         rxd->mpdu_end.info0);
 
@@ -1522,7 +1522,7 @@ static bool ath10k_htt_rx_amsdu_allowed(struct ath10k* ar,
      */
 
     if (!rx_status->freq) {
-        ath10k_warn(ar, "no channel configured; ignoring frame(s)!\n");
+        ath10k_warn("no channel configured; ignoring frame(s)!\n");
         return false;
     }
 
@@ -1565,7 +1565,7 @@ static int ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
     spin_unlock_bh(&htt->rx_ring.lock);
 
     if (ret < 0) {
-        ath10k_warn(ar, "rx ring became corrupted: %d\n", ret);
+        ath10k_warn("rx ring became corrupted: %d\n", ret);
         __skb_queue_purge(&amsdu);
         /* FIXME: It's probably a good idea to reboot the
          * device instead of leaving it inoperable.
@@ -1634,7 +1634,7 @@ static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar,
         tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
         break;
     default:
-        ath10k_warn(ar, "unhandled tx completion status %d\n", status);
+        ath10k_warn("unhandled tx completion status %d\n", status);
         tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
         break;
     }
@@ -1655,7 +1655,7 @@ static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar,
          *  writer, you don't need extra locking to use these macro.
          */
         if (!kfifo_put(&htt->txdone_fifo, tx_done)) {
-            ath10k_warn(ar, "txdone fifo overrun, msdu_id %d status %d\n",
+            ath10k_warn("txdone fifo overrun, msdu_id %d status %d\n",
                         tx_done.msdu_id, tx_done.status);
             ath10k_txrx_tx_unref(htt, &tx_done);
         }
@@ -1679,7 +1679,7 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
     spin_lock_bh(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
-        ath10k_warn(ar, "received addba event for invalid peer_id: %hu\n",
+        ath10k_warn("received addba event for invalid peer_id: %hu\n",
                     peer_id);
         spin_unlock_bh(&ar->data_lock);
         return;
@@ -1687,7 +1687,7 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
 
     arvif = ath10k_get_arvif(ar, peer->vdev_id);
     if (!arvif) {
-        ath10k_warn(ar, "received addba event for invalid vdev_id: %u\n",
+        ath10k_warn("received addba event for invalid vdev_id: %u\n",
                     peer->vdev_id);
         spin_unlock_bh(&ar->data_lock);
         return;
@@ -1718,7 +1718,7 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
     spin_lock_bh(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
-        ath10k_warn(ar, "received addba event for invalid peer_id: %hu\n",
+        ath10k_warn("received addba event for invalid peer_id: %hu\n",
                     peer_id);
         spin_unlock_bh(&ar->data_lock);
         return;
@@ -1726,7 +1726,7 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
 
     arvif = ath10k_get_arvif(ar, peer->vdev_id);
     if (!arvif) {
-        ath10k_warn(ar, "received addba event for invalid vdev_id: %u\n",
+        ath10k_warn("received addba event for invalid vdev_id: %u\n",
                     peer->vdev_id);
         spin_unlock_bh(&ar->data_lock);
         return;
@@ -1813,7 +1813,7 @@ static int ath10k_htt_rx_h_rx_offload(struct ath10k* ar,
         skb_pull(msdu, sizeof(*rx));
 
         if (skb_tailroom(msdu) < rx->msdu_len) {
-            ath10k_warn(ar, "dropping frame: offloaded rx msdu is too long!\n");
+            ath10k_warn("dropping frame: offloaded rx msdu is too long!\n");
             dev_kfree_skb_any(msdu);
             continue;
         }
@@ -1881,7 +1881,7 @@ static int ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct sk_buff* skb) {
                vdev_id, peer_id, tid, offload, frag, msdu_count);
 
     if (skb->len < msdu_count * sizeof(*resp->rx_in_ord_ind.msdu_descs)) {
-        ath10k_warn(ar, "dropping invalid in order rx indication\n");
+        ath10k_warn("dropping invalid in order rx indication\n");
         return -EINVAL;
     }
 
@@ -1891,7 +1891,7 @@ static int ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct sk_buff* skb) {
     __skb_queue_head_init(&list);
     ret = ath10k_htt_rx_pop_paddr_list(htt, &resp->rx_in_ord_ind, &list);
     if (ret < 0) {
-        ath10k_warn(ar, "failed to pop paddr list: %d\n", ret);
+        ath10k_warn("failed to pop paddr list: %d\n", ret);
         htt->rx_confused = true;
         return -EIO;
     }
@@ -1924,7 +1924,7 @@ static int ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct sk_buff* skb) {
         /* fall through */
         default:
             /* Should not happen. */
-            ath10k_warn(ar, "failed to extract amsdu: %d\n", ret);
+            ath10k_warn("failed to extract amsdu: %d\n", ret);
             htt->rx_confused = true;
             __skb_queue_purge(&list);
             return -EIO;
@@ -1974,7 +1974,7 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
 
     len = sizeof(resp->hdr) + sizeof(resp->tx_fetch_ind);
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_fetch_ind event: buffer too short\n");
+        ath10k_warn("received corrupted tx_fetch_ind event: buffer too short\n");
         return;
     }
 
@@ -1985,7 +1985,7 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
     len += sizeof(resp->tx_fetch_ind.resp_ids[0]) * num_resp_ids;
 
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_fetch_ind event: too many records/resp_ids\n");
+        ath10k_warn("received corrupted tx_fetch_ind event: too many records/resp_ids\n");
         return;
     }
 
@@ -1994,12 +1994,12 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
                resp->tx_fetch_ind.fetch_seq_num);
 
     if (!ar->htt.tx_q_state.enabled) {
-        ath10k_warn(ar, "received unexpected tx_fetch_ind event: not enabled\n");
+        ath10k_warn("received unexpected tx_fetch_ind event: not enabled\n");
         return;
     }
 
     if (ar->htt.tx_q_state.mode == HTT_TX_MODE_SWITCH_PUSH) {
-        ath10k_warn(ar, "received unexpected tx_fetch_ind event: in push mode\n");
+        ath10k_warn("received unexpected tx_fetch_ind event: in push mode\n");
         return;
     }
 
@@ -2019,7 +2019,7 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
 
         if (unlikely(peer_id >= ar->htt.tx_q_state.num_peers) ||
                 unlikely(tid >= ar->htt.tx_q_state.num_tids)) {
-            ath10k_warn(ar, "received out of range peer_id %hu tid %hhu\n",
+            ath10k_warn("received out of range peer_id %hu tid %hhu\n",
                         peer_id, tid);
             continue;
         }
@@ -2033,7 +2033,7 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
          */
 
         if (unlikely(!txq)) {
-            ath10k_warn(ar, "failed to lookup txq for peer_id %hu tid %hhu\n",
+            ath10k_warn("failed to lookup txq for peer_id %hu tid %hhu\n",
                         peer_id, tid);
             continue;
         }
@@ -2069,7 +2069,7 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
                                    resp->tx_fetch_ind.records,
                                    num_records);
     if (unlikely(ret)) {
-        ath10k_warn(ar, "failed to submit tx fetch resp for token 0x%08x: %d\n",
+        ath10k_warn("failed to submit tx fetch resp for token 0x%08x: %d\n",
                     resp->tx_fetch_ind.token, ret);
         /* FIXME: request fw restart */
     }
@@ -2087,7 +2087,7 @@ static void ath10k_htt_rx_tx_fetch_confirm(struct ath10k* ar,
 
     len = sizeof(resp->hdr) + sizeof(resp->tx_fetch_confirm);
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_fetch_confirm event: buffer too short\n");
+        ath10k_warn("received corrupted tx_fetch_confirm event: buffer too short\n");
         return;
     }
 
@@ -2095,7 +2095,7 @@ static void ath10k_htt_rx_tx_fetch_confirm(struct ath10k* ar,
     len += sizeof(resp->tx_fetch_confirm.resp_ids[0]) * num_resp_ids;
 
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_fetch_confirm event: resp_ids buffer overflow\n");
+        ath10k_warn("received corrupted tx_fetch_confirm event: resp_ids buffer overflow\n");
         return;
     }
 
@@ -2125,7 +2125,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
 
     len = sizeof(resp->hdr) + sizeof(resp->tx_mode_switch_ind);
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_mode_switch_ind event: buffer too short\n");
+        ath10k_warn("received corrupted tx_mode_switch_ind event: buffer too short\n");
         return;
     }
 
@@ -2144,7 +2144,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
     len += sizeof(resp->tx_mode_switch_ind.records[0]) * num_records;
 
     if (unlikely(skb->len < len)) {
-        ath10k_warn(ar, "received corrupted tx_mode_switch_mode_ind event: too many records\n");
+        ath10k_warn("received corrupted tx_mode_switch_mode_ind event: too many records\n");
         return;
     }
 
@@ -2153,7 +2153,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
     case HTT_TX_MODE_SWITCH_PUSH_PULL:
         break;
     default:
-        ath10k_warn(ar, "received invalid tx_mode_switch_mode_ind mode %d, ignoring\n",
+        ath10k_warn("received invalid tx_mode_switch_mode_ind mode %d, ignoring\n",
                     mode);
         return;
     }
@@ -2176,7 +2176,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
 
         if (unlikely(peer_id >= ar->htt.tx_q_state.num_peers) ||
                 unlikely(tid >= ar->htt.tx_q_state.num_tids)) {
-            ath10k_warn(ar, "received out of range peer_id %hu tid %hhu\n",
+            ath10k_warn("received out of range peer_id %hu tid %hhu\n",
                         peer_id, tid);
             continue;
         }
@@ -2190,7 +2190,7 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
          */
 
         if (unlikely(!txq)) {
-            ath10k_warn(ar, "failed to lookup txq for peer_id %hu tid %hhu\n",
+            ath10k_warn("failed to lookup txq for peer_id %hu tid %hhu\n",
                         peer_id, tid);
             continue;
         }
@@ -2249,13 +2249,13 @@ ath10k_update_per_peer_tx_stats(struct ath10k* ar,
     sgi = ATH10K_HW_GI(peer_stats->flags);
 
     if (txrate.flags == WMI_RATE_PREAMBLE_VHT && txrate.mcs > 9) {
-        ath10k_warn(ar, "Invalid VHT mcs %hhd peer stats",  txrate.mcs);
+        ath10k_warn("Invalid VHT mcs %hhd peer stats",  txrate.mcs);
         return;
     }
 
     if (txrate.flags == WMI_RATE_PREAMBLE_HT &&
             (txrate.mcs > 7 || txrate.nss < 1)) {
-        ath10k_warn(ar, "Invalid HT mcs %hhd nss %hhd peer stats",
+        ath10k_warn("Invalid HT mcs %hhd nss %hhd peer stats",
                     txrate.mcs, txrate.nss);
         return;
     }
@@ -2267,7 +2267,7 @@ ath10k_update_per_peer_tx_stats(struct ath10k* ar,
         rate = ATH10K_HW_LEGACY_RATE(peer_stats->ratecode);
 
         if (!is_valid_legacy_rate(rate)) {
-            ath10k_warn(ar, "Invalid legacy rate %hhd peer stats",
+            ath10k_warn("Invalid legacy rate %hhd peer stats",
                         rate);
             return;
         }
@@ -2308,7 +2308,7 @@ static void ath10k_htt_fetch_peer_stats(struct ath10k* ar,
     ppdu_len = resp->peer_tx_stats.ppdu_len * sizeof(uint32_t);
 
     if (skb->len < sizeof(struct htt_resp_hdr) + num_ppdu * ppdu_len) {
-        ath10k_warn(ar, "Invalid peer stats buf length %d\n", skb->len);
+        ath10k_warn("Invalid peer stats buf length %d\n", skb->len);
         return;
     }
 
@@ -2320,7 +2320,7 @@ static void ath10k_htt_fetch_peer_stats(struct ath10k* ar,
     spin_lock_bh(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
-        ath10k_warn(ar, "Invalid peer id %d peer stats buffer\n",
+        ath10k_warn("Invalid peer id %d peer stats buffer\n",
                     peer_id);
         goto out;
     }
@@ -2355,7 +2355,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
 
     /* confirm alignment */
     if (!IS_ALIGNED((unsigned long)skb->data, 4)) {
-        ath10k_warn(ar, "unaligned htt message, expect trouble\n");
+        ath10k_warn("unaligned htt message, expect trouble\n");
     }
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, msg_type: 0x%0X\n",
@@ -2452,7 +2452,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
          * sends all tx frames as already inspected so this shouldn't
          * happen unless fw has a bug.
          */
-        ath10k_warn(ar, "received an unexpected htt tx inspect event\n");
+        ath10k_warn("received an unexpected htt tx inspect event\n");
         break;
     case HTT_T2H_MSG_TYPE_RX_ADDBA:
         ath10k_htt_rx_addba(ar, resp);
@@ -2495,7 +2495,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
         struct sk_buff* tx_fetch_ind = skb_copy(skb, GFP_ATOMIC);
 
         if (!tx_fetch_ind) {
-            ath10k_warn(ar, "failed to copy htt tx fetch ind\n");
+            ath10k_warn("failed to copy htt tx fetch ind\n");
             break;
         }
         skb_queue_tail(&htt->tx_fetch_ind_q, tx_fetch_ind);
@@ -2512,7 +2512,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
         break;
     case HTT_T2H_MSG_TYPE_EN_STATS:
     default:
-        ath10k_warn(ar, "htt event (%d) not handled\n",
+        ath10k_warn("htt event (%d) not handled\n",
                     resp->hdr.msg_type);
         ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ",
                         skb->data, skb->len);

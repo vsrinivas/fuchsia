@@ -294,7 +294,7 @@ int ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
     int ret = 0;
 
     if (nbytes > ce_state->src_sz_max)
-        ath10k_warn(ar, "%s: send more we can (nbytes: %d, max: %d)\n",
+        ath10k_warn("%s: send more we can (nbytes: %d, max: %d)\n",
                     __func__, nbytes, ce_state->src_sz_max);
 
     if (unlikely(CE_RING_DELTA(nentries_mask,
@@ -1005,7 +1005,7 @@ int ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id,
     if (attr->src_nentries) {
         ret = ath10k_ce_init_src_ring(ar, ce_id, attr);
         if (ret) {
-            ath10k_err(ar, "Failed to initialize CE src ring for ID: %d (%d)\n",
+            ath10k_err("Failed to initialize CE src ring for ID: %d (%d)\n",
                        ce_id, ret);
             return ret;
         }
@@ -1014,7 +1014,7 @@ int ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id,
     if (attr->dest_nentries) {
         ret = ath10k_ce_init_dest_ring(ar, ce_id, attr);
         if (ret) {
-            ath10k_err(ar, "Failed to initialize CE dest ring for ID: %d (%d)\n",
+            ath10k_err("Failed to initialize CE dest ring for ID: %d (%d)\n",
                        ce_id, ret);
             return ret;
         }
@@ -1082,7 +1082,7 @@ int ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
         ce_state->src_ring = ath10k_ce_alloc_src_ring(ar, ce_id, attr);
         if (IS_ERR(ce_state->src_ring)) {
             ret = PTR_ERR(ce_state->src_ring);
-            ath10k_err(ar, "failed to allocate copy engine source ring %d: %d\n",
+            ath10k_err("failed to allocate copy engine source ring %d: %d\n",
                        ce_id, ret);
             ce_state->src_ring = NULL;
             return ret;
@@ -1094,7 +1094,7 @@ int ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
                               attr);
         if (IS_ERR(ce_state->dest_ring)) {
             ret = PTR_ERR(ce_state->dest_ring);
-            ath10k_err(ar, "failed to allocate copy engine destination ring %d: %d\n",
+            ath10k_err("failed to allocate copy engine destination ring %d: %d\n",
                        ce_id, ret);
             ce_state->dest_ring = NULL;
             return ret;
@@ -1140,7 +1140,7 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
 
     lockdep_assert_held(&ar->data_lock);
 
-    ath10k_err(ar, "Copy Engine register dump:\n");
+    ath10k_err("Copy Engine register dump:\n");
 
     spin_lock_bh(&ar_pci->ce_lock);
     for (id = 0; id < CE_COUNT; id++) {
@@ -1160,7 +1160,7 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
             crash_data->ce_crash_data[id] = ce;
         }
 
-        ath10k_err(ar, "[%02d]: 0x%08x %3u %3u %3u %3u", id,
+        ath10k_err("[%02d]: 0x%08x %3u %3u %3u %3u", id,
                    ce.base_addr,
                    ce.src_wr_idx,
                    ce.src_r_idx,

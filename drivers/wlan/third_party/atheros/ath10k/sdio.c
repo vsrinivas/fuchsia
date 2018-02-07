@@ -166,7 +166,7 @@ static int ath10k_sdio_config(struct ath10k* ar) {
                                           CCCR_SDIO_DRIVER_STRENGTH_ENABLE_ADDR,
                                           byte);
     if (ret) {
-        ath10k_warn(ar, "failed to enable driver strength: %d\n", ret);
+        ath10k_warn("failed to enable driver strength: %d\n", ret);
         goto out;
     }
 
@@ -181,7 +181,7 @@ static int ath10k_sdio_config(struct ath10k* ar) {
                                           CCCR_SDIO_IRQ_MODE_REG_SDIO3,
                                           byte);
     if (ret) {
-        ath10k_warn(ar, "failed to enable 4-bit async irq mode: %d\n",
+        ath10k_warn("failed to enable 4-bit async irq mode: %d\n",
                     ret);
         goto out;
     }
@@ -203,7 +203,7 @@ static int ath10k_sdio_config(struct ath10k* ar) {
 
     ret = sdio_set_block_size(func, ar_sdio->mbox_info.block_size);
     if (ret) {
-        ath10k_warn(ar, "failed to set sdio block size to %d: %d\n",
+        ath10k_warn("failed to set sdio block size to %d: %d\n",
                     ar_sdio->mbox_info.block_size, ret);
         goto out;
     }
@@ -222,7 +222,7 @@ static int ath10k_sdio_write32(struct ath10k* ar, uint32_t addr, uint32_t val) {
 
     sdio_writel(func, val, addr, &ret);
     if (ret) {
-        ath10k_warn(ar, "failed to write 0x%x to address 0x%x: %d\n",
+        ath10k_warn("failed to write 0x%x to address 0x%x: %d\n",
                     val, addr, ret);
         goto out;
     }
@@ -253,7 +253,7 @@ static int ath10k_sdio_writesb32(struct ath10k* ar, uint32_t addr, uint32_t val)
 
     ret = sdio_writesb(func, addr, buf, sizeof(*buf));
     if (ret) {
-        ath10k_warn(ar, "failed to write value 0x%x to fixed sb address 0x%x: %d\n",
+        ath10k_warn("failed to write value 0x%x to fixed sb address 0x%x: %d\n",
                     val, addr, ret);
         goto out;
     }
@@ -277,7 +277,7 @@ static int ath10k_sdio_read32(struct ath10k* ar, uint32_t addr, uint32_t* val) {
     sdio_claim_host(func);
     *val = sdio_readl(func, addr, &ret);
     if (ret) {
-        ath10k_warn(ar, "failed to read from address 0x%x: %d\n",
+        ath10k_warn("failed to read from address 0x%x: %d\n",
                     addr, ret);
         goto out;
     }
@@ -300,7 +300,7 @@ static int ath10k_sdio_read(struct ath10k* ar, uint32_t addr, void* buf, size_t 
 
     ret = sdio_memcpy_fromio(func, buf, addr, len);
     if (ret) {
-        ath10k_warn(ar, "failed to read from address 0x%x: %d\n",
+        ath10k_warn("failed to read from address 0x%x: %d\n",
                     addr, ret);
         goto out;
     }
@@ -327,7 +327,7 @@ static int ath10k_sdio_write(struct ath10k* ar, uint32_t addr, const void* buf, 
      */
     ret = sdio_memcpy_toio(func, addr, (void*)buf, len);
     if (ret) {
-        ath10k_warn(ar, "failed to write to address 0x%x: %d\n",
+        ath10k_warn("failed to write to address 0x%x: %d\n",
                     addr, ret);
         goto out;
     }
@@ -353,7 +353,7 @@ static int ath10k_sdio_readsb(struct ath10k* ar, uint32_t addr, void* buf, size_
 
     ret = sdio_readsb(func, buf, addr, len);
     if (ret) {
-        ath10k_warn(ar, "failed to read from fixed (sb) address 0x%x: %d\n",
+        ath10k_warn("failed to read from fixed (sb) address 0x%x: %d\n",
                     addr, ret);
         goto out;
     }
@@ -431,7 +431,7 @@ static int ath10k_sdio_mbox_rx_process_packets(struct ath10k* ar,
         id = ((struct ath10k_htc_hdr*)&lookaheads[i])->eid;
 
         if (id >= ATH10K_HTC_EP_COUNT) {
-            ath10k_warn(ar, "invalid endpoint in look-ahead: %d\n",
+            ath10k_warn("invalid endpoint in look-ahead: %d\n",
                         id);
             ret = -ENOMEM;
             goto out;
@@ -440,7 +440,7 @@ static int ath10k_sdio_mbox_rx_process_packets(struct ath10k* ar,
         ep = &htc->endpoint[id];
 
         if (ep->service_id == 0) {
-            ath10k_warn(ar, "ep %d is not connected\n", id);
+            ath10k_warn("ep %d is not connected\n", id);
             ret = -ENOMEM;
             goto out;
         }
@@ -497,8 +497,7 @@ static int ath10k_sdio_mbox_alloc_pkt_bundle(struct ath10k* ar,
     *bndl_cnt = FIELD_GET(ATH10K_HTC_FLAG_BUNDLE_MASK, htc_hdr->flags);
 
     if (*bndl_cnt > HTC_HOST_MAX_MSG_PER_BUNDLE) {
-        ath10k_warn(ar,
-                    "HTC bundle length %u exceeds maximum %u\n",
+        ath10k_warn("HTC bundle length %u exceeds maximum %u\n",
                     htc_hdr->len,
                     HTC_HOST_MAX_MSG_PER_BUNDLE);
         return -ENOMEM;
@@ -533,8 +532,7 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k* ar,
     int ret, i;
 
     if (n_lookaheads > ATH10K_SDIO_MAX_RX_MSGS) {
-        ath10k_warn(ar,
-                    "the total number of pkgs to be fetched (%u) exceeds maximum %u\n",
+        ath10k_warn("the total number of pkgs to be fetched (%u) exceeds maximum %u\n",
                     n_lookaheads,
                     ATH10K_SDIO_MAX_RX_MSGS);
         ret = -ENOMEM;
@@ -547,8 +545,7 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k* ar,
 
         if (htc_hdr->len >
                 ATH10K_HTC_MBOX_MAX_PAYLOAD_LENGTH) {
-            ath10k_warn(ar,
-                        "payload length %d exceeds max htc length: %zu\n",
+            ath10k_warn("payload length %d exceeds max htc length: %zu\n",
                         htc_hdr->len,
                         ATH10K_HTC_MBOX_MAX_PAYLOAD_LENGTH);
             ret = -ENOMEM;
@@ -559,8 +556,7 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k* ar,
         full_len = ath10k_sdio_calc_txrx_padded_len(ar_sdio, act_len);
 
         if (full_len > ATH10K_SDIO_MAX_BUFFER_SIZE) {
-            ath10k_warn(ar,
-                        "rx buffer requested with invalid htc_hdr length (%d, 0x%x): %d\n",
+            ath10k_warn("rx buffer requested with invalid htc_hdr length (%d, 0x%x): %d\n",
                         htc_hdr->eid, htc_hdr->flags,
                         htc_hdr->len);
             ret = -EINVAL;
@@ -718,7 +714,7 @@ static int ath10k_sdio_mbox_rxmsg_pending_handler(struct ath10k* ar,
     }
 
     if (ret && (ret != -ECANCELED))
-        ath10k_warn(ar, "failed to get pending recv messages: %d\n",
+        ath10k_warn("failed to get pending recv messages: %d\n",
                     ret);
 
     return ret;
@@ -729,14 +725,14 @@ static int ath10k_sdio_mbox_proc_dbg_intr(struct ath10k* ar) {
     int ret;
 
     /* TODO: Add firmware crash handling */
-    ath10k_warn(ar, "firmware crashed\n");
+    ath10k_warn("firmware crashed\n");
 
     /* read counter to clear the interrupt, the debug error interrupt is
      * counter 0.
      */
     ret = ath10k_sdio_read32(ar, MBOX_COUNT_DEC_ADDRESS, &val);
     if (ret) {
-        ath10k_warn(ar, "failed to clear debug interrupt: %d\n", ret);
+        ath10k_warn("failed to clear debug interrupt: %d\n", ret);
     }
 
     return ret;
@@ -777,7 +773,7 @@ static int ath10k_sdio_mbox_proc_err_intr(struct ath10k* ar) {
 
     error_int_status = irq_data->irq_proc_reg->error_int_status & 0x0F;
     if (!error_int_status) {
-        ath10k_warn(ar, "invalid error interrupt status: 0x%x\n",
+        ath10k_warn("invalid error interrupt status: 0x%x\n",
                     error_int_status);
         return -EIO;
     }
@@ -792,12 +788,12 @@ static int ath10k_sdio_mbox_proc_err_intr(struct ath10k* ar) {
 
     if (FIELD_GET(MBOX_ERROR_INT_STATUS_RX_UNDERFLOW_MASK,
                   error_int_status)) {
-        ath10k_warn(ar, "rx underflow interrupt error\n");
+        ath10k_warn("rx underflow interrupt error\n");
     }
 
     if (FIELD_GET(MBOX_ERROR_INT_STATUS_TX_OVERFLOW_MASK,
                   error_int_status)) {
-        ath10k_warn(ar, "tx overflow interrupt error\n");
+        ath10k_warn("tx overflow interrupt error\n");
     }
 
     /* Clear the interrupt */
@@ -807,7 +803,7 @@ static int ath10k_sdio_mbox_proc_err_intr(struct ath10k* ar) {
     ret = ath10k_sdio_writesb32(ar, MBOX_ERROR_INT_STATUS_ADDRESS,
                                 error_int_status);
     if (ret) {
-        ath10k_warn(ar, "unable to write to error int status address: %d\n",
+        ath10k_warn("unable to write to error int status address: %d\n",
                     ret);
         return ret;
     }
@@ -825,7 +821,7 @@ static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k* ar) {
     cpu_int_status = irq_data->irq_proc_reg->cpu_int_status &
                      irq_data->irq_en_reg->cpu_int_status_en;
     if (!cpu_int_status) {
-        ath10k_warn(ar, "CPU interrupt status is zero\n");
+        ath10k_warn("CPU interrupt status is zero\n");
         ret = -EIO;
         goto out;
     }
@@ -843,7 +839,7 @@ static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k* ar) {
     ret = ath10k_sdio_writesb32(ar, MBOX_CPU_INT_STATUS_ADDRESS,
                                 cpu_int_status);
     if (ret) {
-        ath10k_warn(ar, "unable to write to cpu interrupt status address: %d\n",
+        ath10k_warn("unable to write to cpu interrupt status address: %d\n",
                     ret);
         goto out;
     }
@@ -908,7 +904,7 @@ static int ath10k_sdio_mbox_read_int_status(struct ath10k* ar,
     if (irq_proc_reg->rx_lookahead_valid & htc_mbox) {
         *lookahead = irq_proc_reg->rx_lookahead[ATH10K_HTC_MAILBOX];
         if (!*lookahead) {
-            ath10k_warn(ar, "sdio mbox lookahead is zero\n");
+            ath10k_warn("sdio mbox lookahead is zero\n");
         }
     }
 
@@ -1067,8 +1063,7 @@ static int ath10k_sdio_bmi_credits(struct ath10k* ar) {
          */
         ret = ath10k_sdio_read32(ar, addr, &cmd_credits);
         if (ret) {
-            ath10k_warn(ar,
-                        "unable to decrement the command credit count register: %d\n",
+            ath10k_warn("unable to decrement the command credit count register: %d\n",
                         ret);
             return ret;
         }
@@ -1080,7 +1075,7 @@ static int ath10k_sdio_bmi_credits(struct ath10k* ar) {
     }
 
     if (!cmd_credits) {
-        ath10k_warn(ar, "bmi communication timeout\n");
+        ath10k_warn("bmi communication timeout\n");
         return -ETIMEDOUT;
     }
 
@@ -1100,7 +1095,7 @@ static int ath10k_sdio_bmi_get_rx_lookahead(struct ath10k* ar) {
                                  MBOX_HOST_INT_STATUS_ADDRESS,
                                  &rx_word);
         if (ret) {
-            ath10k_warn(ar, "unable to read RX_LOOKAHEAD_VALID: %d\n", ret);
+            ath10k_warn("unable to read RX_LOOKAHEAD_VALID: %d\n", ret);
             return ret;
         }
 
@@ -1109,7 +1104,7 @@ static int ath10k_sdio_bmi_get_rx_lookahead(struct ath10k* ar) {
     }
 
     if (!rx_word) {
-        ath10k_warn(ar, "bmi_recv_buf FIFO empty\n");
+        ath10k_warn("bmi_recv_buf FIFO empty\n");
         return -EINVAL;
     }
 
@@ -1134,8 +1129,7 @@ static int ath10k_sdio_bmi_exchange_msg(struct ath10k* ar,
         memcpy(ar_sdio->bmi_buf, req, req_len);
         ret = ath10k_sdio_write(ar, addr, ar_sdio->bmi_buf, req_len);
         if (ret) {
-            ath10k_warn(ar,
-                        "unable to send the bmi data to the device: %d\n",
+            ath10k_warn("unable to send the bmi data to the device: %d\n",
                         ret);
             return ret;
         }
@@ -1201,8 +1195,7 @@ static int ath10k_sdio_bmi_exchange_msg(struct ath10k* ar,
     addr = ar_sdio->mbox_info.htc_addr;
     ret = ath10k_sdio_read(ar, addr, ar_sdio->bmi_buf, *resp_len);
     if (ret) {
-        ath10k_warn(ar,
-                    "unable to read the bmi data from the device: %d\n",
+        ath10k_warn("unable to read the bmi data from the device: %d\n",
                     ret);
         return ret;
     }
@@ -1255,7 +1248,7 @@ static void __ath10k_sdio_write_async(struct ath10k* ar,
     skb = req->skb;
     ret = ath10k_sdio_write(ar, req->address, skb->data, skb->len);
     if (ret)
-        ath10k_warn(ar, "failed to write skb to 0x%x asynchronously: %d",
+        ath10k_warn("failed to write skb to 0x%x asynchronously: %d",
                     req->address, ret);
 
     if (req->htc_msg) {
@@ -1298,8 +1291,7 @@ static int ath10k_sdio_prep_async_req(struct ath10k* ar, uint32_t addr,
      */
     bus_req = ath10k_sdio_alloc_busreq(ar);
     if (!bus_req) {
-        ath10k_warn(ar,
-                    "unable to allocate bus request for async request\n");
+        ath10k_warn("unable to allocate bus request for async request\n");
         return -ENOMEM;
     }
 
@@ -1343,7 +1335,7 @@ static void ath10k_sdio_irq_handler(struct sdio_func* func) {
     wake_up(&ar_sdio->irq_wq);
 
     if (ret && ret != -ECANCELED)
-        ath10k_warn(ar, "failed to process pending SDIO interrupts: %d\n",
+        ath10k_warn("failed to process pending SDIO interrupts: %d\n",
                     ret);
 }
 
@@ -1361,7 +1353,7 @@ static int ath10k_sdio_hif_disable_intrs(struct ath10k* ar) {
     ret = ath10k_sdio_write(ar, MBOX_INT_STATUS_ENABLE_ADDRESS,
                             &regs->int_status_en, sizeof(*regs));
     if (ret) {
-        ath10k_warn(ar, "unable to disable sdio interrupts: %d\n", ret);
+        ath10k_warn("unable to disable sdio interrupts: %d\n", ret);
     }
 
     mutex_unlock(&irq_data->mtx);
@@ -1384,7 +1376,7 @@ static int ath10k_sdio_hif_power_up(struct ath10k* ar) {
 
     ret = sdio_enable_func(func);
     if (ret) {
-        ath10k_warn(ar, "unable to enable sdio function: %d)\n", ret);
+        ath10k_warn("unable to enable sdio function: %d)\n", ret);
         sdio_release_host(func);
         return ret;
     }
@@ -1422,7 +1414,7 @@ static void ath10k_sdio_hif_power_down(struct ath10k* ar) {
     sdio_release_host(ar_sdio->func);
 
     if (ret) {
-        ath10k_warn(ar, "unable to disable sdio function: %d\n", ret);
+        ath10k_warn("unable to disable sdio function: %d\n", ret);
     }
 
     ar_sdio->is_disabled = true;
@@ -1498,8 +1490,7 @@ static int ath10k_sdio_hif_enable_intrs(struct ath10k* ar) {
     ret = ath10k_sdio_write(ar, MBOX_INT_STATUS_ENABLE_ADDRESS,
                             &regs->int_status_en, sizeof(*regs));
     if (ret)
-        ath10k_warn(ar,
-                    "failed to update mbox interrupt status register : %d\n",
+        ath10k_warn("failed to update mbox interrupt status register : %d\n",
                     ret);
 
     mutex_unlock(&irq_data->mtx);
@@ -1512,7 +1503,7 @@ static int ath10k_sdio_hif_set_mbox_sleep(struct ath10k* ar, bool enable_sleep) 
 
     ret = ath10k_sdio_read32(ar, ATH10K_FIFO_TIMEOUT_AND_CHIP_CONTROL, &val);
     if (ret) {
-        ath10k_warn(ar, "failed to read fifo/chip control register: %d\n",
+        ath10k_warn("failed to read fifo/chip control register: %d\n",
                     ret);
         return ret;
     }
@@ -1525,7 +1516,7 @@ static int ath10k_sdio_hif_set_mbox_sleep(struct ath10k* ar, bool enable_sleep) 
 
     ret = ath10k_sdio_write32(ar, ATH10K_FIFO_TIMEOUT_AND_CHIP_CONTROL, val);
     if (ret) {
-        ath10k_warn(ar, "failed to write to FIFO_TIMEOUT_AND_CHIP_CONTROL: %d",
+        ath10k_warn("failed to write to FIFO_TIMEOUT_AND_CHIP_CONTROL: %d",
                     ret);
         return ret;
     }
@@ -1542,14 +1533,14 @@ static int ath10k_sdio_hif_diag_read(struct ath10k* ar, uint32_t address, void* 
     /* set window register to start read cycle */
     ret = ath10k_sdio_write32(ar, MBOX_WINDOW_READ_ADDR_ADDRESS, address);
     if (ret) {
-        ath10k_warn(ar, "failed to set mbox window read address: %d", ret);
+        ath10k_warn("failed to set mbox window read address: %d", ret);
         return ret;
     }
 
     /* read the data */
     ret = ath10k_sdio_read(ar, MBOX_WINDOW_DATA_ADDRESS, buf, buf_len);
     if (ret) {
-        ath10k_warn(ar, "failed to read from mbox window data address: %d\n",
+        ath10k_warn("failed to read from mbox window data address: %d\n",
                     ret);
         return ret;
     }
@@ -1587,8 +1578,7 @@ static int ath10k_sdio_hif_diag_write_mem(struct ath10k* ar, uint32_t address,
     /* set write data */
     ret = ath10k_sdio_write(ar, MBOX_WINDOW_DATA_ADDRESS, data, nbytes);
     if (ret) {
-        ath10k_warn(ar,
-                    "failed to write 0x%p to mbox window data address: %d\n",
+        ath10k_warn("failed to write 0x%p to mbox window data address: %d\n",
                     data, ret);
         return ret;
     }
@@ -1596,7 +1586,7 @@ static int ath10k_sdio_hif_diag_write_mem(struct ath10k* ar, uint32_t address,
     /* set window register, which starts the write cycle */
     ret = ath10k_sdio_write32(ar, MBOX_WINDOW_WRITE_ADDR_ADDRESS, address);
     if (ret) {
-        ath10k_warn(ar, "failed to set mbox window write address: %d", ret);
+        ath10k_warn("failed to set mbox window write address: %d", ret);
         return ret;
     }
 
@@ -1631,7 +1621,7 @@ static int ath10k_sdio_hif_start(struct ath10k* ar) {
     /* Register the isr */
     ret =  sdio_claim_irq(ar_sdio->func, ath10k_sdio_irq_handler);
     if (ret) {
-        ath10k_warn(ar, "failed to claim sdio interrupt: %d\n", ret);
+        ath10k_warn("failed to claim sdio interrupt: %d\n", ret);
         sdio_release_host(ar_sdio->func);
         return ret;
     }
@@ -1640,14 +1630,14 @@ static int ath10k_sdio_hif_start(struct ath10k* ar) {
 
     ret = ath10k_sdio_hif_enable_intrs(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to enable sdio interrupts: %d\n", ret);
+        ath10k_warn("failed to enable sdio interrupts: %d\n", ret);
     }
 
     addr = host_interest_item_address(HI_ITEM(hi_acs_flags));
 
     ret = ath10k_sdio_hif_diag_read32(ar, addr, &val);
     if (ret) {
-        ath10k_warn(ar, "unable to read hi_acs_flags address: %d\n", ret);
+        ath10k_warn("unable to read hi_acs_flags address: %d\n", ret);
         return ret;
     }
 
@@ -1712,14 +1702,14 @@ static void ath10k_sdio_irq_disable(struct ath10k* ar) {
     ret = wait_for_completion_timeout(&irqs_disabled_comp,
                                       SDIO_IRQ_DISABLE_TIMEOUT_HZ);
     if (!ret) {
-        ath10k_warn(ar, "sdio irq disable request timed out\n");
+        ath10k_warn("sdio irq disable request timed out\n");
     }
 
     sdio_claim_host(ar_sdio->func);
 
     ret = sdio_release_irq(ar_sdio->func);
     if (ret) {
-        ath10k_warn(ar, "failed to release sdio interrupt: %d\n", ret);
+        ath10k_warn("failed to release sdio interrupt: %d\n", ret);
     }
 
     sdio_release_host(ar_sdio->func);
@@ -1851,7 +1841,7 @@ static int ath10k_sdio_hif_map_service_to_pipe(struct ath10k* ar,
                    ar_sdio->mbox_addr[eid], ar_sdio->mbox_size[eid]);
         break;
     default:
-        ath10k_warn(ar, "unsupported HTC service id: %d\n",
+        ath10k_warn("unsupported HTC service id: %d\n",
                     service_id);
         return -EINVAL;
     }
@@ -2008,7 +1998,7 @@ static int ath10k_sdio_probe(struct sdio_func* func,
         break;
     default:
         ret = -ENODEV;
-        ath10k_err(ar, "unsupported device id %u (0x%x)\n",
+        ath10k_err("unsupported device id %u (0x%x)\n",
                    dev_id_base, id->device);
         goto err_free_bmi_buf;
     }
@@ -2020,7 +2010,7 @@ static int ath10k_sdio_probe(struct sdio_func* func,
 
     ret = ath10k_sdio_config(ar);
     if (ret) {
-        ath10k_err(ar, "failed to config sdio: %d\n", ret);
+        ath10k_err("failed to config sdio: %d\n", ret);
         goto err_free_wq;
     }
 
@@ -2028,12 +2018,12 @@ static int ath10k_sdio_probe(struct sdio_func* func,
     chip_id = 0;
     ret = ath10k_core_register(ar, chip_id);
     if (ret) {
-        ath10k_err(ar, "failed to register driver core: %d\n", ret);
+        ath10k_err("failed to register driver core: %d\n", ret);
         goto err_free_wq;
     }
 
     /* TODO: remove this once SDIO support is fully implemented */
-    ath10k_warn(ar, "WARNING: ath10k SDIO support is incomplete, don't expect anything to work!\n");
+    ath10k_warn("WARNING: ath10k SDIO support is incomplete, don't expect anything to work!\n");
 
     return 0;
 

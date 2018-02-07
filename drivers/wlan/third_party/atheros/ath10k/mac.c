@@ -217,7 +217,7 @@ int ath10k_mac_ext_resource_config(struct ath10k* ar, uint32_t val) {
     ret = ath10k_wmi_ext_resource_config(ar, platform_type, val);
 
     if (ret && ret != -EOPNOTSUPP) {
-        ath10k_warn(ar, "failed to configure ext resource: %d\n", ret);
+        ath10k_warn("failed to configure ext resource: %d\n", ret);
         return ret;
     }
 
@@ -262,7 +262,7 @@ static int ath10k_send_key(struct ath10k_vif* arvif,
         WARN_ON(1);
         return -EINVAL;
     default:
-        ath10k_warn(ar, "cipher %d is not supported\n", key->cipher);
+        ath10k_warn("cipher %d is not supported\n", key->cipher);
         return -EOPNOTSUPP;
     }
 
@@ -395,7 +395,7 @@ static int ath10k_install_peer_wep_keys(struct ath10k_vif* arvif,
                                     arvif->ar->wmi.vdev_param->def_keyid,
                                     arvif->def_wep_key_idx);
     if (ret) {
-        ath10k_warn(ar, "failed to re-set def wpa key idxon vdev %i: %d\n",
+        ath10k_warn("failed to re-set def wpa key idxon vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -435,7 +435,7 @@ static int ath10k_clear_peer_keys(struct ath10k_vif* arvif,
         }
 
         if (ret < 0)
-            ath10k_warn(ar, "failed to remove peer wep key %d: %d\n",
+            ath10k_warn("failed to remove peer wep key %d: %d\n",
                         i, ret);
 
         spin_lock_bh(&ar->data_lock);
@@ -515,7 +515,7 @@ static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
         }
 
         if (ret)
-            ath10k_warn(ar, "failed to remove key for %pM: %d\n",
+            ath10k_warn("failed to remove key for %pM: %d\n",
                         addr, ret);
     }
 
@@ -548,7 +548,7 @@ static int ath10k_mac_vif_update_wep_key(struct ath10k_vif* arvif,
 
         ret = ath10k_install_peer_wep_keys(arvif, peer->addr);
         if (ret) {
-            ath10k_warn(ar, "failed to update wep keys on vdev %i for peer %pM: %d\n",
+            ath10k_warn("failed to update wep keys on vdev %i for peer %pM: %d\n",
                         arvif->vdev_id, peer->addr, ret);
             return ret;
         }
@@ -728,14 +728,14 @@ static int ath10k_peer_create(struct ath10k* ar,
 
     ret = ath10k_wmi_peer_create(ar, vdev_id, addr, peer_type);
     if (ret) {
-        ath10k_warn(ar, "failed to create wmi peer %pM on vdev %i: %i\n",
+        ath10k_warn("failed to create wmi peer %pM on vdev %i: %i\n",
                     addr, vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_wait_for_peer_created(ar, vdev_id, addr);
     if (ret) {
-        ath10k_warn(ar, "failed to wait for created wmi peer %pM on vdev %i: %i\n",
+        ath10k_warn("failed to wait for created wmi peer %pM on vdev %i: %i\n",
                     addr, vdev_id, ret);
         return ret;
     }
@@ -745,7 +745,7 @@ static int ath10k_peer_create(struct ath10k* ar,
     peer = ath10k_peer_find(ar, vdev_id, addr);
     if (!peer) {
         spin_unlock_bh(&ar->data_lock);
-        ath10k_warn(ar, "failed to find peer %pM on vdev %i after creation\n",
+        ath10k_warn("failed to find peer %pM on vdev %i after creation\n",
                     addr, vdev_id);
         ath10k_wmi_peer_delete(ar, vdev_id, addr);
         return -ENOENT;
@@ -770,7 +770,7 @@ static int ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_pdev_set_param(ar, param,
                                     ATH10K_KICKOUT_THRESHOLD);
     if (ret) {
-        ath10k_warn(ar, "failed to set kickout threshold on vdev %i: %d\n",
+        ath10k_warn("failed to set kickout threshold on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -779,7 +779,7 @@ static int ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MIN_IDLE);
     if (ret) {
-        ath10k_warn(ar, "failed to set keepalive minimum idle time on vdev %i: %d\n",
+        ath10k_warn("failed to set keepalive minimum idle time on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -788,7 +788,7 @@ static int ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MAX_IDLE);
     if (ret) {
-        ath10k_warn(ar, "failed to set keepalive maximum idle time on vdev %i: %d\n",
+        ath10k_warn("failed to set keepalive maximum idle time on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -797,7 +797,7 @@ static int ath10k_mac_set_kickout(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param,
                                     ATH10K_KEEPALIVE_MAX_UNRESPONSIVE);
     if (ret) {
-        ath10k_warn(ar, "failed to set keepalive maximum unresponsive time on vdev %i: %d\n",
+        ath10k_warn("failed to set keepalive maximum unresponsive time on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -846,7 +846,7 @@ static void ath10k_peer_cleanup(struct ath10k* ar, uint32_t vdev_id) {
             continue;
         }
 
-        ath10k_warn(ar, "removing stale peer %pM from vdev_id %d\n",
+        ath10k_warn("removing stale peer %pM from vdev_id %d\n",
                     peer->addr, vdev_id);
 
         for_each_set_bit(peer_id, peer->peer_ids,
@@ -859,7 +859,7 @@ static void ath10k_peer_cleanup(struct ath10k* ar, uint32_t vdev_id) {
          */
         for (i = 0; i < ARRAY_SIZE(ar->peer_map); i++) {
             if (ar->peer_map[i] == peer) {
-                ath10k_warn(ar, "removing stale peer_map entry for %pM (ptr %pK idx %d)\n",
+                ath10k_warn("removing stale peer_map entry for %pM (ptr %pK idx %d)\n",
                             peer->addr, peer, i);
                 ar->peer_map[i] = NULL;
             }
@@ -918,7 +918,7 @@ static int ath10k_mac_tdls_peer_update(struct ath10k* ar, uint32_t vdev_id,
 
     ret = ath10k_wmi_tdls_peer_update(ar, &arg, &cap, &chan_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to update tdls peer %pM on vdev %i: %i\n",
+        ath10k_warn("failed to update tdls peer %pM on vdev %i: %i\n",
                     arg.addr, vdev_id, ret);
         return ret;
     }
@@ -1024,21 +1024,21 @@ static int ath10k_monitor_vdev_start(struct ath10k* ar, int vdev_id) {
 
     ret = ath10k_wmi_vdev_start(ar, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to request monitor vdev %i start: %d\n",
+        ath10k_warn("failed to request monitor vdev %i start: %d\n",
                     vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_vdev_setup_sync(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to synchronize setup for monitor vdev %i start: %d\n",
+        ath10k_warn("failed to synchronize setup for monitor vdev %i start: %d\n",
                     vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_wmi_vdev_up(ar, vdev_id, 0, ar->mac_addr);
     if (ret) {
-        ath10k_warn(ar, "failed to put up monitor vdev %i: %d\n",
+        ath10k_warn("failed to put up monitor vdev %i: %d\n",
                     vdev_id, ret);
         goto vdev_stop;
     }
@@ -1052,7 +1052,7 @@ static int ath10k_monitor_vdev_start(struct ath10k* ar, int vdev_id) {
 vdev_stop:
     ret = ath10k_wmi_vdev_stop(ar, ar->monitor_vdev_id);
     if (ret)
-        ath10k_warn(ar, "failed to stop monitor vdev %i after start failure: %d\n",
+        ath10k_warn("failed to stop monitor vdev %i after start failure: %d\n",
                     ar->monitor_vdev_id, ret);
 
     return ret;
@@ -1065,19 +1065,19 @@ static int ath10k_monitor_vdev_stop(struct ath10k* ar) {
 
     ret = ath10k_wmi_vdev_down(ar, ar->monitor_vdev_id);
     if (ret)
-        ath10k_warn(ar, "failed to put down monitor vdev %i: %d\n",
+        ath10k_warn("failed to put down monitor vdev %i: %d\n",
                     ar->monitor_vdev_id, ret);
 
     reinit_completion(&ar->vdev_setup_done);
 
     ret = ath10k_wmi_vdev_stop(ar, ar->monitor_vdev_id);
     if (ret)
-        ath10k_warn(ar, "failed to to request monitor vdev %i stop: %d\n",
+        ath10k_warn("failed to to request monitor vdev %i stop: %d\n",
                     ar->monitor_vdev_id, ret);
 
     ret = ath10k_vdev_setup_sync(ar);
     if (ret)
-        ath10k_warn(ar, "failed to synchronize monitor vdev %i stop: %d\n",
+        ath10k_warn("failed to synchronize monitor vdev %i stop: %d\n",
                     ar->monitor_vdev_id, ret);
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac monitor vdev %i stopped\n",
@@ -1091,7 +1091,7 @@ static int ath10k_monitor_vdev_create(struct ath10k* ar) {
     lockdep_assert_held(&ar->conf_mutex);
 
     if (ar->free_vdev_map == 0) {
-        ath10k_warn(ar, "failed to find free vdev id for monitor vdev\n");
+        ath10k_warn("failed to find free vdev id for monitor vdev\n");
         return -ENOMEM;
     }
 
@@ -1103,7 +1103,7 @@ static int ath10k_monitor_vdev_create(struct ath10k* ar) {
                                  WMI_VDEV_TYPE_MONITOR,
                                  0, ar->mac_addr);
     if (ret) {
-        ath10k_warn(ar, "failed to request monitor vdev %i creation: %d\n",
+        ath10k_warn("failed to request monitor vdev %i creation: %d\n",
                     ar->monitor_vdev_id, ret);
         return ret;
     }
@@ -1122,7 +1122,7 @@ static int ath10k_monitor_vdev_delete(struct ath10k* ar) {
 
     ret = ath10k_wmi_vdev_delete(ar, ar->monitor_vdev_id);
     if (ret) {
-        ath10k_warn(ar, "failed to request wmi monitor vdev %i removal: %d\n",
+        ath10k_warn("failed to request wmi monitor vdev %i removal: %d\n",
                     ar->monitor_vdev_id, ret);
         return ret;
     }
@@ -1141,13 +1141,13 @@ static int ath10k_monitor_start(struct ath10k* ar) {
 
     ret = ath10k_monitor_vdev_create(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to create monitor vdev: %d\n", ret);
+        ath10k_warn("failed to create monitor vdev: %d\n", ret);
         return ret;
     }
 
     ret = ath10k_monitor_vdev_start(ar, ar->monitor_vdev_id);
     if (ret) {
-        ath10k_warn(ar, "failed to start monitor vdev: %d\n", ret);
+        ath10k_warn("failed to start monitor vdev: %d\n", ret);
         ath10k_monitor_vdev_delete(ar);
         return ret;
     }
@@ -1165,13 +1165,13 @@ static int ath10k_monitor_stop(struct ath10k* ar) {
 
     ret = ath10k_monitor_vdev_stop(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to stop monitor vdev: %d\n", ret);
+        ath10k_warn("failed to stop monitor vdev: %d\n", ret);
         return ret;
     }
 
     ret = ath10k_monitor_vdev_delete(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to delete monitor vdev: %d\n", ret);
+        ath10k_warn("failed to delete monitor vdev: %d\n", ret);
         return ret;
     }
 
@@ -1242,7 +1242,7 @@ static int ath10k_monitor_recalc(struct ath10k* ar) {
 
             ret = ath10k_monitor_stop(ar);
             if (ret)
-                ath10k_warn(ar, "failed to stop disallowed monitor: %d\n",
+                ath10k_warn("failed to stop disallowed monitor: %d\n",
                             ret);
             /* not serious */
         }
@@ -1322,7 +1322,7 @@ static int ath10k_start_cac(struct ath10k* ar) {
 
     ret = ath10k_monitor_recalc(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to start monitor (cac): %d\n", ret);
+        ath10k_warn("failed to start monitor (cac): %d\n", ret);
         clear_bit(ATH10K_CAC_RUNNING, &ar->dev_flags);
         return ret;
     }
@@ -1391,7 +1391,7 @@ static void ath10k_recalc_radar_detection(struct ath10k* ar) {
          * radiation is not allowed, make this channel DFS_UNAVAILABLE
          * by indicating that radar was detected.
          */
-        ath10k_warn(ar, "failed to start CAC: %d\n", ret);
+        ath10k_warn("failed to start CAC: %d\n", ret);
         ieee80211_radar_detected(ar->hw);
     }
 }
@@ -1406,14 +1406,14 @@ static int ath10k_vdev_stop(struct ath10k_vif* arvif) {
 
     ret = ath10k_wmi_vdev_stop(ar, arvif->vdev_id);
     if (ret) {
-        ath10k_warn(ar, "failed to stop WMI vdev %i: %d\n",
+        ath10k_warn("failed to stop WMI vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_vdev_setup_sync(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to synchronize setup for vdev %i: %d\n",
+        ath10k_warn("failed to synchronize setup for vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1478,15 +1478,14 @@ static int ath10k_vdev_start_restart(struct ath10k_vif* arvif,
     }
 
     if (ret) {
-        ath10k_warn(ar, "failed to start WMI vdev %i: %d\n",
+        ath10k_warn("failed to start WMI vdev %i: %d\n",
                     arg.vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_vdev_setup_sync(ar);
     if (ret) {
-        ath10k_warn(ar,
-                    "failed to synchronize setup for vdev %i restart %d: %d\n",
+        ath10k_warn("failed to synchronize setup for vdev %i restart %d: %d\n",
                     arg.vdev_id, restart, ret);
         return ret;
     }
@@ -1529,7 +1528,7 @@ static int ath10k_mac_setup_bcn_p2p_ie(struct ath10k_vif* arvif,
 
     ret = ath10k_wmi_p2p_go_bcn_ie(ar, arvif->vdev_id, p2p_ie);
     if (ret) {
-        ath10k_warn(ar, "failed to submit p2p go bcn ie for vdev %i: %d\n",
+        ath10k_warn("failed to submit p2p go bcn ie for vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1588,13 +1587,13 @@ static int ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
 
     bcn = ieee80211_beacon_get_template(hw, vif, &offs);
     if (!bcn) {
-        ath10k_warn(ar, "failed to get beacon template from mac80211\n");
+        ath10k_warn("failed to get beacon template from mac80211\n");
         return -EPERM;
     }
 
     ret = ath10k_mac_setup_bcn_p2p_ie(arvif, bcn);
     if (ret) {
-        ath10k_warn(ar, "failed to setup p2p go bcn ie: %d\n", ret);
+        ath10k_warn("failed to setup p2p go bcn ie: %d\n", ret);
         kfree_skb(bcn);
         return ret;
     }
@@ -1612,7 +1611,7 @@ static int ath10k_mac_setup_bcn_tmpl(struct ath10k_vif* arvif) {
     kfree_skb(bcn);
 
     if (ret) {
-        ath10k_warn(ar, "failed to submit beacon template command: %d\n",
+        ath10k_warn("failed to submit beacon template command: %d\n",
                     ret);
         return ret;
     }
@@ -1637,7 +1636,7 @@ static int ath10k_mac_setup_prb_tmpl(struct ath10k_vif* arvif) {
 
     prb = ieee80211_proberesp_get(hw, vif);
     if (!prb) {
-        ath10k_warn(ar, "failed to get probe resp template from mac80211\n");
+        ath10k_warn("failed to get probe resp template from mac80211\n");
         return -EPERM;
     }
 
@@ -1645,7 +1644,7 @@ static int ath10k_mac_setup_prb_tmpl(struct ath10k_vif* arvif) {
     kfree_skb(prb);
 
     if (ret) {
-        ath10k_warn(ar, "failed to submit probe resp template command: %d\n",
+        ath10k_warn("failed to submit probe resp template command: %d\n",
                     ret);
         return ret;
     }
@@ -1691,7 +1690,7 @@ static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
     if (ret) {
-        ath10k_warn(ar, "failed to bring down ap vdev %i: %d\n",
+        ath10k_warn("failed to bring down ap vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1702,19 +1701,19 @@ static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
 
     ret = ath10k_mac_setup_bcn_tmpl(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to update beacon template: %d\n", ret);
+        ath10k_warn("failed to update beacon template: %d\n", ret);
         return ret;
     }
 
     ret = ath10k_mac_setup_prb_tmpl(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to update presp template: %d\n", ret);
+        ath10k_warn("failed to update presp template: %d\n", ret);
         return ret;
     }
 
     ret = ath10k_vdev_restart(arvif, &def);
     if (ret) {
-        ath10k_warn(ar, "failed to restart ap vdev %i: %d\n",
+        ath10k_warn("failed to restart ap vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1722,7 +1721,7 @@ static int ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
                              arvif->bssid);
     if (ret) {
-        ath10k_warn(ar, "failed to bring up ap vdev %i: %d\n",
+        ath10k_warn("failed to bring up ap vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1740,7 +1739,7 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif,
     if (!info->enable_beacon) {
         ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
         if (ret)
-            ath10k_warn(ar, "failed to down vdev_id %i: %d\n",
+            ath10k_warn("failed to down vdev_id %i: %d\n",
                         arvif->vdev_id, ret);
 
         arvif->is_up = false;
@@ -1760,7 +1759,7 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif,
     ret = ath10k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
                              arvif->bssid);
     if (ret) {
-        ath10k_warn(ar, "failed to bring up vdev %d: %i\n",
+        ath10k_warn("failed to bring up vdev %d: %i\n",
                     arvif->vdev_id, ret);
         return;
     }
@@ -1769,7 +1768,7 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif,
 
     ret = ath10k_mac_vif_fix_hidden_ssid(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to fix hidden ssid for vdev %i, expect trouble: %d\n",
+        ath10k_warn("failed to fix hidden ssid for vdev %i, expect trouble: %d\n",
                     arvif->vdev_id, ret);
         return;
     }
@@ -1800,7 +1799,7 @@ static void ath10k_control_ibss(struct ath10k_vif* arvif,
     ret = ath10k_wmi_vdev_set_param(arvif->ar, arvif->vdev_id, vdev_param,
                                     ATH10K_DEFAULT_ATIM);
     if (ret)
-        ath10k_warn(ar, "failed to set IBSS ATIM for vdev %d: %d\n",
+        ath10k_warn("failed to set IBSS ATIM for vdev %d: %d\n",
                     arvif->vdev_id, ret);
 }
 
@@ -1821,7 +1820,7 @@ static int ath10k_mac_vif_recalc_ps_wake_threshold(struct ath10k_vif* arvif) {
     param = WMI_STA_PS_PARAM_TX_WAKE_THRESHOLD;
     ret = ath10k_wmi_set_sta_ps_param(ar, arvif->vdev_id, param, value);
     if (ret) {
-        ath10k_warn(ar, "failed to submit ps wake threshold %u on vdev %i: %d\n",
+        ath10k_warn("failed to submit ps wake threshold %u on vdev %i: %d\n",
                     value, arvif->vdev_id, ret);
         return ret;
     }
@@ -1847,7 +1846,7 @@ static int ath10k_mac_vif_recalc_ps_poll_count(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_set_sta_ps_param(ar, arvif->vdev_id,
                                       param, value);
     if (ret) {
-        ath10k_warn(ar, "failed to submit ps poll count %u on vdev %i: %d\n",
+        ath10k_warn("failed to submit ps poll count %u on vdev %i: %d\n",
                     value, arvif->vdev_id, ret);
         return ret;
     }
@@ -1890,7 +1889,7 @@ static int ath10k_mac_vif_setup_ps(struct ath10k_vif* arvif) {
     if (enable_ps && ath10k_mac_num_vifs_started(ar) > 1 &&
             !test_bit(ATH10K_FW_FEATURE_MULTI_VIF_PS_SUPPORT,
                       ar->running_fw->fw_file.fw_features)) {
-        ath10k_warn(ar, "refusing to enable ps on vdev %i: not supported by fw\n",
+        ath10k_warn("refusing to enable ps on vdev %i: not supported by fw\n",
                     arvif->vdev_id);
         enable_ps = false;
     }
@@ -1916,7 +1915,7 @@ static int ath10k_mac_vif_setup_ps(struct ath10k_vif* arvif) {
         ret = ath10k_wmi_set_sta_ps_param(ar, arvif->vdev_id, param,
                                           ps_timeout);
         if (ret) {
-            ath10k_warn(ar, "failed to set inactivity time for vdev %d: %i\n",
+            ath10k_warn("failed to set inactivity time for vdev %d: %i\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -1929,7 +1928,7 @@ static int ath10k_mac_vif_setup_ps(struct ath10k_vif* arvif) {
 
     ret = ath10k_wmi_set_psmode(ar, arvif->vdev_id, psmode);
     if (ret) {
-        ath10k_warn(ar, "failed to set PS Mode %d for vdev %d: %d\n",
+        ath10k_warn("failed to set PS Mode %d for vdev %d: %d\n",
                     psmode, arvif->vdev_id, ret);
         return ret;
     }
@@ -1962,7 +1961,7 @@ static int ath10k_mac_vif_disable_keepalive(struct ath10k_vif* arvif) {
 
     ret = ath10k_wmi_sta_keepalive(ar, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to submit keepalive on vdev %i: %d\n",
+        ath10k_warn("failed to submit keepalive on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -1998,12 +1997,12 @@ static void ath10k_mac_vif_ap_csa_count_down(struct ath10k_vif* arvif) {
 
         ret = ath10k_mac_setup_bcn_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to update bcn tmpl during csa: %d\n",
+            ath10k_warn("failed to update bcn tmpl during csa: %d\n",
                         ret);
 
         ret = ath10k_mac_setup_prb_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to update prb tmpl during csa: %d\n",
+            ath10k_warn("failed to update prb tmpl during csa: %d\n",
                         ret);
     } else {
         ieee80211_csa_finish(vif);
@@ -2397,7 +2396,7 @@ static int ath10k_peer_assoc_qos_ap(struct ath10k* ar,
                                          WMI_AP_PS_PEER_PARAM_UAPSD,
                                          uapsd);
         if (ret) {
-            ath10k_warn(ar, "failed to set ap ps peer param uapsd for vdev %i: %d\n",
+            ath10k_warn("failed to set ap ps peer param uapsd for vdev %i: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -2407,7 +2406,7 @@ static int ath10k_peer_assoc_qos_ap(struct ath10k* ar,
                                          WMI_AP_PS_PEER_PARAM_MAX_SP,
                                          max_sp);
         if (ret) {
-            ath10k_warn(ar, "failed to set ap ps peer param max sp for vdev %i: %d\n",
+            ath10k_warn("failed to set ap ps peer param max sp for vdev %i: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -2421,7 +2420,7 @@ static int ath10k_peer_assoc_qos_ap(struct ath10k* ar,
                                          WMI_AP_PS_PEER_PARAM_AGEOUT_TIME,
                                          10);
         if (ret) {
-            ath10k_warn(ar, "failed to set ap ps peer param ageout time for vdev %i: %d\n",
+            ath10k_warn("failed to set ap ps peer param ageout time for vdev %i: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -2832,7 +2831,7 @@ static int ath10k_mac_vif_recalc_txbf(struct ath10k* ar,
 
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, param, value);
     if (ret) {
-        ath10k_warn(ar, "failed to submit vdev param txbf 0x%x: %d\n",
+        ath10k_warn("failed to submit vdev param txbf 0x%x: %d\n",
                     value, ret);
         return ret;
     }
@@ -2861,7 +2860,7 @@ static void ath10k_bss_assoc(struct ieee80211_hw* hw,
 
     ap_sta = ieee80211_find_sta(vif, bss_conf->bssid);
     if (!ap_sta) {
-        ath10k_warn(ar, "failed to find station entry for bss %pM vdev %i\n",
+        ath10k_warn("failed to find station entry for bss %pM vdev %i\n",
                     bss_conf->bssid, arvif->vdev_id);
         rcu_read_unlock();
         return;
@@ -2875,7 +2874,7 @@ static void ath10k_bss_assoc(struct ieee80211_hw* hw,
 
     ret = ath10k_peer_assoc_prepare(ar, vif, ap_sta, &peer_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to prepare peer assoc for %pM vdev %i: %d\n",
+        ath10k_warn("failed to prepare peer assoc for %pM vdev %i: %d\n",
                     bss_conf->bssid, arvif->vdev_id, ret);
         rcu_read_unlock();
         return;
@@ -2885,21 +2884,21 @@ static void ath10k_bss_assoc(struct ieee80211_hw* hw,
 
     ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to run peer assoc for %pM vdev %i: %d\n",
+        ath10k_warn("failed to run peer assoc for %pM vdev %i: %d\n",
                     bss_conf->bssid, arvif->vdev_id, ret);
         return;
     }
 
     ret = ath10k_setup_peer_smps(ar, arvif, bss_conf->bssid, &ht_cap);
     if (ret) {
-        ath10k_warn(ar, "failed to setup peer SMPS for vdev %i: %d\n",
+        ath10k_warn("failed to setup peer SMPS for vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return;
     }
 
     ret = ath10k_mac_vif_recalc_txbf(ar, vif, vht_cap);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc txbf for vdev %i on bss %pM: %d\n",
+        ath10k_warn("failed to recalc txbf for vdev %i on bss %pM: %d\n",
                     arvif->vdev_id, bss_conf->bssid, ret);
         return;
     }
@@ -2915,7 +2914,7 @@ static void ath10k_bss_assoc(struct ieee80211_hw* hw,
 
     ret = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
     if (ret) {
-        ath10k_warn(ar, "failed to set vdev %d up: %d\n",
+        ath10k_warn("failed to set vdev %d up: %d\n",
                     arvif->vdev_id, ret);
         return;
     }
@@ -2929,7 +2928,7 @@ static void ath10k_bss_assoc(struct ieee80211_hw* hw,
     ret = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, arvif->bssid,
                                     WMI_PEER_DUMMY_VAR, 1);
     if (ret) {
-        ath10k_warn(ar, "failed to poke peer %pM param for ps workaround on vdev %i: %d\n",
+        ath10k_warn("failed to poke peer %pM param for ps workaround on vdev %i: %d\n",
                     arvif->bssid, arvif->vdev_id, ret);
         return;
     }
@@ -2949,14 +2948,14 @@ static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
 
     ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
     if (ret)
-        ath10k_warn(ar, "failed to down vdev %i: %d\n",
+        ath10k_warn("failed to down vdev %i: %d\n",
                     arvif->vdev_id, ret);
 
     arvif->def_wep_key_idx = -1;
 
     ret = ath10k_mac_vif_recalc_txbf(ar, vif, vht_cap);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc txbf for vdev %i: %d\n",
+        ath10k_warn("failed to recalc txbf for vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return;
     }
@@ -2978,14 +2977,14 @@ static int ath10k_station_assoc(struct ath10k* ar,
 
     ret = ath10k_peer_assoc_prepare(ar, vif, sta, &peer_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to prepare WMI peer assoc for %pM vdev %i: %i\n",
+        ath10k_warn("failed to prepare WMI peer assoc for %pM vdev %i: %i\n",
                     sta->addr, arvif->vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
     if (ret) {
-        ath10k_warn(ar, "failed to run peer assoc for STA %pM vdev %i: %d\n",
+        ath10k_warn("failed to run peer assoc for STA %pM vdev %i: %d\n",
                     sta->addr, arvif->vdev_id, ret);
         return ret;
     }
@@ -2997,14 +2996,14 @@ static int ath10k_station_assoc(struct ath10k* ar,
         ret = ath10k_setup_peer_smps(ar, arvif, sta->addr,
                                      &sta->ht_cap);
         if (ret) {
-            ath10k_warn(ar, "failed to setup peer SMPS for vdev %d: %d\n",
+            ath10k_warn("failed to setup peer SMPS for vdev %d: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
 
         ret = ath10k_peer_assoc_qos_ap(ar, arvif, sta);
         if (ret) {
-            ath10k_warn(ar, "failed to set qos params for STA %pM for vdev %i: %d\n",
+            ath10k_warn("failed to set qos params for STA %pM for vdev %i: %d\n",
                         sta->addr, arvif->vdev_id, ret);
             return ret;
         }
@@ -3013,7 +3012,7 @@ static int ath10k_station_assoc(struct ath10k* ar,
             arvif->num_legacy_stations++;
             ret  = ath10k_recalc_rtscts_prot(arvif);
             if (ret) {
-                ath10k_warn(ar, "failed to recalculate rts/cts prot for vdev %d: %d\n",
+                ath10k_warn("failed to recalculate rts/cts prot for vdev %d: %d\n",
                             arvif->vdev_id, ret);
                 return ret;
             }
@@ -3023,7 +3022,7 @@ static int ath10k_station_assoc(struct ath10k* ar,
         if (arvif->def_wep_key_idx != -1) {
             ret = ath10k_install_peer_wep_keys(arvif, sta->addr);
             if (ret) {
-                ath10k_warn(ar, "failed to install peer wep keys for vdev %i: %d\n",
+                ath10k_warn("failed to install peer wep keys for vdev %i: %d\n",
                             arvif->vdev_id, ret);
                 return ret;
             }
@@ -3045,7 +3044,7 @@ static int ath10k_station_disassoc(struct ath10k* ar,
         arvif->num_legacy_stations--;
         ret = ath10k_recalc_rtscts_prot(arvif);
         if (ret) {
-            ath10k_warn(ar, "failed to recalculate rts/cts prot for vdev %d: %d\n",
+            ath10k_warn("failed to recalculate rts/cts prot for vdev %d: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -3053,7 +3052,7 @@ static int ath10k_station_disassoc(struct ath10k* ar,
 
     ret = ath10k_clear_peer_keys(arvif, sta->addr);
     if (ret) {
-        ath10k_warn(ar, "failed to clear all peer wep keys for vdev %i: %d\n",
+        ath10k_warn("failed to clear all peer wep keys for vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -3194,7 +3193,7 @@ static void ath10k_regd_update(struct ath10k* ar) {
 
     ret = ath10k_update_channel_list(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to update channel list: %d\n", ret);
+        ath10k_warn("failed to update channel list: %d\n", ret);
     }
 
     regpair = ar->ath_common.regulatory.regpair;
@@ -3217,7 +3216,7 @@ static void ath10k_regd_update(struct ath10k* ar) {
                                         regpair->reg_5ghz_ctl,
                                         wmi_dfs_reg);
     if (ret) {
-        ath10k_warn(ar, "failed to set pdev regdomain: %d\n", ret);
+        ath10k_warn("failed to set pdev regdomain: %d\n", ret);
     }
 }
 
@@ -3249,7 +3248,7 @@ static void ath10k_reg_notifier(struct wiphy* wiphy,
         result = ar->dfs_detector->set_dfs_domain(ar->dfs_detector,
                  request->dfs_region);
         if (!result)
-            ath10k_warn(ar, "DFS region 0x%X not supported, will trigger radar for every pulse\n",
+            ath10k_warn("DFS region 0x%X not supported, will trigger radar for every pulse\n",
                         request->dfs_region);
     }
 
@@ -3599,7 +3598,7 @@ static int ath10k_mac_tx_wmi_mgmt(struct ath10k* ar, struct sk_buff* skb) {
     spin_lock_bh(&ar->data_lock);
 
     if (skb_queue_len(q) == ATH10K_MAX_NUM_MGMT_PENDING) {
-        ath10k_warn(ar, "wmi mgmt tx queue is full\n");
+        ath10k_warn("wmi mgmt tx queue is full\n");
         ret = -ENOSPC;
         goto unlock;
     }
@@ -3660,7 +3659,7 @@ static int ath10k_mac_tx_submit(struct ath10k* ar,
     }
 
     if (ret) {
-        ath10k_warn(ar, "failed to transmit packet, dropping: %d\n",
+        ath10k_warn("failed to transmit packet, dropping: %d\n",
                     ret);
         ieee80211_free_txskb(ar->hw, skb);
     }
@@ -3716,7 +3715,7 @@ static int ath10k_mac_tx(struct ath10k* ar,
 
     ret = ath10k_mac_tx_submit(ar, txmode, txpath, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to submit frame: %d\n", ret);
+        ath10k_warn("failed to submit frame: %d\n", ret);
         return ret;
     }
 
@@ -3789,7 +3788,7 @@ void ath10k_offchan_tx_work(struct work_struct* work) {
                                      peer_addr,
                                      WMI_PEER_TYPE_DEFAULT);
             if (ret)
-                ath10k_warn(ar, "failed to create peer %pM on vdev %d: %d\n",
+                ath10k_warn("failed to create peer %pM on vdev %d: %d\n",
                             peer_addr, vdev_id, ret);
             tmp_peer_created = (ret == 0);
         }
@@ -3817,7 +3816,7 @@ void ath10k_offchan_tx_work(struct work_struct* work) {
 
         ret = ath10k_mac_tx(ar, vif, txmode, txpath, skb);
         if (ret) {
-            ath10k_warn(ar, "failed to transmit offchannel frame: %d\n",
+            ath10k_warn("failed to transmit offchannel frame: %d\n",
                         ret);
             /* not serious */
         }
@@ -3825,13 +3824,13 @@ void ath10k_offchan_tx_work(struct work_struct* work) {
         time_left =
             wait_for_completion_timeout(&ar->offchan_tx_completed, 3 * HZ);
         if (time_left == 0)
-            ath10k_warn(ar, "timed out waiting for offchannel skb %pK\n",
+            ath10k_warn("timed out waiting for offchannel skb %pK\n",
                         skb);
 
         if (!peer && tmp_peer_created) {
             ret = ath10k_peer_delete(ar, vdev_id, peer_addr);
             if (ret)
-                ath10k_warn(ar, "failed to delete peer %pM on vdev %d: %d\n",
+                ath10k_warn("failed to delete peer %pM on vdev %d: %d\n",
                             peer_addr, vdev_id, ret);
         }
 
@@ -3865,7 +3864,7 @@ void ath10k_mgmt_over_wmi_tx_work(struct work_struct* work) {
 
         ret = ath10k_wmi_mgmt_tx(ar, skb);
         if (ret) {
-            ath10k_warn(ar, "failed to transmit management frame via WMI: %d\n",
+            ath10k_warn("failed to transmit management frame via WMI: %d\n",
                         ret);
             ieee80211_free_txskb(ar->hw, skb);
         }
@@ -4013,7 +4012,7 @@ int ath10k_mac_tx_push_txq(struct ieee80211_hw* hw,
 
     ret = ath10k_mac_tx(ar, vif, txmode, txpath, skb);
     if (unlikely(ret)) {
-        ath10k_warn(ar, "failed to push frame: %d\n", ret);
+        ath10k_warn("failed to push frame: %d\n", ret);
 
         spin_lock_bh(&ar->htt.tx_lock);
         ath10k_htt_tx_dec_pending(htt);
@@ -4131,13 +4130,13 @@ static int ath10k_scan_stop(struct ath10k* ar) {
 
     ret = ath10k_wmi_stop_scan(ar, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to stop wmi scan: %d\n", ret);
+        ath10k_warn("failed to stop wmi scan: %d\n", ret);
         goto out;
     }
 
     ret = wait_for_completion_timeout(&ar->scan.completed, 3 * HZ);
     if (ret == 0) {
-        ath10k_warn(ar, "failed to receive scan abortion completion: timed out\n");
+        ath10k_warn("failed to receive scan abortion completion: timed out\n");
         ret = -ETIMEDOUT;
     } else if (ret > 0) {
         ret = 0;
@@ -4175,7 +4174,7 @@ static void ath10k_scan_abort(struct ath10k* ar) {
         break;
     case ATH10K_SCAN_STARTING:
     case ATH10K_SCAN_ABORTING:
-        ath10k_warn(ar, "refusing scan abortion due to invalid scan state: %s (%d)\n",
+        ath10k_warn("refusing scan abortion due to invalid scan state: %s (%d)\n",
                     ath10k_scan_state_str(ar->scan.state),
                     ar->scan.state);
         break;
@@ -4185,7 +4184,7 @@ static void ath10k_scan_abort(struct ath10k* ar) {
 
         ret = ath10k_scan_stop(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to abort scan: %d\n", ret);
+            ath10k_warn("failed to abort scan: %d\n", ret);
         }
 
         spin_lock_bh(&ar->data_lock);
@@ -4219,7 +4218,7 @@ static int ath10k_start_scan(struct ath10k* ar,
     if (ret == 0) {
         ret = ath10k_scan_stop(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to stop scan: %d\n", ret);
+            ath10k_warn("failed to stop scan: %d\n", ret);
         }
 
         return -ETIMEDOUT;
@@ -4274,7 +4273,7 @@ static void ath10k_mac_op_tx(struct ieee80211_hw* hw,
 
         ret = ath10k_htt_tx_inc_pending(htt);
         if (ret) {
-            ath10k_warn(ar, "failed to increase tx pending count: %d, dropping\n",
+            ath10k_warn("failed to increase tx pending count: %d, dropping\n",
                         ret);
             spin_unlock_bh(&ar->htt.tx_lock);
             ieee80211_free_txskb(ar->hw, skb);
@@ -4295,7 +4294,7 @@ static void ath10k_mac_op_tx(struct ieee80211_hw* hw,
 
     ret = ath10k_mac_tx(ar, vif, txmode, txpath, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to transmit frame: %d\n", ret);
+        ath10k_warn("failed to transmit frame: %d\n", ret);
         if (is_htt) {
             spin_lock_bh(&ar->htt.tx_lock);
             ath10k_htt_tx_dec_pending(htt);
@@ -4403,7 +4402,7 @@ static void ath10k_check_chain_mask(struct ath10k* ar, uint32_t cm, const char* 
         return;
     }
 
-    ath10k_warn(ar, "mac %s antenna chainmask may be invalid: 0x%x.  Suggested values: 15, 7, 3, 1 or 0.\n",
+    ath10k_warn("mac %s antenna chainmask may be invalid: 0x%x.  Suggested values: 15, 7, 3, 1 or 0.\n",
                 dbg, cm);
 }
 
@@ -4617,7 +4616,7 @@ static int __ath10k_set_antenna(struct ath10k* ar, uint32_t tx_ant, uint32_t rx_
     ret = ath10k_wmi_pdev_set_param(ar, ar->wmi.pdev_param->tx_chain_mask,
                                     tx_ant);
     if (ret) {
-        ath10k_warn(ar, "failed to set tx-chainmask: %d, req 0x%x\n",
+        ath10k_warn("failed to set tx-chainmask: %d, req 0x%x\n",
                     ret, tx_ant);
         return ret;
     }
@@ -4625,7 +4624,7 @@ static int __ath10k_set_antenna(struct ath10k* ar, uint32_t tx_ant, uint32_t rx_
     ret = ath10k_wmi_pdev_set_param(ar, ar->wmi.pdev_param->rx_chain_mask,
                                     rx_ant);
     if (ret) {
-        ath10k_warn(ar, "failed to set rx-chainmask: %d, req 0x%x\n",
+        ath10k_warn("failed to set rx-chainmask: %d, req 0x%x\n",
                     ret, rx_ant);
         return ret;
     }
@@ -4680,35 +4679,35 @@ static int ath10k_start(struct ieee80211_hw* hw) {
 
     ret = ath10k_hif_power_up(ar);
     if (ret) {
-        ath10k_err(ar, "Could not init hif: %d\n", ret);
+        ath10k_err("Could not init hif: %d\n", ret);
         goto err_off;
     }
 
     ret = ath10k_core_start(ar, ATH10K_FIRMWARE_MODE_NORMAL,
                             &ar->normal_mode_fw);
     if (ret) {
-        ath10k_err(ar, "Could not init core: %d\n", ret);
+        ath10k_err("Could not init core: %d\n", ret);
         goto err_power_down;
     }
 
     param = ar->wmi.pdev_param->pmf_qos;
     ret = ath10k_wmi_pdev_set_param(ar, param, 1);
     if (ret) {
-        ath10k_warn(ar, "failed to enable PMF QOS: %d\n", ret);
+        ath10k_warn("failed to enable PMF QOS: %d\n", ret);
         goto err_core_stop;
     }
 
     param = ar->wmi.pdev_param->dynamic_bw;
     ret = ath10k_wmi_pdev_set_param(ar, param, 1);
     if (ret) {
-        ath10k_warn(ar, "failed to enable dynamic BW: %d\n", ret);
+        ath10k_warn("failed to enable dynamic BW: %d\n", ret);
         goto err_core_stop;
     }
 
     if (test_bit(WMI_SERVICE_ADAPTIVE_OCS, ar->wmi.svc_map)) {
         ret = ath10k_wmi_adaptive_qcs(ar, true);
         if (ret) {
-            ath10k_warn(ar, "failed to enable adaptive qcs: %d\n",
+            ath10k_warn("failed to enable adaptive qcs: %d\n",
                         ret);
             goto err_core_stop;
         }
@@ -4718,7 +4717,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
         param = ar->wmi.pdev_param->burst_enable;
         ret = ath10k_wmi_pdev_set_param(ar, param, 0);
         if (ret) {
-            ath10k_warn(ar, "failed to disable burst: %d\n", ret);
+            ath10k_warn("failed to disable burst: %d\n", ret);
             goto err_core_stop;
         }
     }
@@ -4737,7 +4736,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
     param = ar->wmi.pdev_param->arp_ac_override;
     ret = ath10k_wmi_pdev_set_param(ar, param, 0);
     if (ret) {
-        ath10k_warn(ar, "failed to set arp ac override parameter: %d\n",
+        ath10k_warn("failed to set arp ac override parameter: %d\n",
                     ret);
         goto err_core_stop;
     }
@@ -4748,7 +4747,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
                 WMI_CCA_DETECT_LEVEL_AUTO,
                 WMI_CCA_DETECT_MARGIN_AUTO);
         if (ret) {
-            ath10k_warn(ar, "failed to enable adaptive cca: %d\n",
+            ath10k_warn("failed to enable adaptive cca: %d\n",
                         ret);
             goto err_core_stop;
         }
@@ -4757,7 +4756,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
     param = ar->wmi.pdev_param->ani_enable;
     ret = ath10k_wmi_pdev_set_param(ar, param, 1);
     if (ret) {
-        ath10k_warn(ar, "failed to enable ani by default: %d\n",
+        ath10k_warn("failed to enable ani by default: %d\n",
                     ret);
         goto err_core_stop;
     }
@@ -4769,8 +4768,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
         ret = ath10k_wmi_pdev_set_param(ar, param,
                                         PEER_DEFAULT_STATS_UPDATE_PERIOD);
         if (ret) {
-            ath10k_warn(ar,
-                        "failed to set peer stats period : %d\n",
+            ath10k_warn("failed to set peer stats period : %d\n",
                         ret);
             goto err_core_stop;
         }
@@ -4782,8 +4780,7 @@ static int ath10k_start(struct ieee80211_hw* hw) {
                      ar->running_fw->fw_file.fw_features)) {
         ret = ath10k_wmi_pdev_set_param(ar, param, 0);
         if (ret) {
-            ath10k_warn(ar,
-                        "failed to set btcoex param: %d\n", ret);
+            ath10k_warn("failed to set btcoex param: %d\n", ret);
             goto err_core_stop;
         }
         clear_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags);
@@ -4838,7 +4835,7 @@ static int ath10k_config_ps(struct ath10k* ar) {
     list_for_each_entry(arvif, &ar->arvifs, list) {
         ret = ath10k_mac_vif_setup_ps(arvif);
         if (ret) {
-            ath10k_warn(ar, "failed to setup powersave: %d\n", ret);
+            ath10k_warn("failed to setup powersave: %d\n", ret);
             break;
         }
     }
@@ -4857,7 +4854,7 @@ static int ath10k_mac_txpower_setup(struct ath10k* ar, int txpower) {
     param = ar->wmi.pdev_param->txpower_limit2g;
     ret = ath10k_wmi_pdev_set_param(ar, param, txpower * 2);
     if (ret) {
-        ath10k_warn(ar, "failed to set 2g txpower %d: %d\n",
+        ath10k_warn("failed to set 2g txpower %d: %d\n",
                     txpower, ret);
         return ret;
     }
@@ -4865,7 +4862,7 @@ static int ath10k_mac_txpower_setup(struct ath10k* ar, int txpower) {
     param = ar->wmi.pdev_param->txpower_limit5g;
     ret = ath10k_wmi_pdev_set_param(ar, param, txpower * 2);
     if (ret) {
-        ath10k_warn(ar, "failed to set 5g txpower %d: %d\n",
+        ath10k_warn("failed to set 5g txpower %d: %d\n",
                     txpower, ret);
         return ret;
     }
@@ -4897,7 +4894,7 @@ static int ath10k_mac_txpower_recalc(struct ath10k* ar) {
 
     ret = ath10k_mac_txpower_setup(ar, txpower);
     if (ret) {
-        ath10k_warn(ar, "failed to setup tx power %d: %d\n",
+        ath10k_warn("failed to setup tx power %d: %d\n",
                     txpower, ret);
         return ret;
     }
@@ -4920,7 +4917,7 @@ static int ath10k_config(struct ieee80211_hw* hw, uint32_t changed) {
         ar->monitor = conf->flags & IEEE80211_CONF_MONITOR;
         ret = ath10k_monitor_recalc(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc monitor: %d\n", ret);
+            ath10k_warn("failed to recalc monitor: %d\n", ret);
         }
     }
 
@@ -5028,13 +5025,13 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
     }
 
     if (ar->num_peers >= ar->max_num_peers) {
-        ath10k_warn(ar, "refusing vdev creation due to insufficient peer entry resources in firmware\n");
+        ath10k_warn("refusing vdev creation due to insufficient peer entry resources in firmware\n");
         ret = -ENOBUFS;
         goto err;
     }
 
     if (ar->free_vdev_map == 0) {
-        ath10k_warn(ar, "Free vdev map is empty, no more interfaces allowed.\n");
+        ath10k_warn("Free vdev map is empty, no more interfaces allowed.\n");
         ret = -EBUSY;
         goto err;
     }
@@ -5069,7 +5066,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
                                   (ar, WMI_VDEV_SUBTYPE_MESH_11S);
         } else if (!test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags)) {
             ret = -EINVAL;
-            ath10k_warn(ar, "must load driver with rawmode=1 to add mesh interfaces\n");
+            ath10k_warn("must load driver with rawmode=1 to add mesh interfaces\n");
             goto err;
         }
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
@@ -5124,7 +5121,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
                                                 GFP_ATOMIC);
         if (!arvif->beacon_buf) {
             ret = -ENOMEM;
-            ath10k_warn(ar, "failed to allocate beacon buffer: %d\n",
+            ath10k_warn("failed to allocate beacon buffer: %d\n",
                         ret);
             goto err;
         }
@@ -5135,7 +5132,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
 
     if (arvif->nohwcrypt &&
             !test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags)) {
-        ath10k_warn(ar, "cryptmode module param needed for sw crypto\n");
+        ath10k_warn("cryptmode module param needed for sw crypto\n");
         goto err;
     }
 
@@ -5146,7 +5143,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
     ret = ath10k_wmi_vdev_create(ar, arvif->vdev_id, arvif->vdev_type,
                                  arvif->vdev_subtype, vif->addr);
     if (ret) {
-        ath10k_warn(ar, "failed to create WMI vdev %i: %d\n",
+        ath10k_warn("failed to create WMI vdev %i: %d\n",
                     arvif->vdev_id, ret);
         goto err;
     }
@@ -5161,7 +5158,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
      */
     ret = ath10k_mac_vif_disable_keepalive(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to disable keepalive on vdev %i: %d\n",
+        ath10k_warn("failed to disable keepalive on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         goto err_vdev_delete;
     }
@@ -5173,7 +5170,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
                                     ATH10K_HW_TXRX_NATIVE_WIFI);
     /* 10.X firmware does not support this VDEV parameter. Do not warn */
     if (ret && ret != -EOPNOTSUPP) {
-        ath10k_warn(ar, "failed to set vdev %i TX encapsulation: %d\n",
+        ath10k_warn("failed to set vdev %i TX encapsulation: %d\n",
                     arvif->vdev_id, ret);
         goto err_vdev_delete;
     }
@@ -5188,7 +5185,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
         ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param,
                                         nss);
         if (ret) {
-            ath10k_warn(ar, "failed to set vdev %i chainmask 0x%x, nss %i: %d\n",
+            ath10k_warn("failed to set vdev %i chainmask 0x%x, nss %i: %d\n",
                         arvif->vdev_id, ar->cfg_tx_chainmask, nss,
                         ret);
             goto err_vdev_delete;
@@ -5200,7 +5197,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
         ret = ath10k_peer_create(ar, vif, NULL, arvif->vdev_id,
                                  vif->addr, WMI_PEER_TYPE_DEFAULT);
         if (ret) {
-            ath10k_warn(ar, "failed to create vdev %i peer for AP/IBSS: %d\n",
+            ath10k_warn("failed to create vdev %i peer for AP/IBSS: %d\n",
                         arvif->vdev_id, ret);
             goto err_vdev_delete;
         }
@@ -5209,7 +5206,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
 
         peer = ath10k_peer_find(ar, arvif->vdev_id, vif->addr);
         if (!peer) {
-            ath10k_warn(ar, "failed to lookup peer %pM on vdev %i\n",
+            ath10k_warn("failed to lookup peer %pM on vdev %i\n",
                         vif->addr, arvif->vdev_id);
             spin_unlock_bh(&ar->data_lock);
             ret = -ENOENT;
@@ -5227,7 +5224,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
     if (arvif->vdev_type == WMI_VDEV_TYPE_AP) {
         ret = ath10k_mac_set_kickout(arvif);
         if (ret) {
-            ath10k_warn(ar, "failed to set vdev %i kickout parameters: %d\n",
+            ath10k_warn("failed to set vdev %i kickout parameters: %d\n",
                         arvif->vdev_id, ret);
             goto err_peer_delete;
         }
@@ -5239,21 +5236,21 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
         ret = ath10k_wmi_set_sta_ps_param(ar, arvif->vdev_id,
                                           param, value);
         if (ret) {
-            ath10k_warn(ar, "failed to set vdev %i RX wake policy: %d\n",
+            ath10k_warn("failed to set vdev %i RX wake policy: %d\n",
                         arvif->vdev_id, ret);
             goto err_peer_delete;
         }
 
         ret = ath10k_mac_vif_recalc_ps_wake_threshold(arvif);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc ps wake threshold on vdev %i: %d\n",
+            ath10k_warn("failed to recalc ps wake threshold on vdev %i: %d\n",
                         arvif->vdev_id, ret);
             goto err_peer_delete;
         }
 
         ret = ath10k_mac_vif_recalc_ps_poll_count(arvif);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc ps poll count on vdev %i: %d\n",
+            ath10k_warn("failed to recalc ps poll count on vdev %i: %d\n",
                         arvif->vdev_id, ret);
             goto err_peer_delete;
         }
@@ -5261,14 +5258,14 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
 
     ret = ath10k_mac_set_txbf_conf(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to set txbf for vdev %d: %d\n",
+        ath10k_warn("failed to set txbf for vdev %d: %d\n",
                     arvif->vdev_id, ret);
         goto err_peer_delete;
     }
 
     ret = ath10k_mac_set_rts(arvif, ar->hw->wiphy->rts_threshold);
     if (ret) {
-        ath10k_warn(ar, "failed to set rts threshold for vdev %d: %d\n",
+        ath10k_warn("failed to set rts threshold for vdev %d: %d\n",
                     arvif->vdev_id, ret);
         goto err_peer_delete;
     }
@@ -5276,7 +5273,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
     arvif->txpower = vif->bss_conf.txpower;
     ret = ath10k_mac_txpower_recalc(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc tx power: %d\n", ret);
+        ath10k_warn("failed to recalc tx power: %d\n", ret);
         goto err_peer_delete;
     }
 
@@ -5284,7 +5281,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
         ar->monitor_arvif = arvif;
         ret = ath10k_monitor_recalc(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc monitor: %d\n", ret);
+            ath10k_warn("failed to recalc monitor: %d\n", ret);
             goto err_peer_delete;
         }
     }
@@ -5350,7 +5347,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
 
     ret = ath10k_spectral_vif_stop(arvif);
     if (ret)
-        ath10k_warn(ar, "failed to stop spectral for vdev %i: %d\n",
+        ath10k_warn("failed to stop spectral for vdev %i: %d\n",
                     arvif->vdev_id, ret);
 
     ar->free_vdev_map |= 1LL << arvif->vdev_id;
@@ -5363,7 +5360,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
         ret = ath10k_wmi_peer_delete(arvif->ar, arvif->vdev_id,
                                      vif->addr);
         if (ret)
-            ath10k_warn(ar, "failed to submit AP/IBSS self-peer removal on vdev %i: %d\n",
+            ath10k_warn("failed to submit AP/IBSS self-peer removal on vdev %i: %d\n",
                         arvif->vdev_id, ret);
 
         kfree(arvif->u.ap.noa_data);
@@ -5374,7 +5371,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
 
     ret = ath10k_wmi_vdev_delete(ar, arvif->vdev_id);
     if (ret)
-        ath10k_warn(ar, "failed to delete WMI vdev %i: %d\n",
+        ath10k_warn("failed to delete WMI vdev %i: %d\n",
                     arvif->vdev_id, ret);
 
     /* Some firmware revisions don't notify host about self-peer removal
@@ -5385,7 +5382,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
         ret = ath10k_wait_for_peer_deleted(ar, arvif->vdev_id,
                                            vif->addr);
         if (ret)
-            ath10k_warn(ar, "failed to remove AP self-peer on vdev %i: %d\n",
+            ath10k_warn("failed to remove AP self-peer on vdev %i: %d\n",
                         arvif->vdev_id, ret);
 
         spin_lock_bh(&ar->data_lock);
@@ -5401,7 +5398,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
         }
 
         if (peer->vif == vif) {
-            ath10k_warn(ar, "found vif peer %pM entry on vdev %i after it was supposedly removed\n",
+            ath10k_warn("found vif peer %pM entry on vdev %i after it was supposedly removed\n",
                         vif->addr, arvif->vdev_id);
             peer->vif = NULL;
         }
@@ -5415,13 +5412,13 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
         ar->monitor_arvif = NULL;
         ret = ath10k_monitor_recalc(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc monitor: %d\n", ret);
+            ath10k_warn("failed to recalc monitor: %d\n", ret);
         }
     }
 
     ret = ath10k_mac_txpower_recalc(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc tx power: %d\n", ret);
+        ath10k_warn("failed to recalc tx power: %d\n", ret);
     }
 
     spin_lock_bh(&ar->htt.tx_lock);
@@ -5460,7 +5457,7 @@ static void ath10k_configure_filter(struct ieee80211_hw* hw,
 
     ret = ath10k_monitor_recalc(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc monitor: %d\n", ret);
+        ath10k_warn("failed to recalc monitor: %d\n", ret);
     }
 
     mutex_unlock(&ar->conf_mutex);
@@ -5491,7 +5488,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
                    arvif->vdev_id, arvif->beacon_interval);
 
         if (ret)
-            ath10k_warn(ar, "failed to set beacon interval for vdev %d: %i\n",
+            ath10k_warn("failed to set beacon interval for vdev %d: %i\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5504,12 +5501,12 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
         ret = ath10k_wmi_pdev_set_param(ar, pdev_param,
                                         WMI_BEACON_STAGGERED_MODE);
         if (ret)
-            ath10k_warn(ar, "failed to set beacon mode for vdev %d: %i\n",
+            ath10k_warn("failed to set beacon mode for vdev %d: %i\n",
                         arvif->vdev_id, ret);
 
         ret = ath10k_mac_setup_bcn_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to update beacon template: %d\n",
+            ath10k_warn("failed to update beacon template: %d\n",
                         ret);
 
         if (ieee80211_vif_is_mesh(vif)) {
@@ -5523,7 +5520,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
     if (changed & BSS_CHANGED_AP_PROBE_RESP) {
         ret = ath10k_mac_setup_prb_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to setup probe resp template on vdev %i: %d\n",
+            ath10k_warn("failed to setup probe resp template on vdev %i: %d\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5538,7 +5535,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
         ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param,
                                         arvif->dtim_period);
         if (ret)
-            ath10k_warn(ar, "failed to set dtim period for vdev %d: %i\n",
+            ath10k_warn("failed to set dtim period for vdev %d: %i\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5564,13 +5561,13 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
 
         ret = ath10k_recalc_rtscts_prot(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to recalculate rts/cts prot for vdev %d: %d\n",
+            ath10k_warn("failed to recalculate rts/cts prot for vdev %d: %d\n",
                         arvif->vdev_id, ret);
 
         if (ath10k_mac_can_set_cts_prot(arvif)) {
             ret = ath10k_mac_set_cts_prot(arvif);
             if (ret)
-                ath10k_warn(ar, "failed to set cts protection for vdev %d: %d\n",
+                ath10k_warn("failed to set cts protection for vdev %d: %d\n",
                             arvif->vdev_id, ret);
         }
     }
@@ -5591,7 +5588,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
         ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param,
                                         slottime);
         if (ret)
-            ath10k_warn(ar, "failed to set erp slot for vdev %d: %i\n",
+            ath10k_warn("failed to set erp slot for vdev %d: %i\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5610,7 +5607,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
         ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param,
                                         preamble);
         if (ret)
-            ath10k_warn(ar, "failed to set preamble for vdev %d: %i\n",
+            ath10k_warn("failed to set preamble for vdev %d: %i\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5637,7 +5634,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
         arvif->txpower = info->txpower;
         ret = ath10k_mac_txpower_recalc(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to recalc tx power: %d\n", ret);
+            ath10k_warn("failed to recalc tx power: %d\n", ret);
         }
     }
 
@@ -5646,7 +5643,7 @@ static void ath10k_bss_info_changed(struct ieee80211_hw* hw,
 
         ret = ath10k_config_ps(ar);
         if (ret)
-            ath10k_warn(ar, "failed to setup ps on vdev %i: %d\n",
+            ath10k_warn("failed to setup ps on vdev %i: %d\n",
                         arvif->vdev_id, ret);
     }
 
@@ -5729,7 +5726,7 @@ static int ath10k_hw_scan(struct ieee80211_hw* hw,
 
     ret = ath10k_start_scan(ar, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to start hw scan: %d\n", ret);
+        ath10k_warn("failed to start hw scan: %d\n", ret);
         spin_lock_bh(&ar->data_lock);
         ar->scan.state = ATH10K_SCAN_IDLE;
         spin_unlock_bh(&ar->data_lock);
@@ -5798,7 +5795,7 @@ static void ath10k_set_key_h_def_keyidx(struct ath10k* ar,
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param,
                                     key->keyidx);
     if (ret)
-        ath10k_warn(ar, "failed to set vdev %i group key as default key: %d\n",
+        ath10k_warn("failed to set vdev %i group key as default key: %d\n",
                     arvif->vdev_id, ret);
 }
 
@@ -5858,7 +5855,7 @@ static int ath10k_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
 
     if (!peer) {
         if (cmd == SET_KEY) {
-            ath10k_warn(ar, "failed to install key for non-existent peer %pM\n",
+            ath10k_warn("failed to install key for non-existent peer %pM\n",
                         peer_addr);
             ret = -EOPNOTSUPP;
             goto exit;
@@ -5902,7 +5899,7 @@ static int ath10k_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
     ret = ath10k_install_key(arvif, key, cmd, peer_addr, flags);
     if (ret) {
         WARN_ON(ret > 0);
-        ath10k_warn(ar, "failed to install key for vdev %i peer %pM: %d\n",
+        ath10k_warn("failed to install key for vdev %i peer %pM: %d\n",
                     arvif->vdev_id, peer_addr, ret);
         goto exit;
     }
@@ -5918,13 +5915,13 @@ static int ath10k_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
         ret = ath10k_install_key(arvif, key, cmd, peer_addr, flags2);
         if (ret) {
             WARN_ON(ret > 0);
-            ath10k_warn(ar, "failed to install (ucast) key for vdev %i peer %pM: %d\n",
+            ath10k_warn("failed to install (ucast) key for vdev %i peer %pM: %d\n",
                         arvif->vdev_id, peer_addr, ret);
             ret2 = ath10k_install_key(arvif, key, DISABLE_KEY,
                                       peer_addr, flags);
             if (ret2) {
                 WARN_ON(ret2 > 0);
-                ath10k_warn(ar, "failed to disable (mcast) key for vdev %i peer %pM: %d\n",
+                ath10k_warn("failed to disable (mcast) key for vdev %i peer %pM: %d\n",
                             arvif->vdev_id, peer_addr, ret2);
             }
             goto exit;
@@ -5942,7 +5939,7 @@ static int ath10k_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
     } else if (peer == NULL)
         /* impossible unless FW goes crazy */
     {
-        ath10k_warn(ar, "Peer %pM disappeared!\n", peer_addr);
+        ath10k_warn("Peer %pM disappeared!\n", peer_addr);
     }
     spin_unlock_bh(&ar->data_lock);
 
@@ -5973,7 +5970,7 @@ static void ath10k_set_default_unicast_key(struct ieee80211_hw* hw,
                                     keyidx);
 
     if (ret) {
-        ath10k_warn(ar, "failed to update wep key index for vdev %d: %d\n",
+        ath10k_warn("failed to update wep key index for vdev %d: %d\n",
                     arvif->vdev_id,
                     ret);
         goto unlock;
@@ -6034,7 +6031,7 @@ static void ath10k_sta_rc_update_wk(struct work_struct* wk) {
         err = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, sta->addr,
                                         WMI_PEER_CHAN_WIDTH, bw);
         if (err)
-            ath10k_warn(ar, "failed to update STA %pM peer bw %d: %d\n",
+            ath10k_warn("failed to update STA %pM peer bw %d: %d\n",
                         sta->addr, bw, err);
     }
 
@@ -6045,7 +6042,7 @@ static void ath10k_sta_rc_update_wk(struct work_struct* wk) {
         err = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, sta->addr,
                                         WMI_PEER_NSS, nss);
         if (err)
-            ath10k_warn(ar, "failed to update STA %pM nss %d: %d\n",
+            ath10k_warn("failed to update STA %pM nss %d: %d\n",
                         sta->addr, nss, err);
     }
 
@@ -6056,7 +6053,7 @@ static void ath10k_sta_rc_update_wk(struct work_struct* wk) {
         err = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, sta->addr,
                                         WMI_PEER_SMPS_STATE, smps);
         if (err)
-            ath10k_warn(ar, "failed to update STA %pM smps %d: %d\n",
+            ath10k_warn("failed to update STA %pM smps %d: %d\n",
                         sta->addr, smps, err);
     }
 
@@ -6067,7 +6064,7 @@ static void ath10k_sta_rc_update_wk(struct work_struct* wk) {
 
         err = ath10k_station_assoc(ar, arvif->vif, sta, true);
         if (err)
-            ath10k_warn(ar, "failed to reassociate station: %pM\n",
+            ath10k_warn("failed to reassociate station: %pM\n",
                         sta->addr);
     }
 
@@ -6209,7 +6206,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         if (sta->tdls) {
             if (num_tdls_stations >= ar->max_num_tdls_vdevs) {
-                ath10k_warn(ar, "vdev %i exceeded maximum number of tdls vdevs %i\n",
+                ath10k_warn("vdev %i exceeded maximum number of tdls vdevs %i\n",
                             arvif->vdev_id,
                             ar->max_num_tdls_vdevs);
                 ret = -ELNRNG;
@@ -6220,7 +6217,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         ret = ath10k_mac_inc_num_stations(arvif, sta);
         if (ret) {
-            ath10k_warn(ar, "refusing to associate station: too many connected already (%d)\n",
+            ath10k_warn("refusing to associate station: too many connected already (%d)\n",
                         ar->max_num_stations);
             goto exit;
         }
@@ -6228,7 +6225,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ret = ath10k_peer_create(ar, vif, sta, arvif->vdev_id,
                                  sta->addr, peer_type);
         if (ret) {
-            ath10k_warn(ar, "failed to add peer %pM for vdev %d when adding a new sta: %i\n",
+            ath10k_warn("failed to add peer %pM for vdev %d when adding a new sta: %i\n",
                         sta->addr, arvif->vdev_id, ret);
             ath10k_mac_dec_num_stations(arvif, sta);
             goto exit;
@@ -6238,7 +6235,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         peer = ath10k_peer_find(ar, arvif->vdev_id, sta->addr);
         if (!peer) {
-            ath10k_warn(ar, "failed to lookup peer %pM on vdev %i\n",
+            ath10k_warn("failed to lookup peer %pM on vdev %i\n",
                         vif->addr, arvif->vdev_id);
             spin_unlock_bh(&ar->data_lock);
             ath10k_peer_delete(ar, arvif->vdev_id, sta->addr);
@@ -6259,7 +6256,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ret = ath10k_wmi_update_fw_tdls_state(ar, arvif->vdev_id,
                                               WMI_TDLS_ENABLE_ACTIVE);
         if (ret) {
-            ath10k_warn(ar, "failed to update fw tdls state on vdev %i: %i\n",
+            ath10k_warn("failed to update fw tdls state on vdev %i: %i\n",
                         arvif->vdev_id, ret);
             ath10k_peer_delete(ar, arvif->vdev_id,
                                sta->addr);
@@ -6270,8 +6267,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ret = ath10k_mac_tdls_peer_update(ar, arvif->vdev_id, sta,
                                           WMI_TDLS_PEER_STATE_PEERING);
         if (ret) {
-            ath10k_warn(ar,
-                        "failed to update tdls peer %pM for vdev %d when adding a new sta: %i\n",
+            ath10k_warn("failed to update tdls peer %pM for vdev %d when adding a new sta: %i\n",
                         sta->addr, arvif->vdev_id, ret);
             ath10k_peer_delete(ar, arvif->vdev_id, sta->addr);
             ath10k_mac_dec_num_stations(arvif, sta);
@@ -6293,7 +6289,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         ret = ath10k_peer_delete(ar, arvif->vdev_id, sta->addr);
         if (ret)
-            ath10k_warn(ar, "failed to delete peer %pM for vdev %d: %i\n",
+            ath10k_warn("failed to delete peer %pM for vdev %d: %i\n",
                         sta->addr, arvif->vdev_id, ret);
 
         ath10k_mac_dec_num_stations(arvif, sta);
@@ -6306,7 +6302,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
             }
 
             if (peer->sta == sta) {
-                ath10k_warn(ar, "found sta peer %pM (ptr %pK id %d) entry on vdev %i after it was supposedly removed\n",
+                ath10k_warn("found sta peer %pM (ptr %pK id %d) entry on vdev %i after it was supposedly removed\n",
                             sta->addr, peer, i, arvif->vdev_id);
                 peer->sta = NULL;
 
@@ -6337,7 +6333,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ret = ath10k_wmi_update_fw_tdls_state(ar, arvif->vdev_id,
                                               WMI_TDLS_DISABLE);
         if (ret) {
-            ath10k_warn(ar, "failed to update fw tdls state on vdev %i: %i\n",
+            ath10k_warn("failed to update fw tdls state on vdev %i: %i\n",
                         arvif->vdev_id, ret);
         }
     } else if (old_state == IEEE80211_STA_AUTH &&
@@ -6353,7 +6349,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         ret = ath10k_station_assoc(ar, vif, sta, false);
         if (ret)
-            ath10k_warn(ar, "failed to associate station %pM for vdev %i: %i\n",
+            ath10k_warn("failed to associate station %pM for vdev %i: %i\n",
                         sta->addr, arvif->vdev_id, ret);
     } else if (old_state == IEEE80211_STA_ASSOC &&
                new_state == IEEE80211_STA_AUTHORIZED &&
@@ -6366,7 +6362,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         ret = ath10k_station_assoc(ar, vif, sta, false);
         if (ret) {
-            ath10k_warn(ar, "failed to associate tdls station %pM for vdev %i: %i\n",
+            ath10k_warn("failed to associate tdls station %pM for vdev %i: %i\n",
                         sta->addr, arvif->vdev_id, ret);
             goto exit;
         }
@@ -6374,7 +6370,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ret = ath10k_mac_tdls_peer_update(ar, arvif->vdev_id, sta,
                                           WMI_TDLS_PEER_STATE_CONNECTED);
         if (ret)
-            ath10k_warn(ar, "failed to update tdls peer %pM for vdev %i: %i\n",
+            ath10k_warn("failed to update tdls peer %pM for vdev %i: %i\n",
                         sta->addr, arvif->vdev_id, ret);
     } else if (old_state == IEEE80211_STA_ASSOC &&
                new_state == IEEE80211_STA_AUTH &&
@@ -6389,7 +6385,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
 
         ret = ath10k_station_disassoc(ar, vif, sta);
         if (ret)
-            ath10k_warn(ar, "failed to disassociate station: %pM vdev %i: %i\n",
+            ath10k_warn("failed to disassociate station: %pM vdev %i: %i\n",
                         sta->addr, arvif->vdev_id, ret);
     }
 exit:
@@ -6448,7 +6444,7 @@ static int ath10k_conf_tx_uapsd(struct ath10k* ar, struct ieee80211_vif* vif,
                                       WMI_STA_PS_PARAM_UAPSD,
                                       arvif->u.sta.uapsd);
     if (ret) {
-        ath10k_warn(ar, "failed to set uapsd params: %d\n", ret);
+        ath10k_warn("failed to set uapsd params: %d\n", ret);
         goto exit;
     }
 
@@ -6462,19 +6458,19 @@ static int ath10k_conf_tx_uapsd(struct ath10k* ar, struct ieee80211_vif* vif,
                                       WMI_STA_PS_PARAM_RX_WAKE_POLICY,
                                       value);
     if (ret) {
-        ath10k_warn(ar, "failed to set rx wake param: %d\n", ret);
+        ath10k_warn("failed to set rx wake param: %d\n", ret);
     }
 
     ret = ath10k_mac_vif_recalc_ps_wake_threshold(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc ps wake threshold on vdev %i: %d\n",
+        ath10k_warn("failed to recalc ps wake threshold on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
 
     ret = ath10k_mac_vif_recalc_ps_poll_count(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to recalc ps poll count on vdev %i: %d\n",
+        ath10k_warn("failed to recalc ps poll count on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         return ret;
     }
@@ -6496,7 +6492,7 @@ static int ath10k_conf_tx_uapsd(struct ath10k* ar, struct ieee80211_vif* vif,
         ret = ath10k_wmi_vdev_sta_uapsd(ar, arvif->vdev_id,
                                         arvif->bssid, &arg, 1);
         if (ret) {
-            ath10k_warn(ar, "failed to set uapsd auto trigger %d\n",
+            ath10k_warn("failed to set uapsd auto trigger %d\n",
                         ret);
             return ret;
         }
@@ -6551,7 +6547,7 @@ static int ath10k_conf_tx(struct ieee80211_hw* hw,
         ret = ath10k_wmi_vdev_wmm_conf(ar, arvif->vdev_id,
                                        &arvif->wmm_params);
         if (ret) {
-            ath10k_warn(ar, "failed to set vdev wmm params on vdev %i: %d\n",
+            ath10k_warn("failed to set vdev wmm params on vdev %i: %d\n",
                         arvif->vdev_id, ret);
             goto exit;
         }
@@ -6561,14 +6557,14 @@ static int ath10k_conf_tx(struct ieee80211_hw* hw,
          */
         ret = ath10k_wmi_pdev_set_wmm_params(ar, &arvif->wmm_params);
         if (ret) {
-            ath10k_warn(ar, "failed to set wmm params: %d\n", ret);
+            ath10k_warn("failed to set wmm params: %d\n", ret);
             goto exit;
         }
     }
 
     ret = ath10k_conf_tx_uapsd(ar, vif, ac, params->uapsd);
     if (ret) {
-        ath10k_warn(ar, "failed to set sta uapsd: %d\n", ret);
+        ath10k_warn("failed to set sta uapsd: %d\n", ret);
     }
 
 exit:
@@ -6633,7 +6629,7 @@ static int ath10k_remain_on_channel(struct ieee80211_hw* hw,
 
     ret = ath10k_start_scan(ar, &arg);
     if (ret) {
-        ath10k_warn(ar, "failed to start roc scan: %d\n", ret);
+        ath10k_warn("failed to start roc scan: %d\n", ret);
         spin_lock_bh(&ar->data_lock);
         ar->scan.state = ATH10K_SCAN_IDLE;
         spin_unlock_bh(&ar->data_lock);
@@ -6642,11 +6638,11 @@ static int ath10k_remain_on_channel(struct ieee80211_hw* hw,
 
     ret = wait_for_completion_timeout(&ar->scan.on_channel, 3 * HZ);
     if (ret == 0) {
-        ath10k_warn(ar, "failed to switch to channel for roc scan\n");
+        ath10k_warn("failed to switch to channel for roc scan\n");
 
         ret = ath10k_scan_stop(ar);
         if (ret) {
-            ath10k_warn(ar, "failed to stop scan: %d\n", ret);
+            ath10k_warn("failed to stop scan: %d\n", ret);
         }
 
         ret = -ETIMEDOUT;
@@ -6697,7 +6693,7 @@ static int ath10k_set_rts_threshold(struct ieee80211_hw* hw, uint32_t value) {
 
         ret = ath10k_mac_set_rts(arvif, value);
         if (ret) {
-            ath10k_warn(ar, "failed to set rts threshold for vdev %d: %d\n",
+            ath10k_warn("failed to set rts threshold for vdev %d: %d\n",
                         arvif->vdev_id, ret);
             break;
         }
@@ -6755,7 +6751,7 @@ static void ath10k_flush(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
     }), ATH10K_FLUSH_TIMEOUT_HZ);
 
     if (time_left == 0 || skip)
-        ath10k_warn(ar, "failed to flush transmit queue (skip %i ar-state %i): %ld\n",
+        ath10k_warn("failed to flush transmit queue (skip %i ar-state %i): %ld\n",
                     skip, ar->state, time_left);
 
 skip:
@@ -6784,7 +6780,7 @@ static void ath10k_reconfig_complete(struct ieee80211_hw* hw,
      * ATH10K_STATE_WEDGED
      */
     if (ar->state == ATH10K_STATE_RESTARTED) {
-        ath10k_info(ar, "device successfully recovered\n");
+        ath10k_trace("device successfully recovered\n");
         ar->state = ATH10K_STATE_ON;
         ieee80211_wake_queues(ar->hw);
     }
@@ -6814,13 +6810,13 @@ ath10k_mac_update_bss_chan_survey(struct ath10k* ar,
 
     ret = ath10k_wmi_pdev_bss_chan_info_request(ar, type);
     if (ret) {
-        ath10k_warn(ar, "failed to send pdev bss chan info request\n");
+        ath10k_warn("failed to send pdev bss chan info request\n");
         return;
     }
 
     ret = wait_for_completion_timeout(&ar->bss_survey_done, 3 * HZ);
     if (!ret) {
-        ath10k_warn(ar, "bss channel survey timed out\n");
+        ath10k_warn("bss channel survey timed out\n");
         return;
     }
 }
@@ -7011,7 +7007,7 @@ static int ath10k_mac_set_fixed_rate_params(struct ath10k_vif* arvif,
     vdev_param = ar->wmi.vdev_param->fixed_rate;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, rate);
     if (ret) {
-        ath10k_warn(ar, "failed to set fixed rate param 0x%02x: %d\n",
+        ath10k_warn("failed to set fixed rate param 0x%02x: %d\n",
                     rate, ret);
         return ret;
     }
@@ -7019,21 +7015,21 @@ static int ath10k_mac_set_fixed_rate_params(struct ath10k_vif* arvif,
     vdev_param = ar->wmi.vdev_param->nss;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, nss);
     if (ret) {
-        ath10k_warn(ar, "failed to set nss param %d: %d\n", nss, ret);
+        ath10k_warn("failed to set nss param %d: %d\n", nss, ret);
         return ret;
     }
 
     vdev_param = ar->wmi.vdev_param->sgi;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, sgi);
     if (ret) {
-        ath10k_warn(ar, "failed to set sgi param %d: %d\n", sgi, ret);
+        ath10k_warn("failed to set sgi param %d: %d\n", sgi, ret);
         return ret;
     }
 
     vdev_param = ar->wmi.vdev_param->ldpc;
     ret = ath10k_wmi_vdev_set_param(ar, arvif->vdev_id, vdev_param, ldpc);
     if (ret) {
-        ath10k_warn(ar, "failed to set ldpc param %d: %d\n", ldpc, ret);
+        ath10k_warn("failed to set ldpc param %d: %d\n", ldpc, ret);
         return ret;
     }
 
@@ -7061,7 +7057,7 @@ ath10k_mac_can_set_bitrate_mask(struct ath10k* ar,
         case BIT(10) - 1:
             break;
         default:
-            ath10k_warn(ar, "refusing bitrate mask with missing 0-7 VHT MCS rates\n");
+            ath10k_warn("refusing bitrate mask with missing 0-7 VHT MCS rates\n");
             return false;
         }
     }
@@ -7120,7 +7116,7 @@ static int ath10k_mac_op_set_bitrate_mask(struct ieee80211_hw* hw,
         ret = ath10k_mac_bitrate_mask_get_single_rate(ar, band, mask,
                 &rate, &nss);
         if (ret) {
-            ath10k_warn(ar, "failed to get single rate for vdev %i: %d\n",
+            ath10k_warn("failed to get single rate for vdev %i: %d\n",
                         arvif->vdev_id, ret);
             return ret;
         }
@@ -7152,7 +7148,7 @@ static int ath10k_mac_op_set_bitrate_mask(struct ieee80211_hw* hw,
 
     ret = ath10k_mac_set_fixed_rate_params(arvif, rate, nss, sgi, ldpc);
     if (ret) {
-        ath10k_warn(ar, "failed to set fixed rate params on vdev %i: %d\n",
+        ath10k_warn("failed to set fixed rate params on vdev %i: %d\n",
                     arvif->vdev_id, ret);
         goto exit;
     }
@@ -7195,7 +7191,7 @@ static void ath10k_sta_rc_update(struct ieee80211_hw* hw,
             bw = WMI_PEER_CHWIDTH_160MHZ;
             break;
         default:
-            ath10k_warn(ar, "Invalid bandwidth %d in rc update for %pM\n",
+            ath10k_warn("Invalid bandwidth %d in rc update for %pM\n",
                         sta->bandwidth, sta->addr);
             bw = WMI_PEER_CHWIDTH_20MHZ;
             break;
@@ -7223,7 +7219,7 @@ static void ath10k_sta_rc_update(struct ieee80211_hw* hw,
             smps = WMI_PEER_SMPS_DYNAMIC;
             break;
         case IEEE80211_SMPS_NUM_MODES:
-            ath10k_warn(ar, "Invalid smps %d in sta rc update for %pM\n",
+            ath10k_warn("Invalid smps %d in sta rc update for %pM\n",
                         sta->smps_mode, sta->addr);
             smps = WMI_PEER_SMPS_PS_NONE;
             break;
@@ -7258,7 +7254,7 @@ static void ath10k_offset_tsf(struct ieee80211_hw* hw,
                                     vdev_param, offset);
 
     if (ret && ret != -EOPNOTSUPP)
-        ath10k_warn(ar, "failed to set tsf offset %d cmd %d: %d\n",
+        ath10k_warn("failed to set tsf offset %d cmd %d: %d\n",
                     offset, vdev_param, ret);
 }
 
@@ -7384,7 +7380,7 @@ ath10k_mac_update_vif_chan(struct ath10k* ar,
 
         ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
         if (ret) {
-            ath10k_warn(ar, "failed to down vdev %d: %d\n",
+            ath10k_warn("failed to down vdev %d: %d\n",
                         arvif->vdev_id, ret);
             continue;
         }
@@ -7411,17 +7407,17 @@ ath10k_mac_update_vif_chan(struct ath10k* ar,
 
         ret = ath10k_mac_setup_bcn_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to update bcn tmpl during csa: %d\n",
+            ath10k_warn("failed to update bcn tmpl during csa: %d\n",
                         ret);
 
         ret = ath10k_mac_setup_prb_tmpl(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to update prb tmpl during csa: %d\n",
+            ath10k_warn("failed to update prb tmpl during csa: %d\n",
                         ret);
 
         ret = ath10k_vdev_restart(arvif, &vifs[i].new_ctx->def);
         if (ret) {
-            ath10k_warn(ar, "failed to restart vdev %d: %d\n",
+            ath10k_warn("failed to restart vdev %d: %d\n",
                         arvif->vdev_id, ret);
             continue;
         }
@@ -7429,7 +7425,7 @@ ath10k_mac_update_vif_chan(struct ath10k* ar,
         ret = ath10k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
                                  arvif->bssid);
         if (ret) {
-            ath10k_warn(ar, "failed to bring vdev up %d: %d\n",
+            ath10k_warn("failed to bring vdev up %d: %d\n",
                         arvif->vdev_id, ret);
             continue;
         }
@@ -7602,7 +7598,7 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw* hw,
 
     ret = ath10k_vdev_start(arvif, &ctx->def);
     if (ret) {
-        ath10k_warn(ar, "failed to start vdev %i addr %pM on freq %d: %d\n",
+        ath10k_warn("failed to start vdev %i addr %pM on freq %d: %d\n",
                     arvif->vdev_id, vif->addr,
                     ctx->def.chan->center_freq, ret);
         goto err;
@@ -7612,7 +7608,7 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw* hw,
 
     ret = ath10k_mac_vif_setup_ps(arvif);
     if (ret) {
-        ath10k_warn(ar, "failed to update vdev %i ps: %d\n",
+        ath10k_warn("failed to update vdev %i ps: %d\n",
                     arvif->vdev_id, ret);
         goto err_stop;
     }
@@ -7620,7 +7616,7 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw* hw,
     if (vif->type == NL80211_IFTYPE_MONITOR) {
         ret = ath10k_wmi_vdev_up(ar, arvif->vdev_id, 0, vif->addr);
         if (ret) {
-            ath10k_warn(ar, "failed to up monitor vdev %i: %d\n",
+            ath10k_warn("failed to up monitor vdev %i: %d\n",
                         arvif->vdev_id, ret);
             goto err_stop;
         }
@@ -7631,7 +7627,7 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw* hw,
     if (ath10k_mac_can_set_cts_prot(arvif)) {
         ret = ath10k_mac_set_cts_prot(arvif);
         if (ret)
-            ath10k_warn(ar, "failed to set cts protection for vdev %d: %d\n",
+            ath10k_warn("failed to set cts protection for vdev %d: %d\n",
                         arvif->vdev_id, ret);
     }
 
@@ -7669,7 +7665,7 @@ ath10k_mac_op_unassign_vif_chanctx(struct ieee80211_hw* hw,
 
         ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
         if (ret)
-            ath10k_warn(ar, "failed to down monitor vdev %i: %d\n",
+            ath10k_warn("failed to down monitor vdev %i: %d\n",
                         arvif->vdev_id, ret);
 
         arvif->is_up = false;
@@ -7677,7 +7673,7 @@ ath10k_mac_op_unassign_vif_chanctx(struct ieee80211_hw* hw,
 
     ret = ath10k_vdev_stop(arvif);
     if (ret)
-        ath10k_warn(ar, "failed to stop vdev %i: %d\n",
+        ath10k_warn("failed to stop vdev %i: %d\n",
                     arvif->vdev_id, ret);
 
     arvif->is_started = false;
@@ -8074,7 +8070,7 @@ struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id) {
             ath10k_get_arvif_iter,
             &arvif_iter);
     if (!arvif_iter.arvif) {
-        ath10k_warn(ar, "No VIF found for vdev %d\n", vdev_id);
+        ath10k_warn("No VIF found for vdev %d\n", vdev_id);
         return NULL;
     }
 
@@ -8094,7 +8090,7 @@ static uint32_t ath10k_mac_wrdd_get_mcc(struct ath10k* ar, union acpi_object* wr
             wrdd->package.count < 2 ||
             wrdd->package.elements[0].type != ACPI_TYPE_INTEGER ||
             wrdd->package.elements[0].integer.value != 0) {
-        ath10k_warn(ar, "ignoring malformed/unsupported wrdd structure\n");
+        ath10k_warn("ignoring malformed/unsupported wrdd structure\n");
         return 0;
     }
 
@@ -8336,7 +8332,7 @@ int ath10k_mac_register(struct ath10k* ar) {
 
     ret = ath10k_wow_init(ar);
     if (ret) {
-        ath10k_warn(ar, "failed to init wow: %d\n", ret);
+        ath10k_warn("failed to init wow: %d\n", ret);
         goto err_free;
     }
 
@@ -8404,7 +8400,7 @@ int ath10k_mac_register(struct ath10k* ar) {
                            NL80211_DFS_UNSET);
 
         if (!ar->dfs_detector) {
-            ath10k_warn(ar, "failed to initialise DFS pattern detector\n");
+            ath10k_warn("failed to initialise DFS pattern detector\n");
         }
     }
 
@@ -8420,7 +8416,7 @@ int ath10k_mac_register(struct ath10k* ar) {
 
     ret = ath10k_mac_init_rd(ar);
     if (ret) {
-        ath10k_err(ar, "failed to derive regdom: %d\n", ret);
+        ath10k_err("failed to derive regdom: %d\n", ret);
         goto err_dfs_detector_exit;
     }
 
@@ -8432,7 +8428,7 @@ int ath10k_mac_register(struct ath10k* ar) {
     ret = ath_regd_init(&ar->ath_common.regulatory, ar->hw->wiphy,
                         ath10k_reg_notifier);
     if (ret) {
-        ath10k_err(ar, "failed to initialise regulatory: %i\n", ret);
+        ath10k_err("failed to initialise regulatory: %i\n", ret);
         goto err_dfs_detector_exit;
     }
 
@@ -8443,7 +8439,7 @@ int ath10k_mac_register(struct ath10k* ar) {
 
     ret = ieee80211_register_hw(ar->hw);
     if (ret) {
-        ath10k_err(ar, "failed to register ieee80211: %d\n", ret);
+        ath10k_err("failed to register ieee80211: %d\n", ret);
         goto err_dfs_detector_exit;
     }
 

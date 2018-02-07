@@ -497,8 +497,7 @@ static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar, int16_t valu
 
     /* Do some sanity checks on the slottime register. */
     if (slottime_reg % phyclk) {
-        ath10k_warn(ar,
-                    "failed to set coverage class: expected integer microsecond value in register\n");
+        ath10k_warn("failed to set coverage class: expected integer microsecond value in register\n");
 
         goto store_regs;
     }
@@ -506,8 +505,7 @@ static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar, int16_t valu
     slottime = MS(slottime_reg, WAVE1_PCU_GBL_IFS_SLOT);
     slottime = slottime / phyclk;
     if (slottime != 9 && slottime != 20) {
-        ath10k_warn(ar,
-                    "failed to set coverage class: expected slot time of 9 or 20us in HW register. It is %uus.\n",
+        ath10k_warn("failed to set coverage class: expected slot time of 9 or 20us in HW register. It is %uus.\n",
                     slottime);
 
         goto store_regs;

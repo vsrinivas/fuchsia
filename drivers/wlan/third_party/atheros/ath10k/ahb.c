@@ -80,7 +80,7 @@ static int ath10k_ahb_get_num_banks(struct ath10k* ar) {
         return 1;
     }
 
-    ath10k_warn(ar, "unknown number of banks, assuming 1\n");
+    ath10k_warn("unknown number of banks, assuming 1\n");
     return 1;
 }
 
@@ -92,21 +92,21 @@ static int ath10k_ahb_clock_init(struct ath10k* ar) {
 
     ar_ahb->cmd_clk = devm_clk_get(dev, "wifi_wcss_cmd");
     if (IS_ERR_OR_NULL(ar_ahb->cmd_clk)) {
-        ath10k_err(ar, "failed to get cmd clk: %ld\n",
+        ath10k_err("failed to get cmd clk: %ld\n",
                    PTR_ERR(ar_ahb->cmd_clk));
         return ar_ahb->cmd_clk ? PTR_ERR(ar_ahb->cmd_clk) : -ENODEV;
     }
 
     ar_ahb->ref_clk = devm_clk_get(dev, "wifi_wcss_ref");
     if (IS_ERR_OR_NULL(ar_ahb->ref_clk)) {
-        ath10k_err(ar, "failed to get ref clk: %ld\n",
+        ath10k_err("failed to get ref clk: %ld\n",
                    PTR_ERR(ar_ahb->ref_clk));
         return ar_ahb->ref_clk ? PTR_ERR(ar_ahb->ref_clk) : -ENODEV;
     }
 
     ar_ahb->rtc_clk = devm_clk_get(dev, "wifi_wcss_rtc");
     if (IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
-        ath10k_err(ar, "failed to get rtc clk: %ld\n",
+        ath10k_err("failed to get rtc clk: %ld\n",
                    PTR_ERR(ar_ahb->rtc_clk));
         return ar_ahb->rtc_clk ? PTR_ERR(ar_ahb->rtc_clk) : -ENODEV;
     }
@@ -132,26 +132,26 @@ static int ath10k_ahb_clock_enable(struct ath10k* ar) {
     if (IS_ERR_OR_NULL(ar_ahb->cmd_clk) ||
             IS_ERR_OR_NULL(ar_ahb->ref_clk) ||
             IS_ERR_OR_NULL(ar_ahb->rtc_clk)) {
-        ath10k_err(ar, "clock(s) is/are not initialized\n");
+        ath10k_err("clock(s) is/are not initialized\n");
         ret = -EIO;
         goto out;
     }
 
     ret = clk_prepare_enable(ar_ahb->cmd_clk);
     if (ret) {
-        ath10k_err(ar, "failed to enable cmd clk: %d\n", ret);
+        ath10k_err("failed to enable cmd clk: %d\n", ret);
         goto out;
     }
 
     ret = clk_prepare_enable(ar_ahb->ref_clk);
     if (ret) {
-        ath10k_err(ar, "failed to enable ref clk: %d\n", ret);
+        ath10k_err("failed to enable ref clk: %d\n", ret);
         goto err_cmd_clk_disable;
     }
 
     ret = clk_prepare_enable(ar_ahb->rtc_clk);
     if (ret) {
-        ath10k_err(ar, "failed to enable rtc clk: %d\n", ret);
+        ath10k_err("failed to enable rtc clk: %d\n", ret);
         goto err_ref_clk_disable;
     }
 
@@ -191,35 +191,35 @@ static int ath10k_ahb_rst_ctrl_init(struct ath10k* ar) {
 
     ar_ahb->core_cold_rst = devm_reset_control_get(dev, "wifi_core_cold");
     if (IS_ERR(ar_ahb->core_cold_rst)) {
-        ath10k_err(ar, "failed to get core cold rst ctrl: %ld\n",
+        ath10k_err("failed to get core cold rst ctrl: %ld\n",
                    PTR_ERR(ar_ahb->core_cold_rst));
         return PTR_ERR(ar_ahb->core_cold_rst);
     }
 
     ar_ahb->radio_cold_rst = devm_reset_control_get(dev, "wifi_radio_cold");
     if (IS_ERR(ar_ahb->radio_cold_rst)) {
-        ath10k_err(ar, "failed to get radio cold rst ctrl: %ld\n",
+        ath10k_err("failed to get radio cold rst ctrl: %ld\n",
                    PTR_ERR(ar_ahb->radio_cold_rst));
         return PTR_ERR(ar_ahb->radio_cold_rst);
     }
 
     ar_ahb->radio_warm_rst = devm_reset_control_get(dev, "wifi_radio_warm");
     if (IS_ERR(ar_ahb->radio_warm_rst)) {
-        ath10k_err(ar, "failed to get radio warm rst ctrl: %ld\n",
+        ath10k_err("failed to get radio warm rst ctrl: %ld\n",
                    PTR_ERR(ar_ahb->radio_warm_rst));
         return PTR_ERR(ar_ahb->radio_warm_rst);
     }
 
     ar_ahb->radio_srif_rst = devm_reset_control_get(dev, "wifi_radio_srif");
     if (IS_ERR(ar_ahb->radio_srif_rst)) {
-        ath10k_err(ar, "failed to get radio srif rst ctrl: %ld\n",
+        ath10k_err("failed to get radio srif rst ctrl: %ld\n",
                    PTR_ERR(ar_ahb->radio_srif_rst));
         return PTR_ERR(ar_ahb->radio_srif_rst);
     }
 
     ar_ahb->cpu_init_rst = devm_reset_control_get(dev, "wifi_cpu_init");
     if (IS_ERR(ar_ahb->cpu_init_rst)) {
-        ath10k_err(ar, "failed to get cpu init rst ctrl: %ld\n",
+        ath10k_err("failed to get cpu init rst ctrl: %ld\n",
                    PTR_ERR(ar_ahb->cpu_init_rst));
         return PTR_ERR(ar_ahb->cpu_init_rst);
     }
@@ -245,31 +245,31 @@ static int ath10k_ahb_release_reset(struct ath10k* ar) {
             IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) ||
             IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) ||
             IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
-        ath10k_err(ar, "rst ctrl(s) is/are not initialized\n");
+        ath10k_err("rst ctrl(s) is/are not initialized\n");
         return -EINVAL;
     }
 
     ret = reset_control_deassert(ar_ahb->radio_cold_rst);
     if (ret) {
-        ath10k_err(ar, "failed to deassert radio cold rst: %d\n", ret);
+        ath10k_err("failed to deassert radio cold rst: %d\n", ret);
         return ret;
     }
 
     ret = reset_control_deassert(ar_ahb->radio_warm_rst);
     if (ret) {
-        ath10k_err(ar, "failed to deassert radio warm rst: %d\n", ret);
+        ath10k_err("failed to deassert radio warm rst: %d\n", ret);
         return ret;
     }
 
     ret = reset_control_deassert(ar_ahb->radio_srif_rst);
     if (ret) {
-        ath10k_err(ar, "failed to deassert radio srif rst: %d\n", ret);
+        ath10k_err("failed to deassert radio srif rst: %d\n", ret);
         return ret;
     }
 
     ret = reset_control_deassert(ar_ahb->cpu_init_rst);
     if (ret) {
-        ath10k_err(ar, "failed to deassert cpu init rst: %d\n", ret);
+        ath10k_err("failed to deassert cpu init rst: %d\n", ret);
         return ret;
     }
 
@@ -298,7 +298,7 @@ static void ath10k_ahb_halt_axi_bus(struct ath10k* ar, uint32_t haltreq_reg,
     } while (time_before(jiffies, timeout));
 
     if (!(val & AHB_AXI_BUS_HALT_ACK)) {
-        ath10k_err(ar, "failed to halt axi bus: %d\n", val);
+        ath10k_err("failed to halt axi bus: %d\n", val);
         return;
     }
 
@@ -316,7 +316,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
             IS_ERR_OR_NULL(ar_ahb->radio_warm_rst) ||
             IS_ERR_OR_NULL(ar_ahb->radio_srif_rst) ||
             IS_ERR_OR_NULL(ar_ahb->cpu_init_rst)) {
-        ath10k_err(ar, "rst ctrl(s) is/are not initialized\n");
+        ath10k_err("rst ctrl(s) is/are not initialized\n");
         return;
     }
 
@@ -334,7 +334,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
         haltack_reg = ATH10K_AHB_TCSR_WCSS1_HALTACK;
         break;
     default:
-        ath10k_err(ar, "invalid core id %d found, skipping reset sequence\n",
+        ath10k_err("invalid core id %d found, skipping reset sequence\n",
                    core_id);
         return;
     }
@@ -347,31 +347,31 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
 
     ret = reset_control_assert(ar_ahb->core_cold_rst);
     if (ret) {
-        ath10k_err(ar, "failed to assert core cold rst: %d\n", ret);
+        ath10k_err("failed to assert core cold rst: %d\n", ret);
     }
     msleep(1);
 
     ret = reset_control_assert(ar_ahb->radio_cold_rst);
     if (ret) {
-        ath10k_err(ar, "failed to assert radio cold rst: %d\n", ret);
+        ath10k_err("failed to assert radio cold rst: %d\n", ret);
     }
     msleep(1);
 
     ret = reset_control_assert(ar_ahb->radio_warm_rst);
     if (ret) {
-        ath10k_err(ar, "failed to assert radio warm rst: %d\n", ret);
+        ath10k_err("failed to assert radio warm rst: %d\n", ret);
     }
     msleep(1);
 
     ret = reset_control_assert(ar_ahb->radio_srif_rst);
     if (ret) {
-        ath10k_err(ar, "failed to assert radio srif rst: %d\n", ret);
+        ath10k_err("failed to assert radio srif rst: %d\n", ret);
     }
     msleep(1);
 
     ret = reset_control_assert(ar_ahb->cpu_init_rst);
     if (ret) {
-        ath10k_err(ar, "failed to assert cpu init rst: %d\n", ret);
+        ath10k_err("failed to assert cpu init rst: %d\n", ret);
     }
     msleep(10);
 
@@ -388,7 +388,7 @@ static void ath10k_ahb_halt_chip(struct ath10k* ar) {
 
     ret = reset_control_deassert(ar_ahb->core_cold_rst);
     if (ret) {
-        ath10k_err(ar, "failed to deassert core cold rst: %d\n", ret);
+        ath10k_err("failed to deassert core cold rst: %d\n", ret);
     }
 
     ath10k_dbg(ar, ATH10K_DBG_AHB, "core %d reset done\n", core_id);
@@ -417,7 +417,7 @@ static int ath10k_ahb_request_irq_legacy(struct ath10k* ar) {
                       ath10k_ahb_interrupt_handler,
                       IRQF_SHARED, "ath10k_ahb", ar);
     if (ret) {
-        ath10k_warn(ar, "failed to request legacy irq %d: %d\n",
+        ath10k_warn("failed to request legacy irq %d: %d\n",
                     ar_ahb->irq, ret);
         return ret;
     }
@@ -449,14 +449,14 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
 
     res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (!res) {
-        ath10k_err(ar, "failed to get memory resource\n");
+        ath10k_err("failed to get memory resource\n");
         ret = -ENXIO;
         goto out;
     }
 
     ar_ahb->mem = devm_ioremap_resource(&pdev->dev, res);
     if (IS_ERR(ar_ahb->mem)) {
-        ath10k_err(ar, "mem ioremap error\n");
+        ath10k_err("mem ioremap error\n");
         ret = PTR_ERR(ar_ahb->mem);
         goto out;
     }
@@ -466,7 +466,7 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
     ar_ahb->gcc_mem = ioremap_nocache(ATH10K_GCC_REG_BASE,
                                       ATH10K_GCC_REG_SIZE);
     if (!ar_ahb->gcc_mem) {
-        ath10k_err(ar, "gcc mem ioremap error\n");
+        ath10k_err("gcc mem ioremap error\n");
         ret = -ENOMEM;
         goto err_mem_unmap;
     }
@@ -474,20 +474,20 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
     ar_ahb->tcsr_mem = ioremap_nocache(ATH10K_TCSR_REG_BASE,
                                        ATH10K_TCSR_REG_SIZE);
     if (!ar_ahb->tcsr_mem) {
-        ath10k_err(ar, "tcsr mem ioremap error\n");
+        ath10k_err("tcsr mem ioremap error\n");
         ret = -ENOMEM;
         goto err_gcc_mem_unmap;
     }
 
     ret = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
     if (ret) {
-        ath10k_err(ar, "failed to set 32-bit dma mask: %d\n", ret);
+        ath10k_err("failed to set 32-bit dma mask: %d\n", ret);
         goto err_tcsr_mem_unmap;
     }
 
     ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
     if (ret) {
-        ath10k_err(ar, "failed to set 32-bit consistent dma: %d\n",
+        ath10k_err("failed to set 32-bit consistent dma: %d\n",
                    ret);
         goto err_tcsr_mem_unmap;
     }
@@ -504,7 +504,7 @@ static int ath10k_ahb_resource_init(struct ath10k* ar) {
 
     ar_ahb->irq = platform_get_irq_byname(pdev, "legacy");
     if (ar_ahb->irq < 0) {
-        ath10k_err(ar, "failed to get irq number: %d\n", ar_ahb->irq);
+        ath10k_err("failed to get irq number: %d\n", ar_ahb->irq);
         ret = ar_ahb->irq;
         goto err_clock_deinit;
     }
@@ -567,7 +567,7 @@ static int ath10k_ahb_prepare_device(struct ath10k* ar) {
 
     ret = ath10k_ahb_clock_enable(ar);
     if (ret) {
-        ath10k_err(ar, "failed to enable clocks\n");
+        ath10k_err("failed to enable clocks\n");
         return ret;
     }
 
@@ -664,25 +664,25 @@ static int ath10k_ahb_hif_power_up(struct ath10k* ar) {
 
     ret = ath10k_ahb_chip_reset(ar);
     if (ret) {
-        ath10k_err(ar, "failed to reset chip: %d\n", ret);
+        ath10k_err("failed to reset chip: %d\n", ret);
         goto out;
     }
 
     ret = ath10k_pci_init_pipes(ar);
     if (ret) {
-        ath10k_err(ar, "failed to initialize CE: %d\n", ret);
+        ath10k_err("failed to initialize CE: %d\n", ret);
         goto out;
     }
 
     ret = ath10k_pci_init_config(ar);
     if (ret) {
-        ath10k_err(ar, "failed to setup init config: %d\n", ret);
+        ath10k_err("failed to setup init config: %d\n", ret);
         goto err_ce_deinit;
     }
 
     ret = ath10k_ahb_wake_target_cpu(ar);
     if (ret) {
-        ath10k_err(ar, "could not wake up target CPU: %d\n", ret);
+        ath10k_err("could not wake up target CPU: %d\n", ret);
         goto err_ce_deinit;
     }
 
@@ -783,7 +783,7 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
 
     ret = ath10k_pci_setup_resource(ar);
     if (ret) {
-        ath10k_err(ar, "failed to setup resource: %d\n", ret);
+        ath10k_err("failed to setup resource: %d\n", ret);
         goto err_resource_deinit;
     }
 
@@ -803,14 +803,14 @@ static int ath10k_ahb_probe(struct platform_device* pdev) {
 
     chip_id = ath10k_ahb_soc_read32(ar, SOC_CHIP_ID_ADDRESS);
     if (chip_id == 0xffffffff) {
-        ath10k_err(ar, "failed to get chip id\n");
+        ath10k_err("failed to get chip id\n");
         ret = -ENODEV;
         goto err_halt_device;
     }
 
     ret = ath10k_core_register(ar, chip_id);
     if (ret) {
-        ath10k_err(ar, "failed to register driver core: %d\n", ret);
+        ath10k_err("failed to register driver core: %d\n", ret);
         goto err_halt_device;
     }
 

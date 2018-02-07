@@ -178,7 +178,7 @@ static inline int ath10k_hif_resume(struct ath10k* ar) {
 
 static inline uint32_t ath10k_hif_read32(struct ath10k* ar, uint32_t address) {
     if (!ar->hif.ops->read32) {
-        ath10k_warn(ar, "hif read32 not supported\n");
+        ath10k_warn("hif read32 not supported\n");
         return 0xdeaddead;
     }
 
@@ -188,7 +188,7 @@ static inline uint32_t ath10k_hif_read32(struct ath10k* ar, uint32_t address) {
 static inline void ath10k_hif_write32(struct ath10k* ar,
                                       uint32_t address, uint32_t data) {
     if (!ar->hif.ops->write32) {
-        ath10k_warn(ar, "hif write32 not supported\n");
+        ath10k_warn("hif write32 not supported\n");
         return;
     }
 

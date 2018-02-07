@@ -184,7 +184,7 @@ static int ath10k_wmi_tlv_event_bcn_tx_status(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -206,7 +206,7 @@ static int ath10k_wmi_tlv_event_bcn_tx_status(struct ath10k* ar,
         /* FIXME: It's probably worth telling mac80211 to stop the
          * interface as it is crippled.
          */
-        ath10k_warn(ar, "received bcn tmpl tx status on vdev %i: %d",
+        ath10k_warn("received bcn tmpl tx status on vdev %i: %d",
                     vdev_id, tx_status);
         break;
     }
@@ -231,7 +231,7 @@ static int ath10k_wmi_tlv_event_diag_data(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -250,14 +250,14 @@ static int ath10k_wmi_tlv_event_diag_data(struct ath10k* ar,
             break;
         }
         if (len < sizeof(*item)) {
-            ath10k_warn(ar, "failed to parse diag data: can't fit item header\n");
+            ath10k_warn("failed to parse diag data: can't fit item header\n");
             break;
         }
 
         item = data;
 
         if (len < sizeof(*item) + item->len) {
-            ath10k_warn(ar, "failed to parse diag data: item is too long\n");
+            ath10k_warn("failed to parse diag data: item is too long\n");
             break;
         }
 
@@ -276,7 +276,7 @@ static int ath10k_wmi_tlv_event_diag_data(struct ath10k* ar,
     }
 
     if (num_items != -1 || len != 0)
-        ath10k_warn(ar, "failed to parse diag data event: num_items %d len %d\n",
+        ath10k_warn("failed to parse diag data event: num_items %d len %d\n",
                     num_items, len);
 
     kfree(tb);
@@ -292,7 +292,7 @@ static int ath10k_wmi_tlv_event_diag(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -320,7 +320,7 @@ static int ath10k_wmi_tlv_event_p2p_noa(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -353,7 +353,7 @@ static int ath10k_wmi_tlv_event_tx_pause(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -549,7 +549,7 @@ static void ath10k_wmi_tlv_op_rx(struct ath10k* ar, struct sk_buff* skb) {
         ath10k_wmi_tlv_event_tx_pause(ar, skb);
         break;
     default:
-        ath10k_warn(ar, "Unknown eventid: %d\n", id);
+        ath10k_warn("Unknown eventid: %d\n", id);
         break;
     }
 
@@ -567,7 +567,7 @@ static int ath10k_wmi_tlv_op_pull_scan_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -600,7 +600,7 @@ static int ath10k_wmi_tlv_op_pull_mgmt_rx_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -646,7 +646,7 @@ static int ath10k_wmi_tlv_op_pull_ch_info_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -677,7 +677,7 @@ ath10k_wmi_tlv_op_pull_vdev_start_ev(struct ath10k* ar, struct sk_buff* skb,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -707,7 +707,7 @@ static int ath10k_wmi_tlv_op_pull_peer_kick_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -748,7 +748,7 @@ static int ath10k_wmi_tlv_swba_tim_parse(struct ath10k* ar, uint16_t tag, uint16
 
     if (tim_info_ev->tim_len >
             sizeof(tim_info_ev->tim_bitmap)) {
-        ath10k_warn(ar, "refusing to parse invalid swba structure\n");
+        ath10k_warn("refusing to parse invalid swba structure\n");
         return -EPROTO;
     }
 
@@ -825,7 +825,7 @@ static int ath10k_wmi_tlv_op_pull_swba_ev(struct ath10k* ar,
     ret = ath10k_wmi_tlv_iter(ar, skb->data, skb->len,
                               ath10k_wmi_tlv_swba_parse, &swba);
     if (ret) {
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -859,7 +859,7 @@ static int ath10k_wmi_tlv_op_pull_phyerr_ev_hdr(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -925,7 +925,7 @@ static int ath10k_wmi_tlv_op_pull_svc_rdy_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -977,7 +977,7 @@ static int ath10k_wmi_tlv_op_pull_svc_rdy_ev(struct ath10k* ar,
                               ath10k_wmi_tlv_parse_mem_reqs, arg);
     if (ret) {
         kfree(tb);
-        ath10k_warn(ar, "failed to parse mem_reqs tlv: %d\n", ret);
+        ath10k_warn("failed to parse mem_reqs tlv: %d\n", ret);
         return ret;
     }
 
@@ -995,7 +995,7 @@ static int ath10k_wmi_tlv_op_pull_rdy_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -1067,7 +1067,7 @@ static int ath10k_wmi_tlv_op_pull_fw_stats(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -1174,7 +1174,7 @@ static int ath10k_wmi_tlv_op_pull_roam_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -1202,7 +1202,7 @@ ath10k_wmi_tlv_op_pull_wow_ev(struct ath10k* ar, struct sk_buff* skb,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 
@@ -1231,7 +1231,7 @@ static int ath10k_wmi_tlv_op_pull_echo_ev(struct ath10k* ar,
     tb = ath10k_wmi_tlv_parse_alloc(ar, skb->data, skb->len, GFP_ATOMIC);
     if (IS_ERR(tb)) {
         ret = PTR_ERR(tb);
-        ath10k_warn(ar, "failed to parse tlv: %d\n", ret);
+        ath10k_warn("failed to parse tlv: %d\n", ret);
         return ret;
     }
 

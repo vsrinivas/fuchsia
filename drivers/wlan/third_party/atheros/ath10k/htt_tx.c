@@ -85,7 +85,7 @@ static void __ath10k_htt_tx_txq_recalc(struct ieee80211_hw* hw,
 
     if (unlikely(peer_id >= ar->htt.tx_q_state.num_peers) ||
             unlikely(tid >= ar->htt.tx_q_state.num_tids)) {
-        ath10k_warn(ar, "refusing to update txq for peer_id %hu tid %hhu due to out of bounds\n",
+        ath10k_warn("refusing to update txq for peer_id %hu tid %hhu due to out of bounds\n",
                     peer_id, tid);
         return;
     }
@@ -330,7 +330,7 @@ static int ath10k_htt_tx_alloc_txq(struct ath10k_htt* htt) {
                                            size, DMA_TO_DEVICE);
     ret = dma_mapping_error(ar->dev, htt->tx_q_state.paddr);
     if (ret) {
-        ath10k_warn(ar, "failed to dma map tx_q_state: %d\n", ret);
+        ath10k_warn("failed to dma map tx_q_state: %d\n", ret);
         kfree(htt->tx_q_state.vaddr);
         return -EIO;
     }
@@ -358,25 +358,25 @@ static int ath10k_htt_tx_alloc_buf(struct ath10k_htt* htt) {
 
     ret = ath10k_htt_tx_alloc_cont_txbuf(htt);
     if (ret) {
-        ath10k_err(ar, "failed to alloc cont tx buffer: %d\n", ret);
+        ath10k_err("failed to alloc cont tx buffer: %d\n", ret);
         return ret;
     }
 
     ret = ath10k_htt_tx_alloc_cont_frag_desc(htt);
     if (ret) {
-        ath10k_err(ar, "failed to alloc cont frag desc: %d\n", ret);
+        ath10k_err("failed to alloc cont frag desc: %d\n", ret);
         goto free_txbuf;
     }
 
     ret = ath10k_htt_tx_alloc_txq(htt);
     if (ret) {
-        ath10k_err(ar, "failed to alloc txq: %d\n", ret);
+        ath10k_err("failed to alloc txq: %d\n", ret);
         goto free_frag_desc;
     }
 
     ret = ath10k_htt_tx_alloc_txdone_fifo(htt);
     if (ret) {
-        ath10k_err(ar, "failed to alloc txdone fifo: %d\n", ret);
+        ath10k_err("failed to alloc txdone fifo: %d\n", ret);
         goto free_txq;
     }
 
@@ -531,7 +531,7 @@ int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cook
 
     ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to send htt type stats request: %d",
+        ath10k_warn("failed to send htt type stats request: %d",
                     ret);
         dev_kfree_skb_any(skb);
         return ret;
@@ -553,7 +553,7 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
     }
 
     if (!htt->frag_desc.paddr) {
-        ath10k_warn(ar, "invalid frag desc memory\n");
+        ath10k_warn("invalid frag desc memory\n");
         return -EINVAL;
     }
 
@@ -594,7 +594,7 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
 
     ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to send frag desc bank cfg request: %d\n",
+        ath10k_warn("failed to send frag desc bank cfg request: %d\n",
                     ret);
         dev_kfree_skb_any(skb);
         return ret;
@@ -775,7 +775,7 @@ int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
 
     ret = ath10k_htc_send(&ar->htc, ar->htt.eid, skb);
     if (ret) {
-        ath10k_warn(ar, "failed to submit htc command: %d\n", ret);
+        ath10k_warn("failed to submit htc command: %d\n", ret);
         goto err_free_skb;
     }
 

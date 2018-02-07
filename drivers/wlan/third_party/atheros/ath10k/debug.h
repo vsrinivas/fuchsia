@@ -63,9 +63,9 @@ enum ath10k_dbg_aggr_mode {
 
 extern unsigned int ath10k_debug_mask;
 
-__printf(2, 3) void ath10k_info(struct ath10k* ar, const char* fmt, ...);
-__printf(2, 3) void ath10k_err(struct ath10k* ar, const char* fmt, ...);
-__printf(2, 3) void ath10k_warn(struct ath10k* ar, const char* fmt, ...);
+#define ath10k_trace(fmt, ...) zxlogf(TRACE, "ath10k: " fmt, ##__VA_ARGS__)
+#define ath10k_warn(fmt, ...) zxlogf(WARN, "ath10k: " fmt, ##__VA_ARGS__)
+#define ath10k_err(fmt, ...) zxlogf(ERROR, "ath10k: " fmt, ##__VA_ARGS__)
 
 void ath10k_debug_print_hwfw_info(struct ath10k* ar);
 void ath10k_debug_print_board_info(struct ath10k* ar);

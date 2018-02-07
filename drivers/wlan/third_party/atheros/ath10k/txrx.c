@@ -39,7 +39,7 @@ static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {
      */
     spin_lock_bh(&ar->data_lock);
     if (ar->offchan_tx_skb != skb) {
-        ath10k_warn(ar, "completed old offchannel frame\n");
+        ath10k_warn("completed old offchannel frame\n");
         goto out;
     }
 
@@ -66,7 +66,7 @@ int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
                tx_done->msdu_id, tx_done->status);
 
     if (tx_done->msdu_id >= htt->max_num_pending_tx) {
-        ath10k_warn(ar, "warning: msdu_id %d too big, ignoring\n",
+        ath10k_warn("warning: msdu_id %d too big, ignoring\n",
                     tx_done->msdu_id);
         return -EINVAL;
     }
@@ -74,7 +74,7 @@ int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
     spin_lock_bh(&htt->tx_lock);
     msdu = idr_find(&htt->pending_tx, tx_done->msdu_id);
     if (!msdu) {
-        ath10k_warn(ar, "received tx completion for invalid msdu_id: %d\n",
+        ath10k_warn("received tx completion for invalid msdu_id: %d\n",
                     tx_done->msdu_id);
         spin_unlock_bh(&htt->tx_lock);
         return -ENOENT;
@@ -196,8 +196,7 @@ void ath10k_peer_map_event(struct ath10k_htt* htt,
     struct ath10k_peer* peer;
 
     if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
-        ath10k_warn(ar,
-                    "received htt peer map event with idx out of bounds: %hu\n",
+        ath10k_warn("received htt peer map event with idx out of bounds: %hu\n",
                     ev->peer_id);
         return;
     }
@@ -232,8 +231,7 @@ void ath10k_peer_unmap_event(struct ath10k_htt* htt,
     struct ath10k_peer* peer;
 
     if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
-        ath10k_warn(ar,
-                    "received htt peer unmap event with idx out of bounds: %hu\n",
+        ath10k_warn("received htt peer unmap event with idx out of bounds: %hu\n",
                     ev->peer_id);
         return;
     }
@@ -241,7 +239,7 @@ void ath10k_peer_unmap_event(struct ath10k_htt* htt,
     spin_lock_bh(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, ev->peer_id);
     if (!peer) {
-        ath10k_warn(ar, "peer-unmap-event: unknown peer id %d\n",
+        ath10k_warn("peer-unmap-event: unknown peer id %d\n",
                     ev->peer_id);
         goto exit;
     }

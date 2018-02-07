@@ -219,7 +219,7 @@ static int ath10k_htt_verify_version(struct ath10k_htt* htt) {
 
     if (htt->target_version_major != 2 &&
             htt->target_version_major != 3) {
-        ath10k_err(ar, "unsupported htt major version %d. supported versions are 2 and 3\n",
+        ath10k_err("unsupported htt major version %d. supported versions are 2 and 3\n",
                    htt->target_version_major);
         return -ENOTSUPP;
     }
@@ -241,13 +241,13 @@ int ath10k_htt_setup(struct ath10k_htt* htt) {
     status = wait_for_completion_timeout(&htt->target_version_received,
                                          HTT_TARGET_VERSION_TIMEOUT_HZ);
     if (status == 0) {
-        ath10k_warn(ar, "htt version request timed out\n");
+        ath10k_warn("htt version request timed out\n");
         return -ETIMEDOUT;
     }
 
     status = ath10k_htt_verify_version(htt);
     if (status) {
-        ath10k_warn(ar, "failed to verify htt version: %d\n",
+        ath10k_warn("failed to verify htt version: %d\n",
                     status);
         return status;
     }
@@ -259,7 +259,7 @@ int ath10k_htt_setup(struct ath10k_htt* htt) {
 
     status = ath10k_htt_send_rx_ring_cfg_ll(htt);
     if (status) {
-        ath10k_warn(ar, "failed to setup rx ring: %d\n",
+        ath10k_warn("failed to setup rx ring: %d\n",
                     status);
         return status;
     }
@@ -268,7 +268,7 @@ int ath10k_htt_setup(struct ath10k_htt* htt) {
                                          htt->max_num_ampdu,
                                          htt->max_num_amsdu);
     if (status) {
-        ath10k_warn(ar, "failed to setup amsdu/ampdu limit: %d\n",
+        ath10k_warn("failed to setup amsdu/ampdu limit: %d\n",
                     status);
         return status;
     }

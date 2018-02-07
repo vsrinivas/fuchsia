@@ -137,7 +137,7 @@ static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file,
 
     ret = ath10k_wmi_addba_clear_resp(ar, arsta->arvif->vdev_id, sta->addr);
     if (ret) {
-        ath10k_warn(ar, "failed to clear addba session ret: %d\n", ret);
+        ath10k_warn("failed to clear addba session ret: %d\n", ret);
         goto out;
     }
 
@@ -190,7 +190,7 @@ static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
     ret = ath10k_wmi_addba_send(ar, arsta->arvif->vdev_id, sta->addr,
                                 tid, buf_size);
     if (ret) {
-        ath10k_warn(ar, "failed to send addba request: vdev_id %u peer %pM tid %u buf_size %u\n",
+        ath10k_warn("failed to send addba request: vdev_id %u peer %pM tid %u buf_size %u\n",
                     arsta->arvif->vdev_id, sta->addr, tid, buf_size);
     }
 
@@ -242,7 +242,7 @@ static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
     ret = ath10k_wmi_addba_set_resp(ar, arsta->arvif->vdev_id, sta->addr,
                                     tid, status);
     if (ret) {
-        ath10k_warn(ar, "failed to send addba response: vdev_id %u peer %pM tid %u status%u\n",
+        ath10k_warn("failed to send addba response: vdev_id %u peer %pM tid %u status%u\n",
                     arsta->arvif->vdev_id, sta->addr, tid, status);
     }
     ret = count;
@@ -293,7 +293,7 @@ static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
     ret = ath10k_wmi_delba_send(ar, arsta->arvif->vdev_id, sta->addr,
                                 tid, initiator, reason);
     if (ret) {
-        ath10k_warn(ar, "failed to send delba: vdev_id %u peer %pM tid %u initiator %u reason %u\n",
+        ath10k_warn("failed to send delba: vdev_id %u peer %pM tid %u initiator %u reason %u\n",
                     arsta->arvif->vdev_id, sta->addr, tid, initiator,
                     reason);
     }
@@ -356,7 +356,7 @@ ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
     ret = ath10k_wmi_peer_set_param(ar, arsta->arvif->vdev_id, sta->addr,
                                     WMI_PEER_DEBUG, peer_debug_trigger);
     if (ret) {
-        ath10k_warn(ar, "failed to set param to trigger peer tid logs for station ret: %d\n",
+        ath10k_warn("failed to set param to trigger peer tid logs for station ret: %d\n",
                     ret);
         goto out;
     }
