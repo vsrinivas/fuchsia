@@ -27,7 +27,7 @@ public:
 
     inline mdi_id_t get_id() const { return id; }
     inline const char* get_id_name() const { return id_name.c_str(); }
-    inline const mdi_type_t get_type() const { return MDI_ID_TYPE(id); };
+    inline mdi_type_t get_type() const { return MDI_ID_TYPE(id); };
 
     inline void add_child(const Node& node) {
         children.push_back(node);

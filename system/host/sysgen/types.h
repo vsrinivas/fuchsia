@@ -79,5 +79,5 @@ struct Syscall {
 
 const std::string map_override(
     const std::string& name, const std::map<std::string, std::string>& overrides);
-const bool has_attribute(const char* attr, const std::vector<std::string>& attrs);
-const void dump_attributes(const std::vector<std::string>& attrs);
+bool has_attribute(const char* attr, const std::vector<std::string>& attrs);
+void dump_attributes(const std::vector<std::string>& attrs);

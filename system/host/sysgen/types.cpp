@@ -35,11 +35,11 @@ const std::map<string, string> rust_reserved_words = {
     {"proc", "proc_"},
 };
 
-const bool has_attribute(const char* attr, const vector<string>& attrs) {
+bool has_attribute(const char* attr, const vector<string>& attrs) {
     return std::find(attrs.begin(), attrs.end(), attr) != attrs.end();
 }
 
-const void dump_attributes(const vector<string>& attrs) {
+void dump_attributes(const vector<string>& attrs) {
     for (auto& a : attrs) {
         fprintf(stderr, "%s ", a.c_str());
     }
