@@ -28,7 +28,7 @@ namespace {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    auto story_count_str =
+    const auto story_count_str =
         command_line.GetOptionValueWithDefault("story_count", "1");
     if (!fxl::StringToNumberWithError(story_count_str, &story_count)) {
       FXL_LOG(ERROR) << "Unrecognized value [--story_count=" << story_count_str
@@ -36,7 +36,7 @@ class Settings {
     }
 
     module_url = command_line.GetOptionValueWithDefault(
-        "module_url", "file:///system/test/modular_tests/null_module");
+        "module_url", "file:///system/test/modular_tests/common_null_module");
   }
 
   int story_count{0};
