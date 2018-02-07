@@ -586,7 +586,40 @@ void AudioRenderer2Impl::SetGainMute(float gain,
                                      uint32_t flags,
                                      const SetGainMuteCallback& callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  bool dirty = false;
+  if ((flags & kGainFlagGainValid) && (db_gain_ != gain)) {
+    if (gain > AudioRenderer::kMaxGain) {
+      FXL_LOG(ERROR) << "Gain value too large (" << gain
+                     << ") for audio renderer.";
+      return;
+    }
+
+    db_gain_ = gain;
+    dirty = true;
+  }
+
+  if ((flags & kGainFlagMuteValid) && (mute_ != mute)) {
+    mute_ = mute;
+    dirty = true;
+  }
+
+  if (dirty) {
+    float effective_gain = mute_ ? AudioRenderer::kMutedGain : db_gain_;
+
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->gain().SetRendererGain(effective_gain);
+    }
+  }
+
+  if (callback != nullptr) {
+    callback(db_gain_, mute_);
+  }
+
+  // Things went well, cancel the cleanup hook.
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::SetGainMuteNoReply(float gain,

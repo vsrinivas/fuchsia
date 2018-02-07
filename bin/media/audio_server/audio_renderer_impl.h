@@ -46,6 +46,7 @@ class AudioRendererImpl
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   float db_gain_ = 0.0;
+  bool mute_ = false;
   std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
 };
 
