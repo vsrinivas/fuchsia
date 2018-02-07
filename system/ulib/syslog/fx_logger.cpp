@@ -154,19 +154,25 @@ zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
 
 zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
                                  const char* msg, va_list args) {
-  if (msg == NULL) {
+  if (msg == NULL || severity > FX_LOG_FATAL) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (GetSeverity() > severity) {
     return ZX_OK;
   }
 
+  zx_status_t status;
   if (socket_.is_valid()) {
-    return VLogWriteToSocket(severity, tag, msg, args);
+    status = VLogWriteToSocket(severity, tag, msg, args);
   } else if (console_fd_.get() != -1) {
-    return VLogWriteToConsoleFd(severity, tag, msg, args);
+    status = VLogWriteToConsoleFd(severity, tag, msg, args);
+  } else {
+    return ZX_ERR_BAD_STATE;
   }
-  return ZX_ERR_BAD_STATE;
+  if (severity == FX_LOG_FATAL) {
+    abort();
+  }
+  return status;
 }
 
 // This function is not thread safe
