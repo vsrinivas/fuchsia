@@ -7,21 +7,21 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-platform=${1:-x86-64}
-build_dir=$fuchsia_root/out/build-vulkancts-$platform
+build=${1:-debug-x86-64}
+build_dir=$fuchsia_root/out/build-vulkancts-$build
 cc=$fuchsia_root/`find buildtools -type l -name "clang"`
 cxx=$fuchsia_root/`find buildtools -type l -name "clang++"`
 objcopy=$fuchsia_root/`find buildtools -name "llvm-objcopy"`
 ar=$fuchsia_root/`find buildtools -name "llvm-ar"`
 ranlib=$fuchsia_root/`find buildtools -name "llvm-ranlib"`
-sysroot=$fuchsia_root/out/build-zircon/build-user-$platform/sysroot
+sysroot=$fuchsia_root/out/$build/sdks/zircon_sysroot/sysroot
 
 if [ ! -d "$sysroot" ]; then
 	echo "Can't find sysroot: $sysroot"
 	exit 1
 fi
 
-if [[ $platform == *"arm64" ]]; then
+if [[ $build == *"aarch64" ]]; then
 	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=aarch64 -DDE_CPU=DE_CPU_ARM_64 -DDE_PTR_SIZE=8"
 else
 	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=x86_64"

@@ -7,13 +7,13 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-platform=${1:-x86-64}
-build_dir=$fuchsia_root/out/build-vulkancts-$platform
+build=${1:-debug-x86-64}
+build_dir=$fuchsia_root/out/build-vulkancts-$build
 dest_dir=/data/vulkancts
 netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
 
 fuchsia_platform=x86-64
-if [[ $platform == *"arm64" ]]; then
+if [[ $build == *"aarch64" ]]; then
     fuchsia_platform=aarch64
 fi
 
