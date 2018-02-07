@@ -231,7 +231,21 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<ast::UnionDeclaration> uni
 }
 
 bool Library::ConsumeFile(std::unique_ptr<ast::File> file) {
-    auto library_name = std::move(file->identifier);
+    // All fidl files in a library should agree on the library name.
+    if (file->identifier->components.size() != 1) {
+        return false;
+    }
+    auto library_name = std::move(file->identifier->components[0]);
+
+    if (library_name_ == nullptr) {
+        library_name_ = std::move(library_name);
+    } else {
+        StringView current_name = library_name_->location.data();
+        StringView new_name = library_name->location.data();
+        if (current_name != new_name) {
+            return false;
+        }
+    }
 
     auto using_list = std::move(file->using_list);
 

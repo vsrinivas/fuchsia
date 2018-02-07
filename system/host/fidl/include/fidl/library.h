@@ -138,6 +138,8 @@ public:
         }
     }
 
+    std::unique_ptr<ast::Identifier> library_name_;
+
     std::vector<flat::Const> const_declarations_;
     std::vector<flat::Enum> enum_declarations_;
     std::vector<flat::Interface> interface_declarations_;

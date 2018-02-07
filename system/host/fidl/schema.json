@@ -2,6 +2,18 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
     "properties": {
+        "required": [
+            "name",
+            "const_declarations",
+            "enum_declarations",
+            "interface_declarations",
+            "struct_declarations",
+            "union_declarations",
+            "library_dependencies",
+        ],
+        "name": {
+            "$ref": "#/definitions/identifier"
+        },
         "const_declarations": {
             "type": "array",
             "items": {
