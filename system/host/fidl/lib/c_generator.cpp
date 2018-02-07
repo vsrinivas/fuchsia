@@ -205,7 +205,7 @@ CGenerator::IntegerConstantType EnumType(ast::PrimitiveType::Subtype type) {
 
 void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
                Library* library, std::string* out_value) {
-    // TODO(kulakowski) Move this into module resolution.
+    // TODO(kulakowski) Move this into library resolution.
 
     std::ostringstream member_value;
 

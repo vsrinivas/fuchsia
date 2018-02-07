@@ -32,10 +32,10 @@
                 "$ref": "#/definitions/union"
             }
         },
-        "module_dependencies": {
+        "library_dependencies": {
             "type": "array",
             "items": {
-                "$ref": "#/definitions/module"
+                "$ref": "#/definitions/library"
             }
         }
     },
@@ -199,7 +199,7 @@
                 }
             }
         },
-        "module": {
+        "library": {
             "type": "object",
             "properties": {
             }

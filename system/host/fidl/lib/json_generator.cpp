@@ -497,8 +497,8 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
 void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
     indent_level_ = 0;
     GenerateObject([&]() {
-        // TODO(abarth): Produce module-dependencies data.
-        GenerateObjectMember("module_dependencies", std::vector<bool>(), Position::First);
+        // TODO(abarth): Produce library-dependencies data.
+        GenerateObjectMember("library_dependencies", std::vector<bool>(), Position::First);
         GenerateObjectMember("const_declarations", library_->const_declarations_);
         GenerateObjectMember("enum_declarations", library_->enum_declarations_);
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);

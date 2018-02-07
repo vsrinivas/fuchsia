@@ -20,7 +20,7 @@
 // ulib/fidl/include/coding.h and so on.
 
 // In particular, compared to the ast version:
-// - All files in the module are resolved together
+// - All files in the library are resolved together
 // - Names have been unnested and fully qualified
 // - All data structure sizes and layouts have been computed
 
