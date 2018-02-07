@@ -131,5 +131,5 @@ static zx_driver_ops_t passthrough_hci_driver_ops = {
 // This should be the last driver queried, so we match any transport.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_passthrough_hci, passthrough_hci_driver_ops, "fuchsia", "*0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BT_HCI_TRANSPORT),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
 ZIRCON_DRIVER_END(bt_passthrough_hci)
