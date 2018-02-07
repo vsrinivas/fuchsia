@@ -18,6 +18,8 @@
 
 #include <object/process_dispatcher.h>
 
+#include <platform.h>
+
 using fbl::AutoLock;
 
 // The starting max_height value of the root job.
@@ -267,8 +269,13 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
     if ((job_count_ == 0) && (process_count_ == 0)) {
         if (state_ == State::KILLING)
             state_ = State::READY;
-        if (!parent_)
-            panic("No user processes left!\n");
+        if (!parent_) {
+            // There are no userspace process left. From here, there's
+            // no particular context as to whether this was
+            // intentional, or if a core devhost crashed due to a
+            // bug. Either way, shut down the kernel.
+            platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
+        }
     }
 
     UpdateState(0u, set);
