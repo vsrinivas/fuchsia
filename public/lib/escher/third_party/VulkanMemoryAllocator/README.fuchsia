@@ -1,0 +1,9 @@
+Source: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+Git Commit: 4cefd614dc69fa4272ad3663d75f9d4f22c4f369
+License: MIT
+
+Only src/vk_mem_alloc.h and LICENSE.txt files were imported.
+
+Modifications:
+- added README.fuchsia
+- line endings were auto-converted from CRLF
