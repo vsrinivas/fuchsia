@@ -36,6 +36,7 @@ private:
         if (error_msg_out_ != nullptr) {
             *error_msg_out_ = error_msg;
         }
+        // TODO(TO-509): close all handles.
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -393,7 +394,8 @@ zx_status_t FidlDecoder::DecodeMessage() {
                 Pop();
                 continue;
             default:
-                return WithError("message tried to decode a non-present string");
+                return WithError(
+                    "message tried to decode a string that is neither present nor absent");
             }
             uint64_t bound = frame->string_state.max_size;
             uint64_t size = string_ptr->size;
@@ -466,6 +468,9 @@ zx_status_t FidlDecoder::DecodeMessage() {
         case Frame::kStateDone: {
             if (out_of_line_offset_ != num_bytes_) {
                 return WithError("message did not decode all provided bytes");
+            }
+            if (handle_idx_ != num_handles_) {
+                return WithError("message did not contain the specified number of handles");
             }
             return ZX_OK;
         }

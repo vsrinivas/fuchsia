@@ -37,6 +37,7 @@ private:
         if (error_msg_out_ != nullptr) {
             *error_msg_out_ = error_msg;
         }
+        // TODO(TO-509): release handles, set actual_handles_out_ to 0.
         return ZX_ERR_INVALID_ARGS;
     }
 

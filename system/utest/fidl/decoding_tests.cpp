@@ -157,6 +157,27 @@ bool decode_single_present_handle() {
     END_TEST;
 }
 
+bool decode_too_many_handles_specified_error() {
+    BEGIN_TEST;
+
+    nonnullable_handle_message_layout message = {};
+    message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+    zx_handle_t handles[] = {
+        dummy_handle_0,
+    };
+
+    const char* error = nullptr;
+    auto status = fidl_decode(&nonnullable_handle_message_type, &message, sizeof(message), handles,
+                              ArrayCount(handles) + 1, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error, error);
+    EXPECT_EQ(message.inline_struct.handle, dummy_handle_0);
+
+    END_TEST;
+}
+
 bool decode_single_present_handle_unaligned_error() {
     BEGIN_TEST;
 
@@ -1471,6 +1492,7 @@ END_TEST_CASE(null_parameters)
 
 BEGIN_TEST_CASE(handles)
 RUN_TEST(decode_single_present_handle)
+RUN_TEST(decode_too_many_handles_specified_error)
 RUN_TEST(decode_single_present_handle_unaligned_error)
 RUN_TEST(decode_multiple_present_handles)
 RUN_TEST(decode_single_absent_handle)

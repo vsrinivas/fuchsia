@@ -295,139 +295,165 @@ non-null or **NULL** when the reference is null. The location of the vector's
 content is determined by the depth-first traversal order of the message during
 decoding.
 
-Encoding Functions
+# fidl_encode()
 
-# fidl_object_encode()
+Declared in
+[system/ulib/fidl/include/fidl/coding.h](
+https://fuchsia.googlesource.com/zircon/+/HEAD/system/ulib/fidl/include/fidl/coding.h),
+defined in
+[system/ulib/fidl/encoding.cpp](
+https://fuchsia.googlesource.com/zircon/+/HEAD/system/ulib/fidl/encoding.cpp).
+
 
 ```
-zx_status_t fidl_object_encode(
-const fidl_encoding_table_t* encoding_table,
-void* buf,
-size_t num_bytes,
-zx_handle_t* handles,
-size_t max_handles,
-size_t* num_handles);
+zx_status_t fidl_encode(
+    const fidl_type_t* type,
+    void* bytes,
+    uint32_t num_bytes,
+    zx_handle_t* handles,
+    uint32_t max_handles,
+    uint32_t* actual_handles_out,
+    const char** error_msg_out);
 ```
 
-Encodes and validates exactly **num_bytes** of the object in **buf** in-place by
-performing a depth-first traversal of the encoding data from **encoding_table**
-to fix up internal references. Replaces internal pointers references with **0**
-or **UINTPTR_MAX** to indicate presence or absence. Extracts non-zero internal
-handle references out of **buf**, stores them sequentially in **handles**, and
-replaces their location in **buf** with **UINT32_MAX** to indicate their
-presence. Sets ***num_handles** to the number of handles present.
+Encodes and validates exactly **num_bytes** of the object in **bytes** in-place
+by performing a depth-first traversal of the encoding data from **type**
+to fix up internal references. Replaces internal pointers references with
+`FIDL_ALLOC_ABSENT` or `FIDL_ALLOC_PRESENT` to indicate presence.
+Extracts non-zero internal handle references out of **bytes**, stores up to
+**max_handles** of them sequentially in **handles**, and replaces their location
+in **bytes** with `FIDL_HANDLE_PRESENT` to indicate their presence. Sets
+**actual_handles_out** to the number of handles stored in **handles**.
 
 To prevent handle leakage, this operation ensures that either all handles within
-**buf** are moved into **handles** in case of success or they are all closed in
+**bytes** are moved into **handles** in case of success or they are all closed in
 case of an error.
 
-If **buf** is null and **num_bytes** is zero, sets ***num_handles** to zero and
-returns success.
+If a recoverable error occurs, such as encountering a null pointer for a
+required sub-object, **bytes** remains in an unusable partially modified state.
 
-If a recoverable error occurs, such as encountering a **NULL **pointer for a
-required sub-object, **buf** remains in an unusable partially modified state.
-All handles in **buf** which were already been consumed up to the point of the
-error are released and ***num_handles** is set to zero. Depth-first traversal of
+TODO(TO-509): The following paragarph isn't true today, but it should be.
+
+All handles in **bytes** which were already been consumed up to the point of the
+error are released and **actual_handles_out** is set to zero. Depth-first traversal of
 the object then continues to completion, closing all remaining handle references
-in **buf. **Since traversal is table-driven, it can continue even when the
-contents of **buf** fail encoding validation -- we assume it's not complete
-garbage.
+in **bytes**.
 
 If an unrecoverable error occurs, such as exceeding the bound of the buffer,
 exceeding the maximum nested complex object recursion depth, encountering
-invalid encoding table data, or a dangling pointer, the behavior is undefined;
-the function may **abort()**.
+invalid encoding table data, or a dangling pointer, the behavior is undefined.
 
-On success, **buf** and **handles** describe an encoded object ready to be sent
-using **zx_channel_send()**.
+On success, **bytes** and **handles** describe an encoded object ready to be sent
+using `zx_channel_send()`.
+
+If anything other than `ZX_OK` is returned, **error_msg_out** will be set.
 
 Result is…
 
-*   **NO_ERROR**: success
-*   **ERR_INVALID_ARGS**:
-    *   **encoding_table** was null
-    *   **buf** was null but **num_bytes** was non-zero
-*   **ERR_MALFORMED_DATA**: (tbd)
-    *   **handles** and/or **num_handles** were null but **buf** contained at
-        least one handle
-    *   there were more than **max_handles** in **buf**
-    *   the total length of the object determined by the traversal did not equal
-        precisely **num_bytes**
-    *   a required pointer reference in **buf **was null
-    *   a required handle reference in **buf **was zero
-    *   a pointer reference in **buf **did not have the expected value according
-        to the traversal
-    *   a handle reference in **buf **was **UINT32_MAX**
-    *   the complex object recursion depth was exceeded (see wire format)
+*   `ZX_OK`: success
+*   `ZX_ERR_INVALID_ARGS`:
+    *   **type** is null
+    *   **bytes** is null
+    *   **actual_handles_out** is null
+    *   **handles** is null and **max_handles** != 0
+    *   **type** is not a FIDL struct
+    *   there are more than **max_handles** in **bytes**
+    *   the total length of the object in **bytes** determined by the traversal
+        does not equal precisely **num_bytes**
+    *   **bytes** contains an invalid union field, according to **type**
+    *   a required pointer reference in **bytes** was null
+    *   a required handle reference in **bytes** was `ZX_HANDLE_INVALID`
+    *   a bounded string or vector in **bytes** is too large, according to
+        **type**
+    *   a pointer reference in **bytes** does not have the expected value
+        according to the traversal
+    *   `FIDL_RECURSION_DEPTH` was exceeded (see
+        [wire format](wire-format/index.md))
 
-_This function is effectively a simple interpreter of the contents of the
-encoding table. Unless the object encoding includes internal references which
+
+This function is effectively a simple interpreter of the contents of the
+type. Unless the object encoding includes internal references which
 must be fixed up, the only work amounts to checking the object size and the
-ranges of data types such as enums and union tags._
+ranges of data types such as enums and union tags.
 
-# fidl_object_decode()
+# fidl_decode()
+
+Declared in
+[system/ulib/fidl/include/fidl/coding.h](
+https://fuchsia.googlesource.com/zircon/+/HEAD/system/ulib/fidl/include/fidl/coding.h),
+defined in
+[system/ulib/fidl/decoding.cpp](
+https://fuchsia.googlesource.com/zircon/+/HEAD/system/ulib/fidl/decoding.cpp).
 
 ```
-zx_status_t fidl_object_decode(
-const fidl_encoding_table_t* encoding_table,
-void* buf,
-size_t num_bytes,
-const zx_handle_t* handles,
-size_t num_handles);
+zx_status_t fidl_decode(
+    const fidl_type_t* type,
+    void* bytes,
+    uint32_t num_bytes,
+    const zx_handle_t* handles,
+    uint32_t num_handles,
+    const char** error_msg_out);
 ```
 
-Decodes and validates the object in **buf** in-place by performing a depth-first
-traversal of the encoding data from **encoding_table** to fix up internal
-references. Patches internal pointers within **buf **whose value is
-**UINTPTR_MAX** to refer to the address of the out-of-line data they reference
-later in the buffer. Populates internal handles within **buf** whose value is
-**UINT32_MAX** to their corresponding handle taken sequentially from
-**handles**.
+Decodes and validates the object in **bytes** in-place by performing a
+depth-first traversal of the encoding data from **type** to fix up internal
+references. Patches internal pointers within **bytes** whose value is
+`FIDL_ALLOC_PRESENT` to refer to the address of the out-of-line data they
+reference later in the buffer. Populates internal handles within **bytes**
+whose value is `FIDL_HANDLE_PRESENT` to their corresponding handle taken
+sequentially from **handles**.
+
+TODO(TO-509): The following paragarph is not true but it should be.
 
 To prevent handle leakage, this operation ensures that either all handles in
-**handles** are moved into **buf** in case of success or they are all closed in
+**handles** are moved into **bytes** in case of success or they are all closed in
 case of an error. After successfully decoding an object, you may use
-**fidl_object_close_handles()** to close any handles which you did not consume
+`fidl_object_close_handles()` to close any handles which you did not consume
 from it.
 
 The **handles** array is not modified by the operation.
 
-If **buf** is null, **num_bytes** is zero, and **num_handles** is zero, returns
-success.
+If a recoverable error occurs, a result is returned, **bytes** remains in an
+unusable partially modified state, and all handles in **handles** are closed
+(TODO(TO-509): handles are not actually closed but they should be).
 
-If a recoverable error occurs, such as encountering a **NULL **pointer for a
-required sub-object, exceeding the bound of the buffer, or exceeding the maximum
-nested complex object recursion depth, **buf** remains in an unusable partially
-modified state, all handles in **handles** are closed.
+If an unrecoverable error occurs, such as encountering an invalid **type**,
+the behavior is undefined.
 
-If an unrecoverable error occurs, such as encountering invalid encoding table
-data, the behavior is undefined; the function may **abort()**.
+If anything other than `ZX_OK` is returned, **error_msg_out** will be set.
 
 Result is...
 
-*   **NO_ERROR**: success
-*   **ERR_INVALID_ARGS**:
-    *   **encoding_table** was null
-    *   **buf** was null but **num_bytes** or **num_handles** were non-zero
-*   **ERR_MALFORMED_DATA**: (tbd)
-    *   **handles** was null but **buf** contained at least one valid handle
+*   `ZX_OK`: success
+*   `ZX_ERR_INVALID_ARGS`:
+    *   **type** is null
+    *   **bytes** is null
+    *   **handles** is null but **num_handles** != 0.
+    *   **handles** is null but **bytes** contained at least one valid handle
         reference
-    *   the total length of the object determined by the traversal did not equal
+    *   **type** is not a FIDL struct
+    *   the total length of the object determined by the traversal does not equal
         precisely **num_bytes**
-    *   the total number of handles determined by the traversal did not equal
+    *   the total number of handles determined by the traversal does not equal
         precisely **num_handles**
-    *   a required pointer reference in **buf **was null
-    *   a required handle reference in **buf **was zero
-    *   a pointer reference in **buf **had a value other than zero or
-        **UINTPTR_MAX**
-    *   a handle reference in **buf **had a value other than zero or
-        **UINT32_MAX**
-    *   the complex object recursion depth was exceeded (see wire format)
+    *   **bytes** contains an invalid union field, according to **type**
+    *   a required pointer reference in **bytes** is `FIDL_ALLOC_ABSENT`.
+    *   a required handle reference in **bytes** is `ZX_HANDLE_INVALID`.
+    *   **bytes** contains an optional pointer reference which is marked
+        as `FIDL_ALLOC_ABSENT` but has size > 0.
+    *   a bounded string or vector in **bytes** is too large, according to
+        **type**
+    *   a pointer reference in **bytes** has a value other than
+        `FIDL_ALLOC_ABSENT` or `FIDL_ALLOC_PRESENT`.
+    *   a handle reference in **bytes** has a value other than
+        `ZX_HANDLE_INVALID` or `FIDL_HANDLE_PRESENT`.
+    *   `FIDL_RECURSION_DEPTH` was exceeded (see
+        [wire format](wire-format/index.md))
 
-_This function is effectively a simple interpreter of the contents of the
-encoding table. Unless the object encoding includes internal references which
+This function is effectively a simple interpreter of the contents of the
+type. Unless the object encoding includes internal references which
 must be fixed up, the only work amounts to checking the object size and the
-ranges of data types such as enums and union tags._
+ranges of data types such as enums and union tags.
 
 # fidl_object_close_handles()
 
@@ -460,7 +486,7 @@ size_t* num_handles);
 Counts how many non-zero handles appear in **buf**. Assumes that the object is
 valid. The contents of **buf** are not modified by the operation.
 
-If **buf** is null, sets ***num_handles** to zero and returns success.
+If **buf** is null, sets **num_handles** to zero and returns success.
 
 Result is...
 
@@ -488,7 +514,7 @@ string of up to **max_chars** characters (including the terminator) in
 ***num_chars**. Assumes that the object is valid. The contents of **buf** are
 not modified by the operation.
 
-If **buf** is null, sets ***num_chars** to zero and returns success.
+If **buf** is null, sets **num_chars** to zero and returns success.
 
 Result is...
 
@@ -576,13 +602,13 @@ const uint8_t* str);
 Initializes the string at **ref**, optionally copying the contents of **str**
 into **buf**.
 
-Sets **ref->size** to **<code>size</code></strong>. Sets
-<strong>ref->data</strong> to *<strong>buf</strong>. Pads with zeros to the next
+Sets **ref->size** to **<code>size</code>**. Sets
+**ref->data** to **buf**. Pads with zeros to the next
 multiple of 8 bytes (for alignment, not termination). Advances
-<strong>*buf</strong> to point just beyond the padded region.
+**buf** to point just beyond the padded region.
 
-If **str** is non-null, copies **<code>size</code></strong> bytes from
-<strong>str</strong> to <strong>ref->data</strong>.
+If **str** is non-null, copies **<code>size</code>** bytes from
+**str** to **ref->data**.
 
 # fidl_vector_init()
 
@@ -710,7 +736,7 @@ channel.
 *   Write the message header into the buffer (transaction id and method
     ordinal).
 *   Write the message body into the buffer (method arguments).
-*   Call **fidl_object_encode()** to encode the message and handles for
+*   Call **fidl_encode()** to encode the message and handles for
     transfer, taking care to pass a pointer to the **encoding table** of the
     message.
 *   Call **zx_channel_send()** to send the message buffer and its associated
@@ -729,37 +755,39 @@ altogether (or do it manually).
 // for building messages to take care of more of the grunt work
 // or by generating helpers.
 zx_status_t say_hello(
-zx_handle_t channel, const char* text, zx_handle_t token) {
-    assert(strlen(text) <= MAX_TEXT_SIZE);
+    zx_handle_t channel, const char* text, zx_handle_t token) {
+  assert(strlen(text) <= MAX_TEXT_SIZE);
 
-    uint8_t buf[sizeof(fidl_message_header_t)
-    + sizeof(example_animal_Say_args_t)
-        + FIDL_ALIGN(MAX_TEXT_SIZE)];
-    memset(buf, 0, sizeof(buf));
-    void* ptr = buf;
+  uint8_t buf[sizeof(fidl_message_header_t) +
+              sizeof(example_animal_Say_args_t) + FIDL_ALIGN(MAX_TEXT_SIZE)];
+  memset(buf, 0, sizeof(buf));
+  void* ptr = buf;
 
-    fidl_message_header_t* header = (fidl_message_header_t*)ptr;
-    ptr = header + 1;
-header->transaction_id = 1;
-header->flags = 0;
-header->ordinal = example_Animal_Say_ordinal;
+  fidl_message_header_t* header = (fidl_message_header_t*)ptr;
+  ptr = header + 1;
+  header->transaction_id = 1;
+  header->flags = 0;
+  header->ordinal = example_Animal_Say_ordinal;
 
-    example_Animal_Say_args_t* args = (example_Animal_Say_args_t*)ptr;
-    ptr = request + 1;
-    fidl_string_init(&ptr, &args->text, strlen(text), text);
-args->token = token;
+  example_Animal_Say_args_t* args = (example_Animal_Say_args_t*)ptr;
+  ptr = request + 1;
+  fidl_string_init(&ptr, &args->text, strlen(text), text);
+  args->token = token;
 
-    size_t num_bytes = (uint8_t*)ptr - buf;
-    zx_handle_t handles[1];
-    size_t num_handles;
-    zx_status_t status = fidl_object_encode(
-        example_Animal_Say_args_encoding,
-    args, num_bytes - sizeof(fidl_message_header_t),
-        handles, 1, &num_handles);
-    if (status == NO_ERROR) {
-        status = zx_channel_write(channel, 0, msg, num_bytes, handles, num_handles);
-    }
-    return status;
+  size_t num_bytes = (uint8_t*)ptr - buf;
+  zx_handle_t handles[1];
+  size_t num_handles;
+  const char* error_msg = nullptr;
+  zx_status_t status = fidl_encode(example_Animal_Say_args_type,
+      args, num_bytes - sizeof(fidl_message_header_t),
+      handles, 1, &num_handles, &error_msg);
+  if (status == ZX_OK) {
+    status = zx_channel_write(
+        channel, 0, msg, num_bytes, handles, num_handles);
+  } else {
+    FXL_LOG(WARNING) << "Failed to Say(\"hello\"): " << error_msg;
+  }
+  return status;
 }
 ```
 
@@ -777,14 +805,14 @@ channel.
 *   Dispatch the message based on the method ordinal stored in the message
     header. If the message is invalid, close the handles and skip to the last
     step.
-*   Call **fidl_object_decode()** to decode and validate the message and handles
-    for access, taking care to pass a pointer to the **encoding table** of the
+*   Call **fidl_decode()** to decode and validate the message and handles
+    for access, taking care to pass a pointer to the **type** of the
     message.
 *   If the message is invalid, skip to last step. (No need to release handles
     since they will be closed automatically by the decoder.)
 *   Consume the message.
 *   Call **fidl_object_close_handles()** to release any remaining handles stored
-    within the message, taking care to pass a pointer to the **encoding table**
+    within the message, taking care to pass a pointer to the **type**
     of the message body structure.
 *   Discard or reuse the buffer.
 
