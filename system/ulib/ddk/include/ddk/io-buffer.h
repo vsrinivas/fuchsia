@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -14,12 +15,16 @@
 
 __BEGIN_CDECLS;
 
+// Sentinel value for io_buffer_t's |phys| field for when it is not valid.
+#define IO_BUFFER_INVALID_PHYS UINT64_MAX
+
 typedef struct {
     zx_handle_t vmo_handle;
     size_t size;
     zx_off_t offset;
     void* virt;
-    // Points to the physical page backing the start of the VMO.
+    // Points to the physical page backing the start of the VMO, if this
+    // io buffer was created with the IO_BUFFER_CONTIG flag.
     zx_paddr_t phys;
 
     // This is used for storing the addresses of the physical pages backing non
@@ -81,6 +86,7 @@ static inline void* io_buffer_virt(io_buffer_t* buffer) {
 }
 
 static inline zx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
+    ZX_DEBUG_ASSERT(buffer->phys != IO_BUFFER_INVALID_PHYS);
     return buffer->phys + buffer->offset;
 }
 

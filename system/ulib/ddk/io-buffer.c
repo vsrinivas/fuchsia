@@ -11,12 +11,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Returns true if a buffer with these parameters was allocated using
+// zx_vmo_create_contiguous.  This is primarily important so we know whether we
+// need to call COMMIT on it to get the pages to exist.
+static bool is_allocated_contiguous(size_t size, uint32_t flags) {
+    return (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
+}
+
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_handle, size_t size,
                                          zx_off_t offset, uint32_t flags) {
     zx_vaddr_t virt;
 
-    bool contiguous = (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
-    if (!contiguous) {
+    if (!is_allocated_contiguous(size, flags)) {
         // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
         zx_status_t status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
         if (status != ZX_OK) {
@@ -38,14 +44,19 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
         return status;
     }
 
-    zx_paddr_t phys;
-    size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
-    status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
-        zx_vmar_unmap(zx_vmar_root_self(), virt, size);
-        zx_handle_close(vmo_handle);
-        return status;
+    zx_paddr_t phys = IO_BUFFER_INVALID_PHYS;
+    // For contiguous buffers, pre-lookup the physical mapping so
+    // io_buffer_phys() works.  For non-contiguous buffers, io_buffer_physmap()
+    // will need to be called.
+    if (flags & IO_BUFFER_CONTIG) {
+        size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
+        status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
+            zx_vmar_unmap(zx_vmar_root_self(), virt, size);
+            zx_handle_close(vmo_handle);
+            return status;
+        }
     }
 
     buffer->vmo_handle = vmo_handle;
@@ -72,9 +83,8 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
 
     zx_handle_t vmo_handle;
     zx_status_t status;
-    bool contiguous = (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
 
-    if (contiguous) {
+    if (is_allocated_contiguous(flags, size)) {
         status = zx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
     } else {
         // zx_vmo_create doesn't support passing an alignment.
