@@ -25,6 +25,7 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/wlan/fidl:mlme_data_only",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "garnet/public/lib/wlan/fidl/wlan_mlme.fidl-common.h"
+
 #include <cstdint>
 #include <string>
 
@@ -42,6 +44,8 @@ struct Channel {
     // Define the rule to translsate center frequency to/from channel numbering.
     // See IEEE Std 802.11-2016 19.3.15
 };
+
+wlan_channel_t FromFidl(const wlan::WlanChan& fidl_chan);
 
 }  // namespace common
 }  // namespace wlan
