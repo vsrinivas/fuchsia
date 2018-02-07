@@ -10,7 +10,7 @@
 
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
-#include "garnet/bin/ui/scene_manager/util/unwrap.h"
+#include "garnet/lib/ui/scenic/util/unwrap.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -728,8 +728,8 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
   session_.HitTestDeviceRay(
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
-      [ this, callback = std::move(callback), ray_origin,
-        ray_direction ](fidl::Array<scenic::HitPtr> hits) {
+      [this, callback = std::move(callback), ray_origin,
+       ray_direction](fidl::Array<scenic::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
         view_hits.reserve(hits.size());
         for (auto& hit : hits) {
@@ -868,9 +868,8 @@ void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
         FXL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
 
         view_state->set_invalidation_flags(
-            old_flags &
-            ~(ViewState::INVALIDATION_IN_PROGRESS |
-              ViewState::INVALIDATION_STALLED));
+            old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
+                          ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
           FXL_VLOG(2) << "View recovered from stalled invalidation: view_state="

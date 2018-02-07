@@ -7,9 +7,9 @@
 
 #include "lib/escher/forward_declarations.h"
 
-#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
-#include "garnet/bin/ui/scene_manager/tests/mocks.h"
+#include "garnet/lib/ui/scenic/displays/display_manager.h"
+#include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "lib/fsl/threading/thread.h"
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 

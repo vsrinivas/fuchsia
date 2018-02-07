@@ -12,9 +12,9 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 
-#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_app.h"
-#include "garnet/bin/ui/scene_manager/util/vulkan_utils.h"
+#include "garnet/lib/ui/scenic/displays/display_manager.h"
+#include "garnet/lib/ui/scenic/util/vulkan_utils.h"
 #include "lib/escher/escher_process_init.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_instance.h"

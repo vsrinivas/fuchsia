@@ -7,10 +7,10 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "garnet/examples/escher/common/demo.h"
 #include "garnet/examples/escher/common/demo_harness_fuchsia.h"
+#include "garnet/lib/ui/scenic/displays/display_manager.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

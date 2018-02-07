@@ -5,10 +5,10 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/synchronization/waitable_event.h"
 
-#include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
-#include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
-#include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "garnet/lib/ui/scenic/resources/nodes/entity_node.h"
+#include "garnet/lib/ui/scenic/tests/mocks.h"
+#include "garnet/lib/ui/scenic/tests/util.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
@@ -70,7 +70,8 @@ TEST_F(SceneManagerTest, ScheduleUpdateInOrder) {
 
 bool IsFenceSignalled(const zx::event& fence) {
   zx_signals_t signals = 0u;
-  zx_status_t status = fence.wait_one(escher::kFenceSignalled, zx::time(), &signals);
+  zx_status_t status =
+      fence.wait_one(escher::kFenceSignalled, zx::time(), &signals);
   FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
   return signals & escher::kFenceSignalled;
 }

@@ -14,6 +14,7 @@ package("mozart_tests") {
     "input_reader/tests",
     "scene_manager/tests",
     "view_manager/tests",
+    "//garnet/lib/ui/scenic/tests",
     "//garnet/public/lib/ui/geometry/cpp:apptests",
   ]
 
@@ -46,15 +47,19 @@ package("root_presenter") {
 
   binary = "root_presenter"
 
-  resources = [ {
-        path = rebase_path("root_presenter/resources/cursor32.png")
-        dest = "cursor32.png"
-      } ]
+  resources = [
+    {
+      path = rebase_path("root_presenter/resources/cursor32.png")
+      dest = "cursor32.png"
+    },
+  ]
 
-  meta = [ {
-        path = rebase_path("root_presenter/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("root_presenter/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("ime_service") {
@@ -80,10 +85,12 @@ package("scene_manager") {
 
   binary = "scene_manager"
 
-  meta = [ {
-        path = rebase_path("scene_manager/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("scene_manager/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("mozart_tools") {

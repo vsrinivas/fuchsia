@@ -1,0 +1,89 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/ui/config.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":unittests",
+    ":unittests_using_escher",
+  ]
+}
+
+source_set("testing_deps") {
+  testonly = true
+  sources = [
+    "mocks.cc",
+    "mocks.h",
+  ]
+  public_deps = [
+    ":util",
+    "//garnet/bin/ui/scene_manager:common",
+    "//garnet/public/lib/escher/test:gtest_vulkan",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/tests",
+  ]
+}
+
+source_set("util") {
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("unittests") {
+  output_name = "scene_manager_unittests"
+
+  testonly = true
+
+  sources = [
+    "escher_vulkan_smoke_test.cc",
+    "event_timestamper_unittest.cc",
+    "hittest_unittest.cc",
+    "imagepipe_unittest.cc",
+    "import_unittest.cc",
+    "node_unittest.cc",
+    "pose_buffer_unit_test.cc",
+    "resource_linker_unittest.cc",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest.cc",
+    "shape_unittest.cc",
+    "vk_session_test.cc",
+    "vk_session_test.h",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//garnet/bin/ui/tests:main",
+  ]
+}
+
+executable("unittests_using_escher") {
+  output_name = "scene_manager_unittests_using_escher"
+
+  testonly = true
+
+  sources = [
+    "escher_test_environment.cc",
+    "escher_test_environment.h",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest_using_escher.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//garnet/examples/escher/common",
+    "//garnet/public/lib/escher",
+    "//garnet/public/lib/test_runner/cpp/reporting",
+  ]
+}

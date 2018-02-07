@@ -12,7 +12,7 @@ executable("hello_scene_manager") {
   ]
 
   deps = [
-    "//garnet/bin/ui/scene_manager/tests:util",
+    "//garnet/lib/ui/scenic/tests:util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp/bindings",
