@@ -767,32 +767,10 @@ bool Session::ApplyCreateRoundedRectangle(
 
   const float width = args->width->get_vector1();
   const float height = args->height->get_vector1();
-  float top_left_radius = args->top_left_radius->get_vector1();
-  float top_right_radius = args->top_right_radius->get_vector1();
-  float bottom_right_radius = args->bottom_right_radius->get_vector1();
-  float bottom_left_radius = args->bottom_left_radius->get_vector1();
-
-  // If radii sum exceeds width or height, scale them down.
-  if (top_left_radius + top_right_radius > width) {
-    float radius_sum = top_left_radius + top_right_radius;
-    top_left_radius = top_left_radius / radius_sum * width;
-    top_right_radius = top_right_radius / radius_sum * width;
-  }
-  if (bottom_left_radius + bottom_right_radius > width) {
-    float radius_sum = bottom_left_radius + bottom_right_radius;
-    bottom_left_radius = bottom_left_radius / radius_sum * width;
-    bottom_right_radius = bottom_right_radius / radius_sum * width;
-  }
-  if (top_left_radius + bottom_left_radius > height) {
-    float radius_sum = top_left_radius + bottom_left_radius;
-    top_left_radius = top_left_radius / radius_sum * height;
-    bottom_left_radius = bottom_left_radius / radius_sum * height;
-  }
-  if (top_right_radius + bottom_right_radius > height) {
-    float radius_sum = top_right_radius + bottom_right_radius;
-    top_right_radius = top_right_radius / radius_sum * height;
-    bottom_right_radius = bottom_right_radius / radius_sum * height;
-  }
+  const float top_left_radius = args->top_left_radius->get_vector1();
+  const float top_right_radius = args->top_right_radius->get_vector1();
+  const float bottom_right_radius = args->bottom_right_radius->get_vector1();
+  const float bottom_left_radius = args->bottom_left_radius->get_vector1();
 
   auto rectangle = CreateRoundedRectangle(id, width, height, top_left_radius,
                                           top_right_radius, bottom_right_radius,
@@ -1073,6 +1051,24 @@ ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
     return ResourcePtr();
   }
 
+  // If radii sum exceeds width or height, scale them down.
+  float top_radii_sum = top_left_radius + top_right_radius;
+  float top_scale = std::min(width / top_radii_sum, 1.f);
+
+  float bottom_radii_sum = bottom_left_radius + bottom_right_radius;
+  float bottom_scale = std::min(width / bottom_radii_sum, 1.f);
+
+  float left_radii_sum = top_left_radius + bottom_left_radius;
+  float left_scale = std::min(height / left_radii_sum, 1.f);
+
+  float right_radii_sum = top_right_radius + bottom_right_radius;
+  float right_scale = std::min(height / right_radii_sum, 1.f);
+
+  top_left_radius *= std::min(top_scale, left_scale);
+  top_right_radius *= std::min(top_scale, right_scale);
+  bottom_left_radius *= std::min(bottom_scale, left_scale);
+  bottom_right_radius *= std::min(bottom_scale, right_scale);
+
   escher::RoundedRectSpec rect_spec(width, height, top_left_radius,
                                     top_right_radius, bottom_right_radius,
                                     bottom_left_radius);
@@ -1178,7 +1174,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
+        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
           if (weak)
             weak->engine_->ScheduleSessionUpdate(presentation_time,
                                                  SessionPtr(weak.get()));
