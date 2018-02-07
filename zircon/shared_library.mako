@@ -9,6 +9,10 @@ config("${data.name}_config") {
     "${include}",
     % endfor
   ]
+
+  visibility = [
+    ":*",
+  ]
 }
 
 if (!is_pic_default) {
@@ -60,6 +64,10 @@ if (is_debug) {
 config("${data.name}_lib_config") {
   libs = [
     _linked_lib,
+  ]
+
+  visibility = [
+    ":*",
   ]
 }
 

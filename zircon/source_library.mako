@@ -8,6 +8,10 @@ config("${data.name}_config") {
     "${include}",
     % endfor
   ]
+
+  visibility = [
+    ":*",
+  ]
 }
 
 sdk_source_set("${data.name}") {

@@ -25,6 +25,10 @@ config("${data.name}_config") {
   libs = [
     _lib,
   ]
+
+  visibility = [
+    ":*",
+  ]
 }
 
 group("${data.name}") {
