@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+    "//peridot/bin/device_runner/*",
+    "//peridot/bin/story_runner/*",
+    "//peridot/bin/user_runner/*"
+]
+
+source_set("cobalt") {
+  sources = [
+    "cobalt.cc",
+    "cobalt.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/cobalt/fidl",
+    "//peridot/lib/backoff",
+    "//peridot/lib/callback",
+    "//peridot/lib/cobalt",
+  ]
+}

@@ -30,6 +30,7 @@
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
+#include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/device_runner/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
@@ -55,6 +56,7 @@ class Settings {
     account_provider.url = command_line.GetOptionValueWithDefault(
         "account_provider", "oauth_token_manager");
 
+    disable_statistics = command_line.HasOption("disable_statistics");
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
     test = command_line.HasOption("test");
@@ -81,6 +83,7 @@ class Settings {
       user_runner.args.push_back("--test");
       user_shell.args.push_back("--test");
       test_name = FindTestName(user_shell.url, user_shell.args);
+      disable_statistics = true;
       ignore_monitor = true;
       no_minfs = true;
     }
@@ -95,6 +98,7 @@ class Settings {
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
       --account_provider=ACCOUNT_PROVIDER
+      --disable_statistics
       --ignore_monitor
       --no_minfs
       --test
@@ -123,6 +127,7 @@ class Settings {
   AppConfig account_provider;
 
   std::string test_name;
+  bool disable_statistics;
   bool ignore_monitor;
   bool no_minfs;
   bool test;
@@ -186,11 +191,13 @@ class Settings {
 
 class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
  public:
-  explicit DeviceRunnerApp(const Settings& settings)
+  explicit DeviceRunnerApp(const Settings& settings,
+                           std::shared_ptr<app::ApplicationContext> const app_context,
+                           std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
-        app_context_(
-            app::ApplicationContext::CreateFromStartupInfoNotChecked()),
+        app_context_(std::move(app_context)),
+        on_shutdown_(std::move(on_shutdown)),
         device_shell_context_binding_(this),
         account_provider_context_binding_(this) {
     // 0a. Check if environment handle / services have been initialized.
@@ -298,6 +305,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     user_provider_impl_.reset(new UserProviderImpl(
         app_context_, settings_.user_runner, settings_.user_shell,
         settings_.story_shell, token_manager_->primary_service().get()));
+
+    ReportEvent(CobaltEvent::BOOTED_TO_DEVICE_RUNNER);
   }
 
   // |DeviceShellContext|
@@ -329,7 +338,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         device_shell_app_->Teardown(kBasicTimeout, [this] {
           FXL_DLOG(INFO) << "- DeviceShell down";
           FXL_LOG(INFO) << "Clean Shutdown";
-          fsl::MessageLoop::GetCurrent()->QuitNow();
+          on_shutdown_();
         });
       });
     });
@@ -345,8 +354,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   const Settings& settings_;  // Not owned nor copied.
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
-  std::shared_ptr<app::ApplicationContext> app_context_;
+  std::shared_ptr<app::ApplicationContext> const app_context_;
   DeviceRunnerMonitorPtr monitor_;
+  std::function<void()> on_shutdown_;
 
   fidl::Binding<DeviceShellContext> device_shell_context_binding_;
   fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
@@ -356,6 +366,16 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   DeviceShellPtr device_shell_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
+};
+
+fxl::AutoCall<fxl::Closure> SetupCobalt(
+    Settings& settings,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    app::ApplicationContext* app_context) {
+  if (settings.disable_statistics) {
+    return fxl::MakeAutoCall<fxl::Closure>([] {});
+  }
+  return InitializeCobalt(task_runner, app_context);
 };
 
 }  // namespace
@@ -369,11 +389,21 @@ int main(int argc, const char** argv) {
   }
 
   modular::Settings settings(command_line);
-
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
+  auto app_context = std::shared_ptr<app::ApplicationContext>(
+      app::ApplicationContext::CreateFromStartupInfo());
+  fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
+      settings, std::move(loop.task_runner()), app_context.get());
 
-  modular::DeviceRunnerApp app(settings);
+  modular::DeviceRunnerApp app(
+      settings,
+      app_context,
+      [&loop, &cobalt_cleanup] {
+        cobalt_cleanup.call();
+        loop.QuitNow();
+      });
   loop.Run();
+
   return 0;
 }

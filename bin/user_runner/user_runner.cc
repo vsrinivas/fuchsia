@@ -10,6 +10,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
 int main(int argc, const char** argv) {
@@ -19,11 +20,18 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<app::ApplicationContext> app_context =
+      app::ApplicationContext::CreateFromStartupInfo();
+  fxl::AutoCall<fxl::Closure> cobalt_cleanup = modular::InitializeCobalt(
+      std::move(loop.task_runner()),
+      app_context.get());
   modular::AppDriver<modular::UserRunnerImpl> driver(
       app_context->outgoing_services(),
       std::make_unique<modular::UserRunnerImpl>(app_context.get(), test),
-      [&loop] { loop.QuitNow(); });
+      [&loop, &cobalt_cleanup] {
+        cobalt_cleanup.call();
+        loop.QuitNow();
+      });
 
   loop.Run();
   return 0;

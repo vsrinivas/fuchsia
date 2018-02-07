@@ -55,6 +55,7 @@ executable("user_runner_bin") {
     "//peridot/bin/agent_runner",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/component",
+    "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/story_runner",

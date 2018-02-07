@@ -51,6 +51,7 @@ executable("device_runner_bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
+    "//peridot/bin/device_runner/cobalt",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",

@@ -27,6 +27,7 @@
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
@@ -174,6 +175,7 @@ void UserRunnerImpl::Initialize(
   InitializeMaxwell(user_shell->url, std::move(story_shell));
   InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
+  ReportEvent(CobaltEvent::BOOTED_TO_USER_RUNNER);
 }
 
 void UserRunnerImpl::InitializeUser(
