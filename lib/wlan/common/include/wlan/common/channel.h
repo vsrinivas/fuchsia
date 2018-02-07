@@ -24,6 +24,9 @@ bool IsValidChan2Ghz(const wlan_channel_t& chan);
 bool IsValidChan5Ghz(const wlan_channel_t& chan);
 bool IsValidChan(const wlan_channel_t& chan);
 
+bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
+bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
+
 Mhz GetCenterFreq(const wlan_channel_t& chan);
 uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
 

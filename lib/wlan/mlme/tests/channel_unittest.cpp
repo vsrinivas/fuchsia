@@ -50,6 +50,25 @@ TEST_F(ChannelTest, ValidCombo) {
         EXPECT_EQ(want, IsValidChan(chan));
     }
 }
+
+TEST_F(ChannelTest, Equality) {
+    wlan_channel_t lhs{.primary = 1, .cbw = CBW20};
+    wlan_channel_t rhs{.primary = 1, .cbw = CBW20};
+    EXPECT_EQ(true, lhs == rhs);
+
+    rhs.cbw = CBW40;
+    EXPECT_EQ(true, lhs != rhs);
+
+    lhs.cbw = CBW40;
+    EXPECT_EQ(true, lhs == rhs);
+
+    rhs.primary = 2;
+    EXPECT_EQ(true, lhs != rhs);
+
+    lhs.primary = 2;
+    EXPECT_EQ(true, lhs == rhs);
+}
+
 TEST_F(ChannelTest, InvalidCombo) {
     TestVector tvs[] = {
         // clang-format off

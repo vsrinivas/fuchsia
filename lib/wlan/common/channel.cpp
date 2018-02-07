@@ -95,6 +95,15 @@ bool IsValidChan(const wlan_channel_t& chan) {
     return result;
 }
 
+bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
+    // TODO(porce): Support 802.11ac Wave2 by lhs.secondary80 == rhs.secondary80
+    return (lhs.primary == rhs.primary && lhs.cbw == rhs.cbw);
+}
+
+bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
+    return !(lhs == rhs);
+}
+
 Mhz GetCenterFreq(const wlan_channel_t& chan) {
     ZX_DEBUG_ASSERT(IsValidChan(chan));
 
