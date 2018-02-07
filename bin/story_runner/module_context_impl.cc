@@ -46,6 +46,7 @@ void ModuleContextImpl::GetChain(fidl::InterfaceRequest<Chain> request) {
 void ModuleContextImpl::GetLink(const fidl::String& name,
                                 fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
+  LinkImpl::ConnectionType connection_type{LinkImpl::ConnectionType::Secondary};
   if (name) {
     // See if there's a chain mapping for this module.
     link_path = story_controller_impl_->GetLinkPathForChainKey(
@@ -54,11 +55,12 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
       link_path = LinkPath::New();
       link_path->module_path = module_data_->module_path.Clone();
       link_path->link_name = name;
+      connection_type = LinkImpl::ConnectionType::Primary;
     }
   } else {
     link_path = module_data_->link_path.Clone();
   }
-  story_controller_impl_->ConnectLinkPath(std::move(link_path),
+  story_controller_impl_->ConnectLinkPath(std::move(link_path), connection_type,
                                           std::move(request));
 }
 

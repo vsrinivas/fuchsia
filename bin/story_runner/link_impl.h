@@ -98,10 +98,20 @@ class LinkImpl : PageClient {
 
   ~LinkImpl() override;
 
+  // Primary connections are from the module that owns the link.
+  // Secondary connections are from modules that receive the link with their
+  // nouns, and from the story controller. This is used to decide whether links
+  // that are marked as READ_ONLY_TO_OTHERS are writable.
+  enum class ConnectionType {
+    Primary = 0,
+    Secondary = 1,
+  };
+
   // Creates a new LinkConnection for the given request. LinkConnection
   // instances are deleted when their connections close, and they are all
   // deleted and close their connections when LinkImpl is destroyed.
-  void Connect(fidl::InterfaceRequest<Link> request);
+  void Connect(fidl::InterfaceRequest<Link> request,
+               ConnectionType connection_type);
 
   // Used by LinkConnection.
   void SetSchema(const fidl::String& json_schema);
@@ -124,6 +134,9 @@ class LinkImpl : PageClient {
 
   // Used by LinkWatcherConnection.
   void RemoveConnection(LinkWatcherConnection* connection);
+
+  // Returns true if the given connection is not allowed to write this Link.
+  bool IsClientReadOnly(uint32_t src);
 
   // Used by StoryControllerImpl.
   const LinkPathPtr& link_path() const { return link_path_; }
@@ -161,17 +174,29 @@ class LinkImpl : PageClient {
                       const CrtJsonPointer& debug_pointer,
                       const std::string& debug_json);
 
-  // Counter for LinkConnection IDs. ID 0 is never used so it can be used as
-  // pseudo connection ID for WatchAll() watchers. ID 1 is used as the source ID
-  // for updates from the Ledger.
+  // Counter for LinkConnection IDs used for sequentially assigning IDs to
+  // connections. ID 0 is never used so it can be used as pseudo connection ID
+  // for WatchAll() watchers. ID 1 is used as the source ID for updates from the
+  // Ledger.
   uint32_t next_connection_id_{2};
   static constexpr uint32_t kWatchAllConnectionId{0};
   static constexpr uint32_t kOnChangeConnectionId{1};
+
+  // Ids of connections that will always have write access to this link.
+  // Empty by default because it's possible that none of the connected mods
+  // have write access. The write access for secondary connection is determined
+  // by |CreateLinkInfo|.
+  std::set<uint32_t> primary_connection_ids_;
 
   // We can only accept connection requests once the instance is fully
   // initialized. So we queue connections on |requests_| until |ready_| is true.
   bool ready_{};
   std::vector<fidl::InterfaceRequest<Link>> requests_;
+
+  // Indices within |requests_| of primary connections. There is no default
+  // primary connection. These values are translated to connection IDs by the
+  // LinkImpl constructor as the connection IDs are generated.
+  std::vector<size_t> requests_primary_indices_;
 
   // The value of this Link instance.
   CrtJsonDoc doc_;

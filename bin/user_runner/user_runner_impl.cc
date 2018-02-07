@@ -664,7 +664,8 @@ void UserRunnerImpl::GetIntelligenceServices(
 
 void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   if (user_shell_link_) {
-    user_shell_link_->Connect(std::move(request));
+    user_shell_link_->Connect(std::move(request),
+                              LinkImpl::ConnectionType::Primary);
     return;
   }
 
@@ -674,7 +675,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
                                                 fidl::Array<uint8_t>::New(16),
                                                 std::move(link_path), nullptr);
-  user_shell_link_->Connect(std::move(request));
+  user_shell_link_->Connect(std::move(request),
+                            LinkImpl::ConnectionType::Secondary);
 }
 
 void UserRunnerImpl::GetPresentation(

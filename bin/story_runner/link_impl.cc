@@ -310,6 +310,11 @@ class LinkImpl::SetCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
+    if (impl_->IsClientReadOnly(src_)) {
+      FXL_LOG(WARNING) << "LinkImpl::SetCall failed, no write access";
+      return;
+    }
+
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
     const bool success = impl_->ApplySetOp(ptr, json_);
     if (success) {
@@ -351,6 +356,11 @@ class LinkImpl::UpdateObjectCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
+    if (impl_->IsClientReadOnly(src_)) {
+      FXL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed, no write access";
+      return;
+    }
+
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
     const bool success = impl_->ApplyUpdateOp(ptr, json_);
     if (success) {
@@ -389,6 +399,11 @@ class LinkImpl::EraseCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
+
+    if (impl_->IsClientReadOnly(src_)) {
+      FXL_LOG(WARNING) << "LinkImpl::EraseCall failed, no write access";
+      return;
+    }
 
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
     const bool success = impl_->ApplyEraseOp(ptr);
@@ -536,20 +551,33 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client,
       link_path_(std::move(link_path)),
       create_link_info_(std::move(create_link_info)) {
   MakeReloadCall([this] {
+    // Convert the indices of the pending primary handles into connection IDs
+    // and store the connection IDs in a set<> that's quickly searchable.
+    for (auto index : requests_primary_indices_) {
+      primary_connection_ids_.insert(index + next_connection_id_);
+    }
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
     requests_.clear();
+    requests_primary_indices_.clear();
     ready_ = true;
   });
 }
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
+void LinkImpl::Connect(fidl::InterfaceRequest<Link> request,
+                       ConnectionType connection_type) {
   if (ready_) {
+    if (connection_type == ConnectionType::Primary) {
+      primary_connection_ids_.insert(next_connection_id_);
+    }
     LinkConnection::New(this, next_connection_id_++, std::move(request));
   } else {
+    if (connection_type == ConnectionType::Primary) {
+      requests_primary_indices_.push_back(requests_.size());
+    }
     requests_.emplace_back(std::move(request));
   }
 }
@@ -736,6 +764,13 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
                      << "  API json " << debug_json << std::endl;
     }
   }
+}
+
+bool LinkImpl::IsClientReadOnly(uint32_t src) {
+  return create_link_info_ &&
+         create_link_info_->permissions ==
+             LinkPermissions::READ_ONLY_FOR_OTHERS &&
+         primary_connection_ids_.count(src) == 0;
 }
 
 // To be called after:

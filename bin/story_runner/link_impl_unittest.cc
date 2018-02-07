@@ -75,29 +75,29 @@ class PageClientPeer : modular::PageClient {
   std::string expected_prefix_;
 };
 
-class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
+class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
  public:
-  LinkImplTest() : watcher_binding_(this) {}
+  LinkImplTestBase() : watcher_binding_(this) {}
+
+  virtual CreateLinkInfoPtr GetCreateLinkInfo() = 0;
 
   void SetUp() override {
     TestWithLedger::SetUp();
 
     OperationBase::set_observer([this](const char* const operation_name) {
-      FXL_LOG(INFO) << "Operation " << operation_name;
       ++operations_[operation_name];
     });
 
     auto page_id = to_array("0123456789123456");
     auto link_path = GetTestLinkPath();
 
-    auto create_link_info = CreateLinkInfo::New();
-    create_link_info->initial_data = kInitialLinkValue;
+    auto create_link_info = GetCreateLinkInfo();
 
     link_impl_ = std::make_unique<LinkImpl>(ledger_client(), page_id.Clone(),
                                             link_path->Clone(),
                                             std::move(create_link_info));
 
-    link_impl_->Connect(link_.NewRequest());
+    link_impl_->Connect(link_.NewRequest(), LinkImpl::ConnectionType::Primary);
 
     ledger_client_peer_ = ledger_client()->GetLedgerClientPeer();
     page_client_peer_ = std::make_unique<PageClientPeer>(
@@ -174,8 +174,22 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
   std::map<std::string, int> operations_;
 };
 
+class LinkImplTest : public LinkImplTestBase {
+ public:
+  LinkImplTest() = default;
+  ~LinkImplTest() = default;
+
+  CreateLinkInfoPtr GetCreateLinkInfo() override {
+    auto create_link_info = CreateLinkInfo::New();
+    create_link_info->permissions = LinkPermissions::READ_WRITE;
+    create_link_info->initial_data = kInitialLinkValue;
+    // |create_link_info->allowed_types| is already null.
+    return create_link_info;
+  }
+};
+
 TEST_F(LinkImplTest, Constructor) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 1); };
+  continue_ = [this] { EXPECT_LE(step_, 1); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -203,7 +217,7 @@ TEST_F(LinkImplTest, Constructor) {
 }
 
 TEST_F(LinkImplTest, Set) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 2); };
+  continue_ = [this] { EXPECT_LE(step_, 2); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
   link_->Set(nullptr, "{ \"value\": 7 }");
@@ -229,7 +243,7 @@ TEST_F(LinkImplTest, Set) {
 }
 
 TEST_F(LinkImplTest, Update) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
+  continue_ = [this] { EXPECT_LE(step_, 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -252,7 +266,7 @@ TEST_F(LinkImplTest, Update) {
 }
 
 TEST_F(LinkImplTest, UpdateNewKey) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
+  continue_ = [this] { EXPECT_LE(step_, 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -275,7 +289,7 @@ TEST_F(LinkImplTest, UpdateNewKey) {
 }
 
 TEST_F(LinkImplTest, Erase) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
+  continue_ = [this] { EXPECT_LE(step_, 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -300,7 +314,7 @@ TEST_F(LinkImplTest, Erase) {
 }
 
 TEST_F(LinkImplTest, SetEntity) {
-  continue_ = [this] { EXPECT_TRUE(step_ <= 4); };
+  continue_ = [this] { EXPECT_LE(step_, 4); };
 
   const char entity_ref[] = "entertaining-entity";
   const std::string entity_ref_json = EntityReferenceToJson(entity_ref);
@@ -329,6 +343,91 @@ TEST_F(LinkImplTest, SetEntity) {
     done = true;
   });
   EXPECT_TRUE(RunLoopUntil([&done] { return done; }));
+}
+
+
+class LinkImplReadOnlyTest : public LinkImplTestBase {
+ public:
+  LinkImplReadOnlyTest() = default;
+  ~LinkImplReadOnlyTest() = default;
+
+  CreateLinkInfoPtr GetCreateLinkInfo() override {
+    auto create_link_info = CreateLinkInfo::New();
+    create_link_info->permissions = LinkPermissions::READ_ONLY_FOR_OTHERS;
+    // create_link_info->initial_data| is left null.
+    // |create_link_info->allowed_types| is already null.
+    return create_link_info;
+  }
+
+  LinkPtr link2_;
+};
+
+// In contrast to the Constructor test for LinkImplTest,
+// |create_link_info->initial_data| was set to null for this test, so nothing
+// was written to the link by default.
+TEST_F(LinkImplReadOnlyTest, Constructor) {
+  continue_ = [this] { EXPECT_LE(step_, 1); };
+
+  link_->WatchAll(watcher_binding_.NewBinding());
+
+  bool synced{};
+  link_->Sync([&synced] { synced = true; });
+
+  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+
+  EXPECT_EQ(0, ledger_change_count());
+
+  EXPECT_EQ("null", last_json_notify_);
+  ExpectOneCall("LinkImpl::ReloadCall");
+  ExpectOneCall("ReadAllDataCall");
+  // All numbers for |IncrementalChangeCall| are "at least" because PageClient
+  // will make a callback once per write, effectively doubling the number of
+  // calls. However, |LinkImpl::OnPageChange| puts those requests on an
+  // OperationQueue, so each request may or may not have run by the time Sync()
+  // returns.
+  ExpectOneCall("LinkImpl::WatchCall");
+  ExpectOneCall("SyncCall");
+  ExpectNoOtherCalls();
+}
+
+TEST_F(LinkImplReadOnlyTest, Set) {
+  continue_ = [this] { EXPECT_LE(step_, 2); };
+
+  link_->WatchAll(watcher_binding_.NewBinding());
+
+  link_impl_->Connect(link2_.NewRequest(), LinkImpl::ConnectionType::Secondary);
+
+  // This should be a no-op because |link2_| is read-only.
+  link2_->Set(nullptr, "\"from_link2\"");
+  // Writing from_link2 silently fails, so we need to write another value
+  // so we have a condition against which we can detect the end of the test.
+  link_->Set(nullptr, "\"from_link\"");
+
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return "\"from_link\"" == last_json_notify_ && ledger_change_count() == 1;
+  }));
+}
+
+class LinkImplNullInitTest : public LinkImplTestBase {
+ public:
+  LinkImplNullInitTest() = default;
+  ~LinkImplNullInitTest() = default;
+
+  CreateLinkInfoPtr GetCreateLinkInfo() override { return CreateLinkInfoPtr(); }
+};
+
+TEST_F(LinkImplNullInitTest, Set) {
+  // Even though we only write one value, we get two notifications, one
+  // for the initial value of null and one for the Set() call below.
+  continue_ = [this] { EXPECT_LE(step_, 2); };
+
+  link_->WatchAll(watcher_binding_.NewBinding());
+
+  link_->Set(nullptr, "\"from_link\"");
+
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return "\"from_link\"" == last_json_notify_ && ledger_change_count() == 1;
+  }));
 }
 
 // TODO(jimbe) Still many tests to be written, including:

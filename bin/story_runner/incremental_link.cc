@@ -291,6 +291,9 @@ void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data,
 }
 
 void LinkImpl::MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src) {
+  if (IsClientReadOnly(src)) {
+    return;
+  }
   new IncrementalChangeCall(&operation_queue_, this, std::move(data), src,
                             [] {});
 }

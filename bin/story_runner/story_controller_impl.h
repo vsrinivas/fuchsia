@@ -41,6 +41,7 @@
 #include "lib/surface/fidl/surface.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/context.h"
 #include "peridot/lib/fidl/scope.h"
@@ -51,7 +52,6 @@
 namespace modular {
 
 class ChainImpl;
-class LinkImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
 class StoryProviderImpl;
@@ -142,6 +142,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by ModuleContextImpl.
   void ConnectLinkPath(LinkPathPtr link_path,
+                       LinkImpl::ConnectionType connection_type,
                        fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.
