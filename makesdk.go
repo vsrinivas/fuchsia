@@ -87,21 +87,21 @@ func init() {
 	}
 
 	zxBuildDir := "out/build-zircon/"
-	x86ZxBuildDir := zxBuildDir + "/build-user-x86-64/"
-	armZxBuildDir := zxBuildDir + "/build-user-arm64/"
-	x86Builddir := "out/release-x86-64/"
-	armBuilddir := "out/release-aarch64/"
+	x86ZxBuildDir := zxBuildDir + "build-user-x86-64/"
+	armZxBuildDir := zxBuildDir + "build-user-arm64/"
+	x86BuildDir := "out/release-x86-64/"
+	armBuildDir := "out/release-aarch64/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
 		{
 			sysroot,
-			x86ZxBuildDir + "sysroot",
+			x86BuildDir + "sdks/zircon_sysroot/sysroot/",
 			"sysroot/x86_64-fuchsia/",
 		},
 		{
 			sysroot,
-			armZxBuildDir + "sysroot",
+			armBuildDir + "sdks/zircon_sysroot/sysroot/",
 			"sysroot/aarch64-fuchsia",
 		},
 		{
@@ -116,7 +116,7 @@ func init() {
 		},
 		{
 			tools,
-			x86Builddir + "host_x64/far",
+			x86BuildDir + "host_x64/far",
 			"tools/far",
 		},
 		{
@@ -160,7 +160,7 @@ func init() {
 		},
 		{
 			bootdata,
-			x86Builddir + "user.bootfs",
+			x86BuildDir + "user.bootfs",
 			"target/x86_64/bootdata.bin",
 		},
 		{
@@ -170,7 +170,7 @@ func init() {
 		},
 		{
 			bootdata,
-			armBuilddir + "user.bootfs",
+			armBuildDir + "user.bootfs",
 			"target/aarch64/bootdata.bin",
 		},
 	}
@@ -185,7 +185,7 @@ func init() {
 		},
 		{
 			kernelDebugObjs,
-			x86Builddir,
+			x86BuildDir,
 			"sysroot/x86_64-fuchsia/debug-info",
 			customType,
 			copyIdsTxt,
@@ -199,7 +199,7 @@ func init() {
 		},
 		{
 			kernelDebugObjs,
-			armBuilddir,
+			armBuildDir,
 			"sysroot/aarch64-fuchsia/debug-info",
 			customType,
 			copyIdsTxt,
@@ -210,10 +210,10 @@ func init() {
 		files = append(files, file{c.flag, c.src, "sysroot/aarch64-fuchsia/include/" + c.dst})
 	}
 	for _, c := range clientLibs {
-		files = append(files, file{c.flag, x86Builddir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
-		files = append(files, file{c.flag, x86Builddir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
-		files = append(files, file{c.flag, armBuilddir + "arm64-shared/" + c.name, "sysroot/aarch64-fuchsia/lib/" + c.name})
-		files = append(files, file{c.flag, armBuilddir + "arm64-shared/lib.unstripped/" + c.name, "sysroot/aarch64-fuchsia/debug-info/" + c.name})
+		files = append(files, file{c.flag, x86BuildDir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
+		files = append(files, file{c.flag, x86BuildDir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
+		files = append(files, file{c.flag, armBuildDir + "arm64-shared/" + c.name, "sysroot/aarch64-fuchsia/lib/" + c.name})
+		files = append(files, file{c.flag, armBuildDir + "arm64-shared/lib.unstripped/" + c.name, "sysroot/aarch64-fuchsia/debug-info/" + c.name})
 	}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
