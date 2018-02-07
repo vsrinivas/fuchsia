@@ -575,7 +575,7 @@ bool DpDisplay::LinkTrainingSetup() {
     // TODO(ZX-1416): set SET_POWER dpcd field (0x600)
 
     uint8_t max_lc_byte;
-    if (!DpcdRead(dpcd::DPCD_COUNT_SET, &max_lc_byte, 1)) {
+    if (!DpcdRead(dpcd::DPCD_MAX_LANE_COUNT, &max_lc_byte, 1)) {
         zxlogf(ERROR, "Failed to read lane count\n");
         return false;
     }
@@ -807,12 +807,14 @@ namespace {
 
 // Convert ratio x/y into the form used by the Link/Data M/N ratio registers.
 void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
-    // The exact denominator (N) value shouldn't matter too much.  Larger
-    // values will tend to represent the ratio more accurately.  The value
-    // must fit into a 24-bit register, so use 1 << 23.
-    const uint32_t kDenominator = 1 << 23;
-    *n_out = kDenominator;
-    *m_out = static_cast<uint32_t>(static_cast<uint64_t>(x) * kDenominator / y);
+    // The exact values of N and M shouldn't matter too much.  N and M can be
+    // up to 24 bits, and larger values will tend to represent the ratio more
+    // accurately. However, large values of N (e.g. 1 << 23) cause some monitors
+    // to inexplicably fail. Pick a relatively arbitrary value for N that works
+    // well in practice.
+    *n_out = 1 << 20;
+    *m_out = static_cast<uint32_t>(static_cast<uint64_t>(x) * *n_out / y);
+
 }
 
 } // namespace
