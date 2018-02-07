@@ -22,6 +22,12 @@ __BEGIN_CDECLS
 // Error messages are always displayed by default.
 #define DDK_LOG_ERROR    ZX_LOG_ERROR
 
+// Warning messages are for situations that are not errors but
+// may be indicative of an impending problem.  As with errors they
+// should not be issued repeatedly and rapidly.
+// Warning messages are always displayed by default.
+#define DDK_LOG_WARN     ZX_LOG_WARN
+
 // Info messages should provide terse information messages
 // around driver startup, shutdown or state change.  They
 // should be concise, infrequent, and one-line whenever possible.
@@ -54,6 +60,7 @@ __BEGIN_CDECLS
 // useful for network core or driver logging that would otherwise
 // spiral out of control as it logs about packets about logging...
 #define DDK_LOG_LERROR   (ZX_LOG_ERROR | ZX_LOG_LOCAL)
+#define DDK_LOG_LWARN    (ZX_LOG_WARN | ZX_LOG_LOCAL)
 #define DDK_LOG_LINFO    (ZX_LOG_INFO | ZX_LOG_LOCAL)
 #define DDK_LOG_LTRACE   (ZX_LOG_TRACE | ZX_LOG_LOCAL)
 #define DDK_LOG_LSPEW    (ZX_LOG_SPEW | ZX_LOG_LOCAL)

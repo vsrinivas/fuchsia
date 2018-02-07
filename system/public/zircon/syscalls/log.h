@@ -26,15 +26,18 @@ typedef struct zx_log_record {
 
 // Common Log Levels
 #define ZX_LOG_ERROR          (0x0001)
-#define ZX_LOG_INFO           (0x0002)
-#define ZX_LOG_TRACE          (0x0004)
-#define ZX_LOG_SPEW           (0x0008)
+#define ZX_LOG_WARN           (0x0002)
+#define ZX_LOG_INFO           (0x0004)
+
+// Verbose log levels
+#define ZX_LOG_TRACE          (0x0010)
+#define ZX_LOG_SPEW           (0x0020)
 
 // Custom Log Levels
-#define ZX_LOG_DEBUG1         (0x0010)
-#define ZX_LOG_DEBUG2         (0x0020)
-#define ZX_LOG_DEBUG3         (0x0040)
-#define ZX_LOG_DEBUG4         (0x0080)
+#define ZX_LOG_DEBUG1         (0x0100)
+#define ZX_LOG_DEBUG2         (0x0200)
+#define ZX_LOG_DEBUG3         (0x0400)
+#define ZX_LOG_DEBUG4         (0x0800)
 
 // Filter Flags
 
@@ -42,8 +45,8 @@ typedef struct zx_log_record {
 // (for logging in network core and drivers)
 #define ZX_LOG_LOCAL          (0x1000)
 
-#define ZX_LOG_LEVEL_MASK     (0x00FF)
-#define ZX_LOG_FLAGS_MASK     (0xFFFF)
+#define ZX_LOG_LEVEL_MASK     (0x0FFF)
+#define ZX_LOG_FLAGS_MASK     (0xF000)
 
 // Options
 

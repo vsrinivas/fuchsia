@@ -85,6 +85,9 @@ static uint32_t logflagval(char* flag) {
     if (!strcmp(flag, "error")) {
         return DDK_LOG_ERROR;
     }
+    if (!strcmp(flag, "warn")) {
+        return DDK_LOG_WARN;
+    }
     if (!strcmp(flag, "info")) {
         return DDK_LOG_INFO;
     }
