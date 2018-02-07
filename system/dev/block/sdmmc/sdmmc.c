@@ -35,6 +35,23 @@
 #define SDMMC_LOCK(dev)   mtx_lock(&(dev)->lock);
 #define SDMMC_UNLOCK(dev) mtx_unlock(&(dev)->lock);
 
+#if WITH_STATS
+#define STAT_INC(name) do { dev->stat_##name++; } while (0)
+#define STAT_DEC(name) do { dev->stat_##name--; } while (0)
+#define STAT_DEC_IF(name, c) do { if (c) dev->stat_##name--; } while (0)
+#define STAT_ADD(name, num) do { dev->stat_##name += num; } while (0)
+#define STAT_INC_MAX(name) do { \
+    if (++dev->stat_##name > dev->stat_max_##name) { \
+        dev->stat_max_##name = dev->stat_##name; \
+    }} while (0)
+#else
+#define STAT_INC(name) do { } while (0)
+#define STAT_DEC(name) do { } while (0)
+#define STAT_DEC_IF(name, c) do { } while (0)
+#define STAT_ADD(name, num) do { } while (0)
+#define STAT_INC_MAX(name) do { } while (0)
+#endif
+
 static void block_complete(block_op_t* bop, zx_status_t status) {
     if (bop->completion_cb) {
         bop->completion_cb(bop, status);
@@ -54,9 +71,9 @@ static zx_off_t sdmmc_get_size(void* ctx) {
 
 static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    sdmmc_device_t* dev = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
-        sdmmc_device_t* dev = ctx;
         block_info_t* info = reply;
         if (max < sizeof(*info)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
@@ -64,6 +81,34 @@ static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
         memcpy(info, &dev->block_info, sizeof(*info));
         *out_actual = sizeof(*info);
         return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_STATS: {
+#if WITH_STATS
+        if (cmdlen != sizeof(bool)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        block_stats_t* out = reply;
+        if (max < sizeof(*out)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        SDMMC_LOCK(dev);
+        out->max_concur = dev->stat_max_concur;
+        out->max_pending = dev->stat_max_pending;
+        out->total_ops = dev->stat_total_ops;
+        out->total_blocks = dev->stat_total_blocks;
+        bool clear = *(bool *)cmd;
+        if (clear) {
+            dev->stat_max_concur = 0;
+            dev->stat_max_pending = 0;
+            dev->stat_total_ops = 0;
+            dev->stat_total_blocks = 0;
+        }
+        SDMMC_UNLOCK(dev);
+        *out_actual = sizeof(*out);
+        return ZX_OK;
+#else
+        return ZX_ERR_NOT_SUPPORTED;
+#endif
     }
     case IOCTL_BLOCK_RR_PART: {
         sdmmc_device_t* dev = ctx;
@@ -155,7 +200,13 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
 
     SDMMC_LOCK(dev);
 
+    STAT_INC(total_ops);
+    if ((btxn->command == BLOCK_OP_READ) || (btxn->command == BLOCK_OP_WRITE)) {
+        STAT_ADD(total_blocks, btxn->rw.length);
+    }
+
     list_add_tail(&dev->txn_list, &txn->node);
+    STAT_INC_MAX(pending);
     // Wake up the worker thread (while locked, so they don't accidentally
     // clear the event).
     zx_object_signal(dev->worker_event, 0, SDMMC_TXN_RECEIVED);
@@ -359,6 +410,7 @@ static int sdmmc_worker_thread(void* arg) {
         // between each txn.
         SDMMC_LOCK(dev);
         sdmmc_txn_t* txn = list_remove_head_type(&dev->txn_list, sdmmc_txn_t, node);
+        STAT_DEC_IF(pending, txn != NULL);
         if (txn) {
             // Unlock if we execute the transaction
             SDMMC_UNLOCK(dev);

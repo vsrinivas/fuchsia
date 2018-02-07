@@ -22,6 +22,11 @@ typedef enum sdmmc_type {
 
 #define SDMMC_REQ_COUNT   16
 
+// If enabled, gather stats on concurrent io ops,
+// pending txns, etc. Print them whenever the block
+// info is queried (lsblk will provoke this)
+#define WITH_STATS 1
+
 typedef struct sdmmc_device {
     zx_device_t* zxdev;
 
@@ -54,6 +59,15 @@ typedef struct sdmmc_device {
     thrd_t worker_thread;
     zx_handle_t worker_event;
     bool worker_thread_running;
+
+#if WITH_STATS
+    size_t stat_concur;
+    size_t stat_pending;
+    size_t stat_max_concur;
+    size_t stat_max_pending;
+    size_t stat_total_ops;
+    size_t stat_total_blocks;
+#endif
 
     block_info_t block_info;
 } sdmmc_device_t;
