@@ -18,8 +18,6 @@
 
 namespace {
 
-static const uint8_t scratch_buffer[PAGE_SIZE] __ALIGNED(PAGE_SIZE) = {};
-
 inline uint64_t gen_pte_encode(uint64_t bus_addr, bool valid)
 {
     return bus_addr | (valid ? PAGE_PRESENT : 0);
@@ -50,8 +48,25 @@ zx_status_t Gtt::Init(Controller* controller) {
     uint32_t gtt_size = gmch_gfx_ctrl.gtt_mappable_mem_size();
     zxlogf(SPEW, "i915: Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
 
+    status = zx::vmo::create(PAGE_SIZE, 0, &scratch_buffer_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to alloc scratch buffer %d\n", status);
+        return status;
+    }
+    status = scratch_buffer_.op_range(ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to commit scratch buffer %d\n", status);
+        return status;
+    }
+    status = scratch_buffer_.op_range(ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
+                                      &scratch_buffer_paddr_, sizeof(zx_paddr_t));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to look up scratch buffer %d\n", status);
+        return status;
+    }
+
     // Populate the gtt with the scratch buffer.
-    uint64_t pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), false);
+    uint64_t pte = gen_pte_encode(scratch_buffer_paddr_, false);
     unsigned i;
     for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(i), pte);
@@ -90,7 +105,7 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
             controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
         }
     }
-    uint64_t padding_pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), true);
+    uint64_t padding_pte = gen_pte_encode(scratch_buffer_paddr_, true);
     for (i = 0; i < pte_padding; i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
@@ -106,7 +121,7 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_paddi
         uint64_t pte = gen_pte_encode(stolen_fb, true);
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
     }
-    uint64_t padding_pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), true);
+    uint64_t padding_pte = gen_pte_encode(scratch_buffer_paddr_, true);
     for (unsigned i = 0; i < pte_padding; i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
@@ -118,7 +133,7 @@ GttRegion::GttRegion(fbl::unique_ptr<const RegionAllocator::Region> region, Gtt*
 
 GttRegion::~GttRegion() {
     uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
-    uint64_t pte = gen_pte_encode(reinterpret_cast<uintptr_t>(scratch_buffer), false);
+    uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, false);
     for (unsigned i = 0; i < region_->size / PAGE_SIZE; i++) {
         gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
     }

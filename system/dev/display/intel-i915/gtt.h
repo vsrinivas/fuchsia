@@ -38,6 +38,8 @@ public:
 private:
     Controller* controller_;
     RegionAllocator region_allocator_;
+    zx::vmo scratch_buffer_;
+    zx_paddr_t scratch_buffer_paddr_;
 
     friend class GttRegion;
 };
