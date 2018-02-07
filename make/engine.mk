@@ -711,7 +711,9 @@ HOST_OBJCOPY := $(HOST_TOOLCHAIN_PREFIX)objcopy
 HOST_STRIP   := $(HOST_TOOLCHAIN_PREFIX)strip
 
 # Host compile flags
-HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
+HOST_COMPILEFLAGS := -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
+HOST_COMPILEFLAGS += -Wall -Wextra
+HOST_COMPILEFLAGS += -Wno-unused-parameter -Wno-sign-compare
 HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti
 HOST_LDFLAGS :=
