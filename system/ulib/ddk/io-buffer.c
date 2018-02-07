@@ -84,7 +84,7 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
     zx_handle_t vmo_handle;
     zx_status_t status;
 
-    if (is_allocated_contiguous(flags, size)) {
+    if (is_allocated_contiguous(size, flags)) {
         status = zx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
     } else {
         // zx_vmo_create doesn't support passing an alignment.
