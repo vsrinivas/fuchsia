@@ -26,13 +26,12 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
         }
     }
 
+    uint32_t map_flags = ZX_VM_FLAG_PERM_READ;
     if (flags & IO_BUFFER_RW) {
-        flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    } else {
-        flags = ZX_VM_FLAG_PERM_READ;
+        map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     }
 
-    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
+    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, map_flags, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
