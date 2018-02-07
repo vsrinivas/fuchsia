@@ -38,7 +38,7 @@ source_set("bindings2") {
   public_deps = [
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
-    "//zircon/system/ulib/fidl",
+    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
 
