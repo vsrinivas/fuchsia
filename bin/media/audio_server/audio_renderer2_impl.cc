@@ -543,7 +543,40 @@ void AudioRenderer2Impl::Pause(const PauseCallback& callback) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  // Update our reference clock to fractional frame transformation, making sure
+  // to keep it 1st order continuous in the process.
+  int64_t ref_clock_now;
+  {
+    fbl::AutoLock lock(&ref_to_ff_lock_);
+
+    // TODO(johngro): query the actual reference clock, do not assume that
+    // CLOCK_MONO is the reference clock.
+    ref_clock_now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    pause_time_frac_frames_ = ref_clock_to_frac_frames_.Apply(ref_clock_now);
+    pause_time_frac_frames_valid_ = true;
+
+    ref_clock_to_frac_frames_ = TimelineFunction(ref_clock_now,
+                                                 pause_time_frac_frames_,
+                                                 { 0, 1 });
+    ref_clock_to_frac_frames_gen_.Next();
+  }
+
+  // If we do not know the pts_to_frac_frames relationship yet, compute one.
+  if (!pts_to_frac_frames_valid_) {
+    next_frac_frame_pts_ = pause_time_frac_frames_;
+    ComputePtsToFracFrames(0);
+  }
+
+  // If the user requested a callback, figure out the media time that we paused
+  // at and report back.
+  if (callback != nullptr) {
+    int64_t paused_media_time =
+      pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_);
+    callback(ref_clock_now, paused_media_time);
+  }
+
+  // Things went well, cancel the cleanup hook.
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::PauseNoReply() { Pause(nullptr); }
