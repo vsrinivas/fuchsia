@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zircon/fidl.h>
+#include <fidl/types.h>
 
 namespace fidl {
 

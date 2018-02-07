@@ -14,8 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := sanitizer-utils-test
 MODULE_USERTEST_GROUP := libc
 
-MODULE_STATIC_LIBS := system/ulib/ldmsg
-
 MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/launchpad \

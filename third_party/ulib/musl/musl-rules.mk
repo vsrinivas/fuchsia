@@ -1093,9 +1093,7 @@ MODULE_LDFLAGS += --no-undefined-version
 MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_LIBS := system/ulib/zircon
-MODULE_STATIC_LIBS := \
-    system/ulib/ldmsg \
-    system/ulib/runtime \
+MODULE_STATIC_LIBS := system/ulib/runtime
 
 # At link time and in DT_SONAME, musl is known as libc.so.  But the
 # (only) place it needs to be installed at runtime is where the

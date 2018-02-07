@@ -6,7 +6,7 @@
 
 #include <fidl/cpp/message_part.h>
 #include <fidl/coding.h>
-#include <zircon/fidl.h>
+#include <fidl/types.h>
 
 namespace fidl {
 

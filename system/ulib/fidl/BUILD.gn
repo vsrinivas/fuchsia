@@ -21,6 +21,7 @@ sdk_source_set("fidl") {
     "include/fidl/cpp/vector_view.h",
     "include/fidl/coding.h",
     "include/fidl/internal.h",
+    "include/fidl/types.h",
     "builder.cpp",
     "decoding.cpp",
     "encoding.cpp",

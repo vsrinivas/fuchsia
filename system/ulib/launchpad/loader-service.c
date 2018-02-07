@@ -7,7 +7,6 @@
 #include <fdio/debug.h>
 #include <fdio/dispatcher.h>
 #include <fdio/io.h>
-#include <ldmsg/ldmsg.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -187,7 +186,7 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
     zx_status_t status;
 
     switch (load_op) {
-    case LDMSG_ORDINAL_CONFIG: {
+    case LOADER_SVC_OP_CONFIG: {
         size_t len = strlen(fn);
         if (len < 2 || len >= sizeof(svc->config_prefix) - 1 ||
             strchr(fn, '/') != NULL) {
@@ -205,7 +204,7 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
         status = ZX_OK;
         break;
     }
-    case LDMSG_ORDINAL_LOAD_OBJECT:
+    case LOADER_SVC_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
         if (svc->config_prefix[0] != '\0') {
             size_t maxlen = PREFIX_MAX + strlen(fn) + 1;
@@ -222,24 +221,24 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
         }
         status = svc->ops->load_object(svc->ctx, fn, out);
         break;
-    case LDMSG_ORDINAL_LOAD_SCRIPT_INTERPRETER:
-    case LDMSG_ORDINAL_DEBUG_LOAD_CONFIG:
+    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+    case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
         // When loading a script interpreter or debug configuration file,
         // we expect an absolute path.
         if (fn[0] != '/') {
             fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
-                    load_op == LDMSG_ORDINAL_LOAD_SCRIPT_INTERPRETER ?
+                    load_op == LOADER_SVC_OP_LOAD_SCRIPT_INTERP ?
                     "script interpreter" : "debug config file",
                     fn);
             return ZX_ERR_NOT_FOUND;
         }
         status = svc->ops->load_abspath(svc->ctx, fn, out);
         break;
-    case LDMSG_ORDINAL_DEBUG_PUBLISH_DATA_SINK:
+    case LOADER_SVC_OP_PUBLISH_DATA_SINK:
         status = svc->ops->publish_data_sink(svc->ctx, fn, request_handle);
         request_handle = ZX_HANDLE_INVALID;
         break;
-    case LDMSG_ORDINAL_CLONE:
+    case LOADER_SVC_OP_CLONE:
         status = loader_service_attach(svc, request_handle);
         request_handle = ZX_HANDLE_INVALID;
         break;
@@ -266,12 +265,13 @@ struct startup {
 static zx_status_t handle_loader_rpc(zx_handle_t h,
                                      loader_service_fn_t loader,
                                      void* loader_arg, zx_handle_t sys_log) {
-    ldmsg_req_t req;
-    uint32_t req_len = sizeof(req);
+    uint8_t data[1024];
+    zx_loader_svc_msg_t* msg = (void*) data;
+    uint32_t sz = sizeof(data);
     zx_handle_t request_handle;
     uint32_t nhandles;
     zx_status_t r =
-        zx_channel_read(h, 0, &req, &request_handle, req_len, 1, &req_len, &nhandles);
+        zx_channel_read(h, 0, msg, &request_handle, sz, 1, &sz, &nhandles);
     if (r != ZX_OK) {
         // This is the normal error for the other end going away,
         // which happens when the process dies.
@@ -281,58 +281,57 @@ static zx_status_t handle_loader_rpc(zx_handle_t h,
     }
     if (nhandles == 0)
         request_handle = ZX_HANDLE_INVALID;
-
-    const char* data = NULL;
-    size_t len = 0;
-    r = ldmsg_req_decode(&req, req_len, &data, &len);
-
-    if (r != ZX_OK) {
+    if ((sz <= sizeof(zx_loader_svc_msg_t))) {
         zx_handle_close(request_handle);
-        fprintf(stderr, "dlsvc: invalid message\n");
+        fprintf(stderr, "dlsvc: runt message\n");
         return ZX_ERR_IO;
     }
 
-    ldmsg_rsp_t rsp;
-    memset(&rsp, 0, sizeof(rsp));
+    // forcibly null-terminate the message data argument
+    data[sz - 1] = 0;
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
-    switch (req.header.ordinal) {
-    case LDMSG_ORDINAL_CONFIG:
-    case LDMSG_ORDINAL_LOAD_OBJECT:
-    case LDMSG_ORDINAL_LOAD_SCRIPT_INTERPRETER:
-    case LDMSG_ORDINAL_DEBUG_LOAD_CONFIG:
-    case LDMSG_ORDINAL_DEBUG_PUBLISH_DATA_SINK:
-    case LDMSG_ORDINAL_CLONE:
+    switch (msg->opcode) {
+    case LOADER_SVC_OP_CONFIG:
+    case LOADER_SVC_OP_LOAD_OBJECT:
+    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+    case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
+    case LOADER_SVC_OP_PUBLISH_DATA_SINK:
+    case LOADER_SVC_OP_CLONE:
         // TODO(ZX-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
-        r = (*loader)(loader_arg, req.header.ordinal, request_handle, data, &handle);
+        r = (*loader)(loader_arg, msg->opcode,
+                      request_handle, (const char*) msg->data, &handle);
         if (r == ZX_ERR_NOT_FOUND) {
-            fprintf(stderr, "dlsvc: could not open '%s'\n", data);
+            fprintf(stderr, "dlsvc: could not open '%s'\n",
+                    (const char*) msg->data);
         }
         request_handle = ZX_HANDLE_INVALID;
-        rsp.rv = r;
+        msg->arg = r;
         break;
-    case LDMSG_ORDINAL_DEBUG_PRINT:
-        log_printf(sys_log, "dlsvc: debug: %s\n", data);
-        rsp.rv = ZX_OK;
+    case LOADER_SVC_OP_DEBUG_PRINT:
+        log_printf(sys_log, "dlsvc: debug: %s\n", (const char*) msg->data);
+        msg->arg = ZX_OK;
         break;
-    case LDMSG_ORDINAL_DONE:
+    case LOADER_SVC_OP_DONE:
         zx_handle_close(request_handle);
         return ZX_ERR_PEER_CLOSED;
     default:
-        __builtin_trap();
+        fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
+        msg->arg = ZX_ERR_INVALID_ARGS;
+        break;
     }
     if (request_handle != ZX_HANDLE_INVALID) {
         fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
-                request_handle, req.header.ordinal, data);
+                request_handle, msg->opcode, msg->data);
         zx_handle_close(request_handle);
     }
 
-    rsp.object = handle == ZX_HANDLE_INVALID ?
-        FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
-    rsp.header.txid = req.header.txid;
-    rsp.header.ordinal = req.header.ordinal;
-    if ((r = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp),
+    // msg->txid returned as received from the client.
+    msg->opcode = LOADER_SVC_OP_STATUS;
+    msg->reserved0 = 0;
+    msg->reserved1 = 0;
+    if ((r = zx_channel_write(h, 0, msg, sizeof(zx_loader_svc_msg_t),
                               &handle, handle != ZX_HANDLE_INVALID ? 1 : 0)) < 0) {
         fprintf(stderr, "dlsvc: msg write error: %d: %s\n", r, zx_status_get_string(r));
         return r;

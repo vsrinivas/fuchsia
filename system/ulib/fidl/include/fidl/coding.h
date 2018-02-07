@@ -4,8 +4,9 @@
 
 #pragma once
 
+#include <fidl/types.h>
+
 #include <zircon/compiler.h>
-#include <zircon/fidl.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
