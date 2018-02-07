@@ -19,8 +19,8 @@ All Modular unit tests in the peridot tree are built into a single
 ## Integration tests
 
 Integration tests are written against client-facing FIDL services exposed by
-Modular and run through the [Test Runner][test_runner] framework in a fuchsia
-instance running on either the build host using QEMU or on a target device.
+Modular and run through the [Test Runner] framework in a fuchsia instance
+running on either the build host using QEMU or on a target device.
 
 There are two ways to invoke the test suite, remotely from the build host or
 directly on the fuchsia instance.
@@ -32,53 +32,45 @@ stop with an error if there is more than one. To fix the problem, specify the
 device name with the `--server` parameter.
 
 In order to run tests from your workstation, a `test_runner` must be running
-under fuchsia. In order to start `test_runner`, you can:
+under fuchsia. In order to start `test_runner`, you can either:
 
-* Either, use a gn module to automatically start `test_runner` at fuchsia boot
+* Use a gn module to automatically start `test_runner` at fuchsia boot
   time using [boot_test.config](boot_test.config). At build time on your
   workstation, do:
 
 ```
 fx set x86 --packages peridot/packages/boot_test_modular
-
 ```
 
-* Or else, invoke `test_runner` manually after starting fuchsia. In a shell on
-  your fuchsia device, do:
+* Alternatively, invoke `test_runner` manually after starting fuchsia. In a
+  shell on your fuchsia device, do:
 
 ```
 run test_runner
 ```
 
 Each subdirectory of `peridot/tests` contains one integration test. They
-are all run together by the test runner as specified by the [modular_tests.json]
-configuration file:
+are all run together by the test runner as specified by the
+[modular_tests.json](modular_tests.json) configuration file:
 
 ```
 fx exec garnet/bin/test_runner/run_test \
-  --test_file=peridot/tests/modular_tests.json --sync
+  --test_file=peridot/tests/modular_tests.json
 ```
-
-The option `--sync` is optional and causes required binaries that have changed
-since the fuchsia was started to be updated before the tests are executed.
 
 ### Starting the test suite directly under fuchsia
 
 `run_modular_tests.sh` is a command that runs all of the Modular tests. It is
-based on the [Test Runner][test_runner] framework, but runs the tests
-directly. So no `test_runner` is required to be running under fuchsia.
+based on the [Test Runner] framework, but runs the tests without requiring
+`test_runner` to be running under fuchsia.
 
-First, ensure that device runner is not already running:
-
-```
-$ killall device_runner
-```
-
-Then it can be run directly from the fuchsia shell:
+Run it from the fuchsia shell:
 
 ```
 $ /system/test/run_modular_tests.sh
 ```
 
 
-[test_runner]: https://fuchsia.googlesource.com/test_runner/ "Test Runner"
+[Test Runner]: https://fuchsia.googlesource.com/test_runner/ "Test Runner"
+[Google Test]: https://github.com/google/googletest "Google Test"
+[TestWithMessageLoop]: ../lib/gtest/test_with_message_loop.h
