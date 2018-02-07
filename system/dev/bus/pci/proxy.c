@@ -30,6 +30,9 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
 
     uint32_t handle_cnt = 0;
     if (handle) {
+        // Since only the caller knows if they expected a valid handle back, make
+        // sure the handle reads INVALID if we didn't get one.
+        *handle = ZX_HANDLE_INVALID;
         handle_cnt = 1;
     }
 
@@ -52,8 +55,6 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
         return st;
     }
 
-    // actual_handles is not checked here because only the caller knows
-    // if they expected a valid handle back
     if (actual_bytes != sizeof(*resp)) {
         return ZX_ERR_INTERNAL;
     }
