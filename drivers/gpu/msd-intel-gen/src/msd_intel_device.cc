@@ -688,6 +688,11 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
             *value_out = MsdIntelDevice::cast(device)->subslice_total();
             *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();
             return MAGMA_STATUS_OK;
+
+        case kMsdIntelGenQueryGttSize:
+            // TODO(MA-411): advertise 48-bit support
+            *value_out = 1ul << 32;
+            return MAGMA_STATUS_OK;
     }
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
