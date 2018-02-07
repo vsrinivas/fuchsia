@@ -55,12 +55,7 @@ class Station : public FrameHandler {
 
     uint16_t aid() const { return aid_; }
 
-    wlan_channel_t channel() const {
-        // TODO(porce): Distinguish
-        // (1) what a BSS announced,
-        // (2) on which channel the station is associated,
-        // (3) on which channel the station is tuned to.
-        ZX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
+    wlan_channel_t GetBssChan() const {
         ZX_DEBUG_ASSERT(!bss_.is_null());
         ZX_DEBUG_ASSERT(!bss_->chan.is_null());
 
@@ -68,6 +63,14 @@ class Station : public FrameHandler {
             .primary = bss_->chan->primary,
             .cbw = static_cast<uint8_t>(bss_->chan->cbw),
         };
+    }
+
+    wlan_channel_t GetJoinChan() const { return join_chan_; }
+
+    wlan_channel_t GetDeviceChan() const {
+        ZX_DEBUG_ASSERT(device_ != nullptr);
+        ZX_DEBUG_ASSERT(device_->GetState());
+        return device_->GetState()->channel();
     }
 
     zx_status_t SendKeepAliveResponse();
@@ -151,6 +154,8 @@ class Station : public FrameHandler {
     common::MovingAverage<uint8_t, uint16_t, 20> avg_rssi_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
     PortState controlled_port_ = PortState::kBlocked;
+
+    wlan_channel_t join_chan_;
 };
 
 }  // namespace wlan

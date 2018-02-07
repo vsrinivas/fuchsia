@@ -72,11 +72,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
         return ZX_ERR_BAD_STATE;
     }
 
-    // TODO(porce): Validate the channel before applying what the BSS announced
-    wlan_channel_t chan = wlan_channel_t{
-        .primary = bss_->chan->primary,
-        .cbw = static_cast<uint8_t>(bss_->chan->cbw),
-    };
+    auto chan = GetBssChan();
 
     printf("setting channel to %s\n", common::ChanStr(chan).c_str());
     debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
@@ -90,6 +86,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
         return status;
     }
 
+    join_chan_ = chan;
     join_timeout_ = deadline_after_bcn_period(req.join_failure_timeout);
     status = timer_->SetTimer(join_timeout_);
     if (status != ZX_OK) {
@@ -489,8 +486,8 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
 
     const common::MacAddr& mymac = device_->GetState()->address();
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", mymac.ToString().c_str(),
-          bss_->ssid.data(), bssid.ToString().c_str(), common::ChanStr(channel()).c_str(),
-          common::BandStr(channel()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
+          bss_->ssid.data(), bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
+          common::BandStr(GetJoinChan()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -1231,9 +1228,7 @@ zx_status_t Station::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
-    auto assoc_chan_num = channel().primary;
-    auto current_chan_num = device_->GetState()->channel().primary;
-    if (current_chan_num == assoc_chan_num) {
+    if (GetJoinChan().primary == GetDeviceChan().primary) {
         SetPowerManagementMode(true);
         // TODO(hahnr): start buffering tx packets (not here though)
     }
@@ -1244,9 +1239,7 @@ zx_status_t Station::PostChannelChange() {
     debugfn();
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
-    auto assoc_chan_num = channel().primary;
-    auto current_chan_num = device_->GetState()->channel().primary;
-    if (current_chan_num == assoc_chan_num) {
+    if (GetJoinChan().primary == GetDeviceChan().primary) {
         SetPowerManagementMode(false);
         // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
     }
