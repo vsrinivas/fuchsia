@@ -9,6 +9,7 @@
 
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/utils.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 
@@ -156,6 +157,15 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   float pts_continuity_threshold_ = 0.0f;
   bool pts_continuity_threshold_set_ = false;
   int64_t pts_continuity_threshold_frac_frame_ = 0;
+
+  // Play/Pause state
+  int64_t pause_time_frac_frames_;
+  bool pause_time_frac_frames_valid_ = false;
+  TimelineRate frac_frames_per_ref_tick_;
+
+  fbl::Mutex ref_to_ff_lock_;
+  TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);
+  GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
 };
 
 }  // namespace audio

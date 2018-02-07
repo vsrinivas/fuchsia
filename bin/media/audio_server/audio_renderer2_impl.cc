@@ -25,7 +25,8 @@ AudioRenderer2Impl::AudioRenderer2Impl(
     AudioServerImpl* owner)
   : owner_(owner),
     audio_renderer_binding_(this, std::move(audio_renderer_request)),
-    pts_ticks_per_second_(1000000000, 1) {
+    pts_ticks_per_second_(1000000000, 1),
+    ref_clock_to_frac_frames_(0, 0, { 0, 1 }) {
 
   audio_renderer_binding_.set_error_handler([this]() {
     audio_renderer_binding_.Unbind();
@@ -65,7 +66,12 @@ void AudioRenderer2Impl::SnapshotCurrentTimelineFunction(
     int64_t reference_time,
     TimelineFunction* out,
     uint32_t* generation) {
-  *generation = 0;
+  FXL_DCHECK(out != nullptr);
+  FXL_DCHECK(generation != nullptr);
+
+  fbl::AutoLock lock(&ref_to_ff_lock_);
+  *out = ref_clock_to_frac_frames_;
+  *generation = ref_clock_to_frac_frames_gen_.get();
 }
 
 // IsOperating is true any time we have any packets in flight.  Most
@@ -101,9 +107,9 @@ bool AudioRenderer2Impl::ValidateConfig() {
 
   // Compute the number of fractional frames per PTS tick.
   uint32_t fps = format_info()->format()->frames_per_second;
+  uint32_t frac_fps = fps << kPtsFractionalBits;
   frac_frames_per_pts_tick_ = TimelineRate::Product(
-      pts_ticks_per_second_.Inverse(),
-      TimelineRate(fps << kPtsFractionalBits), 1);
+      pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps, 1));
 
   // Compute the PTS continuity threshold expressed in fractional input frames.
   if (pts_continuity_threshold_set_) {
@@ -113,9 +119,14 @@ bool AudioRenderer2Impl::ValidateConfig() {
       (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
   } else {
     pts_continuity_threshold_frac_frame_ =
-      static_cast<double>(fps << kPtsFractionalBits) *
-      pts_continuity_threshold_;
+      static_cast<double>(frac_fps) * pts_continuity_threshold_;
   }
+
+  // Compute the number of fractional frames per reference clock tick.
+  //
+  // TODO(johngro): handle the case where the reference clock nominal rate is
+  // something other than CLOCK_MONOTONIC
+  frac_frames_per_ref_tick_ = TimelineRate(frac_fps, 1000000000u);
 
   // TODO(johngro): Precompute anything we need to precompute here.
   // Adding links to other output (and selecting resampling filters) might
@@ -449,7 +460,74 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
     return;
   }
 
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  // TODO(johngro): What do we want to do here if we are already playing?
+
+  // Did the user supply a reference time?  If not, figure out a safe starting
+  // time based on the outputs we are currently linked to.
+  //
+  // TODO(johngro): We need to use our reference clock here, and not just assume
+  // clock monotonic is our reference clock.
+  //
+  // TODO(johngro): Actually go over our link list and figure out our minimum
+  // lead time.  Don't just hardcode 50mSec.
+  if (reference_time == AudioPacket::kNoTimestamp) {
+    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(50);
+  }
+
+  // If the user did not specify a media time, use the media time of the first
+  // packet in the pending queue.
+  //
+  // Note: media times specified by the user are expressed in the PTS units they
+  // specified using SetPtsUnits (or nanosecond units by default).  Internally,
+  // we stamp all of our payloads in fractional input frames on a timeline
+  // defined when we transition to our operational mode.  We need to remember to
+  // translate back and forth as appropriate.
+  int64_t frac_frame_media_time;
+  if (media_time == AudioPacket::kNoTimestamp) {
+    // Are we resuming from pause?
+    if (pause_time_frac_frames_valid_) {
+      frac_frame_media_time = pause_time_frac_frames_;
+    } else {
+      // TODO(johngro): peek the first PTS of the pending queue.
+      frac_frame_media_time = 0;
+    }
+
+    // If we do not know the pts_to_frac_frames relationship yet, compute one.
+    if (!pts_to_frac_frames_valid_) {
+      next_frac_frame_pts_ = frac_frame_media_time;
+      ComputePtsToFracFrames(0);
+    }
+
+    media_time = pts_to_frac_frames_.ApplyInverse(frac_frame_media_time);
+  } else {
+    // If we do not know the pts_to_frac_frames relationship yet, compute one.
+    if (!pts_to_frac_frames_valid_) {
+      ComputePtsToFracFrames(media_time);
+      frac_frame_media_time = next_frac_frame_pts_;
+    } else {
+      frac_frame_media_time = pts_to_frac_frames_.Apply(media_time);
+    }
+  }
+
+  // Update our transformation.
+  //
+  // TODO(johngro): if we need to trigger a remix for our set of outputs, here
+  // is the place to do it.
+  {
+    fbl::AutoLock lock(&ref_to_ff_lock_);
+    ref_clock_to_frac_frames_ = TimelineFunction(reference_time,
+                                                 frac_frame_media_time,
+                                                 frac_frames_per_ref_tick_);
+    ref_clock_to_frac_frames_gen_.Next();
+  }
+
+  // If the user requested a callback, invoke it now.
+  if (callback != nullptr) {
+    callback(reference_time, media_time);
+  }
+
+  // Things went well, cancel the cleanup hook.
+  cleanup.cancel();
 }
 
 void AudioRenderer2Impl::PlayNoReply(int64_t reference_time,
