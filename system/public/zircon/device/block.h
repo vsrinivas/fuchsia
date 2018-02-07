@@ -78,6 +78,10 @@
 // since it will allow "activating" updated partitions.
 #define IOCTL_BLOCK_FVM_UPGRADE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 17)
+// Prints stats about the block device to the provided buffer and optionally
+// clears the counters
+#define IOCTL_BLOCK_GET_STATS   \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 18)
 
 // Block Core ioctls (specific to each block device):
 
@@ -91,6 +95,13 @@ typedef struct {
     uint32_t flags;
     uint32_t reserved;
 } block_info_t;
+
+typedef struct {
+    size_t max_concur;      // The maximum number of concurrent ops
+    size_t max_pending;     // The maximum number of pending block ops
+    size_t total_ops;       // Total number of block ops processed
+    size_t total_blocks;    // Total number of blocks processed
+} block_stats_t;
 
 // ssize_t ioctl_block_get_info(int fd, block_info_t* out);
 IOCTL_WRAPPER_OUT(ioctl_block_get_info, IOCTL_BLOCK_GET_INFO, block_info_t);
@@ -207,6 +218,9 @@ typedef struct {
 
 // ssize_t ioctl_block_fvm_upgrade(int fd, const upgrade_req_t* req);
 IOCTL_WRAPPER_IN(ioctl_block_fvm_upgrade, IOCTL_BLOCK_FVM_UPGRADE, upgrade_req_t);
+
+// ssize_t ioctl_block_get_stats(int fd, bool clear, block_stats_t* out)
+IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_stats_t);
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent

@@ -30,8 +30,8 @@
 #include "nvme-hw.h"
 
 // If enabled, gather stats on concurrent io ops,
-// pending txns, etc.  Print them whenever the block
-// info is queried (lsblk will provoke this)
+// pending txns, etc.  Stats are retrieved by
+// IOCTL_BLOCK_GET_STATS
 #define WITH_STATS 1
 
 #define TXN_FLAG_FAILED 1
@@ -593,12 +593,6 @@ static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_
     nvme_device_t* nvme = ctx;
     *info_out = nvme->info;
     *block_op_size_out = sizeof(nvme_txn_t);
-#if WITH_STATS
-    zxlogf(INFO, "nvme: stats: max concurrent utxns:   %zu\n", nvme->stat_max_concur);
-    zxlogf(INFO, "nvme: stats: max pending txns:       %zu\n", nvme->stat_max_pending);
-    zxlogf(INFO, "nvme: stats: total submitted txns:   %zu\n", nvme->stat_total_ops);
-    zxlogf(INFO, "nvme: stats: total submitted blocks:  %zu\n", nvme->stat_total_blocks);
-#endif
 }
 
 static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
@@ -613,6 +607,34 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         nvme_query(nvme, reply, &sz);
         *out_actual = sizeof(block_info_t);
         return ZX_OK;
+    }
+    case IOCTL_BLOCK_GET_STATS: {
+#if WITH_STATS
+        if (cmdlen != sizeof(bool)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        block_stats_t* out = reply;
+        if (max < sizeof(*out)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        mtx_lock(&nvme->lock);
+        out->max_concur = nvme->stat_max_concur;
+        out->max_pending = nvme->stat_max_pending;
+        out->total_ops = nvme->stat_total_ops;
+        out->total_blocks = nvme->stat_total_blocks;
+        bool clear = *(bool *)cmd;
+        if (clear) {
+            nvme->stat_max_concur = 0;
+            nvme->stat_max_pending = 0;
+            nvme->stat_total_ops = 0;
+            nvme->stat_total_blocks = 0;
+        }
+        mtx_unlock(&nvme->lock);
+        *out_actual = sizeof(*out);
+        return ZX_OK;
+#else
+        return ZX_ERR_NOT_SUPPORTED;
+#endif
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
