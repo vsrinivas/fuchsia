@@ -197,7 +197,9 @@ TEST(ManualResetWaitableEventTest, SignalMultiple) {
 
 // Tries to test that threads that are awoken may immediately call |Reset()|
 // without affecting other threads that are awoken.
-TEST(ManualResetWaitableEventTest, SignalMultipleWaitReset) {
+//
+// This test is flaky. https://fuchsia.atlassian.net/browse/US-429
+TEST(ManualResetWaitableEventTest, DISABLED_SignalMultipleWaitReset) {
   ManualResetWaitableEvent ev;
 
   for (size_t i = 0u; i < 5u; i++) {
