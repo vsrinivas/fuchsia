@@ -12,5 +12,8 @@ const Library = `
 
 import 'package:lib.fidl.dart/bindings.dart' as bindings;
 
+{{ range $enum := .Enums -}}
+{{ template "EnumDeclaration" $enum }}
+{{ end -}}
 {{- end -}}
 `

@@ -30,6 +30,7 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	tree := ir.Compile(fidl)
 
 	tmpls := template.New("DartTemplates")
+	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Library))
 
 	libraryPath := config.FidlStem + ".dart"

@@ -11,5 +11,5 @@ enum class {{ .Name }} : {{ .Type }} {
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };
-{{end}}
+{{ end }}
 `
