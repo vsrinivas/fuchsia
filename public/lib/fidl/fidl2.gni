@@ -82,13 +82,14 @@ template("fidl2") {
     outputs = [
       "${fidl_stem}.h",
       "${fidl_stem}.cc",
+      "${fidl_stem}.dart",
     ]
 
     args = [
       "-fidl-json", rebase_path(fidl_json, root_build_dir),
       "-fidl-stem", rebase_path(fidl_stem, root_build_dir),
       "-root-gen-dir", rebase_path(root_gen_dir, root_build_dir),
-      "-generators", "cpp",
+      "-generators", "cpp,dart",
     ]
 
     deps = [

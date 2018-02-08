@@ -15,8 +15,6 @@ import (
 
 type FidlGenerator struct{}
 
-const ownerReadWriteNoExecute = 0644
-
 func writeFile(outputFilename string,
 	templateName string,
 	tmpls *template.Template,
