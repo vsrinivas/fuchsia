@@ -142,7 +142,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
     }
 
-    int64_t fill_target = cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
+    int64_t fill_target =
+      fifo_frames + cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
 
     // Are we in the middle of an underflow cooldown?  If so, check to see if we
     // have recovered yet.
@@ -165,12 +166,15 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 
     int64_t frames_in_flight = frames_sent_ - rd_ptr_frames;
     FXL_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
-    FXL_DCHECK(frames_sent_ < fill_target);
+    FXL_DCHECK(frames_sent_ <= fill_target);
+    int64_t desired_frames = fill_target - frames_sent_;
+
+    // If we woke up too early to have any work to do, just get out now.
+    if (desired_frames == 0) {
+      return false;
+    }
 
     uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
-    int64_t desired_frames = fill_target - frames_sent_;
-    FXL_DCHECK(desired_frames >= 0);
-
     if (desired_frames > rb.frames()) {
       FXL_LOG(ERROR) << "Fatal underflow: want to produce " << desired_frames
                      << " but the ring buffer is only " << rb.frames()
