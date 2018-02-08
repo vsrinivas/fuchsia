@@ -37,7 +37,7 @@ zx_status_t fx_vlogf(fx_logger_t* logger, fx_log_severity_t severity,
 
 fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger) {
   if (logger == nullptr) {
-    return FX_LOG_INVALID;
+    return FX_LOG_FATAL;
   }
   return logger->GetSeverity();
 }

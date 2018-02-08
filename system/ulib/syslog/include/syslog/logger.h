@@ -20,14 +20,12 @@
 
 // Log entry severity.
 // Used for coarse filtering of log messages
-typedef enum {
-  FX_LOG_DEBUG = 0,
-  FX_LOG_INFO = 1,
-  FX_LOG_WARNING = 2,
-  FX_LOG_ERROR = 3,
-  FX_LOG_FATAL = 4,
-  FX_LOG_INVALID = 100,
-} fx_log_severity_t;
+typedef int fx_log_severity_t;
+#define FX_LOG_DEBUG (0)
+#define FX_LOG_INFO (1)
+#define FX_LOG_WARNING (2)
+#define FX_LOG_ERROR (3)
+#define FX_LOG_FATAL (4)
 
 __BEGIN_CDECLS
 
