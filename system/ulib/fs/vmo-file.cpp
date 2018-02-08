@@ -135,9 +135,8 @@ zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type
 
     *hnd = vmo.release();
     *type = FDIO_PROTOCOL_VMOFILE;
-    zx_off_t* info = reinterpret_cast<zx_off_t*>(extra);
-    info[0] = offset;
-    info[1] = length_;
+    extra->vmofile.offset = offset;
+    extra->vmofile.length = length_;
     return ZX_OK;
 }
 

@@ -50,6 +50,30 @@ zx_status_t zxrio_close(fdio_t* io);
 ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                     size_t in_len, void* out_buf, size_t out_len);
 
+// Acquires a new connection to an object.
+//
+// Returns a description of the opened object in |info|, and
+// the control channel to the object in |out|.
+//
+// |info| may contain an additional handle.
 zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
                             uint32_t flags, uint32_t mode,
                             zxrio_describe_t* info, zx_handle_t* out);
+
+// Acquire the additional handle from |info|.
+//
+// Returns |ZX_OK| if a handle was returned.
+// Returns |ZX_ERR_NOT_FOUND| if no handle can be returned.
+zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
+                                        zx_handle_t* out);
+
+// Create a fdio (if possible) from handles and info.
+//
+// The Control channel is provided in |handle|, and auxillary
+// handles may be provided in the |info| object.
+//
+// This function always takes control of all handles.
+// They are transferred into the |out| object on success,
+// or closed on failure.
+zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
+                              fdio_t** out);

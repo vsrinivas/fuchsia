@@ -25,14 +25,16 @@ namespace blobstore {
 
 zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                                   zxrio_object_info_t* extra) {
-    *type = FDIO_PROTOCOL_REMOTE;
     if (IsDirectory()) {
+        *type = FDIO_PROTOCOL_DIRECTORY;
         return ZX_OK;
     }
+    *type = FDIO_PROTOCOL_FILE;
     zx_status_t r = GetReadableEvent(hnd);
     if (r < 0) {
         return r;
     }
+
     return ZX_OK;
 }
 

@@ -524,7 +524,7 @@ fail:
             memset(&msg, 0, sizeof(msg));
             msg.op = ZXRIO_ON_OPEN;
             msg.status = ZX_OK;
-            msg.type = FDIO_PROTOCOL_REMOTE;
+            msg.extra.tag = FDIO_PROTOCOL_DIRECTORY;
             zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), NULL, 0);
         }
         return;

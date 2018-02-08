@@ -145,10 +145,6 @@ fdio_t* fdio_socket_create(zx_handle_t h, zx_handle_t s, int flags);
 // creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 
-// create a fdio (if possible) from type, handles and extradata
-zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
-                              const zxrio_object_info_t* extra, fdio_t** out);
-
 void fdio_free(fdio_t* io);
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);

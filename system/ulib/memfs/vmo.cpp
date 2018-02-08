@@ -60,8 +60,8 @@ zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
 
 zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                                  zxrio_object_info_t* extra) {
-    zx_off_t* off = reinterpret_cast<zx_off_t*>(extra);
-    zx_off_t* len = off + 1;
+    zx_off_t* off = &extra->vmofile.offset;
+    zx_off_t* len = &extra->vmofile.length;
     zx_handle_t vmo;
     zx_status_t status;
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {

@@ -452,6 +452,43 @@ static off_t zxrio_seek(fdio_t* io, off_t offset, int whence) {
     return msg.arg2.off;
 }
 
+zx_status_t zxrio_object_extract_handle(const zxrio_object_info_t* info,
+                                        zx_handle_t* out) {
+    switch (info->tag) {
+    case FDIO_PROTOCOL_FILE:
+        if (info->file.e != ZX_HANDLE_INVALID) {
+            *out = info->file.e;
+            return ZX_OK;
+        }
+        break;
+    case FDIO_PROTOCOL_SOCKET:
+        if (info->socket.s != ZX_HANDLE_INVALID) {
+            *out = info->socket.s;
+            return ZX_OK;
+        }
+        break;
+    case FDIO_PROTOCOL_PIPE:
+        if (info->pipe.s != ZX_HANDLE_INVALID) {
+            *out = info->pipe.s;
+            return ZX_OK;
+        }
+        break;
+    case FDIO_PROTOCOL_VMOFILE:
+        if (info->vmofile.v != ZX_HANDLE_INVALID) {
+            *out = info->vmofile.v;
+            return ZX_OK;
+        }
+        break;
+    case FDIO_PROTOCOL_DEVICE:
+        if (info->device.e != ZX_HANDLE_INVALID) {
+            *out = info->device.e;
+            return ZX_OK;
+        }
+        break;
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
 zx_status_t zxrio_close(fdio_t* io) {
     zxrio_t* rio = (zxrio_t*)io;
     zxrio_msg_t msg;
@@ -500,28 +537,73 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t rio_h, zxrio_msg_t* ms
 
     // Attempt to read the description from open
     uint32_t dsize = sizeof(*info);
+    zx_handle_t extra_handle = ZX_HANDLE_INVALID;
     uint32_t actual_handles;
-    r = zx_channel_read(h, 0, info, &info->handle, dsize, 1,
+    r = zx_channel_read(h, 0, info, &extra_handle, dsize, 1,
                         &dsize, &actual_handles);
     if (r != ZX_OK) {
         zx_handle_close(h);
         return r;
     }
-    if (actual_handles == 0) {
-        info->handle = ZX_HANDLE_INVALID;
-    }
-    if (dsize != sizeof(zxrio_describe_t) || info->op != ZXRIO_ON_OPEN) {
+    if (dsize < ZXRIO_DESCRIBE_HDR_SZ || info->op != ZXRIO_ON_OPEN) {
         r = ZX_ERR_IO;
     } else {
         r = info->status;
     }
+
+    if (dsize != sizeof(zxrio_describe_t)) {
+        r = (r != ZX_OK) ? r : ZX_ERR_IO;
+    }
+
     if (r != ZX_OK) {
-        if (info->handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(info->handle);
+        if (extra_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(extra_handle);
         }
         zx_handle_close(h);
-        h = ZX_HANDLE_INVALID;
+        *out = ZX_HANDLE_INVALID;
+        return r;
     }
+
+    switch (info->extra.tag) {
+    // Case: No extra handles expected
+    case FDIO_PROTOCOL_SERVICE:
+    case FDIO_PROTOCOL_DIRECTORY:
+        if (extra_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(extra_handle);
+            return ZX_ERR_IO;
+        }
+        break;
+    // Case: Extra handles optional
+    case FDIO_PROTOCOL_FILE:
+        info->extra.file.e = extra_handle;
+        break;
+    case FDIO_PROTOCOL_DEVICE:
+        info->extra.device.e = extra_handle;
+        break;
+    case FDIO_PROTOCOL_SOCKET:
+        info->extra.socket.s = extra_handle;
+        break;
+    // Case: Extra handles required
+    case FDIO_PROTOCOL_PIPE:
+        if (extra_handle == ZX_HANDLE_INVALID) {
+            return ZX_ERR_IO;
+        }
+        info->extra.pipe.s = extra_handle;
+        break;
+    case FDIO_PROTOCOL_VMOFILE:
+        if (extra_handle == ZX_HANDLE_INVALID) {
+            return ZX_ERR_IO;
+        }
+        info->extra.vmofile.v = extra_handle;
+        break;
+    default:
+        printf("Unexpected protocol type opening connection\n");
+        if (extra_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(extra_handle);
+        }
+        return ZX_ERR_IO;
+    }
+
     *out = h;
     return r;
 }
@@ -685,25 +767,46 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
     fdio_t* io;
     zx_status_t r;
     int fd;
-    uint32_t type;
+    zxrio_object_info_t info;
+    zx_handle_t control_channel = ZX_HANDLE_INVALID;
 
+    // Pack additional handles into |info|, if possible.
     switch (PA_HND_TYPE(types[0])) {
     case PA_FDIO_REMOTE:
-        type = FDIO_PROTOCOL_REMOTE;
+        info.tag = FDIO_PROTOCOL_SERVICE;
+        // Expected: Single control-channel handle
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            goto fail;
+        }
+        control_channel = handles[0];
         break;
     case PA_FDIO_PIPE:
-        type = FDIO_PROTOCOL_PIPE;
+        info.tag = FDIO_PROTOCOL_PIPE;
+        // Expected: Single pipe handle
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            goto fail;
+        }
+        info.pipe.s = handles[0];
+        hcount--;
         break;
     case PA_FDIO_SOCKET:
-        type = FDIO_PROTOCOL_SOCKET_CONNECTED;
+        info.tag = FDIO_PROTOCOL_SOCKET_CONNECTED;
+        // Expected: Single socket handle
+        if (hcount != 1) {
+            r = ZX_ERR_INVALID_ARGS;
+            goto fail;
+        }
+        info.socket.s = handles[0];
         break;
     default:
         r = ZX_ERR_IO;
         goto fail;
     }
 
-    if ((r = fdio_from_handles(type, handles, hcount, NULL, &io)) != ZX_OK) {
-        goto fail;
+    if ((r = fdio_from_handles(control_channel, &info, &io)) != ZX_OK) {
+        return r;
     }
 
     fd = fdio_bind_to_fd(io, -1, 0);
@@ -716,107 +819,115 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
     *fd_out = fd;
     return ZX_OK;
 fail:
-    for (size_t i = 0; i < hcount; i++) {
-        zx_handle_close(handles[i]);
-    }
+    discard_handles(handles, hcount);
     return r;
 }
 
-zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
-                              const zxrio_object_info_t* extra, fdio_t** out) {
+zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
+                              fdio_t** out) {
     // All failure cases which require discard_handles set r and break
     // to the end. All other cases in which handle ownership is moved
     // on return locally.
     zx_status_t r;
     fdio_t* io;
-    switch (type) {
-    case FDIO_PROTOCOL_REMOTE:
-        if (hcount == 1) {
-            io = fdio_remote_create(handles[0], 0);
-            xprintf("rio (%x,%x) -> %p\n", handles[0], 0, io);
-        } else if (hcount == 2) {
-            io = fdio_remote_create(handles[0], handles[1]);
-            xprintf("rio (%x,%x) -> %p\n", handles[0], handles[1], io);
-        } else {
+    switch (info->tag) {
+    case FDIO_PROTOCOL_DIRECTORY:
+    case FDIO_PROTOCOL_SERVICE:
+        if (handle == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
+        }
+        io = fdio_remote_create(handle, 0);
+        xprintf("rio (%x,%x) -> %p\n", handle, 0, io);
+        if (io == NULL) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        *out = io;
+        return ZX_OK;
+    case FDIO_PROTOCOL_FILE:
+        if (info->file.e == ZX_HANDLE_INVALID) {
+            io = fdio_remote_create(handle, 0);
+            xprintf("rio (%x,%x) -> %p\n", handle, 0, io);
+        } else {
+            io = fdio_remote_create(handle, info->file.e);
+            xprintf("rio (%x,%x) -> %p\n", handle, info->file.e, io);
         }
         if (io == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            *out = io;
-            return ZX_OK;
         }
-        break;
-    case FDIO_PROTOCOL_SERVICE:
-        if (hcount != 1) {
-            r = ZX_ERR_INVALID_ARGS;
-            break;
-        } else if ((*out = fdio_service_create(handles[0])) == NULL) {
+        *out = io;
+        return ZX_OK;
+    case FDIO_PROTOCOL_DEVICE:
+        if (info->device.e == ZX_HANDLE_INVALID) {
+            io = fdio_remote_create(handle, 0);
+            xprintf("rio (%x,%x) -> %p\n", handle, 0, io);
+        } else {
+            io = fdio_remote_create(handle, info->device.e);
+            xprintf("rio (%x,%x) -> %p\n", handle, info->device.e, io);
+        }
+        if (io == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            return ZX_OK;
         }
-        break;
+        *out = io;
+        return ZX_OK;
     case FDIO_PROTOCOL_PIPE:
-        if (hcount != 1) {
+        if (handle != ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
-        } else if ((*out = fdio_pipe_create(handles[0])) == NULL) {
+        } else if ((*out = fdio_pipe_create(info->pipe.s)) == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            return ZX_OK;
         }
+        return ZX_OK;
     case FDIO_PROTOCOL_VMOFILE: {
-        if (hcount != 2) {
+        if (info->vmofile.v == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
         // Currently, VMO Files don't use a client-side control channel.
-        zx_handle_close(handles[0]);
-        *out = fdio_vmofile_create(handles[1], extra->vmofile.offset, extra->vmofile.length);
+        zx_handle_close(handle);
+        *out = fdio_vmofile_create(info->vmofile.v, info->vmofile.offset,
+                                   info->vmofile.length);
         if (*out == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            return ZX_OK;
         }
+        return ZX_OK;
     }
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
-        int flags = (type == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
+        int flags = (info->tag == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
 #if WITH_NEW_SOCKET
-        if (hcount != 2) {
+        if (handle == ZX_HANDLE_INVALID || info->socket.s == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        zx_handle_close(handles[0]);
-        if ((*out = fdio_socket_create(handles[1], flags)) == NULL) {
+        zx_handle_close(handle);
+        if ((*out = fdio_socket_create(info->socket.s, flags)) == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            return ZX_OK;
         }
+        return ZX_OK;
 #else
-        if (hcount == 1) {
-            io = fdio_socket_create(handles[0], ZX_HANDLE_INVALID, flags);
-        } else if (hcount == 2) {
-            io = fdio_socket_create(handles[0], handles[1], flags);
-        } else {
+        if (handle == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
+        io = fdio_socket_create(handle, info->socket.s, flags);
         if (io == NULL) {
             return ZX_ERR_NO_RESOURCES;
-        } else {
-            *out = io;
-            return ZX_OK;
         }
+        *out = io;
+        return ZX_OK;
 #endif
     }
     default:
+        printf("fdio_from_handles: Not supported\n");
         r = ZX_ERR_NOT_SUPPORTED;
         break;
     }
-    discard_handles(handles, hcount);
+    zx_handle_t extra;
+    if (zxrio_object_extract_handle(info, &extra) == ZX_OK) {
+        zx_handle_close(extra);
+    }
+    zx_handle_close(handle);
     return r;
 }
 
@@ -853,8 +964,7 @@ zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
         }
         // fake up a reply message since pipelined opens don't generate one
         info->status = ZX_OK;
-        info->type = FDIO_PROTOCOL_REMOTE;
-        info->handle = ZX_HANDLE_INVALID;
+        info->extra.tag = FDIO_PROTOCOL_SERVICE;
         *out = h0;
         return ZX_OK;
     }
@@ -868,11 +978,7 @@ zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
     if (r < 0) {
         return r;
     }
-    zx_handle_t handles[2];
-    size_t hcount = (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
-    handles[0] = control_channel;
-    handles[1] = info.handle;
-    return fdio_from_handles(info.type, handles, hcount, &info.extra, out);
+    return fdio_from_handles(control_channel, &info.extra, out);
 }
 
 zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, uint32_t flags,
@@ -883,17 +989,14 @@ zx_status_t zxrio_open_handle_raw(zx_handle_t h, const char* path, uint32_t flag
     if (r < 0) {
         return r;
     }
-    if (info.type == FDIO_PROTOCOL_REMOTE) {
-        if (info.handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(info.handle);
-        }
+    if (info.extra.tag == FDIO_PROTOCOL_SERVICE) {
         *out = control_channel;
         return ZX_OK;
     }
-    if (info.handle != ZX_HANDLE_INVALID) {
-        zx_handle_close(info.handle);
+    zx_handle_t extracted;
+    if (zxrio_object_extract_handle(&info.extra, &extracted) == ZX_OK) {
+        zx_handle_close(extracted);
     }
-    zx_handle_close(control_channel);
     return ZX_ERR_WRONG_TYPE;
 }
 
@@ -912,11 +1015,11 @@ static zx_status_t zxrio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types
     }
     handles[0] = h;
     types[0] = PA_FDIO_REMOTE;
-    if (info.handle != ZX_HANDLE_INVALID) {
-        handles[1] = info.handle;
+    if (zxrio_object_extract_handle(&info.extra, &handles[1]) == ZX_OK) {
         types[1] = PA_FDIO_REMOTE;
+        return 2;
     }
-    return (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
+    return 1;
 }
 
 zx_status_t __zxrio_clone(zx_handle_t h, zx_handle_t* handles, uint32_t* types) {

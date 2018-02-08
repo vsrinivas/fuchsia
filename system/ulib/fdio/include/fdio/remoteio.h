@@ -148,12 +148,31 @@ zx_status_t zxrio_txn_handoff(zx_handle_t server, zx_handle_t reply, zxrio_msg_t
 static_assert(sizeof(zx_txid_t) == 4,
         "If the size of txid changes to 8 bytes then reserved0 should be removed from zxrio_msg");
 
-typedef union {
-    struct {
-        uint64_t offset;
-        uint64_t length;
-    } vmofile;
+typedef struct {
+    uint32_t tag;
+    uint32_t reserved;
+    union {
+        struct {
+            zx_handle_t e;
+        } file;
+        struct {
+            zx_handle_t s;
+        } pipe;
+        struct {
+            zx_handle_t v;
+            uint64_t offset;
+            uint64_t length;
+        } vmofile;
+        struct {
+            zx_handle_t e;
+        } device;
+        struct {
+            zx_handle_t s;
+        } socket;
+    };
 } zxrio_object_info_t;
+
+#define ZXRIO_DESCRIBE_HDR_SZ       (__builtin_offsetof(zxrio_describe_t, extra))
 
 // A one-way message which may be emitted by the server without an
 // accompanying request. Optionally used as a part of the Open handshake.
@@ -164,11 +183,7 @@ typedef struct {
     uint32_t op;
 
     zx_status_t status;
-    zx_handle_t handle;                 // Handle is optional
-
-    uint32_t type;
-    uint32_t reserved;
-
+    zxrio_object_info_t* extra_ptr;
     zxrio_object_info_t extra;
 } zxrio_describe_t;
 

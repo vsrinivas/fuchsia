@@ -42,16 +42,18 @@ void describe_error(zx_handle_t h, zx_status_t status) {
     zx_handle_close(h);
 }
 
-static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg) {
+static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
+                                      zx_handle_t* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->op = ZXRIO_ON_OPEN;
-    msg->type = FDIO_PROTOCOL_REMOTE;
+    msg->extra.tag = FDIO_PROTOCOL_DEVICE;
     msg->status = ZX_OK;
+    *handle = ZX_HANDLE_INVALID;
     if (dev->event != ZX_HANDLE_INVALID) {
         //TODO: read only?
         zx_status_t r;
         if ((r = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS,
-                                     &msg->handle)) < 0) {
+                                     handle)) != ZX_OK) {
             msg->status = r;
             return r;
         }
@@ -95,14 +97,15 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
 
     if (describe) {
         zxrio_describe_t info;
-        if ((r = create_description(dev, &info)) != ZX_OK) {
+        zx_handle_t handle;
+        if ((r = create_description(dev, &info, &handle)) != ZX_OK) {
             goto fail_open;
         }
-        uint32_t hcount = (info.handle != ZX_HANDLE_INVALID) ? 1 : 0;
-        r = zx_channel_write(rh, 0, &info, sizeof(info), &info.handle, hcount);
+        uint32_t hcount = (handle != ZX_HANDLE_INVALID) ? 1 : 0;
+        r = zx_channel_write(rh, 0, &info, sizeof(info), &handle, hcount);
         if (r != ZX_OK) {
             if (hcount) {
-                zx_handle_close(info.handle);
+                zx_handle_close(handle);
             }
             goto fail_open;
         }

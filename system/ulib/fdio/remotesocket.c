@@ -202,11 +202,11 @@ static zx_status_t zxsio_clone_stream(fdio_t* io, zx_handle_t* handles, uint32_t
     }
     handles[0] = h;
     types[0] = PA_FDIO_SOCKET;
-    if (info.handle != ZX_HANDLE_INVALID) {
-        handles[1] = info.handle;
+    if (zxrio_object_extract_handle(&info.extra, &handles[1]) == ZX_OK) {
         types[1] = PA_FDIO_SOCKET;
+        return 2;
     }
-    return (info.handle != ZX_HANDLE_INVALID) ? 2 : 1;
+    return 1;
 }
 
 static zx_status_t zxsio_unwrap_stream(fdio_t* io, zx_handle_t* handles, uint32_t* types) {

@@ -32,15 +32,15 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
     channel.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
 }
 
-void Describe(const fbl::RefPtr<Vnode>& vn, zxrio_describe_t* response,
-              uint32_t flags) {
+void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
+              zxrio_describe_t* response, zx_handle_t* handle) {
     response->op = ZXRIO_ON_OPEN;
-    response->handle = ZX_HANDLE_INVALID;
     zx_status_t r;
+    *handle = ZX_HANDLE_INVALID;
     if (IsPathOnly(flags)) {
-        r = vn->Vnode::GetHandles(flags, &response->handle, &response->type, &response->extra);
+        r = vn->Vnode::GetHandles(flags, handle, &response->extra.tag, &response->extra);
     } else {
-        r = vn->GetHandles(flags, &response->handle, &response->type, &response->extra);
+        r = vn->GetHandles(flags, handle, &response->extra.tag, &response->extra);
     }
     response->status = r;
 }
@@ -85,9 +85,10 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
 
         zxrio_describe_t response;
         memset(&response, 0, sizeof(response));
-        Describe(vnode, &response, flags);
-        uint32_t hcount = (response.handle != ZX_HANDLE_INVALID) ? 1 : 0;
-        channel.write(0, &response, sizeof(zxrio_describe_t), &response.handle, hcount);
+        zx_handle_t extra = ZX_HANDLE_INVALID;
+        Describe(vnode, flags, &response, &extra);
+        uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
+        channel.write(0, &response, sizeof(zxrio_describe_t), &extra, hcount);
     } else if (r != ZX_OK) {
         return;
     }
@@ -230,11 +231,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             zxrio_describe_t response;
             memset(&response, 0, sizeof(response));
             response.status = status;
+            zx_handle_t extra = ZX_HANDLE_INVALID;
             if (status == ZX_OK) {
-                Describe(vnode_, &response, flags_);
+                Describe(vnode_, flags_, &response, &extra);
             }
-            uint32_t hcount = (response.handle != ZX_HANDLE_INVALID) ? 1 : 0;
-            channel.write(0, &response, sizeof(zxrio_describe_t), &response.handle, hcount);
+            uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
+            channel.write(0, &response, sizeof(zxrio_describe_t), &extra, hcount);
         }
         if (status == ZX_OK) {
             vn->Serve(vfs_, fbl::move(channel), flags_);

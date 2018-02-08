@@ -22,7 +22,7 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
 
 zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                               zxrio_object_info_t* extra) {
-    *type = FDIO_PROTOCOL_REMOTE;
+    *type = FDIO_PROTOCOL_SERVICE;
     return ZX_OK;
 }
 
