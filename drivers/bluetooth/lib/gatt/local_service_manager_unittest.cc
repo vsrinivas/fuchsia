@@ -269,6 +269,49 @@ TEST(GATT_LocalServiceManagerTest, RegisterCharacteristic128) {
   EXPECT_FALSE(attrs[2].value());
 }
 
+TEST(GATT_LocalServiceManagerTest, ExtPropSetSuccess) {
+  LocalServiceManager mgr;
+  const att::AccessRequirements kReadReqs, kWriteReqs, kUpdateReqs;
+  constexpr common::UUID kChrcType16((uint16_t)0x1234);
+  constexpr IdType kChrcId = 5;
+
+  auto service = std::make_unique<Service>(true /* primary */, kTestType16);
+
+  constexpr uint8_t kChrcProps = Property::kRead;
+  constexpr uint8_t kExtChrcProps = ExtendedProperty::kReliableWrite;
+  auto chrc = std::make_unique<Characteristic>(kChrcId, kChrcType16, kChrcProps,
+                                               kExtChrcProps, kReadReqs,
+                                               kWriteReqs, kUpdateReqs);
+  service->AddCharacteristic(std::move(chrc));
+
+  ASSERT_TRUE(RegisterService(&mgr, std::move(service)));
+  ASSERT_NE(0u, mgr.database()->groupings().size());
+  const auto& grouping = mgr.database()->groupings().front();
+  const auto& attrs = grouping.attributes();
+  ASSERT_EQ(4u, attrs.size());
+  EXPECT_EQ(types::kCharacteristicExtProperties, attrs[3].type());
+  EXPECT_TRUE(common::ContainersEqual(  // Reliable Write property
+      common::CreateStaticByteBuffer(0x01, 0x00), *attrs[3].value()));
+}
+
+// tests that the extended properties descriptor cannot be set externally
+TEST(GATT_LocalServiceManagerTest, ExtPropSetFailure) {
+  LocalServiceManager mgr;
+  const att::AccessRequirements kReadReqs, kWriteReqs, kUpdateReqs;
+
+  constexpr common::UUID kChrcType16((uint16_t)0x1234);
+  constexpr common::UUID kDescType16((uint16_t)0x2900);  // UUID for Ext Prop
+
+  auto service = std::make_unique<Service>(true /* primary */, kTestType16);
+  auto chrc = std::make_unique<Characteristic>(0, kChrcType16, 0, 0, kReadReqs,
+                                               kWriteReqs, kUpdateReqs);
+  chrc->AddDescriptor(
+      std::make_unique<Descriptor>(1, kDescType16, kReadReqs, kWriteReqs));
+  service->AddCharacteristic(std::move(chrc));
+
+  EXPECT_EQ(false, RegisterService(&mgr, std::move(service)));
+}
+
 TEST(GATT_LocalServiceManagerTest, RegisterCharacteristicSorted) {
   LocalServiceManager mgr;
   const att::AccessRequirements kReadReqs, kWriteReqs, kUpdateReqs;
