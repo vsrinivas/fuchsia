@@ -10,7 +10,7 @@ BUILDROOT ?= .
 DEFAULT_PROJECT ?= x86
 TOOLCHAIN_PREFIX ?=
 
-ENABLE_BUILD_SYSROOT ?= false
+ENABLE_BUILD_SYSROOT ?= true
 # if true, $BUILDDIR/sysroot/{lib,include,...} will be populated with
 # public libraries, headers, and other "build artifacts" necessary
 # for a toolchain to compile binaries for Zircon.
