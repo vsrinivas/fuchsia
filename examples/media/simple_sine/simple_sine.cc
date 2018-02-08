@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -27,7 +27,6 @@ constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
 // Contiguous payload buffers mapped into a single 1-sec memory section (id 0)
 constexpr size_t kNumPayloads = 100;
 constexpr size_t kTotalMappingSize = kPayloadSize * kNumPayloads;
-constexpr size_t kBufferId = 0;
 // Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
 constexpr float kFrequency = 439.0f;
 constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
@@ -55,10 +54,11 @@ void MediaApp::Run(app::ApplicationContext* app_context) {
 
   WriteAudioIntoBuffer();
   for (size_t payload_num = 0; payload_num < kNumPayloads; ++payload_num) {
-    SendMediaPacket(CreateMediaPacket(payload_num));
+    SendPacket(CreateAudioPacket(payload_num));
   }
 
-  StartPlayback();
+  audio_renderer_->PlayNoReply(media::AudioPacket::kNoTimestamp,
+                               media::AudioPacket::kNoTimestamp);
 }
 
 // Use ApplicationContext to acquire AudioServerPtr, MediaRendererPtr and
@@ -69,75 +69,51 @@ void MediaApp::AcquireRenderer(app::ApplicationContext* app_context) {
       app_context->ConnectToEnvironmentService<media::AudioServer>();
 
   // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
-  media::AudioRendererPtr audio_renderer;
-  audio_server->CreateRenderer(audio_renderer.NewRequest(),
-                               media_renderer_.NewRequest());
+  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
-  media_renderer_.set_error_handler([this]() {
-    FXL_LOG(ERROR) << "MediaRenderer connection lost. Quitting.";
+  audio_renderer_.set_error_handler([this]() {
+    FXL_LOG(ERROR) << "AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 }
 
 // Set the Mediarenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetMediaType() {
-  FXL_DCHECK(media_renderer_);
+  FXL_DCHECK(audio_renderer_);
 
-  auto details = media::AudioMediaTypeDetails::New();
-  details->sample_format = media::AudioSampleFormat::SIGNED_16;
-  details->channels = kNumChannels;
-  details->frames_per_second = kRendererFrameRate;
+  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
+  format->sample_format = media::AudioSampleFormat::SIGNED_16;
+  format->channels = kNumChannels;
+  format->frames_per_second = kRendererFrameRate;
 
-  auto media_type = media::MediaType::New();
-  media_type->medium = media::MediaTypeMedium::AUDIO;
-  media_type->encoding = media::MediaType::kAudioEncodingLpcm;
-  media_type->details = media::MediaTypeDetails::New();
-  media_type->details->set_audio(std::move(details));
-
-  media_renderer_->SetMediaType(std::move(media_type));
+  audio_renderer_->SetPcmFormat(std::move(format));
 }
 
 // Create a single Virtual Memory Object, and map enough memory for our audio
-// buffers. Open a PacketConsumer, and send it a duplicate handle of our VMO.
+// buffers. Reduce the rights and send the handle over to the AudioRenderer to
+// act as our shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
-  zx_status_t status = zx::vmo::create(kTotalMappingSize, 0, &vmo_);
+  zx::vmo payload_vmo;
+  zx_status_t status = payload_buffer_.CreateAndMap(
+      kTotalMappingSize,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr,
+      &payload_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::vmo::create failed - " << status;
+    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
     return status;
   }
 
-  status = zx::vmar::root_self().map(
-      0, vmo_, 0, kTotalMappingSize,
-      ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_READ, &mapped_address_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_vmar_map failed - " << status;
-    return status;
-  }
-
-  zx::vmo duplicate_vmo;
-  status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                          &duplicate_vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;
-    return status;
-  }
-
-  media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest());
-
-  packet_consumer_.set_error_handler([this]() {
-    FXL_LOG(ERROR) << "PacketConsumer connection lost. Quitting.";
-    Shutdown();
-  });
-
-  FXL_DCHECK(packet_consumer_);
-  packet_consumer_->AddPayloadBuffer(kBufferId, std::move(duplicate_vmo));
+  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
 
   return ZX_OK;
 }
 
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
 void MediaApp::WriteAudioIntoBuffer() {
-  int16_t* audio_buffer = reinterpret_cast<int16_t*>(mapped_address_);
+  int16_t* audio_buffer = reinterpret_cast<int16_t*>(payload_buffer_.start());
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
     int16_t val = static_cast<int16_t>(round(
@@ -151,14 +127,9 @@ void MediaApp::WriteAudioIntoBuffer() {
 
 // We divided our cross-proc buffer into different zones, called payloads.
 // Create a packet corresponding to this particular payload.
-media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
-  auto packet = media::MediaPacket::New();
+media::AudioPacketPtr MediaApp::CreateAudioPacket(size_t payload_num) {
+  auto packet = media::AudioPacket::New();
 
-  packet->pts = (payload_num == 0) ? 0 : media::MediaPacket::kNoTimestamp;
-  packet->pts_rate_ticks = kRendererFrameRate;
-  packet->pts_rate_seconds = 1;
-  packet->flags = 0;
-  packet->payload_buffer_id = kBufferId;
   packet->payload_offset = (payload_num * kPayloadSize) % kTotalMappingSize;
   packet->payload_size = kPayloadSize;
 
@@ -168,46 +139,26 @@ media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
-void MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
-  FXL_DCHECK(packet_consumer_);
-
+void MediaApp::SendPacket(media::AudioPacketPtr packet) {
   ++num_packets_sent_;
-  packet_consumer_->SupplyPacket(
-      std::move(packet), [this](media::MediaPacketDemandPtr) {
-        ++num_packets_completed_;
-        FXL_DCHECK(num_packets_completed_ <= kNumPacketsToSend);
-        if (num_packets_sent_ < kNumPacketsToSend) {
-          SendMediaPacket(CreateMediaPacket(num_packets_sent_));
-        } else if (num_packets_completed_ >= kNumPacketsToSend) {
-          Shutdown();
-        }
-      });
+  audio_renderer_->SendPacket(
+      std::move(packet), [this]() { OnSendPacketComplete(); });
 }
 
-// Use TimelineConsumer (via TimelineControlPoint) to set playback rate to 1/1.
-void MediaApp::StartPlayback() {
-  media::MediaTimelineControlPointPtr timeline_control_point;
-  media_renderer_->GetTimelineControlPoint(timeline_control_point.NewRequest());
+void MediaApp::OnSendPacketComplete() {
+  ++num_packets_completed_;
+  FXL_DCHECK(num_packets_completed_ <= kNumPacketsToSend);
 
-  media::TimelineConsumerPtr timeline_consumer;
-  timeline_control_point->GetTimelineConsumer(timeline_consumer.NewRequest());
-
-  auto transform = media::TimelineTransform::New();
-  transform->reference_time = media::kUnspecifiedTime;
-  transform->subject_time = 0;
-  transform->reference_delta = 1;
-  transform->subject_delta = 1;
-
-  timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
+  if (num_packets_sent_ < kNumPacketsToSend) {
+    SendPacket(CreateAudioPacket(num_packets_sent_));
+  } else if (num_packets_completed_ >= kNumPacketsToSend) {
+    Shutdown();
+  }
 }
 
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp)
 void MediaApp::Shutdown() {
-  if (mapped_address_) {
-    __UNUSED zx_status_t status =
-        zx::vmar::root_self().unmap(mapped_address_, kTotalMappingSize);
-    FXL_DCHECK(status == ZX_OK);
-  }
+  payload_buffer_.Unmap();
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
