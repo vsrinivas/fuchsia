@@ -113,6 +113,16 @@ static void arm64_brk_handler(struct arm64_iframe_long* iframe, uint exception_f
     try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
+static void arm64_step_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                               uint32_t esr) {
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* trapped inside the kernel, this is bad */
+        printf("software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+        exception_die(iframe, esr);
+    }
+    try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
+}
+
 static void arm64_fpu_handler(struct arm64_iframe_long* iframe, uint exception_flags,
                               uint32_t esr) {
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
@@ -271,6 +281,10 @@ extern "C" void arm64_sync_exception(
     case 0b100100: /* data abort from lower level */
     case 0b100101: /* data abort from same level */
         arm64_data_abort_handler(iframe, exception_flags, esr);
+        break;
+    case 0b110010: /* software step from lower level */
+    case 0b110011: /* software step from same level */
+        arm64_step_handler(iframe, exception_flags, esr);
         break;
     default: {
         /* TODO: properly decode more of these */
