@@ -254,8 +254,6 @@
 
 .macro entry_invalid_exception
 .align 7
-    guest_exit ZX_ERR_INTERNAL
-
     // If we got to here, the exception came from the host or EL2.
     // We reset, as something unexpected happened.
     mov x0, xzr

@@ -101,7 +101,7 @@
 typedef uint32_t __ALIGNED(8) algn32_t;
 
 struct FpState {
-    __uint128_t q[FS_NUM_REGS];
+    long double q[FS_NUM_REGS];
     algn32_t fpsr;
     algn32_t fpcr;
 };
@@ -197,6 +197,7 @@ static_assert(__offsetof(El2State, resume) == ES_RESUME, "");
 static_assert(__offsetof(El2State, guest_state.x) == GS_X0, "");
 static_assert(__offsetof(El2State, guest_state.x[GS_NUM_REGS - 1]) == GS_X(GS_NUM_REGS - 1), "");
 static_assert(__offsetof(El2State, guest_state.fp_state) == GS_FP_STATE, "");
+static_assert(__offsetof(El2State, guest_state.fp_state.q) == GS_FP_STATE + FS_Q0, "");
 static_assert(__offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE, "");
 static_assert(__offsetof(El2State, guest_state.cntv_ctl_el0) == GS_CNTV_CTL_EL0, "");
 static_assert(__offsetof(El2State, guest_state.cntv_cval_el0) == GS_CNTV_CVAL_EL0, "");
@@ -207,6 +208,7 @@ static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");
 static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
 static_assert(__offsetof(El2State, host_state.x[HS_NUM_REGS - 1]) == HS_X18 + HS_X(HS_NUM_REGS - 1), "");
 static_assert(__offsetof(El2State, host_state.fp_state) == HS_FP_STATE, "");
+static_assert(__offsetof(El2State, host_state.fp_state.q) == HS_FP_STATE + FS_Q0, "");
 static_assert(__offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE, "");
 
 __BEGIN_CDECLS
