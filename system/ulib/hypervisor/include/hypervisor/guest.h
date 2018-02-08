@@ -41,10 +41,15 @@ public:
     zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
                               IoHandler* handler);
 
-    // Setup a handler function to run when an additional VCPU is brought up.
+    // Setup a handler function to run when an additional VCPU is brought up. The factory should
+    // call Start on the new VCPU to begin executing the guest on a new thread.
     void RegisterVcpuFactory(VcpuFactory factory);
 
+    // Initializes a VCPU by calling the VCPU factory. The first VCPU must have id 0.
     zx_status_t StartVcpu(uintptr_t entry, uint64_t id);
+
+    // Waits for all VCPUs associated with the guest to finish executing.
+    zx_status_t Join();
 
 private:
     // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.

@@ -192,3 +192,21 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
 
     return ZX_OK;
 }
+
+zx_status_t Guest::Join() {
+    // We assume that the VCPU-0 thread will be started first, and that no additional VCPUs will
+    // be brought up after it terminates.
+    zx_status_t status = vcpus_[0]->Join();
+
+    // Once the initial VCPU has terminated, wait for any additional VCPUs.
+    for (size_t id = 1; id != kMaxVcpus; ++id) {
+        if (vcpus_[id] != nullptr) {
+            zx_status_t vcpu_status = vcpus_[id]->Join();
+            if (vcpu_status != ZX_OK) {
+                status = vcpu_status;
+            }
+        }
+    }
+
+    return status;
+}
