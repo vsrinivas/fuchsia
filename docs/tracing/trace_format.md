@@ -570,7 +570,7 @@ key/value data with it as arguments.  Information about the object is added
 to a per-process userspace object table.
 
 When a trace consumer encounters an event with a **Pointer Argument** whose
-value matches an entry the process’s object table, it can cross-reference
+value matches an entry in the process’s object table, it can cross-reference
 the argument’s pointer value with a prior **Userspace Object Record** to find a
 description of the referent.
 
