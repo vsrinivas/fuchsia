@@ -5,6 +5,7 @@
 #include <wlan/mlme/client/station.h>
 
 #include <wlan/common/channel.h>
+#include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
