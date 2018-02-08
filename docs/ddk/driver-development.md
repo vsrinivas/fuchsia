@@ -152,79 +152,37 @@ directly with hardware (for example, via MMIO) or by communicating with its
 parent device (for example, queuing a USB transaction).
 
 External client requests from processes outside the devhost are fulfilled by
-the device ops `read()`, `write()`, `ioctl()` and `iotxn_queue()`. Requests
-from children drivers, generally in the same process, are fulfilled by device
-protocols corresponding to the device class. With the exception of
-`iotxn_queue()`, it is preferable to use device protocols between drivers
-instead of device ops.
+the device ops `read()`, `write()`, and `ioctl()`. Requests from children
+drivers, generally in the same process, are fulfilled by device
+protocols corresponding to the device class. Driver-to-driver requests should
+use device protocols instead of device ops.
 
 A device can get a protocol supported by its parent by calling
 `device_get_protocol()` on its parent device.
 
-The `iotxn_queue()` device op is optional. It is only implemented by drivers
-that support asynchronous transactions. If a driver implements
-`iotxn_queue()`, it does not need to implement `read()` and `write()`.
-Sync operations will be submitted as iotxns.
-
-## Iotxns
-
-[Iotxns](../../system/ulib/ddk/include/ddk/iotxn.h) are a mechanism to
-implement asynchronous transactions. New transactions are submitted to the
-driver in `iotxn_queue()`. The `completion()` callback in the iotxn is invoked
-when the driver finishes processing the iotxn. A driver may handle the iotxn
-itself, or pass it to its parent.
-
-All iotxns are backed by VMOs. `iotxn_clone()` points the cloned iotxn to the
-same VMO, and does not copy data. It is possible to clone an iotxn to a
-subrange using `iotxn_clone_partial()`. This is useful when the client
-passes in a transaction bigger than what the hardware can support.
-
-It is valid for an intermediate processor of the iotxn to modify the offset
-and length to a subrange. For example, the GPT partition driver sets the
-offset of the incoming iotxn to be relative to the start of the parent device.
-Because of this, a driver should treat iotxn objects as opaque in the
-`completion()` callback and only use the `status` and `actual` arguments
-passed to the callback.
-
-Each iotxn provides 48 bytes of storage for protocol-specific data in
-`protocol_data` and a field defining the protocol of the data in `protocol`.
-For example, the [../system/dev/block/sdmmc/sdmmc.c](SD/MMC driver) stores the
-SD/MMC command and argument to issue to the controller in this field.
-
-An iotxn caches the physical mapping of the VMO once it is mapped. If you
-re-use a VMO, the system will not need to remap the physical pages every time
-it is processed. If the physical mapping is already known, it is also possible
-to pass in the physical mapping directly by setting the `phys` and
-`phys_count` fields.
-
-`iotxn_phys_iter_t` is a convenient way to create scatter-gather tables out of
-iotxns. `iotxn_phys_iter_next()` returns chunks of contiguous ranges of a
-maximum length for each entry of the scatter-gather table.
-
 ## Device interrupts
 
 Device interrupts are implemented by interrupt objects, which are a type of
-kernel objects. A
-driver requests a handle to the device interrupt from its parent device in a
-device protocol method. For example, the PCI protocol implements
-`map_interrupt()` for PCI children. A driver should spawn a thread to wait on
-the interrupt handle, which will be signaled when the system receives an
-interrupt.
+kernel objects. A driver requests a handle to the device interrupt from its
+parent device in a device protocol method. The handle returned will be bound
+to the appropriate interrupt for the device, as defined by a parent driver.
+For example, the PCI protocol implements `map_interrupt()` for PCI children. A
+driver should spawn a thread to wait on the interrupt handle.
 
 The kernel will automatically handle masking and unmasking the
 interrupt as appropriate, depending on whether the interrupt is edge-triggered
-or level-triggered.
-For level-triggered hardware interrupts, zx_interrupt_wait() will mask the interrupt
-before returning and unmask the interrupt when it is called again the next time.
-For edge-triggered interrupts, the interrupt remains unmasked.
+or level-triggered. For level-triggered hardware interrupts,
+[zx_interrupt_wait()](../syscalls/interrupt_wait.md) will mask the interrupt
+before returning and unmask the interrupt when it is called again the next
+time. For edge-triggered interrupts, the interrupt remains unmasked.
 
 The interrupt thread should not perform any long-running tasks. For drivers
 that perform lengthy tasks, use a worker thread.
 
 You can signal an interrupt handle with
-[zx_interrupt_signal()](../syscalls/interrupt_signal.md) to return from
-`zx_interrupt_wait()`. This is necessary to shut down the interrupt thread
-during driver clean up.
+[zx_interrupt_signal()](../syscalls/interrupt_signal.md) on slot
+**ZX_INTERRUPT_SLOT_USER** to return from `zx_interrupt_wait()`. This is
+necessary to shut down the interrupt thread during driver clean up.
 
 ## Ioctl
 
