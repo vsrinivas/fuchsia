@@ -15,9 +15,8 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Tracing][tracing]
  - [Toolchain](../toolchain.md)
 
-## Build system (**TODO**: should these docs be merged?):
+## Build system
 
- - [Build system](../build_system.md)
  - [Build system overview](../build_overview.md)
  - [Build system variants](../build_variants.md)
 

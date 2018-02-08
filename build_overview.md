@@ -1,21 +1,21 @@
 # The build system
 
-
-### Overview
+## Overview
 
 The Fuchsia build system aims at building complete boot images for various
 devices. To do so, it uses [GN][gn-main], a meta-build system that generates
-build files consumed by [Ninja][ninja-main] to execute the actual build.
+build files consumed by [Ninja][ninja-main], which executes the actual build.
+[Using GN build][gn-preso] is a good intro to GN.
 
-The contents of the generated image are controlled by a set of packages defining
-what should go into the GN build and what should be packaged into the image.
+Note that Zircon uses an entirely different build system based on GNU Make.
+The rest of the build relies on Zircon being built ahead of time.
 
+## Packages
 
-### Packages
+The contents of the generated image are controlled by a set of top level
+[packages][packages-source] defining what should go into the GN build.
 
-You can configure what gets built using the [packaging system][packages-source].
-
-### Build targets
+## Build targets
 
 Build targets are defined in `BUILD.gn` files scattered all over the source
 tree. These files use a Python-like syntax to declare buildable objects:
@@ -41,77 +41,92 @@ the [package declaration type][packages-source].
 
 > TODO(pylaligand): list available templates
 
-### Executing a build
+## Executing a build
 
-##### A
+The simplest way to this is through the `fx` tool, as described in
+[Getting Started](/getting_started.md#Setup-Build-Environment). Read on to see
+what `fx` does under the hood.
 
-The first step is to build the Zircon kernel which uses its own build system:
-```
+### A
+
+The first step is to build Zircon which uses its own build system:
+```bash
 $ scripts/build-zircon.sh
 ```
 
-##### B
+This is what gets run under the hood by `fx build-zircon`.
 
-Then configure the content of the generated image by choosing the packages to
-incorporate:
+For a list of all options, run `build-zircon.sh -h`. See Zircon's
+[Getting started][zircon-getting-started] and
+[Makefile options][zircon-makefile-options] for details.
+
+### B
+
+Then configure the content of the generated image by choosing the top level
+packages to incorporate:
 ```
 # fuchsia_base is typically "default".
 # my_stuff is a possibly-empty list of extra packages to include.
 
 $ build/gn/gen.py --packages build/gn/fuchsia_base,build/gn/my_stuff
 ```
-This will create an `out/debug-<arch>` directory containing Ninja files to run
-the build.
+This will create an `out/debug-<arch>` directory containing Ninja files.
 
+This is what gets run under the hood by `fx set`.
 
-##### C
+For a list of all `gen.py` options, run `gen.py --help`.
+For documentation on the `--variants` flag, see [Variants](build_variants.md).
+
+### C
 
 The final step is to run the actual build with Ninja:
 ```
-$ buildtools/ninja -C out/debug-x86-64 -j 64
+$ buildtools/ninja -C out/debug-<arch> -j 64
 ```
 
-### Rebuilding
+This is what gets run under the hood by `fx build`.
 
-#### After modifying non-Zircon files
+## Rebuilding
+
+### After modifying non-Zircon files
 
 In order to rebuild the tree after modifying some sources, just rerun step
 **C**. This holds true even if you modify `BUILD.gn` files as GN adds Ninja
 targets to update Ninja targets if build files are changed! The same holds true
 for package files used to configure the build.
 
-#### After modifying Zircon files
+### After modifying Zircon files
 
 You will want to rerun **A** and **C**.
 
-#### After syncing sources
+### After syncing sources
 
 You’ll most likely need to run **A** once if anything in the Zircon tree was
 changed. After that, run **C** again.
 
 
-### Tips and tricks
+## Tips and tricks
 
-#### Visualizing the hierarchy of build packages
+### Visualizing the hierarchy of build packages
 
-```
+```bash
 $ scripts/visualize_module_tree.py > tree.dot
 $ dot -Tpng tree.dot -o tree.png
 ```
 
-#### Inspecting the content of a GN target
+### Inspecting the content of a GN target
 
-```
+```bash
 $ buildtools/gn desc out/debug-x86-64 //path/to/my:target
 ```
 
-#### Finding references to a GN target
+### Finding references to a GN target
 
-```
+```bash
 $ buildtools/gn refs out/debug-x86-64 //path/to/my:target
 ```
 
-#### Referencing targets for the build host
+### Referencing targets for the build host
 
 Various host tools (some used in the build itself) need to be built along with
 the final image.
@@ -126,37 +141,37 @@ file:
 //path/to/target($host_toolchain)
 ```
 
-#### Building only a specific target
+### Building only a specific target
 
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
-```
+```bash
 $ buildtools/ninja -C out/debug-x86-64 -j64 foo/bar/blah:dash
 ```
 Note that this only works for targets in the default toolchain.
 
-#### Exploring Ninja targets
+### Exploring Ninja targets
 
 GN extensively documents which Ninja targets it generates. The documentation is
 accessible with:
-```
+```bash
 $ buildtools/gn help ninja_rules
 ```
 
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
-```
+```bash
 $ buildtools/ninja -C out/debug-x86-64 -t browse
 ```
 Note that the presence of a Ninja target does not mean it will be built - for
 that it needs to depend on the “default” target.
 
-#### Understanding why Ninja does what it does
+### Understanding why Ninja does what it does
 
 Add `-d explain` to your Ninja command to have it explain every step of its
 execution.
 
-#### Debugging build timing issues
+### Debugging build timing issues
 
 When running a build, Ninja keeps logs that can be used to generate
 visualizations of the build process:
@@ -169,14 +184,14 @@ visualizations of the build process:
 1. Load the resulting json file in Chrome in `about:tracing`.
 
 
-### Troubleshooting
+## Troubleshooting
 
-#### My GN target is not being built!
+### My GN target is not being built!
 
 Make sure it rolls up to a label defined in a module file, otherwise the build
 system will ignore it.
 
-#### GN complains about a missing `sysroot`.
+### GN complains about a missing `sysroot`.
 
 You likely forgot to run **A** before running **B**.
 
@@ -187,9 +202,11 @@ You likely forgot to run **A** before running **B**.
 
 > TODO(pylaligand): .gn, default target, mkbootfs, GN labels insertion
 
-
 [gn-main]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/README.md
+[gn-preso]: https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/
 [ninja-main]: https://ninja-build.org/
 [gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
 [packages-source]: /build_packages.md
+[zircon-getting-started]: https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
+[zircon-makefile-options]: https://fuchsia.googlesource.com/zircon/+/master/docs/makefile_options.md

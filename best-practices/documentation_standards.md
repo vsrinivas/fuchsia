@@ -49,7 +49,7 @@ Preferred locations:
   root of that project's repository and be arranged by topic.
   e.g. `//apps/my-project/docs/my-feature.md`
 - Documents about Fuchsia as a whole should go into the top-level `docs`
-  repository itself.  e.g. `//docs/book.md`
+  repository itself.  e.g. `//docs/build_packages.md`
 
 Alternate locations:
 

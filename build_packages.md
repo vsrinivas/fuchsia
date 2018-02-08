@@ -9,7 +9,7 @@
 
 A top level package file contains references to other top level packages it builds
 on top of (`imports`) and the GN packages it includes (`packages`):
-``` json
+```json
 {
     "imports": [
         "build/gn/foo_framework”,
@@ -20,6 +20,10 @@ on top of (`imports`) and the GN packages it includes (`packages`):
     }
 }
 ```
+
+These top level packages are the root of the dependency graph.
+GN [parses the JSON package definitions][process-build-packages] early
+on in the build, and those definitions determine what else GN has to do.
 
 Packages, not to be confused with top level packages, are build targets which
 define binaries.
@@ -77,7 +81,7 @@ What the `binaries` field in a `package` target does do is let GN know to deploy
 this binary onto fuchsia when you run your built image. This means that you should
 be able to run your binary from inside the fuchsia shell like so:
 
-```
+```bash
 $ hello_world
 Hello World!
 $
@@ -90,3 +94,4 @@ $
 [garnet-packages-source]: https://fuchsia.googlesource.com/garnet/+/master/packages/
 [peridot-packages-source]: https://fuchsia.googlesource.com/peridot/+/master/packages/
 [topaz-packages-source]: https://fuchsia.googlesource.com/topaz/packages/+/master
+[process-build-packages-py]: https://fuchsia.googlesource.com/build/+/master/gn/process_build_packages.py
