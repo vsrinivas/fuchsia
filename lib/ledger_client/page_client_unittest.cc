@@ -166,7 +166,8 @@ class PageClientTest : public TestWithLedger {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
 
-TEST_F(PageClientTest, SimpleWrite) {
+// This test is flaky. https://fuchsia.atlassian.net/browse/MI4-797
+TEST_F(PageClientTest, DISABLED_SimpleWrite) {
   page1()->Put(to_array("key"), to_array("value"), log("Put"));
   Finish();
 
