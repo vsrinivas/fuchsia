@@ -37,6 +37,8 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 
 #if __aarch64__
@@ -178,6 +180,10 @@ zx_status_t read_guest_config(GuestConfig* options,
 }
 
 int main(int argc, char** argv) {
+  fsl::MessageLoop loop;
+  std::unique_ptr<app::ApplicationContext> application_context =
+      app::ApplicationContext::CreateFromStartupInfo();
+
   GuestConfig options;
   zx_status_t status =
       read_guest_config(&options, "/pkg/data/guest.cfg", argc, argv);
@@ -381,7 +387,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup console
-  machina::VirtioConsole console(guest.phys_mem());
+  machina::VirtioConsole console(guest.phys_mem(), application_context.get());
   status = console.Start();
   if (status != ZX_OK) {
     return status;
@@ -452,6 +458,8 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
+
+  loop.Run();
 
   return guest.Join();
 }

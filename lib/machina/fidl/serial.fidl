@@ -1,0 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module machina;
+
+[ServiceName="machina.SerialService"]
+interface SerialService {
+  // Connect to the primary serial device for the guest. The details regarding
+  // exactly what output is produced and what input is accepted is determined
+  // by each specific guest.
+  //
+  // Only a single client is provided with a socket connection. All subsequent
+  // callers will be returned invalid handle.
+  Connect@0() => (handle<socket> socket);
+};

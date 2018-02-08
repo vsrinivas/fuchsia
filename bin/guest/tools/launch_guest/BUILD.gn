@@ -1,0 +1,17 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("launch_guest") {
+  output_name = "launch_guest"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/machina/fidl",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+  ]
+}

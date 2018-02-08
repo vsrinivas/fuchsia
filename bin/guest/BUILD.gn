@@ -67,7 +67,9 @@ package("guest_tests") {
     ":guest_unittests",
   ]
 
-  tests = [ {
-        name = "guest_unittests"
-      } ]
+  tests = [
+    {
+      name = "guest_unittests"
+    },
+  ]
 }

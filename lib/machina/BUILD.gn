@@ -22,6 +22,8 @@ shared_library("machina") {
     "input_dispatcher.h",
     "pci.cc",
     "pci.h",
+    "serial_service_impl.cc",
+    "serial_service_impl.h",
     "virtio.cc",
     "virtio.h",
     "virtio_balloon.cc",
@@ -68,6 +70,8 @@ shared_library("machina") {
   }
 
   public_deps = [
+    "//garnet/lib/machina/fidl",
+    "//garnet/public/lib/app/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hypervisor",
@@ -81,11 +85,11 @@ shared_library("machina") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/hypervisor",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zxcpp",
   ]
 
@@ -129,7 +133,9 @@ package("machina_tests") {
     ":machina_unittests",
   ]
 
-  tests = [ {
-        name = "machina_unittests"
-      } ]
+  tests = [
+    {
+      name = "machina_unittests"
+    },
+  ]
 }

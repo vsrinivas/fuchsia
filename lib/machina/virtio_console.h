@@ -8,14 +8,17 @@
 #include <iostream>
 
 #include <virtio/console.h>
+#include <zx/socket.h>
 
+#include "garnet/lib/machina/serial_service_impl.h"
 #include "garnet/lib/machina/virtio.h"
+#include "lib/app/cpp/application_context.h"
 
 namespace machina {
 
 class VirtioConsole : public VirtioDevice {
  public:
-  VirtioConsole(const PhysMem& phys_mem);
+  VirtioConsole(const PhysMem&, app::ApplicationContext*);
   ~VirtioConsole() override;
 
   zx_status_t Start();
@@ -29,11 +32,12 @@ class VirtioConsole : public VirtioDevice {
                 "There must be a queue for both RX and TX");
 
   zx_status_t Transmit(virtio_queue_t* queue, uint16_t head, uint32_t* used);
+  zx_status_t Receive(virtio_queue_t* queue, uint16_t head, uint32_t* used);
 
   virtio_queue_t queues_[kNumQueues];
   virtio_console_config_t config_ = {};
 
-  std::ostream& ostream_ = std::cout;
+  SerialServiceImpl serial_;
 };
 
 }  // namespace machina

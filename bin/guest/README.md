@@ -26,12 +26,12 @@ $ ./bin/guest/scripts/build.sh x86
 After netbooting the target device, to run Zircon:
 
 ```
-$ run zircon-guest
+$ launch_guest zircon-guest
 ```
 
 Likewise, to launch a Linux guest:
 ```
-$ run linux-guest
+$ launch_guest linux-guest
 ```
 
 ## Running from Topaz
