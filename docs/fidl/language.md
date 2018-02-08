@@ -507,7 +507,7 @@ Union are denoted by their declared name (eg. **Pattern**) and nullability:
 *   Methods are identified by their ordinal index. Ordinals must be stated
     explicitly to reduce the chance that developers might break interfaces by
     reordering methods and to help with interface extension and derivation.
-    *   Method ordinals are unsigned values in the range **0x00000000** to
+    *   Method ordinals are unsigned values in the range **0x00000001** to
         **0x7fffffff**.
     *   The FIDL wire format internally represents ordinals as 32-bit values but
         reserves the range **0x80000000** to **0xffffffff** for protocol control

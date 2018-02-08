@@ -487,9 +487,11 @@ to the selected option.
     follows header.
     *   zx_txid_t transaction id (currently 32 bits, padded to 64 bits)
     *   uint32 flags, all unused bits must be set to zero
-    *   uint32 ordinal, most significant bit indicates systemcontrol messages
-    *   system messages of ordinal 0x80001xxx are "control" messages
-    *   system messages of ordinal 0x80002xxx are "fileio" messages
+    *   uint32 ordinal
+        *   The zero ordinal is invalid.
+        *   Ordinals with the most significant bit set are reserved.
+            *   Ordinals 0x80001xxx are "control" messages
+            *   Ordinals 0x80002xxx are "fileio" messages
 *   A non-zero transaction id is used to correlate sequences of messages which
     involve a request and a response, eg. in a two-way method call. The
     initiator of the request is responsible for assigning a unique transaction
