@@ -7,6 +7,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vmo_mapper.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
@@ -27,7 +28,7 @@ constexpr bool kWavWriterEnabled = false;
 
 using media::TimelineFunction;
 
-constexpr uint32_t NUM_CHANNELS = 2u;
+constexpr uint32_t NUM_CHANNELS = 1u;
 constexpr uint32_t INPUT_FRAMES_PER_SEC = 48000u;
 constexpr uint32_t INPUT_BUFFER_LENGTH_MSEC = 10u;
 constexpr uint32_t INPUT_BUFFER_MIN_FRAMES =
@@ -35,8 +36,7 @@ constexpr uint32_t INPUT_BUFFER_MIN_FRAMES =
 constexpr zx_time_t PROCESS_CHUNK_TIME = ZX_MSEC(1);
 constexpr uint32_t OUTPUT_BUF_MSEC = 1000;
 constexpr zx_time_t OUTPUT_BUF_TIME = ZX_MSEC(OUTPUT_BUF_MSEC);
-constexpr uint32_t OUTPUT_BUFFER_ID = 0;
-constexpr zx_time_t OUTPUT_LEAD_TIME = ZX_MSEC(30);
+constexpr zx_time_t OUTPUT_SEND_PACKET_OVERHEAD_NSEC = ZX_MSEC(1);
 
 constexpr int32_t MIN_REVERB_DEPTH_MSEC = 1;
 constexpr int32_t MAX_REVERB_DEPTH_MSEC = OUTPUT_BUF_MSEC - 10;
@@ -70,13 +70,15 @@ constexpr float DEFAULT_PREAMP_GAIN = -5.0f;
 
 using audio::utils::AudioInput;
 
-class FxProcessor {
+class FxProcessor : public media::AudioRendererMinLeadTimeChangedEvent {
  public:
-  FxProcessor(fbl::unique_ptr<AudioInput> input,
-              media::AudioServerPtr audio_server)
-      : input_(fbl::move(input)), audio_server_(std::move(audio_server)) {}
+  FxProcessor(fbl::unique_ptr<AudioInput> input)
+    : input_(fbl::move(input)),
+      lead_time_event_binding_(this) {}
+  void Startup(media::AudioServerPtr audio_server);
 
-  void Startup();
+  // media::AudioRendererMinLeadTimeChangedEvent
+  void OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec);
 
  private:
   using EffectFn = void (FxProcessor::*)(int16_t* src,
@@ -94,13 +96,12 @@ class FxProcessor {
     return 1.0f - expf(-norm_value * gain);
   }
 
-  media::MediaPacketPtr CreateOutputPacket();
   void RequestKeystrokeMessage();
   void HandleKeystroke(zx_status_t status, uint32_t events);
   void Shutdown(const char* reason = "unknown");
-  void ProcessInput(bool first_time);
-  void ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
-                            media::MediaPacketPtr* out_pkt2);
+  void ProcessInput();
+  void ProduceOutputPackets(::media::AudioPacket* out_pkt1,
+                            ::media::AudioPacket* out_pkt2);
   void ApplyEffect(int16_t* src,
                    uint32_t src_offset,
                    uint32_t src_rb_size,
@@ -129,8 +130,7 @@ class FxProcessor {
                   float mix_delta = 0.0f);
   void UpdatePreampGain(float delta);
 
-  zx::vmo output_buf_vmo_;
-  void* output_buf_virt_ = nullptr;
+  fbl::VmoMapper output_buf_;
   size_t output_buf_sz_ = 0;
   uint32_t output_buf_frames_ = 0;
   uint64_t output_buf_wp_ = 0;
@@ -153,19 +153,21 @@ class FxProcessor {
 
   fbl::unique_ptr<AudioInput> input_;
   uint32_t input_buffer_frames_ = 0;
-  media::AudioServerPtr audio_server_;
-  media::AudioRendererPtr output_audio_;
-  media::MediaRendererPtr output_media_;
-  media::MediaPacketConsumerPtr output_consumer_;
-  media::MediaTimelineControlPointPtr output_timeline_cp_;
-  media::TimelineConsumerPtr output_timeline_consumer_;
+  media::AudioRenderer2Ptr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
+
+  fidl::Binding<media::AudioRendererMinLeadTimeChangedEvent>
+    lead_time_event_binding_;
+  int64_t lead_time_frames_ = 0;
+  bool lead_time_frames_known_ = false;
 };
 
-void FxProcessor::Startup() {
+void FxProcessor::Startup(media::AudioServerPtr audio_server) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown("Startup failure"); });
+
+  zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
 
   if (input_->sample_size() != 2) {
     printf("Invalid input sample size %u\n", input_->sample_size());
@@ -181,86 +183,39 @@ void FxProcessor::Startup() {
     return;
   }
 
-  // Construct the media type we will use to configure the renderer.
-  media::AudioMediaTypeDetails audio_details;
-  audio_details.sample_format = media::AudioSampleFormat::SIGNED_16;
-  audio_details.channels = input_->channel_cnt();
-  audio_details.frames_per_second = input_->frame_rate();
-
-  media::MediaTypeDetails media_details;
-  media_details.set_audio(std::move(audio_details));
-
-  media::MediaType media_type;
-  media_type.medium = media::MediaTypeMedium::AUDIO;
-  media_type.details = std::move(media_details);
-  media_type.encoding = media::kAudioEncodingLpcm;
-
   // Create a renderer.  Setup connection error handlers.
-  audio_server_->CreateRenderer(output_audio_.NewRequest(),
-                                output_media_.NewRequest());
+  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
-  output_audio_.set_error_handler(
+  audio_renderer_.set_error_handler(
       [this]() { Shutdown("AudioRenderer connection closed"); });
 
-  output_media_.set_error_handler(
-      [this]() { Shutdown("MediaRenderer connection closed"); });
+  // Set the format.
+  media::AudioPcmFormat format;
+  format.sample_format = media::AudioSampleFormat::SIGNED_16;
+  format.channels = input_->channel_cnt();
+  format.frames_per_second = input_->frame_rate();
+  audio_renderer_->SetPcmFormat(std::move(format));
 
-  // Set the media type
-  output_media_->SetMediaType(std::move(media_type));
-
-  // Fetch the packet consumer and timeline interfaces, and set connection
-  // error handlers for them as well.
-  output_media_->GetPacketConsumer(output_consumer_.NewRequest());
-  output_media_->GetTimelineControlPoint(output_timeline_cp_.NewRequest());
-
-  output_consumer_.set_error_handler(
-      [this]() { Shutdown("MediaConsumer connection closed"); });
-
-  output_timeline_cp_.set_error_handler(
-      [this]() { Shutdown("TimelineControlPoint connection closed"); });
-
-  output_timeline_cp_->GetTimelineConsumer(
-      output_timeline_consumer_.NewRequest());
-  output_timeline_consumer_.set_error_handler(
-      [this]() { Shutdown("TimelineConsumer connection closed"); });
-
-  // Construct the VMO we will use as our mixing buffer and that we will use
-  // to send data to the audio renderer.  Map it into our address space, fill
-  // it with silence, then duplicate it and assign it to our media consumer
-  // channel.
-  zx_status_t res;
+  // Create and map a VMO our mixing buffer and that we will use to send data to
+  // the audio renderer.  Fill the memory with silence, then send a handle to
+  // the VMO with read only rights to the audio renderer.
   output_buf_frames_ = static_cast<uint32_t>(
       (OUTPUT_BUF_TIME * input_->frame_rate()) / 1000000000u);
   output_buf_sz_ = static_cast<size_t>(input_->frame_sz()) * output_buf_frames_;
 
-  res = zx::vmo::create(output_buf_sz_, 0, &output_buf_vmo_);
-  if (res != ZX_OK) {
-    printf("Failed to create %zu byte output buffer vmo (res %d)\n",
-           output_buf_sz_, res);
-    return;
-  }
-
-  uintptr_t tmp;
-  res = zx::vmar::root_self().map(0, output_buf_vmo_, 0, output_buf_sz_,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &tmp);
-
-  if (res != ZX_OK) {
-    printf("Failed to map %zu byte output buffer vmo (res %d)\n",
-           output_buf_sz_, res);
-    return;
-  }
-  output_buf_virt_ = reinterpret_cast<void*>(tmp);
-
   zx::vmo rend_vmo;
-  res = output_buf_vmo_.duplicate(
-      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &rend_vmo);
-  if (res != ZX_OK) {
-    printf("Failed to duplicate output buffer vmo handle (res %d)\n", res);
-    return;
-  }
+  zx_status_t res = output_buf_.CreateAndMap(
+      output_buf_sz_,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr,
+      &rend_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
-  output_consumer_->AddPayloadBuffer(OUTPUT_BUFFER_ID, std::move(rend_vmo));
+  audio_renderer_->SetPayloadBuffer(std::move(rend_vmo));
+
+  // We want to work in units of audio frames for our PTS units.  Configure this
+  // now.
+  audio_renderer_->SetPtsUnits(input_->frame_rate(), 1);
 
   // Start the input ring buffer.
   res = input_->StartRingBuffer();
@@ -288,15 +243,11 @@ void FxProcessor::Startup() {
   clock_mono_to_input_wr_ptr_ = media::TimelineFunction(
       -fifo_frames, input_->start_time(), frames_per_nsec);
 
-  // Compute the time at which the input will have a chunk of data to process,
-  // and schedule a DPC for then.
-  int64_t first_process_frames = frames_per_nsec.Scale(PROCESS_CHUNK_TIME);
-  auto first_process_time =
-      fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(
-          clock_mono_to_input_wr_ptr_.ApplyInverse(first_process_frames)));
-
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTaskForTime(
-      [this]() { ProcessInput(true); }, first_process_time);
+  // Request notifications about the minimum clock lead time requirements.  We
+  // will be able to start to process the input stream once we know what this
+  // number is.
+  audio_renderer_->EnableMinLeadTimeEvents(
+      lead_time_event_binding_.NewBinding());
 
   // Success.  Print out the usage message, and force an update of effect
   // parameters (which will also print their status).
@@ -328,6 +279,53 @@ void FxProcessor::Startup() {
   // Start to process keystrokes, then cancel the auto-cleanup and get out..
   RequestKeystrokeMessage();
   cleanup.cancel();
+}
+
+void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
+  const auto& cm_to_frames = clock_mono_to_input_wr_ptr_.rate();
+  int64_t new_lead_time_frames = cm_to_frames.Scale(new_min_lead_time_nsec);
+
+  if (new_lead_time_frames > lead_time_frames_) {
+    // Note: If the system is currently running, this discontinuity is going to
+    // put a pop into our presentation.  If this is a huge issue, what we would
+    // really want to do is...
+    //
+    // 1) Take manual control of the routing policy.
+    // 2) When outputs get added, decide whether or not we want to make any
+    //    routing changes ourselves.
+    // 3) If we do, and these changes would effect our lead time requirements,
+    //    we should smoothly ramp down our current presentation, let that play
+    //    out, then stop the output, make the routing changes, then start
+    //    everything back up again.
+    //
+    // Right now, there are no policy APIs which would allow us to acomplish any
+    // of this, so this is the best we can do for the time being.
+    lead_time_frames_  = new_lead_time_frames;
+  }
+
+  // If this is the first time we are learning about our lead time requirements,
+  // it is time to process some input data and start the clock.
+  if (!lead_time_frames_known_) {
+    lead_time_frames_known_ = true;
+
+    // Offset our initial write pointer by a small number of frames (in addition
+    // to our lead time) to allow time for our packet messages to read the mixer
+    // and get noticed by the mixing output loops.
+    output_buf_wp_ = cm_to_frames.Scale(OUTPUT_SEND_PACKET_OVERHEAD_NSEC);
+
+    // Set up our concept of the input read pointer so that it one
+    // PROCESS_CHUNK_TIME behind the current write pointer.
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    input_rp_ = clock_mono_to_input_wr_ptr_.Apply(now - PROCESS_CHUNK_TIME);
+
+    // Process the input to produce some output, then start the clock.  Note: we
+    // start the clock by explicitly mapping  'now' to PTS 0 on our presentation
+    // timeline.  We will control our clock lead time by writing explicit
+    // timestamps on our packets using the sum of the current output_buf_wp_ and
+    // lead_time_frames_.
+    ProcessInput();
+    audio_renderer_->PlayNoReply(now, 0);
+  }
 }
 
 void FxProcessor::RequestKeystrokeMessage() {
@@ -435,64 +433,35 @@ void FxProcessor::HandleKeystroke(zx_status_t status, uint32_t events) {
   RequestKeystrokeMessage();
 }
 
-media::MediaPacketPtr FxProcessor::CreateOutputPacket() {
-  // Create a media packet for output and fill out the default fields.  The
-  // user still needs to fill out the position of the media in the ring
-  // buffer, and the PTS of the packet.
-  media::MediaPacketPtr pkt = media::MediaPacket::New();
-
-  pkt->pts_rate_ticks = input_->frame_rate();
-  pkt->pts_rate_seconds = 1u;
-  pkt->flags = 0u;
-  pkt->payload_buffer_id = OUTPUT_BUFFER_ID;
-
-  return pkt;
-}
-
 void FxProcessor::Shutdown(const char* reason) {
   // We're done (for good or bad): flush (save) the headers; close the WAV file.
   wav_writer_.Close();
 
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
-  output_timeline_cp_.Unbind();
-  output_timeline_consumer_.Unbind();
-  output_consumer_.Unbind();
-  output_audio_.Unbind();
-  output_media_.Unbind();
-  audio_server_.Unbind();
+  lead_time_event_binding_.Unbind();
+  audio_renderer_.Unbind();
   input_.reset();
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
-void FxProcessor::ProcessInput(bool first_time) {
-  media::MediaPacketPtr pkt1, pkt2;
+void FxProcessor::ProcessInput() {
+  media::AudioPacket pkt1, pkt2;
+
+  pkt1.payload_size = 0;
+  pkt2.payload_size = 0;
 
   // Produce output packet(s)  If we do not produce any packets, something is
   // very wrong and we are in the process of shutting down, so just get out now.
   ProduceOutputPackets(&pkt1, &pkt2);
-  if (!pkt1) {
+  if (!pkt1.payload_size) {
     return;
   }
 
   // Send the packet(s)
-  output_consumer_->SupplyPacket(std::move(*pkt1),
-                                 [](media::MediaPacketDemandPtr) {});
-  if (pkt2) {
-    output_consumer_->SupplyPacket(std::move(*pkt2),
-                                   [](media::MediaPacketDemandPtr) {});
-  }
-
-  // if this is the first time we are processing input, start the clock.
-  if (first_time) {
-    // TODO(johngro) : this lead time amount should not be arbitrary... it
-    // needs to be based on the requirements of the renderer at the moment.
-    media::TimelineTransform start;
-    start.reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
-    start.subject_time = 0;
-    start.reference_delta = 1u;
-    start.subject_delta = 1u;
-    output_timeline_consumer_->SetTimelineTransformNoReply(std::move(start));
+  audio_renderer_->SendPacketNoReply(std::move(pkt1));
+  if (pkt2.payload_size) {
+    audio_renderer_->SendPacketNoReply(std::move(pkt2));
   }
 
   // If the input has been closed by the driver, shutdown.
@@ -501,14 +470,24 @@ void FxProcessor::ProcessInput(bool first_time) {
     return;
   }
 
+  // Save output audio to WAV file (if configured to do so).
+  auto output_base = reinterpret_cast<uint8_t*>(output_buf_.start());
+  if (pkt1.payload_size) {
+    wav_writer_.Write(output_base + pkt1.payload_offset, pkt1.payload_size);
+  }
+
+  if (pkt2.payload_size) {
+    wav_writer_.Write(output_base + pkt2.payload_offset, pkt2.payload_size);
+  }
+
   // Schedule our next processing callback.
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this]() { ProcessInput(false); },
+      [this]() { ProcessInput(); },
       fxl::TimeDelta::FromNanoseconds(PROCESS_CHUNK_TIME));
 }
 
-void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
-                                       media::MediaPacketPtr* out_pkt2) {
+void FxProcessor::ProduceOutputPackets(::media::AudioPacket* out_pkt1,
+                                       ::media::AudioPacket* out_pkt2) {
   // Figure out how much input data we have to process.
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
@@ -539,24 +518,26 @@ void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
   // send and the current position of the write pointer in the output ring
   // buffer.
   uint32_t pkt1_frames = fbl::min<uint32_t>(output_space, todo);
-  *out_pkt1 = CreateOutputPacket();
-  (*out_pkt1)->pts = output_buf_wp_;
-  (*out_pkt1)->payload_offset = output_start * input_->frame_sz();
-  (*out_pkt1)->payload_size = pkt1_frames * input_->frame_sz();
+  out_pkt1->timestamp = output_buf_wp_ + lead_time_frames_;
+  out_pkt1->payload_offset = output_start * input_->frame_sz();
+  out_pkt1->payload_size = pkt1_frames * input_->frame_sz();
 
   // Does this job wrap the ring?  If so, we need to create 2 packets instead
   // of 1.
   if (pkt1_frames < todo) {
-    *out_pkt2 = CreateOutputPacket();
-    (*out_pkt2)->pts = output_buf_wp_ + pkt1_frames;
-    (*out_pkt2)->payload_offset = 0;
-    (*out_pkt2)->payload_size = (todo - pkt1_frames) * input_->frame_sz();
+    out_pkt2->timestamp = out_pkt1->timestamp + pkt1_frames;
+    out_pkt2->payload_offset = 0;
+    out_pkt2->payload_size = (todo - pkt1_frames) * input_->frame_sz();
+  } else {
+    out_pkt2->timestamp = ::media::kNoTimestamp;
+    out_pkt2->payload_offset = 0;
+    out_pkt2->payload_size = 0;
   }
 
   // Now actually apply the effects.  Start by just copying the input to the
   // output.
   auto input_base = reinterpret_cast<int16_t*>(input_->ring_buffer());
-  auto output_base = reinterpret_cast<int16_t*>(output_buf_virt_);
+  auto output_base = reinterpret_cast<int16_t*>(output_buf_.start());
   ApplyEffect(input_base, input_start, input_buffer_frames_, output_base,
               output_start, output_buf_frames_, todo,
               (preamp_gain_ == 0.0) ? &FxProcessor::CopyInputEffect
@@ -580,16 +561,6 @@ void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
     ApplyEffect(output_base, reverb_start, output_buf_frames_, output_base,
                 output_start, output_buf_frames_, todo,
                 &FxProcessor::ReverbMixEffect);
-  }
-
-  // After running our processing chain, save the resultant audio to WAV file.
-  if (wav_writer_.Write(reinterpret_cast<void* const>(
-                            reinterpret_cast<uint8_t*>(output_buf_virt_) +
-                            (*out_pkt1)->payload_offset),
-                        (*out_pkt1)->payload_size)) {
-    if (pkt1_frames < todo) {
-      wav_writer_.Write(output_buf_virt_, (*out_pkt2)->payload_size);
-    }
   }
 
   // Finally, update our input read pointer and our output write pointer.
@@ -775,8 +746,8 @@ int main(int argc, char** argv) {
   media::AudioServerPtr audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();
 
-  FxProcessor fx(fbl::move(input), std::move(audio_server));
-  fx.Startup();
+  FxProcessor fx(fbl::move(input));
+  fx.Startup(std::move(audio_server));
 
   loop.Run();
   return 0;
