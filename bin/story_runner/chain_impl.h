@@ -29,6 +29,8 @@ class ChainImpl : Chain {
 
   void Connect(fidl::InterfaceRequest<Chain> request);
 
+  LinkPathPtr GetLinkPathForKey(const fidl::String& key);
+
  private:
   void GetKeys(const GetKeysCallback& done) override;
   void GetLink(const fidl::String& key,

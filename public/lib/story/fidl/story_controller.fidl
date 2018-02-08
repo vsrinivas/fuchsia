@@ -60,6 +60,7 @@ interface StoryController {
   //
   // A ModuleController for the newly added module can be obtained through
   // GetModuleController().
+  // TODO(thatguy): Add a Daisy variant of this call, deprecate this one.
   AddModule@5(array<string>? parent_module_path, string module_name,
               string module_url, string link_name,
               SurfaceRelation? surface_relation);

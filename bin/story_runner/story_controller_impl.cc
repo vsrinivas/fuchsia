@@ -108,6 +108,9 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
   xdr->Field("signal", &data->signal);
 }
 
+// TODO(thatguy): This needs to be integrated into an Operation for starting
+// Daisies.
+
 }  // namespace
 
 class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
@@ -245,7 +248,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
   void Launch(FlowToken /*flow*/) {
     FXL_LOG(INFO) << "StoryControllerImpl::LaunchModule() "
-                  << module_data_->module_url;
+                  << module_data_->module_url << " "
+                  << PathString(module_data_->module_path);
     auto module_config = AppConfig::New();
     module_config->url = module_data_->module_url;
 
@@ -270,18 +274,17 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
     // Ensure that the Module's Chain is available before we launch it.
     // TODO(thatguy): Set up the ChainImpl based on information in ModuleData.
-    auto i = std::remove_if(
+    auto i = std::find_if(
         story_controller_impl_->chains_.begin(),
         story_controller_impl_->chains_.end(),
         [this](const std::unique_ptr<ChainImpl>& ptr) {
           return ptr->chain_path().Equals(module_data_->module_path);
         });
-    // If the Chain already exists, remove it and re-create it appropriately.
-    story_controller_impl_->chains_.erase(
-        i, story_controller_impl_->chains_.end());
-    story_controller_impl_->chains_.emplace_back(new ChainImpl(
-        module_data_->module_path.Clone(), module_data_->chain_data.Clone(),
-        story_controller_impl_));
+    if (i == story_controller_impl_->chains_.end()) {
+      story_controller_impl_->chains_.emplace_back(new ChainImpl(
+          module_data_->module_path.Clone(), module_data_->chain_data.Clone(),
+          story_controller_impl_));
+    }
 
     // ModuleControllerImpl's constructor launches the child application.
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
@@ -402,6 +405,160 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
 };
 
+class StoryControllerImpl::ConnectLinkCall : Operation<> {
+ public:
+  // TODO(mesch/thatguy): Notifying watchers on new Link connections is overly
+  // complex. Sufficient and simpler would be to have a Story watchers notified
+  // of Link state changes for all Links within a Story.
+  ConnectLinkCall(OperationContainer* const container,
+                  StoryControllerImpl* const story_controller_impl,
+                  LinkPathPtr link_path,
+                  CreateLinkInfoPtr create_link_info,
+                  bool notify_watchers,
+                  fidl::InterfaceRequest<Link> request,
+                  ResultCall done)
+      : Operation("StoryControllerImpl::ConnectLinkCall",
+                  container,
+                  std::move(done)),
+        story_controller_impl_(story_controller_impl),
+        link_path_(std::move(link_path)),
+        create_link_info_(std::move(create_link_info)),
+        notify_watchers_(notify_watchers),
+        request_(std::move(request)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    auto i = std::find_if(story_controller_impl_->links_.begin(),
+                          story_controller_impl_->links_.end(),
+                          [this](const std::unique_ptr<LinkImpl>& l) {
+                            return l->link_path().Equals(link_path_);
+                          });
+    if (i != story_controller_impl_->links_.end()) {
+      (*i)->Connect(std::move(request_));
+      return;
+    }
+
+    link_impl_.reset(
+        new LinkImpl(story_controller_impl_->ledger_client_,
+                     story_controller_impl_->story_page_id_.Clone(),
+                     link_path_.Clone(), std::move(create_link_info_)));
+    auto* link_ptr = link_impl_.get();
+    if (request_) {
+      link_impl_->Connect(std::move(request_));
+      // Transfer ownership of |link_impl_| over to |story_controller_impl_|.
+      story_controller_impl_->links_.emplace_back(link_impl_.release());
+      // This orphaned handler will be called after this operation has been
+      // deleted. So we need to take special care when depending on members.
+      // Copies of |story_controller_impl_| and |link_ptr| are ok.
+      link_ptr->set_orphaned_handler(
+          [link_ptr, story_controller_impl = story_controller_impl_] {
+            story_controller_impl->DisposeLink(link_ptr);
+          });
+    }
+
+    link_ptr->Sync([this, flow] { Cont(flow); });
+  }
+
+  void Cont(FlowToken token) {
+    if (!notify_watchers_)
+      return;
+
+    story_controller_impl_->links_watchers_.ForAllPtrs(
+        [this](StoryLinksWatcher* const watcher) {
+          watcher->OnNewLink(link_path_.Clone());
+        });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const LinkPathPtr link_path_;
+  CreateLinkInfoPtr create_link_info_;
+  const bool notify_watchers_;
+  fidl::InterfaceRequest<Link> request_;
+
+  std::unique_ptr<LinkImpl> link_impl_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
+};
+
+// Populates a ChainData struct from a CreateChainInfo struct. May create new
+// Links for any CreateChainInfo.property_info if
+// property_info[i].is_create_link_info().
+class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
+ public:
+  InitializeChainCall(OperationContainer* const container,
+                      StoryControllerImpl* const story_controller_impl,
+                      fidl::Array<fidl::String> module_path,
+                      CreateChainInfoPtr create_chain_info,
+                      ResultCall result_call)
+      : Operation("InitializeChainCall", container, std::move(result_call)),
+        story_controller_impl_(story_controller_impl),
+        module_path_(std::move(module_path)),
+        create_chain_info_(std::move(create_chain_info)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &result_};
+
+    result_ = ChainData::New();
+    result_->key_to_link_map.resize(0);
+
+    if (!create_chain_info_) {
+      return;
+    }
+
+    // For each property in |create_chain_info_|, either:
+    // a) Copy the |link_path| to |result_| directly or
+    // b) Create & populate a new Link and add the correct mapping to
+    // |result_|.
+    for (auto& entry : create_chain_info_->property_info) {
+      const auto& key = entry.GetKey();
+      const auto& info = entry.GetValue();
+
+      auto mapping = ChainKeyToLinkData::New();
+      mapping->key = key;
+      if (info->is_link_path()) {
+        mapping->link_path = info->get_link_path().Clone();
+      } else {  // info->is_create_link()
+        // Create a new Link. ConnectLinkCall will either create a new Link, or
+        // connect to an existing one.
+        // TODO(thatguy): If the Link already exists (it shouldn't),
+        // |create_link_info.initial_data| will be ignored.
+        mapping->link_path = LinkPath::New();
+        mapping->link_path->module_path = module_path_.Clone();
+        mapping->link_path->link_name = key;
+
+        // We create N ConnectLinkCall operations. We rely on the fact that
+        // once all refcounted instances of |flow| are destroyed, the
+        // InitializeChainCall will automatically finish.
+        new ConnectLinkCall(&operation_queue_, story_controller_impl_,
+                            mapping->link_path.Clone(),
+                            info->get_create_link().Clone(),
+                            false /* notify_watchers */,
+                            nullptr /* interface request */, [flow] {});
+      }
+
+      result_->key_to_link_map.push_back(std::move(mapping));
+    }
+  }
+
+  StoryControllerImpl* const story_controller_impl_;
+  const fidl::Array<fidl::String> module_path_;
+  const CreateChainInfoPtr create_chain_info_;
+
+  OperationQueue operation_queue_;
+
+  ChainDataPtr result_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
+};
+
 class StoryControllerImpl::StartModuleCall : Operation<> {
  public:
   StartModuleCall(
@@ -410,6 +567,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       const fidl::Array<fidl::String>& module_path,
       const fidl::String& module_url,
       const fidl::String& link_name,
+      CreateChainInfoPtr create_chain_info,
       const ModuleSource module_source,
       SurfaceRelationPtr surface_relation,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
@@ -425,6 +583,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
+        create_chain_info_(std::move(create_chain_info)),
         module_source_(module_source),
         surface_relation_(std::move(surface_relation)),
         incoming_services_(std::move(incoming_services)),
@@ -447,7 +606,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       link_path_ = LinkPath::New();
       link_path_->module_path = ParentModulePath(module_path_);
       link_path_->link_name = link_name_;
-      Cont1(flow);
+      InitializeModuleData(flow);
     } else {
       // If the link name is null, this module receives the default link of its
       // parent module. We need to retrieve which one it is from story storage.
@@ -458,23 +617,30 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
           [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
-            Cont1(flow);
+            InitializeModuleData(flow);
           });
     }
   }
 
-  void Cont1(FlowToken flow) {
+  void InitializeModuleData(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
-    module_data_->chain_data = ChainData::New();
-    // TODO(thatguy): Populate ChainData correctly.
-    module_data_->chain_data->key_to_link_map.resize(0);
     module_data_->link_path = link_path_.Clone();
     module_data_->module_source = module_source_;
     module_data_->surface_relation = surface_relation_.Clone();
     module_data_->module_stopped = false;
 
+    // Initialize |module_data_->chain_data|.
+    new InitializeChainCall(&operation_queue_, story_controller_impl_,
+                            module_path_.Clone(), create_chain_info_.Clone(),
+                            [this, flow](ChainDataPtr chain_data) {
+                              module_data_->chain_data = std::move(chain_data);
+                              MaybeWriteModuleData(flow);
+                            });
+  }
+
+  void MaybeWriteModuleData(FlowToken flow) {
     // We check if the data in the ledger is already what we want. If so, we do
     // nothing.
     // Read the module data.
@@ -512,6 +678,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   const fidl::String link_name_;
+  CreateChainInfoPtr create_chain_info_;
   const ModuleSource module_source_;
   const SurfaceRelationPtr surface_relation_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
@@ -535,6 +702,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       const fidl::Array<fidl::String>& module_path,
       const fidl::String& module_url,
       const fidl::String& link_name,
+      CreateChainInfoPtr create_chain_info,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
@@ -549,6 +717,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
+        create_chain_info_(std::move(create_chain_info)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         surface_relation_(std::move(surface_relation)),
@@ -567,12 +736,13 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // closed, and the view owner should not be sent to the story
     // shell.
 
-    new StartModuleCall(
-        &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        link_name_, module_source_, surface_relation_.Clone(),
-        std::move(incoming_services_), std::move(module_controller_request_),
-        nullptr /* embed_module_watcher */, view_owner_.NewRequest(),
-        [this, flow] { Cont(flow); });
+    new StartModuleCall(&operation_queue_, story_controller_impl_, module_path_,
+                        module_url_, link_name_, create_chain_info_.Clone(),
+                        module_source_, surface_relation_.Clone(),
+                        std::move(incoming_services_),
+                        std::move(module_controller_request_),
+                        nullptr /* embed_module_watcher */,
+                        view_owner_.NewRequest(), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -634,6 +804,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   const fidl::String link_name_;
+  CreateChainInfoPtr create_chain_info_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
@@ -683,13 +854,16 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
-    module_data_->chain_data = ChainData::New();
-    // TODO(thatguy): Populate ChainData correctly.
-    module_data_->chain_data->key_to_link_map.resize(0);
     module_data_->link_path = link_path_.Clone();
     module_data_->module_source = ModuleSource::EXTERNAL;
     module_data_->surface_relation = surface_relation_.Clone();
     module_data_->module_stopped = false;
+
+    // TODO: Initialize |module_data_->chain_data|. This call is only used
+    // for operations on StoryController, which don't yet accept
+    // CreateChainInfo.
+    module_data_->chain_data = ChainData::New();
+    module_data_->chain_data->key_to_link_map.resize(0);
 
     std::string key{MakeModuleKey(module_path_)};
     new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
@@ -699,10 +873,11 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
-      new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
-                                 module_path_, module_url_, link_name_, nullptr,
-                                 nullptr, std::move(surface_relation_), true,
-                                 ModuleSource::EXTERNAL, [flow] {});
+      new StartModuleInShellCall(
+          &operation_queue_, story_controller_impl_, module_path_, module_url_,
+          link_name_, nullptr /* chain_data */, nullptr /* incoming_services */,
+          nullptr /* module_controller_request*/, std::move(surface_relation_),
+          true, ModuleSource::EXTERNAL, [flow] {});
     }
   }
 
@@ -718,74 +893,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
-};
-
-class StoryControllerImpl::ConnectLinkCall : Operation<> {
- public:
-  ConnectLinkCall(OperationContainer* const container,
-                  StoryControllerImpl* const story_controller_impl,
-                  LinkPathPtr link_path,
-                  CreateLinkInfoPtr create_link_info,
-                  fidl::InterfaceRequest<Link> request,
-                  ResultCall done)
-      : Operation("StoryControllerImpl::ConnectLinkCall",
-                  container,
-                  std::move(done)),
-        story_controller_impl_(story_controller_impl),
-        link_path_(std::move(link_path)),
-        create_link_info_(std::move(create_link_info)),
-        request_(std::move(request)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    auto i = std::find_if(story_controller_impl_->links_.begin(),
-                          story_controller_impl_->links_.end(),
-                          [this](const std::unique_ptr<LinkImpl>& l) {
-                            return l->link_path().Equals(link_path_);
-                          });
-    if (i != story_controller_impl_->links_.end()) {
-      (*i)->Connect(std::move(request_));
-      return;
-    }
-
-    link_impl_ =
-        new LinkImpl(story_controller_impl_->ledger_client_,
-                     story_controller_impl_->story_page_id_.Clone(),
-                     std::move(link_path_), std::move(create_link_info_));
-    link_impl_->Connect(std::move(request_));
-    story_controller_impl_->links_.emplace_back(link_impl_);
-    // This orphaned handler will be called after this operation has been
-    // deleted. So we need to take special care when depending on members.
-    // Copies of |story_controller_impl_| and |link_impl_| are ok.
-    link_impl_->set_orphaned_handler(
-        [link_impl = link_impl_,
-         story_controller_impl = story_controller_impl_] {
-          story_controller_impl->DisposeLink(link_impl);
-        });
-
-    link_impl_->Sync([this, flow] { Cont(flow); });
-  }
-
-  void Cont(FlowToken token) {
-    story_controller_impl_->links_watchers_.ForAllPtrs(
-        [this](StoryLinksWatcher* const watcher) {
-          watcher->OnNewLink(link_impl_->link_path().Clone());
-        });
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  LinkPathPtr link_path_;
-  CreateLinkInfoPtr create_link_info_;
-  fidl::InterfaceRequest<Link> request_;
-
-  LinkImpl* link_impl_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
 };
 
 class StoryControllerImpl::AddForCreateCall : Operation<> {
@@ -828,7 +935,8 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       link_path->link_name = link_name_;
       new ConnectLinkCall(&operation_queue_, story_controller_impl_,
                           std::move(link_path), std::move(create_link_info_),
-                          link_.NewRequest(), [flow] {});
+                          true /* notify_watchers */, link_.NewRequest(),
+                          [flow] {});
     }
 
     auto module_path = fidl::Array<fidl::String>::New(0);
@@ -1129,7 +1237,9 @@ class StoryControllerImpl::StartCall : Operation<> {
               new StartModuleInShellCall(
                   &operation_queue_, story_controller_impl_,
                   module_data->module_path, module_data->module_url,
-                  module_data->link_path->link_name, nullptr, nullptr,
+                  module_data->link_path->link_name, nullptr /* chain_data */,
+                  nullptr /* incoming_services */,
+                  nullptr /* module_controller_request */,
                   module_data->surface_relation.Clone(), true,
                   module_data->module_source, [flow] {});
             }
@@ -1261,8 +1371,10 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     // We reach this point only if we want to start an external module.
     new StartModuleInShellCall(
         &operation_queue_, story_controller_impl_, module_data_->module_path,
-        module_data_->module_url, module_data_->link_path->link_name, nullptr,
-        nullptr, std::move(module_data_->surface_relation), true,
+        module_data_->module_url, module_data_->link_path->link_name,
+        nullptr /* chain_data */, nullptr /* incoming_services */,
+        nullptr /* module_controller_request */,
+        std::move(module_data_->surface_relation), true,
         module_data_->module_source, [flow] {});
   }
 
@@ -1343,6 +1455,126 @@ class StoryControllerImpl::DefocusCall : Operation<> {
   const fidl::Array<fidl::String> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
+};
+
+class StoryControllerImpl::ResolveModulesCall
+    : Operation<FindModulesResultPtr> {
+ public:
+  // If |daisy| originated from a Module, |requesting_module_path| must be
+  // non-null.  Otherwise, it is an error for the |daisy| to have any Nouns of
+  // type 'link_name' (since a Link with a link name without an associated
+  // Module path is impossible to locate).
+  ResolveModulesCall(OperationContainer* const container,
+                     StoryControllerImpl* const story_controller_impl,
+                     DaisyPtr daisy,
+                     fidl::Array<fidl::String> requesting_module_path,
+                     ResultCall result_call)
+      : Operation("StoryControllerImpl::ResolveModulesCall",
+                  container,
+                  std::move(result_call)),
+        story_controller_impl_(story_controller_impl),
+        daisy_(std::move(daisy)),
+        requesting_module_path_(std::move(requesting_module_path)) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this, &result_};
+
+    DaisyToResolverQuery(daisy_, [this, flow] { FindModules(flow); });
+  }
+
+  void DaisyToResolverQuery(const DaisyPtr& daisy, std::function<void()> done) {
+    resolver_query_ = ResolverQuery::New();
+    resolver_query_->verb = daisy->verb;
+    resolver_query_->url = daisy->url;
+
+    std::shared_ptr<int> outstanding_requests{new int{0}};
+    for (const auto& entry : daisy->nouns) {
+      const auto& name = entry.GetKey();
+      const auto& noun = entry.GetValue();
+
+      auto noun_constraint = ResolverNounConstraint::New();
+      if (noun->is_json()) {
+        noun_constraint->set_json(noun->get_json());
+        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+      } else if (noun->is_link_name()) {
+        // Find the chain for this Module.
+        auto link_path = story_controller_impl_->GetLinkPathForChainKey(
+            requesting_module_path_, noun->get_link_name());
+
+        if (!link_path) {
+          // The chain doesn't contain a value for this Link, so assume it's
+          // one the Module created itself.
+          link_path = LinkPath::New();
+          link_path->module_path = requesting_module_path_.Clone();
+          link_path->link_name = noun->get_link_name();
+        }
+
+        ++(*outstanding_requests);
+        LinkPtr link;
+        new ConnectLinkCall(
+            &operation_queue_, story_controller_impl_, link_path.Clone(),
+            nullptr /* create_link_info */, false /* notify_watchers */,
+            link.NewRequest(),
+            fxl::MakeCopyable([this, name, outstanding_requests, done,
+                               link_path = std::move(link_path),
+                               link = std::move(link)]() mutable {
+              link->Get(
+                  nullptr /* path */,
+                  fxl::MakeCopyable([this, name, outstanding_requests, done,
+                                     link_path = std::move(link_path),
+                                     link = std::move(link)](
+                                        const fidl::String& content) mutable {
+                    auto link_info = ResolverLinkInfo::New();
+                    link_info->path = std::move(link_path);
+                    link_info->content_snapshot = content;
+
+                    auto noun_constraint = ResolverNounConstraint::New();
+                    noun_constraint->set_link_info(std::move(link_info));
+
+                    resolver_query_->noun_constraints[name] =
+                        std::move(noun_constraint);
+
+                    --(*outstanding_requests);
+                    if (*outstanding_requests == 0) {
+                      done();
+                    }
+                  }));
+            }));
+      } else if (noun->is_entity_type()) {
+        noun_constraint->set_entity_type(noun->get_entity_type().Clone());
+        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+      } else if (noun->is_entity_reference()) {
+        noun_constraint->set_entity_reference(noun->get_entity_reference());
+        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+      }
+    }
+    if (*outstanding_requests == 0) {
+      done();
+    }
+  }
+
+  void FindModules(FlowToken flow) {
+    story_controller_impl_->story_provider_impl_->module_resolver()
+        ->FindModules(std::move(resolver_query_), nullptr,
+                      [this, flow](const FindModulesResultPtr& result) {
+                        result_ = result.Clone();
+                      });
+  }
+
+  OperationQueue operation_queue_;
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  DaisyPtr daisy_;
+  fidl::Array<fidl::String> requesting_module_path_;
+
+  ResolverQueryPtr resolver_query_;
+
+  FindModulesResultPtr result_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -1485,15 +1717,30 @@ void StoryControllerImpl::ConnectChainPath(
                         });
   // We expect a Chain for each Module to have been created during Module
   // initialization.
-  FXL_CHECK(i != chains_.end()) << fxl::JoinStrings(chain_path, ",");
+  FXL_CHECK(i != chains_.end()) << PathString(chain_path);
   (*i)->Connect(std::move(request));
 }
 
 void StoryControllerImpl::ConnectLinkPath(
     LinkPathPtr link_path,
     fidl::InterfaceRequest<Link> request) {
-  new ConnectLinkCall(&operation_queue_, this, std::move(link_path), nullptr,
-                      std::move(request), [] {});
+  new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
+                      nullptr /* create_link_info */,
+                      true /* notify_watchers */, std::move(request), [] {});
+}
+
+LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
+    const fidl::Array<fidl::String>& module_path,
+    const fidl::String& key) {
+  auto i = std::find_if(chains_.begin(), chains_.end(),
+                        [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
+                          return ptr->chain_path().Equals(module_path);
+                        });
+  // We expect a Chain for each Module to have been created during Module
+  // initialization.
+  FXL_CHECK(i != chains_.end()) << PathString(module_path);
+
+  return (*i)->GetLinkPathForKey(key);
 }
 
 void StoryControllerImpl::StartModule(
@@ -1501,6 +1748,7 @@ void StoryControllerImpl::StartModule(
     const fidl::String& module_name,
     const fidl::String& module_url,
     const fidl::String& link_name,
+    CreateChainInfoPtr create_chain_info,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -1509,9 +1757,10 @@ void StoryControllerImpl::StartModule(
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      module_source, nullptr /* surface_relation */,
-      std::move(incoming_services), std::move(module_controller_request),
-      nullptr /* embed_module_watcher */, std::move(view_owner_request), [] {});
+      std::move(create_chain_info), module_source,
+      nullptr /* surface_relation */, std::move(incoming_services),
+      std::move(module_controller_request), nullptr /* embed_module_watcher */,
+      std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::StartModuleInShell(
@@ -1519,6 +1768,7 @@ void StoryControllerImpl::StartModuleInShell(
     const fidl::String& module_name,
     const fidl::String& module_url,
     const fidl::String& link_name,
+    CreateChainInfoPtr create_chain_info,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
@@ -1528,8 +1778,86 @@ void StoryControllerImpl::StartModuleInShell(
   module_path.push_back(module_name);
   new StartModuleInShellCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      std::move(incoming_services), std::move(module_controller_request),
-      std::move(surface_relation), focus, module_source, [] {});
+      std::move(create_chain_info), std::move(incoming_services),
+      std::move(module_controller_request), std::move(surface_relation), focus,
+      module_source, [] {});
+}
+
+void StoryControllerImpl::StartDaisy(
+    const fidl::Array<fidl::String>& parent_module_path,
+    const fidl::String& module_name,
+    DaisyPtr daisy,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller_request,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    ModuleSource module_source,
+    std::function<void(StartDaisyStatus)> callback) {
+  new ResolveModulesCall(
+      &operation_queue_, this, std::move(daisy), parent_module_path.Clone(),
+      fxl::MakeCopyable(
+          [this, parent_module_path = parent_module_path.Clone(), module_name,
+           incoming_services = std::move(incoming_services),
+           module_controller = std::move(module_controller_request),
+           view_owner = std::move(view_owner_request),
+           callback](FindModulesResultPtr result) mutable {
+            if (result->modules.size() == 0) {
+              callback(StartDaisyStatus::NO_MODULES_FOUND);
+            } else {
+              // We run the first module.
+              // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing
+              // the first Module is not the correct behavior.
+              const auto& module_result = result->modules[0];
+              const auto& module_url = module_result->module_id;
+              const auto& create_chain_info = module_result->create_chain_info;
+
+              StartModule(
+                  std::move(parent_module_path), module_name, module_url,
+                  nullptr /* link_name */, create_chain_info.Clone(),
+                  std::move(incoming_services), std::move(module_controller),
+                  std::move(view_owner), ModuleSource::INTERNAL);
+
+              callback(StartDaisyStatus::SUCCESS);
+            }
+          }));
+}
+
+void StoryControllerImpl::StartDaisyInShell(
+    const fidl::Array<fidl::String>& parent_module_path,
+    const fidl::String& module_name,
+    DaisyPtr daisy,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller_request,
+    SurfaceRelationPtr surface_relation,
+    ModuleSource module_source,
+    std::function<void(StartDaisyStatus)> callback) {
+  // TODO(thatguy): This should happen on the story controller operation queue.
+  new ResolveModulesCall(
+      &operation_queue_, this, std::move(daisy), parent_module_path.Clone(),
+      fxl::MakeCopyable(
+          [this, module_name, parent_module_path = parent_module_path.Clone(),
+           incoming_services = std::move(incoming_services),
+           module_controller = std::move(module_controller_request),
+           surface_relation = std::move(surface_relation),
+           callback](FindModulesResultPtr result) mutable {
+            if (result->modules.size() == 0) {
+              callback(StartDaisyStatus::NO_MODULES_FOUND);
+            } else {
+              // We just run the first module in story shell.
+              // TODO(alhaad/thatguy): Revisit the assumption.
+              const auto& module_result = result->modules[0];
+              const auto& module_url = module_result->module_id;
+              const auto& create_chain_info = module_result->create_chain_info;
+
+              StartModuleInShell(
+                  parent_module_path, module_name, module_url,
+                  nullptr /* link_name */, create_chain_info.Clone(),
+                  std::move(incoming_services), std::move(module_controller),
+                  std::move(surface_relation), true /* focus */,
+                  ModuleSource::INTERNAL);
+
+              callback(StartDaisyStatus::SUCCESS);
+            }
+          }));
 }
 
 void StoryControllerImpl::EmbedModule(
@@ -1537,6 +1865,7 @@ void StoryControllerImpl::EmbedModule(
     const fidl::String& module_name,
     const fidl::String& module_url,
     const fidl::String& link_name,
+    CreateChainInfoPtr create_chain_info,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
@@ -1545,9 +1874,10 @@ void StoryControllerImpl::EmbedModule(
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      ModuleSource::INTERNAL, nullptr /* surface_relation */,
-      std::move(incoming_services), std::move(module_controller_request),
-      std::move(embed_module_watcher), std::move(view_owner_request), [] {});
+      std::move(create_chain_info), ModuleSource::INTERNAL,
+      nullptr /* surface_relation */, std::move(incoming_services),
+      std::move(module_controller_request), std::move(embed_module_watcher),
+      std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::ProcessPendingViews() {

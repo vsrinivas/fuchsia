@@ -121,8 +121,8 @@ class ModuleContextImpl : ModuleContext {
   // the link it was started with.
   const ModuleData* const module_data_;
 
-  // Not owned. The StoryControllerImpl instance this ModuleContextImpl instance
-  // connects to.
+  // Not owned. The StoryControllerImpl for the Story in which this Module
+  // lives.
   StoryControllerImpl* const story_controller_impl_;
 
   // Not owned. Used to notify module watchers and request tear down.
@@ -132,8 +132,6 @@ class ModuleContextImpl : ModuleContext {
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
-
-  ModuleResolver* const module_resolver_;  // Not owned
 
   fidl::BindingSet<ModuleContext> bindings_;
 

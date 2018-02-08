@@ -123,7 +123,15 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
       link_node_writer_->CreateChildValue(
           single_entity_node_writer_.NewRequest(), ContextValueType::ENTITY);
     }
-    single_entity_node_writer_->Set(value, nullptr);
+    // TODO(thatguy): The context engine expects an Entity reference to be
+    // written directly as the content, versus the way Links wrap the reference
+    // in JSON. It'd be good to normalize on one encoded representation for
+    // Entity references in the context engine.
+    if (ref.empty()) {
+      single_entity_node_writer_->Set(value, nullptr);
+    } else {
+      single_entity_node_writer_->Set(ref, nullptr);
+    }
     return;
   } else {
     // There is not simply a *single* Entity in this Link. There may be

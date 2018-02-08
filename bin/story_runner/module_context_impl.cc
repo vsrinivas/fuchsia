@@ -15,54 +15,6 @@
 
 namespace modular {
 
-namespace {
-
-void CopyResolverNounsToLink(const ModuleResolverResultPtr& module_result,
-                             LinkPtr* link_ptr) {
-  auto& link = *link_ptr;
-
-  for (auto entry : module_result->initial_nouns) {
-    const auto& name = entry.GetKey();
-    const auto& value = entry.GetValue();
-
-    auto path = fidl::Array<fidl::String>::New(1);
-    path[0] = name;
-    link->Set(std::move(path), value);
-  }
-}
-
-// TODO(thatguy): Consider breaking this out into a helper class (that can be
-// tested individually) if it becomes more complex.
-ResolverQueryPtr DaisyToResolverQuery(const DaisyPtr& daisy) {
-  auto query = ResolverQuery::New();
-  query->verb = daisy->verb;
-  query->url = daisy->url;
-
-  for (const auto& entry : daisy->nouns) {
-    const auto& name = entry.GetKey();
-    const auto& noun = entry.GetValue();
-
-    auto noun_constraint = ResolverNounConstraint::New();
-    if (noun->is_json()) {
-      noun_constraint->set_json(noun->get_json());
-      query->noun_constraints[name] = std::move(noun_constraint);
-    } else if (noun->is_link_name()) {
-      // TODO(thatguy): Resolve the noun->link_name() to the absolute LinkPath,
-      // grab a content snapshot and populate the NounConstraint.
-    } else if (noun->is_entity_type()) {
-      noun_constraint->set_entity_type(noun->get_entity_type().Clone());
-      query->noun_constraints[name] = std::move(noun_constraint);
-    } else if (noun->is_entity_reference()) {
-      noun_constraint->set_entity_reference(noun->get_entity_reference());
-      query->noun_constraints[name] = std::move(noun_constraint);
-    }
-  }
-
-  return query;
-}
-
-}  // namespace
-
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     const ModuleData* const module_data,
@@ -76,8 +28,7 @@ ModuleContextImpl::ModuleContextImpl(
                                   info.story_controller_impl->GetStoryId()),
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
-      user_intelligence_provider_(info.user_intelligence_provider),
-      module_resolver_(info.module_resolver) {
+      user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<ModuleContext>(
       [this](fidl::InterfaceRequest<ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -96,9 +47,14 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
                                 fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
   if (name) {
-    link_path = LinkPath::New();
-    link_path->module_path = module_data_->module_path.Clone();
-    link_path->link_name = name;
+    // See if there's a chain mapping for this module.
+    link_path = story_controller_impl_->GetLinkPathForChainKey(
+        module_data_->module_path, name);
+    if (!link_path) {
+      link_path = LinkPath::New();
+      link_path->module_path = module_data_->module_path.Clone();
+      link_path->link_name = name;
+    }
   } else {
     link_path = module_data_->link_path.Clone();
   }
@@ -115,8 +71,9 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, query, link_name,
-      std::move(incoming_services), std::move(module_controller),
-      std::move(view_owner), ModuleSource::INTERNAL);
+      nullptr /* create_chain_info */, std::move(incoming_services),
+      std::move(module_controller), std::move(view_owner),
+      ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartDaisy(
@@ -127,36 +84,10 @@ void ModuleContextImpl::StartDaisy(
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
     const StartDaisyCallback& callback) {
-  // TODO(alhaad): This should happen on the story controller operation queue.
-  module_resolver_->FindModules(
-      DaisyToResolverQuery(daisy), nullptr,
-      fxl::MakeCopyable([this, name, link_name,
-                         incoming_services = std::move(incoming_services),
-                         module_controller = std::move(module_controller),
-                         view_owner = std::move(view_owner),
-                         callback](FindModulesResultPtr result) mutable {
-        if (result->modules.size() == 0) {
-          callback(StartDaisyStatus::NO_MODULES_FOUND);
-        } else {
-          // We run the first module in story shell.
-          // TODO(alhaad/thatguy): Revisit the assumption. Simply choosing the
-          // first Module is not the correct behavior.
-          const auto& module_result = result->modules[0];
-          const auto& module_url = module_result->module_id;
-
-          // Copy the initial nouns to the Link.
-          LinkPtr link;
-          GetLink(link_name, link.NewRequest());
-          CopyResolverNounsToLink(module_result, &link);
-
-          story_controller_impl_->StartModule(
-              module_data_->module_path, name, module_url, link_name,
-              std::move(incoming_services), std::move(module_controller),
-              std::move(view_owner), ModuleSource::INTERNAL);
-
-          callback(StartDaisyStatus::SUCCESS);
-        }
-      }));
+  story_controller_impl_->StartDaisy(
+      module_data_->module_path, name, std::move(daisy),
+      std::move(incoming_services), std::move(module_controller),
+      std::move(view_owner), ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::StartModuleInShell(
@@ -169,8 +100,9 @@ void ModuleContextImpl::StartModuleInShell(
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
       module_data_->module_path, name, query, link_name,
-      std::move(incoming_services), std::move(module_controller),
-      std::move(surface_relation), focus, ModuleSource::INTERNAL);
+      nullptr /* create_chain_info */, std::move(incoming_services),
+      std::move(module_controller), std::move(surface_relation), focus,
+      ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartDaisyInShell(
@@ -181,36 +113,10 @@ void ModuleContextImpl::StartDaisyInShell(
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
     const StartDaisyInShellCallback& callback) {
-  // TODO(alhaad): This should happen on the story controller operation queue.
-  module_resolver_->FindModules(
-      DaisyToResolverQuery(daisy), nullptr,
-      fxl::MakeCopyable([this, name, link_name,
-                         incoming_services = std::move(incoming_services),
-                         module_controller = std::move(module_controller),
-                         surface_relation = std::move(surface_relation),
-                         callback](FindModulesResultPtr result) mutable {
-        if (result->modules.size() == 0) {
-          callback(StartDaisyStatus::NO_MODULES_FOUND);
-        } else {
-          // We just run the first module in story shell.
-          // TODO(alhaad/thatguy): Revisit the assumption.
-          const auto& module_result = result->modules[0];
-          const auto& module_url = module_result->module_id;
-
-          // Copy the initial nouns to the Link.
-          LinkPtr link;
-          GetLink(link_name, link.NewRequest());
-          CopyResolverNounsToLink(module_result, &link);
-
-          story_controller_impl_->StartModuleInShell(
-              module_data_->module_path, name, module_url, link_name,
-              std::move(incoming_services), std::move(module_controller),
-              std::move(surface_relation), true /* focus */,
-              ModuleSource::INTERNAL);
-
-          callback(StartDaisyStatus::SUCCESS);
-        }
-      }));
+  story_controller_impl_->StartDaisyInShell(
+      module_data_->module_path, name, std::move(daisy),
+      std::move(incoming_services), std::move(module_controller),
+      std::move(surface_relation), ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::EmbedModule(
@@ -223,8 +129,9 @@ void ModuleContextImpl::EmbedModule(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, query, link_name,
-      std::move(incoming_services), std::move(module_controller),
-      std::move(embed_module_watcher), std::move(view_owner));
+      nullptr /* create_chain_info */, std::move(incoming_services),
+      std::move(module_controller), std::move(embed_module_watcher),
+      std::move(view_owner));
 }
 
 void ModuleContextImpl::GetComponentContext(

@@ -22,6 +22,16 @@ void ChainImpl::Connect(fidl::InterfaceRequest<Chain> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
+LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::String& key) {
+  auto it = std::find_if(
+      chain_data_->key_to_link_map.begin(), chain_data_->key_to_link_map.end(),
+      [&key](const ChainKeyToLinkDataPtr& data) { return data->key == key; });
+  if (it == chain_data_->key_to_link_map.end())
+    return nullptr;
+
+  return (*it)->link_path.Clone();
+}
+
 void ChainImpl::GetKeys(const GetKeysCallback& done) {
   fidl::Array<fidl::String> keys =
       fidl::Array<fidl::String>::New(chain_data_->key_to_link_map.size());
@@ -34,14 +44,12 @@ void ChainImpl::GetKeys(const GetKeysCallback& done) {
 
 void ChainImpl::GetLink(const fidl::String& key,
                         fidl::InterfaceRequest<Link> request) {
-  auto it = std::find_if(
-      chain_data_->key_to_link_map.begin(), chain_data_->key_to_link_map.end(),
-      [&key](const ChainKeyToLinkDataPtr& data) { return data->key == key; });
-  if (it == chain_data_->key_to_link_map.end())
+  auto link_path = GetLinkPathForKey(key);
+  if (!link_path)
     return;
 
-  story_controller_->GetLink((*it)->link_path->module_path.Clone(),
-                             (*it)->link_path->link_name, std::move(request));
+  story_controller_->GetLink(std::move(link_path->module_path),
+                             link_path->link_name, std::move(request));
 }
 
 }  // namespace modular

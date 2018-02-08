@@ -32,6 +32,7 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/create_chain.fidl.h"
 #include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/per_device_story_info.fidl.h"
 #include "lib/story/fidl/story_controller.fidl.h"
@@ -144,35 +145,71 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                        fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.
+  LinkPathPtr GetLinkPathForChainKey(
+      const fidl::Array<fidl::String>& module_path,
+      const fidl::String& key);
+
+  // Called by ModuleContextImpl.
+  // TODO(thatguy): Remove this entirely once all Modules use StartDaisy.
+  // MI4-739
   void StartModule(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& module_url,
       const fidl::String& link_name,
+      CreateChainInfoPtr create_chain_info,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl and AddModule.
+  // TODO(thatguy): Remove this entirely once all Modules use StartDaisy.
+  // MI4-739
   void StartModuleInShell(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& module_url,
       const fidl::String& link_name,
+      CreateChainInfoPtr create_chain_info,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       bool focus,
       ModuleSource module_source);
 
+  // Called by ModuleContextImpl.
+  void StartDaisy(
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      DaisyPtr daisy,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ModuleSource module_source,
+      std::function<void(StartDaisyStatus)> callback);
+
+  // Called by ModuleContextImpl.
+  void StartDaisyInShell(
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      DaisyPtr daisy,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      SurfaceRelationPtr surface_relation,
+      ModuleSource module_source,
+      std::function<void(StartDaisyStatus)> callback);
+
   // Called by ModuleContextImpl. Note this is always from an internal module
   // source.
+  // TODO(thatguy): Remove |link_name| once no Modules use root Links.
+  // MI4-739
   void EmbedModule(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& module_url,
       const fidl::String& link_name,
+      CreateChainInfoPtr create_chain_info,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
@@ -329,12 +366,14 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class StopModuleCall;
   class DeleteCall;
   class ConnectLinkCall;
+  class InitializeChainCall;
   class StartCall;
   class GetImportanceCall;
   class LedgerNotificationCall;
   class FocusCall;
   class DefocusCall;
   class BlockingModuleDataWriteCall;
+  class ResolveModulesCall;
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.

@@ -77,6 +77,14 @@ package("modular_tests") {
       dest = "modular_tests/chain_test_module"
     },
     {
+      name = "chain_test_child_module"
+      dest = "modular_tests/chain_test_child_module"
+    },
+    {
+      name = "chain_test_user_shell"
+      dest = "modular_tests/chain_test_user_shell"
+    },
+    {
       name = "clipboard_test_module"
       dest = "modular_tests/clipboard_test_module"
     },

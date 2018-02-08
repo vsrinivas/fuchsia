@@ -6,7 +6,33 @@ group("chain") {
   testonly = true
 
   public_deps = [
+    ":chain_test_child_module",
     ":chain_test_module",
+    ":chain_test_user_shell",
+  ]
+}
+
+executable("chain_test_user_shell") {
+  testonly = true
+
+  sources = [
+    "chain_test_user_shell.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user/fidl",
   ]
 }
 
@@ -15,6 +41,23 @@ executable("chain_test_module") {
 
   sources = [
     "chain_test_module.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+  ]
+}
+
+executable("chain_test_child_module") {
+  testonly = true
+
+  sources = [
+    "chain_test_child_module.cc",
   ]
   deps = [
     "//garnet/public/lib/fsl",

@@ -87,13 +87,8 @@ interface ModuleContext {
 
   // Like StartModuleInShell(), but instead accepts a Daisy structure. A Module
   // is selected based on a process called Module Resolution (see
-  // docs/module_resolution.md). Resolution produces both a) a schema to use
-  // for communications on the Link specified by |link_name|, as well as b) a
-  // set of initial state derived from |daisy.nouns| which is written to the
-  // Link.
-  //
-  // When |daisy.verb| is not set, the calling Module will have a read-only
-  // view of the Link |link_name|.
+  // docs/module_resolution.md). The child Module will see one Link per |daisy.nouns|
+  // available through its ModuleContext.GetLink() call.
   //
   // TODO(thatguy): Add a return value that indicates success or error. Example
   // of error: no Modules could be resolved for |daisy|.
