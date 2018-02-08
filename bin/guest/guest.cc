@@ -449,11 +449,10 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  Vcpu vcpu;
-  status = initialize_vcpu(&guest, guest_ip, 0 /* id */, &vcpu);
+  status = guest.StartVcpu(guest_ip, 0 /* id */);
   if (status != ZX_OK) {
     return status;
   }
 
-  return vcpu.Join();
+  return guest.Join();
 }
