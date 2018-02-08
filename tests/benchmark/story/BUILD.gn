@@ -21,6 +21,7 @@ executable("modular_benchmark_story_module") {
     "modular_benchmark_story_module.cc",
   ]
   deps = [
+    ":tracing_base",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
@@ -31,6 +32,7 @@ executable("modular_benchmark_story_user_shell") {
   testonly = true
 
   deps = [
+    ":tracing_base",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -41,7 +43,6 @@ executable("modular_benchmark_story_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//zircon/public/lib/trace-provider",
   ]
 
   sources = [
@@ -57,5 +58,20 @@ copy("modular_benchmark_story_tspec") {
   ]
   outputs = [
     "$root_out_dir/modular_benchmark_story.tspec",
+  ]
+}
+
+source_set("tracing_base") {
+  sources = [
+    "tracing_base.h",
+    "tracing_base.cc",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
   ]
 }

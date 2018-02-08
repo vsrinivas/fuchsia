@@ -11,6 +11,16 @@
   "measure": [
     {
       "type": "duration",
+      "event_name": "link/set",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "link/trans",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
       "event_name": "story/create",
       "event_category": "benchmark",
       "split_samples_at": [1]

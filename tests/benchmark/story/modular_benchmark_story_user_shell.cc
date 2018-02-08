@@ -22,6 +22,7 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/benchmark/story/tracing_base.h"
 
 namespace {
 
@@ -87,11 +88,46 @@ class StoryWatcherImpl : modular::StoryWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
+// A simple link watcher implementation that invokes a "continue" callback when
+// it sees the watched link change.
+class LinkWatcherImpl : modular::LinkWatcher {
+ public:
+  LinkWatcherImpl() : binding_(this) {}
+  ~LinkWatcherImpl() override = default;
+
+  // Registers itself as a watcher on the given link. Only one story at a time
+  // can be watched.
+  void Watch(modular::LinkPtr* const link) {
+    (*link)->WatchAll(binding_.NewBinding());
+  }
+
+  // Deregisters itself from the watched story.
+  void Reset() { binding_.Unbind(); }
+
+  // Sets the function where to continue when the story is observed to be done.
+  void Continue(std::function<void(const fidl::String&)> at) {
+    continue_ = at;
+  }
+
+ private:
+  // |LinkWatcher|
+  void Notify(const fidl::String& json) override {
+    continue_(json);
+  }
+
+  fidl::Binding<modular::LinkWatcher> binding_;
+
+  std::function<void(const fidl::String&)> continue_{[](const fidl::String&) {}};
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
+};
+
 // Measures timing the machinery available to a user shell implementation. This
 // is invoked as a user shell from device runner and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
-class TestApp : public modular::SingleServiceApp<modular::UserShell> {
+class TestApp : public modular::SingleServiceApp<modular::UserShell>,
+                        modular::TracingBase {
  public:
   using Base = modular::SingleServiceApp<modular::UserShell>;
   TestApp(app::ApplicationContext* const application_context, Settings settings)
@@ -114,29 +150,9 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    WaitForTracing();
-  }
-
-  void WaitForTracing() {
-    auto* const loop = fsl::MessageLoop::GetCurrent();
-
-    // Cf. RunWithTracing() used by ledger benchmarks.
-    trace_provider_ = std::make_unique<trace::TraceProvider>(loop->async());
-    trace_observer_ = std::make_unique<trace::TraceObserver>();
-
-    std::function<void()> on_trace_state_changed = [this] {
-      if (TRACE_CATEGORY_ENABLED("benchmark") && !started_) {
-        started_ = true;
+    WaitForTracing([this] {
         Loop();
-      }
-    };
-
-    // In case tracing has already started.
-    on_trace_state_changed();
-
-    if (!started_) {
-      trace_observer_->Start(loop->async(), on_trace_state_changed);
-    }
+      });
   }
 
   void Loop() {
@@ -168,15 +184,35 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
           TRACE_ASYNC_END("benchmark", "story/info", 0);
-          StoryStart();
+          Link();
         });
+  }
+
+  void Link() {
+    story_controller_->GetLink(nullptr, "root", link_.NewRequest());
+    link_watcher_.Watch(&link_);
+    link_watcher_.Continue([this](const fidl::String& json) {
+        if (json == "") {
+          return;
+        }
+
+        const int count = fxl::StringToNumber<int>(json.get());
+
+        // Corresponding TRACE_FLOW_BEGIN() is in the module.
+        TRACE_FLOW_END("benchmark", "link/trans", count);
+
+        if (count == 100) {
+          StoryStop();
+        }
+      });
+
+    StoryStart();
   }
 
   void StoryStart() {
     TRACE_ASYNC_BEGIN("benchmark", "story/start", 0);
     story_watcher_.Continue(modular::StoryState::RUNNING, [this] {
       TRACE_ASYNC_END("benchmark", "story/start", 0);
-      StoryStop();
     });
 
     story_watcher_.Watch(&story_controller_);
@@ -203,17 +239,15 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
   const Settings settings_;
 
-  bool started_{};
-  std::unique_ptr<trace::TraceProvider> trace_provider_;
-  std::unique_ptr<trace::TraceObserver> trace_observer_;
-
   int story_count_{};
 
   StoryWatcherImpl story_watcher_;
+  LinkWatcherImpl link_watcher_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
+  modular::LinkPtr link_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
