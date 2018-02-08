@@ -201,9 +201,9 @@ static zx_status_t aml_gpio_write(void* ctx, uint32_t pin, uint8_t value) {
     uint32_t regval = readl(reg);
 
     if (value) {
-        regval &= ~(1 << pin_index);
-    } else {
         regval |= (1 << pin_index);
+    } else {
+        regval &= ~(1 << pin_index);
     }
 
     writel(regval, reg);
