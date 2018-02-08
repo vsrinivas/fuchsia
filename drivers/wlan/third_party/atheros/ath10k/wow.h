@@ -18,7 +18,7 @@
 
 struct ath10k_wow {
     uint32_t max_num_patterns;
-    struct completion wakeup_completed;
+    completion_t wakeup_completed;
     struct wiphy_wowlan_support wowlan_support;
 };
 

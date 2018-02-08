@@ -209,7 +209,7 @@ int ath10k_htt_init(struct ath10k* ar) {
     return 0;
 }
 
-#define HTT_TARGET_VERSION_TIMEOUT_HZ (3 * HZ)
+#define HTT_TARGET_VERSION_TIMEOUTZ (ZX_SEC(3))
 
 static int ath10k_htt_verify_version(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
@@ -231,16 +231,15 @@ int ath10k_htt_setup(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
     int status;
 
-    init_completion(&htt->target_version_received);
+    htt->target_version_received = COMPLETION_INIT;
 
     status = ath10k_htt_h2t_ver_req_msg(htt);
     if (status) {
         return status;
     }
 
-    status = wait_for_completion_timeout(&htt->target_version_received,
-                                         HTT_TARGET_VERSION_TIMEOUT_HZ);
-    if (status == 0) {
+    if (completion_wait(&htt->target_version_received,
+                        HTT_TARGET_VERSION_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("htt version request timed out\n");
         return -ETIMEDOUT;
     }

@@ -489,7 +489,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar,
              * sending unsolicited messages on the ep 0
              */
             ath10k_warn("HTC rx ctrl still processing\n");
-            complete(&htc->ctl_resp);
+            completion_signal(&htc->ctl_resp);
             goto out;
         }
 
@@ -500,7 +500,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar,
         memcpy(htc->control_resp_buffer, skb->data,
                htc->control_resp_len);
 
-        complete(&htc->ctl_resp);
+        completion_signal(&htc->ctl_resp);
         break;
     case ATH10K_HTC_MSG_SEND_SUSPEND_COMPLETE:
         htc->htc_ops.target_send_suspend_complete(ar);
@@ -579,13 +579,10 @@ static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
 int ath10k_htc_wait_target(struct ath10k_htc* htc) {
     struct ath10k* ar = htc->ar;
     int i, status = 0;
-    unsigned long time_left;
     struct ath10k_htc_msg* msg;
     uint16_t message_id;
 
-    time_left = wait_for_completion_timeout(&htc->ctl_resp,
-                                            ATH10K_HTC_WAIT_TIMEOUT_HZ);
-    if (!time_left) {
+    if (completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         /* Workaround: In some cases the PCI HIF doesn't
          * receive interrupt for the control response message
          * even if the buffer was completed. It is suspected
@@ -598,11 +595,7 @@ int ath10k_htc_wait_target(struct ath10k_htc* htc) {
             ath10k_hif_send_complete_check(htc->ar, i, 1);
         }
 
-        time_left =
-            wait_for_completion_timeout(&htc->ctl_resp,
-                                        ATH10K_HTC_WAIT_TIMEOUT_HZ);
-
-        if (!time_left) {
+        if (completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT) == ZX_ERR_TIMED_OUT) {
             status = -ETIMEDOUT;
         }
     }
@@ -669,7 +662,6 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     struct sk_buff* skb;
     unsigned int max_msg_size = 0;
     int length, status;
-    unsigned long time_left;
     bool disable_credit_flow_ctrl = false;
     uint16_t message_id, service_id, flags = 0;
     uint8_t tx_alloc = 0;
@@ -716,7 +708,7 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     req_msg->flags = flags;
     req_msg->service_id = conn_req->service_id;
 
-    reinit_completion(&htc->ctl_resp);
+    completion_reset(&htc->ctl_resp);
 
     status = ath10k_htc_send(htc, ATH10K_HTC_EP_0, skb);
     if (status) {
@@ -725,9 +717,7 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
     }
 
     /* wait for response */
-    time_left = wait_for_completion_timeout(&htc->ctl_resp,
-                                            ATH10K_HTC_CONN_SVC_TIMEOUT_HZ);
-    if (!time_left) {
+    if (completion_wait(&htc->ctl_resp, ATH10K_HTC_CONN_SVC_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_err("Service connect timeout\n");
         return -ETIMEDOUT;
     }
@@ -899,7 +889,7 @@ int ath10k_htc_init(struct ath10k* ar) {
         return status;
     }
 
-    init_completion(&htc->ctl_resp);
+    htc->ctl_resp = COMPLETION_INIT;
 
     return 0;
 }

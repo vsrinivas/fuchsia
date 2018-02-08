@@ -367,7 +367,7 @@ void ath10k_debug_fw_stats_process(struct ath10k* ar, struct sk_buff* skb) {
         list_splice_tail_init(&stats.vdevs, &ar->debug.fw_stats.vdevs);
     }
 
-    complete(&ar->debug.fw_stats_complete);
+    completion_signal(&ar->debug.fw_stats_complete);
 
 free:
     /* In some cases lists have been spliced and cleared. Free up
@@ -382,7 +382,7 @@ free:
 }
 
 static int ath10k_debug_fw_stats_request(struct ath10k* ar) {
-    unsigned long timeout, time_left;
+    unsigned long timeout;
     int ret;
 
     lockdep_assert_held(&ar->conf_mutex);
@@ -396,7 +396,7 @@ static int ath10k_debug_fw_stats_request(struct ath10k* ar) {
             return -ETIMEDOUT;
         }
 
-        reinit_completion(&ar->debug.fw_stats_complete);
+        completion_reset(&ar->debug.fw_stats_complete);
 
         ret = ath10k_wmi_request_stats(ar, ar->fw_stats_req_mask);
         if (ret) {
@@ -404,10 +404,7 @@ static int ath10k_debug_fw_stats_request(struct ath10k* ar) {
             return ret;
         }
 
-        time_left =
-            wait_for_completion_timeout(&ar->debug.fw_stats_complete,
-                                        1 * HZ);
-        if (!time_left) {
+        if (completion_wait(&ar->debug.fw_stats_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
             return -ETIMEDOUT;
         }
 
@@ -1647,11 +1644,10 @@ static const struct file_operations fops_nf_cal_period = {
 
 static int ath10k_debug_tpc_stats_request(struct ath10k* ar) {
     int ret;
-    unsigned long time_left;
 
     lockdep_assert_held(&ar->conf_mutex);
 
-    reinit_completion(&ar->debug.tpc_complete);
+    completion_reset(&ar->debug.tpc_complete);
 
     ret = ath10k_wmi_pdev_get_tpc_config(ar, WMI_TPC_CONFIG_PARAM);
     if (ret) {
@@ -1659,9 +1655,7 @@ static int ath10k_debug_tpc_stats_request(struct ath10k* ar) {
         return ret;
     }
 
-    time_left = wait_for_completion_timeout(&ar->debug.tpc_complete,
-                                            1 * HZ);
-    if (time_left == 0) {
+    if (completion_wait(&ar->debug.tpc_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
         return -ETIMEDOUT;
     }
 
@@ -1674,7 +1668,7 @@ void ath10k_debug_tpc_stats_process(struct ath10k* ar,
 
     kfree(ar->debug.tpc_stats);
     ar->debug.tpc_stats = tpc_stats;
-    complete(&ar->debug.tpc_complete);
+    completion_signal(&ar->debug.tpc_complete);
 
     spin_unlock_bh(&ar->data_lock);
 }
@@ -2387,8 +2381,8 @@ int ath10k_debug_register(struct ath10k* ar) {
     INIT_DELAYED_WORK(&ar->debug.htt_stats_dwork,
                       ath10k_debug_htt_stats_dwork);
 
-    init_completion(&ar->debug.tpc_complete);
-    init_completion(&ar->debug.fw_stats_complete);
+    ar->debug.tpc_complete = COMPLETION_INIT;
+    ar->debug.fw_stats_complete = COMPLETION_INIT;
 
     debugfs_create_file("fw_stats", 0400, ar->debug.debugfs_phy, ar,
                         &fops_fw_stats);

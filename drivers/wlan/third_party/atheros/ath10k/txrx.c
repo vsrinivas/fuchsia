@@ -32,7 +32,7 @@ static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {
         return;
     }
 
-    /* If the original wait_for_completion() timed out before
+    /* If the original completion_wait() timed out before
      * {data,mgmt}_tx_completed() was called then we could complete
      * offchan_tx_completed for a different skb. Prevent this by using
      * offchan_tx_skb.
@@ -43,7 +43,7 @@ static void ath10k_report_offchan_tx(struct ath10k* ar, struct sk_buff* skb) {
         goto out;
     }
 
-    complete(&ar->offchan_tx_completed);
+    completion_signal(&ar->offchan_tx_completed);
     ar->offchan_tx_skb = NULL; /* just for sanity */
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "completed offchannel skb %pK\n", skb);

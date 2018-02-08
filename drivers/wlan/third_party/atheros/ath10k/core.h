@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-#include <linux/completion.h>
+#include <sync/completion.h>
 #include <linux/if_ether.h>
 #include <linux/pci.h>
 #include <linux/uuid.h>
@@ -161,9 +161,9 @@ struct ath10k_mem_chunk {
 
 struct ath10k_wmi {
     enum ath10k_htc_ep_id eid;
-    struct completion service_ready;
-    struct completion unified_ready;
-    struct completion barrier;
+    completion_t service_ready;
+    completion_t unified_ready;
+    completion_t barrier;
     wait_queue_head_t tx_credits_wq;
     DECLARE_BITMAP(svc_map, WMI_SERVICE_MAX);
     struct wmi_cmd_map* cmd;
@@ -366,7 +366,7 @@ struct ath10k_sta {
 #endif
 };
 
-#define ATH10K_VDEV_SETUP_TIMEOUT_HZ (5 * HZ)
+#define ATH10K_VDEV_SETUP_TIMEOUT (ZX_SEC(5))
 
 enum ath10k_beacon_state {
     ATH10K_BEACON_SCHEDULED = 0,
@@ -466,7 +466,7 @@ struct ath10k_debug {
     struct dentry* debugfs_phy;
 
     struct ath10k_fw_stats fw_stats;
-    struct completion fw_stats_complete;
+    completion_t fw_stats_complete;
     bool fw_stats_done;
 
     unsigned long htt_stats_mask;
@@ -477,7 +477,7 @@ struct ath10k_debug {
     /* used for tpc-dump storage, protected by data-lock */
     struct ath10k_tpc_stats* tpc_stats;
 
-    struct completion tpc_complete;
+    completion_t tpc_complete;
 
     /* protected by conf_mutex */
     uint64_t fw_dbglog_mask;
@@ -786,7 +786,7 @@ struct ath10k {
         const struct ath10k_hif_ops* ops;
     } hif;
 
-    struct completion target_suspend;
+    completion_t target_suspend;
 
     const struct ath10k_hw_regs* regs;
     const struct ath10k_hw_ce_regs* hw_ce_regs;
@@ -827,9 +827,9 @@ struct ath10k {
     enum ath10k_cal_mode cal_mode;
 
     struct {
-        struct completion started;
-        struct completion completed;
-        struct completion on_channel;
+        completion_t started;
+        completion_t completed;
+        completion_t on_channel;
         struct delayed_work timeout;
         enum ath10k_scan_state state;
         bool is_roc;
@@ -871,9 +871,9 @@ struct ath10k {
     uint8_t cfg_tx_chainmask;
     uint8_t cfg_rx_chainmask;
 
-    struct completion install_key_done;
+    completion_t install_key_done;
 
-    struct completion vdev_setup_done;
+    completion_t vdev_setup_done;
 
     struct workqueue_struct* workqueue;
     /* Auxiliary workqueue */
@@ -909,7 +909,7 @@ struct ath10k {
 
     struct work_struct offchan_tx_work;
     struct sk_buff_head offchan_tx_queue;
-    struct completion offchan_tx_completed;
+    completion_t offchan_tx_completed;
     struct sk_buff* offchan_tx_skb;
 
     struct work_struct wmi_mgmt_tx_work;
@@ -934,7 +934,7 @@ struct ath10k {
      * avoid reporting garbage data.
      */
     bool ch_info_can_report_survey;
-    struct completion bss_survey_done;
+    completion_t bss_survey_done;
 
     struct dfs_pattern_detector* dfs_detector;
 

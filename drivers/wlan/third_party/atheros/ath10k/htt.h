@@ -1584,7 +1584,7 @@ struct ath10k_htt {
 
     uint8_t target_version_major;
     uint8_t target_version_minor;
-    struct completion target_version_received;
+    completion_t target_version_received;
     uint8_t max_num_amsdu;
     uint8_t max_num_ampdu;
 

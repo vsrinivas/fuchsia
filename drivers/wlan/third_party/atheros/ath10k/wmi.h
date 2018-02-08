@@ -2062,8 +2062,8 @@ struct wmi_10x_service_ready_event {
     struct wlan_host_mem_req mem_reqs[0];
 } __packed;
 
-#define WMI_SERVICE_READY_TIMEOUT_HZ (5 * HZ)
-#define WMI_UNIFIED_READY_TIMEOUT_HZ (5 * HZ)
+#define WMI_SERVICE_READY_TIMEOUT (ZX_SEC(5))
+#define WMI_UNIFIED_READY_TIMEOUT (ZX_SEC(5))
 
 struct wmi_ready_event {
     uint32_t sw_version;

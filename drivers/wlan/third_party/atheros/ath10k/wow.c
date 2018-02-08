@@ -182,7 +182,7 @@ static int ath10k_wow_enable(struct ath10k* ar) {
 
     lockdep_assert_held(&ar->conf_mutex);
 
-    reinit_completion(&ar->target_suspend);
+    completion_reset(&ar->target_suspend);
 
     ret = ath10k_wmi_wow_enable(ar);
     if (ret) {
@@ -190,8 +190,7 @@ static int ath10k_wow_enable(struct ath10k* ar) {
         return ret;
     }
 
-    ret = wait_for_completion_timeout(&ar->target_suspend, 3 * HZ);
-    if (ret == 0) {
+    if (completion_wait(&ar->target_suspend, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("timed out while waiting for suspend completion\n");
         return -ETIMEDOUT;
     }
@@ -204,7 +203,7 @@ static int ath10k_wow_wakeup(struct ath10k* ar) {
 
     lockdep_assert_held(&ar->conf_mutex);
 
-    reinit_completion(&ar->wow.wakeup_completed);
+    completion_reset(&ar->wow.wakeup_completed);
 
     ret = ath10k_wmi_wow_host_wakeup_ind(ar);
     if (ret) {
@@ -213,8 +212,7 @@ static int ath10k_wow_wakeup(struct ath10k* ar) {
         return ret;
     }
 
-    ret = wait_for_completion_timeout(&ar->wow.wakeup_completed, 3 * HZ);
-    if (ret == 0) {
+    if (completion_wait(&ar->wow.wakeup_completed, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("timed out while waiting for wow wakeup completion\n");
         return -ETIMEDOUT;
     }
