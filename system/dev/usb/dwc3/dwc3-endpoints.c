@@ -43,7 +43,7 @@ zx_status_t dwc3_ep_fifo_init(dwc3_t* dwc, unsigned ep_num) {
     dwc3_fifo_t* fifo = &ep->fifo;
 
     static_assert(EP_FIFO_SIZE <= PAGE_SIZE, "");
-    zx_status_t status = io_buffer_init(&fifo->buffer, EP_FIFO_SIZE, IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init(&fifo->buffer, EP_FIFO_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         return status;
     }
