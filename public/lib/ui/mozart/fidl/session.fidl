@@ -1,0 +1,25 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module ui_mozart;
+
+import "lib/ui/mozart/fidl/commands.fidl";
+import "lib/ui/mozart/fidl/events.fidl";
+
+// Client use Sessions to interact with a Mozart instance by enqueuing commands
+// that create or modify resources.
+interface Session {
+  Enqueue@0(array<Command> cmds);
+  Present@1();
+};
+
+// Listens for events which occur within the session.
+interface SessionListener {
+  // Called when an error has occurred and the session will be torn down.
+  OnError@0(string error);
+
+  // Called to deliver a batch of one or more events to the listener.
+  // Use |SetEventMaskOp| to enable event delivery for a resource.
+  OnEvent@1(array<Event> events);
+};

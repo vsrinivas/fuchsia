@@ -93,6 +93,21 @@ package("scene_manager") {
   ]
 }
 
+package("mozart") {
+  deps = [
+    "mozart",
+  ]
+
+  binary = "mozart"
+
+  meta = [
+    {
+      path = rebase_path("mozart/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+}
+
 package("mozart_tools") {
   system_image = true
 

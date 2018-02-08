@@ -1,0 +1,47 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# To build a different Mozart-y executable, cut'n'paste the
+# declare_args() and executable("mozart") into a different
+# BUILD.gn and then modify the args and the executable name,
+# as desired.
+
+declare_args() {
+  enable_value_subsystem = false
+  enable_scenic_subsystem = false
+  enable_sketchy_subsystem = false
+  enable_dummy_subsystem = true
+}
+
+executable("mozart") {
+  sources = [
+    "//garnet/bin/ui/mozart/app.cc",
+    "//garnet/bin/ui/mozart/app.h",
+    "//garnet/bin/ui/mozart/main.cc",
+  ]
+
+  deps = [ "//garnet/bin/ui/mozart:base_deps" ]
+  defines = []
+
+  if (enable_scenic_subsystem) {
+    defines += [ "MOZART_ENABLE_SCENIC_SUBSYSTEM"]
+    deps += [ "//garnet/lib/ui/scenic:system" ]
+  }
+
+  if (enable_dummy_subsystem) {
+    defines += [ "MOZART_ENABLE_DUMMY_SUBSYSTEM"]
+    deps += [ "//garnet/lib/ui/mozart/tests:dummy_system" ]
+  }
+}
+
+source_set("base_deps") {
+  public_deps = [
+    "//garnet/lib/ui/mozart",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/trace-provider",
+  ]
+}

@@ -8,6 +8,7 @@
     ],
     "packages": {
         "ime_service": "//garnet/bin/ui:ime_service",
+        "mozart": "//garnet/bin/ui:mozart",
         "mozart_tests": "//garnet/bin/ui:mozart_tests",
         "mozart_tools": "//garnet/bin/ui:mozart_tools",
         "root_presenter": "//garnet/bin/ui:root_presenter",

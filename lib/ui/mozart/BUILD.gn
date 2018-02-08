@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mozart") {
+  sources = [
+    "clock.cc",
+    "clock.h",
+    "command_dispatcher.cc",
+    "command_dispatcher.h",
+    "mozart.cc",
+    "mozart.h",
+    "session.cc",
+    "session.h",
+    "system.cc",
+    "system.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/mozart/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
+  ]
+}
