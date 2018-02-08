@@ -1,18 +1,14 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
-
-using modular::testing::TestPoint;
 
 namespace {
 
-// The NullModule just sits there and does nothing until it's terminated.
+// This Module just sits there and does nothing until it's terminated.
 class NullModule {
  public:
   NullModule(
@@ -20,21 +16,15 @@ class NullModule {
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host_->application_context(), __FILE__);
     module_host_->module_context()->Ready();
-    initialized_.Pass();
   }
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    stopped_.Pass();
-    modular::testing::Done(done);
+    done();
   }
 
  private:
-  TestPoint initialized_{"Null module initialized"};
-  TestPoint stopped_{"Null module stopped"};
-
   modular::ModuleHost* const module_host_;
 };
 

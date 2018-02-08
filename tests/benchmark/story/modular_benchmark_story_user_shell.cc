@@ -36,7 +36,7 @@ class Settings {
     }
 
     module_url = command_line.GetOptionValueWithDefault(
-        "module_url", "file:///system/test/modular_tests/common_null_module");
+        "module_url", "file:///system/test/modular_tests/modular_benchmark_story_module");
   }
 
   int story_count{0};

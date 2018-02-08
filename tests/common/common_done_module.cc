@@ -4,9 +4,7 @@
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -18,7 +16,7 @@ namespace {
 class DoneModule {
  public:
   DoneModule(
-      modular::ModuleHost* module_host,
+      modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
@@ -38,7 +36,7 @@ class DoneModule {
   TestPoint initialized_{"Null module initialized"};
   TestPoint stopped_{"Null module stopped"};
 
-  modular::ModuleHost* module_host_;
+  modular::ModuleHost* const module_host_;
 };
 
 }  // namespace

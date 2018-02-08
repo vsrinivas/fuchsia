@@ -17,6 +17,10 @@ package("modular_benchmarks") {
 
   tests = [
     {
+      name = "modular_benchmark_story_module"
+      dest = "modular_tests/modular_benchmark_story_module"
+    },
+    {
       name = "modular_benchmark_story.tspec"
       dest = "modular_tests/modular_benchmark_story.tspec"
     },

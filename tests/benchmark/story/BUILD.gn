@@ -8,8 +8,22 @@ group("story") {
   testonly = true
 
   public_deps = [
+    ":modular_benchmark_story_module",
     ":modular_benchmark_story_tspec",
     ":modular_benchmark_story_user_shell",
+  ]
+}
+
+executable("modular_benchmark_story_module") {
+  testonly = true
+
+  sources = [
+    "modular_benchmark_story_module.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
   ]
 }
 
