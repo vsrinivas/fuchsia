@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fbl/type_support.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
@@ -35,27 +36,27 @@ static zx_status_t guest_get_resource(zx_handle_t* resource) {
 zx_status_t Guest::Init(size_t mem_size) {
     zx_status_t status = phys_mem_.Init(mem_size);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create guest physical memory.\n");
+        fprintf(stderr, "Failed to create guest physical memory\n");
         return status;
     }
 
     zx_handle_t resource;
     status = guest_get_resource(&resource);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to get hypervisor resource.\n");
+        fprintf(stderr, "Failed to get hypervisor resource\n");
         return status;
     }
 
     status = zx_guest_create(resource, 0, phys_mem_.vmo(), &guest_);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create guest.\n");
+        fprintf(stderr, "Failed to create guest\n");
         return status;
     }
     zx_handle_close(resource);
 
     status = zx::port::create(0, &port_);
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create port.\n");
+        fprintf(stderr, "Failed to create port\n");
         return status;
     }
 
@@ -130,7 +131,7 @@ static constexpr uint32_t trap_kind(TrapType type) {
     case TrapType::PIO_ASYNC:
         return ZX_GUEST_TRAP_IO;
     default:
-        ZX_PANIC("Unhandled TrapType %d.\n",
+        ZX_PANIC("Unhandled TrapType %d\n",
                  static_cast<fbl::underlying_type<TrapType>::type>(type));
         return 0;
     }
@@ -145,7 +146,7 @@ static constexpr zx_handle_t get_trap_port(TrapType type, zx_handle_t port) {
     case TrapType::MMIO_SYNC:
         return ZX_HANDLE_INVALID;
     default:
-        ZX_PANIC("Unhandled TrapType %d.\n",
+        ZX_PANIC("Unhandled TrapType %d\n",
                  static_cast<fbl::underlying_type<TrapType>::type>(type));
         return ZX_HANDLE_INVALID;
     }
@@ -177,8 +178,13 @@ void Guest::RegisterVcpuFactory(VcpuFactory factory) {
 }
 
 zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
+    fbl::AutoLock lock(&mutex_);
     if (id >= kMaxVcpus) {
         return ZX_ERR_INVALID_ARGS;
+    }
+    if (vcpus_[0] == nullptr && id != 0) {
+        fprintf(stderr, "VCPU-0 must be started before other VCPUs\n");
+        return ZX_ERR_BAD_STATE;
     }
     if (vcpus_[id] != nullptr) {
         return ZX_ERR_ALREADY_EXISTS;

@@ -17,6 +17,37 @@ class Guest;
 
 class Vcpu {
 public:
+    Vcpu() { cnd_init(&state_cnd_); }
+    ~Vcpu() { cnd_destroy(&state_cnd_); }
+
+    // Create a new VCPU for a given guest.
+    //
+    // Upon successful completion the VCPU will be in the state
+    // |WAITING_TO_START|.
+    zx_status_t Create(Guest* guest, zx_vaddr_t entry, uint64_t id);
+
+    // TODO(alexlegg): Remove this once the above is used in Garnet.
+    zx_status_t Create(Guest* guest, zx_vaddr_t entry) { return Create(guest, entry, 0); }
+
+    // Begins VCPU execution.
+    //
+    // If |initial_vcpu_state| is non-null the given state will be written to
+    // the VCPU before execution begins.
+    zx_status_t Start(zx_vcpu_state_t* initial_vcpu_state);
+
+    // Waits for the VCPU to transition to a terminal state.
+    zx_status_t Join();
+
+    // TODO(tjdetwiler): These should be made private as they're not thread-
+    // safe.
+    zx_status_t Interrupt(uint32_t vector);
+
+    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
+    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
+
+    zx_status_t StartSecondaryProcessor(uintptr_t entry, uint64_t id);
+
+private:
     enum class State {
         // No kernel objects have been created.
         UNINITIALIZED = 0,
@@ -48,37 +79,6 @@ public:
         ERROR_ABORTED = 7,
     };
 
-    Vcpu() { cnd_init(&state_cnd_); }
-    ~Vcpu() { cnd_destroy(&state_cnd_); }
-
-    // Create a new VCPU for a given guest.
-    //
-    // Upon successful completion the VCPU will be in the state
-    // |WAITING_TO_START|.
-    zx_status_t Create(Guest* guest, zx_vaddr_t entry, uint64_t id);
-
-    // TODO(alexlegg): Remove this once the above is used in Garnet.
-    zx_status_t Create(Guest* guest, zx_vaddr_t entry) { return Create(guest, entry, 0); }
-
-    // Begins VCPU execution.
-    //
-    // If |initial_vcpu_state| is non-null the given state will be written to
-    // the VCPU before execution begins.
-    zx_status_t Start(zx_vcpu_state_t* initial_vcpu_state);
-
-    // Waits for the VCPU to transition to a terminal state.
-    zx_status_t Join();
-
-    // TODO(tjdetwiler): These should be made private as they're not thread-
-    // safe.
-    zx_status_t Interrupt(uint32_t vector);
-
-    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
-    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
-
-    Guest* guest() const { return guest_; }
-
-private:
     // Entry point for the VCPU on the dedicated VCPU thread. This thread will
     // handle taking the VCPU through the entire VCPU lifecycle and handle any
     // interaction with the VCPU syscalls.

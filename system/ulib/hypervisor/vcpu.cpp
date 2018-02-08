@@ -170,7 +170,7 @@ static zx_status_t handle_io(Vcpu* vcpu, const zx_packet_guest_io_t* io, uint64_
 static zx_status_t handle_vcpu(Vcpu* vcpu, const zx_packet_guest_vcpu_t* packet,
                                uint64_t trap_key) {
     fprintf(stderr, "Got VCPU packet with addr = %lx, apic_id = %ld\n", packet->addr, packet->id);
-    return vcpu->guest()->StartVcpu(packet->addr, packet->id);
+    return vcpu->StartSecondaryProcessor(packet->addr, packet->id);
 }
 
 struct Vcpu::ThreadEntryArgs {
@@ -232,6 +232,8 @@ zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
                 return status;
             }
         }
+
+        SetStateLocked(State::STARTED);
     }
 
     return Loop();
@@ -322,4 +324,12 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return zx_vcpu_write_state(vcpu_, kind, buffer, len);
+}
+
+zx_status_t Vcpu::StartSecondaryProcessor(uintptr_t entry, uint64_t id) {
+    if (id_ != 0) {
+        fprintf(stderr, "Application processors must be started by the base processor\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    return guest_->StartVcpu(entry, id);
 }

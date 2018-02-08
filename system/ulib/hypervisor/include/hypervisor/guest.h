@@ -55,6 +55,8 @@ private:
     // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
     static constexpr size_t kMaxVcpus = 16u;
 
+    fbl::Mutex mutex_;
+
     zx_status_t IoThread();
 
     zx_handle_t guest_ = ZX_HANDLE_INVALID;
