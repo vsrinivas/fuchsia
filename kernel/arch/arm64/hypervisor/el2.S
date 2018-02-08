@@ -476,8 +476,9 @@ FUNCTION_LABEL(el2_hvc_resume)
     msr cnthctl_el2, x10
 
     // Enable floating-point traps.
-    movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
-    msr cptr_el2, x10
+    // TODO(ZX-1685): Re-enable floating-point traps once bug is fixed.
+    // movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
+    // msr cptr_el2, x10
     isb
 
     host_state stp, HS_X18
