@@ -17,6 +17,8 @@
 #ifndef _SWAP_H_
 #define _SWAP_H_
 
+#include <ddk/io-buffer.h>
+
 #define ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX    (512 * 1024)
 #define ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ 12
 #define ATH10K_SWAP_CODE_SEG_NUM_MAX        16
@@ -55,16 +57,17 @@ struct ath10k_swap_code_seg_hw_info {
 
 struct ath10k_swap_code_seg_info {
     struct ath10k_swap_code_seg_hw_info seg_hw_info;
+    io_buffer_t handles[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
     void* virt_address[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
     uint32_t target_addr;
-    dma_addr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
+    zx_paddr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
 };
 
-int ath10k_swap_code_seg_configure(struct ath10k* ar,
-                                   const struct ath10k_fw_file* fw_file);
+zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar,
+        const struct ath10k_fw_file* fw_file);
 void ath10k_swap_code_seg_release(struct ath10k* ar,
                                   struct ath10k_fw_file* fw_file);
-int ath10k_swap_code_seg_init(struct ath10k* ar,
-                              struct ath10k_fw_file* fw_file);
+zx_status_t ath10k_swap_code_seg_init(struct ath10k* ar,
+                                      struct ath10k_fw_file* fw_file);
 
 #endif

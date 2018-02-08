@@ -19,13 +19,18 @@
  * memory to store some of the code segments.
  */
 
+#include <ddk/io-buffer.h>
+#include <zircon/status.h>
+
+#include <string.h>
+
 #include "core.h"
 #include "bmi.h"
 #include "debug.h"
 
-static int ath10k_swap_code_seg_fill(struct ath10k* ar,
-                                     struct ath10k_swap_code_seg_info* seg_info,
-                                     const void* data, size_t data_len) {
+static zx_status_t ath10k_swap_code_seg_fill(struct ath10k* ar,
+        struct ath10k_swap_code_seg_info* seg_info,
+        const void* data, size_t data_len) {
     uint8_t* virt_addr = seg_info->virt_address[0];
     uint8_t swap_magic[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ] = {};
     const uint8_t* fw_data = data;
@@ -48,17 +53,16 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
                  size_left != sizeof(struct ath10k_swap_code_seg_tail))) {
             ath10k_err("refusing to parse invalid tlv length %d\n",
                        payload_len);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         if (payload_len == 0) {
             if (memcmp(swap_item->tail.magic_signature, swap_magic,
                        ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ)) {
                 ath10k_err("refusing an invalid swap file\n");
-                return -EINVAL;
+                return ZX_ERR_INVALID_ARGS;
             }
-            seg_info->target_addr =
-                swap_item->tail.bmi_write_addr;
+            seg_info->target_addr = swap_item->tail.bmi_write_addr;
             break;
         }
 
@@ -70,13 +74,13 @@ static int ath10k_swap_code_seg_fill(struct ath10k* ar,
         total_payload_len += payload_len;
     }
 
-    if (seg_info->target_addr == -1) {
+    if (seg_info->target_addr == (uint32_t)-1) {
         ath10k_err("failed to parse invalid swap file\n");
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     seg_info->seg_hw_info.swap_size = total_payload_len;
 
-    return 0;
+    return ZX_OK;
 }
 
 static void
@@ -93,15 +97,14 @@ ath10k_swap_code_seg_free(struct ath10k* ar,
     }
 
     seg_size = seg_info->seg_hw_info.size;
-    dma_free_coherent(ar->dev, seg_size, seg_info->virt_address[0],
-                      seg_info->paddr[0]);
+    io_buffer_release(&seg_info->handles[0]);
 }
 
 static struct ath10k_swap_code_seg_info*
 ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     struct ath10k_swap_code_seg_info* seg_info;
     void* virt_addr;
-    dma_addr_t paddr;
+    zx_paddr_t paddr;
 
     swap_bin_len = roundup(swap_bin_len, 2);
     if (swap_bin_len > ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX) {
@@ -110,23 +113,25 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
         return NULL;
     }
 
-    seg_info = devm_kzalloc(ar->dev, sizeof(*seg_info), GFP_KERNEL);
+    seg_info = calloc(1, sizeof(*seg_info));
     if (!seg_info) {
         return NULL;
     }
 
-    virt_addr = dma_alloc_coherent(ar->dev, swap_bin_len, &paddr,
-                                   GFP_KERNEL);
-    if (!virt_addr) {
-        ath10k_err("failed to allocate dma coherent memory\n");
+    zx_status_t ret = io_buffer_init(&seg_info->handles[0], swap_bin_len,
+                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to allocate dma memory\n");
         return NULL;
     }
+
+    paddr = io_buffer_phys(&seg_info->handles[0]);
+    virt_addr = io_buffer_virt(&seg_info->handles[0]);
 
     seg_info->seg_hw_info.bus_addr[0] = paddr;
     seg_info->seg_hw_info.size = swap_bin_len;
     seg_info->seg_hw_info.swap_size = swap_bin_len;
-    seg_info->seg_hw_info.num_segs =
-        ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED;
+    seg_info->seg_hw_info.num_segs = ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED;
     seg_info->seg_hw_info.size_log2 = ilog2(swap_bin_len);
     seg_info->virt_address[0] = virt_addr;
     seg_info->paddr[0] = paddr;
@@ -134,13 +139,13 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     return seg_info;
 }
 
-int ath10k_swap_code_seg_configure(struct ath10k* ar,
-                                   const struct ath10k_fw_file* fw_file) {
-    int ret;
+zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar,
+        const struct ath10k_fw_file* fw_file) {
+    zx_status_t ret;
     struct ath10k_swap_code_seg_info* seg_info = NULL;
 
     if (!fw_file->firmware_swap_code_seg_info) {
-        return 0;
+        return ZX_OK;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot found firmware code swap binary\n");
@@ -150,13 +155,13 @@ int ath10k_swap_code_seg_configure(struct ath10k* ar,
     ret = ath10k_bmi_write_memory(ar, seg_info->target_addr,
                                   &seg_info->seg_hw_info,
                                   sizeof(seg_info->seg_hw_info));
-    if (ret) {
-        ath10k_err("failed to write Code swap segment information (%d)\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to write Code swap segment information (%s)\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
 void ath10k_swap_code_seg_release(struct ath10k* ar,
@@ -172,8 +177,8 @@ void ath10k_swap_code_seg_release(struct ath10k* ar,
     fw_file->firmware_swap_code_seg_info = NULL;
 }
 
-int ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file) {
-    int ret;
+zx_status_t ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file) {
+    zx_status_t ret;
     struct ath10k_swap_code_seg_info* seg_info;
     const void* codeswap_data;
     size_t codeswap_len;
@@ -182,26 +187,26 @@ int ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file)
     codeswap_len = fw_file->codeswap_len;
 
     if (!codeswap_len || !codeswap_data) {
-        return 0;
+        return ZX_OK;
     }
 
     seg_info = ath10k_swap_code_seg_alloc(ar, codeswap_len);
     if (!seg_info) {
         ath10k_err("failed to allocate fw code swap segment\n");
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     ret = ath10k_swap_code_seg_fill(ar, seg_info,
                                     codeswap_data, codeswap_len);
 
-    if (ret) {
-        ath10k_warn("failed to initialize fw code swap segment: %d\n",
-                    ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to initialize fw code swap segment: %s\n",
+                    zx_status_get_string(ret));
         ath10k_swap_code_seg_free(ar, seg_info);
         return ret;
     }
 
     fw_file->firmware_swap_code_seg_info = seg_info;
 
-    return 0;
+    return ZX_OK;
 }
