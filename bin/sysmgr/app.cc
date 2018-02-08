@@ -34,6 +34,9 @@ void LaunchWlanstack(app::ServiceProvider* provider) {
   zx::channel h1, h2;
   zx::channel::create(0, &h1, &h2);
   provider->ConnectToService("wlan::WlanService", std::move(h1));
+
+  zx::channel::create(0, &h1, &h2);
+  provider->ConnectToService("wlan::DeviceService", std::move(h1));
 }
 
 }  // namespace

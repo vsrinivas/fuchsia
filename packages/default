@@ -73,6 +73,7 @@
         "garnet/packages/vim",
         "garnet/packages/wlan_tests",
         "garnet/packages/wlanstack",
+        "garnet/packages/wlanstack2",
         "garnet/packages/zircon_benchmarks"
     ]
 }
