@@ -390,6 +390,15 @@ zx_status_t UsbVideoStream::StartStreaming() {
     if (!data_ring_buffer_.virt || streaming_state_ != StreamingState::STOPPED) {
         return ZX_ERR_BAD_STATE;
     }
+
+    // Initialize the state.
+    num_frames_ = 0;
+    cur_frame_state_ = {};
+    // FID of the first seen frame could either be 0 or 1.
+    // Initialize this to -1 so that the first frame will consistently be
+    // detected as a new frame.
+    cur_frame_state_.fid = -1;
+
     zx_status_t status = usb_set_interface(&usb_, iface_num_,
                                            cur_streaming_setting_->alt_setting);
     if (status != ZX_OK) {
@@ -461,21 +470,21 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_PTS) {
         uint32_t new_pts = header.dwPresentationTime;
 
-        if (cur_frame_pts_ != 0 && new_pts != cur_frame_pts_) {
+        if (cur_frame_state_.pts != 0 && new_pts != cur_frame_state_.pts) {
             zxlogf(ERROR, "#%u: PTS changed between payloads, from %u to %u\n",
-            num_frames_, cur_frame_pts_, new_pts);
+            num_frames_, cur_frame_state_.pts, new_pts);
         }
-        cur_frame_pts_ = new_pts;
+        cur_frame_state_.pts = new_pts;
     }
 
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_SCR) {
         uint32_t new_stc = header.scrSourceTimeClock;
 
-        if (cur_frame_stc_ != 0 && new_stc != cur_frame_stc_) {
+        if (cur_frame_state_.stc != 0 && new_stc != cur_frame_state_.stc) {
             zxlogf(ERROR, "#%u: STC changed between payloads, from %u to %u\n",
-            num_frames_, cur_frame_stc_, new_stc);
+            num_frames_, cur_frame_state_.stc, new_stc);
         }
-        cur_frame_stc_ = new_stc;
+        cur_frame_state_.stc = new_stc;
     }
 }
 
@@ -502,39 +511,41 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     }
 
     uint8_t fid = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_FID;
-    // FID is toggled when a new frame begins.
-    if (cur_fid_ != fid) {
-        // Only advance the ring buffer position if the frame had no errors.
-        // TODO(jocelyndang): figure out if we should do something else.
-        if (!cur_frame_error_) {
-            data_ring_buffer_.offset += cur_frame_bytes_;
-            if (data_ring_buffer_.offset >= data_ring_buffer_.size) {
-                data_ring_buffer_.offset -= data_ring_buffer_.size;
-                ZX_DEBUG_ASSERT(data_ring_buffer_.offset < data_ring_buffer_.size);
+    // FID is toggled when a new frame begins. This means any in progress frame
+    // is now complete, and we are currently parsing the header of a new frame.
+    if (cur_frame_state_.fid != fid) {
+        // If the currently stored FID is valid, we've just completed a frame.
+        if (cur_frame_state_.fid >= 0) {
+            // Only advance the ring buffer position if the frame had no errors.
+            // TODO(jocelyndang): figure out if we should do something else.
+            if (!cur_frame_state_.error) {
+                data_ring_buffer_.offset += cur_frame_state_.bytes;
+                if (data_ring_buffer_.offset >= data_ring_buffer_.size) {
+                    data_ring_buffer_.offset -= data_ring_buffer_.size;
+                    ZX_DEBUG_ASSERT(data_ring_buffer_.offset < data_ring_buffer_.size);
+                }
+            }
+
+            if (clock_frequency_hz_ != 0) {
+                zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs\n",
+                       num_frames_,
+                       cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
+                       cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_));
             }
         }
 
-        if (clock_frequency_hz_ != 0) {
-            zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs\n",
-                   num_frames_,
-                   cur_frame_pts_ / static_cast<double>(clock_frequency_hz_),
-                   cur_frame_stc_ / static_cast<double>(clock_frequency_hz_));
-        }
-
+        // Initialize the frame state for the new frame.
+        cur_frame_state_ = {};
+        cur_frame_state_.fid = fid;
         num_frames_++;
-        cur_frame_bytes_ = 0;
-        cur_frame_error_ = false;
-        cur_fid_ = fid;
-        cur_frame_pts_ = 0;
-        cur_frame_stc_ = 0;
     }
-    if (cur_frame_error_) {
+    if (cur_frame_state_.error) {
         zxlogf(ERROR, "skipping payload of invalid frame #%u\n", num_frames_);
         return;
     }
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_ERR) {
         zxlogf(ERROR, "payload of frame #%u had an error bit set\n", num_frames_);
-        cur_frame_error_ = true;
+        cur_frame_state_.error = true;
         return;
     }
 
@@ -543,15 +554,15 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     // Copy the data into the ring buffer;
     uint32_t offset = header.bHeaderLength;
     uint32_t data_size = static_cast<uint32_t>(req->response.actual) - offset;
-    if (cur_frame_bytes_ + data_size > max_frame_size_) {
+    if (cur_frame_state_.bytes + data_size > max_frame_size_) {
         zxlogf(ERROR, "invalid data size %u, cur frame bytes %u, frame size %u\n",
-               data_size, cur_frame_bytes_, max_frame_size_);
-        cur_frame_error_ = true;
+               data_size, cur_frame_state_.bytes, max_frame_size_);
+        cur_frame_state_.error = true;
         return;
     }
 
     // Append the data to the end of the current frame.
-    uint32_t frame_end_offset = data_ring_buffer_.offset + cur_frame_bytes_;
+    uint32_t frame_end_offset = data_ring_buffer_.offset + cur_frame_state_.bytes;
     if (frame_end_offset >= data_ring_buffer_.size) {
         frame_end_offset -= data_ring_buffer_.size;
     }
@@ -566,7 +577,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     if (amt < data_size) {
         usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, offset + amt);
     }
-    cur_frame_bytes_ += data_size;
+    cur_frame_state_.bytes += data_size;
 }
 
 void UsbVideoStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
