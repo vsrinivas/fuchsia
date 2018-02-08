@@ -19,6 +19,16 @@ double Average(const std::vector<double>& samples) {
   return static_cast<double>(sum) / samples.size();
 }
 
+double Min(const std::vector<double>& samples) {
+  auto it = std::min_element(std::cbegin(samples), std::cend(samples));
+  return *it;
+}
+
+double Max(const std::vector<double>& samples) {
+  auto it = std::max_element(std::cbegin(samples), std::cend(samples));
+  return *it;
+}
+
 double StdDev(const std::vector<double>& samples, double average) {
   double sum_of_squared_deltas = 0.0;
   for (auto sample : samples) {
@@ -38,10 +48,12 @@ void OutputSamples(std::ostream& out,
 
   double average = Average(values);
   double std_dev = StdDev(values, average);
+  double min = Min(values);
+  double max = Max(values);
 
   out << "avg " << average << unit << " out of " << values.size()
       << " samples. "
-      << "(std dev " << std_dev << ")";
+      << "(std dev " << std_dev << ", min " << min << ", max " << max << ")";
 }
 
 }  // namespace
