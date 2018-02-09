@@ -13,6 +13,7 @@
 
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/async/cpp/operation.h"
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
@@ -21,9 +22,17 @@
 
 namespace maxwell {
 
-class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
+class ModuleResolverImpl : modular::ModuleResolver,
+                           QueryHandler,
+                           ContextListener {
  public:
   ModuleResolverImpl(modular::EntityResolverPtr entity_resolver);
+  // Constructs a module resolver that uses the provided ContextReader to
+  // monitor for context changes and ...
+  // TODO(MI4-802): provide suggestions for modules that are compatible with the
+  // current context.
+  ModuleResolverImpl(modular::EntityResolverPtr entity_resolver,
+                     ContextReaderPtr context_reader);
   ~ModuleResolverImpl() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
@@ -48,6 +57,9 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
 
   // |QueryHandler|
   void OnQuery(UserInputPtr query, const OnQueryCallback& done) override;
+
+  // |ContextListener|
+  void OnContextUpdate(ContextUpdatePtr update) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name,
@@ -87,6 +99,11 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   NounTypeInferenceHelper type_helper_;
 
   modular::OperationCollection operations_;
+
+  // The context reader that is used to suggest modules compatible with the
+  // current context.
+  ContextReaderPtr context_reader_;
+  fidl::Binding<ContextListener> context_listener_binding_;
 
   fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);

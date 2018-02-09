@@ -40,8 +40,14 @@ class ModuleResolverApp {
     modular::EntityResolverPtr entity_resolver;
     component_context->GetEntityResolver(entity_resolver.NewRequest());
 
-    resolver_impl_ =
-        std::make_unique<ModuleResolverImpl>(std::move(entity_resolver));
+    IntelligenceServicesPtr intelligence_services;
+    context->ConnectToEnvironmentService(intelligence_services.NewRequest());
+
+    ContextReaderPtr context_reader;
+    intelligence_services->GetContextReader(context_reader.NewRequest());
+
+    resolver_impl_ = std::make_unique<ModuleResolverImpl>(
+        std::move(entity_resolver), std::move(context_reader));
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource(
         "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
@@ -62,8 +68,6 @@ class ModuleResolverApp {
             "cloud-mods", "" /* prefix */));
 
     // Make |resolver_impl_| a query (ask) handler.
-    IntelligenceServicesPtr intelligence_services;
-    context->ConnectToEnvironmentService(intelligence_services.NewRequest());
     fidl::InterfaceHandle<QueryHandler> query_handler;
     resolver_impl_->BindQueryHandler(query_handler.NewRequest());
     intelligence_services->RegisterQueryHandler(std::move(query_handler));

@@ -15,6 +15,8 @@ namespace maxwell {
 
 namespace {
 
+constexpr char kContextListenerEntitiesKey[] = "entities";
+
 // << operator for ModuleResolverImpl::EntryId.
 std::ostream& operator<<(std::ostream& o,
                          const std::pair<std::string, std::string>& id) {
@@ -25,10 +27,27 @@ std::ostream& operator<<(std::ostream& o,
 
 ModuleResolverImpl::ModuleResolverImpl(
     modular::EntityResolverPtr entity_resolver)
+    : ModuleResolverImpl(std::move(entity_resolver), ContextReaderPtr()) {}
+
+ModuleResolverImpl::ModuleResolverImpl(
+    modular::EntityResolverPtr entity_resolver,
+    ContextReaderPtr context_reader)
     : query_handler_binding_(this),
       already_checking_if_sources_are_ready_(false),
       type_helper_(std::move(entity_resolver)),
-      weak_factory_(this) {}
+      context_reader_(std::move(context_reader)),
+      context_listener_binding_(this),
+      weak_factory_(this) {
+  if (context_reader_.is_bound()) {
+    auto query = ContextQuery::New();
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::ENTITY;
+    query->selector[kContextListenerEntitiesKey] = std::move(selector);
+    context_reader_->Subscribe(std::move(query),
+                               context_listener_binding_.NewBinding());
+  }
+}
+
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
 void ModuleResolverImpl::AddSource(
@@ -425,6 +444,21 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
           }
         },
         fxl::TimeDelta::FromSeconds(10));
+  }
+}
+
+void ModuleResolverImpl::OnContextUpdate(ContextUpdatePtr update) {
+  const fidl::Array<ContextValuePtr>& values =
+      update->values[kContextListenerEntitiesKey];
+  if (values.empty()) {
+    return;
+  }
+
+  for (const auto& value : values) {
+    rapidjson::Document document;
+    document.Parse(value->content);
+    FXL_VLOG(1) << "Module resolver observed context update: "
+                << document.GetString();
   }
 }
 
