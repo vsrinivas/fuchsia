@@ -20,8 +20,11 @@ following command:
 curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s <layer>
 ```
 
-This script will bootstrap a development environment for the given layer in a
-directory named after the layer. Upon success, the script should print a message
+This script will bootstrap a development environment for the given layer
+by first creating directories `fuchsia`, then downloading repositories for
+`<layer>` as well as dependent repositories required in building `<layer>`.
+
+Upon success, the script should print a message
 recommending that you add the `.jiri_root/bin` directory to your PATH. Adding
 **jiri** to your PATH is strongly recommended and is assumed by other parts of the
 Fuchsia toolchain.
