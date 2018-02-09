@@ -260,8 +260,8 @@ typedef uint64_t zx_off_t;
 #define ZX_MAX_NAME_LEN           (32)
 
 // Buffer size limits on the cprng syscalls
-#define ZX_CPRNG_DRAW_MAX_LEN        256
-#define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+#define ZX_CPRNG_DRAW_MAX_LEN        4096
+#define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 4096
 
 // interrupt bind flags
 #define ZX_INTERRUPT_REMAP_IRQ       0x1

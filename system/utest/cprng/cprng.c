@@ -41,9 +41,9 @@ bool cprng_test_draw_success(void) {
             num_zeros++;
         }
     }
-    // The probability of getting more than 16 zeros if the buf is 256 bytes
-    // is 6.76 * 10^-16, so probably not gonna happen.
-    EXPECT_LE(num_zeros, 16, "buffer wasn't written to");
+    // The probability of getting more than 64 zeros if the buf is 4096 bytes
+    // is 2.49 * 10^-20, so probably not gonna happen.
+    EXPECT_LE(num_zeros, 64, "buffer wasn't written to");
     END_TEST;
 }
 
