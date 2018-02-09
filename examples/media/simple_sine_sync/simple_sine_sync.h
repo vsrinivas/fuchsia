@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "lib/media/fidl/media_renderer.fidl.h"
+#include <fbl/vmo_mapper.h>
+
+#include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 
 namespace examples {
@@ -15,9 +17,6 @@ class MediaApp {
   ~MediaApp();
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
-  void set_first_pts_delay_ms(int64_t value) {
-    first_pts_delay_ = ZX_MSEC(value);
-  }
   void set_low_water_mark_ms(int64_t value) {
     low_water_mark_ = ZX_MSEC(value);
   }
@@ -32,27 +31,23 @@ class MediaApp {
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();
-  void WriteAudioIntoBuffer(uintptr_t buffer, size_t num_frames);
+  void WriteAudioIntoBuffer(void* buffer, size_t num_frames);
 
   bool RefillBuffer();
 
-  media::MediaPacketPtr CreateMediaPacket(size_t payload_num);
-  bool SendMediaPacket(media::MediaPacketPtr packet);
+  media::AudioPacketPtr CreateAudioPacket(size_t payload_num);
+  bool SendAudioPacket(media::AudioPacketPtr packet);
 
-  bool StartPlayback(zx_time_t reference_time);
   void WaitForPackets(size_t num_packets);
 
-  media::MediaRendererSyncPtr media_renderer_;
-  media::MediaPacketConsumerSyncPtr packet_consumer_;
-  media::MediaTimelineControlPointSyncPtr timeline_control_point_;
+  media::AudioRenderer2SyncPtr audio_renderer_;
 
-  zx::vmo vmo_;
-  uintptr_t mapped_address_ = 0u;
+  fbl::VmoMapper payload_buffer_;
   size_t num_packets_sent_ = 0u;
   zx_time_t start_time_;
+  bool start_time_known_ = false;
 
   bool verbose_ = false;
-  zx_duration_t first_pts_delay_;
   zx_duration_t low_water_mark_;
   zx_duration_t high_water_mark_;
 };

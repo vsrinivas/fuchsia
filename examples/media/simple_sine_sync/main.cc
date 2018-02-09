@@ -11,9 +11,6 @@
 
 namespace {
 
-constexpr char kFirstPtsDelaySwitch[] = "lead";
-constexpr char kFirstPtsDelayDefaultValue[] = "5";
-
 constexpr char kLowWaterMarkSwitch[] = "wake";
 constexpr char kLowWaterMarkDefaultValue[] = "30";
 
@@ -28,11 +25,6 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose"))
     media_app.set_verbose(true);
-
-  std::string first_pts_delay = command_line.GetOptionValueWithDefault(
-      kFirstPtsDelaySwitch, kFirstPtsDelayDefaultValue);
-  media_app.set_first_pts_delay_ms(
-      fxl::StringToNumber<int64_t>(first_pts_delay));
 
   std::string low_water_mark_ms = command_line.GetOptionValueWithDefault(
       kLowWaterMarkSwitch, kLowWaterMarkDefaultValue);

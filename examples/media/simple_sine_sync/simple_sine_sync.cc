@@ -21,8 +21,6 @@ constexpr size_t kMSecsPerPayload = 10;
 constexpr size_t kFramesPerPayload =
     kMSecsPerPayload * kRendererFrameRate / 1000;
 constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
-// Use a single memory section (id 0) that can contain 1 second of our audio.
-constexpr size_t kBufferId = 0;
 constexpr size_t kTotalMappingFrames = kRendererFrameRate;
 constexpr size_t kTotalMappingSize =
     kTotalMappingFrames * kNumChannels * kSampleSize;
@@ -46,10 +44,10 @@ MediaApp::~MediaApp() {}
 // Prepare for playback, compute playback data, supply media packets, start.
 int MediaApp::Run() {
   if (verbose_) {
-    printf("First PTS delay: %ldms\n", first_pts_delay_ / 1000000);
     printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
   }
+
   if (!AcquireRenderer()) {
     FXL_LOG(ERROR) << "Could not acquire renderer";
     return 1;
@@ -61,100 +59,114 @@ int MediaApp::Run() {
     return 2;
   }
 
-  WriteAudioIntoBuffer(mapped_address_, kTotalMappingFrames);
+  WriteAudioIntoBuffer(payload_buffer_.start(), kTotalMappingFrames);
 
-  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC) + first_pts_delay_;
-  RefillBuffer();
-  if (!StartPlayback(start_time_))
-    return 3;
+  // Query the current absolute minimum lead time demanded by the mixer, then
+  // adjust our high and low water marks to stand off by that much as well.
+  //
+  // Note: Since we are using timing to drive this entire example (and not
+  // the occasional asynchronous callback), to be perfectly correct, we would
+  // want to dynamically adjust our lead time in response to changing
+  // conditions.  Sadly, there is really no good way to do this with a purely
+  // single threaded synchronous interface.
+  int64_t min_lead_time;
+  audio_renderer_->GetMinLeadTime(&min_lead_time);
+  low_water_mark_ += min_lead_time;
+  high_water_mark_ += min_lead_time;
+
+  if ((min_lead_time > 0) && verbose_) {
+    printf("Adjusted high and low water marks by min lead time %.3lfms\n",
+        min_lead_time / 1000000.0);
+
+    printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
+    printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
+  }
+
+  constexpr zx_duration_t nsec_per_payload = ZX_MSEC(kMSecsPerPayload);
+  uint32_t initial_payloads = std::min<uint32_t>(
+    (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload,
+    kNumPacketsToSend);
+
+  while (num_packets_sent_ < initial_payloads) {
+    SendAudioPacket(CreateAudioPacket(num_packets_sent_));
+  }
+
+  int64_t ref_start_time;
+  int64_t media_start_time;
+  audio_renderer_->Play(media::AudioPacket::kNoTimestamp,
+                        media::AudioPacket::kNoTimestamp,
+                        &ref_start_time,
+                        &media_start_time);
+  start_time_known_ = true;
+
+  // TODO(johngro): This program is making the assumption that the platform's
+  // default reference clock is CLOCK_MONOTONIC.  While that is (currently)
+  // true, it will not always be so.  When we start to introduce the posibility
+  // that the default audio reference clock is different, we need to come back
+  // and either...
+  //
+  // 1) Explicitly set our reference clock to CLOCK_MONO (causing
+  //    micro-resampling in the mixer to effect clock correction, if needed)
+  // -- OR --
+  // 2) Obtain a handle to the system's default reference clock and use that to
+  //    control timing, instead of blindly using CLOCK_MONO.
+  FXL_DCHECK(ref_start_time >= 0);
+  FXL_DCHECK(media_start_time == 0);
+  start_time_ = static_cast<zx_time_t>(ref_start_time);
 
   while (num_packets_sent_ < kNumPacketsToSend) {
     WaitForPackets(num_packets_sent_);
     RefillBuffer();
   }
+
   WaitForPackets(kNumPacketsToSend);  // Wait for last packet to complete
 
   return 0;
 }
 
-// Connect to AudioServer and MediaRenderer services.
+// Connect to the AudioServer and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
   component::ConnectToEnvironmentService(GetSynchronousProxy(&audio_server));
-
-  // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
-  media::AudioRendererSyncPtr audio_renderer;
-  if (!audio_server->CreateRenderer(GetSynchronousProxy(&audio_renderer),
-                                    GetSynchronousProxy(&media_renderer_))) {
-    return false;
-  }
-
-  return media_renderer_->GetTimelineControlPoint(
-      GetSynchronousProxy(&timeline_control_point_));
+  return audio_server->CreateRendererV2(GetSynchronousProxy(&audio_renderer_));
 }
 
-// Set the Mediarenderer's audio format to stereo 48kHz 16-bit (LPCM).
+// Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetMediaType() {
-  FXL_DCHECK(media_renderer_);
+  FXL_DCHECK(audio_renderer_);
 
-  auto details = media::AudioMediaTypeDetails::New();
-  details->sample_format = media::AudioSampleFormat::SIGNED_16;
-  details->channels = kNumChannels;
-  details->frames_per_second = kRendererFrameRate;
+  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
+  format->sample_format = media::AudioSampleFormat::SIGNED_16;
+  format->channels = kNumChannels;
+  format->frames_per_second = kRendererFrameRate;
 
-  auto media_type = media::MediaType::New();
-  media_type->medium = media::MediaTypeMedium::AUDIO;
-  media_type->encoding = media::MediaType::kAudioEncodingLpcm;
-  media_type->details = media::MediaTypeDetails::New();
-  media_type->details->set_audio(std::move(details));
-
-  if (!media_renderer_->SetMediaType(std::move(media_type)))
-    FXL_LOG(ERROR) << "Could not set media type";
+  if (!audio_renderer_->SetPcmFormat(std::move(format)))
+    FXL_LOG(ERROR) << "Could not set format";
 }
 
 // Create a single Virtual Memory Object, and map enough memory for our audio
 // buffers. Open a PacketConsumer, and send it a duplicate handle of our VMO.
 zx_status_t MediaApp::CreateMemoryMapping() {
-  zx_status_t status = zx::vmo::create(kTotalMappingSize, 0, &vmo_);
+  zx::vmo payload_vmo;
+  zx_status_t status = payload_buffer_.CreateAndMap(
+      kTotalMappingSize,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr,
+      &payload_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::vmo::create failed - " << status;
+    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
     return status;
   }
 
-  status = zx::vmar::root_self().map(
-      0, vmo_, 0, kTotalMappingSize,
-      ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_READ, &mapped_address_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_vmar_map failed - " << status;
-    return status;
-  }
-
-  zx::vmo duplicate_vmo;
-  status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                          &duplicate_vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::handle::duplicate failed - " << status;
-    return status;
-  }
-
-  if (!media_renderer_->GetPacketConsumer(
-          GetSynchronousProxy(&packet_consumer_))) {
-    FXL_LOG(ERROR) << "PacketConsumer connection lost. Quitting.";
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  FXL_DCHECK(packet_consumer_);
-  if (!packet_consumer_->AddPayloadBuffer(kBufferId,
-                                          std::move(duplicate_vmo))) {
-    FXL_LOG(ERROR) << "Could not add payload buffer";
-    return ZX_ERR_UNAVAILABLE;
-  }
+  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
 
   return ZX_OK;
 }
 
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
-void MediaApp::WriteAudioIntoBuffer(uintptr_t buffer, size_t num_frames) {
+void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
   int16_t* audio_buffer = reinterpret_cast<int16_t*>(buffer);
 
   for (size_t frame = 0; frame < num_frames; ++frame) {
@@ -167,14 +179,9 @@ void MediaApp::WriteAudioIntoBuffer(uintptr_t buffer, size_t num_frames) {
 }
 
 // Create a packet for this payload.
-media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
-  auto packet = media::MediaPacket::New();
+media::AudioPacketPtr MediaApp::CreateAudioPacket(size_t payload_num) {
+  auto packet = media::AudioPacket::New();
 
-  packet->pts = (payload_num == 0) ? 0 : media::MediaPacket::kNoTimestamp;
-  packet->pts_rate_ticks = kRendererFrameRate;
-  packet->pts_rate_seconds = 1;
-  packet->flags = 0;
-  packet->payload_buffer_id = kBufferId;
   packet->payload_offset = (payload_num % kNumPayloads) * kPayloadSize;
   packet->payload_size = kPayloadSize;
 
@@ -182,24 +189,24 @@ media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
 }
 
 // Submit a packet, incrementing our count of packets sent.
-bool MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
-  FXL_DCHECK(packet_consumer_);
-
+bool MediaApp::SendAudioPacket(media::AudioPacketPtr packet) {
   if (verbose_) {
-    const float delay = (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_;
-    printf("SendMediaPacket num %zu time %.2f\n", num_packets_sent_,
-           num_packets_sent_ ? delay / 1000000 : (float)-first_pts_delay_);
+    const float delay = (start_time_known_
+                      ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_
+                      : 0) / 1000000;
+    printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
   }
 
   ++num_packets_sent_;
+
   // Note: SupplyPacketNoReply returns immediately, before packet is consumed.
-  return packet_consumer_->SupplyPacketNoReply(std::move(packet));
+  return audio_renderer_->SendPacketNoReply(std::move(packet));
 }
 
 // Stay ahead of the presentation timeline, by the amount high_water_mark_.
 // We must wait until a packet is consumed before reusing its buffer space.
 // For more fine-grained awareness/control of buffers, clients should use the
-// (asynchronous) MediaPacketConsumerPtr interface and call SupplyPacket().
+// (asynchronous) AudioRenderer interface and process callbacks from SendPacket.
 bool MediaApp::RefillBuffer() {
   const zx_duration_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   const zx_duration_t time_data_needed =
@@ -216,7 +223,7 @@ bool MediaApp::RefillBuffer() {
            num_packets_sent_ * kMSecsPerPayload);
   }
   while (num_packets_sent_ < num_payloads_needed) {
-    if (!SendMediaPacket(CreateMediaPacket(num_packets_sent_))) {
+    if (!SendAudioPacket(CreateAudioPacket(num_packets_sent_))) {
       return false;
     }
   }
@@ -224,34 +231,15 @@ bool MediaApp::RefillBuffer() {
   return true;
 }
 
-// Use TimelineConsumer (via TimelineControlPoint) to set playback rate.
-bool MediaApp::StartPlayback(uint64_t reference_time) {
-  media::TimelineConsumerSyncPtr timeline_consumer;
-  timeline_control_point_->GetTimelineConsumer(
-      GetSynchronousProxy(&timeline_consumer));
-
-  auto transform = media::TimelineTransform::New();
-  transform->reference_time = reference_time;
-  transform->subject_time = 0;
-  transform->reference_delta = 1;
-  transform->subject_delta = 1;
-
-  const zx_time_t before = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  bool status =
-      timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
-  if (verbose_) {
-    printf("SetTimelineTransform(%.3fms) at %.3fms took %.2fms, returned %d\n",
-           (float)reference_time / 1000000, (float)before / 1000000,
-           (float)(zx_clock_get(ZX_CLOCK_MONOTONIC) - before) / 1000000, status);
-  }
-  return status;
-}
-
 void MediaApp::WaitForPackets(size_t num_packets) {
-  const zx_duration_t audio_submitted = ZX_MSEC(kMSecsPerPayload) * num_packets;
-  zx_time_t wake_time = start_time_ + audio_submitted - low_water_mark_;
-  if (num_packets >= kNumPacketsToSend)
-    wake_time += (low_water_mark_ - first_pts_delay_);
+  const zx_duration_t audio_submitted
+    = ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
+
+  FXL_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
+  zx_time_t wake_time = start_time_ + audio_submitted;
+  if (num_packets_sent_ < kNumPacketsToSend) {
+    wake_time -= low_water_mark_;
+  }
 
   const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   if (wake_time > now) {
