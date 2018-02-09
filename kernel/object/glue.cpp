@@ -11,6 +11,8 @@
 //
 // TODO(dbort): Split this file into self-consistent pieces.
 
+#include <inttypes.h>
+
 #include <trace.h>
 
 #include <kernel/cmdline.h>

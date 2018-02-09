@@ -12,13 +12,10 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
     $(LOCAL_DIR)/global_prng.cpp \
     $(LOCAL_DIR)/global_prng_unittest.cpp \
-    $(LOCAL_DIR)/hash.cpp \
-    $(LOCAL_DIR)/hash_unittest.cpp \
     $(LOCAL_DIR)/prng.cpp \
     $(LOCAL_DIR)/prng_unittest.cpp
 
 MODULE_DEPS += third_party/lib/uboringssl
-MODULE_DEPS += third_party/lib/cryptolib
 MODULE_DEPS += kernel/lib/explicit-memory
 MODULE_DEPS += kernel/lib/fbl
 MODULE_DEPS += kernel/lib/unittest

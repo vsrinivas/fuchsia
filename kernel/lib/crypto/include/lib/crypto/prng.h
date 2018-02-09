@@ -10,8 +10,8 @@
 #include <stdint.h>
 
 #include <kernel/event.h>
-#include <lib/crypto/cryptolib.h>
 #include <fbl/mutex.h>
+#include <openssl/sha.h>
 
 namespace crypto {
 
@@ -82,7 +82,7 @@ private:
     void DrawInternal(void* out, size_t size);
 
     // ChaCha20 key.
-    uint8_t key_[clSHA256_DIGEST_SIZE];
+    uint8_t key_[SHA256_DIGEST_LENGTH];
 
     // 96-bit ChaCha20 nonce as described in RFC 7539, represented as unsigned
     // integers of different sizes for implementation convenience. Section 9.5/1

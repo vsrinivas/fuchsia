@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
+
 #include <object/job_dispatcher.h>
 
 #include <err.h>

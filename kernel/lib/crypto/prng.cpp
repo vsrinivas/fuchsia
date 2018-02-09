@@ -10,11 +10,11 @@
 #include <string.h>
 
 #include <err.h>
-#include <lib/crypto/cryptolib.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <fbl/auto_lock.h>
 #include <openssl/chacha.h>
+#include <openssl/sha.h>
 #include <pow2.h>
 
 namespace crypto {
@@ -49,17 +49,17 @@ void PRNG::AddEntropy(const void* data, size_t size) {
 }
 
 static_assert(PRNG::kMaxEntropy <= INT_MAX, "bad entropy limit");
-static_assert(sizeof(uint32_t) * 2 <= clSHA256_DIGEST_SIZE, "digest too small");
+static_assert(sizeof(uint32_t) * 2 <= SHA256_DIGEST_LENGTH, "digest too small");
 void PRNG::AddEntropyInternal(const void* data, size_t size) {
     ASSERT(size < kMaxEntropy);
-    clSHA256_CTX ctx;
-    clSHA256_init(&ctx);
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
     // We mix all of the entropy with the previous key to make the PRNG state
     // depend on both the entropy added and the sequence in which it was added.
-    clHASH_update(&ctx, data, static_cast<int>(size));
-    clHASH_update(&ctx, key_, sizeof(key_));
-    static_assert(clSHA256_DIGEST_SIZE <= sizeof(key_), "key too small");
-    memcpy(key_, clHASH_final(&ctx), clSHA256_DIGEST_SIZE);
+    SHA256_Update(&ctx, data, size);
+    SHA256_Update(&ctx, key_, sizeof(key_));
+    static_assert(SHA256_DIGEST_LENGTH <= sizeof(key_), "key too small");
+    SHA256_Final(key_, &ctx);
     total_entropy_added_ += size;
 }
 
