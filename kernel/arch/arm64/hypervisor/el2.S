@@ -325,6 +325,12 @@ FUNCTION(arm64_el2_on)
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
+    // Setup the EL2 translation table.
+    msr ttbr0_el2, x0
+
+    // Setup the EL2 stack pointer.
+    mov sp, x1
+
     // Load PARange from ID_AA64MMFR0_EL1.
     mrs x10, id_aa64mmfr0_el1
     and x10, x10, ID_AA64MMFR0_EL1_PARANGE_MASK
@@ -345,28 +351,20 @@ FUNCTION_LABEL(el2_hvc_on)
     // Setup the EL2 memory attributes.
     movlit x9, MMU_MAIR_VAL
     msr mair_el2, x9
-
-    // Setup the EL2 translation table.
-    msr ttbr0_el2, x0
-    isb
-
-    // Enable the MMU, I-cache, D-cache, and all alignment checking.
-    movlit x9, SCTLR_ELX_M | SCTLR_ELX_A | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | \
-               SCTLR_EL2_RES1
-    msr sctlr_el2, x9
     isb
 
     // Invalidate all EL2 TLB entries.
     tlbi alle2
-    isb
+    dsb sy
 
-    // Setup the EL2 stack pointer.
-    mov sp, x1
+    // Enable the MMU, I-cache, D-cache, and stack alignment checking.
+    movlit x9, SCTLR_ELX_M | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
+    msr sctlr_el2, x9
+    isb
 
     // Setup the exec vector table for EL2.
     adr_global x9, arm64_el2_exec_table
     msr vbar_el2, x9
-    isb
 
     exception_return ZX_OK
 
@@ -383,8 +381,8 @@ FUNCTION(arm64_el2_off)
     ret
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
-    // Disable the MMU, but enable I-cache, D-cache, and all alignment checking.
-    movlit x9, SCTLR_ELX_A | SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
+    // Disable the MMU, but enable I-cache, D-cache, and stack alignment checking.
+    movlit x9, SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
     msr sctlr_el2, x9
     isb
 
