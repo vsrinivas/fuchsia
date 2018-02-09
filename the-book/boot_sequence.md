@@ -18,22 +18,22 @@ that environment. Typically, these applications create environments nested
 directly in the root environment. The default configuration contains one initial
 app: `bootstrap`.
 
-# Layer 2: [bootstrap](https://fuchsia.googlesource.com/garnet/+/master/bin/bootstrap/)
+# Layer 2: [sysmgr](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/)
 
-`bootstrap`'s job is to create the boot environment and create a number of
+`sysmgr`'s job is to create the boot environment and create a number of
  initial applications in the boot environment.
 
-The services that `bootstrap` offers in the boot environment are not provided by
-bootstrap itself. Instead, when bootstrap receives a request for a service for
-the first time, `bootstrap` lazily creates the appropriate app to implement that
+The services that `sysmgr` offers in the boot environment are not provided by
+bootstrap itself. Instead, when `sysmgr` receives a request for a service for
+the first time, `sysmgr` lazily creates the appropriate app to implement that
 service and routes the request to that app. The table of which applications
 implement which services is contained in the
 `/system/data/bootstrap/services.config` file. Subsequent requests for the same
 service are routed to the already running app. If the app terminates,
-`bootstrap` will start it again the next time it receives a request for a
+`sysmgr` will start it again the next time it receives a request for a
 service implemented by that app.
 
-`bootstrap` also runs a number of applications in the boot environment at
+`sysmgr` also runs a number of applications in the boot environment at
 startup. The list of applications to run at startup is contained in the
 `/system/data/bootstrap/apps.config` file.
 
@@ -60,4 +60,3 @@ user's id token and with a namespace that is mapped within and managed by
 
 Logging-in as a guest user (in incognito mode) starts an instance of
 `user_runner` but without an id token and a temporary namespace.
-

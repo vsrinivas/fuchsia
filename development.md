@@ -24,10 +24,11 @@ Build system (**TODO**: should these docs be merged?):
 
 Language-specific workflow guides:
 
- - [Dart](dart.md)
+ - [C/C++](development/languages/c-cpp/README.md)
+ - [Dart](development/languages/dart/README.md)
  - [Flutter modules][flutter_module] - how to write a graphical module using
    Flutter
- - [Rust](rust.md)
+ - [Rust](development/languages/rust/README.md)
 
 ## Development hardware
 
@@ -48,13 +49,10 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Documentation standards](documentation_standards.md)
  - [Testing best practices][testing_best_practices]
 
-Language-specific conventions:
-
- - [Naming C/C++ objects](languages/c-cpp/naming.md)
 
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md "Intel NUC"
-[pixelbook]: /hardware/pixelbook.md "Pixelbook"
+[pixelbook]: /development/hardware/pixelbook.md "Pixelbook"
 [flutter_module]: https://fuchsia.googlesource.com/peridot/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [testing_best_practices]: /best-practices/testing.md "Testing best practices"
 [Tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md

@@ -89,7 +89,7 @@ qualities suitable for user interfaces.
 
 The Fuchsia Archive Format is a container for files to be used by Zircon and Fuchsia.
 It will replace Zircon's older BootFS container and be used in Fuchsia Packages.
-- [FAR Spec](/archive_format.md)
+- [FAR Spec](the-book/archive_format.md)
 
 #### **fdio**
 
@@ -119,7 +119,7 @@ Fuchsia Volume Manager is a partition manager providing dynamically allocated
 groups of blocks known as slices into a virtual block address space. The
 FVM partitions provide a block interface enabling filesystems to interact
 with it in a manner largely consistent with a regular block device.
-- [Filesystems](filesystems.md)
+- [Filesystems](the-book/filesystems.md)
 
 #### **Garnet**
 
@@ -159,7 +159,7 @@ TODO(cpu): add definition
 
 #### **Launchpad**
 
-[Launchpad](launchpad.md) is a library provided by Zircon that provides the
+[Launchpad](the-book/launchpad.md) is a library provided by Zircon that provides the
 functionality to create and start new processes (including loading ELF binaries,
 passing initial RPC messages needed by runtime init, etc).  It is a low-level
 library and over time it is expected that few pieces of code will make direct
@@ -209,7 +209,7 @@ Fuchsia's standard C library (libc) is based on Musl Libc.
 A namespace is the composite hierarchy of files, directories, sockets, [service](#Service)s,
 and other named objects which are offered to application components by their
 [environment](#Environment).
-- [Fuchsia Namespace Spec](namespaces.md)
+- [Fuchsia Namespace Spec](the-book/namespaces.md)
 
 #### **Netstack**
 

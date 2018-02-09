@@ -7,10 +7,10 @@ documentation.
  - [Glossary](glossary.md) - definitions of commonly used terms
  - [Development](development.md) - instructions for building, running and testing
    Fuchsia and software that runs on Fuchsia
- - [System](book.md) - documentation for how Fuchsia works
+ - [System](the-book/README.md) - documentation for how Fuchsia works
+ - [Repository map](map.md)
 
 Other files in this repository are **system-wide** documentation articles for
 Fuchsia. **Individual subprojects** have their own documentation within each
 project repository. The articles above link to Individual documents both within
 the system-wide repository and within Individual project repositories.
-

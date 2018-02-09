@@ -28,7 +28,7 @@ runs amounts to configuring the process's namespace.
 ## Archives and namespaces
 
 In our current implementation, a process runs in a sandbox if its binary is
-contained in an archive (i.e., a [FAR](glossary.md#FAR)). As the package manager
+contained in an archive (i.e., a [FAR](../glossary.md#FAR)). As the package manager
 evolves, these details are likely to change.
 
 An application run from an archive is given access to two namespaces by default:
@@ -69,7 +69,7 @@ framebuffer driver:
 }
 ```
 
-In the current implementation, the [AppMgr](glossary.md#AppMgr) grants all such
+In the current implementation, the [AppMgr](../glossary.md#AppMgr) grants all such
 requests, but that is likely to change as the system evolves.
 
 ## Building an archive
