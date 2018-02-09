@@ -230,7 +230,7 @@ static int completer_thread(void *arg) {
             zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             break;
         }
-        if (slots & ZX_INTERRUPT_SLOT_USER) {
+        if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
             break;
         }
         if (atomic_load(&completer->xhci->suspended)) {

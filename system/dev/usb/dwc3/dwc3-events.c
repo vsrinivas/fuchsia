@@ -191,7 +191,7 @@ static int dwc3_irq_thread(void* arg) {
             zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d\n", status);
             break;
         }
-        if (slots & ZX_INTERRUPT_SLOT_USER) {
+        if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
             break;
         }
 
