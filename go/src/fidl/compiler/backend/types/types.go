@@ -158,7 +158,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
+		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
+		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
+		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
+		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
+		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
 		}
