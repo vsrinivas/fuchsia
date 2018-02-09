@@ -1004,8 +1004,6 @@ RUN_TEST((multi_zero_buffer_succeeds<ZX_INFO_PROCESS_THREADS, get_test_process>)
 RUN_TEST((invalid_handle_fails<ZX_INFO_THREAD_EXCEPTION_REPORT, zx_exception_report_t>));
 
 // TODO(dbort): Test resource topics
-// RUN_MULTI_ENTRY_TESTS(ZX_INFO_RESOURCE_CHILDREN, zx_rrec_t, get_root_resource);
-// RUN_MULTI_ENTRY_TESTS(ZX_INFO_RESOURCE_RECORDS, zx_rrec_t, get_root_resource);
 // RUN_MULTI_ENTRY_TESTS(ZX_INFO_CPU_STATS, zx_info_cpu_stats_t, get_root_resource);
 // RUN_SINGLE_ENTRY_TESTS(ZX_INFO_KMEM_STATS, zx_info_kmem_stats_t, get_root_resource);
 

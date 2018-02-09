@@ -134,24 +134,6 @@ but note that an external thread can create new threads.
 *avail* will contain the total number of threads of the process at
 the time the list of threads was obtained, it could be larger than *actual*.
 
-### ZX_INFO_RESOURCE_CHILDREN
-
-*handle* type: **Resource**
-
-*buffer* type: **zx_rrec_t[n]**
-
-Returns an array of *zx_rrec_t*, one for each child Resource of the provided
-Resource handle.
-
-### ZX_INFO_RESOURCE_RECORDS
-
-*handle* type: **Resource**
-
-*buffer* type: **zx_rrec_t[n]**
-
-Returns an array of *zx_rrec_t*, one for each Record associated with the
-provided Resource handle.
-
 ### ZX_INFO_THREAD
 
 *handle* type: **Thread**
@@ -217,6 +199,58 @@ response, then this returns the exception report as a single
 Returns **ZX_ERR_BAD_STATE** if the thread is not in an exception and waiting for
 an exception response.
 
+### ZX_INFO_THREAD_STATS
+
+*handle* type: **Thread**
+
+*buffer* type: **zx_info_thread_stats[1]**
+
+```
+typedef struct zx_info_thread_stats {
+    // Total accumulated running time of the thread.
+    zx_duration_t total_runtime;
+} zx_info_thread_stats_t;
+```
+
+
+### ZX_INFO_CPU_STATS
+
+Note: many values of this topic are being retired in favor of a different mechanism.
+
+*handle* type: **Resource** (Specifically, the root resource)
+
+*buffer* type: **zx_info_cpu_stats_t[1]**
+
+```
+typedef struct zx_info_cpu_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+
+    zx_duration_t idle_time;
+
+    // kernel scheduler counters
+    uint64_t reschedules;
+    uint64_t context_switches;
+    uint64_t irq_preempts;
+    uint64_t preempts;
+    uint64_t yields;
+
+    // cpu level interrupts and exceptions
+    uint64_t ints;          // hardware interrupts, minus timer interrupts
+                            // inter-processor interrupts
+    uint64_t timer_ints;    // timer interrupts
+    uint64_t timers;        // timer callbacks
+    uint64_t page_faults;   // (deprecated, returns 0)
+    uint64_t exceptions;    // (deprecated, returns 0)
+    uint64_t syscalls;
+
+    // inter-processor interrupts
+    uint64_t reschedule_ipis;
+    uint64_t generic_ipis;
+} zx_info_cpu_stats_t;
+```
+
+
 ### ZX_INFO_VMAR
 
 *handle* type: **VM Address Region**
@@ -257,9 +291,9 @@ provided Job handle.
 
 *buffer* type: **zx_info_task_stats_t[1]**
 
+Returns statistics about resources (e.g., memory) used by a task.
+
 ```
-// Statistics about resources (e.g., memory) used by a task. Can be relatively
-// expensive to gather.
 typedef struct zx_info_task_stats {
     // The total size of mapped memory ranges in the task.
     // Not all will be backed by physical memory.
@@ -415,9 +449,9 @@ the VMOs of arbitrary processes by koid.
 
 *buffer* type: **zx_info_kmem_stats_t[1]**
 
+Returns information about kernel memory usage. It can be expensive to gather.
+
 ```
-// Information about kernel memory usage.
-// Can be expensive to gather.
 typedef struct zx_info_kmem_stats {
     // The total amount of physical memory available to the system.
     size_t total_bytes;
@@ -453,6 +487,32 @@ typedef struct zx_info_kmem_stats {
     size_t other_bytes;
 } zx_info_kmem_stats_t;
 ```
+
+
+### ZX_INFO_RESOURCE
+
+*handle* type: **Resource**
+*buffer* type: **zx_info_resource_t[1]**
+
+Returns information about a resource object via its handle.
+
+```
+typedef struct zx_info_resource {
+    // The resource kind
+    uint32_t kind;
+    // Resource's low value (inclusive)
+    uint64_t low;
+    // Resource's high value (inclusive)
+    uint64_t high;
+} zx_info_resource_t;
+```
+
+The resource kind is one of
+
+*   *ZX_RSRC_KIND_ROOT*
+*   *ZX_RSRC_KIND_MMIO*
+*   *ZX_RSRC_KIND_IOPORT*
+*   *ZX_RSRC_KIND_IRQ*
 
 ## RETURN VALUE
 

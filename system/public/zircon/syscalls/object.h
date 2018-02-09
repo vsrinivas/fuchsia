@@ -120,7 +120,7 @@ typedef struct zx_info_thread {
 
 typedef struct zx_info_thread_stats {
     // Total accumulated running time of the thread.
-    zx_time_t total_runtime;
+    zx_duration_t total_runtime;
 } zx_info_thread_stats_t;
 
 // Statistics about resources (e.g., memory) used by a task. Can be relatively
@@ -285,7 +285,7 @@ typedef struct zx_info_cpu_stats {
     uint32_t cpu_number;
     uint32_t flags;
 
-    zx_time_t idle_time;
+    zx_duration_t idle_time;
 
     // kernel scheduler counters
     uint64_t reschedules;
