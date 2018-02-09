@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Run various checks to determine the health of a Fuchsia checkout.
+
+## usage: fx doctor
+
+# The goal of this script is to detect common issues with a Fuchsia
+# checkout. For example, on OS X the xcode command line tool
+# installation often lapses. Ensuring that `xcode select --install` is
+# run as part of a checkout or build is problematic: the step involves
+# manual input. Detecting that it needs to be run, however, is
+# perfectly mechanizable.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function dr-mac {
+    # TODO actually check the need for this
+    echo "A common issue with Fuchsia development on macOS is needing to"
+    echo "re-run the \`xcode-select install\` step. The typical symptom is"
+    echo "failure to find system C or C++ headers after a reboot or update."
+    return
+}
+
+function dr-linux {
+    return
+}
+
+function dr {
+    return
+}
+
+function main {
+    case $(uname) in
+        Darwin)
+            dr-mac
+            ;;
+        Linux)
+            dr-linux
+            ;;
+    esac
+    dr
+    return
+}
+
+main "$@"
