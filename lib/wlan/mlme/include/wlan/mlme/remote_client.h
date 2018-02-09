@@ -46,6 +46,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
+    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet);
 
     // Note: There can only ever by one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
@@ -133,6 +134,8 @@ class AssociatedState : public BaseState {
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
+    zx_status_t HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
+                                const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
                                        const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,

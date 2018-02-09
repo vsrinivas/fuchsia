@@ -186,6 +186,59 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
+zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
+                                     const wlan_rx_info_t& rxinfo) {
+    // Filter unsupported Data frame types.
+    switch (frame.hdr->fc.subtype()) {
+        case DataSubtype::kDataSubtype:
+            // Fall-through
+        case DataSubtype::kQosdata:  // For data frames within BlockAck session.
+            break;
+        default:
+            warnf("unsupported data subtype %02x\n", frame.hdr->fc.subtype());
+            return ZX_OK;
+    }
+
+    if (frame.hdr->fc.to_ds() == 0 || frame.hdr->fc.from_ds() == 1) {
+        warnf("received unsupported data frame from %s with to_ds/from_ds combination: %u/%u\n",
+              frame.hdr->addr2.ToString().c_str(), frame.hdr->fc.to_ds(), frame.hdr->fc.from_ds());
+        return ZX_OK;
+    }
+
+    auto hdr = frame.hdr;
+    auto llc = frame.body;
+
+    // Forward EAPOL frames to SME.
+    if (be16toh(llc->protocol_id) == kEapolProtocolId) {
+        // TODO(NET-462): Forward EAPOL frames to Wlanstack.
+        return ZX_OK;
+    }
+
+    // TODO(NET-463): Disallow data frames if RSNA is required but not established.
+    // TODO(NET-445): Check FC's power saving bit.
+
+    const size_t eth_len = frame.body_len + sizeof(EthernetII);
+    auto buffer = GetBuffer(eth_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
+    // no need to clear the packet since every byte is overwritten
+    eth_packet->set_peer(Packet::Peer::kEthernet);
+
+    auto eth = eth_packet->mut_field<EthernetII>(0);
+    eth->dest = hdr->addr3;
+    eth->src = hdr->addr2;
+    eth->ether_type = llc->protocol_id;
+    std::memcpy(eth->payload, llc->payload, frame.body_len - sizeof(LlcHeader));
+
+    auto status = client_->SendEthernet(std::move(eth_packet));
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not send ethernet data: %d\n", client_->addr().ToString().c_str(), status);
+    }
+
+    return status;
+}
+
 zx_status_t AssociatedState::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     active_ = true;
     return ZX_OK;
@@ -360,6 +413,10 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
                status);
     }
     return status;
+}
+
+zx_status_t RemoteClient::SendEthernet(fbl::unique_ptr<Packet> packet) {
+    return device_->SendEthernet(fbl::move(packet));
 }
 
 #undef LOG_STATE_TRANSITION
