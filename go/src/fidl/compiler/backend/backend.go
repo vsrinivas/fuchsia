@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/dart"
+	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/types"
 	"flag"
 	"io/ioutil"
@@ -20,8 +21,9 @@ type GenerateFidl interface {
 }
 
 var generators = map[string]GenerateFidl{
-	"cpp": cpp.FidlGenerator{},
+	"cpp":  cpp.FidlGenerator{},
 	"dart": dart.FidlGenerator{},
+	"rust": rust.FidlGenerator{},
 }
 
 func main() {

@@ -203,7 +203,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func compileIdentifier(val types.Identifier) string {
+func changeIfReserved(val types.Identifier) string {
 	str := string(val)
 	if isReservedWord(str) {
 		return str + "_"
@@ -214,7 +214,7 @@ func compileIdentifier(val types.Identifier) string {
 func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	for _, v := range val {
-		strs = append(strs, compileIdentifier(v))
+		strs = append(strs, changeIfReserved(v))
 	}
 	return strings.Join(strs, "::")
 }
@@ -288,13 +288,13 @@ func compileType(val types.Type) Type {
 
 func compileEnum(val types.Enum) Enum {
 	e := Enum{
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
-			compileIdentifier(v.Name),
+			changeIfReserved(v.Name),
 			compileConstant(v.Value),
 		})
 	}
@@ -307,7 +307,7 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 	for _, v := range val {
 		p := Parameter{
 			compileType(v.Type),
-			compileIdentifier(v.Name),
+			changeIfReserved(v.Name),
 		}
 		r = append(r, p)
 	}
@@ -317,17 +317,17 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 
 func compileInterface(val types.Interface) Interface {
 	r := Interface{
-		compileIdentifier(val.Name),
-		compileIdentifier(val.Name + "Proxy"),
-		compileIdentifier(val.Name + "Stub"),
+		changeIfReserved(val.Name),
+		changeIfReserved(val.Name + "Proxy"),
+		changeIfReserved(val.Name + "Stub"),
 		[]Method{},
 	}
 
 	for _, v := range val.Methods {
-		name := compileIdentifier(v.Name)
+		name := changeIfReserved(v.Name)
 		callbackType := ""
 		if v.HasResponse {
-			callbackType = compileIdentifier(v.Name + "Callback")
+			callbackType = changeIfReserved(v.Name + "Callback")
 		}
 		m := Method{
 			v.Ordinal,
@@ -350,13 +350,13 @@ func compileInterface(val types.Interface) Interface {
 func compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		compileType(val.Type),
-		compileIdentifier(val.Name),
-		compileIdentifier(val.Name + "_"),
+		changeIfReserved(val.Name),
+		changeIfReserved(val.Name + "_"),
 	}
 }
 
 func compileStruct(val types.Struct) Struct {
-	name := compileIdentifier(val.Name)
+	name := changeIfReserved(val.Name)
 	r := Struct{
 		name,
 		"::" + name,
@@ -373,13 +373,13 @@ func compileStruct(val types.Struct) Struct {
 func compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		compileType(val.Type),
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 	}
 }
 
 func compileUnion(val types.Union) Union {
 	r := Union{
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 		[]UnionMember{},
 	}
 

@@ -228,7 +228,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func compileIdentifier(val types.Identifier) string {
+func changeIfReserved(val types.Identifier) string {
 	str := string(val)
 	if isReservedWord(str) {
 		return str + "_"
@@ -239,7 +239,7 @@ func compileIdentifier(val types.Identifier) string {
 func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	for _, v := range val {
-		strs = append(strs, compileIdentifier(v))
+		strs = append(strs, changeIfReserved(v))
 	}
 	return strings.Join(strs, ".")
 }
@@ -344,14 +344,14 @@ func compileType(val types.Type) Type {
 
 func compileEnum(val types.Enum) Enum {
 	e := Enum{
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 		[]EnumMember{},
 		primitiveEncodedSize[val.Type],
 		primitiveCodecSuffix[val.Type],
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
-			compileIdentifier(v.Name),
+			changeIfReserved(v.Name),
 			compileConstant(v.Value),
 		})
 	}
@@ -361,13 +361,13 @@ func compileEnum(val types.Enum) Enum {
 func compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		compileType(val.Type),
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 		0, // TODO(TO-758): Need the member offset from the frontend.
 	}
 }
 
 func compileStruct(val types.Struct) Struct {
-	name := compileIdentifier(val.Name)
+	name := changeIfReserved(val.Name)
 	r := Struct{
 		name,
 		[]StructMember{},
@@ -384,15 +384,15 @@ func compileStruct(val types.Struct) Struct {
 func compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		compileType(val.Type),
-		compileIdentifier(val.Name),
+		changeIfReserved(val.Name),
 		0, // TODO(TO-758): Need the member offset from the frontend.
 	}
 }
 
 func compileUnion(val types.Union) Union {
 	r := Union{
-		compileIdentifier(val.Name),
-		compileIdentifier(val.Name + "Tag"),
+		changeIfReserved(val.Name),
+		changeIfReserved(val.Name + "Tag"),
 		[]UnionMember{},
 		0, // TODO(TO-758): Need the encoded size from the frontend.
 	}
