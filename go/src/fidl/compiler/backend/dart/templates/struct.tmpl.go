@@ -44,7 +44,7 @@ class {{ .Name }} extends Encodable {
   @override
   void encode(Encoder encoder, int offset) {
   {{- range .Members }}
-    {{ .Type.EncodeStanza .Name .Offset }};
+    {{ .Type.Encode .Name .Offset }};
   {{- end }}
   }
 }

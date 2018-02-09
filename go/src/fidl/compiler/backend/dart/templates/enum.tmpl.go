@@ -43,10 +43,10 @@ class {{ .Name }} extends Encodable {
   @override
   String toString() {
     switch (value) {
-    {{- range .Members }}
+  {{- range .Members }}
       case {{ .Value }}:
         return '{{ $.Name }}.{{ .Name }}';
-    {{- end }}
+  {{- end }}
       default:
         return null;
     }

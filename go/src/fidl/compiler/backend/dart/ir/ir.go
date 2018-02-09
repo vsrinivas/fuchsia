@@ -16,7 +16,7 @@ type encodingType string
 
 const (
 	primitiveEncodingType   encodingType = "primitive"
-	encodeableEncodingType               = "encodeable"
+	encodableEncodingType                = "encodable"
 	structEncodingType                   = "struct"
 	stringEncodingType                   = "string"
 	handleEncodingType                   = "handle"
@@ -35,13 +35,13 @@ type Type struct {
 	codecSuffix   string
 }
 
-func (t *Type) EncodeStanza(identifer string, offset int) string {
+func (t *Type) Encode(identifer string, offset int) string {
 	offsetStr := strconv.Itoa(offset)
 	nullableStr := strconv.FormatBool(t.Nullable)
 	switch t.encodingType {
 	case primitiveEncodingType:
 		return fmt.Sprintf("encoder.encode%s(this.%s, offset + %s)", t.codecSuffix, identifer, offsetStr)
-	case encodeableEncodingType:
+	case encodableEncodingType:
 		// TODO(abarth): Need to distinguish the nullable case from the non-nullable case.
 		return fmt.Sprintf("this.%s.encode(encoder, offset + %s)", identifer, offsetStr)
 	case structEncodingType:
@@ -76,6 +76,19 @@ type EnumMember struct {
 	Value string
 }
 
+type Union struct {
+	Name        string
+	TagName     string
+	Members     []UnionMember
+	EncodedSize int
+}
+
+type UnionMember struct {
+	Type   Type
+	Name   string
+	Offset int
+}
+
 type Struct struct {
 	Name        string
 	Members     []StructMember
@@ -91,6 +104,7 @@ type StructMember struct {
 type Root struct {
 	Enums   []Enum
 	Structs []Struct
+	Unions  []Union
 }
 
 var reservedWords = map[string]bool{
@@ -311,7 +325,7 @@ func compileType(val types.Type) Type {
 	case types.RequestType:
 		t := compileCompoundIdentifier(val.RequestSubtype)
 		r.Decl = fmt.Sprintf("InterfaceRequest<%s>", t)
-		r.encodingType = encodeableEncodingType
+		r.encodingType = encodableEncodingType
 	case types.PrimitiveType:
 		r.Decl = compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.TypedDataDecl = typedDataDecl[val.PrimitiveSubtype]
@@ -321,7 +335,7 @@ func compileType(val types.Type) Type {
 		t := compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
 		r.Decl = fmt.Sprintf("InterfaceHandle<%s>", t)
-		r.encodingType = encodeableEncodingType
+		r.encodingType = encodableEncodingType
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
@@ -367,6 +381,29 @@ func compileStruct(val types.Struct) Struct {
 	return r
 }
 
+func compileUnionMember(val types.UnionMember) UnionMember {
+	return UnionMember{
+		compileType(val.Type),
+		compileIdentifier(val.Name),
+		0, // TODO(TO-758): Need the member offset from the frontend.
+	}
+}
+
+func compileUnion(val types.Union) Union {
+	r := Union{
+		compileIdentifier(val.Name),
+		compileIdentifier(val.Name + "Tag"),
+		[]UnionMember{},
+		0, // TODO(TO-758): Need the encoded size from the frontend.
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, compileUnionMember(v))
+	}
+
+	return r
+}
+
 func Compile(fidlData types.Root) Root {
 	root := Root{}
 
@@ -376,6 +413,10 @@ func Compile(fidlData types.Root) Root {
 
 	for _, v := range fidlData.Structs {
 		root.Structs = append(root.Structs, compileStruct(v))
+	}
+
+	for _, v := range fidlData.Unions {
+		root.Unions = append(root.Unions, compileUnion(v))
 	}
 
 	return root

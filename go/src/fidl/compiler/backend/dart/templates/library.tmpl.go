@@ -19,5 +19,8 @@ import 'package:zircon/zircon.dart';
 {{ range $struct := .Structs -}}
 {{ template "StructDeclaration" $struct }}
 {{ end -}}
+{{ range $union := .Unions -}}
+{{ template "UnionDeclaration" $union }}
+{{ end -}}
 {{- end -}}
 `
