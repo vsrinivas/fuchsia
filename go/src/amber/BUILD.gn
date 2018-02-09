@@ -7,61 +7,97 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
-go_binary("amber_bin") {
-  output_name = "amber"
+common_dependencies = [
+  {
+    package = "amber"
+    source = "//garnet/go/src/amber"
+  },
+  {
+    package = "fuchsia.googlesource.com/far"
+    source = "//garnet/go/src/far"
+  },
+  {
+    package = "fuchsia.googlesource.com/merkle"
+    source = "//garnet/go/src/merkle"
+  },
+  {
+    package = "github.com/flynn/go-tuf"
+    source = "//third_party/golibs/github.com/flynn/go-tuf"
+  },
+  {
+    package = "golang.org/x/crypto"
+    source = "//third_party/golang/crypto"
+  },
+  {
+    package = "github.com/syndtr/goleveldb/leveldb"
+    source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
+  },
+  {
+    package = "github.com/tent/canonical-json-go"
+    source = "//third_party/golibs/github.com/tent/canonical-json-go"
+  },
+  {
+    package = "github.com/golang/snappy"
+    source = "//third_party/golibs/github.com/golang/snappy"
+  },
+]
 
-  gopackage = "amber/cmd/amber"
-  deps = [
-    "//garnet/public/lib/amber/fidl",
-    "//garnet/public/lib/app/fidl",
-  ]
+fidl_dependencies = [
+      {
+        package = "garnet/amber/api"
+        source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
+      },
+      {
+        package = "fidl"
+        source = "//garnet/public/lib/fidl/go/src/fidl"
+      },
+      {
+        package = "application/lib/app"
+        source = "//garnet/public/lib/app/go/src/app"
+      },
+      {
+        package = "garnet/public/lib/app/fidl"
+        source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+      },
+      {
+        package = "svc"
+        source = "//garnet/public/lib/svc/go/src/svc"
+      },
+    ]
 
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "garnet/amber/api"
-      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      package = "github.com/syndtr/goleveldb/leveldb"
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      package = "github.com/tent/canonical-json-go"
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-    },
-    {
-      package = "github.com/golang/snappy"
-      source = "//third_party/golibs/github.com/golang/snappy"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "application/lib/app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "garnet/public/lib/app/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-  ]
+amber_target_binaries = [
+  {
+    target = "amber_bin"
+    name = "amber"
+    gopkg = "amber/cmd/amber"
+  },
+  {
+    name = "amber_ctl"
+    gopkg = "amber/cmd/ctl"
+  },
+  {
+    name = "amber_init"
+    gopkg = "amber/cmd/init"
+  },
+]
+
+foreach(tgt, amber_target_binaries) {
+  target_name = tgt.name
+  if (defined(tgt.target)) {
+    target_name = tgt.target
+  }
+  go_binary(target_name) {
+    output_name = tgt.name
+
+    gopackage = tgt.gopkg
+
+    deps = [
+      "//garnet/public/lib/amber/fidl",
+      "//garnet/public/lib/app/fidl",
+    ]
+
+    go_dependencies = common_dependencies + fidl_dependencies
+  }
 }
 
 package("amber") {
@@ -71,15 +107,19 @@ package("amber") {
 
   binary = "amber"
 
-  resources = [ {
-        path = rebase_path("keys/root_sig.json")
-        dest = "keys"
-      } ]
+  resources = [
+    {
+      path = rebase_path("keys/root_sig.json")
+      dest = "keys"
+    },
+  ]
 
-  meta = [ {
-        path = rebase_path("cmd/amber/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("cmd/amber/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("amber_tools") {
@@ -100,273 +140,85 @@ package("amber_tools") {
   ]
 }
 
-go_binary("amber-srv") {
-  gopackage = "amber/cmd/amber-serve"
+amber_host_binaries = [
+  {
+    name = "amber-srv"
+    gopkg = "amber/cmd/amber-serve"
+  },
+  {
+    name = "amber-publish"
+    gopkg = "amber/cmd/publish"
+  },
+]
 
-  go_dependencies = [ {
-        package = "amber"
-        source = "//garnet/go/src/amber"
-      } ]
-}
+foreach(tgt, amber_host_binaries) {
+  go_binary(tgt.name) {
+    output_name = tgt.name
 
-go_binary("amber-publish") {
-  gopackage = "amber/cmd/publish"
+    gopackage = tgt.gopkg
 
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "fuchsia.googlesource.com/far"
-      source = "//garnet/go/src/far"
-    },
-    {
-      package = "fuchsia.googlesource.com/merkle"
-      source = "//garnet/go/src/merkle"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/syndtr/goleveldb/leveldb"
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      package = "github.com/tent/canonical-json-go"
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-    },
-    {
-      package = "github.com/golang/snappy"
-      source = "//third_party/golibs/github.com/golang/snappy"
-    },
-  ]
-}
-
-go_binary("amber_init") {
-  gopackage = "amber/cmd/init"
-
-  deps = [
-    "//garnet/public/lib/amber/fidl",
-    "//garnet/public/lib/app/fidl",
-  ]
-
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "garnet/amber/api"
-      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "application/lib/app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "garnet/public/lib/app/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-  ]
-}
-
-go_binary("amber_ctl") {
-  gopackage = "amber/cmd/ctl"
-
-  deps = [
-    "//garnet/public/lib/amber/fidl",
-    "//garnet/public/lib/app/fidl",
-  ]
-
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "garnet/amber/api"
-      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "application/lib/app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "garnet/public/lib/app/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-  ]
-}
-
-go_test("amber_daemon_test") {
-  gopackage = "amber/daemon"
-
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-      package = "github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-      package = "github.com/tent/canonical-json-go"
-    },
-    {
-      source = "//third_party/golibs/github.com/golang/snappy"
-      package = "github.com/golang/snappy"
-    },
-  ]
-}
-
-package("amber_test") {
-  system_image = true
-  testonly = true
-
-  deps = [
-    ":amber_daemon_test",
-  ]
-
-  tests = [ {
-        name = "amber_daemon_test"
-      } ]
-}
-
-go_test("amber_publish_test_bin") {
-  gopackage = "amber/publish"
-  output_name = "amber_publish_test"
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "fuchsia.googlesource.com/merkle"
-      source = "//garnet/go/src/merkle"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-      package = "github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-      package = "github.com/tent/canonical-json-go"
-    },
-    {
-      source = "//third_party/golibs/github.com/golang/snappy"
-      package = "github.com/golang/snappy"
-    },
-  ]
-}
-
-package("amber_pub_test") {
-  system_image = true
-  testonly = true
-
-  deps = [
-    ":amber_publish_test_bin",
-  ]
-
-  tests = [ {
-        name = "amber_publish_test"
-      } ]
-}
-
-go_test("amber_cmd_publish_test_bin") {
-  gopackage = "amber/cmd/publish"
-  go_dependencies = [
-    {
-      package = "amber"
-      source = "//garnet/go/src/amber"
-    },
-    {
-      package = "fuchsia.googlesource.com/far"
-      source = "//garnet/go/src/far"
-    },
-    {
-      package = "fuchsia.googlesource.com/merkle"
-      source = "//garnet/go/src/merkle"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/syndtr/goleveldb/leveldb"
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      package = "github.com/tent/canonical-json-go"
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-    },
-    {
-      package = "github.com/golang/snappy"
-      source = "//third_party/golibs/github.com/golang/snappy"
-    },
-    {
-      package = "github.com/google/go-cmp/cmp"
-      source = "//third_party/golibs/github.com/google/go-cmp/cmp"
-    }
-
-  ]
-}
-
-package("amber_cmd_publish_test") {
-  system_image = true
-  testonly = true
-
-  deps = [
-    ":amber_cmd_publish_test_bin"
-  ]
-
-  tests = [ {
-        name = "amber_cmd_publish_test_bin"
+    go_dependencies = common_dependencies
   }
-  ]
+}
+
+install_host_tools("amber_host_tools") {
+  deps = []
+  outputs = []
+
+  foreach(tgt, amber_host_binaries) {
+    deps += [ ":${tgt.name}" ]
+    outputs += [ tgt.name ]
+  }
+}
+
+test_targets = [
+  {
+    name = "amber_daemon_test"
+    gopkg = "amber/daemon"
+  },
+  {
+    name = "amber_publish_test"
+    gopkg = "amber/publish"
+  },
+  {
+    name = "amber_cmd_publish_test"
+    gopkg = "amber/cmd/publish"
+  },
+]
+foreach(test, test_targets) {
+  go_test(test.name) {
+    gopackage = test.gopkg
+
+    deps = [
+      "//garnet/public/lib/amber/fidl",
+      "//garnet/public/lib/app/fidl",
+    ]
+
+    go_dependencies =
+        common_dependencies + fidl_dependencies + [
+          {
+            package = "github.com/google/go-cmp/cmp"
+            source = "//third_party/golibs/github.com/google/go-cmp/cmp"
+          },
+        ]
+  }
+}
+
+package("amber_tests") {
+  system_image = true
+  testonly = true
+
+  deps = []
+  tests = []
+
+  foreach(test, test_targets) {
+    deps += [ ":${test.name}" ]
+    tests += [
+      {
+        name = test.name
+      },
+    ]
+  }
 }
 
 copy("amber-srv-keys") {
