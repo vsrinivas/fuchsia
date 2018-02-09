@@ -18,9 +18,8 @@ class VirtioNet : public VirtioDevice {
   VirtioNet(const PhysMem& phys_mem);
   ~VirtioNet() override;
 
-  // Starts a thread to monitor for Ethernet devices, and begins execution of
-  // the Virtio Ethernet device once it finds one.
-  zx_status_t Start();
+  // Starts the Virtio Ethernet device based on the path provided.
+  zx_status_t Start(const char* path);
 
   // Drains a Virtio queue, and passes data to the underlying Ethernet device.
   zx_status_t DrainQueue(virtio_queue_t* queue,
@@ -43,9 +42,6 @@ class VirtioNet : public VirtioDevice {
   eth_fifos_t fifos_ = {};
   // Connection to the Ethernet device.
   fbl::unique_fd net_fd_;
-
-  // Starts the Virtio Ethernet device.
-  zx_status_t StartDevice(int dir_fd, int event, const char* fn);
 
   zx_status_t ReceiveLoop();
   zx_status_t TransmitLoop();

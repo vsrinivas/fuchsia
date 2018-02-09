@@ -440,13 +440,13 @@ int main(int argc, char** argv) {
 
   // Setup net device.
   machina::VirtioNet net(guest.phys_mem());
-  status = net.Start();
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = bus.Connect(net.pci_device());
-  if (status != ZX_OK) {
-    return status;
+  status = net.Start("/dev/class/ethernet/000");
+  if (status == ZX_OK) {
+    // If we started the net device, then connect to the PCI bus.
+    status = bus.Connect(net.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   status = guest.StartVcpu(guest_ip, 0 /* id */);

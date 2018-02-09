@@ -4,8 +4,6 @@
 
 #include "garnet/lib/machina/virtio_net.h"
 
-#include <fbl/unique_fd.h>
-#include <fdio/watcher.h>
 #include <virtio/virtio_ids.h>
 #include <zircon/device/ethernet.h>
 
@@ -15,8 +13,6 @@
 #include "lib/fxl/logging.h"
 
 namespace machina {
-
-static constexpr char kEthernetDirPath[] = "/dev/class/ethernet";
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem)
     : VirtioDevice(VIRTIO_ID_NET,
@@ -36,15 +32,10 @@ VirtioNet::~VirtioNet() {
   zx_handle_close(fifos_.rx_fifo);
 }
 
-zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
-  if (event != WATCH_EVENT_ADD_FILE) {
-    return ZX_OK;
-  }
-
-  net_fd_.reset(openat(dir_fd, fn, O_RDONLY));
+zx_status_t VirtioNet::Start(const char* path) {
+  net_fd_.reset(open(path, O_RDONLY));
   if (!net_fd_) {
-    FXL_LOG(ERROR) << "Failed to open Ethernet device " << kEthernetDirPath
-                   << "/" << fn;
+    FXL_LOG(INFO) << "Could not open Ethernet device " << path;
     return ZX_ERR_IO;
   }
 
@@ -119,31 +110,8 @@ zx_status_t VirtioNet::StartDevice(int dir_fd, int event, const char* fn) {
     return ZX_ERR_INTERNAL;
   }
 
-  FXL_LOG(INFO) << "Polling device " << kEthernetDirPath << "/" << fn
-                << " for Ethernet frames";
+  FXL_LOG(INFO) << "Polling device " << path << " for Ethernet frames";
   return ZX_ERR_STOP;
-}
-
-zx_status_t VirtioNet::Start() {
-  thrd_t thread;
-  int ret = thrd_create_with_name(
-      &thread,
-      [](void* ctx) -> int {
-        fbl::unique_fd dir_fd(open(kEthernetDirPath, O_DIRECTORY | O_RDONLY));
-        if (!dir_fd) {
-          return ZX_ERR_IO;
-        }
-        auto callback = [](int fd, int event, const char* fn, void* ctx) {
-          return static_cast<VirtioNet*>(ctx)->StartDevice(fd, event, fn);
-        };
-        return fdio_watch_directory(dir_fd.get(), callback, ZX_TIME_INFINITE,
-                                    ctx);
-      },
-      this, "virtio-net-watch");
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-  return ZX_OK;
 }
 
 zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
