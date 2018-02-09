@@ -50,10 +50,4 @@ MODULE_SO_INSTALL_NAME := -
 # Make it use a simplified, hardened memory layout.
 MODULE_LDFLAGS := $(RODSO_LDFLAGS)
 
-# Explicit dependency to make sure the file gets generated first.
-# MODULE_SRCDEPS is overkill for this since only one file uses it.
-$(BUILDDIR)/$(LOCAL_DIR)/$(LOCAL_DIR)/zx_system_get_version.cpp.o: \
-    $(BUILDDIR)/config-buildid.h
-MODULE_COMPILEFLAGS += -I$(BUILDDIR)
-
 include make/module.mk

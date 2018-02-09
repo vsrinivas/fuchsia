@@ -11,8 +11,12 @@
 // environments.  It must use only the basic types so that struct
 // layouts match exactly in both contexts.
 
-#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8)
 #define VDSO_CONSTANTS_ALIGN 8
+// The build id is based on a 40 character representation of a git
+// hash. There is also a 4 byte 'git-' prefix, and possibly a 6 byte
+// '-dirty' suffix. Let's be generous and use 64 bytes.
+#define MAX_BUILDID_SIZE 64
+#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8 + MAX_BUILDID_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -48,6 +52,10 @@ struct vdso_constants {
 
     // Total amount of physical memory in the system, in bytes.
     uint64_t physmem;
+
+    // A build id of the system. Currently a non-null terminated ascii
+    // representation of a git SHA.
+    char buildid[MAX_BUILDID_SIZE];
 };
 
 static_assert(VDSO_CONSTANTS_SIZE == sizeof(vdso_constants),

@@ -18,6 +18,7 @@
 #include <vm/vm_object.h>
 #include <zircon/types.h>
 
+#include "config-buildid.h"
 #include "vdso-code.h"
 
 // This is defined in assembly by vdso-image.S; vdso-code.h
@@ -233,6 +234,7 @@ const VDso* VDso::Create() {
         arch_icache_line_size(),
         per_second,
         pmm_count_total_bytes(),
+        BUILDID,
     };
 
     // If ticks_per_second has not been calibrated, it will return 0. In this
