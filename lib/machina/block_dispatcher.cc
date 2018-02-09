@@ -244,6 +244,7 @@ zx_status_t BlockDispatcher::CreateFromPath(
 
 struct GuidLookupArgs {
   int fd;
+  BlockDispatcher::Mode mode;
   const BlockDispatcher::Guid& guid;
   ssize_t (*guid_ioctl)(int fd, void* out, size_t out_len);
 };
@@ -257,7 +258,8 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd,
   }
   auto args = static_cast<GuidLookupArgs*>(cookie);
 
-  fbl::unique_fd fd(openat(dirfd, fn, O_RDONLY));
+  fbl::unique_fd fd(openat(
+      dirfd, fn, args->mode == BlockDispatcher::Mode::RO ? O_RDONLY : O_RDWR));
   if (!fd) {
     FXL_LOG(ERROR) << "Failed to open device " << kBlockDirPath << "/" << fn;
     return ZX_ERR_IO;
@@ -286,7 +288,7 @@ zx_status_t BlockDispatcher::CreateFromGuid(
     DataPlane data_plane,
     const PhysMem& phys_mem,
     fbl::unique_ptr<BlockDispatcher>* dispatcher) {
-  GuidLookupArgs args = {-1, guid, nullptr};
+  GuidLookupArgs args = {-1, mode, guid, nullptr};
   switch (guid.type) {
     case GuidType::GPT_PARTITION_GUID:
       args.guid_ioctl = &ioctl_block_get_partition_guid;
