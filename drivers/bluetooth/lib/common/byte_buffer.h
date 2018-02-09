@@ -88,6 +88,13 @@ class ByteBuffer {
     return *reinterpret_cast<const T*>(data());
   }
 
+  bool operator==(const ByteBuffer& other) const {
+    if (size() != other.size()) {
+      return false;
+    }
+    return (memcmp(data(), other.data(), size()) == 0);
+  }
+
   // Returns the contents of this buffer as a C++ string-like object without
   // copying its contents.
   fxl::StringView AsString() const;

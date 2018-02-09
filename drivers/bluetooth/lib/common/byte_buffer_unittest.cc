@@ -244,6 +244,18 @@ TEST(ByteBufferTest, MutableView) {
   EXPECT_EQ("TEst", buffer.AsString());
 }
 
+TEST(ByteBufferTest, ByteBufferEqualityFail) {
+  const auto kData0 = common::CreateStaticByteBuffer('T', 'e', 's', 't');
+  const auto kData1 = common::CreateStaticByteBuffer('F', 'o', 'o');
+  EXPECT_FALSE(kData0 == kData1);
+}
+
+TEST(ByteBufferTest, ByteBufferEqualitySuccess) {
+  const auto kData0 = common::CreateStaticByteBuffer('T', 'e', 's', 't');
+  const auto kData1 = common::CreateStaticByteBuffer('T', 'e', 's', 't');
+  EXPECT_TRUE(kData0 == kData1);
+}
+
 TEST(ByteBufferTest, MutableByteBufferWrite) {
   const auto kData0 = common::CreateStaticByteBuffer('T', 'e', 's', 't');
   const auto kData1 = common::CreateStaticByteBuffer('F', 'o', 'o');
