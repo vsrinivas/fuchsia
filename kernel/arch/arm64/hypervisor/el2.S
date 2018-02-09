@@ -27,8 +27,6 @@
 // NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
 #define ID_AA64MMFR0_EL1_PARANGE_MASK   0x07
 
-#define VECTOR_TABLE_SIZE               0x0800
-
 .section .text.el2,"ax",@progbits
 .align 12
 
@@ -267,6 +265,7 @@
 // stack and hypervisor state, and we use the exec vector table to maintain
 // execution of the hypervisor.
 
+.align 10
 FUNCTION_LABEL(arm64_el2_init_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
@@ -292,6 +291,7 @@ FUNCTION_LABEL(arm64_el2_init_table)
     entry_invalid_exception
     entry_invalid_exception
 
+.align 10
 FUNCTION_LABEL(arm64_el2_exec_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
@@ -364,8 +364,7 @@ FUNCTION_LABEL(el2_hvc_on)
     mov sp, x1
 
     // Setup the exec vector table for EL2.
-    mrs x9, vbar_el2
-    add x9, x9, VECTOR_TABLE_SIZE
+    adr_global x9, arm64_el2_exec_table
     msr vbar_el2, x9
     isb
 
@@ -394,8 +393,7 @@ FUNCTION_LABEL(el2_hvc_off)
     isb
 
     // Setup the init vector table for EL2.
-    mrs x9, vbar_el2
-    sub x9, x9, VECTOR_TABLE_SIZE
+    adr_global x9, arm64_el2_init_table
     msr vbar_el2, x9
     isb
 
