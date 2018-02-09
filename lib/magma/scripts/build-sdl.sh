@@ -7,30 +7,27 @@
 set -e
 fuchsia_root=`pwd`
 
-zircon_platform=${1:-pc-x86-64}
+build=${1:-debug-x86-64}
+builddir=out/build-sdl-$build
 
-if [[ $zircon_platform == *"-arm64" ]]; then
-	platform=aarch64
+if [[ $build == *"aarch64" ]]; then
 	shared_path=arm64
 	system_processor=aarch64
 
 else
-	platform=x86-64
 	shared_path=x64
 	system_processor=x86_64
 fi
 
-#export VULKAN_INCLUDE_DIR=$fuchsia_root/third_party/vulkan_loader_and_validation_layers/include
-#export VULKAN_LIB_PATH=$fuchsia_root/out/debug-$platform/$shared_path-shared
-#export VULKAN_LIBRARY=$VULKAN_LIB_PATH/libvulkan.so
-#unset EDITOR
+export FUCHSIA_INCLUDE_PATH=$fuchsia_root/garnet/lib/magma/include/magma_abi
+export FUCHSIA_LIB_PATH=$fuchsia_root/out/$build/$shared_path-shared
+export SDL_VULKAN_HEADER=$fuchsia_root/third_party/vulkan_loader_and_validation_layers/include/vulkan/vulkan.h
 
-sysroot=$fuchsia_root/out/build-zircon/build-zircon-$zircon_platform/sysroot
+sysroot=$fuchsia_root/out/$build/sdks/zircon_sysroot/sysroot
 ninja_path=$fuchsia_root/buildtools/ninja
 
-cd third_party/sdl
-mkdir -p build
-pushd build
-cmake .. -GNinja -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_INSTALL_PREFIX=$fuchsia_root/third_party/sdl/install -DCMAKE_BUILD_TYPE=Debug -DFUCHSIA_SYSTEM_PROCESSOR=$system_processor -DCMAKE_MAKE_PROGRAM=$ninja_path -DFUCHSIA_SYSROOT=$sysroot -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake 
+mkdir -p $builddir
+pushd $builddir
+cmake $fuchsia_root/third_party/sdl -GNinja -DVIDEO_VULKAN=ON -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug -DFUCHSIA_SYSTEM_PROCESSOR=$system_processor -DCMAKE_MAKE_PROGRAM=$ninja_path -DFUCHSIA_SYSROOT=$sysroot -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake 
 $ninja_path install
 popd
