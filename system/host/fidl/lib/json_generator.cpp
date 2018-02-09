@@ -347,26 +347,26 @@ void JSONGenerator::Generate(const ast::Type& value) {
             GenerateObjectMember("element_type", type->element_type);
             if (type->maybe_element_count)
                 GenerateObjectMember("maybe_element_count", type->maybe_element_count);
-            GenerateObjectMember("nullability", type->nullability);
+            GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case ast::Type::Kind::String: {
             auto type = static_cast<const ast::StringType*>(&value);
             if (type->maybe_element_count)
                 GenerateObjectMember("maybe_element_count", type->maybe_element_count);
-            GenerateObjectMember("nullability", type->nullability);
+            GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case ast::Type::Kind::Handle: {
             auto type = static_cast<const ast::HandleType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
-            GenerateObjectMember("nullability", type->nullability);
+            GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case ast::Type::Kind::Request: {
             auto type = static_cast<const ast::RequestType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
-            GenerateObjectMember("nullability", type->nullability);
+            GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case ast::Type::Kind::Primitive: {
@@ -377,7 +377,7 @@ void JSONGenerator::Generate(const ast::Type& value) {
         case ast::Type::Kind::Identifier: {
             auto type = static_cast<const ast::IdentifierType*>(&value);
             GenerateObjectMember("identifier", type->identifier);
-            GenerateObjectMember("nullability", type->nullability);
+            GenerateObjectMember("nullable", type->nullability);
             break;
         }
         }

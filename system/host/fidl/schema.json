@@ -247,7 +247,7 @@
         },
         "vector-type": {
             "type": "object",
-            "required": [ "kind", "element_type", "nullability" ],
+            "required": [ "kind", "element_type", "nullable" ],
             "properties": {
                 "kind": {
                     "type": "string",
@@ -259,14 +259,14 @@
                 "maybe_element_count": {
                     "$ref": "#/definitions/constant"
                 },
-                "nullability": {
+                "nullable": {
                     "type": "boolean"
                 }
             }
         },
         "string-type": {
             "type": "object",
-            "required": [ "kind", "nullability" ],
+            "required": [ "kind", "nullable" ],
             "properties": {
                 "kind": {
                     "type": "string",
@@ -275,14 +275,14 @@
                 "maybe_element_count": {
                     "$ref": "#/definitions/constant"
                 },
-                "nullability": {
+                "nullable": {
                     "type": "boolean"
                 }
             }
         },
         "handle-type": {
             "type": "object",
-            "required": [ "kind", "subtype", "nullability" ],
+            "required": [ "kind", "subtype", "nullable" ],
             "properties": {
                 "kind": {
                     "type": "string",
@@ -291,14 +291,14 @@
                 "subtype": {
                     "$ref": "#/definitions/handle-subtype"
                 },
-                "nullability": {
+                "nullable": {
                     "type": "boolean"
                 }
             }
         },
         "request-type": {
             "type": "object",
-            "required": [ "kind", "subtype", "nullability" ],
+            "required": [ "kind", "subtype", "nullable" ],
             "properties": {
                 "kind": {
                     "type": "string",
@@ -307,7 +307,7 @@
                 "subtype": {
                     "$ref": "#/definitions/compound-identifier"
                 },
-                "nullability": {
+                "nullable": {
                     "type": "boolean"
                 }
             }
@@ -327,7 +327,7 @@
         },
         "identifier-type": {
             "type": "object",
-            "required": [ "kind", "identifier", "nullability" ],
+            "required": [ "kind", "identifier", "nullable" ],
             "properties": {
                 "kind": {
                     "type": "string",
@@ -336,7 +336,7 @@
                 "identifier": {
                     "$ref": "#/definitions/compound-identifier"
                 },
-                "nullability": {
+                "nullable": {
                     "type": "boolean"
                 }
             }
