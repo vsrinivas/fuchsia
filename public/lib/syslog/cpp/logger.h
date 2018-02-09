@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string>
 
-#include <syslog/logger.h>
+#include <syslog/global.h>
 
 namespace syslog {
 namespace internal {
@@ -75,8 +75,9 @@ zx_status_t InitLogger();
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_LOGST(severity, tag) \
-  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, tag), FX_LOG_IS_ENABLED(severity))
+#define FX_LOGST(severity, tag)                      \
+  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag)), \
+                     FX_LOG_IS_ENABLED(severity))
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
@@ -92,5 +93,17 @@ zx_status_t InitLogger();
 
 // Writes error message to the global logger if |condition| fails.
 #define FX_CHECK(condition) FX_CHECKT(condition, nullptr)
+
+// VLOG macros log with negative verbosities.
+#define FX_VLOG_STREAM(verbose_level, tag)                                    \
+  ::syslog::internal::LogMessage(-(verbose_level), __FILE__, __LINE__, (tag), \
+                                 nullptr)                                     \
+      .stream()
+
+#define FX_VLOGST(verbose_level, tag)                        \
+  FX_LOG_LAZY_STREAM(FX_VLOG_STREAM((verbose_level), (tag)), \
+                     FX_VLOG_IS_ENABLED((verbose_level)))
+
+#define FX_VLOGS(verbose_level) FX_VLOGST((verbose_level), nullptr)
 
 #endif  // LIB_SYSLOG_CPP_LOGGER_H_

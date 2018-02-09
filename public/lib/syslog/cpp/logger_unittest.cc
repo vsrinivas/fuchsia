@@ -125,4 +125,47 @@ TEST(Logger, CheckFunction) {
   EXPECT_EQ(0u, outstanding_bytes);
 }
 
+TEST(Logger, VLog) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "test message";
+  FX_VLOGS(1) << msg;
+  size_t outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_LOG_SET_VERBOSITY(1);
+  FX_VLOGS(2) << msg;
+  outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_VLOGS(1) << msg;
+  output_compare_helper(std::move(local), -1, msg, nullptr, 0);
+}
+
+TEST(Logger, VLogWithTag) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "test message";
+  const char* tags[] = {"tag"};
+  FX_VLOGST(1, tags[0]) << msg;
+  size_t outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_LOG_SET_VERBOSITY(1);
+  FX_VLOGST(2, tags[0]) << msg;
+  outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_VLOGST(1, tags[0]) << msg;
+  output_compare_helper(std::move(local), -1, msg, tags, 1);
+}
+
 }  // namespace
