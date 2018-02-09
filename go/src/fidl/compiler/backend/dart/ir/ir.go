@@ -8,13 +8,60 @@ import (
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
+)
+
+type encodingType string
+
+const (
+	primitiveEncodingType   encodingType = "primitive"
+	encodeableEncodingType               = "encodeable"
+	structEncodingType                   = "struct"
+	stringEncodingType                   = "string"
+	handleEncodingType                   = "handle"
+	vectorEncodingType                   = "vector"
+	typedVectorEncodingType              = "typedVector"
+	arrayEncodingType                    = "array"
+	typedArrayEncodingType               = "typedArray"
 )
 
 type Type struct {
 	Decl          string
 	TypedDataDecl string
 	ElementCount  string
+	Nullable      bool
+	encodingType  encodingType
+	codecSuffix   string
+}
+
+func (t *Type) EncodeStanza(identifer string, offset int) string {
+	offsetStr := strconv.Itoa(offset)
+	nullableStr := strconv.FormatBool(t.Nullable)
+	switch t.encodingType {
+	case primitiveEncodingType:
+		return fmt.Sprintf("encoder.encode%s(this.%s, offset + %s)", t.codecSuffix, identifer, offsetStr)
+	case encodeableEncodingType:
+		// TODO(abarth): Need to distinguish the nullable case from the non-nullable case.
+		return fmt.Sprintf("this.%s.encode(encoder, offset + %s)", identifer, offsetStr)
+	case structEncodingType:
+		return fmt.Sprintf("encoder.encodeStruct(this.%s, offset + %s, %s)", identifer, offsetStr, nullableStr)
+	case stringEncodingType:
+		return fmt.Sprintf("encoder.encodeString(this.%s, %s, offset + %s, %s)", identifer, t.ElementCount, offsetStr, nullableStr)
+	case handleEncodingType:
+		return fmt.Sprintf("encoder.encodeHandle(this.%s, offset + %s, %s)", identifer, offsetStr, nullableStr)
+	case vectorEncodingType:
+		return fmt.Sprintf("encoder.encodeEncodableVector(this.%s, %s, offset + %s, %s)", identifer, t.ElementCount, offsetStr, nullableStr)
+	case typedVectorEncodingType:
+		return fmt.Sprintf("encoder.encode%sAsVector(this.%s, %s, offset + %s, %s)", t.TypedDataDecl, identifer, t.ElementCount, offsetStr, nullableStr)
+	case arrayEncodingType:
+		return fmt.Sprintf("encoder.encodeEncodableArray(this.%s, %s, offset + %s)", identifer, t.ElementCount, offsetStr)
+	case typedArrayEncodingType:
+		return fmt.Sprintf("encoder.encode%sAsArray(this.%s, %s, offset + %s)", t.TypedDataDecl, identifer, t.ElementCount, offsetStr)
+	default:
+		log.Fatal("Unknown encodingType:", t.encodingType)
+		return ""
+	}
 }
 
 type Enum struct {
@@ -30,17 +77,20 @@ type EnumMember struct {
 }
 
 type Struct struct {
-	Name    string
-	Members []StructMember
+	Name        string
+	Members     []StructMember
+	EncodedSize int
 }
 
 type StructMember struct {
-	Type Type
-	Name string
+	Type   Type
+	Name   string
+	Offset int
 }
 
 type Root struct {
-	Enums []Enum
+	Enums   []Enum
+	Structs []Struct
 }
 
 var reservedWords = map[string]bool{
@@ -198,8 +248,6 @@ func compileLiteral(val types.Literal) string {
 		log.Fatal("Unknown literal kind:", val.Kind)
 		return ""
 	}
-	log.Fatal("Unknown literal:", val)
-	return ""
 }
 
 func compileConstant(val types.Constant) string {
@@ -222,33 +270,58 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return ""
 }
 
+func maybeCompileConstant(val *types.Constant) string {
+	if val == nil {
+		return "null"
+	}
+	return compileConstant(*val)
+}
+
 func compileType(val types.Type) Type {
 	r := Type{}
+	r.Nullable = val.Nullable
 	switch val.Kind {
 	case types.ArrayType:
-		fallthrough
+		t := compileType(*val.ElementType)
+		if len(t.TypedDataDecl) > 0 {
+			r.Decl = t.TypedDataDecl
+			r.encodingType = typedArrayEncodingType
+		} else {
+			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
+			r.encodingType = arrayEncodingType
+		}
+		r.ElementCount = compileConstant(*val.ElementCount)
 	case types.VectorType:
 		t := compileType(*val.ElementType)
 		if len(t.TypedDataDecl) > 0 {
 			r.Decl = t.TypedDataDecl
+			r.encodingType = typedVectorEncodingType
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
+			r.encodingType = vectorEncodingType
 		}
-		r.ElementCount = compileConstant(val.ElementCount)
+		r.ElementCount = maybeCompileConstant(val.ElementCount)
 	case types.StringType:
 		r.Decl = "String"
+		r.encodingType = stringEncodingType
+		r.ElementCount = maybeCompileConstant(val.ElementCount)
 	case types.HandleType:
 		r.Decl = "Handle"
+		r.encodingType = handleEncodingType
 	case types.RequestType:
 		t := compileCompoundIdentifier(val.RequestSubtype)
 		r.Decl = fmt.Sprintf("InterfaceRequest<%s>", t)
+		r.encodingType = encodeableEncodingType
 	case types.PrimitiveType:
 		r.Decl = compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.TypedDataDecl = typedDataDecl[val.PrimitiveSubtype]
+		r.encodingType = primitiveEncodingType
+		r.codecSuffix = primitiveCodecSuffix[val.PrimitiveSubtype]
 	case types.IdentifierType:
 		t := compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
 		r.Decl = fmt.Sprintf("InterfaceHandle<%s>", t)
+		r.encodingType = encodeableEncodingType
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
@@ -271,11 +344,38 @@ func compileEnum(val types.Enum) Enum {
 	return e
 }
 
+func compileStructMember(val types.StructMember) StructMember {
+	return StructMember{
+		compileType(val.Type),
+		compileIdentifier(val.Name),
+		0, // TODO(TO-758): Need the member offset from the frontend.
+	}
+}
+
+func compileStruct(val types.Struct) Struct {
+	name := compileIdentifier(val.Name)
+	r := Struct{
+		name,
+		[]StructMember{},
+		0, // TODO(TO-758): Need the encoded size from the frontend.
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, compileStructMember(v))
+	}
+
+	return r
+}
+
 func Compile(fidlData types.Root) Root {
 	root := Root{}
 
 	for _, v := range fidlData.Enums {
 		root.Enums = append(root.Enums, compileEnum(v))
+	}
+
+	for _, v := range fidlData.Structs {
+		root.Structs = append(root.Structs, compileStruct(v))
 	}
 
 	return root

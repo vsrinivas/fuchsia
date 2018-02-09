@@ -40,6 +40,7 @@ class {{ .Name }} extends Encodable {
     }
   }
 
+  @override
   String toString() {
     switch (value) {
     {{- range .Members }}

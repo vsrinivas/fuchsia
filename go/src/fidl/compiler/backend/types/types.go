@@ -114,12 +114,12 @@ const (
 type Type struct {
 	Kind             TypeKind
 	ElementType      *Type
-	ElementCount     Constant
+	ElementCount     *Constant
 	HandleSubtype    HandleSubtype
 	RequestSubtype   CompoundIdentifier
 	PrimitiveSubtype PrimitiveSubtype
 	Identifier       CompoundIdentifier
-	Nullability      bool
+	Nullable         bool
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -158,7 +158,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullability)
+		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullability)
+		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullability)
+		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullability)
+		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
 		if err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(*obj["nullability"], &t.Nullability)
+		err = json.Unmarshal(*obj["nullability"], &t.Nullable)
 		if err != nil {
 			return err
 		}

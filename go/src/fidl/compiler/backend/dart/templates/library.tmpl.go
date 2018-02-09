@@ -11,9 +11,13 @@ const Library = `
 // found in the LICENSE file.
 
 import 'package:lib.fidl.dart/bindings.dart' as bindings;
+import 'package:zircon/zircon.dart';
 
 {{ range $enum := .Enums -}}
 {{ template "EnumDeclaration" $enum }}
+{{ end -}}
+{{ range $struct := .Structs -}}
+{{ template "StructDeclaration" $struct }}
 {{ end -}}
 {{- end -}}
 `

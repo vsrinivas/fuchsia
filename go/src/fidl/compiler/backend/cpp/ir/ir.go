@@ -236,8 +236,6 @@ func compileLiteral(val types.Literal) string {
 		log.Fatal("Unknown literal kind:", val.Kind)
 		return ""
 	}
-	log.Fatal("Unknown literal:", val)
-	return ""
 }
 
 func compileConstant(val types.Constant) string {
@@ -265,7 +263,7 @@ func compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := compileType(*val.ElementType)
-		r.Decl = fmt.Sprintf("::fidl::Array<%s, %s>", t.Decl, compileConstant(val.ElementCount))
+		r.Decl = fmt.Sprintf("::fidl::Array<%s, %s>", t.Decl, compileConstant(*val.ElementCount))
 	case types.VectorType:
 		t := compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
