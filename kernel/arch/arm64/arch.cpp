@@ -28,12 +28,32 @@
 
 #define LOCAL_TRACE 0
 
-enum {
-    PMCR_EL0_ENABLE_BIT = 1 << 0,
-    PMCR_EL0_LONG_COUNTER_BIT = 1 << 6,
-};
+// Counter-timer Kernel Control Register, EL1.
+static constexpr uint64_t CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER = 1 << 1;
 
-typedef struct {
+// Monitor Debug System Control Register, EL1.
+static constexpr uint64_t MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS = 1 << 13;
+static constexpr uint64_t MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS = 1 << 15;
+
+// Performance Monitors Count Enable Set, EL0.
+static constexpr uint64_t PMCNTENSET_EL0_ENABLE = 1UL << 31;  // Enable cycle count register.
+
+// Performance Monitor Control Register, EL0.
+static constexpr uint64_t PMCR_EL0_ENABLE_BIT = 1 << 0;
+static constexpr uint64_t PMCR_EL0_LONG_COUNTER_BIT = 1 << 6;
+
+// Performance Monitors User Enable Regiser, EL0.
+static constexpr uint64_t PMUSERENR_EL0_ENABLE = 1 << 0;  // Enable EL0 access to cycle counter.
+
+// System Control Register, EL1.
+static constexpr uint64_t SCTLR_EL1_UCI = 1 << 26; // Allow certain cache ops in EL0.
+static constexpr uint64_t SCTLR_EL1_UCT = 1 << 15; // Allow EL0 access to CTR register.
+static constexpr uint64_t SCTLR_EL1_DZE = 1 << 14; // Allow EL0 to use DC ZVA.
+static constexpr uint64_t SCTLR_EL1_SA0 = 1 << 4;  // Enable Stack Alignment Check EL0.
+static constexpr uint64_t SCTLR_EL1_SA = 1 << 3;   // Enable Stack Alignment Check EL1.
+static constexpr uint64_t SCTLR_EL1_AC = 1 << 1;   // Enable Alignment Checking for EL1 EL0.
+
+struct arm64_sp_info_t {
     uint64_t mpid;
     void* sp;
 
@@ -43,7 +63,7 @@ typedef struct {
     // (TPIDR_EL1) points just past arm64_sp_info_t.
     uintptr_t stack_guard;
     void* unsafe_sp;
-} arm64_sp_info_t;
+};
 
 static_assert(sizeof(arm64_sp_info_t) == 32,
               "check arm64_get_secondary_sp assembly");
@@ -58,20 +78,19 @@ static_assert(TP_OFFSET(stack_guard) == ZX_TLS_STACK_GUARD_OFFSET, "");
 static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
-/* smp boot lock */
+// SMP boot lock.
 static spin_lock_t arm_boot_cpu_lock = (spin_lock_t){1};
 static volatile int secondaries_to_init = 0;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
-extern uint64_t arch_boot_el; // Defined in start.S.
+extern uint64_t arch_boot_el;  // Defined in start.S.
 
-uint64_t arm64_get_boot_el(void) {
+uint64_t arm64_get_boot_el() {
     return arch_boot_el >> 2;
 }
 
-zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
-                                   void* sp, void* unsafe_sp) {
+zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* sp, void* unsafe_sp) {
     uint64_t mpid = ARM64_MPID(cluster, cpu);
 
     uint32_t i = 0;
@@ -94,46 +113,45 @@ zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
     return ZX_OK;
 }
 
-static void arm64_cpu_early_init(void) {
-    /* make sure the per cpu pointer is set up */
+static void arm64_cpu_early_init() {
+    // Make sure the per cpu pointer is set up.
     arm64_init_percpu_early();
 
-    /* set the vector base */
+    // Set the vector base.
     ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_el1_exception_base);
 
-    /* set some control bits in sctlr */
+    // Set some control bits in sctlr.
     uint64_t sctlr = ARM64_READ_SYSREG(sctlr_el1);
-    sctlr |= (1 << 26); /* UCI - Allow certain cache ops in EL0 */
-    sctlr |= (1 << 15); /* UCT - Allow EL0 access to CTR register */
-    sctlr |= (1 << 14); /* DZE - Allow EL0 to use DC ZVA */
-    sctlr |= (1 << 4);  /* SA0 - Enable Stack Alignment Check EL0 */
-    sctlr |= (1 << 3);  /* SA  - Enable Stack Alignment Check EL1 */
-    sctlr &= ~(1 << 1); /* AC  - Disable Alignment Checking for EL1 EL0 */
+    sctlr |= SCTLR_EL1_UCI | SCTLR_EL1_UCT | SCTLR_EL1_DZE | SCTLR_EL1_SA0 | SCTLR_EL1_SA;
+    sctlr &= ~SCTLR_EL1_AC;  // Disable alignment checking for EL1, EL0.
     ARM64_WRITE_SYSREG(sctlr_el1, sctlr);
 
-    /* save all of the features of the cpu */
+    // Save all of the features of the cpu.
     arm64_feature_init();
 
-    /* enable cycle counter */
-    ARM64_WRITE_SYSREG(pmcr_el0, (uint64_t)(PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT));
-    ARM64_WRITE_SYSREG(pmcntenset_el0, (1UL << 31));
+    // Enable cycle counter.
+    ARM64_WRITE_SYSREG(pmcr_el0, PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
+    ARM64_WRITE_SYSREG(pmcntenset_el0, PMCNTENSET_EL0_ENABLE);
 
-    /* enable user space access to cycle counter */
-    ARM64_WRITE_SYSREG(pmuserenr_el0, 1UL);
+    // Enable user space access to cycle counter.
+    ARM64_WRITE_SYSREG(pmuserenr_el0, PMUSERENR_EL0_ENABLE);
 
-    /* enable user space access to virtual counter (CNTVCT_EL0) */
-    ARM64_WRITE_SYSREG(cntkctl_el1, 1UL << 1);
+    // Enable user space access to virtual counter (CNTVCT_EL0).
+    ARM64_WRITE_SYSREG(cntkctl_el1, CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER);
+
+    ARM64_WRITE_SYSREG(mdscr_el1,
+                       MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS | MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS);
 
     arch_enable_fiqs();
 }
 
-void arch_early_init(void) {
+void arch_early_init() {
     arm64_cpu_early_init();
 
     platform_init_mmu_mappings();
 }
 
-void arch_init(void) TA_NO_THREAD_SAFETY_ANALYSIS {
+void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
     arch_mp_init_percpu();
 
     dprintf(INFO, "ARM boot EL%lu\n", arm64_get_boot_el());
@@ -153,30 +171,31 @@ void arch_init(void) TA_NO_THREAD_SAFETY_ANALYSIS {
 
     LTRACEF("releasing %d secondary cpus\n", secondaries_to_init);
 
-    /* release the secondary cpus */
+    // Release the secondary cpus.
     spin_unlock(&arm_boot_cpu_lock);
 
-    /* flush the release of the lock, since the secondary cpus are running without cache on */
+    // Flush the release of the lock, since the secondary cpus are running without cache on.
     arch_clean_cache_range((addr_t)&arm_boot_cpu_lock, sizeof(arm_boot_cpu_lock));
 }
 
-void arch_idle(void) {
+void arch_idle() {
     __asm__ volatile("wfi");
 }
 
-/* switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to the top of the kernel stack */
+// Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
+// the top of the kernel stack.
 void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
     thread_t* ct = get_current_thread();
 
-    /* set up a default spsr to get into 64bit user space:
-     * zeroed NZCV
-     * no SS, no IL, no D
-     * all interrupts enabled
-     * mode 0: EL0t
-     */
+    // Set up a default spsr to get into 64bit user space:
+    //  - Zeroed NZCV.
+    //  - No SS, no IL, no D.
+    //  - All interrupts enabled.
+    //  - Mode 0: EL0t.
+    //
     // TODO: (hollande,travisg) Need to determine why some platforms throw an
     //         SError exception when first switching to uspace.
-    uint32_t spsr = (uint32_t)(1 << 8); //Mask SError exceptions (currently unhandled)
+    uint32_t spsr = 1 << 8;  // Mask SError exceptions (currently unhandled).
 
     arch_disable_ints();
 
@@ -187,8 +206,8 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
     __UNREACHABLE;
 }
 
-/* called from assembly */
-extern "C" void arm64_secondary_entry(void) {
+// called from assembly.
+extern "C" void arm64_secondary_entry() {
     arm64_cpu_early_init();
 
     spin_lock(&arm_boot_cpu_lock);
@@ -196,7 +215,7 @@ extern "C" void arm64_secondary_entry(void) {
 
     uint cpu = arch_curr_cpu_num();
     thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
-    /* run early secondary cpu init routines up to the threading level */
+    // Run early secondary cpu init routines up to the threading level.
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
     arch_mp_init_percpu();
