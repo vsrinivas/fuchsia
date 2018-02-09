@@ -363,24 +363,14 @@ void x86_exception_handler(x86_iframe_t* frame) {
     case X86_INT_DOUBLE_FAULT:
         x86_df_handler(frame);
         break;
-    case X86_INT_FPU_FP_ERROR: {
+    case X86_INT_FPU_FP_ERROR:
         kcounter_add(exceptions_fpu, 1u);
-        uint16_t fsw;
-        __asm__ __volatile__("fnstsw %0"
-                             : "=m"(fsw));
-        TRACEF("fsw 0x%hx\n", fsw);
-        exception_die(frame, "x87 math fault\n");
+        x86_unhandled_exception(frame);
         break;
-    }
-    case X86_INT_SIMD_FP_ERROR: {
+    case X86_INT_SIMD_FP_ERROR:
         kcounter_add(exceptions_simd, 1u);
-        uint32_t mxcsr;
-        __asm__ __volatile__("stmxcsr %0"
-                             : "=m"(mxcsr));
-        TRACEF("mxcsr 0x%x\n", mxcsr);
-        exception_die(frame, "simd math fault\n");
+        x86_unhandled_exception(frame);
         break;
-    }
     case X86_INT_GP_FAULT:
         kcounter_add(exceptions_gpf, 1u);
         x86_gpf_handler(frame);
