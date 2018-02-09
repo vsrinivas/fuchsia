@@ -15,7 +15,8 @@ using auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
     app::ApplicationContext* app_context,
-    fidl::Array<AuthProviderConfigPtr> auth_provider_configs) {
+    fidl::Array<AuthProviderConfigPtr> auth_provider_configs)
+    : token_cache_(kMaxCacheSize) {
   FXL_CHECK(app_context);
 
   // TODO: Start the auth provider only when someone does a request to it,
@@ -92,20 +93,31 @@ void TokenManagerImpl::Authorize(
 
 void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
-    const fidl::String& app_client_id, fidl::Array<fidl::String> app_scopes,
+    const fidl::String& app_client_id,
+    fidl::Array<fidl::String> app_scopes,
     const GetAccessTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
-  // TODO: Return from cache if not expired
 
   // TODO: Fetch credential from data store
   fidl::String credential = "TODO";
+  fidl::String idp_credential_id = "TODO";
 
-  it->second ->GetAppAccessToken(
-      credential, app_client_id, std::move(app_scopes),
-      [this, callback](AuthProviderStatus status, AuthTokenPtr access_token) {
+  auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
+  cache::OAuthTokens tokens;
+
+  if (token_cache_.Get(cacheKey, &tokens) == cache::Status::kOK &&
+      tokens.access_token.IsValid()) {
+    callback(Status::OK, tokens.access_token.token);
+    return;
+  }
+
+  it->second->GetAppAccessToken(
+      idp_credential_id, app_client_id, std::move(app_scopes),
+      [this, callback, cacheKey, &tokens](AuthProviderStatus status,
+                                          AuthTokenPtr access_token) {
         std::string access_token_val;
         if (access_token) {
           access_token_val = access_token->token;
@@ -116,6 +128,18 @@ void TokenManagerImpl::GetAccessToken(
           return;
         }
 
+        tokens.access_token.expiration_time =
+            fxl::TimePoint::Now() +
+            fxl::TimeDelta::FromSeconds(access_token->expires_in);
+        tokens.access_token.token = access_token_val;
+
+        auto cacheStatus = token_cache_.Put(cacheKey, tokens);
+        if (cacheStatus != cache::Status::kOK) {
+          // TODO: log error
+          callback(Status::OK, access_token_val);
+          return;
+        }
+
         callback(Status::OK, std::move(access_token_val));
         return;
       });
@@ -123,19 +147,30 @@ void TokenManagerImpl::GetAccessToken(
 
 void TokenManagerImpl::GetIdToken(
     const auth::AuthProviderType auth_provider_type,
-    const fidl::String& audience, const GetIdTokenCallback& callback) {
+    const fidl::String& audience,
+    const GetIdTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
-  // TODO: Return from cache if not expired
 
   // TODO: Fetch credential from data store
   fidl::String credential = "TODO";
+  fidl::String idp_credential_id = "TODO";
+
+  auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
+  cache::OAuthTokens tokens;
+
+  if (token_cache_.Get(cacheKey, &tokens) == cache::Status::kOK &&
+      tokens.id_token.IsValid()) {
+    callback(Status::OK, tokens.id_token.token);
+    return;
+  }
 
   it->second->GetAppIdToken(
       credential, audience,
-      [this, callback](AuthProviderStatus status, AuthTokenPtr id_token) {
+      [this, callback, cacheKey, &tokens](AuthProviderStatus status,
+                                          AuthTokenPtr id_token) {
         std::string id_token_val;
         if (id_token) {
           id_token_val = id_token->token;
@@ -143,6 +178,18 @@ void TokenManagerImpl::GetIdToken(
 
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR, id_token_val);
+          return;
+        }
+
+        tokens.id_token.expiration_time =
+            fxl::TimePoint::Now() +
+            fxl::TimeDelta::FromSeconds(id_token->expires_in);
+        tokens.id_token.token = id_token_val;
+
+        auto cacheStatus = token_cache_.Put(cacheKey, tokens);
+        if (cacheStatus != cache::Status::kOK) {
+          // TODO: log error
+          callback(Status::OK, id_token_val);
           return;
         }
 
@@ -187,18 +234,35 @@ void TokenManagerImpl::DeleteAllTokens(
 
   // TODO: Fetch credential from data store
   fidl::String credential = "TODO";
+  fidl::String idp_credential_id = "TODO";
+  cache::CacheKey cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
 
   it->second->RevokeAppOrPersistentCredential(
-      credential, [this, callback](AuthProviderStatus status) {
+      credential, [this, cacheKey, callback](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);
           return;
         }
 
-        //  TODO: Delete local copy from cache and data store
+        auto cacheStatus = token_cache_.Delete(cacheKey);
+        if (cacheStatus != cache::Status::kOK &&
+            cacheStatus != cache::Status::kKeyNotFound) {
+          callback(Status::INTERNAL_CACHE_ERROR);
+          return;
+        }
+
+        //  TODO: Delete local copy from data store
         callback(Status::OK);
         return;
       });
+}
+
+const cache::CacheKey TokenManagerImpl::GetCacheKey(
+    auth::AuthProviderType identity_provider,
+    const fidl::String& idp_credential_id) {
+  // TODO: consider replacing the static cast with a string map (more type safe)
+  return cache::CacheKey(std::to_string(static_cast<int>(identity_provider)),
+                         idp_credential_id.get());
 }
 
 }  // namespace auth

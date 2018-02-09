@@ -55,31 +55,25 @@ enum Status {
 
 // Unique key for accessing token cache.
 struct CacheKey {
-  const std::string user_id;
   const std::string idp_provider;
   const std::string idp_credential_id;
 
-  CacheKey(std::string user_id,
-           std::string idp_provider,
-           std::string idp_credential_id)
-      : user_id(std::move(user_id)),
-        idp_provider(std::move(idp_provider)),
+  CacheKey(std::string idp_provider, std::string idp_credential_id)
+      : idp_provider(std::move(idp_provider)),
         idp_credential_id(std::move(idp_credential_id)) {}
 
   bool operator<(const CacheKey& other) const {
-    return std::tie(user_id, idp_provider, idp_credential_id) <
-           std::tie(other.user_id, other.idp_provider, other.idp_credential_id);
+    return std::tie(idp_provider, idp_credential_id) <
+           std::tie(other.idp_provider, other.idp_credential_id);
   }
 
   bool operator==(const CacheKey& other) const {
-    return (this->user_id == other.user_id &&
-            this->idp_provider == other.idp_provider &&
+    return (this->idp_provider == other.idp_provider &&
             this->idp_credential_id == other.idp_credential_id);
   }
 
   bool IsValid() const {
-    return !(user_id.empty() || idp_provider.empty() ||
-             idp_credential_id.empty());
+    return !(idp_provider.empty() || idp_credential_id.empty());
   }
 };
 
@@ -110,25 +104,33 @@ struct FirebaseAuthToken {
   }
 };
 
-// In-memory cache for short lived oauth tokens that resets on system reboots.
-// Tokens are cached based on the expiration time set by the Identity provider.
-// Token cache is indexed by unique |CacheKey|.
-struct OAuthTokens {
+struct OAuthToken {
   fxl::TimePoint expiration_time;
-  std::string access_token;
-  std::string id_token;
-  std::map<std::string, FirebaseAuthToken> firebase_tokens_map;
+  std::string token;
 
-  bool IsValid() const {
-    return (expiration_time > fxl::TimePoint::Min()) &&
-           !(access_token.empty() || id_token.empty());
+  bool operator==(const OAuthToken& other) const {
+    return (this->expiration_time == other.expiration_time &&
+            this->token == other.token);
   }
 
-  // Returns true if the stored token has expired.
+  bool IsValid() const {
+    return expiration_time > fxl::TimePoint::Min() && !token.empty();
+  }
+
   bool HasExpired() const {
     FXL_DCHECK(IsValid());
     return (expiration_time - fxl::TimePoint::Now()) < kPaddingForTokenExpiry;
   }
+};
+
+// In-memory cache for short lived oauth tokens that resets on system reboots.
+// Tokens are cached based on the expiration time set by the Identity provider.
+// Token cache is indexed by unique |CacheKey|.
+struct OAuthTokens {
+  OAuthToken id_token;
+  OAuthToken access_token;
+
+  std::map<std::string, FirebaseAuthToken> firebase_tokens_map;
 };
 
 class LinkedHashMap {
@@ -136,7 +138,8 @@ class LinkedHashMap {
   LinkedHashMap(int cache_size) { cache_size_ = cache_size; }
 
   Status Insert(const CacheKey& key, const OAuthTokens& tokens) {
-    if (!key.IsValid() || !tokens.IsValid()) {
+    if (!key.IsValid() ||
+        !(tokens.id_token.IsValid() || tokens.access_token.IsValid())) {
       return Status::kInvalidArguments;
     }
 
@@ -172,15 +175,18 @@ class LinkedHashMap {
       return Status::kKeyNotFound;
     }
 
+    auto& tokens = it->second->second;
+
     // check if the cache has expired before returning. If oauth tokens are
     // expired, remove them from cache before returning error status.
-    if (it->second->second.HasExpired()) {
+    // TODO: invalidate id and access tokens individually
+    if ((tokens.id_token.IsValid() && tokens.id_token.HasExpired()) ||
+        (tokens.access_token.IsValid() && tokens.access_token.HasExpired())) {
       Delete(key);
       return Status::kCacheExpired;
     }
 
     tokens_list_.splice(tokens_list_.begin(), tokens_list_, it->second);
-    auto& tokens = it->second->second;
 
     // OAuth token is valid, check to see if firebase tokens are all also valid.
     // Purge all expired firebase tokens before returning.

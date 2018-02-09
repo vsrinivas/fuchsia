@@ -26,16 +26,13 @@ constexpr int kMaxCacheSize = 10;
 constexpr int kDefaultTokenExpiration = 3600;
 
 CacheKey MakeCacheKey(const int index) {
-  std::string user_id(15, 0);
-  std::snprintf(&user_id[0], user_id.size(), "user_id_%d", index);
-
   std::string idp(15, 0);
   std::snprintf(&idp[0], idp.size(), "idp_%d", index);
 
   std::string idp_cred_id(15, 0);
   std::snprintf(&idp_cred_id[0], idp_cred_id.size(), "idp_cred_id_%d", index);
 
-  return CacheKey(user_id, idp, idp_cred_id);
+  return CacheKey(idp, idp_cred_id);
 }
 
 FirebaseAuthToken MakeFirebaseAuthToken(const int index, const int expires_in) {
@@ -58,10 +55,14 @@ OAuthTokens MakeOAuthTokens(const int index, const int expires_in) {
   std::snprintf(&id_token[0], id_token.size(), "id_token_%d", index);
 
   OAuthTokens tokens;
-  tokens.expiration_time =
+  tokens.access_token.token = access_token;
+  tokens.access_token.expiration_time =
       fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(expires_in);
-  tokens.access_token = access_token;
-  tokens.id_token = id_token;
+  ;
+  tokens.id_token.token = id_token;
+  tokens.id_token.expiration_time =
+      fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(expires_in);
+  ;
 
   for (int i = 0; i < index; i++) {
     tokens.firebase_tokens_map["fb_api_key_" + std::to_string(i)] =
@@ -80,7 +81,6 @@ void VerifyFirebaseAuthToken(const FirebaseAuthToken& expected,
 }
 
 bool VerifyOAuthTokens(const OAuthTokens& expected, const OAuthTokens& got) {
-  EXPECT_EQ(expected.expiration_time, got.expiration_time);
   EXPECT_EQ(expected.access_token, got.access_token);
   EXPECT_EQ(expected.id_token, got.id_token);
 
@@ -131,39 +131,36 @@ TEST_F(AuthCacheTest, CheckFirebaseAuthToken) {
 
 TEST_F(AuthCacheTest, CheckOAuthTokens) {
   std::map<std::string, FirebaseAuthToken> firebase_tokens_map;
-  EXPECT_FALSE(
-      (OAuthTokens{fxl::TimePoint::Min(), "a", "a", firebase_tokens_map})
-          .IsValid());
-  EXPECT_FALSE((OAuthTokens{fxl::TimePoint::Now(), "", "", firebase_tokens_map})
-                   .IsValid());
-  EXPECT_FALSE(
-      (OAuthTokens{fxl::TimePoint::Now(), "", "a", firebase_tokens_map})
-          .IsValid());
-  EXPECT_FALSE(
-      (OAuthTokens{fxl::TimePoint::Now(), "a", "", firebase_tokens_map})
-          .IsValid());
-  EXPECT_TRUE(
-      (OAuthTokens{fxl::TimePoint::Now(), "a", "a", firebase_tokens_map})
-          .IsValid());
+
+  OAuthTokens invalid_tokens{{fxl::TimePoint::Min(), "a"},
+                             {fxl::TimePoint::Min(), "a"},
+                             firebase_tokens_map};
+
+  EXPECT_FALSE(invalid_tokens.access_token.IsValid());
+  EXPECT_FALSE(invalid_tokens.id_token.IsValid());
 
   OAuthTokens otokens1{
-      fxl::TimePoint::Now() - fxl::TimeDelta::FromSeconds(7200), "a", "a",
+      {fxl::TimePoint::Now() - fxl::TimeDelta::FromSeconds(7200), "a"},
+      {fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(7200), "a"},
       firebase_tokens_map};
-  EXPECT_TRUE(otokens1.IsValid());
-  EXPECT_TRUE(otokens1.HasExpired());
+  EXPECT_TRUE(otokens1.id_token.IsValid());
+  EXPECT_TRUE(otokens1.access_token.IsValid());
+  EXPECT_TRUE(otokens1.id_token.HasExpired());
+  EXPECT_FALSE(otokens1.access_token.HasExpired());
 
   OAuthTokens otokens2{
-      fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(7200), "a", "a",
+      {fxl::TimePoint::Now() + fxl::TimeDelta::FromSeconds(7200), ""},
+      {fxl::TimePoint::Now() - fxl::TimeDelta::FromSeconds(7200), "a"},
       firebase_tokens_map};
-  EXPECT_TRUE(otokens2.IsValid());
-  EXPECT_FALSE(otokens2.HasExpired());
+  EXPECT_FALSE(otokens2.id_token.IsValid());
+  EXPECT_TRUE(otokens2.access_token.HasExpired());
 }
 
 TEST_F(AuthCacheTest, CheckGetAndPut) {
   TokenCache cache(kMaxCacheSize);
 
   // check for cache miss
-  auto key = CacheKey("u1", "idp1", "cred_id1");
+  auto key = CacheKey("idp1", "cred_id1");
   OAuthTokens out;
   auto status = cache.Get(key, &out);
   EXPECT_EQ(status, Status::kKeyNotFound);

@@ -50,21 +50,23 @@ class DevTokenManagerAppTest : public ::auth::TestWithMessageLoop {
       std::ostringstream stream;
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info->arguments.push_back(stream.str());
-  }
-  application_context_->launcher()->CreateApplication(
-      std::move(launch_info), app_controller_.NewRequest());
-  app_controller_.set_error_handler(
-      [] { FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service."; });
+    }
+    application_context_->launcher()->CreateApplication(
+        std::move(launch_info), app_controller_.NewRequest());
+    app_controller_.set_error_handler([] {
+      FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
+    });
 
-  app::ConnectToService(services.get(), token_mgr_factory_.NewRequest());
+    app::ConnectToService(services.get(), token_mgr_factory_.NewRequest());
 
-  auto dev_config_ptr = auth::AuthProviderConfig::New();
-  dev_config_ptr->auth_provider_type = kDevAuthProvider;
-  dev_config_ptr->url = "dev_auth_provider";
-  auth_provider_configs_.push_back(std::move(dev_config_ptr));
+    auto dev_config_ptr = auth::AuthProviderConfig::New();
+    dev_config_ptr->auth_provider_type = kDevAuthProvider;
+    dev_config_ptr->url = "dev_auth_provider";
+    auth_provider_configs_.push_back(std::move(dev_config_ptr));
 
-  token_mgr_factory_->GetTokenManager(
-      kTestUserId, std::move(auth_provider_configs_), token_mgr_.NewRequest());
+    token_mgr_factory_->GetTokenManager(kTestUserId,
+                                        std::move(auth_provider_configs_),
+                                        token_mgr_.NewRequest());
   }
 
   void TearDown() override {}
@@ -88,6 +90,7 @@ TEST_F(DevTokenManagerAppTest, Authorize) {
 
   token_mgr_->Authorize(kDevAuthProvider, std::move(auth_ui_context),
                         auth::Capture(MakeQuitTask(), &status, &user_info));
+
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
   // TODO(ukode): Validate user_info contents
@@ -130,13 +133,105 @@ TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
 }
 
 TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
+  auto scopes = fidl::Array<fidl::String>::New(0);
   auth::Status status;
-  auth::FirebaseTokenPtr firebase_token;
+
+  fidl::String old_id_token;
+  fidl::String old_access_token;
+  fidl::String new_id_token;
+  fidl::String new_access_token;
+
+  token_mgr_->GetIdToken(kDevAuthProvider, "",
+                         auth::Capture(MakeQuitTask(), &status, &old_id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, "", std::move(scopes),
+      auth::Capture(MakeQuitTask(), &status, &old_access_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->DeleteAllTokens(kDevAuthProvider,
                               auth::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
+
+  scopes = fidl::Array<fidl::String>::New(0);
+  token_mgr_->GetIdToken(kDevAuthProvider, "",
+                         auth::Capture(MakeQuitTask(), &status, &new_id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, "", std::move(scopes),
+      auth::Capture(MakeQuitTask(), &status, &new_access_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  ASSERT_NE(old_id_token, new_id_token);
+  ASSERT_NE(old_access_token, new_access_token);
+}
+
+TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
+  auth::Status status;
+  fidl::String id_token;
+  fidl::String cached_id_token;
+
+  token_mgr_->GetIdToken(kDevAuthProvider, "",
+                         auth::Capture(MakeQuitTask(), &status, &id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetIdToken(
+      kDevAuthProvider, "",
+      auth::Capture(MakeQuitTask(), &status, &cached_id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
+  ASSERT_EQ(id_token.get(), cached_id_token.get());
+
+  token_mgr_->DeleteAllTokens(kDevAuthProvider,
+                              auth::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetIdToken(
+      kDevAuthProvider, "",
+      auth::Capture(MakeQuitTask(), &status, &cached_id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
+  ASSERT_NE(id_token.get(), cached_id_token.get());
+}
+
+TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
+  auto scopes = fidl::Array<fidl::String>::New(0);
+  auth::Status status;
+  fidl::String id_token;
+  fidl::String access_token;
+  fidl::String cached_access_token;
+
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, "", std::move(scopes),
+      auth::Capture(MakeQuitTask(), &status, &access_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetIdToken(kDevAuthProvider, "",
+                         auth::Capture(MakeQuitTask(), &status, &id_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  scopes = fidl::Array<fidl::String>::New(0);
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, "", std::move(scopes),
+      auth::Capture(MakeQuitTask(), &status, &cached_access_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
+  ASSERT_EQ(access_token.get(), cached_access_token.get());
 }
 
 }  // namespace

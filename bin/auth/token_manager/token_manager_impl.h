@@ -7,6 +7,7 @@
 
 #include <map>
 
+#include "garnet/bin/auth/cache/token_cache.h"
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/auth/fidl/auth_provider.fidl.h"
@@ -21,6 +22,8 @@ namespace auth {
 
 using auth::AuthProviderPtr;
 using auth::AuthProviderType;
+
+constexpr int kMaxCacheSize = 10;
 
 class TokenManagerImpl : public TokenManager {
  public:
@@ -52,10 +55,16 @@ class TokenManagerImpl : public TokenManager {
   void DeleteAllTokens(const auth::AuthProviderType identity_provider,
                        const DeleteAllTokensCallback& callback) override;
 
+  const cache::CacheKey GetCacheKey(
+      const auth::AuthProviderType identity_provider,
+      const fidl::String& idp_credential_id);
+
   std::map<AuthProviderType, app::ApplicationControllerPtr>
       auth_provider_controllers_;
 
   std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;
+
+  cache::TokenCache token_cache_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenManagerImpl);
 };
