@@ -422,9 +422,25 @@ void x86_exception_handler(x86_iframe_t* frame) {
         platform_irq(frame);
         break;
     }
-    default:
+
+    /* Integer division-by-zero */
+    case X86_INT_DIVIDE_0:
+    /* Overflow for INTO instruction (should be x86-32-only) */
+    case X86_INT_OVERFLOW:
+    /* Bound range exceeded for BOUND instruction (should be x86-32-only) */
+    case X86_INT_BOUND_RANGE:
+    /* Loading segment with "not present" bit set */
+    case X86_INT_SEGMENT_NOT_PRESENT:
+    /* Stack segment fault (should be x86-32-only) */
+    case X86_INT_STACK_FAULT:
+    /* Misaligned memory access when AC=1 in flags */
+    case X86_INT_ALIGNMENT_CHECK:
         kcounter_add(exceptions_unhandled, 1u);
         x86_unhandled_exception(frame);
+        break;
+
+    default:
+        exception_die(frame, "unhandled exception type, halting\n");
         break;
     }
 
