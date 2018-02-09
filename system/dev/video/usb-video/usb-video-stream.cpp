@@ -265,32 +265,43 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
         proposal.dwFrameInterval = frame_desc->default_frame_interval;
     }
 
-    zx_status_t status = usb_video_negotiate_stream(
-        &usb_, iface_num_, &proposal, out_result);
+    usb_video_vc_probe_and_commit_controls result;
+    zx_status_t status = usb_video_negotiate_probe(
+        &usb_, iface_num_, &proposal, &result);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_video_negotiate_stream failed: %d\n", status);
+        zxlogf(ERROR, "usb_video_negotiate_probe failed: %d\n", status);
         return status;
     }
 
     // TODO(jocelyndang): we should calculate this ourselves instead
     // of reading the reported value, as it is incorrect in some devices.
-    uint32_t required_bandwidth = negotiation_result_.dwMaxPayloadTransferSize;
+    uint32_t required_bandwidth = result.dwMaxPayloadTransferSize;
 
-    bool found = false;
+    const UsbVideoStreamingSetting* best_setting = nullptr;
     // Find a setting that supports the required bandwidth.
     for (const auto& setting : streaming_settings_) {
         uint32_t bandwidth = setting_bandwidth(setting);
         if (bandwidth >= required_bandwidth) {
-            found = true;
-            *out_setting = &setting;
+            best_setting = &setting;
             break;
         }
     }
-    if (!found) {
+    if (!best_setting) {
         zxlogf(ERROR, "could not find a setting with bandwidth >= %u\n",
                required_bandwidth);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    status = usb_video_negotiate_commit(&usb_, iface_num_, &result);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "usb_video_negotiate_commit failed: %d\n", status);
+        return status;
+    }
+
+    // Negotiation succeeded, copy the results out.
+    memcpy(out_result, &result, sizeof(usb_video_vc_probe_and_commit_controls));
+    *out_setting = best_setting;
+
     return ZX_OK;
 }
 
