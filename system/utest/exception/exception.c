@@ -1141,6 +1141,21 @@ static void __NO_RETURN trigger_hw_bkpt(void)
     trigger_unsupported();
 }
 
+// ARM does not trap on integer divide-by-zero.
+#if defined(__x86_64__)
+static void __NO_RETURN trigger_integer_divide_by_zero(void)
+{
+    // Use an x86 division instruction (rather than doing division from C)
+    // to ensure that the compiler does not convert the division into
+    // something else.
+    uint32_t result;
+    __asm__ volatile("idivb %1"
+                     : "=a"(result)
+                     : "r"((uint8_t) 0), "a"((uint16_t) 1));
+    trigger_unsupported();
+}
+#endif
+
 static const struct {
     zx_excp_type_t type;
     const char* name;
@@ -1152,6 +1167,9 @@ static const struct {
     { ZX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn", true, trigger_undefined_insn },
     { ZX_EXCP_SW_BREAKPOINT, "sw-bkpt", true, trigger_sw_bkpt },
     { ZX_EXCP_HW_BREAKPOINT, "hw-bkpt", false, trigger_hw_bkpt },
+#if defined(__x86_64__)
+    { ZX_EXCP_GENERAL, "integer-divide-by-zero", true, trigger_integer_divide_by_zero },
+#endif
 };
 
 static void __NO_RETURN trigger_exception(const char* excp_name)
