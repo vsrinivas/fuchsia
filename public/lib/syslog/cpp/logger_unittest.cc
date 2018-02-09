@@ -20,6 +20,12 @@ __END_CDECLS
 
 namespace {
 
+class Cleanup {
+ public:
+  Cleanup() { fx_log_reset_global(); }
+  ~Cleanup() { fx_log_reset_global(); }
+};
+
 bool ends_with(const char* str, const char* suffix) {
   if (strlen(str) < strlen(suffix)) {
     return false;
@@ -64,14 +70,14 @@ void output_compare_helper(zx::socket local,
 }
 
 TEST(LogInit, Init) {
-  fx_log_reset_global();
+  Cleanup cleanup;
   ASSERT_EQ(ZX_OK, syslog::InitLogger());
   fx_log_reset_global();
   ASSERT_EQ(ZX_OK, syslog::InitLogger({"tag1", "tag2"}));
 }
 
 TEST(Logger, LogSimple) {
-  fx_log_reset_global();
+  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -81,7 +87,7 @@ TEST(Logger, LogSimple) {
 }
 
 TEST(Logger, LogSeverity) {
-  fx_log_reset_global();
+  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -97,7 +103,7 @@ TEST(Logger, LogSeverity) {
 }
 
 TEST(Logger, LogWithTag) {
-  fx_log_reset_global();
+  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
@@ -108,7 +114,7 @@ TEST(Logger, LogWithTag) {
 }
 
 TEST(Logger, CheckFunction) {
-  fx_log_reset_global();
+  Cleanup cleanup;
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
