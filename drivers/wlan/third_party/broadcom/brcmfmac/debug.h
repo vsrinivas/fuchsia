@@ -17,7 +17,9 @@
 #ifndef BRCMFMAC_DEBUG_H
 #define BRCMFMAC_DEBUG_H
 
-#include <linux/net.h> /* net_ratelimit() */
+//#include <linux/net.h> /* net_ratelimit() */
+
+#include "linuxisms.h"
 
 // clang-format off
 
@@ -49,7 +51,7 @@
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-__printf(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
+__PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
 /* Macro for error messages. When debugging / tracing the driver all error
  * messages are important to us.
  */
@@ -64,7 +66,7 @@ __printf(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
 /* For debug/tracing purposes treat info messages as errors */
 #define brcmf_info brcmf_err
 
-__printf(3, 4) void __brcmf_dbg(u32 level, const char* func, const char* fmt, ...);
+__PRINTFLIKE(3, 4) void __brcmf_dbg(u32 level, const char* func, const char* fmt, ...);
 #define brcmf_dbg(level, fmt, ...)                                      \
     do {                                                                \
         __brcmf_dbg(BRCMF_##level##_VAL, __func__, fmt, ##__VA_ARGS__); \

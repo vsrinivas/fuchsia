@@ -5,6 +5,7 @@
     "packages": {
         "wlan": "//garnet/drivers/wlan/wlan",
         "ralink": "//garnet/drivers/wlan/mediatek/ralink",
-        "ath10k": "//garnet/drivers/wlan/third_party/atheros/ath10k"
+        "ath10k": "//garnet/drivers/wlan/third_party/atheros/ath10k",
+        "brcmfmac": "//garnet/drivers/wlan/third_party/broadcom/brcmfmac"
     }
 }

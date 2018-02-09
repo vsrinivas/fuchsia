@@ -16,7 +16,9 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 
-#include <net/cfg80211.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
 
 struct brcmf_cfg80211_info;
 

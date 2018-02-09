@@ -13,16 +13,18 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <asm/unaligned.h>
-#include <linux/bcma/bcma.h>
-#include <linux/delay.h>
-#include <linux/firmware.h>
-#include <linux/interrupt.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/pci.h>
-#include <linux/sched.h>
-#include <linux/vmalloc.h>
+//#include <asm/unaligned.h>
+//#include <linux/bcma/bcma.h>
+//#include <linux/delay.h>
+//#include <linux/firmware.h>
+//#include <linux/interrupt.h>
+//#include <linux/kernel.h>
+//#include <linux/module.h>
+//#include <linux/pci.h>
+//#include <linux/sched.h>
+//#include <linux/vmalloc.h>
+
+#include "linuxisms.h"
 
 #include <brcm_hw_ids.h>
 #include <brcmu_utils.h>
@@ -1175,10 +1177,10 @@ static int brcmf_pcie_get_fwname(struct device* dev, u32 chip, u32 chiprev, u8* 
     int ret = 0;
 
     if (devinfo->fw_name[0] != '\0') {
-        strlcpy(fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
+        strlcpy((char*)fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
     } else
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_pcie_fwnames,
-                                        ARRAY_SIZE(brcmf_pcie_fwnames), fw_name, NULL);
+                                        ARRAY_SIZE(brcmf_pcie_fwnames), (char*)fw_name, NULL);
 
     return ret;
 }

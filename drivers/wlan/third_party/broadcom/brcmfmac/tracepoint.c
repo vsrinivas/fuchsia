@@ -14,7 +14,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/module.h> /* bug in tracepoint.h, it should include this */
+//#include <linux/module.h> /* bug in tracepoint.h, it should include this */
+
+#include "linuxisms.h"
 
 #ifndef __CHECKER__
 #define CREATE_TRACE_POINTS
@@ -24,7 +26,7 @@
 void __brcmf_err(const char* func, const char* fmt, ...) {
     struct va_format vaf = {
         .fmt = fmt,
-    };
+        };
     va_list args;
 
     va_start(args, fmt);

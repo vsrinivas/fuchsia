@@ -15,25 +15,27 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
-#include <linux/acpi.h>
-#include <linux/completion.h>
-#include <linux/errno.h>
-#include <linux/interrupt.h>
-#include <linux/mmc/card.h>
-#include <linux/mmc/core.h>
-#include <linux/mmc/host.h>
-#include <linux/mmc/sdio.h>
-#include <linux/mmc/sdio_func.h>
-#include <linux/module.h>
-#include <linux/netdevice.h>
-#include <linux/pci.h>
-#include <linux/pci_ids.h>
-#include <linux/pm_runtime.h>
-#include <linux/scatterlist.h>
-#include <linux/sched.h>
-#include <linux/suspend.h>
-#include <linux/types.h>
-#include <net/cfg80211.h>
+//#include <linux/acpi.h>
+//#include <linux/completion.h>
+//#include <linux/errno.h>
+//#include <linux/interrupt.h>
+//#include <linux/mmc/card.h>
+//#include <linux/mmc/core.h>
+//#include <linux/mmc/host.h>
+//#include <linux/mmc/sdio.h>
+//#include <linux/mmc/sdio_func.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+//#include <linux/pci.h>
+//#include <linux/pci_ids.h>
+//#include <linux/pm_runtime.h>
+//#include <linux/scatterlist.h>
+//#include <linux/sched.h>
+//#include <linux/suspend.h>
+//#include <linux/types.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
 
 #include <brcm_hw_ids.h>
 #include <brcmu_utils.h>
@@ -300,7 +302,7 @@ static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_f
         break;
     default:
         /* bail out as things are really fishy here */
-        WARN(1, "invalid sdio function number: %d\n", func->num);
+        WARN(1, "invalid sdio function number\n"); // TODO(cphoenix): %d\n", func->num);
         err = -ENOMEDIUM;
     };
 

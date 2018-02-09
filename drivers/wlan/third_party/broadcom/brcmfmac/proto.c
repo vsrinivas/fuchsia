@@ -14,9 +14,11 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/netdevice.h>
-#include <linux/slab.h>
-#include <linux/types.h>
+//#include <linux/netdevice.h>
+//#include <linux/slab.h>
+//#include <linux/types.h>
+
+#include "linuxisms.h"
 
 #include <brcmu_wifi.h>
 #include "bcdc.h"

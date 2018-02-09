@@ -16,6 +16,8 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_BTCOEX_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_BTCOEX_H_
 
+#include "cfg80211.h"
+
 enum brcmf_btcoex_mode { BRCMF_BTCOEX_DISABLED, BRCMF_BTCOEX_ENABLED };
 
 int brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg);

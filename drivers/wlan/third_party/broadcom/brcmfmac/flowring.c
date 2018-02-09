@@ -14,9 +14,12 @@
  */
 
 #include <brcmu_utils.h>
-#include <linux/etherdevice.h>
-#include <linux/netdevice.h>
-#include <linux/types.h>
+
+//#include <linux/etherdevice.h>
+//#include <linux/netdevice.h>
+//#include <linux/types.h>
+
+#include "linuxisms.h"
 
 #include "bus.h"
 #include "common.h"

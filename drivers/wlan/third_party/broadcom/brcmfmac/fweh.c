@@ -13,7 +13,10 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/netdevice.h>
+
+//#include <linux/netdevice.h>
+
+#include "linuxisms.h"
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -68,7 +71,7 @@ static struct brcmf_fweh_event_name fweh_event_names[] = {BRCMF_FWEH_EVENT_ENUM_
  */
 const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
     int i;
-    for (i = 0; i < ARRAY_SIZE(fweh_event_names); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(fweh_event_names); i++) {
         if (fweh_event_names[i].code == code) {
             return fweh_event_names[i].name;
         }

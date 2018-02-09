@@ -13,9 +13,12 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/gcd.h>
-#include <linux/netdevice.h>
-#include <net/cfg80211.h>
+
+//#include <linux/gcd.h>
+//#include <linux/netdevice.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
 
 #include "cfg80211.h"
 #include "core.h"
@@ -54,7 +57,7 @@ static int brcmf_pno_store_request(struct brcmf_pno_info* pi,
         return -ENOSPC;
     }
 
-    brcmf_dbg(SCAN, "reqid=%llu\n", req->reqid);
+    brcmf_dbg(SCAN, "reqid=%lu\n", req->reqid);
     mutex_lock(&pi->req_lock);
     pi->reqs[pi->n_reqs++] = req;
     mutex_unlock(&pi->req_lock);
@@ -79,7 +82,7 @@ static int brcmf_pno_remove_request(struct brcmf_pno_info* pi, u64 reqid) {
         goto done;
     }
 
-    brcmf_dbg(SCAN, "reqid=%llu\n", reqid);
+    brcmf_dbg(SCAN, "reqid=%lu\n", reqid);
     pi->n_reqs--;
 
     /* if last we are done */
@@ -185,7 +188,7 @@ static int brcmf_pno_set_random(struct brcmf_if* ifp, struct brcmf_pno_info* pi)
     /* Set locally administered */
     pfn_mac.mac[0] |= 0x02;
 
-    brcmf_dbg(SCAN, "enabling random mac: reqid=%llu mac=%pM\n", pi->reqs[i]->reqid, pfn_mac.mac);
+    brcmf_dbg(SCAN, "enabling random mac: reqid=%lu mac=%pM\n", pi->reqs[i]->reqid, pfn_mac.mac);
     err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac));
     if (err) {
         brcmf_err("pfn_macaddr failed, err=%d\n", err);
@@ -465,7 +468,7 @@ int brcmf_pno_start_sched_scan(struct brcmf_if* ifp, struct cfg80211_sched_scan_
     struct brcmf_pno_info* pi;
     int ret;
 
-    brcmf_dbg(TRACE, "reqid=%llu\n", req->reqid);
+    brcmf_dbg(TRACE, "reqid=%lu\n", req->reqid);
 
     pi = ifp_to_pno(ifp);
     ret = brcmf_pno_store_request(pi, req);
@@ -488,7 +491,7 @@ int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, u64 reqid) {
     struct brcmf_pno_info* pi;
     int err;
 
-    brcmf_dbg(TRACE, "reqid=%llu\n", reqid);
+    brcmf_dbg(TRACE, "reqid=%lu\n", reqid);
 
     pi = ifp_to_pno(ifp);
     err = brcmf_pno_remove_request(pi, reqid);
@@ -545,7 +548,7 @@ u64 brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, u32 bucket) {
 
     mutex_lock(&pi->req_lock);
 
-    if (bucket < pi->n_reqs) {
+    if ((int)bucket < pi->n_reqs) {
         reqid = pi->reqs[bucket]->reqid;
     }
 

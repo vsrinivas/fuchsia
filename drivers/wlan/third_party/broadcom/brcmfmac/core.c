@@ -16,14 +16,17 @@
 
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
-#include <linux/etherdevice.h>
-#include <linux/inetdevice.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <net/addrconf.h>
-#include <net/cfg80211.h>
-#include <net/ipv6.h>
-#include <net/rtnetlink.h>
+
+//#include <linux/etherdevice.h>
+//#include <linux/inetdevice.h>
+//#include <linux/kernel.h>
+//#include <linux/module.h>
+//#include <net/addrconf.h>
+//#include <net/cfg80211.h>
+//#include <net/ipv6.h>
+//#include <net/rtnetlink.h>
+
+#include "linuxisms.h"
 
 #include "bus.h"
 #include "cfg80211.h"
@@ -110,7 +113,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     struct netdev_hw_addr* ha;
     u32 cmd_value, cnt;
     __le32 cnt_le;
-    char* buf
+    char* buf;
     char* bufp;
     u32 buflen;
     s32 err;
@@ -907,7 +910,7 @@ int brcmf_attach(struct device* dev, struct brcmf_mp_device* settings) {
         return -ENOMEM;
     }
 
-    for (i = 0; i < ARRAY_SIZE(drvr->if2bss); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(drvr->if2bss); i++) {
         drvr->if2bss[i] = BRCMF_BSSIDX_INVALID;
     }
 

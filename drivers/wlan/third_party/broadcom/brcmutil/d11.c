@@ -15,7 +15,9 @@
  */
 /*********************channel spec common functions*********************/
 
-#include <linux/module.h>
+//#include <linux/module.h>
+
+#include "linuxisms.h"
 
 #include <brcmu_d11.h>
 #include <brcmu_utils.h>

@@ -14,12 +14,14 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/bcm47xx_nvram.h>
-#include <linux/device.h>
-#include <linux/firmware.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/slab.h>
+//#include <linux/bcm47xx_nvram.h>
+//#include <linux/device.h>
+//#include <linux/firmware.h>
+//#include <linux/kernel.h>
+//#include <linux/module.h>
+//#include <linux/slab.h>
+
+#include "linuxisms.h"
 
 #include "common.h"
 #include "core.h"
@@ -113,18 +115,18 @@ static enum nvram_parser_state brcmf_nvram_handle_key(struct nvram_parser* nvp) 
     c = nvp->data[nvp->pos];
     if (c == '=') {
         /* ignore RAW1 by treating as comment */
-        if (strncmp(&nvp->data[nvp->entry], "RAW1", 4) == 0) {
+        if (strncmp((char*)&nvp->data[nvp->entry], "RAW1", 4) == 0) {
             st = COMMENT;
         } else {
             st = VALUE;
         }
-        if (strncmp(&nvp->data[nvp->entry], "devpath", 7) == 0) {
+        if (strncmp((char*)&nvp->data[nvp->entry], "devpath", 7) == 0) {
             nvp->multi_dev_v1 = true;
         }
-        if (strncmp(&nvp->data[nvp->entry], "pcie/", 5) == 0) {
+        if (strncmp((char*)&nvp->data[nvp->entry], "pcie/", 5) == 0) {
             nvp->multi_dev_v2 = true;
         }
-        if (strncmp(&nvp->data[nvp->entry], "boardrev", 8) == 0) {
+        if (strncmp((char*)&nvp->data[nvp->entry], "boardrev", 8) == 0) {
             nvp->boardrev_found = true;
         }
     } else if (!is_nvram_char(c) || c == ' ') {
@@ -147,8 +149,8 @@ static enum nvram_parser_state brcmf_nvram_handle_value(struct nvram_parser* nvp
     c = nvp->data[nvp->pos];
     if (!is_nvram_char(c)) {
         /* key,value pair complete */
-        ekv = (u8*)&nvp->data[nvp->pos];
-        skv = (u8*)&nvp->data[nvp->entry];
+        ekv = (char*)&nvp->data[nvp->pos];
+        skv = (char*)&nvp->data[nvp->entry];
         cplen = ekv - skv;
         if (nvp->nvram_len + cplen + 1 >= BRCMF_FW_MAX_NVRAM_SIZE) {
             return END;
@@ -258,9 +260,9 @@ static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, u16 domain_nr, u16
         /* Format: devpathX=pcie/Y/Z/
          * Y = domain_nr, Z = bus_nr, X = virtual ID
          */
-        if (strncmp(&nvp->nvram[i], "devpath", 7) == 0 &&
-                (!strncmp(&nvp->nvram[i + 8], pci_path, pci_len) ||
-                 !strncmp(&nvp->nvram[i + 8], pcie_path, pcie_len))) {
+        if (strncmp((char*)&nvp->nvram[i], "devpath", 7) == 0 &&
+                (!strncmp((char*)&nvp->nvram[i + 8], pci_path, pci_len) ||
+                 !strncmp((char*)&nvp->nvram[i + 8], pcie_path, pcie_len))) {
             id = nvp->nvram[i + 7] - '0';
             found = true;
             break;
@@ -280,7 +282,7 @@ static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, u16 domain_nr, u16
     while (i < nvp->nvram_len) {
         if ((nvp->nvram[i] - '0' == id) && (nvp->nvram[i + 1] == ':')) {
             i += 2;
-            if (strncmp(&nvp->nvram[i], "boardrev", 8) == 0) {
+            if (strncmp((char*)&nvp->nvram[i], "boardrev", 8) == 0) {
                 nvp->boardrev_found = true;
             }
             while (nvp->nvram[i] != 0) {
@@ -332,9 +334,9 @@ static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, u16 domain_nr, u16
     i = 0;
     j = 0;
     while (i < nvp->nvram_len - len) {
-        if (strncmp(&nvp->nvram[i], prefix, len) == 0) {
+        if (strncmp((char*)&nvp->nvram[i], prefix, len) == 0) {
             i += len;
-            if (strncmp(&nvp->nvram[i], "boardrev", 8) == 0) {
+            if (strncmp((char*)&nvp->nvram[i], "boardrev", 8) == 0) {
                 nvp->boardrev_found = true;
             }
             while (nvp->nvram[i] != 0) {

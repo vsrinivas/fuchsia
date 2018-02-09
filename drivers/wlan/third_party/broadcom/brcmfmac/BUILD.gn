@@ -1,0 +1,104 @@
+#
+# Copyright (c) 2018 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("brcmfmac_driver") {
+  output_name = "brcmfmac"
+
+  include_dirs = [ "../include" ]
+
+  sources = [
+    "../brcmutil/d11.c",
+    "../brcmutil/utils.c",
+    "bcdc.c",
+    "bcdc.h",
+    "bcmsdh.c",
+    "binding.c",
+    "btcoex.c",
+    "btcoex.h",
+    "bus.h",
+    "cfg80211.c",
+    "cfg80211.h",
+    "chip.c",
+    "chip.h",
+    "common.c",
+    "common.h",
+    "commonring.c",
+    "commonring.h",
+    "core.c",
+    "core.h",
+    "debug.c",
+    "debug.h",
+    "feature.c",
+    "feature.h",
+    "firmware.c",
+    "firmware.h",
+    "flowring.c",
+    "flowring.h",
+    "fweh.c",
+    "fweh.h",
+    "fwil.c",
+    "fwil.h",
+    "fwil_types.h",
+    "fwsignal.c",
+    "fwsignal.h",
+    "linuxisms.h",
+    "msgbuf.c",
+    "msgbuf.h",
+    "of.c",
+    "of.h",
+    "p2p.c",
+    "p2p.h",
+    "pcie.c",
+    "pcie.h",
+    "pno.c",
+    "pno.h",
+    "proto.c",
+    "proto.h",
+    "sdio.c",
+    "sdio.h",
+    "tracepoint.c",
+    "tracepoint.h",
+    "usb.c",
+    "usb.h",
+    "vendor.c",
+    "vendor.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+package("brcmfmac") {
+  system_image = true
+
+  deps = [
+    ":brcmfmac_driver",
+  ]
+
+  drivers = [
+    {
+      name = "brcmfmac.so"
+    },
+  ]
+}

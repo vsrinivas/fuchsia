@@ -21,8 +21,12 @@
 #include "fwil.h"
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
-#include <linux/kernel.h>
-#include <linux/netdevice.h>
+
+//#include <linux/kernel.h>
+//#include <linux/netdevice.h>
+
+#include "linuxisms.h"
+
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
@@ -210,7 +214,7 @@ s32 brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data,
     brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
     brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
-    buflen = brcmf_create_iovar(name, data, len, drvr->proto_buf, sizeof(drvr->proto_buf));
+    buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true);
     } else {
@@ -229,7 +233,7 @@ s32 brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, u32 l
 
     mutex_lock(&drvr->proto_block);
 
-    buflen = brcmf_create_iovar(name, data, len, drvr->proto_buf, sizeof(drvr->proto_buf));
+    buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false);
         if (err == 0) {
@@ -266,8 +270,8 @@ s32 brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, u32* data) {
 
 static u32 brcmf_create_bsscfg(s32 bsscfgidx, char* name, char* data, u32 datalen, char* buf,
                                u32 buflen) {
-    const s8* prefix = "bsscfg:";
-    s8* p;
+    const char* prefix = "bsscfg:";
+    char* p;
     u32 prefixlen;
     u32 namelen;
     u32 iolen;
@@ -320,7 +324,7 @@ s32 brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, u32 
               len);
     brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
-    buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, drvr->proto_buf,
+    buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, (char*)drvr->proto_buf,
                                  sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true);
@@ -340,7 +344,7 @@ s32 brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, u32 
 
     mutex_lock(&drvr->proto_block);
 
-    buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, drvr->proto_buf,
+    buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, (char*)drvr->proto_buf,
                                  sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false);

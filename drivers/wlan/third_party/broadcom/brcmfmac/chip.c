@@ -13,12 +13,15 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/bcma/bcma.h>
-#include <linux/bcma/bcma_regs.h>
-#include <linux/delay.h>
-#include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/ssb/ssb_regs.h>
+
+//#include <linux/bcma/bcma.h>
+//#include <linux/bcma/bcma_regs.h>
+//#include <linux/delay.h>
+//#include <linux/kernel.h>
+//#include <linux/list.h>
+//#include <linux/ssb/ssb_regs.h>
+
+#include "linuxisms.h"
 
 #include <brcm_hw_ids.h>
 #include <brcmu_utils.h>
@@ -564,7 +567,7 @@ static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, u32* ramsize, 
         }
     } else {
         nb = (coreinfo & SRCI_SRNB_MASK) >> SRCI_SRNB_SHIFT;
-        for (i = 0; i < nb; i++) {
+        for (i = 0; i < (int)nb; i++) {
             retent = brcmf_chip_socram_banksize(sr, i, &banksize);
             *ramsize += banksize;
             if (retent) {
@@ -1067,7 +1070,7 @@ fail:
 void brcmf_chip_detach(struct brcmf_chip* pub) {
     struct brcmf_chip_priv* chip;
     struct brcmf_core_priv* core;
-    struct brcmf_core_priv* tmp;
+    //struct brcmf_core_priv* tmp; //unused
 
     chip = container_of(pub, struct brcmf_chip_priv, pub);
     list_for_each_entry_safe(core, tmp, &chip->cores, list) {

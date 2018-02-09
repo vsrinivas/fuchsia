@@ -13,16 +13,19 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/err.h>
-#include <linux/etherdevice.h>
-#include <linux/if_ether.h>
-#include <linux/jiffies.h>
-#include <linux/module.h>
-#include <linux/netdevice.h>
-#include <linux/skbuff.h>
-#include <linux/spinlock.h>
-#include <linux/types.h>
-#include <net/cfg80211.h>
+
+//#include <linux/err.h>
+//#include <linux/etherdevice.h>
+//#include <linux/if_ether.h>
+//#include <linux/jiffies.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+//#include <linux/skbuff.h>
+//#include <linux/spinlock.h>
+//#include <linux/types.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
 
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
@@ -117,7 +120,7 @@ static struct {
 static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
     int i;
 
-    for (i = 0; i < ARRAY_SIZE(brcmf_fws_tlv_names); i++)
+    for (i = 0; i < (int)ARRAY_SIZE(brcmf_fws_tlv_names); i++)
         if (brcmf_fws_tlv_names[i].id == id) {
             return brcmf_fws_tlv_names[i].name;
         }
@@ -547,7 +550,7 @@ static void brcmf_fws_unlock(struct brcmf_fws_info* fws) __releases(&fws->spinlo
 
 static bool brcmf_fws_ifidx_match(struct sk_buff* skb, void* arg) {
     u32 ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
-    return ifidx == *(int*)arg;
+    return ifidx == *(u32*)arg;
 }
 
 static void brcmf_fws_psq_flush(struct brcmf_fws_info* fws, struct pktq* q, int ifidx) {
@@ -571,7 +574,7 @@ static void brcmf_fws_hanger_init(struct brcmf_fws_hanger* hanger) {
     int i;
 
     memset(hanger, 0, sizeof(*hanger));
-    for (i = 0; i < ARRAY_SIZE(hanger->items); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(hanger->items); i++) {
         hanger->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
     }
 }
@@ -657,7 +660,7 @@ static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws, bool (*fn)(stru
     int i;
     enum brcmf_fws_hanger_item_state s;
 
-    for (i = 0; i < ARRAY_SIZE(h->items); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(h->items); i++) {
         s = h->items[i].state;
         if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE ||
                 s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
@@ -717,7 +720,7 @@ static struct brcmf_fws_mac_descriptor* brcmf_fws_macdesc_lookup(struct brcmf_fw
     }
 
     entry = &fws->desc.nodes[0];
-    for (i = 0; i < ARRAY_SIZE(fws->desc.nodes); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(fws->desc.nodes); i++) {
         if (entry->occupied && !memcmp(entry->ea, ea, ETH_ALEN)) {
             return entry;
         }
@@ -826,7 +829,7 @@ static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
 
     /* cleanup individual nodes */
     table = &fws->desc.nodes[0];
-    for (i = 0; i < ARRAY_SIZE(fws->desc.nodes); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(fws->desc.nodes); i++) {
         brcmf_fws_macdesc_cleanup(fws, &table[i], ifidx);
     }
 
@@ -1522,7 +1525,7 @@ static int brcmf_fws_notify_credit_map(struct brcmf_if* ifp, const struct brcmf_
 
     brcmf_dbg(TRACE, "enter: credits %pM\n", credits);
     brcmf_fws_lock(fws);
-    for (i = 0; i < ARRAY_SIZE(fws->fifo_credit); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(fws->fifo_credit); i++) {
         if (*credits) {
             fws->fifo_credit_map |= 1 << i;
         } else {

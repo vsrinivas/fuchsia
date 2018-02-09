@@ -17,11 +17,16 @@
 #include "common.h"
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
-#include <linux/firmware.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/netdevice.h>
-#include <linux/string.h>
+
+//#include <linux/firmware.h>
+//#include <linux/kernel.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+//#include <linux/string.h>
+
+#include "linuxisms.h"
+#include <stdarg.h>
+
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
@@ -136,7 +141,7 @@ static int brcmf_c_get_clm_name(struct brcmf_if* ifp, u8* clm_name) {
     }
 
     /* generate CLM blob file name */
-    ptr = strrchr(fw_name, '.');
+    ptr = (u8*)strrchr((char*)fw_name, '.');
     if (!ptr) {
         err = -ENOENT;
         goto done;
@@ -146,8 +151,8 @@ static int brcmf_c_get_clm_name(struct brcmf_if* ifp, u8* clm_name) {
     if (len + strlen(".clm_blob") > BRCMF_FW_NAME_LEN) {
         err = -E2BIG;
     } else {
-        strlcpy(clm_name, fw_name, len);
-        strlcat(clm_name, ".clm_blob", BRCMF_FW_NAME_LEN);
+        strlcpy((char*)clm_name, (const char*)fw_name, len);
+        strlcat((char*)clm_name, ".clm_blob", BRCMF_FW_NAME_LEN);
     }
 done:
     return err;
@@ -275,7 +280,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* query for 'ver' to get version info from firmware */
     memset(buf, 0, sizeof(buf));
-    strcpy(buf, "ver");
+    strcpy((char*)buf, "ver");
     err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf));
     if (err < 0) {
         brcmf_err("Retreiving version information failed, %d\n", err);
@@ -288,7 +293,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     brcmf_info("Firmware version = %s\n", buf);
 
     /* locate firmware version number for ethtool */
-    ptr = strrchr(buf, ' ') + 1;
+    ptr = strrchr((char*)buf, ' ') + 1;
     strlcpy(ifp->drvr->fwver, ptr, sizeof(ifp->drvr->fwver));
 
     /* Query for 'clmver' to get CLM version info from firmware */
@@ -378,7 +383,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 void __brcmf_dbg(u32 level, const char* func, const char* fmt, ...) {
     struct va_format vaf = {
         .fmt = fmt,
-    };
+        };
     va_list args;
 
     va_start(args, fmt);
@@ -436,7 +441,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bu
         for (i = 0; i < brcmfmac_pdata->device_count; i++) {
             device_pd = &brcmfmac_pdata->devices[i];
             if ((device_pd->bus_type == bus_type) && (device_pd->id == chip) &&
-                    ((device_pd->rev == chiprev) || (device_pd->rev == -1))) {
+                ((device_pd->rev == (s32)chiprev) || (device_pd->rev == -1))) {
                 brcmf_dbg(INFO, "Platform data for device found\n");
                 settings->country_codes = device_pd->country_codes;
                 if (device_pd->bus_type == BRCMF_BUSTYPE_SDIO) {

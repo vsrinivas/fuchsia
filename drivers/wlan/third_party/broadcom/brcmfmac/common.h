@@ -15,8 +15,12 @@
 #ifndef BRCMFMAC_COMMON_H
 #define BRCMFMAC_COMMON_H
 
-#include <linux/platform_data/brcmfmac.h>
-#include <linux/platform_device.h>
+//#include <linux/platform_data/brcmfmac.h>
+//#include <linux/platform_device.h>
+
+#include "linuxisms.h"
+
+#include "core.h"
 #include "fwil_types.h"
 
 extern const u8 ALLFFMAC[ETH_ALEN];

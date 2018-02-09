@@ -21,7 +21,10 @@
 #ifndef BRCMFMAC_CORE_H
 #define BRCMFMAC_CORE_H
 
-#include <net/cfg80211.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
+
 #include "fweh.h"
 
 #define TOE_TX_CSUM_OL 0x00000001

@@ -15,6 +15,8 @@
 #ifndef BRCMFMAC_FLOWRING_H
 #define BRCMFMAC_FLOWRING_H
 
+#include "proto.h"
+
 #define BRCMF_FLOWRING_HASHSIZE 512 /* has to be 2^x */
 #define BRCMF_FLOWRING_INVALID_ID 0xFFFFFFFF
 

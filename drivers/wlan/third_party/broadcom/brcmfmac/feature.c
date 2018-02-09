@@ -14,8 +14,10 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/module.h>
-#include <linux/netdevice.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+
+#include "linuxisms.h"
 
 #include <brcm_hw_ids.h>
 #include <brcmu_wifi.h>
@@ -132,7 +134,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
 
     brcmf_dbg(INFO, "[ %s]\n", caps);
 
-    for (i = 0; i < ARRAY_SIZE(brcmf_fwcap_map); i++) {
+    for (i = 0; i < (int)ARRAY_SIZE(brcmf_fwcap_map); i++) {
         if (strnstr(caps, brcmf_fwcap_map[i].fwcap_id, sizeof(caps))) {
             id = brcmf_fwcap_map[i].feature;
             brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);

@@ -13,9 +13,12 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/init.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
+
+//#include <linux/init.h>
+//#include <linux/of.h>
+//#include <linux/of_irq.h>
+
+#include "linuxisms.h"
 
 #include <defs.h>
 #include "common.h"

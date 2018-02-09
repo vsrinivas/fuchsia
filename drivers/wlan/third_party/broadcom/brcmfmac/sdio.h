@@ -17,8 +17,12 @@
 #ifndef BRCMFMAC_SDIO_H
 #define BRCMFMAC_SDIO_H
 
-#include <linux/firmware.h>
-#include <linux/skbuff.h>
+//#include <linux/firmware.h>
+//#include <linux/skbuff.h>
+
+#include "linuxisms.h"
+
+#include "defs.h"
 #include "firmware.h"
 
 #define SDIOD_FBR_SIZE 0x100

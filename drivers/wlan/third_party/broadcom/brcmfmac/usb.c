@@ -14,11 +14,13 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/firmware.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/usb.h>
-#include <linux/vmalloc.h>
+//#include <linux/firmware.h>
+//#include <linux/kernel.h>
+//#include <linux/module.h>
+//#include <linux/usb.h>
+//#include <linux/vmalloc.h>
+
+#include "linuxisms.h"
 
 #include <brcm_hw_ids.h>
 #include <brcmu_utils.h>
@@ -421,7 +423,7 @@ fail:
 
 static void brcmf_usb_free_q(struct list_head* q, bool pending) {
     struct brcmf_usbreq* req;
-    struct brcmf_usbreq* next;
+    // struct brcmf_usbreq* next; // unused
     int i = 0;
     list_for_each_entry_safe(req, next, q, list) {
         if (!req->urb) {
@@ -541,7 +543,7 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
 
     brcmf_dbg(USB, "Enter, current state=%d, new state=%d\n", devinfo->bus_pub.state, state);
 
-    if (devinfo->bus_pub.state == state) {
+    if ((int)devinfo->bus_pub.state == state) {
         return;
     }
 
@@ -835,7 +837,7 @@ static int brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, u8* fw, in
         goto fail;
     }
     sent = 0;
-    dlpos = fw;
+    dlpos = (char*)fw;
     dllen = fwlen;
 
     /* Get chip id and rev */
@@ -1081,10 +1083,10 @@ static int brcmf_usb_get_fwname(struct device* dev, u32 chip, u32 chiprev, u8* f
     int ret = 0;
 
     if (devinfo->fw_name[0] != '\0') {
-        strlcpy(fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
+      strlcpy((char*)fw_name, devinfo->fw_name, BRCMF_FW_NAME_LEN);
     } else
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_usb_fwnames,
-                                        ARRAY_SIZE(brcmf_usb_fwnames), fw_name, NULL);
+                                        ARRAY_SIZE(brcmf_usb_fwnames), (char*)fw_name, NULL);
 
     return ret;
 }

@@ -17,9 +17,12 @@
     defined(TRACE_HEADER_MULTI_READ)
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_TRACEPOINT_H_
 
-#include <linux/tracepoint.h>
-#include <linux/types.h>
+//#include <linux/tracepoint.h>
+//#include <linux/types.h>
 
+#include "linuxisms.h"
+
+#if 0
 #ifndef CONFIG_BRCM_TRACING
 
 #undef TRACE_EVENT
@@ -72,6 +75,7 @@ TRACE_EVENT(brcmf_bcdchdr, TP_PROTO(void* data), TP_ARGS(data),
                            __entry->siglen = *((u8*)data + 3) * 4;
                            memcpy(__get_dynamic_array(signal), (u8*)data + 4, __entry->siglen);),
             TP_printk("bcdc: prio=%d siglen=%d", __entry->prio, __entry->siglen));
+#endif  // LINUX cphoenix
 
 #ifndef SDPCM_RX
 #define SDPCM_RX 0
@@ -83,6 +87,7 @@ TRACE_EVENT(brcmf_bcdchdr, TP_PROTO(void* data), TP_ARGS(data),
 #define SDPCM_GLOM 2
 #endif
 
+#if 0
 TRACE_EVENT(brcmf_sdpcm_hdr, TP_PROTO(u8 dir, void* data), TP_ARGS(dir, data),
             TP_STRUCT__entry(__field(u8, dir) __field(u16, len)
                                  __dynamic_array(u8, hdr, dir == SDPCM_GLOM ? 20 : 12)),
@@ -99,7 +104,9 @@ TRACE_EVENT(brcmf_sdpcm_hdr, TP_PROTO(u8 dir, void* data), TP_ARGS(dir, data),
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE tracepoint
 
-#include <trace/define_trace.h>
+#endif  // LINUX cphoenix
+
+//#include <trace/define_trace.h>
 
 #endif /* CONFIG_BRCM_TRACING */
 

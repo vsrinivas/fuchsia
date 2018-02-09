@@ -14,31 +14,34 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+//#include <asm/unaligned.h>
+//#include <linux/atomic.h>
+//#include <linux/bcma/bcma.h>
+//#include <linux/debugfs.h>
+//#include <linux/firmware.h>
+//#include <linux/interrupt.h>
+//#include <linux/kernel.h>
+//#include <linux/kthread.h>
+//#include <linux/mmc/card.h>
+//#include <linux/mmc/sdio.h>
+//#include <linux/mmc/sdio_func.h>
+//#include <linux/mmc/sdio_ids.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+//#include <linux/pci_ids.h>
+//#include <linux/printk.h>
+//#include <linux/sched/signal.h>
+//#include <linux/semaphore.h>
+//#include <linux/types.h>
+//#include <linux/vmalloc.h>
+
+#include "linuxisms.h"
+
 #include "sdio.h"
-#include <asm/unaligned.h>
 #include <brcm_hw_ids.h>
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
 #include <defs.h>
-#include <linux/atomic.h>
-#include <linux/bcma/bcma.h>
-#include <linux/debugfs.h>
-#include <linux/firmware.h>
-#include <linux/interrupt.h>
-#include <linux/kernel.h>
-#include <linux/kthread.h>
-#include <linux/mmc/card.h>
-#include <linux/mmc/sdio.h>
-#include <linux/mmc/sdio_func.h>
-#include <linux/mmc/sdio_ids.h>
-#include <linux/module.h>
-#include <linux/netdevice.h>
-#include <linux/pci_ids.h>
-#include <linux/printk.h>
-#include <linux/sched/signal.h>
-#include <linux/semaphore.h>
-#include <linux/types.h>
-#include <linux/vmalloc.h>
 #include <soc.h>
 #include "bcdc.h"
 #include "chip.h"
@@ -2883,7 +2886,7 @@ static int brcmf_sdio_assert_info(struct seq_file* seq, struct brcmf_sdio* bus,
                                   struct sdpcm_shared* sh) {
     int error = 0;
     char file[80] = "?";
-    char expr[80] = "<???>";
+    char expr[80] = "<??""?>";
 
     if ((sh->flags & SDPCM_SHARED_ASSERT_BUILT) == 0) {
         brcmf_dbg(INFO, "firmware not built with -assert\n");
@@ -3089,9 +3092,9 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, u32 ram_addr
 
     address = ram_addr;
     offset = 0;
-    while (offset < ram_sz) {
-        len = ((offset + MEMBLOCK) < ram_sz) ? MEMBLOCK : ram_sz - offset;
-        err = brcmf_sdiod_ramrw(sdiodev, false, address, ram_cmp, len);
+    while (offset < (int)ram_sz) {
+        len = ((offset + MEMBLOCK) < (int)ram_sz) ? MEMBLOCK : ram_sz - offset;
+        err = brcmf_sdiod_ramrw(sdiodev, false, address, (u8*)ram_cmp, len);
         if (err) {
             brcmf_err("error %d on reading %d membytes at 0x%08x\n", err, len, address);
             ret = false;
@@ -3321,7 +3324,7 @@ static int brcmf_sdio_bus_get_memdump(struct device* dev, void* data, size_t mem
     struct brcmf_sdio* bus = sdiodev->bus;
     int err;
     int address;
-    int offset;
+    size_t offset; // clang needs this unsigned
     int len;
 
     brcmf_dbg(INFO, "dump at 0x%08x: size=%zu\n", bus->ci->rambase, mem_size);
@@ -3825,10 +3828,10 @@ static int brcmf_sdio_get_fwname(struct device* dev, u32 chip, u32 chiprev, u8* 
     int ret = 0;
 
     if (sdiodev->fw_name[0] != '\0') {
-        strlcpy(fw_name, sdiodev->fw_name, BRCMF_FW_NAME_LEN);
+        strlcpy((char*)fw_name, sdiodev->fw_name, BRCMF_FW_NAME_LEN);
     } else {
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_sdio_fwnames,
-                                        ARRAY_SIZE(brcmf_sdio_fwnames), fw_name, NULL);
+                                        ARRAY_SIZE(brcmf_sdio_fwnames), (char*)fw_name, NULL);
     }
     return ret;
 }

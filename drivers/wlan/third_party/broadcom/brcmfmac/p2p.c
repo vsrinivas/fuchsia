@@ -13,11 +13,14 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <linux/etherdevice.h>
-#include <linux/netdevice.h>
-#include <linux/rtnetlink.h>
-#include <linux/slab.h>
-#include <net/cfg80211.h>
+
+//#include <linux/etherdevice.h>
+//#include <linux/netdevice.h>
+//#include <linux/rtnetlink.h>
+//#include <linux/slab.h>
+//#include <net/cfg80211.h>
+
+#include "linuxisms.h"
 
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
@@ -1988,7 +1991,7 @@ static struct wireless_dev* brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, 
         goto fail;
     }
 
-    WARN_ON(p2p_ifp->bsscfgidx != bsscfgidx);
+    WARN_ON(p2p_ifp->bsscfgidx != (s32)bsscfgidx);
 
     init_completion(&p2p->send_af_done);
     INIT_WORK(&p2p->afx_hdl.afx_work, brcmf_p2p_afx_handler);

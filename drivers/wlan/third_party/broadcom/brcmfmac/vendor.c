@@ -14,9 +14,11 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/vmalloc.h>
-#include <net/cfg80211.h>
-#include <net/netlink.h>
+//#include <linux/vmalloc.h>
+//#include <net/cfg80211.h>
+//#include <net/netlink.h>
+
+#include "linuxisms.h"
 
 #include <brcmu_wifi.h>
 #include "cfg80211.h"
@@ -39,7 +41,7 @@ static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wir
     u16 msglen;
     u16 maxmsglen = PAGE_SIZE - 0x100;
 
-    if (len < sizeof(*cmdhdr)) {
+    if (len < (int)sizeof(*cmdhdr)) {
         brcmf_err("vendor command too short: %d\n", len);
         return -EINVAL;
     }
@@ -49,7 +51,7 @@ static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wir
 
     brcmf_dbg(TRACE, "ifidx=%d, cmd=%d\n", ifp->ifidx, cmdhdr->cmd);
 
-    if (cmdhdr->offset > len) {
+    if ((int)cmdhdr->offset > len) {
         brcmf_err("bad buffer offset %d > %d\n", cmdhdr->offset, len);
         return -EINVAL;
     }
