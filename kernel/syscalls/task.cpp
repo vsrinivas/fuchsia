@@ -42,6 +42,8 @@
 #include <lk/init.h>
 #endif
 
+namespace {
+
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
@@ -50,8 +52,8 @@ constexpr size_t kPolicyBasicInlineCount = 8;
 
 #if THREAD_SET_PRIORITY_EXPERIMENT
 // See ZX-940
-static bool thread_set_priority_allowed = false;
-static void thread_set_priority_experiment_init_hook(uint) {
+bool thread_set_priority_allowed = false;
+void thread_set_priority_experiment_init_hook(uint) {
     thread_set_priority_allowed = cmdline_get_bool("thread.set.priority.allowed", false);
     printf("thread set priority experiment is : %s\n",
            thread_set_priority_allowed ? "ENABLED" : "DISABLED");
@@ -64,10 +66,10 @@ LK_INIT_HOOK(thread_set_priority_experiment,
 // TODO(ZX-1025): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
-static zx_status_t copy_user_string(const user_in_ptr<const char>& src,
-                                    size_t src_len,
-                                    char* buf, size_t buf_len,
-                                    fbl::StringPiece* sp) {
+zx_status_t copy_user_string(const user_in_ptr<const char>& src,
+                             size_t src_len,
+                             char* buf, size_t buf_len,
+                             fbl::StringPiece* sp) {
     if (!src || src_len > buf_len) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -85,11 +87,40 @@ static zx_status_t copy_user_string(const user_in_ptr<const char>& src,
 }
 
 // Convenience function to go from process handle to process.
-static zx_status_t get_process(ProcessDispatcher* up,
-                               zx_handle_t proc_handle,
-                               fbl::RefPtr<ProcessDispatcher>* proc) {
+zx_status_t get_process(ProcessDispatcher* up,
+                        zx_handle_t proc_handle,
+                        fbl::RefPtr<ProcessDispatcher>* proc) {
     return up->GetDispatcherWithRights(proc_handle, ZX_RIGHT_WRITE, proc);
 }
+
+// This represents the local storage for thread_read/write_state. It should be large enough to
+// handle all structures passed over these APIs.
+union thread_state_local_buffer_t {
+    zx_thread_state_general_regs general_regs;  // ZX_THREAD_STATE_GENERAL_REGS
+    uint32_t single_step;  // ZX_THREAD_STATE_SINGLE_STEP
+};
+
+// Validates the input topic to thread_read_state and thread_write_state is a valid value, and
+// checks that the input buffer size is at least as large as necessary for the topic. On ZX_OK, the
+// actual size necessary for the buffer will be placed in the output parameter.
+zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t* out_len) {
+    switch (in_topic) {
+    case ZX_THREAD_STATE_GENERAL_REGS:
+        *out_len = sizeof(zx_thread_state_general_regs_t);
+        break;
+    case ZX_THREAD_STATE_SINGLE_STEP:
+        *out_len = sizeof(zx_thread_state_single_step_t);
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (in_len < *out_len)
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    return ZX_OK;
+}
+
+}  // namespace
 
 zx_status_t sys_thread_create(zx_handle_t process_handle,
                               user_in_ptr<const char> _name, uint32_t name_len,
@@ -172,16 +203,14 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
     if (status != ZX_OK)
         return status;
 
-    // Currently only "general regs" is supported.
-    if (state_kind != ZX_THREAD_STATE_GENERAL_REGS)
-        return ZX_ERR_INVALID_ARGS;
+    thread_state_local_buffer_t local_buffer;
+    size_t local_buffer_len = 0;
+    status = validate_thread_state_input(state_kind, buffer_len, &local_buffer_len);
+    if (status != ZX_OK)
+        return status;
 
-    zx_thread_state_general_regs local_buffer;
-    size_t local_buffer_len = sizeof(local_buffer);
-    if (buffer_len < local_buffer_len)
-        return ZX_ERR_BUFFER_TOO_SMALL;
-
-    status = thread->ReadState(state_kind, &local_buffer, local_buffer_len);
+    status = thread->ReadState(static_cast<zx_thread_state_topic_t>(state_kind), &local_buffer,
+                               local_buffer_len);
     if (status != ZX_OK)
         return status;
 
@@ -202,20 +231,23 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
     if (status != ZX_OK)
         return status;
 
-    // Currently only "general regs" is supported.
-    if (state_kind != ZX_THREAD_STATE_GENERAL_REGS ||
-        buffer_len != sizeof(zx_thread_state_general_regs)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    thread_state_local_buffer_t local_buffer;
+    size_t local_buffer_len = 0;
+    status = validate_thread_state_input(state_kind, buffer_len, &local_buffer_len);
+    if (status != ZX_OK)
+        return status;
 
-    zx_thread_state_general_regs local_buffer;
-    size_t local_buffer_len = sizeof(local_buffer);
+    // Additionally check that the buffer is the exact size expected (validate only checks it's
+    // larger, which is sufficient for reading).
+    if (local_buffer_len != buffer_len)
+        return ZX_ERR_INVALID_ARGS;
 
     status = _buffer.copy_array_from_user(&local_buffer, local_buffer_len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    return thread->WriteState(state_kind, &local_buffer, local_buffer_len);
+    return thread->WriteState(static_cast<zx_thread_state_topic_t>(state_kind), &local_buffer,
+                              local_buffer_len);
 }
 
 // See ZX-940

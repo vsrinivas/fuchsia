@@ -33,6 +33,11 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 The buffer must point to a **zx_thread_state_general_regs_t** structure that
 contains the general registers for the current architecture.
 
+### ZX_THREAD_STATE_SINGLE_STEP
+
+The buffer must point to a **zx_thread_state_single_step_t** value which
+may contain either 0 (normal running), or 1 (single stepping enabled).
+
 ## RETURN VALUE
 
 **thread_read_state**() returns **ZX_OK** on success.

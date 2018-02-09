@@ -14,6 +14,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/perf_mon.h>
+#include <arch/x86/registers.h>
 
 #include <debug.h>
 
@@ -102,6 +103,14 @@ static zx_status_t call_dispatch_user_exception(uint kind,
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
     zx_status_t status = dispatch_user_exception(kind, context);
     x86_reset_suspended_general_regs(&thread->arch);
+
+    // Set or clear the trap flag according to the thread single-step state.
+    if (unlikely(thread->single_step)) {
+      frame->flags |= X86_FLAGS_TF;
+    } else {
+      frame->flags &= ~X86_FLAGS_TF;
+    }
+
     return status;
 }
 

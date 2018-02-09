@@ -883,7 +883,8 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
 
 // Note: buffer must be sufficiently aligned
 
-zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, size_t buffer_len) {
+zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
+                                        void* buffer, size_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -895,12 +896,20 @@ zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, size_
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
-    switch (state_kind)
-    {
-    case ZX_THREAD_STATE_GENERAL_REGS:
-        if (buffer_len != sizeof(zx_thread_state_general_regs))
+    switch (state_kind) {
+    case ZX_THREAD_STATE_GENERAL_REGS: {
+        if (buffer_len != sizeof(zx_thread_state_general_regs_t))
             return ZX_ERR_INVALID_ARGS;
-        return arch_get_general_regs(&thread_, static_cast<zx_thread_state_general_regs*>(buffer));
+        return arch_get_general_regs(
+                &thread_, static_cast<zx_thread_state_general_regs_t*>(buffer));
+    }
+    case ZX_THREAD_STATE_SINGLE_STEP: {
+        if (buffer_len != sizeof(zx_thread_state_single_step_t))
+            return ZX_ERR_INVALID_ARGS;
+        *static_cast<zx_thread_state_single_step_t*>(buffer) =
+                static_cast<zx_thread_state_single_step_t>(thread_.single_step);
+        return ZX_OK;
+    }
     default:
         return ZX_ERR_INVALID_ARGS;
     }
@@ -908,7 +917,8 @@ zx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, size_
 
 // Note: buffer must be sufficiently aligned
 
-zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, size_t buffer_len) {
+zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
+                                         const void* buffer, size_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -920,12 +930,23 @@ zx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
-    switch (state_kind)
-    {
-    case ZX_THREAD_STATE_GENERAL_REGS:
-        if (buffer_len != sizeof(zx_thread_state_general_regs))
+    switch (state_kind) {
+    case ZX_THREAD_STATE_GENERAL_REGS: {
+        if (buffer_len != sizeof(zx_thread_state_general_regs_t))
             return ZX_ERR_INVALID_ARGS;
-        return arch_set_general_regs(&thread_, static_cast<const zx_thread_state_general_regs*>(buffer));
+        return arch_set_general_regs(&thread_,
+                                     static_cast<const zx_thread_state_general_regs_t*>(buffer));
+    }
+    case ZX_THREAD_STATE_SINGLE_STEP: {
+        if (buffer_len != sizeof(zx_thread_state_single_step_t))
+            return ZX_ERR_INVALID_ARGS;
+        const zx_thread_state_single_step_t* single_step =
+                static_cast<const zx_thread_state_single_step_t*>(buffer);
+        if (*single_step != 0 && *single_step != 1)
+            return ZX_ERR_INVALID_ARGS;
+        thread_.single_step = *single_step == 1;
+        return ZX_OK;
+    }
     default:
         return ZX_ERR_INVALID_ARGS;
     }

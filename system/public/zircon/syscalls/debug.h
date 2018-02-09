@@ -46,7 +46,14 @@ typedef struct zx_thread_state_general_regs {
 
 #endif
 
+// Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1
+// (single-stepping). Other values will give ZX_ERR_INVALID_ARGS.
+typedef uint32_t zx_thread_state_single_step_t;
+
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
-#define ZX_THREAD_STATE_GENERAL_REGS 0u
+typedef enum {
+    ZX_THREAD_STATE_GENERAL_REGS = 0, // zx_thread_state_general_regs_t value.
+    ZX_THREAD_STATE_SINGLE_STEP = 1   // zx_thread_state_single_step_t value.
+} zx_thread_state_topic_t;
 
 __END_CDECLS

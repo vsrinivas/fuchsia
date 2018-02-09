@@ -18,6 +18,7 @@
 #include <object/excp_port.h>
 #include <object/futex_node.h>
 
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 #include <fbl/canary.h>
@@ -151,8 +152,9 @@ public:
     zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
 
     // For debugger usage.
-    zx_status_t ReadState(uint32_t state_kind, void* buffer, size_t buffer_len);
-    zx_status_t WriteState(uint32_t state_kind, const void* buffer, size_t buffer_len);
+    zx_status_t ReadState(zx_thread_state_topic_t state_kind, void* buffer, size_t buffer_len);
+    zx_status_t WriteState(zx_thread_state_topic_t state_kind, const void* buffer,
+                           size_t buffer_len);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
