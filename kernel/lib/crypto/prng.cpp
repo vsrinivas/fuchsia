@@ -4,20 +4,28 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/crypto/prng.h>
-
 #include <assert.h>
 #include <string.h>
 
 #include <err.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <fbl/auto_lock.h>
+#include <explicit-memory/bytes.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_call.h>
+#include <fbl/mutex.h>
+#include <kernel/auto_lock.h>
+#include <lib/crypto/prng.h>
 #include <openssl/chacha.h>
 #include <openssl/sha.h>
 #include <pow2.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 namespace crypto {
+namespace {
+
+const uint128_t kNonceOverflow = ((uint128_t)1ULL) << 96;
+
+} // namespace
 
 PRNG::PRNG(const void* data, size_t size)
     : PRNG(data, size, NonThreadSafeTag()) {
@@ -25,82 +33,78 @@ PRNG::PRNG(const void* data, size_t size)
 }
 
 PRNG::PRNG(const void* data, size_t size, NonThreadSafeTag tag)
-    : is_thread_safe_(false), lock_(), total_entropy_added_(0) {
+    : nonce_(0), accumulated_(0) {
     memset(key_, 0, sizeof(key_));
-    memset(nonce_.u8, 0, sizeof(nonce_.u8));
+    memset(&ready_, 0, sizeof(ready_));
     AddEntropy(data, size);
+}
+
+PRNG::~PRNG() {
+    mandatory_memset(key_, 0, sizeof(key_));
+    nonce_ = 0;
 }
 
 void PRNG::AddEntropy(const void* data, size_t size) {
     DEBUG_ASSERT(data || size == 0);
-    if (likely(is_thread_safe_)) {
-        uint64_t total;
-        {
-            fbl::AutoLock guard(&lock_);
-            AddEntropyInternal(data, size);
-            total = total_entropy_added_;
-        }
-        if (total >= kMinEntropy) {
-            event_signal(&ready_, true);
-        }
-    } else {
-        AddEntropyInternal(data, size);
-    }
-}
-
-static_assert(PRNG::kMaxEntropy <= INT_MAX, "bad entropy limit");
-static_assert(sizeof(uint32_t) * 2 <= SHA256_DIGEST_LENGTH, "digest too small");
-void PRNG::AddEntropyInternal(const void* data, size_t size) {
-    ASSERT(size < kMaxEntropy);
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
+    ASSERT(size <= kMaxEntropy);
+    // Concurrent calls to |AddEntropy| must run sequentially.
+    fbl::AutoLock guard(&mutex_);
+    // Save the key on the stack, but guarantee we clean them up
+    uint8_t key[sizeof(key_)];
+    auto cleanup =
+        fbl::MakeAutoCall([&] { mandatory_memset(key, 0, sizeof(key)); });
     // We mix all of the entropy with the previous key to make the PRNG state
     // depend on both the entropy added and the sequence in which it was added.
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
     SHA256_Update(&ctx, data, size);
-    SHA256_Update(&ctx, key_, sizeof(key_));
-    static_assert(SHA256_DIGEST_LENGTH <= sizeof(key_), "key too small");
-    SHA256_Final(key_, &ctx);
-    total_entropy_added_ += size;
+    {
+        AutoSpinLock guard(&spinlock_);
+        memcpy(key, key_, sizeof(key));
+    }
+    SHA256_Update(&ctx, key, sizeof(key));
+    SHA256_Final(key, &ctx);
+    {
+        AutoSpinLock guard(&spinlock_);
+        memcpy(key_, key, sizeof(key_));
+    }
+    // Increment how much entropy has been added, and signal if we have enough.
+    if (is_thread_safe() &&
+        accumulated_.fetch_add(size) + size >= kMinEntropy) {
+        event_signal(&ready_, true /* reschedule */);
+    }
 }
 
 void PRNG::Draw(void* out, size_t size) {
     DEBUG_ASSERT(out || size == 0);
-    if (likely(is_thread_safe_)) {
-        fbl::AutoLock guard(&lock_);
-        if (unlikely(total_entropy_added_ < kMinEntropy)) {
-            lock_.Release();
-            zx_status_t status = event_wait(&ready_);
-            ASSERT(status == ZX_OK);
-            lock_.Acquire();
-        }
-        DrawInternal(out, size);
-    } else {
-        DrawInternal(out, size);
+    ASSERT(size <= kMaxDrawLen);
+    // Wait if other threads should add entropy.
+    if (is_thread_safe() && accumulated_.load() < kMinEntropy) {
+        event_wait(&ready_);
     }
-}
+    // Save these on the stack, but guarantee we clean them up
+    uint8_t key[sizeof(key_)];
+    uint128_t nonce;
+    auto cleanup = fbl::MakeAutoCall([&] {
+        mandatory_memset(key, 0, sizeof(key));
+        nonce = 0;
+    });
+    {
+        AutoSpinLock guard(&spinlock_);
+        nonce = ++nonce_;
+        memcpy(key, key_, sizeof(key));
+    }
+    ASSERT(nonce < kNonceOverflow);
+    static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "must be LE");
+    uint8_t* nonce_u8 = reinterpret_cast<uint8_t*>(&nonce);
+    uint8_t* buf = reinterpret_cast<uint8_t*>(out);
 
-void PRNG::DrawInternal(void* out, size_t size) {
-    ASSERT(size < kMaxDrawLen);
-    uint8_t* buf = static_cast<uint8_t*>(out);
-    // CRYPTO_chacha_20 XORs the cipher stream with the contents of the 'in'
-    // buffer (which can't be null).  Zero it to get just the cipher stream.
-    // TODO(aarongreen): try to get BoringSSL to take a patch which allows 'in'
-    // to be null.
-    memset(buf, 0, size);
-    // We use a unique nonce for each request, meaning we can reset the
-    // counter to 0 each time.  The counter is guaranteed not to overflow within
-    // the call below because of the above assertion on the overall size.
-    CRYPTO_chacha_20(buf, buf, size, key_, nonce_.u8, 0);
-    // We use a different 12-byte nonce for each request by treating it as the
-    // concatenation of an 8-byte and 4-byte counter.  Every time the 8-byte
-    // counter overflows, we increment the 4-byte counter.  The 4-byte counter
-    // must not overflow, meaning we can make a total of 2**96 requests.  Even
-    // at 1000 requests per nanosecond, this would take 2.5 billion years.
-    ++nonce_.u64;
-    if (unlikely(nonce_.u64 == 0)) {
-        ++nonce_.u32[2];
-        ASSERT(nonce_.u32[2] != 0);
-    }
+    // We randomize |buf| by encrypting it with a key that is never exposed to
+    // the caller, and a 96-bit nonce that changes on each call.  We don't zero
+    // |buf| because the encrypted output meets the criteria of the PRNG
+    // regardless of its original contents.  We reset the counter to 0 on each
+    // request; it can't overflow because of the limit on the overall size.
+    CRYPTO_chacha_20(buf, buf, size, key, nonce_u8, 0);
 }
 
 uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
@@ -127,16 +131,15 @@ uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
 }
 
 // It is safe to call this function from PRNG's constructor provided
-// |is_thread_safe_| and |total_entropy_added_| are initialized.
+// |ready_| and |accumulated_| initialized.
 void PRNG::BecomeThreadSafe() {
-    ASSERT(!is_thread_safe_);
-
-    const bool enough_entropy = (total_entropy_added_ >= kMinEntropy);
-    ready_ = EVENT_INITIAL_VALUE(ready_, enough_entropy, 0);
-
-    is_thread_safe_ = true;
+    ASSERT(!event_initialized(&ready_));
+    event_init(&ready_, accumulated_.load() < kMinEntropy, 0);
 }
 
-PRNG::~PRNG() {}
+bool PRNG::is_thread_safe() const {
+    // Safe to read event.magic; it is read-only in a threaded context
+    return event_initialized(&ready_);
+}
 
 } // namespace crypto
