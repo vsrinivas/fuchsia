@@ -9,9 +9,9 @@ are specific to the type of object.
 For example, the signal *ZX_CHANNEL_READABLE* indicates "this channel endpoint has
 messages to read", and **ZX_PROCESS_TERMINATED** indicates "this process stopped running."
 
-The signals for an object are stored in a uint32 bitmask, and their values (which are object-specific) are defined in the header
-[`zircon/types.h`](../system/public/zircon/types.h).  The typedef `zx_signals_t`
-is used to refer to signal bitmasks in syscalls and other APIs.
+The signals for an object are stored in a uint32 bitmask, and their values (which are
+object-specific) are defined in the header[`zircon/types.h`](../system/public/zircon/types.h).
+The typedef `zx_signals_t` is used to refer to signal bitmasks in syscalls and other APIs.
 
 Most objects are waitable.  Ports are an example of a non-waitable object.
 To determine if an object is waitable, call [object_get_info](syscalls/object_get_info.md)
@@ -23,7 +23,7 @@ A signal is said to be **Active** when its bit is 1 and **Inactive** when its bi
 
 A signal is said to be **Asserted** when it is made **Active** in response to an event
 (even if it was already **Active**), and is said to be **Deasserted** when it is made
-**Inactive* in response to an event (even if it was already **Inactive**).
+**Inactive** in response to an event (even if it was already **Inactive**).
 
 For example:  When a message is written into a Channel endpoint, the *ZX_CHANNEL_READABLE*
 signal of the opposing endpoint is **asserted** (which causes that signal to become **active**,
@@ -33,7 +33,8 @@ queue is read from that endpoint, the *ZX_CHANNEL_READABLE* signal of that endpo
 
 ## Observing Signals
 
-The syscalls **zx_object_wait_one**(), **zx_object_wait_many**(), and **zx_object_wait_async**() (in combination with a Port), can be used to wait for specified signals on one or more objects.
+The syscalls **zx_object_wait_one**(), **zx_object_wait_many**(), and **zx_object_wait_async**() (in
+combination with a Port), can be used to wait for specified signals on one or more objects.
 
 ## Common Signals
 
