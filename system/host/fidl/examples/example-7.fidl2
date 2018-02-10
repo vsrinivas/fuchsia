@@ -5,5 +5,5 @@ using pkg;
 // ¡🇷🇸🇷
 
 interface Hello {
-  0: Say(string req) -> (string response);
+  1: Say(string req) -> (string response);
 };
