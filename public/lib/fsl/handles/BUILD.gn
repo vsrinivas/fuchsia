@@ -14,5 +14,6 @@ sdk_source_set("handles") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 }

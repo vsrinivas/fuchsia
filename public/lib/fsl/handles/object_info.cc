@@ -46,15 +46,55 @@ std::string GetCurrentProcessName() {
 }
 
 zx_koid_t GetCurrentThreadKoid() {
-  return GetKoid(thrd_get_zx_handle(thrd_current()));
+  return GetKoid(zx_thread_self());
 }
 
 std::string GetCurrentThreadName() {
-  return GetObjectName(thrd_get_zx_handle(thrd_current()));
+  return GetObjectName(zx_thread_self());
 }
 
 zx_status_t SetCurrentThreadName(const std::string& name) {
-  return SetObjectName(thrd_get_zx_handle(thrd_current()), name);
+  return SetObjectName(zx_thread_self(), name);
+}
+
+zx::duration GetCurrentThreadTotalRuntime() {
+  zx_info_thread_stats_t info;
+  zx_status_t status =
+      zx_object_get_info(zx_thread_self(), ZX_INFO_THREAD_STATS, &info,
+                         sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? zx::duration(info.total_runtime) : zx::duration();
+}
+
+size_t GetCurrentProcessMemoryMappedBytes() {
+  zx_info_task_stats_t info;
+  zx_status_t status =
+      zx_object_get_info(zx_process_self(), ZX_INFO_TASK_STATS, &info,
+                         sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.mem_mapped_bytes : 0;
+}
+
+size_t GetCurrentProcessMemoryPrivateBytes() {
+  zx_info_task_stats_t info;
+  zx_status_t status =
+      zx_object_get_info(zx_process_self(), ZX_INFO_TASK_STATS, &info,
+                         sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.mem_private_bytes : 0;
+}
+
+size_t GetCurrentProcessMemorySharedBytes() {
+  zx_info_task_stats_t info;
+  zx_status_t status =
+      zx_object_get_info(zx_process_self(), ZX_INFO_TASK_STATS, &info,
+                         sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.mem_shared_bytes : 0;
+}
+
+size_t GetCurrentProcessMemoryScaledSharedBytes() {
+  zx_info_task_stats_t info;
+  zx_status_t status =
+      zx_object_get_info(zx_process_self(), ZX_INFO_TASK_STATS, &info,
+                         sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.mem_scaled_shared_bytes : 0;
 }
 
 }  // namespace fsl
