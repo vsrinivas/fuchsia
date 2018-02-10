@@ -208,6 +208,71 @@ bool test_tag_length_limit(void) {
     END_TEST;
 }
 
+bool test_vlog_simple_write(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
+    const char* msg = "test message";
+    FX_LOG_SET_VERBOSITY(1);
+    FX_VLOG(1, nullptr, msg);
+    output_compare_helper(fbl::move(local), -1, msg, nullptr, 0);
+    END_TEST;
+}
+
+bool test_vlog_write(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
+    FX_LOG_SET_VERBOSITY(1);
+    FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
+    output_compare_helper(fbl::move(local), -1, "10, just some number",
+                          nullptr, 0);
+    END_TEST;
+}
+
+bool test_vlog_write_with_tag(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
+    FX_LOG_SET_VERBOSITY(1);
+    FX_VLOGF(1, "tag", "%d, %s", 10, "just some string");
+    const char* tags[] = {"tag"};
+    output_compare_helper(fbl::move(local), -1, "10, just some string",
+                          tags, 1);
+    END_TEST;
+}
+
+bool test_log_verbosity(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
+
+    FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
+    size_t outstanding_bytes = 10u; // init to non zero value.
+    ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes), "");
+    EXPECT_EQ(0u, outstanding_bytes);
+
+    FX_LOG_SET_SEVERITY(DEBUG);
+    FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
+    outstanding_bytes = 10u; // init to non zero value.
+    ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes), "");
+    EXPECT_EQ(0u, outstanding_bytes);
+
+    FX_LOG_SET_VERBOSITY(2);
+    FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
+    output_compare_helper(fbl::move(local), -1,
+                          "10, just some number", nullptr, 0);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(syslog_socket_tests)
 RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)
@@ -215,6 +280,10 @@ RUN_TEST(test_log_severity)
 RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)
 RUN_TEST(test_log_write_with_multi_global_tag)
+RUN_TEST(test_vlog_simple_write)
+RUN_TEST(test_vlog_write)
+RUN_TEST(test_vlog_write_with_tag)
+RUN_TEST(test_log_verbosity)
 END_TEST_CASE(syslog_socket_tests)
 
 BEGIN_TEST_CASE(syslog_socket_tests_edge_cases)

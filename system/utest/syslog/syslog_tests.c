@@ -54,6 +54,7 @@ static inline zx_status_t init_helper(int fd, const char** tags, int ntags) {
 
   return fx_log_init_with_config(&config);
 }
+
 bool test_log_simple_write(void) {
   BEGIN_TEST;
   fx_log_reset_global();
@@ -183,6 +184,42 @@ bool test_msg_length_limit(void) {
   END_TEST;
 }
 
+bool test_vlog_simple_write(void) {
+  BEGIN_TEST;
+  fx_log_reset_global();
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  FX_LOG_SET_VERBOSITY(1);
+  FX_VLOG(1, NULL, "test message");
+  char buf[256];
+  size_t n = read(pipefd[1], &buf, 256);
+  EXPECT_GT(n, 0u, "");
+  buf[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "VLOG(1): test message\n"), buf);
+  close(pipefd[1]);
+  fx_log_reset_global();
+  END_TEST;
+}
+
+bool test_vlog_write(void) {
+  BEGIN_TEST;
+  fx_log_reset_global();
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  FX_LOG_SET_VERBOSITY(1);
+  FX_VLOGF(1, NULL, "%d, %s", 10, "just some number");
+  char buf[256];
+  size_t n = read(pipefd[1], &buf, 256);
+  EXPECT_GT(n, 0u, "");
+  buf[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "VLOG(1): 10, just some number\n"), buf);
+  close(pipefd[1]);
+  fx_log_reset_global();
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(syslog_tests)
 RUN_TEST(test_log_init)
 RUN_TEST(test_log_simple_write)
@@ -192,6 +229,8 @@ RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)
 RUN_TEST(test_log_write_with_multi_global_tag)
 RUN_TEST(test_log_enabled_macro)
+RUN_TEST(test_vlog_simple_write)
+RUN_TEST(test_vlog_write)
 END_TEST_CASE(syslog_tests)
 
 BEGIN_TEST_CASE(syslog_tests_edge_cases)
