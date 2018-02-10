@@ -37,5 +37,6 @@ package("peridot_lib_tests") {
 
   tests = [ {
         name = "peridot_lib_unittests"
+        dest = "modular_tests/peridot_lib_unittests"
       } ]
 }

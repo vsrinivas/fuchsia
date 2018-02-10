@@ -19,8 +19,8 @@
       }
     },
     {
-      "name":"context_index",
-      "exec":"/system/test/maxwell_unittests"
+      "name":"maxwell_unittests",
+      "exec":"/system/test/modular_tests/maxwell_unittests"
     },
     {
       "name":"context_link",
@@ -93,7 +93,7 @@
     },
     {
       "name":"modular_unittests",
-      "exec":"/system/test/modular_unittests"
+      "exec":"/system/test/modular_tests/modular_unittests"
     },
     {
       "name":"parent_child",
@@ -107,7 +107,7 @@
     },
     {
       "name":"peridot_lib_unittests",
-      "exec":"/system/test/peridot_lib_unittests"
+      "exec":"/system/test/modular_tests/peridot_lib_unittests"
     },
     {
       "name":"queue_persistence",
