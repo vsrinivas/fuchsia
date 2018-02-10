@@ -7,7 +7,9 @@
 namespace mz {
 namespace test {
 
-DummySystem::DummySystem(SystemContext context) : System(std::move(context)) {}
+DummySystem::DummySystem(SystemContext context,
+                         bool initialized_after_construction)
+    : System(std::move(context), initialized_after_construction) {}
 
 DummySystem::~DummySystem() = default;
 

@@ -14,7 +14,8 @@ class DummySystem : public System {
  public:
   static constexpr TypeId kTypeId = kDummySystem;
 
-  explicit DummySystem(SystemContext context);
+  explicit DummySystem(SystemContext context,
+                       bool initialized_after_construction = true);
   ~DummySystem() override;
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(

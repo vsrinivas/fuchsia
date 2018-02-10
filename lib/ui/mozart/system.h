@@ -70,6 +70,8 @@ class System {
       CommandDispatcherContext context) = 0;
 
   SystemContext* context() { return &context_; }
+  fxl::TaskRunner* task_runner() { return context_.task_runner(); }
+  Clock* clock() { return context_.clock(); }
 
   bool initialized() { return initialized_; };
 

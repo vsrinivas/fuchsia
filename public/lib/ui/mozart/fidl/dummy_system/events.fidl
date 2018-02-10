@@ -5,15 +5,15 @@
 module ui_mozart;
 
 union DummySystemEvent {
-  StoopidEvt one;
-  SillyEvt two;
+  StoopidEvent one;
+  SillyEvent two;
 };
 
-struct StoopidEvt {
+struct StoopidEvent {
   string value;
 };
 
-struct SillyEvt {
+struct SillyEvent {
   int32 one;
   int32 two;
 };

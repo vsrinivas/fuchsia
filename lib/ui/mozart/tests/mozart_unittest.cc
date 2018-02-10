@@ -2,54 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#include "garnet/lib/ui/mozart/clock.h"
-#include "garnet/lib/ui/mozart/mozart.h"
-#include "lib/fsl/tasks/message_loop.h"
-
-extern std::unique_ptr<app::ApplicationContext> g_application_context;
+#include "garnet/lib/ui/mozart/tests/dummy_system.h"
+#include "garnet/lib/ui/mozart/tests/mozart_test.h"
 
 namespace mz {
 namespace test {
 
-using MozartTest = testing::Test;
+namespace {
 
-class MockSystemWithDelayedInitialization : public System {
+class MockSystemWithDelayedInitialization : public DummySystem {
  public:
-  static constexpr TypeId kTypeId = kDummySystem;
+  // Expose to tests.
+  using System::SetToInitialized;
 
   explicit MockSystemWithDelayedInitialization(SystemContext context)
-      : System(std::move(context), false) {}
-
-  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
-      CommandDispatcherContext context) override {
-    return nullptr;
-  }
-
-  void Initialize() {
-    // This is a mock, so don't do anything except mark self as initialized.
-    SetToInitialized();
-  }
+      : DummySystem(std::move(context), false) {}
 };
 
+}  // anonymous namespace
+
 TEST_F(MozartTest, SessionCreatedAfterAllSystemsInitialized) {
-  app::ApplicationContext* app_context = g_application_context.get();
-  fxl::TaskRunner* task_runner =
-      fsl::MessageLoop::GetCurrent()->task_runner().get();
-  Clock clock_;
-  Mozart mozart(app_context, task_runner, &clock_);
-
   auto mock_system =
-      mozart.RegisterSystem<MockSystemWithDelayedInitialization>();
-  EXPECT_EQ(0U, mozart.num_sessions());
+      mozart()->RegisterSystem<test::MockSystemWithDelayedInitialization>();
 
+  EXPECT_EQ(0U, mozart()->num_sessions());
+
+  // Request session creation, which doesn't occur yet because system isn't
+  // initialized.
   ui_mozart::SessionPtr session;
-  mozart.CreateSession(session.NewRequest(), nullptr);
-  EXPECT_EQ(0U, mozart.num_sessions());
+  mozart()->CreateSession(session.NewRequest(), nullptr);
+  EXPECT_EQ(0U, mozart()->num_sessions());
 
-  mock_system->Initialize();
-  EXPECT_EQ(1U, mozart.num_sessions());
+  // Initializing the system allows the session to be created.
+  mock_system->SetToInitialized();
+  EXPECT_EQ(1U, mozart()->num_sessions());
 }
 
 }  // namespace test
