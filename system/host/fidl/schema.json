@@ -9,7 +9,7 @@
             "interface_declarations",
             "struct_declarations",
             "union_declarations",
-            "library_dependencies",
+            "library_dependencies"
         ],
         "name": {
             "$ref": "#/definitions/identifier"
