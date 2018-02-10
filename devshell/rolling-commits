@@ -8,6 +8,7 @@
 import argparse
 from argparse import RawTextHelpFormatter
 import base64
+from datetime import datetime, timedelta, tzinfo
 import json
 import sys
 import urllib2
@@ -61,7 +62,7 @@ def get_commits(layer, revision):
         get_url = url
         if start:
             get_url = '%s&s=%s' % (url, start)
-        content = http_get(url)
+        content = http_get(get_url)
         # Remove the anti-XSSI header.
         content = content[5:]
         data = json.loads(content)
@@ -78,7 +79,7 @@ def get_commits(layer, revision):
 def filter_commit(commit):
     """Returns True if a commit should be listed."""
     author = commit['author']['name']
-    if author == 'skia-deps-roller@chromium.org':
+    if author == 'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com':
         return False
     for layer in LAYERS:
         if author == '%s-roller' % layer:
@@ -86,11 +87,58 @@ def filter_commit(commit):
     return True
 
 
+class MyTimezone(tzinfo):
+    """Simple timezone implementation, since for some reason Python 2.7 doesn't
+       provide one.
+       """
+
+    def __init__(self, data=None):
+        self.data = data if data else '+0000'
+
+    def utcoffset(self, dt):
+        hours = int(self.data[1:3])
+        minutes = int(self.data[3:5])
+        delta = timedelta(hours=hours, minutes=minutes)
+        if self.data[0] == '-':
+            delta = -delta
+        return delta
+
+    def tzname(self, dt):
+        return 'Bogus'
+
+    def dst(self, dt):
+        return timedelta(0)
+
+
+def get_time_since(timestamp):
+    """Returns a string describing the amount of time elapsed since the given
+       timestamp.
+       Timestamp format: Sat Feb 10 03:17:06 2018 +0000
+       """
+    timestamp_no_tz = timestamp[:-6]
+    date_no_tz = datetime.strptime(timestamp_no_tz, '%a %b %d %H:%M:%S %Y')
+    date = date_no_tz.replace(tzinfo=MyTimezone(timestamp[-5:]))
+    now = datetime.utcnow().replace(tzinfo=MyTimezone())
+    delta = now - date
+    if delta.days >= 1:
+        return '>1d'
+    hours = delta.seconds / 3600
+    if hours >= 1:
+        return '%sh' % hours
+    minutes = (delta.seconds % 3600) / 60
+    return '%sm' % minutes
+
+
 def print_commits(layer, commits):
     """Prints the given commits in a user=pleasing format."""
     commits = [c for c in commits if filter_commit(c)]
+    if commits:
+        timestamp = commits[-1]['committer']['time']
+        elapsed_time = get_time_since(timestamp)
+    else:
+        elapsed_time = ''
     print('--------------')
-    print('| %s |' % '{:^10}'.format(layer))
+    print('| %s | %s' % ('{:^10}'.format(layer), elapsed_time))
     print('--------------')
     for commit in commits:
         print('%s | %s | %s' % (commit['commit'][:7],
