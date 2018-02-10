@@ -329,6 +329,8 @@
     getuid;
     __get_unsafe_stack_ptr;
     __get_unsafe_stack_start;
+    glob;
+    globfree;
     gmtime;
     gmtime_r;
     grantpt;
