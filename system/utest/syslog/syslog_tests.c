@@ -41,6 +41,7 @@ bool test_log_enabled_macro(void) {
   if (!FX_LOG_IS_ENABLED(ERROR)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -66,6 +67,7 @@ bool test_log_simple_write(void) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "test message\n"), buf);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -82,6 +84,7 @@ bool test_log_write(void) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "INFO: 10, just some number\n"), buf);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -97,6 +100,7 @@ bool test_log_severity(void) {
   fd.events = POLLIN;
   EXPECT_EQ(poll(&fd, 1, 1), 0, "");
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -113,6 +117,7 @@ bool test_log_write_with_tag(void) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[tag] INFO: 10, just some string\n"), buf);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -129,6 +134,7 @@ bool test_log_write_with_global_tag(void) {
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[gtag, tag] INFO: 10, just some string\n"), buf);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -147,6 +153,7 @@ bool test_log_write_with_multi_global_tag(void) {
   EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"),
               buf);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -154,6 +161,7 @@ bool test_global_tag_limit(void) {
   BEGIN_TEST;
   fx_log_reset_global();
   EXPECT_NE(ZX_OK, init_helper(-1, NULL, FX_LOG_MAX_TAGS + 1), "");
+  fx_log_reset_global();
   END_TEST;
 }
 
@@ -171,6 +179,7 @@ bool test_msg_length_limit(void) {
   msg[n] = 0;
   EXPECT_TRUE(ends_with(msg, "a...\n"), msg);
   close(pipefd[1]);
+  fx_log_reset_global();
   END_TEST;
 }
 
