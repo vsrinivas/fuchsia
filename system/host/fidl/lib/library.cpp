@@ -157,6 +157,8 @@ bool Library::ConsumeInterfaceDeclaration(
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
             return false;
+        if (value == 0u)
+            return false;
         flat::Ordinal ordinal(std::move(ordinal_literal), value);
 
         auto method_name = std::move(method->identifier);
