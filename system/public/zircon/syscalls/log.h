@@ -46,7 +46,7 @@ typedef struct zx_log_record {
 #define ZX_LOG_LOCAL          (0x1000)
 
 #define ZX_LOG_LEVEL_MASK     (0x0FFF)
-#define ZX_LOG_FLAGS_MASK     (0xF000)
+#define ZX_LOG_FLAGS_MASK     (0xFFFF)
 
 // Options
 
