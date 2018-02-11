@@ -12,8 +12,7 @@ MediaPacketProducerBase::MediaPacketProducerBase()
     : allocator_(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                  ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP) {
   // No demand initially.
-  demand_.min_packets_outstanding = 0;
-  demand_.min_pts = MediaPacket::kNoTimestamp;
+  ResetDemand();
 }
 
 MediaPacketProducerBase::~MediaPacketProducerBase() {
@@ -45,6 +44,11 @@ void MediaPacketProducerBase::Connect(
 
   HandleDemandUpdate();
   callback();
+}
+
+void MediaPacketProducerBase::Disconnect() {
+  consumer_.Unbind();
+  ResetDemand();
 }
 
 void MediaPacketProducerBase::Reset() {
@@ -198,6 +202,13 @@ bool MediaPacketProducerBase::ShouldProducePacket(
 
 void MediaPacketProducerBase::OnFailure() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+}
+
+void MediaPacketProducerBase::ResetDemand() {
+  fxl::MutexLocker locker(&mutex_);
+  packets_outstanding_ = 0;
+  demand_.min_packets_outstanding = 0;
+  demand_.min_pts = MediaPacket::kNoTimestamp;
 }
 
 void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {
