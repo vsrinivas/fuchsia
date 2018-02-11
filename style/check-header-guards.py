@@ -134,9 +134,11 @@ def check_file(path, fix_guards=False):
         if found_pragma_once:
             print('%s contained #pragma once instead of a header guard' % path)
         else:
-            print('%s did not contain a header guard' % path)
+            print('%s did not contain a header guard or the header guard did '
+                  'not match the file path' % path)
     else:
-        print('%s contained neither a header guard nor #pragma once' % path)
+        print('%s contained neither a proper header guard nor #pragma once' %
+              path)
     if fix_guards:
         fix_header_guard(path, header_guard)
     return False
