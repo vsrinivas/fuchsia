@@ -4,13 +4,11 @@
     ],
     "imports": [
         "garnet/packages/guest_tests",
+        "garnet/packages/guest_tools",
         "garnet/packages/pmd",
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
         "garnet/packages/zircon-guest",
         "garnet/packages/linux-guest"
-    ],
-    "packages": {
-        "guest_tools": "//garnet/bin/guest/tools"
-    }
+    ]
 }

@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "guest_tools": "//garnet/bin/guest/tools"
+    }
+}
