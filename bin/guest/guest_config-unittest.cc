@@ -112,6 +112,16 @@ TEST(GuestConfigParserTest, BooleanFlag) {
   ASSERT_TRUE(config.balloon_demand_page());
 }
 
+TEST(GuestConfigParserTest, CommandLineAppend) {
+  GuestConfig config;
+  GuestConfigParser parser(&config);
+
+  const char* argv[] = {"exe_name", "--cmdline=foo bar", "--cmdline-append=baz"};
+  ASSERT_EQ(ZX_OK,
+            parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
+  ASSERT_STREQ("foo bar baz", config.cmdline().c_str());
+}
+
 TEST(GuestConfigParserTest, BlockSpecArg) {
   GuestConfig config;
   GuestConfigParser parser(&config);

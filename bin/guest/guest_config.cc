@@ -30,7 +30,11 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
   std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
   std::cerr << "\t                                available instead of failing.\n";
-  std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line\n";
+  std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line. This will\n";
+  std::cerr << "\t                                overwrite any existing command line created using --cmdline\n";
+  std::cerr << "\t                                or --cmdline-append.\n";
+  std::cerr << "\t--cmdline-append=[cmdline]      Appends string 'cmdline' to the existing kernel command\n";
+  std::cerr << "\t                                line\n";
   std::cerr << "\t--nogpu                         Disable GPU device and graphics output\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
   std::cerr << "\t                                and adjust the balloon size based on the amount of\n";
@@ -106,6 +110,19 @@ static GuestConfigParser::OptionHandler append_option(
       return status;
     }
     out->push_back(t);
+    return ZX_OK;
+  };
+}
+
+static GuestConfigParser::OptionHandler append_string(std::string* out, const char* delim) {
+  return [out, delim](const std::string& key, const std::string& value) {
+    if (value.empty()) {
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
+                     << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    out->append(delim);
+    out->append(value);
     return ZX_OK;
   };
 }
@@ -270,6 +287,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* config)
           {"block",
            append_option<BlockSpec>(&config_->block_specs_, parse_block_spec)},
           {"cmdline", save_option(&config_->cmdline_)},
+          {"cmdline-append", append_string(&config_->cmdline_, " ")},
 #if __x86_64__
           {"memory", parse_mem_size(&config_->memory_)},
 #endif
