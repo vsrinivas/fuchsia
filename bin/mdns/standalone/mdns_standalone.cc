@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iomanip>
 #include <iostream>
 
 #include "garnet/bin/mdns/standalone/mdns_standalone.h"
 
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/standalone/ioctl_interface_monitor.h"
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -25,6 +27,18 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   }
 
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, zx::duration value) {
+  uint64_t seconds = value / zx::sec(1);
+  uint64_t minutes = seconds / 60;
+  uint64_t hours = minutes / 60;
+  seconds %= 60;
+  minutes %= 60;
+  int64_t milliseconds = (value / zx::msec(1)) % 1000;
+  return os << hours << ":" << std::setw(2) << std::setfill('0') << minutes
+            << ":" << std::setw(2) << seconds << "." << std::setw(3)
+            << milliseconds;
 }
 
 const fxl::TimeDelta kTrafficLoggingInterval = fxl::TimeDelta::FromSeconds(60);
@@ -50,6 +64,12 @@ void MdnsStandalone::LogTrafficAfterDelay() {
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this]() {
         mdns_.LogTraffic();
+        zx::duration run_time = fsl::GetCurrentThreadTotalRuntime();
+        size_t mem_bytes = fsl::GetCurrentProcessMemoryPrivateBytes();
+        std::cout << "resource stats\n";
+        std::cout << "    total run time:     " << run_time << " ("
+                  << run_time.get() << "ns)\n";
+        std::cout << "    private memory:     " << mem_bytes << " bytes\n";
         LogTrafficAfterDelay();
       },
       kTrafficLoggingInterval);
