@@ -92,13 +92,18 @@
       "description": "Additional information about an SDK",
       "type": "object",
       "properties": {
-        "arch": {
-          "description": "The target architecture for binaries referenced in this manifest, expressed as a compiler triple",
+        "target-arch": {
+          "description": "The architecture for target binaries referenced in this manifest, expressed as a compiler triple",
+          "type": "string"
+        },
+        "host-arch": {
+          "description": "The architecture for host binaries referenced in this manifest, expressed as a compiler triple",
           "type": "string"
         }
       },
       "required": [
-        "arch"
+        "host-arch",
+        "target-arch"
       ],
       "additionalProperties": false
     }
