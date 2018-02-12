@@ -59,8 +59,8 @@ zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
     zx_status_t status = zx_channel_read(
-        channel, flags, bytes_.data(), handles_.data(), handles_.capacity(),
-        bytes_.capacity(), &actual_bytes, &actual_handles);
+        channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
+        handles_.capacity(), &actual_bytes, &actual_handles);
     if (status == ZX_OK) {
         bytes_.set_actual(actual_bytes);
         handles_.set_actual(actual_handles);
