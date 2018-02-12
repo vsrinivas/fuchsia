@@ -31,11 +31,11 @@ bool TestBind(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.GenerateKey(version));
-    ASSERT_OK(device.Create(kDeviceSize, kBlockSize, fvm));
+    ASSERT_TRUE(device.GenerateKey(version));
+    ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
     ASSERT_OK(Volume::Create(device.parent(), device.key()));
 
-    EXPECT_OK(device.BindZxcrypt());
+    EXPECT_TRUE(device.BindZxcrypt());
 
     END_TEST;
 }
@@ -48,7 +48,7 @@ bool TestDdkGetSize(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     fbl::unique_fd parent = device.parent();
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
@@ -66,7 +66,7 @@ bool TestBlockGetInfo(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     fbl::unique_fd parent = device.parent();
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
@@ -89,7 +89,7 @@ bool TestBlockFvmQuery(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
     if (!fvm) {
@@ -112,7 +112,7 @@ bool TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
     query_request_t req;
@@ -140,7 +140,7 @@ bool TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
     extend_request_t mod;
@@ -185,10 +185,10 @@ bool TestFdZeroLength(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
 
-    EXPECT_OK(device.WriteFd(0, 0));
-    EXPECT_OK(device.ReadFd(0, 0));
+    EXPECT_TRUE(device.WriteFd(0, 0));
+    EXPECT_TRUE(device.ReadFd(0, 0));
 
     END_TEST;
 }
@@ -198,12 +198,11 @@ bool TestFdFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t one = device.block_size();
 
-    EXPECT_OK(device.WriteFd(0, one));
-    EXPECT_OK(device.ReadFd(0, one));
-    EXPECT_TRUE(device.CheckMatch(0, one));
+    EXPECT_TRUE(device.WriteFd(0, one));
+    EXPECT_TRUE(device.ReadFd(0, one));
 
     END_TEST;
 }
@@ -213,13 +212,12 @@ bool TestFdLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
 
-    EXPECT_OK(device.WriteFd(n - one, one));
-    EXPECT_OK(device.ReadFd(n - one, one));
-    EXPECT_TRUE(device.CheckMatch(n - one, one));
+    EXPECT_TRUE(device.WriteFd(n - one, one));
+    EXPECT_TRUE(device.ReadFd(n - one, one));
 
     END_TEST;
 }
@@ -229,12 +227,11 @@ bool TestFdAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.size();
 
-    EXPECT_OK(device.WriteFd(0, n));
-    EXPECT_OK(device.ReadFd(0, n));
-    EXPECT_TRUE(device.CheckMatch(0, n));
+    EXPECT_TRUE(device.WriteFd(0, n));
+    EXPECT_TRUE(device.ReadFd(0, n));
 
     END_TEST;
 }
@@ -244,22 +241,29 @@ bool TestFdUnaligned(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t one = device.block_size();
+    ssize_t one_s = static_cast<ssize_t>(one);
 
-    ASSERT_OK(device.WriteFd(0, one));
+    ASSERT_TRUE(device.WriteFd(one, one));
+    ASSERT_TRUE(device.ReadFd(one, one));
 
-    EXPECT_ZX(device.WriteFd(one - 1, one), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(one + 1, one), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(one, one - 1), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(one, one + 1), ZX_ERR_IO);
+    EXPECT_EQ(device.lseek(one - 1), one_s - 1);
+    EXPECT_LT(device.write(one, one), 0);
+    EXPECT_LT(device.read(one, one), 0);
 
-    ASSERT_OK(device.ReadFd(0, one));
+    EXPECT_EQ(device.lseek(one + 1), one_s + 1);
+    EXPECT_LT(device.write(one, one), 0);
+    EXPECT_LT(device.read(one, one), 0);
 
-    EXPECT_ZX(device.ReadFd(one - 1, one), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(one + 1, one), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(one, one - 1), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(one, one + 1), ZX_ERR_IO);
+    EXPECT_EQ(device.lseek(one), one_s);
+    EXPECT_LT(device.write(one, one - 1), 0);
+    EXPECT_LT(device.read(one, one - 1), 0);
+
+    EXPECT_EQ(device.lseek(one), one_s);
+    EXPECT_LT(device.write(one, one + 1), 0);
+    EXPECT_LT(device.read(one, one + 1), 0);
+
     END_TEST;
 }
 DEFINE_EACH_DEVICE(TestFdUnaligned);
@@ -268,24 +272,43 @@ bool TestFdOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.size();
+    ssize_t n_s = static_cast<ssize_t>(n);
+
     size_t one = device.block_size();
+    ssize_t one_s = static_cast<ssize_t>(one);
+
     size_t two = one + one;
+    ssize_t two_s = static_cast<ssize_t>(two);
 
-    ASSERT_OK(device.WriteFd(0, one));
+    ASSERT_TRUE(device.WriteFd(0, one));
 
-    EXPECT_ZX(device.WriteFd(n, one), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(n - one, two), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(two, n - one), ZX_ERR_IO);
-    EXPECT_ZX(device.WriteFd(one, n), ZX_ERR_IO);
+    EXPECT_EQ(device.lseek(n), n_s);
+    EXPECT_NE(device.write(n, one), one_s);
 
-    ASSERT_OK(device.ReadFd(0, one));
+    EXPECT_EQ(device.lseek(n - one), n_s - one_s);
+    EXPECT_NE(device.write(n - one, two), two_s);
 
-    EXPECT_ZX(device.ReadFd(n, one), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(n - one, two), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(two, n - one), ZX_ERR_IO);
-    EXPECT_ZX(device.ReadFd(one, n), ZX_ERR_IO);
+    EXPECT_EQ(device.lseek(two), two_s);
+    EXPECT_NE(device.write(two, n - one), n_s - one_s);
+
+    EXPECT_EQ(device.lseek(one), one_s);
+    EXPECT_NE(device.write(one, n), n_s);
+
+    ASSERT_TRUE(device.ReadFd(0, one));
+
+    EXPECT_EQ(device.lseek(n), n_s);
+    EXPECT_NE(device.read(n, one), one_s);
+
+    EXPECT_EQ(device.lseek(n - one), n_s - one_s);
+    EXPECT_NE(device.read(n - one, two), two_s);
+
+    EXPECT_EQ(device.lseek(two), two_s);
+    EXPECT_NE(device.read(two, n - one), n_s - one_s);
+
+    EXPECT_EQ(device.lseek(one), one_s);
+    EXPECT_NE(device.read(one, n), n_s);
 
     END_TEST;
 }
@@ -295,18 +318,16 @@ bool TestFdOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
 
-    ASSERT_OK(device.WriteFd(0, n));
-    ASSERT_OK(device.BindZxcrypt());
+    ASSERT_TRUE(device.WriteFd(0, n));
+    ASSERT_TRUE(device.BindZxcrypt());
 
     for (size_t off = 0; off < n; off += one) {
-        EXPECT_OK(device.ReadFd(off, one));
+        EXPECT_TRUE(device.ReadFd(off, one));
     }
-
-    EXPECT_TRUE(device.CheckMatch(0, n));
 
     END_TEST;
 }
@@ -316,18 +337,16 @@ bool TestFdManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
 
     for (size_t off = 0; off < n; off += one) {
-        EXPECT_OK(device.WriteFd(off, one));
+        EXPECT_TRUE(device.WriteFd(off, one));
     }
 
-    ASSERT_OK(device.BindZxcrypt());
-    EXPECT_OK(device.ReadFd(0, n));
-
-    EXPECT_TRUE(device.CheckMatch(0, n));
+    ASSERT_TRUE(device.BindZxcrypt());
+    EXPECT_TRUE(device.ReadFd(0, n));
 
     END_TEST;
 }
@@ -338,11 +357,11 @@ bool TestVmoZeroLength(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
 
     // Zero length is illegal for the block fifo
-    EXPECT_ZX(device.WriteVmo(0, 0), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(device.ReadVmo(0, 0), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 0, 0), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, 0, 0), ZX_ERR_INVALID_ARGS);
 
     END_TEST;
 }
@@ -352,12 +371,10 @@ bool TestVmoFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
-    size_t one = device.block_size();
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
 
-    EXPECT_OK(device.WriteVmo(0, 1));
-    EXPECT_OK(device.ReadVmo(0, 1));
-    EXPECT_TRUE(device.CheckMatch(0, one));
+    EXPECT_TRUE(device.WriteVmo(0, 1));
+    EXPECT_TRUE(device.ReadVmo(0, 1));
 
     END_TEST;
 }
@@ -367,13 +384,11 @@ bool TestVmoLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.block_count();
-    size_t one = device.block_size();
 
-    EXPECT_OK(device.WriteVmo(n - 1, 1));
-    EXPECT_OK(device.ReadVmo(n - 1, 1));
-    EXPECT_TRUE(device.CheckMatch(device.size() - one, one));
+    EXPECT_TRUE(device.WriteVmo(n - 1, 1));
+    EXPECT_TRUE(device.ReadVmo(n - 1, 1));
 
     END_TEST;
 }
@@ -383,12 +398,11 @@ bool TestVmoAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.block_count();
 
-    EXPECT_OK(device.WriteVmo(0, n));
-    EXPECT_OK(device.ReadVmo(0, n));
-    EXPECT_TRUE(device.CheckMatch(0, device.size()));
+    EXPECT_TRUE(device.WriteVmo(0, n));
+    EXPECT_TRUE(device.ReadVmo(0, n));
 
     END_TEST;
 }
@@ -398,20 +412,22 @@ bool TestVmoOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.block_count();
 
-    ASSERT_OK(device.WriteVmo(0, 1));
-    EXPECT_ZX(device.WriteVmo(n, 1), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.WriteVmo(n - 1, 2), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.WriteVmo(2, n - 1), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.WriteVmo(1, n), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_TRUE(device.WriteVmo(0, 1));
 
-    ASSERT_OK(device.ReadVmo(0, 1));
-    EXPECT_ZX(device.ReadVmo(n, 1), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.ReadVmo(n - 1, 2), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.ReadVmo(2, n - 1), ZX_ERR_OUT_OF_RANGE);
-    EXPECT_ZX(device.ReadVmo(1, n), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, n, 1), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, n - 1, 2), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 2, n - 1), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 1, n), ZX_ERR_OUT_OF_RANGE);
+
+    ASSERT_TRUE(device.ReadVmo(0, 1));
+
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, n, 1), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, n - 1, 2), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, 2, n - 1), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, 1, n), ZX_ERR_OUT_OF_RANGE);
 
     END_TEST;
 }
@@ -421,15 +437,14 @@ bool TestVmoOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.block_count();
 
-    EXPECT_OK(device.WriteVmo(0, n));
-    ASSERT_OK(device.BindZxcrypt());
+    EXPECT_TRUE(device.WriteVmo(0, n));
+    ASSERT_TRUE(device.BindZxcrypt());
     for (size_t off = 0; off < n; ++off) {
-        EXPECT_OK(device.ReadVmo(off, 1));
+        EXPECT_TRUE(device.ReadVmo(off, 1));
     }
-    EXPECT_TRUE(device.CheckMatch(0, device.size()));
 
     END_TEST;
 }
@@ -439,16 +454,15 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_OK(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.DefaultInit(version, fvm));
     size_t n = device.block_count();
 
     for (size_t off = 0; off < n; ++off) {
-        EXPECT_OK(device.WriteVmo(off, 1));
+        EXPECT_TRUE(device.WriteVmo(off, 1));
     }
 
-    ASSERT_OK(device.BindZxcrypt());
-    EXPECT_OK(device.ReadVmo(0, n));
-    EXPECT_TRUE(device.CheckMatch(0, device.size()));
+    ASSERT_TRUE(device.BindZxcrypt());
+    EXPECT_TRUE(device.ReadVmo(0, n));
 
     END_TEST;
 }

@@ -44,6 +44,8 @@ public:
     explicit TestDevice();
     ~TestDevice();
 
+    // ACCESSORS
+
     // Returns the size of the zxcrypt volume.
     size_t size() const { return block_count_ * block_size_; }
 
@@ -65,70 +67,87 @@ public:
     // Returns a reference to the root key generated for this device.
     const crypto::Bytes& key() const { return key_; }
 
+    // API WRAPPERS
+
+    // These methods mirror the POSIX API, except that the file descriptors and buffers are
+    // provided automatically. |off| and |len| are in bytes.
+    ssize_t lseek(zx_off_t off) { return ::lseek(zxcrypt_.get(), off, SEEK_SET); }
+    ssize_t read(zx_off_t off, size_t len) {
+        return ::read(zxcrypt_.get(), as_read_.get() + off, len);
+    }
+    ssize_t write(zx_off_t off, size_t len) {
+        return ::write(zxcrypt_.get(), to_write_.get() + off, len);
+    }
+
+    // These methods mirror the syscall API, except that the VMO and buffers are provided
+    // automatically. |off| and |len| are in bytes.
+    zx_status_t vmo_read(zx_off_t off, size_t len) {
+        size_t ignored;
+        return vmo_.read(as_read_.get() + off, 0, len, &ignored);
+    }
+    zx_status_t vmo_write(uint64_t off, uint64_t len) {
+        size_t ignored;
+        return vmo_.write(to_write_.get() + off, 0, len, &ignored);
+    }
+
+    // Sends a request over the block fifo to read or write the blocks given by |off| and |len|,
+    // according to the given |opcode|.  The data sent or received can be accessed using |vmo_write|
+    // or |vmo_read|, respectively.  |off| and |len| are in blocks.
+    zx_status_t block_fifo_txn(uint16_t opcode, uint64_t off, uint64_t len) {
+        req_.opcode = opcode;
+        req_.length = len;
+        req_.dev_offset = off;
+        req_.vmo_offset = 0;
+        return ::block_fifo_txn(client_, &req_, 1);
+    }
+
+    // TEST HELPERS
+
     // Generates a key of an appropriate length for the given |version|.
-    zx_status_t GenerateKey(Volume::Version version);
+    bool GenerateKey(Volume::Version version);
 
     // Allocates a new block device of at least |device_size| bytes grouped into blocks of
     // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
     // appropriates number of slices of |FVM_BLOCK_SIZE| each.  A file descriptor for the block
     // device is returned via |out_fd|.
-    zx_status_t Create(size_t device_size, size_t block_size, bool fvm);
+    bool Create(size_t device_size, size_t block_size, bool fvm);
 
     // Binds the zxcrypt driver to the current block device.  It is an error to call this method
     // without calling |Create|.  If the driver was previously bound, this will trigger the
     // underlying device to unbind and rebind its children.
-    zx_status_t BindZxcrypt();
+    bool BindZxcrypt();
 
     // Convenience method that generates a key and creates a device according to |version| and
     // |fvm|.  It sets up the device as a zxcrypt volume and binds to it.
-    zx_status_t DefaultInit(Volume::Version version, bool fvm);
+    bool DefaultInit(Volume::Version version, bool fvm);
 
-    // Flips a (pseudo)random bit in the byte at the given |offset| on the block device.  The call
-    // to |srand| in main.c guarantees the same bit will be chosen for a given test iteration.
-    zx_status_t Corrupt(zx_off_t offset);
+    // Test helpers that perform a |lseek| and a |read| or |write| together. |off| and |len| are in
+    // bytes.  |ReadFd| additionally checks that the data read matches what was written.
+    bool ReadFd(zx_off_t off, size_t len);
+    bool WriteFd(zx_off_t off, size_t len);
 
-    // Seeks to the given |offset| in the zxcrypt device, and writes|length| bytes from an internal
-    // write buffer containing a pseudo-random byte sequence.
-    zx_status_t WriteFd(zx_off_t offset, size_t length) {
-        return Write(zxcrypt_, to_write_.get(), offset, length);
-    }
+    // Test helpers that perform a |lseek| and a |vmo_read| or |vmo_write| together.  |off| and
+    // |len| are in blocks.  |ReadVmo| additionally checks that the data read matches what was
+    // written.
+    bool ReadVmo(zx_off_t off, size_t len);
+    bool WriteVmo(zx_off_t off, size_t len);
 
-    // Seeks to the given |offset| in the zxcrypt device, and reads |length| bytes into an internal
-    // read buffer.
-    zx_status_t ReadFd(zx_off_t offset, size_t length) {
-        return Read(zxcrypt_, as_read_.get(), offset, length);
-    }
-
-    // Writes up to |length| bytes from an internal write buffer to the given |offset| in the
-    // device.
-    zx_status_t WriteVmo(zx_off_t offset, size_t length);
-
-    // Reads up to |length| bytes from the given |offset| in the device into an internal read
-    // buffer.
-    zx_status_t ReadVmo(zx_off_t offset, size_t length);
-
-    // Returns true if and only if |length| starting from the given |offset| bytes of the internal
-    // read and write buffers match, i.e. if the data was written and read back correctly using
-    // the methods below.
-    bool CheckMatch(zx_off_t offset, size_t length) const;
+    // Test helper that flips a (pseudo)random bit in the byte at the given |offset| on the block
+    // device.  The call to |srand| in main.c guarantees the same bit will be chosen for a given
+    // test iteration.
+    bool Corrupt(zx_off_t offset);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(TestDevice);
 
     // Allocates a new ramdisk of at least |device_size| bytes arranged into blocks of |block_size|
     // bytes, and opens it.
-    zx_status_t CreateRamdisk(size_t device_size, size_t block_size);
+    bool CreateRamdisk(size_t device_size, size_t block_size);
 
     // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
     // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
     // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
-    zx_status_t CreateFvmPart(size_t device_size, size_t block_size);
-
-    // Seeks to the given |offset| in |fd|, and writes |length| bytes from |buf|.
-    zx_status_t Write(const fbl::unique_fd& fd, const uint8_t* buf, zx_off_t offset, size_t length);
-
-    // Seeks to the given |offset| in |fd|, and reads |length| bytes into |buf|.
-    zx_status_t Read(const fbl::unique_fd& fd, uint8_t* buf, zx_off_t offset, size_t length);
+    bool CreateFvmPart(size_t device_size, size_t block_size);
 
     // Tears down the current ramdisk and all its children.
     void Reset();
