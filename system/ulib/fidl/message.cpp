@@ -94,11 +94,13 @@ zx_status_t Message::Call(zx_handle_t channel, uint32_t flags,
     zx_status_t status = zx_channel_call(channel, flags, deadline, &args,
                                          &actual_bytes, &actual_handles,
                                          read_status);
-    if (status == ZX_OK) {
+    if (status == ZX_OK || status == ZX_ERR_CALL_FAILED) {
         ClearHandlesUnsafe();
-        if (*read_status == ZX_OK) {
-            response->bytes_.set_actual(actual_bytes);
-            response->handles_.set_actual(actual_handles);
+        if (status == ZX_OK) {
+            if (*read_status == ZX_OK) {
+                response->bytes_.set_actual(actual_bytes);
+                response->handles_.set_actual(actual_handles);
+            }
         }
     }
     return status;
