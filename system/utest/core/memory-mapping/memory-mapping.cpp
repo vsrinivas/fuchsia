@@ -88,6 +88,19 @@ bool address_space_limits_test() {
     END_TEST;
 }
 
+bool mmap_zerofilled_test() {
+    BEGIN_TEST;
+
+    char* addr = (char *)mmap(NULL, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    for (size_t i = 0; i < 16384; i++) {
+        EXPECT_EQ('\0', addr[i], "non-zero memory found");
+    }
+    int unmap_result = munmap(addr, 16384);
+    EXPECT_EQ(0, unmap_result, "munmap should have succeeded");
+
+    END_TEST;
+}
+
 bool mmap_len_test() {
     BEGIN_TEST;
 
@@ -197,6 +210,7 @@ bool mprotect_test() {
 
 BEGIN_TEST_CASE(memory_mapping_tests)
 RUN_TEST(address_space_limits_test);
+RUN_TEST(mmap_zerofilled_test);
 RUN_TEST(mmap_len_test);
 RUN_TEST(mmap_offset_test);
 RUN_TEST(mmap_prot_test);
