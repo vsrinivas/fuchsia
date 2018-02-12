@@ -133,8 +133,14 @@ public:
     zx_status_t Call(zx_handle_t channel, uint32_t flags, zx_time_t deadline,
                      zx_status_t* read_status, Message* response);
 
+    // Stop tracking the handles in stored in handles(), without closing them.
+    //
+    // Typically, these handles will be extracted during decode or the
+    // message's destructor, so this function will be unnecessary. However,
+    // for clients of ulib/fidl which decode message manually, this function
+    // is necessary to prevent extracted handles from being closed.
+    void ClearHandlesUnsafe();
 private:
-    void ClearHandles();
 
     BytePart bytes_;
     HandlePart handles_;
