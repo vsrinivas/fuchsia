@@ -11,15 +11,19 @@ package("network_time") {
 
   binary = "network_time"
 
-  resources = [ {
-        path = rebase_path("roughtime-servers.json")
-        dest = "roughtime-servers.json"
-      } ]
+  resources = [
+    {
+      path = rebase_path("roughtime-servers.json")
+      dest = "roughtime-servers.json"
+    },
+  ]
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("network_time_tests") {
@@ -30,9 +34,11 @@ package("network_time_tests") {
     ":tests",
   ]
 
-  tests = [ {
-        name = "network_time_tests"
-      } ]
+  tests = [
+    {
+      name = "network_time_tests"
+    },
+  ]
 }
 
 source_set("lib") {
@@ -52,6 +58,7 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/syslog",
   ]
 }
 
@@ -65,6 +72,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
   ]
 }
 

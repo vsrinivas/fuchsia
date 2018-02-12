@@ -6,20 +6,20 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <zircon/device/rtc.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <zircon/device/rtc.h>
 
 #include <string>
 
-#include "garnet/bin/network_time/logging.h"
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace timeservice {
 
 bool TimeService::Run() {
-  TS_LOG(INFO) << "started";
+  FX_LOGS(INFO) << "started";
   UpdateSystemTime(3);
   return true;
 }
@@ -41,22 +41,22 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
   }
 
   if (server == nullptr) {
-    TS_LOG(ERROR) << "No valid server";
+    FX_LOGS(ERROR) << "No valid server";
     return false;
   }
 
   for (uint8_t i = 0; i < tries; i++) {
-    TS_LOG(INFO) << "Updating system time, attempt: " << i + 1;
+    FX_LOGS(DEBUG) << "Updating system time, attempt: " << i + 1;
     roughtime::rough_time_t timestamp;
     Status ret = server->GetTimeFromServer(&timestamp);
     if (ret == NETWORK_ERROR) {
       if (i != tries - 1) {
-        TS_LOG(INFO) << "Can't get time, sleeping for 10 sec";
+        FX_LOGS(DEBUG) << "Can't get time, sleeping for 10 sec";
         sleep(10);
       }
       continue;
     } else if (ret != OK) {
-      TS_LOG(ERROR) << "Error with roughtime server, abort";
+      FX_LOGS(ERROR) << "Error with roughtime server, abort";
       return false;
     }
 
@@ -72,20 +72,20 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
     rtc.year = ptm.tm_year + 1900;
     int rtc_fd = open("/dev/misc/rtc", O_WRONLY);
     if (rtc_fd < 0) {
-      TS_LOG(ERROR) << "open rtc: " << strerror(errno);
+      FX_LOGS(ERROR) << "open rtc: " << strerror(errno);
       return false;
     }
     ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
     if (written != sizeof(rtc)) {
       printf("%04d-%02d-%02dT%02d:%02d:%02d\n", rtc.year, rtc.month, rtc.day,
              rtc.hours, rtc.minutes, rtc.seconds);
-      TS_LOG(ERROR) << "ioctl_rtc_set: " << strerror(errno) << " " << t;
+      FX_LOGS(ERROR) << "ioctl_rtc_set: " << strerror(errno) << " " << t;
       return false;
     }
     char time[20];
     snprintf(time, 20, "%04d-%02d-%02dT%02d:%02d:%02d", rtc.year, rtc.month,
              rtc.day, rtc.hours, rtc.minutes, rtc.seconds);
-    TS_LOG(INFO) << "time set to: " << time;
+    FX_LOGS(INFO) << "time set to: " << time;
     break;
   }
   return true;

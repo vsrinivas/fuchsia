@@ -5,12 +5,12 @@
 #include "garnet/bin/network_time/roughtime_server.h"
 
 #include <errno.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <functional>
 #include <string>
@@ -20,7 +20,7 @@
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "garnet/bin/network_time/logging.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace timeservice {
 
@@ -31,13 +31,13 @@ bool RoughTimeServer::IsValid() const {
 Status RoughTimeServer::GetTimeFromServer(
     roughtime::rough_time_t* timestamp) const {
   if (!IsValid()) {
-    TS_LOG(ERROR) << "Time server not supported: " << address_;
+    FX_LOGS(ERROR) << "Time server not supported: " << address_;
     return NOT_SUPPORTED;
   }
   // Create Socket
   const size_t colon_offset = address_.rfind(':');
   if (colon_offset == std::string::npos) {
-    TS_LOG(ERROR) << "No port number in server address: " << address_;
+    FX_LOGS(ERROR) << "No port number in server address: " << address_;
     return NOT_SUPPORTED;
   }
 
@@ -59,21 +59,21 @@ Status RoughTimeServer::GetTimeFromServer(
   struct addrinfo* addrs;
   int err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (err != 0) {
-    TS_LOG(ERROR) << "Failed to resolve " << address_ << ": "
-                  << gai_strerror(err);
+    FX_LOGS(ERROR) << "Failed to resolve " << address_ << ": "
+                   << gai_strerror(err);
     return NETWORK_ERROR;
   }
   auto ac1 = fxl::MakeAutoCall([&]() { freeaddrinfo(addrs); });
   fxl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
-    TS_LOG(ERROR) << "Failed to create UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to create UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
-    TS_LOG(ERROR) << "Failed to connect UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to connect UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
 
@@ -82,11 +82,11 @@ Status RoughTimeServer::GetTimeFromServer(
                     sizeof(dest_str), NULL, 0, NI_NUMERICHOST);
 
   if (err != 0) {
-    TS_LOG(ERROR) << "getnameinfo: " << gai_strerror(err);
+    FX_LOGS(ERROR) << "getnameinfo: " << gai_strerror(err);
     return NETWORK_ERROR;
   }
 
-  TS_LOG(INFO) << "Sending request to " << dest_str << ", port " << port_str;
+  FX_LOGS(DEBUG) << "Sending request to " << dest_str << ", port " << port_str;
 
   uint8_t nonce[roughtime::kNonceLength];
   RAND_bytes(nonce, sizeof(nonce));
@@ -101,7 +101,7 @@ Status RoughTimeServer::GetTimeFromServer(
   const uint64_t start_us = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
-    TS_LOG(ERROR) << "send on UDP socket" << strerror(errno);
+    FX_LOGS(ERROR) << "send on UDP socket" << strerror(errno);
     return NETWORK_ERROR;
   }
 
@@ -114,15 +114,15 @@ Status RoughTimeServer::GetTimeFromServer(
   FD_SET(sock_fd, &readfds);
   int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
-    TS_LOG(ERROR) << "poll on UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "poll on UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
   if (ret == 0) {
-    TS_LOG(ERROR) << "timeout while poll";
+    FX_LOGS(ERROR) << "timeout while poll";
     return NETWORK_ERROR;
   }
   if (readfd.revents != POLLIN) {
-    TS_LOG(ERROR) << "Error poll, revents = " << readfd.revents;
+    FX_LOGS(ERROR) << "Error poll, revents = " << readfd.revents;
     return NETWORK_ERROR;
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
@@ -130,7 +130,7 @@ Status RoughTimeServer::GetTimeFromServer(
   const uint64_t end_us = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   if (buf_len == -1) {
-    TS_LOG(ERROR) << "recv from UDP socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "recv from UDP socket: " << strerror(errno);
     return NETWORK_ERROR;
   }
 
@@ -138,7 +138,7 @@ Status RoughTimeServer::GetTimeFromServer(
   std::string error;
   if (!roughtime::ParseResponse(timestamp, &radius, &error, public_key_,
                                 recv_buf, buf_len, nonce)) {
-    TS_LOG(ERROR) << "Response from " << address_ << " failed verification: ",
+    FX_LOGS(ERROR) << "Response from " << address_ << " failed verification: ",
         error;
     return BAD_RESPONSE;
   }

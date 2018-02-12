@@ -16,7 +16,7 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "garnet/bin/network_time/logging.h"
+#include "lib/syslog/cpp/logger.h"
 
 #define MULTILINE(...) #__VA_ARGS__
 
@@ -56,7 +56,7 @@ static bool readFile(std::string* out_contents, const char* filename) {
   std::ifstream serverFile;
   serverFile.open(filename);
   if ((serverFile.rdstate() & std::ifstream::failbit) != 0) {
-    TS_LOG(ERROR) << "Opening " << filename << ": " << strerror(errno);
+    FX_LOGS(ERROR) << "Opening " << filename << ": " << strerror(errno);
     return false;
   }
   std::stringstream strStream;
@@ -72,7 +72,7 @@ std::vector<RoughTimeServer> TimeServerConfig::ServerList() {
 bool checkSchema(rapidjson::Document& d) {
   rapidjson::Document sd;
   if (sd.Parse(config_schema).HasParseError()) {
-    TS_LOG(ERROR) << "Schema not valid";
+    FX_LOGS(ERROR) << "Schema not valid";
     return false;
   }
   rapidjson::SchemaDocument schema(sd);
@@ -82,11 +82,12 @@ bool checkSchema(rapidjson::Document& d) {
     // Output diagnostic information
     rapidjson::StringBuffer sb;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-    TS_LOG(ERROR) << "Invalid schema: " << sb.GetString();
-    TS_LOG(ERROR) << "Invalid keyword: " << validator.GetInvalidSchemaKeyword();
+    FX_LOGS(ERROR) << "Invalid schema: " << sb.GetString();
+    FX_LOGS(ERROR) << "Invalid keyword: "
+                   << validator.GetInvalidSchemaKeyword();
     sb.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-    TS_LOG(ERROR) << "Invalid document: " << sb.GetString();
+    FX_LOGS(ERROR) << "Invalid document: " << sb.GetString();
     return false;
   }
   return true;
@@ -101,9 +102,9 @@ bool TimeServerConfig::Parse(std::string config_file) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    TS_LOG(ERROR) << "JSON parse error: "
-                  << rapidjson::GetParseError_En(ok.Code()) << "("
-                  << ok.Offset() << ")";
+    FX_LOGS(ERROR) << "JSON parse error: "
+                   << rapidjson::GetParseError_En(ok.Code()) << "("
+                   << ok.Offset() << ")";
     return false;
   }
   if (!checkSchema(doc)) {
@@ -123,7 +124,7 @@ bool TimeServerConfig::Parse(std::string config_file) {
       std::string address_str = address["address"].GetString();
       uint8_t public_key[ED25519_PUBLIC_KEY_LEN];
       if (public_key_str.length() != ED25519_PUBLIC_KEY_LEN * 2) {
-        TS_LOG(ERROR) << "Invalid public key: " << public_key_str;
+        FX_LOGS(ERROR) << "Invalid public key: " << public_key_str;
         return false;
       }
       for (int k = 0; k < ED25519_PUBLIC_KEY_LEN; k++) {
