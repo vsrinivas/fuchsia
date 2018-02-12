@@ -11,6 +11,7 @@ members =  [
   "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",
+  "lib/rust/crates/wlan-sme",
   "lib/rust/fidl_crates/garnet_lib_wlan_fidl",
   "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
   "public/lib/fidl/rust/fidl",
@@ -68,3 +69,5 @@ mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
 rand = { path = "../third_party/rust-mirrors/rand" }
 tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
 tokio-fuchsia = { path = "public/rust/crates/tokio-fuchsia" }
+wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
+wlan-sme = { path = "lib/rust/crates/wlan-sme" }
