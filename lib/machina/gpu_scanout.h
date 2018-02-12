@@ -30,8 +30,7 @@ class GpuScanout {
 
   virtual void FlushRegion(const virtio_gpu_rect_t& rect);
 
-  zx_status_t SetResource(GpuResource* res,
-                          const virtio_gpu_set_scanout_t* request);
+  void SetResource(GpuResource* res, const virtio_gpu_set_scanout_t* request);
 
  private:
   GpuBitmap surface_;
