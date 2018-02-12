@@ -18,6 +18,8 @@ source_set("lib") {
     "application_runner_holder.h",
     "config.cc",
     "config.h",
+    "dynamic_library_loader.cc",
+    "dynamic_library_loader.h",
     "job_holder.cc",
     "job_holder.h",
     "namespace_builder.cc",
@@ -42,8 +44,9 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/loader-service",
     "//zircon/public/lib/zx",
   ]
 
@@ -85,9 +88,11 @@ package("appmgr") {
   deps = [
     ":bin",
   ]
-  binaries = [ {
-        name = "appmgr"
-      } ]
+  binaries = [
+    {
+      name = "appmgr"
+    },
+  ]
 }
 
 package("appmgr_tests") {
@@ -97,7 +102,9 @@ package("appmgr_tests") {
   deps = [
     ":tests",
   ]
-  tests = [ {
-        name = "appmgr_unittests"
-      } ]
+  tests = [
+    {
+      name = "appmgr_unittests"
+    },
+  ]
 }

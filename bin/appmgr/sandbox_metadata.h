@@ -16,6 +16,7 @@ class SandboxMetadata {
   ~SandboxMetadata();
 
   bool Parse(const std::string& data);
+  bool HasFeature(const std::string& feature);
 
   const std::vector<std::string>& dev() const { return dev_; }
   const std::vector<std::string>& system() const { return system_; }

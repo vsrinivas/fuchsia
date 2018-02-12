@@ -16,6 +16,7 @@
 
 #include <utility>
 
+#include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
@@ -111,6 +112,7 @@ zx::process CreateProcess(const zx::job& job,
                           fsl::SizedVmo data,
                           const std::string& argv0,
                           ApplicationLaunchInfoPtr launch_info,
+                          zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   if (!data)
     return zx::process();
@@ -157,6 +159,8 @@ zx::process CreateProcess(const zx::job& job,
     launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
   if (!launch_info->err)
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+  if (loader_service)
+    launchpad_use_loader_service(lp, loader_service.release());
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_nametable(lp, flat->count, flat->path);
   launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
@@ -432,8 +436,9 @@ void JobHolder::CreateApplicationWithProcess(
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
-  zx::process process = CreateProcess(job_for_child_, std::move(executable),
-                                      url, std::move(launch_info), builder.Build());
+  zx::process process =
+      CreateProcess(job_for_child_, std::move(executable), url,
+                    std::move(launch_info), zx::channel(), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
@@ -460,15 +465,18 @@ void JobHolder::CreateApplicationFromPackage(
   std::string sandbox_data;
   std::string runtime_data;
   fsl::SizedVmo app_data;
+  zx::channel loader_service;
 
   if (package->data) {
-    pkg_fs = std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
+    pkg_fs =
+        std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
     pkg = pkg_fs->OpenAsDirectory();
     pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
     if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
       app_data = pkg_fs->GetFileAsVMO(kAppPath);
   } else if (package->directory) {
-    fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    fxl::UniqueFD fd =
+        fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
     files::ReadFileToStringAt(fd.get(), kSandboxPath, &sandbox_data);
     if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
       VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
@@ -476,6 +484,8 @@ void JobHolder::CreateApplicationFromPackage(
     // should be able to tear down the file descriptor in a way that gives us
     // the channel back.
     pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
+    if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
+      return;
   }
   if (!pkg)
     return;
@@ -494,6 +504,13 @@ void JobHolder::CreateApplicationFromPackage(
                      << launch_info->url;
       return;
     }
+
+    // If an app has the "shell" feature, then we use the libraries from the
+    // system rather than from the package because programs spawned from the
+    // shell will need the system-provided libraries to run.
+    if (sandbox.HasFeature("shell"))
+      loader_service.reset();
+
     builder.AddSandbox(sandbox);
   }
 
@@ -506,14 +523,15 @@ void JobHolder::CreateApplicationFromPackage(
   if (app_data) {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
     zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
-    zx::process process = CreateProcess(job_for_child_, std::move(app_data),
-        kAppArv0, std::move(launch_info), builder.Build());
+    zx::process process = CreateProcess(
+        job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
+        std::move(loader_service), builder.Build());
 
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
-          std::move(controller), this, std::move(pkg_fs),
-          std::move(process), url, GetLabelFromURL(url),
-          std::move(application_namespace), fbl::move(service_dir_channel));
+          std::move(controller), this, std::move(pkg_fs), std::move(process),
+          url, GetLabelFromURL(url), std::move(application_namespace),
+          fbl::move(service_dir_channel));
       ApplicationControllerImpl* key = application.get();
       info_dir_->AddEntry(application->label(), application->info_dir());
       applications_.emplace(key, std::move(application));
@@ -539,9 +557,9 @@ void JobHolder::CreateApplicationFromPackage(
                      << launch_info->url;
       return;
     }
-    runner->StartApplication(std::move(inner_package), std::move(startup_info),
-                             std::move(pkg_fs), std::move(application_namespace),
-                             std::move(controller));
+    runner->StartApplication(
+        std::move(inner_package), std::move(startup_info), std::move(pkg_fs),
+        std::move(application_namespace), std::move(controller));
   }
 }
 

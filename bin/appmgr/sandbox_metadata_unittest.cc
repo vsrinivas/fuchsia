@@ -23,6 +23,9 @@ TEST(SandboxMetadata, Parse) {
   EXPECT_EQ(0u, sandbox.dev().size());
   EXPECT_EQ(1u, sandbox.features().size());
   EXPECT_EQ("vulkan", sandbox.features()[0]);
+
+  EXPECT_TRUE(sandbox.HasFeature("vulkan"));
+  EXPECT_FALSE(sandbox.HasFeature("banana"));
 }
 
 }  // namespace

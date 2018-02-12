@@ -13,6 +13,7 @@
 #include <zircon/processargs.h>
 
 #include "garnet/bin/appmgr/config.h"
+#include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/root_environment_host.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"

@@ -4,16 +4,16 @@
 
 #include "garnet/bin/appmgr/namespace_builder.h"
 
-#include <zircon/processargs.h>
 #include <fdio/limits.h>
 #include <fdio/util.h>
+#include <zircon/processargs.h>
 
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/unique_fd.h"
 #include "lib/fsl/io/fd.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace app {
 
@@ -81,6 +81,10 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
       PushDirectoryFromPath("/dev/class/display");
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPath("/system/data/vulkan");
+      // TODO(abarth): Teach the gpu devices to provide a protocol for fetching
+      // the device specific vulkan library by message, rather than loading it
+      // from the filesystem.
+      PushDirectoryFromPath("/system/lib");
     }
   }
 }
