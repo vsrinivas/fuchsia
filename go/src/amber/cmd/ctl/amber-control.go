@@ -48,7 +48,7 @@ var (
 	rateLimit  = fs.Int("l", 0, "Minimum time between requests to a source, in seconds")
 	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
 	srcKeyHash = fs.String("h", "", "SHA256 of the key. This is required whether the key is provided directly or by URL")
-	blob_id    = fs.String("i", "", "Content ID of the blob")
+	blobID     = fs.String("i", "", "Content ID of the blob")
 )
 
 func doTest(pxy *amber.Control_Proxy) {
@@ -85,14 +85,14 @@ func main() {
 		if strings.Index(*pkgName, "/") != 0 {
 			*pkgName = fmt.Sprintf("/%s", *pkgName)
 		}
-		blobId, err := proxy.GetUpdate(*pkgName, pkgVersion)
+		blobID, err := proxy.GetUpdate(*pkgName, pkgVersion)
 		if err == nil {
-			fmt.Printf("Wrote update to blob %s\n", *blobId)
+			fmt.Printf("Wrote update to blob %s\n", *blobID)
 		} else {
 			fmt.Printf("Error getting update %s\n", err)
 		}
 	case "get_blob":
-		if err := proxy.GetBlob(*blob_id); err != nil {
+		if err := proxy.GetBlob(*blobID); err != nil {
 			fmt.Printf("Error getting content blob %s\n", err)
 		}
 	case "add_src":

@@ -62,9 +62,8 @@ func (r *PackageSet) Replace(old *Package, new *Package, insertNew bool) error {
 
 	if insertNew {
 		return nil
-	} else {
-		return err
 	}
+	return err
 }
 
 // Packages returns copy of the list of Packages

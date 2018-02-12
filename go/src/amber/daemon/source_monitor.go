@@ -26,7 +26,7 @@ type SourceMonitor struct {
 	i         time.Duration
 }
 
-// NewSourceMonitr creates a new SourceMonitor object that manages periodic and
+// NewSourceMonitor creates a new SourceMonitor object that manages periodic and
 // one-off update requests for a Source. The 'proc' func will be called when a
 // matching update is available from the source.
 func NewSourceMonitor(d *Daemon, pkgs *pkg.PackageSet,

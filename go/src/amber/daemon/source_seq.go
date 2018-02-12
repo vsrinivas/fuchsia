@@ -39,23 +39,23 @@ func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pk
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	slice_pt := len(k.hist)
+	slicePt := len(k.hist)
 	interval := k.CheckInterval()
 	for idx, val := range k.hist {
 		if time.Since(val) < interval {
-			slice_pt = idx
+			slicePt = idx
 			break
 		}
 	}
 
-	if slice_pt > 0 {
-		nlen := len(k.hist) - slice_pt
+	if slicePt > 0 {
+		nlen := len(k.hist) - slicePt
 		nhist := make([]time.Time, nlen)
-		copy(nhist, k.hist[slice_pt:])
+		copy(nhist, k.hist[slicePt:])
 		k.hist = nhist
 	}
 
-	if uint64(len(k.hist) + 1) > k.CheckLimit() {
+	if uint64(len(k.hist)+1) > k.CheckLimit() {
 		log.Println("Query rate exceeded")
 		return nil, ErrRateExceeded
 	}

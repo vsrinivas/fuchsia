@@ -36,7 +36,7 @@ func TestReadManifestWithEmptyLine(t *testing.T) {
 			t.Fatalf("Writing line failed: %s", err)
 		}
 
-		count += 1
+		count++
 	}
 
 	r.Close()
@@ -147,7 +147,7 @@ func verifyEntries(entries []manifestEntry, orig map[string]string,
 
 	if len(orig) != 0 {
 		t.Errorf("Some entires not found in manifest file")
-		for k, _ := range orig {
+		for k := range orig {
 			t.Errorf("Entry %q remains\n", k)
 		}
 		t.Fail()

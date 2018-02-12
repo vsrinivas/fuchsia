@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-var ErrNoLogFile = errors.New("amber: log file could not be opened.")
+var ErrNoLogFile = errors.New("amber: log file could not be opened")
 var logFile = "/data/amber/log_%d.txt"
 var Log = log.New(newLogWriter(NewFileLogger(logFile)), "", log.Ldate|log.Ltime)
 
@@ -45,7 +45,7 @@ func newLogWriter(logger Logger) *logWriter {
 
 func (l *logWriter) Write(msg []byte) (int, error) {
 	origSize := len(msg)
-	var err error = nil
+	var err error
 
 	for len(msg) > 0 {
 		if !l.Ready() {
@@ -125,9 +125,8 @@ func (fl *FileLogger) Close() error {
 		err := fl.File.Close()
 		fl.File = nil
 		return err
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Roll will close the current log file, rename the file to indicate it is not

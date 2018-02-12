@@ -27,7 +27,7 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 
 	httpC := &http.Client{}
 
-	for i, _ := range repos {
+	for i := range repos {
 		reader, sz, err := FetchBlobFromRepo(repos[i], blob, httpC)
 		if err != nil {
 			log.Printf("Got error trying to get blob\n")
@@ -43,7 +43,7 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	return fmt.Errorf("couldn't fetch blob %q from any repo", blob)
 }
 
-// FetchBlob attempts to pull the set of blobs requested from the supplied
+// FetchBlobFromRepo attempts to pull the set of blobs requested from the supplied
 // BlobRepo. FetchBlob returns the list of blobs successfully stored.
 func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadCloser, int64, error) {
 	u, err := url.Parse(r.Address)
@@ -62,13 +62,11 @@ func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadClo
 	if r, err := client.Get(srcAddr.String()); err == nil {
 		if r.StatusCode == 200 {
 			return r.Body, r.ContentLength, nil
-		} else {
-			r.Body.Close()
-			return nil, -1, fmt.Errorf("fetch failed with status %s", r.StatusCode)
 		}
-	} else {
-		return nil, -1, err
+		r.Body.Close()
+		return nil, -1, fmt.Errorf("fetch failed with status %s", r.StatusCode)
 	}
+	return nil, -1, err
 }
 
 func WriteBlob(name string, sz int64, con io.ReadCloser) error {

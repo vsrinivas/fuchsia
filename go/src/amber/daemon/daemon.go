@@ -29,7 +29,7 @@ var ErrSrcNotFound = errors.New("amber/daemon: no corresponding source found")
 
 const CheckInterval = 5 * time.Minute
 
-// Deamon provides access to a set of Sources and oversees the polling of those
+// Daemon provides access to a set of Sources and oversees the polling of those
 // Sources for updates to Packages in the supplied PackageSet. GetUpdates can be
 // used for a one-and-done set of packages.
 //
@@ -97,7 +97,7 @@ func (d *Daemon) AddBlobRepo(br BlobRepo) {
 	d.muRepos.Unlock()
 }
 
-// GetBlobs is a blocking call which tries to get all requested blobs
+// GetBlob is a blocking call which tries to get all requested blobs
 func (d *Daemon) GetBlob(blob string) error {
 	repos := d.blobRepos()
 	return FetchBlob(repos, blob, &d.muBlobUpdates, DstBlob)
@@ -105,7 +105,7 @@ func (d *Daemon) GetBlob(blob string) error {
 
 func (d *Daemon) RemoveBlobRepo(r BlobRepo) {
 	d.muRepos.Lock()
-	for i, _ := range d.repos {
+	for i := range d.repos {
 		if d.repos[i] == r {
 			d.repos = append(d.repos[:i], d.repos[i+1:]...)
 			break
@@ -374,7 +374,7 @@ func (d *Daemon) CancelAll() {
 	d.srcMons = []*SourceMonitor{}
 }
 
-// ErrProcPkgIO is a general I/O error during ProcessPackage
+// ErrProcessPackage is a general I/O error during ProcessPackage
 type ErrProcessPackage string
 
 func NewErrProcessPackage(f string, args ...interface{}) error {
@@ -388,7 +388,7 @@ func (e ErrProcessPackage) Error() string {
 // ProcessPackage attempts to retrieve the content of the supplied Package
 // from the supplied Source. If retrieval from the Source fails, the Source's
 // error is returned. If there is a local I/O error when processing the package
-// an ErrProcPkgIO is returned.
+// an ErrProcessPackage is returned.
 func ProcessPackage(data *GetResult, pkgs *pkg.PackageSet) error {
 	if data.Err != nil {
 		return data.Err
