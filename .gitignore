@@ -12,6 +12,8 @@
 .project
 *.pyc
 .pydevproject
+*.sublime-project
+*.sublime-workspace
 .vscode
 Session.vim
 Thumbs.db
