@@ -190,9 +190,10 @@ bool mprotect_test() {
     int status = mprotect(addr, page_size, PROT_READ);
     EXPECT_EQ(0, status, "mprotect failed to downgrade to read-only");
 
-    // TODO: catch page fault exceptions and confirm that the following line
-    // fails
-    //*addr = 12;
+    ASSERT_DEATH([](void* crashaddr) {
+        uint32_t *intptr = static_cast<uint32_t *>(crashaddr);
+        *intptr = 12;
+    }, addr, "write to addr should have caused a crash");
 
     status = mprotect(addr, page_size, PROT_WRITE);
     auto test_errno = errno;
@@ -215,7 +216,7 @@ RUN_TEST(mmap_len_test);
 RUN_TEST(mmap_offset_test);
 RUN_TEST(mmap_prot_test);
 RUN_TEST(mmap_flags_test);
-RUN_TEST(mprotect_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(mprotect_test);
 END_TEST_CASE(memory_mapping_tests)
 
 #ifndef BUILD_COMBINED_TESTS
