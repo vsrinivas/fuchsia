@@ -120,6 +120,11 @@ func init() {
 			"tools/far",
 		},
 		{
+			tools,
+			x86BuildDir + "host_x64/pm",
+			"tools/pm",
+		},
+		{
 			toolchain,
 			fmt.Sprintf("buildtools/%s-%s/clang", hostOs, hostCpu),
 			"clang",
