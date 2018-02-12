@@ -31,7 +31,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
   std::cerr << "\t                                available instead of failing.\n";
   std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line\n";
-  std::cerr << "\t--nographic                     Disable GPU device and graphics output\n";
+  std::cerr << "\t--nogpu                         Disable GPU device and graphics output\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
   std::cerr << "\t                                and adjust the balloon size based on the amount of\n";
   std::cerr << "\t                                unused guest memory\n";
@@ -279,7 +279,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* config)
            parse_number(&config_->balloon_interval_seconds_)},
           {"balloon-threshold",
            parse_number(&config_->balloon_pages_threshold_)},
-          {"nographic", set_flag(&config_->enable_gpu_, false)},
+          {"nogpu", set_flag(&config_->enable_gpu_, false)},
           {"block-wait", set_flag(&config_->block_wait_, true)},
       } {}
 
