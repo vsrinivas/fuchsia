@@ -442,8 +442,34 @@ void AudioRenderer2Impl::SendPacketNoReply(AudioPacketPtr packet) {
 }
 
 void AudioRenderer2Impl::Flush(const FlushCallback& callback) {
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
-  Shutdown();
+  // If the user has requested a callback, create the flush token we will use to
+  // invoke the callback at the proper time.
+  fbl::RefPtr<PendingFlushToken> flush_token;
+  if (callback != nullptr) {
+    flush_token = PendingFlushToken::Create(owner_, callback);
+  }
+
+  // Tell each of our link thats they need to flush.  If the links are currently
+  // processing pending data, then link will take a reference to the flush token
+  // and ensure that the callback is queued at the proper time (after all of the
+  // pending packet complete callbacks have been queued).
+  if (throttle_output_link_ != nullptr) {
+    throttle_output_link_->FlushPendingQueue(flush_token);
+  }
+
+  {
+    fbl::AutoLock links_lock(&links_lock_);
+    for (const auto& link : dest_links_) {
+      FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
+      auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+      packet_link->FlushPendingQueue(flush_token);
+    }
+  }
+
+  // Invalidate any internal state which gets reset after a flush.
+  next_frac_frame_pts_ = 0;
+  pts_to_frac_frames_valid_ = false;
+  pause_time_frac_frames_valid_ = false;
 }
 
 void AudioRenderer2Impl::FlushNoReply() {
