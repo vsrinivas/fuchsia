@@ -2,7 +2,7 @@
 
 * [Home](README.md)
 * [Glossary](glossary.md)
-* [Development](development.md)
+* [Development](development/README.md)
 * [System](the-book/README.md)
 
 [home]: README.md

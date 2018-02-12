@@ -102,7 +102,8 @@ Tips for leaving breadcrumbs:
 
 - Top-down linkage: Add links from more broadly scoped documents to more
   detailed documents to help readers learn more about particular topics.  The
-  [Fuchsia book](/the-book/README.md) is a good starting point for top-down linkage.
+  [Fuchsia book](../the-book/README.md) is a good starting point for top-down
+  linkage.
 - Bottom-up linkage: Add links from more detailed documents to more broadly
   scoped documents to help readers develop more awareness of the overall
   context of the topics being discussed.  Adding links from module, class, or

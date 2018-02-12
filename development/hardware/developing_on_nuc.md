@@ -63,7 +63,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 ## 3. Build Fuchsia <a name="build"/>
 
-1. Follow the [getting started guidelines](getting_started.md)
+1. Follow the [getting started guidelines](../../getting_started.md)
 1. Plug in your USB key to your build workstation
 1. Identify the path to your USB key by running `fx list-usb-disks`
 1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`

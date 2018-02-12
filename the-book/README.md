@@ -96,7 +96,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
 [zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md "Zircon concepts"
 [zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md "Zircon syscalls"
-[framework-story]: https://fuchsia.googlesource.com/modular/+/master/docs/story.md "Framework story"
-[framework-module]: https://fuchsia.googlesource.com/modular/+/master/docs/module.md "Framework module"
-[framework-agent]: https://fuchsia.googlesource.com/modular/+/master/docs/agent.md "Framework agent"
+[framework-story]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/story.md "Framework story"
+[framework-module]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/module.md "Framework module"
+[framework-agent]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/agent.md "Framework agent"
 [ledger]: https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md

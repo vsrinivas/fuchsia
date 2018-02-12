@@ -199,7 +199,7 @@ any number of “VFS” implementations in a language, but at the time of writin
 two well-known implementations exist: one written in C++ within the [libfs
 library](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fs/),
 and another written in Go in the [rpc package of
-ThinFS](https://fuchsia.googlesource.com/thinfs/+/master/zircon/rpc/rpc.go)]
+ThinFS](https://fuchsia.googlesource.com/garnet/+/master/go/src/thinfs/zircon/rpc/rpc.go)]
 
 The VFS layer defines the interface of operations which may be routed to the
 underlying filesystem, including:

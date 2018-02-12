@@ -3,7 +3,7 @@ Multi Device Setup
 
 This guide will walk you through the process of getting two Fuchsia devices
 set up and synchronizing story state using the
-[Ledger](https://fuchsia.googlesource.com/ledger).
+[Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/).
 
 ## Setup
 
@@ -41,7 +41,7 @@ the output, use the `loglistener [<nodename>]` command.
 
 Ledger is a distributed storage system for Fuchsia.  Stories use it to
 synchronize their state across multiple devices.  Follow the steps in Ledger's
-[User Guide](https://fuchsia.googlesource.com/ledger/+/master/docs/user_guide.md)
+[User Guide](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/user_guide.md)
 to:
 
 * Set up [persistent storage](https://fuchsia.googlesource.com/zircon/+/master/docs/minfs.md). (optional)

@@ -42,4 +42,4 @@ If two FIDL targets coexist in a single BUILD file:
   binding's assumptions.
 
 
-[fidl]: https://fuchsia.googlesource.com/fidl/+/master/fidl.gni "FIDL"
+[fidl]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/fidl.gni "FIDL"

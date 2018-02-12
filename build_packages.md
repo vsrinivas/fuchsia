@@ -86,7 +86,7 @@ $
 
 
 
-[packages-source]: https://fuchsia.googlesource.com/packages/+/master/gn
+[packages-source]: https://fuchsia.googlesource.com/build/+/master/gn
 [garnet-packages-source]: https://fuchsia.googlesource.com/garnet/+/master/packages/
 [peridot-packages-source]: https://fuchsia.googlesource.com/peridot/+/master/packages/
 [topaz-packages-source]: https://fuchsia.googlesource.com/topaz/packages/+/master

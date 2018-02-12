@@ -242,4 +242,4 @@ fx run-test <test name> [<test args>]
 * Build [Fuchsia's toolchain](toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fx full-build`
 * More information on the system bootstrap application is
-[here](https://fuchsia.googlesource.com/application/+/HEAD/src/bootstrap/).
+[here](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).

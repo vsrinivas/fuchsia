@@ -233,7 +233,7 @@ single flat directory of hashes, and blobs can be accessed by operations like
 
 ### ThinFS: A FAT filesystem written in Go
 
-[ThinFS](https://fuchsia.googlesource.com/thinfs/) is an implementation of a
+[ThinFS](https://fuchsia.googlesource.com/garnet/+/master/go/src/thinfs/) is an implementation of a
 FAT filesystem in Go. It serves a dual purpose: first, proving that our system
 is actually modular, and capable of using novel filesystems, regardless of
 language or runtime. Secondly, it provides a mechanism for reading a universal
