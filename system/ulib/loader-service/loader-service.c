@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <stdalign.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,7 @@
 #define PREFIX_MAX 32
 
 struct loader_service {
+    atomic_int refcount;
     async_t* async;
 
     const loader_service_ops_t* ops;
@@ -39,6 +41,18 @@ struct loader_service {
     char config_prefix[PREFIX_MAX];
     bool config_exclusive;
 };
+
+static void loader_service_addref(loader_service_t* svc) {
+    atomic_fetch_add(&svc->refcount, 1);
+}
+
+static void loader_service_deref(loader_service_t* svc) {
+    if (atomic_fetch_sub(&svc->refcount, 1) == 1) {
+        if (svc->ops->finalizer)
+            svc->ops->finalizer(svc->ctx);
+        free(svc);
+    }
+}
 
 static const char* const libpaths[] = {
     "/system/lib",
@@ -179,10 +193,17 @@ static zx_status_t fd_publish_data_sink(void* ctx, const char* name, zx_handle_t
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t fd_finalizer(void* ctx) {
+    int dirfd = *(int*)ctx;
+    close(dirfd);
+    return ZX_OK;
+}
+
 static const loader_service_ops_t fd_ops = {
     .load_object = fd_load_object,
     .load_abspath = fd_load_abspath,
     .publish_data_sink = fd_publish_data_sink,
+    .finalizer = fd_finalizer,
 };
 
 static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
@@ -400,7 +421,21 @@ zx_status_t loader_service_create(async_t* async,
     svc->ops = ops;
     svc->ctx = ctx;
 
+    // When we create the loader service, we initialize the refcount to 1, which
+    // causes the loader service to stay alive at least until someone calls
+    // |loader_service_release|, at which point the service will be destroyed
+    // once the last client goes away.
+    loader_service_addref(svc);
+
     *out = svc;
+    return ZX_OK;
+}
+
+zx_status_t loader_service_release(loader_service_t* svc) {
+    // This call to |loader_service_deref| balances the |loader_service_addref|
+    // call in |loader_service_create|. This reference prevents the loader
+    // service from being destroyed before its creator is done with it.
+    loader_service_deref(svc);
     return ZX_OK;
 }
 
@@ -434,15 +469,16 @@ static async_wait_result_t loader_service_handler(async_t* async,
                                                   async_wait_t* wait,
                                                   zx_status_t status,
                                                   const zx_packet_signal_t* signal) {
+    loader_service_t* svc = loader_service_wait_get_svc(wait);
     if (status != ZX_OK)
         goto stop;
-    loader_service_t* svc = loader_service_wait_get_svc(wait);
     status = handle_loader_rpc(wait->object, default_load_fn, svc);
     if (status != ZX_OK)
         goto stop;
     return ASYNC_WAIT_AGAIN;
 stop:
     free(wait);
+    loader_service_deref(svc);  // Balanced in |loader_service_attach|.
     return ASYNC_WAIT_FINISHED;
 }
 
@@ -468,6 +504,9 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     wait->svc = svc;
 
     status = async_begin_wait(svc->async, (async_wait_t*)wait);
+
+    if (status == ZX_OK)
+        loader_service_addref(svc);  // Balanced in |loader_service_handler|.
 
 done:
     if (status != ZX_OK) {

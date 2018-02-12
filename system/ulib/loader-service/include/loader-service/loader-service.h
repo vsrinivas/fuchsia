@@ -73,6 +73,10 @@ typedef struct loader_service_ops {
     // attempt to publish a data sink
     // takes ownership of the provided vmo on both success and failure.
     zx_status_t (*publish_data_sink)(void* ctx, const char* name, zx_handle_t vmo);
+
+    // finalize the loader service (optional)
+    // called shortly before the loader service is destroyed
+    zx_status_t (*finalizer)(void* ctx);
 } loader_service_ops_t;
 
 // Create a loader service backed by custom loader ops.
@@ -83,6 +87,13 @@ zx_status_t loader_service_create(async_t* async,
                                   const loader_service_ops_t* ops,
                                   void* ctx,
                                   loader_service_t** out);
+
+// After this function returns, |svc| will destroy itself once there are no
+// longer any outstanding connections.
+//
+// The |finalizer| in |loader_service_ops_t| will be called shortly before |svc|
+// destroys itself.
+zx_status_t loader_service_release(loader_service_t* svc);
 
 // The default publish_data_sink implementation, which publishes
 // into /tmp, provided the fs there supports such publishing.
