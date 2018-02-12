@@ -4,6 +4,7 @@
     ],
     "imports": [
         "garnet/packages/guest_tests",
+        "garnet/packages/pmd",
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
         "garnet/packages/zircon-guest",
