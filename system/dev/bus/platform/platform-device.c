@@ -365,7 +365,7 @@ static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, u
                         req->i2c.txn_ctx.read_length, platform_i2c_complete, txn);
 }
 
-static zx_status_t pdev_rpc_i2c_get_bitrate(platform_dev_t* dev, pdev_i2c_req_t* req,
+static zx_status_t pdev_rpc_i2c_set_bitrate(platform_dev_t* dev, pdev_i2c_req_t* req,
                                             pdev_i2c_resp_t* resp) {
     i2c_channel_t* channel = (i2c_channel_t *)req->server_ctx;
     return i2c_set_bitrate(channel, req->bitrate);
@@ -447,7 +447,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         }
         break;
     case PDEV_I2C_SET_BITRATE:
-        resp.status = pdev_rpc_i2c_get_bitrate(dev, &req->i2c, &resp.i2c);
+        resp.status = pdev_rpc_i2c_set_bitrate(dev, &req->i2c, &resp.i2c);
         break;
     case PDEV_I2C_CHANNEL_RELEASE:
         pdev_rpc_i2c_channel_release(dev, &req->i2c);
