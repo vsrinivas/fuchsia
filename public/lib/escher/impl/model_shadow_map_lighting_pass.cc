@@ -31,8 +31,9 @@ layout(location = 1) in vec4 shadowPos;
 layout(set = 0, binding = 0) uniform PerModel {
   vec2 frag_coord_to_uv_multiplier;
   float time;
-	vec3 ambient_light_intensity;
-	vec3 direct_light_intensity;
+  vec3 ambient_light_intensity;
+  vec3 direct_light_intensity;
+  vec2 shadow_map_uv_multiplier;
 };
 
 layout(set = 0, binding = 1) uniform sampler2D shadow_map_tex;
@@ -47,15 +48,29 @@ layout(set = 1, binding = 1) uniform sampler2D material_tex;
 
 layout(location = 0) out vec4 outColor;
 
+// TODO: better fudge factor
+const float kFudgeFactor = 1e-3;
+
+float weight(float x, float y) {
+  return abs(x) < 1. && abs(y) < 1. ?
+      (.6 / 4.) : (.4 / 12.);
+}
+
 void main() {
   vec3 light = ambient_light_intensity;
-
   vec4 shadowUV = (shadowPos / shadowPos.w);
-  // TODO: do better than 0.0004 fudge factor.
-  if (texture(shadow_map_tex, shadowUV.xy).r >= (shadowUV.z - 0.0004)) {
-    light += direct_light_intensity;
-  }
+  float fragLightDist = shadowUV.z;
 
+  float x, y;
+  for (y = -1.5; y <= 1.5; y += 1.) {
+    for (x = -1.5; x <= 1.5; x += 1.) {
+      vec2 shadowCoord = shadowUV.xy + vec2(x, y) * shadow_map_uv_multiplier;
+      float occluderLightDist = texture(shadow_map_tex, shadowCoord).r;
+      if (occluderLightDist + kFudgeFactor >= fragLightDist) {
+        light += weight(x, y) * direct_light_intensity;
+      }
+    }
+  }
   outColor = vec4(light, 1.f) * color * texture(material_tex, inUV);
 }
 )GLSL";

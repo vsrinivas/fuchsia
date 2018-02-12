@@ -31,7 +31,7 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
 
   // Describes per-model data accessible by shaders.
   struct PerModel {
-    // One uniform descriptor, and one texture descriptor.
+    // One uniform descriptor and one texture descriptor.
     static constexpr uint32_t kDescriptorCount = 2;
     // layout(set = 0, ...)
     static constexpr uint32_t kDescriptorSetIndex = 0;
@@ -51,6 +51,10 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     vec3 ambient_light_intensity;
     float __pad2;  // std140
     vec3 direct_light_intensity;
+    float __pad3;  // std140
+
+    // Inverse size of the shadow map texture.
+    vec2 shadow_map_uv_multiplier;
   };
 
   // Describes per-object data accessible by shaders.

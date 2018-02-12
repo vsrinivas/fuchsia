@@ -485,6 +485,8 @@ void PaperRenderer::DrawFrameWithShadowMapShadows(
                    stage.fill_light().color(), shadow_map->light_color(),
                    shadow_map_lighting_pass_, stage, model, camera,
                    overlay_model);
+
+  frame->AddTimestamp("finished shadow map lighting pass");
 }
 
 void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,

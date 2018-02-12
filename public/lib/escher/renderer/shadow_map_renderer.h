@@ -39,6 +39,9 @@ class ShadowMapRenderer : public Renderer {
                     const impl::ModelRendererPtr& model_renderer);
   ~ShadowMapRenderer() override;
 
+  void ComputeShadowStageFromSceneStage(const Stage& scene_stage,
+                                        Stage& shadow_stage);
+
   impl::ImageCache* image_cache_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;

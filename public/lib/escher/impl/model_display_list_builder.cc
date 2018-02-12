@@ -71,10 +71,6 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
           model_data->per_object_descriptor_set_pool()) {
   FXL_DCHECK(white_texture_);
 
-  if (shadow_texture) {
-    textures_.push_back(shadow_texture);
-  }
-
   // Obtain a uniform buffer and write the PerModel data to it.
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
   auto per_model =
@@ -85,6 +81,12 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   per_model->direct_light_intensity = direct_light_intensity;
   per_model->time = model.time();
   uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
+
+  if (shadow_texture) {
+    textures_.push_back(shadow_texture);
+    per_model->shadow_map_uv_multiplier = vec2(1.f/shadow_texture->width(),
+                                               1.f/shadow_texture->height());
+  }
 
   // Obtain the single per-Model descriptor set.
   DescriptorSetAllocationPtr per_model_descriptor_set_allocation =

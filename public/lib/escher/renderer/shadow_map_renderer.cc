@@ -63,11 +63,13 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
     const glm::vec3 light_color) {
   auto camera =
       Camera::NewForDirectionalShadowMap(stage.viewing_volume(), direction);
+  Stage shadow_stage;
+  ComputeShadowStageFromSceneStage(stage, shadow_stage);
 
   ImageInfo info;
   info.format = kShadowMapFormat;
-  info.width = static_cast<uint32_t>(stage.width());
-  info.height = static_cast<uint32_t>(stage.height());
+  info.width = static_cast<uint32_t>(shadow_stage.width());
+  info.height = static_cast<uint32_t>(shadow_stage.height());
   info.sample_count = 1;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment |
                vk::ImageUsageFlagBits::eSampled |
@@ -75,7 +77,7 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
 
   auto color_image = escher()->image_cache()->NewImage(info);
   auto depth_image = image_utils::NewDepthImage(
-      escher()->image_cache(), depth_format_, stage.width(), stage.height(),
+      escher()->image_cache(), depth_format_, info.width, info.height,
       vk::ImageUsageFlags());
 
   auto fb = fxl::MakeRefCounted<Framebuffer>(escher(), color_image, depth_image,
@@ -91,15 +93,17 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
   auto display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, shadow_map_pass_, impl::ModelDisplayListFlag::kNull,
-      1.f, TexturePtr(), mat4(1.f), vec3(0.f), vec3(0.f), command_buffer);
+      shadow_stage, model, camera, shadow_map_pass_,
+      impl::ModelDisplayListFlag::kNull, 1.f, TexturePtr(), mat4(1.f),
+      vec3(0.f), vec3(0.f), command_buffer);
 
   command_buffer->KeepAlive(fb);
   command_buffer->KeepAlive(display_list);
 
   command_buffer->BeginRenderPass(shadow_map_pass_, fb, clear_values_);
-  model_renderer_->Draw(stage, display_list, command_buffer);
+  model_renderer_->Draw(shadow_stage, display_list, command_buffer);
   command_buffer->EndRenderPass();
+  frame->AddTimestamp("generated shadow map");
 
   auto semaphore = escher::Semaphore::New(escher()->vk_device());
   frame->SubmitPartialFrame(semaphore);
@@ -113,6 +117,18 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
   return fxl::AdoptRef(new ShadowMap(
       std::move(color_image), bias * camera.projection() * camera.transform(),
       light_color));
+}
+
+void ShadowMapRenderer::ComputeShadowStageFromSceneStage(
+    const Stage& scene_stage, Stage& shadow_stage) {
+  uint32_t shadow_size = static_cast<uint32_t>(
+      std::max(scene_stage.width(), scene_stage.height()));
+  shadow_stage.set_viewing_volume(
+      escher::ViewingVolume(shadow_size, shadow_size,
+                            scene_stage.viewing_volume().top(),
+                            scene_stage.viewing_volume().bottom()));
+  shadow_stage.set_key_light(scene_stage.key_light());
+  shadow_stage.set_fill_light(scene_stage.fill_light());
 }
 
 }  // namespace escher
