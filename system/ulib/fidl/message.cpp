@@ -97,17 +97,14 @@ zx_status_t Message::Call(zx_handle_t channel, uint32_t flags,
     if (status == ZX_OK || status == ZX_ERR_CALL_FAILED) {
         ClearHandlesUnsafe();
         if (status == ZX_OK) {
-            if (*read_status == ZX_OK) {
-                response->bytes_.set_actual(actual_bytes);
-                response->handles_.set_actual(actual_handles);
-            }
+            response->bytes_.set_actual(actual_bytes);
+            response->handles_.set_actual(actual_handles);
         }
     }
     return status;
 }
 
 void Message::ClearHandlesUnsafe() {
-    memset(handles_.data(), 0, sizeof(zx_handle_t) * handles_.actual());
     handles_.set_actual(0u);
 }
 
