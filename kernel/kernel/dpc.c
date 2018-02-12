@@ -130,6 +130,11 @@ void dpc_init_for_cpu(void) {
     struct percpu* cpu = get_local_percpu();
     uint cpu_num = arch_curr_cpu_num();
 
+    // the cpu's dpc state was initialized on a previous hotplug event
+    if (event_initialized(&cpu->dpc_event)) {
+        return;
+    }
+
     list_initialize(&cpu->dpc_list);
     event_init(&cpu->dpc_event, false, 0);
 

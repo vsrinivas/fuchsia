@@ -467,7 +467,7 @@ static void migrate_current_thread(thread_t* current_thread) {
     sched_resched_internal();
 }
 
-/* migrate all threads assigned to |old_cpu| to other queues */
+/* migrate all non-pinned threads assigned to |old_cpu| to other queues */
 void sched_transition_off_cpu(cpu_num_t old_cpu) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -477,9 +477,23 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
     thread_t* t;
     bool local_resched = false;
     cpu_mask_t accum_cpu_mask = 0;
+    cpu_mask_t pinned_mask = cpu_num_to_mask(old_cpu);
+    list_node_t pinned_threads = LIST_INITIAL_VALUE(pinned_threads);
     while (!thread_is_idle(t = sched_get_top_thread(old_cpu))) {
-        find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
-        DEBUG_ASSERT(!local_resched);
+        // Threads pinned to old_cpu can't run anywhere else, so put them
+        // into a temporary list and deal with them later.
+        if (t->cpu_affinity != pinned_mask) {
+            find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
+            DEBUG_ASSERT(!local_resched);
+        } else {
+            DEBUG_ASSERT(!list_in_list(&t->queue_node));
+            list_add_head(&pinned_threads, &t->queue_node);
+        }
+    }
+
+    // Put pinned threads back on old_cpu's queue.
+    while ((t = list_remove_head_type(&pinned_threads, thread_t, queue_node)) != NULL) {
+        insert_in_run_queue_head(old_cpu, t);
     }
 
     if (accum_cpu_mask) {
