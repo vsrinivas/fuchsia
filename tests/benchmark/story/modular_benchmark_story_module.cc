@@ -12,13 +12,13 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/tests/benchmark/story/tracing_base.h"
+#include "peridot/tests/benchmark/story/tracing_waiter.h"
 
 namespace {
 
 // This Module updates its root link 100 times and then just sits there until
 // it's terminated.
-class NullModule : modular::LinkWatcher, modular::TracingBase {
+class NullModule : modular::LinkWatcher {
  public:
   NullModule(
       modular::ModuleHost* const module_host,
@@ -53,7 +53,7 @@ class NullModule : modular::LinkWatcher, modular::TracingBase {
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
       count_ = 0;
-      WaitForTracing([this] { Set(); });
+      tracing_waiter_.WaitForTracing([this] { Set(); });
       return;
     }
 
@@ -64,8 +64,8 @@ class NullModule : modular::LinkWatcher, modular::TracingBase {
   }
 
   modular::ModuleHost* const module_host_;
+  modular::TracingWaiter tracing_waiter_;
   modular::LinkPtr link_;
-
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 
   int count_{-1};

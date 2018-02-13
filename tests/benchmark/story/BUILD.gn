@@ -21,7 +21,7 @@ executable("modular_benchmark_story_module") {
     "modular_benchmark_story_module.cc",
   ]
   deps = [
-    ":tracing_base",
+    ":tracing_waiter",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
@@ -32,7 +32,7 @@ executable("modular_benchmark_story_user_shell") {
   testonly = true
 
   deps = [
-    ":tracing_base",
+    ":tracing_waiter",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -61,10 +61,10 @@ copy("modular_benchmark_story_tspec") {
   ]
 }
 
-source_set("tracing_base") {
+source_set("tracing_waiter") {
   sources = [
-    "tracing_base.h",
-    "tracing_base.cc",
+    "tracing_waiter.h",
+    "tracing_waiter.cc",
   ]
 
   public_deps = [

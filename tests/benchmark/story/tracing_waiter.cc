@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/tests/benchmark/story/tracing_base.h"
+#include "peridot/tests/benchmark/story/tracing_waiter.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 
-void TracingBase::WaitForTracing(std::function<void()> cont) {
+TracingWaiter::TracingWaiter() = default;
+TracingWaiter::~TracingWaiter() = default;
+
+void TracingWaiter::WaitForTracing(std::function<void()> cont) {
   auto* const loop = fsl::MessageLoop::GetCurrent();
 
   // Cf. RunWithTracing() used by ledger benchmarks.

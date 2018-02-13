@@ -22,7 +22,7 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/benchmark/story/tracing_base.h"
+#include "peridot/tests/benchmark/story/tracing_waiter.h"
 
 namespace {
 
@@ -126,8 +126,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
 // is invoked as a user shell from device runner and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
-class TestApp : public modular::SingleServiceApp<modular::UserShell>,
-                        modular::TracingBase {
+class TestApp : public modular::SingleServiceApp<modular::UserShell> {
  public:
   using Base = modular::SingleServiceApp<modular::UserShell>;
   TestApp(app::ApplicationContext* const application_context, Settings settings)
@@ -150,7 +149,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell>,
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    WaitForTracing([this] {
+    tracing_waiter_.WaitForTracing([this] {
         Loop();
       });
   }
@@ -236,6 +235,8 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell>,
     story_count_++;
     Loop();
   }
+
+  modular::TracingWaiter tracing_waiter_;
 
   const Settings settings_;
 
