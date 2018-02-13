@@ -112,7 +112,8 @@ type iostate struct {
 	refs      int
 	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
-	writeLoopDone chan struct{}
+	writeLoopDone   chan struct{}
+	controlLoopDone chan struct{}
 
 	withNewSocket bool // remove when we remove old FDIO support
 }
@@ -464,6 +465,8 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 }
 
 func (ios *iostate) loopControl(s *socketServer, cookie int64) {
+	defer func() { ios.controlLoopDone <- struct{}{} }()
+
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	for {
@@ -508,13 +511,14 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	var ios *iostate
 	if iosOrig == nil {
 		ios = &iostate{
-			netProto:      netProto,
-			transProto:    transProto,
-			wq:            wq,
-			ep:            ep,
-			refs:          1,
-			writeLoopDone: make(chan struct{}),
-			withNewSocket: withNewSocket,
+			netProto:        netProto,
+			transProto:      transProto,
+			wq:              wq,
+			ep:              ep,
+			refs:            1,
+			writeLoopDone:   make(chan struct{}),
+			controlLoopDone: make(chan struct{}),
+			withNewSocket:   withNewSocket,
 		}
 		if ep != nil || withNewSocket {
 			switch transProto {
@@ -1394,6 +1398,9 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 			switch mxerror.Status(err) {
 			case zx.ErrOk:
 				<-ios.writeLoopDone
+				if ios.withNewSocket {
+					<-ios.controlLoopDone
+				}
 			default:
 				log.Printf("close: signal failed: %v", err)
 			}
