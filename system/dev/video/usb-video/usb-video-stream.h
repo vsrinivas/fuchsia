@@ -130,6 +130,13 @@ private:
     void RequestComplete(usb_request_t* req);
 
     void ParseHeaderTimestamps(usb_request_t* req);
+    // Parses the payload header from the start of the usb request response.
+    // If the header is parsed successfully, ZX_OK is returned and the length
+    // of the header stored in out_header_length.
+    // Returns an error if the header is malformed.
+    zx_status_t ParsePayloadHeaderLocked(usb_request_t* req,
+                                         uint32_t* out_header_length)
+        __TA_REQUIRES(lock_);
     // Extracts the payload data from the usb request response,
     // and stores it in the ring buffer.
     void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);

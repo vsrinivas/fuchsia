@@ -506,15 +506,8 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     }
 }
 
-void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
-    if (req->response.status != ZX_OK) {
-        zxlogf(ERROR, "usb request failed: %d\n", req->response.status);
-        return;
-    }
-    // Empty responses should be ignored.
-    if (req->response.actual == 0) {
-        return;
-    }
+zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
+                                                     uint32_t* out_header_length) {
     // Different payload types have different header types but always share
     // the same first two bytes.
     usb_video_vs_payload_header header;
@@ -525,7 +518,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         header.bHeaderLength > req->response.actual) {
         zxlogf(ERROR, "got invalid header bHeaderLength %u data length %lu\n",
                header.bHeaderLength, req->response.actual);
-        return;
+        return ZX_ERR_INTERNAL;
     }
 
     uint8_t fid = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_FID;
@@ -557,21 +550,47 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         cur_frame_state_.fid = fid;
         num_frames_++;
     }
-    if (cur_frame_state_.error) {
-        zxlogf(ERROR, "skipping payload of invalid frame #%u\n", num_frames_);
-        return;
-    }
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_ERR) {
-        zxlogf(ERROR, "payload of frame #%u had an error bit set\n", num_frames_);
-        cur_frame_state_.error = true;
-        return;
+        // Only print the error message for the first erroneous payload of the
+        // frame.
+        if (!cur_frame_state_.error) {
+            zxlogf(ERROR, "payload of frame #%u had an error bit set\n",
+                   num_frames_);
+            cur_frame_state_.error = true;
+        }
+        return ZX_OK;
     }
 
     ParseHeaderTimestamps(req);
 
-    // Copy the data into the ring buffer;
-    uint32_t offset = header.bHeaderLength;
-    uint32_t data_size = static_cast<uint32_t>(req->response.actual) - offset;
+    *out_header_length = header.bHeaderLength;
+    return ZX_OK;
+}
+
+void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
+    if (req->response.status != ZX_OK) {
+        zxlogf(ERROR, "usb request failed: %d\n", req->response.status);
+        return;
+    }
+    // Empty responses should be ignored.
+    if (req->response.actual == 0) {
+        return;
+    }
+
+    uint32_t header_len = 0;
+    // Each isochronous response contains a payload header.
+    zx_status_t status = ParsePayloadHeaderLocked(req, &header_len);
+    if (status != ZX_OK) {
+        return;
+    }
+
+    if (cur_frame_state_.error) {
+        zxlogf(TRACE, "skipping payload of invalid frame #%u\n", num_frames_);
+        return;
+    }
+
+    // Copy the data into the ring buffer.
+    uint32_t data_size = static_cast<uint32_t>(req->response.actual) - header_len;
     if (cur_frame_state_.bytes + data_size > max_frame_size_) {
         zxlogf(ERROR, "invalid data size %u, cur frame bytes %u, frame size %u\n",
                data_size, cur_frame_state_.bytes, max_frame_size_);
@@ -591,9 +610,9 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     uint32_t amt = fbl::min(avail, data_size);
     uint8_t* dst = reinterpret_cast<uint8_t*>(data_ring_buffer_.virt) + frame_end_offset;
 
-    usb_request_copyfrom(req, dst, amt, offset);
+    usb_request_copyfrom(req, dst, amt, header_len);
     if (amt < data_size) {
-        usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, offset + amt);
+        usb_request_copyfrom(req, data_ring_buffer_.virt, data_size - amt, header_len + amt);
     }
     cur_frame_state_.bytes += data_size;
 }
