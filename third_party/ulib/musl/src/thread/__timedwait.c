@@ -1,25 +1,16 @@
 #include "pthread_impl.h"
+#include "time_conversion.h"
 #include <errno.h>
 #include <zircon/syscalls.h>
 #include <time.h>
 
 int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
-    struct timespec to;
     zx_time_t deadline = ZX_TIME_INFINITE;
 
     if (at) {
-        if (at->tv_nsec >= ZX_SEC(1))
-            return EINVAL;
-        if (__clock_gettime(clk, &to))
-            return EINVAL;
-        to.tv_sec = at->tv_sec - to.tv_sec;
-        if ((to.tv_nsec = at->tv_nsec - to.tv_nsec) < 0) {
-            to.tv_sec--;
-            to.tv_nsec += ZX_SEC(1);
-        }
-        if (to.tv_sec < 0)
-            return ETIMEDOUT;
-        deadline = _zx_deadline_after(ZX_SEC(to.tv_sec) + to.tv_nsec);
+        int ret = __timespec_to_deadline(at, clk, &deadline);
+        if (ret)
+            return ret;
     }
 
     // zx_futex_wait will return ZX_ERR_BAD_STATE if someone modifying *addr

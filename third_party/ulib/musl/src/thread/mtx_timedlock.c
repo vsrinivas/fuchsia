@@ -5,8 +5,12 @@
 #include "time_conversion.h"
 
 int mtx_timedlock(mtx_t* restrict m, const struct timespec* restrict ts) {
-    zx_time_t abstime = __timespec_to_zx_time_t(*ts);
-    zx_status_t status = __zxr_mutex_timedlock((zxr_mutex_t*)&m->__i, abstime);
+    zx_time_t deadline = ZX_TIME_INFINITE;
+    int ret = __timespec_to_deadline(ts, CLOCK_REALTIME, &deadline);
+    if (ret)
+        return ret == ETIMEDOUT ? thrd_timedout : thrd_error;
+
+    zx_status_t status = __zxr_mutex_timedlock((zxr_mutex_t*)&m->__i, deadline);
     switch (status) {
     default:
         return thrd_error;

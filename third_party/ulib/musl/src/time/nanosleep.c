@@ -12,7 +12,7 @@ int nanosleep(const struct timespec* req, struct timespec* rem) {
     // which reports back how much time is remaining. Until then,
     // always report back 0 timeout remaining.
 
-    int ret = _zx_nanosleep(_zx_deadline_after(__timespec_to_zx_time_t(*req)));
+    int ret = _zx_nanosleep(__duration_timespec_to_deadline(*req));
     assert(ret == 0);
     if (rem) {
         *rem = (struct timespec){
