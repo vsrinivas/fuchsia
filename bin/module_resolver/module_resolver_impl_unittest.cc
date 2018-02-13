@@ -480,5 +480,366 @@ TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
   EXPECT_EQ("id1", results()[0]->module_id);
 }
 
+// Tests that a query that does not contain a verb or a URL matches a noun with
+// the correct types.
+TEST_F(ModuleResolverImplTest, MatchingNounWithNoVerbOrUrl) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"foo", "missed"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder().AddNounTypes("start", {"foo", "bar"}).build();
+
+  FindModules(std::move(query));
+
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+}
+
+// Tests that a query that does not contain a verb or a URL matches when the
+// noun types do, even if the noun name does not.
+TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrl) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"end", {"foo", "baz"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder().AddNounTypes("start", {"foo", "bar"}).build();
+
+  FindModules(std::move(query));
+
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+}
+
+// Tests that a query that does not contain a verb or a URL returns results for
+// multiple matching entries.
+TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrlMultipleMatches) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"end", {"foo", "baz"}}};
+    source->add("1", entry);
+  }
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module2";
+    entry.verb = "com.google.fuchsia.navigate.v2";
+    entry.noun_constraints = {{"end", {"foo", "baz"}}};
+    source->add("2", entry);
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder().AddNounTypes("start", {"foo", "bar"}).build();
+
+  FindModules(std::move(query));
+
+  ASSERT_EQ(2lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+  EXPECT_EQ("module2", results()[1]->module_id);
+}
+
+// Tests that a query that does not contain a verb or a URL does not match when
+// the noun types don't match.
+TEST_F(ModuleResolverImplTest, IncorrectNounTypeWithNoVerbOrUrl) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"not", "correct"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder().AddNounTypes("start", {"foo", "bar"}).build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(0lu, results().size());
+}
+
+// Tests that for a query with multiple nouns, each noun gets assigned to the
+// correct module parameters.
+TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"gps"}}, {"end", {"not_gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"gps", "gps data"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  fidl::String end_entity = AddEntity({{"not_gps", "not gps data"}});
+  ASSERT_TRUE(!end_entity.empty());
+
+  auto query = QueryBuilder()
+                   .AddEntityNoun("noun1", start_entity)
+                   .AddEntityNoun("noun2", end_entity)
+                   .build();
+
+  FindModules(std::move(query));
+
+  ASSERT_EQ(1lu, results().size());
+  auto result = results()[0].get();
+
+  EXPECT_EQ(result->create_chain_info->property_info["start"]
+                ->get_create_link()
+                ->initial_data,
+            modular::EntityReferenceToJson(start_entity));
+  EXPECT_EQ(result->create_chain_info->property_info["end"]
+                ->get_create_link()
+                ->initial_data,
+            modular::EntityReferenceToJson(end_entity));
+}
+
+// Tests that when there are multiple valid mappings of query noun types to
+// entities, all such combinations are returned.
+TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"gps"}}, {"end", {"gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  fidl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  ASSERT_TRUE(!end_entity.empty());
+
+  auto query = QueryBuilder()
+                   .AddEntityNoun("noun1", start_entity)
+                   .AddEntityNoun("noun2", end_entity)
+                   .build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(2lu, results().size());
+
+  bool found_first_mapping = false;
+  bool found_second_mapping = false;
+
+  for (const auto& result : results()) {
+    bool start_mapped_to_start =
+        result->create_chain_info->property_info["start"]
+            ->get_create_link()
+            ->initial_data == modular::EntityReferenceToJson(start_entity);
+    bool start_mapped_to_end =
+        result->create_chain_info->property_info["start"]
+            ->get_create_link()
+            ->initial_data == modular::EntityReferenceToJson(end_entity);
+    bool end_mapped_to_end =
+        result->create_chain_info->property_info["end"]
+            ->get_create_link()
+            ->initial_data == modular::EntityReferenceToJson(end_entity);
+    bool end_mapped_to_start =
+        result->create_chain_info->property_info["end"]
+            ->get_create_link()
+            ->initial_data == modular::EntityReferenceToJson(start_entity);
+    found_first_mapping |= start_mapped_to_start && end_mapped_to_end;
+    found_second_mapping |= start_mapped_to_end && end_mapped_to_start;
+  }
+
+  EXPECT_TRUE(found_first_mapping);
+  EXPECT_TRUE(found_second_mapping);
+}
+
+// Tests that a query with three nouns of the same type matches an entry with
+// three expected nouns in 6 different ways.
+TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndThreeNounsOfSameType) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {
+        {"start", {"gps"}}, {"end", {"gps"}}, {"middle", {"gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  fidl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  ASSERT_TRUE(!end_entity.empty());
+
+  fidl::String middle_entity = AddEntity({{"gps", "gps data three"}});
+  ASSERT_TRUE(!middle_entity.empty());
+
+  auto query = QueryBuilder()
+                   .AddEntityNoun("noun1", start_entity)
+                   .AddEntityNoun("noun2", end_entity)
+                   .AddEntityNoun("noun3", middle_entity)
+                   .build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(6lu, results().size());
+}
+
+// Tests that a query with three nouns of the same type matches an entry with
+// two expected nouns in 6 different ways.
+TEST_F(ModuleResolverImplTest,
+       QueryWithoutVerbAndDifferentNumberOfNounsInQueryVsEntry) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"gps"}}, {"end", {"gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  fidl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  ASSERT_TRUE(!end_entity.empty());
+
+  fidl::String middle_entity = AddEntity({{"gps", "gps data three"}});
+  ASSERT_TRUE(!middle_entity.empty());
+
+  auto query = QueryBuilder()
+                   .AddEntityNoun("noun1", start_entity)
+                   .AddEntityNoun("noun2", end_entity)
+                   .AddEntityNoun("noun3", middle_entity)
+                   .build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(6lu, results().size());
+}
+
+// Tests that a query without a verb does not match a module that requires a
+// proper superset of the query nouns.
+TEST_F(ModuleResolverImplTest,
+       QueryWithoutVerbWithEntryContainingProperSuperset) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"gps"}}, {"end", {"gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"gps", "gps data"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  // The query only contains an Entity for "noun1", but the module manifest
+  // requires two nouns of type "gps."
+  auto query = QueryBuilder().AddEntityNoun("noun1", start_entity).build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(0lu, results().size());
+}
+
+// Tests that a query without a verb does not match an entry where the noun
+// types are incompatible.
+TEST_F(ModuleResolverImplTest, QueryWithoutVerbIncompatibleNounTypes) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"start", {"gps"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  fidl::String start_entity = AddEntity({{"not_gps", "not gps data"}});
+  ASSERT_TRUE(!start_entity.empty());
+
+  // The query only contains an Entity for "noun1", but the module manifest
+  // requires two nouns of type "gps."
+  auto query = QueryBuilder().AddEntityNoun("noun1", start_entity).build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(0lu, results().size());
+}
+
+// Tests that a query with a verb requires noun name and type to match (i.e.
+// does not behave like verb-less matching where the noun names are
+// disregarded).
+TEST_F(ModuleResolverImplTest, QueryWithVerbMatchesBothNounNamesAndTypes) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    modular::ModuleManifestSource::Entry entry;
+    entry.binary = "module1";
+    entry.verb = "com.google.fuchsia.navigate.v1";
+    entry.noun_constraints = {{"end", {"foo", "baz"}}};
+    source->add("1", entry);
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
+                   .AddNounTypes("start", {"foo", "baz"})
+                   .build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(0lu, results().size());
+}
+
 }  // namespace
 }  // namespace maxwell

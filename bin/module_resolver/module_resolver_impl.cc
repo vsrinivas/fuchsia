@@ -100,12 +100,12 @@ class ModuleResolverImpl::FindModulesCall
     Ready();
   }
 
-  // Given a verb, we:
-  // 1) Find all modules that can handle the verb in this query.
-  // 2) Find all modules that can handle any of the (noun,type)s in this query.
-  //    Note that this includes modules that only satisfy a subset of the query
-  //    input.
-  // 3) Intersect 1) and 2) to find modules that satisfy the query.
+  // Finds all modules that match |query_|.
+  //
+  // When a verb is specified it is used to filter potential modules, and the
+  // associated nouns are required to match in both name and type. If there is
+  // no verb, all modules are considered and only the noun types are used to
+  // filter results.
   void Run() {
     FlowToken flow{this, &result_};
 
@@ -117,18 +117,21 @@ class ModuleResolverImpl::FindModulesCall
     }
 
     if (!query_->verb) {
-      // TODO(thatguy): Add no-verb resolution.
-      result_ = CreateEmptyResult();
-      return;
-    }
+      std::transform(
+          module_resolver_impl_->entries_.begin(),
+          module_resolver_impl_->entries_.end(),
+          std::inserter(candidates_, candidates_.begin()),
+          [](const std::pair<EntryId, modular::ModuleManifestSource::Entry>&
+                 key_value) { return key_value.first; });
+    } else {
+      auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
+      if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
+        result_ = CreateEmptyResult();
+        return;
+      }
 
-    auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
-    if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
-      result_ = CreateEmptyResult();
-      return;
+      candidates_ = verb_it->second;
     }
-
-    candidates_ = verb_it->second;
 
     // For each noun in the ResolverQuery, try to find Modules that provide the
     // types in the noun as constraints.
@@ -146,7 +149,8 @@ class ModuleResolverImpl::FindModulesCall
       module_resolver_impl_->type_helper_.GetNounTypes(
           noun_constraints,
           [noun_name, flow, this](std::vector<std::string> types) {
-            ProcessNounTypes(noun_name, std::move(types));
+            ProcessNounTypes(noun_name, std::move(types),
+                             !query_->verb.is_null());
             if (--num_nouns_countdown_ == 0) {
               Finally(flow);
             }
@@ -156,8 +160,11 @@ class ModuleResolverImpl::FindModulesCall
 
  private:
   // |noun_name| and |types| come from the ResolverQuery.
+  // |match_name| is true if the entries are required to match both the noun
+  // name and types. If false, only the types are matched.
   void ProcessNounTypes(const std::string& noun_name,
-                        std::vector<std::string> types) {
+                        std::vector<std::string> types,
+                        const bool match_name) {
     noun_types_cache_[noun_name] = types;
 
     // The types list we have is an OR - any Module that can handle any of the
@@ -165,12 +172,10 @@ class ModuleResolverImpl::FindModulesCall
     // we gather all such modules, regardless of if they handle the verb.
     std::set<EntryId> noun_type_entries;
     for (const auto& type : types) {
-      auto noun_it = module_resolver_impl_->noun_type_to_entries_.find(
-          std::make_pair(type, noun_name));
-      if (noun_it == module_resolver_impl_->noun_type_to_entries_.end())
-        continue;
-
-      noun_type_entries.insert(noun_it->second.begin(), noun_it->second.end());
+      std::set<EntryId> found_entries =
+          match_name ? GetEntriesMatchingNounByTypeAndName(type, noun_name)
+                     : GetEntriesMatchingNounByType(type);
+      noun_type_entries.insert(found_entries.begin(), found_entries.end());
     }
 
     // The target Module must match the types in every noun specified in the
@@ -184,37 +189,238 @@ class ModuleResolverImpl::FindModulesCall
     candidates_.swap(new_result_entries);
   }
 
+  // Returns the EntryIds of all entries with a noun that matches the provided
+  // type.
+  std::set<EntryId> GetEntriesMatchingNounByType(const std::string& noun_type) {
+    std::set<EntryId> found_entries;
+    auto found_entries_it =
+        module_resolver_impl_->noun_type_to_entries_.find(noun_type);
+    if (found_entries_it !=
+        module_resolver_impl_->noun_type_to_entries_.end()) {
+      found_entries.insert(found_entries_it->second.begin(),
+                           found_entries_it->second.end());
+    }
+    return found_entries;
+  }
+
+  // Returns the EntryIds of all entries with a noun that matches the provided
+  // name and type.
+  std::set<EntryId> GetEntriesMatchingNounByTypeAndName(
+      const std::string& noun_type,
+      const std::string& noun_name) {
+    std::set<EntryId> found_entries;
+    auto found_entries_it =
+        module_resolver_impl_->noun_type_and_name_to_entries_.find(
+            std::make_pair(noun_type, noun_name));
+    if (found_entries_it !=
+        module_resolver_impl_->noun_type_and_name_to_entries_.end()) {
+      found_entries.insert(found_entries_it->second.begin(),
+                           found_entries_it->second.end());
+    }
+    return found_entries;
+  }
+
+  // At this point |candidates_| contains all the modules that could potentially
+  // match the query. The purpose of this method is to create those matches and
+  // populate |result_|.
   void Finally(FlowToken flow) {
+    result_ = CreateEmptyResult();
     if (candidates_.empty()) {
-      result_ = CreateEmptyResult();
       return;
     }
 
-    result_ = modular::FindModulesResult::New();
+    // For each of the potential candidates, compute each possible mapping from
+    // query noun to entry noun. If the query specifies a verb or url, there is
+    // only one result per candidate. If there is no verb or url, results will
+    // be constructed for each mapping from entry noun to |query_| noun where
+    // the types are compatible.
     for (auto id : candidates_) {
       auto entry_it = module_resolver_impl_->entries_.find(id);
       FXL_CHECK(entry_it != module_resolver_impl_->entries_.end()) << id;
       const auto& entry = entry_it->second;
 
-      auto result = modular::ModuleResolverResult::New();
-      result->module_id = entry.binary;
-      result->local_name = entry.local_name;
-      CopyNounsToModuleResolverResult(query_, &result);
+      if (!query_->verb && !query_->url) {
+        // If there is no verb and no url each entry may be able to be matched
+        // in multiple ways (i.e. values of nouns with the same type are
+        // interchangeable), so the result set may contain multiple entries for
+        // the same candidate.
+        auto new_results = MatchQueryNounsToEntryNounsByType(entry);
+        for (auto& result : new_results) {
+          result_->modules.push_back(std::move(result));
+        }
 
-      result_->modules.push_back(std::move(result));
+      } else {
+        auto result = modular::ModuleResolverResult::New();
+        result->module_id = entry.binary;
+        result->local_name = entry.local_name;
+        CopyNounsToModuleResolverResult(query_, &result);
+
+        result_->modules.push_back(std::move(result));
+      }
     }
   }
 
+  // Creates ModuleResolverResultPtrs for each available mapping from nouns in
+  // |query_| to the corresponding nouns in each candidate entry.
+  //
+  // In order for a query to match an entry, it must contain enough nouns to
+  // populate each of the entry nouns.
+  fidl::Array<modular::ModuleResolverResultPtr>
+  MatchQueryNounsToEntryNounsByType(
+      const modular::ModuleManifestSource::Entry& entry) {
+    fidl::Array<modular::ModuleResolverResultPtr> modules;
+    modules.resize(0);
+    // TODO(MI4-866): Handle entries with optional nouns.
+    if (query_->noun_constraints.size() < entry.noun_constraints.size()) {
+      return modules;
+    }
+
+    // Map each noun in |entry| to the query noun names that could be used to
+    // populate the |entry| noun.
+    std::map<std::string, std::vector<std::string>> entry_nouns_to_query_nouns =
+        MapEntryNounsToCompatibleQueryNouns(entry);
+
+    // Compute each possible map from |query_| noun to the |entry| noun that it
+    // should populate.
+    std::vector<std::map<std::string, std::string>> noun_mappings =
+        ComputeResultsFromEntryNounToQueryNounMapping(
+            entry_nouns_to_query_nouns);
+
+    // For each of the possible mappings, create a resolver result.
+    for (const auto& noun_mapping : noun_mappings) {
+      auto result = modular::ModuleResolverResult::New();
+      result->module_id = entry.binary;
+      result->local_name = entry.local_name;
+      CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
+      modules.push_back(std::move(result));
+    }
+
+    return modules;
+  }
+
+  // Returns a map where the keys are the |entry|'s nouns, and the values are
+  // all the |query_| nouns that are type-compatible with that |entry| noun.
+  std::map<std::string, std::vector<std::string>>
+  MapEntryNounsToCompatibleQueryNouns(
+      const modular::ModuleManifestSource::Entry& entry) {
+    std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
+    for (const auto& entry_noun : entry.noun_constraints) {
+      std::vector<std::string> matching_query_nouns;
+      for (const auto& query_noun : query_->noun_constraints) {
+        if (DoTypesIntersect(noun_types_cache_[query_noun.GetKey()],
+                             entry_noun.types)) {
+          matching_query_nouns.push_back(query_noun.GetKey());
+        }
+      }
+      entry_noun_to_query_nouns[entry_noun.name] = matching_query_nouns;
+    }
+    return entry_noun_to_query_nouns;
+  }
+
+  // Returns a collection of valid mappings where the key is the query noun, and
+  // the value is the entry noun to be populated with the query nouns contents.
+  //
+  // |remaining_entry_nouns| are all the entry nouns that are yet to be matched.
+  // |used_query_nouns| are all the query nouns that have already been used in
+  // the current solution.
+  std::vector<std::map<std::string, std::string>>
+  ComputeResultsFromEntryNounToQueryNounMapping(
+      const std::map<std::string, std::vector<std::string>>&
+          remaining_entry_nouns,
+      const std::set<std::string>& used_query_nouns = {}) {
+    std::vector<std::map<std::string, std::string>> result;
+    if (remaining_entry_nouns.empty()) {
+      return result;
+    }
+
+    auto first_entry_noun_it = remaining_entry_nouns.begin();
+    const std::string& first_entry_noun_name = first_entry_noun_it->first;
+    const std::vector<std::string> query_nouns_for_first_entry =
+        first_entry_noun_it->second;
+
+    // If there is only one remaining entry noun, create one result mapping for
+    // each viable query noun.
+    if (remaining_entry_nouns.size() == 1) {
+      for (const auto& query_noun_name : query_nouns_for_first_entry) {
+        // Don't create solutions where the query noun has already been used.
+        if (used_query_nouns.find(query_noun_name) != used_query_nouns.end()) {
+          continue;
+        }
+
+        std::map<std::string, std::string> result_map;
+        result_map[query_noun_name] = first_entry_noun_name;
+        result.push_back(result_map);
+      }
+      return result;
+    }
+
+    for (const auto& query_noun_name : first_entry_noun_it->second) {
+      // If the query noun has already been used, it cannot be matched again,
+      // and thus the loop continues.
+      if (used_query_nouns.find(query_noun_name) != used_query_nouns.end()) {
+        continue;
+      }
+
+      // The current query noun that will be used by the first entry noun must
+      // be added to the used set before computing the solution to the smaller
+      // problem.
+      std::set<std::string> new_used_query_nouns = used_query_nouns;
+      new_used_query_nouns.insert(query_noun_name);
+
+      // Recurse for the remaining nouns.
+      std::vector<std::map<std::string, std::string>> solution_for_remainder =
+          ComputeResultsFromEntryNounToQueryNounMapping(
+              {std::next(remaining_entry_nouns.begin()),
+               remaining_entry_nouns.end()},
+              new_used_query_nouns);
+
+      // Expand each solution to the smaller problem by inserting the current
+      // query noun -> entry noun into the solution.
+      for (const auto& existing_solution : solution_for_remainder) {
+        std::map<std::string, std::string> updated_solution = existing_solution;
+        updated_solution[query_noun_name] = first_entry_noun_name;
+        result.push_back(updated_solution);
+      }
+    }
+
+    return result;
+  }
+
+  // Returns true if the any entry of |first_types| is contained in
+  // |second_types|.
+  bool DoTypesIntersect(const std::vector<std::string>& first_types,
+                        const std::vector<std::string>& second_types) {
+    const std::set<std::string> first_type_set(first_types.begin(),
+                                               first_types.end());
+    const std::set<std::string> second_type_set(second_types.begin(),
+                                                second_types.end());
+    std::set<std::string> intersection;
+    std::set_intersection(first_type_set.begin(), first_type_set.end(),
+                          second_type_set.begin(), second_type_set.end(),
+                          std::inserter(intersection, intersection.begin()));
+    return !intersection.empty();
+  }
+
+  // Copies the nouns from |query| to the provided resolver result.
+  //
+  // |noun_mapping| A mapping from the noun names of query to the entry noun
+  // that should be populated. If no such mapping exists, the query noun name
+  // will be used.
   void CopyNounsToModuleResolverResult(
       const modular::ResolverQueryPtr& query,
-      modular::ModuleResolverResultPtr* result) {
+      modular::ModuleResolverResultPtr* result,
+      std::map<std::string, std::string> noun_mapping = {}) {
     (*result)->initial_nouns.mark_non_null();
     (*result)->create_chain_info = modular::CreateChainInfo::New();
     auto& create_chain_info = (*result)->create_chain_info;  // For convenience.
     create_chain_info->property_info.mark_non_null();
-    for (auto entry : query->noun_constraints) {
-      const auto& name = entry.GetKey();
-      const auto& noun = entry.GetValue();
+    for (auto query_noun : query->noun_constraints) {
+      const auto& noun = query_noun.GetValue();
+      std::string name = query_noun.GetKey();
+      auto it = noun_mapping.find(query_noun.GetKey());
+      if (it != noun_mapping.end()) {
+        name = it->second;
+      }
 
       if (noun->is_entity_reference()) {
         // TODO(thatguy): Remove this once no more Modules are using the root
@@ -399,7 +605,9 @@ void ModuleResolverImpl::OnNewManifestEntry(
 
   for (const auto& constraint : entry.noun_constraints) {
     for (const auto& type : constraint.types) {
-      noun_type_to_entries_[std::make_pair(type, constraint.name)].insert(id);
+      noun_type_and_name_to_entries_[std::make_pair(type, constraint.name)]
+          .insert(id);
+      noun_type_to_entries_[type].insert(id);
     }
   }
 }
@@ -418,7 +626,9 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
 
   for (const auto& constraint : entry.noun_constraints) {
     for (const auto& type : constraint.types) {
-      noun_type_to_entries_[std::make_pair(type, constraint.name)].erase(id);
+      noun_type_and_name_to_entries_[std::make_pair(type, constraint.name)]
+          .erase(id);
+      noun_type_to_entries_[type].erase(id);
     }
   }
 
@@ -457,8 +667,6 @@ void ModuleResolverImpl::OnContextUpdate(ContextUpdatePtr update) {
   for (const auto& value : values) {
     rapidjson::Document document;
     document.Parse(value->content);
-    FXL_VLOG(1) << "Module resolver observed context update: "
-                << document.GetString();
   }
 }
 

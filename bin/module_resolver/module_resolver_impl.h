@@ -88,7 +88,9 @@ class ModuleResolverImpl : modular::ModuleResolver,
   std::map<std::string, std::set<EntryId>> verb_to_entries_;
   // (type, noun name) -> key in |entries_|
   std::map<std::pair<std::string, std::string>, std::set<EntryId>>
-      noun_type_to_entries_;
+      noun_type_and_name_to_entries_;
+  //  (type) -> key in |entries_|.
+  std::map<std::string, std::set<EntryId>> noun_type_to_entries_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
   fidl::Binding<QueryHandler> query_handler_binding_;
