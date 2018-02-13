@@ -47,6 +47,181 @@
       "type": "duration",
       "event_name": "user/logout",
       "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "AgentContextImpl::InitializeCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "AgentContextImpl::StopCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "AgentRunnerStorageImpl::InitializeCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "LinkImpl::IncrementalChangeCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "LinkImpl::IncrementalWriteCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "LinkImpl::ReloadCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "LinkImpl::WatchCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "ReadAllDataCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "ReadDataCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "WriteDataCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "SyncCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::AddForCreateCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::AddModuleCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::BlockingModuleDataWriteCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::LaunchModuleCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::KillModuleCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::StartModuleCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::StartModuleInShellCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::StopCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::StopModuleCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::DeleteCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::ConnectLinkCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::StartCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::GetImportanceCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::LedgerNotificationCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::FocusCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryControllerImpl::DefocusCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::MutateStoryDataCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::CreateStoryCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::DeleteStoryCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::GetControllerCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::TeardownCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::GetImportanceCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::GetLinkPeerCall",
+      "event_category": "modular"
+    },
+    {
+      "type": "duration",
+      "event_name": "StoryProviderImpl::DumpStateCall",
+      "event_category": "modular"
     }
   ]
 }
