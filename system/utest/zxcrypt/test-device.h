@@ -103,23 +103,18 @@ public:
 
     // TEST HELPERS
 
-    // Generates a key of an appropriate length for the given |version|.
-    bool GenerateKey(Volume::Version version);
-
     // Allocates a new block device of at least |device_size| bytes grouped into blocks of
     // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
     // appropriates number of slices of |FVM_BLOCK_SIZE| each.  A file descriptor for the block
     // device is returned via |out_fd|.
     bool Create(size_t device_size, size_t block_size, bool fvm);
 
-    // Binds the zxcrypt driver to the current block device.  It is an error to call this method
-    // without calling |Create|.  If the driver was previously bound, this will trigger the
-    // underlying device to unbind and rebind its children.
-    bool BindZxcrypt();
+    // Test helper that generates a key and creates a device according to |version| and |fvm|.  It
+    // sets up the device as a zxcrypt volume and binds to it.
+    bool Bind(Volume::Version version, bool fvm);
 
-    // Convenience method that generates a key and creates a device according to |version| and
-    // |fvm|.  It sets up the device as a zxcrypt volume and binds to it.
-    bool DefaultInit(Volume::Version version, bool fvm);
+    // Test helper that rebinds the ramdisk and its children.
+    bool Rebind();
 
     // Test helpers that perform a |lseek| and a |read| or |write| together. |off| and |len| are in
     // bytes.  |ReadFd| additionally checks that the data read matches what was written.
@@ -149,11 +144,12 @@ private:
     // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
     bool CreateFvmPart(size_t device_size, size_t block_size);
 
-    // Tears down the current ramdisk and all its children.
-    void Reset();
+    // Connects the block client to the block server.
+    bool Connect();
 
-    // Indicates if create_ramdisk was called successfully.
-    bool has_ramdisk_;
+    // Disconnects the block client from the block server.
+    bool Disconnect();
+
     // The pathname of the ramdisk
     char ramdisk_path_[PATH_MAX];
     // The pathname of the FVM partition.

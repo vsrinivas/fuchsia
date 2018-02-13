@@ -25,21 +25,19 @@ bool TestCreate(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_TRUE(device.GenerateKey(version));
+    ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
 
     // Invalid file descriptor
     fbl::unique_fd bad_fd;
     EXPECT_ZX(Volume::Create(fbl::move(bad_fd), device.key()), ZX_ERR_INVALID_ARGS);
 
     // Weak key
-    ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
     crypto::Bytes short_key;
     ASSERT_OK(short_key.Copy(device.key()));
     ASSERT_OK(short_key.Resize(short_key.len() - 1));
     EXPECT_ZX(Volume::Create(fbl::move(device.parent()), short_key), ZX_ERR_INVALID_ARGS);
 
     // Valid
-    ASSERT_TRUE(device.GenerateKey(version));
     EXPECT_OK(Volume::Create(fbl::move(device.parent()), device.key()));
 
     END_TEST;
@@ -62,7 +60,6 @@ bool TestOpen(Volume::Version version, bool fvm) {
     EXPECT_ZX(Volume::Open(fbl::move(bad_fd), device.key(), 0, &volume), ZX_ERR_INVALID_ARGS);
 
     // Bad key
-    ASSERT_TRUE(device.GenerateKey(version));
     ASSERT_OK(Volume::Create(fbl::move(device.parent()), device.key()));
 
     crypto::Bytes mod;
@@ -94,7 +91,7 @@ DEFINE_EACH_DEVICE(TestOpen);
 bool TestEnroll(Volume::Version version, bool fvm) {
     BEGIN_TEST;
     TestDevice device;
-    ASSERT_TRUE(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.Bind(version, fvm));
 
     fbl::unique_ptr<Volume> volume;
     ASSERT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 0, &volume));
@@ -102,8 +99,6 @@ bool TestEnroll(Volume::Version version, bool fvm) {
     // Bad key
     crypto::Bytes bad_key;
     EXPECT_ZX(volume->Enroll(bad_key, 1), ZX_ERR_INVALID_ARGS);
-
-    ASSERT_TRUE(device.GenerateKey(version));
 
     // Bad slot
     EXPECT_ZX(volume->Enroll(device.key(), Volume::kNumSlots), ZX_ERR_INVALID_ARGS);
@@ -113,7 +108,6 @@ bool TestEnroll(Volume::Version version, bool fvm) {
     EXPECT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 1, &volume));
 
     // Valid; existing slot
-    ASSERT_TRUE(device.GenerateKey(version));
     EXPECT_OK(volume->Enroll(device.key(), 0));
     EXPECT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 0, &volume));
 
@@ -125,7 +119,7 @@ bool TestRevoke(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_TRUE(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.Bind(version, fvm));
 
     fbl::unique_ptr<Volume> volume;
     ASSERT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 0, &volume));
@@ -149,7 +143,7 @@ bool TestShred(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
-    ASSERT_TRUE(device.DefaultInit(version, fvm));
+    ASSERT_TRUE(device.Bind(version, fvm));
 
     fbl::unique_ptr<Volume> volume;
     ASSERT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 0, &volume));
