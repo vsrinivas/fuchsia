@@ -83,20 +83,18 @@ def update_file(file, contents):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate bootfs manifest and "
+    parser = argparse.ArgumentParser(description="Generate package manifest and "
                                      + "list of GN targets for a list of "
                                      + "Fuchsia packages")
     parser.add_argument("--targets-file",
                         help="path to the GN targets file to generate")
     parser.add_argument("--system-manifest",
                         help="path to manifest file to generate for /system")
-    parser.add_argument("--packages", help="list of packages",
-                        default="default")
+    parser.add_argument("--packages", help="list of packages", required=True)
     parser.add_argument("--omit-files",
                         help="list of files omitted from user.bootfs",
                         default="")
     parser.add_argument("--build-root", help="path to root of build directory")
-    parser.add_argument("--depfile", help="path to depfile to generate")
     args = parser.parse_args()
 
     amalgamation = Amalgamation(args.build_root)
@@ -107,15 +105,6 @@ def main():
 
     system_manifest_contents = manifest_contents(amalgamation.system.files)
     update_file(args.system_manifest, system_manifest_contents)
-
-    if args.depfile:
-        with open(args.depfile, "w") as f:
-            f.write("user.bootfs: %s" % args.system_manifest)
-            for path in amalgamation.config_paths:
-                f.write(" " + path)
-            for resource in amalgamation.resources:
-                f.write(" " + resource)
-
     update_file(args.targets_file, '\n'.join(amalgamation.packages) + '\n')
 
     sys.stdout.write("\n".join(amalgamation.deps))
