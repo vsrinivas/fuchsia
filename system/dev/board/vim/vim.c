@@ -30,15 +30,35 @@
 // DMC MMIO for display driver
 static pbus_mmio_t vim_display_mmios[] = {
     {
-        .base = DMC_REG_BASE,
-        .length = PAGE_SIZE,
+        .base =     S912_PRESET_BASE,
+        .length =   S912_PRESET_LENGTH,
+    },
+    {
+        .base =     S912_HDMITX_BASE,
+        .length =   S912_HDMITX_LENGTH,
+    },
+    {
+        .base =     S912_HIU_BASE,
+        .length =   S912_HIU_LENGTH,
+    },
+    {
+        .base =     S912_VPU_BASE,
+        .length =   S912_VPU_LENGTH,
+    },
+    {
+        .base =     S912_HDMITX_SEC_BASE,
+        .length =   S912_HDMITX_SEC_LENGTH,
+    },
+    {
+        .base =     S912_DMC_REG_BASE,
+        .length =   S912_DMC_REG_LENGTH,
     },
 };
 
 static const pbus_dev_t display_dev = {
     .name = "display",
     .vid = PDEV_VID_KHADAS,
-    .pid = PDEV_PID_VIM,
+    .pid = PDEV_PID_VIM2,
     .did = PDEV_DID_VIM_DISPLAY,
     .mmios = vim_display_mmios,
     .mmio_count = countof(vim_display_mmios),

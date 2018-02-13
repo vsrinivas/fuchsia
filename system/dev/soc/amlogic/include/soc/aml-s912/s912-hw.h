@@ -4,16 +4,19 @@
 
 #pragma once
 
-// DMC registers
-#define DMC_REG_BASE        0xc8838000
-
-#define DMC_CAV_LUT_DATAL           (0x12 << 2)
-#define DMC_CAV_LUT_DATAH           (0x13 << 2)
-#define DC_CAV_LUT_ADDR             (0x14 << 2)
-
-#define DC_CAV_LUT_ADDR_INDEX_MASK  0x7
-#define DC_CAV_LUT_ADDR_RD_EN       (1 << 8)
-#define DC_CAV_LUT_ADDR_WR_EN       (2 << 8)
+// Display Related Register
+#define S912_PRESET_BASE                0xC1104000
+#define S912_PRESET_LENGTH              0x1000
+#define S912_DMC_REG_BASE               0xC8838000
+#define S912_DMC_REG_LENGTH             0x1000
+#define S912_HDMITX_BASE                0xC883A000
+#define S912_HDMITX_LENGTH              0x2000
+#define S912_HIU_BASE                   0xC883C000
+#define S912_HIU_LENGTH                 0x2000
+#define S912_VPU_BASE                   0xD0100000
+#define S912_VPU_LENGTH                 0x40000
+#define S912_HDMITX_SEC_BASE            0xDA83A000
+#define S912_HDMITX_SEC_LENGTH          0x2000
 
 // Alternate Functions for I2C
 #define S912_I2C_SDA_A      S912_GPIODV(24)
