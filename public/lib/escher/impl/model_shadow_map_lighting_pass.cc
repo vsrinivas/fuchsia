@@ -15,7 +15,7 @@ layout(location = 1) out vec4 shadowPos;
 
 void main() {
   vec4 pos = ComputeVertexPosition();
-  gl_Position = camera_transform * pos;
+  gl_Position = vp_matrix * model_transform * pos;
   shadowPos = light_transform * pos;
   fragUV = inUV;
 }
@@ -39,7 +39,7 @@ layout(set = 0, binding = 0) uniform PerModel {
 layout(set = 0, binding = 1) uniform sampler2D shadow_map_tex;
 
 layout(set = 1, binding = 0) uniform PerObject {
-  mat4 camera_transform;
+  mat4 model_transform;
   mat4 light_transform;
   vec4 color;
 };

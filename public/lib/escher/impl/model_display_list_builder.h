@@ -68,7 +68,8 @@ class ModelDisplayListBuilder {
 
   // Global camera view/projection matrix, adjusted to meet the needs of this
   // particular display list.
-  const mat4 camera_transform_;
+  const mat4 view_transform_;
+  const mat4 projection_transform_;
 
   // If this is false, use |default_white_texture_| instead of a material's
   // existing texture (e.g. to save bandwidth during depth-only passes).

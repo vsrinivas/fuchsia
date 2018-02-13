@@ -33,7 +33,7 @@ static mat4 AdjustCameraTransform(const Stage& stage,
   scale_adjustment[3][0] = scale - 1.f;
   scale_adjustment[3][1] = scale - 1.f;
 
-  return scale_adjustment * camera.projection() * camera.transform();
+  return scale_adjustment * camera.projection();
 }
 
 ModelDisplayListBuilder::~ModelDisplayListBuilder() = default;
@@ -55,7 +55,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     ModelDisplayListFlags flags)
     : device_(device),
       volume_(stage.viewing_volume()),
-      camera_transform_(AdjustCameraTransform(stage, camera, scale)),
+      view_transform_(camera.transform()),
+      projection_transform_(AdjustCameraTransform(stage, camera, scale)),
       use_material_textures_(render_pass->UseMaterialTextures()),
       disable_depth_test_(flags & ModelDisplayListFlag::kDisableDepthTest),
       white_texture_(white_texture),
@@ -73,14 +74,13 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   // Obtain a uniform buffer and write the PerModel data to it.
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
-  auto per_model =
-      reinterpret_cast<ModelData::PerModel*>(uniform_buffer_->ptr());
+  auto per_model = reinterpret_cast<ModelData::PerModel*>(
+      &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   per_model->frag_coord_to_uv_multiplier =
       vec2(1.f / volume_.width(), 1.f / volume_.height());
   per_model->ambient_light_intensity = ambient_light_intensity;
   per_model->direct_light_intensity = direct_light_intensity;
   per_model->time = model.time();
-  uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
 
   if (shadow_texture) {
     textures_.push_back(shadow_texture);
@@ -111,7 +111,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   vk::DescriptorBufferInfo buffer_info;
   buffer_info.buffer = uniform_buffer_->get();
   buffer_info.range = sizeof(ModelData::PerModel);
-  buffer_info.offset = 0;
+  buffer_info.offset = uniform_buffer_write_index_;
   buffer_write.pBufferInfo = &buffer_info;
 
   auto& image_write = writes[1];
@@ -125,6 +125,29 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   image_info.imageView = shadow_texture_->vk_image_view();
   image_info.sampler = shadow_texture_->vk_sampler();
   image_write.pImageInfo = &image_info;
+
+  uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
+
+  // Obtain a uniform buffer and write the ViewProjection data to it.
+  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection), 0);
+  auto view_projection = reinterpret_cast<ModelData::ViewProjection*>(
+      &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
+  view_projection->vp_matrix = projection_transform_ * view_transform_;
+
+  auto& vp_buffer_write = writes[2];
+  vp_buffer_write.dstSet = per_model_descriptor_set_;
+  vp_buffer_write.dstBinding =
+      ModelData::ViewProjection::kDescriptorSetUniformBinding;
+  vp_buffer_write.dstArrayElement = 0;
+  vp_buffer_write.descriptorCount = 1;
+  vp_buffer_write.descriptorType = vk::DescriptorType::eUniformBuffer;
+  vk::DescriptorBufferInfo vp_buffer_info;
+  vp_buffer_info.buffer = uniform_buffer_->get();
+  vp_buffer_info.range = sizeof(ModelData::ViewProjection);
+  vp_buffer_info.offset = uniform_buffer_write_index_;
+  vp_buffer_write.pBufferInfo = &vp_buffer_info;
+
+  uniform_buffer_write_index_ += sizeof(ModelData::ViewProjection);
 
   device_.updateDescriptorSets(ModelData::PerModel::kDescriptorCount, writes, 0,
                                nullptr);
@@ -268,7 +291,7 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   auto& mat = object.material();
 
   // Push uniforms for scale/translation and color.
-  per_object->camera_transform = camera_transform_ * object.transform();
+  per_object->model_transform = object.transform();
   per_object->shadow_transform = shadow_matrix_ * object.transform();
   per_object->color = mat ? mat->color() : vec4(1, 1, 1, 1);  // always opaque
 

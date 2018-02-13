@@ -31,8 +31,9 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
 
   // Describes per-model data accessible by shaders.
   struct PerModel {
-    // One uniform descriptor and one texture descriptor.
-    static constexpr uint32_t kDescriptorCount = 2;
+    // Two uniform descriptor, and one texture descriptor.
+    // second uniform descriptor is used to hold the ViewProjection
+    static constexpr uint32_t kDescriptorCount = 3;
     // layout(set = 0, ...)
     static constexpr uint32_t kDescriptorSetIndex = 0;
     // layout(set = 0, binding = 0) uniform PerModel { ... }
@@ -57,6 +58,18 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     vec2 shadow_map_uv_multiplier;
   };
 
+  // The VP matrix is put into its own binding in the PerModel DescriptorSet
+  // in order to allow it to be bound to a separate buffer to allow late
+  // latching view matrices from a PoseBuffer. For details see
+  // garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h
+  struct ViewProjection {
+    // layout(set = 0, binding = 2) uniform ViewProjection { ... }
+    static constexpr uint32_t kDescriptorSetUniformBinding = 2;
+
+    // The premultiplied View and Projection matrix.
+    mat4 vp_matrix;
+  };
+
   // Describes per-object data accessible by shaders.
   struct PerObject {
     // One uniform descriptor, and one texture descriptor.
@@ -68,8 +81,8 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     // layout(set = 1, binding = 1) sampler2D PerObjectSampler;
     static constexpr uint32_t kDescriptorSetSamplerBinding = 1;
 
-    // Model-view-projection matrix.
-    mat4 camera_transform;
+    // Model matrix.
+    mat4 model_transform;
     // Model-light matrix for shadow mapping.
     mat4 shadow_transform;
     // Color of object.  Applied as filter to object's material, if it has one.

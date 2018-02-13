@@ -11,7 +11,7 @@ namespace impl {
 
 static const char kVertexShaderMainSourceCode[] = R"GLSL(
 void main() {
-  gl_Position = camera_transform * ComputeVertexPosition();
+  gl_Position = vp_matrix * model_transform * ComputeVertexPosition();
 }
 )GLSL";
 

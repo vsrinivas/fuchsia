@@ -116,12 +116,17 @@ layout(set = 0, binding = 0) uniform PerModel {
   vec3 direct_light_intensity;
 };
 
+// Use binding 2 to avoid potential collision with PerModelSampler
+layout(set = 0, binding = 2) uniform ViewProjection {
+  mat4 vp_matrix;
+};
+
 // Attribute locations must match constants in model_data.h
 )GLSL";
 
 static constexpr char kVertexShaderPosition[] = R"GLSL(
 layout(set = 1, binding = 0) uniform PerObject {
-  mat4 camera_transform;
+  mat4 model_transform;
   mat4 light_transform;
   vec4 color;
 };
@@ -145,7 +150,7 @@ float EvalSineParams(SineParams params) {
 }
 
 layout(set = 1, binding = 0) uniform PerObject {
-  mat4 camera_transform;
+  mat4 model_transform;
   mat4 light_transform;
   vec4 color;
   // Corresponds to ModifierWobble::SineParams[0].
