@@ -5,6 +5,7 @@
 #include "job_scheduler.h"
 
 #include "magma_util/dlog.h"
+#include "platform_trace.h"
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
     : owner_(owner), job_slots_(job_slots), executing_atoms_(job_slots)
@@ -14,6 +15,23 @@ JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
 void JobScheduler::EnqueueAtom(std::shared_ptr<MsdArmAtom> atom)
 {
     atoms_.push_back(std::move(atom));
+}
+
+// Use different names for different slots so they'll line up cleanly in the
+// trace viewer.
+static const char* AtomRunningString(uint32_t slot)
+{
+    switch (slot) {
+        case 0:
+            return "Atom running slot 0";
+        case 1:
+            return "Atom running slot 1";
+        case 2:
+            return "Atom running slot 2";
+        default:
+            DASSERT(false);
+            return "Atom running unknown slot";
+    }
 }
 
 void JobScheduler::TryToSchedule()
@@ -45,6 +63,8 @@ void JobScheduler::TryToSchedule()
                         (*it)->SetExecutionStarted();
                         executing_atoms_[slot] = *it;
                         atoms_.erase(it);
+                        TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot),
+                                          executing_atoms_[slot]->trace_nonce());
                         owner_->RunAtom(executing_atoms_[slot].get());
                         break;
                     }
@@ -74,6 +94,7 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
 void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
 {
     DASSERT(executing_atoms_[slot]);
+    TRACE_ASYNC_END("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce());
     owner_->AtomCompleted(executing_atoms_[slot].get(), result_code);
     executing_atoms_[slot].reset();
     TryToSchedule();

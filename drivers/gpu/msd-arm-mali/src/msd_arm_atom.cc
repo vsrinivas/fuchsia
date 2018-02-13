@@ -5,6 +5,14 @@
 #include "msd_arm_atom.h"
 
 #include "magma_util/macros.h"
+#include "platform_trace.h"
+
+MsdArmAtom::MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address,
+                       uint32_t slot, uint8_t atom_number, magma_arm_mali_user_data user_data)
+    : trace_nonce_(TRACE_NONCE()), connection_(connection), gpu_address_(gpu_address), slot_(slot),
+      atom_number_(atom_number), user_data_(user_data)
+{
+}
 
 void MsdArmAtom::set_dependencies(const std::vector<std::weak_ptr<MsdArmAtom>>& dependencies)
 {

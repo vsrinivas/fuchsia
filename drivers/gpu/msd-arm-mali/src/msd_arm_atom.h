@@ -22,12 +22,9 @@ public:
 
     virtual ~MsdArmAtom() {}
     MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address, uint32_t slot,
-               uint8_t atom_number, magma_arm_mali_user_data user_data)
-        : connection_(connection), gpu_address_(gpu_address), slot_(slot),
-          atom_number_(atom_number), user_data_(user_data)
-    {
-    }
+               uint8_t atom_number, magma_arm_mali_user_data user_data);
 
+    uint64_t trace_nonce() const { return trace_nonce_; }
     std::weak_ptr<MsdArmConnection> connection() const { return connection_; }
     uint64_t gpu_address() const { return gpu_address_; }
     uint32_t slot() const { return slot_; }
@@ -61,6 +58,7 @@ public:
 
 private:
     // The following data is immmutable after construction.
+    const uint64_t trace_nonce_;
     const std::weak_ptr<MsdArmConnection> connection_;
     const uint64_t gpu_address_;
     const uint32_t slot_;
