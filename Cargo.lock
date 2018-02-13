@@ -373,6 +373,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "garnet_public_lib_mdns_fidl"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "garnet_public_lib_app_fidl 0.1.0",
+ "garnet_public_lib_netstack_fidl_net_address 0.1.0",
+ "tokio-core 0.1.12",
+ "tokio-fuchsia 0.1.0",
+]
+
+[[package]]
 name = "garnet_public_lib_netstack_fidl_net_address"
 version = "0.1.0"
 dependencies = [

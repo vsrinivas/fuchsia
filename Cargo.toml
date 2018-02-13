@@ -34,6 +34,7 @@ members =  [
   "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl",
   "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl",
   "public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
+  "public/rust/fidl_crates/garnet_public_lib_mdns_fidl",
   "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address",
   "public/rust/fidl_crates/garnet_public_lib_network_fidl",
   "public/rust/fidl_crates/garnet_public_lib_power_fidl",
@@ -60,6 +61,7 @@ garnet_public_lib_app_fidl_service_provider = { path = "public/rust/fidl_crates/
 garnet_public_lib_bluetooth_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl" }
 garnet_public_lib_device_settings_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl" }
 garnet_public_lib_fsl_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_fsl_fidl" }
+garnet_public_lib_mdns_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_mdns_fidl" }
 garnet_public_lib_netstack_fidl_net_address = { path = "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address" }
 garnet_public_lib_network_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_network_fidl" }
 garnet_public_lib_power_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_power_fidl" }
