@@ -60,14 +60,15 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     gic_write_gich_hcr(GICH_HCR_EN);
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
     vcpu->gich_state_.num_lrs = (gic_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
-    vcpu->gich_state_.elrs = (1 << vcpu->gich_state_.num_lrs) - 1;
+    vcpu->gich_state_.elrs = (1u << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_.guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
     vcpu->el2_state_.guest_state.system_state.vmpidr_el2 = vmpidr_of(vpid, mpidr);
     vcpu->el2_state_.host_state.system_state.vmpidr_el2 = mpidr;
-    vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC |
-                 HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
+    vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_FB |
+                 HCR_EL2_BSU_IS | HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC |
+                 HCR_EL2_TVM | HCR_EL2_RW;
 
     *out = fbl::move(vcpu);
     return ZX_OK;

@@ -508,19 +508,19 @@ FUNCTION_LABEL(el2_guest_exit)
     host_state ldp, HS_X18
 
     mrs x10, cptr_el2
-    tbz x10, CPTR_EL2_TFP_SHIFT, .Lfp_restore
+    tbnz x10, CPTR_EL2_TFP_SHIFT, .Lfp_untrap
 
-    // Disable floating-point traps.
-    mov x10, CPTR_EL2_RES1
-    msr cptr_el2, x10
-    b .Lfp_skip
-
-.Lfp_restore:
     // Restore floating-point state if it was modified.
     fp_state stp, GS_FP_STATE
     fp_state ldp, HS_FP_STATE
+    b .Lfp_done
 
-.Lfp_skip:
+.Lfp_untrap:
+    // Disable floating-point traps.
+    mov x10, CPTR_EL2_RES1
+    msr cptr_el2, x10
+
+.Lfp_done:
     // Disable virtual timer set by guest, and enable access to physical timer.
     msr cntv_ctl_el0, xzr
     mov x10, CNTHCTL_EL2_EL1PCTEN | CNTHCTL_EL2_EL1PCEN
@@ -549,11 +549,11 @@ FUNCTION_LABEL(el2_fp_resume)
     // Disable floating-point traps.
     mov x10, CPTR_EL2_RES1
     msr cptr_el2, x10
+    isb
 
     fp_state stp, HS_FP_STATE
     fp_state ldp, GS_FP_STATE
 
     // Return to guest.
-    ldp x9, x10, [sp]
-    pop_stack
+    ldp x9, x10, [sp], 16
     eret
