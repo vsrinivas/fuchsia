@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,6 +20,9 @@
 #include <unistd.h>
 
 #include <unittest/unittest.h>
+
+// The suffix appended to the filename of each test.
+static const char* kOutputSuffix = ".out";
 
 typedef enum {
     SUCCESS,
@@ -234,20 +238,44 @@ static bool run_test(const char* path, FILE* out) {
     return true;
 }
 
+// Creates an output file name from a path to a test.
+//
+// |test_path| is the absolute path to the test binary.
+// |out| is the location to write output to.
+// |out_len| is the amount of space available at that location.
+//
+// Returns non-zero on failure with errno set.
+static int create_output_file_name(const char* test_path, char* out, const size_t out_len) {
+    // Generate output file name.
+    size_t path_len = snprintf(out, out_len, "%s%s", test_path, kOutputSuffix);
+    if (path_len >= out_len) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    return 0;
+}
+
 // Creates an output file name and opens the file for writing.
 //
-// |test_name| is the name of the test binary.
 // |output_dir| is the location the output file should be written.
+// |test_path| is the absolute path to the test binary.
 //
 // Returns NULL on failure, with errno set.
-static FILE* open_output_file(const char* test_name, const char* output_dir) {
+static FILE* open_output_file(const char* output_dir, const char* test_path) {
     char output_path[PATH_MAX];
 
-    // Generate output file name.
-    size_t path_len = snprintf(output_path, sizeof(output_path), "%s/%s.out",
-                               output_dir, test_name);
-    if (path_len >= sizeof(output_path)) {
+    // test_path must be an absolute path, and therefore must start with '/'.
+    assert(test_path[0] == '/');
+
+    // Generate the full path to the output file.
+    size_t output_dir_len = strlen(output_dir);
+    if (output_dir_len >= sizeof(output_path)) {
         errno = ENAMETOOLONG;
+        return NULL;
+    }
+    memcpy(output_path, output_dir, output_dir_len + 1);
+    if (create_output_file_name(test_path, &output_path[output_dir_len],
+                                sizeof(output_path) - output_dir_len)) {
         return NULL;
     }
 
@@ -261,7 +289,7 @@ static FILE* open_output_file(const char* test_name, const char* output_dir) {
 // |filter_names| is a list of test names to filter on (i.e. tests whose names
 // don't match are skipped). May be NULL.
 // |num_filter_names| is the length of |filter_names|.
-// |output_dir| is the output directory to write test output to.
+// |output_dir| is the output directory for test output, passed in via -o.
 // |num_tests| is an output parameter which will be set to the number of test
 // binaries executed.
 // |num_failed| is an output parameter which will be set to the number of test
@@ -306,7 +334,7 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
         // to a file whose name is based on the test name.
         FILE* out = NULL;
         if (output_dir != NULL) {
-            out = open_output_file(test_name, output_dir);
+            out = open_output_file(output_dir, test_path);
             if (out == NULL) {
                 printf("Error: Could not open output file for test %s: %s\n", test_name,
                        strerror(errno));
@@ -339,22 +367,43 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
 //
 // |tests| is a linked-list of test results.
 // |summary_json| is the file stream to write the JSON summary to.
-void write_summary_json(const list_node_t* tests, FILE* summary_json) {
+//
+// Returns non-zero on failure, with errno set.
+static int write_summary_json(const list_node_t* tests, FILE* summary_json) {
     int test_count = 0;
     test_t* test = NULL;
     test_t* temp = NULL;
-    fprintf(summary_json, "{\"tests\": [\n");
+    fprintf(summary_json, "{\"tests\":[\n");
     list_for_every_entry_safe (tests, test, temp, test_t, node) {
         if (test_count != 0) {
             fprintf(summary_json, ",\n");
         }
         fprintf(summary_json, "{");
-        fprintf(summary_json, "\"name\": \"%s\"", test->name);
-        fprintf(summary_json, ",\"result\": \"%s\"", test->result == SUCCESS ? "PASS" : "FAIL");
+
+        // Write the name of the test.
+        fprintf(summary_json, "\"name\":\"%s\"", test->name);
+
+        // Write the path to the output file, relative to the test output root
+        // (i.e. what's passed in via -o). The test name is already a path to
+        // the test binary on the target, so to make this a relative path, we
+        // only have to skip leading '/' characters in the test name.
+        char buf[PATH_MAX];
+        if (create_output_file_name(test->name, buf, sizeof(buf))) {
+            return -1;
+        }
+        char *output_file = buf;
+        for (; *output_file == '/'; output_file++);
+        fprintf(summary_json, ",\"output_file\":\"%s\"", output_file);
+
+        // Write the result of the test, which is either PASS or FAIL. We only
+        // have one PASS condition in test_result_t, which is SUCCESS.
+        fprintf(summary_json, ",\"result\":\"%s\"", test->result == SUCCESS ? "PASS" : "FAIL");
+
         fprintf(summary_json, "}");
         test_count++;
     }
-    fprintf(summary_json, "]}\n");
+    fprintf(summary_json, "\n]}\n");
+    return 0;
 }
 
 int usage(char* name) {
@@ -498,9 +547,8 @@ int main(int argc, char** argv) {
         }
 
         // Ensure the output directory for this test binary's output exists.
-        char buf[PATH_MAX];
-        char* test_output_dir = NULL;
         if (output_dir != NULL) {
+            char buf[PATH_MAX];
             size_t path_len = snprintf(buf, sizeof(buf), "%s/%s", output_dir, abs_test_dir);
             if (path_len >= sizeof(buf)) {
                 printf("Error: Output path is too long: %s/%s\n", output_dir, abs_test_dir);
@@ -511,13 +559,12 @@ int main(int argc, char** argv) {
                        strerror(errno));
                 return -1;
             }
-            test_output_dir = buf;
         }
 
         int num_tests = 0;
         int num_failed = 0;
         bool success = run_tests_in_dir(test_dirs[i], filter_names, num_filter_names,
-                                        test_output_dir, &num_tests, &num_failed);
+                                        output_dir, &num_tests, &num_failed);
         total_count += num_tests;
         failed_count += num_failed;
 
@@ -539,7 +586,10 @@ int main(int argc, char** argv) {
             printf("Error: Could not open JSON summary file.\n");
             return -1;
         }
-        write_summary_json(&tests, summary_json);
+        if (write_summary_json(&tests, summary_json)) {
+            printf("Error: Failed to write JSON summary.\n");
+            return -1;
+        }
         if (fclose(summary_json)) {
             printf("Error: Could not close JSON summary.\n");
             return -1;

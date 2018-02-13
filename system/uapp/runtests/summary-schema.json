@@ -17,12 +17,13 @@
             "type": "object",
             "properties": {
                 "name": { "type": "string" },
+                "output_file": { "type": "string" },
                 "result": {
                     "type": "string",
                     "enum": ["PASS", "FAIL"]
                 }
             },
-            "required": [ "name", "result" ]
+            "required": [ "name", "output_file", "result" ]
         }
     }
 }
