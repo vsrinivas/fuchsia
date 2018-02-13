@@ -18,6 +18,8 @@ std::pair<bool, f1dl::Array<ContextValuePtr>> TakeContextValue(
 void AddToContextQuery(ContextQuery* query, const std::string& key,
                        ContextSelectorPtr selector);
 
+bool HasSelectorKey(ContextQuery* const query, const std::string& key);
+
 }  // namespace maxwell
 
 #endif  // LIB_CONTEXT_CPP_CONTEXT_HELPER_H_

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 
+#include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
 
 namespace maxwell {
@@ -65,9 +66,11 @@ void RankedSuggestionsList::Rank(
   for (auto& suggestion : suggestions_) {
     double confidence = 0.0;
     for (auto& feature : ranking_features_) {
+      f1dl::Array<ContextValuePtr> context_values = TakeContextValue(
+          context_update.get(), feature.second->UniqueId()).second;
       confidence +=
           feature.first *
-          feature.second->ComputeFeature(query, *suggestion, context_update);
+          feature.second->ComputeFeature(query, *suggestion, context_values);
     }
     // TODO(jwnichols): Reconsider this normalization approach.
     // Weights may be negative, so there is some chance that the calculated

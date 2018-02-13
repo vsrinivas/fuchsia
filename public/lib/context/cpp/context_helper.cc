@@ -24,4 +24,13 @@ void AddToContextQuery(ContextQuery* const query, const std::string& key,
   query->selector.push_back(std::move(entry));
 }
 
+bool HasSelectorKey(ContextQuery* const query, const std::string& key) {
+  for (auto& it : query->selector) {
+    if (it->key == key) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace maxwell

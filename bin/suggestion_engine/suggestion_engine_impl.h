@@ -199,6 +199,8 @@ class SuggestionEngineImpl : public ContextListener,
                            const std::string& source_url,
                            uint32_t story_color);
 
+  void RegisterRankingFeatures();
+
   void PlayMediaResponse(MediaResponsePtr media_response);
   void HandleMediaUpdates(uint64_t version,
                           media::MediaTimelineControlPointStatusPtr status);

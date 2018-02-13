@@ -73,6 +73,8 @@ source_set("ranking") {
     "ranking_feature.h",
     "ranking_features/kronk_ranking_feature.cc",
     "ranking_features/kronk_ranking_feature.h",
+    "ranking_features/mod_pair_ranking_feature.cc",
+    "ranking_features/mod_pair_ranking_feature.h",
     "ranking_features/proposal_hint_ranking_feature.cc",
     "ranking_features/proposal_hint_ranking_feature.h",
     "ranking_features/query_match_ranking_feature.cc",
@@ -80,10 +82,15 @@ source_set("ranking") {
     "suggestion_filter.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
   deps = [
     ":models",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/suggestion/fidl",
   ]
 }
@@ -98,6 +105,7 @@ source_set("state") {
     ":models",
     ":ranking",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
   ]

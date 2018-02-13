@@ -13,7 +13,7 @@ ProposalHintRankingFeature::~ProposalHintRankingFeature() = default;
 double ProposalHintRankingFeature::ComputeFeatureInternal(
     const UserInput& query,
     const RankedSuggestion& suggestion,
-    const ContextUpdatePtr& context_update) {
+    const f1dl::Array<ContextValuePtr>& context_update_values) {
   return suggestion.prototype->proposal->confidence;
 }
 

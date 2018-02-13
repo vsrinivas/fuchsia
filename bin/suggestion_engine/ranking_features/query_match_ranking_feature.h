@@ -19,7 +19,7 @@ class QueryMatchRankingFeature : public RankingFeature {
  protected:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion,
-      const ContextUpdatePtr& context_update) override;
+      const f1dl::Array<ContextValuePtr>& context_update_values) override;
 };
 
 }  // namespace maxwell

@@ -20,15 +20,12 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace maxwell {
-
-namespace {
-constexpr char kContextListenerStoriesKey[] = "stories";
-}
 
 SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
     : next_processor_(this), context_listener_binding_(this) {
@@ -52,25 +49,6 @@ SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
     audio_server_ = nullptr;
     media_packet_producer_ = nullptr;
   });
-
-  // Create common ranking features
-  std::shared_ptr<RankingFeature> proposal_hint_feature =
-      std::make_shared<ProposalHintRankingFeature>();
-  std::shared_ptr<RankingFeature> kronk_feature =
-      std::make_shared<KronkRankingFeature>();
-
-  // TODO(jwnichols): Replace the code configuration of the ranking features
-  // with a configuration file
-
-  // Set up the next ranking features
-  next_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
-  next_suggestions_.AddRankingFeature(-0.1, kronk_feature);
-
-  // Set up the query ranking features
-  query_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
-  query_suggestions_.AddRankingFeature(-0.1, kronk_feature);
-  query_suggestions_.AddRankingFeature(
-      0, std::make_shared<QueryMatchRankingFeature>());
 }
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
@@ -230,25 +208,47 @@ void SuggestionEngineImpl::Initialize(
   focus_provider_ptr_.Bind(std::move(focus_provider));
   context_writer_.Bind(std::move(context_writer));
   context_reader_.Bind(std::move(context_reader));
-
+  RegisterRankingFeatures();
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
+}
+
+// end SuggestionEngine
+
+void SuggestionEngineImpl::RegisterRankingFeatures() {
+  // Create common ranking features
+  std::shared_ptr<RankingFeature> proposal_hint_feature =
+      std::make_shared<ProposalHintRankingFeature>();
+  std::shared_ptr<RankingFeature> kronk_feature =
+      std::make_shared<KronkRankingFeature>();
+  std::shared_ptr<RankingFeature> mod_pair_feature =
+      std::make_shared<ModPairRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
   auto query = ContextQuery::New();
-  auto selector = ContextSelector::New();
-  selector->type = ContextValueType::MODULE;
-  selector->meta = ContextMetadata::New();
-  selector->meta->story = StoryMetadata::New();
-  selector->meta->story->focused = FocusedState::New();
-  selector->meta->story->focused->state = FocusedState::State::FOCUSED;
-  AddToContextQuery(query.get(), kContextListenerStoriesKey,
-                    std::move(selector));
+  ContextSelectorPtr selector = mod_pair_feature->CreateContextSelector();
+  if (!selector.is_null()) {
+    AddToContextQuery(query.get(), mod_pair_feature->UniqueId(),
+                      std::move(selector));
+  }
   context_reader_->Subscribe(std::move(query),
                              context_listener_binding_.NewBinding());
-}
 
-// end SuggestionEngine
+  // TODO(jwnichols): Replace the code configuration of the ranking features
+  // with a configuration file
+
+  // Set up the next ranking features
+  next_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
+  next_suggestions_.AddRankingFeature(-0.1, kronk_feature);
+  next_suggestions_.AddRankingFeature(0, mod_pair_feature);
+
+  // Set up the query ranking features
+  query_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
+  query_suggestions_.AddRankingFeature(-0.1, kronk_feature);
+  query_suggestions_.AddRankingFeature(0, mod_pair_feature);
+  query_suggestions_.AddRankingFeature(
+      0, std::make_shared<QueryMatchRankingFeature>());
+}
 
 void SuggestionEngineImpl::CleanUpPreviousQuery() {
   active_query_.reset();
