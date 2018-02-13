@@ -5,10 +5,17 @@
 #ifndef MSD_ARM_DEVICE_H
 #define MSD_ARM_DEVICE_H
 
+#include <deque>
+#include <list>
+#include <mutex>
+#include <thread>
+#include <vector>
+
 #include "address_manager.h"
 #include "device_request.h"
 #include "gpu_features.h"
 #include "job_scheduler.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -18,11 +25,6 @@
 #include "platform_interrupt.h"
 #include "platform_semaphore.h"
 #include "power_manager.h"
-#include <deque>
-#include <list>
-#include <mutex>
-#include <thread>
-#include <vector>
 
 class MsdArmDevice : public msd_device_t,
                      public JobScheduler::Owner,
@@ -130,7 +132,7 @@ private:
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
     magma::Status ProcessMmuInterrupt();
-    magma::Status ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom);
+    magma::Status ProcessScheduleAtoms();
     magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
 
     void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
@@ -156,6 +158,9 @@ private:
     std::unique_ptr<magma::PlatformPort> device_port_;
     std::mutex device_request_mutex_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+
+    std::mutex schedule_mutex_;
+    FXL_GUARDED_BY(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;

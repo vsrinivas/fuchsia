@@ -66,15 +66,10 @@ protected:
 
 class MsdArmDevice::ScheduleAtomRequest : public DeviceRequest {
 public:
-    ScheduleAtomRequest(std::shared_ptr<MsdArmAtom> atom) : atom_(std::move(atom)) {}
+    ScheduleAtomRequest() {}
 
 protected:
-    magma::Status Process(MsdArmDevice* device) override
-    {
-        return device->ProcessScheduleAtom(std::move(atom_));
-    }
-
-    std::shared_ptr<MsdArmAtom> atom_;
+    magma::Status Process(MsdArmDevice* device) override { return device->ProcessScheduleAtoms(); }
 };
 
 class MsdArmDevice::CancelAtomsRequest : public DeviceRequest {
@@ -562,7 +557,14 @@ void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, 
 
 void MsdArmDevice::ScheduleAtom(std::shared_ptr<MsdArmAtom> atom)
 {
-    EnqueueDeviceRequest(std::make_unique<ScheduleAtomRequest>(std::move(atom)));
+    bool need_schedule;
+    {
+        std::lock_guard<std::mutex> lock(schedule_mutex_);
+        need_schedule = atoms_to_schedule_.empty();
+        atoms_to_schedule_.push_back(std::move(atom));
+    }
+    if (need_schedule)
+        EnqueueDeviceRequest(std::make_unique<ScheduleAtomRequest>());
 }
 
 void MsdArmDevice::CancelAtoms(std::shared_ptr<MsdArmConnection> connection)
@@ -664,10 +666,16 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
     return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdArmDevice::ProcessScheduleAtom(std::shared_ptr<MsdArmAtom> atom)
+magma::Status MsdArmDevice::ProcessScheduleAtoms()
 {
-    TRACE_DURATION("magma", "MsdArmDevice::ProcessScheduleAtom");
-    scheduler_->EnqueueAtom(std::move(atom));
+    TRACE_DURATION("magma", "MsdArmDevice::ProcessScheduleAtoms");
+    std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule;
+    {
+        std::lock_guard<std::mutex> lock(schedule_mutex_);
+        atoms_to_schedule.swap(atoms_to_schedule_);
+    }
+    for (auto& atom : atoms_to_schedule)
+        scheduler_->EnqueueAtom(std::move(atom));
     scheduler_->TryToSchedule();
     return MAGMA_STATUS_OK;
 }
