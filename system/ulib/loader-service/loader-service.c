@@ -4,6 +4,8 @@
 
 #include <loader-service/loader-service.h>
 
+#include <async/loop.h>
+#include <async/wait.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fdio/debug.h>
@@ -30,9 +32,7 @@
 #define PREFIX_MAX 32
 
 struct loader_service {
-    char name[ZX_MAX_NAME_LEN];
-    mtx_t dispatcher_lock;
-    fdio_dispatcher_t* dispatcher;
+    async_t* async;
 
     const loader_service_ops_t* ops;
     void* ctx;
@@ -131,14 +131,14 @@ static zx_handle_t load_object_fd(int fd, const char* fn, zx_handle_t* out) {
     return status;
 }
 
-static zx_status_t fs_load_object(void *ctx, const char* name, zx_handle_t* out) {
+static zx_status_t fs_load_object(void* ctx, const char* name, zx_handle_t* out) {
     int fd = open_from_libpath(name);
     if (fd >= 0)
         return load_object_fd(fd, name, out);
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t fs_load_abspath(void *ctx, const char* path, zx_handle_t* out) {
+static zx_status_t fs_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
     int fd = open(path, O_RDONLY);
     if (fd >= 0)
         return load_object_fd(fd, path, out);
@@ -342,68 +342,102 @@ static int loader_service_thread(void* arg) {
     return 0;
 }
 
-zx_status_t loader_service_create(const char* name,
+zx_status_t loader_service_create(async_t* async,
                                   const loader_service_ops_t* ops,
                                   void* ctx,
                                   loader_service_t** out) {
-    if (name == NULL || name[0] == '\0' || out == NULL ||
-        ops == NULL) {
+    if (out == NULL || ops == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
+
     loader_service_t* svc = calloc(1, sizeof(loader_service_t));
     if (svc == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    if (!async) {
+        zx_status_t status = async_loop_create(NULL, &async);
+        if (status != ZX_OK) {
+            free(svc);
+            return status;
+        }
+
+        status = async_loop_start_thread(async, "loader-service", NULL);
+        if (status != ZX_OK) {
+            free(svc);
+            async_loop_destroy(async);
+            return status;
+        }
+    }
+
+    svc->async = async;
     svc->ops = ops;
     svc->ctx = ctx;
-    strncpy(svc->name, name, sizeof(svc->name) - 1);
-    *out = svc;
 
+    *out = svc;
     return ZX_OK;
 }
 
-zx_status_t loader_service_create_fs(const char* name,
+zx_status_t loader_service_create_fs(async_t* async,
                                      loader_service_t** out) {
-    return loader_service_create(name, &fs_ops, NULL, out);
+    return loader_service_create(async, &fs_ops, NULL, out);
 }
 
-static zx_status_t multiloader_cb(zx_handle_t h, void* cb, void* cookie) {
-    if (h == 0) {
-        // close notification, which we can ignore
-        return 0;
-    }
-    loader_service_t* svc = cookie;
-    return handle_loader_rpc(h, default_load_fn, svc);
+typedef struct loader_service_wait loader_service_wait_t;
+struct loader_service_wait {
+    async_wait_t wait;
+    loader_service_t* svc;
+};
+
+static inline loader_service_t* loader_service_wait_get_svc(async_wait_t* wait) {
+    return ((loader_service_wait_t*) wait)->svc;
+}
+
+static async_wait_result_t loader_service_handler(async_t* async,
+                                                  async_wait_t* wait,
+                                                  zx_status_t status,
+                                                  const zx_packet_signal_t* signal) {
+    if (status != ZX_OK)
+        goto stop;
+    loader_service_t* svc = loader_service_wait_get_svc(wait);
+    status = handle_loader_rpc(wait->object, default_load_fn, svc);
+    if (status != ZX_OK)
+        goto stop;
+    return ASYNC_WAIT_AGAIN;
+stop:
+    free(wait);
+    return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
+    zx_status_t status = ZX_OK;
+    loader_service_wait_t* wait = NULL;
+
     if (svc == NULL) {
-        return ZX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
+        goto done;
     }
 
-    mtx_lock(&svc->dispatcher_lock);
-    zx_status_t r;
-    if (svc->dispatcher == NULL) {
-        if ((r = fdio_dispatcher_create(&svc->dispatcher,
-                                        multiloader_cb)) < 0) {
-            goto done;
-        }
-        if ((r = fdio_dispatcher_start(svc->dispatcher, svc->name)) < 0) {
-            //TODO: destroy dispatcher once support exists
-            svc->dispatcher = NULL;
-            goto done;
-        }
+    wait = calloc(1, sizeof(loader_service_wait_t));
+    if (wait == NULL) {
+        status = ZX_ERR_NO_MEMORY;
+        goto done;
     }
 
-    r = fdio_dispatcher_add(svc->dispatcher, h, NULL, svc);
+    wait->wait.handler = loader_service_handler;
+    wait->wait.object = h;
+    wait->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    wait->wait.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
+    wait->svc = svc;
+
+    status = async_begin_wait(svc->async, (async_wait_t*) wait);
 
 done:
-    mtx_unlock(&svc->dispatcher_lock);
-    if (r != ZX_OK) {
-        zx_handle_close(r);
+    if (status != ZX_OK) {
+        zx_handle_close(h);
+        free(wait);
     }
-    return r;
+    return status;
 }
 
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {

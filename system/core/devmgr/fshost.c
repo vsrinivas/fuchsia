@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
         printf("fshost: cannot install namespace: %d\n", r);
     }
 
-    if ((r = loader_service_create_fs("system-loader", &loader_service)) != ZX_OK) {
+    if ((r = loader_service_create_fs(NULL, &loader_service)) != ZX_OK) {
         printf("fshost: failed to create loader service: %d\n", r);
     } else {
         loader_service_attach(loader_service, devmgr_loader);

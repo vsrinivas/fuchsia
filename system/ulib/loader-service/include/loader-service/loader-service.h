@@ -9,18 +9,21 @@
 
 __BEGIN_CDECLS
 
-// These routines provide loader service implementations that
-// some users of liblaunchpad may need.  They are compatible with
-// dl_set_loader_service() and are primarily used by devmgr (to
-// provide the default system loader service) and clients of
-// launchpad that need a specialized variant loader.
+typedef struct async_dispatcher async_t; // From <async/dispatcher.h>
+
+// These functions provide an implementation of the shared library loading
+// service.  See <zircon/loader.fidl> for a definition of the protocol.
+//
+// These implementations are compatible with |dl_set_loader_service| and are
+// primarily used by devmgr, fshost, and appmgr to provide shared libraries to
+// the processes they create.
 //
 // Terms:
+//
 // "loader service": A channel that speaks the protocol expected by
 //     dl_set_loader_service(). The service behind the channel receives
 //     load requests (e.g., "libhid.so") and returns VMOs that contain
 //     the data associated with that name.
-// "local loader service": An in-process loader service.
 // "system loader service": A loader service, provided by the system,
 //     that is shared by multiple processes.
 
@@ -41,34 +44,40 @@ typedef struct loader_service loader_service_t;
 
 // Create a new file-system backed loader service capable of handling
 // any number of clients.
-zx_status_t loader_service_create_fs(const char* name, loader_service_t** out);
+//
+// Requests will be processed on the given |async|. If |async| is NULL, this
+// library will create a new thread and listen for requests on that thread.
+zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out);
 
 // Same as connect except caller provides the channel endpoint (which
-// is connected on success, closed on failure)
+// is connected on success, closed on failure).
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t channel);
 
 typedef struct loader_service_ops {
-    // attempt to load a DSO from suitable library paths
+    // attempt to load a shared library from suitable library paths.
     zx_status_t (*load_object)(void* ctx, const char* name, zx_handle_t* vmo);
 
     // attempt to load a script interpreter or debug config file
     zx_status_t (*load_abspath)(void* ctx, const char* path, zx_handle_t* vmo);
 
     // attempt to publish a data sink
-    // takes ownership of the provided vmo on both success and failure
+    // takes ownership of the provided vmo on both success and failure.
     zx_status_t (*publish_data_sink)(void* ctx, const char* name, zx_handle_t vmo);
 } loader_service_ops_t;
 
-// Create a loader service backed by custom loader ops
-zx_status_t loader_service_create(const char* name,
+// Create a loader service backed by custom loader ops.
+//
+// Requests will be processed on the given |async|. If |async| is NULL, this
+// library will create a new thread and listen for requests on that thread.
+zx_status_t loader_service_create(async_t* async,
                                   const loader_service_ops_t* ops, void* ctx,
                                   loader_service_t** out);
 
-// the default publish_data_sink implementation, which publishes
-// into /tmp, provided the fs there supports such publishing
+// The default publish_data_sink implementation, which publishes
+// into /tmp, provided the fs there supports such publishing.
 zx_status_t loader_service_publish_data_sink_fs(const char* name, zx_handle_t vmo);
 
 __END_CDECLS

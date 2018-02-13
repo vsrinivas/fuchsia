@@ -537,8 +537,7 @@ void fshost_start(void) {
     // to allow us to load the fshost (since we don't have filesystems before
     // the fshost starts up).
     zx_handle_t svc;
-    if ((loader_service_create("bootfs-loader", &loader_ops,
-                               &bootfs, &loader_service) != ZX_OK) ||
+    if ((loader_service_create(NULL, &loader_ops, &bootfs, &loader_service) != ZX_OK) ||
         (loader_service_connect(loader_service, &svc) != ZX_OK)) {
         printf("devmgr: cannot create loader service\n");
         exit(1);
