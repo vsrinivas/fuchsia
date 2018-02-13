@@ -12,38 +12,46 @@
 #include <unittest/unittest.h>
 
 #define TEST_SINK_NAME "test-sink"
-#define TEST_CONFIG_GOOD_NAME "test-config-exists"
-#define TEST_CONFIG_BAD_NAME "test-config-does-not-exist"
+#define TEST_CONFIG_GOOD_NAME "/test-config-exists"
+#define TEST_CONFIG_BAD_NAME "/test-config-does-not-exist"
 
 static atomic_bool my_loader_service_ok;
 static atomic_int my_loader_service_calls;
 
-static zx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
-                                            zx_handle_t request_handle,
-                                            const char* name, zx_handle_t* out) {
-    ++my_loader_service_calls;
+static zx_status_t my1_load_object(void* ctx, const char* name, zx_handle_t* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
 
-    EXPECT_EQ(load_op, (uint32_t)LDMSG_OP_DEBUG_PUBLISH_DATA_SINK,
-              "called with unexpected load op");
+static zx_status_t my1_load_abspath(void* ctx, const char* name, zx_handle_t* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t my1_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
+    ++my_loader_service_calls;
 
     EXPECT_STR_EQ(TEST_SINK_NAME, name, sizeof(TEST_SINK_NAME) - 1,
                   "called with unexpected name");
 
-    EXPECT_NE(request_handle, ZX_HANDLE_INVALID,
+    EXPECT_NE(vmo, ZX_HANDLE_INVALID,
              "called with invalid handle");
 
     char vmo_name[ZX_MAX_NAME_LEN];
-    EXPECT_EQ(zx_object_get_property(request_handle, ZX_PROP_NAME,
-                                     vmo_name, sizeof(vmo_name)),
+    EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)),
               ZX_OK, "get ZX_PROP_NAME");
     EXPECT_STR_EQ(TEST_SINK_NAME, vmo_name, sizeof(vmo_name),
                   "not called with expected VMO handle");
 
-    EXPECT_EQ(zx_handle_close(request_handle), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(vmo), ZX_OK, "");
 
     my_loader_service_ok = current_test_info->all_ok;
     return ZX_OK;
 }
+
+static loader_service_ops_t my1_loader_ops = {
+    .load_object = my1_load_object,
+    .load_abspath = my1_load_abspath,
+    .publish_data_sink = my1_publish_data_sink,
+};
 
 bool publish_data_test(void) {
     BEGIN_TEST;
@@ -51,9 +59,13 @@ bool publish_data_test(void) {
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    zx_handle_t my_service;
-    zx_status_t status = loader_service_simple(&sink_test_loader_service, NULL, &my_service);
-    ASSERT_EQ(status, ZX_OK, "fdio_loader_service");
+    loader_service_t* svc = NULL;
+    zx_status_t status = loader_service_create(NULL, &my1_loader_ops, NULL, &svc);
+    EXPECT_EQ(status, ZX_OK, "loader_service_create");
+
+    zx_handle_t my_service = ZX_HANDLE_INVALID;
+    status = loader_service_connect(svc, &my_service);
+    EXPECT_EQ(status, ZX_OK, "loader_service_connect");
 
     // Install the service.
     zx_handle_t old = dl_set_loader_service(my_service);
@@ -84,16 +96,12 @@ bool publish_data_test(void) {
 
 static zx_handle_t test_config_vmo = ZX_HANDLE_INVALID;
 
-static zx_status_t config_test_loader_service(void* arg, uint32_t load_op,
-                                              zx_handle_t request_handle,
-                                              const char* name,
-                                              zx_handle_t* out) {
+static zx_status_t my2_load_object(void* ctx, const char* name, zx_handle_t* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t my2_load_abspath(void* ctx, const char* name, zx_handle_t* out) {
     ++my_loader_service_calls;
-
-    EXPECT_EQ(load_op, (uint32_t)LDMSG_OP_DEBUG_LOAD_CONFIG,
-              "called with unexpected load op");
-
-    EXPECT_EQ(request_handle, ZX_HANDLE_INVALID, "called with a handle");
 
     zx_handle_t result = ZX_HANDLE_INVALID;
     if (!strcmp(TEST_CONFIG_GOOD_NAME, name)) {
@@ -111,16 +119,30 @@ static zx_status_t config_test_loader_service(void* arg, uint32_t load_op,
     return result;
 }
 
+static zx_status_t my2_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static loader_service_ops_t my2_loader_ops = {
+    .load_object = my2_load_object,
+    .load_abspath = my2_load_abspath,
+    .publish_data_sink = my2_publish_data_sink,
+};
+
 bool debug_config_test(void) {
     BEGIN_TEST;
     my_loader_service_ok = false;
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    zx_handle_t my_service;
-    zx_status_t status =
-        loader_service_simple(&config_test_loader_service, NULL, &my_service);
-    ASSERT_EQ(status, ZX_OK, "fdio_loader_service");
+    loader_service_t* svc = NULL;
+    zx_status_t status = loader_service_create(NULL, &my2_loader_ops, NULL, &svc);
+    EXPECT_EQ(status, ZX_OK, "loader_service_create");
+
+    zx_handle_t my_service = ZX_HANDLE_INVALID;
+    status = loader_service_connect(svc, &my_service);
+    EXPECT_EQ(status, ZX_OK, "loader_service_connect");
 
     // Install the service.
     zx_handle_t old = dl_set_loader_service(my_service);

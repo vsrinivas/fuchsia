@@ -12,20 +12,16 @@
 #include <inttypes.h>
 #include <ldmsg/ldmsg.h>
 #include <limits.h>
-#include <stdalign.h>
-#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #define PREFIX_MAX 32
@@ -206,21 +202,40 @@ static const loader_service_ops_t fd_ops = {
     .finalizer = fd_finalizer,
 };
 
-static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
-                                   zx_handle_t request_handle,
-                                   const char* fn, zx_handle_t* out) {
-    loader_service_t* svc = cookie;
-    zx_status_t status;
+static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_t* svc) {
+    ldmsg_req_t req;
+    uint32_t req_len = sizeof(req);
+    zx_handle_t req_handle = ZX_HANDLE_INVALID;
+    uint32_t req_handle_len;
+    zx_status_t status =
+        zx_channel_read(h, 0, &req, &req_handle, req_len, 1, &req_len, &req_handle_len);
+    if (status != ZX_OK) {
+        // This is the normal error for the other end going away,
+        // which happens when the process dies.
+        if (status != ZX_ERR_PEER_CLOSED)
+            fprintf(stderr, "dlsvc: msg read error %d: %s\n", status, zx_status_get_string(status));
+        return status;
+    }
 
-    switch (load_op) {
+    const char* data = NULL;
+    size_t len = 0;
+    status = ldmsg_req_decode(&req, req_len, &data, &len);
+
+    if (status != ZX_OK) {
+        zx_handle_close(req_handle);
+        fprintf(stderr, "dlsvc: invalid message\n");
+        return ZX_ERR_IO;
+    }
+
+    zx_handle_t rsp_handle = ZX_HANDLE_INVALID;
+    switch (req.header.ordinal) {
     case LDMSG_OP_CONFIG: {
-        size_t len = strlen(fn);
-        if (len < 2 || len >= sizeof(svc->config_prefix) - 1 ||
-            strchr(fn, '/') != NULL) {
+        size_t len = strlen(data);
+        if (len < 2 || len >= sizeof(svc->config_prefix) - 1 || strchr(data, '/') != NULL) {
             status = ZX_ERR_INVALID_ARGS;
             break;
         }
-        strncpy(svc->config_prefix, fn, len + 1);
+        strncpy(svc->config_prefix, data, len + 1);
         svc->config_exclusive = false;
         if (svc->config_prefix[len - 1] == '!') {
             --len;
@@ -234,10 +249,10 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
     case LDMSG_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
         if (svc->config_prefix[0] != '\0') {
-            size_t maxlen = PREFIX_MAX + strlen(fn) + 1;
-            char pfn[maxlen];
-            snprintf(pfn, maxlen, "%s%s", svc->config_prefix, fn);
-            if (((status = svc->ops->load_object(svc->ctx, pfn, out)) == ZX_OK) ||
+            size_t maxlen = PREFIX_MAX + strlen(data) + 1;
+            char prefixed_name[maxlen];
+            snprintf(prefixed_name, maxlen, "%s%s", svc->config_prefix, data);
+            if (((status = svc->ops->load_object(svc->ctx, prefixed_name, &rsp_handle)) == ZX_OK) ||
                 svc->config_exclusive) {
                 // if loading with prefix succeeds, or loading
                 // with prefix is configured to be exclusive of
@@ -246,147 +261,64 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
             }
             // otherwise, if non-exclusive, try loading without the prefix
         }
-        status = svc->ops->load_object(svc->ctx, fn, out);
+        status = svc->ops->load_object(svc->ctx, data, &rsp_handle);
         break;
     case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
         // When loading a script interpreter or debug configuration file,
         // we expect an absolute path.
-        if (fn[0] != '/') {
+        if (data[0] != '/') {
             fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
-                    load_op == LDMSG_OP_LOAD_SCRIPT_INTERPRETER ? "script interpreter" : "debug config file",
-                    fn);
-            return ZX_ERR_NOT_FOUND;
+                    req.header.ordinal == LDMSG_OP_LOAD_SCRIPT_INTERPRETER ? "script interpreter" : "debug config file",
+                    data);
+            status = ZX_ERR_NOT_FOUND;
+            break;
         }
-        status = svc->ops->load_abspath(svc->ctx, fn, out);
+        status = svc->ops->load_abspath(svc->ctx, data, &rsp_handle);
         break;
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-        status = svc->ops->publish_data_sink(svc->ctx, fn, request_handle);
-        request_handle = ZX_HANDLE_INVALID;
+        status = svc->ops->publish_data_sink(svc->ctx, data, req_handle);
+        req_handle = ZX_HANDLE_INVALID;
         break;
     case LDMSG_OP_CLONE:
-        status = loader_service_attach(svc, request_handle);
-        request_handle = ZX_HANDLE_INVALID;
-        break;
-    default:
-        __builtin_trap();
-    }
-
-    if (request_handle != ZX_HANDLE_INVALID) {
-        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
-                request_handle, load_op, fn);
-        zx_handle_close(request_handle);
-    }
-
-    return status;
-}
-
-struct startup {
-    loader_service_fn_t loader;
-    void* loader_arg;
-    zx_handle_t pipe_handle;
-};
-
-static zx_status_t handle_loader_rpc(zx_handle_t h,
-                                     loader_service_fn_t loader,
-                                     void* loader_arg) {
-    ldmsg_req_t req;
-    uint32_t req_len = sizeof(req);
-    zx_handle_t request_handle = ZX_HANDLE_INVALID;
-    uint32_t nhandles;
-    zx_status_t r =
-        zx_channel_read(h, 0, &req, &request_handle, req_len, 1, &req_len, &nhandles);
-    if (r != ZX_OK) {
-        // This is the normal error for the other end going away,
-        // which happens when the process dies.
-        if (r != ZX_ERR_PEER_CLOSED)
-            fprintf(stderr, "dlsvc: msg read error %d: %s\n", r, zx_status_get_string(r));
-        return r;
-    }
-
-    const char* data = NULL;
-    size_t len = 0;
-    r = ldmsg_req_decode(&req, req_len, &data, &len);
-
-    if (r != ZX_OK) {
-        zx_handle_close(request_handle);
-        fprintf(stderr, "dlsvc: invalid message\n");
-        return ZX_ERR_IO;
-    }
-
-    ldmsg_rsp_t rsp;
-    memset(&rsp, 0, sizeof(rsp));
-
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    switch (req.header.ordinal) {
-    case LDMSG_OP_CONFIG:
-    case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-    case LDMSG_OP_CLONE:
-        // TODO(ZX-491): Use a threadpool for loading, and guard against
-        // other starvation attacks.
-        r = (*loader)(loader_arg, req.header.ordinal, request_handle, data, &handle);
-        if (r == ZX_ERR_NOT_FOUND) {
-            fprintf(stderr, "dlsvc: could not open '%s'\n", data);
-        }
-        request_handle = ZX_HANDLE_INVALID;
-        rsp.rv = r;
+        status = loader_service_attach(svc, req_handle);
+        req_handle = ZX_HANDLE_INVALID;
         break;
     case LDMSG_OP_DEBUG_PRINT:
         fprintf(stderr, "dlsvc: debug: %s\n", data);
-        rsp.rv = ZX_OK;
+        status = ZX_OK;
         break;
     case LDMSG_OP_DONE:
-        zx_handle_close(request_handle);
+        zx_handle_close(req_handle);
         return ZX_ERR_PEER_CLOSED;
     default:
         // This case cannot happen because ldmsg_req_decode will return an
         // error for invalid ordinals.
         __builtin_trap();
     }
-    if (request_handle != ZX_HANDLE_INVALID) {
-        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
-                request_handle, req.header.ordinal, data);
-        zx_handle_close(request_handle);
+
+    if (status == ZX_ERR_NOT_FOUND) {
+        fprintf(stderr, "dlsvc: could not open '%s'\n", data);
     }
 
-    rsp.object = handle == ZX_HANDLE_INVALID ? FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
+    if (req_handle != ZX_HANDLE_INVALID) {
+        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
+                req_handle, req.header.ordinal, data);
+        zx_handle_close(req_handle);
+    }
+
+    ldmsg_rsp_t rsp;
+    memset(&rsp, 0, sizeof(rsp));
     rsp.header.txid = req.header.txid;
     rsp.header.ordinal = req.header.ordinal;
-    if ((r = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp),
-                              &handle, handle != ZX_HANDLE_INVALID ? 1 : 0)) < 0) {
-        fprintf(stderr, "dlsvc: msg write error: %d: %s\n", r, zx_status_get_string(r));
-        return r;
+    rsp.rv = status;
+    rsp.object = rsp_handle == ZX_HANDLE_INVALID ? FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
+    if ((status = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp),
+                                   &rsp_handle, rsp_handle != ZX_HANDLE_INVALID ? 1 : 0)) < 0) {
+        fprintf(stderr, "dlsvc: msg write error: %d: %s\n", status, zx_status_get_string(status));
+        return status;
     }
     return ZX_OK;
-}
-
-static int loader_service_thread(void* arg) {
-    struct startup* startup = arg;
-    zx_handle_t h = startup->pipe_handle;
-    loader_service_fn_t loader = startup->loader;
-    void* loader_arg = startup->loader_arg;
-    free(startup);
-
-    zx_status_t r;
-
-    for (;;) {
-        if ((r = zx_object_wait_one(h, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL)) < 0) {
-            // This is the normal error for the other end going away,
-            // which happens when the process dies.
-            if (r != ZX_ERR_BAD_STATE)
-                fprintf(stderr, "dlsvc: wait error %d: %s\n", r, zx_status_get_string(r));
-            break;
-        }
-        if ((r = handle_loader_rpc(h, loader, loader_arg)) < 0) {
-            break;
-        }
-    }
-
-    zx_handle_close(h);
-    return 0;
 }
 
 zx_status_t loader_service_create(async_t* async,
@@ -472,13 +404,13 @@ static async_wait_result_t loader_service_handler(async_t* async,
     loader_service_t* svc = loader_service_wait_get_svc(wait);
     if (status != ZX_OK)
         goto stop;
-    status = handle_loader_rpc(wait->object, default_load_fn, svc);
+    status = loader_service_rpc(wait->object, svc);
     if (status != ZX_OK)
         goto stop;
     return ASYNC_WAIT_AGAIN;
 stop:
     free(wait);
-    loader_service_deref(svc);  // Balanced in |loader_service_attach|.
+    loader_service_deref(svc); // Balanced in |loader_service_attach|.
     return ASYNC_WAIT_FINISHED;
 }
 
@@ -506,7 +438,7 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     status = async_begin_wait(svc->async, (async_wait_t*)wait);
 
     if (status == ZX_OK)
-        loader_service_addref(svc);  // Balanced in |loader_service_handler|.
+        loader_service_addref(svc); // Balanced in |loader_service_handler|.
 
 done:
     if (status != ZX_OK) {
@@ -518,46 +450,14 @@ done:
 
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {
     zx_handle_t h0, h1;
-    zx_status_t r;
-    if ((r = zx_channel_create(0, &h0, &h1)) != ZX_OK) {
-        return r;
+    zx_status_t status;
+    if ((status = zx_channel_create(0, &h0, &h1)) != ZX_OK) {
+        return status;
     }
-    if ((r = loader_service_attach(svc, h1)) != ZX_OK) {
+    if ((status = loader_service_attach(svc, h1)) != ZX_OK) {
         zx_handle_close(h0);
-        return r;
+        return status;
     }
     *out = h0;
-    return ZX_OK;
-}
-
-zx_status_t loader_service_simple(loader_service_fn_t loader, void* loader_arg,
-                                  zx_handle_t* out) {
-    struct startup* startup = malloc(sizeof(*startup));
-    if (startup == NULL)
-        return ZX_ERR_NO_MEMORY;
-
-    zx_handle_t h;
-    zx_status_t r;
-
-    if ((r = zx_channel_create(0, &h, &startup->pipe_handle)) < 0) {
-        free(startup);
-        return r;
-    }
-
-    startup->loader = loader;
-    startup->loader_arg = loader_arg;
-
-    thrd_t t;
-    int ret = thrd_create_with_name(&t, loader_service_thread, startup,
-                                    "local-custom-loader");
-    if (ret != thrd_success) {
-        zx_handle_close(h);
-        zx_handle_close(startup->pipe_handle);
-        free(startup);
-        return thrd_status_to_zx_status(ret);
-    }
-
-    thrd_detach(t);
-    *out = h;
     return ZX_OK;
 }

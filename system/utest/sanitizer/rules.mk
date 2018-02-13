@@ -16,11 +16,13 @@ MODULE_USERTEST_GROUP := libc
 
 MODULE_STATIC_LIBS := \
     system/ulib/loader-service \
+    system/ulib/async.loop \
     system/ulib/ldmsg \
 
 MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/launchpad \
+    system/ulib/async.default \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/c

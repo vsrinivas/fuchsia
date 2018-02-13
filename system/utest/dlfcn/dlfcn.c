@@ -54,14 +54,8 @@ bool dlopen_vmo_test(void) {
 static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;
 
-static zx_status_t my_loader_service(void* arg, uint32_t load_op,
-                                     zx_handle_t request_handle,
-                                     const char* name,
-                                     zx_handle_t* out) {
+static zx_status_t my_load_object(void* ctx, const char* name, zx_handle_t* out) {
     ++my_loader_service_calls;
-
-    EXPECT_EQ(request_handle, ZX_HANDLE_INVALID,
-              "called with a request handle");
 
     int cmp = strcmp(name, TEST_NAME);
     EXPECT_EQ(cmp, 0, "called with unexpected name");
@@ -69,16 +63,9 @@ static zx_status_t my_loader_service(void* arg, uint32_t load_op,
         unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
         return ZX_HANDLE_INVALID;
     }
-    EXPECT_EQ(load_op, (uint32_t) LDMSG_OP_LOAD_OBJECT,
-              "called with unexpected load op");
-    if (load_op != (uint32_t) LDMSG_OP_LOAD_OBJECT) {
-        unittest_printf("        saw %" PRIu32 ", expected %" PRIu32, load_op,
-                        LDMSG_OP_LOAD_OBJECT);
-        return ZX_HANDLE_INVALID;
-    }
 
     zx_handle_t vmo = ZX_HANDLE_INVALID;
-    zx_status_t status = launchpad_vmo_from_file(arg, &vmo);
+    zx_status_t status = launchpad_vmo_from_file((char*) ctx, &vmo);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_NE(vmo, ZX_HANDLE_INVALID, "launchpad_vmo_from_file");
     if (status < 0) {
@@ -89,6 +76,21 @@ static zx_status_t my_loader_service(void* arg, uint32_t load_op,
     *out = vmo;
     return ZX_OK;
 }
+
+static zx_status_t my_load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t my_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static loader_service_ops_t my_loader_ops = {
+    .load_object = my_load_object,
+    .load_abspath = my_load_abspath,
+    .publish_data_sink = my_publish_data_sink,
+};
 
 static void show_dlerror(void) {
     unittest_printf_critical("dlerror: %s\n", dlerror());
@@ -104,9 +106,13 @@ bool loader_service_test(void) {
         show_dlerror();
 
     // Spin up our test service.
-    zx_handle_t my_service;
-    zx_status_t status = loader_service_simple(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
-    EXPECT_EQ(status, ZX_OK, "fdio_loader_service");
+    loader_service_t* svc = NULL;
+    zx_status_t status = loader_service_create(NULL, &my_loader_ops, (void*)TEST_ACTUAL_NAME, &svc);
+    EXPECT_EQ(status, ZX_OK, "loader_service_create");
+
+    zx_handle_t my_service = ZX_HANDLE_INVALID;
+    status = loader_service_connect(svc, &my_service);
+    EXPECT_EQ(status, ZX_OK, "loader_service_connect");
 
     // Install the service.
     zx_handle_t old = dl_set_loader_service(my_service);
