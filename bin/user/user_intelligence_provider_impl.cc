@@ -21,7 +21,7 @@
 
 namespace maxwell {
 
-constexpr char kMIDashboardUrl[] = "agents/mi_dashboard";
+constexpr char kMIDashboardUrl[] = "mi_dashboard";
 
 namespace {
 
