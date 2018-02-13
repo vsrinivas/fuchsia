@@ -1,0 +1,31 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("unittests") {
+  testonly = true
+  output_name = "garnet_lib_unittests"
+
+  deps = [
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//garnet/lib/backoff:unittests",
+    "//garnet/lib/callback:unittests",
+    "//garnet/lib/gtest:unittests",
+    "//garnet/lib/network_wrapper:unittests",
+  ]
+}
+
+package("garnet_lib_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":unittests",
+  ]
+
+  tests = [ {
+        name = "garnet_lib_unittests"
+      } ]
+}

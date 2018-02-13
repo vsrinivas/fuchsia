@@ -22,6 +22,7 @@
         "garnet/packages/fonts",
         "garnet/packages/fortune",
         "garnet/packages/fxl",
+        "garnet/packages/lib_tests",
         "garnet/packages/go_far_tests",
         "garnet/packages/go_merkle_tests",
         "garnet/packages/go_stdlib_tests",
