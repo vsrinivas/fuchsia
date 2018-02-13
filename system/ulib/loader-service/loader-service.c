@@ -4,14 +4,13 @@
 
 #include <loader-service/loader-service.h>
 
+#include <errno.h>
+#include <fcntl.h>
 #include <fdio/debug.h>
 #include <fdio/dispatcher.h>
 #include <fdio/io.h>
-#include <ldmsg/ldmsg.h>
-
-#include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
+#include <ldmsg/ldmsg.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <stdarg.h>
@@ -21,32 +20,12 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
-#include <zircon/device/dmctl.h>
 #include <zircon/device/vfs.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
-
-static void __PRINTFLIKE(2, 3) log_printf(zx_handle_t log,
-                                          const char* fmt, ...) {
-    if (log <= 0)
-        return;
-
-    char buf[128];
-    va_list ap;
-    va_start(ap, fmt);
-    // we allow partial writes.
-    int len = vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    if (len < 0)
-        return;
-    len = (len > (int)sizeof(buf)) ? (int)sizeof(buf) : len;
-    zx_log_write(log, len, buf, 0u);
-}
 
 #define PREFIX_MAX 32
 
@@ -54,7 +33,6 @@ struct loader_service {
     char name[ZX_MAX_NAME_LEN];
     mtx_t dispatcher_lock;
     fdio_dispatcher_t* dispatcher;
-    zx_handle_t dispatcher_log;
 
     const loader_service_ops_t* ops;
     void* ctx;
@@ -259,12 +237,11 @@ struct startup {
     loader_service_fn_t loader;
     void* loader_arg;
     zx_handle_t pipe_handle;
-    zx_handle_t syslog_handle;
 };
 
 static zx_status_t handle_loader_rpc(zx_handle_t h,
                                      loader_service_fn_t loader,
-                                     void* loader_arg, zx_handle_t sys_log) {
+                                     void* loader_arg) {
     ldmsg_req_t req;
     uint32_t req_len = sizeof(req);
     zx_handle_t request_handle = ZX_HANDLE_INVALID;
@@ -310,7 +287,7 @@ static zx_status_t handle_loader_rpc(zx_handle_t h,
         rsp.rv = r;
         break;
     case LDMSG_OP_DEBUG_PRINT:
-        log_printf(sys_log, "dlsvc: debug: %s\n", data);
+        fprintf(stderr, "dlsvc: debug: %s\n", data);
         rsp.rv = ZX_OK;
         break;
     case LDMSG_OP_DONE:
@@ -344,7 +321,6 @@ static int loader_service_thread(void* arg) {
     zx_handle_t h = startup->pipe_handle;
     loader_service_fn_t loader = startup->loader;
     void* loader_arg = startup->loader_arg;
-    zx_handle_t sys_log = startup->syslog_handle;
     free(startup);
 
     zx_status_t r;
@@ -357,7 +333,7 @@ static int loader_service_thread(void* arg) {
                 fprintf(stderr, "dlsvc: wait error %d: %s\n", r, zx_status_get_string(r));
             break;
         }
-        if ((r = handle_loader_rpc(h, loader, loader_arg, sys_log)) < 0) {
+        if ((r = handle_loader_rpc(h, loader, loader_arg)) < 0) {
             break;
         }
     }
@@ -397,10 +373,8 @@ static zx_status_t multiloader_cb(zx_handle_t h, void* cb, void* cookie) {
         // close notification, which we can ignore
         return 0;
     }
-    // This uses svc->dispatcher_log without grabbing the lock, but
-    // it will never change once the dispatcher that called us is created.
     loader_service_t* svc = cookie;
-    return handle_loader_rpc(h, default_load_fn, svc, svc->dispatcher_log);
+    return handle_loader_rpc(h, default_load_fn, svc);
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
@@ -420,10 +394,6 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
             svc->dispatcher = NULL;
             goto done;
         }
-        if (zx_log_create(0, &svc->dispatcher_log) < 0) {
-            // unlikely to fail, but we'll keep going without it if so
-            svc->dispatcher_log = ZX_HANDLE_INVALID;
-        }
     }
 
     r = fdio_dispatcher_add(svc->dispatcher, h, NULL, svc);
@@ -436,9 +406,6 @@ done:
     return r;
 }
 
-// TODO(dbort): Provide a name/id for the process that this handle will
-// be used for, to make error messages more useful? Would need to pass
-// the same through IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL.
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {
     zx_handle_t h0, h1;
     zx_status_t r;
@@ -467,14 +434,8 @@ zx_status_t loader_service_simple(loader_service_fn_t loader, void* loader_arg,
         return r;
     }
 
-    zx_handle_t sys_log = ZX_HANDLE_INVALID;
-    if ((r = zx_log_create(0u, &sys_log)) < 0)
-        fprintf(stderr, "dlsvc: log creation failed: error %d: %s\n", r,
-                zx_status_get_string(r));
-
     startup->loader = loader;
     startup->loader_arg = loader_arg;
-    startup->syslog_handle = sys_log;
 
     thrd_t t;
     int ret = thrd_create_with_name(&t, loader_service_thread, startup,
