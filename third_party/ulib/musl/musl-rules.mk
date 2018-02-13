@@ -55,10 +55,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_attr_init.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setdetachstate.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setguardsize.c \
-    $(LOCAL_DIR)/pthread/pthread_attr_setinheritsched.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setschedparam.c \
-    $(LOCAL_DIR)/pthread/pthread_attr_setschedpolicy.c \
-    $(LOCAL_DIR)/pthread/pthread_attr_setscope.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setstacksize.c \
     $(LOCAL_DIR)/pthread/pthread_barrier_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_barrier_init.c \
@@ -81,7 +78,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_getattr_np.c \
     $(LOCAL_DIR)/pthread/pthread_getconcurrency.c \
     $(LOCAL_DIR)/pthread/pthread_getcpuclockid.c \
-    $(LOCAL_DIR)/pthread/pthread_getschedparam.c \
     $(LOCAL_DIR)/pthread/pthread_getspecific.c \
     $(LOCAL_DIR)/pthread/pthread_join.c \
     $(LOCAL_DIR)/pthread/pthread_key_create.c \
@@ -116,8 +112,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_setcancelstate.c \
     $(LOCAL_DIR)/pthread/pthread_setcanceltype.c \
     $(LOCAL_DIR)/pthread/pthread_setconcurrency.c \
-    $(LOCAL_DIR)/pthread/pthread_setschedparam.c \
-    $(LOCAL_DIR)/pthread/pthread_setschedprio.c \
     $(LOCAL_DIR)/pthread/pthread_setspecific.c \
     $(LOCAL_DIR)/pthread/pthread_sigmask.c \
     $(LOCAL_DIR)/pthread/pthread_spin_destroy.c \
