@@ -224,6 +224,15 @@ private:
         // The USB frame number at the time that STC was sampled.
         // The largest value can have 11 bits set before wrapping around to zero.
         uint16_t device_sof;
+
+        // This is the 64 bit incremental frame number at the time the first
+        // payload was received by the USB video driver.
+        // The XHCI host handles the SOF value wrapping around, so this is 64 bits.
+        uint64_t host_sof;
+
+        // The time at the midpoint of the capture operation, with respect
+        // to the monotonic clock.
+        zx_time_t capture_time;
     };
 
     FrameState cur_frame_state_;

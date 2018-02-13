@@ -11,6 +11,7 @@
 #include <fbl/vector.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/device/usb.h>
 #include <zx/vmar.h>
 
 #include "usb-video-stream.h"
@@ -21,6 +22,11 @@ namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
 static constexpr uint32_t NANOSECS_IN_SEC = 1e9;
+
+// Only keep the first 11 bits of the USB SOF (Start of Frame) values.
+// The payload header SOF values only have 11 bits before wrapping around,
+// whereas the XHCI host returns 64 bits.
+static constexpr uint16_t USB_SOF_MASK = 0x7FF;
 
 UsbVideoStream::~UsbVideoStream() {
     // List may not have been initialized.
@@ -758,6 +764,12 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
     QueueRequestLocked();
 }
 
+// Converts from device clock units to milliseconds.
+static inline double device_clock_to_ms(uint32_t clock_reading,
+                                        uint32_t clock_frequency_hz) {
+    return clock_frequency_hz != 0 ? clock_reading * 1000.0 / clock_frequency_hz : 0;
+}
+
 void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
     usb_video_vs_uncompressed_payload_header header = {};
@@ -789,6 +801,68 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
             cur_frame_state_.device_sof = new_sof;
         }
     }
+
+    // The device might not support header timestamps.
+    if (cur_frame_state_.pts == 0 || cur_frame_state_.stc == 0) {
+        return;
+    }
+    // Already calculated the capture time for the frame.
+    if (cur_frame_state_.capture_time != 0) {
+        return;
+    }
+
+    // Calculate the capture time. This uses the method detailed in the
+    // USB Video Class 1.5 FAQ, Section 2.7 Audio and Video Stream Synchronization.
+    //
+    //  Event                      Available Timestamps
+    //  ------------------------   ----------------------------------
+    //  raw frame capture starts - PTS in device clock units
+    //  raw frame capture ends   - STC in device clock units, device SOF
+    //  driver receives frame    - host monotonic timestamp, host SOF
+    //
+    // TODO(jocelyndang): revisit this. This may be slightly inaccurate for devices
+    // implementing the 1.1 version of the spec, which states that a payload's SOF
+    // number is not required to match the 'current' frame number.
+
+    // Get the current host SOF value and host monotonic timestamp.
+    size_t len;
+    zx_status_t status = device_ioctl(parent_, IOCTL_USB_GET_CURRENT_FRAME,
+                                      NULL, 0,
+                                      &cur_frame_state_.host_sof,
+                                      sizeof(cur_frame_state_.host_sof),
+                                      &len);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "could not get host SOF, err: %d\n", status);
+        return;
+    }
+    zx_time_t host_complete_time_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+
+    // Calculate the difference between when raw frame capture starts and ends.
+    uint32_t device_delay = cur_frame_state_.stc - cur_frame_state_.pts;
+    double device_delay_ms = device_clock_to_ms(device_delay, clock_frequency_hz_);
+
+    // Calculate the delay caused by USB transport and processing. This will be
+    // the time between raw frame capture ending and the driver receiving the frame
+    //
+    // SOF (Start of Frame) values are transmitted by the USB host every
+    // millisecond.
+    // We want the difference between the SOF values of when frame capture
+    // completed (device_sof) and when we received the frame (host_sof).
+    //
+    // Since the device SOF value only has 11 bits and wraps around, we should
+    // discard the higher bits of the result. The delay is expected to be
+    // less than 2^11 ms.
+    uint16_t transport_delay_ms =
+        (cur_frame_state_.host_sof - cur_frame_state_.device_sof) & USB_SOF_MASK;
+
+    // Time between when raw frame capture starts and the driver receiving the frame.
+    double total_video_delay = device_delay_ms + transport_delay_ms;
+
+    // Start of raw frame capture as zx_time_t (nanoseconds).
+    zx_time_t capture_start_ns = host_complete_time_ns - ZX_MSEC(total_video_delay);
+    // The capture time is specified in the camera interface as the midpoint of
+    // the capture operation, not including USB transport time.
+    cur_frame_state_.capture_time = capture_start_ns + ZX_MSEC(device_delay_ms) / 2;
 }
 
 zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
@@ -825,11 +899,13 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
             }
 
             if (clock_frequency_hz_ != 0) {
-                zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs, SOF = %u\n",
+                zxlogf(TRACE, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu\n",
                        num_frames_,
+                       cur_frame_state_.capture_time,
                        cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
                        cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
-                       cur_frame_state_.device_sof);
+                       cur_frame_state_.device_sof,
+                       cur_frame_state_.host_sof);
             }
         }
 
