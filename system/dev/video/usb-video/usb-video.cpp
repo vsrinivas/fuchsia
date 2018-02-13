@@ -295,7 +295,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device, void** c
                 video::usb::UsbVideoStreamingSetting setting = {
                     .alt_setting = intf->bAlternateSetting,
                     .transactions_per_microframe = per_mf,
-                    .max_packet_size = max_packet_size
+                    .max_packet_size = max_packet_size,
+                    .ep_type = usb_ep_type(endp)
                 };
                 streaming_settings.push_back(setting, &ac);
                 if (!ac.check()) {

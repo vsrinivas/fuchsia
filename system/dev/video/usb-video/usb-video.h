@@ -40,6 +40,9 @@ struct UsbVideoStreamingSetting {
 
     uint8_t transactions_per_microframe;
     uint16_t max_packet_size;
+
+    // USB_ENDPOINT_BULK or USB_ENDPOINT_ISOCHRONOUS
+    int ep_type;
 };
 
 inline uint32_t setting_bandwidth(const UsbVideoStreamingSetting& setting) {

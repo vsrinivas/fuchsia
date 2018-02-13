@@ -45,7 +45,7 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device,
                                    fbl::Vector<UsbVideoFormat>* formats,
                                    fbl::Vector<UsbVideoStreamingSetting>* settings) {
     if (!usb || !intf || !control_header || !input_header ||
-        !formats || formats->size() == 0 || !settings) {
+        !formats || formats->size() == 0 || !settings || settings->size() == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
     auto domain = dispatcher::ExecutionDomain::Create();
@@ -79,6 +79,24 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
         if (bandwidth > max_bandwidth) {
             max_bandwidth = bandwidth;
         }
+
+        // The streaming settings should all be of the same type,
+        // either all USB_ENDPOINT_BULK or all USB_ENDPOINT_ISOCHRONOUS.
+        if (streaming_ep_type_ != USB_ENDPOINT_INVALID &&
+            streaming_ep_type_ != setting.ep_type) {
+            zxlogf(ERROR, "mismatched EP types: %u and %u\n",
+                   streaming_ep_type_, setting.ep_type);
+            return ZX_ERR_BAD_STATE;
+        }
+        streaming_ep_type_ = setting.ep_type;
+    }
+
+    // A video streaming interface containing a bulk endpoint for streaming
+    // shall support only alternate setting zero.
+    if (streaming_ep_type_ == USB_ENDPOINT_BULK &&
+        (streaming_settings_.size() > 1 || streaming_settings_.get()->alt_setting != 0)) {
+        zxlogf(ERROR, "invalid streaming settings for bulk endpoint\n");
+        return ZX_ERR_BAD_STATE;
     }
 
     zxlogf(TRACE, "allocating %d usb requests of size %u\n",

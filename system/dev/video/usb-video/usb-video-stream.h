@@ -20,6 +20,8 @@
 namespace video {
 namespace usb {
 
+static constexpr int USB_ENDPOINT_INVALID = -1;
+
 struct VideoStreamProtocol : public ddk::internal::base_protocol {
     explicit VideoStreamProtocol() {
         ddk_proto_id_ = ZX_PROTOCOL_CAMERA;
@@ -144,6 +146,7 @@ private:
     const UsbVideoFrameDesc* cur_frame_desc_;
     const UsbVideoStreamingSetting* cur_streaming_setting_;
 
+    int streaming_ep_type_ = USB_ENDPOINT_INVALID;
     uint8_t iface_num_ = 0;
     uint8_t usb_ep_addr_ = 0;
 
