@@ -67,19 +67,19 @@ public:
         thread->join();
 
         // TODO(ZX-594) - enable: Verify WaitAsync/Wait then kill the handle
-        if (false) {
-            sem->WaitAsync(port.get());
-            thread.reset(new std::thread([port] {
-                DLOG("Waiting for semaphore");
-                uint64_t key;
-                EXPECT_EQ(MAGMA_STATUS_OK, port->Wait(&key).get());
-                DLOG("Semaphore wait returned");
-            }));
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            EXPECT_EQ(1u, sem.use_count());
-            sem.reset();
-            thread->join();
-        }
+#if 0
+        sem->WaitAsync(port.get());
+        thread.reset(new std::thread([port] {
+            DLOG("Waiting for semaphore");
+            uint64_t key;
+            EXPECT_EQ(MAGMA_STATUS_OK, port->Wait(&key).get());
+            DLOG("Semaphore wait returned");
+        }));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        EXPECT_EQ(1u, sem.use_count());
+        sem.reset();
+        thread->join();
+#endif
 
         // Verify close
         // TODO(ZX-594): test Close after Wait also
