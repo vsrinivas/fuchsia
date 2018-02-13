@@ -120,6 +120,7 @@ static const aml_pinmux_block_t s905x_pinmux_blocks[] = {
             { .regs = { REG_5 }, .bits = { 18 }, },
             { .regs = { REG_5 }, .bits = { 17 }, },
             { .regs = { REG_5 }, .bits = { 16 }, },
+            { .regs = { REG_5 }, .bits = { 15 }, },
             // pinmux not specified for GPIOX_17 and GPIOX_18.
         },
     },
