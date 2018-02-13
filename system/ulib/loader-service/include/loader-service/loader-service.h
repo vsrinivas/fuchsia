@@ -49,6 +49,13 @@ typedef struct loader_service loader_service_t;
 // library will create a new thread and listen for requests on that thread.
 zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out);
 
+// Create a new file-descriptor backed loader service capable of handling
+// any number of clients.
+//
+// Requests will be processed on the given |async|. If |async| is NULL, this
+// library will create a new thread and listen for requests on that thread.
+zx_status_t loader_service_create_fd(async_t* async, int dirfd, loader_service_t** out);
+
 // Returns a new dl_set_loader_service-compatible loader service channel.
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out);
 
@@ -73,7 +80,8 @@ typedef struct loader_service_ops {
 // Requests will be processed on the given |async|. If |async| is NULL, this
 // library will create a new thread and listen for requests on that thread.
 zx_status_t loader_service_create(async_t* async,
-                                  const loader_service_ops_t* ops, void* ctx,
+                                  const loader_service_ops_t* ops,
+                                  void* ctx,
                                   loader_service_t** out);
 
 // The default publish_data_sink implementation, which publishes

@@ -8,8 +8,6 @@
 #include <async/wait.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fdio/debug.h>
-#include <fdio/dispatcher.h>
 #include <fdio/io.h>
 #include <inttypes.h>
 #include <ldmsg/ldmsg.h>
@@ -36,6 +34,7 @@ struct loader_service {
 
     const loader_service_ops_t* ops;
     void* ctx;
+    int dirfd; // Used by fd_ops.
 
     char config_prefix[PREFIX_MAX];
     bool config_exclusive;
@@ -110,7 +109,6 @@ zx_status_t loader_service_publish_data_sink_fs(const char* sink_name, zx_handle
     return ZX_OK;
 }
 
-
 // When loading a library object, search in the hard-coded locations.
 static int open_from_libpath(const char* fn) {
     int fd = -1;
@@ -155,6 +153,36 @@ static const loader_service_ops_t fs_ops = {
     .load_object = fs_load_object,
     .load_abspath = fs_load_abspath,
     .publish_data_sink = fs_publish_data_sink,
+};
+
+static zx_status_t fd_load_object(void* ctx, const char* name, zx_handle_t* out) {
+    int dirfd = *(int*)ctx;
+    char path[PATH_MAX];
+    if (snprintf(path, sizeof(path), "lib/%s", name) >= PATH_MAX)
+        return ZX_ERR_BAD_PATH;
+    int fd = openat(dirfd, path, O_RDONLY);
+    if (fd >= 0)
+        return load_object_fd(fd, name, out);
+    return ZX_ERR_NOT_FOUND;
+}
+
+static zx_status_t fd_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
+    int dirfd = *(int*)ctx;
+    int fd = openat(dirfd, path, O_RDONLY);
+    if (fd >= 0)
+        return load_object_fd(fd, path, out);
+    return ZX_ERR_NOT_FOUND;
+}
+
+static zx_status_t fd_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static const loader_service_ops_t fd_ops = {
+    .load_object = fd_load_object,
+    .load_abspath = fd_load_abspath,
+    .publish_data_sink = fd_publish_data_sink,
 };
 
 static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
@@ -205,8 +233,7 @@ static zx_status_t default_load_fn(void* cookie, uint32_t load_op,
         // we expect an absolute path.
         if (fn[0] != '/') {
             fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
-                    load_op == LDMSG_OP_LOAD_SCRIPT_INTERPRETER ?
-                    "script interpreter" : "debug config file",
+                    load_op == LDMSG_OP_LOAD_SCRIPT_INTERPRETER ? "script interpreter" : "debug config file",
                     fn);
             return ZX_ERR_NOT_FOUND;
         }
@@ -304,8 +331,7 @@ static zx_status_t handle_loader_rpc(zx_handle_t h,
         zx_handle_close(request_handle);
     }
 
-    rsp.object = handle == ZX_HANDLE_INVALID ?
-        FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
+    rsp.object = handle == ZX_HANDLE_INVALID ? FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
     rsp.header.txid = req.header.txid;
     rsp.header.ordinal = req.header.ordinal;
     if ((r = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp),
@@ -383,6 +409,17 @@ zx_status_t loader_service_create_fs(async_t* async,
     return loader_service_create(async, &fs_ops, NULL, out);
 }
 
+zx_status_t loader_service_create_fd(async_t* async,
+                                     int dirfd,
+                                     loader_service_t** out) {
+    loader_service_t* svc;
+    zx_status_t status = loader_service_create(async, &fd_ops, NULL, &svc);
+    svc->dirfd = dirfd;
+    svc->ctx = &svc->dirfd;
+    *out = svc;
+    return status;
+}
+
 typedef struct loader_service_wait loader_service_wait_t;
 struct loader_service_wait {
     async_wait_t wait;
@@ -390,7 +427,7 @@ struct loader_service_wait {
 };
 
 static inline loader_service_t* loader_service_wait_get_svc(async_wait_t* wait) {
-    return ((loader_service_wait_t*) wait)->svc;
+    return ((loader_service_wait_t*)wait)->svc;
 }
 
 static async_wait_result_t loader_service_handler(async_t* async,
@@ -430,7 +467,7 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     wait->wait.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     wait->svc = svc;
 
-    status = async_begin_wait(svc->async, (async_wait_t*) wait);
+    status = async_begin_wait(svc->async, (async_wait_t*)wait);
 
 done:
     if (status != ZX_OK) {
@@ -456,7 +493,7 @@ zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {
 
 zx_status_t loader_service_simple(loader_service_fn_t loader, void* loader_arg,
                                   zx_handle_t* out) {
-    struct startup *startup = malloc(sizeof(*startup));
+    struct startup* startup = malloc(sizeof(*startup));
     if (startup == NULL)
         return ZX_ERR_NO_MEMORY;
 

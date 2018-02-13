@@ -506,7 +506,7 @@ static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
     return bootfs_open(bootfs, tmp, vmo);
 }
 
-static zx_status_t load_abspath(void *ctx, const char* name, zx_handle_t* vmo) {
+static zx_status_t load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
