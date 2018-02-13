@@ -1618,6 +1618,111 @@ class StoryControllerImpl::ResolveModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
 };
 
+class StoryControllerImpl::StartContainerInShellCall : Operation<> {
+ public:
+  StartContainerInShellCall(
+      OperationContainer* const container,
+      StoryControllerImpl* const story_controller_impl,
+      f1dl::Array<f1dl::String> parent_module_path,
+      const f1dl::String& container_name,
+      f1dl::Array<ContainerLayoutPtr> layout,
+      f1dl::Array<ContainerRelationEntryPtr> relationships,
+      f1dl::Array<ContainerNodePtr> nodes)
+      : Operation("StoryControllerImpl::StartContainerInShellCall",
+                  container,
+                  [] {}),
+        story_controller_impl_(story_controller_impl),
+        parent_module_path_(std::move(parent_module_path)),
+        container_name_(container_name),
+        layout_(std::move(layout)),
+        relationships_(std::move(relationships)),
+        nodes_(std::move(nodes)) {
+    Ready();
+
+    for (auto& relationship : relationships_) {
+      relation_map_[relationship->node_name] = relationship.Clone();
+    }
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    // parent + container used as module path of requesting module for
+    // containers
+    f1dl::Array<f1dl::String> module_path = parent_module_path_.Clone();
+    module_path.push_back(container_name_);
+    for (size_t i = 0; i < nodes_.size(); ++i) {
+      new ResolveModulesCall(&operation_queue_, story_controller_impl_,
+                             nodes_[i]->daisy.Clone(),
+                             std::move(module_path),  // May be wrong.
+                             [this, flow, i](FindModulesResultPtr result) {
+                               Cont(flow, i, std::move(result));
+                             });
+    }
+  }
+
+  void Cont(FlowToken flow, const size_t i, FindModulesResultPtr result) {
+    if (result->modules.size() > 0) {
+      // We just run the first module in story shell.
+      // TODO(alhaad/thatguy): Revisit the assumption.
+      const auto& module_result = result->modules[0];
+      mozart::ViewOwnerPtr view_owner;
+      node_views_[nodes_[i]->node_name] = std::move(view_owner);
+      f1dl::Array<f1dl::String> module_path = parent_module_path_.Clone();
+      module_path.push_back(container_name_);
+      module_path.push_back(nodes_[i]->node_name);
+      new StartModuleCall(
+          &operation_queue_, story_controller_impl_, std::move(module_path),
+          module_result->module_id, nullptr,
+          module_result->create_chain_info.Clone(), ModuleSource::INTERNAL,
+          nullptr /* surface_relation */, nullptr /* incoming_services */,
+          nullptr /* module_controller_request */,
+          nullptr /* embed_module_watcher */,
+          node_views_[nodes_[i]->node_name].NewRequest(),
+          [this, flow] { Cont2(flow); });
+    } else {
+      Cont2(flow);
+    }
+  }
+
+  void Cont2(FlowToken flow) {
+    nodes_done_++;
+
+    if (nodes_done_ < nodes_.size()) {
+      return;
+    }
+    if (!story_controller_impl_->story_shell_) {
+      return;
+    }
+    auto views = f1dl::Array<modular::ContainerViewPtr>::New(nodes_.size());
+    for (size_t i = 0; i < nodes_.size(); i++) {
+      ContainerViewPtr view = ContainerView::New();
+      view->node_name = nodes_[i]->node_name;
+      view->owner = std::move(node_views_[nodes_[i]->node_name]);
+      views[i] = std::move(view);
+    }
+    story_controller_impl_->story_shell_->AddContainer(
+        container_name_, PathString(parent_module_path_), nullptr,
+        std::move(layout_), std::move(relationships_), std::move(views));
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  OperationQueue operation_queue_;
+  const f1dl::Array<f1dl::String> parent_module_path_;
+  const f1dl::String container_name_;
+
+  f1dl::Array<ContainerLayoutPtr> layout_;
+  f1dl::Array<ContainerRelationEntryPtr> relationships_;
+  const f1dl::Array<ContainerNodePtr> nodes_;
+  std::map<std::string, ContainerRelationEntryPtr> relation_map_;
+  size_t nodes_done_{};
+
+  // map of node_name to view_owners
+  std::map<f1dl::String, mozart::ViewOwnerPtr> node_views_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
+};
+
 // An operation that first performs module resolution with the provided Daisy
 // and subsequently starts the most appropriate resolved module in the story
 // shell.
@@ -1953,6 +2058,17 @@ void StoryControllerImpl::StartDaisyInShell(
       nullptr /* view_owner_request */,
       std::move(module_source),
       std::move(callback));
+}
+
+void StoryControllerImpl::StartContainerInShell(
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& name,
+    f1dl::Array<ContainerLayoutPtr> layout,
+    f1dl::Array<ContainerRelationEntryPtr> relationships,
+    f1dl::Array<ContainerNodePtr> nodes) {
+  new StartContainerInShellCall(
+      &operation_queue_, this, parent_module_path.Clone(), name,
+      std::move(layout), std::move(relationships), std::move(nodes));
 }
 
 void StoryControllerImpl::EmbedModule(

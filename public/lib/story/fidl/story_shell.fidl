@@ -5,6 +5,7 @@
 module modular;
 
 import "lib/ui/views/fidl/view_token.fidl";
+import "lib/surface/fidl/container.fidl";
 import "lib/surface/fidl/surface.fidl";
 
 // This interface is implemented by a story shell. Dependencies are passed to it
@@ -34,6 +35,26 @@ interface StoryShell {
 
   // Defocuses the view with view_id, dismissing it to the background.
   DefocusView@3(string view_id) => ();
+
+  // Adds a container, with corresponding container layouts to the story.
+  // Optionally provide a parent_id to connect to, if omitted adds the
+  // Container node as the root of a new tree in the Story
+  AddContainer@4(string containerName, string? parentId,
+                  SurfaceRelation relation, // relation of container to parent
+                  array<ContainerLayout> layout,
+                  array<ContainerRelationEntry> relationships,
+                  array<ContainerView> views);
+};
+
+// Maps the node_name to the specific mozart view resulting from resolving and
+// launching the daisy specified in a Container node
+struct ContainerView {
+  // Name by which this container node is referenced in container layout and 
+  // surface relationship specifications (cf. container.fidl)
+  string node_name;
+
+  // The new view resolved from the daisy corresponding to node_name
+  mozart.ViewOwner owner;
 };
 
 // This interface provides the StoryShell instance with everything it needs to

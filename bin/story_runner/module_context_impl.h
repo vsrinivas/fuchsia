@@ -16,6 +16,7 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
+#include "lib/surface/fidl/surface.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
@@ -91,6 +92,12 @@ class ModuleContextImpl : ModuleContext {
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       const StartDaisyInShellCallback& callback) override;
+  // |ModuleContext|
+  void StartContainerInShell(
+      const f1dl::String& name,
+      f1dl::Array<ContainerLayoutPtr> layout,
+      f1dl::Array<ContainerRelationEntryPtr> relationships,
+      f1dl::Array<ContainerNodePtr> nodes) override;
   // |ModuleContext|
   void EmbedModule(
       const f1dl::String& name,

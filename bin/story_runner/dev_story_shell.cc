@@ -66,6 +66,15 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
     callback();
   }
 
+  // |StoryShell|
+  void AddContainer(
+      const f1dl::String& /*container_name*/,
+      const f1dl::String& /*parent_id*/,
+      modular::SurfaceRelationPtr /* relation */,
+      f1dl::Array<modular::ContainerLayoutPtr> /*layout*/,
+      f1dl::Array<modular::ContainerRelationEntryPtr> /* relationships */,
+      f1dl::Array<modular::ContainerViewPtr> /* views */) override {}
+
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
       view_ = std::make_unique<modular::ViewHost>(

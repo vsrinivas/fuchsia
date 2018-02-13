@@ -1,0 +1,69 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition of module container layouts.
+
+module modular;
+
+import "lib/daisy/fidl/daisy.fidl";
+import "lib/surface/fidl/surface.fidl";
+
+// Specification of the layout of multiple surfaces in a module container. The
+// surfaces are referenced by name in ContainerRelationEntry.
+struct ContainerLayout {
+  array<LayoutEntry> surfaces;
+};
+
+// Specification of the postion of one surface within a container layout,
+// specified by a rectangle.
+struct LayoutEntry {
+  // Surface name, referenced by container relation entry.
+  string node_name;
+
+  // Layout, as rectangle in Dart conventions(left, top, width, height), as a
+  // proportion of the size of the container
+  array<float, 4> rectangle;
+};
+
+// Specifies the surface relationship between modules started together in module
+// container.
+//
+// TODO(djmurphy): this allows arbitrary graphs including cyclical ones, which
+// makes no sense. We could consider a nested data structure that makes cycles
+// impossible to specify.
+struct ContainerRelationEntry {
+  // Surface name, referenced by layout.
+  string node_name;
+
+  // Surface name of the layout parent. This could be the container itself,
+  // rather than a module in it.
+  string parent_node_name;
+
+  // This surface relation between the surface identified by node_name and by
+  // parent_node_name.
+  //
+  // It is possible to specify a surface relationship of a module in a container
+  // to the container itself, as opposed to another module in the container.
+  // This expresses for example that a module can be dismissed individually, as
+  // opposed to dismissing the module dismisses the container as a whole.
+  //
+  // TODO(djmurphy,mesch): The case above is not really a surface relationship,
+  // because the container is not a surface as such. We could adjust the name
+  // accordingly, or use a different type here. Depends on whether all surface
+  // relationship types make sense between a module and its container or not,
+  // etc.
+  SurfaceRelation relationship;
+};
+
+// Specifies one module to start inside a container. The module is specified by
+// a daisy as usual. The node_name of the surface is referenced by container
+// layout and by container relation entry.
+struct ContainerNode {
+  // Name by which this module is references in layout and surface relationship
+  // specifications (cf. above).
+  string node_name;
+
+  // The daisy to resolve to a module.
+  Daisy daisy;
+};

@@ -8,6 +8,7 @@ import "lib/app/fidl/service_provider.fidl";
 import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/component/fidl/component_context.fidl";
 import "lib/story/fidl/link.fidl";
+import "lib/surface/fidl/container.fidl";
 import "lib/surface/fidl/surface.fidl";
 import "lib/module/fidl/module_controller.fidl";
 import "lib/daisy/fidl/daisy.fidl";
@@ -93,6 +94,15 @@ interface ModuleContext {
                       ModuleController& module_controller,
                       SurfaceRelation? surface_relation)
                       => (StartDaisyStatus status);
+
+  // Like StartModuleInShell(), but starts multiple modules simultaneously and
+  // specifies a custom layout for them (aka container).
+  //
+  // There are multiple layouts specified, for different screen sizes etc.
+  StartContainerInShell@13(string container_name,
+                           array<ContainerLayout> layout,
+                           array<ContainerRelationEntry> relationships,
+                           array<ContainerNode> nodes);
 
   // Like StartModule(), used to embed the view of the requested module, but
   // also allows to obtain information of modules started transitively in the

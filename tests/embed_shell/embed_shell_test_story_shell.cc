@@ -63,6 +63,15 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
     callback();
   }
 
+  // |StoryShell|
+  void AddContainer(
+      const f1dl::String& /*container_name*/,
+      const f1dl::String& /*parent_id*/,
+      modular::SurfaceRelationPtr /*relation*/,
+      f1dl::Array<modular::ContainerLayoutPtr> /*layout*/,
+      f1dl::Array<modular::ContainerRelationEntryPtr> /* relationships */,
+      f1dl::Array<modular::ContainerViewPtr> /* views */) override {}
+
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

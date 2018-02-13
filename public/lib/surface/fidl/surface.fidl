@@ -6,6 +6,20 @@
 
 module modular;
 
+// Describes the relationship between two Surfaces.
+// Provides information to the StoryShell for layout optimization.
+struct SurfaceRelation {
+  // Advice on arranging these surfaces on the screen together.
+  SurfaceArrangement arrangement = NONE;
+
+  // Advice for dismissal of surfaces to be linked.
+  SurfaceDependency dependency = NONE;
+
+  // Relative emphasis of the child surface, relative to the parent.
+  // Influences relative areas of surfaces on screen.
+  float emphasis = 1.0;
+};
+
 // Expresses arrangement type.
 enum SurfaceArrangement {
   // No arrangement specified.
@@ -28,18 +42,4 @@ enum SurfaceDependency {
   // Child is dependent on parent.
   // If parent is dismissed, child is dismissed as well.
   DEPENDENT
-};
-
-// Describes the relationship between two Surfaces.
-// Provides information to the StoryShell for layout optimization.
-struct SurfaceRelation {
-  // Advice on arranging these surfaces on the screen together.
-  SurfaceArrangement arrangement = NONE;
-
-  // Advice for dismissal of surfaces to be linked.
-  SurfaceDependency dependency = NONE;
-
-  // Relative emphasis of the child surface, relative to the parent.
-  // Influences relative areas of surfaces on screen.
-  float emphasis = 1.0;
 };

@@ -212,6 +212,14 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
+  // Called by ModuleContextImpl.
+  void StartContainerInShell(
+      const f1dl::Array<f1dl::String>& parent_module_path,
+      const f1dl::String& name,
+      f1dl::Array<ContainerLayoutPtr> layout,
+      f1dl::Array<ContainerRelationEntryPtr> relationships,
+      f1dl::Array<ContainerNodePtr> nodes);
+
  private:
   class ModuleWatcherImpl;
 
@@ -365,6 +373,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class KillModuleCall;
   class StartModuleCall;
   class StartModuleInShellCall;
+  class StartContainerInShellCall;
   class AddModuleCall;
   class AddForCreateCall;
   class StopCall;

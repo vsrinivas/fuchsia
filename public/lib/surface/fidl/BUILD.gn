@@ -6,6 +6,11 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
+    "container.fidl",
     "surface.fidl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/daisy/fidl",
   ]
 }

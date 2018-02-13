@@ -116,6 +116,16 @@ void ModuleContextImpl::StartDaisyInShell(
       std::move(surface_relation), ModuleSource::INTERNAL, callback);
 }
 
+void ModuleContextImpl::StartContainerInShell(
+    const f1dl::String& name,
+    f1dl::Array<ContainerLayoutPtr> layout,
+    f1dl::Array<ContainerRelationEntryPtr> relationships,
+    f1dl::Array<ContainerNodePtr> nodes) {
+  story_controller_impl_->StartContainerInShell(
+      module_data_->module_path,
+      name, std::move(layout), std::move(relationships), std::move(nodes));
+}
+
 void ModuleContextImpl::EmbedModule(
     const f1dl::String& name,
     const f1dl::String& query,
