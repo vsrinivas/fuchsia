@@ -96,7 +96,7 @@ interface CobaltEncoderFactory {
 // sends them to the server. An instance of CobaltEncoder is associated with a
 // particular Cobalt project ID.
 //
-// Next method ordinal: 6
+// Next method ordinal: 8
 interface CobaltEncoder {
   // Adds a string observation. It will eventually be sent to the Cobalt server.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
@@ -168,25 +168,29 @@ interface CobaltEncoder {
   AddIndexObservation@1(uint32 metric_id, uint32 encoding_id, uint32 index)
       => (Status status);
 
-  // Adds a multi-part observation. It will eventually be sent to the Cobalt
-  // server.
+  // Adds an observation. It will eventually be sent to the Cobalt server.
+  // This version of Add*Observation() allows the user to specify the
+  // observation using the variadic type |Value|.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
-  //             associated with this encoder's project ID.
+  //             associated with this encoder's project ID.  The specified
+  //             metric must have a single part and the the type of this part
+  //             must be consistent with the runtime type of |observation|.
   //
   // |encoding_id| Must be an encoding ID registered with the Cobalt system
   //               and associated with this encoder's project ID.
   //
-  // |observation| The multi-value Observation to be encoded. Must be consistent
-  //               with the definition of the metric and encoding.
-  AddMultipartObservation@5(uint32 metric_id,
-                            array<ObservationValue> observation)
+  // |observation| The Observation to be encoded. The runtime type must be
+  //               consistent with the definition of the metric and encoding.
+  AddObservation@7(uint32 metric_id, uint32 encoding_id,
+                   Value observation)
       => (Status status);
 
   // Adds a distribution of int observations. It will eventually be sent to the
   // Cobalt server.
   //
   // |metric_id| Must be a metric ID registered with the Cobalt system and
-  //             associated with this encoder's project ID.
+  //             associated with this encoder's project ID.  The specified
+  //             metric must have a single part of type INT.
   //
   // |encoding_id| Must be an encoding ID registered with the Cobalt system
   //               and associated with this encoder's project ID.
@@ -198,6 +202,17 @@ interface CobaltEncoder {
   //                Cobalt.
   AddIntBucketDistribution@6(uint32 metric_id, uint32 encoding_id,
                              map<uint32, uint64> distribution)
+      => (Status status);
+
+  // Adds a multi-part observation. It will eventually be sent to the Cobalt
+  // server.
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID.
+  //
+  // |observation| The multi-value Observation to be encoded. Must be consistent
+  //               with the definition of the metric and encoding.
+  AddMultipartObservation@5(uint32 metric_id,
+                            array<ObservationValue> observation)
       => (Status status);
 
   // Obsolete. This does nothing and always returns OK.

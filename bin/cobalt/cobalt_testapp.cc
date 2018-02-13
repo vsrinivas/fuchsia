@@ -465,7 +465,15 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
                                         bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    encoder_->AddStringObservation(metric_id, encoding_config_id, val, &status);
+    if (i == 0) {
+      auto value = cobalt::Value::New();
+      value->set_string_value(val);
+      encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
+                               &status);
+    } else {
+      encoder_->AddStringObservation(metric_id, encoding_config_id, val,
+                                     &status);
+    }
     FXL_VLOG(1) << "AddStringObservation(" << val << ") => "
                 << StatusToString(status);
     if (status != cobalt::Status::OK) {
@@ -483,7 +491,14 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
                                      bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    encoder_->AddIntObservation(metric_id, encoding_config_id, val, &status);
+    if (i == 0) {
+      auto value = cobalt::Value::New();
+      value->set_int_value(val);
+      encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
+                               &status);
+    } else {
+      encoder_->AddIntObservation(metric_id, encoding_config_id, val, &status);
+    }
     FXL_VLOG(1) << "AddIntObservation(" << val << ") => "
                 << StatusToString(status);
     if (status != cobalt::Status::OK) {
@@ -501,7 +516,15 @@ bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
                                         bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    encoder_->AddDoubleObservation(metric_id, encoding_config_id, val, &status);
+    if (i == 0) {
+      auto value = cobalt::Value::New();
+      value->set_double_value(val);
+      encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
+                               &status);
+    } else {
+      encoder_->AddDoubleObservation(metric_id, encoding_config_id, val,
+                                     &status);
+    }
     FXL_VLOG(1) << "AddDoubleObservation(" << val << ") => "
                 << StatusToString(status);
     if (status != cobalt::Status::OK) {
@@ -519,8 +542,15 @@ bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
                                        bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    encoder_->AddIndexObservation(metric_id, encoding_config_id, index,
-                                  &status);
+    if (i == 0) {
+      auto value = cobalt::Value::New();
+      value->set_index_value(index);
+      encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
+                               &status);
+    } else {
+      encoder_->AddIndexObservation(metric_id, encoding_config_id, index,
+                                    &status);
+    }
     FXL_VLOG(1) << "AddIndexObservation(" << index << ") => "
                 << StatusToString(status);
     if (status != cobalt::Status::OK) {

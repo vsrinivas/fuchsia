@@ -42,6 +42,7 @@ using cobalt::EncryptedMessage;
 using cobalt::ObservationValuePtr;
 using cobalt::Status;
 using cobalt::Value;
+using cobalt::ValuePtr;
 using cobalt::config::EncodingRegistry;
 using cobalt::config::MetricRegistry;
 using cobalt::encoder::ClientSecret;
@@ -132,7 +133,9 @@ class CobaltEncoderImpl : public CobaltEncoder {
                          const AddIntObservationCallback& callback) override;
 
   void AddDoubleObservation(
-      uint32_t metric_id, uint32_t encoding_id, const double observation,
+      uint32_t metric_id,
+      uint32_t encoding_id,
+      const double observation,
       const AddDoubleObservationCallback& callback) override;
 
   void AddIndexObservation(
@@ -141,13 +144,19 @@ class CobaltEncoderImpl : public CobaltEncoder {
       uint32_t index,
       const AddIndexObservationCallback& callback) override;
 
+  void AddObservation(uint32_t metric_id,
+                      uint32_t encoding_id,
+                      ValuePtr observation,
+                      const AddObservationCallback& callback) override;
+
   void AddMultipartObservation(
       uint32_t metric_id,
       fidl::Array<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override;
 
   void AddIntBucketDistribution(
-      uint32_t metric_id, uint32_t encoding_id,
+      uint32_t metric_id,
+      uint32_t encoding_id,
       fidl::Map<uint32_t, uint64_t> distribution,
       const AddIntBucketDistributionCallback& callback) override;
 
@@ -205,7 +214,9 @@ void CobaltEncoderImpl::AddIntObservation(
 }
 
 void CobaltEncoderImpl::AddDoubleObservation(
-    uint32_t metric_id, uint32_t encoding_id, const double observation,
+    uint32_t metric_id,
+    uint32_t encoding_id,
+    const double observation,
     const AddDoubleObservationCallback& callback) {
   auto result = encoder_.EncodeDouble(metric_id, encoding_id, observation);
   AddEncodedObservation(&result, callback);
@@ -218,6 +229,39 @@ void CobaltEncoderImpl::AddIndexObservation(
     const AddIndexObservationCallback& callback) {
   auto result = encoder_.EncodeIndex(metric_id, encoding_id, index);
   AddEncodedObservation(&result, callback);
+}
+
+void CobaltEncoderImpl::AddObservation(uint32_t metric_id,
+                                       uint32_t encoding_id,
+                                       ValuePtr observation,
+                                       const AddObservationCallback& callback) {
+  switch (observation->which()) {
+    case Value::Tag::STRING_VALUE: {
+      AddStringObservation(metric_id, encoding_id,
+                           observation->get_string_value(), callback);
+      break;
+    }
+    case Value::Tag::INT_VALUE: {
+      AddIntObservation(metric_id, encoding_id, observation->get_int_value(),
+                        callback);
+      break;
+    }
+    case Value::Tag::DOUBLE_VALUE: {
+      AddDoubleObservation(metric_id, encoding_id,
+                           observation->get_double_value(), callback);
+      break;
+    }
+    case Value::Tag::INDEX_VALUE: {
+      AddIndexObservation(metric_id, encoding_id,
+                          observation->get_index_value(), callback);
+      break;
+    }
+    // TODO(azani) Handle INT_BUCKET_DISTRIBUTION
+    default:
+      callback(Status::INVALID_ARGUMENTS);
+      FXL_LOG(ERROR) << "Cobalt: Unrecognized value type in observation.";
+      return;
+  }
 }
 
 void CobaltEncoderImpl::AddMultipartObservation(
@@ -247,6 +291,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
                            obs_val->value->get_index_value());
         break;
       }
+      // TODO(azani) Handle INT_BUCKET_DISTRIBUTION
       default:
         callback(Status::INVALID_ARGUMENTS);
         FXL_LOG(ERROR)
@@ -260,7 +305,8 @@ void CobaltEncoderImpl::AddMultipartObservation(
 }
 
 void CobaltEncoderImpl::AddIntBucketDistribution(
-    uint32_t metric_id, uint32_t encoding_id,
+    uint32_t metric_id,
+    uint32_t encoding_id,
     fidl::Map<uint32_t, uint64_t> distribution,
     const AddIntBucketDistributionCallback& callback) {
   FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
