@@ -13,7 +13,6 @@
 #include "devcoordinator.h"
 
 #include <zircon/device/dmctl.h>
-#include <launchpad/loader-service.h>
 
 static zx_device_t* dmctl_dev;
 

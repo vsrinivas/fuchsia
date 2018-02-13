@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/loader-service.h>
+#include <loader-service/loader-service.h>
 
 #include <fdio/debug.h>
 #include <fdio/dispatcher.h>
@@ -23,7 +23,6 @@
 #include <unistd.h>
 
 #include <zircon/compiler.h>
-#include <zircon/dlfcn.h>
 #include <zircon/device/dmctl.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -452,22 +451,6 @@ zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {
     }
     *out = h0;
     return ZX_OK;
-}
-
-// In-process multiloader
-static loader_service_t local_loader_svc = {
-    .name = "local-loader-svc",
-    .ops = &fs_ops,
-};
-
-zx_status_t loader_service_get_default(zx_handle_t* out) {
-    // Try to clone the active loader service (if it exists)
-    if (dl_clone_loader_service(out) == ZX_OK) {
-        return ZX_OK;
-    }
-
-    // Otherwise, fall back to an in-process loader service.
-    return loader_service_connect(&local_loader_svc, out);
 }
 
 zx_status_t loader_service_simple(loader_service_fn_t loader, void* loader_arg,

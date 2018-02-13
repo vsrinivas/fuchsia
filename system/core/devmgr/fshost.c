@@ -12,7 +12,7 @@
 #include <fdio/watcher.h>
 #include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
-#include <launchpad/loader-service.h>
+#include <loader-service/loader-service.h>
 
 #include <zircon/boot/bootdata.h>
 #include <zircon/dlfcn.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/loader-service.h>
+#include <loader-service/loader-service.h>
 #include <ldmsg/ldmsg.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>

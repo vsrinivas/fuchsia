@@ -7,11 +7,11 @@
 #include "elf.h"
 
 #include <zircon/assert.h>
+#include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
-#include <launchpad/loader-service.h>
 #include <ldmsg/ldmsg.h>
 #include <fdio/io.h>
 #include <assert.h>
@@ -477,7 +477,7 @@ static zx_status_t setup_loader_svc(launchpad_t* lp) {
         return ZX_OK;
 
     zx_handle_t loader_svc;
-    zx_status_t status = loader_service_get_default(&loader_svc);
+    zx_status_t status = dl_clone_loader_service(&loader_svc);
     if (status < 0)
         return status;
 

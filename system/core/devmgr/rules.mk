@@ -32,6 +32,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/bootdata \
+    system/ulib/loader-service \
     system/ulib/memfs \
     third_party/ulib/lz4 \
     system/ulib/port \
@@ -63,6 +64,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/memfs \
     system/ulib/fs \
+    system/ulib/loader-service \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async.loop-cpp \

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -31,13 +31,6 @@ __BEGIN_CDECLS
 typedef zx_status_t (*loader_service_fn_t)(void* loader_arg, uint32_t load_cmd,
                                            zx_handle_t request_handle, const char* file,
                                            zx_handle_t* out);
-
-// Obtain the default loader service for this process.
-// That is normally a new connection to the service that
-// was used to load this process, if allowed and available.
-// Otherwise an in-process loader service, using the filesystem
-// will be created.
-zx_status_t loader_service_get_default(zx_handle_t* out);
 
 // Create a simple single-threaded loader service, which
 // will use the provided service_fn to process load commands

@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <launchpad/vmo.h>
-#include <launchpad/loader-service.h>
+#include <loader-service/loader-service.h>
 #include <ldmsg/ldmsg.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>

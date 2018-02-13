@@ -14,6 +14,4 @@ MODULE_SRCS += \
 MODULE_LIBS := \
     system/ulib/zircon \
 
-MODULE_PACKAGE := static
-
 include make/module.mk

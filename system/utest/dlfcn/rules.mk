@@ -18,6 +18,7 @@ MODULE_NAME := dlfcn-test
 # we use launchpad_vmo_from_file to load it!  So link it statically.
 MODULE_STATIC_LIBS := \
     system/ulib/launchpad \
+    system/ulib/loader-service \
     system/ulib/ldmsg \
     system/ulib/elfload \
 
