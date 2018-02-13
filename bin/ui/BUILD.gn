@@ -47,19 +47,15 @@ package("root_presenter") {
 
   binary = "root_presenter"
 
-  resources = [
-    {
-      path = rebase_path("root_presenter/resources/cursor32.png")
-      dest = "cursor32.png"
-    },
-  ]
+  resources = [ {
+        path = rebase_path("root_presenter/resources/cursor32.png")
+        dest = "cursor32.png"
+      } ]
 
-  meta = [
-    {
-      path = rebase_path("root_presenter/meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
+  meta = [ {
+        path = rebase_path("root_presenter/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("ime_service") {
@@ -85,12 +81,10 @@ package("scene_manager") {
 
   binary = "scene_manager"
 
-  meta = [
-    {
-      path = rebase_path("scene_manager/meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
+  meta = [ {
+        path = rebase_path("scene_manager/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("mozart") {
@@ -100,12 +94,10 @@ package("mozart") {
 
   binary = "mozart"
 
-  meta = [
-    {
-      path = rebase_path("mozart/meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
+  meta = [ {
+        path = rebase_path("mozart/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 package("mozart_tools") {
@@ -114,11 +106,15 @@ package("mozart_tools") {
   deps = [
     "input",
     "print_input",
+    "set_root_view",
   ]
 
   binaries = [
     {
       name = "input"
+    },
+    {
+      name = "set_root_view"
     },
     {
       name = "print_input"
