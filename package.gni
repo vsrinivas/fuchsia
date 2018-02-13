@@ -148,8 +148,8 @@ declare_args() {
 #         Location the resource will be placed within "data/"
 #
 #   extra (optional)
-#     A potentially build-time generated file containing extra entries in the
-#     package, formatted as a manifest.
+#     A list of potentially build-time generated files containing extra entries
+#     in the package, formatted as a manifest.
 template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
@@ -200,12 +200,16 @@ template("package") {
       }
       action("${mkfs_target}_extra") {
         deps = invoker.deps
-        inputs = [ partial, pkg.extra ]
+        inputs = [ partial ] + pkg.extra
         outputs = [ output ]
         script = "/bin/sh"
         rebased_partial = rebase_path(partial)
-        rebased_extra = rebase_path(pkg.extra)
         rebased_output = rebase_path(output)
+        rebased_extra = ""
+        foreach(e, pkg.extra) {
+          rebased_e = rebase_path(e)
+          rebased_extra = "$rebased_extra $rebased_e"
+        }
         args = [
           "-c",
           "/bin/cat $rebased_partial $rebased_extra > $rebased_output",
