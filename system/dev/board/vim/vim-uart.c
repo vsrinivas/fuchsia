@@ -19,7 +19,8 @@
 // on the 40 pin header
 #define UART_TEST 1
 
-#define BT_EN S912_GPIOX(17)
+#define WIFI_32K    S912_GPIOX(16)
+#define BT_EN       S912_GPIOX(17)
 
 static const pbus_mmio_t uart_mmios[] = {
     // UART_A, for BT HCI
@@ -95,17 +96,59 @@ static pbus_dev_t uart_test_dev = {
 };
 #endif
 
+// Enables and configures PWM_E on the WIFI_32K line for the Wifi/Bluetooth module
+static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
+    // Configure WIFI_32K pin for PWM_E
+    zx_status_t status = gpio_set_alt_function(&bus->gpio, WIFI_32K, 1);
+    if (status != ZX_OK) return status;
+
+    io_buffer_t buffer;
+    status = io_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000,
+                                                 get_root_resource(),
+                                                 ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
+        return status;
+    }
+    uint32_t* regs = io_buffer_virt(&buffer);
+
+    // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
+    // TODO(voydanoff) write a proper PWM driver
+    writel(0x016d016e, regs + S912_PWM_PWM_E);
+    writel(0x016d016d, regs + S912_PWM_E2);
+    writel(0x0a0a0609, regs + S912_PWM_TIME_EF);
+    writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
+
+    io_buffer_release(&buffer);
+
+    return ZX_OK;
+}
+
 zx_status_t vim_uart_init(vim_bus_t* bus) {
+    zx_status_t status;
+
     // set alternate functions to enable UART_A and UART_AO_B
-    gpio_set_alt_function(&bus->gpio, S912_UART_TX_A, S912_UART_TX_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_UART_RX_A, S912_UART_RX_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_UART_CTS_A, S912_UART_CTS_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_UART_RTS_A, S912_UART_RTS_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
-    gpio_set_alt_function(&bus->gpio, S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_TX_A, S912_UART_TX_A_FN);
+    if (status != ZX_OK) return status;
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_RX_A, S912_UART_RX_A_FN);
+    if (status != ZX_OK) return status;
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_CTS_A, S912_UART_CTS_A_FN);
+    if (status != ZX_OK) return status;
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_RTS_A, S912_UART_RTS_A_FN);
+    if (status != ZX_OK) return status;
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
+    if (status != ZX_OK) return status;
+    status = gpio_set_alt_function(&bus->gpio, S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
+    if (status != ZX_OK) return status;
+
+    // Configure the WIFI_32K PWM, which is needed for the Bluetooth module to work properly
+    status = vim_enable_wifi_32K(bus);
+     if (status != ZX_OK) {
+        return status;
+    }
 
     // bind our UART driver
-    zx_status_t status = pbus_device_add(&bus->pbus, &uart_dev, PDEV_ADD_PBUS_DEVHOST);
+    status = pbus_device_add(&bus->pbus, &uart_dev, PDEV_ADD_PBUS_DEVHOST);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
         return status;

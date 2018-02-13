@@ -86,3 +86,31 @@
 #define S912_UART_TX_AO_B_FN    1
 #define S912_UART_RX_AO_B       S912_GPIOAO(5)
 #define S912_UART_RX_AO_B_FN    1
+
+#define S912_PWM_BASE               0xc1100000
+#define S912_AO_PWM_BASE            0xc8100400
+
+// PWM register offsets
+// These are relative to base address 0xc1100000 and in sizeof(uint32_t)
+#define S912_PWM_PWM_A              0x2154
+#define S912_PWM_PWM_B              0x2155
+#define S912_PWM_MISC_REG_AB        0x2156
+#define S912_DS_A_B                 0x2157
+#define S912_PWM_TIME_AB            0x2158
+#define S912_PWM_A2                 0x2159
+#define S912_PWM_PWM_C              0x2194
+#define S912_PWM_PWM_D              0x2195
+#define S912_PWM_MISC_REG_CD        0x2196
+#define S912_PWM_DELTA_SIGMA_CD     0x2197
+#define S912_PWM_PWM_E              0x21b0
+#define S912_PWM_PWM_F              0x21b1
+#define S912_PWM_MISC_REG_EF        0x21b2
+#define S912_PWM_DELTA_SIGMA_EF     0x21b3
+#define S912_PWM_TIME_EF            0x21b4
+#define S912_PWM_E2                 0x21b5
+
+// These are relative to base address 0xc8100400 and in sizeof(uint32_t)
+#define S912_AO_PWM_PWM_A           0x54
+#define S912_AO_PWM_PWM_B           0x55
+#define S912_AO_PWM_MISC_REG_AB     0x56
+#define S912_AO_PWM_DELTA_SIGMA_AB  0x57
