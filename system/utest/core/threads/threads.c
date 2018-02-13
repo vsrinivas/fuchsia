@@ -435,8 +435,6 @@ static bool test_suspend_sleeping(void) {
     const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
     zxr_thread_t thread;
 
-    // TODO(teisenbe): This code could be made less racy with a deadline sleep
-    // mode when we get one.
     zx_handle_t thread_h;
     ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)sleep_deadline, &thread, &thread_h), "");
 
@@ -448,8 +446,9 @@ static bool test_suspend_sleeping(void) {
     ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_OK, "");
 
     // Wait for the sleep to finish
-    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, sleep_deadline + ZX_MSEC(50), NULL),
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL),
               ZX_OK, "");
+
     const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
 
