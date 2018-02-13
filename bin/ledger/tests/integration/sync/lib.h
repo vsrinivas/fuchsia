@@ -16,7 +16,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/gtest/test_with_message_loop.h"
