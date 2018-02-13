@@ -136,6 +136,8 @@ class Station : public FrameHandler {
     uint16_t next_seq();
 
     bool IsHTReady() const;
+    bool IsCbw40RxReady() const;
+    bool IsCbw40TxReady() const;
     HtCapabilities BuildHtCapabilities() const;
 
     DeviceInterface* device_;

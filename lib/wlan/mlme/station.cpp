@@ -74,7 +74,26 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
 
     auto chan = GetBssChan();
 
-    printf("setting channel to %s\n", common::ChanStr(chan).c_str());
+    // TODO(NET-449): Move this logic to policy engine
+    // Validation and sanitization
+    if (!common::IsValidChan(chan)) {
+        wlan_channel_t chan_sanitized = chan;
+        chan_sanitized.cbw = common::GetValidCbw(chan);
+        errorf("Wlanstack attempts to configure an invalid channel: %s. Falling back to %s\n",
+               common::ChanStr(chan).c_str(), common::ChanStr(chan_sanitized).c_str());
+        chan = chan_sanitized;
+    }
+    if (IsCbw40RxReady()) {
+        // Override with CBW40 support
+        wlan_channel_t chan_override = chan;
+        chan_override.cbw = CBW40;
+        chan_override.cbw = common::GetValidCbw(chan_override);
+
+        infof("CBW40 Rx is ready. Overriding the channel configuration from %s to %s\n",
+              common::ChanStr(chan).c_str(), common::ChanStr(chan_override).c_str());
+        chan = chan_override;
+    }
+
     debugjoin("setting channel to %s\n", common::ChanStr(chan).c_str());
     zx_status_t status = device_->SetChannel(chan);
 
@@ -759,6 +778,17 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     // TODO(porce): Construct addr4 field
 
+    if (IsCbw40TxReady()) {
+        // Ralink appears to setup BlockAck session AND AMPDU handling
+        // TODO(porce): Use a separate sequence number space in that case
+        if (hdr->addr3.IsUcast()) {
+            // 40MHz direction does not matter here.
+            // Radio uses the operational channel setting. This indicates the bandwidth without
+            // direction.
+            txinfo.cbw = CBW40;
+        }
+    }
+
     if (hdr->HasQosCtrl()) {  // QoS Control field
         auto qos_ctrl = hdr->qos_ctrl();
         qos_ctrl->set_tid(0);
@@ -1355,13 +1385,19 @@ zx::time Station::deadline_after_bcn_period(zx_duration_t tus) {
 }
 
 bool Station::IsHTReady() const {
-    // TODO(porce): Placeholder.
-    // bool bss_is_ht_capable = true;
-    // bool client_is_ht_capable = true;
-    // bool client_is_ht_config = true;
-    // return bss_is_ht_capable && client_is_ht_capable && client_is_ht_config;
-
+    // TODO(porce): Test capabilites and configurations of the client and its BSS.
     return true;
+}
+
+bool Station::IsCbw40RxReady() const {
+    // TODO(porce): Test capabilites and configurations of the client and its BSS.
+    return false;
+}
+
+bool Station::IsCbw40TxReady() const {
+    // TODO(porce): Test capabilites and configurations of the client and its BSS.
+    // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
+    return false;
 }
 
 HtCapabilities Station::BuildHtCapabilities() const {
@@ -1375,13 +1411,18 @@ HtCapabilities Station::BuildHtCapabilities() const {
     HtCapabilityInfo& hci = htc.ht_cap_info;
 
     hci.set_ldpc_coding_cap(0);  // Ralink RT5370 is incapable of LDPC.
-    hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY);
-    // hci.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    if (IsCbw40RxReady()) {
+        hci.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+    } else {
+        hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY);
+    }
+
     hci.set_sm_power_save(HtCapabilityInfo::DISABLED);
     hci.set_greenfield(0);
     hci.set_short_gi_20(1);
-    hci.set_short_gi_40(0);
-    hci.set_tx_stbc(1);
+    hci.set_short_gi_40(1);
+    hci.set_tx_stbc(0);  // No plan to support STBC Tx
     hci.set_rx_stbc(1);  // one stream.
     hci.set_delayed_block_ack(0);
     hci.set_max_amsdu_len(HtCapabilityInfo::OCTETS_7935);  // Aruba
