@@ -1391,7 +1391,7 @@ bool Station::IsHTReady() const {
 
 bool Station::IsCbw40RxReady() const {
     // TODO(porce): Test capabilites and configurations of the client and its BSS.
-    return false;
+    return true;
 }
 
 bool Station::IsCbw40TxReady() const {
