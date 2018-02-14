@@ -11,7 +11,6 @@ namespace media {
 namespace tts {
 
 static constexpr uint64_t kSharedBufSize = 64 << 10;
-static constexpr uint32_t kOutputBufferId = 0;
 static constexpr uint32_t kLowWaterMsec = 100;
 
 static constexpr uint32_t kFliteChannelCount = 1;
@@ -41,13 +40,6 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
   return ZX_OK;
 }
 
-TtsSpeaker::~TtsSpeaker() {
-  if (shared_buf_virt_ != nullptr) {
-    zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(shared_buf_virt_),
-                                shared_buf_size_);
-  }
-}
-
 zx_status_t TtsSpeaker::Init(
     const std::unique_ptr<component::ApplicationContext>& application_context) {
   zx_status_t res;
@@ -63,41 +55,16 @@ zx_status_t TtsSpeaker::Init(
     return res;
   }
 
-  res = zx::vmo::create(kSharedBufSize, 0, &shared_buf_vmo_);
-  if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create " << kSharedBufSize
-                   << " byte VMO!  (res " << res << ")";
-    return res;
-  }
-
-  res = shared_buf_vmo_.get_size(&shared_buf_size_);
-  if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to fetch VMO size!  (res " << res << ")";
-    return res;
-  }
-
-  // We currently hardcode 16 bps and single channel, so the size of our VMO
-  // (even if the kernel rounds up to page size) should always be divisble by
-  // the size of an audio frame (2 bytes)
-  FXL_DCHECK((shared_buf_size_ % (sizeof(int16_t) * kFliteChannelCount)) == 0);
-
-  uintptr_t tmp;
-  res = zx::vmar::root_self().map(0, shared_buf_vmo_, 0, shared_buf_size_,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &tmp);
+  zx::vmo shared_vmo;
+  res = shared_buf_.CreateAndMap(
+      kSharedBufSize,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr,
+      &shared_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map VMO!  (res " << res << ")";
-    return res;
-  }
-  shared_buf_virt_ = reinterpret_cast<void*>(tmp);
-
-  zx::vmo rend_vmo;
-  res = shared_buf_vmo_.duplicate(
-      ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP, &rend_vmo);
-  if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate shared buffer VMO!  (res " << res
-                   << ")";
+    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << res;
     return res;
   }
 
@@ -105,27 +72,15 @@ zx_status_t TtsSpeaker::Init(
   auto audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();
 
-  audio_server->CreateRenderer(audio_renderer_.NewRequest(),
-                               media_renderer_.NewRequest());
+  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
-  media::AudioMediaTypeDetails audio_details;
-  audio_details.sample_format = kFliteSampleFormat;
-  audio_details.channels = kFliteChannelCount;
-  audio_details.frames_per_second = kFliteFrameRate;
+  media::AudioPcmFormat format;
+  format.sample_format = kFliteSampleFormat;
+  format.channels = kFliteChannelCount;
+  format.frames_per_second = kFliteFrameRate;
 
-  media::MediaTypeDetails media_details;
-  media_details.set_audio(std::move(audio_details));
-
-  media::MediaType media_type;
-  media_type.medium = media::MediaTypeMedium::AUDIO;
-  media_type.details = std::move(media_details);
-  media_type.encoding = media::kAudioEncodingLpcm;
-
-  media_renderer_->SetMediaType(std::move(media_type));
-  media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest());
-  media_renderer_->GetTimelineControlPoint(timeline_cp_.NewRequest());
-  packet_consumer_->AddPayloadBuffer(kOutputBufferId, std::move(rend_vmo));
-  timeline_cp_->GetTimelineConsumer(timeline_consumer_.NewRequest());
+  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPayloadBuffer(std::move(shared_vmo));
 
   return ZX_OK;
 }
@@ -167,7 +122,7 @@ void TtsSpeaker::SendPendingAudio() {
   bool first_payload = !clock_started_;
   bool eos = synthesis_complete_.load();
   uint64_t bytes_till_low_water = eos ? 0 : bytes_to_send - kLowWaterBytes;
-  uint64_t bytes_till_ring_wrap = shared_buf_size_ - tx_ptr_;
+  uint64_t bytes_till_ring_wrap = shared_buf_.size() - tx_ptr_;
 
   FXL_DCHECK(eos || bytes_to_send > kLowWaterBytes);
 
@@ -182,43 +137,32 @@ void TtsSpeaker::SendPendingAudio() {
       todo = bytes_till_low_water;
     }
 
-    media::MediaPacket pkt;
-    pkt.pts_rate_ticks = kFliteFrameRate;
-    pkt.pts_rate_seconds = 1u;
-    pkt.pts = first_payload ? 0 : media::kUnspecifiedTime;
-    pkt.flags = (eos && (todo == bytes_to_send)) ? media::kFlagEos : 0u;
-
-    pkt.payload_buffer_id = kOutputBufferId;
+    media::AudioPacket pkt;
     pkt.payload_offset = tx_ptr_;
     pkt.payload_size = todo;
 
     first_payload = false;
     tx_ptr_ += todo;
-    if (tx_ptr_ >= shared_buf_size_) {
-      FXL_DCHECK(tx_ptr_ == shared_buf_size_);
+    if (tx_ptr_ >= shared_buf_.size()) {
+      FXL_DCHECK(tx_ptr_ == shared_buf_.size());
       tx_ptr_ = 0;
     }
 
-    media::MediaPacketConsumer::SupplyPacketCallback after_payload_rendered;
-
-    if (pkt.flags & media::kFlagEos) {
-      after_payload_rendered = [speak_complete_cbk =
-                                    std::move(speak_complete_cbk_)](
-          media::MediaPacketDemandPtr) {
-        speak_complete_cbk();
-      };
+    if (eos && (todo == bytes_to_send)) {
+      audio_renderer_->SendPacket(
+          std::move(pkt),
+          [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
+            speak_complete_cbk();
+          });
     } else if (todo == bytes_till_low_water) {
-      after_payload_rendered =
-          [ thiz = shared_from_this(),
-            new_rd_pos = tx_ptr_ ](media::MediaPacketDemandPtr) {
-        thiz->UpdateRdPtr(new_rd_pos);
-      };
+      audio_renderer_->SendPacket(
+          std::move(pkt),
+          [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {
+            thiz->UpdateRdPtr(new_rd_pos);
+          });
     } else {
-      after_payload_rendered = [](media::MediaPacketDemandPtr) {};
+      audio_renderer_->SendPacketNoReply(std::move(pkt));
     }
-
-    packet_consumer_->SupplyPacket(std::move(pkt),
-                                   std::move(after_payload_rendered));
 
     FXL_DCHECK(todo <= bytes_to_send);
     bytes_to_send -= todo;
@@ -229,13 +173,8 @@ void TtsSpeaker::SendPendingAudio() {
   }
 
   if (!clock_started_) {
-    media::TimelineTransform start;
-    start.reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(50);
-    start.subject_time = 0;
-    start.reference_delta = 1u;
-    start.subject_delta = 1u;
+    audio_renderer_->PlayNoReply(::media::kNoTimestamp, ::media::kNoTimestamp);
     clock_started_ = true;
-    timeline_consumer_->SetTimelineTransform(std::move(start), [](bool) {});
   }
 }
 
@@ -277,9 +216,10 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
 
       if (size < space) {
         while (size > 0) {
-          uint64_t todo = std::min<uint64_t>(shared_buf_size_ - wr_ptr_, size);
+          uint64_t todo;
+          todo = std::min<uint64_t>(shared_buf_.size() - wr_ptr_, size);
 
-          ::memcpy(reinterpret_cast<uint8_t*>(shared_buf_virt_) + wr_ptr_,
+          ::memcpy(reinterpret_cast<uint8_t*>(shared_buf_.start()) + wr_ptr_,
                    payload, todo);
 
           size -= todo;
@@ -287,8 +227,8 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
           payload = reinterpret_cast<const void*>(
               reinterpret_cast<uintptr_t>(payload) + todo);
 
-          if (wr_ptr_ >= shared_buf_size_) {
-            FXL_DCHECK(wr_ptr_ == shared_buf_size_);
+          if (wr_ptr_ >= shared_buf_.size()) {
+            FXL_DCHECK(wr_ptr_ == shared_buf_.size());
             wr_ptr_ = 0;
           }
         }
@@ -308,7 +248,8 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
     zx_signals_t pending;
     zx_status_t res;
 
-    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(),
+    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0,
+                                 zx::time::infinite(),
                                  &pending);
     if ((res != ZX_OK) || abort_playback_.load()) {
       return CST_AUDIO_STREAM_STOP;

@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <zircon/types.h>
-#include <zx/vmo.h>
+#include <fbl/vmo_mapper.h>
 
 #include <mutex>
 #include <thread>
+#include <zircon/types.h>
 
 #include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/application_context.h"
@@ -23,7 +23,7 @@ namespace tts {
 class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
  public:
   TtsSpeaker(fxl::RefPtr<fxl::TaskRunner> master_task_runner);
-  ~TtsSpeaker();
+  ~TtsSpeaker() = default;
 
   zx_status_t Init(const std::unique_ptr<component::ApplicationContext>&
                        application_context);
@@ -46,16 +46,17 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   uint64_t ComputeRingDistance(uint64_t back, uint64_t front) {
     uint64_t ret;
 
-    FXL_DCHECK(front < shared_buf_size_);
-    FXL_DCHECK(back < shared_buf_size_);
-    ret = (front >= back) ? (front - back) : (shared_buf_size_ + front - back);
+    auto sb_size = shared_buf_.size();
+    FXL_DCHECK(front < sb_size);
+    FXL_DCHECK(back < sb_size);
+    ret = (front >= back) ? (front - back) : (sb_size + front - back);
 
-    FXL_DCHECK(ret < shared_buf_size_);
+    FXL_DCHECK(ret < sb_size);
     return ret;
   }
 
   uint64_t ComputeWriteSpace() FXL_EXCLUSIVE_LOCKS_REQUIRED(ring_buffer_lock_) {
-    return shared_buf_size_ - ComputeRingDistance(rd_ptr_, wr_ptr_) - 1;
+    return shared_buf_.size() - ComputeRingDistance(rd_ptr_, wr_ptr_) - 1;
   }
 
   uint64_t ComputeTxPending() FXL_EXCLUSIVE_LOCKS_REQUIRED(ring_buffer_lock_) {
@@ -68,19 +69,8 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   fxl::RefPtr<fxl::TaskRunner> engine_task_runner_;
   fxl::RefPtr<fxl::TaskRunner> master_task_runner_;
 
-  media::AudioRendererPtr audio_renderer_;
-  media::MediaRendererPtr media_renderer_;
-  media::MediaPacketConsumerPtr packet_consumer_;
-  media::MediaTimelineControlPointPtr timeline_cp_;
-  media::TimelineConsumerPtr timeline_consumer_;
-
-  zx::vmo shared_buf_vmo_;
-  void* shared_buf_virt_ = nullptr;
-
-  // Note: shared_buf_size_ is a value established at Init time, before the work
-  // thread has been created.  Once its value has been determined, it never
-  // changes, therefor it should not need to be guarded by the ring buffer lock.
-  uint64_t shared_buf_size_ = 0;
+  media::AudioRenderer2Ptr audio_renderer_;
+  fbl::VmoMapper shared_buf_;
 
   std::mutex ring_buffer_lock_;
   uint64_t wr_ptr_ FXL_GUARDED_BY(ring_buffer_lock_) = 0;
