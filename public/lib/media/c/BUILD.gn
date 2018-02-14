@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
+import("//build/cpp/prebuilt_shared_library.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 
-shared_library("c") {
+prebuilt_shared_library("c") {
   sources = [
     "audio.h",
   ]
@@ -15,6 +16,11 @@ shared_library("c") {
   ]
 
   output_name = "media_client"
+
+  runtime_deps = [
+    "//garnet/public/lib/fsl:fsl_sdk",
+    "//garnet/public/lib/fxl:fxl_sdk",
+  ]
 }
 
 test("tests") {

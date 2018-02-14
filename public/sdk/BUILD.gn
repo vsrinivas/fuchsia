@@ -22,3 +22,12 @@ sdk("zircon_sysroot") {
     "//zircon/public/sysroot:sysroot_sdk",
   ]
 }
+
+sdk("garnet") {
+
+  deps = [
+    "//garnet/bin/far:bin_sdk($host_toolchain)",
+    "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//garnet/public/lib/media/c:c_sdk",
+  ]
+}

@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
-executable("bin") {
+sdk_executable("bin") {
   output_name = "far"
 
   sources = [

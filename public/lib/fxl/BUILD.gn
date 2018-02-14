@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 if (is_fuchsia) {
+  import("//build/cpp/prebuilt_shared_library.gni")
   import("//build/package.gni")
 }
 
@@ -186,7 +187,9 @@ source_set("fxl_logging_lib") {
 }
 
 if (is_fuchsia) {
-  shared_library("fxl_logging") {
+  prebuilt_shared_library("fxl_logging") {
+    no_headers = true
+
     public_deps = [
       ":fxl_logging_lib",
     ]
@@ -202,9 +205,16 @@ if (is_fuchsia) {
 }
 
 if (is_fuchsia) {
-  shared_library("fxl") {
+  prebuilt_shared_library("fxl") {
+    no_headers = true
+
     public_deps = [
       ":fxl_lib",
+    ]
+
+    runtime_deps = [
+      ":fxl_logging_sdk",
+      "//zircon/public/lib/syslog:syslog_sdk",
     ]
   }
 } else {

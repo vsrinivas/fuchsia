@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/prebuilt_shared_library.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_group.gni")
 
-group("fsl") {
+sdk_group("fsl") {
   public_deps = [
     ":fsl_lib",
     "//zircon/public/lib/fbl",
@@ -13,8 +15,10 @@ group("fsl") {
   ]
 }
 
-shared_library("fsl_lib") {
+prebuilt_shared_library("fsl_lib") {
   output_name = "fsl"
+
+  no_headers = true
 
   public_deps = [
     "//garnet/public/lib/fsl/handles",
@@ -23,6 +27,12 @@ shared_library("fsl_lib") {
     "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fsl/threading",
     "//garnet/public/lib/fsl/vmo",
+  ]
+
+  runtime_deps = [
+    "//garnet/public/lib/fxl:fxl_sdk",
+    "//zircon/public/lib/async-default:async-default_sdk",
+    "//zircon/public/lib/fdio:fdio_sdk",
   ]
 }
 
