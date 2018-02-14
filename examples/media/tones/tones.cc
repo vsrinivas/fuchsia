@@ -10,8 +10,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/audio/types.h"
-#include "lib/media/timeline/timeline.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 
 // TODO(dalesat): Remove once the mixer supports floats.
 #define FLOAT_SAMPLES_SUPPORTED 0
@@ -19,16 +18,16 @@
 namespace examples {
 namespace {
 
+
 static constexpr uint32_t kChannelCount = 1;
-static constexpr uint32_t kFramesPerSecond = 48000;
-static constexpr uint32_t kFramesPerBuffer = 480;
+static constexpr uint32_t kFramesPerSecond  = 48000;
+static constexpr uint32_t kFramesPerBuffer  = 480;
+static constexpr uint32_t kTargetPayloadsInFlight = 2;
 static constexpr float kEffectivelySilentVolume = 0.001f;
 static constexpr float kNoteZeroFrequency = 110.0f;
 static constexpr float kVolume = 0.2f;
 static constexpr float kDecay = 0.95f;
 static constexpr uint32_t kBeatsPerMinute = 90;
-static constexpr fxl::TimeDelta kLeadTime =
-    fxl::TimeDelta::FromMilliseconds(10);
 
 // Translates a note number into a frequency.
 float Note(int32_t note) {
@@ -36,7 +35,7 @@ float Note(int32_t note) {
 }
 
 // Translates a beat number into a time.
-int64_t Beat(float beat) {
+constexpr int64_t Beat(float beat) {
   return static_cast<int64_t>((beat * 60.0f * kFramesPerSecond) /
                               kBeatsPerMinute);
 }
@@ -63,7 +62,18 @@ void ConvertFloatToSigned16(float* source, int16_t* dest, size_t sample_count) {
   }
 }
 
+static constexpr media::AudioSampleFormat kSampleFormat =
+  media::AudioSampleFormat::SIGNED_16;
+static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(uint16_t);
+#else
+static constexpr media::AudioSampleFormat kSampleFormat =
+  media::AudioSampleFormat::FLOAT;
+static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
 #endif
+
+static constexpr size_t kBytesPerBuffer = kBytesPerFrame * kFramesPerBuffer;
+static constexpr size_t kTotalMappingSize =
+  kBytesPerBuffer * kTargetPayloadsInFlight;
 
 static const std::map<int, float> notes_by_key_ = {
     {'a', Note(-4)}, {'z', Note(-3)}, {'s', Note(-2)}, {'x', Note(-1)},
@@ -75,32 +85,50 @@ static const std::map<int, float> notes_by_key_ = {
 }  // namespace
 
 Tones::Tones(bool interactive) : interactive_(interactive) {
+  // Allocate our shared payload buffer and pass a handle to it over to the
+  // renderer.
+  zx::vmo payload_vmo;
+  zx_status_t status = payload_buffer_.CreateAndMap(
+      kTotalMappingSize,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr,
+      &payload_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+
+  if (status != ZX_OK) {
+    std::cerr << "VmoMapper:::CreateAndMap failed - " << status;
+    return;
+  }
+
+  // Connect to the audio service and get a renderer.
   auto application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+    component::ApplicationContext::CreateFromStartupInfo();
 
-  // Open the output stream.
-  lpcm_output_stream_ = media::LpcmOutputStream::Create(
-      application_context.get(),
-#if FLOAT_SAMPLES_SUPPORTED
-      media::AudioSampleFormat::FLOAT,
-#else
-      media::AudioSampleFormat::SIGNED_16,
-#endif
-      kChannelCount, kFramesPerSecond, kFramesPerSecond);
+  media::AudioServerPtr audio_server =
+      application_context->ConnectToEnvironmentService<media::AudioServer>();
 
-  lpcm_output_stream_->OnError([this]() {
-    switch (lpcm_output_stream_->error()) {
-      case media::MediaResult::CONNECTION_LOST:
-        std::cerr << "Unexpected error: channel to audio service closed\n";
-        break;
-      default:
-        std::cerr << "Unexpected error: " << lpcm_output_stream_->error()
-                  << "\n";
-        break;
-    }
+  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
+  audio_renderer_.set_error_handler([this]() {
+    std::cerr << "Unexpected error: channel to audio service closed\n";
     Quit();
   });
+
+  // Configure the format of the renderer.
+  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
+  format->sample_format = kSampleFormat;
+  format->channels = kChannelCount;
+  format->frames_per_second = kFramesPerSecond;
+  audio_renderer_->SetPcmFormat(std::move(format));
+
+  // Assign our shared payload buffer to the renderer.
+  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+
+  // Configure the renderer to use input frames of audio as its PTS units.
+  audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
+
+  // Configure the renderer to use input frames for the presentation timestamp
+  // units instead of defaulting to nanoseconds.
 
   if (interactive_) {
     std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
@@ -115,7 +143,8 @@ Tones::Tones(bool interactive) : interactive_(interactive) {
   }
 
   // Post a task to be called when we need to |Send|.
-  lpcm_output_stream_->PostTaskBeforeDeadline([this]() { Send(); }, kLeadTime);
+  auto& task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
+  task_runner->PostTask([this]() { Start(); });
 
   WaitForKeystroke();
 }
@@ -123,8 +152,7 @@ Tones::Tones(bool interactive) : interactive_(interactive) {
 Tones::~Tones() {}
 
 void Tones::Quit() {
-  lpcm_output_stream_->Reset();
-  lpcm_output_stream_ = nullptr;
+  audio_renderer_.Unbind();
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
@@ -175,37 +203,42 @@ void Tones::BuildScore() {
   frequencies_by_pts_.emplace(Beat(14.0f), Note(7));
 }
 
-void Tones::Send() {
-  while (!done() && lpcm_output_stream_->ShouldSendNow(kLeadTime)) {
-    // Allocate a buffer.
-    media::LpcmPayload payload =
-        lpcm_output_stream_->CreatePayload(kFramesPerBuffer);
-    if (!payload) {
-      break;
-    }
+void Tones::Start() {
+  Send(kTargetPayloadsInFlight);
+  audio_renderer_->PlayNoReply(media::AudioPacket::kNoTimestamp,
+                               media::AudioPacket::kNoTimestamp);
+}
 
-// Fill it with audio.
+void Tones::Send(uint32_t amt) {
+  while (!done() && amt--) {
+    // Allocate packet and locate its position in the buffer.
+    auto packet = media::AudioPacket::New();
+    packet->payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
+    packet->payload_size = kBytesPerBuffer;
+
+    FXL_DCHECK((packet->payload_offset + packet->payload_size) <=
+                payload_buffer_.size());
+
+    auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start())
+      + packet->payload_offset;
+
+    // Fill it with audio.
 #if FLOAT_SAMPLES_SUPPORTED
-    FillBuffer(payload.samples<float>());
+    FillBuffer(reinterpret_cast<float*>(payload_ptr));
 #else
     float buffer[kFramesPerBuffer * kChannelCount];
     FillBuffer(buffer);
-    ConvertFloatToSigned16(buffer, payload.samples<int16_t>(),
+    ConvertFloatToSigned16(buffer,
+                           reinterpret_cast<int16_t*>(payload_ptr),
                            kFramesPerBuffer * kChannelCount);
 #endif
 
     // Send it.
-    lpcm_output_stream_->Send(std::move(payload));
-  }
-
-  if (done()) {
-    // Queue an end-of-stream indicator. When the audio renderer encounters
-    // this, the state will change to |kEnded|.
-    lpcm_output_stream_->End([this]() { Quit(); });
-  } else {
-    // Post a task to be called when we need to |Send| again.
-    lpcm_output_stream_->PostTaskBeforeDeadline([this]() { Send(); },
-                                                kLeadTime);
+    if (!done()) {
+      audio_renderer_->SendPacket(std::move(packet), [this] { Send(1); });
+    } else {
+      audio_renderer_->SendPacket(std::move(packet), [this] { Quit(); });
+    }
   }
 }
 

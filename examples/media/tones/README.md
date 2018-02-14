@@ -1,7 +1,7 @@
 # Tones Example App
 
 This directory contains an application that plays some synthetic tones to the
-default audio output. It uses the LpcmOutputStream API.
+default audio output.
 
 ## USAGE
 
