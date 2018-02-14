@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<manifest>
-  <projects>
-    <localimport file="minimal"/>
-    <import remote="https://fuchsia.googlesource.com/manifest"
-            manifest="build"
-            name="manifest"/>
-  </projects>
-</manifest>
