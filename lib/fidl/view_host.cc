@@ -102,7 +102,7 @@ void ViewHost::UpdateScene() {
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
 
-  session()->Present(0, [](scenic::PresentationInfoPtr info) {});
+  session()->Present(0, [](ui_mozart::PresentationInfoPtr info) {});
 }
 
 }  // namespace modular

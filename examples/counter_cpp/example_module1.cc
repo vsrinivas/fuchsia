@@ -57,10 +57,10 @@ class Module1View : public mozart::BaseView {
 
  private:
   // Copied from
-  // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
+  // https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      scenic::PresentationInfoPtr /*presentation_info*/) override {
+      ui_mozart::PresentationInfoPtr /*presentation_info*/) override {
     if (!has_logical_size()) {
       return;
     }
