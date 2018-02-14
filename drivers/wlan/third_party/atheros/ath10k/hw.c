@@ -450,7 +450,7 @@ static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar, int16_t valu
     uint64_t fw_dbglog_mask;
     uint32_t fw_dbglog_level;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     /* Only modify registers if the core is started. */
     if ((ar->state != ATH10K_STATE_ON) &&
@@ -570,7 +570,7 @@ store_regs:
     ar->fw_coverage.reg_ack_cts_timeout_conf = timeout_reg;
 
 unlock:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 }
 
 /**

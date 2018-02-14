@@ -102,11 +102,11 @@ static ssize_t ath10k_dbg_sta_read_aggr_mode(struct file* file,
     char buf[32];
     int len = 0;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     len = scnprintf(buf, sizeof(buf) - len, "aggregation mode: %s\n",
                     (arsta->aggr_mode == ATH10K_DBG_AGGR_MODE_AUTO) ?
                     "auto" : "manual");
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -128,7 +128,7 @@ static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     if ((ar->state != ATH10K_STATE_ON) ||
             (aggr_mode == arsta->aggr_mode)) {
         ret = count;
@@ -143,7 +143,7 @@ static ssize_t ath10k_dbg_sta_write_aggr_mode(struct file* file,
 
     arsta->aggr_mode = aggr_mode;
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -180,7 +180,7 @@ static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     if ((ar->state != ATH10K_STATE_ON) ||
             (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
@@ -196,7 +196,7 @@ static ssize_t ath10k_dbg_sta_write_addba(struct file* file,
 
     ret = count;
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -232,7 +232,7 @@ static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     if ((ar->state != ATH10K_STATE_ON) ||
             (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
@@ -247,7 +247,7 @@ static ssize_t ath10k_dbg_sta_write_addba_resp(struct file* file,
     }
     ret = count;
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -283,7 +283,7 @@ static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     if ((ar->state != ATH10K_STATE_ON) ||
             (arsta->aggr_mode != ATH10K_DBG_AGGR_MODE_MANUAL)) {
         ret = count;
@@ -299,7 +299,7 @@ static ssize_t ath10k_dbg_sta_write_delba(struct file* file,
     }
     ret = count;
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -320,10 +320,10 @@ static ssize_t ath10k_dbg_sta_read_peer_debug_trigger(struct file* file,
     char buf[8];
     int len = 0;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     len = scnprintf(buf, sizeof(buf) - len,
                     "Write 1 to once trigger the debug logs\n");
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -346,7 +346,7 @@ ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (ar->state != ATH10K_STATE_ON) {
         ret = -ENETDOWN;
@@ -361,7 +361,7 @@ ath10k_dbg_sta_write_peer_debug_trigger(struct file* file,
         goto out;
     }
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return count;
 }
 

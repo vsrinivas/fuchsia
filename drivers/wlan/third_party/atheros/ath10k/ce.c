@@ -342,7 +342,7 @@ void __ath10k_ce_send_revert(struct ath10k_ce_pipe* pipe) {
     struct ath10k_ce_ring* src_ring = pipe->src_ring;
     uint32_t ctrl_addr = pipe->ctrl_addr;
 
-    lockdep_assert_held(&ar_pci->ce_lock);
+    ASSERT_MTX_HELD(&ar_pci->ce_lock);
 
     /*
      * This function must be called only if there is an incomplete
@@ -404,7 +404,7 @@ int __ath10k_ce_rx_num_free_bufs(struct ath10k_ce_pipe* pipe) {
     unsigned int write_index = dest_ring->write_index;
     unsigned int sw_index = dest_ring->sw_index;
 
-    lockdep_assert_held(&ar_pci->ce_lock);
+    ASSERT_MTX_HELD(&ar_pci->ce_lock);
 
     return CE_RING_DELTA(nentries_mask, write_index, sw_index - 1);
 }
@@ -420,7 +420,7 @@ int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t pad
     struct ce_desc* desc = CE_DEST_RING_TO_DESC(base, write_index);
     uint32_t ctrl_addr = pipe->ctrl_addr;
 
-    lockdep_assert_held(&ar_pci->ce_lock);
+    ASSERT_MTX_HELD(&ar_pci->ce_lock);
 
     if ((pipe->id != 5) &&
             CE_RING_DELTA(nentries_mask, write_index, sw_index - 1) == 0) {
@@ -1138,7 +1138,7 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
     struct ath10k_ce_crash_data ce;
     uint32_t addr, id;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     ath10k_err("Copy Engine register dump:\n");
 

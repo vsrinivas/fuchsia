@@ -153,7 +153,7 @@ fail:
 }
 
 static int ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) {
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
     return __ath10k_htt_rx_ring_fill_n(htt, num);
 }
 
@@ -247,7 +247,7 @@ static inline struct sk_buff* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
     int idx;
     struct sk_buff* msdu;
 
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     if (htt->rx_ring.fill_cnt == 0) {
         ath10k_warn("tried to pop sk_buff from an empty rx ring\n");
@@ -282,7 +282,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
     struct sk_buff* msdu;
     struct htt_rx_desc* rx_desc;
 
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     for (;;) {
         int last_msdu, msdu_len_invalid, msdu_chained;
@@ -383,7 +383,7 @@ static struct sk_buff* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, uint32_t 
     struct ath10k_skb_rxcb* rxcb;
     struct sk_buff* msdu;
 
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     msdu = ath10k_htt_rx_find_skb_paddr(ar, paddr);
     if (!msdu) {
@@ -414,7 +414,7 @@ static int ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
     bool is_offload;
     uint32_t paddr;
 
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     msdu_count = ev->msdu_count;
     is_offload = !!(ev->info & HTT_RX_IN_ORD_IND_INFO_OFFLOAD_MASK);
@@ -722,7 +722,7 @@ ath10k_htt_rx_h_peer_channel(struct ath10k* ar, struct htt_rx_desc* rxd) {
     struct cfg80211_chan_def def;
     uint16_t peer_id;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     if (!rxd) {
         return NULL;
@@ -763,7 +763,7 @@ ath10k_htt_rx_h_vdev_channel(struct ath10k* ar, uint32_t vdev_id) {
     struct ath10k_vif* arvif;
     struct cfg80211_chan_def def;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     list_for_each_entry(arvif, &ar->arvifs, list) {
         if (arvif->vdev_id == vdev_id &&
@@ -1859,7 +1859,7 @@ static int ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct sk_buff* skb) {
     bool frag;
     int ret, num_msdus = 0;
 
-    lockdep_assert_held(&htt->rx_ring.lock);
+    ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
     if (htt->rx_confused) {
         return -EIO;
@@ -2240,7 +2240,7 @@ ath10k_update_per_peer_tx_stats(struct ath10k* ar,
     uint8_t rate = 0, sgi;
     struct rate_info txrate;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     txrate.flags = ATH10K_HW_PREAMBLE(peer_stats->ratecode);
     txrate.bw = ATH10K_HW_BW(peer_stats->flags);

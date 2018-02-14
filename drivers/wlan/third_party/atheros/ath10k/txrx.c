@@ -131,7 +131,7 @@ struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
                                      const uint8_t* addr) {
     struct ath10k_peer* peer;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     list_for_each_entry(peer, &ar->peers, list) {
         if (peer->vdev_id != vdev_id) {
@@ -150,7 +150,7 @@ struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
 struct ath10k_peer* ath10k_peer_find_by_id(struct ath10k* ar, int peer_id) {
     struct ath10k_peer* peer;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     list_for_each_entry(peer, &ar->peers, list)
     if (test_bit(peer_id, peer->peer_ids)) {

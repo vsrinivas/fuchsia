@@ -220,7 +220,7 @@ static int ath10k_tm_cmd_utf_start(struct ath10k* ar, struct nlattr* tb[]) {
 
     ath10k_dbg(ar, ATH10K_DBG_TESTMODE, "testmode cmd utf start\n");
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (ar->state == ATH10K_STATE_UTF) {
         ret = -EALREADY;
@@ -288,7 +288,7 @@ static int ath10k_tm_cmd_utf_start(struct ath10k* ar, struct nlattr* tb[]) {
 
     ath10k_trace("UTF firmware %s started\n", ver);
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return 0;
 
@@ -305,13 +305,13 @@ err_release_utf_mode_fw:
     ar->testmode.utf_mode_fw.fw_file.firmware = NULL;
 
 err:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return ret;
 }
 
 static void __ath10k_tm_cmd_utf_stop(struct ath10k* ar) {
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     ath10k_core_stop(ar);
     ath10k_hif_power_down(ar);
@@ -338,7 +338,7 @@ static int ath10k_tm_cmd_utf_stop(struct ath10k* ar, struct nlattr* tb[]) {
 
     ath10k_dbg(ar, ATH10K_DBG_TESTMODE, "testmode cmd utf stop\n");
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (ar->state != ATH10K_STATE_UTF) {
         ret = -ENETDOWN;
@@ -352,7 +352,7 @@ static int ath10k_tm_cmd_utf_stop(struct ath10k* ar, struct nlattr* tb[]) {
     ath10k_trace("UTF firmware stopped\n");
 
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -362,7 +362,7 @@ static int ath10k_tm_cmd_wmi(struct ath10k* ar, struct nlattr* tb[]) {
     uint32_t cmd_id;
     void* buf;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (ar->state != ATH10K_STATE_UTF) {
         ret = -ENETDOWN;
@@ -407,7 +407,7 @@ static int ath10k_tm_cmd_wmi(struct ath10k* ar, struct nlattr* tb[]) {
     ret = 0;
 
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -442,7 +442,7 @@ int ath10k_tm_cmd(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
 }
 
 void ath10k_testmode_destroy(struct ath10k* ar) {
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (ar->state != ATH10K_STATE_UTF) {
         /* utf firmware is not running, nothing to do */
@@ -452,5 +452,5 @@ void ath10k_testmode_destroy(struct ath10k* ar) {
     __ath10k_tm_cmd_utf_stop(ar);
 
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 }

@@ -59,7 +59,7 @@ static void __ath10k_htt_tx_txq_recalc(struct ieee80211_hw* hw,
     uint8_t tid;
     uint8_t count;
 
-    lockdep_assert_held(&ar->htt.tx_lock);
+    ASSERT_MTX_HELD(&ar->htt.tx_lock);
 
     if (!ar->htt.tx_q_state.enabled) {
         return;
@@ -102,7 +102,7 @@ static void __ath10k_htt_tx_txq_sync(struct ath10k* ar) {
     uint32_t seq;
     size_t size;
 
-    lockdep_assert_held(&ar->htt.tx_lock);
+    ASSERT_MTX_HELD(&ar->htt.tx_lock);
 
     if (!ar->htt.tx_q_state.enabled) {
         return;
@@ -152,7 +152,7 @@ void ath10k_htt_tx_txq_update(struct ieee80211_hw* hw,
 }
 
 void ath10k_htt_tx_dec_pending(struct ath10k_htt* htt) {
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     htt->num_pending_tx--;
     if (htt->num_pending_tx == htt->max_num_pending_tx - 1) {
@@ -161,7 +161,7 @@ void ath10k_htt_tx_dec_pending(struct ath10k_htt* htt) {
 }
 
 int ath10k_htt_tx_inc_pending(struct ath10k_htt* htt) {
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     if (htt->num_pending_tx >= htt->max_num_pending_tx) {
         return -EBUSY;
@@ -179,7 +179,7 @@ int ath10k_htt_tx_mgmt_inc_pending(struct ath10k_htt* htt, bool is_mgmt,
                                    bool is_presp) {
     struct ath10k* ar = htt->ar;
 
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     if (!is_mgmt || !ar->hw_params.max_probe_resp_desc_thres) {
         return 0;
@@ -196,7 +196,7 @@ int ath10k_htt_tx_mgmt_inc_pending(struct ath10k_htt* htt, bool is_mgmt,
 }
 
 void ath10k_htt_tx_mgmt_dec_pending(struct ath10k_htt* htt) {
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     if (!htt->ar->hw_params.max_probe_resp_desc_thres) {
         return;
@@ -209,7 +209,7 @@ int ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt, struct sk_buff* skb) {
     struct ath10k* ar = htt->ar;
     int ret;
 
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     ret = idr_alloc(&htt->pending_tx, skb, 0,
                     htt->max_num_pending_tx, GFP_ATOMIC);
@@ -222,7 +222,7 @@ int ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt, struct sk_buff* skb) {
 void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id) {
     struct ath10k* ar = htt->ar;
 
-    lockdep_assert_held(&htt->tx_lock);
+    ASSERT_MTX_HELD(&htt->tx_lock);
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx free msdu_id %hu\n", msdu_id);
 

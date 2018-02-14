@@ -81,7 +81,7 @@ static void ath10k_p2p_noa_ie_assign(struct ath10k_vif* arvif, void* ie,
                                      size_t len) {
     struct ath10k* ar = arvif->ar;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     kfree(arvif->u.ap.noa_data);
 
@@ -95,7 +95,7 @@ static void __ath10k_p2p_noa_update(struct ath10k_vif* arvif,
     void* ie;
     size_t len;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     ath10k_p2p_noa_ie_assign(arvif, NULL, 0);
 

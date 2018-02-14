@@ -60,7 +60,7 @@ static int ath10k_wow_cleanup(struct ath10k* ar) {
     struct ath10k_vif* arvif;
     int ret;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     list_for_each_entry(arvif, &ar->arvifs, list) {
         ret = ath10k_wow_vif_cleanup(arvif);
@@ -163,7 +163,7 @@ static int ath10k_wow_set_wakeups(struct ath10k* ar,
     struct ath10k_vif* arvif;
     int ret;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     list_for_each_entry(arvif, &ar->arvifs, list) {
         ret = ath10k_vif_wow_set_wakeups(arvif, wowlan);
@@ -180,7 +180,7 @@ static int ath10k_wow_set_wakeups(struct ath10k* ar,
 static int ath10k_wow_enable(struct ath10k* ar) {
     int ret;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     completion_reset(&ar->target_suspend);
 
@@ -201,7 +201,7 @@ static int ath10k_wow_enable(struct ath10k* ar) {
 static int ath10k_wow_wakeup(struct ath10k* ar) {
     int ret;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     completion_reset(&ar->wow.wakeup_completed);
 
@@ -225,7 +225,7 @@ int ath10k_wow_op_suspend(struct ieee80211_hw* hw,
     struct ath10k* ar = hw->priv;
     int ret;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (WARN_ON(!test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
                           ar->running_fw->fw_file.fw_features))) {
@@ -268,7 +268,7 @@ cleanup:
     ath10k_wow_cleanup(ar);
 
 exit:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret ? 1 : 0;
 }
 
@@ -276,7 +276,7 @@ int ath10k_wow_op_resume(struct ieee80211_hw* hw) {
     struct ath10k* ar = hw->priv;
     int ret;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (WARN_ON(!test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
                           ar->running_fw->fw_file.fw_features))) {
@@ -314,7 +314,7 @@ exit:
         }
     }
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 

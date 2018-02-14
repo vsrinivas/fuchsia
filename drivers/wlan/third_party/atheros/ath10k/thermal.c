@@ -36,9 +36,9 @@ ath10k_thermal_get_cur_throttle_state(struct thermal_cooling_device* cdev,
                                       unsigned long* state) {
     struct ath10k* ar = cdev->devdata;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     *state = ar->thermal.throttle_state;
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return 0;
 }
@@ -53,10 +53,10 @@ ath10k_thermal_set_cur_throttle_state(struct thermal_cooling_device* cdev,
                     throttle_state, ATH10K_THERMAL_THROTTLE_MAX);
         return -EINVAL;
     }
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     ar->thermal.throttle_state = throttle_state;
     ath10k_thermal_set_throttling(ar);
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return 0;
 }
 
@@ -72,7 +72,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
     struct ath10k* ar = dev_get_drvdata(dev);
     int ret, temperature;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     /* Can't get temperature when the card is off */
     if (ar->state != ATH10K_STATE_ON) {
@@ -105,7 +105,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
     /* display in millidegree celcius */
     ret = snprintf(buf, PAGE_SIZE, "%d\n", temperature * 1000);
 out:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
     return ret;
 }
 
@@ -129,7 +129,7 @@ void ath10k_thermal_set_throttling(struct ath10k* ar) {
     uint32_t period, duration, enabled;
     int ret;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     if (!ar->wmi.ops->gen_pdev_set_quiet_mode) {
         return;

@@ -167,7 +167,7 @@ struct ath10k_sdio_irq_data {
      * These function require non atomic context, and hence, spinlocks
      * can be held while calling these functions.
      */
-    struct mutex mtx;
+    mtx_t mtx;
     struct ath10k_sdio_irq_proc_regs* irq_proc_reg;
     struct ath10k_sdio_irq_enable_regs* irq_en_reg;
 };

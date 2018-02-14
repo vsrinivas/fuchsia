@@ -175,7 +175,7 @@ int ath10k_spectral_process_fft(struct ath10k* ar,
 static struct ath10k_vif* ath10k_get_spectral_vdev(struct ath10k* ar) {
     struct ath10k_vif* arvif;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     if (list_empty(&ar->arvifs)) {
         return NULL;
@@ -196,7 +196,7 @@ static int ath10k_spectral_scan_trigger(struct ath10k* ar) {
     int res;
     int vdev_id;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     arvif = ath10k_get_spectral_vdev(ar);
     if (!arvif) {
@@ -231,7 +231,7 @@ static int ath10k_spectral_scan_config(struct ath10k* ar,
     struct ath10k_vif* arvif;
     int vdev_id, count, res = 0;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     arvif = ath10k_get_spectral_vdev(ar);
     if (!arvif) {
@@ -297,9 +297,9 @@ static ssize_t read_file_spec_scan_ctl(struct file* file, char __user* user_buf,
     size_t len;
     enum ath10k_spectral_mode spectral_mode;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     spectral_mode = ar->spectral.mode;
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     switch (spectral_mode) {
     case SPECTRAL_DISABLED:
@@ -332,7 +332,7 @@ static ssize_t write_file_spec_scan_ctl(struct file* file,
 
     buf[len] = '\0';
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     if (strncmp("trigger", buf, 7) == 0) {
         if (ar->spectral.mode == SPECTRAL_MANUAL ||
@@ -364,7 +364,7 @@ static ssize_t write_file_spec_scan_ctl(struct file* file,
         res = -EINVAL;
     }
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     if (res < 0) {
         return res;
@@ -389,9 +389,9 @@ static ssize_t read_file_spectral_count(struct file* file,
     size_t len;
     uint8_t spectral_count;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     spectral_count = ar->spectral.config.count;
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     len = sprintf(buf, "%d\n", spectral_count);
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
@@ -419,9 +419,9 @@ static ssize_t write_file_spectral_count(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     ar->spectral.config.count = val;
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return count;
 }
@@ -442,13 +442,13 @@ static ssize_t read_file_spectral_bins(struct file* file,
     unsigned int bins, fft_size, bin_scale;
     size_t len;
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     fft_size = ar->spectral.config.fft_size;
     bin_scale = WMI_SPECTRAL_BIN_SCALE_DEFAULT;
     bins = 1 << (fft_size - bin_scale);
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     len = sprintf(buf, "%d\n", bins);
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
@@ -480,10 +480,10 @@ static ssize_t write_file_spectral_bins(struct file* file,
         return -EINVAL;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
     ar->spectral.config.fft_size = ilog2(val);
     ar->spectral.config.fft_size += WMI_SPECTRAL_BIN_SCALE_DEFAULT;
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     return count;
 }
@@ -523,7 +523,7 @@ static struct rchan_callbacks rfs_spec_scan_cb = {
 int ath10k_spectral_start(struct ath10k* ar) {
     struct ath10k_vif* arvif;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     list_for_each_entry(arvif, &ar->arvifs, list)
     arvif->spectral_enabled = 0;

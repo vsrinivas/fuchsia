@@ -1890,7 +1890,7 @@ ath10k_wmi_op_gen_mgmt_tx(struct ath10k* ar, struct sk_buff* msdu) {
 }
 
 static void ath10k_wmi_event_scan_started(struct ath10k* ar) {
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
@@ -1913,7 +1913,7 @@ static void ath10k_wmi_event_scan_started(struct ath10k* ar) {
 }
 
 static void ath10k_wmi_event_scan_start_failed(struct ath10k* ar) {
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
@@ -1931,7 +1931,7 @@ static void ath10k_wmi_event_scan_start_failed(struct ath10k* ar) {
 }
 
 static void ath10k_wmi_event_scan_completed(struct ath10k* ar) {
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
@@ -1956,7 +1956,7 @@ static void ath10k_wmi_event_scan_completed(struct ath10k* ar) {
 }
 
 static void ath10k_wmi_event_scan_bss_chan(struct ath10k* ar) {
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
@@ -1973,7 +1973,7 @@ static void ath10k_wmi_event_scan_bss_chan(struct ath10k* ar) {
 }
 
 static void ath10k_wmi_event_scan_foreign_chan(struct ath10k* ar, uint32_t freq) {
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:

@@ -1718,7 +1718,7 @@ static void ath10k_core_restart(struct work_struct* work) {
      */
     cancel_work_sync(&ar->set_coverage_class_work);
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     switch (ar->state) {
     case ATH10K_STATE_ON:
@@ -1747,7 +1747,7 @@ static void ath10k_core_restart(struct work_struct* work) {
         break;
     }
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     ret = ath10k_debug_fw_devcoredump(ar);
     if (ret)
@@ -1982,7 +1982,7 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     int status;
     uint32_t val;
 
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
 
     clear_bit(ATH10K_FLAG_CRASH_FLUSH, &ar->dev_flags);
 
@@ -2244,7 +2244,7 @@ int ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
 }
 
 void ath10k_core_stop(struct ath10k* ar) {
-    lockdep_assert_held(&ar->conf_mutex);
+    ASSERT_MTX_HELD(&ar->conf_mutex);
     ath10k_debug_stop(ar);
 
     /* try to suspend target */
@@ -2351,7 +2351,7 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
         goto err_free_firmware_files;
     }
 
-    mutex_lock(&ar->conf_mutex);
+    mtx_lock(&ar->conf_mutex);
 
     ret = ath10k_core_start(ar, ATH10K_FIRMWARE_MODE_NORMAL,
                             &ar->normal_mode_fw);
@@ -2363,13 +2363,13 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
     ath10k_debug_print_boot_info(ar);
     ath10k_core_stop(ar);
 
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
     ath10k_hif_power_down(ar);
     return 0;
 
 err_unlock:
-    mutex_unlock(&ar->conf_mutex);
+    mtx_unlock(&ar->conf_mutex);
 
 err_free_firmware_files:
     ath10k_core_free_firmware_files(ar);
@@ -2551,7 +2551,7 @@ struct ath10k* ath10k_core_create(size_t priv_size, struct device* dev,
         goto err_free_wq;
     }
 
-    mutex_init(&ar->conf_mutex);
+    mtx_init(&ar->conf_mutex, mtx_plain);
     spin_lock_init(&ar->data_lock);
     spin_lock_init(&ar->txqs_lock);
 

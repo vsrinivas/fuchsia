@@ -745,7 +745,7 @@ static int ath10k_sdio_mbox_proc_counter_intr(struct ath10k* ar) {
     uint8_t counter_int_status;
     int ret;
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
     counter_int_status = irq_data->irq_proc_reg->counter_int_status &
                          irq_data->irq_en_reg->cntr_int_status_en;
 
@@ -759,7 +759,7 @@ static int ath10k_sdio_mbox_proc_counter_intr(struct ath10k* ar) {
         ret = 0;
     }
 
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
 
     return ret;
 }
@@ -818,7 +818,7 @@ static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k* ar) {
     uint8_t cpu_int_status;
     int ret;
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
     cpu_int_status = irq_data->irq_proc_reg->cpu_int_status &
                      irq_data->irq_en_reg->cpu_int_status_en;
     if (!cpu_int_status) {
@@ -846,7 +846,7 @@ static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k* ar) {
     }
 
 out:
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
     return ret;
 }
 
@@ -860,7 +860,7 @@ static int ath10k_sdio_mbox_read_int_status(struct ath10k* ar,
     uint8_t htc_mbox = FIELD_PREP(ATH10K_HTC_MAILBOX_MASK, 1);
     int ret;
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
 
     *lookahead = 0;
     *host_int_status = 0;
@@ -910,7 +910,7 @@ static int ath10k_sdio_mbox_read_int_status(struct ath10k* ar,
     }
 
 out:
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
     return ret;
 }
 
@@ -1348,7 +1348,7 @@ static int ath10k_sdio_hif_disable_intrs(struct ath10k* ar) {
     struct ath10k_sdio_irq_enable_regs* regs = irq_data->irq_en_reg;
     int ret;
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
 
     memset(regs, 0, sizeof(*regs));
     ret = ath10k_sdio_write(ar, MBOX_INT_STATUS_ENABLE_ADDRESS,
@@ -1357,7 +1357,7 @@ static int ath10k_sdio_hif_disable_intrs(struct ath10k* ar) {
         ath10k_warn("unable to disable sdio interrupts: %d\n", ret);
     }
 
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
 
     return ret;
 }
@@ -1460,7 +1460,7 @@ static int ath10k_sdio_hif_enable_intrs(struct ath10k* ar) {
     struct ath10k_sdio_irq_enable_regs* regs = irq_data->irq_en_reg;
     int ret;
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
 
     /* Enable all but CPU interrupts */
     regs->int_status_en = FIELD_PREP(MBOX_INT_STATUS_ENABLE_ERROR_MASK, 1) |
@@ -1494,7 +1494,7 @@ static int ath10k_sdio_hif_enable_intrs(struct ath10k* ar) {
         ath10k_warn("failed to update mbox interrupt status register : %d\n",
                     ret);
 
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
     return ret;
 }
 
@@ -1680,13 +1680,13 @@ static void ath10k_sdio_irq_disable(struct ath10k* ar) {
         return;
     }
 
-    mutex_lock(&irq_data->mtx);
+    mtx_lock(&irq_data->mtx);
 
     memset(regs, 0, sizeof(*regs)); /* disable all interrupts */
     memcpy(skb->data, regs, sizeof(*regs));
     skb_put(skb, sizeof(*regs));
 
-    mutex_unlock(&irq_data->mtx);
+    mtx_unlock(&irq_data->mtx);
 
     irqs_disabled_comp = COMPLETION_INIT;
     ret = ath10k_sdio_prep_async_req(ar, MBOX_INT_STATUS_ENABLE_ADDRESS,
@@ -1971,7 +1971,7 @@ static int ath10k_sdio_probe(struct sdio_func* func,
 
     spin_lock_init(&ar_sdio->lock);
     spin_lock_init(&ar_sdio->wr_async_lock);
-    mutex_init(&ar_sdio->irq_data.mtx);
+    mtx_init(&ar_sdio->irq_data.mtx, mtx_plain);
 
     INIT_LIST_HEAD(&ar_sdio->bus_req_freeq);
     INIT_LIST_HEAD(&ar_sdio->wr_asyncq);

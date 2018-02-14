@@ -440,7 +440,7 @@ static bool ath10k_pci_is_awake(struct ath10k* ar) {
 static void __ath10k_pci_wake(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
-    lockdep_assert_held(&ar_pci->ps_lock);
+    ASSERT_MTX_HELD(&ar_pci->ps_lock);
 
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps wake reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
@@ -453,7 +453,7 @@ static void __ath10k_pci_wake(struct ath10k* ar) {
 static void __ath10k_pci_sleep(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
-    lockdep_assert_held(&ar_pci->ps_lock);
+    ASSERT_MTX_HELD(&ar_pci->ps_lock);
 
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps sleep reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
@@ -1413,7 +1413,7 @@ static void ath10k_pci_dump_registers(struct ath10k* ar,
     uint32_t reg_dump_values[REG_DUMP_COUNT_QCA988X] = {};
     int i, ret;
 
-    lockdep_assert_held(&ar->data_lock);
+    ASSERT_MTX_HELD(&ar->data_lock);
 
     ret = ath10k_pci_diag_read_hi(ar, &reg_dump_values[0],
                                   hi_failure_state,

@@ -21,11 +21,10 @@
 #include <stdint.h>
 
 #include <sync/completion.h>
-#include <linux/if_ether.h>
-#include <linux/pci.h>
-#include <linux/uuid.h>
-#include <linux/time.h>
 
+#include <threads.h>
+
+#include "linuxisms.h"
 #include "htt.h"
 #include "htc.h"
 #include "hw.h"
@@ -880,7 +879,7 @@ struct ath10k {
     struct workqueue_struct* workqueue_aux;
 
     /* prevents concurrent FW reconfiguration */
-    struct mutex conf_mutex;
+    mtx_t conf_mutex;
 
     /* protects shared structure data */
     spinlock_t data_lock;
