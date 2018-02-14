@@ -72,7 +72,7 @@ interface-member = interface-method | const-declaration | enum-declaration ;
 interface-method = ordinal , ":" , interface-parameters
 
 interface-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
-                     | "event" , IDENTIFIER , parameter-list
+                     | "->" , IDENTIFIER , parameter-list
 
 parameter-list = "(" , parameters , ")" ;
 

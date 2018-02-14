@@ -27,5 +27,5 @@ const uint32 NumberOfDirections = 4;
 interface Drawing {
     1: Draw(Point p, Direction d);
     2: DrawLots(Points ps);
-    3: event DrawSucceeded(uint32 draws);
+    3: -> DrawSucceeded(uint32 draws);
 };

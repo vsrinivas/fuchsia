@@ -650,7 +650,7 @@ std::unique_ptr<ast::InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod()
         return true;
     };
 
-    if (MaybeConsumeToken(Token::Kind::Event)) {
+    if (MaybeConsumeToken(Token::Kind::Arrow)) {
         method_name = ParseIdentifier();
         if (!Ok())
             return Fail();

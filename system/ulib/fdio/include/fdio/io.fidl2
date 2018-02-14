@@ -93,7 +93,7 @@ interface Object {
   // to open, |info| contains descriptive information about
   // the object (the same as would be returned by |Describe|),
   // otherwise it is null.
-  0x80000007: event OnOpen(status s, ObjectInfo? info);
+  0x80000007: -> OnOpen(status s, ObjectInfo? info);
 };
 
 // NodeAttributes defines generic information about a filesystem node.
