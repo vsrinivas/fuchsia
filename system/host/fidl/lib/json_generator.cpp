@@ -170,6 +170,10 @@ void EmitUint32(std::ostream* file, uint32_t value) {
     *file << value;
 }
 
+void EmitUint64(std::ostream* file, uint64_t value) {
+    *file << value;
+}
+
 void EmitNewlineAndIndent(std::ostream* file, int indent_level) {
     *file << "\n";
     while (indent_level--)
@@ -272,6 +276,10 @@ void JSONGenerator::Generate(bool value) {
 
 void JSONGenerator::Generate(StringView value) {
     EmitString(&json_file_, value);
+}
+
+void JSONGenerator::Generate(uint64_t value) {
+    EmitUint64(&json_file_, value);
 }
 
 void JSONGenerator::Generate(types::HandleSubtype value) {
@@ -468,6 +476,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
         GenerateObjectMember("members", value.members);
+        GenerateObjectMember("size", value.size);
     });
 }
 
@@ -475,8 +484,9 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::First);
         GenerateObjectMember("name", value.name);
-        if (value.default_value)
-            GenerateObjectMember("maybe_default_value", value.default_value);
+        if (value.maybe_default_value)
+            GenerateObjectMember("maybe_default_value", value.maybe_default_value);
+        GenerateObjectMember("offset", value.offset);
     });
 }
 
@@ -484,6 +494,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
         GenerateObjectMember("members", value.members);
+        GenerateObjectMember("size", value.size);
     });
 }
 
@@ -491,6 +502,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::First);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("offset", value.offset);
     });
 }
 

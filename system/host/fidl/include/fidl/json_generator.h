@@ -59,6 +59,7 @@ public:
 
     void Generate(bool value);
     void Generate(StringView value);
+    void Generate(uint64_t value);
 
     void Generate(types::HandleSubtype value);
 

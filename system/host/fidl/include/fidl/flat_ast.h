@@ -107,12 +107,14 @@ struct Interface {
 struct Struct {
     struct Member {
         Member(std::unique_ptr<ast::Type> type, std::unique_ptr<ast::Identifier> name,
-               std::unique_ptr<ast::Constant> default_value)
+               std::unique_ptr<ast::Constant> maybe_default_value)
             : type(std::move(type)), name(std::move(name)),
-              default_value(std::move(default_value)) {}
+              maybe_default_value(std::move(maybe_default_value)) {}
         std::unique_ptr<ast::Type> type;
         std::unique_ptr<ast::Identifier> name;
-        std::unique_ptr<ast::Constant> default_value;
+        std::unique_ptr<ast::Constant> maybe_default_value;
+        // TODO(TO-758) Compute this.
+        uint64_t offset = 0;
     };
 
     Struct(Name name, std::vector<Member> members)
@@ -120,6 +122,8 @@ struct Struct {
 
     Name name;
     std::vector<Member> members;
+    // TODO(TO-758) Compute this.
+    uint64_t size = 8;
 };
 
 struct Union {
@@ -128,6 +132,8 @@ struct Union {
             : type(std::move(type)), name(std::move(name)) {}
         std::unique_ptr<ast::Type> type;
         std::unique_ptr<ast::Identifier> name;
+        // TODO(TO-758) Compute this.
+        uint64_t offset = 0;
     };
 
     Union(Name name, std::vector<Member> members)
@@ -135,6 +141,8 @@ struct Union {
 
     Name name;
     std::vector<Member> members;
+    // TODO(TO-758) Compute this.
+    uint64_t size = 8;
 };
 
 } // namespace flat

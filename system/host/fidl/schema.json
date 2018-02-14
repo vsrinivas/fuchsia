@@ -156,7 +156,7 @@
         },
         "struct": {
             "type": "object",
-            "required": [ "name", "members" ],
+            "required": [ "name", "members", "size" ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -166,18 +166,24 @@
                     "items": {
                         "$ref": "#/definitions/struct-member"
                     }
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
         "struct-member": {
             "type": "object",
-            "required": [ "type", "name" ],
+            "required": [ "type", "name", "offset" ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "offset": {
+                    "$ref": "#/definitions/size"
                 },
                 "maybe_default_value": {
                     "$ref": "#/definitions/constant"
@@ -186,7 +192,7 @@
         },
         "union": {
             "type": "object",
-            "required": [ "name", "members" ],
+            "required": [ "name", "members", "size" ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -196,18 +202,24 @@
                     "items": {
                         "$ref": "#/definitions/union-member"
                     }
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
         "union-member": {
             "type": "object",
-            "required": [ "type", "name" ],
+            "required": [ "type", "name", "offset" ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "offset": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
