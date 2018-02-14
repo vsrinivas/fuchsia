@@ -35,30 +35,6 @@ typedef enum {
 } zx_object_info_topic_t;
 
 typedef enum {
-    ZX_OBJ_TYPE_NONE                = 0,
-    ZX_OBJ_TYPE_PROCESS             = 1,
-    ZX_OBJ_TYPE_THREAD              = 2,
-    ZX_OBJ_TYPE_VMO                 = 3,
-    ZX_OBJ_TYPE_CHANNEL             = 4,
-    ZX_OBJ_TYPE_EVENT               = 5,
-    ZX_OBJ_TYPE_PORT                = 6,
-    ZX_OBJ_TYPE_INTERRUPT           = 9,
-    ZX_OBJ_TYPE_PCI_DEVICE          = 11,
-    ZX_OBJ_TYPE_LOG                 = 12,
-    ZX_OBJ_TYPE_SOCKET              = 14,
-    ZX_OBJ_TYPE_RESOURCE            = 15,
-    ZX_OBJ_TYPE_EVENT_PAIR          = 16,
-    ZX_OBJ_TYPE_JOB                 = 17,
-    ZX_OBJ_TYPE_VMAR                = 18,
-    ZX_OBJ_TYPE_FIFO                = 19,
-    ZX_OBJ_TYPE_GUEST               = 20,
-    ZX_OBJ_TYPE_VCPU                = 21,
-    ZX_OBJ_TYPE_TIMER               = 22,
-    ZX_OBJ_TYPE_IOMMU               = 23,
-    ZX_OBJ_TYPE_LAST
-} zx_obj_type_t;
-
-typedef enum {
     ZX_OBJ_PROP_NONE            = 0,
     ZX_OBJ_PROP_WAITABLE        = 1,
 } zx_obj_props_t;

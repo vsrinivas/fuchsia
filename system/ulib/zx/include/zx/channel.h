@@ -37,6 +37,13 @@ public:
                                num_handles, actual_bytes, actual_handles);
     }
 
+    zx_status_t read_etc(uint32_t flags, void* bytes, uint32_t num_bytes,
+                         uint32_t* actual_bytes, zx_handle_info_t* handles,
+                         uint32_t num_handles, uint32_t* actual_handles) const {
+        return zx_channel_read_etc(get(), flags, bytes, handles, num_bytes,
+                                   num_handles, actual_bytes, actual_handles);
+    }
+
     zx_status_t write(uint32_t flags, const void* bytes, uint32_t num_bytes,
                       const zx_handle_t* handles, uint32_t num_handles) const {
         return zx_channel_write(get(), flags, bytes, num_bytes, handles,

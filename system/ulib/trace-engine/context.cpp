@@ -549,8 +549,7 @@ void trace_context_write_kernel_object_record(
     if (payload) {
         payload
             .WriteUint64(trace::MakeRecordHeader(trace::RecordType::kKernelObject, record_size) |
-                         trace::KernelObjectRecordFields::ObjectType::Make(
-                             trace::ToUnderlyingType(type)) |
+                         trace::KernelObjectRecordFields::ObjectType::Make(type) |
                          trace::KernelObjectRecordFields::NameStringRef::Make(
                              name_ref->encoded_value) |
                          trace::KernelObjectRecordFields::ArgumentCount::Make(num_args))

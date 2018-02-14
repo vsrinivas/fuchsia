@@ -172,6 +172,14 @@ syscall channel_read
         num_handles: uint32_t)
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
+syscall channel_read_etc
+    (handle: zx_handle_t, options: uint32_t,
+        bytes: any[num_bytes] OUT,
+        handles: zx_handle_info_t[num_handles] OUT,
+        num_bytes: uint32_t,
+        num_handles: uint32_t)
+    returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
+
 syscall channel_write
     (handle: zx_handle_t, options: uint32_t,
         bytes: any[num_bytes] IN, num_bytes: uint32_t,

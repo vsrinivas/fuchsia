@@ -325,6 +325,36 @@ typedef enum {
 #define ZX_TIMER_SLACK_EARLY        1u
 #define ZX_TIMER_SLACK_LATE         2u
 
+typedef uint32_t zx_obj_type_t;
+
+#define ZX_OBJ_TYPE_NONE            ((zx_obj_type_t)0u)
+#define ZX_OBJ_TYPE_PROCESS         ((zx_obj_type_t)1u)
+#define ZX_OBJ_TYPE_THREAD          ((zx_obj_type_t)2u)
+#define ZX_OBJ_TYPE_VMO             ((zx_obj_type_t)3u)
+#define ZX_OBJ_TYPE_CHANNEL         ((zx_obj_type_t)4u)
+#define ZX_OBJ_TYPE_EVENT           ((zx_obj_type_t)5u)
+#define ZX_OBJ_TYPE_PORT            ((zx_obj_type_t)6u)
+#define ZX_OBJ_TYPE_INTERRUPT       ((zx_obj_type_t)9u)
+#define ZX_OBJ_TYPE_PCI_DEVICE      ((zx_obj_type_t)11u)
+#define ZX_OBJ_TYPE_LOG             ((zx_obj_type_t)12u)
+#define ZX_OBJ_TYPE_SOCKET          ((zx_obj_type_t)14u)
+#define ZX_OBJ_TYPE_RESOURCE        ((zx_obj_type_t)15u)
+#define ZX_OBJ_TYPE_EVENT_PAIR      ((zx_obj_type_t)16u)
+#define ZX_OBJ_TYPE_JOB             ((zx_obj_type_t)17u)
+#define ZX_OBJ_TYPE_VMAR            ((zx_obj_type_t)18u)
+#define ZX_OBJ_TYPE_FIFO            ((zx_obj_type_t)19u)
+#define ZX_OBJ_TYPE_GUEST           ((zx_obj_type_t)20u)
+#define ZX_OBJ_TYPE_VCPU            ((zx_obj_type_t)21u)
+#define ZX_OBJ_TYPE_TIMER           ((zx_obj_type_t)22u)
+#define ZX_OBJ_TYPE_IOMMU           ((zx_obj_type_t)23u)
+#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)24u)
+
+typedef struct {
+    zx_handle_t handle;
+    zx_obj_type_t type;
+    zx_rights_t rights;
+    uint32_t unused;
+} zx_handle_info_t;
 
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by

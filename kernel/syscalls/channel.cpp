@@ -78,15 +78,36 @@ zx_status_t sys_channel_create(uint32_t options,
     return result;
 }
 
+template <typename HandleInfoT>
+void MapHandleToValue(
+    ProcessDispatcher* up, const Handle* handle, HandleInfoT* out);
+
+template<>
+void MapHandleToValue<uint32_t>(
+    ProcessDispatcher* up, const Handle* handle, uint32_t* out) {
+    *out = up->MapHandleToValue(handle);
+}
+
+template<>
+void MapHandleToValue<zx_handle_info_t>(
+    ProcessDispatcher* up, const Handle* handle, zx_handle_info_t* out) {
+    out->handle = up->MapHandleToValue(handle);
+    out->type = handle->dispatcher()->get_type();
+    out->rights = handle->rights();
+    out->unused = 0;
+}
+
+template <typename HandleT>
 static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
-                            user_out_ptr<zx_handle_t> handles, uint32_t num_handles) {
+                            user_out_ptr<HandleT> handles, uint32_t num_handles) {
     Handle* const* handle_list = msg->handles();
     msg->set_owns_handles(false);
 
-    zx_handle_t hvs[kMaxMessageHandles];
+    HandleT hvs[kMaxMessageHandles];
     for (size_t i = 0; i < num_handles; ++i) {
-        hvs[i] = up->MapHandleToValue(handle_list[i]);
+        MapHandleToValue(up, handle_list[i], &hvs[i]);
     }
+
     handles.copy_array_to_user(hvs, num_handles);
 
     for (size_t i = 0; i < num_handles; ++i) {
@@ -98,8 +119,9 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     }
 }
 
-zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
-                             user_out_ptr<void> bytes, user_out_ptr<zx_handle_t> handles,
+template <typename HandleInfoT>
+static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
+                             user_out_ptr<void> bytes, user_out_ptr<HandleInfoT> handles,
                              uint32_t num_bytes, uint32_t num_handles,
                              user_out_ptr<uint32_t> actual_bytes,
                              user_out_ptr<uint32_t> actual_handles) {
@@ -153,6 +175,26 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
     record_recv_msg_sz(num_bytes);
     ktrace(TAG_CHANNEL_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
+}
+
+zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
+                             user_out_ptr<void> bytes,
+                             user_out_ptr<zx_handle_t> handle_info,
+                             uint32_t num_bytes, uint32_t num_handles,
+                             user_out_ptr<uint32_t> actual_bytes,
+                             user_out_ptr<uint32_t> actual_handles) {
+    return channel_read(handle_value, options,
+        bytes, handle_info, num_bytes, num_handles, actual_bytes, actual_handles);
+}
+
+zx_status_t sys_channel_read_etc(zx_handle_t handle_value, uint32_t options,
+                             user_out_ptr<void> bytes,
+                             user_out_ptr<zx_handle_info_t> handle_info,
+                             uint32_t num_bytes, uint32_t num_handles,
+                             user_out_ptr<uint32_t> actual_bytes,
+                             user_out_ptr<uint32_t> actual_handles) {
+    return channel_read(handle_value, options,
+        bytes, handle_info, num_bytes, num_handles, actual_bytes, actual_handles);
 }
 
 static zx_status_t channel_read_out(ProcessDispatcher* up,

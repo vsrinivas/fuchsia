@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <zircon/compiler.h>
+#include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
@@ -884,6 +885,53 @@ static bool channel_disallow_write_to_self(void) {
     END_TEST;
 }
 
+static bool channel_read_etc(void) {
+    BEGIN_TEST;
+
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK, "");
+    ASSERT_EQ(zx_handle_replace(event,  ZX_RIGHT_SIGNAL | ZX_RIGHT_TRANSFER, &event), ZX_OK, "");
+
+    zx_handle_t fifo[2];
+    ASSERT_EQ(zx_fifo_create(32u, 8u, 0u, &fifo[0], &fifo[1]), ZX_OK, "");
+
+    zx_handle_t sent[] = {
+        fifo[0],
+        event,
+        fifo[1]
+    };
+
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    EXPECT_EQ(zx_channel_write(channel[0], 0u, NULL, 0, sent, 3u), ZX_OK, "");
+
+    zx_handle_info_t recv[] = {{}, {}, {}};
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+
+    EXPECT_EQ(zx_channel_read_etc(
+        channel[1], 0u, NULL, recv, 0u, 3u, &actual_bytes, &actual_handles), ZX_OK, "");
+
+    EXPECT_EQ(actual_bytes, 0u, "");
+    EXPECT_EQ(actual_handles, 3u, "");
+    EXPECT_EQ(recv[0].type, ZX_OBJ_TYPE_FIFO, "");
+    EXPECT_EQ(recv[0].rights, ZX_DEFAULT_FIFO_RIGHTS, "");
+
+    EXPECT_EQ(recv[1].type, ZX_OBJ_TYPE_EVENT, "");
+    EXPECT_EQ(recv[1].rights, ZX_RIGHT_SIGNAL | ZX_RIGHT_TRANSFER, "");
+
+    EXPECT_EQ(recv[2].type, ZX_OBJ_TYPE_FIFO, "");
+    EXPECT_EQ(recv[2].rights, ZX_DEFAULT_FIFO_RIGHTS, "");
+
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(recv[0].handle), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(recv[1].handle), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(recv[2].handle), ZX_OK, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -897,6 +945,7 @@ RUN_TEST(channel_call2)
 RUN_TEST(bad_channel_call_finish)
 RUN_TEST(channel_nest)
 RUN_TEST(channel_disallow_write_to_self)
+RUN_TEST(channel_read_etc)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS

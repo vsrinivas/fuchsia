@@ -1,4 +1,4 @@
-# zx_channel_read
+# zx_channel_read  - zx_channel_read_etc
 
 ## NAME
 
@@ -13,15 +13,22 @@ zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options,
                             void* bytes, zx_handle_t* handles,
                             uint32_t num_bytes, uint32_t num_handles,
                             uint32_t* actual_bytes, uint32_t* actual_handles);
+
+
+zx_status_t zx_channel_read_etc(zx_handle_t handle, uint32_t options,
+                                void* bytes, zx_handle_info_t* handles,
+                                uint32_t num_bytes, uint32_t num_handles,
+                                uint32_t* actual_bytes, uint32_t* actual_handles);
 ```
 
 ## DESCRIPTION
 
-**channel_read**() attempts to read the first message from the channel
-specified by *handle* into the provided *bytes* and/or *handles* buffers.
+**channel_read**() and **channel_read_etc**() attempts to read the first
+message from the channel specified by *handle* into the provided *bytes*
+and/or *handles* buffers.
 
 The parameters *num_bytes* and *num_handles* are used to specify the
-size of the read buffers.
+size of the respective read buffers.
 
 Channel messages may contain both byte data and handle payloads and may
 only be read in their entirety.  Partial reads are not possible.
@@ -30,9 +37,26 @@ The *bytes* buffer is written before the *handles* buffer. In the event of
 overlap between these two buffers, the contents written to *handles*
 will overwrite the portion of *bytes* it overlaps.
 
+Both forms of read behave the same except that **channel_read**() returns an
+array of raw ``zx_handle_t`` handle values while **channel_read_etc**() returns
+an array of ``zx_handle_info_t`` structures of the form:
+
+```
+typedef struct {
+    zx_handle_t handle;     // handle value
+    zx_obj_type_t type;     // type of object, see ZX_OBJ_TYPE_
+    zx_rights_t rights;     // handle rights
+    uint32_t unused;        // set to zero
+} zx_handle_info_t;
+```
+
+When communicating to an untrusted party over a channel, it is recommended
+that the **channel_read_etc**() form is used and each handle type and rights
+are validated against the expected values.
+
 ## RETURN VALUE
 
-**channel_read**() returns **ZX_OK** on success, if *actual_bytes*
+both forms of read returns **ZX_OK** on success, if *actual_bytes*
 and *actual_handles* (if non-NULL), contain the exact number of bytes
 and count of handles read.
 
