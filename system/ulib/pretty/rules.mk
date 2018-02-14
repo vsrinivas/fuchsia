@@ -16,6 +16,8 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c
 
+MODULE_PACKAGE := static
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).test

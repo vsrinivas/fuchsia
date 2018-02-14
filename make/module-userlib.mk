@@ -184,15 +184,10 @@ endif
 MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
 MODULE_PKG_ARCH := src
 MODULE_PKG_TAG := "[src]"
-# source modules need to include their static deps to be buildable
-# we apply the same . to - transform as in PKG_DEPS
-MODULE_PKG_SDEPS := $(subst .,-,$(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 else
 MODULE_PKG_SRCS :=
 MODULE_PKG_ARCH := $(ARCH)
 MODULE_PKG_TAG := "[lib]"
-# binary modules do not include static deps (they've already been linked in)
-MODULE_PKG_SDEPS :=
 
 ifneq ($(filter shared,$(MODULE_PACKAGE)),)
 ifneq ($(MODULE_SO_NAME),)
@@ -206,6 +201,13 @@ MODULE_PKG_SRCS += lib/lib$(MODULE_NAME).a=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MO
 endif
 endif
 
+ifeq ($(filter shared,$(MODULE_PACKAGE)),)
+# source modules and static libraries need to include their static deps to be buildable
+# we apply the same . to - transform as in PKG_DEPS
+MODULE_PKG_SDEPS := $(subst .,-,$(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
+else
+MODULE_PKG_SDEPS :=
+endif
 
 # libc is the "sysroot" package
 # We bundle crt1, aux libs (libdl, etc), libzircon, as well
