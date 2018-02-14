@@ -31,7 +31,8 @@ implements different `verb`s.
         "https://fuchsia.instagram.com/types/Friend"
       ]
     }
-  ]
+  ],
+  "composition_pattern": "ticker"
 }
 ```
 ```javascript
@@ -123,9 +124,9 @@ is made up of the following fields:
 * `name`: this is the name of the noun given in the [verb template](verb_template.md)
 * `types`: a list of [Entity](../entity.md) types.
    Multiple entries in this list indicate that any of the listed types are compatible.
-   
+
    > TODO(thatguy): Add information about where entity types & schemas are discoverable.
-   
+
    > TODO(thatguy): The semantics of `types` doesn't make a lot of sense for *output*
      or maybe *input/output* nouns.
 
@@ -135,6 +136,21 @@ typing described here, making any attempt to write an `Entity` with an
 incompatible type an error. This applies for all values of `direction` (`input`,
 `output` and `input/output`) on the nouns as specified in the *verb*'s corresponding
 [verb_template](verb_template.md) file.
+
+#### composition_pattern
+
+```javascript
+"composition_pattern": "ticker",
+```
+Specifies the composition pattern with which the module will shown with existing module(s) in
+the story. For example, the ticker pattern described above gives a signal to the story shell that
+the module should be placed below another module that it may share a link with.
+
+Currently supported patterns:
+  ticker: Shown at the bottom of the screen underneath another module.
+  comments-right: Shown to the right of another module.
+
+> NOTE: the set of the patterns supported and their names will likely evolve with time.
 
 #### outgoing services
 

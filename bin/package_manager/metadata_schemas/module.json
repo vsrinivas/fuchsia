@@ -29,6 +29,10 @@
     "alphaNumString": {
       "type": "string",
       "pattern": "^[a-zA-Z0-9_]+$"
+    },
+    "compositionPattern": {
+      "type": "string",
+      "enum": [ "ticker", "comments-right"]
     }
   },
   "type": "object",
@@ -36,7 +40,8 @@
     "binary": { "type": "string" },
     "local_name": { "type": "string" },
     "verb": { "type" : "string" },
-    "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" }
+    "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
+    "composition_pattern" : { "$ref": "#/definitions/compositionPattern" }
   },
   "required": [ "binary", "local_name", "verb" ],
   "additionalProperties": false
