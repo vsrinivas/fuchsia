@@ -48,27 +48,31 @@
  */
 #define MAXCHANNEL 224
 
-#define WL_CHANSPEC_CHAN_MASK 0x00ff
-#define WL_CHANSPEC_CHAN_SHIFT 0
+// clang-format off
 
-#define WL_CHANSPEC_CTL_SB_MASK 0x0300
+#define WL_CHANSPEC_CHAN_MASK    0x00ff
+#define WL_CHANSPEC_CHAN_SHIFT   0
+
+#define WL_CHANSPEC_CTL_SB_MASK  0x0300
 #define WL_CHANSPEC_CTL_SB_SHIFT 8
 #define WL_CHANSPEC_CTL_SB_LOWER 0x0100
 #define WL_CHANSPEC_CTL_SB_UPPER 0x0200
-#define WL_CHANSPEC_CTL_SB_NONE 0x0300
+#define WL_CHANSPEC_CTL_SB_NONE  0x0300
 
-#define WL_CHANSPEC_BW_MASK 0x0C00
-#define WL_CHANSPEC_BW_SHIFT 10
-#define WL_CHANSPEC_BW_10 0x0400
-#define WL_CHANSPEC_BW_20 0x0800
-#define WL_CHANSPEC_BW_40 0x0C00
-#define WL_CHANSPEC_BW_80 0x2000
+#define WL_CHANSPEC_BW_MASK      0x0C00
+#define WL_CHANSPEC_BW_SHIFT     10
+#define WL_CHANSPEC_BW_10        0x0400
+#define WL_CHANSPEC_BW_20        0x0800
+#define WL_CHANSPEC_BW_40        0x0C00
+#define WL_CHANSPEC_BW_80        0x2000
 
-#define WL_CHANSPEC_BAND_MASK 0xf000
-#define WL_CHANSPEC_BAND_SHIFT 12
-#define WL_CHANSPEC_BAND_5G 0x1000
-#define WL_CHANSPEC_BAND_2G 0x2000
-#define INVCHANSPEC 255
+#define WL_CHANSPEC_BAND_MASK    0xf000
+#define WL_CHANSPEC_BAND_SHIFT   12
+#define WL_CHANSPEC_BAND_5G      0x1000
+#define WL_CHANSPEC_BAND_2G      0x2000
+#define INVCHANSPEC         255
+
+// clang-format on
 
 #define WL_CHAN_VALID_HW (1 << 0)   /* valid with current HW */
 #define WL_CHAN_VALID_SW (1 << 1)   /* valid with country sett. */
@@ -189,12 +193,14 @@ static inline bool ac_bitmap_tst(u8 bitmap, int prec) {
 #define CRYPTO_ALGO_AES_RESERVED2 6
 #define CRYPTO_ALGO_NALG 7
 
+// clang-format off
+
 /* wireless security bitvec */
 
-#define WEP_ENABLED 0x0001
+#define WEP_ENABLED  0x0001
 #define TKIP_ENABLED 0x0002
-#define AES_ENABLED 0x0004
-#define WSEC_SWFLAG 0x0008
+#define AES_ENABLED  0x0004
+#define WSEC_SWFLAG  0x0008
 /* to go into transition mode without setting wep */
 #define SES_OW_ENABLED 0x0040
 /* MFP */
@@ -202,21 +208,23 @@ static inline bool ac_bitmap_tst(u8 bitmap, int prec) {
 #define MFP_REQUIRED 0x0400
 
 /* WPA authentication mode bitvec */
-#define WPA_AUTH_DISABLED 0x0000    /* Legacy (i.e., non-WPA) */
-#define WPA_AUTH_NONE 0x0001        /* none (IBSS) */
-#define WPA_AUTH_UNSPECIFIED 0x0002 /* over 802.1x */
-#define WPA_AUTH_PSK 0x0004         /* Pre-shared key */
-#define WPA_AUTH_RESERVED1 0x0008
-#define WPA_AUTH_RESERVED2 0x0010
+#define WPA_AUTH_DISABLED       0x0000  /* Legacy (i.e., non-WPA) */
+#define WPA_AUTH_NONE           0x0001  /* none (IBSS) */
+#define WPA_AUTH_UNSPECIFIED    0x0002  /* over 802.1x */
+#define WPA_AUTH_PSK            0x0004  /* Pre-shared key */
+#define WPA_AUTH_RESERVED1      0x0008
+#define WPA_AUTH_RESERVED2      0x0010
 
-#define WPA2_AUTH_RESERVED1 0x0020
-#define WPA2_AUTH_UNSPECIFIED 0x0040 /* over 802.1x */
-#define WPA2_AUTH_PSK 0x0080         /* Pre-shared key */
-#define WPA2_AUTH_RESERVED3 0x0200
-#define WPA2_AUTH_RESERVED4 0x0400
-#define WPA2_AUTH_RESERVED5 0x0800
-#define WPA2_AUTH_1X_SHA256 0x1000  /* 1X with SHA256 key derivation */
-#define WPA2_AUTH_PSK_SHA256 0x8000 /* PSK with SHA256 key derivation */
+#define WPA2_AUTH_RESERVED1     0x0020
+#define WPA2_AUTH_UNSPECIFIED   0x0040  /* over 802.1x */
+#define WPA2_AUTH_PSK           0x0080  /* Pre-shared key */
+#define WPA2_AUTH_RESERVED3     0x0200
+#define WPA2_AUTH_RESERVED4     0x0400
+#define WPA2_AUTH_RESERVED5     0x0800
+#define WPA2_AUTH_1X_SHA256     0x1000  /* 1X with SHA256 key derivation */
+#define WPA2_AUTH_PSK_SHA256    0x8000  /* PSK with SHA256 key derivation */
+
+// clang-format on
 
 #define DOT11_DEFAULT_RTS_LEN 2347
 #define DOT11_DEFAULT_FRAG_LEN 2346
@@ -229,4 +237,4 @@ static inline bool ac_bitmap_tst(u8 bitmap, int prec) {
 #define HT_CAP_RX_STBC_NO 0x0
 #define HT_CAP_RX_STBC_ONE_STREAM 0x1
 
-#endif /* _BRCMU_WIFI_H_ */
+#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_WIFI_H_ */

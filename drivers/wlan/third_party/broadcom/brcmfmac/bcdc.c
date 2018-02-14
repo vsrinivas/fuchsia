@@ -41,13 +41,15 @@ struct brcmf_proto_bcdc_dcmd {
     __le32 status; /* status code returned from the device */
 };
 
+// clang-format off
+
 /* BCDC flag definitions */
-#define BCDC_DCMD_ERROR 0x01     /* 1=cmd failed */
-#define BCDC_DCMD_SET 0x02       /* 0=get, 1=set cmd */
-#define BCDC_DCMD_IF_MASK 0xF000 /* I/F index */
-#define BCDC_DCMD_IF_SHIFT 12
-#define BCDC_DCMD_ID_MASK 0xFFFF0000 /* id an cmd pairing */
-#define BCDC_DCMD_ID_SHIFT 16        /* ID Mask shift bits */
+#define BCDC_DCMD_ERROR     0x00000001       /* 1=cmd failed */
+#define BCDC_DCMD_SET       0x00000002       /* 0=get, 1=set cmd */
+#define BCDC_DCMD_IF_MASK   0x0000F000       /* I/F index */
+#define BCDC_DCMD_IF_SHIFT  12
+#define BCDC_DCMD_ID_MASK   0xFFFF0000       /* id an cmd pairing */
+#define BCDC_DCMD_ID_SHIFT  16               /* ID Mask shift bits */
 #define BCDC_DCMD_ID(flags) (((flags)&BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT)
 
 /*
@@ -56,13 +58,15 @@ struct brcmf_proto_bcdc_dcmd {
  */
 #define BCDC_HEADER_LEN 4
 #define BCDC_PROTO_VER 2          /* Protocol version */
-#define BCDC_FLAG_VER_MASK 0xf0   /* Protocol version mask */
-#define BCDC_FLAG_VER_SHIFT 4     /* Protocol version shift */
-#define BCDC_FLAG_SUM_GOOD 0x04   /* Good RX checksums */
+#define BCDC_FLAG_VER_MASK   0xf0   /* Protocol version mask */
+#define BCDC_FLAG_VER_SHIFT  4     /* Protocol version shift */
+#define BCDC_FLAG_SUM_GOOD   0x04   /* Good RX checksums */
 #define BCDC_FLAG_SUM_NEEDED 0x08 /* Dongle needs to do TX checksums */
-#define BCDC_PRIORITY_MASK 0x7
-#define BCDC_FLAG2_IF_MASK 0x0f /* packet rx interface in APSTA */
-#define BCDC_FLAG2_IF_SHIFT 0
+#define BCDC_PRIORITY_MASK   0x07
+#define BCDC_FLAG2_IF_MASK   0x0f /* packet rx interface in APSTA */
+#define BCDC_FLAG2_IF_SHIFT  0
+
+// clang-format on
 
 #define BCDC_GET_IF_IDX(hdr) ((int)((((hdr)->flags2) & BCDC_FLAG2_IF_MASK) >> BCDC_FLAG2_IF_SHIFT))
 #define BCDC_SET_IF_IDX(hdr, idx) \
@@ -90,12 +94,12 @@ struct brcmf_proto_bcdc_header {
 #define BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES 12
 
 #define RETRIES 2 /* # of retries to retrieve matching dcmd response */
-#define BUS_HEADER_LEN                                 \
-    (16 + 64) /* Must be atleast SDPCM_RESERVE         \
-               * (amount of header tha might be added) \
-               * plus any space that might be needed   \
-               * for bus alignment padding.            \
-               */
+/* Must be atleast SDPCM_RESERVE
+ * (amount of header tha might be added)
+ * plus any space that might be needed
+ * for bus alignment padding.
+ */
+#define BUS_HEADER_LEN (16 + 64)
 struct brcmf_bcdc {
     u16 reqid;
     u8 bus_header[BUS_HEADER_LEN];
@@ -163,7 +167,8 @@ static int brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint c
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     void* info;
-    int ret = 0, retries = 0;
+    int ret = 0;
+    int retries = 0;
     u32 id, flags;
 
     brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
@@ -376,7 +381,7 @@ void brcmf_proto_bcdc_txcomplete(struct device* dev, struct sk_buff* txp, bool s
 }
 
 static void brcmf_proto_bcdc_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
-        enum proto_addr_mode addr_mode) {}
+                                                 enum proto_addr_mode addr_mode) {}
 
 static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx, u8 peer[ETH_ALEN]) {}
 

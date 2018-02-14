@@ -110,7 +110,8 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     struct netdev_hw_addr* ha;
     u32 cmd_value, cnt;
     __le32 cnt_le;
-    char* buf, *bufp;
+    char* buf
+    char* bufp;
     u32 buflen;
     s32 err;
 
@@ -330,12 +331,11 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
     brcmf_dbg(DATA, "rx proto=0x%X\n", ntohs(skb->protocol));
     if (in_interrupt()) {
         netif_rx(skb);
-    } else
+    } else {
         /* If the receive is not processed inside an ISR,
          * the softirqd must be woken explicitly to service
          * the NET_RX_SOFTIRQ.  This is handled by netif_rx_ni().
          */
-    {
         netif_rx_ni(skb);
     }
 }

@@ -166,7 +166,8 @@ static enum nvram_parser_state brcmf_nvram_handle_value(struct nvram_parser* nvp
 }
 
 static enum nvram_parser_state brcmf_nvram_handle_comment(struct nvram_parser* nvp) {
-    char* eoc, *sol;
+    char* eoc;
+    char* sol;
 
     sol = (char*)&nvp->data[nvp->pos];
     eoc = strchr(sol, '\n');
@@ -516,8 +517,8 @@ done:
 
 int brcmf_fw_get_firmwares_pcie(struct device* dev, u16 flags, const char* code, const char* nvram,
                                 void (*fw_cb)(struct device* dev, int err,
-                                        const struct firmware* fw, void* nvram_image,
-                                        u32 nvram_len),
+                                              const struct firmware* fw, void* nvram_image,
+                                              u32 nvram_len),
                                 u16 domain_nr, u16 bus_nr) {
     struct brcmf_fw* fwctx;
 
@@ -550,7 +551,7 @@ int brcmf_fw_get_firmwares_pcie(struct device* dev, u16 flags, const char* code,
 
 int brcmf_fw_get_firmwares(struct device* dev, u16 flags, const char* code, const char* nvram,
                            void (*fw_cb)(struct device* dev, int err, const struct firmware* fw,
-                                   void* nvram_image, u32 nvram_len)) {
+                                         void* nvram_image, u32 nvram_len)) {
     return brcmf_fw_get_firmwares_pcie(dev, flags, code, nvram, fw_cb, 0, 0);
 }
 

@@ -86,18 +86,22 @@ enum brcmf_fws_tlv_type { BRCMF_FWS_TLV_DEFLIST BRCMF_FWS_TYPE_INVALID };
 enum brcmf_fws_tlv_len { BRCMF_FWS_TLV_DEFLIST };
 #undef BRCMF_FWS_TLV_DEF
 
+// clang-format off
+
 /* AMPDU rx reordering definitions */
 #define BRCMF_RXREORDER_FLOWID_OFFSET 0
 #define BRCMF_RXREORDER_MAXIDX_OFFSET 2
-#define BRCMF_RXREORDER_FLAGS_OFFSET 4
+#define BRCMF_RXREORDER_FLAGS_OFFSET  4
 #define BRCMF_RXREORDER_CURIDX_OFFSET 6
 #define BRCMF_RXREORDER_EXPIDX_OFFSET 8
 
-#define BRCMF_RXREORDER_DEL_FLOW 0x01
-#define BRCMF_RXREORDER_FLUSH_ALL 0x02
+#define BRCMF_RXREORDER_DEL_FLOW     0x01
+#define BRCMF_RXREORDER_FLUSH_ALL    0x02
 #define BRCMF_RXREORDER_CURIDX_VALID 0x04
 #define BRCMF_RXREORDER_EXPIDX_VALID 0x08
-#define BRCMF_RXREORDER_NEW_HOLE 0x10
+#define BRCMF_RXREORDER_NEW_HOLE     0x10
+
+// clang-format-on
 
 #ifdef DEBUG
 /*
@@ -208,6 +212,8 @@ struct brcmf_skbuff_cb {
  */
 #define brcmf_skbcb(skb) ((struct brcmf_skbuff_cb*)((skb)->cb))
 
+// clang-format-off
+
 /*
  * sk_buff control if flags
  *
@@ -218,18 +224,18 @@ struct brcmf_skbuff_cb {
  *  b[7]   - interface in AP mode.
  *  b[3:0] - interface index.
  */
-#define BRCMF_SKB_IF_FLAGS_REQUESTED_MASK 0x0800
-#define BRCMF_SKB_IF_FLAGS_REQUESTED_SHIFT 11
-#define BRCMF_SKB_IF_FLAGS_SIGNAL_ONLY_MASK 0x0400
+#define BRCMF_SKB_IF_FLAGS_REQUESTED_MASK    0x0800
+#define BRCMF_SKB_IF_FLAGS_REQUESTED_SHIFT   11
+#define BRCMF_SKB_IF_FLAGS_SIGNAL_ONLY_MASK  0x0400
 #define BRCMF_SKB_IF_FLAGS_SIGNAL_ONLY_SHIFT 10
-#define BRCMF_SKB_IF_FLAGS_TRANSMIT_MASK 0x0200
-#define BRCMF_SKB_IF_FLAGS_TRANSMIT_SHIFT 9
-#define BRCMF_SKB_IF_FLAGS_REQ_CREDIT_MASK 0x0100
-#define BRCMF_SKB_IF_FLAGS_REQ_CREDIT_SHIFT 8
-#define BRCMF_SKB_IF_FLAGS_IF_AP_MASK 0x0080
-#define BRCMF_SKB_IF_FLAGS_IF_AP_SHIFT 7
-#define BRCMF_SKB_IF_FLAGS_INDEX_MASK 0x000f
-#define BRCMF_SKB_IF_FLAGS_INDEX_SHIFT 0
+#define BRCMF_SKB_IF_FLAGS_TRANSMIT_MASK     0x0200
+#define BRCMF_SKB_IF_FLAGS_TRANSMIT_SHIFT    9
+#define BRCMF_SKB_IF_FLAGS_REQ_CREDIT_MASK   0x0100
+#define BRCMF_SKB_IF_FLAGS_REQ_CREDIT_SHIFT  8
+#define BRCMF_SKB_IF_FLAGS_IF_AP_MASK        0x0080
+#define BRCMF_SKB_IF_FLAGS_IF_AP_SHIFT       7
+#define BRCMF_SKB_IF_FLAGS_INDEX_MASK        0x000f
+#define BRCMF_SKB_IF_FLAGS_INDEX_SHIFT       0
 
 #define brcmf_skb_if_flags_set_field(skb, field, value)                               \
     brcmu_maskset16(&(brcmf_skbcb(skb)->if_flags), BRCMF_SKB_IF_FLAGS_##field##_MASK, \
@@ -253,16 +259,16 @@ struct brcmf_skbuff_cb {
  * h-slot   : b[23:8] => hanger-slot
  * freerun  : b[7:0] => A free running counter
  */
-#define BRCMF_SKB_HTOD_TAG_GENERATION_MASK 0x80000000
+#define BRCMF_SKB_HTOD_TAG_GENERATION_MASK  0x80000000
 #define BRCMF_SKB_HTOD_TAG_GENERATION_SHIFT 31
-#define BRCMF_SKB_HTOD_TAG_FLAGS_MASK 0x78000000
-#define BRCMF_SKB_HTOD_TAG_FLAGS_SHIFT 27
-#define BRCMF_SKB_HTOD_TAG_FIFO_MASK 0x07000000
-#define BRCMF_SKB_HTOD_TAG_FIFO_SHIFT 24
-#define BRCMF_SKB_HTOD_TAG_HSLOT_MASK 0x00ffff00
-#define BRCMF_SKB_HTOD_TAG_HSLOT_SHIFT 8
-#define BRCMF_SKB_HTOD_TAG_FREERUN_MASK 0x000000ff
-#define BRCMF_SKB_HTOD_TAG_FREERUN_SHIFT 0
+#define BRCMF_SKB_HTOD_TAG_FLAGS_MASK       0x78000000
+#define BRCMF_SKB_HTOD_TAG_FLAGS_SHIFT      27
+#define BRCMF_SKB_HTOD_TAG_FIFO_MASK        0x07000000
+#define BRCMF_SKB_HTOD_TAG_FIFO_SHIFT       24
+#define BRCMF_SKB_HTOD_TAG_HSLOT_MASK       0x00ffff00
+#define BRCMF_SKB_HTOD_TAG_HSLOT_SHIFT      8
+#define BRCMF_SKB_HTOD_TAG_FREERUN_MASK     0x000000ff
+#define BRCMF_SKB_HTOD_TAG_FREERUN_SHIFT    0
 
 #define brcmf_skb_htod_tag_set_field(skb, field, value)                           \
     brcmu_maskset32(&(brcmf_skbcb(skb)->htod), BRCMF_SKB_HTOD_TAG_##field##_MASK, \
@@ -271,12 +277,12 @@ struct brcmf_skbuff_cb {
     brcmu_maskget32(brcmf_skbcb(skb)->htod, BRCMF_SKB_HTOD_TAG_##field##_MASK, \
                     BRCMF_SKB_HTOD_TAG_##field##_SHIFT)
 
-#define BRCMF_SKB_HTOD_SEQ_FROMFW_MASK 0x2000
-#define BRCMF_SKB_HTOD_SEQ_FROMFW_SHIFT 13
-#define BRCMF_SKB_HTOD_SEQ_FROMDRV_MASK 0x1000
+#define BRCMF_SKB_HTOD_SEQ_FROMFW_MASK   0x2000
+#define BRCMF_SKB_HTOD_SEQ_FROMFW_SHIFT  13
+#define BRCMF_SKB_HTOD_SEQ_FROMDRV_MASK  0x1000
 #define BRCMF_SKB_HTOD_SEQ_FROMDRV_SHIFT 12
-#define BRCMF_SKB_HTOD_SEQ_NR_MASK 0x0fff
-#define BRCMF_SKB_HTOD_SEQ_NR_SHIFT 0
+#define BRCMF_SKB_HTOD_SEQ_NR_MASK       0x0fff
+#define BRCMF_SKB_HTOD_SEQ_NR_SHIFT      0
 
 #define brcmf_skb_htod_seq_set_field(skb, field, value)                               \
     brcmu_maskset16(&(brcmf_skbcb(skb)->htod_seq), BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
@@ -285,16 +291,18 @@ struct brcmf_skbuff_cb {
     brcmu_maskget16(brcmf_skbcb(skb)->htod_seq, BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
                     BRCMF_SKB_HTOD_SEQ_##field##_SHIFT)
 
-#define BRCMF_FWS_TXSTAT_GENERATION_MASK 0x80000000
+#define BRCMF_FWS_TXSTAT_GENERATION_MASK  0x80000000
 #define BRCMF_FWS_TXSTAT_GENERATION_SHIFT 31
-#define BRCMF_FWS_TXSTAT_FLAGS_MASK 0x78000000
-#define BRCMF_FWS_TXSTAT_FLAGS_SHIFT 27
-#define BRCMF_FWS_TXSTAT_FIFO_MASK 0x07000000
-#define BRCMF_FWS_TXSTAT_FIFO_SHIFT 24
-#define BRCMF_FWS_TXSTAT_HSLOT_MASK 0x00FFFF00
-#define BRCMF_FWS_TXSTAT_HSLOT_SHIFT 8
-#define BRCMF_FWS_TXSTAT_FREERUN_MASK 0x000000FF
-#define BRCMF_FWS_TXSTAT_FREERUN_SHIFT 0
+#define BRCMF_FWS_TXSTAT_FLAGS_MASK       0x78000000
+#define BRCMF_FWS_TXSTAT_FLAGS_SHIFT      27
+#define BRCMF_FWS_TXSTAT_FIFO_MASK        0x07000000
+#define BRCMF_FWS_TXSTAT_FIFO_SHIFT       24
+#define BRCMF_FWS_TXSTAT_HSLOT_MASK       0x00FFFF00
+#define BRCMF_FWS_TXSTAT_HSLOT_SHIFT      8
+#define BRCMF_FWS_TXSTAT_FREERUN_MASK     0x000000FF
+#define BRCMF_FWS_TXSTAT_FREERUN_SHIFT    0
+
+// clang-format on
 
 #define brcmf_txstatus_get_field(txs, field) \
     brcmu_maskget32(txs, BRCMF_FWS_TXSTAT_##field##_MASK, BRCMF_FWS_TXSTAT_##field##_SHIFT)
@@ -700,7 +708,7 @@ static void brcmf_fws_macdesc_deinit(struct brcmf_fws_mac_descriptor* desc) {
 }
 
 static struct brcmf_fws_mac_descriptor* brcmf_fws_macdesc_lookup(struct brcmf_fws_info* fws,
-        u8* ea) {
+                                                                 u8* ea) {
     struct brcmf_fws_mac_descriptor* entry;
     int i;
 
@@ -720,7 +728,7 @@ static struct brcmf_fws_mac_descriptor* brcmf_fws_macdesc_lookup(struct brcmf_fw
 }
 
 static struct brcmf_fws_mac_descriptor* brcmf_fws_macdesc_find(struct brcmf_fws_info* fws,
-        struct brcmf_if* ifp, u8* da) {
+                                                               struct brcmf_if* ifp, u8* da) {
     struct brcmf_fws_mac_descriptor* entry = &fws->desc.other;
     bool multicast;
 
@@ -952,7 +960,8 @@ static int brcmf_fws_rssi_indicate(struct brcmf_fws_info* fws, s8 rssi) {
 }
 
 static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, u8 type, u8* data) {
-    struct brcmf_fws_mac_descriptor* entry, *existing;
+    struct brcmf_fws_mac_descriptor* entry;
+    struct brcmf_fws_mac_descriptor* existing;
     u8 mac_handle;
     u8 ifidx;
     u8* addr;
@@ -1107,7 +1116,7 @@ static int brcmf_fws_request_indicate(struct brcmf_fws_info* fws, u8 type, u8* d
 }
 
 static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* entry,
-        struct sk_buff* skb) {
+                                             struct sk_buff* skb) {
     if (entry->requested_credit > 0) {
         entry->requested_credit--;
         brcmf_skb_if_flags_set_field(skb, REQUESTED, 1);
@@ -1331,7 +1340,7 @@ done:
 }
 
 static int brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int fifo, struct sk_buff* skb,
-        u32 genbit, u16 seq) {
+                                         u32 genbit, u16 seq) {
     struct brcmf_fws_mac_descriptor* entry = brcmf_skbcb(skb)->mac;
     u32 hslot;
     int ret;
@@ -1527,7 +1536,7 @@ static int brcmf_fws_notify_credit_map(struct brcmf_if* ifp, const struct brcmf_
 }
 
 static int brcmf_fws_notify_bcmc_credit_support(struct brcmf_if* ifp,
-        const struct brcmf_event_msg* e, void* data) {
+                                                const struct brcmf_event_msg* e, void* data) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
 
     if (fws) {
@@ -1539,7 +1548,7 @@ static int brcmf_fws_notify_bcmc_credit_support(struct brcmf_if* ifp,
 }
 
 static void brcmf_rxreorder_get_skb_list(struct brcmf_ampdu_rx_reorder* rfi, u8 start, u8 end,
-        struct sk_buff_head* skb_list) {
+                                         struct sk_buff_head* skb_list) {
     /* initialize return list */
     __skb_queue_head_init(skb_list);
 

@@ -110,22 +110,22 @@ struct rte_console {
 
 #define TXRETRIES 2 /* # of retries for tx frames */
 
-#define BRCMF_RXBOUND                  \
-    50 /* Default for max rx frames in \
-        one scheduling */
+/* Default for max rx frames in
+   one scheduling */
+#define BRCMF_RXBOUND 50
 
-#define BRCMF_TXBOUND                  \
-    20 /* Default for max tx frames in \
-        one scheduling */
+/* Default for max tx frames in
+   one scheduling */
+#define BRCMF_TXBOUND 20
 
 #define BRCMF_TXMINMAX 1 /* Max tx frames if rx still pending */
 
-#define MEMBLOCK                            \
-    2048 /* Block size used for downloading \
-          of dongle image */
-#define MAX_DATA_BUF                            \
-    (32 * 1024) /* Must be large enough to hold \
-         biggest possible glom */
+/* Block size used for downloading
+   of dongle image */
+#define MEMBLOCK 2048
+/* Must be large enough to hold
+   biggest possible glom */
+#define MAX_DATA_BUF (32 * 1024)
 
 #define BRCMF_FIRSTREAD (1 << 6)
 
@@ -133,21 +133,23 @@ struct rte_console {
 
 /* SBSDIO_DEVICE_CTL */
 
+// clang-format off
+
 /* 1: device will assert busy signal when receiving CMD53 */
-#define SBSDIO_DEVCTL_SETBUSY 0x01
+#define SBSDIO_DEVCTL_SETBUSY       0x01
 /* 1: assertion of sdio interrupt is synchronous to the sdio clock */
 #define SBSDIO_DEVCTL_SPI_INTR_SYNC 0x02
 /* 1: mask all interrupts to host except the chipActive (rev 8) */
-#define SBSDIO_DEVCTL_CA_INT_ONLY 0x04
+#define SBSDIO_DEVCTL_CA_INT_ONLY   0x04
 /* 1: isolate internal sdio signals, put external pads in tri-state; requires
  * sdio bus power cycle to clear (rev 9) */
-#define SBSDIO_DEVCTL_PADS_ISO 0x08
+#define SBSDIO_DEVCTL_PADS_ISO      0x08
 /* Force SD->SB reset mapping (rev 11) */
-#define SBSDIO_DEVCTL_SB_RST_CTL 0x30
+#define SBSDIO_DEVCTL_SB_RST_CTL    0x30
 /*   Determined by CoreControl bit */
-#define SBSDIO_DEVCTL_RST_CORECTL 0x00
+#define SBSDIO_DEVCTL_RST_CORECTL   0x00
 /*   Force backplane reset */
-#define SBSDIO_DEVCTL_RST_BPRESET 0x10
+#define SBSDIO_DEVCTL_RST_BPRESET   0x10
 /*   Force no backplane reset */
 #define SBSDIO_DEVCTL_RST_NOBPRESET 0x20
 
@@ -167,21 +169,21 @@ struct rte_console {
 
 /* SDIO function 1 register CHIPCLKCSR */
 /* Force ALP request to backplane */
-#define SBSDIO_FORCE_ALP 0x01
+#define SBSDIO_FORCE_ALP           0x01
 /* Force HT request to backplane */
-#define SBSDIO_FORCE_HT 0x02
+#define SBSDIO_FORCE_HT            0x02
 /* Force ILP request to backplane */
-#define SBSDIO_FORCE_ILP 0x04
+#define SBSDIO_FORCE_ILP           0x04
 /* Make ALP ready (power up xtal) */
-#define SBSDIO_ALP_AVAIL_REQ 0x08
+#define SBSDIO_ALP_AVAIL_REQ       0x08
 /* Make HT ready (power up PLL) */
-#define SBSDIO_HT_AVAIL_REQ 0x10
+#define SBSDIO_HT_AVAIL_REQ        0x10
 /* Squelch clock requests from HW */
 #define SBSDIO_FORCE_HW_CLKREQ_OFF 0x20
 /* Status: ALP is ready */
-#define SBSDIO_ALP_AVAIL 0x40
+#define SBSDIO_ALP_AVAIL           0x40
 /* Status: HT is ready */
-#define SBSDIO_HT_AVAIL 0x80
+#define SBSDIO_HT_AVAIL            0x80
 #define SBSDIO_CSR_MASK 0x1F
 #define SBSDIO_AVBITS (SBSDIO_HT_AVAIL | SBSDIO_ALP_AVAIL)
 #define SBSDIO_ALPAV(regval) ((regval)&SBSDIO_AVBITS)
@@ -225,28 +227,28 @@ struct rte_console {
 #define I_DMA (I_RI | I_XI | I_ERRORS)
 
 /* corecontrol */
-#define CC_CISRDY (1 << 0)     /* CIS Ready */
-#define CC_BPRESEN (1 << 1)    /* CCCR RES signal */
-#define CC_F2RDY (1 << 2)      /* set CCCR IOR2 bit */
-#define CC_CLRPADSISO (1 << 3) /* clear SDIO pads isolation */
+#define CC_CISRDY            (1 << 0)     /* CIS Ready */
+#define CC_BPRESEN           (1 << 1)     /* CCCR RES signal */
+#define CC_F2RDY             (1 << 2)     /* set CCCR IOR2 bit */
+#define CC_CLRPADSISO        (1 << 3)     /* clear SDIO pads isolation */
 #define CC_XMTDATAAVAIL_MODE (1 << 4)
 #define CC_XMTDATAAVAIL_CTRL (1 << 5)
 
 /* SDA_FRAMECTRL */
-#define SFC_RF_TERM (1 << 0)  /* Read Frame Terminate */
-#define SFC_WF_TERM (1 << 1)  /* Write Frame Terminate */
-#define SFC_CRC4WOOS (1 << 2) /* CRC error for write out of sync */
-#define SFC_ABORTALL (1 << 3) /* Abort all in-progress frames */
+#define SFC_RF_TERM  (1 << 0)  /* Read Frame Terminate */
+#define SFC_WF_TERM  (1 << 1)  /* Write Frame Terminate */
+#define SFC_CRC4WOOS (1 << 2)  /* CRC error for write out of sync */
+#define SFC_ABORTALL (1 << 3)  /* Abort all in-progress frames */
 
 /*
  * Software allocation of To SB Mailbox resources
  */
 
 /* tosbmailbox bits corresponding to intstatus bits */
-#define SMB_NAK (1 << 0)     /* Frame NAK */
-#define SMB_INT_ACK (1 << 1) /* Host Interrupt ACK */
-#define SMB_USE_OOB (1 << 2) /* Use OOB Wakeup */
-#define SMB_DEV_INT (1 << 3) /* Miscellaneous Interrupt */
+#define SMB_NAK     (1 << 0)   /* Frame NAK */
+#define SMB_INT_ACK (1 << 1)   /* Host Interrupt ACK */
+#define SMB_USE_OOB (1 << 2)   /* Use OOB Wakeup */
+#define SMB_DEV_INT (1 << 3)   /* Miscellaneous Interrupt */
 
 /* tosbmailboxdata */
 #define SMB_DATA_VERSION_SHIFT 16 /* host protocol version */
@@ -262,16 +264,16 @@ struct rte_console {
 #define I_HMB_HOST_INT I_HMB_SW3  /* Miscellaneous Interrupt */
 
 /* tohostmailboxdata */
-#define HMB_DATA_NAKHANDLED 0x0001 /* retransmit NAK'd frame */
-#define HMB_DATA_DEVREADY 0x0002   /* talk to host after enable */
-#define HMB_DATA_FC 0x0004         /* per prio flowcontrol update flag */
-#define HMB_DATA_FWREADY 0x0008    /* fw ready for protocol activity */
-#define HMB_DATA_FWHALT 0x0010     /* firmware halted */
+#define HMB_DATA_NAKHANDLED 0x0001   /* retransmit NAK'd frame */
+#define HMB_DATA_DEVREADY   0x0002   /* talk to host after enable */
+#define HMB_DATA_FC         0x0004   /* per prio flowcontrol update flag */
+#define HMB_DATA_FWREADY    0x0008   /* fw ready for protocol activity */
+#define HMB_DATA_FWHALT     0x0010   /* firmware halted */
 
-#define HMB_DATA_FCDATA_MASK 0xff000000
-#define HMB_DATA_FCDATA_SHIFT 24
+#define HMB_DATA_FCDATA_MASK   0xff000000
+#define HMB_DATA_FCDATA_SHIFT  24
 
-#define HMB_DATA_VERSION_MASK 0x00ff0000
+#define HMB_DATA_VERSION_MASK  0x00ff0000
 #define HMB_DATA_VERSION_SHIFT 16
 
 /*
@@ -285,15 +287,17 @@ struct rte_console {
  * Shared structure between dongle and the host.
  * The structure contains pointers to trap or assert information.
  */
-#define SDPCM_SHARED_VERSION 0x0003
-#define SDPCM_SHARED_VERSION_MASK 0x00FF
-#define SDPCM_SHARED_ASSERT_BUILT 0x0100
-#define SDPCM_SHARED_ASSERT 0x0200
-#define SDPCM_SHARED_TRAP 0x0400
+#define SDPCM_SHARED_VERSION       0x0003
+#define SDPCM_SHARED_VERSION_MASK  0x00FF
+#define SDPCM_SHARED_ASSERT_BUILT  0x0100
+#define SDPCM_SHARED_ASSERT        0x0200
+#define SDPCM_SHARED_TRAP          0x0400
 
 /* Space for header read, limit for data packets */
-#define MAX_HDR_READ (1 << 6)
+#define MAX_HDR_READ  (1 << 6)
 #define MAX_RX_DATASZ 2048
+
+// clang-format on
 
 /* Bump up limit on waiting for HT to account for first startup;
  * if the image is doing a CRC calculation before programming the PMU
@@ -309,10 +313,7 @@ struct rte_console {
 /* Flags for SDH calls */
 #define F2SYNC (SDIO_REQ_4BYTE | SDIO_REQ_FIXED)
 
-#define BRCMF_IDLE_ACTIVE                   \
-    0 /* Do not request any SD clock change \
-       * when idle                          \
-       */
+#define BRCMF_IDLE_ACTIVE 0  /* Do not request any SD clock change when idle */
 #define BRCMF_IDLE_INTERVAL 1
 
 #define KSO_WAIT_US 50
@@ -638,7 +639,8 @@ static bool data_ok(struct brcmf_sdio* bus) {
 }
 
 static int brcmf_sdio_kso_control(struct brcmf_sdio* bus, bool on) {
-    u8 wr_val = 0, rd_val, cmp_val, bmask;
+    u8 wr_val = 0;
+    u8 rd_val, cmp_val, bmask;
     int err = 0;
     int err_cnt = 0;
     int try_cnt = 0;
@@ -1042,12 +1044,12 @@ static u32 brcmf_sdio_hostmail(struct brcmf_sdio* bus) {
      */
     if (hmb_data & (HMB_DATA_DEVREADY | HMB_DATA_FWREADY)) {
         bus->sdpcm_ver = (hmb_data & HMB_DATA_VERSION_MASK) >> HMB_DATA_VERSION_SHIFT;
-        if (bus->sdpcm_ver != SDPCM_PROT_VERSION)
+        if (bus->sdpcm_ver != SDPCM_PROT_VERSION) {
             brcmf_err(
                 "Version mismatch, dongle reports %d, "
                 "expecting %d\n",
                 bus->sdpcm_ver, SDPCM_PROT_VERSION);
-        else {
+        } else {
             brcmf_dbg(SDIO, "Dongle ready, protocol version %d\n", bus->sdpcm_ver);
         }
 
@@ -1173,7 +1175,8 @@ static uint brcmf_sdio_glom_len(struct brcmf_sdio* bus) {
 }
 
 static void brcmf_sdio_free_glom(struct brcmf_sdio* bus) {
-    struct sk_buff* cur, *next;
+    struct sk_buff* cur;
+    struct sk_buff* next;
 
     skb_queue_walk_safe(&bus->glom, cur, next) {
         skb_unlink(cur, &bus->glom);
@@ -1390,9 +1393,11 @@ static void brcmf_sdio_hdpack(struct brcmf_sdio* bus, u8* header,
 
 static u8 brcmf_sdio_rxglom(struct brcmf_sdio* bus, u8 rxseq) {
     u16 dlen, totlen;
-    u8* dptr, num = 0;
+    u8* dptr;
+    u8 num = 0;
     u16 sublen;
-    struct sk_buff* pfirst, *pnext;
+    struct sk_buff* pfirst;
+    struct sk_buff* pnext;
 
     int errcode;
     u8 doff, sfdoff;
@@ -1611,7 +1616,8 @@ static int brcmf_sdio_dcmd_resp_wake(struct brcmf_sdio* bus) {
 }
 static void brcmf_sdio_read_control(struct brcmf_sdio* bus, u8* hdr, uint len, uint doff) {
     uint rdlen, pad;
-    u8* buf = NULL, *rbuf;
+    u8* buf = NULL;
+    u8* rbuf;
     int sdret;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -1718,7 +1724,8 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
     uint rxleft = 0;     /* Remaining number of frames allowed */
     int ret;             /* Return code from calls */
     uint rxcount = 0;    /* Total frames read */
-    struct brcmf_sdio_hdrinfo* rd = &bus->cur_read, rd_new;
+    struct brcmf_sdio_hdrinfo* rd = &bus->cur_read;
+    struct brcmf_sdio_hdrinfo rd_new;
     u8 head_read = 0;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -2097,7 +2104,9 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* 
     u32 dat_offset;
     u16 tail_pad;
     u16 dummy_flags, chop_len;
-    struct sk_buff* pkt_next, *tmp, *pkt_prev;
+    struct sk_buff* pkt_next;
+    struct sk_buff* tmp;
+    struct sk_buff* pkt_prev;
 
     skb_queue_walk_safe(pktq, pkt_next, tmp) {
         dummy_flags = *(u16*)(pkt_next->cb);
@@ -2126,7 +2135,8 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* 
 /* Assumes: (a) header space already there, (b) caller holds lock */
 static int brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct sk_buff_head* pktq, uint chan) {
     int ret;
-    struct sk_buff* pkt_next, *tmp;
+    struct sk_buff* pkt_next;
+    struct sk_buff* tmp;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -2162,7 +2172,8 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     struct sk_buff_head pktq;
     u32 intstat_addr = bus->sdio_core->base + SD_REG(intstatus);
     u32 intstatus = 0;
-    int ret = 0, prec_out, i;
+    int ret = 0;
+    int prec_out, i;
     uint cnt = 0;
     u8 tx_prec_map, pkt_num;
 
@@ -2405,7 +2416,8 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
     /* If waiting for HTAVAIL, check status */
     if (!bus->sr_enabled && bus->clkstate == CLK_PENDING) {
-        u8 clkctl, devctl = 0;
+        u8 clkctl;
+        u8 devctl = 0;
 
 #ifdef DEBUG
         /* Check for inconsistent device control */
@@ -2649,7 +2661,8 @@ static int brcmf_sdio_bus_txdata(struct device* dev, struct sk_buff* pkt) {
 
 static int brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
     struct brcmf_console* c = &bus->console;
-    u8 line[CONSOLE_LINE_MAX], ch;
+    u8 line[CONSOLE_LINE_MAX];
+    u8 ch;
     u32 n, idx, addr;
     int rv;
 
@@ -3457,7 +3470,7 @@ static void brcmf_sdio_dataworker(struct work_struct* work) {
 }
 
 static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct brcmf_chip* ci,
-        u32 drivestrength) {
+                                         u32 drivestrength) {
     const struct sdiod_drive_str* str_tab = NULL;
     u32 str_mask;
     u32 str_shift;
@@ -3813,10 +3826,10 @@ static int brcmf_sdio_get_fwname(struct device* dev, u32 chip, u32 chiprev, u8* 
 
     if (sdiodev->fw_name[0] != '\0') {
         strlcpy(fw_name, sdiodev->fw_name, BRCMF_FW_NAME_LEN);
-    } else
+    } else {
         ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_sdio_fwnames,
                                         ARRAY_SIZE(brcmf_sdio_fwnames), fw_name, NULL);
-
+    }
     return ret;
 }
 
@@ -3834,7 +3847,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
 };
 
 static void brcmf_sdio_firmware_callback(struct device* dev, int err, const struct firmware* code,
-        void* nvram, u32 nvram_len) {
+                                         void* nvram, u32 nvram_len) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;

@@ -734,7 +734,8 @@ static s32 brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if*
     s32 search_state = WL_P2P_DISC_ST_SCAN;
     struct brcmf_cfg80211_vif* vif;
     struct net_device* dev = NULL;
-    int i, num_nodfs = 0;
+    int i;
+    int num_nodfs = 0;
     u16* chanspecs;
 
     brcmf_dbg(TRACE, "enter\n");
@@ -1142,7 +1143,7 @@ static s32 brcmf_p2p_af_searching_channel(struct brcmf_p2p_info* p2p) {
  *
  */
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
-        struct brcmf_bss_info_le* bi)
+                                           struct brcmf_bss_info_le* bi)
 
 {
     struct brcmf_p2p_info* p2p = &cfg->p2p;
@@ -1345,7 +1346,7 @@ int brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct brcmf_ev
     mgmt_frame_len += offsetof(struct ieee80211_mgmt, u);
 
     freq = ieee80211_channel_to_frequency(
-               ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
+        ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
 
     wdev = &ifp->vif->wdev;
     cfg80211_rx_mgmt(wdev, freq, 0, (u8*)mgmt_frame, mgmt_frame_len, 0);
@@ -1369,8 +1370,8 @@ int brcmf_p2p_notify_action_tx_complete(struct brcmf_if* ifp, const struct brcmf
 
     brcmf_dbg(INFO, "Enter: event %s, status=%d\n",
               e->event_code == BRCMF_E_ACTION_FRAME_OFF_CHAN_COMPLETE
-              ? "ACTION_FRAME_OFF_CHAN_COMPLETE"
-              : "ACTION_FRAME_COMPLETE",
+                  ? "ACTION_FRAME_OFF_CHAN_COMPLETE"
+                  : "ACTION_FRAME_COMPLETE",
               e->status);
 
     if (!test_bit(BRCMF_P2P_STATUS_SENDING_ACT_FRAME, &p2p->status)) {
@@ -1734,7 +1735,7 @@ exit:
  * @data: payload of event message (probe request).
  */
 s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-        void* data) {
+                                          void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
@@ -1785,7 +1786,7 @@ s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brc
     mgmt_frame = (u8*)(rxframe + 1);
     mgmt_frame_len = e->datalen - sizeof(*rxframe);
     freq = ieee80211_channel_to_frequency(
-               ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
+        ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
 
     cfg80211_rx_mgmt(&vif->wdev, freq, 0, mgmt_frame, mgmt_frame_len, 0);
 
@@ -1931,7 +1932,7 @@ static int brcmf_p2p_release_p2p_if(struct brcmf_cfg80211_vif* vif) {
  * @addr: mac address for this new interface.
  */
 static struct wireless_dev* brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wiphy* wiphy,
-        u8* addr) {
+                                                    u8* addr) {
     struct brcmf_cfg80211_vif* p2p_vif;
     struct brcmf_if* p2p_ifp;
     struct brcmf_if* pri_ifp;

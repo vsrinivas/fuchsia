@@ -202,4 +202,4 @@ __printf(3, 4) static inline void brcmu_dbg_hex_dump(const void* data, size_t si
 char* brcmu_boardrev_str(u32 brev, char* buf);
 char* brcmu_dotrev_str(u32 dotrev, char* buf);
 
-#endif /* _BRCMU_UTILS_H_ */
+#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_UTILS_H_ */

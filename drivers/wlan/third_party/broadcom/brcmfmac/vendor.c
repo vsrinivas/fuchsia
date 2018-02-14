@@ -28,14 +28,16 @@
 #include "vendor.h"
 
 static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wireless_dev* wdev,
-        const void* data, int len) {
+                                                 const void* data, int len) {
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_if* ifp;
     const struct brcmf_vndr_dcmd_hdr* cmdhdr = data;
     struct sk_buff* reply;
     int ret, payload, ret_len;
-    void* dcmd_buf = NULL, *wr_pointer;
-    u16 msglen, maxmsglen = PAGE_SIZE - 0x100;
+    void* dcmd_buf = NULL;
+    void* wr_pointer;
+    u16 msglen;
+    u16 maxmsglen = PAGE_SIZE - 0x100;
 
     if (len < sizeof(*cmdhdr)) {
         brcmf_err("vendor command too short: %d\n", len);

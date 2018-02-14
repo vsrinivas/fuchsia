@@ -116,7 +116,8 @@ EXPORT_SYMBOL(brcmu_pktq_pdeq);
 struct sk_buff* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
                                       bool (*match_fn)(struct sk_buff* skb, void* arg), void* arg) {
     struct sk_buff_head* q;
-    struct sk_buff* p, *next;
+    struct sk_buff* p;
+    struct sk_buff* next;
 
     q = &pq->q[prec].skblist;
     skb_queue_walk_safe(q, p, next) {
@@ -148,7 +149,8 @@ EXPORT_SYMBOL(brcmu_pktq_pdeq_tail);
 void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct sk_buff*, void*),
                        void* arg) {
     struct sk_buff_head* q;
-    struct sk_buff* p, *next;
+    struct sk_buff* p;
+    struct sk_buff* next;
 
     q = &pq->q[prec].skblist;
     skb_queue_walk_safe(q, p, next) {

@@ -229,69 +229,73 @@ struct chipcregs {
     u16 sromotp[768];
 };
 
+// clang-format off
+
 /* chipid */
-#define CID_ID_MASK 0x0000ffff  /* Chip Id mask */
-#define CID_REV_MASK 0x000f0000 /* Chip Revision mask */
-#define CID_REV_SHIFT 16        /* Chip Revision shift */
-#define CID_PKG_MASK 0x00f00000 /* Package Option mask */
-#define CID_PKG_SHIFT 20        /* Package Option shift */
-#define CID_CC_MASK 0x0f000000  /* CoreCount (corerev >= 4) */
-#define CID_CC_SHIFT 24
-#define CID_TYPE_MASK 0xf0000000 /* Chip Type */
+#define CID_ID_MASK    0x0000ffff  /* Chip Id mask */
+#define CID_REV_MASK   0x000f0000 /* Chip Revision mask */
+#define CID_REV_SHIFT  16        /* Chip Revision shift */
+#define CID_PKG_MASK   0x00f00000 /* Package Option mask */
+#define CID_PKG_SHIFT  20        /* Package Option shift */
+#define CID_CC_MASK    0x0f000000  /* CoreCount (corerev >= 4) */
+#define CID_CC_SHIFT   24
+#define CID_TYPE_MASK  0xf0000000 /* Chip Type */
 #define CID_TYPE_SHIFT 28
 
 /* capabilities */
-#define CC_CAP_UARTS_MASK 0x00000003 /* Number of UARTs */
-#define CC_CAP_MIPSEB 0x00000004     /* MIPS is in big-endian mode */
-#define CC_CAP_UCLKSEL 0x00000018    /* UARTs clock select */
+#define CC_CAP_UARTS_MASK  0x00000003 /* Number of UARTs */
+#define CC_CAP_MIPSEB      0x00000004     /* MIPS is in big-endian mode */
+#define CC_CAP_UCLKSEL     0x00000018    /* UARTs clock select */
 /* UARTs are driven by internal divided clock */
-#define CC_CAP_UINTCLK 0x00000008
-#define CC_CAP_UARTGPIO 0x00000020    /* UARTs own GPIOs 15:12 */
+#define CC_CAP_UINTCLK     0x00000008
+#define CC_CAP_UARTGPIO    0x00000020    /* UARTs own GPIOs 15:12 */
 #define CC_CAP_EXTBUS_MASK 0x000000c0 /* External bus mask */
 #define CC_CAP_EXTBUS_NONE 0x00000000 /* No ExtBus present */
 #define CC_CAP_EXTBUS_FULL 0x00000040 /* ExtBus: PCMCIA, IDE & Prog */
 #define CC_CAP_EXTBUS_PROG 0x00000080 /* ExtBus: ProgIf only */
-#define CC_CAP_FLASH_MASK 0x00000700  /* Type of flash */
-#define CC_CAP_PLL_MASK 0x00038000    /* Type of PLL */
-#define CC_CAP_PWR_CTL 0x00040000     /* Power control */
-#define CC_CAP_OTPSIZE 0x00380000     /* OTP Size (0 = none) */
+#define CC_CAP_FLASH_MASK  0x00000700  /* Type of flash */
+#define CC_CAP_PLL_MASK    0x00038000    /* Type of PLL */
+#define CC_CAP_PWR_CTL     0x00040000     /* Power control */
+#define CC_CAP_OTPSIZE     0x00380000     /* OTP Size (0 = none) */
 #define CC_CAP_OTPSIZE_SHIFT 19       /* OTP Size shift */
 #define CC_CAP_OTPSIZE_BASE 5         /* OTP Size base */
-#define CC_CAP_JTAGP 0x00400000       /* JTAG Master Present */
-#define CC_CAP_ROM 0x00800000         /* Internal boot rom active */
-#define CC_CAP_BKPLN64 0x08000000     /* 64-bit backplane */
-#define CC_CAP_PMU 0x10000000         /* PMU Present, rev >= 20 */
-#define CC_CAP_SROM 0x40000000        /* Srom Present, rev >= 32 */
+#define CC_CAP_JTAGP       0x00400000       /* JTAG Master Present */
+#define CC_CAP_ROM         0x00800000         /* Internal boot rom active */
+#define CC_CAP_BKPLN64     0x08000000     /* 64-bit backplane */
+#define CC_CAP_PMU         0x10000000         /* PMU Present, rev >= 20 */
+#define CC_CAP_SROM        0x40000000        /* Srom Present, rev >= 32 */
 /* Nand flash present, rev >= 35 */
-#define CC_CAP_NFLASH 0x80000000
+#define CC_CAP_NFLASH      0x80000000
 
 #define CC_CAP2_SECI 0x00000001 /* SECI Present, rev >= 36 */
 /* GSIO (spi/i2c) present, rev >= 37 */
 #define CC_CAP2_GSIO 0x00000002
 
 /* pmucapabilities */
-#define PCAP_REV_MASK 0x000000ff
-#define PCAP_RC_MASK 0x00001f00
-#define PCAP_RC_SHIFT 8
-#define PCAP_TC_MASK 0x0001e000
-#define PCAP_TC_SHIFT 13
-#define PCAP_PC_MASK 0x001e0000
-#define PCAP_PC_SHIFT 17
-#define PCAP_VC_MASK 0x01e00000
-#define PCAP_VC_SHIFT 21
-#define PCAP_CC_MASK 0x1e000000
-#define PCAP_CC_SHIFT 25
-#define PCAP5_PC_MASK 0x003e0000 /* PMU corerev >= 5 */
-#define PCAP5_PC_SHIFT 17
-#define PCAP5_VC_MASK 0x07c00000
-#define PCAP5_VC_SHIFT 22
-#define PCAP5_CC_MASK 0xf8000000
-#define PCAP5_CC_SHIFT 27
+#define PCAP_REV_MASK   0x000000ff
+#define PCAP_RC_MASK    0x00001f00
+#define PCAP_RC_SHIFT   8
+#define PCAP_TC_MASK    0x0001e000
+#define PCAP_TC_SHIFT   13
+#define PCAP_PC_MASK    0x001e0000
+#define PCAP_PC_SHIFT   17
+#define PCAP_VC_MASK    0x01e00000
+#define PCAP_VC_SHIFT   21
+#define PCAP_CC_MASK    0x1e000000
+#define PCAP_CC_SHIFT   25
+#define PCAP5_PC_MASK   0x003e0000 /* PMU corerev >= 5 */
+#define PCAP5_PC_SHIFT  17
+#define PCAP5_VC_MASK   0x07c00000
+#define PCAP5_VC_SHIFT  22
+#define PCAP5_CC_MASK   0xf8000000
+#define PCAP5_CC_SHIFT  27
 /* pmucapabilites_ext PMU rev >= 15 */
-#define PCAPEXT_SR_SUPPORTED_MASK (1 << 1)
+#define PCAPEXT_SR_SUPPORTED_MASK    (1 << 1)
 /* retention_ctl PMU rev >= 15 */
 #define PMU_RCTL_MACPHY_DISABLE_MASK (1 << 26)
-#define PMU_RCTL_LOGIC_DISABLE_MASK (1 << 27)
+#define PMU_RCTL_LOGIC_DISABLE_MASK  (1 << 27)
+
+// clang-format on
 
 /*
  * Maximum delay for the PMU state transition in us.

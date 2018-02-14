@@ -98,7 +98,7 @@ static void brcmf_fweh_queue_event(struct brcmf_fweh_info* fweh,
 }
 
 static int brcmf_fweh_call_event_handler(struct brcmf_if* ifp, enum brcmf_fweh_event_code code,
-        struct brcmf_event_msg* emsg, void* data) {
+                                         struct brcmf_event_msg* emsg, void* data) {
     struct brcmf_fweh_info* fweh;
     int err = -EINVAL;
 

@@ -21,20 +21,22 @@
 
 #define BRCMF_FIL_ACTION_FRAME_SIZE 1800
 
+// clang-format off
+
 /* ARP Offload feature flags for arp_ol iovar */
-#define BRCMF_ARP_OL_AGENT 0x00000001
-#define BRCMF_ARP_OL_SNOOP 0x00000002
+#define BRCMF_ARP_OL_AGENT           0x00000001
+#define BRCMF_ARP_OL_SNOOP           0x00000002
 #define BRCMF_ARP_OL_HOST_AUTO_REPLY 0x00000004
 #define BRCMF_ARP_OL_PEER_AUTO_REPLY 0x00000008
 
 #define BRCMF_BSS_INFO_VERSION 109 /* curr ver of brcmf_bss_info_le struct */
 #define BRCMF_BSS_RSSI_ON_CHANNEL 0x0002
 
-#define BRCMF_STA_WME 0x00000002      /* WMM association */
-#define BRCMF_STA_AUTHE 0x00000008    /* Authenticated */
-#define BRCMF_STA_ASSOC 0x00000010    /* Associated */
-#define BRCMF_STA_AUTHO 0x00000020    /* Authorized */
-#define BRCMF_STA_SCBSTATS 0x00004000 /* Per STA debug stats */
+#define BRCMF_STA_WME       0x00000002    /* WMM association */
+#define BRCMF_STA_AUTHE     0x00000008    /* Authenticated */
+#define BRCMF_STA_ASSOC     0x00000010    /* Associated */
+#define BRCMF_STA_AUTHO     0x00000020    /* Authorized */
+#define BRCMF_STA_SCBSTATS  0x00004000    /* Per STA debug stats */
 
 /* size of brcmf_scan_params not including variable length array */
 #define BRCMF_SCAN_PARAMS_FIXED_SIZE 64
@@ -44,9 +46,11 @@
 #define BRCMF_SCAN_PARAMS_NSSID_SHIFT 16
 
 /* scan type definitions */
-#define BRCMF_SCANTYPE_DEFAULT 0xFF
-#define BRCMF_SCANTYPE_ACTIVE 0
-#define BRCMF_SCANTYPE_PASSIVE 1
+#define BRCMF_SCANTYPE_DEFAULT   0xFF
+#define BRCMF_SCANTYPE_ACTIVE    0
+#define BRCMF_SCANTYPE_PASSIVE   1
+
+// clang-format on
 
 #define BRCMF_WSEC_MAX_PSK_LEN 32
 #define BRCMF_WSEC_PASSPHRASE BIT(0)
@@ -518,15 +522,15 @@ struct brcmf_channel_info_le {
 };
 
 struct brcmf_sta_info_le {
-    __le16 ver;                      /* version of this struct */
-    __le16 len;                      /* length in bytes of this structure */
-    __le16 cap;                      /* sta's advertised capabilities */
-    __le32 flags;                    /* flags defined below */
-    __le32 idle;                     /* time since data pkt rx'd from sta */
-    u8 ea[ETH_ALEN];                 /* Station address */
-    __le32 count;                    /* # rates in this set */
-    u8 rates[BRCMF_MAXRATES_IN_SET]; /* rates in 500kbps units */
-    /* w/hi bit set if basic */
+    __le16 ver;                        /* version of this struct */
+    __le16 len;                        /* length in bytes of this structure */
+    __le16 cap;                        /* sta's advertised capabilities */
+    __le32 flags;                      /* flags defined below */
+    __le32 idle;                       /* time since data pkt rx'd from sta */
+    u8 ea[ETH_ALEN];                   /* Station address */
+    __le32 count;                      /* # rates in this set */
+    u8 rates[BRCMF_MAXRATES_IN_SET];   /* rates in 500kbps units */
+                                       /* w/hi bit set if basic */
     __le32 in;                         /* seconds elapsed since associated */
     __le32 listen_interval_inms;       /* Min Listen interval in ms for STA */
     __le32 tx_pkts;                    /* # of packets transmitted */
@@ -961,4 +965,4 @@ struct brcmf_gscan_config {
     struct brcmf_gscan_bucket_config bucket[1];
 };
 
-#endif /* FWIL_TYPES_H_ */
+#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_ */

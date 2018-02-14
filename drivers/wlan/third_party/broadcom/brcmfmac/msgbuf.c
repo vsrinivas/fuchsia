@@ -280,7 +280,7 @@ struct brcmf_msgbuf_pktids {
 static void brcmf_msgbuf_rxbuf_ioctlresp_post(struct brcmf_msgbuf* msgbuf);
 
 static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(u32 nr_array_entries,
-        enum dma_data_direction direction) {
+                                                            enum dma_data_direction direction) {
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktids* pktids;
 
@@ -345,7 +345,7 @@ static int brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msgbuf_pkti
 }
 
 static struct sk_buff* brcmf_msgbuf_get_pktid(struct device* dev,
-        struct brcmf_msgbuf_pktids* pktids, u32 idx) {
+                                              struct brcmf_msgbuf_pktids* pktids, u32 idx) {
     struct brcmf_msgbuf_pktid* pktid;
     struct sk_buff* skb;
 
@@ -529,7 +529,7 @@ static struct brcmf_msgbuf_work_item* brcmf_msgbuf_dequeue_work(struct brcmf_msg
 }
 
 static u32 brcmf_msgbuf_flowring_create_worker(struct brcmf_msgbuf* msgbuf,
-        struct brcmf_msgbuf_work_item* work) {
+                                               struct brcmf_msgbuf_work_item* work) {
     struct msgbuf_tx_flowring_create_req* create;
     struct brcmf_commonring* commonring;
     void* ret_ptr;
@@ -747,7 +747,7 @@ static int brcmf_msgbuf_tx_queue_data(struct brcmf_pub* drvr, int ifidx, struct 
 }
 
 static void brcmf_msgbuf_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
-        enum proto_addr_mode addr_mode) {
+                                             enum proto_addr_mode addr_mode) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
 
     brcmf_flowring_configure_addr_mode(msgbuf->flow, ifidx, addr_mode);

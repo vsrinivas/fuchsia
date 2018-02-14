@@ -140,7 +140,7 @@ again:
 }
 
 void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring, u16 n_items,
-        u16* alloced) {
+                                                  u16* alloced) {
     void* ret_ptr;
     u16 available;
     bool retry = true;

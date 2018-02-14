@@ -219,8 +219,10 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
 }
 
 static int brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiodev, u32 addr) {
-    u32 v, bar0 = addr & SBSDIO_SBWINDOW_MASK;
-    int err = 0, i;
+    u32 v;
+    u32 bar0 = addr & SBSDIO_SBWINDOW_MASK;
+    int err = 0;
+    int i;
 
     if (bar0 == sdiodev->sbwad) {
         return 0;
@@ -344,9 +346,13 @@ static int brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_fun
     unsigned int req_sz, func_blk_sz, sg_cnt, sg_data_sz, pkt_offset;
     unsigned int max_req_sz, orig_offset, dst_offset;
     unsigned short max_seg_cnt, seg_sz;
-    unsigned char* pkt_data, *orig_data, *dst_data;
-    struct sk_buff* pkt_next = NULL, *local_pkt_next;
-    struct sk_buff_head local_list, *target_list;
+    unsigned char* pkt_data;
+    unsigned char* orig_data;
+    unsigned char* dst_data;
+    struct sk_buff* pkt_next = NULL;
+    struct sk_buff* local_pkt_next;
+    struct sk_buff_head local_list;
+    struct sk_buff_head* target_list;
     struct mmc_request mmc_req;
     struct mmc_command mmc_cmd;
     struct mmc_data mmc_dat;
@@ -1120,8 +1126,7 @@ static struct sdio_driver brcmf_sdmmc_driver = {
     .remove = brcmf_ops_sdio_remove,
     .name = KBUILD_MODNAME,
     .id_table = brcmf_sdmmc_ids,
-    .drv =
-    {
+    .drv = {
         .owner = THIS_MODULE,
 #ifdef CONFIG_PM_SLEEP
         .pm = &brcmf_sdio_pm_ops,

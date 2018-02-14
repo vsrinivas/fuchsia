@@ -31,4 +31,4 @@ void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct sk_buff* skb);
 void brcmf_fws_bus_blocked(struct brcmf_pub* drvr, bool flow_blocked);
 void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb);
 
-#endif /* FWSIGNAL_H_ */
+#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_ */

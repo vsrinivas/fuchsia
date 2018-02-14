@@ -32,57 +32,59 @@
 #define SOCI_SB 0
 #define SOCI_AI 1
 
+// clang-format off
+
 /* PL-368 DMP definitions */
-#define DMP_DESC_TYPE_MSK 0x0000000F
-#define DMP_DESC_EMPTY 0x00000000
-#define DMP_DESC_VALID 0x00000001
-#define DMP_DESC_COMPONENT 0x00000001
-#define DMP_DESC_MASTER_PORT 0x00000003
-#define DMP_DESC_ADDRESS 0x00000005
-#define DMP_DESC_ADDRSIZE_GT32 0x00000008
-#define DMP_DESC_EOT 0x0000000F
+#define DMP_DESC_TYPE_MSK       0x0000000F
+#define DMP_DESC_EMPTY          0x00000000
+#define DMP_DESC_VALID          0x00000001
+#define DMP_DESC_COMPONENT      0x00000001
+#define DMP_DESC_MASTER_PORT    0x00000003
+#define DMP_DESC_ADDRESS        0x00000005
+#define DMP_DESC_ADDRSIZE_GT32  0x00000008
+#define DMP_DESC_EOT            0x0000000F
 
-#define DMP_COMP_DESIGNER 0xFFF00000
-#define DMP_COMP_DESIGNER_S 20
-#define DMP_COMP_PARTNUM 0x000FFF00
-#define DMP_COMP_PARTNUM_S 8
-#define DMP_COMP_CLASS 0x000000F0
-#define DMP_COMP_CLASS_S 4
-#define DMP_COMP_REVISION 0xFF000000
-#define DMP_COMP_REVISION_S 24
-#define DMP_COMP_NUM_SWRAP 0x00F80000
-#define DMP_COMP_NUM_SWRAP_S 19
-#define DMP_COMP_NUM_MWRAP 0x0007C000
-#define DMP_COMP_NUM_MWRAP_S 14
-#define DMP_COMP_NUM_SPORT 0x00003E00
-#define DMP_COMP_NUM_SPORT_S 9
-#define DMP_COMP_NUM_MPORT 0x000001F0
-#define DMP_COMP_NUM_MPORT_S 4
+#define DMP_COMP_DESIGNER     0xFFF00000
+#define DMP_COMP_DESIGNER_S   20
+#define DMP_COMP_PARTNUM      0x000FFF00
+#define DMP_COMP_PARTNUM_S    8
+#define DMP_COMP_CLASS        0x000000F0
+#define DMP_COMP_CLASS_S      4
+#define DMP_COMP_REVISION     0xFF000000
+#define DMP_COMP_REVISION_S   24
+#define DMP_COMP_NUM_SWRAP    0x00F80000
+#define DMP_COMP_NUM_SWRAP_S  19
+#define DMP_COMP_NUM_MWRAP    0x0007C000
+#define DMP_COMP_NUM_MWRAP_S  14
+#define DMP_COMP_NUM_SPORT    0x00003E00
+#define DMP_COMP_NUM_SPORT_S  9
+#define DMP_COMP_NUM_MPORT    0x000001F0
+#define DMP_COMP_NUM_MPORT_S  4
 
-#define DMP_MASTER_PORT_UID 0x0000FF00
+#define DMP_MASTER_PORT_UID   0x0000FF00
 #define DMP_MASTER_PORT_UID_S 8
-#define DMP_MASTER_PORT_NUM 0x000000F0
+#define DMP_MASTER_PORT_NUM   0x000000F0
 #define DMP_MASTER_PORT_NUM_S 4
 
-#define DMP_SLAVE_ADDR_BASE 0xFFFFF000
-#define DMP_SLAVE_ADDR_BASE_S 12
-#define DMP_SLAVE_PORT_NUM 0x00000F00
-#define DMP_SLAVE_PORT_NUM_S 8
-#define DMP_SLAVE_TYPE 0x000000C0
-#define DMP_SLAVE_TYPE_S 6
-#define DMP_SLAVE_TYPE_SLAVE 0
-#define DMP_SLAVE_TYPE_BRIDGE 1
-#define DMP_SLAVE_TYPE_SWRAP 2
-#define DMP_SLAVE_TYPE_MWRAP 3
-#define DMP_SLAVE_SIZE_TYPE 0x00000030
-#define DMP_SLAVE_SIZE_TYPE_S 4
-#define DMP_SLAVE_SIZE_4K 0
-#define DMP_SLAVE_SIZE_8K 1
-#define DMP_SLAVE_SIZE_16K 2
-#define DMP_SLAVE_SIZE_DESC 3
+#define DMP_SLAVE_ADDR_BASE    0xFFFFF000
+#define DMP_SLAVE_ADDR_BASE_S  12
+#define DMP_SLAVE_PORT_NUM     0x00000F00
+#define DMP_SLAVE_PORT_NUM_S   8
+#define DMP_SLAVE_TYPE         0x000000C0
+#define DMP_SLAVE_TYPE_S       6
+#define DMP_SLAVE_TYPE_SLAVE   0
+#define DMP_SLAVE_TYPE_BRIDGE  1
+#define DMP_SLAVE_TYPE_SWRAP   2
+#define DMP_SLAVE_TYPE_MWRAP   3
+#define DMP_SLAVE_SIZE_TYPE    0x00000030
+#define DMP_SLAVE_SIZE_TYPE_S  4
+#define DMP_SLAVE_SIZE_4K      0
+#define DMP_SLAVE_SIZE_8K      1
+#define DMP_SLAVE_SIZE_16K     2
+#define DMP_SLAVE_SIZE_DESC    3
 
 /* EROM CompIdentB */
-#define CIB_REV_MASK 0xff000000
+#define CIB_REV_MASK  0xff000000
 #define CIB_REV_SHIFT 24
 
 /* ARM CR4 core specific control flag bits */
@@ -90,7 +92,7 @@
 
 /* D11 core specific control flag bits */
 #define D11_BCMA_IOCTL_PHYCLOCKEN 0x0004
-#define D11_BCMA_IOCTL_PHYRESET 0x0008
+#define D11_BCMA_IOCTL_PHYRESET   0x0008
 
 /* chip core base & ramsize */
 /* bcm4329 */
@@ -150,8 +152,8 @@ struct sbconfig {
 
 /* bankidx and bankinfo reg defines corerev >= 8 */
 #define SOCRAM_BANKINFO_RETNTRAM_MASK 0x00010000
-#define SOCRAM_BANKINFO_SZMASK 0x0000007f
-#define SOCRAM_BANKIDX_ROM_MASK 0x00000100
+#define SOCRAM_BANKINFO_SZMASK        0x0000007f
+#define SOCRAM_BANKIDX_ROM_MASK       0x00000100
 
 #define SOCRAM_BANKIDX_MEMTYPE_SHIFT 8
 /* socram bankinfo memtype */
@@ -160,12 +162,12 @@ struct sbconfig {
 #define SOCRAM_MEMTYPE_DEVRAM 2
 
 #define SOCRAM_BANKINFO_SZBASE 8192
-#define SRCI_LSS_MASK 0x00f00000
-#define SRCI_LSS_SHIFT 20
-#define SRCI_SRNB_MASK 0xf0
-#define SRCI_SRNB_SHIFT 4
-#define SRCI_SRBSZ_MASK 0xf
-#define SRCI_SRBSZ_SHIFT 0
+#define SRCI_LSS_MASK    0x00f00000
+#define SRCI_LSS_SHIFT   20
+#define SRCI_SRNB_MASK         0xf0
+#define SRCI_SRNB_SHIFT  4
+#define SRCI_SRBSZ_MASK         0xf
+#define SRCI_SRBSZ_SHIFT          0
 #define SR_BSZ_BASE 14
 
 struct sbsocramregs {
@@ -208,18 +210,20 @@ struct sbsocramregs {
 #define SOCRAMREGOFFS(_f) offsetof(struct sbsocramregs, _f)
 #define SYSMEMREGOFFS(_f) offsetof(struct sbsocramregs, _f)
 
-#define ARMCR4_CAP (0x04)
-#define ARMCR4_BANKIDX (0x40)
+#define ARMCR4_CAP      (0x04)
+#define ARMCR4_BANKIDX  (0x40)
 #define ARMCR4_BANKINFO (0x44)
-#define ARMCR4_BANKPDA (0x4C)
+#define ARMCR4_BANKPDA  (0x4C)
 
-#define ARMCR4_TCBBNB_MASK 0xf0
+#define ARMCR4_TCBBNB_MASK  0xf0
 #define ARMCR4_TCBBNB_SHIFT 4
-#define ARMCR4_TCBANB_MASK 0xf
+#define ARMCR4_TCBANB_MASK  0x0f
 #define ARMCR4_TCBANB_SHIFT 0
 
 #define ARMCR4_BSZ_MASK 0x3f
 #define ARMCR4_BSZ_MULT 8192
+
+// clang-format on
 
 struct brcmf_core_priv {
     struct brcmf_core pub;
@@ -447,7 +451,7 @@ static char* brcmf_chip_name(uint chipid, char* buf, uint len) {
 }
 
 static struct brcmf_core* brcmf_chip_add_core(struct brcmf_chip_priv* ci, u16 coreid, u32 base,
-        u32 wrapbase) {
+                                              u32 wrapbase) {
     struct brcmf_core_priv* core;
 
     core = kzalloc(sizeof(*core), GFP_KERNEL);
@@ -1262,7 +1266,8 @@ bool brcmf_chip_set_active(struct brcmf_chip* pub, u32 rstvec) {
 }
 
 bool brcmf_chip_sr_capable(struct brcmf_chip* pub) {
-    u32 base, addr, reg, pmu_cc3_mask = ~0;
+    u32 base, addr, reg;
+    u32 pmu_cc3_mask = ~0;
     struct brcmf_chip_priv* chip;
     struct brcmf_core* pmu = brcmf_chip_get_pmu(pub);
 
@@ -1282,7 +1287,7 @@ bool brcmf_chip_sr_capable(struct brcmf_chip* pub) {
     case BRCM_CC_4345_CHIP_ID:
         /* explicitly check SR engine enable bit */
         pmu_cc3_mask = BIT(2);
-    /* fall-through */
+        /* fall-through */
     case BRCM_CC_43241_CHIP_ID:
     case BRCM_CC_4335_CHIP_ID:
     case BRCM_CC_4339_CHIP_ID:

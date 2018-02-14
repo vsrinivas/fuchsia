@@ -24,46 +24,46 @@
 #include "fwil_types.h"
 #include "p2p.h"
 
-#define BRCMF_SCAN_IE_LEN_MAX 2048
+// clang-format off
 
-#define WL_NUM_SCAN_MAX 10
-#define WL_TLV_INFO_MAX 1024
-#define WL_BSS_INFO_MAX 2048
-#define WL_ASSOC_INFO_MAX 512 /* assoc related fil max buf */
-#define WL_EXTRA_BUF_MAX 2048
-#define WL_ROAM_TRIGGER_LEVEL -75
-#define WL_ROAM_DELTA 20
+#define WL_NUM_SCAN_MAX        10
+#define WL_TLV_INFO_MAX        1024
+#define WL_BSS_INFO_MAX        2048
+#define WL_ASSOC_INFO_MAX      512 /* assoc related fil max buf */
+#define WL_EXTRA_BUF_MAX       2048
+#define WL_ROAM_TRIGGER_LEVEL  -75
+#define WL_ROAM_DELTA          20
 
 /* Keep BRCMF_ESCAN_BUF_SIZE below 64K (65536). Allocing over 64K can be
  * problematic on some systems and should be avoided.
  */
-#define BRCMF_ESCAN_BUF_SIZE 65000
+#define BRCMF_ESCAN_BUF_SIZE   65000
 #define BRCMF_ESCAN_TIMER_INTERVAL_MS 10000 /* E-Scan timeout */
 
-#define WL_ESCAN_ACTION_START 1
-#define WL_ESCAN_ACTION_CONTINUE 2
-#define WL_ESCAN_ACTION_ABORT 3
+#define WL_ESCAN_ACTION_START      1
+#define WL_ESCAN_ACTION_CONTINUE   2
+#define WL_ESCAN_ACTION_ABORT      3
 
 #define WL_AUTH_SHARED_KEY 1 /* d11 shared authentication */
 #define IE_MAX_LEN 512
 
 /* IE TLV processing */
-#define TLV_LEN_OFF 1  /* length offset */
-#define TLV_HDR_LEN 2  /* header length */
-#define TLV_BODY_OFF 2 /* body offset */
-#define TLV_OUI_LEN 3  /* oui id length */
+#define TLV_LEN_OFF   1  /* length offset */
+#define TLV_HDR_LEN   2  /* header length */
+#define TLV_BODY_OFF  2  /* body offset */
+#define TLV_OUI_LEN   3  /* oui id length */
 
 /* 802.11 Mgmt Packet flags */
-#define BRCMF_VNDR_IE_BEACON_FLAG 0x1
-#define BRCMF_VNDR_IE_PRBRSP_FLAG 0x2
-#define BRCMF_VNDR_IE_ASSOCRSP_FLAG 0x4
-#define BRCMF_VNDR_IE_AUTHRSP_FLAG 0x8
-#define BRCMF_VNDR_IE_PRBREQ_FLAG 0x10
-#define BRCMF_VNDR_IE_ASSOCREQ_FLAG 0x20
+#define BRCMF_VNDR_IE_BEACON_FLAG     0x1
+#define BRCMF_VNDR_IE_PRBRSP_FLAG     0x2
+#define BRCMF_VNDR_IE_ASSOCRSP_FLAG   0x4
+#define BRCMF_VNDR_IE_AUTHRSP_FLAG    0x8
+#define BRCMF_VNDR_IE_PRBREQ_FLAG    0x10
+#define BRCMF_VNDR_IE_ASSOCREQ_FLAG  0x20
 /* vendor IE in IW advertisement protocol ID field */
-#define BRCMF_VNDR_IE_IWAPID_FLAG 0x40
+#define BRCMF_VNDR_IE_IWAPID_FLAG    0x40
 /* allow custom IE id */
-#define BRCMF_VNDR_IE_CUSTOM_FLAG 0x100
+#define BRCMF_VNDR_IE_CUSTOM_FLAG   0x100
 
 /* P2P Action Frames flags (spec ordered) */
 #define BRCMF_VNDR_IE_GONREQ_FLAG 0x001000
@@ -81,8 +81,10 @@
 #define BRCMF_MAX_DEFAULT_KEYS 6
 
 /* beacon loss timeout defaults */
-#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON 2
+#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON  2
 #define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF 4
+
+// clang-format on
 
 #define BRCMF_VIF_EVENT_TIMEOUT msecs_to_jiffies(1500)
 

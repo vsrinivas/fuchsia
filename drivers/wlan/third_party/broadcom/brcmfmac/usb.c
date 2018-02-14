@@ -36,9 +36,7 @@
 #define BRCMF_USB_RESET_GETVER_SPINWAIT 100 /* in unit of ms */
 #define BRCMF_USB_RESET_GETVER_LOOP_CNT 10
 
-#define BRCMF_POSTBOOT_ID            \
-    0xA123 /* ID to detect if dongle \
-              has boot up */
+#define BRCMF_POSTBOOT_ID 0xA123 /* ID to detect if dongle has boot up */
 #define BRCMF_USB_NRXQ 50
 #define BRCMF_USB_NTXQ 50
 
@@ -76,36 +74,30 @@ static struct brcmf_firmware_mapping brcmf_usb_fwnames[] = {
 #define DL_START 3     /* initialize dl state */
 #define DL_REBOOT 4    /* reboot the device in 2 seconds */
 #define DL_GETVER 5    /* returns the bootrom_id_t struct */
-#define DL_GO_PROTECTED                                        \
-    6             /* execute the downloaded code and set reset \
-                   * event to occur in 2 seconds.  It is the   \
-                   * responsibility of the downloaded code to  \
-                   * clear this event                          \
-                   */
+/* execute the downloaded code and set reset
+ * event to occur in 2 seconds.  It is the
+ * responsibility of the downloaded code to
+ * clear this event
+ */
+#define DL_GO_PROTECTED 6
 #define DL_EXEC 7 /* jump to a supplied address */
-#define DL_RESETCFG                       \
-    8 /* To support single enum on dongle \
-       * - Not used by bootloader         \
-       */
-#define DL_DEFER_RESP_OK                         \
-    9 /* Potentially defer the response to setup \
-       * if resp unavailable                     \
-       */
+/* To support single enum on dongle
+ * - Not used by bootloader
+ */
+#define DL_RESETCFG 8
+/* Potentially defer the response to setup
+ * if resp unavailable
+ */
+#define DL_DEFER_RESP_OK 9
 
 /* states */
-#define DL_WAITING 0 /* waiting to rx first pkt */
-#define DL_READY                                                 \
-    1                   /* hdr was good, waiting for more of the \
-                         * compressed image                      \
-                         */
-#define DL_BAD_HDR 2    /* hdr was corrupted */
-#define DL_BAD_CRC 3    /* compressed image was corrupted */
-#define DL_RUNNABLE 4   /* download was successful,waiting for go cmd */
-#define DL_START_FAIL 5 /* failed to initialize correctly */
-#define DL_NVRAM_TOOBIG                                                 \
-    6                     /* host specified nvram data exceeds DL_NVRAM \
-                           * value                                      \
-                           */
+#define DL_WAITING 0      /* waiting to rx first pkt */
+#define DL_READY 1        /* hdr was good, waiting for more of the compressed image */
+#define DL_BAD_HDR 2      /* hdr was corrupted */
+#define DL_BAD_CRC 3      /* compressed image was corrupted */
+#define DL_RUNNABLE 4     /* download was successful,waiting for go cmd */
+#define DL_START_FAIL 5   /* failed to initialize correctly */
+#define DL_NVRAM_TOOBIG 6 /* host specified nvram data exceeds DL_NVRAM value */
 #define DL_IMAGE_TOOBIG 7 /* firmware image too big */
 
 struct trx_header_le {
@@ -364,7 +356,7 @@ static int brcmf_usb_rx_ctlpkt(struct device* dev, u8* buf, u32 len) {
 }
 
 static struct brcmf_usbreq* brcmf_usb_deq(struct brcmf_usbdev_info* devinfo, struct list_head* q,
-        int* counter) {
+                                          int* counter) {
     unsigned long flags;
     struct brcmf_usbreq* req;
     spin_lock_irqsave(&devinfo->qlock, flags);
@@ -394,7 +386,8 @@ static void brcmf_usb_enq(struct brcmf_usbdev_info* devinfo, struct list_head* q
 
 static struct brcmf_usbreq* brcmf_usbdev_qinit(struct list_head* q, int qsize) {
     int i;
-    struct brcmf_usbreq* req, *reqs;
+    struct brcmf_usbreq* req;
+    struct brcmf_usbreq* reqs;
 
     reqs = kcalloc(qsize, sizeof(struct brcmf_usbreq), GFP_ATOMIC);
     if (reqs == NULL) {
@@ -427,7 +420,8 @@ fail:
 }
 
 static void brcmf_usb_free_q(struct list_head* q, bool pending) {
-    struct brcmf_usbreq* req, *next;
+    struct brcmf_usbreq* req;
+    struct brcmf_usbreq* next;
     int i = 0;
     list_for_each_entry_safe(req, next, q, list) {
         if (!req->urb) {
@@ -814,7 +808,8 @@ static int brcmf_usb_dl_send_bulk(struct brcmf_usbdev_info* devinfo, void* buffe
 
 static int brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, u8* fw, int fwlen) {
     unsigned int sendlen, sent, dllen;
-    char* bulkchunk = NULL, *dlpos;
+    char* bulkchunk = NULL;
+    char* dlpos;
     struct rdl_state_le state;
     u32 rdlstate, rdlbytes;
     int err = 0;
@@ -1012,7 +1007,7 @@ static int check_file(const u8* headers) {
 }
 
 static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, int nrxq,
-        int ntxq) {
+                                             int ntxq) {
     brcmf_dbg(USB, "Enter\n");
 
     devinfo->bus_pub.nrxq = nrxq;

@@ -19,27 +19,31 @@
 
 #include <linux/net.h> /* net_ratelimit() */
 
+// clang-format off
+
 /* message levels */
-#define BRCMF_TRACE_VAL 0x00000002
-#define BRCMF_INFO_VAL 0x00000004
-#define BRCMF_DATA_VAL 0x00000008
-#define BRCMF_CTL_VAL 0x00000010
-#define BRCMF_TIMER_VAL 0x00000020
-#define BRCMF_HDRS_VAL 0x00000040
-#define BRCMF_BYTES_VAL 0x00000080
-#define BRCMF_INTR_VAL 0x00000100
-#define BRCMF_GLOM_VAL 0x00000200
-#define BRCMF_EVENT_VAL 0x00000400
-#define BRCMF_BTA_VAL 0x00000800
-#define BRCMF_FIL_VAL 0x00001000
-#define BRCMF_USB_VAL 0x00002000
-#define BRCMF_SCAN_VAL 0x00004000
-#define BRCMF_CONN_VAL 0x00008000
-#define BRCMF_BCDC_VAL 0x00010000
-#define BRCMF_SDIO_VAL 0x00020000
-#define BRCMF_MSGBUF_VAL 0x00040000
-#define BRCMF_PCIE_VAL 0x00080000
-#define BRCMF_FWCON_VAL 0x00100000
+#define BRCMF_TRACE_VAL   0x00000002
+#define BRCMF_INFO_VAL    0x00000004
+#define BRCMF_DATA_VAL    0x00000008
+#define BRCMF_CTL_VAL     0x00000010
+#define BRCMF_TIMER_VAL   0x00000020
+#define BRCMF_HDRS_VAL    0x00000040
+#define BRCMF_BYTES_VAL   0x00000080
+#define BRCMF_INTR_VAL    0x00000100
+#define BRCMF_GLOM_VAL    0x00000200
+#define BRCMF_EVENT_VAL   0x00000400
+#define BRCMF_BTA_VAL     0x00000800
+#define BRCMF_FIL_VAL     0x00001000
+#define BRCMF_USB_VAL     0x00002000
+#define BRCMF_SCAN_VAL    0x00004000
+#define BRCMF_CONN_VAL    0x00008000
+#define BRCMF_BCDC_VAL    0x00010000
+#define BRCMF_SDIO_VAL    0x00020000
+#define BRCMF_MSGBUF_VAL  0x00040000
+#define BRCMF_PCIE_VAL    0x00080000
+#define BRCMF_FWCON_VAL   0x00100000
+
+// clang-format on
 
 /* set default print format */
 #undef pr_fmt
@@ -65,15 +69,18 @@ __printf(3, 4) void __brcmf_dbg(u32 level, const char* func, const char* fmt, ..
     do {                                                                \
         __brcmf_dbg(BRCMF_##level##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
-#define BRCMF_DATA_ON() (brcmf_msg_level & BRCMF_DATA_VAL)
-#define BRCMF_CTL_ON() (brcmf_msg_level & BRCMF_CTL_VAL)
-#define BRCMF_HDRS_ON() (brcmf_msg_level & BRCMF_HDRS_VAL)
+
+// clang-format off
+
+#define BRCMF_DATA_ON()  (brcmf_msg_level & BRCMF_DATA_VAL)
+#define BRCMF_CTL_ON()   (brcmf_msg_level & BRCMF_CTL_VAL)
+#define BRCMF_HDRS_ON()  (brcmf_msg_level & BRCMF_HDRS_VAL)
 #define BRCMF_BYTES_ON() (brcmf_msg_level & BRCMF_BYTES_VAL)
-#define BRCMF_GLOM_ON() (brcmf_msg_level & BRCMF_GLOM_VAL)
+#define BRCMF_GLOM_ON()  (brcmf_msg_level & BRCMF_GLOM_VAL)
 #define BRCMF_EVENT_ON() (brcmf_msg_level & BRCMF_EVENT_VAL)
-#define BRCMF_FIL_ON() (brcmf_msg_level & BRCMF_FIL_VAL)
+#define BRCMF_FIL_ON()   (brcmf_msg_level & BRCMF_FIL_VAL)
 #define BRCMF_FWCON_ON() (brcmf_msg_level & BRCMF_FWCON_VAL)
-#define BRCMF_SCAN_ON() (brcmf_msg_level & BRCMF_SCAN_VAL)
+#define BRCMF_SCAN_ON()  (brcmf_msg_level & BRCMF_SCAN_VAL)
 
 #else /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
 
@@ -84,15 +91,17 @@ __printf(3, 4) void __brcmf_dbg(u32 level, const char* func, const char* fmt, ..
 
 #define brcmf_dbg(level, fmt, ...) no_printk(fmt, ##__VA_ARGS__)
 
-#define BRCMF_DATA_ON() 0
-#define BRCMF_CTL_ON() 0
-#define BRCMF_HDRS_ON() 0
+#define BRCMF_DATA_ON()  0
+#define BRCMF_CTL_ON()   0
+#define BRCMF_HDRS_ON()  0
 #define BRCMF_BYTES_ON() 0
-#define BRCMF_GLOM_ON() 0
+#define BRCMF_GLOM_ON()  0
 #define BRCMF_EVENT_ON() 0
-#define BRCMF_FIL_ON() 0
+#define BRCMF_FIL_ON()   0
 #define BRCMF_FWCON_ON() 0
-#define BRCMF_SCAN_ON() 0
+#define BRCMF_SCAN_ON()  0
+
+// clang-format on
 
 #endif /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
 

@@ -849,7 +849,7 @@ static int brcmf_pcie_ring_mb_update_wptr(void* ctx) {
 }
 
 static void* brcmf_pcie_init_dmabuffer_for_device(struct brcmf_pciedev_info* devinfo, u32 size,
-        u32 tcm_dma_phys_addr, dma_addr_t* dma_handle) {
+                                                  u32 tcm_dma_phys_addr, dma_addr_t* dma_handle) {
     void* ring;
     u64 address;
 
@@ -868,8 +868,8 @@ static void* brcmf_pcie_init_dmabuffer_for_device(struct brcmf_pciedev_info* dev
 }
 
 static struct brcmf_pcie_ringbuf* brcmf_pcie_alloc_dma_and_ring(struct brcmf_pciedev_info* devinfo,
-        u32 ring_id,
-        u32 tcm_ring_phys_addr) {
+                                                                u32 ring_id,
+                                                                u32 tcm_ring_phys_addr) {
     void* dma_buf;
     dma_addr_t dma_handle;
     struct brcmf_pcie_ringbuf* ring;
@@ -878,7 +878,7 @@ static struct brcmf_pcie_ringbuf* brcmf_pcie_alloc_dma_and_ring(struct brcmf_pci
 
     size = brcmf_ring_max_item[ring_id] * brcmf_ring_itemsize[ring_id];
     dma_buf = brcmf_pcie_init_dmabuffer_for_device(
-                  devinfo, size, tcm_ring_phys_addr + BRCMF_RING_MEM_BASE_ADDR_OFFSET, &dma_handle);
+        devinfo, size, tcm_ring_phys_addr + BRCMF_RING_MEM_BASE_ADDR_OFFSET, &dma_handle);
     if (!dma_buf) {
         return NULL;
     }
@@ -1565,7 +1565,7 @@ static int brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_device_id* id
     }
 
     devinfo->settings = brcmf_get_module_param(&devinfo->pdev->dev, BRCMF_BUSTYPE_PCIE,
-                        devinfo->ci->chip, devinfo->ci->chiprev);
+                                               devinfo->ci->chip, devinfo->ci->chiprev);
     if (!devinfo->settings) {
         ret = -ENOMEM;
         goto fail;

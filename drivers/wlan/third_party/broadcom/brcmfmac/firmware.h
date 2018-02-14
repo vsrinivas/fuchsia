@@ -16,10 +16,14 @@
 #ifndef BRCMFMAC_FIRMWARE_H
 #define BRCMFMAC_FIRMWARE_H
 
-#define BRCMF_FW_REQUEST 0x000F
-#define BRCMF_FW_REQUEST_NVRAM 0x0001
-#define BRCMF_FW_REQ_FLAGS 0x00F0
+// clang-format off
+
+#define BRCMF_FW_REQUEST         0x000F
+#define BRCMF_FW_REQUEST_NVRAM   0x0001
+#define BRCMF_FW_REQ_FLAGS       0x00F0
 #define BRCMF_FW_REQ_NV_OPTIONAL 0x0010
+
+// clang-format on
 
 #define BRCMF_FW_NAME_LEN 320
 

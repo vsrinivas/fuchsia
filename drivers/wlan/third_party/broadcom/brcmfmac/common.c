@@ -405,7 +405,7 @@ static void brcmf_mp_attach(void) {
 }
 
 struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
-        u32 chip, u32 chiprev) {
+                                               u32 chip, u32 chiprev) {
     struct brcmf_mp_device* settings;
     struct brcmfmac_pd_device* device_pd;
     bool found;
@@ -480,7 +480,8 @@ static int brcmf_common_pd_remove(struct platform_device* pdev) {
     return 0;
 }
 
-static struct platform_driver brcmf_pd = {.remove = brcmf_common_pd_remove,
+static struct platform_driver brcmf_pd = {
+    .remove = brcmf_common_pd_remove,
     .driver = {
         .name = BRCMFMAC_PDATA_NAME,
     }

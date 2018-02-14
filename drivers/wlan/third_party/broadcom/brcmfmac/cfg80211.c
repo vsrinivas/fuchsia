@@ -71,10 +71,7 @@
 #define RSN_CAP_MFPC_MASK BIT(7)
 #define RSN_PMKID_COUNT_LEN 2
 
-#define VNDR_IE_CMD_LEN               \
-    4 /* length of the set command    \
-       * string :"add", "del" (+ NUL) \
-       */
+#define VNDR_IE_CMD_LEN 4 /* length of the set command string :"add", "del" (+ NUL) */
 #define VNDR_IE_COUNT_OFFSET 4
 #define VNDR_IE_PKTFLAG_OFFSET 8
 #define VNDR_IE_VSIE_OFFSET 12
@@ -141,17 +138,52 @@ static struct ieee80211_rate __wl_rates[] = {
     }
 
 static struct ieee80211_channel __wl_2ghz_channels[] = {
-    CHAN2G(1, 2412),  CHAN2G(2, 2417),  CHAN2G(3, 2422),  CHAN2G(4, 2427), CHAN2G(5, 2432),
-    CHAN2G(6, 2437),  CHAN2G(7, 2442),  CHAN2G(8, 2447),  CHAN2G(9, 2452), CHAN2G(10, 2457),
-    CHAN2G(11, 2462), CHAN2G(12, 2467), CHAN2G(13, 2472), CHAN2G(14, 2484)
+    CHAN2G(1, 2412),
+    CHAN2G(2, 2417),
+    CHAN2G(3, 2422),
+    CHAN2G(4, 2427),
+    CHAN2G(5, 2432),
+    CHAN2G(6, 2437),
+    CHAN2G(7, 2442),
+    CHAN2G(8, 2447),
+    CHAN2G(9, 2452),
+    CHAN2G(10, 2457),
+    CHAN2G(11, 2462),
+    CHAN2G(12, 2467),
+    CHAN2G(13, 2472),
+    CHAN2G(14, 2484)
 };
 
 static struct ieee80211_channel __wl_5ghz_channels[] = {
-    CHAN5G(34),  CHAN5G(36),  CHAN5G(38),  CHAN5G(40),  CHAN5G(42),  CHAN5G(44),
-    CHAN5G(46),  CHAN5G(48),  CHAN5G(52),  CHAN5G(56),  CHAN5G(60),  CHAN5G(64),
-    CHAN5G(100), CHAN5G(104), CHAN5G(108), CHAN5G(112), CHAN5G(116), CHAN5G(120),
-    CHAN5G(124), CHAN5G(128), CHAN5G(132), CHAN5G(136), CHAN5G(140), CHAN5G(144),
-    CHAN5G(149), CHAN5G(153), CHAN5G(157), CHAN5G(161), CHAN5G(165)
+    CHAN5G(34),
+    CHAN5G(36),
+    CHAN5G(38),
+    CHAN5G(40),
+    CHAN5G(42),
+    CHAN5G(44),
+    CHAN5G(46),
+    CHAN5G(48),
+    CHAN5G(52),
+    CHAN5G(56),
+    CHAN5G(60),
+    CHAN5G(64),
+    CHAN5G(100),
+    CHAN5G(104),
+    CHAN5G(108),
+    CHAN5G(112),
+    CHAN5G(116),
+    CHAN5G(120),
+    CHAN5G(124),
+    CHAN5G(128),
+    CHAN5G(132),
+    CHAN5G(136),
+    CHAN5G(140),
+    CHAN5G(144),
+    CHAN5G(149),
+    CHAN5G(153),
+    CHAN5G(157),
+    CHAN5G(161),
+    CHAN5G(165)
 };
 
 /* Band templates duplicated per wiphy. The channel info
@@ -501,7 +533,7 @@ static int brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
  * @params: contains mac address for AP device.
  */
 static struct wireless_dev* brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
-        struct vif_params* params) {
+                                             struct vif_params* params) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = netdev_priv(cfg_to_ndev(cfg));
     struct brcmf_cfg80211_vif* vif;
@@ -570,9 +602,9 @@ static bool brcmf_is_ibssmode(struct brcmf_cfg80211_vif* vif) {
 }
 
 static struct wireless_dev* brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
-        unsigned char name_assign_type,
-        enum nl80211_iftype type,
-        struct vif_params* params) {
+                                                     unsigned char name_assign_type,
+                                                     enum nl80211_iftype type,
+                                                     struct vif_params* params) {
     struct wireless_dev* wdev;
     int err;
 
@@ -1705,7 +1737,8 @@ static enum nl80211_auth_type brcmf_war_auth_type(struct brcmf_if* ifp,
 static void brcmf_set_join_pref(struct brcmf_if* ifp, struct cfg80211_bss_selection* bss_select) {
     struct brcmf_join_pref_params join_pref_params[2];
     enum nl80211_band band;
-    int err, i = 0;
+    int err;
+    int i = 0;
 
     join_pref_params[i].len = 2;
     join_pref_params[i].rssi_gain = 0;
@@ -2064,7 +2097,7 @@ done:
 }
 
 static s32 brcmf_cfg80211_config_default_key(struct wiphy* wiphy, struct net_device* ndev,
-        u8 key_idx, bool unicast, bool multicast) {
+                                             u8 key_idx, bool unicast, bool multicast) {
     struct brcmf_if* ifp = netdev_priv(ndev);
     u32 index;
     u32 wsec;
@@ -2294,7 +2327,7 @@ done:
 }
 
 static s32 brcmf_cfg80211_config_default_mgmt_key(struct wiphy* wiphy, struct net_device* ndev,
-        u8 key_idx) {
+                                                  u8 key_idx) {
     struct brcmf_if* ifp = netdev_priv(ndev);
 
     brcmf_dbg(TRACE, "Enter key_idx %d\n", key_idx);
@@ -2575,7 +2608,7 @@ static int brcmf_cfg80211_dump_station(struct wiphy* wiphy, struct net_device* n
 }
 
 static s32 brcmf_cfg80211_set_power_mgmt(struct wiphy* wiphy, struct net_device* ndev, bool enabled,
-        s32 timeout) {
+                                         s32 timeout) {
     s32 pm;
     s32 err = 0;
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
@@ -2678,7 +2711,7 @@ static s32 brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg, struct brcmf
 }
 
 static struct brcmf_bss_info_le* next_bss_le(struct brcmf_scan_results* list,
-        struct brcmf_bss_info_le* bss) {
+                                             struct brcmf_bss_info_le* bss) {
     if (bss == NULL) {
         return list->bss_info_le;
     }
@@ -2870,8 +2903,8 @@ static void brcmf_escan_timeout(struct timer_list* t) {
 }
 
 static s32 brcmf_compare_update_same_bss(struct brcmf_cfg80211_info* cfg,
-        struct brcmf_bss_info_le* bss,
-        struct brcmf_bss_info_le* bss_info_le) {
+                                         struct brcmf_bss_info_le* bss,
+                                         struct brcmf_bss_info_le* bss_info_le) {
     struct brcmu_chan ch_bss, ch_bss_info_le;
 
     ch_bss.chspec = le16_to_cpu(bss->chanspec);
@@ -3018,7 +3051,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
 }
 
 static struct cfg80211_scan_request* brcmf_alloc_internal_escan_request(struct wiphy* wiphy,
-        u32 n_netinfo) {
+                                                                        u32 n_netinfo) {
     struct cfg80211_scan_request* req;
     size_t req_size;
 
@@ -3034,7 +3067,7 @@ static struct cfg80211_scan_request* brcmf_alloc_internal_escan_request(struct w
 }
 
 static int brcmf_internal_escan_add_info(struct cfg80211_scan_request* req, u8* ssid, u8 ssid_len,
-        u8 channel) {
+                                         u8 channel) {
     struct ieee80211_channel* chan;
     enum nl80211_band band;
     int freq, i;
@@ -3109,7 +3142,7 @@ static struct brcmf_pno_net_info_le* brcmf_get_netinfo_array(
     switch (pfn_v1->version) {
     default:
         WARN_ON(1);
-    /* fall-thru */
+        /* fall-thru */
     case cpu_to_le32(1):
         netinfo = (struct brcmf_pno_net_info_le*)(pfn_v1 + 1);
         break;
@@ -3129,12 +3162,14 @@ static struct brcmf_pno_net_info_le* brcmf_get_netinfo_array(
  * cfg80211_scan_request one out of the received PNO event.
  */
 static s32 brcmf_notify_sched_scan_results(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-        void* data) {
+                                           void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-    struct brcmf_pno_net_info_le* netinfo, *netinfo_start;
+    struct brcmf_pno_net_info_le* netinfo
+    struct brcmf_pno_net_info_le* netinfo_start;
     struct cfg80211_scan_request* request = NULL;
     struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    int i, err = 0;
+    int i;
+    int err = 0;
     struct brcmf_pno_scanresults_le* pfn_result;
     u32 bucket_map;
     u32 result_count;
@@ -3213,7 +3248,7 @@ free_req:
 }
 
 static int brcmf_cfg80211_sched_scan_start(struct wiphy* wiphy, struct net_device* ndev,
-        struct cfg80211_sched_scan_request* req) {
+                                           struct cfg80211_sched_scan_request* req) {
     struct brcmf_if* ifp = netdev_priv(ndev);
     struct brcmf_cfg80211_info* cfg = wiphy_priv(wiphy);
 
@@ -3322,8 +3357,8 @@ static s32 brcmf_wowl_nd_results(struct brcmf_if* ifp, const struct brcmf_event_
     cfg->wowl.nd->ssid.ssid_len = netinfo->SSID_len;
     cfg->wowl.nd->n_channels = 1;
     cfg->wowl.nd->channels[0] = ieee80211_channel_to_frequency(
-                                    netinfo->channel,
-                                    netinfo->channel <= CH_MAX_2G_CHANNEL ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
+        netinfo->channel,
+        netinfo->channel <= CH_MAX_2G_CHANNEL ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
     cfg->wowl.nd_info->n_matches = 1;
     cfg->wowl.nd_info->matches[0] = cfg->wowl.nd;
 
@@ -4541,7 +4576,7 @@ static int brcmf_cfg80211_change_station(struct wiphy* wiphy, struct net_device*
 }
 
 static void brcmf_cfg80211_mgmt_frame_register(struct wiphy* wiphy, struct wireless_dev* wdev,
-        u16 frame_type, bool reg) {
+                                               u16 frame_type, bool reg) {
     struct brcmf_cfg80211_vif* vif;
     u16 mgmt_type;
 
@@ -4655,7 +4690,7 @@ exit:
 }
 
 static int brcmf_cfg80211_cancel_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
-        u64 cookie) {
+                                                   u64 cookie) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_cfg80211_vif* vif;
     int err = 0;
@@ -4735,7 +4770,7 @@ static int brcmf_cfg80211_get_channel(struct wiphy* wiphy, struct wireless_dev* 
 }
 
 static int brcmf_cfg80211_crit_proto_start(struct wiphy* wiphy, struct wireless_dev* wdev,
-        enum nl80211_crit_proto_id proto, u16 duration) {
+                                           enum nl80211_crit_proto_id proto, u16 duration) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_cfg80211_vif* vif;
 
@@ -4850,7 +4885,7 @@ static int brcmf_cfg80211_update_conn_params(struct wiphy* wiphy, struct net_dev
 
 #ifdef CONFIG_PM
 static int brcmf_cfg80211_set_rekey_data(struct wiphy* wiphy, struct net_device* ndev,
-        struct cfg80211_gtk_rekey_data* gtk) {
+                                         struct cfg80211_gtk_rekey_data* gtk) {
     struct brcmf_if* ifp = netdev_priv(ndev);
     struct brcmf_gtk_keyinfo_le gtk_le;
     int ret;
@@ -4945,7 +4980,7 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
 };
 
 struct brcmf_cfg80211_vif* brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg,
-        enum nl80211_iftype type) {
+                                           enum nl80211_iftype type) {
     struct brcmf_cfg80211_vif* vif_walk;
     struct brcmf_cfg80211_vif* vif;
     bool mbss;
@@ -5212,7 +5247,7 @@ static s32 brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_de
 }
 
 static s32 brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-        const struct brcmf_event_msg* e, void* data) {
+                                          const struct brcmf_event_msg* e, void* data) {
     static int generation;
     u32 event = e->event_code;
     u32 reason = e->reason;
@@ -5561,7 +5596,7 @@ dongle_scantime_out:
 }
 
 static void brcmf_update_bw40_channel_flag(struct ieee80211_channel* channel,
-        struct brcmu_chan* ch) {
+                                           struct brcmu_chan* ch) {
     u32 ht40_flag;
 
     ht40_flag = channel->flags & IEEE80211_CHAN_NO_HT40;
@@ -5802,10 +5837,10 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, u32 bw_cap[]) {
     switch (mimo_bwcap) {
     case WLC_N_BW_40ALL:
         bw_cap[NL80211_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
-    /* fall-thru */
+        /* fall-thru */
     case WLC_N_BW_20IN2G_40IN5G:
         bw_cap[NL80211_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
-    /* fall-thru */
+        /* fall-thru */
     case WLC_N_BW_20ALL:
         bw_cap[NL80211_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
         bw_cap[NL80211_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
@@ -6519,7 +6554,7 @@ static void brcmf_free_wiphy(struct wiphy* wiphy) {
 }
 
 struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr, struct device* busdev,
-        bool p2pdev_forced) {
+                                                  bool p2pdev_forced) {
     struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
     struct brcmf_cfg80211_info* cfg;
     struct wiphy* wiphy;

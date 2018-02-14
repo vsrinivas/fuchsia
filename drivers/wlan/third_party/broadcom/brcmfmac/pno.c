@@ -62,7 +62,8 @@ static int brcmf_pno_store_request(struct brcmf_pno_info* pi,
 }
 
 static int brcmf_pno_remove_request(struct brcmf_pno_info* pi, u64 reqid) {
-    int i, err = 0;
+    int i;
+    int err = 0;
 
     mutex_lock(&pi->req_lock);
 
@@ -266,10 +267,11 @@ static int brcmf_pno_clean(struct brcmf_if* ifp) {
 }
 
 static int brcmf_pno_get_bucket_channels(struct cfg80211_sched_scan_request* r,
-        struct brcmf_pno_config_le* pno_cfg) {
+                                         struct brcmf_pno_config_le* pno_cfg) {
     u32 n_chan = le32_to_cpu(pno_cfg->channel_num);
     u16 chan;
-    int i, err = 0;
+    int i;
+    int err = 0;
 
     for (i = 0; i < r->n_channels; i++) {
         if (n_chan >= BRCMF_NUMCHANNELS) {
@@ -356,7 +358,8 @@ static int brcmf_pno_config_networks(struct brcmf_if* ifp, struct brcmf_pno_info
     struct cfg80211_sched_scan_request* r;
     struct cfg80211_match_set* ms;
     bool active;
-    int i, j, err = 0;
+    int i, j;
+    int err = 0;
 
     for (i = 0; i < pi->n_reqs; i++) {
         r = pi->reqs[i];
