@@ -37,6 +37,10 @@ typedef struct {
 } pbus_uart_t;
 
 typedef struct {
+    uint32_t clk;
+} pbus_clk_t;
+
+typedef struct {
     const char* name;
     uint32_t vid;
     uint32_t pid;
@@ -51,6 +55,8 @@ typedef struct {
     uint32_t i2c_channel_count;
     const pbus_uart_t* uarts;
     uint32_t uart_count;
+    const pbus_clk_t* clks;
+    uint32_t clk_count;
 } pbus_dev_t;
 
 // flags for pbus_device_add()

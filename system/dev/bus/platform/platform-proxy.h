@@ -40,6 +40,10 @@ enum {
     // ZX_PROTOCOL_SERIAL
     PDEV_SERIAL_CONFIG,
     PDEV_SERIAL_OPEN_SOCKET,
+
+    // ZX_PROTOCOL_CLK
+    PDEV_CLK_ENABLE,
+    PDEV_CLK_DISABLE,
 };
 
 // context for i2c_transact

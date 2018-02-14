@@ -15,6 +15,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial.h>
+#include <ddk/protocol/clk.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
 #include "platform-proxy.h"
@@ -339,6 +340,35 @@ static serial_protocol_ops_t serial_ops = {
     .open_socket = pdev_serial_open_socket,
 };
 
+static zx_status_t pdev_clk_enable(void* ctx, uint32_t index) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_CLK_ENABLE,
+        .index = index,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL,
+                            0, NULL);
+}
+
+static zx_status_t pdev_clk_disable(void* ctx, uint32_t index) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_CLK_DISABLE,
+        .index = index,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL,
+                            0, NULL);
+}
+
+static clk_protocol_ops_t clk_ops = {
+    .enable = pdev_clk_enable,
+    .disable = pdev_clk_disable,
+};
+
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
                                          void** vaddr, size_t* size, zx_handle_t* out_handle) {
     platform_proxy_t* proxy = ctx;
@@ -496,6 +526,12 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
         serial_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &serial_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_CLK: {
+        clk_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &clk_ops;
         return ZX_OK;
     }
     default:

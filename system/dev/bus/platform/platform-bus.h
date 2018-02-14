@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 #include <ddk/device.h>
+#include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-bus.h>
@@ -25,6 +26,7 @@ typedef struct {
     usb_mode_switch_protocol_t ums;
     gpio_protocol_t gpio;
     i2c_protocol_t i2c;
+    clk_protocol_t clk;
     serial_driver_protocol_t serial;
     zx_handle_t resource;   // root resource for platform bus
     uint32_t vid;
@@ -60,11 +62,13 @@ typedef struct {
     pbus_gpio_t* gpios;
     pbus_i2c_channel_t* i2c_channels;
     pbus_uart_t* uarts;
+    pbus_clk_t* clks;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
     uint32_t uart_count;
+    uint32_t clk_count;
 } platform_dev_t;
 
 typedef struct {

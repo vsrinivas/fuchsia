@@ -401,6 +401,34 @@ static zx_status_t pdev_rpc_serial_open_socket(platform_dev_t* dev, uint32_t ind
     return status;
 }
 
+static zx_status_t pdev_rpc_clk_enable(platform_dev_t* dev, uint32_t index) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->clk.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->clk_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    index = dev->clks[index].clk;
+
+    return clk_enable(&bus->clk, index);
+}
+
+static zx_status_t pdev_rpc_clk_disable(platform_dev_t* dev, uint32_t index) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->clk.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->clk_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    index = dev->clks[index].clk;
+
+    return clk_disable(&bus->clk, index);
+}
+
 static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
@@ -483,6 +511,12 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_SERIAL_OPEN_SOCKET:
         resp.status = pdev_rpc_serial_open_socket(dev, req->index, &handle, &handle_count);
+        break;
+    case PDEV_CLK_ENABLE:
+        resp.status = pdev_rpc_clk_enable(dev, req->index);
+        break;
+    case PDEV_CLK_DISABLE:
+        resp.status = pdev_rpc_clk_disable(dev, req->index);
         break;
     default:
         zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);
@@ -588,6 +622,16 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         }
         memcpy(dev->uarts, pdev->uarts, size);
         dev->uart_count = pdev->uart_count;
+    }
+    if (pdev->clk_count) {
+        const size_t sz = pdev->clk_count * sizeof(*pdev->clks);
+        dev->clks = malloc(sz);
+        if (!dev->clks) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->clks, pdev->clks, sz);
+        dev->clk_count = pdev->clk_count;
     }
 
     dev->bus = bus;

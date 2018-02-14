@@ -33,6 +33,9 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_I2C:
         memcpy(&bus->i2c, protocol, sizeof(bus->i2c));
         break;
+    case ZX_PROTOCOL_CLK:
+        memcpy(&bus->clk, protocol, sizeof(bus->clk));
+        break;
     case ZX_PROTOCOL_SERIAL_DRIVER: {
         zx_status_t status = platform_serial_init(bus, (serial_driver_protocol_t *)protocol);
         if (status != ZX_OK) {
@@ -121,6 +124,12 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
     case ZX_PROTOCOL_I2C:
         if (bus->i2c.ops) {
             memcpy(protocol, &bus->i2c, sizeof(bus->i2c));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_CLK:
+        if (bus->clk.ops) {
+            memcpy(protocol, &bus->clk, sizeof(bus->clk));
             return ZX_OK;
         }
         break;
