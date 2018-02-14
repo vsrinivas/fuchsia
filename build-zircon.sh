@@ -18,18 +18,18 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf '%s: [-c] [-v] [-V] [-A] [-H] [-p projects] [-t target] [-o outdir]\n' "$0"
-  printf 'Note: Passing extra arguments to make is not supported.\n'
-}
-
-make_zircon_common() {
-  make --no-print-directory -C "${ROOT_DIR}/zircon" \
-    -j ${JOBS} DEBUG_BUILDROOT=../../zircon "$@"
-}
-
-make_zircon_target() {
-  make_zircon_common \
-    BUILDROOT=${ZIRCON_BUILDROOT} TOOLS=${OUTDIR}/build-zircon/tools "$@"
+  echo "$0 <options>"
+  echo "Options:"
+  echo "  -c: Clean before building"
+  echo "  -v: Level 1 verbosity"
+  echo "  -V: Level 2 verbosity"
+  echo "  -A: Build with ASan"
+  echo "  -H: Build host tools with ASan"
+  echo "  -p <projects>: Kernel projects to build."
+  echo "  -t <target>: Kernel target to build."
+  echo "  -o <outdir>: Directory in which to put the build-zircon directory."
+  echo ""
+  echo "Note: Passing extra arguments to make is not supported."
 }
 
 declare ASAN="${ASAN:-false}"
@@ -52,6 +52,16 @@ while getopts "AcHht:p:o:vV" opt; do
     *) usage 1>&2 ; exit 1 ;;
   esac
 done
+
+make_zircon_common() {
+  make --no-print-directory -C "${ROOT_DIR}/zircon" \
+    -j ${JOBS} DEBUG_BUILDROOT=../../zircon "$@"
+}
+
+make_zircon_target() {
+  make_zircon_common \
+    BUILDROOT=${ZIRCON_BUILDROOT} TOOLS=${OUTDIR}/build-zircon/tools "$@"
+}
 
 if [[ "${PROJECTS}" = "" ]]; then
     if [[ "${TARGET}" != "" ]]; then
