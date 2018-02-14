@@ -42,6 +42,8 @@ private:
         Subsequent,
     };
 
+    void GenerateEOF();
+
     template <typename Collection>
     void GenerateArray(const Collection& collection);
 

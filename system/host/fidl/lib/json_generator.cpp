@@ -174,6 +174,10 @@ void EmitUint64(std::ostream* file, uint64_t value) {
     *file << value;
 }
 
+void EmitNewline(std::ostream* file) {
+    *file << "\n";
+}
+
 void EmitNewlineAndIndent(std::ostream* file, int indent_level) {
     *file << "\n";
     while (indent_level--)
@@ -212,6 +216,10 @@ void EmitArrayEnd(std::ostream* file) {
 }
 
 } // namespace
+
+void JSONGenerator::GenerateEOF() {
+    EmitNewline(&json_file_);
+}
 
 template <typename Collection>
 void JSONGenerator::GenerateArray(const Collection& collection) {
@@ -552,6 +560,7 @@ void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
                 GenerateDeclarationMapEntry(count++, decl.name, "union");
         });
     });
+    GenerateEOF();
 
     *json_file_out = std::move(json_file_);
 }
