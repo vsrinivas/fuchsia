@@ -29,4 +29,3 @@
 
 #include <endian.h>
 #include <limits.h>
-#include <sys/resource.h>

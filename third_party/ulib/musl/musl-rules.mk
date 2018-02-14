@@ -279,7 +279,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/getpass.c \
     $(LOCAL_DIR)/src/legacy/isastream.c \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
-    $(LOCAL_DIR)/src/legacy/ulimit.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
     $(LOCAL_DIR)/src/linux/flock.c \
     $(LOCAL_DIR)/src/linux/sethostname.c \
@@ -437,9 +436,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/gethostid.c \
     $(LOCAL_DIR)/src/misc/getopt.c \
     $(LOCAL_DIR)/src/misc/getopt_long.c \
-    $(LOCAL_DIR)/src/misc/getpriority.c \
-    $(LOCAL_DIR)/src/misc/getrlimit.c \
-    $(LOCAL_DIR)/src/misc/getrusage.c \
     $(LOCAL_DIR)/src/misc/getsubopt.c \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
@@ -449,8 +445,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/ptsname.c \
     $(LOCAL_DIR)/src/misc/pty.c \
     $(LOCAL_DIR)/src/misc/setdomainname.c \
-    $(LOCAL_DIR)/src/misc/setpriority.c \
-    $(LOCAL_DIR)/src/misc/setrlimit.c \
     $(LOCAL_DIR)/src/misc/syslog.c \
     $(LOCAL_DIR)/src/misc/wordexp.c \
     $(LOCAL_DIR)/src/mman/madvise.c \
@@ -876,7 +870,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/gethostname.c \
     $(LOCAL_DIR)/src/unistd/getlogin.c \
     $(LOCAL_DIR)/src/unistd/getlogin_r.c \
-    $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
     $(LOCAL_DIR)/src/unistd/posix_close.c \
     $(LOCAL_DIR)/src/unistd/setpgrp.c \

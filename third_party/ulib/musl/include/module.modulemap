@@ -263,10 +263,6 @@ module Libc [system] {
       header "tar.h"
       export *
     }
-    module ulimit { // POSIX
-      header "ulimit.h"
-      export *
-    }
     module unistd { // POSIX
       header "unistd.h"
       export *
@@ -408,10 +404,6 @@ module Libc [system] {
       }
       module msg {
         header "sys/msg.h"
-        export *
-      }
-      module resource {
-        header "sys/resource.h"
         export *
       }
       module select {

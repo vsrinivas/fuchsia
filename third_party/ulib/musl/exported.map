@@ -317,7 +317,6 @@
     getpwuid_r;
     getresgid;
     getresuid;
-    getrusage;
     getservbyname;
     getservbyport;
     getsid;
@@ -671,7 +670,6 @@
     setresgid;
     setresuid;
     setreuid;
-    setrlimit;
     setsid;
     setsockopt;
     setuid;

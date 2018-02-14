@@ -132,7 +132,6 @@ size_t confstr(int, char*, size_t);
 #if defined(_XOPEN_SOURCE) || defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 int lockf(int, int, off_t);
 long gethostid(void);
-int nice(int);
 void sync(void);
 int syncfs(int);
 pid_t setpgrp(void);
