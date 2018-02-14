@@ -160,18 +160,56 @@ func init() {
 	files := []file{
 		{
 			kernelImg,
+			"out/build-zircon/build-arm64/zircon.bin",
+			"target/aarch64/zircon.bin",
+		},
+		{
+			kernelImg,
+			armBuildDir + "bootdata-blobstore-arm64.bin",
+			"target/aarch64/bootdata-blobstore.bin",
+		},
+		{
+			kernelImg,
+			armBuildDir + "images/fvm.blk",
+			"target/aarch64/fvm.blk",
+		},
+
+		{
+			kernelImg,
 			"out/build-zircon/build-x86/zircon.bin",
 			"target/x86_64/zircon.bin",
 		},
 		{
-			bootdata,
-			x86BuildDir + "user.bootfs",
-			"target/x86_64/bootdata.bin",
+			kernelImg,
+			x86BuildDir + "bootdata-blobstore-x86.bin",
+			"target/x86_64/bootdata-blobstore.bin",
 		},
 		{
 			kernelImg,
-			"out/build-zircon/build-arm64/zircon.bin",
-			"target/aarch64/zircon.bin",
+			x86BuildDir + "images/local-x86.esp.blk",
+			"target/x86_64/local.esp.blk",
+		},
+		{
+			kernelImg,
+			x86BuildDir + "images/zircon-x86.vboot",
+			"target/x86_64/zircon.vboot",
+		},
+		{
+			kernelImg,
+			x86BuildDir + "images/fvm.blk",
+			"target/x86_64/fvm.blk",
+		},
+		{
+			kernelImg,
+			x86BuildDir + "images/fvm.sparse.blk",
+			"target/x86_64/fvm.sparse.blk",
+		},
+
+		// TODO(marshallk): Remove this when bootfs is deprecated.
+		{
+			bootdata,
+			x86BuildDir + "user.bootfs",
+			"target/x86_64/bootdata.bin",
 		},
 		{
 			bootdata,
