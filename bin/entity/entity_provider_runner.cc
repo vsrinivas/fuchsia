@@ -236,8 +236,6 @@ void EntityProviderRunner::ResolveEntity(
   std::string agent_url;
   std::string cookie;
   if (!DecodeEntityReference(entity_reference, &agent_url, &cookie)) {
-    FXL_DLOG(ERROR) << "Could not resolve entity reference: "
-                    << entity_reference;
     return;
     // |entity_request| is closed here.
   }
