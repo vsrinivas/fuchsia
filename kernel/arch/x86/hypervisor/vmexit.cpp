@@ -33,8 +33,7 @@
 #define LOCAL_TRACE 0
 
 static const uint64_t kLocalApicPhysBase =
-    APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE |
-    IA32_APIC_BASE_X2APIC_ENABLE;
+    APIC_PHYS_BASE | IA32_APIC_BASE_XAPIC_ENABLE | IA32_APIC_BASE_X2APIC_ENABLE;
 
 static const uint64_t kX2ApicMsrBase = 0x800;
 static const uint64_t kX2ApicMsrMax = 0x83f;
@@ -340,8 +339,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     switch (static_cast<X2ApicMsr>(guest_state->rcx)) {
     case X2ApicMsr::ID:
         next_rip(exit_info, vmcs);
-        // TODO: Handle multiple VCPUs.
-        guest_state->rax = 0;
+        guest_state->rax = vmcs->Read(VmcsField16::VPID) - 1;
         return ZX_OK;
     case X2ApicMsr::VERSION: {
         next_rip(exit_info, vmcs);
@@ -392,6 +390,8 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info, vmcs);
         guest_state->rax = kLocalApicPhysBase;
+        if (vmcs->Read(VmcsField16::VPID) == 1)
+            guest_state->rax |= IA32_APIC_BASE_BSP;
         guest_state->rdx = 0;
         return ZX_OK;
     // From Volume 4, Section 2.1, Table 2-2: For now, only enable fast strings.
@@ -571,7 +571,9 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
                                 GuestPhysicalAddressSpace* gpas, zx_port_packet* packet) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
-        if (guest_state->rax != kLocalApicPhysBase || guest_state->rdx != 0)
+        if (guest_state->rdx != 0)
+            return ZX_ERR_INVALID_ARGS;
+        if ((guest_state->rax & ~IA32_APIC_BASE_BSP) != kLocalApicPhysBase)
             return ZX_ERR_INVALID_ARGS;
         next_rip(exit_info, vmcs);
         return ZX_OK;
