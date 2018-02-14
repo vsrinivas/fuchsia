@@ -28,11 +28,11 @@ pub trait Stub {
     /// The type of the future that is resolved to a response.
     type DispatchResponseFuture: Future<Item = EncodeBuf, Error = ErrorOrClose>;
 
-    /// The type of the future that dispatches a message with no response.
-    type DispatchFuture: Future<Item = (), Error = ErrorOrClose>;
-
     /// Dispatches a request and returns a future for the response.
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture;
+
+    /// The type of the future that dispatches a message with no response.
+    type DispatchFuture: Future<Item = (), Error = ErrorOrClose>;
 
     /// Dispatches a request and returns a future with no response.
     fn dispatch(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
@@ -172,7 +172,7 @@ mod tests {
     impl Stub for DummyDispatcher {
         type Service = DummyService;
 
-        type DispatchResponseFuture = future::FutureResult<EncodeBuf, Error>;
+        type DispatchResponseFuture = future::FutureResult<EncodeBuf, ErrorOrClose>;
         fn dispatch_with_response(
             &mut self,
             _request: &mut DecodeBuf,
@@ -181,7 +181,7 @@ mod tests {
             future::ok(buf)
         }
 
-        type DispatchFuture = future::FutureResult<(), Error>;
+        type DispatchFuture = future::FutureResult<(), ErrorOrClose>;
         fn dispatch(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture {
             let ordinal = LittleEndian::read_u32(&request.get_bytes()[8..12]);
             assert_eq!(ordinal, 42);
@@ -202,7 +202,7 @@ mod tests {
         // add a timeout to receiver so if test is broken it doesn't take forever
         let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
             .unwrap()
-            .map_err(|err| err.into());
+            .map_err(Error::TestIo);
         let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
             |(err, _)| err,
         );
@@ -210,7 +210,7 @@ mod tests {
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()| {
             let mut handles = Vec::new();
             client_end.write(req.get_bytes(), &mut handles).unwrap();
-        }).map_err(|err| err.into());
+        }).map_err(Error::TestIo);
 
         let done = receiver.join(sender);
         core.run(done).unwrap();
@@ -231,7 +231,7 @@ mod tests {
         // add a timeout to receiver so if test is broken it doesn't take forever
         let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
             .unwrap()
-            .map_err(|err| err.into());
+            .map_err(Error::TestIo);
         let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
             |(err, _)| err,
         );
@@ -245,7 +245,7 @@ mod tests {
                 println!("{:?}", buf.bytes());
                 assert_eq!(bytes, buf.bytes());
             })
-        }).map_err(|err| err.into());
+        }).map_err(Error::TestIo);
 
         let done = receiver.join(sender);
         core.run(done).unwrap();

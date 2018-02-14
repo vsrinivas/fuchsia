@@ -333,7 +333,7 @@ mod tests {
         let server = Channel::from_channel(server_end, &handle).unwrap();
         let mut buffer = MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map(|(chan, buf)| {
-            let bytes = &[24, 0, 0, 0, 1, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+            let bytes = &[24, 0, 0, 0, 1, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
             println!("{:?}", buf.bytes());
             assert_eq!(bytes, buf.bytes());
             let id = LittleEndian::read_u64(&buf.bytes()[16..24]);

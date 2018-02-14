@@ -17,6 +17,7 @@ extern crate tokio_fuchsia;
 
 #[macro_use]
 mod encoding;
+pub mod encoding2;
 mod message;
 mod error;
 mod server;
