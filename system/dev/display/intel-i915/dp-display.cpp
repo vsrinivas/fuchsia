@@ -602,7 +602,7 @@ bool DpDisplay::LinkTrainingSetup() {
     } else {
         get_dp_ddi_buf_trans_entries(controller()->device_id(), &entries, &i_boost, &count);
     }
-    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi());
+    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), true /* is_dp */);
 
     for (unsigned i = 0; i < count; i++) {
         auto ddi_buf_trans_high = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());

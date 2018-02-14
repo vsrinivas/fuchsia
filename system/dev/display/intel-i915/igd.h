@@ -192,29 +192,29 @@ public:
     ~IgdOpRegion();
     zx_status_t Init(pci_protocol_t* pci);
 
-    bool IsHdmi(registers::Ddi ddi) const {
-        return ddi_type_[ddi] == kHdmi;
+    bool SupportsHdmi(registers::Ddi ddi) const {
+        return ddi_supports_hdmi_[ddi];
     }
-    bool IsDvi(registers::Ddi ddi) const {
-        return ddi_type_[ddi] == kDvi;
+    bool SupportsDvi(registers::Ddi ddi) const {
+        return ddi_supports_dvi_[ddi];
     }
-    bool IsDp(registers::Ddi ddi) const {
-        return ddi_type_[ddi] == kDp || ddi_type_[ddi] == kEdp;
+    bool SupportsDp(registers::Ddi ddi) const {
+        return ddi_supports_dp_[ddi];
     }
 
     bool IsLowVoltageEdp(registers::Ddi ddi) const {
-        ZX_DEBUG_ASSERT(IsDp(ddi));
+        ZX_DEBUG_ASSERT(SupportsDp(ddi));
         // TODO(stevensd): Support the case where more than one type of edp panel is present.
-        return ddi_type_[ddi] == kEdp && edp_is_low_voltage_;
+        return ddi_is_edp_[ddi] && edp_is_low_voltage_;
     }
 
-    uint8_t GetIBoost(registers::Ddi ddi) const {
-        return iboosts_[ddi];
+    uint8_t GetIBoost(registers::Ddi ddi, bool is_dp) const {
+        return is_dp ? iboosts_[ddi].dp_iboost : iboosts_[ddi].hdmi_iboost;
     }
 
     static constexpr uint8_t kUseDefaultIdx = 0xff;
     uint8_t GetHdmiBufferTranslationIndex(registers::Ddi ddi) const {
-        ZX_DEBUG_ASSERT(IsHdmi(ddi) || IsDvi(ddi));
+        ZX_DEBUG_ASSERT(SupportsHdmi(ddi) || SupportsDvi(ddi));
         return hdmi_buffer_translation_idx_[ddi];
     }
 
@@ -233,16 +233,17 @@ private:
     igd_opregion_t* igd_opregion_;
     bios_data_blocks_header_t* bdb_;
 
-    uint8_t ddi_type_[registers::kDdiCount];
-    constexpr static uint8_t kNone = 0;
-    constexpr static uint8_t kHdmi = 1;
-    constexpr static uint8_t kDvi = 2;
-    constexpr static uint8_t kDp = 3;
-    constexpr static uint8_t kEdp = 4;
+    bool ddi_supports_hdmi_[registers::kDdiCount];
+    bool ddi_supports_dvi_[registers::kDdiCount];
+    bool ddi_supports_dp_[registers::kDdiCount];
+    bool ddi_is_edp_[registers::kDdiCount];
 
     bool edp_is_low_voltage_;
 
-    uint8_t iboosts_[registers::kDdiCount];
+    struct {
+        uint8_t hdmi_iboost;
+        uint8_t dp_iboost;
+    } iboosts_[registers::kDdiCount];
     uint8_t hdmi_buffer_translation_idx_[registers::kDdiCount];
 };
 

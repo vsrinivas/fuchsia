@@ -625,7 +625,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
 
     // kUseDefaultIdx always fails the idx-in-bounds check, so no additional handling is needed
     uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi());
-    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi());
+    uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), false /* is_dp */);
 
     const ddi_buf_trans_entry* entries;
     uint8_t default_iboost;

@@ -465,20 +465,19 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     }
 
     fbl::AllocChecker ac;
-    if (igd_opregion_.IsHdmi(ddi) || igd_opregion_.IsDvi(ddi)) {
-        zxlogf(SPEW, "Checking for hdmi monitor\n");
-        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
-        if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
-            return hdmi_disp;
-        }
-    } else if (igd_opregion_.IsDp(ddi)) {
+    if (igd_opregion_.SupportsDp(ddi)) {
         zxlogf(SPEW, "Checking for displayport monitor\n");
         auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, ddi, pipe);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
             return dp_disp;
         }
-    } else {
-        zxlogf(SPEW, "Skipping ddi\n");
+    }
+    if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
+        zxlogf(SPEW, "Checking for hdmi monitor\n");
+        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
+        if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
+            return hdmi_disp;
+        }
     }
 
     return nullptr;
