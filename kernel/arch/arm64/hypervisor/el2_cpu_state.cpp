@@ -19,30 +19,22 @@ static fbl::Mutex guest_mutex;
 static size_t num_guests TA_GUARDED(guest_mutex) = 0;
 static fbl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(guest_mutex);
 
-El2TranslationTable::~El2TranslationTable() {
-    vm_page_t* page = paddr_to_vm_page(l0_pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
-    page = paddr_to_vm_page(l1_pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
-}
-
 zx_status_t El2TranslationTable::Init() {
-    vm_page_t* page = pmm_alloc_page(0, &l0_pa_);
-    if (page == nullptr)
-        return ZX_ERR_NO_MEMORY;
-    page = pmm_alloc_page(0, &l1_pa_);
-    if (page == nullptr)
-        return ZX_ERR_NO_MEMORY;
+    zx_status_t status = l0_page_.Alloc(0);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = l1_page_.Alloc(0);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     // L0: Point to a single L1 translation table.
-    pte_t* l0_pte = static_cast<pte_t*>(paddr_to_physmap(l0_pa_));
-    arch_zero_page(l0_pte);
-    *l0_pte = l1_pa_ | MMU_PTE_L012_DESCRIPTOR_TABLE;
+    pte_t* l0_pte = l0_page_.VirtualAddress<pte_t>();
+    *l0_pte = l1_page_.PhysicalAddress() | MMU_PTE_L012_DESCRIPTOR_TABLE;
 
     // L1: Identity map the first 512GB of physical memory at.
-    pte_t* l1_pte = static_cast<pte_t*>(paddr_to_physmap(l1_pa_));
+    pte_t* l1_pte = l1_page_.VirtualAddress<pte_t>();
     for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
         l1_pte[i] = i * (1u << 30) | MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE |
                     MMU_PTE_ATTR_AP_P_RW_U_RW | MMU_PTE_ATTR_NORMAL_MEMORY |
@@ -54,24 +46,15 @@ zx_status_t El2TranslationTable::Init() {
 }
 
 zx_paddr_t El2TranslationTable::Base() const {
-    return l0_pa_;
-}
-
-El2Stack::~El2Stack() {
-    vm_page_t* page = paddr_to_vm_page(pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
+    return l0_page_.PhysicalAddress();
 }
 
 zx_status_t El2Stack::Alloc() {
-    vm_page_t* page = pmm_alloc_page(0, &pa_);
-    if (page == nullptr)
-        return ZX_ERR_NO_MEMORY;
-    return ZX_OK;
+    return page_.Alloc(0);
 }
 
 zx_paddr_t El2Stack::Top() const {
-    return pa_ + PAGE_SIZE;
+    return page_.PhysicalAddress() + PAGE_SIZE;
 }
 
 zx_status_t El2CpuState::OnTask(void* context, uint cpu_num) {

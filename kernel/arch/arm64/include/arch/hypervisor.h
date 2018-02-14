@@ -11,6 +11,7 @@
 #include <fbl/unique_ptr.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
+#include <hypervisor/page.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
@@ -87,21 +88,13 @@ private:
 // EL2State will not cross a page boundary and be incorrectly accessed in EL2.
 class El2StatePtr {
 public:
-    El2StatePtr() = default;
-    ~El2StatePtr();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(El2StatePtr);
-
     zx_status_t Alloc();
 
-    paddr_t PhysicalAddress() const {
-        DEBUG_ASSERT(pa_ != 0);
-        return pa_;
-    }
-
+    paddr_t PhysicalAddress() const { return page_.PhysicalAddress(); }
     El2State* operator->() const { return state_; }
 
 private:
-    zx_paddr_t pa_ = 0;
+    hypervisor::Page page_;
     El2State* state_ = nullptr;
 };
 

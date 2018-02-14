@@ -13,8 +13,6 @@
 #include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
-#include <vm/physmap.h>
-#include <vm/pmm.h>
 
 #include <fbl/mutex.h>
 
@@ -70,12 +68,6 @@ EptInfo::EptInfo() {
         BIT_SHIFT(ept_info, 26);
 }
 
-VmxPage::~VmxPage() {
-    vm_page_t* page = paddr_to_vm_page(pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
-}
-
 zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
@@ -90,17 +82,7 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
 
     // The maximum size for a VMXON or VMCS region is 4096, therefore
     // unconditionally allocating a page is adequate.
-    vm_page_t* page = pmm_alloc_page(0, &pa_);
-    if (page == nullptr)
-        return ZX_ERR_NO_MEMORY;
-
-    memset(VirtualAddress(), fill, PAGE_SIZE);
-    return ZX_OK;
-}
-
-void* VmxPage::VirtualAddress() const {
-    DEBUG_ASSERT(pa_ != 0);
-    return paddr_to_physmap(pa_);
+    return hypervisor::Page::Alloc(fill);
 }
 
 static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {

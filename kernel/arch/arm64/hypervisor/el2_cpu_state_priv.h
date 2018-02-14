@@ -9,36 +9,29 @@
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
 #include <hypervisor/id_allocator.h>
+#include <hypervisor/page.h>
 
 class El2TranslationTable {
 public:
-    El2TranslationTable() = default;
-    ~El2TranslationTable();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(El2TranslationTable);
-
     zx_status_t Init();
     zx_paddr_t Base() const;
 
 private:
-    zx_paddr_t l0_pa_ = 0;
-    zx_paddr_t l1_pa_ = 0;
+    hypervisor::Page l0_page_;
+    hypervisor::Page l1_page_;
 };
 
-/* Represents a stack for use with EL2. */
+// Represents a stack for use with EL2/
 class El2Stack {
 public:
-    El2Stack() = default;
-    ~El2Stack();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(El2Stack);
-
     zx_status_t Alloc();
     zx_paddr_t Top() const;
 
 private:
-    zx_paddr_t pa_ = 0;
+    hypervisor::Page page_;
 };
 
-/* Maintains the EL2 state for each CPU. */
+// Maintains the EL2 state for each CPU.
 class El2CpuState : public hypervisor::IdAllocator<uint8_t, 64> {
 public:
     static zx_status_t Create(fbl::unique_ptr<El2CpuState>* out);

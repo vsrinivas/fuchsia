@@ -15,6 +15,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
+#include <hypervisor/page.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
@@ -28,29 +29,12 @@ class HostMapping;
 class VmObject;
 struct VmxInfo;
 
-class VmxPage {
+class VmxPage : public hypervisor::Page {
 public:
-    VmxPage() = default;
-    ~VmxPage();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmxPage);
-
     zx_status_t Alloc(const VmxInfo& info, uint8_t fill);
-    void* VirtualAddress() const;
-
-    template <typename T>
-    T* VirtualAddress() const {
-        return static_cast<T*>(VirtualAddress());
-    }
-
-    paddr_t PhysicalAddress() const {
-        DEBUG_ASSERT(pa_ != 0);
-        return pa_;
-    }
-
-    bool IsAllocated() const { return pa_ != 0; }
 
 private:
-    zx_paddr_t pa_ = 0;
+    using hypervisor::Page::Alloc;
 };
 
 // Represents a guest within the hypervisor.

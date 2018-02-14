@@ -86,18 +86,12 @@ AutoGich::~AutoGich() {
     arch_enable_ints();
 }
 
-El2StatePtr::~El2StatePtr() {
-    vm_page_t* page = paddr_to_vm_page(pa_);
-    if (page != nullptr)
-        pmm_free_page(page);
-}
-
 zx_status_t El2StatePtr::Alloc() {
-    vm_page_t* page = pmm_alloc_page(0, &pa_);
-    if (page == nullptr)
-        return ZX_ERR_NO_MEMORY;
-    state_ = static_cast<El2State*>(paddr_to_physmap(pa_));
-    memset(state_, 0, sizeof(El2State));
+    zx_status_t status = page_.Alloc(0);
+    if (status != ZX_OK) {
+        return status;
+    }
+    state_ = page_.VirtualAddress<El2State>();
     return ZX_OK;
 }
 
