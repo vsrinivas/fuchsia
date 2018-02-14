@@ -389,7 +389,7 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
     }
 
     // Update size
-    if (edit_file && (sizestr != nullptr || s.st_size < total_size)) {
+    if (edit_file && (sizestr != nullptr || s.st_size != total_size)) {
         if (ftruncate(fd.get(), total_size)) {
             fprintf(stderr, "error: cannot truncate device '%s'\n", device);
             return -1;
