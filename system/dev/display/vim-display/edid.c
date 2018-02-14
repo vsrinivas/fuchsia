@@ -154,24 +154,11 @@ static void get_vic(vim2_display_t* display)
     uint32_t i;
     ZX_DEBUG_ASSERT(display);
 
-    disp_timing_t* disp_timing = &display->pref_disp_timing;
+    disp_timing_t* disp_timing = &display->std_disp_timing;
     ZX_DEBUG_ASSERT(disp_timing);
 
     struct hdmi_param** supportedFormats = get_supported_formats();
     ZX_DEBUG_ASSERT(supportedFormats);
-
-    /*TODO: This particular monitor can support 1080p but prefers 720p.
-     * Will force to 1080p for now.
-     * TODO: This is really something upper layers will decide in the future
-     */
-    if (strcmp(get_mfg_id(display->edid_buf), "ACI") == 0) {
-        DISP_INFO("Found an ACI monitor 0x%x\n", get_prod_id(display->edid_buf));
-        if (get_prod_id(display->edid_buf) == 0x22fd) {
-            DISP_INFO("Forcing 1080p resolution\n");
-            display->p = &hdmi_1920x1080p60Hz_vft;
-            return;
-        }
-    }
 
     for (i = 0; supportedFormats[i] != NULL; i++) {
         if (supportedFormats[i]->timings.hactive != disp_timing->HActive) {
@@ -185,7 +172,7 @@ static void get_vic(vim2_display_t* display)
     }
 
     DISP_ERROR("Display preferred resolution not supported (%d x %d%c [flag = 0x%x])\n",
-        disp_timing->HActive, disp_timing->VActive, disp_timing->Flags & (0x80) ? 'p' : 'i',
+        disp_timing->HActive, disp_timing->VActive, disp_timing->Flags & (0x80) ? 'i' : 'p',
         disp_timing->Flags);
     DISP_ERROR("Use default: 640x480p60Hz\n");
     display->p = &hdmi_640x480p60Hz_vft;

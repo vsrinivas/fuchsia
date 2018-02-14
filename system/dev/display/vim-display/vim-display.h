@@ -52,6 +52,7 @@ extern struct hdmi_param hdmi_640x480p60Hz_vft;
 extern struct hdmi_param hdmi_720x480p60Hz_vft;
 extern struct hdmi_param hdmi_1280x720p60Hz_vft;
 extern struct hdmi_param hdmi_1280x800p60Hz_vft;
+extern struct hdmi_param hdmi_1280x1024p60Hz_vft;
 extern struct hdmi_param hdmi_1920x1080p60Hz_vft;
 
 

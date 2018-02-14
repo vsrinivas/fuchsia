@@ -1350,6 +1350,29 @@ static const struct reg_val_pair ENC_LUT_480p[] = {
     { 0xFFFFFFFF, 0},
 };
 
+static const struct reg_val_pair ENC_LUT_1280x1024p60hz[] = {
+    {VPU_ENCP_VIDEO_EN, 0,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    {VPU_ENCP_VIDEO_MODE, 0x4040,},
+    {VPU_ENCP_VIDEO_MODE_ADV, 0x18,},
+    {VPU_ENCP_VIDEO_MAX_PXCNT, 0x697,},
+    {VPU_ENCP_VIDEO_MAX_LNCNT, 0x429,},
+    {VPU_ENCP_VIDEO_HAVON_BEGIN, 0x168,},
+    {VPU_ENCP_VIDEO_HAVON_END, 0x667,},
+    {VPU_ENCP_VIDEO_VAVON_BLINE, 0x29,},
+    {VPU_ENCP_VIDEO_VAVON_ELINE, 0x428,},
+    {VPU_ENCP_VIDEO_HSO_BEGIN, 0x0,},
+    {VPU_ENCP_VIDEO_HSO_END, 0x70,},
+    {VPU_ENCP_VIDEO_VSO_BEGIN, 0x1E,},
+    {VPU_ENCP_VIDEO_VSO_END, 0x32,},
+    {VPU_ENCP_VIDEO_VSO_BLINE, 0x0,},
+    {VPU_ENCP_VIDEO_VSO_ELINE, 0x3,},
+    {VPU_VPU_VIU_VENC_MUX_CTRL, 0xA},
+    {VPU_ENCI_VIDEO_EN, 0},
+    {VPU_ENCP_VIDEO_EN, 1},
+    { 0xFFFFFFFF, 0},
+};
+
 
 struct cea_timing {
     uint8_t             interlace_mode;
@@ -1528,6 +1551,7 @@ struct hdmi_param {
  #define VESA_OFFSET                            300
  #define VIC_VESA_640x480p_60Hz_4x3             300
  #define VIC_VESA_1280x800p_60Hz_16x9           301
+ #define VIC_VESA_1280x1024p_60Hz_5x4           302
 
 void hdmitx_writereg(vim2_display_t* display, uint32_t addr, uint32_t data);
 uint32_t hdmitx_readreg(vim2_display_t* display, uint32_t addr);
