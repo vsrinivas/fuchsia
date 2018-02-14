@@ -15,6 +15,8 @@
 #define S912_HDMITX_LENGTH              0x2000
 #define S912_HIU_BASE                   0xC883C000
 #define S912_HIU_LENGTH                 0x2000
+#define S912_MALI_BASE                  0xD00C0000
+#define S912_MALI_LENGTH                0x40000
 #define S912_VPU_BASE                   0xD0100000
 #define S912_VPU_LENGTH                 0x40000
 #define S912_HDMITX_SEC_BASE            0xDA83A000
@@ -116,3 +118,4 @@
 #define S912_AO_PWM_PWM_B           0x55
 #define S912_AO_PWM_MISC_REG_AB     0x56
 #define S912_AO_PWM_DELTA_SIGMA_AB  0x57
+

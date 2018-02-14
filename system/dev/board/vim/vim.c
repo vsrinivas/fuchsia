@@ -109,6 +109,14 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
         goto fail;
     }
+
+    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
+        if ((status = vim_mali_init(bus)) != ZX_OK) {
+            zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
+            goto fail;
+        }
+    }
+
     if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
         goto fail;
