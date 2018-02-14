@@ -20,7 +20,7 @@ class SessionForTest : public Session {
   SessionForTest(SessionId id,
                  Engine* engine,
                  scene_manager::EventReporter* event_reporter,
-                 scene_manager::ErrorReporter* error_reporter);
+                 mz::ErrorReporter* error_reporter);
 
   virtual void TearDown() override;
 };

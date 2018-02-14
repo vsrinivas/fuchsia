@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/resources/lights/directional_light.h"
 
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 
 namespace scene_manager {
 

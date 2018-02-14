@@ -9,10 +9,10 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/engine/engine.h"
 #include "garnet/lib/ui/scenic/engine/event_reporter.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scene_manager {
@@ -25,7 +25,7 @@ class SceneManagerImpl;
 // profiling suggests to.
 class SessionHandler : public scenic::Session,
                        public EventReporter,
-                       private ErrorReporter {
+                       private mz::ErrorReporter {
  public:
   SessionHandler(Engine* engine,
                  SessionId session_id,
@@ -59,7 +59,7 @@ class SessionHandler : public scenic::Session,
  private:
   friend class Engine;
 
-  // Customize behavior of ErrorReporter::ReportError().
+  // Customize behavior of mz::ErrorReporter::ReportError().
   void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 

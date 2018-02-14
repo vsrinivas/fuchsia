@@ -83,7 +83,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
                        MemoryPtr memory,
                        const scenic::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
-                       ErrorReporter* error_reporter) override {
+                       mz::ErrorReporter* error_reporter) override {
     return HostImage::NewForTesting(session, 0u, dummy_resource_manager_,
                                     memory->As<HostMemory>());
   }

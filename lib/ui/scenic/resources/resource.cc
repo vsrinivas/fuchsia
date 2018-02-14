@@ -33,7 +33,7 @@ Resource::~Resource() {
   session_->DecrementResourceCount();
 }
 
-ErrorReporter* Resource::error_reporter() const {
+mz::ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
 }
 

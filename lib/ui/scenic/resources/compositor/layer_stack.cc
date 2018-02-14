@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/scenic/resources/compositor/layer_stack.h"
 
 #include "garnet/lib/ui/scenic/resources/compositor/layer.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 
 namespace scene_manager {
 

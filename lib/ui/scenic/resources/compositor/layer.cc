@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/scenic/resources/camera.h"
 #include "garnet/lib/ui/scenic/resources/compositor/layer_stack.h"
 #include "garnet/lib/ui/scenic/resources/renderers/renderer.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 
 namespace scene_manager {

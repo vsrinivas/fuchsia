@@ -16,7 +16,7 @@ namespace scene_manager {
 namespace test {
 
 class SessionTest : public ::testing::Test,
-                    public scene_manager::ErrorReporter,
+                    public mz::ErrorReporter,
                     public scene_manager::EventReporter {
  public:
   // ::testing::Test virtual method.
@@ -29,7 +29,7 @@ class SessionTest : public ::testing::Test,
   virtual std::unique_ptr<Engine> CreateEngine();
 
  protected:
-  // |ErrorReporter|
+  // |mz::ErrorReporter|
   void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 

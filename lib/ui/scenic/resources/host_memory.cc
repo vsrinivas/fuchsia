@@ -22,7 +22,7 @@ HostMemoryPtr HostMemory::New(Session* session,
                               scenic::ResourceId id,
                               vk::Device device,
                               const scenic::MemoryPtr& args,
-                              ErrorReporter* error_reporter) {
+                              mz::ErrorReporter* error_reporter) {
   if (args->memory_type != scenic::MemoryType::HOST_MEMORY) {
     error_reporter->ERROR() << "scene_manager::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
@@ -35,7 +35,7 @@ HostMemoryPtr HostMemory::New(Session* session,
                               scenic::ResourceId id,
                               vk::Device device,
                               zx::vmo vmo,
-                              ErrorReporter* error_reporter) {
+                              mz::ErrorReporter* error_reporter) {
   uint64_t vmo_size;
   vmo.get_size(&vmo_size);
   return fxl::MakeRefCounted<HostMemory>(session, id, std::move(vmo), vmo_size);

@@ -19,7 +19,7 @@ SessionHandler::SessionHandler(
           session_id,
           engine_,
           this,
-          static_cast<ErrorReporter*>(this))),
+          static_cast<mz::ErrorReporter*>(this))),
       listener_(listener.Bind()) {
   FXL_DCHECK(engine);
 

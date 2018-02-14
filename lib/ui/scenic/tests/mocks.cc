@@ -9,8 +9,8 @@ namespace test {
 
 SessionForTest::SessionForTest(SessionId id,
                                Engine* engine,
-                               EventReporter* event_reporter,
-                               ErrorReporter* error_reporter)
+                               scene_manager::EventReporter* event_reporter,
+                               mz::ErrorReporter* error_reporter)
     : Session(id, engine, event_reporter, error_reporter) {}
 
 void SessionForTest::TearDown() {

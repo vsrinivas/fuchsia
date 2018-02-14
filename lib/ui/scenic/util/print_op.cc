@@ -4,8 +4,6 @@
 
 #include "garnet/lib/ui/scenic/util/print_op.h"
 
-namespace scene_manager {
-
 using scenic::Op;
 using scenic::OpPtr;
 using scenic::RendererParam;
@@ -238,5 +236,3 @@ std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
       return stream << "__UNKNOWN__";
   }
 }
-
-}  // namespace scene_manager

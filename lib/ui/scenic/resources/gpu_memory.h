@@ -7,8 +7,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/resources/memory.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
 
 namespace scene_manager {
@@ -37,7 +37,7 @@ class GpuMemory : public Memory {
                           scenic::ResourceId id,
                           vk::Device device,
                           zx::vmo vmo,
-                          ErrorReporter* error_reporter);
+                          mz::ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
@@ -45,7 +45,7 @@ class GpuMemory : public Memory {
                           scenic::ResourceId id,
                           vk::Device device,
                           const scenic::MemoryPtr& args,
-                          ErrorReporter* error_reporter);
+                          mz::ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 

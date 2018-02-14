@@ -28,7 +28,7 @@ ImagePtr Image::New(Session* session,
                     MemoryPtr memory,
                     const scenic::ImageInfoPtr& image_info,
                     uint64_t memory_offset,
-                    ErrorReporter* error_reporter) {
+                    mz::ErrorReporter* error_reporter) {
   // Create from host memory.
   if (memory->IsKindOf<HostMemory>()) {
     return HostImage::New(session, id, memory->As<HostMemory>(), image_info,

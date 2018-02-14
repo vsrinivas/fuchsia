@@ -7,11 +7,11 @@
 
 #include <vector>
 
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/engine/engine.h"
 #include "garnet/lib/ui/scenic/engine/event_reporter.h"
 #include "garnet/lib/ui/scenic/engine/resource_map.h"
 #include "garnet/lib/ui/scenic/resources/memory.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -43,7 +43,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   Session(SessionId id,
           Engine* engine,
           EventReporter* event_reporter = nullptr,
-          ErrorReporter* error_reporter = ErrorReporter::Default());
+          mz::ErrorReporter* error_reporter = mz::ErrorReporter::Default());
   virtual ~Session();
 
   // Apply the operation to the current session state.  Return true if
@@ -67,7 +67,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Session becomes invalid once TearDown is called.
   bool is_valid() const { return is_valid_; }
 
-  ErrorReporter* error_reporter() const;
+  mz::ErrorReporter* error_reporter() const;
 
   ResourceMap* resources() { return &resources_; }
 
@@ -296,7 +296,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   const SessionId id_;
   Engine* const engine_;
-  ErrorReporter* error_reporter_ = nullptr;
+  mz::ErrorReporter* error_reporter_ = nullptr;
   EventReporter* event_reporter_ = nullptr;
 
   ResourceMap resources_;

@@ -14,6 +14,8 @@ source_set("mozart") {
     "session.h",
     "system.cc",
     "system.h",
+    "util/error_reporter.cc",
+    "util/error_reporter.h",
   ]
 
   deps = [

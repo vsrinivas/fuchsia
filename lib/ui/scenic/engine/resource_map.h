@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_UI_SCENIC_ENGINE_RESOURCE_MAP_H_
 #define GARNET_LIB_UI_SCENIC_ENGINE_RESOURCE_MAP_H_
 
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/resources/resource.h"
 #include "garnet/lib/ui/scenic/resources/variable.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 
 #include <unordered_map>
 
@@ -16,7 +16,7 @@ namespace scene_manager {
 class ResourceMap {
  public:
   explicit ResourceMap(
-      ErrorReporter* error_reporter = ErrorReporter::Default());
+      mz::ErrorReporter* error_reporter = mz::ErrorReporter::Default());
   ~ResourceMap();
 
   void Clear();
@@ -92,7 +92,7 @@ class ResourceMap {
 
  private:
   std::unordered_map<scenic::ResourceId, ResourcePtr> resources_;
-  ErrorReporter* const error_reporter_;
+  mz::ErrorReporter* const error_reporter_;
 };
 
 }  // namespace scene_manager

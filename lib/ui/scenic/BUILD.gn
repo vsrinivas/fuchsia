@@ -128,8 +128,6 @@ source_set("scenic") {
     "swapchain/swapchain.h",
     "swapchain/vulkan_display_swapchain.cc",
     "swapchain/vulkan_display_swapchain.h",
-    "util/error_reporter.cc",
-    "util/error_reporter.h",
     "util/event_timestamper.cc",
     "util/event_timestamper.h",
     "util/print_op.cc",
@@ -160,6 +158,7 @@ source_set("scenic") {
 
   deps = [
     "//garnet/lib/magma:libmagma",
+    "//garnet/lib/ui/mozart",
     "//garnet/public/lib/vulkan",
     "//zircon/public/lib/trace",
   ]

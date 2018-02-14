@@ -33,7 +33,7 @@ class Mozart : public ui_mozart::Mozart {
   // Called by Session when it needs to close itself.
   void CloseSession(Session* session);
 
-  // ui_mozart::Mozart FIDL API.
+  // |ui_mozart::Mozart|
   void CreateSession(
       ::fidl::InterfaceRequest<ui_mozart::Session> session,
       ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) override;

@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/scenic/resources/resource.h"
 
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/geometry/types.h"
 

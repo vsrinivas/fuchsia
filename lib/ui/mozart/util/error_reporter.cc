@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 
-namespace scene_manager {
+namespace mz {
 
 namespace {
 
@@ -53,4 +53,4 @@ ErrorReporter* ErrorReporter::Default() {
   return &reporter;
 }
 
-}  // namespace scene_manager
+}  // namespace mz

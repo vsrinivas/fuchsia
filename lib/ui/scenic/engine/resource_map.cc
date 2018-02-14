@@ -6,7 +6,7 @@
 
 namespace scene_manager {
 
-ResourceMap::ResourceMap(ErrorReporter* error_reporter)
+ResourceMap::ResourceMap(mz::ErrorReporter* error_reporter)
     : error_reporter_(error_reporter) {}
 
 ResourceMap::~ResourceMap() {}

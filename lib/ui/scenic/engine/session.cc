@@ -7,7 +7,6 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
-
 #include "garnet/lib/ui/scenic/engine/hit_tester.h"
 #include "garnet/lib/ui/scenic/engine/session_handler.h"
 #include "garnet/lib/ui/scenic/resources/buffer.h"
@@ -32,7 +31,6 @@
 #include "garnet/lib/ui/scenic/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/scenic/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/scenic/resources/variable.h"
-#include "garnet/lib/ui/scenic/util/print_op.h"
 #include "garnet/lib/ui/scenic/util/unwrap.h"
 #include "garnet/lib/ui/scenic/util/wrap.h"
 
@@ -75,7 +73,7 @@ fidl::Array<scenic::HitPtr> WrapHits(const std::vector<Hit>& hits) {
 Session::Session(SessionId id,
                  Engine* engine,
                  EventReporter* event_reporter,
-                 ErrorReporter* error_reporter)
+                 mz::ErrorReporter* error_reporter)
     : id_(id),
       engine_(engine),
       error_reporter_(error_reporter),
@@ -1120,8 +1118,8 @@ void Session::TearDown() {
   error_reporter_ = nullptr;
 }
 
-ErrorReporter* Session::error_reporter() const {
-  return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
+mz::ErrorReporter* Session::error_reporter() const {
+  return error_reporter_ ? error_reporter_ : mz::ErrorReporter::Default();
 }
 
 bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,

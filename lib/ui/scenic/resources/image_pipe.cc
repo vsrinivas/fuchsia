@@ -87,7 +87,7 @@ ImagePtr ImagePipe::CreateImage(Session* session,
                                 MemoryPtr memory,
                                 const scenic::ImageInfoPtr& image_info,
                                 uint64_t memory_offset,
-                                ErrorReporter* error_reporter) {
+                                mz::ErrorReporter* error_reporter) {
   return Image::New(session, 0u, memory, image_info, memory_offset,
                     error_reporter);
 }

@@ -80,7 +80,7 @@ class ImagePipe : public ImageBase {
                                MemoryPtr memory,
                                const scenic::ImageInfoPtr& image_info,
                                uint64_t memory_offset,
-                               ErrorReporter* error_reporter);
+                               mz::ErrorReporter* error_reporter);
 
   fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;
 
