@@ -287,7 +287,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
-    $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/flock.c \
     $(LOCAL_DIR)/src/linux/sethostname.c \
     $(LOCAL_DIR)/src/linux/settimeofday.c \
