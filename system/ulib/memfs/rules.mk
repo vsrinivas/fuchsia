@@ -32,4 +32,6 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
 
+MODULE_PACKAGE := static
+
 include make/module.mk
