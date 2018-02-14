@@ -26,7 +26,7 @@
 ##   --packages            Include the listed packages (separated by commas) in the
 ##                         system build. Defaults to the default set of packages
 ##                         for the current layer (e.g., "garnet/packages/default"
-##                         for the Garnet layer). If the --package argument is
+##                         for the Garnet layer). If the --packages argument is
 ##                         given multiple times, all the specified packages are
 ##                         included in the build.
 ##   --variant             Pass --variant=VARIANT to gen.py, which itself is
