@@ -46,13 +46,15 @@ readonly USER_AGENT="buildtools/$(git -C ${SCRIPT_DIR} rev-parse HEAD 2>/dev/nul
 
 if [[ ! -e "${CLIENT}" ]]; then
   echo "Bootstrapping cipd client for ${HOST_PLATFORM}-${HOST_ARCH}..."
+  CLIENT_TMP="$(mktemp -p "${SCRIPT_DIR}" 2>/dev/null || mktemp "${SCRIPT_DIR}/.cipd_client.XXXXXXX")"
   if hash curl 2> /dev/null ; then
-    curl -f --progress-bar "${URL}" -A "${USER_AGENT}"  -L -o "${CLIENT}"
-    chmod +x "${CLIENT}"
+    curl -f --progress-bar "${URL}" -A "${USER_AGENT}"  -L -o "${CLIENT_TMP}"
+    chmod +x "${CLIENT_TMP}"
   else
     echo "The \`curl\` command is missing, download ${URL} as ${CLIENT}, and then re-run this command" 1>&2
     exit 1
   fi
+  mv "${CLIENT_TMP}" "${CLIENT}"
 fi
 
 export CIPD_HTTP_USER_AGENT_PREFIX="${USER_AGENT}"
