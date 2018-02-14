@@ -15,11 +15,7 @@ namespace fidl {
 
 class Parser {
 public:
-    Parser(Lexer* lexer, ErrorReporter* error_reporter)
-        : lexer_(lexer)
-        , error_reporter_(error_reporter) {
-        last_token_ = Lex();
-    }
+    Parser(Lexer* lexer, ErrorReporter* error_reporter);
 
     std::unique_ptr<ast::File> Parse() { return ParseFile(); }
 
@@ -53,6 +49,9 @@ private:
             return false;
         }
     }
+
+    bool LookupHandleSubtype(const ast::Identifier* identifier,
+                             types::HandleSubtype* subtype_out);
 
     decltype(nullptr) Fail();
 
@@ -95,6 +94,8 @@ private:
     std::unique_ptr<ast::UnionDeclaration> ParseUnionDeclaration();
 
     std::unique_ptr<ast::File> ParseFile();
+
+    std::map<StringView, types::HandleSubtype> handle_subtype_table_;
 
     Lexer* lexer_;
     ErrorReporter* error_reporter_;

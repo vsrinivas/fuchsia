@@ -43,6 +43,44 @@ enum {
 };
 } // namespace
 
+Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
+        : lexer_(lexer)
+        , error_reporter_(error_reporter) {
+    handle_subtype_table_ = {
+        { "process", types::HandleSubtype::Process },
+        { "thread", types::HandleSubtype::Thread },
+        { "vmo", types::HandleSubtype::Vmo },
+        { "channel", types::HandleSubtype::Channel },
+        { "event", types::HandleSubtype::Event },
+        { "port", types::HandleSubtype::Port },
+        { "interrupt", types::HandleSubtype::Interrupt },
+        { "iomap", types::HandleSubtype::Iomap },
+        { "pci", types::HandleSubtype::Pci },
+        { "log", types::HandleSubtype::Log },
+        { "socket", types::HandleSubtype::Socket },
+        { "resource", types::HandleSubtype::Resource },
+        { "eventpair", types::HandleSubtype::Eventpair },
+        { "job", types::HandleSubtype::Job },
+        { "vmar", types::HandleSubtype::Vmar },
+        { "fifo", types::HandleSubtype::Fifo },
+        { "hypervisor", types::HandleSubtype::Hypervisor },
+        { "guest", types::HandleSubtype::Guest },
+        { "timer", types::HandleSubtype::Timer },
+    };
+
+    last_token_ = Lex();
+}
+
+bool Parser::LookupHandleSubtype(const ast::Identifier* identifier,
+                                 types::HandleSubtype* subtype_out) {
+    auto lookup = handle_subtype_table_.find(identifier->location.data());
+    if (lookup == handle_subtype_table_.end()) {
+        return false;
+    }
+    *subtype_out = lookup->second;
+    return true;
+}
+
 decltype(nullptr) Parser::Fail() {
     if (ok_) {
         int line_number;
@@ -283,75 +321,14 @@ std::unique_ptr<ast::HandleType> Parser::ParseHandleType() {
         return Fail();
 
     auto subtype = types::HandleSubtype::Handle;
-
     if (MaybeConsumeToken(Token::Kind::LeftAngle)) {
         if (!Ok())
             return Fail();
-        switch (Peek()) {
-        case Token::Kind::Process:
-            subtype = types::HandleSubtype::Process;
-            break;
-        case Token::Kind::Thread:
-            subtype = types::HandleSubtype::Thread;
-            break;
-        case Token::Kind::Vmo:
-            subtype = types::HandleSubtype::Vmo;
-            break;
-        case Token::Kind::Channel:
-            subtype = types::HandleSubtype::Channel;
-            break;
-        case Token::Kind::Event:
-            subtype = types::HandleSubtype::Event;
-            break;
-        case Token::Kind::Port:
-            subtype = types::HandleSubtype::Port;
-            break;
-        case Token::Kind::Interrupt:
-            subtype = types::HandleSubtype::Interrupt;
-            break;
-        case Token::Kind::Iomap:
-            subtype = types::HandleSubtype::Iomap;
-            break;
-        case Token::Kind::Pci:
-            subtype = types::HandleSubtype::Pci;
-            break;
-        case Token::Kind::Log:
-            subtype = types::HandleSubtype::Log;
-            break;
-        case Token::Kind::Socket:
-            subtype = types::HandleSubtype::Socket;
-            break;
-        case Token::Kind::Resource:
-            subtype = types::HandleSubtype::Resource;
-            break;
-        case Token::Kind::Eventpair:
-            subtype = types::HandleSubtype::Eventpair;
-            break;
-        case Token::Kind::Job:
-            subtype = types::HandleSubtype::Job;
-            break;
-        case Token::Kind::Vmar:
-            subtype = types::HandleSubtype::Vmar;
-            break;
-        case Token::Kind::Fifo:
-            subtype = types::HandleSubtype::Fifo;
-            break;
-        case Token::Kind::Hypervisor:
-            subtype = types::HandleSubtype::Hypervisor;
-            break;
-        case Token::Kind::Guest:
-            subtype = types::HandleSubtype::Guest;
-            break;
-        case Token::Kind::Timer:
-            subtype = types::HandleSubtype::Timer;
-            break;
-        default:
-            return Fail();
-        }
-        Consume();
+        auto identifier = ParseIdentifier();
         if (!Ok())
             return Fail();
-
+        if (!LookupHandleSubtype(identifier.get(), &subtype))
+            return Fail();
         ConsumeToken(Token::Kind::RightAngle);
         if (!Ok())
             return Fail();

@@ -7,23 +7,23 @@ library io;
 struct Service {};
 // The object may be cast to interface 'File'.
 struct File {
-  handle<event>? e;
+  handle<event>? event;
 };
 // The object may be cast to interface 'Directory'.
 struct Directory {};
 // The object is accompanied by a pipe.
 struct Pipe {
-  handle<socket> s;
+  handle<socket> socket;
 };
 // The object is accompanied by a VMO.
 struct Vmofile {
-  handle<vmo> v;
+  handle<vmo> vmo;
   uint64 offset;
   uint64 length;
 };
 // The object may be cast to interface 'Device'.
 struct Device {
-  handle<event>? e;
+  handle<event>? event;
 };
 
 // Describes how the connection to the Object should be handled, as well as
@@ -197,10 +197,10 @@ interface File : Node {
   const uint32 kVmoFlagWrite   = 0x00000002;
   const uint32 kVmoFlagExec    = 0x00000004;
   const uint32 kVmoFlagPrivate = 0x00010000;
-  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo> v);
+  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo> vmo);
 
   // Acquire a VMO representing this file, limited to a particular range.
-  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo> v);
+  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo> vmo);
 };
 
 // Directory defines a node which is capable of containing other Objects.

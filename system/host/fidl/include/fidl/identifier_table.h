@@ -11,6 +11,7 @@
 #include "fidl/source_file.h"
 #include "string_view.h"
 #include "token.h"
+#include "types.h"
 
 namespace fidl {
 
