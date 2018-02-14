@@ -20,13 +20,8 @@ fi
 
 layer="$1"
 
-if [[ "${layer}" == "zircon" ]]; then
-  fx-command-help
-  echo >&2 "error: Switching to the Zircon layer is not supported."
-  exit 1
-fi
-
-if [[ "${layer}" != "garnet" ]] &&
+if [[ "${layer}" != "zircon" ]] &&
+   [[ "${layer}" != "garnet" ]] &&
    [[ "${layer}" != "peridot" ]] &&
    [[ "${layer}" != "topaz" ]]; then
   fx-command-help
@@ -52,7 +47,7 @@ function remove-import {
   ${jiri} -q import -delete=true -name="${name}" "${manifest}"
 }
 
-remove-import zircon manifest
+remove-import zircon manifest/zircon
 remove-import garnet manifest/garnet
 remove-import peridot manifest/peridot
 remove-import topaz manifest/topaz
