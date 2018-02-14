@@ -1,16 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
+    "required": [
+        "name",
+        "const_declarations",
+        "enum_declarations",
+        "interface_declarations",
+        "struct_declarations",
+        "union_declarations",
+        "library_dependencies"
+    ],
     "properties": {
-        "required": [
-            "name",
-            "const_declarations",
-            "enum_declarations",
-            "interface_declarations",
-            "struct_declarations",
-            "union_declarations",
-            "library_dependencies"
-        ],
         "name": {
             "$ref": "#/definitions/identifier"
         },
