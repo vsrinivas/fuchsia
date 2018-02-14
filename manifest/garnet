@@ -4,8 +4,8 @@
     <localimport file="minimal"/>
     <localimport file="third_party"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
-            manifest="manifest/zircon"
+            manifest="manifest"
             name="zircon"
-            revision="24a056a4e0d367103644a477cf9dba6523f33a68"/>
+            revision="9ab85a2d3a41c5041d54998ce49ad6622ff54f62"/>
   </imports>
 </manifest>
