@@ -55,7 +55,10 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 }
 
 // This must be accessed atomically from any given thread.
-static fbl::atomic<int64_t> utc_offset;
+//
+// NOTE(abdulla): This is used by pvclock. If logic here is changed, please
+// update pvclock too.
+fbl::atomic<int64_t> utc_offset;
 
 uint64_t sys_clock_get(uint32_t clock_id) {
     switch (clock_id) {

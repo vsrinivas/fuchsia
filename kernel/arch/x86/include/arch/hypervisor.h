@@ -96,7 +96,7 @@ struct pvclock_system_time;
 struct PvClockState {
     uint32_t version = 0;
     pvclock_system_time* system_time = nullptr;
-    fbl::unique_ptr<GuestMapping> guest_mapping;
+    GuestPtr guest_ptr;
 };
 
 // Represents a virtual CPU within a guest.

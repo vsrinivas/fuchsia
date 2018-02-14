@@ -87,7 +87,7 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t *mul, int8_t* shift) {
 
 }  // namespace
 
-uint64_t sys_clock_get(uint32_t clock_id);
+extern fbl::atomic<int64_t> utc_offset;
 
 zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_paddr) {
     static const uint32_t kNanoseconds = 1000000000;
@@ -98,23 +98,19 @@ zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t
     static fbl::Mutex mutex;
     static uint32_t version __TA_GUARDED(mutex);
 
-    zx_vaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
-    zx_vaddr_t end = ROUNDUP(guest_paddr + sizeof(pvclock_boot_time), PAGE_SIZE);
-    // Guest gave us a bad physical address.
-    if (end <= begin)
-        return ZX_ERR_INVALID_ARGS;
-
-    fbl::unique_ptr<GuestMapping> guest_mapping;
-    zx_status_t status = gpas->MapToHost(begin, end - begin, "pvclock-boot-time-guest-mapping",
-                                         &guest_mapping);
-
-    pvclock_boot_time* boot_time;
-    status = guest_mapping->GetHostPtr(guest_paddr, &boot_time);
-    if (status != ZX_OK)
+    GuestPtr guest_ptr;
+    zx_status_t status = gpas->CreateGuestPtr(guest_paddr,
+                                              sizeof(pvclock_boot_time),
+                                              "pvclock-boot-time-guest-mapping",
+                                              &guest_ptr);
+    if (status != ZX_OK) {
         return status;
+    }
+    auto boot_time = guest_ptr.as<pvclock_boot_time>();
+    ZX_DEBUG_ASSERT(boot_time != nullptr);
 
     fbl::AutoLock lock(&mutex);
-    zx_time_t time = sys_clock_get(ZX_CLOCK_UTC) - current_time();
+    zx_time_t time = utc_offset.load();
     // See the comment for pvclock_boot_time structure above
     atomic_store_relaxed_u32(&boot_time->version, version + 1);
     atomic_fence();
@@ -128,22 +124,22 @@ zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t
 
 zx_status_t pvclock_reset_clock(PvClockState* pvclock, GuestPhysicalAddressSpace* gpas,
                                 zx_vaddr_t guest_paddr) {
-    zx_vaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
-    zx_vaddr_t end = ROUNDUP(guest_paddr + sizeof(pvclock_system_time), PAGE_SIZE);
-    // Guest gave us a bad physical address.
-    if (end <= begin)
-        return ZX_ERR_INVALID_ARGS;
-
-    zx_status_t status = gpas->MapToHost(begin, end - begin, "pvclock-system-time-guest-mapping",
-                                         &pvclock->guest_mapping);
-    if (status != ZX_OK)
+    zx_status_t status = gpas->CreateGuestPtr(guest_paddr,
+                                              sizeof(pvclock_system_time),
+                                              "pvclock-system-time-guest-mapping",
+                                              &pvclock->guest_ptr);
+    if (status != ZX_OK) {
         return status;
-    return pvclock->guest_mapping->GetHostPtr(guest_paddr, &pvclock->system_time);
+    }
+    pvclock->system_time = pvclock->guest_ptr.as<pvclock_system_time>();
+    ZX_DEBUG_ASSERT(pvclock->system_time != nullptr);
+    return ZX_OK;
 }
 
 void pvclock_update_system_time(PvClockState* pvclock, GuestPhysicalAddressSpace* gpas) {
-    if (!pvclock->system_time)
+    if (!pvclock->system_time) {
         return;
+    }
 
     pvclock_system_time* system_time = pvclock->system_time;
     uint32_t tsc_mul;
@@ -166,5 +162,5 @@ void pvclock_update_system_time(PvClockState* pvclock, GuestPhysicalAddressSpace
 
 void pvclock_stop_clock(PvClockState* pvclock) {
     pvclock->system_time = nullptr;
-    pvclock->guest_mapping.reset();
+    pvclock->guest_ptr.reset();
 }
