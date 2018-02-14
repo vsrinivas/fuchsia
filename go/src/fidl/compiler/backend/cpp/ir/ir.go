@@ -15,10 +15,6 @@ type Type struct {
 	Decl string
 }
 
-func (t *Type) Decorate(identifer string) string {
-	return t.Decl + " " + identifer
-}
-
 type Enum struct {
 	Name    string
 	Type    string

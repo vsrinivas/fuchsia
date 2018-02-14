@@ -14,7 +14,7 @@ struct {{ .Name }} {
   ::fidl_union_tag_t tag;
   union {
     {{- range .Members }}
-    {{ .Name|.Type.Decorate }};
+    {{ .Type.Decl }} {{ .Name }};
     {{- end }}
   };
 };

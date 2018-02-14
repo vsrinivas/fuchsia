@@ -18,12 +18,12 @@ class {{ .Name }}  {
   {{- range .Members }}
 
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  void set_{{ .Name }}({{ "value"|.Type.Decorate }}) { {{ .StorageName }} = std::move(value); }
+  void set_{{ .Name }}({{ .Type.Decl }} value) { {{ .StorageName }} = std::move(value); }
   {{- end }}
 
  private:
   {{- range .Members }}
-  {{ .StorageName|.Type.Decorate }};
+  {{ .Type.Decl }} {{ .StorageName }};
   {{- end }}
 };
 {{- end }}

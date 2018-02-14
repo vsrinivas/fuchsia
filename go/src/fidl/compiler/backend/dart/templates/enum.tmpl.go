@@ -6,7 +6,7 @@ package templates
 
 const Enum = `
 {{- define "EnumDeclaration" -}}
-class {{ .Name }} extends Encodable {
+class {{ .Name }} extends $b.Encodable {
   {{- range .Members }}
   static const {{ $.Name }} {{ .Name }} = const {{ $.Name }}._({{ .Value }});
   {{- end }}
@@ -54,12 +54,16 @@ class {{ .Name }} extends Encodable {
 
   int toJson() => value;
 
-  @override
-  int get encodedSize => {{ .EncodedSize }};
+  static const int $encodedSize = {{ .EncodedSize }};
 
   @override
-  void encode(Encoder encoder, int offset) {
-    encoder.encode{{ .CodecSuffix }}(value, offset);
+  void $encode($b.Encoder $encoder, int $offset) {
+    $encoder.encode{{ .CodecSuffix }}(value, $offset);
+  }
+
+  static {{ .Name }} $decode($b.Decoder $decoder, int $offset) {
+    final int value = $decoder.decode{{ .CodecSuffix }}($offset);
+    return new {{ .Name }}(value);
   }
 }
 {{ end }}

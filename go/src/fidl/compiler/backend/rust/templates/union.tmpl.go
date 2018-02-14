@@ -8,7 +8,7 @@ const Union = `
 {{- define "UnionDeclaration" }}
 pub enum {{ .Name }} {
     {{- range .Members }}
-    {{ .Name }}(pub {{ .Type.Decorate }});
+    {{ .Name }}(pub {{ .Type }});
     {{- end }}
 }
 {{- end }}

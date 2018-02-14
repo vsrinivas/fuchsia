@@ -7,36 +7,36 @@ package templates
 const Union = `
 {{- define "UnionDeclaration" -}}
 enum {{ .TagName }} {
-  {{- range .Members }}
+{{- range .Members }}
   {{ .Name }},
-  {{- end }}
+{{- end }}
 }
 
-class {{ .Name }} extends Encodable {
-  {{- range .Members }}
+class {{ .Name }} extends $b.Encodable {
+{{- range .Members }}
 
   const {{ $.Name }}.with{{ .Name }}({{ .Type.Decl }} value)
     : _data = value, tag = {{ $.TagName }}.{{ .Name }};
-  {{- end }}
+{{- end }}
 
   final _data;
   final {{ .TagName }} tag;
 
-  {{- range .Members }}
+{{- range .Members }}
   {{ .Type.Decl }} get {{ .Name }} {
     if (tag != {{ $.TagName }}.{{ .Name }})
       return null;
     return _data;
   }
-  {{- end }}
+{{- end }}
 
   @override
   String toString() {
     switch (tag) {
-  {{- range .Members }}
+{{- range .Members }}
       case {{ $.TagName }}.{{ .Name }}:
         return "{{ $.Name }}.{{ .Name }}(${{ .Name }})";
-  {{- end }}
+{{- end }}
       default:
         return null;
     }
@@ -44,22 +44,35 @@ class {{ .Name }} extends Encodable {
 
   dynamic toJson() => _data.toJson();
 
-  @override
-  int get encodedSize => {{ .EncodedSize }};
+  static const int $encodedSize = {{ .EncodedSize }};
 
   @override
-  void encode(Encoder encoder, int offset) {
-    encoder.encodeUint32(tag.index, offset);
+  void $encode($b.Encoder $encoder, int $offset) {
+    $encoder.encodeUint32(tag.index, $offset);
     switch (tag) {
-  {{- range .Members }}
+{{- range .Members }}
       case {{ $.TagName }}.{{ .Name }}:
-        {{ .Type.Encode .Name .Offset }};
+        {{ .Type.Encode "_data" .Offset }};
         break;
-  {{- end }}
+{{- end }}
       default:
-        throw new FidlCodecError('Bad union tag: $tag');
+        throw new $b.FidlCodecError('Bad union tag: $tag');
     }
   }
-}
+
+  static {{ .Name }} $decode($b.Decoder $decoder, int $offset) {
+    final int $index = $decoder.decodeUint32($offset);
+    if ($index >= {{ .TagName }}.values.length)
+      throw new $b.FidlCodecError('Bad union tag index: $index');
+    switch ({{ .TagName }}.values[$index]) {
+{{- range .Members }}
+      case {{ $.TagName }}.{{ .Name }}:
+        return new {{ $.Name }}.with{{ .Name }}({{ .Type.Decode .Offset }});
+{{- end }}
+      default:
+        throw new $b.FidlCodecError('Bad union tag: $tag');
+      }
+    }
+  }
 {{ end }}
 `

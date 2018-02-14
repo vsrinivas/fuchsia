@@ -6,46 +6,53 @@ package templates
 
 const Struct = `
 {{- define "StructDeclaration" -}}
-class {{ .Name }} extends Encodable {
+class {{ .Name }} extends $b.Encodable {
 
-  {{- range .Members }}
+{{- range .Members }}
   final {{ .Type.Decl }} {{ .Name }};
-  {{- end }}
+{{- end }}
 
   const {{ .Name }}({
-  {{- range .Members }}
-    {{- if not .Type.Nullable }}
+{{- range .Members }}
+  {{- if not .Type.Nullable }}
     @required
-    {{- end }}
-    this.{{ .Name }},
   {{- end }}
+    this.{{ .Name }},
+{{- end }}
   });
 
   @override
   String toString() {
     return "{{ .Name }}(
-  {{- range $index, $member := .Members -}}
+{{- range $index, $member := .Members -}}
       {{- if $index }}, {{ end -}}{{ $member.Name  }}: ${{ $member.Name  }}
-  {{- end -}}
+{{- end -}}
     )";
   }
 
   Map toJson() {
-    Map map = new Map();
-  {{- range .Members }}
-    map["{{ .Name }}"] = {{ .Name }};
-  {{- end }}
-    return map;
+    final Map $map = new Map();
+{{- range .Members }}
+    $map["{{ .Name }}"] = {{ .Name }};
+{{- end }}
+    return $map;
   }
 
-  @override
-  int get encodedSize => {{ .EncodedSize }};
+  static const int $encodedSize = {{ .EncodedSize }};
 
   @override
-  void encode(Encoder encoder, int offset) {
+  void $encode($b.Encoder $encoder, int $offset) {
   {{- range .Members }}
     {{ .Type.Encode .Name .Offset }};
   {{- end }}
+  }
+
+  static {{ .Name }} $decode($b.Decoder $decoder, int $offset) {
+    return new {{ .Name }}(
+  {{- range .Members }}
+      {{ .Name }}: {{ .Type.Decode .Offset }},
+  {{- end }}
+    );
   }
 }
 {{ end }}

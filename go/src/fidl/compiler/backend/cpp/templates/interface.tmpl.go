@@ -14,13 +14,13 @@ class {{ .StubName }};
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Name|$param.Type.Decorate }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ ""|$param.Type.Decorate }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }}
   {{- end -}}
 {{ end }}
 
@@ -43,7 +43,7 @@ class {{ .Name }} {
     {{- if .HasRequest }}
       {{- if .HasResponse }}
   using {{ .CallbackType }} =
-      std::function<void({{ template "Params" .Response }})>;
+      std::function<void({{ template "ParamTypes" .Response }})>;
       {{- end }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
     {{- end }}

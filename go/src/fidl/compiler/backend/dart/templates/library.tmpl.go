@@ -10,17 +10,21 @@ const Library = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:lib.fidl.dart/bindings.dart' as bindings;
+import 'package:lib.fidl.dart/bindings.dart' as $b;
+import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 {{ range $enum := .Enums -}}
 {{ template "EnumDeclaration" $enum }}
 {{ end -}}
+{{ range $union := .Unions -}}
+{{ template "UnionDeclaration" $union }}
+{{ end -}}
 {{ range $struct := .Structs -}}
 {{ template "StructDeclaration" $struct }}
 {{ end -}}
-{{ range $union := .Unions -}}
-{{ template "UnionDeclaration" $union }}
+{{ range $interface := .Interfaces -}}
+{{ template "InterfaceDeclaration" $interface }}
 {{ end -}}
 {{- end -}}
 `
