@@ -187,7 +187,10 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
         return ZX_ERR_BAD_STATE;
     }
     if (vcpus_[id] != nullptr) {
-        return ZX_ERR_ALREADY_EXISTS;
+        // The guest might make multiple requests to start a particular VCPU. On x86, the guest
+        // should send two START_UP IPIs but we initialise the VCPU on the first. So, we ignore
+        // subsequent requests.
+        return ZX_OK;
     }
     auto vcpu = fbl::make_unique<Vcpu>();
     zx_status_t status = vcpu_factory_(this, entry, id, vcpu.get());

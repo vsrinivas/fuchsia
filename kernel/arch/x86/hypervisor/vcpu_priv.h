@@ -25,6 +25,7 @@ static const uint32_t kProcbasedCtls2Ept                = 1u << 1;
 static const uint32_t kProcbasedCtls2Rdtscp             = 1u << 3;
 static const uint32_t kProcbasedCtls2x2Apic             = 1u << 4;
 static const uint32_t kProcbasedCtls2Vpid               = 1u << 5;
+static const uint32_t kProcbasedCtls2UnrestrictedGuest  = 1u << 7;
 static const uint32_t kProcbasedCtls2Invpcid            = 1u << 12;
 
 // PROCBASED_CTLS flags.
@@ -71,7 +72,13 @@ static const uint32_t kGuestXxAccessRightsS             = 1u << 4;
 static const uint32_t kGuestXxAccessRightsP             = 1u << 7;
 static const uint32_t kGuestXxAccessRightsL             = 1u << 13;
 // See Volume 3, Section 3.5 for valid system selectors types.
+static const uint32_t kGuestTrAccessRightsTssBusy16Bit  = 3u << 0;
 static const uint32_t kGuestTrAccessRightsTssBusy       = 11u << 0;
+
+static const uint32_t kGuestXxAccessRightsDefault       = kGuestXxAccessRightsTypeA |
+                                                          kGuestXxAccessRightsTypeW |
+                                                          kGuestXxAccessRightsS |
+                                                          kGuestXxAccessRightsP;
 
 // GUEST_INTERRUPTIBILITY_STATE flags.
 static const uint32_t kInterruptibilityStiBlocking      = 1u << 0;
@@ -126,6 +133,16 @@ enum class VmcsField32 : uint64_t {
     EXIT_INSTRUCTION_LENGTH                             = 0x440c,
     EXIT_INSTRUCTION_INFORMATION                        = 0x440e,
     HOST_IA32_SYSENTER_CS                               = 0x4c00,
+
+    GUEST_ES_LIMIT                                      = 0x4800,
+    GUEST_CS_LIMIT                                      = 0x4802,
+    GUEST_SS_LIMIT                                      = 0x4804,
+    GUEST_DS_LIMIT                                      = 0x4806,
+    GUEST_FS_LIMIT                                      = 0x4808,
+    GUEST_GS_LIMIT                                      = 0x480a,
+    GUEST_LDTR_LIMIT                                    = 0x480c,
+    GUEST_TR_LIMIT                                      = 0x480e,
+
     GUEST_GDTR_LIMIT                                    = 0x4810,
     GUEST_IDTR_LIMIT                                    = 0x4812,
     GUEST_CS_ACCESS_RIGHTS                              = 0x4816,
@@ -149,6 +166,15 @@ enum class VmcsFieldXX : uint64_t {
     GUEST_CR0                                           = 0x6800,
     GUEST_CR3                                           = 0x6802,
     GUEST_CR4                                           = 0x6804,
+
+    GUEST_ES_BASE                                       = 0x6806,
+    GUEST_CS_BASE                                       = 0x6808,
+    GUEST_SS_BASE                                       = 0x680A,
+    GUEST_DS_BASE                                       = 0x680C,
+    GUEST_FS_BASE                                       = 0x680E,
+    GUEST_GS_BASE                                       = 0x6810,
+    GUEST_TR_BASE                                       = 0x6814,
+
     GUEST_GDTR_BASE                                     = 0x6816,
     GUEST_IDTR_BASE                                     = 0x6818,
     GUEST_RSP                                           = 0x681c,

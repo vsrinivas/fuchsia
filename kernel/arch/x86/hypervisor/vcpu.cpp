@@ -16,16 +16,17 @@
 #include <vm/vm_object.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "pvclock_priv.h"
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
 #include "vmx_cpu_state_priv.h"
-#include "pvclock_priv.h"
 
 extern uint8_t _gdt[];
 
-static const uint32_t kInterruptInfoValid = 1u << 31;
-static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
-static const uint32_t kInterruptTypeHardwareException = 3u << 8;
+static constexpr uint32_t kInterruptInfoValid = 1u << 31;
+static constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
+static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
+static constexpr uint16_t kBaseProcessorVpid = 1;
 
 static zx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
@@ -268,7 +269,9 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
                                  kProcbasedCtls2x2Apic |
                                  // Associate cached translations of linear
                                  // addresses with a virtual processor ID.
-                                 kProcbasedCtls2Vpid,
+                                 kProcbasedCtls2Vpid |
+                                 // Enable unrestricted guest.
+                                 kProcbasedCtls2UnrestrictedGuest,
                              0);
     if (status != ZX_OK)
         return status;
@@ -346,17 +349,16 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
         return status;
 
     // Setup VM-entry VMCS controls.
+    // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
+    uint32_t entry_ctls = kEntryCtlsLoadIa32Pat | kEntryCtlsLoadIa32Efer;
+    if (vpid == kBaseProcessorVpid) {
+        // On the BSP, go straight to IA32E mode on entry.
+        entry_ctls |= kEntryCtlsIa32eMode;
+    }
     status = vmcs.SetControl(VmcsField32::ENTRY_CTLS,
                              read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
                              read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS),
-                             // After VM entry, logical processor is in IA-32e
-                             // mode and IA32_EFER.LMA is set to true.
-                             kEntryCtlsIa32eMode |
-                                 // Load the guest IA32_PAT MSR on entry.
-                                 kEntryCtlsLoadIa32Pat |
-                                 // Load the guest IA32_EFER MSR on entry.
-                                 kEntryCtlsLoadIa32Efer,
-                             0);
+                             entry_ctls, 0);
     if (status != ZX_OK)
         return status;
 
@@ -469,10 +471,19 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
         return ZX_ERR_BAD_STATE;
     }
+    if (vpid != kBaseProcessorVpid) {
+        // Disable protected mode and paging on secondary VCPUs.
+        // From Volume 3, Section 26.3.1.1: CR0 is now invalid according to
+        // X86_MSR_IA32_VMX_CR0_FIXED1 but this does not apply to unrestricted guests.
+        cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
+    }
     vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
-    uint64_t cr4 = X86_CR4_PAE | // Enable PAE paging
-                   X86_CR4_VMXE; // Enable VMX
+    uint64_t cr4 = X86_CR4_VMXE; // Enable VMX
+    if (vpid == kBaseProcessorVpid) {
+        // Enable the PAE bit on the BSP for 64-bit paging.
+        cr4 |= X86_CR4_PAE;
+    }
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
         return ZX_ERR_BAD_STATE;
     }
@@ -484,33 +495,65 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
     vmcs.Write(VmcsFieldXX::CR4_READ_SHADOW, 0);
 
     vmcs.Write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
-    vmcs.Write(VmcsField64::GUEST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
 
-    vmcs.Write(VmcsField32::GUEST_CS_ACCESS_RIGHTS,
-               kGuestXxAccessRightsTypeA |
-                   kGuestXxAccessRightsTypeW |
-                   kGuestXxAccessRightsTypeE |
-                   kGuestXxAccessRightsTypeCode |
-                   kGuestXxAccessRightsS |
-                   kGuestXxAccessRightsP |
-                   kGuestXxAccessRightsL);
+    uint64_t guest_efer = read_msr(X86_MSR_IA32_EFER);
+    if (vpid != kBaseProcessorVpid) {
+        // Disable LME and LMA on all but the BSP.
+        guest_efer &= ~(X86_EFER_LME | X86_EFER_LMA);
+    }
+    vmcs.Write(VmcsField64::GUEST_IA32_EFER, guest_efer);
+
+    uint32_t cs_access_rights = kGuestXxAccessRightsDefault |
+                                kGuestXxAccessRightsTypeE |
+                                kGuestXxAccessRightsTypeCode;
+    if (vpid == kBaseProcessorVpid) {
+        // Ensure that the BSP starts with a 64-bit code segment.
+        cs_access_rights |= kGuestXxAccessRightsL;
+    }
+    vmcs.Write(VmcsField32::GUEST_CS_ACCESS_RIGHTS, cs_access_rights);
 
     vmcs.Write(VmcsField32::GUEST_TR_ACCESS_RIGHTS,
-               kGuestTrAccessRightsTssBusy |
-                   kGuestXxAccessRightsP);
+               kGuestTrAccessRightsTssBusy | kGuestXxAccessRightsP);
 
-    // Disable all other segment selectors until we have a guest that uses them.
-    vmcs.Write(VmcsField32::GUEST_SS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
-    vmcs.Write(VmcsField32::GUEST_DS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
-    vmcs.Write(VmcsField32::GUEST_ES_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
-    vmcs.Write(VmcsField32::GUEST_FS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
-    vmcs.Write(VmcsField32::GUEST_GS_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
-    vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS, kGuestXxAccessRightsUnusable);
+    vmcs.Write(VmcsField32::GUEST_SS_ACCESS_RIGHTS, kGuestXxAccessRightsDefault);
+    vmcs.Write(VmcsField32::GUEST_DS_ACCESS_RIGHTS, kGuestXxAccessRightsDefault);
+    vmcs.Write(VmcsField32::GUEST_ES_ACCESS_RIGHTS, kGuestXxAccessRightsDefault);
+    vmcs.Write(VmcsField32::GUEST_FS_ACCESS_RIGHTS, kGuestXxAccessRightsDefault);
+    vmcs.Write(VmcsField32::GUEST_GS_ACCESS_RIGHTS, kGuestXxAccessRightsDefault);
 
+    vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS,
+               kGuestXxAccessRightsTypeW | kGuestXxAccessRightsP);
+
+    if (vpid == kBaseProcessorVpid) {
+        // Use GUEST_RIP to set the entry point on the BSP.
+        vmcs.Write(VmcsFieldXX::GUEST_CS_BASE, 0);
+        vmcs.Write(VmcsField16::GUEST_CS_SELECTOR, 0);
+        vmcs.Write(VmcsFieldXX::GUEST_RIP, entry);
+    } else {
+        // Use CS to set the entry point on APs.
+        vmcs.Write(VmcsFieldXX::GUEST_CS_BASE, entry);
+        vmcs.Write(VmcsField16::GUEST_CS_SELECTOR, static_cast<uint16_t>(entry >> 4));
+        vmcs.Write(VmcsFieldXX::GUEST_RIP, 0);
+    }
+    vmcs.Write(VmcsField32::GUEST_CS_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_TR_BASE, 0);
+    vmcs.Write(VmcsField16::GUEST_TR_SELECTOR, 0);
+    vmcs.Write(VmcsField32::GUEST_TR_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_DS_BASE, 0);
+    vmcs.Write(VmcsField32::GUEST_DS_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_SS_BASE, 0);
+    vmcs.Write(VmcsField32::GUEST_SS_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_ES_BASE, 0);
+    vmcs.Write(VmcsField32::GUEST_ES_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_FS_BASE, 0);
+    vmcs.Write(VmcsField32::GUEST_FS_LIMIT, 0xffff);
+    vmcs.Write(VmcsFieldXX::GUEST_GS_BASE, 0);
+    vmcs.Write(VmcsField32::GUEST_GS_LIMIT, 0xffff);
+    vmcs.Write(VmcsField32::GUEST_LDTR_LIMIT, 0xffff);
     vmcs.Write(VmcsFieldXX::GUEST_GDTR_BASE, 0);
-    vmcs.Write(VmcsField32::GUEST_GDTR_LIMIT, 0);
+    vmcs.Write(VmcsField32::GUEST_GDTR_LIMIT, 0xffff);
     vmcs.Write(VmcsFieldXX::GUEST_IDTR_BASE, 0);
-    vmcs.Write(VmcsField32::GUEST_IDTR_LIMIT, 0);
+    vmcs.Write(VmcsField32::GUEST_IDTR_LIMIT, 0xffff);
 
     // Set all reserved RFLAGS bits to their correct values
     vmcs.Write(VmcsFieldXX::GUEST_RFLAGS, X86_FLAGS_RESERVED_ONES);
@@ -526,7 +569,6 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
     vmcs.Write(VmcsField32::GUEST_IA32_SYSENTER_CS, 0);
 
     vmcs.Write(VmcsFieldXX::GUEST_RSP, 0);
-    vmcs.Write(VmcsFieldXX::GUEST_RIP, entry);
     vmcs.Write(VmcsFieldXX::GUEST_CR3, 0);
 
     // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
