@@ -35,12 +35,16 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmxPage);
 
     zx_status_t Alloc(const VmxInfo& info, uint8_t fill);
-    zx_paddr_t PhysicalAddress() const;
     void* VirtualAddress() const;
 
     template <typename T>
     T* VirtualAddress() const {
         return static_cast<T*>(VirtualAddress());
+    }
+
+    paddr_t PhysicalAddress() const {
+        DEBUG_ASSERT(pa_ != 0);
+        return pa_;
     }
 
     bool IsAllocated() const { return pa_ != 0; }

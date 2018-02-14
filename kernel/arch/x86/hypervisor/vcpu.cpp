@@ -12,7 +12,6 @@
 #include <hypervisor/cpu.h>
 #include <kernel/mp.h>
 #include <vm/fault.h>
-#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 #include <zircon/syscalls/hypervisor.h>

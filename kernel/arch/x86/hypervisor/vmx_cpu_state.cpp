@@ -98,11 +98,6 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     return ZX_OK;
 }
 
-paddr_t VmxPage::PhysicalAddress() const {
-    DEBUG_ASSERT(pa_ != 0);
-    return pa_;
-}
-
 void* VmxPage::VirtualAddress() const {
     DEBUG_ASSERT(pa_ != 0);
     return paddr_to_physmap(pa_);

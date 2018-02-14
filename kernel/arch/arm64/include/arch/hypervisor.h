@@ -80,6 +80,31 @@ private:
     GichState* gich_state_;
 };
 
+// Provides a smart pointer to an EL2State allocated in its own page.
+//
+// We allocate an EL2State into its own page as the structure is passed between
+// EL1 and EL2, which have different address spaces mappings. This ensures that
+// EL2State will not cross a page boundary and be incorrectly accessed in EL2.
+class El2StatePtr {
+public:
+    El2StatePtr() = default;
+    ~El2StatePtr();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(El2StatePtr);
+
+    zx_status_t Alloc();
+
+    paddr_t PhysicalAddress() const {
+        DEBUG_ASSERT(pa_ != 0);
+        return pa_;
+    }
+
+    El2State* operator->() const { return state_; }
+
+private:
+    zx_paddr_t pa_ = 0;
+    El2State* state_ = nullptr;
+};
+
 class Vcpu {
 public:
     static zx_status_t Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out);
@@ -97,7 +122,7 @@ private:
     const thread_t* thread_;
     fbl::atomic_bool running_;
     GichState gich_state_;
-    El2State el2_state_;
+    El2StatePtr el2_state_;
     uint64_t hcr_;
 
     Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread);

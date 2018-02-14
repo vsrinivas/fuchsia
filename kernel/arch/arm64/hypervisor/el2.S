@@ -458,7 +458,6 @@ FUNCTION_LABEL(el2_hvc_resume)
     ldr x10, [x9, ES_RESUME]
     cbnz x10, .Lresume
     tlbi vmalle1
-    isb
     mov x10, 1
     str x10, [x9, ES_RESUME]
     dsb ishst

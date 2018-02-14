@@ -98,6 +98,7 @@
 
 #ifndef __ASSEMBLER__
 
+#include <arch/defines.h>
 #include <zircon/types.h>
 
 typedef uint32_t __ALIGNED(8) algn32_t;
@@ -163,6 +164,8 @@ struct El2State {
     GuestState guest_state;
     HostState host_state;
 };
+
+static_assert(sizeof(El2State) <= PAGE_SIZE, "");
 
 static_assert(__offsetof(FpState, q) == FS_Q0, "");
 static_assert(__offsetof(FpState, q[FS_NUM_REGS - 1]) == FS_Q(FS_NUM_REGS - 1), "");
