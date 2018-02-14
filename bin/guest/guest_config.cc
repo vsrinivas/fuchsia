@@ -265,6 +265,8 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
       }
       out->guid.type =
           machina::BlockDispatcher::GuidType::GPT_PARTITION_TYPE_GUID;
+    } else if (token == "volatile") {
+      out->volatile_writes = true;
     }
   }
 

@@ -366,6 +366,14 @@ int main(int argc, char** argv) {
       FXL_LOG(ERROR) << "Failed to create block dispatcher " << status;
       return status;
     }
+    if (block_spec.volatile_writes) {
+      status = machina::BlockDispatcher::CreateVolatileWrapper(
+          fbl::move(dispatcher), &dispatcher);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to create volatile block dispatcher";
+        return status;
+      }
+    }
 
     auto block = fbl::make_unique<machina::VirtioBlock>(guest.phys_mem());
     status = block->SetDispatcher(fbl::move(dispatcher));

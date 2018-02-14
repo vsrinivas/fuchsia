@@ -22,6 +22,7 @@ struct BlockSpec {
   machina::BlockDispatcher::Mode mode = machina::BlockDispatcher::Mode::RW;
   machina::BlockDispatcher::DataPlane data_plane =
       machina::BlockDispatcher::DataPlane::FDIO;
+  bool volatile_writes = false;
 };
 
 class GuestConfig {

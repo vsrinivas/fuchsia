@@ -20,6 +20,7 @@
 #include <zircon/device/block.h>
 
 #include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/volatile_write_block_dispatcher.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
@@ -337,6 +338,12 @@ zx_status_t BlockDispatcher::CreateFromFd(
       FXL_LOG(ERROR) << "Unsupported block dispatcher data plane";
       return ZX_ERR_INVALID_ARGS;
   }
+}
+
+zx_status_t BlockDispatcher::CreateVolatileWrapper(
+    fbl::unique_ptr<BlockDispatcher> dispatcher,
+    fbl::unique_ptr<BlockDispatcher>* out) {
+  return VolatileWriteBlockDispatcher::Create(fbl::move(dispatcher), out);
 }
 
 }  // namespace machina
