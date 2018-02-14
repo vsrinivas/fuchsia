@@ -28,6 +28,7 @@ fidl("fidl") {
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl:module_controller",
     "//peridot/public/lib/module/fidl:module_data",
+    "//peridot/public/lib/module_resolver/fidl:daisy",
     "//peridot/public/lib/surface/fidl",
   ]
 }

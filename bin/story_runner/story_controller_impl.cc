@@ -2117,6 +2117,32 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
   ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
+void StoryControllerImpl::AddDaisy(fidl::Array<fidl::String> parent_module_path,
+                                   const fidl::String& module_name,
+                                   DaisyPtr daisy,
+                                   SurfaceRelationPtr surface_relation) {
+  new ResolveModulesCall(
+      &operation_queue_, this, std::move(daisy), parent_module_path.Clone(),
+      fxl::MakeCopyable([this, module_name,
+                         parent_module_path = std::move(parent_module_path),
+                         surface_relation = std::move(surface_relation)](
+                            FindModulesResultPtr result) mutable {
+        if (!result->modules.empty()) {
+          // Run the first module in story shell.
+          const auto& module_result = result->modules[0];
+          const auto& module_url = module_result->module_id;
+          const auto& create_chain_info = module_result->create_chain_info;
+
+          StartModuleInShell(parent_module_path, module_name, module_url,
+                             nullptr /* link_name */, create_chain_info.Clone(),
+                             nullptr /* incoming_services */,
+                             nullptr /* module_controller */,
+                             std::move(surface_relation), true /* focus */,
+                             ModuleSource::INTERNAL);
+        }
+      }));
+}
+
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));

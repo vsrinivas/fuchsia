@@ -7,7 +7,6 @@ import("//garnet/public/lib/fidl/fidl.gni")
 # For consumption outside modular.
 fidl("fidl") {
   sources = [
-    "daisy.fidl",
     "module_resolver.fidl",
   ]
 
@@ -15,5 +14,15 @@ fidl("fidl") {
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/story/fidl",
+  ]
+
+  public_deps = [
+    ":daisy",
+  ]
+}
+
+fidl("daisy") {
+  sources = [
+    "daisy.fidl",
   ]
 }

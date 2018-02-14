@@ -97,6 +97,13 @@ class StoryControllerMock : public StoryController {
     get_link_calls.push_back(std::move(call));
   }
 
+  void AddDaisy(fidl::Array<fidl::String> module_path,
+                const fidl::String& module_name,
+                DaisyPtr daisy,
+                SurfaceRelationPtr surface_relation) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
   std::string last_added_module_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerMock);

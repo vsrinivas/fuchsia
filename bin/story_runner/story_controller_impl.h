@@ -245,6 +245,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void GetLink(fidl::Array<fidl::String> module_path,
                const fidl::String& name,
                fidl::InterfaceRequest<Link> request) override;
+  void AddDaisy(fidl::Array<fidl::String> module_path,
+                const fidl::String& module_name,
+                DaisyPtr daisy,
+                SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
