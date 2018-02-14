@@ -1,4 +1,4 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,17 +8,12 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
+MODULE_FIRMWARE := intel-adsp-sst/dsp_fw_kbl_v3266.bin
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
-    $(LOCAL_DIR)/codec-cmd-job.cpp \
-    $(LOCAL_DIR)/debug.cpp \
-    $(LOCAL_DIR)/intel-hda-codec.cpp \
-    $(LOCAL_DIR)/intel-hda-controller.cpp \
-    $(LOCAL_DIR)/intel-hda-controller-init.cpp \
-    $(LOCAL_DIR)/intel-hda-dsp.cpp \
-    $(LOCAL_DIR)/intel-hda-stream.cpp \
-    $(LOCAL_DIR)/irq-thread.cpp \
-    $(LOCAL_DIR)/utils.cpp \
+    $(LOCAL_DIR)/intel-audio-dsp.cpp \
+    $(LOCAL_DIR)/intel-dsp-code-loader.cpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
@@ -34,5 +29,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/ddktl \
 
 include make/module.mk

@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <zircon/thread_annotations.h>
 
+#include "binding.h"
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
 #include "intel-hda-stream.h"
@@ -20,6 +21,8 @@ static constexpr zx_time_t INTEL_HDA_RESET_TIMEOUT_NSEC          = ZX_MSEC(1);  
 static constexpr zx_time_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = ZX_MSEC(1);   // 1mS Arbitrary
 static constexpr zx_time_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC     = ZX_USEC(10);  // 10uS Arbitrary
 static constexpr zx_time_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC   = ZX_USEC(521); // Section 4.3
+
+static constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
 }  // anon namespace
 
 zx_status_t IntelHDAController::ResetControllerHW() {
@@ -67,11 +70,9 @@ zx_status_t IntelHDAController::ResetControllerHW() {
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
-                        [](void* r) -> bool {
-                           auto regs = reinterpret_cast<hda_registers_t*>(r);
-                           return (REG_RD(&regs->gctl) & HDA_REG_GCTL_HWINIT) == 0;
-                        },
-                        regs());
+                        [this]() -> bool {
+                           return (REG_RD(&regs()->gctl) & HDA_REG_GCTL_HWINIT) == 0;
+                        });
 
     if (res != ZX_OK) {
         LOG(ERROR, "Error attempting to enter reset! (res %d)\n", res);
@@ -87,11 +88,9 @@ zx_status_t IntelHDAController::ResetControllerHW() {
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
-                        [](void* r) -> bool {
-                           auto regs = reinterpret_cast<hda_registers_t*>(r);
-                           return (REG_RD(&regs->gctl) & HDA_REG_GCTL_HWINIT) != 0;
-                        },
-                        regs());
+                        [this]() -> bool {
+                           return (REG_RD(&regs()->gctl) & HDA_REG_GCTL_HWINIT) != 0;
+                        });
 
     if (res != ZX_OK) {
         LOG(ERROR, "Error attempting to leave reset! (res %d)\n", res);
@@ -112,11 +111,9 @@ zx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
-                             [](void* r) -> bool {
-                                auto regs = reinterpret_cast<hda_registers_t*>(r);
-                                return (REG_RD(&regs->corbrp) & HDA_REG_CORBRP_RST) != 0;
-                             },
-                             regs())) != ZX_OK) {
+                             [this]() -> bool {
+                                return (REG_RD(&regs()->corbrp) & HDA_REG_CORBRP_RST) != 0;
+                             })) != ZX_OK) {
         return res;
     }
 
@@ -126,11 +123,9 @@ zx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
-                             [](void* r) -> bool {
-                                auto regs = reinterpret_cast<hda_registers_t*>(r);
-                                return (REG_RD(&regs->corbrp) & HDA_REG_CORBRP_RST) == 0;
-                             },
-                             regs())) != ZX_OK) {
+                             [this]() -> bool {
+                                return (REG_RD(&regs()->corbrp) & HDA_REG_CORBRP_RST) == 0;
+                             })) != ZX_OK) {
         return res;
     }
 
@@ -477,6 +472,71 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     return ZX_OK;
 }
 
+void IntelHDAController::ProbeAudioDSP() {
+    // This driver only supports the Audio DSP on Kabylake.
+    if ((pci_dev_info_.vendor_id != INTEL_HDA_PCI_VID) ||
+        (pci_dev_info_.device_id != INTEL_HDA_PCI_DID_KABYLAKE)) {
+        LOG(TRACE, "Audio DSP is not supported for device 0x%04x:0x%04x\n",
+            pci_dev_info_.vendor_id, pci_dev_info_.device_id);
+        return;
+    }
+
+    // Look for the processing pipe capability structure. Existence of this
+    // structure means the Audio DSP is supported by the HW.
+    uint32_t offset = REG_RD(&regs()->llch);
+    if ((offset == 0) || (offset >= mapped_regs_.size())) {
+        LOG(TRACE, "Invalid LLCH offset to capability structures: 0x%08x\n", offset);
+        return;
+    }
+
+    ZX_DEBUG_ASSERT(pp_regs_ == nullptr);
+
+    hda_pp_registers_t* pp_regs = nullptr;
+    uint8_t* regs_ptr = nullptr;
+    unsigned int count = 0;
+    uint32_t cap;
+    do {
+        regs_ptr = reinterpret_cast<uint8_t*>(regs()) + offset;
+        pp_regs = reinterpret_cast<hda_pp_registers_t*>(regs_ptr);
+        cap = REG_RD(&pp_regs->ppch);
+        if ((cap & HDA_CAP_ID_MASK) == HDA_CAP_PP_ID) {
+            pp_regs_ = pp_regs;
+            break;
+        }
+        offset = cap & HDA_CAP_PTR_MASK;
+        count += 1;
+    } while ((count < MAX_CAPS) && (offset != 0));
+
+    if (pp_regs_ == nullptr) {
+        LOG(TRACE, "Pipe processing capability structure not found\n");
+        return;
+    }
+
+    // Add the Audio DSP device.
+    char dev_name[ZX_DEVICE_NAME_MAX] = { 0 };
+    snprintf(dev_name, sizeof(dev_name), "intel-sst-dsp-%03u", id());
+
+    zx_device_prop_t dsp_props[3];
+    dsp_props[0].id = BIND_PROTOCOL;
+    dsp_props[0].value = ZX_PROTOCOL_IHDA_DSP;
+    dsp_props[1].id = BIND_PCI_VID;
+    dsp_props[1].value = pci_dev_info_.vendor_id;
+    dsp_props[2].id = BIND_PCI_DID;
+    dsp_props[2].value = pci_dev_info_.device_id;
+
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = dev_name;
+    args.ctx = this;
+    args.ops = &DSP_DEVICE_THUNKS;
+    args.proto_id = ZX_PROTOCOL_IHDA_DSP;
+    args.proto_ops = &DSP_PROTO_THUNKS;
+    args.props = dsp_props;
+    args.prop_count = countof(dsp_props);
+
+    device_add(dev_node_, &args, NULL);
+}
+
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     default_domain_ = dispatcher::ExecutionDomain::Create();
     if (default_domain_ == nullptr)
@@ -581,6 +641,17 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
         this->AddRef();
         SetState(State::OPERATING);
         WakeupIRQThread();
+
+        // Probe for the Audio DSP. This is done after adding the HDA controller
+        // device because the Audio DSP will be added a child to the HDA
+        // controller and ddktl requires the parent device node to be initialized
+        // at construction time.
+
+        // No need to check for return value because the absence of the Audio
+        // DSP is not a failure.
+        // TODO(yky) Come up with a way to warn for the absence of Audio DSP
+        // on platforms that require it.
+        ProbeAudioDSP();
     }
 
     return res;

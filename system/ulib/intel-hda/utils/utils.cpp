@@ -11,15 +11,14 @@ namespace intel_hda {
 
 zx_status_t WaitCondition(zx_time_t timeout,
                           zx_time_t poll_interval,
-                          WaitConditionFn cond,
-                          void* cond_ctx) {
+                          WaitConditionFn cond) {
     ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
-    ZX_DEBUG_ASSERT(cond != nullptr);
+    ZX_DEBUG_ASSERT(cond);
 
     zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
     timeout += now;
 
-    while (!cond(cond_ctx)) {
+    while (!cond()) {
         now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         if (now >= timeout)
             return ZX_ERR_TIMED_OUT;

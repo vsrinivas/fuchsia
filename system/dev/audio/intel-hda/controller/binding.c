@@ -7,6 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 
+#include "binding.h"
+
 extern zx_status_t ihda_init_hook(void**);
 extern zx_status_t ihda_bind_hook(void*, zx_device_t*);
 extern void        ihda_release_hook(void*);
@@ -20,11 +22,11 @@ static zx_driver_ops_t intel_hda_driver_ops = {
 
 ZIRCON_DRIVER_BEGIN(intel_hda, intel_hda_driver_ops, "zircon", "0.1", 8)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x2668), // Standard (Spec Rev 1.0a; 6/17/2010)
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x9CA0), // Intel Broadwell PCH
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0xA170), // Intel 100/C230 PCH Spec
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0xA1F0), // Intel 200/C400 PCH Spec
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x9D70), // Intel 6th Gen (Skylake) PCH-U/Y I/O Datasheet
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x9D71), // Intel 7th Gen (Skylake) PCH-U/Y I/O Datasheet
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_HDA_PCI_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_STANDARD),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_BROADWELL),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_100_C230),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_200_C400),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_SKYLAKE),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_KABYLAKE),
 ZIRCON_DRIVER_END(intel_hda)

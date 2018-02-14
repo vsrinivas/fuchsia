@@ -140,12 +140,10 @@ void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
     res = WaitCondition(
             IHDA_SD_MAX_RESET_TIME_NSEC,
             IHDA_SD_RESET_POLL_TIME_NSEC,
-            [](void* r) -> bool {
-                auto regs = reinterpret_cast<hda_stream_desc_regs_t*>(r);
+            [&regs]() -> bool {
                 auto val  = REG_RD(&regs->ctl_sts.w);
                 return (val & HDA_SD_REG_CTRL_SRST) != 0;
-            },
-            regs);
+            });
 
     if (res != ZX_OK) {
         GLOBAL_LOG(ERROR, "Failed to place stream descriptor HW into reset! (res %d)\n", res);
@@ -161,12 +159,10 @@ void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
     res = WaitCondition(
            IHDA_SD_MAX_RESET_TIME_NSEC,
            IHDA_SD_RESET_POLL_TIME_NSEC,
-           [](void* r) -> bool {
-               auto regs = reinterpret_cast<hda_stream_desc_regs_t*>(r);
+           [&regs]() -> bool {
                auto val  = REG_RD(&regs->ctl_sts.w);
                return (val & HDA_SD_REG_CTRL_SRST) == 0;
-           },
-           regs);
+           });
 
     if (res != ZX_OK) {
         GLOBAL_LOG(ERROR, "Failed to release stream descriptor HW from reset! (res %d)\n", res);

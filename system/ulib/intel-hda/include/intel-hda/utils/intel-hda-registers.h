@@ -63,7 +63,9 @@ typedef struct hda_registers {
     uint16_t wakeen;        // (0x0C) Wake Enable
     uint16_t statests;      // (0x0E) State Change Status
     uint16_t gsts;          // (0x10) Global Status
-    uint8_t  __rsvd0[6];    // (0x12) Reserved
+    uint16_t gcap2;         // (0x12) Global Capabilities 2
+    uint16_t llch;          // (0x14) Linked List Capabilities Header
+    uint8_t __rsvd[2];      // (0x16) Reserved
     uint16_t outstrmpay;    // (0x18) Output Stream Payload Capability
     uint16_t instrmpay;     // (0x1A) Input Stream Payload Capability
     uint8_t  __rsvd1[4];    // (0x1C) Reserved
@@ -121,10 +123,57 @@ typedef struct hda_alias_registers {
     uint8_t __rsvd9[0x1BC0];    // (0x440 - 0x1FFF)
 } __PACKED hda_alias_registers_t;
 
+typedef struct hda_pp_registers {
+    uint32_t ppch;          // (0x00) Processing Pipe Capability Header
+    uint32_t ppctl;         // (0x04) Processing Pipe Control
+    uint32_t ppsts;         // (0x08) Processing Pipe Status
+} __PACKED hda_pp_registers_t;
+
 typedef struct hda_all_registers {
     hda_registers_t         regs;
     hda_alias_registers_t   alias_regs;
 } __PACKED hda_all_registers_t;
+
+// The Intel HD Audio stream registers and Intel HD Audio Software
+// Position Based FIFO capability structure is duplicated for
+// DSP FW loading. There is no need to have the Intel HD Audio
+// Processing Pipe capability structure, as it is always treated
+// as a host DMA operating in de-coupled mode (without link DMA).
+typedef struct adsp_code_loader_registers {
+    hda_stream_desc_regs_t stream;
+    uint32_t spbfch;
+    uint32_t spbfctl;
+    uint32_t spib;
+    uint32_t maxfifos;
+} __PACKED adsp_code_loader_registers_t;
+
+typedef struct adsp_registers {
+    uint8_t  __rsvd0[4];    // (0x00) Reserved
+    uint32_t adspcs;        // (0x04) Audio DSP Control and Status
+    uint32_t adspic;        // (0x08) Audio DSP Interrupt Control
+    uint32_t adspis;        // (0x0C) Audio DSP Interrupt Status
+    uint32_t adspic2;       // (0x10) Audio DSP Interrupt Control 2
+    uint32_t adspis2;       // (0x14) Audio DSP Interrupt Status 2
+    uint8_t  __rsvd1[0x28]; // (0x18 - 0x3F)
+    uint32_t hipct;         // (0x40) Host IPC Target
+    uint32_t hipcte;        // (0x44) Host IPC Target Extension
+    uint32_t hipci;         // (0x48) Host IPC Initiator
+    uint32_t hipcie;        // (0x4C) Host IPC Initiator Extension
+    uint32_t hipcctl;       // (0x50) Host IPC Control
+    uint8_t  __rsvd2[0x2c]; // (0x54 - 0x7F)
+
+    adsp_code_loader_registers_t cldma; // (0x80 - 0xAF)
+
+    uint8_t  _rsvd3[0xFF50];// (0xB0 - 0xFFFF)
+} __PACKED adsp_registers_t;
+
+typedef struct adsp_fw_registers {
+    uint32_t fw_status;     // (0x00) Current ROM/FW status
+    uint32_t error_code;    // (0x04) Last ROM/FW error code
+    uint32_t fw_pwr_status; // (0x08) Current DSP clock status
+    uint8_t  __rsvd0[12];   // (0x0C - 0x17)
+    uint32_t rom_info;      // (0x18) Basic platform configuration reported by ROM
+} __PACKED adsp_fw_registers_t;
 
 #ifdef __cplusplus
 
@@ -231,6 +280,42 @@ constexpr uint32_t HDA_SD_REG_STS32_ACK      = static_cast<uint32_t>(HDA_SD_REG_
 constexpr uint32_t HDA_SD_REG_STS32_MASK     = static_cast<uint32_t>(HDA_SD_REG_STS8_MASK)    << 24;
 
 // Stream Descriptor Status Register bits.
+
+// Multiple Links Capability Header/Pipe Processing Capability Header bits.
+constexpr uint32_t HDA_CAP_ID_MASK  = (0xFFF << 16);
+constexpr uint32_t HDA_CAP_PP_ID    = (0x003 << 16);
+constexpr uint32_t HDA_CAP_PTR_MASK = 0xFFFF;
+
+// Processing Pipe Control bits
+constexpr uint32_t HDA_PPCTL_PIE     = (1 << 31);
+constexpr uint32_t HDA_PPCTL_GPROCEN = (1 << 30);
+
+// Processing Pipe Status bits
+constexpr uint32_t HDA_PPSTS_PIS = (1 << 31);
+
+// Audio DSP Control and Status (ADSPCS - offset 0x04)
+_SIC_ uint32_t ADSP_REG_ADSPCS_CRST  (uint32_t core_mask) { return (core_mask & 0xFF); }
+_SIC_ uint32_t ADSP_REG_ADSPCS_CSTALL(uint32_t core_mask) { return (core_mask & 0xFF) <<  8; }
+_SIC_ uint32_t ADSP_REG_ADSPCS_SPA   (uint32_t core_mask) { return (core_mask & 0xFF) << 16; }
+_SIC_ uint32_t ADSP_REG_ADSPCS_CPA   (uint32_t core_mask) { return (core_mask & 0xFF) << 24; }
+
+constexpr uint8_t ADSP_REG_ADSPCS_CORE0_MASK = (1u << 0);
+
+// Audio DSP Interrupt Control (ADSPIC - offset 0x08)
+constexpr uint32_t ADSP_REG_ADSPIC_CLDMA = (1 << 1);
+constexpr uint32_t ADSP_REG_ADSPIC_IPC   = (1 << 0);
+
+// Audio DSP Host IPC Control - (HIPCCTL - offset 0x50)
+constexpr uint32_t ADSP_REG_HIPCCTL_IPCTDIE = (1 << 1);
+constexpr uint32_t ADSP_REG_HIPCCTL_IPCTBIE = (1 << 0);
+
+// Audio DSP Code Loader Software Based Position FIFO Control - (SPBFCTL)
+constexpr uint32_t ADSP_REG_CL_SPBFCTL_SPIBE = (1 << 0);
+
+// Audio DSP ROM Status bits
+constexpr uint32_t ADSP_FW_STATUS_STATE_INITIALIZATION_DONE = 0x1;
+constexpr uint32_t ADSP_FW_STATUS_STATE_ENTER_BASE_FW       = 0xF;
+constexpr uint32_t ADSP_FW_STATUS_STATE_MASK                = 0x0FFFFFFF;
 
 #undef _SIC_
 

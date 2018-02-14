@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/intel-hda-dsp.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 #include <fbl/atomic.h>
@@ -31,6 +32,8 @@
 namespace audio {
 namespace intel_hda {
 
+class IntelAudioDSP;
+
 class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 public:
     IntelHDAController();
@@ -39,11 +42,12 @@ public:
     zx_status_t Init(zx_device_t* pci_dev);
 
     // one-liner accessors.
-    const char*                  dev_name() const   { return device_get_name(dev_node_); }
-    zx_device_t*                 dev_node()         { return dev_node_; }
-    const zx_pcie_device_info_t& dev_info() const   { return pci_dev_info_; }
-    unsigned int                 id() const         { return id_; }
-    const char*                  log_prefix() const { return log_prefix_; }
+    const char*                  dev_name() const     { return device_get_name(dev_node_); }
+    zx_device_t*                 dev_node()           { return dev_node_; }
+    const zx_pcie_device_info_t& dev_info() const     { return pci_dev_info_; }
+    unsigned int                 id() const           { return id_; }
+    const char*                  log_prefix() const   { return log_prefix_; }
+    const pci_protocol_t*        pci() const          { return &pci_; }
 
     // CORB/RIRB
     zx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
@@ -72,6 +76,9 @@ private:
     // Accessor for our mapped registers
     hda_registers_t* regs() const {
         return &reinterpret_cast<hda_all_registers_t*>(mapped_regs_.start())->regs;
+    }
+    hda_pp_registers_t* pp_regs() const {
+        return pp_regs_;
     }
 
     int  IRQThread();
@@ -107,6 +114,7 @@ private:
     zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
     zx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
     zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
+    void        ProbeAudioDSP();
 
     void WaitForIrqOrWakeup();
 
@@ -122,11 +130,21 @@ private:
 
     void ProcessStreamIRQ(uint32_t intsts);
     void ProcessControllerIRQ();
+    void ProcessDspIRQ();
 
     // Thunk for interacting with client channels
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
     zx_status_t SnapshotRegs(dispatcher::Channel* channel,
                              const ihda_controller_snapshot_regs_req_t& req);
+
+    // ZX_PROTOCOL_IHDA_DSP protocol thunks
+    void DspGetDevInfo(zx_pcie_device_info_t* out_info);
+    zx_status_t DspGetMmio(zx_handle_t* out_vmo, size_t* out_size);
+    zx_status_t DspGetBti(zx_handle_t* out_handle);
+    void DspEnable();
+    void DspDisable();
+    zx_status_t DspIrqEnable(ihda_dsp_irq_callback_t* callback, void* cookie);
+    void DspIrqDisable();
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
@@ -150,8 +168,9 @@ private:
     zx_device_t* dev_node_ = nullptr;
 
     // PCI Registers and IRQ
-    zx::interrupt    irq_;
-    fbl::VmoMapper   mapped_regs_;
+    zx::interrupt       irq_;
+    fbl::VmoMapper      mapped_regs_;
+    hda_pp_registers_t* pp_regs_ = nullptr;
 
     // A handle to the Bus Transaction Initiator for this PCI device.  Used to
     // grant access to specific regions of physical mememory to the controller
@@ -198,8 +217,14 @@ private:
     fbl::Mutex codec_lock_;
     fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
+    fbl::Mutex dsp_lock_;
+    ihda_dsp_irq_callback_t* dsp_irq_callback_ TA_GUARDED(dsp_lock_) = nullptr;
+    void* dsp_irq_cookie_ TA_GUARDED(dsp_lock_) = nullptr;
+
     static fbl::atomic_uint32_t device_id_gen_;
     static zx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
+    static zx_protocol_device_t DSP_DEVICE_THUNKS;
+    static ihda_dsp_protocol_ops_t DSP_PROTO_THUNKS;
 };
 
 }  // namespace intel_hda
