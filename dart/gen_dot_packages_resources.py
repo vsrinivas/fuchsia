@@ -10,6 +10,7 @@
 import argparse
 import os
 import string
+import subprocess
 import sys
 import urlparse
 
@@ -25,13 +26,39 @@ def main():
   parser.add_argument("--dot-packages-out",
       help="Output .packages file to be included in the manifest",
       required=True)
+  parser.add_argument("--gen-snapshot",
+      help="Path to gen_snapshot")
+  parser.add_argument("--main-dart",
+      help="main.dart entrypoint of the program.")
   parser.add_argument("--manifest-out",
       help="Output manifest file.",
       required=True)
   parser.add_argument("--package",
       help="The name of the package containing the lib/main.dart entrypoint",
       required=True)
+  parser.add_argument('--url-mapping',
+      type=str,
+      action='append',
+      help='dart: url mappings to pass to gen_snapshot.')
   args = parser.parse_args()
+
+  # Invoke gen_snapshot to get the list of .dart files used by the program.
+  # This is used to filter out unused files from the package.
+  depfile_sources = None
+  if args.gen_snapshot != None:
+    cmd = [
+      args.gen_snapshot,
+      '--print_dependencies',
+      '--dependencies_only',
+      '--packages=' + args.dot_packages,
+      '--vm_snapshot_data=/dev/null',
+      '--isolate_snapshot_data=/dev/null',
+    ]
+    for url_mapping in args.url_mapping:
+      cmd.append("--url_mapping=" + url_mapping)
+    cmd.append(args.main_dart)
+    result = subprocess.check_output(cmd)
+    depfile_sources = set(result.strip().split('\n'))
 
   # TODO(zra): At some point, it will likely make sense for the flutter content
   # handler to understand a metadata file describing the contents of the
@@ -56,9 +83,11 @@ def main():
           if not f.endswith('.dart'):
             continue
           full_path = os.path.join(root, f)
-          relative_path = full_path[path_len:]
-          manifest_path = os.path.join(manifest_lib_path, relative_path)
-          mfile.write(manifest_path + '=' + full_path + '\n')
+          # Only include files that gen_snapshot found.
+          if depfile_sources == None or full_path in depfile_sources:
+            relative_path = full_path[path_len:]
+            manifest_path = os.path.join(manifest_lib_path, relative_path)
+            mfile.write(manifest_path + '=' + full_path + '\n')
       dpoutfile.write(package_name + ':file:///pkg/' + manifest_lib_path + '/\n')
     mfile.write(os.path.join('data', 'dart-pkg', '.packages') + '=' + args.dot_packages_out + '\n')
     mfile.write(os.path.join('data', 'dart-pkg', 'contents') + '=' + args.contents_out + '\n')
