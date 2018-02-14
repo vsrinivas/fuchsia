@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# An executable which can be bundled in an SDK.
+#
+# An equivalent to the built-in executable which adds an SDK atom declaration to
+# allow the resulting binary to be included in an SDK.
+
+template("sdk_executable") {
+
+  main_target_name = target_name
+
+  executable(main_target_name) {
+    forward_variables_from(invoker, "*")
+  }
+
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
+  sdk_atom("${target_name}_sdk") {
+    domain = "exe"
+    name = output_name
+
+    files = [
+      {
+        source = "$root_out_dir/$output_name"
+        dest = output_name
+      }
+    ]
+
+    non_sdk_deps = [
+      ":$main_target_name",
+    ]
+  }
+}

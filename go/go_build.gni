@@ -32,6 +32,7 @@
 # be built.
 
 import("//build/config/sysroot.gni")
+import("//build/sdk/sdk_atom.gni")
 import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
@@ -46,17 +47,19 @@ template("go_build") {
   assert(defined(invoker.gopackage),
          "gopackage must be defined for $target_name")
 
-  action(target_name) {
-    forward_variables_from(invoker, [ "deps" ])
+  main_target_name = target_name
 
-    output_name = target_name
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    }
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+  output_path = "${root_out_dir}/${output_name}"
+
+  action(main_target_name) {
+    forward_variables_from(invoker, [ "deps" ])
 
     use_strip = is_fuchsia
 
-    output_path = "${root_out_dir}/${output_name}"
     outputs = [
       output_path,
     ]
@@ -135,5 +138,21 @@ template("go_build") {
         "//garnet/public/sdk:zircon_sysroot_export",
       ]
     }
+  }
+
+  sdk_atom("${target_name}_sdk") {
+    domain = "exe"
+    name = output_name
+
+    files = [
+      {
+        source = output_path
+        dest = output_name
+      }
+    ]
+
+    non_sdk_deps = [
+      ":$main_target_name",
+    ]
   }
 }
