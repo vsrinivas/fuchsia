@@ -44,7 +44,6 @@
 #ifdef BSD
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <sys/resource.h>
 #endif
 #include <sys/ioctl.h>
 #include <zircon/process.h>

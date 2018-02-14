@@ -40,7 +40,6 @@
 #include <sys/param.h>		/* BSD4_4 */
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/resource.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
