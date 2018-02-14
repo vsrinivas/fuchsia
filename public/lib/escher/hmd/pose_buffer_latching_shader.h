@@ -5,6 +5,7 @@
 #ifndef GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
 #define GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
 
+#include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/impl/compute_shader.h"
 
 namespace escher {
@@ -14,11 +15,7 @@ namespace hmd {
 // See //garnet/public/lib/ui/scenic/fidl/ops.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
-  PoseBufferLatchingShader(Escher* escher,
-                           BufferPtr& pose_buffer,
-                           uint32_t num_entries,
-                           uint64_t base_time,
-                           uint64_t time_interval);
+  PoseBufferLatchingShader(Escher* escher, PoseBuffer pose_buffer);
 
   // Latches a pose from the pose buffer for |latch_time|
   // The returned buffer will contain the raw latched pose as well as a
@@ -41,10 +38,7 @@ class PoseBufferLatchingShader {
  private:
   Escher* const escher_;
   std::unique_ptr<impl::ComputeShader> kernel_;
-  BufferPtr pose_buffer_;
-  uint32_t num_entries_;
-  uint64_t base_time_;
-  uint64_t time_interval_;
+  PoseBuffer pose_buffer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PoseBufferLatchingShader);
 };

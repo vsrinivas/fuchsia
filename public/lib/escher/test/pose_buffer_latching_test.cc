@@ -123,17 +123,18 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
       vk::BufferUsageFlagBits::eUniformBuffer |
       vk::BufferUsageFlagBits::eStorageBuffer;
 
-  auto pose_buffer = escher::Buffer::New(
-      escher->resource_recycler(), frame->gpu_allocator(), pose_buffer_size,
-      buffer_usage_flags, memory_property_flags);
-
   // Create the shader.
-  hmd::PoseBufferLatchingShader test_shader(
-      escher.get(), pose_buffer, num_entries, base_time, time_interval);
+  hmd::PoseBuffer pose_buffer(
+      escher::Buffer::New(escher->resource_recycler(), frame->gpu_allocator(),
+                          pose_buffer_size, buffer_usage_flags,
+                          memory_property_flags),
+      num_entries, base_time, time_interval);
+
+  hmd::PoseBufferLatchingShader test_shader(escher.get(), pose_buffer);
 
   // Fill the pose buffer.
-  ASSERT_NE(nullptr, pose_buffer->ptr());
-  hmd::Pose* poses = reinterpret_cast<hmd::Pose*>(pose_buffer->ptr());
+  ASSERT_NE(nullptr, pose_buffer.buffer->ptr());
+  hmd::Pose* poses = reinterpret_cast<hmd::Pose*>(pose_buffer.buffer->ptr());
   float pi = glm::pi<float>();
   for (uint32_t i = 0; i < num_entries; i++) {
     // Change pose each interation. The goal is to have unique poses in each
