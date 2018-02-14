@@ -205,6 +205,7 @@ def generate_compiled_library(package, context):
 
     # Dependencies.
     data.deps += filter_deps(package.get('deps', []))
+    data.deps += filter_deps(package.get('static-deps', []))
 
     # Generate the build file.
     template = 'shared_library.mako' if is_shared else 'static_library.mako'
