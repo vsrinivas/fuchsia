@@ -128,6 +128,43 @@ bool mmap_offset_test() {
     END_TEST;
 }
 
+static __attribute__ ((noinline)) int add(int a, int b) {
+    return a+b;
+}
+
+bool mmap_PROT_EXEC_test() {
+    BEGIN_TEST;
+
+    // allocate 2 pages worth of memory which we will eventually execute
+    int PAGE_SZ = getpagesize();
+    void *addr = mmap(NULL, PAGE_SZ * 2, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    EXPECT_NE(MAP_FAILED, addr, "mmap should have succeeded for PROT_READ|PROT_WRITE");
+
+    // Copy over code from our address space into the newly allocated memory.
+    // We assume our add function will never cover more than 2 pages of memory
+    // and that the two pages will be readable in memory.
+    uintptr_t fp = (uintptr_t) &add;
+    uintptr_t page_start = fp & ~(PAGE_SZ - 1);
+    memcpy(addr, (void *) page_start, PAGE_SZ * 2);
+
+    // mark the code executable
+    int result = mprotect(addr, PAGE_SZ * 2, PROT_READ|PROT_EXEC);
+    EXPECT_EQ(0, result, "Unable to mark pages PROT_READ|PROT_EXEC");
+
+    // Execute the code from our new location
+    uintptr_t offset = fp - page_start;
+    int (*add_func)(int, int) = (int (*)(int, int))((uintptr_t) addr + offset);
+    int add_result = add_func(1, 2);
+
+    // Check that the result of adding 1+2 is 3.
+    EXPECT_EQ(3, add_result);
+
+    // Deallocate pages
+    result = munmap(addr, PAGE_SZ * 2);
+    EXPECT_EQ(0, result, "munmap unexpectedly failed");
+    END_TEST;
+}
+
 bool mmap_prot_test() {
     BEGIN_TEST;
 
@@ -148,8 +185,6 @@ bool mmap_prot_test() {
     // back.
     *addr = 5678u;
     EXPECT_EQ(5678u, *addr, "writing to address returned by mmap failed");
-
-    // TODO: test PROT_EXEC
 
     END_TEST;
 }
@@ -213,6 +248,7 @@ BEGIN_TEST_CASE(memory_mapping_tests)
 RUN_TEST(address_space_limits_test);
 RUN_TEST(mmap_zerofilled_test);
 RUN_TEST(mmap_len_test);
+RUN_TEST(mmap_PROT_EXEC_test);
 RUN_TEST(mmap_offset_test);
 RUN_TEST(mmap_prot_test);
 RUN_TEST(mmap_flags_test);
