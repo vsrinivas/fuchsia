@@ -241,7 +241,6 @@
     <project name="third_party/vulkan-cts"
              path="third_party/vulkan-cts"
              remote="https://fuchsia.googlesource.com/third_party/vulkan-cts"
-             remotebranch="master"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/vulkan_loader_and_validation_layers"
              path="third_party/vulkan_loader_and_validation_layers"
