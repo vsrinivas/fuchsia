@@ -1,0 +1,157 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use futures::{Async, Poll};
+use futures::task::AtomicTask;
+use executor::{PacketReceiver, ReceiverRegistration, EHandle};
+use zx::{self, AsHandleRef};
+
+const READABLE: usize = 0b001;
+const WRITABLE: usize = 0b010;
+const CLOSED:   usize = 0b100;
+
+struct RWPacketReceiver {
+    signals: AtomicUsize,
+    read_task: AtomicTask,
+    write_task: AtomicTask,
+}
+
+impl PacketReceiver for RWPacketReceiver {
+    fn receive_packet(&self, packet: zx::Packet) {
+        let observed = if let zx::PacketContents::SignalOne(p) = packet.contents() {
+            p.observed()
+        } else { return };
+
+        let new = 0 |
+            (if observed.contains(zx::Signals::OBJECT_READABLE) { READABLE } else { 0 }) |
+            (if observed.contains(zx::Signals::OBJECT_WRITABLE) { WRITABLE } else { 0 }) |
+            (if observed.contains(zx::Signals::OBJECT_PEER_CLOSED) { CLOSED } else { 0 });
+
+        let old = self.signals.fetch_or(new, Ordering::SeqCst);
+        let became_readable = ((new & READABLE) != 0) && ((old & READABLE) == 0);
+        let became_writable = ((new & WRITABLE) != 0) && ((old & WRITABLE) == 0);
+        let became_closed = ((new & CLOSED) != 0) && ((old & CLOSED) == 0);
+
+        if became_readable || became_closed {
+            self.read_task.notify();
+        }
+        if became_writable || became_closed {
+            self.write_task.notify();
+        }
+    }
+}
+
+/// A `Handle` that receives notifications when it is readable/writable.
+pub struct RWHandle<T> {
+    handle: T,
+    receiver: ReceiverRegistration<RWPacketReceiver>,
+}
+
+impl<T> RWHandle<T> where T: AsHandleRef {
+    /// Creates a new `RWHandle` object which will receive notifications when
+    /// the underlying handle becomes readable, writable, or closes.
+    pub fn new(handle: T, ehandle: &EHandle) -> Result<Self, zx::Status> {
+        let receiver = ehandle.register_receiver(Arc::new(RWPacketReceiver {
+            signals: AtomicUsize::new(0),
+            read_task: AtomicTask::new(),
+            write_task: AtomicTask::new(),
+        }));
+
+        let rwhandle = RWHandle {
+            handle,
+            receiver,
+        };
+
+        // Need to schedule packets to maintain the invariant that
+        // if !READABLE or !WRITABLE a packet has been scheduled.
+        rwhandle.schedule_packet(zx::Signals::OBJECT_READABLE)?;
+        rwhandle.schedule_packet(zx::Signals::OBJECT_WRITABLE)?;
+
+        // Make sure we get notifications when the handle closes.
+        rwhandle.schedule_packet(zx::Signals::OBJECT_PEER_CLOSED)?;
+
+        Ok(rwhandle)
+    }
+
+    /// Returns a reference to the underlying handle.
+    pub fn get_ref(&self) -> &T {
+        &self.handle
+    }
+
+    /// Returns a mutable reference to the underlying handle.
+    pub fn get_mut(&mut self) -> &mut T {
+        &mut self.handle
+    }
+
+    /// Consumes this type, returning the inner handle.
+    pub fn into_inner(self) -> T {
+        self.handle
+    }
+
+    /// Tests to see if this resource is ready to be read from.
+    /// If it is not, it arranges for the current task to receive a notification
+    /// when a "readable" signal arrives.
+    pub fn poll_read(&self) -> Poll<(), zx::Status> {
+        if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
+            Ok(Async::Ready(()))
+        } else {
+            self.need_read()?;
+            Ok(Async::NotReady)
+        }
+    }
+
+    /// Tests to see if this resource is ready to be read from.
+    /// If it is not, it arranges for the current task to receive a notification
+    /// when a "writable" signal arrives.
+    pub fn poll_write(&self) -> Poll<(), zx::Status> {
+        if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
+            Ok(Async::Ready(()))
+        } else {
+            self.need_write()?;
+            Ok(Async::NotReady)
+        }
+    }
+
+    fn receiver(&self) -> &RWPacketReceiver {
+        self.receiver.receiver()
+    }
+
+    /// Arranges for the current task to receive a notification when a
+    /// "readable" signal arrives.
+    pub fn need_read(&self) -> Result<(), zx::Status> {
+        self.receiver().read_task.register();
+        let old = self.receiver().signals.fetch_and(!READABLE, Ordering::SeqCst);
+        // We only need to schedule a new packet if one isn't already scheduled.
+        // If READABLE was already false, a packet was already scheduled.
+        if (old & READABLE) != 0 {
+            self.schedule_packet(zx::Signals::OBJECT_READABLE)?;
+        }
+        Ok(())
+    }
+
+    /// Arranges for the current task to receive a notification when a
+    /// "writable" signal arrives.
+    pub fn need_write(&self) -> Result<(), zx::Status> {
+        self.receiver().read_task.register();
+        let old = self.receiver().signals.fetch_and(!WRITABLE, Ordering::SeqCst);
+        // We only need to schedule a new packet if one isn't already scheduled.
+        // If WRITABLE was already false, a packet was already scheduled.
+        if (old & WRITABLE) != 0 {
+            self.schedule_packet(zx::Signals::OBJECT_WRITABLE)?;
+        }
+        Ok(())
+    }
+
+    fn schedule_packet(&self, signals: zx::Signals) -> Result<(), zx::Status> {
+        self.handle.wait_async_handle(
+            self.receiver.port(),
+            self.receiver.key(),
+            signals,
+            zx::WaitAsyncOpts::Once,
+        )
+    }
+}

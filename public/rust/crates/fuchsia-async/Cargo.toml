@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "fuchsia-async"
+version = "0.1.0"
+authors = ["cramertj <cramertj@google.com>"]
+
+[dependencies]
+fuchsia-zircon = "0.3"
+futures = "0.1"
+parking_lot = "0.4"
+slab = "0.4"
+smallvec = "0.4"
+tokio-io = "0.1"
