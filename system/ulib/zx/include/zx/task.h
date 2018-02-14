@@ -9,6 +9,8 @@
 
 namespace zx {
 
+class port;
+
 template <typename T = void> class task : public object<T> {
 public:
     constexpr task() = default;
@@ -23,7 +25,10 @@ public:
         return zx_task_resume(object<T>::get(), options);
     }
 
-    // TODO(abarth): zx_task_bind_exception_port
+    zx_status_t bind_exception_port(
+            const object<port>& port, uint64_t key, uint32_t options) const {
+        return zx_task_bind_exception_port(object<T>::get(), port.get(), key, options);
+    }
 
     zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
 
