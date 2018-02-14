@@ -102,7 +102,7 @@ private:
     void Init(fbl::RefPtr<ChannelDispatcher> other);
     int WriteSelf(fbl::unique_ptr<MessagePacket> msg) TA_REQ(get_lock());
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
-    void OnPeerZeroHandles();
+    void OnPeerZeroHandlesLocked();
 
     fbl::Canary<fbl::magic("CHAN")> canary_;
 

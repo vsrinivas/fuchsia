@@ -115,14 +115,14 @@ void ChannelDispatcher::on_zero_handles() {
 
     // Ensure other endpoint detaches us
     if (other)
-        other->OnPeerZeroHandles();
+        other->OnPeerZeroHandlesLocked();
 }
 
 // This requires holding the shared channel lock. The thread analysis
 // can reason about repeated calls to get_lock() on the shared object,
 // but cannot reason about the aliasing between left->get_lock() and
 // right->get_lock(), which occurs above in on_zero_handles.
-void ChannelDispatcher::OnPeerZeroHandles() TA_NO_THREAD_SAFETY_ANALYSIS {
+void ChannelDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     other_.reset();
