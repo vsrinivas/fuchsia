@@ -50,6 +50,7 @@ struct Pose {
 static_assert(sizeof(Pose) == 32, "Pose structure is not 32 bytes");
 
 struct PoseBuffer {
+  PoseBuffer() {}
   PoseBuffer(BufferPtr buffer,
              uint32_t num_entries,
              uint64_t base_time,

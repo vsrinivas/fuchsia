@@ -37,12 +37,20 @@ void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
 
 escher::Camera Camera::GetEscherCamera(
     const escher::ViewingVolume& volume) const {
+  escher::Camera camera(glm::mat4(1), glm::mat4(1));
   if (fovy_ == 0.f) {
-    return escher::Camera::NewOrtho(volume);
+    camera = escher::Camera::NewOrtho(volume);
   } else {
-    return escher::Camera::NewPerspective(
+    camera = escher::Camera::NewPerspective(
         volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_);
   }
+  if (pose_buffer_) {
+    escher::hmd::PoseBuffer escher_pose_buffer(pose_buffer_->escher_buffer(),
+                                               num_entries_, base_time_,
+                                               time_interval_);
+    camera.SetPoseBuffer(escher_pose_buffer);
+  }
+  return camera;
 }
 
 std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(

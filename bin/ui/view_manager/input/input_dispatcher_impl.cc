@@ -10,7 +10,6 @@
 #include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
-#include "lib/escher/scene/camera.h"
 #include "lib/escher/util/type_utils.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
