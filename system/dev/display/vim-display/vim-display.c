@@ -25,7 +25,6 @@
 
 /* Default formats */
 static const uint8_t _ginput_color_format   = HDMI_COLOR_FORMAT_444;
-static const uint8_t _goutput_color_format  = HDMI_COLOR_FORMAT_444;
 static const uint8_t _gcolor_depth          = HDMI_COLOR_DEPTH_24B;
 
 // MMIO indices (based on vim2_display_mmios)
@@ -188,7 +187,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
 
     display->input_color_format = _ginput_color_format;
-    display->output_color_format = _goutput_color_format;
     display->color_depth = _gcolor_depth;
 
 

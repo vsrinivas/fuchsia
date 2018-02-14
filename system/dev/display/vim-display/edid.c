@@ -32,6 +32,12 @@ bool edid_has_extension(const uint8_t* edid_buf)
     return (edid->ext_flag == 1);
 }
 
+bool edid_rgb_disp(const uint8_t* edid_buf)
+{
+    const edid_t* edid = (edid_t *) edid_buf;
+    return (!!((edid->feature_support & (1 << 2)) >> 2));
+}
+
 static char* get_mfg_id(const uint8_t* edid_buf)
 {
     char *mfg_str = calloc(1, sizeof(char));;
@@ -130,7 +136,11 @@ zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, detailed_timing_t
     // It has extension. Read from start of DTD until you hit 00 00
     start_ext = &edid_buf[128];
 
-    if (start_ext[0] != 0x2) {
+    if (start_ext[0] != 0x2 ) {
+        if(!edid_has_extension(edid_buf)) {
+            // No extension and no valid tag. Not worth reading on.
+            return ZX_OK;
+        }
         DISP_ERROR("%s: Unknown tag! %d\n", __FUNCTION__, start_ext[0]);
         return ZX_ERR_WRONG_TYPE;
     }
@@ -166,6 +176,13 @@ static void get_vic(vim2_display_t* display)
         }
         if (supportedFormats[i]->timings.vactive != disp_timing->VActive) {
             continue;
+        }
+        // FIXME: for some reason 1920x1200 doesn't work. go to a lower resolution
+        if (disp_timing->HActive == 1920 && disp_timing->VActive == 1200) {
+            DISP_ERROR("Preferred Resolution of 1920x1200-60Hz is not supported\n");
+            DISP_ERROR("Switching to 1024x768-60Hz instead\n");
+            display->p = &hdmi_1024x768p60Hz_vft;
+            return;
         }
         display->p = supportedFormats[i];
         return;
@@ -234,6 +251,13 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
 
     // Find out whether we support the preferred format or not
     get_vic(display);
+
+    // See if we need to change output color to RGB
+    if (edid_rgb_disp(display->edid_buf)) {
+        display->output_color_format = HDMI_COLOR_FORMAT_RGB;
+    } else {
+        display->output_color_format = HDMI_COLOR_FORMAT_444;
+    }
 
     return ZX_OK;
 

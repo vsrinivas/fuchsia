@@ -50,10 +50,13 @@ typedef struct {
 
 extern struct hdmi_param hdmi_640x480p60Hz_vft;
 extern struct hdmi_param hdmi_720x480p60Hz_vft;
+extern struct hdmi_param hdmi_800X600p60Hz_vft;
+extern struct hdmi_param hdmi_1024x768p60Hz_vft;
 extern struct hdmi_param hdmi_1280x720p60Hz_vft;
 extern struct hdmi_param hdmi_1280x800p60Hz_vft;
 extern struct hdmi_param hdmi_1280x1024p60Hz_vft;
 extern struct hdmi_param hdmi_1920x1080p60Hz_vft;
+extern struct hdmi_param hdmi_1920x1200p60Hz_vft;
 
 
 zx_status_t configure_canvas(vim2_display_t* display);

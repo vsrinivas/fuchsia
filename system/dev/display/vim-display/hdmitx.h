@@ -1373,7 +1373,74 @@ static const struct reg_val_pair ENC_LUT_1280x1024p60hz[] = {
     { 0xFFFFFFFF, 0},
 };
 
+static const struct reg_val_pair ENC_LUT_1920x1200p8x5[] = {
+    {VPU_ENCP_VIDEO_EN, 0,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    {VPU_ENCP_VIDEO_MODE, 0x4040,},
+    {VPU_ENCP_VIDEO_MODE_ADV, 0x18,},
+    {VPU_ENCP_VIDEO_MAX_PXCNT, 0xA1F,},
+    {VPU_ENCP_VIDEO_MAX_LNCNT, 0x4DC,},
+    {VPU_ENCP_VIDEO_HAVON_BEGIN, 0x218,},
+    {VPU_ENCP_VIDEO_HAVON_END, 0x997,},
+    {VPU_ENCP_VIDEO_VAVON_BLINE, 0x2A,},
+    {VPU_ENCP_VIDEO_VAVON_ELINE, 0x4D9,},
+    {VPU_ENCP_VIDEO_HSO_BEGIN, 0x0,},
+    {VPU_ENCP_VIDEO_HSO_END, 0xC8,},
+    {VPU_ENCP_VIDEO_VSO_BEGIN, 0x1E,},
+    {VPU_ENCP_VIDEO_VSO_END, 0x32,},
+    {VPU_ENCP_VIDEO_VSO_BLINE, 0x0,},
+    {VPU_ENCP_VIDEO_VSO_ELINE, 0x6,},
+    {VPU_VPU_VIU_VENC_MUX_CTRL, 0xA},
+    {VPU_ENCI_VIDEO_EN, 0},
+    {VPU_ENCP_VIDEO_EN, 1},
+    { 0xFFFFFFFF, 0},
+};
 
+static const struct reg_val_pair ENC_LUT_800x600p60hz[] = {
+    {VPU_ENCP_VIDEO_EN, 0,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    {VPU_ENCP_VIDEO_MODE, 0x4040,},
+    {VPU_ENCP_VIDEO_MODE_ADV, 0x18,},
+    {VPU_ENCP_VIDEO_MAX_PXCNT, 0x41F,},
+    {VPU_ENCP_VIDEO_MAX_LNCNT, 0x273,},
+    {VPU_ENCP_VIDEO_HAVON_BEGIN, 0xD8,},
+    {VPU_ENCP_VIDEO_HAVON_END, 0x3F7,},
+    {VPU_ENCP_VIDEO_VAVON_BLINE, 0x1B,},
+    {VPU_ENCP_VIDEO_VAVON_ELINE, 0x272,},
+    {VPU_ENCP_VIDEO_HSO_BEGIN, 0x0,},
+    {VPU_ENCP_VIDEO_HSO_END, 0x80,},
+    {VPU_ENCP_VIDEO_VSO_BEGIN, 0x1E,},
+    {VPU_ENCP_VIDEO_VSO_END, 0x32,},
+    {VPU_ENCP_VIDEO_VSO_BLINE, 0x0,},
+    {VPU_ENCP_VIDEO_VSO_ELINE, 0x4,},
+    {VPU_VPU_VIU_VENC_MUX_CTRL, 0xA},
+    {VPU_ENCP_VIDEO_EN, 1,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    { 0xFFFFFFFF, 0},
+};
+
+static const struct reg_val_pair ENC_LUT_1024x768p60hz[] = {
+    {VPU_ENCP_VIDEO_EN, 0,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    {VPU_ENCP_VIDEO_MODE, 0x4040,},
+    {VPU_ENCP_VIDEO_MODE_ADV, 0x18,},
+    {VPU_ENCP_VIDEO_MAX_PXCNT, 0x53F,},
+    {VPU_ENCP_VIDEO_MAX_LNCNT, 0x325,},
+    {VPU_ENCP_VIDEO_HAVON_BEGIN, 0x128,},
+    {VPU_ENCP_VIDEO_HAVON_END, 0x527,},
+    {VPU_ENCP_VIDEO_VAVON_BLINE, 0x23,},
+    {VPU_ENCP_VIDEO_VAVON_ELINE, 0x322,},
+    {VPU_ENCP_VIDEO_HSO_BEGIN, 0x0,},
+    {VPU_ENCP_VIDEO_HSO_END, 0x88,},
+    {VPU_ENCP_VIDEO_VSO_BEGIN, 0x1E,},
+    {VPU_ENCP_VIDEO_VSO_END, 0x32,},
+    {VPU_ENCP_VIDEO_VSO_BLINE, 0x0,},
+    {VPU_ENCP_VIDEO_VSO_ELINE, 0x6,},
+    {VPU_VPU_VIU_VENC_MUX_CTRL, 0xA},
+    {VPU_ENCP_VIDEO_EN, 1,},
+    {VPU_ENCI_VIDEO_EN, 0,},
+    { 0xFFFFFFFF, 0},
+};
 struct cea_timing {
     uint8_t             interlace_mode;
     uint32_t            pfreq;
@@ -1552,6 +1619,9 @@ struct hdmi_param {
  #define VIC_VESA_640x480p_60Hz_4x3             300
  #define VIC_VESA_1280x800p_60Hz_16x9           301
  #define VIC_VESA_1280x1024p_60Hz_5x4           302
+ #define VIC_VESA_1920x1200p_60Hz_8x5           303
+ #define VIC_VESA_800x600p_60Hz                 304
+ #define VIC_VESA_1024x768p_60Hz                305
 
 void hdmitx_writereg(vim2_display_t* display, uint32_t addr, uint32_t data);
 uint32_t hdmitx_readreg(vim2_display_t* display, uint32_t addr);

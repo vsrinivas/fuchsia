@@ -26,10 +26,13 @@
 struct hdmi_param* supportedFormats[] = {
     &hdmi_640x480p60Hz_vft,
     &hdmi_720x480p60Hz_vft,
+    &hdmi_800X600p60Hz_vft,
+    &hdmi_1024x768p60Hz_vft,
     &hdmi_1280x720p60Hz_vft,
     &hdmi_1280x800p60Hz_vft,
     &hdmi_1280x1024p60Hz_vft,
     &hdmi_1920x1080p60Hz_vft,
+    &hdmi_1920x1200p60Hz_vft,
     NULL,
 };
 
@@ -176,6 +179,148 @@ struct hdmi_param hdmi_720x480p60Hz_vft = {
         .vid_clk_div =          1,
         .hdmi_tx_pixel_div =    2,
         .encp_div =             1,
+        .enci_div =             -1,
+    },
+};
+
+struct hdmi_param hdmi_800X600p60Hz_vft = {
+    .vic = VIC_VESA_800x600p_60Hz,
+    .enc_lut = ENC_LUT_800x600p60hz,
+    .aspect_ratio = HDMI_ASPECT_RATIO_4x3,
+    .colorimety = HDMI_COLORIMETY_ITU709, // if ref std is smte[x], set to 709, else 601
+    .timings = {
+        .interlace_mode =       0,          // progressive
+        .pfreq =                66666,     // KHz
+        .ln =                   1,
+        .pixel_repeat =         0,
+        .venc_pixel_repeat =    0,          // TODO: ?
+        .hfreq =                37879,      // Hz
+        .hactive =              800,
+        .htotal =               1056,
+        .hblank =               256,
+        .hfront =               40,
+        .hsync =                128,
+        .hback =                88,
+        .hpol =                 1,          // 0: N, 1: P,
+        .vfreq =                60317,
+        .vactive =              600,
+        .vtotal =               628,
+        .vblank0 =              28,
+        .vblank1 =              0,         // ignore for progressive mode
+        .vfront =               1,
+        .vsync =                4,
+        .vback =                23,
+        .vpol =                 1,
+    },
+    .phy_mode = 4,
+    .pll_p_24b = {
+        .viu_channel =          1,
+        .viu_type =             VIU_ENCP,
+        .hpll_clk_out =         3200000,
+        .od1 =                  4,
+        .od2 =                  2,
+        .od3 =                  1,
+        .vid_pll_div =          VID_PLL_DIV_5,
+        .vid_clk_div =          2,
+        .hdmi_tx_pixel_div =    1,
+        .encp_div =             1,
+        .enci_div =             -1,
+    },
+    .pll_p_30b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
+        .enci_div =             -1,
+    },
+    .pll_p_36b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
+        .enci_div =             -1,
+    },
+};
+
+struct hdmi_param hdmi_1024x768p60Hz_vft = {
+    .vic = VIC_VESA_1024x768p_60Hz,
+    .enc_lut = ENC_LUT_1024x768p60hz,
+    .aspect_ratio = HDMI_ASPECT_RATIO_4x3,
+    .colorimety = HDMI_COLORIMETY_ITU709, // if ref std is smte[x], set to 709, else 601
+    .timings = {
+        .interlace_mode =       0,          // progressive
+        .pfreq =                79500,     // KHz
+        .ln =                   1,
+        .pixel_repeat =         0,
+        .venc_pixel_repeat =    0,          // TODO: ?
+        .hfreq =                48360,      // Hz
+        .hactive =              1024,
+        .htotal =               1344,
+        .hblank =               320,
+        .hfront =               24,
+        .hsync =                136,
+        .hback =                160,
+        .hpol =                 1,          // 0: N, 1: P,
+        .vfreq =                60004,
+        .vactive =              768,
+        .vtotal =               806,
+        .vblank0 =              38,
+        .vblank1 =              0,         // ignore for progressive mode
+        .vfront =               3,
+        .vsync =                6,
+        .vback =                29,
+        .vpol =                 1,
+    },
+    .phy_mode = 4,
+    .pll_p_24b = {
+        .viu_channel =          1,
+        .viu_type =             VIU_ENCP,
+        .hpll_clk_out =         5200000,
+        .od1 =                  4,
+        .od2 =                  2,
+        .od3 =                  1,
+        .vid_pll_div =          VID_PLL_DIV_5,
+        .vid_clk_div =          2,
+        .hdmi_tx_pixel_div =    1,
+        .encp_div =             1,
+        .enci_div =             -1,
+    },
+    .pll_p_30b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
+        .enci_div =             -1,
+    },
+    .pll_p_36b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
         .enci_div =             -1,
     },
 };
@@ -464,3 +609,74 @@ struct hdmi_param hdmi_1920x1080p60Hz_vft = {
     },
 };
 
+
+struct hdmi_param hdmi_1920x1200p60Hz_vft = {
+    .vic = VIC_VESA_1920x1200p_60Hz_8x5,
+    .enc_lut = ENC_LUT_1920x1200p8x5,
+    .aspect_ratio = HDMI_ASPECT_RATIO_16x9,
+    .colorimety = HDMI_COLORIMETY_ITU709, // if ref std is smte[x], set to 709, else 601
+    .timings = {
+        .interlace_mode =       0,          // progressive
+        .pfreq =                193250,     // KHz
+        .ln =                   1,
+        .pixel_repeat =         0,
+        .venc_pixel_repeat =    0,          // TODO: ?
+        .hfreq =                74700,      // Hz
+        .hactive =              1920,
+        .htotal =               2592,
+        .hblank =               672,
+        .hfront =               136,
+        .hsync =                200,
+        .hback =                336,
+        .hpol =                 1,          // 0: N, 1: P,
+        .vfreq =                59885,
+        .vactive =              1200,
+        .vtotal =               1245,
+        .vblank0 =              45,
+        .vblank1 =              0,         // ignore for progressive mode
+        .vfront =               3,
+        .vsync =                6,
+        .vback =                36,
+        .vpol =                 1,
+    },
+    .phy_mode = 4,
+    .pll_p_24b = {
+        .viu_channel =          1,
+        .viu_type =             VIU_ENCP,
+        .hpll_clk_out =         3865000,
+        .od1 =                  2,
+        .od2 =                  1,
+        .od3 =                  1,
+        .vid_pll_div =          VID_PLL_DIV_5,
+        .vid_clk_div =          2,
+        .hdmi_tx_pixel_div =    1,
+        .encp_div =             1,
+        .enci_div =             -1,
+    },
+    .pll_p_30b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
+        .enci_div =             -1,
+    },
+    .pll_p_36b = {
+        .viu_channel =          -1,
+        .viu_type =             -1,
+        .hpll_clk_out =         -1,
+        .od1 =                  -1,
+        .od2 =                  -1,
+        .od3 =                  -1,
+        .vid_pll_div =          -1,
+        .vid_clk_div =          -1,
+        .hdmi_tx_pixel_div =    -1,
+        .encp_div =             -1,
+        .enci_div =             -1,
+    },
+};
