@@ -168,7 +168,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
     }
     next_release_fences = std::move(frames_.front().release_fences);
 
-    auto info = scenic::PresentationInfo::New();
+    auto info = ui_mozart::PresentationInfo::New();
     info->presentation_time = presentation_time;
     info->presentation_interval = presentation_interval;
     if (frames_.front().present_image_callback) {

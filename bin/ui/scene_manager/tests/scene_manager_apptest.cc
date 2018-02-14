@@ -108,7 +108,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // Call Present with release fences.
   session->Present(0u, ::fidl::Array<zx::event>::New(0),
                    std::move(release_fences),
-                   [](scenic::PresentationInfoPtr info) {});
+                   [](ui_mozart::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
@@ -117,7 +117,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // Call Present again with no release fences.
   session->Present(0u, ::fidl::Array<zx::event>::New(0),
                    ::fidl::Array<zx::event>::New(0),
-                   [](scenic::PresentationInfoPtr info) {});
+                   [](ui_mozart::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
 
@@ -161,7 +161,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
 
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
-                   [](scenic::PresentationInfoPtr info) {});
+                   [](ui_mozart::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
@@ -170,7 +170,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   // Call Present again with no fences.
   session->Present(0u, ::fidl::Array<zx::event>::New(0),
                    ::fidl::Array<zx::event>::New(0),
-                   [](scenic::PresentationInfoPtr info) {});
+                   [](ui_mozart::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
 
   EXPECT_FALSE(IsFenceSignalled(release_fence));

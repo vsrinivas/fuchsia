@@ -281,7 +281,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](scenic::PresentationInfoPtr info) {
+      next_presentation_time, [this](ui_mozart::PresentationInfoPtr info) {
         Update(info->presentation_time + info->presentation_interval);
       });
 }

@@ -1219,7 +1219,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
          scheduled_updates_.front().acquire_fences->ready()) {
     if (ApplyUpdate(&scheduled_updates_.front())) {
       needs_render = true;
-      auto info = scenic::PresentationInfo::New();
+      auto info = ui_mozart::PresentationInfo::New();
       info->presentation_time = presentation_time;
       info->presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));

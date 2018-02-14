@@ -95,7 +95,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   last_presentation_time_ = presentation_time;
 
   session()->Present(
-      presentation_time, [this](scenic::PresentationInfoPtr info) {
+      presentation_time, [this](ui_mozart::PresentationInfoPtr info) {
         FXL_DCHECK(present_pending_);
 
         zx_time_t next_presentation_time =
@@ -154,7 +154,7 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
 void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 
 void BaseView::OnSceneInvalidated(
-    scenic::PresentationInfoPtr presentation_info) {}
+    ui_mozart::PresentationInfoPtr presentation_info) {}
 
 void BaseView::OnSessionEvent(fidl::Array<scenic::EventPtr> events) {}
 

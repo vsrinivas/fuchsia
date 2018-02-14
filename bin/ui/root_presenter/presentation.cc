@@ -605,7 +605,7 @@ void Presentation::PresentScene() {
   }
 
   session_.Present(
-      0, [weak = weak_factory_.GetWeakPtr()](scenic::PresentationInfoPtr info) {
+      0, [weak = weak_factory_.GetWeakPtr()](ui_mozart::PresentationInfoPtr info) {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
               info->presentation_time + info->presentation_interval;
@@ -625,7 +625,7 @@ void Presentation::SetRendererParams(
   for (auto& param : params) {
     renderer_.SetParam(std::move(param));
   }
-  session_.Present(0, [](scenic::PresentationInfoPtr info) {});
+  session_.Present(0, [](ui_mozart::PresentationInfoPtr info) {});
 }
 
 }  // namespace root_presenter

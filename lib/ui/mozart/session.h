@@ -37,7 +37,10 @@ class Session final : public ui_mozart::Session {
   void Enqueue(::fidl::Array<ui_mozart::CommandPtr> cmds) override;
 
   // |ui_mozart::Session|
-  void Present() override;
+  void Present(uint64_t presentation_time,
+               ::fidl::Array<zx::event> acquire_fences,
+               ::fidl::Array<zx::event> release_fences,
+               const PresentCallback& callback) override;
 
   SessionId id() const { return id_; }
 

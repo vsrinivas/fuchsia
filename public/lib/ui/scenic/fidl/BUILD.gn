@@ -19,14 +19,8 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    ":presentation_info",
     "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/ui/geometry/fidl",
-  ]
-}
-
-fidl("presentation_info") {
-  sources = [
-    "presentation_info.fidl",
+    "//garnet/public/lib/ui/mozart/fidl:presentation_info",
   ]
 }

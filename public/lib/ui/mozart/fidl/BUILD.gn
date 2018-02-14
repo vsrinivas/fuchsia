@@ -13,7 +13,14 @@ fidl("fidl") {
   ]
 
   public_deps = [
+    ":presentation_info",
     "//garnet/public/lib/ui/mozart/fidl/dummy_system:fidl",
     "//garnet/public/lib/ui/scenic/fidl",
+  ]
+}
+
+fidl("presentation_info") {
+  sources = [
+    "presentation_info.fidl",
   ]
 }

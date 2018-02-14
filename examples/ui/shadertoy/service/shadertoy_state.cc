@@ -122,7 +122,7 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
   KeepAlive(escher()->command_buffer_sequencer()->latest_sequence_number());
 }
 
-void ShadertoyState::OnFramePresented(const scenic::PresentationInfoPtr& info) {
+void ShadertoyState::OnFramePresented(const ui_mozart::PresentationInfoPtr& info) {
   FXL_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info->presentation_time + info->presentation_interval);

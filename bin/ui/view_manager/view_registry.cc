@@ -683,7 +683,7 @@ void ViewRegistry::PresentSession() {
   FXL_DCHECK(present_session_scheduled_);
 
   present_session_scheduled_ = false;
-  session_.Present(0, [this](scenic::PresentationInfoPtr info) {});
+  session_.Present(0, [this](ui_mozart::PresentationInfoPtr info) {});
 }
 
 // VIEW AND VIEW TREE SERVICE PROVIDERS

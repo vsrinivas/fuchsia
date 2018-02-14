@@ -48,7 +48,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
    private:
     // |BaseView|:
     void OnSceneInvalidated(
-        scenic::PresentationInfoPtr presentation_info) override;
+        ui_mozart::PresentationInfoPtr presentation_info) override;
 
     std::shared_ptr<VideoFrameSource> video_frame_source_;
     TimelineFunction timeline_function_;

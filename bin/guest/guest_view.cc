@@ -90,7 +90,7 @@ GuestView::GuestView(
 GuestView::~GuestView() = default;
 
 void GuestView::OnSceneInvalidated(
-    scenic::PresentationInfoPtr presentation_info) {
+    ui_mozart::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

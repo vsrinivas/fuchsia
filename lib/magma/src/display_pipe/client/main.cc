@@ -106,7 +106,7 @@ class BufferHandler {
       buffer_->dupReleaseFence(&rel.front());
 
       image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
-                               [](scenic::PresentationInfoPtr info) {});
+                               [](ui_mozart::PresentationInfoPtr info) {});
 
       uint8_t r, g, b;
       hsv_color(hsv_index, &r, &g, &b);

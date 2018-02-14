@@ -123,7 +123,7 @@ class BaseView : private ViewListener,
   //
   // The default implementation does nothing.
   virtual void OnSceneInvalidated(
-      scenic::PresentationInfoPtr presentation_info);
+      ui_mozart::PresentationInfoPtr presentation_info);
 
   // Called when session events are received.
   //

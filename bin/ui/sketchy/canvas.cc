@@ -53,11 +53,11 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   is_scenic_present_requested_ = true;
 
   auto session_callback = [this, callbacks = std::move(callbacks_)](
-                              scenic::PresentationInfoPtr info) {
+                              ui_mozart::PresentationInfoPtr info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {
-      auto _info = scenic::PresentationInfo::New();
+      auto _info = ui_mozart::PresentationInfo::New();
       _info->presentation_time = _info->presentation_time;
       _info->presentation_interval = _info->presentation_interval;
       callback(std::move(_info));

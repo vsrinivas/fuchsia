@@ -69,7 +69,7 @@ VideoRendererImpl::View::~View() {
 }
 
 void VideoRendererImpl::View::OnSceneInvalidated(
-    scenic::PresentationInfoPtr presentation_info) {
+    ui_mozart::PresentationInfoPtr presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
   video_frame_source_->AdvanceReferenceTime(

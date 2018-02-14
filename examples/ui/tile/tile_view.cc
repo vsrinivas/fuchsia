@@ -131,7 +131,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
 }
 
 void TileView::OnSceneInvalidated(
-    scenic::PresentationInfoPtr presentation_info) {
+    ui_mozart::PresentationInfoPtr presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 

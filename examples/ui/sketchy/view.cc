@@ -36,7 +36,7 @@ void View::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(width * .5f, height * .5f, .1f);
   canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                  [](scenic::PresentationInfoPtr info) {});
+                  [](ui_mozart::PresentationInfoPtr info) {});
 }
 
 bool View::OnInputEvent(mozart::InputEventPtr event) {
@@ -50,7 +50,7 @@ bool View::OnInputEvent(mozart::InputEventPtr event) {
         scratch_group_.AddStroke(*stroke);
         stroke->Begin({pointer->x, pointer->y});
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](scenic::PresentationInfoPtr info) {});
+                        [](ui_mozart::PresentationInfoPtr info) {});
         return true;
       }
       case mozart::PointerEvent::Phase::MOVE: {
@@ -63,7 +63,7 @@ bool View::OnInputEvent(mozart::InputEventPtr event) {
         // TODO(MZ-269): The current stroke fitter would simply connect the
         // point if Canvas::Present() is called after extending with one point.
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](scenic::PresentationInfoPtr info) {});
+                        [](ui_mozart::PresentationInfoPtr info) {});
         return true;
       }
       case mozart::PointerEvent::Phase::UP: {
@@ -77,7 +77,7 @@ bool View::OnInputEvent(mozart::InputEventPtr event) {
         stable_group_.AddStroke(*stroke);
         pointer_id_to_stroke_map_.erase(it);
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](scenic::PresentationInfoPtr info) {});
+                        [](ui_mozart::PresentationInfoPtr info) {});
         return true;
       }
       default:
@@ -91,7 +91,7 @@ bool View::OnInputEvent(mozart::InputEventPtr event) {
         keyboard->hid_usage == 6 /* c */) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                      [](scenic::PresentationInfoPtr info) {});
+                      [](ui_mozart::PresentationInfoPtr info) {});
       return true;
     }
   }

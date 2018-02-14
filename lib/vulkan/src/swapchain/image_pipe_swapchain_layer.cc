@@ -462,7 +462,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
   fidl::Array<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
-  scenic::PresentationInfoPtr info;
+  ui_mozart::PresentationInfoPtr info;
   image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
                             std::move(acquire_fences),
                             std::move(release_fences), &info);

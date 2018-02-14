@@ -21,7 +21,7 @@ class SpinningSquareView : public mozart::BaseView {
  private:
   // |BaseView|:
   void OnSceneInvalidated(
-      scenic::PresentationInfoPtr presentation_info) override;
+      ui_mozart::PresentationInfoPtr presentation_info) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::ShapeNode square_node_;

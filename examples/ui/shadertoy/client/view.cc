@@ -120,7 +120,7 @@ float View::UpdateTransition(zx_time_t presentation_time) {
   return glm::smoothstep(0.f, 1.f, transition_param);
 }
 
-void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
+void View::OnSceneInvalidated(ui_mozart::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

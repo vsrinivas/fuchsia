@@ -19,7 +19,10 @@ void Session::Enqueue(::fidl::Array<ui_mozart::CommandPtr> cmds) {
   FXL_DCHECK(false) << "unimplemented.";
 }
 
-void Session::Present() {
+void Session::Present(uint64_t presentation_time,
+                      ::fidl::Array<zx::event> acquire_fences,
+                      ::fidl::Array<zx::event> release_fences,
+                      const PresentCallback& callback) {
   FXL_DCHECK(false) << "unimplemented.";
 }
 

@@ -11,7 +11,9 @@ import "lib/ui/mozart/fidl/events.fidl";
 // that create or modify resources.
 interface Session {
   Enqueue@0(array<Command> cmds);
-  Present@1();
+  Present@1(uint64 presentation_time,
+      array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
+      (PresentationInfo presentation_info);
 };
 
 // Listens for events which occur within the session.

@@ -147,7 +147,7 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
 
   // Present the image and request another frame.
   auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-                                    scenic::PresentationInfoPtr info) {
+                                    ui_mozart::PresentationInfoPtr info) {
     // Need this cast in order to call protected member of superclass.
     if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
       self->OnFramePresented(info);

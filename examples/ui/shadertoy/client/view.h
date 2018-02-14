@@ -29,7 +29,7 @@ class View : public mozart::BaseView {
  private:
   // |BaseView|.
   void OnSceneInvalidated(
-      scenic::PresentationInfoPtr presentation_info) override;
+      ui_mozart::PresentationInfoPtr presentation_info) override;
 
   app::ApplicationContext* const application_context_;
   fsl::MessageLoop* loop_;

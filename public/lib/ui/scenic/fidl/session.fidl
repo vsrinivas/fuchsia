@@ -4,8 +4,8 @@
 
 module scenic;
 
+import "lib/ui/mozart/fidl/presentation_info.fidl";
 import "lib/ui/scenic/fidl/ops.fidl";
-import "lib/ui/scenic/fidl/presentation_info.fidl";
 import "lib/ui/scenic/fidl/types.fidl";
 
 interface Session {
@@ -128,7 +128,7 @@ interface Session {
   // content?
   Present@1(uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
-      (PresentationInfo presentation_info);
+      (ui_mozart.PresentationInfo presentation_info);
 
   // Performs a hit test along the specified ray.
   //

@@ -24,7 +24,7 @@ class Session : private scenic::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback = std::function<void(scenic::PresentationInfoPtr info)>;
+  using PresentCallback = std::function<void(ui_mozart::PresentationInfoPtr info)>;
 
   // Provide information about hits.
   using HitTestCallback = std::function<void(fidl::Array<scenic::HitPtr> hits)>;

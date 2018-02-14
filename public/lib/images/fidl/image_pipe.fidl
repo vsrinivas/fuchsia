@@ -2,7 +2,7 @@ module scenic;
 
 import "lib/images/fidl/image_info.fidl";
 import "lib/images/fidl/memory_type.fidl";
-import "lib/ui/scenic/fidl/presentation_info.fidl";
+import "lib/ui/mozart/fidl/presentation_info.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
@@ -115,5 +115,5 @@ interface ImagePipe {
   // - |image_id| does not reference a currently registered image resource
   PresentImage@2(uint32 image_id, uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
-          (PresentationInfo presentation_info);
+          (ui_mozart.PresentationInfo presentation_info);
 };
