@@ -14,92 +14,89 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <linux/debugfs.h>
-#include <linux/netdevice.h>
-#include <linux/module.h>
 #include <linux/devcoredump.h>
+#include <linux/module.h>
+#include <linux/netdevice.h>
 
-#include <brcmu_wifi.h>
 #include <brcmu_utils.h>
-#include "core.h"
+#include <brcmu_wifi.h>
 #include "bus.h"
-#include "fweh.h"
+#include "core.h"
 #include "debug.h"
+#include "fweh.h"
 
-static struct dentry *root_folder;
+static struct dentry* root_folder;
 
-int brcmf_debug_create_memdump(struct brcmf_bus *bus, const void *data,
-			       size_t len)
-{
-	void *dump;
-	size_t ramsize;
-	int err;
+int brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {
+    void* dump;
+    size_t ramsize;
+    int err;
 
-	ramsize = brcmf_bus_get_ramsize(bus);
-	if (!ramsize)
-		return -ENOTSUPP;
+    ramsize = brcmf_bus_get_ramsize(bus);
+    if (!ramsize) {
+        return -ENOTSUPP;
+    }
 
-	dump = vzalloc(len + ramsize);
-	if (!dump)
-		return -ENOMEM;
+    dump = vzalloc(len + ramsize);
+    if (!dump) {
+        return -ENOMEM;
+    }
 
-	memcpy(dump, data, len);
-	err = brcmf_bus_get_memdump(bus, dump + len, ramsize);
-	if (err) {
-		vfree(dump);
-		return err;
-	}
+    memcpy(dump, data, len);
+    err = brcmf_bus_get_memdump(bus, dump + len, ramsize);
+    if (err) {
+        vfree(dump);
+        return err;
+    }
 
-	dev_coredumpv(bus->dev, dump, len + ramsize, GFP_KERNEL);
+    dev_coredumpv(bus->dev, dump, len + ramsize, GFP_KERNEL);
 
-	return 0;
+    return 0;
 }
 
-void brcmf_debugfs_init(void)
-{
-	root_folder = debugfs_create_dir(KBUILD_MODNAME, NULL);
-	if (IS_ERR(root_folder))
-		root_folder = NULL;
+void brcmf_debugfs_init(void) {
+    root_folder = debugfs_create_dir(KBUILD_MODNAME, NULL);
+    if (IS_ERR(root_folder)) {
+        root_folder = NULL;
+    }
 }
 
-void brcmf_debugfs_exit(void)
-{
-	if (!root_folder)
-		return;
+void brcmf_debugfs_exit(void) {
+    if (!root_folder) {
+        return;
+    }
 
-	debugfs_remove_recursive(root_folder);
-	root_folder = NULL;
+    debugfs_remove_recursive(root_folder);
+    root_folder = NULL;
 }
 
-int brcmf_debug_attach(struct brcmf_pub *drvr)
-{
-	struct device *dev = drvr->bus_if->dev;
+int brcmf_debug_attach(struct brcmf_pub* drvr) {
+    struct device* dev = drvr->bus_if->dev;
 
-	if (!root_folder)
-		return -ENODEV;
+    if (!root_folder) {
+        return -ENODEV;
+    }
 
-	drvr->dbgfs_dir = debugfs_create_dir(dev_name(dev), root_folder);
-	return PTR_ERR_OR_ZERO(drvr->dbgfs_dir);
+    drvr->dbgfs_dir = debugfs_create_dir(dev_name(dev), root_folder);
+    return PTR_ERR_OR_ZERO(drvr->dbgfs_dir);
 }
 
-void brcmf_debug_detach(struct brcmf_pub *drvr)
-{
-	brcmf_fweh_unregister(drvr, BRCMF_E_PSM_WATCHDOG);
+void brcmf_debug_detach(struct brcmf_pub* drvr) {
+    brcmf_fweh_unregister(drvr, BRCMF_E_PSM_WATCHDOG);
 
-	if (!IS_ERR_OR_NULL(drvr->dbgfs_dir))
-		debugfs_remove_recursive(drvr->dbgfs_dir);
+    if (!IS_ERR_OR_NULL(drvr->dbgfs_dir)) {
+        debugfs_remove_recursive(drvr->dbgfs_dir);
+    }
 }
 
-struct dentry *brcmf_debugfs_get_devdir(struct brcmf_pub *drvr)
-{
-	return drvr->dbgfs_dir;
+struct dentry* brcmf_debugfs_get_devdir(struct brcmf_pub* drvr) {
+    return drvr->dbgfs_dir;
 }
 
-int brcmf_debugfs_add_entry(struct brcmf_pub *drvr, const char *fn,
-			    int (*read_fn)(struct seq_file *seq, void *data))
-{
-	struct dentry *e;
+int brcmf_debugfs_add_entry(struct brcmf_pub* drvr, const char* fn,
+                            int (*read_fn)(struct seq_file* seq, void* data)) {
+    struct dentry* e;
 
-	e = debugfs_create_devm_seqfile(drvr->bus_if->dev, fn,
-					drvr->dbgfs_dir, read_fn);
-	return PTR_ERR_OR_ZERO(e);
+    e = debugfs_create_devm_seqfile(drvr->bus_if->dev, fn, drvr->dbgfs_dir, read_fn);
+    return PTR_ERR_OR_ZERO(e);
 }

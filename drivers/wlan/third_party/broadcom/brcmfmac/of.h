@@ -14,11 +14,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #ifdef CONFIG_OF
-void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
-		    struct brcmf_mp_device *settings);
+void brcmf_of_probe(struct device* dev, enum brcmf_bus_type bus_type,
+                    struct brcmf_mp_device* settings);
 #else
-static void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
-			   struct brcmf_mp_device *settings)
-{
-}
+static void brcmf_of_probe(struct device* dev, enum brcmf_bus_type bus_type,
+                           struct brcmf_mp_device* settings) {}
 #endif /* CONFIG_OF */

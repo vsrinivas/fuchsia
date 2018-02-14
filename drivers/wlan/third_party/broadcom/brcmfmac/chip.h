@@ -18,8 +18,7 @@
 
 #include <linux/types.h>
 
-#define CORE_CC_REG(base, field) \
-		(base + offsetof(struct chipcregs, field))
+#define CORE_CC_REG(base, field) (base + offsetof(struct chipcregs, field))
 
 /**
  * struct brcmf_chip - chip level information.
@@ -36,16 +35,16 @@
  * @name: string representation of the chip identifier.
  */
 struct brcmf_chip {
-	u32 chip;
-	u32 chiprev;
-	u32 cc_caps;
-	u32 cc_caps_ext;
-	u32 pmucaps;
-	u32 pmurev;
-	u32 rambase;
-	u32 ramsize;
-	u32 srsize;
-	char name[8];
+    u32 chip;
+    u32 chiprev;
+    u32 cc_caps;
+    u32 cc_caps_ext;
+    u32 pmucaps;
+    u32 pmurev;
+    u32 rambase;
+    u32 ramsize;
+    u32 srsize;
+    char name[8];
 };
 
 /**
@@ -56,9 +55,9 @@ struct brcmf_chip {
  * @base: base address of core register space.
  */
 struct brcmf_core {
-	u16 id;
-	u16 rev;
-	u32 base;
+    u16 id;
+    u16 rev;
+    u32 base;
 };
 
 /**
@@ -69,29 +68,27 @@ struct brcmf_core {
  * @prepare: prepare bus for core configuration.
  * @setup: bus-specific core setup.
  * @active: chip becomes active.
- *	The callback should use the provided @rstvec when non-zero.
+ *  The callback should use the provided @rstvec when non-zero.
  */
 struct brcmf_buscore_ops {
-	u32 (*read32)(void *ctx, u32 addr);
-	void (*write32)(void *ctx, u32 addr, u32 value);
-	int (*prepare)(void *ctx);
-	int (*reset)(void *ctx, struct brcmf_chip *chip);
-	int (*setup)(void *ctx, struct brcmf_chip *chip);
-	void (*activate)(void *ctx, struct brcmf_chip *chip, u32 rstvec);
+    u32 (*read32)(void* ctx, u32 addr);
+    void (*write32)(void* ctx, u32 addr, u32 value);
+    int (*prepare)(void* ctx);
+    int (*reset)(void* ctx, struct brcmf_chip* chip);
+    int (*setup)(void* ctx, struct brcmf_chip* chip);
+    void (*activate)(void* ctx, struct brcmf_chip* chip, u32 rstvec);
 };
 
-struct brcmf_chip *brcmf_chip_attach(void *ctx,
-				     const struct brcmf_buscore_ops *ops);
-void brcmf_chip_detach(struct brcmf_chip *chip);
-struct brcmf_core *brcmf_chip_get_core(struct brcmf_chip *chip, u16 coreid);
-struct brcmf_core *brcmf_chip_get_chipcommon(struct brcmf_chip *chip);
-struct brcmf_core *brcmf_chip_get_pmu(struct brcmf_chip *pub);
-bool brcmf_chip_iscoreup(struct brcmf_core *core);
-void brcmf_chip_coredisable(struct brcmf_core *core, u32 prereset, u32 reset);
-void brcmf_chip_resetcore(struct brcmf_core *core, u32 prereset, u32 reset,
-			  u32 postreset);
-void brcmf_chip_set_passive(struct brcmf_chip *ci);
-bool brcmf_chip_set_active(struct brcmf_chip *ci, u32 rstvec);
-bool brcmf_chip_sr_capable(struct brcmf_chip *pub);
+struct brcmf_chip* brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops);
+void brcmf_chip_detach(struct brcmf_chip* chip);
+struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* chip, u16 coreid);
+struct brcmf_core* brcmf_chip_get_chipcommon(struct brcmf_chip* chip);
+struct brcmf_core* brcmf_chip_get_pmu(struct brcmf_chip* pub);
+bool brcmf_chip_iscoreup(struct brcmf_core* core);
+void brcmf_chip_coredisable(struct brcmf_core* core, u32 prereset, u32 reset);
+void brcmf_chip_resetcore(struct brcmf_core* core, u32 prereset, u32 reset, u32 postreset);
+void brcmf_chip_set_passive(struct brcmf_chip* ci);
+bool brcmf_chip_set_active(struct brcmf_chip* ci, u32 rstvec);
+bool brcmf_chip_sr_capable(struct brcmf_chip* pub);
 
 #endif /* BRCMF_AXIDMP_H */

@@ -15,13 +15,13 @@
 #ifndef BRCMFMAC_COMMON_H
 #define BRCMFMAC_COMMON_H
 
-#include <linux/platform_device.h>
 #include <linux/platform_data/brcmfmac.h>
+#include <linux/platform_device.h>
 #include "fwil_types.h"
 
 extern const u8 ALLFFMAC[ETH_ALEN];
 
-#define BRCMF_FW_ALTPATH_LEN			256
+#define BRCMF_FW_ALTPATH_LEN 256
 
 /* Definitions for the module global and device specific settings are defined
  * here. Two structs are used for them. brcmf_mp_global_t and brcmf_mp_device.
@@ -37,7 +37,7 @@ extern const u8 ALLFFMAC[ETH_ALEN];
  * @firmware_path: Alternative firmware path.
  */
 struct brcmf_mp_global_t {
-	char	firmware_path[BRCMF_FW_ALTPATH_LEN];
+    char firmware_path[BRCMF_FW_ALTPATH_LEN];
 };
 
 extern struct brcmf_mp_global_t brcmf_mp_global;
@@ -54,25 +54,24 @@ extern struct brcmf_mp_global_t brcmf_mp_global;
  * @bus: Bus specific platform data. Only SDIO at the mmoment.
  */
 struct brcmf_mp_device {
-	bool		p2p_enable;
-	unsigned int	feature_disable;
-	int		fcmode;
-	bool		roamoff;
-	bool		ignore_probe_fail;
-	struct brcmfmac_pd_cc *country_codes;
-	union {
-		struct brcmfmac_sdio_pd sdio;
-	} bus;
+    bool p2p_enable;
+    unsigned int feature_disable;
+    int fcmode;
+    bool roamoff;
+    bool ignore_probe_fail;
+    struct brcmfmac_pd_cc* country_codes;
+    union {
+        struct brcmfmac_sdio_pd sdio;
+    } bus;
 };
 
-void brcmf_c_set_joinpref_default(struct brcmf_if *ifp);
+void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
-struct brcmf_mp_device *brcmf_get_module_param(struct device *dev,
-					       enum brcmf_bus_type bus_type,
-					       u32 chip, u32 chiprev);
-void brcmf_release_module_param(struct brcmf_mp_device *module_param);
+struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
+                                               u32 chip, u32 chiprev);
+void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 
 /* Sets dongle media info (drv_version, mac address). */
-int brcmf_c_preinit_dcmds(struct brcmf_if *ifp);
+int brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
 
 #endif /* BRCMFMAC_COMMON_H */

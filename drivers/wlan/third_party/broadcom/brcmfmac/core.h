@@ -24,31 +24,31 @@
 #include <net/cfg80211.h>
 #include "fweh.h"
 
-#define TOE_TX_CSUM_OL		0x00000001
-#define TOE_RX_CSUM_OL		0x00000002
+#define TOE_TX_CSUM_OL 0x00000001
+#define TOE_RX_CSUM_OL 0x00000002
 
 /* For supporting multiple interfaces */
-#define BRCMF_MAX_IFS	16
+#define BRCMF_MAX_IFS 16
 
 /* Small, medium and maximum buffer size for dcmd
  */
-#define BRCMF_DCMD_SMLEN	256
-#define BRCMF_DCMD_MEDLEN	1536
-#define BRCMF_DCMD_MAXLEN	8192
+#define BRCMF_DCMD_SMLEN 256
+#define BRCMF_DCMD_MEDLEN 1536
+#define BRCMF_DCMD_MAXLEN 8192
 
 /* IOCTL from host to device are limited in lenght. A device can only handle
  * ethernet frame size. This limitation is to be applied by protocol layer.
  */
-#define BRCMF_TX_IOCTL_MAX_MSG_SIZE	(ETH_FRAME_LEN+ETH_FCS_LEN)
+#define BRCMF_TX_IOCTL_MAX_MSG_SIZE (ETH_FRAME_LEN + ETH_FCS_LEN)
 
-#define BRCMF_AMPDU_RX_REORDER_MAXFLOWS		256
+#define BRCMF_AMPDU_RX_REORDER_MAXFLOWS 256
 
 /* Length of firmware version string stored for
  * ethtool driver info which uses 32 bytes as well.
  */
-#define BRCMF_DRIVER_FIRMWARE_VERSION_LEN	32
+#define BRCMF_DRIVER_FIRMWARE_VERSION_LEN 32
 
-#define NDOL_MAX_ENTRIES	8
+#define NDOL_MAX_ENTRIES 8
 
 /**
  * struct brcmf_ampdu_rx_reorder - AMPDU receive reorder info
@@ -61,18 +61,18 @@
  * @pend_pkts: number of packets currently in @pktslots.
  */
 struct brcmf_ampdu_rx_reorder {
-	struct sk_buff **pktslots;
-	u8 flow_id;
-	u8 cur_idx;
-	u8 exp_idx;
-	u8 max_idx;
-	u8 pend_pkts;
+    struct sk_buff** pktslots;
+    u8 flow_id;
+    u8 cur_idx;
+    u8 exp_idx;
+    u8 max_idx;
+    u8 pend_pkts;
 };
 
 /* Forward decls for struct brcmf_pub (see below) */
-struct brcmf_proto;	/* device communication protocol info */
-struct brcmf_fws_info;	/* firmware signalling info */
-struct brcmf_mp_device;	/* module paramateres, device specific */
+struct brcmf_proto;     /* device communication protocol info */
+struct brcmf_fws_info;  /* firmware signalling info */
+struct brcmf_mp_device; /* module paramateres, device specific */
 
 /*
  * struct brcmf_rev_info
@@ -83,66 +83,65 @@ struct brcmf_mp_device;	/* module paramateres, device specific */
  * fwil_types.h
  */
 struct brcmf_rev_info {
-	int result;
-	u32 vendorid;
-	u32 deviceid;
-	u32 radiorev;
-	u32 chiprev;
-	u32 corerev;
-	u32 boardid;
-	u32 boardvendor;
-	u32 boardrev;
-	u32 driverrev;
-	u32 ucoderev;
-	u32 bus;
-	u32 chipnum;
-	u32 phytype;
-	u32 phyrev;
-	u32 anarev;
-	u32 chippkg;
-	u32 nvramrev;
+    int result;
+    u32 vendorid;
+    u32 deviceid;
+    u32 radiorev;
+    u32 chiprev;
+    u32 corerev;
+    u32 boardid;
+    u32 boardvendor;
+    u32 boardrev;
+    u32 driverrev;
+    u32 ucoderev;
+    u32 bus;
+    u32 chipnum;
+    u32 phytype;
+    u32 phyrev;
+    u32 anarev;
+    u32 chippkg;
+    u32 nvramrev;
 };
 
 /* Common structure for module and instance linkage */
 struct brcmf_pub {
-	/* Linkage ponters */
-	struct brcmf_bus *bus_if;
-	struct brcmf_proto *proto;
-	struct brcmf_cfg80211_info *config;
+    /* Linkage ponters */
+    struct brcmf_bus* bus_if;
+    struct brcmf_proto* proto;
+    struct brcmf_cfg80211_info* config;
 
-	/* Internal brcmf items */
-	uint hdrlen;		/* Total BRCMF header length (proto + bus) */
+    /* Internal brcmf items */
+    uint hdrlen; /* Total BRCMF header length (proto + bus) */
 
-	/* Dongle media info */
-	char fwver[BRCMF_DRIVER_FIRMWARE_VERSION_LEN];
-	u8 mac[ETH_ALEN];		/* MAC address obtained from dongle */
+    /* Dongle media info */
+    char fwver[BRCMF_DRIVER_FIRMWARE_VERSION_LEN];
+    u8 mac[ETH_ALEN]; /* MAC address obtained from dongle */
 
-	struct mac_address addresses[BRCMF_MAX_IFS];
+    struct mac_address addresses[BRCMF_MAX_IFS];
 
-	struct brcmf_if *iflist[BRCMF_MAX_IFS];
-	s32 if2bss[BRCMF_MAX_IFS];
+    struct brcmf_if* iflist[BRCMF_MAX_IFS];
+    s32 if2bss[BRCMF_MAX_IFS];
 
-	struct mutex proto_block;
-	unsigned char proto_buf[BRCMF_DCMD_MAXLEN];
+    struct mutex proto_block;
+    unsigned char proto_buf[BRCMF_DCMD_MAXLEN];
 
-	struct brcmf_fweh_info fweh;
+    struct brcmf_fweh_info fweh;
 
-	struct brcmf_ampdu_rx_reorder
-		*reorder_flows[BRCMF_AMPDU_RX_REORDER_MAXFLOWS];
+    struct brcmf_ampdu_rx_reorder* reorder_flows[BRCMF_AMPDU_RX_REORDER_MAXFLOWS];
 
-	u32 feat_flags;
-	u32 chip_quirks;
+    u32 feat_flags;
+    u32 chip_quirks;
 
-	struct brcmf_rev_info revinfo;
+    struct brcmf_rev_info revinfo;
 #ifdef DEBUG
-	struct dentry *dbgfs_dir;
+    struct dentry* dbgfs_dir;
 #endif
 
-	struct notifier_block inetaddr_notifier;
-	struct notifier_block inet6addr_notifier;
-	struct brcmf_mp_device *settings;
+    struct notifier_block inetaddr_notifier;
+    struct notifier_block inet6addr_notifier;
+    struct brcmf_mp_device* settings;
 
-	u8 clmver[BRCMF_DCMD_SMLEN];
+    u8 clmver[BRCMF_DCMD_SMLEN];
 };
 
 /* forward declarations */
@@ -153,16 +152,16 @@ struct brcmf_fws_mac_descriptor;
  * enum brcmf_netif_stop_reason - reason for stopping netif queue.
  *
  * @BRCMF_NETIF_STOP_REASON_FWS_FC:
- *	netif stopped due to firmware signalling flow control.
+ *  netif stopped due to firmware signalling flow control.
  * @BRCMF_NETIF_STOP_REASON_FLOW:
- *	netif stopped due to flowring full.
+ *  netif stopped due to flowring full.
  * @BRCMF_NETIF_STOP_REASON_DISCONNECTED:
- *	netif stopped due to not being connected (STA mode).
+ *  netif stopped due to not being connected (STA mode).
  */
 enum brcmf_netif_stop_reason {
-	BRCMF_NETIF_STOP_REASON_FWS_FC = BIT(0),
-	BRCMF_NETIF_STOP_REASON_FLOW = BIT(1),
-	BRCMF_NETIF_STOP_REASON_DISCONNECTED = BIT(2)
+    BRCMF_NETIF_STOP_REASON_FWS_FC = BIT(0),
+    BRCMF_NETIF_STOP_REASON_FLOW = BIT(1),
+    BRCMF_NETIF_STOP_REASON_DISCONNECTED = BIT(2)
 };
 
 /**
@@ -183,38 +182,37 @@ enum brcmf_netif_stop_reason {
  * @pend_8021x_wait: used for signalling change in count.
  */
 struct brcmf_if {
-	struct brcmf_pub *drvr;
-	struct brcmf_cfg80211_vif *vif;
-	struct net_device *ndev;
-	struct work_struct multicast_work;
-	struct work_struct ndoffload_work;
-	struct brcmf_fws_mac_descriptor *fws_desc;
-	int ifidx;
-	s32 bsscfgidx;
-	u8 mac_addr[ETH_ALEN];
-	u8 netif_stop;
-	spinlock_t netif_stop_lock;
-	atomic_t pend_8021x_cnt;
-	wait_queue_head_t pend_8021x_wait;
-	struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
-	u8 ipv6addr_idx;
+    struct brcmf_pub* drvr;
+    struct brcmf_cfg80211_vif* vif;
+    struct net_device* ndev;
+    struct work_struct multicast_work;
+    struct work_struct ndoffload_work;
+    struct brcmf_fws_mac_descriptor* fws_desc;
+    int ifidx;
+    s32 bsscfgidx;
+    u8 mac_addr[ETH_ALEN];
+    u8 netif_stop;
+    spinlock_t netif_stop_lock;
+    atomic_t pend_8021x_cnt;
+    wait_queue_head_t pend_8021x_wait;
+    struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
+    u8 ipv6addr_idx;
 };
 
-int brcmf_netdev_wait_pend8021x(struct brcmf_if *ifp);
+int brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 
 /* Return pointer to interface name */
-char *brcmf_ifname(struct brcmf_if *ifp);
-struct brcmf_if *brcmf_get_ifp(struct brcmf_pub *drvr, int ifidx);
-void brcmf_configure_arp_nd_offload(struct brcmf_if *ifp, bool enable);
-int brcmf_net_attach(struct brcmf_if *ifp, bool rtnl_locked);
-struct brcmf_if *brcmf_add_if(struct brcmf_pub *drvr, s32 bsscfgidx, s32 ifidx,
-			      bool is_p2pdev, const char *name, u8 *mac_addr);
-void brcmf_remove_interface(struct brcmf_if *ifp, bool rtnl_locked);
-void brcmf_txflowblock_if(struct brcmf_if *ifp,
-			  enum brcmf_netif_stop_reason reason, bool state);
-void brcmf_txfinalize(struct brcmf_if *ifp, struct sk_buff *txp, bool success);
-void brcmf_netif_rx(struct brcmf_if *ifp, struct sk_buff *skb);
-void brcmf_net_setcarrier(struct brcmf_if *ifp, bool on);
+char* brcmf_ifname(struct brcmf_if* ifp);
+struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx);
+void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable);
+int brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);
+struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, s32 bsscfgidx, s32 ifidx, bool is_p2pdev,
+                              const char* name, u8* mac_addr);
+void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked);
+void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state);
+void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success);
+void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb);
+void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 int __init brcmf_core_init(void);
 void __exit brcmf_core_exit(void);
 
