@@ -54,11 +54,11 @@ source_set("lib") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/syslog",
   ]
 }
 
@@ -72,7 +72,6 @@ executable("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/syslog/cpp",
   ]
 }
 
