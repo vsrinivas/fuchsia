@@ -59,7 +59,7 @@ char* brcmf_ifname(struct brcmf_if* ifp) {
 
 struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx) {
     struct brcmf_if* ifp;
-    s32 bsscfgidx;
+    int32_t bsscfgidx;
 
     if (ifidx < 0 || ifidx >= BRCMF_MAX_IFS) {
         brcmf_err("ifidx %d out of range\n", ifidx);
@@ -76,8 +76,8 @@ struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx) {
 }
 
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
-    s32 err;
-    u32 mode;
+    int32_t err;
+    uint32_t mode;
 
     if (enable) {
         mode = BRCMF_ARP_OL_AGENT | BRCMF_ARP_OL_PEER_AUTO_REPLY;
@@ -111,12 +111,12 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     struct brcmf_if* ifp;
     struct net_device* ndev;
     struct netdev_hw_addr* ha;
-    u32 cmd_value, cnt;
+    uint32_t cmd_value, cnt;
     __le32 cnt_le;
     char* buf;
     char* bufp;
-    u32 buflen;
-    s32 err;
+    uint32_t buflen;
+    int32_t err;
 
     ifp = container_of(work, struct brcmf_if, multicast_work);
 
@@ -401,7 +401,7 @@ void brcmf_rx_event(struct device* dev, struct sk_buff* skb) {
 
 void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success) {
     struct ethhdr* eh;
-    u16 type;
+    uint16_t type;
 
     eh = (struct ethhdr*)(txp->data);
     type = ntohs(eh->h_proto);
@@ -456,7 +456,7 @@ static int brcmf_netdev_open(struct net_device* ndev) {
     struct brcmf_if* ifp = netdev_priv(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
     struct brcmf_bus* bus_if = drvr->bus_if;
-    u32 toe_ol;
+    uint32_t toe_ol;
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
@@ -496,7 +496,7 @@ static const struct net_device_ops brcmf_netdev_ops_pri = {
 int brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     struct brcmf_pub* drvr = ifp->drvr;
     struct net_device* ndev;
-    s32 err;
+    int32_t err;
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
     ndev = ifp->ndev;
@@ -618,8 +618,8 @@ fail:
     return -EBADE;
 }
 
-struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, s32 bsscfgidx, s32 ifidx, bool is_p2pdev,
-                              const char* name, u8* mac_addr) {
+struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
+                              const char* name, uint8_t* mac_addr) {
     struct brcmf_if* ifp;
     struct net_device* ndev;
 
@@ -684,7 +684,7 @@ struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, s32 bsscfgidx, s32 ifidx, 
     return ifp;
 }
 
-static void brcmf_del_if(struct brcmf_pub* drvr, s32 bsscfgidx, bool rtnl_locked) {
+static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_locked) {
     struct brcmf_if* ifp;
 
     ifp = drvr->iflist[bsscfgidx];
@@ -759,7 +759,7 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
     struct net_device* ndev = ifa->ifa_dev->dev;
     struct brcmf_if* ifp;
     int idx, i, ret;
-    u32 val;
+    uint32_t val;
     __be32 addr_table[ARPOL_MAX_ENTRIES] = {0};
 
     /* Find out if the notification is meant for us */
@@ -1099,7 +1099,7 @@ void brcmf_dev_reset(struct device* dev) {
 }
 
 void brcmf_detach(struct device* dev) {
-    s32 i;
+    int32_t i;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
@@ -1141,7 +1141,7 @@ void brcmf_detach(struct device* dev) {
     kfree(drvr);
 }
 
-s32 brcmf_iovar_data_set(struct device* dev, char* name, void* data, u32 len) {
+int32_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_if* ifp = bus_if->drvr->iflist[0];
 

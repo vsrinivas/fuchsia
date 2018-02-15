@@ -30,14 +30,6 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint16_t u16;
-typedef uint8_t u8;
-typedef int64_t s64;
-typedef int32_t s32;
-typedef int16_t s16;
-typedef int8_t s8;
 typedef uint16_t __be16;
 typedef uint32_t __be32;
 typedef uint64_t __be64;
@@ -125,8 +117,8 @@ typedef struct {
 #define roundup_log2(val) \
     ((unsigned long)(val) == 0 ? (val) : ((sizeof(unsigned long) * 8) - __builtin_clzl((val)-1)))
 
-typedef s32 spinlock_t;
-typedef u32 gfp_t;
+typedef int32_t spinlock_t;
+typedef uint32_t gfp_t;
 
 #define LINUX_FUNC(name, paramtype, rettype)                                                   \
     static inline rettype name(paramtype foo, ...) {                                           \
@@ -147,8 +139,8 @@ typedef u32 gfp_t;
 #define LINUX_FUNCVI(name) LINUX_FUNC(name, void*, int)
 #define LINUX_FUNCcVI(name) LINUX_FUNC(name, const void*, int)
 #define LINUX_FUNCcVV(name) LINUX_FUNC(name, const void*, void*)
-#define LINUX_FUNCVU(name) LINUX_FUNC(name, void*, u16)
-#define LINUX_FUNCUU(name) LINUX_FUNC(name, u32, u32)
+#define LINUX_FUNCVU(name) LINUX_FUNC(name, void*, uint16_t)
+#define LINUX_FUNCUU(name) LINUX_FUNC(name, uint32_t, uint32_t)
 LINUX_FUNCVV(skb_peek_tail)
 LINUX_FUNCVV(skb_peek)
 LINUX_FUNCVI(skb_cloned)
@@ -221,9 +213,9 @@ LINUX_FUNCVU(get_unaligned_le32)
 LINUX_FUNCUU(put_unaligned_le32)
 #define cpu_to_le32(a) (a)
 LINUX_FUNCUU(le32_to_cpu)
-LINUX_FUNC(le32_to_cpup, u32*, u32)
+LINUX_FUNC(le32_to_cpup, uint32_t*, uint32_t)
 LINUX_FUNCUU(le16_to_cpu)
-LINUX_FUNC(le64_to_cpu, u64, u64)
+LINUX_FUNC(le64_to_cpu, uint64_t, uint64_t)
 LINUX_FUNCVI(brcmf_dbg_hex_dump)
 LINUX_FUNCVI(trace_brcmf_hexdump)
 LINUX_FUNCVI(trace_brcmf_debug)
@@ -519,8 +511,8 @@ LINUX_FUNCVI(print_hex_dump_bytes)
 #define for_each_set_bit(a, b, c) for (a = 0;;)
 #define list_first_entry(a, b, c) ((b*)0)
 
-typedef u64 phys_addr_t;
-typedef u64 pm_message_t;
+typedef uint64_t phys_addr_t;
+typedef uint64_t pm_message_t;
 typedef void* usb_complete_t;
 #define DEBUG                         // Turns on struct members that debug.c needs
 #define CONFIG_OF                     // Turns on functions that of.c needs
@@ -867,7 +859,7 @@ enum nl80211_band {
 
 enum brcmf_bus_type { FOO2 };
 
-extern u64 jiffies;
+extern uint64_t jiffies;
 
 #define TP_PROTO(args...) args
 #define MODULE_FIRMWARE(a)
@@ -910,24 +902,24 @@ struct sg_table {
 
 struct sk_buff;
 struct sk_buff_head {
-    u32 priority;
+    uint32_t priority;
     int qlen;
     struct sk_buff* next;
 };
 
 struct sk_buff {
-    u16 protocol;
+    uint16_t protocol;
     int priority;
-    u16 len;
-    u32 data_len;
-    u32 end;
-    u32 tail;
+    uint16_t len;
+    uint32_t data_len;
+    uint32_t end;
+    uint32_t tail;
     void* data;
     void* next;
     void* prev;
     void* cb;
-    u32 pkt_type;
-    u32 ip_summed;
+    uint32_t pkt_type;
+    uint32_t ip_summed;
 };
 
 struct {
@@ -935,9 +927,9 @@ struct {
 } * current;
 
 struct brcmfmac_pd_cc_entry {
-    u8* iso3166;
-    u32 rev;
-    u8* cc;
+    uint8_t* iso3166;
+    uint32_t rev;
+    uint8_t* cc;
 };
 
 struct brcmfmac_pd_cc {
@@ -946,8 +938,8 @@ struct brcmfmac_pd_cc {
 };
 
 struct brcmfmac_pd_device {
-    u32 bus_type;
-    u32 id;
+    uint32_t bus_type;
+    uint32_t id;
     int rev;
     struct brcmfmac_pd_cc country_codes[555];
     struct {
@@ -992,8 +984,8 @@ struct net_device {
     const struct ethtool_ops* ethtool_ops;
     void* dev_addr;
     void* name;
-    u8 name_assign_type;
-    u32 flags;
+    uint8_t name_assign_type;
+    uint32_t flags;
     struct {
         int tx_dropped;
         int tx_packets;
@@ -1004,8 +996,8 @@ struct net_device {
         int rx_errors;
         int tx_errors;
     } stats;
-    u32 features;
-    u32 needed_headroom;
+    uint32_t features;
+    uint32_t needed_headroom;
     void* priv_destructor;
     int reg_state;
     int needs_free_netdev;
@@ -1015,18 +1007,18 @@ void ether_setup(void);
 
 struct ieee80211_channel {
     int hw_value;
-    u32 flags;
+    uint32_t flags;
     int center_freq;
     int max_antenna_gain;
     int max_power;
     int band;
-    u32 orig_flags;
+    uint32_t orig_flags;
 };
 
 struct ieee80211_rate {
     int bitrate;
-    u32 flags;
-    u32 hw_value;
+    uint32_t flags;
+    uint32_t hw_value;
 };
 
 struct ieee80211_supported_band {
@@ -1034,29 +1026,29 @@ struct ieee80211_supported_band {
     struct ieee80211_rate* bitrates;
     int n_bitrates;
     struct ieee80211_channel* channels;
-    u32 n_channels;
+    uint32_t n_channels;
     struct {
         int ht_supported;
-        u16 cap;
+        uint16_t cap;
         int ampdu_factor;
         int ampdu_density;
         struct {
             void* rx_mask;
-            u32 tx_params;
+            uint32_t tx_params;
         } mcs;
     } ht_cap;
     struct {
         int vht_supported;
-        u32 cap;
+        uint32_t cap;
         struct {
-            u16 rx_mcs_map;
-            u16 tx_mcs_map;
+            uint16_t rx_mcs_map;
+            uint16_t tx_mcs_map;
         } vht_mcs;
     } vht_cap;
 };
 
 struct mac_address {
-    u8* addr;
+    uint8_t* addr;
 };
 
 struct regulatory_request {
@@ -1070,32 +1062,32 @@ struct wiphy {
     int max_sched_scan_ie_len;
     int max_match_sets;
     int max_sched_scan_ssids;
-    u32 rts_threshold;
-    u32 frag_threshold;
-    u32 retry_long;
-    u32 retry_short;
-    u32 interface_modes;
+    uint32_t rts_threshold;
+    uint32_t frag_threshold;
+    uint32_t retry_long;
+    uint32_t retry_short;
+    uint32_t interface_modes;
     struct ieee80211_supported_band* bands[555];
     int n_iface_combinations;
     struct ieee80211_iface_combination* iface_combinations;
-    u32 max_scan_ssids;
-    u32 max_scan_ie_len;
-    u32 max_num_pmkids;
+    uint32_t max_scan_ssids;
+    uint32_t max_scan_ie_len;
+    uint32_t max_num_pmkids;
     struct mac_address* addresses;
-    u32 n_addresses;
-    u32 signal_type;
-    const u32* cipher_suites;
-    u32 n_cipher_suites;
-    u32 bss_select_support;
-    u32 flags;
+    uint32_t n_addresses;
+    uint32_t signal_type;
+    const uint32_t* cipher_suites;
+    uint32_t n_cipher_suites;
+    uint32_t bss_select_support;
+    uint32_t flags;
     const struct ieee80211_txrx_stypes* mgmt_stypes;
-    u32 max_remain_on_channel_duration;
-    u32 n_vendor_commands;
+    uint32_t max_remain_on_channel_duration;
+    uint32_t n_vendor_commands;
     const struct wiphy_vendor_command* vendor_commands;
     void* perm_addr;
     void (*reg_notifier)(struct wiphy*, struct regulatory_request*);
-    u32 regulatory_flags;
-    u32 features;
+    uint32_t regulatory_flags;
+    uint32_t features;
 };
 
 struct vif_params {
@@ -1144,7 +1136,7 @@ struct ieee80211_mgmt {
     char* bssid;
     void* da;
     void* sa;
-    u16 frame_control;
+    uint16_t frame_control;
 };
 
 struct pci_dev {
@@ -1158,7 +1150,7 @@ struct pci_dev {
 };
 
 struct ethhdr {
-    u32 h_proto;
+    uint32_t h_proto;
     void* h_dest;
     void* h_source;
 };
@@ -1199,7 +1191,7 @@ struct seq_file {
 };
 
 struct timer_list {
-    u64 expires;
+    uint64_t expires;
 };
 
 struct asdf {
@@ -1211,8 +1203,8 @@ struct completion {
 };
 
 struct sdio_func {
-    u32 class;
-    u32 vendor;
+    uint32_t class;
+    uint32_t vendor;
     int cur_blksize;
     int enable_timeout;
     int device;
@@ -1220,12 +1212,12 @@ struct sdio_func {
     int num;
     struct {
         struct mmc_host* host;
-        u32 quirks;
+        uint32_t quirks;
         void** sdio_func;
     } * card;
 };
 
-typedef u64 dma_addr_t;
+typedef uint64_t dma_addr_t;
 
 struct pci_device_id {
     int a, b, c, d, e, f, g;
@@ -1252,8 +1244,8 @@ struct ieee80211_regdomain {
             int max_antenna_gain;
             int max_eirp;
         } power_rule;
-        u32 flags;
-        u32 dfs_cac_ms;
+        uint32_t flags;
+        uint32_t dfs_cac_ms;
     } reg_rules[];
 };
 #define REG_RULE(...) \
@@ -1262,7 +1254,7 @@ struct ieee80211_regdomain {
 struct cfg80211_sched_scan_request {
     int n_ssids;
     int n_match_sets;
-    u64 reqid;
+    uint64_t reqid;
     int flags;
     void* mac_addr;
     struct cfg80211_ssid* ssids;
@@ -1280,7 +1272,7 @@ struct wiphy_vendor_command {
         int vendor_id;
         int subcmd;
     } unknown_name;
-    u32 flags;
+    uint32_t flags;
     void* doit;
 };
 
@@ -1338,7 +1330,7 @@ struct cfg80211_connect_params {
     void* ie;
     int ie_len;
     int privacy;
-    u32 key_len;
+    uint32_t key_len;
     int key_idx;
     void* key;
     int want_1x;
@@ -1351,7 +1343,7 @@ struct cfg80211_connect_params {
 };
 
 struct key_params {
-    u32 key_len;
+    uint32_t key_len;
     int cipher;
     void* key;
 };
@@ -1365,42 +1357,42 @@ struct station_info {
     unsigned long filled;
     struct nl80211_sta_flag_update sta_flags;
     struct {
-        u32 flags;
-        u32 dtim_period;
-        u32 beacon_interval;
+        uint32_t flags;
+        uint32_t dtim_period;
+        uint32_t beacon_interval;
     } bss_param;
     struct {
-        u32 legacy;
+        uint32_t legacy;
     } txrate;
     struct {
-        u32 legacy;
+        uint32_t legacy;
     } rxrate;
-    u32 signal;
-    u32 rx_packets;
-    u32 rx_dropped_misc;
-    u32 tx_packets;
-    u32 tx_failed;
-    u32 inactive_time;
-    u32 connected_time;
-    u32 tx_bytes;
-    u32 rx_bytes;
-    u32 chain_signal_avg[555];
-    u32 chain_signal[555];
-    u32 chains;
+    uint32_t signal;
+    uint32_t rx_packets;
+    uint32_t rx_dropped_misc;
+    uint32_t tx_packets;
+    uint32_t tx_failed;
+    uint32_t inactive_time;
+    uint32_t connected_time;
+    uint32_t tx_bytes;
+    uint32_t rx_bytes;
+    uint32_t chain_signal_avg[555];
+    uint32_t chain_signal[555];
+    uint32_t chains;
     void* assoc_req_ies;
-    u32 assoc_req_ies_len;
-    u32 generation;
+    uint32_t assoc_req_ies_len;
+    uint32_t generation;
 };
 
 struct cfg80211_wowlan {
     int disconnect;
     struct {
-        u8* pattern;
-        u32 pattern_len;
-        u8* mask;
-        u32 pkt_offset;
+        uint8_t* pattern;
+        uint32_t pattern_len;
+        uint8_t* mask;
+        uint32_t pkt_offset;
     } * patterns;
-    u32 n_patterns;
+    uint32_t n_patterns;
     int magic_pkt;
     void* nd_config;
     int gtk_rekey_failure;
@@ -1409,7 +1401,7 @@ struct cfg80211_wowlan {
 struct cfg80211_wowlan_nd_match {
     struct {
         void* ssid;
-        u32 ssid_len;
+        uint32_t ssid_len;
     } ssid;
     int n_channels;
     int* channels;
@@ -1424,8 +1416,8 @@ struct cfg80211_wowlan_nd_info {
 };
 
 struct cfg80211_pmksa {
-    u8* bssid;
-    u8* pmkid;
+    uint8_t* bssid;
+    uint8_t* pmkid;
 };
 
 struct cfg80211_beacon_data {
@@ -1455,13 +1447,13 @@ struct station_del_parameters {
 };
 
 struct station_parameters {
-    u32 sta_flags_mask;
-    u32 sta_flags_set;
+    uint32_t sta_flags_mask;
+    uint32_t sta_flags_set;
 };
 
 struct cfg80211_mgmt_tx_params {
     struct ieee80211_channel* chan;
-    u8* buf;
+    uint8_t* buf;
     size_t len;
 };
 
@@ -1544,8 +1536,8 @@ struct ieee80211_iface_combination {
 };
 
 struct ieee80211_txrx_stypes {
-    u32 tx;
-    u32 rx;
+    uint32_t tx;
+    uint32_t rx;
 };
 
 struct ieee80211_iface_limit {
@@ -1573,15 +1565,15 @@ struct ethtool_drvinfo {
 struct mmc_request {
     void* data;
     void* cmd;
-    u32 arg;
-    u32 flags;
+    uint32_t arg;
+    uint32_t flags;
 };
 
 struct mmc_command {
-    u32 arg;
-    u32 flags;
+    uint32_t arg;
+    uint32_t flags;
     int error;
-    u32 opcode;
+    uint32_t opcode;
 };
 
 struct mmc_data {
@@ -1589,12 +1581,12 @@ struct mmc_data {
     int blocks;
     void* sg;
     int blksz;
-    u32 flags;
-    u32 error;
+    uint32_t flags;
+    uint32_t error;
 };
 
 struct usb_ctrlrequest {
-    u16 wLength;
+    uint16_t wLength;
     int bRequest;
     int wValue;
     int wIndex;
@@ -1604,9 +1596,9 @@ struct usb_ctrlrequest {
 struct urb {
     void* context;
     int actual_length;
-    u32 status;
+    uint32_t status;
     int transfer_buffer_length;
-    u16 transfer_flags;
+    uint16_t transfer_flags;
 };
 
 struct cfg80211_match_set {
@@ -1623,7 +1615,7 @@ struct mmc_host {
     void* parent;
     int max_blk_count;
     int max_req_size;
-    u32 caps;
+    uint32_t caps;
     int max_segs;
     int max_seg_size;
 };

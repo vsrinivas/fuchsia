@@ -25,10 +25,10 @@ enum brcmf_usb_state {
 };
 
 struct brcmf_stats {
-    u32 tx_ctlpkts;
-    u32 tx_ctlerrs;
-    u32 rx_ctlpkts;
-    u32 rx_ctlerrs;
+    uint32_t tx_ctlpkts;
+    uint32_t tx_ctlerrs;
+    uint32_t rx_ctlpkts;
+    uint32_t rx_ctlerrs;
 };
 
 struct brcmf_usbdev {
@@ -37,7 +37,7 @@ struct brcmf_usbdev {
     enum brcmf_usb_state state;
     struct brcmf_stats stats;
     int ntxq, nrxq, rxsize;
-    u32 bus_mtu;
+    uint32_t bus_mtu;
     int devid;
     int chiprev; /* chip revsion number */
 };

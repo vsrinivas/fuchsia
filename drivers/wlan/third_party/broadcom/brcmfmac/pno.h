@@ -38,7 +38,7 @@ int brcmf_pno_start_sched_scan(struct brcmf_if* ifp, struct cfg80211_sched_scan_
  * @ifp: interface object used.
  * @reqid: unique identifier of scan to be stopped.
  */
-int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, u64 reqid);
+int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid);
 
 /**
  * brcmf_pno_wiphy_params - fill scheduled scan parameters in wiphy instance.
@@ -68,7 +68,7 @@ void brcmf_pno_detach(struct brcmf_cfg80211_info* cfg);
  * @pi: pno instance used.
  * @bucket: index of firmware bucket.
  */
-u64 brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, u32 bucket);
+uint64_t brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, uint32_t bucket);
 
 /**
  * brcmf_pno_get_bucket_map - determine bucket map for given netinfo.
@@ -76,6 +76,6 @@ u64 brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, u32 bucket);
  * @pi: pno instance used.
  * @netinfo: netinfo to compare with bucket configuration.
  */
-u32 brcmf_pno_get_bucket_map(struct brcmf_pno_info* pi, struct brcmf_pno_net_info_le* netinfo);
+uint32_t brcmf_pno_get_bucket_map(struct brcmf_pno_info* pi, struct brcmf_pno_net_info_le* netinfo);
 
 #endif /* _BRCMF_PNO_H */

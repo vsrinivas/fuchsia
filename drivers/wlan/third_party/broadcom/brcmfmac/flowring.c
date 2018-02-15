@@ -36,9 +36,9 @@
 #define BRCMF_FLOWRING_HASH_AP(da, fifo, ifidx) (da[5] * 2 + fifo + ifidx * 16)
 #define BRCMF_FLOWRING_HASH_STA(fifo, ifidx) (fifo + ifidx * 16)
 
-static const u8 brcmf_flowring_prio2fifo[] = {1, 0, 0, 1, 2, 2, 3, 3};
+static const uint8_t brcmf_flowring_prio2fifo[] = {1, 0, 0, 1, 2, 2, 3, 3};
 
-static bool brcmf_flowring_is_tdls_mac(struct brcmf_flowring* flow, u8 mac[ETH_ALEN]) {
+static bool brcmf_flowring_is_tdls_mac(struct brcmf_flowring* flow, uint8_t mac[ETH_ALEN]) {
     struct brcmf_flowring_tdls_entry* search;
 
     search = flow->tdls_entry;
@@ -53,20 +53,20 @@ static bool brcmf_flowring_is_tdls_mac(struct brcmf_flowring* flow, u8 mac[ETH_A
     return false;
 }
 
-u32 brcmf_flowring_lookup(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio, u8 ifidx) {
+uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx) {
     struct brcmf_flowring_hash* hash;
-    u16 hash_idx;
-    u32 i;
+    uint16_t hash_idx;
+    uint32_t i;
     bool found;
     bool sta;
-    u8 fifo;
-    u8* mac;
+    uint8_t fifo;
+    uint8_t* mac;
 
     fifo = brcmf_flowring_prio2fifo[prio];
     sta = (flow->addr_mode[ifidx] == ADDR_INDIRECT);
     mac = da;
     if ((!sta) && (is_multicast_ether_addr(da))) {
-        mac = (u8*)ALLFFMAC;
+        mac = (uint8_t*)ALLFFMAC;
         fifo = 0;
     }
     if ((sta) && (flow->tdls_active) && (brcmf_flowring_is_tdls_mac(flow, da))) {
@@ -93,21 +93,21 @@ u32 brcmf_flowring_lookup(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio,
     return BRCMF_FLOWRING_INVALID_ID;
 }
 
-u32 brcmf_flowring_create(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio, u8 ifidx) {
+uint32_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx) {
     struct brcmf_flowring_ring* ring;
     struct brcmf_flowring_hash* hash;
-    u16 hash_idx;
-    u32 i;
+    uint16_t hash_idx;
+    uint32_t i;
     bool found;
-    u8 fifo;
+    uint8_t fifo;
     bool sta;
-    u8* mac;
+    uint8_t* mac;
 
     fifo = brcmf_flowring_prio2fifo[prio];
     sta = (flow->addr_mode[ifidx] == ADDR_INDIRECT);
     mac = da;
     if ((!sta) && (is_multicast_ether_addr(da))) {
-        mac = (u8*)ALLFFMAC;
+        mac = (uint8_t*)ALLFFMAC;
         fifo = 0;
     }
     if ((sta) && (flow->tdls_active) && (brcmf_flowring_is_tdls_mac(flow, da))) {
@@ -157,7 +157,7 @@ u32 brcmf_flowring_create(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio,
     return BRCMF_FLOWRING_INVALID_ID;
 }
 
-u8 brcmf_flowring_tid(struct brcmf_flowring* flow, u16 flowid) {
+uint8_t brcmf_flowring_tid(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -165,14 +165,14 @@ u8 brcmf_flowring_tid(struct brcmf_flowring* flow, u16 flowid) {
     return flow->hash[ring->hash_id].fifo;
 }
 
-static void brcmf_flowring_block(struct brcmf_flowring* flow, u16 flowid, bool blocked) {
+static void brcmf_flowring_block(struct brcmf_flowring* flow, uint16_t flowid, bool blocked) {
     struct brcmf_flowring_ring* ring;
     struct brcmf_bus* bus_if;
     struct brcmf_pub* drvr;
     struct brcmf_if* ifp;
     bool currently_blocked;
     int i;
-    u8 ifidx;
+    uint8_t ifidx;
     unsigned long flags;
 
     spin_lock_irqsave(&flow->block_lock, flags);
@@ -210,12 +210,12 @@ static void brcmf_flowring_block(struct brcmf_flowring* flow, u16 flowid, bool b
     spin_unlock_irqrestore(&flow->block_lock, flags);
 }
 
-void brcmf_flowring_delete(struct brcmf_flowring* flow, u16 flowid) {
+void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
     struct brcmf_flowring_ring* ring;
     struct brcmf_if* ifp;
-    u16 hash_idx;
-    u8 ifidx;
+    uint16_t hash_idx;
+    uint8_t ifidx;
     struct sk_buff* skb;
 
     ring = flow->rings[flowid];
@@ -241,7 +241,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, u16 flowid) {
     kfree(ring);
 }
 
-u32 brcmf_flowring_enqueue(struct brcmf_flowring* flow, u16 flowid, struct sk_buff* skb) {
+uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -264,7 +264,7 @@ u32 brcmf_flowring_enqueue(struct brcmf_flowring* flow, u16 flowid, struct sk_bu
     return skb_queue_len(&ring->skblist);
 }
 
-struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, u16 flowid) {
+struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
     struct sk_buff* skb;
 
@@ -283,7 +283,7 @@ struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, u16 flowid) 
     return skb;
 }
 
-void brcmf_flowring_reinsert(struct brcmf_flowring* flow, u16 flowid, struct sk_buff* skb) {
+void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -291,7 +291,7 @@ void brcmf_flowring_reinsert(struct brcmf_flowring* flow, u16 flowid, struct sk_
     skb_queue_head(&ring->skblist, skb);
 }
 
-u32 brcmf_flowring_qlen(struct brcmf_flowring* flow, u16 flowid) {
+uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -306,7 +306,7 @@ u32 brcmf_flowring_qlen(struct brcmf_flowring* flow, u16 flowid) {
     return skb_queue_len(&ring->skblist);
 }
 
-void brcmf_flowring_open(struct brcmf_flowring* flow, u16 flowid) {
+void brcmf_flowring_open(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -318,9 +318,9 @@ void brcmf_flowring_open(struct brcmf_flowring* flow, u16 flowid) {
     ring->status = RING_OPEN;
 }
 
-u8 brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, u16 flowid) {
+uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
-    u16 hash_idx;
+    uint16_t hash_idx;
 
     ring = flow->rings[flowid];
     hash_idx = ring->hash_id;
@@ -328,9 +328,9 @@ u8 brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, u16 flowid) {
     return flow->hash[hash_idx].ifidx;
 }
 
-struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, u16 nrofrings) {
+struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, uint16_t nrofrings) {
     struct brcmf_flowring* flow;
-    u32 i;
+    uint32_t i;
 
     flow = kzalloc(sizeof(*flow), GFP_KERNEL);
     if (flow) {
@@ -358,7 +358,7 @@ void brcmf_flowring_detach(struct brcmf_flowring* flow) {
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_flowring_tdls_entry* search;
     struct brcmf_flowring_tdls_entry* remove;
-    u16 flowid;
+    uint16_t flowid;
 
     for (flowid = 0; flowid < flow->nrofrings; flowid++) {
         if (flow->rings[flowid]) {
@@ -380,8 +380,8 @@ void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
                                         enum proto_addr_mode addr_mode) {
     struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
     struct brcmf_pub* drvr = bus_if->drvr;
-    u32 i;
-    u16 flowid;
+    uint32_t i;
+    uint16_t flowid;
 
     if (flow->addr_mode[ifidx] != addr_mode) {
         for (i = 0; i < ARRAY_SIZE(flow->hash); i++) {
@@ -398,14 +398,14 @@ void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
     }
 }
 
-void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, u8 peer[ETH_ALEN]) {
+void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, uint8_t peer[ETH_ALEN]) {
     struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_flowring_hash* hash;
     struct brcmf_flowring_tdls_entry* prev;
     struct brcmf_flowring_tdls_entry* search;
-    u32 i;
-    u16 flowid;
+    uint32_t i;
+    uint16_t flowid;
     bool sta;
 
     sta = (flow->addr_mode[ifidx] == ADDR_INDIRECT);
@@ -445,7 +445,7 @@ void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, u8 peer[
     }
 }
 
-void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, u8 peer[ETH_ALEN]) {
+void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, uint8_t peer[ETH_ALEN]) {
     struct brcmf_flowring_tdls_entry* tdls_entry;
     struct brcmf_flowring_tdls_entry* search;
 

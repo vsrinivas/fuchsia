@@ -89,19 +89,19 @@
 #define BRCMF_C_SET_VAR 263
 #define BRCMF_C_SET_WSEC_PMK 268
 
-s32 brcmf_fil_cmd_data_set(struct brcmf_if* ifp, u32 cmd, void* data, u32 len);
-s32 brcmf_fil_cmd_data_get(struct brcmf_if* ifp, u32 cmd, void* data, u32 len);
-s32 brcmf_fil_cmd_int_set(struct brcmf_if* ifp, u32 cmd, u32 data);
-s32 brcmf_fil_cmd_int_get(struct brcmf_if* ifp, u32 cmd, u32* data);
+int32_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len);
+int32_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len);
+int32_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data);
+int32_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data);
 
-s32 brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data, u32 len);
-s32 brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, u32 len);
-s32 brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, u32 data);
-s32 brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, u32* data);
+int32_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data, uint32_t len);
+int32_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len);
+int32_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, uint32_t data);
+int32_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* data);
 
-s32 brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, u32 len);
-s32 brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, u32 len);
-s32 brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, u32 data);
-s32 brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, u32* data);
+int32_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, uint32_t len);
+int32_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len);
+int32_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, uint32_t data);
+int32_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, uint32_t* data);
 
 #endif /* _fwil_h_ */

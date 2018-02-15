@@ -36,7 +36,7 @@ void brcmf_commonring_register_cb(struct brcmf_commonring* commonring,
     commonring->cr_ctx = ctx;
 }
 
-void brcmf_commonring_config(struct brcmf_commonring* commonring, u16 depth, u16 item_len,
+void brcmf_commonring_config(struct brcmf_commonring* commonring, uint16_t depth, uint16_t item_len,
                              void* buf_addr) {
     commonring->depth = depth;
     commonring->item_len = item_len;
@@ -68,7 +68,7 @@ void brcmf_commonring_unlock(struct brcmf_commonring* commonring) __releases(&co
 }
 
 bool brcmf_commonring_write_available(struct brcmf_commonring* commonring) {
-    u16 available;
+    uint16_t available;
     bool retry = true;
 
 again:
@@ -110,7 +110,7 @@ again:
 
 void* brcmf_commonring_reserve_for_write(struct brcmf_commonring* commonring) {
     void* ret_ptr;
-    u16 available;
+    uint16_t available;
     bool retry = true;
 
 again:
@@ -141,10 +141,10 @@ again:
     return NULL;
 }
 
-void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring, u16 n_items,
-                                                  u16* alloced) {
+void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring, uint16_t n_items,
+                                                  uint16_t* alloced) {
     void* ret_ptr;
-    u16 available;
+    uint16_t available;
     bool retry = true;
 
 again:
@@ -156,7 +156,7 @@ again:
 
     if (available > 1) {
         ret_ptr = commonring->buf_addr + (commonring->w_ptr * commonring->item_len);
-        *alloced = min_t(u16, n_items, available - 1);
+        *alloced = min_t(uint16_t, n_items, available - 1);
         if (*alloced + commonring->w_ptr > commonring->depth) {
             *alloced = commonring->depth - commonring->w_ptr;
         }
@@ -201,7 +201,7 @@ int brcmf_commonring_write_complete(struct brcmf_commonring* commonring) {
     return -EIO;
 }
 
-void brcmf_commonring_write_cancel(struct brcmf_commonring* commonring, u16 n_items) {
+void brcmf_commonring_write_cancel(struct brcmf_commonring* commonring, uint16_t n_items) {
     if (commonring->w_ptr == 0) {
         commonring->w_ptr = commonring->depth - n_items;
     } else {
@@ -209,7 +209,7 @@ void brcmf_commonring_write_cancel(struct brcmf_commonring* commonring, u16 n_it
     }
 }
 
-void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, u16* n_items) {
+void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, uint16_t* n_items) {
     if (commonring->cr_update_wptr) {
         commonring->cr_update_wptr(commonring->cr_ctx);
     }
@@ -224,7 +224,7 @@ void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, u16* n_
     return commonring->buf_addr + (commonring->r_ptr * commonring->item_len);
 }
 
-int brcmf_commonring_read_complete(struct brcmf_commonring* commonring, u16 n_items) {
+int brcmf_commonring_read_complete(struct brcmf_commonring* commonring, uint16_t n_items) {
     commonring->r_ptr += n_items;
     if (commonring->r_ptr == commonring->depth) {
         commonring->r_ptr = 0;

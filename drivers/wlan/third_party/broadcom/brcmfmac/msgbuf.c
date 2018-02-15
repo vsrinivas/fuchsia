@@ -80,10 +80,10 @@
 #define BRCMF_MSGBUF_UPDATE_RX_PTR_THRS 48
 
 struct msgbuf_common_hdr {
-    u8 msgtype;
-    u8 ifidx;
-    u8 flags;
-    u8 rsvd0;
+    uint8_t msgtype;
+    uint8_t ifidx;
+    uint8_t flags;
+    uint8_t rsvd0;
     __le32 request_id;
 };
 
@@ -100,9 +100,9 @@ struct msgbuf_ioctl_req_hdr {
 
 struct msgbuf_tx_msghdr {
     struct msgbuf_common_hdr msg;
-    u8 txhdr[ETH_HLEN];
-    u8 flags;
-    u8 seg_cnt;
+    uint8_t txhdr[ETH_HLEN];
+    uint8_t flags;
+    uint8_t seg_cnt;
     struct msgbuf_buf_addr metadata_buf_addr;
     struct msgbuf_buf_addr data_buf_addr;
     __le16 metadata_buf_len;
@@ -170,13 +170,13 @@ struct msgbuf_rx_complete {
 
 struct msgbuf_tx_flowring_create_req {
     struct msgbuf_common_hdr msg;
-    u8 da[ETH_ALEN];
-    u8 sa[ETH_ALEN];
-    u8 tid;
-    u8 if_flags;
+    uint8_t da[ETH_ALEN];
+    uint8_t sa[ETH_ALEN];
+    uint8_t tid;
+    uint8_t if_flags;
     __le16 flow_ring_id;
-    u8 tc;
-    u8 priority;
+    uint8_t tc;
+    uint8_t priority;
     __le16 int_vector;
     __le16 max_items;
     __le16 len_item;
@@ -210,10 +210,10 @@ struct msgbuf_flowring_flush_resp {
 
 struct brcmf_msgbuf_work_item {
     struct list_head queue;
-    u32 flowid;
+    uint32_t flowid;
     int ifidx;
-    u8 sa[ETH_ALEN];
-    u8 da[ETH_ALEN];
+    uint8_t sa[ETH_ALEN];
+    uint8_t da[ETH_ALEN];
 };
 
 struct brcmf_msgbuf {
@@ -223,31 +223,31 @@ struct brcmf_msgbuf {
     struct brcmf_commonring** flowrings;
     dma_addr_t* flowring_dma_handle;
 
-    u16 max_flowrings;
-    u16 max_submissionrings;
-    u16 max_completionrings;
+    uint16_t max_flowrings;
+    uint16_t max_submissionrings;
+    uint16_t max_completionrings;
 
-    u16 rx_dataoffset;
-    u32 max_rxbufpost;
-    u16 rx_metadata_offset;
-    u32 rxbufpost;
+    uint16_t rx_dataoffset;
+    uint32_t max_rxbufpost;
+    uint16_t rx_metadata_offset;
+    uint32_t rxbufpost;
 
-    u32 max_ioctlrespbuf;
-    u32 cur_ioctlrespbuf;
-    u32 max_eventbuf;
-    u32 cur_eventbuf;
+    uint32_t max_ioctlrespbuf;
+    uint32_t cur_ioctlrespbuf;
+    uint32_t max_eventbuf;
+    uint32_t cur_eventbuf;
 
     void* ioctbuf;
     dma_addr_t ioctbuf_handle;
-    u32 ioctbuf_phys_hi;
-    u32 ioctbuf_phys_lo;
+    uint32_t ioctbuf_phys_hi;
+    uint32_t ioctbuf_phys_lo;
     int ioctl_resp_status;
-    u32 ioctl_resp_ret_len;
-    u32 ioctl_resp_pktid;
+    uint32_t ioctl_resp_ret_len;
+    uint32_t ioctl_resp_pktid;
 
-    u16 data_seq_no;
-    u16 ioctl_seq_no;
-    u32 reqid;
+    uint16_t data_seq_no;
+    uint16_t ioctl_seq_no;
+    uint32_t reqid;
     wait_queue_head_t ioctl_resp_wait;
     bool ctl_completed;
 
@@ -267,21 +267,21 @@ struct brcmf_msgbuf {
 
 struct brcmf_msgbuf_pktid {
     atomic_t allocated;
-    u16 data_offset;
+    uint16_t data_offset;
     struct sk_buff* skb;
     dma_addr_t physaddr;
 };
 
 struct brcmf_msgbuf_pktids {
-    u32 array_size;
-    u32 last_allocated_idx;
+    uint32_t array_size;
+    uint32_t last_allocated_idx;
     enum dma_data_direction direction;
     struct brcmf_msgbuf_pktid* array;
 };
 
 static void brcmf_msgbuf_rxbuf_ioctlresp_post(struct brcmf_msgbuf* msgbuf);
 
-static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(u32 nr_array_entries,
+static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_entries,
                                                             enum dma_data_direction direction) {
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktids* pktids;
@@ -303,10 +303,10 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(u32 nr_array_entries
 }
 
 static int brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msgbuf_pktids* pktids,
-                                    struct sk_buff* skb, u16 data_offset, dma_addr_t* physaddr,
-                                    u32* idx) {
+                                    struct sk_buff* skb, uint16_t data_offset, dma_addr_t* physaddr,
+                                    uint32_t* idx) {
     struct brcmf_msgbuf_pktid* array;
-    u32 count;
+    uint32_t count;
 
     array = pktids->array;
 
@@ -347,7 +347,7 @@ static int brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msgbuf_pkti
 }
 
 static struct sk_buff* brcmf_msgbuf_get_pktid(struct device* dev,
-                                              struct brcmf_msgbuf_pktids* pktids, u32 idx) {
+                                              struct brcmf_msgbuf_pktids* pktids, uint32_t idx) {
     struct brcmf_msgbuf_pktid* pktid;
     struct sk_buff* skb;
 
@@ -372,7 +372,7 @@ static struct sk_buff* brcmf_msgbuf_get_pktid(struct device* dev,
 static void brcmf_msgbuf_release_array(struct device* dev, struct brcmf_msgbuf_pktids* pktids) {
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktid* pktid;
-    u32 count;
+    uint32_t count;
 
     array = pktids->array;
     count = 0;
@@ -403,7 +403,7 @@ static int brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint cmd, vo
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;
     struct msgbuf_ioctl_req_hdr* request;
-    u16 buf_len;
+    uint16_t buf_len;
     void* ret_ptr;
     int err;
 
@@ -420,14 +420,14 @@ static int brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint cmd, vo
 
     request = (struct msgbuf_ioctl_req_hdr*)ret_ptr;
     request->msg.msgtype = MSGBUF_TYPE_IOCTLPTR_REQ;
-    request->msg.ifidx = (u8)ifidx;
+    request->msg.ifidx = (uint8_t)ifidx;
     request->msg.flags = 0;
     request->msg.request_id = cpu_to_le32(BRCMF_IOCTL_REQ_PKTID);
     request->cmd = cpu_to_le32(cmd);
     request->output_buf_len = cpu_to_le16(len);
     request->trans_id = cpu_to_le16(msgbuf->reqid);
 
-    buf_len = min_t(u16, len, BRCMF_TX_IOCTL_MAX_MSG_SIZE);
+    buf_len = min_t(uint16_t, len, BRCMF_TX_IOCTL_MAX_MSG_SIZE);
     request->input_buf_len = cpu_to_le16(buf_len);
     request->req_buf_addr.high_addr = cpu_to_le32(msgbuf->ioctbuf_phys_hi);
     request->req_buf_addr.low_addr = cpu_to_le32(msgbuf->ioctbuf_phys_lo);
@@ -502,8 +502,8 @@ static int brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct sk_b
 
 static void brcmf_msgbuf_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb) {}
 
-static void brcmf_msgbuf_remove_flowring(struct brcmf_msgbuf* msgbuf, u16 flowid) {
-    u32 dma_sz;
+static void brcmf_msgbuf_remove_flowring(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
+    uint32_t dma_sz;
     void* dma_buf;
 
     brcmf_dbg(MSGBUF, "Removing flowring %d\n", flowid);
@@ -530,15 +530,15 @@ static struct brcmf_msgbuf_work_item* brcmf_msgbuf_dequeue_work(struct brcmf_msg
     return work;
 }
 
-static u32 brcmf_msgbuf_flowring_create_worker(struct brcmf_msgbuf* msgbuf,
+static uint32_t brcmf_msgbuf_flowring_create_worker(struct brcmf_msgbuf* msgbuf,
                                                struct brcmf_msgbuf_work_item* work) {
     struct msgbuf_tx_flowring_create_req* create;
     struct brcmf_commonring* commonring;
     void* ret_ptr;
-    u32 flowid;
+    uint32_t flowid;
     void* dma_buf;
-    u32 dma_sz;
-    u64 address;
+    uint32_t dma_sz;
+    uint64_t address;
     int err;
 
     flowid = work->flowid;
@@ -572,7 +572,7 @@ static u32 brcmf_msgbuf_flowring_create_worker(struct brcmf_msgbuf* msgbuf,
     create->flow_ring_id = cpu_to_le16(flowid + BRCMF_H2D_MSGRING_FLOWRING_IDSTART);
     memcpy(create->sa, work->sa, ETH_ALEN);
     memcpy(create->da, work->da, ETH_ALEN);
-    address = (u64)msgbuf->flowring_dma_handle[flowid];
+    address = (uint64_t)msgbuf->flowring_dma_handle[flowid];
     create->flow_ring_addr.high_addr = cpu_to_le32(address >> 32);
     create->flow_ring_addr.low_addr = cpu_to_le32(address & 0xffffffff);
     create->max_items = cpu_to_le16(BRCMF_H2D_TXFLOWRING_MAX_ITEM);
@@ -604,11 +604,11 @@ static void brcmf_msgbuf_flowring_worker(struct work_struct* work) {
     }
 }
 
-static u32 brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int ifidx,
+static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int ifidx,
                                         struct sk_buff* skb) {
     struct brcmf_msgbuf_work_item* create;
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
-    u32 flowid;
+    uint32_t flowid;
     ulong flags;
 
     create = kzalloc(sizeof(*create), GFP_ATOMIC);
@@ -635,16 +635,16 @@ static u32 brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int ifidx,
     return flowid;
 }
 
-static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, u16 flowid) {
+static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
     struct brcmf_flowring* flow = msgbuf->flow;
     struct brcmf_commonring* commonring;
     void* ret_ptr;
-    u32 count;
+    uint32_t count;
     struct sk_buff* skb;
     dma_addr_t physaddr;
-    u32 pktid;
+    uint32_t pktid;
     struct msgbuf_tx_msghdr* tx_msghdr;
-    u64 address;
+    uint64_t address;
 
     commonring = msgbuf->flowrings[flowid];
     if (!brcmf_commonring_write_available(commonring)) {
@@ -685,7 +685,7 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, u16 flowid) {
         tx_msghdr->seg_cnt = 1;
         memcpy(tx_msghdr->txhdr, skb->data, ETH_HLEN);
         tx_msghdr->data_len = cpu_to_le16(skb->len - ETH_HLEN);
-        address = (u64)physaddr;
+        address = (uint64_t)physaddr;
         tx_msghdr->data_buf_addr.high_addr = cpu_to_le32(address >> 32);
         tx_msghdr->data_buf_addr.low_addr = cpu_to_le32(address & 0xffffffff);
         tx_msghdr->metadata_buf_len = 0;
@@ -705,7 +705,7 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, u16 flowid) {
 
 static void brcmf_msgbuf_txflow_worker(struct work_struct* worker) {
     struct brcmf_msgbuf* msgbuf;
-    u32 flowid;
+    uint32_t flowid;
 
     msgbuf = container_of(worker, struct brcmf_msgbuf, txflow_work);
     for_each_set_bit(flowid, msgbuf->flow_map, msgbuf->max_flowrings) {
@@ -714,7 +714,7 @@ static void brcmf_msgbuf_txflow_worker(struct work_struct* worker) {
     }
 }
 
-static int brcmf_msgbuf_schedule_txdata(struct brcmf_msgbuf* msgbuf, u32 flowid, bool force) {
+static int brcmf_msgbuf_schedule_txdata(struct brcmf_msgbuf* msgbuf, uint32_t flowid, bool force) {
     struct brcmf_commonring* commonring;
 
     set_bit(flowid, msgbuf->flow_map);
@@ -730,8 +730,8 @@ static int brcmf_msgbuf_tx_queue_data(struct brcmf_pub* drvr, int ifidx, struct 
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_flowring* flow = msgbuf->flow;
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
-    u32 flowid;
-    u32 queue_count;
+    uint32_t flowid;
+    uint32_t queue_count;
     bool force;
 
     flowid = brcmf_flowring_lookup(flow, eh->h_dest, skb->priority, ifidx);
@@ -755,13 +755,13 @@ static void brcmf_msgbuf_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
     brcmf_flowring_configure_addr_mode(msgbuf->flow, ifidx, addr_mode);
 }
 
-static void brcmf_msgbuf_delete_peer(struct brcmf_pub* drvr, int ifidx, u8 peer[ETH_ALEN]) {
+static void brcmf_msgbuf_delete_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
 
     brcmf_flowring_delete_peer(msgbuf->flow, ifidx, peer);
 }
 
-static void brcmf_msgbuf_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, u8 peer[ETH_ALEN]) {
+static void brcmf_msgbuf_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
 
     brcmf_flowring_add_tdls_peer(msgbuf->flow, ifidx, peer);
@@ -772,7 +772,7 @@ static void brcmf_msgbuf_process_ioctl_complete(struct brcmf_msgbuf* msgbuf, voi
 
     ioctl_resp = (struct msgbuf_ioctl_resp_hdr*)buf;
 
-    msgbuf->ioctl_resp_status = (s16)le16_to_cpu(ioctl_resp->compl_hdr.status);
+    msgbuf->ioctl_resp_status = (int16_t)le16_to_cpu(ioctl_resp->compl_hdr.status);
     msgbuf->ioctl_resp_ret_len = le16_to_cpu(ioctl_resp->resp_len);
     msgbuf->ioctl_resp_pktid = le32_to_cpu(ioctl_resp->msg.request_id);
 
@@ -787,9 +787,9 @@ static void brcmf_msgbuf_process_ioctl_complete(struct brcmf_msgbuf* msgbuf, voi
 static void brcmf_msgbuf_process_txstatus(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct brcmf_commonring* commonring;
     struct msgbuf_tx_status* tx_status;
-    u32 idx;
+    uint32_t idx;
     struct sk_buff* skb;
-    u16 flowid;
+    uint16_t flowid;
 
     tx_status = (struct msgbuf_tx_status*)buf;
     idx = le32_to_cpu(tx_status->msg.request_id);
@@ -807,17 +807,17 @@ static void brcmf_msgbuf_process_txstatus(struct brcmf_msgbuf* msgbuf, void* buf
     brcmf_txfinalize(brcmf_get_ifp(msgbuf->drvr, tx_status->msg.ifidx), skb, true);
 }
 
-static u32 brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, u32 count) {
+static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32_t count) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
     struct sk_buff* skb;
-    u16 alloced;
-    u32 pktlen;
+    uint16_t alloced;
+    uint32_t pktlen;
     dma_addr_t physaddr;
     struct msgbuf_rx_bufpost* rx_bufpost;
-    u64 address;
-    u32 pktid;
-    u32 i;
+    uint64_t address;
+    uint32_t pktid;
+    uint32_t i;
 
     commonring = msgbuf->commonrings[BRCMF_H2D_MSGRING_RXPOST_SUBMIT];
     ret_ptr = brcmf_commonring_reserve_for_write_multiple(commonring, count, &alloced);
@@ -848,7 +848,7 @@ static u32 brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, u32 count) 
         }
 
         if (msgbuf->rx_metadata_offset) {
-            address = (u64)physaddr;
+            address = (uint64_t)physaddr;
             rx_bufpost->metadata_buf_len = cpu_to_le16(msgbuf->rx_metadata_offset);
             rx_bufpost->metadata_buf_addr.high_addr = cpu_to_le32(address >> 32);
             rx_bufpost->metadata_buf_addr.low_addr = cpu_to_le32(address & 0xffffffff);
@@ -860,8 +860,8 @@ static u32 brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, u32 count) 
         rx_bufpost->msg.msgtype = MSGBUF_TYPE_RXBUF_POST;
         rx_bufpost->msg.request_id = cpu_to_le32(pktid);
 
-        address = (u64)physaddr;
-        rx_bufpost->data_buf_len = cpu_to_le16((u16)pktlen);
+        address = (uint64_t)physaddr;
+        rx_bufpost->data_buf_len = cpu_to_le16((uint16_t)pktlen);
         rx_bufpost->data_buf_addr.high_addr = cpu_to_le32(address >> 32);
         rx_bufpost->data_buf_addr.low_addr = cpu_to_le32(address & 0xffffffff);
 
@@ -876,8 +876,8 @@ static u32 brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, u32 count) 
 }
 
 static void brcmf_msgbuf_rxbuf_data_fill(struct brcmf_msgbuf* msgbuf) {
-    u32 fillbufs;
-    u32 retcount;
+    uint32_t fillbufs;
+    uint32_t retcount;
 
     fillbufs = msgbuf->max_rxbufpost - msgbuf->rxbufpost;
 
@@ -891,24 +891,24 @@ static void brcmf_msgbuf_rxbuf_data_fill(struct brcmf_msgbuf* msgbuf) {
     }
 }
 
-static void brcmf_msgbuf_update_rxbufpost_count(struct brcmf_msgbuf* msgbuf, u16 rxcnt) {
+static void brcmf_msgbuf_update_rxbufpost_count(struct brcmf_msgbuf* msgbuf, uint16_t rxcnt) {
     msgbuf->rxbufpost -= rxcnt;
     if (msgbuf->rxbufpost <= (msgbuf->max_rxbufpost - BRCMF_MSGBUF_RXBUFPOST_THRESHOLD)) {
         brcmf_msgbuf_rxbuf_data_fill(msgbuf);
     }
 }
 
-static u32 brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_buf, u32 count) {
+static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_buf, uint32_t count) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
     struct sk_buff* skb;
-    u16 alloced;
-    u32 pktlen;
+    uint16_t alloced;
+    uint32_t pktlen;
     dma_addr_t physaddr;
     struct msgbuf_rx_ioctl_resp_or_event* rx_bufpost;
-    u64 address;
-    u32 pktid;
-    u32 i;
+    uint64_t address;
+    uint32_t pktid;
+    uint32_t i;
 
     commonring = msgbuf->commonrings[BRCMF_H2D_MSGRING_CONTROL_SUBMIT];
     brcmf_commonring_lock(commonring);
@@ -946,8 +946,8 @@ static u32 brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_
         }
         rx_bufpost->msg.request_id = cpu_to_le32(pktid);
 
-        address = (u64)physaddr;
-        rx_bufpost->host_buf_len = cpu_to_le16((u16)pktlen);
+        address = (uint64_t)physaddr;
+        rx_bufpost->host_buf_len = cpu_to_le16((uint16_t)pktlen);
         rx_bufpost->host_buf_addr.high_addr = cpu_to_le32(address >> 32);
         rx_bufpost->host_buf_addr.low_addr = cpu_to_le32(address & 0xffffffff);
 
@@ -964,7 +964,7 @@ static u32 brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_
 }
 
 static void brcmf_msgbuf_rxbuf_ioctlresp_post(struct brcmf_msgbuf* msgbuf) {
-    u32 count;
+    uint32_t count;
 
     count = msgbuf->max_ioctlrespbuf - msgbuf->cur_ioctlrespbuf;
     count = brcmf_msgbuf_rxbuf_ctrl_post(msgbuf, false, count);
@@ -972,7 +972,7 @@ static void brcmf_msgbuf_rxbuf_ioctlresp_post(struct brcmf_msgbuf* msgbuf) {
 }
 
 static void brcmf_msgbuf_rxbuf_event_post(struct brcmf_msgbuf* msgbuf) {
-    u32 count;
+    uint32_t count;
 
     count = msgbuf->max_eventbuf - msgbuf->cur_eventbuf;
     count = brcmf_msgbuf_rxbuf_ctrl_post(msgbuf, true, count);
@@ -981,8 +981,8 @@ static void brcmf_msgbuf_rxbuf_event_post(struct brcmf_msgbuf* msgbuf) {
 
 static void brcmf_msgbuf_process_event(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_rx_event* event;
-    u32 idx;
-    u16 buflen;
+    uint32_t idx;
+    uint16_t buflen;
     struct sk_buff* skb;
     struct brcmf_if* ifp;
 
@@ -1023,9 +1023,9 @@ exit:
 static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_rx_complete* rx_complete;
     struct sk_buff* skb;
-    u16 data_offset;
-    u16 buflen;
-    u32 idx;
+    uint16_t data_offset;
+    uint16_t buflen;
+    uint32_t idx;
     struct brcmf_if* ifp;
 
     brcmf_msgbuf_update_rxbufpost_count(msgbuf, 1);
@@ -1061,8 +1061,8 @@ static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* 
 
 static void brcmf_msgbuf_process_flow_ring_create_response(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_flowring_create_resp* flowring_create_resp;
-    u16 status;
-    u16 flowid;
+    uint16_t status;
+    uint16_t flowid;
 
     flowring_create_resp = (struct msgbuf_flowring_create_resp*)buf;
 
@@ -1084,8 +1084,8 @@ static void brcmf_msgbuf_process_flow_ring_create_response(struct brcmf_msgbuf* 
 
 static void brcmf_msgbuf_process_flow_ring_delete_response(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_flowring_delete_resp* flowring_delete_resp;
-    u16 status;
-    u16 flowid;
+    uint16_t status;
+    uint16_t flowid;
 
     flowring_delete_resp = (struct msgbuf_flowring_delete_resp*)buf;
 
@@ -1144,8 +1144,8 @@ static void brcmf_msgbuf_process_msgtype(struct brcmf_msgbuf* msgbuf, void* buf)
 static void brcmf_msgbuf_process_rx(struct brcmf_msgbuf* msgbuf,
                                     struct brcmf_commonring* commonring) {
     void* buf;
-    u16 count;
-    u16 processed;
+    uint16_t count;
+    uint16_t processed;
 
 again:
     buf = brcmf_commonring_get_read_ptr(commonring, &count);
@@ -1179,7 +1179,7 @@ int brcmf_proto_msgbuf_rx_trigger(struct device* dev) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;
     void* buf;
-    u32 flowid;
+    uint32_t flowid;
     int qlen;
 
     buf = msgbuf->commonrings[BRCMF_D2H_MSGRING_RX_COMPLETE];
@@ -1203,12 +1203,12 @@ int brcmf_proto_msgbuf_rx_trigger(struct device* dev) {
     return 0;
 }
 
-void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, u16 flowid) {
+void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct msgbuf_tx_flowring_delete_req* delete;
     struct brcmf_commonring* commonring;
     void* ret_ptr;
-    u8 ifidx;
+    uint8_t ifidx;
     int err;
 
     commonring = msgbuf->commonrings[BRCMF_H2D_MSGRING_CONTROL_SUBMIT];
@@ -1248,7 +1248,7 @@ static int brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;
-    u16 i;
+    uint16_t i;
     struct brcmf_flowring_ring* ring;
     struct brcmf_flowring_hash* hash;
 
@@ -1299,8 +1299,8 @@ static int brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
 int brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     struct brcmf_bus_msgbuf* if_msgbuf;
     struct brcmf_msgbuf* msgbuf;
-    u64 address;
-    u32 count;
+    uint64_t address;
+    uint32_t count;
 
     if_msgbuf = drvr->bus_if->msgbuf;
 
@@ -1338,7 +1338,7 @@ int brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     if (!msgbuf->ioctbuf) {
         goto fail;
     }
-    address = (u64)msgbuf->ioctbuf_handle;
+    address = (uint64_t)msgbuf->ioctbuf_handle;
     msgbuf->ioctbuf_phys_hi = address >> 32;
     msgbuf->ioctbuf_phys_lo = address & 0xffffffff;
 

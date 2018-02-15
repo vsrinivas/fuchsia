@@ -65,11 +65,11 @@
  */
 struct brcmf_ampdu_rx_reorder {
     struct sk_buff** pktslots;
-    u8 flow_id;
-    u8 cur_idx;
-    u8 exp_idx;
-    u8 max_idx;
-    u8 pend_pkts;
+    uint8_t flow_id;
+    uint8_t cur_idx;
+    uint8_t exp_idx;
+    uint8_t max_idx;
+    uint8_t pend_pkts;
 };
 
 /* Forward decls for struct brcmf_pub (see below) */
@@ -87,23 +87,23 @@ struct brcmf_mp_device; /* module paramateres, device specific */
  */
 struct brcmf_rev_info {
     int result;
-    u32 vendorid;
-    u32 deviceid;
-    u32 radiorev;
-    u32 chiprev;
-    u32 corerev;
-    u32 boardid;
-    u32 boardvendor;
-    u32 boardrev;
-    u32 driverrev;
-    u32 ucoderev;
-    u32 bus;
-    u32 chipnum;
-    u32 phytype;
-    u32 phyrev;
-    u32 anarev;
-    u32 chippkg;
-    u32 nvramrev;
+    uint32_t vendorid;
+    uint32_t deviceid;
+    uint32_t radiorev;
+    uint32_t chiprev;
+    uint32_t corerev;
+    uint32_t boardid;
+    uint32_t boardvendor;
+    uint32_t boardrev;
+    uint32_t driverrev;
+    uint32_t ucoderev;
+    uint32_t bus;
+    uint32_t chipnum;
+    uint32_t phytype;
+    uint32_t phyrev;
+    uint32_t anarev;
+    uint32_t chippkg;
+    uint32_t nvramrev;
 };
 
 /* Common structure for module and instance linkage */
@@ -118,12 +118,12 @@ struct brcmf_pub {
 
     /* Dongle media info */
     char fwver[BRCMF_DRIVER_FIRMWARE_VERSION_LEN];
-    u8 mac[ETH_ALEN]; /* MAC address obtained from dongle */
+    uint8_t mac[ETH_ALEN]; /* MAC address obtained from dongle */
 
     struct mac_address addresses[BRCMF_MAX_IFS];
 
     struct brcmf_if* iflist[BRCMF_MAX_IFS];
-    s32 if2bss[BRCMF_MAX_IFS];
+    int32_t if2bss[BRCMF_MAX_IFS];
 
     struct mutex proto_block;
     unsigned char proto_buf[BRCMF_DCMD_MAXLEN];
@@ -132,8 +132,8 @@ struct brcmf_pub {
 
     struct brcmf_ampdu_rx_reorder* reorder_flows[BRCMF_AMPDU_RX_REORDER_MAXFLOWS];
 
-    u32 feat_flags;
-    u32 chip_quirks;
+    uint32_t feat_flags;
+    uint32_t chip_quirks;
 
     struct brcmf_rev_info revinfo;
 #ifdef DEBUG
@@ -144,7 +144,7 @@ struct brcmf_pub {
     struct notifier_block inet6addr_notifier;
     struct brcmf_mp_device* settings;
 
-    u8 clmver[BRCMF_DCMD_SMLEN];
+    uint8_t clmver[BRCMF_DCMD_SMLEN];
 };
 
 /* forward declarations */
@@ -192,14 +192,14 @@ struct brcmf_if {
     struct work_struct ndoffload_work;
     struct brcmf_fws_mac_descriptor* fws_desc;
     int ifidx;
-    s32 bsscfgidx;
-    u8 mac_addr[ETH_ALEN];
-    u8 netif_stop;
+    int32_t bsscfgidx;
+    uint8_t mac_addr[ETH_ALEN];
+    uint8_t netif_stop;
     spinlock_t netif_stop_lock;
     atomic_t pend_8021x_cnt;
     wait_queue_head_t pend_8021x_wait;
     struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
-    u8 ipv6addr_idx;
+    uint8_t ipv6addr_idx;
 };
 
 int brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
@@ -209,8 +209,8 @@ char* brcmf_ifname(struct brcmf_if* ifp);
 struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx);
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable);
 int brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);
-struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, s32 bsscfgidx, s32 ifidx, bool is_p2pdev,
-                              const char* name, u8* mac_addr);
+struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
+                              const char* name, uint8_t* mac_addr);
 void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked);
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state);
 void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success);

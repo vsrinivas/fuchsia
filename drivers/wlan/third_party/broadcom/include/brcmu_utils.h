@@ -50,10 +50,10 @@
 #ifndef NBBY   /* the BSD family defines NBBY */
 #define NBBY 8 /* 8 bits per byte */
 #endif         /* #ifndef NBBY */
-#define setbit(a, i) (((u8*)a)[(i) / NBBY] |= 1 << ((i) % NBBY))
-#define clrbit(a, i) (((u8*)a)[(i) / NBBY] &= ~(1 << ((i) % NBBY)))
-#define isset(a, i) (((const u8*)a)[(i) / NBBY] & (1 << ((i) % NBBY)))
-#define isclr(a, i) ((((const u8*)a)[(i) / NBBY] & (1 << ((i) % NBBY))) == 0)
+#define setbit(a, i) (((uint8_t*)a)[(i) / NBBY] |= 1 << ((i) % NBBY))
+#define clrbit(a, i) (((uint8_t*)a)[(i) / NBBY] &= ~(1 << ((i) % NBBY)))
+#define isset(a, i) (((const uint8_t*)a)[(i) / NBBY] & (1 << ((i) % NBBY)))
+#define isclr(a, i) ((((const uint8_t*)a)[(i) / NBBY] & (1 << ((i) % NBBY))) == 0)
 #endif /* setbit */
 
 #define NBITS(type) (sizeof(type) * 8)
@@ -71,15 +71,15 @@
 
 struct pktq_prec {
     struct sk_buff_head skblist;
-    u16 max; /* maximum number of queued packets */
+    uint16_t max; /* maximum number of queued packets */
 };
 
 /* multi-priority pkt queue */
 struct pktq {
-    u16 num_prec; /* number of precedences in use */
-    u16 hi_prec;  /* rapid dequeue hint (>= highest non-empty prec) */
-    u16 max;      /* total max packets */
-    u16 len;      /* total number of packets */
+    uint16_t num_prec; /* number of precedences in use */
+    uint16_t hi_prec;  /* rapid dequeue hint (>= highest non-empty prec) */
+    uint16_t max;      /* total max packets */
+    uint16_t len;      /* total number of packets */
     /*
      * q array must be last since # of elements can be either
      * PKTQ_MAX_PREC or 1
@@ -170,18 +170,18 @@ struct ipv4_addr;
  *
  * remark: the mask parameter should be a shifted mask.
  */
-static inline void brcmu_maskset32(u32* var, u32 mask, u8 shift, u32 value) {
+static inline void brcmu_maskset32(uint32_t* var, uint32_t mask, uint8_t shift, uint32_t value) {
     value = (value << shift) & mask;
     *var = (*var & ~mask) | value;
 }
-static inline u32 brcmu_maskget32(u32 var, u32 mask, u8 shift) {
+static inline uint32_t brcmu_maskget32(uint32_t var, uint32_t mask, uint8_t shift) {
     return (var & mask) >> shift;
 }
-static inline void brcmu_maskset16(u16* var, u16 mask, u8 shift, u16 value) {
+static inline void brcmu_maskset16(uint16_t* var, uint16_t mask, uint8_t shift, uint16_t value) {
     value = (value << shift) & mask;
     *var = (*var & ~mask) | value;
 }
-static inline u16 brcmu_maskget16(u16 var, u16 mask, u8 shift) {
+static inline uint16_t brcmu_maskget16(uint16_t var, uint16_t mask, uint8_t shift) {
     return (var & mask) >> shift;
 }
 
@@ -203,7 +203,7 @@ static inline void brcmu_dbg_hex_dump(const void* data, size_t size, const char*
 #define BRCMU_BOARDREV_LEN 8
 #define BRCMU_DOTREV_LEN 16
 
-char* brcmu_boardrev_str(u32 brev, char* buf);
-char* brcmu_dotrev_str(u32 dotrev, char* buf);
+char* brcmu_boardrev_str(uint32_t brev, char* buf);
+char* brcmu_dotrev_str(uint32_t dotrev, char* buf);
 
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_UTILS_H_ */

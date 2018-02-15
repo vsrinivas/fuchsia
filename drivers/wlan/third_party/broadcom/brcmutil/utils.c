@@ -69,7 +69,7 @@ struct sk_buff* brcmu_pktq_penq(struct pktq* pq, int prec, struct sk_buff* p) {
     pq->len++;
 
     if (pq->hi_prec < prec) {
-        pq->hi_prec = (u8)prec;
+        pq->hi_prec = (uint8_t)prec;
     }
 
     return p;
@@ -88,7 +88,7 @@ struct sk_buff* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct sk_buff* 
     pq->len++;
 
     if (pq->hi_prec < prec) {
-        pq->hi_prec = (u8)prec;
+        pq->hi_prec = (uint8_t)prec;
     }
 
     return p;
@@ -180,9 +180,9 @@ void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len) {
     /* pq is variable size; only zero out what's requested */
     memset(pq, 0, offsetof(struct pktq, q) + (sizeof(struct pktq_prec) * num_prec));
 
-    pq->num_prec = (u16)num_prec;
+    pq->num_prec = (uint16_t)num_prec;
 
-    pq->max = (u16)max_len;
+    pq->max = (uint16_t)max_len;
 
     for (prec = 0; prec < num_prec; prec++) {
         pq->q[prec].max = pq->max;
@@ -262,7 +262,7 @@ struct sk_buff* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_out) {
 EXPORT_SYMBOL(brcmu_pktq_mdeq);
 
 /* Produce a human-readable string for boardrev */
-char* brcmu_boardrev_str(u32 brev, char* buf) {
+char* brcmu_boardrev_str(uint32_t brev, char* buf) {
     char c;
 
     if (brev < 0x100) {
@@ -275,8 +275,8 @@ char* brcmu_boardrev_str(u32 brev, char* buf) {
 }
 EXPORT_SYMBOL(brcmu_boardrev_str);
 
-char* brcmu_dotrev_str(u32 dotrev, char* buf) {
-    u8 dotval[4];
+char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
+    uint8_t dotval[4];
 
     if (!dotrev) {
         snprintf(buf, BRCMU_DOTREV_LEN, "unknown");

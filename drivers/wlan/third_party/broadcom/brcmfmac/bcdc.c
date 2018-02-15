@@ -83,10 +83,10 @@ struct brcmf_proto_bcdc_dcmd {
  * @data_offset: start of packet data. header is following by firmware signals.
  */
 struct brcmf_proto_bcdc_header {
-    u8 flags;
-    u8 priority;
-    u8 flags2;
-    u8 data_offset;
+    uint8_t flags;
+    uint8_t priority;
+    uint8_t flags2;
+    uint8_t data_offset;
 };
 
 /*
@@ -103,8 +103,8 @@ struct brcmf_proto_bcdc_header {
  */
 #define BUS_HEADER_LEN (16 + 64)
 struct brcmf_bcdc {
-    u16 reqid;
-    u8 bus_header[BUS_HEADER_LEN];
+    uint16_t reqid;
+    uint8_t bus_header[BUS_HEADER_LEN];
     struct brcmf_proto_bcdc_dcmd msg;
     unsigned char buf[BRCMF_DCMD_MAXLEN];
     struct brcmf_fws_info* fws;
@@ -120,7 +120,7 @@ static int brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, voi
                                 bool set) {
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
-    u32 flags;
+    uint32_t flags;
 
     brcmf_dbg(BCDC, "Enter\n");
 
@@ -148,7 +148,7 @@ static int brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, voi
     return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len);
 }
 
-static int brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, u32 id, u32 len) {
+static int brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, uint32_t len) {
     int ret;
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
 
@@ -171,7 +171,7 @@ static int brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint c
     void* info;
     int ret = 0;
     int retries = 0;
-    u32 id, flags;
+    uint32_t id, flags;
 
     brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
@@ -228,7 +228,7 @@ static int brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     int ret;
-    u32 flags, id;
+    uint32_t flags, id;
 
     brcmf_dbg(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
@@ -264,7 +264,7 @@ done:
     return ret;
 }
 
-static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, u8 offset,
+static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                      struct sk_buff* pktbuf) {
     struct brcmf_proto_bcdc_header* h;
 
@@ -348,7 +348,7 @@ static int brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx, str
     return brcmf_fws_process_skb(ifp, skb);
 }
 
-static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, u8 offset,
+static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                    struct sk_buff* pktbuf) {
     brcmf_proto_bcdc_hdrpush(drvr, ifidx, offset, pktbuf);
     return brcmf_bus_txdata(drvr->bus_if, pktbuf);
@@ -385,9 +385,9 @@ void brcmf_proto_bcdc_txcomplete(struct device* dev, struct sk_buff* txp, bool s
 static void brcmf_proto_bcdc_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
                                                  enum proto_addr_mode addr_mode) {}
 
-static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx, u8 peer[ETH_ALEN]) {}
+static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {}
 
-static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, u8 peer[ETH_ALEN]) {}
+static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {}
 
 static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb) {
     brcmf_fws_rxreorder(ifp, skb);

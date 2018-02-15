@@ -64,7 +64,7 @@ static int brcmf_pno_store_request(struct brcmf_pno_info* pi,
     return 0;
 }
 
-static int brcmf_pno_remove_request(struct brcmf_pno_info* pi, u64 reqid) {
+static int brcmf_pno_remove_request(struct brcmf_pno_info* pi, uint64_t reqid) {
     int i;
     int err = 0;
 
@@ -108,11 +108,11 @@ static int brcmf_pno_channel_config(struct brcmf_if* ifp, struct brcmf_pno_confi
     return brcmf_fil_iovar_data_set(ifp, "pfn_cfg", cfg, sizeof(*cfg));
 }
 
-static int brcmf_pno_config(struct brcmf_if* ifp, u32 scan_freq, u32 mscan, u32 bestn) {
+static int brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, uint32_t mscan, uint32_t bestn) {
     struct brcmf_pno_param_le pfn_param;
-    u16 flags;
-    u32 pfnmem;
-    s32 err;
+    uint16_t flags;
+    uint32_t pfnmem;
+    int32_t err;
 
     memset(&pfn_param, 0, sizeof(pfn_param));
     pfn_param.version = cpu_to_le32(BRCMF_PNO_VERSION);
@@ -140,7 +140,7 @@ static int brcmf_pno_config(struct brcmf_if* ifp, u32 scan_freq, u32 mscan, u32 
             brcmf_err("failed to get pfnmem\n");
             goto exit;
         }
-        mscan = min_t(u32, mscan, pfnmem);
+        mscan = min_t(uint32_t, mscan, pfnmem);
         pfn_param.mscan = mscan;
         pfn_param.bestn = bestn;
         flags |= BIT(BRCMF_PNO_ENABLE_BD_SCAN_BIT);
@@ -159,8 +159,8 @@ exit:
 
 static int brcmf_pno_set_random(struct brcmf_if* ifp, struct brcmf_pno_info* pi) {
     struct brcmf_pno_macaddr_le pfn_mac;
-    u8* mac_addr = NULL;
-    u8* mac_mask = NULL;
+    uint8_t* mac_addr = NULL;
+    uint8_t* mac_mask = NULL;
     int err, i;
 
     for (i = 0; i < pi->n_reqs; i++)
@@ -220,7 +220,7 @@ static int brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid* ssid, 
     return err;
 }
 
-static int brcmf_pno_add_bssid(struct brcmf_if* ifp, const u8* bssid) {
+static int brcmf_pno_add_bssid(struct brcmf_if* ifp, const uint8_t* bssid) {
     struct brcmf_pno_bssid_le bssid_cfg;
     int err;
 
@@ -271,8 +271,8 @@ static int brcmf_pno_clean(struct brcmf_if* ifp) {
 
 static int brcmf_pno_get_bucket_channels(struct cfg80211_sched_scan_request* r,
                                          struct brcmf_pno_config_le* pno_cfg) {
-    u32 n_chan = le32_to_cpu(pno_cfg->channel_num);
-    u16 chan;
+    uint32_t n_chan = le32_to_cpu(pno_cfg->channel_num);
+    uint16_t chan;
     int i;
     int err = 0;
 
@@ -293,7 +293,7 @@ done:
 }
 
 static int brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi, struct brcmf_pno_config_le* pno_cfg,
-                                   struct brcmf_gscan_bucket_config** buckets, u32* scan_freq) {
+                                   struct brcmf_gscan_bucket_config** buckets, uint32_t* scan_freq) {
     struct cfg80211_sched_scan_request* sr;
     struct brcmf_gscan_bucket_config* fw_buckets;
     int i, err, chidx;
@@ -391,7 +391,7 @@ static int brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     struct brcmf_gscan_bucket_config* buckets;
     struct brcmf_pno_config_le pno_cfg;
     size_t gsz;
-    u32 scan_freq;
+    uint32_t scan_freq;
     int err, n_buckets;
 
     pi = ifp_to_pno(ifp);
@@ -487,7 +487,7 @@ int brcmf_pno_start_sched_scan(struct brcmf_if* ifp, struct cfg80211_sched_scan_
     return 0;
 }
 
-int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, u64 reqid) {
+int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid) {
     struct brcmf_pno_info* pi;
     int err;
 
@@ -543,8 +543,8 @@ void brcmf_pno_wiphy_params(struct wiphy* wiphy, bool gscan) {
     wiphy->max_sched_scan_plan_interval = BRCMF_PNO_SCHED_SCAN_MAX_PERIOD;
 }
 
-u64 brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, u32 bucket) {
-    u64 reqid = 0;
+uint64_t brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, uint32_t bucket) {
+    uint64_t reqid = 0;
 
     mutex_lock(&pi->req_lock);
 
@@ -556,10 +556,10 @@ u64 brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, u32 bucket) {
     return reqid;
 }
 
-u32 brcmf_pno_get_bucket_map(struct brcmf_pno_info* pi, struct brcmf_pno_net_info_le* ni) {
+uint32_t brcmf_pno_get_bucket_map(struct brcmf_pno_info* pi, struct brcmf_pno_net_info_le* ni) {
     struct cfg80211_sched_scan_request* req;
     struct cfg80211_match_set* ms;
-    u32 bucket_map = 0;
+    uint32_t bucket_map = 0;
     int i, j;
 
     mutex_lock(&pi->req_lock);

@@ -230,8 +230,8 @@ enum brcmf_fweh_event_code {
 struct brcm_ethhdr {
     __be16 subtype;
     __be16 length;
-    u8 version;
-    u8 oui[3];
+    uint8_t version;
+    uint8_t oui[3];
     __be16 usr_subtype;
 } __packed;
 
@@ -243,10 +243,10 @@ struct brcmf_event_msg_be {
     __be32 reason;
     __be32 auth_type;
     __be32 datalen;
-    u8 addr[ETH_ALEN];
+    uint8_t addr[ETH_ALEN];
     char ifname[IFNAMSIZ];
-    u8 ifidx;
-    u8 bsscfgidx;
+    uint8_t ifidx;
+    uint8_t bsscfgidx;
 } __packed;
 
 /**
@@ -278,25 +278,25 @@ struct brcmf_event {
  * @bsscfgidx: bsscfg index.
  */
 struct brcmf_event_msg {
-    u16 version;
-    u16 flags;
-    u32 event_code;
-    u32 status;
-    u32 reason;
-    s32 auth_type;
-    u32 datalen;
-    u8 addr[ETH_ALEN];
+    uint16_t version;
+    uint16_t flags;
+    uint32_t event_code;
+    uint32_t status;
+    uint32_t reason;
+    int32_t auth_type;
+    uint32_t datalen;
+    uint8_t addr[ETH_ALEN];
     char ifname[IFNAMSIZ];
-    u8 ifidx;
-    u8 bsscfgidx;
+    uint8_t ifidx;
+    uint8_t bsscfgidx;
 };
 
 struct brcmf_if_event {
-    u8 ifidx;
-    u8 action;
-    u8 flags;
-    u8 bsscfgidx;
-    u8 role;
+    uint8_t ifidx;
+    uint8_t action;
+    uint8_t flags;
+    uint8_t bsscfgidx;
+    uint8_t role;
 };
 
 typedef int (*brcmf_fweh_handler_t)(struct brcmf_if* ifp, const struct brcmf_event_msg* evtmsg,
@@ -330,12 +330,12 @@ int brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code,
 void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code);
 int brcmf_fweh_activate_events(struct brcmf_if* ifp);
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
-                              u32 packet_len);
+                              uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 
 static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct sk_buff* skb) {
     struct brcmf_event* event_packet;
-    u16 usr_stype;
+    uint16_t usr_stype;
 
     /* only process events when protocol matches */
     if (skb->protocol != cpu_to_be16(ETH_P_LINK_CTL)) { return; }

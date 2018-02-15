@@ -38,8 +38,8 @@ static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wir
     int ret, payload, ret_len;
     void* dcmd_buf = NULL;
     void* wr_pointer;
-    u16 msglen;
-    u16 maxmsglen = PAGE_SIZE - 0x100;
+    uint16_t msglen;
+    uint16_t maxmsglen = PAGE_SIZE - 0x100;
 
     if (len < (int)sizeof(*cmdhdr)) {
         brcmf_err("vendor command too short: %d\n", len);

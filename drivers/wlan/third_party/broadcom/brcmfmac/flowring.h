@@ -21,23 +21,23 @@
 #define BRCMF_FLOWRING_INVALID_ID 0xFFFFFFFF
 
 struct brcmf_flowring_hash {
-    u8 mac[ETH_ALEN];
-    u8 fifo;
-    u8 ifidx;
-    u16 flowid;
+    uint8_t mac[ETH_ALEN];
+    uint8_t fifo;
+    uint8_t ifidx;
+    uint16_t flowid;
 };
 
 enum ring_status { RING_CLOSED, RING_CLOSING, RING_OPEN };
 
 struct brcmf_flowring_ring {
-    u16 hash_id;
+    uint16_t hash_id;
     bool blocked;
     enum ring_status status;
     struct sk_buff_head skblist;
 };
 
 struct brcmf_flowring_tdls_entry {
-    u8 mac[ETH_ALEN];
+    uint8_t mac[ETH_ALEN];
     struct brcmf_flowring_tdls_entry* next;
 };
 
@@ -47,26 +47,26 @@ struct brcmf_flowring {
     struct brcmf_flowring_ring** rings;
     spinlock_t block_lock;
     enum proto_addr_mode addr_mode[BRCMF_MAX_IFS];
-    u16 nrofrings;
+    uint16_t nrofrings;
     bool tdls_active;
     struct brcmf_flowring_tdls_entry* tdls_entry;
 };
 
-u32 brcmf_flowring_lookup(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio, u8 ifidx);
-u32 brcmf_flowring_create(struct brcmf_flowring* flow, u8 da[ETH_ALEN], u8 prio, u8 ifidx);
-void brcmf_flowring_delete(struct brcmf_flowring* flow, u16 flowid);
-void brcmf_flowring_open(struct brcmf_flowring* flow, u16 flowid);
-u8 brcmf_flowring_tid(struct brcmf_flowring* flow, u16 flowid);
-u32 brcmf_flowring_enqueue(struct brcmf_flowring* flow, u16 flowid, struct sk_buff* skb);
-struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, u16 flowid);
-void brcmf_flowring_reinsert(struct brcmf_flowring* flow, u16 flowid, struct sk_buff* skb);
-u32 brcmf_flowring_qlen(struct brcmf_flowring* flow, u16 flowid);
-u8 brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, u16 flowid);
-struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, u16 nrofrings);
+uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx);
+uint32_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx);
+void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid);
+void brcmf_flowring_open(struct brcmf_flowring* flow, uint16_t flowid);
+uint8_t brcmf_flowring_tid(struct brcmf_flowring* flow, uint16_t flowid);
+uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb);
+struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid);
+void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb);
+uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid);
+uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid);
+struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, uint16_t nrofrings);
 void brcmf_flowring_detach(struct brcmf_flowring* flow);
 void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
                                         enum proto_addr_mode addr_mode);
-void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, u8 peer[ETH_ALEN]);
-void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, u8 peer[ETH_ALEN]);
+void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, uint8_t peer[ETH_ALEN]);
+void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, uint8_t peer[ETH_ALEN]);
 
 #endif /* BRCMFMAC_FLOWRING_H */

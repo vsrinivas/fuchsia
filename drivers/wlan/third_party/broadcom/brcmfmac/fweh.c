@@ -42,11 +42,11 @@
 struct brcmf_fweh_queue_item {
     struct list_head q;
     enum brcmf_fweh_event_code code;
-    u8 ifidx;
-    u8 ifaddr[ETH_ALEN];
+    uint8_t ifidx;
+    uint8_t ifaddr[ETH_ALEN];
     struct brcmf_event_msg_be emsg;
-    u32 datalen;
-    u8 data[0];
+    uint32_t datalen;
+    uint8_t data[0];
 };
 
 /**
@@ -245,7 +245,7 @@ static void brcmf_fweh_event_worker(struct work_struct* work) {
 
         brcmf_dbg(EVENT, "  version %u flags %u status %u reason %u\n", emsg.version, emsg.flags,
                   emsg.status, emsg.reason);
-        brcmf_dbg_hex_dump(BRCMF_EVENT_ON(), event->data, min_t(u32, emsg.datalen, 64),
+        brcmf_dbg_hex_dump(BRCMF_EVENT_ON(), event->data, min_t(uint32_t, emsg.datalen, 64),
                            "event payload, len=%d\n", emsg.datalen);
 
         /* special handling of interface event */
@@ -299,7 +299,7 @@ void brcmf_fweh_attach(struct brcmf_pub* drvr) {
 void brcmf_fweh_detach(struct brcmf_pub* drvr) {
     struct brcmf_fweh_info* fweh = &drvr->fweh;
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
-    s8 eventmask[BRCMF_EVENTING_MASK_LEN];
+    int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
 
     if (ifp) {
         /* clear all events */
@@ -348,7 +348,7 @@ void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code co
  */
 int brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     int i, err;
-    s8 eventmask[BRCMF_EVENTING_MASK_LEN];
+    int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
 
     memset(eventmask, 0, sizeof(eventmask));
     for (i = 0; i < BRCMF_E_LAST; i++) {
@@ -380,13 +380,13 @@ int brcmf_fweh_activate_events(struct brcmf_if* ifp) {
  * dispatch the event to a registered handler (using worker).
  */
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
-                              u32 packet_len) {
+                              uint32_t packet_len) {
     enum brcmf_fweh_event_code code;
     struct brcmf_fweh_info* fweh = &drvr->fweh;
     struct brcmf_fweh_queue_item* event;
     gfp_t alloc_flag = GFP_KERNEL;
     void* data;
-    u32 datalen;
+    uint32_t datalen;
 
     /* get event info */
     code = get_unaligned_be32(&event_packet->msg.event_type);

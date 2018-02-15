@@ -196,7 +196,7 @@ enum brcmf_wowl_pattern_type {
 };
 
 struct brcmf_fil_p2p_if_le {
-    u8 addr[ETH_ALEN];
+    uint8_t addr[ETH_ALEN];
     __le16 type;
     __le16 chspec;
 };
@@ -208,17 +208,17 @@ struct brcmf_fil_chan_info_le {
 };
 
 struct brcmf_fil_action_frame_le {
-    u8 da[ETH_ALEN];
+    uint8_t da[ETH_ALEN];
     __le16 len;
     __le32 packet_id;
-    u8 data[BRCMF_FIL_ACTION_FRAME_SIZE];
+    uint8_t data[BRCMF_FIL_ACTION_FRAME_SIZE];
 };
 
 struct brcmf_fil_af_params_le {
     __le32 channel;
     __le32 dwell_time;
-    u8 bssid[ETH_ALEN];
-    u8 pad[2];
+    uint8_t bssid[ETH_ALEN];
+    uint8_t pad[2];
     struct brcmf_fil_action_frame_le action_frame;
 };
 
@@ -241,8 +241,8 @@ struct brcmf_fil_bwcap_le {
  * @pad: unused (for future use).
  */
 struct brcmf_tdls_iovar_le {
-    u8 ea[ETH_ALEN]; /* Station address */
-    u8 mode;         /* mode: depends on iovar */
+    uint8_t ea[ETH_ALEN]; /* Station address */
+    uint8_t mode;         /* mode: depends on iovar */
     __le16 chanspec;
     __le32 pad; /* future */
 };
@@ -269,7 +269,7 @@ struct brcmf_pkt_filter_pattern_le {
      * Variable length mask and pattern data. mask starts at offset 0.
      * Pattern immediately follows mask.
      */
-    u8 mask_and_pattern[1];
+    uint8_t mask_and_pattern[1];
 };
 
 /* IOVAR "pkt_filter_add" parameter. Used to install packet filters. */
@@ -297,29 +297,29 @@ struct brcmf_bss_info_le {
     __le32 length;  /* byte length of data in this record,
                      * starting at version and including IEs
                      */
-    u8 BSSID[ETH_ALEN];
+    uint8_t BSSID[ETH_ALEN];
     __le16 beacon_period; /* units are Kusec */
     __le16 capability;    /* Capability information */
-    u8 SSID_len;
-    u8 SSID[32];
+    uint8_t SSID_len;
+    uint8_t SSID[32];
     struct {
         __le32 count;   /* # rates in this set */
-        u8 rates[16];   /* rates in 500kbps units w/hi bit set if basic */
+        uint8_t rates[16];   /* rates in 500kbps units w/hi bit set if basic */
     } rateset;          /* supported rates */
     __le16 chanspec;    /* chanspec for bss */
     __le16 atim_window; /* units are Kusec */
-    u8 dtim_period;     /* DTIM period */
+    uint8_t dtim_period;     /* DTIM period */
     __le16 RSSI;        /* receive signal strength (in dBm) */
-    s8 phy_noise;       /* noise (in dBm) */
+    int8_t phy_noise;       /* noise (in dBm) */
 
-    u8 n_cap; /* BSS is 802.11N Capable */
+    uint8_t n_cap; /* BSS is 802.11N Capable */
     /* 802.11N BSS Capabilities (based on HT_CAP_*): */
     __le32 nbss_cap;
-    u8 ctl_ch;                      /* 802.11N BSS control channel number */
+    uint8_t ctl_ch;                      /* 802.11N BSS control channel number */
     __le32 reserved32[1];           /* Reserved for expansion of BSS properties */
-    u8 flags;                       /* flags */
-    u8 reserved[3];                 /* Reserved for expansion of BSS properties */
-    u8 basic_mcs[BRCMF_MCSSET_LEN]; /* 802.11N BSS required MCS set */
+    uint8_t flags;                       /* flags */
+    uint8_t reserved[3];                 /* Reserved for expansion of BSS properties */
+    uint8_t basic_mcs[BRCMF_MCSSET_LEN]; /* 802.11N BSS required MCS set */
 
     __le16 ie_offset; /* offset at which IEs start, from beginning */
     __le32 ie_length; /* byte length of Information Elements */
@@ -332,7 +332,7 @@ struct brcm_rateset_le {
     /* # rates in this set */
     __le32 count;
     /* rates in 500kbps units w/hi bit set if basic */
-    u8 rates[BRCMF_MAXRATES_IN_SET];
+    uint8_t rates[BRCMF_MAXRATES_IN_SET];
 };
 
 struct brcmf_ssid_le {
@@ -342,11 +342,11 @@ struct brcmf_ssid_le {
 
 struct brcmf_scan_params_le {
     struct brcmf_ssid_le ssid_le; /* default: {0, ""} */
-    u8 bssid[ETH_ALEN];           /* default: bcast */
-    s8 bss_type;                  /* default: any,
+    uint8_t bssid[ETH_ALEN];           /* default: bcast */
+    int8_t bss_type;                  /* default: any,
                                    * DOT11_BSSTYPE_ANY/INFRASTRUCTURE/INDEPENDENT
                                    */
-    u8 scan_type;                 /* flags, 0 use default */
+    uint8_t scan_type;                 /* flags, 0 use default */
     __le32 nprobes;               /* -1 use default, number of probes per channel */
     __le32 active_time;           /* -1 use default, dwell time per channel for
                                    * active scanning
@@ -365,7 +365,7 @@ struct brcmf_scan_params_le {
                                    *
                                    * high half is entries in struct brcmf_ssid
                                    * array that follows channel_list, aligned for
-                                   * s32 (4 bytes) meaning an odd channel count
+                                   * int32_t (4 bytes) meaning an odd channel count
                                    * implies a 2-byte pad between end of
                                    * channel_list and first ssid
                                    *
@@ -377,9 +377,9 @@ struct brcmf_scan_params_le {
 };
 
 struct brcmf_scan_results {
-    u32 buflen;
-    u32 version;
-    u32 count;
+    uint32_t buflen;
+    uint32_t version;
+    uint32_t count;
     struct brcmf_bss_info_le bss_info_le[];
 };
 
@@ -404,7 +404,7 @@ struct brcmf_escan_result_le {
 /* used for association with a specific BSSID and chanspec list */
 struct brcmf_assoc_params_le {
     /* 00:00:00:00:00:00: broadcast scan */
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
     /* 0: all available channels, otherwise count of chanspecs in
      * chanspec_list */
     __le32 chanspec_num;
@@ -422,10 +422,10 @@ struct brcmf_assoc_params_le {
  *  This is used if @type is BAND or RSSI_DELTA.
  */
 struct brcmf_join_pref_params {
-    u8 type;
-    u8 len;
-    u8 rssi_gain;
-    u8 band;
+    uint8_t type;
+    uint8_t len;
+    uint8_t rssi_gain;
+    uint8_t band;
 };
 
 /* used for join with or without a specific bssid and channel list */
@@ -436,7 +436,7 @@ struct brcmf_join_params {
 
 /* scan params for extended join */
 struct brcmf_join_scan_params_le {
-    u8 scan_type;        /* 0 use default, active or passive scan */
+    uint8_t scan_type;        /* 0 use default, active or passive scan */
     __le32 nprobes;      /* -1 use default, nr of probes per channel */
     __le32 active_time;  /* -1 use default, dwell time per channel for
                           * active scanning
@@ -457,22 +457,22 @@ struct brcmf_ext_join_params_le {
 };
 
 struct brcmf_wsec_key {
-    u32 index;                 /* key index */
-    u32 len;                   /* key length */
-    u8 data[WLAN_MAX_KEY_LEN]; /* key data */
-    u32 pad_1[18];
-    u32 algo;  /* CRYPTO_ALGO_AES_CCM, CRYPTO_ALGO_WEP128, etc */
-    u32 flags; /* misc flags */
-    u32 pad_2[3];
-    u32 iv_initialized; /* has IV been initialized already? */
-    u32 pad_3;
+    uint32_t index;                 /* key index */
+    uint32_t len;                   /* key length */
+    uint8_t data[WLAN_MAX_KEY_LEN]; /* key data */
+    uint32_t pad_1[18];
+    uint32_t algo;  /* CRYPTO_ALGO_AES_CCM, CRYPTO_ALGO_WEP128, etc */
+    uint32_t flags; /* misc flags */
+    uint32_t pad_2[3];
+    uint32_t iv_initialized; /* has IV been initialized already? */
+    uint32_t pad_3;
     /* Rx IV */
     struct {
-        u32 hi; /* upper 32 bits of IV */
-        u16 lo; /* lower 16 bits of IV */
+        uint32_t hi; /* upper 32 bits of IV */
+        uint16_t lo; /* lower 16 bits of IV */
     } rxiv;
-    u32 pad_4[2];
-    u8 ea[ETH_ALEN]; /* per station */
+    uint32_t pad_4[2];
+    uint8_t ea[ETH_ALEN]; /* per station */
 };
 
 /*
@@ -481,7 +481,7 @@ struct brcmf_wsec_key {
 struct brcmf_wsec_key_le {
     __le32 index;              /* key index */
     __le32 len;                /* key length */
-    u8 data[WLAN_MAX_KEY_LEN]; /* key data */
+    uint8_t data[WLAN_MAX_KEY_LEN]; /* key data */
     __le32 pad_1[18];
     __le32 algo;  /* CRYPTO_ALGO_AES_CCM, CRYPTO_ALGO_WEP128, etc */
     __le32 flags; /* misc flags */
@@ -494,7 +494,7 @@ struct brcmf_wsec_key_le {
         __le16 lo; /* lower 16 bits of IV */
     } rxiv;
     __le32 pad_4[2];
-    u8 ea[ETH_ALEN]; /* per station */
+    uint8_t ea[ETH_ALEN]; /* per station */
 };
 
 /**
@@ -507,13 +507,13 @@ struct brcmf_wsec_key_le {
 struct brcmf_wsec_pmk_le {
     __le16 key_len;
     __le16 flags;
-    u8 key[2 * BRCMF_WSEC_MAX_PSK_LEN + 1];
+    uint8_t key[2 * BRCMF_WSEC_MAX_PSK_LEN + 1];
 };
 
 /* Used to get specific STA parameters */
 struct brcmf_scb_val_le {
     __le32 val;
-    u8 ea[ETH_ALEN];
+    uint8_t ea[ETH_ALEN];
 };
 
 /* channel encoding */
@@ -529,9 +529,9 @@ struct brcmf_sta_info_le {
     __le16 cap;                        /* sta's advertised capabilities */
     __le32 flags;                      /* flags defined below */
     __le32 idle;                       /* time since data pkt rx'd from sta */
-    u8 ea[ETH_ALEN];                   /* Station address */
+    uint8_t ea[ETH_ALEN];                   /* Station address */
     __le32 count;                      /* # rates in this set */
-    u8 rates[BRCMF_MAXRATES_IN_SET];   /* rates in 500kbps units */
+    uint8_t rates[BRCMF_MAXRATES_IN_SET];   /* rates in 500kbps units */
                                        /* w/hi bit set if basic */
     __le32 in;                         /* seconds elapsed since associated */
     __le32 listen_interval_inms;       /* Min Listen interval in ms for STA */
@@ -552,8 +552,8 @@ struct brcmf_sta_info_le {
     __le64 tx_mcast_bytes;             /* # data bytes txed (mcast) */
     __le64 rx_ucast_bytes;             /* data bytes recvd (ucast) */
     __le64 rx_mcast_bytes;             /* data bytes recvd (mcast) */
-    s8 rssi[BRCMF_ANT_MAX];            /* per antenna rssi */
-    s8 nf[BRCMF_ANT_MAX];              /* per antenna noise floor */
+    int8_t rssi[BRCMF_ANT_MAX];            /* per antenna rssi */
+    int8_t nf[BRCMF_ANT_MAX];              /* per antenna noise floor */
     __le16 aid;                        /* association ID */
     __le16 ht_capabilities;            /* advertised ht caps */
     __le16 vht_flags;                  /* converted vht flags */
@@ -563,7 +563,7 @@ struct brcmf_sta_info_le {
     __le32 tx_pkts_retry_exhausted;    /* # of user frames where a retry
                                         * was exhausted
                                         */
-    s8 rx_lastpkt_rssi[BRCMF_ANT_MAX]; /* Per antenna RSSI of last
+    int8_t rx_lastpkt_rssi[BRCMF_ANT_MAX]; /* Per antenna RSSI of last
                                         * received data frame.
                                         */
     /* TX WLAN retry/failure statistics:
@@ -612,7 +612,7 @@ struct brcmf_rx_mgmt_data {
  * @type: Type of pattern (enum brcmf_wowl_pattern_type)
  */
 struct brcmf_fil_wowl_pattern_le {
-    u8 cmd[4];
+    uint8_t cmd[4];
     __le32 masksize;
     __le32 offset;
     __le32 patternoffset;
@@ -620,8 +620,8 @@ struct brcmf_fil_wowl_pattern_le {
     __le32 id;
     __le32 reasonsize;
     __le32 type;
-    /* u8 mask[] - Mask follows the structure above */
-    /* u8 pattern[] - Pattern follows the mask is at 'patternoffset' */
+    /* uint8_t mask[] - Mask follows the structure above */
+    /* uint8_t pattern[] - Pattern follows the mask is at 'patternoffset' */
 };
 
 struct brcmf_mbss_ssid_le {
@@ -692,7 +692,7 @@ struct brcmf_rev_info_le {
  */
 struct brcmf_assoclist_le {
     __le32 count;
-    u8 mac[BRCMF_MAX_ASSOCLIST][ETH_ALEN];
+    uint8_t mac[BRCMF_MAX_ASSOCLIST][ETH_ALEN];
 };
 
 /**
@@ -714,8 +714,8 @@ struct brcmf_wowl_wakeind_le {
  * @pmkid: he PMK material itself.
  */
 struct brcmf_pmksa {
-    u8 bssid[ETH_ALEN];
-    u8 pmkid[WLAN_PMKID_LEN];
+    uint8_t bssid[ETH_ALEN];
+    uint8_t pmkid[WLAN_PMKID_LEN];
 };
 
 /**
@@ -752,10 +752,10 @@ struct brcmf_pno_param_le {
     __le32 lost_network_timeout;
     __le16 flags;
     __le16 rssi_margin;
-    u8 bestn;
-    u8 mscan;
-    u8 repeat;
-    u8 exp;
+    uint8_t bestn;
+    uint8_t mscan;
+    uint8_t repeat;
+    uint8_t exp;
     __le32 slow_freq;
 };
 
@@ -804,10 +804,10 @@ struct brcmf_pno_net_param_le {
  * @timestamp: age in seconds.
  */
 struct brcmf_pno_net_info_le {
-    u8 bssid[ETH_ALEN];
-    u8 channel;
-    u8 SSID_len;
-    u8 SSID[32];
+    uint8_t bssid[ETH_ALEN];
+    uint8_t channel;
+    uint8_t SSID_len;
+    uint8_t SSID[32];
     __le16 RSSI;
     __le16 timestamp;
 };
@@ -840,9 +840,9 @@ struct brcmf_pno_scanresults_v2_le {
  * @mac: MAC address.
  */
 struct brcmf_pno_macaddr_le {
-    u8 version;
-    u8 flags;
-    u8 mac[ETH_ALEN];
+    uint8_t version;
+    uint8_t flags;
+    uint8_t mac[ETH_ALEN];
 };
 
 /**
@@ -858,7 +858,7 @@ struct brcmf_dload_data_le {
     __le16 dload_type;
     __le32 len;
     __le32 crc;
-    u8 data[1];
+    uint8_t data[1];
 };
 
 /**
@@ -868,7 +868,7 @@ struct brcmf_dload_data_le {
  * @flags: flags for this BSSID.
  */
 struct brcmf_pno_bssid_le {
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
     __le16 flags;
 };
 
@@ -897,9 +897,9 @@ struct brcmf_pktcnt_le {
  * @replay_counter: replay counter.
  */
 struct brcmf_gtk_keyinfo_le {
-    u8 kck[BRCMF_RSN_KCK_LENGTH];
-    u8 kek[BRCMF_RSN_KEK_LENGTH];
-    u8 replay_counter[BRCMF_RSN_REPLAY_LEN];
+    uint8_t kck[BRCMF_RSN_KCK_LENGTH];
+    uint8_t kek[BRCMF_RSN_KEK_LENGTH];
+    uint8_t replay_counter[BRCMF_RSN_REPLAY_LEN];
 };
 
 #define BRCMF_PNO_REPORT_NO_BATCH BIT(2)
@@ -916,10 +916,10 @@ struct brcmf_gtk_keyinfo_le {
  * @max_freq_multiple: maximum scan interval for exponential scan.
  */
 struct brcmf_gscan_bucket_config {
-    u8 bucket_end_index;
-    u8 bucket_freq_multiple;
-    u8 flag;
-    u8 reserved;
+    uint8_t bucket_end_index;
+    uint8_t bucket_freq_multiple;
+    uint8_t flag;
+    uint8_t reserved;
     __le16 repeat;
     __le16 max_freq_multiple;
 };
@@ -957,12 +957,12 @@ enum brcmf_gscan_cfg_flags {
  */
 struct brcmf_gscan_config {
     __le16 version;
-    u8 flags;
-    u8 buffer_threshold;
-    u8 swc_nbssid_threshold;
-    u8 swc_rssi_window_size;
-    u8 count_of_channel_buckets;
-    u8 retry_threshold;
+    uint8_t flags;
+    uint8_t buffer_threshold;
+    uint8_t swc_nbssid_threshold;
+    uint8_t swc_rssi_window_size;
+    uint8_t count_of_channel_buckets;
+    uint8_t retry_threshold;
     __le16 lost_ap_window;
     struct brcmf_gscan_bucket_config bucket[1];
 };

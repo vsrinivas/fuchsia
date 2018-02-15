@@ -113,7 +113,7 @@
  * @dwell: dwell time in ms for %WL_P2P_DISC_ST_LISTEN state.
  */
 struct brcmf_p2p_disc_st_le {
-    u8 state;
+    uint8_t state;
     __le16 chspec;
     __le16 dwell;
 };
@@ -136,8 +136,8 @@ enum brcmf_p2p_disc_state { WL_P2P_DISC_ST_SCAN, WL_P2P_DISC_ST_LISTEN, WL_P2P_D
  * @sparams: parameters used for type 'S'.
  */
 struct brcmf_p2p_scan_le {
-    u8 type;
-    u8 reserved[3];
+    uint8_t type;
+    uint8_t reserved[3];
     union {
         struct brcmf_escan_params_le eparams;
         struct brcmf_scan_params_le sparams;
@@ -156,13 +156,13 @@ struct brcmf_p2p_scan_le {
  * @elts[1]: Variable length information elements.
  */
 struct brcmf_p2p_pub_act_frame {
-    u8 category;
-    u8 action;
-    u8 oui[3];
-    u8 oui_type;
-    u8 subtype;
-    u8 dialog_token;
-    u8 elts[1];
+    uint8_t category;
+    uint8_t action;
+    uint8_t oui[3];
+    uint8_t oui_type;
+    uint8_t subtype;
+    uint8_t dialog_token;
+    uint8_t elts[1];
 };
 
 /**
@@ -176,12 +176,12 @@ struct brcmf_p2p_pub_act_frame {
  * @elts[1]: Variable length information elements.
  */
 struct brcmf_p2p_action_frame {
-    u8 category;
-    u8 oui[3];
-    u8 type;
-    u8 subtype;
-    u8 dialog_token;
-    u8 elts[1];
+    uint8_t category;
+    uint8_t oui[3];
+    uint8_t type;
+    uint8_t subtype;
+    uint8_t dialog_token;
+    uint8_t elts[1];
 };
 
 /**
@@ -193,10 +193,10 @@ struct brcmf_p2p_action_frame {
  * @query_data[1]: Query Data. SD gas ireq SD gas iresp
  */
 struct brcmf_p2psd_gas_pub_act_frame {
-    u8 category;
-    u8 action;
-    u8 dialog_token;
-    u8 query_data[1];
+    uint8_t category;
+    uint8_t action;
+    uint8_t dialog_token;
+    uint8_t query_data[1];
 };
 
 /**
@@ -208,7 +208,7 @@ struct brcmf_p2psd_gas_pub_act_frame {
  * extra_listen: keep the dwell time to get af response frame.
  */
 struct brcmf_config_af_params {
-    s32 mpc_onoff;
+    int32_t mpc_onoff;
     bool search_channel;
     bool extra_listen;
 };
@@ -221,7 +221,7 @@ struct brcmf_config_af_params {
  *
  * Determine if action frame is p2p public action type
  */
-static bool brcmf_p2p_is_pub_action(void* frame, u32 frame_len) {
+static bool brcmf_p2p_is_pub_action(void* frame, uint32_t frame_len) {
     struct brcmf_p2p_pub_act_frame* pact_frm;
 
     if (frame == NULL) {
@@ -249,7 +249,7 @@ static bool brcmf_p2p_is_pub_action(void* frame, u32 frame_len) {
  *
  * Determine if action frame is p2p action type
  */
-static bool brcmf_p2p_is_p2p_action(void* frame, u32 frame_len) {
+static bool brcmf_p2p_is_p2p_action(void* frame, uint32_t frame_len) {
     struct brcmf_p2p_action_frame* act_frm;
 
     if (frame == NULL) {
@@ -277,7 +277,7 @@ static bool brcmf_p2p_is_p2p_action(void* frame, u32 frame_len) {
  *
  * Determine if action frame is p2p gas action type
  */
-static bool brcmf_p2p_is_gas_action(void* frame, u32 frame_len) {
+static bool brcmf_p2p_is_gas_action(void* frame, uint32_t frame_len) {
     struct brcmf_p2psd_gas_pub_act_frame* sd_act_frm;
 
     if (frame == NULL) {
@@ -315,7 +315,7 @@ static bool brcmf_p2p_is_gas_action(void* frame, u32 frame_len) {
 
 #ifdef DEBUG
 
-static void brcmf_p2p_print_actframe(bool tx, void* frame, u32 frame_len) {
+static void brcmf_p2p_print_actframe(bool tx, void* frame, uint32_t frame_len) {
     struct brcmf_p2p_pub_act_frame* pact_frm;
     struct brcmf_p2p_action_frame* act_frm;
     struct brcmf_p2psd_gas_pub_act_frame* sd_act_frm;
@@ -401,7 +401,7 @@ static void brcmf_p2p_print_actframe(bool tx, void* frame, u32 frame_len) {
 
 #else
 
-static void brcmf_p2p_print_actframe(bool tx, void* frame, u32 frame_len) {}
+static void brcmf_p2p_print_actframe(bool tx, void* frame, uint32_t frame_len) {}
 
 #endif
 
@@ -411,8 +411,8 @@ static void brcmf_p2p_print_actframe(bool tx, void* frame, u32 frame_len) {}
  * @ifp: ifp to use for iovars (primary).
  * @p2p_mac: mac address to configure for p2p_da_override
  */
-static int brcmf_p2p_set_firmware(struct brcmf_if* ifp, u8* p2p_mac) {
-    s32 ret = 0;
+static int brcmf_p2p_set_firmware(struct brcmf_if* ifp, uint8_t* p2p_mac) {
+    int32_t ret = 0;
 
     brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
     brcmf_fil_iovar_int_set(ifp, "apsta", 1);
@@ -443,7 +443,7 @@ static int brcmf_p2p_set_firmware(struct brcmf_if* ifp, u8* p2p_mac) {
  * address it specified, these are derived from the primary net device, ie.
  * the permanent ethernet address of the device.
  */
-static void brcmf_p2p_generate_bss_mac(struct brcmf_p2p_info* p2p, u8* dev_addr) {
+static void brcmf_p2p_generate_bss_mac(struct brcmf_p2p_info* p2p, uint8_t* dev_addr) {
     struct brcmf_if* pri_ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
     bool local_admin = false;
 
@@ -502,10 +502,10 @@ static bool brcmf_p2p_scan_is_p2p_request(struct cfg80211_scan_request* request)
  * @chanspec: channel parameters (for state @WL_P2P_DISC_ST_LISTEN only).
  * @listen_ms: duration to listen (for state @WL_P2P_DISC_ST_LISTEN only).
  */
-static s32 brcmf_p2p_set_discover_state(struct brcmf_if* ifp, u8 state, u16 chanspec,
-                                        u16 listen_ms) {
+static int32_t brcmf_p2p_set_discover_state(struct brcmf_if* ifp, uint8_t state, uint16_t chanspec,
+                                        uint16_t listen_ms) {
     struct brcmf_p2p_disc_st_le discover_state;
-    s32 ret = 0;
+    int32_t ret = 0;
     brcmf_dbg(TRACE, "enter\n");
 
     discover_state.state = state;
@@ -522,7 +522,7 @@ static s32 brcmf_p2p_set_discover_state(struct brcmf_if* ifp, u8 state, u16 chan
  *
  * Resets the discovery state and disables it in firmware.
  */
-static s32 brcmf_p2p_deinit_discovery(struct brcmf_p2p_info* p2p) {
+static int32_t brcmf_p2p_deinit_discovery(struct brcmf_p2p_info* p2p) {
     struct brcmf_cfg80211_vif* vif;
 
     brcmf_dbg(TRACE, "enter\n");
@@ -547,7 +547,7 @@ static s32 brcmf_p2p_deinit_discovery(struct brcmf_p2p_info* p2p) {
  */
 static int brcmf_p2p_enable_discovery(struct brcmf_p2p_info* p2p) {
     struct brcmf_cfg80211_vif* vif;
-    s32 ret = 0;
+    int32_t ret = 0;
 
     brcmf_dbg(TRACE, "enter\n");
     vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
@@ -602,14 +602,14 @@ exit:
  * @search_state: P2P discover state to use.
  * @bss_type: type of P2P bss.
  */
-static s32 brcmf_p2p_escan(struct brcmf_p2p_info* p2p, u32 num_chans, u16 chanspecs[],
-                           s32 search_state, enum p2p_bss_type bss_type) {
-    s32 ret = 0;
-    s32 memsize = offsetof(struct brcmf_p2p_scan_le, eparams.params_le.channel_list);
-    s32 nprobes;
-    s32 active;
-    u32 i;
-    u8* memblk;
+static int32_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chans, uint16_t chanspecs[],
+                           int32_t search_state, enum p2p_bss_type bss_type) {
+    int32_t ret = 0;
+    int32_t memsize = offsetof(struct brcmf_p2p_scan_le, eparams.params_le.channel_list);
+    int32_t nprobes;
+    int32_t active;
+    uint32_t i;
+    uint8_t* memblk;
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_p2p_scan_le* p2p_params;
     struct brcmf_scan_params_le* sparams;
@@ -730,16 +730,16 @@ exit:
  * Determines the P2P discovery state based to scan request parameters and
  * validates the channels in the request.
  */
-static s32 brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+static int32_t brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                struct cfg80211_scan_request* request) {
     struct brcmf_p2p_info* p2p = &cfg->p2p;
-    s32 err = 0;
-    s32 search_state = WL_P2P_DISC_ST_SCAN;
+    int32_t err = 0;
+    int32_t search_state = WL_P2P_DISC_ST_SCAN;
     struct brcmf_cfg80211_vif* vif;
     struct net_device* dev = NULL;
     int i;
     int num_nodfs = 0;
-    u16* chanspecs;
+    uint16_t* chanspecs;
 
     brcmf_dbg(TRACE, "enter\n");
 
@@ -806,10 +806,10 @@ exit:
  * Scan ie for p2p ie and look for attribute 6 channel. If available determine
  * channel and return it.
  */
-static s32 brcmf_p2p_find_listen_channel(const u8* ie, u32 ie_len) {
-    u8 channel_ie[5];
-    s32 listen_channel;
-    s32 err;
+static int32_t brcmf_p2p_find_listen_channel(const uint8_t* ie, uint32_t ie_len) {
+    uint8_t channel_ie[5];
+    int32_t listen_channel;
+    int32_t err;
 
     err = cfg80211_get_p2p_attr(ie, ie_len, IEEE80211_P2P_ATTR_LISTEN_CHANNEL, channel_ie,
                                 sizeof(channel_ie));
@@ -819,7 +819,7 @@ static s32 brcmf_p2p_find_listen_channel(const u8* ie, u32 ie_len) {
 
     /* listen channel subel length format:     */
     /* 3(country) + 1(op. class) + 1(chan num) */
-    listen_channel = (s32)channel_ie[3 + 1];
+    listen_channel = (int32_t)channel_ie[3 + 1];
 
     if (listen_channel == SOCIAL_CHAN_1 || listen_channel == SOCIAL_CHAN_2 ||
             listen_channel == SOCIAL_CHAN_3) {
@@ -879,10 +879,10 @@ int brcmf_p2p_scan_prep(struct wiphy* wiphy, struct cfg80211_scan_request* reque
  * @duration: time in ms to stay on channel.
  *
  */
-static s32 brcmf_p2p_discover_listen(struct brcmf_p2p_info* p2p, u16 channel, u32 duration) {
+static int32_t brcmf_p2p_discover_listen(struct brcmf_p2p_info* p2p, uint16_t channel, uint32_t duration) {
     struct brcmf_cfg80211_vif* vif;
     struct brcmu_chan ch;
-    s32 err = 0;
+    int32_t err = 0;
 
     vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
     if (!vif) {
@@ -900,7 +900,7 @@ static s32 brcmf_p2p_discover_listen(struct brcmf_p2p_info* p2p, u16 channel, u3
     ch.chnum = channel;
     ch.bw = BRCMU_CHAN_BW_20;
     p2p->cfg->d11inf.encchspec(&ch);
-    err = brcmf_p2p_set_discover_state(vif->ifp, WL_P2P_DISC_ST_LISTEN, ch.chspec, (u16)duration);
+    err = brcmf_p2p_set_discover_state(vif->ifp, WL_P2P_DISC_ST_LISTEN, ch.chspec, (uint16_t)duration);
     if (!err) {
         set_bit(BRCMF_P2P_STATUS_DISCOVER_LISTEN, &p2p->status);
         p2p->remain_on_channel_cookie++;
@@ -919,11 +919,11 @@ exit:
  */
 int brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
                                 struct ieee80211_channel* channel, unsigned int duration,
-                                u64* cookie) {
+                                uint64_t* cookie) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_p2p_info* p2p = &cfg->p2p;
-    s32 err;
-    u16 channel_nr;
+    int32_t err;
+    uint16_t channel_nr;
 
     channel_nr = ieee80211_frequency_to_channel(channel->center_freq);
     brcmf_dbg(TRACE, "Enter, channel: %d, duration ms (%d)\n", channel_nr, duration);
@@ -995,11 +995,11 @@ void brcmf_p2p_cancel_remain_on_channel(struct brcmf_if* ifp) {
  * search function to reach at common channel to send action frame. When
  * channel is 0 then all social channels will be used to send af
  */
-static s32 brcmf_p2p_act_frm_search(struct brcmf_p2p_info* p2p, u16 channel) {
-    s32 err;
-    u32 channel_cnt;
-    u16* default_chan_list;
-    u32 i;
+static int32_t brcmf_p2p_act_frm_search(struct brcmf_p2p_info* p2p, uint16_t channel) {
+    int32_t err;
+    uint32_t channel_cnt;
+    uint16_t* default_chan_list;
+    uint32_t i;
     struct brcmu_chan ch;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -1050,7 +1050,7 @@ exit:
 static void brcmf_p2p_afx_handler(struct work_struct* work) {
     struct afx_hdl* afx_hdl = container_of(work, struct afx_hdl, afx_work);
     struct brcmf_p2p_info* p2p = container_of(afx_hdl, struct brcmf_p2p_info, afx_hdl);
-    s32 err;
+    int32_t err;
 
     if (!afx_hdl->is_active) {
         return;
@@ -1077,11 +1077,11 @@ static void brcmf_p2p_afx_handler(struct work_struct* work) {
  * @p2p: p2p device info struct.
  *
  */
-static s32 brcmf_p2p_af_searching_channel(struct brcmf_p2p_info* p2p) {
+static int32_t brcmf_p2p_af_searching_channel(struct brcmf_p2p_info* p2p) {
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
     struct brcmf_cfg80211_vif* pri_vif;
     unsigned long duration;
-    s32 retry;
+    int32_t retry;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -1152,9 +1152,9 @@ bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
     struct brcmu_chan ch;
-    u8* ie;
-    s32 err;
-    u8 p2p_dev_addr[ETH_ALEN];
+    uint8_t* ie;
+    int32_t err;
+    uint8_t p2p_dev_addr[ETH_ALEN];
 
     if (!test_bit(BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL, &p2p->status)) {
         return false;
@@ -1168,7 +1168,7 @@ bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
         return true;
     }
 
-    ie = ((u8*)bi) + le16_to_cpu(bi->ie_offset);
+    ie = ((uint8_t*)bi) + le16_to_cpu(bi->ie_offset);
     memset(p2p_dev_addr, 0, sizeof(p2p_dev_addr));
     err = cfg80211_get_p2p_attr(ie, le32_to_cpu(bi->ie_length), IEEE80211_P2P_ATTR_DEVICE_INFO,
                                 p2p_dev_addr, sizeof(p2p_dev_addr));
@@ -1223,7 +1223,7 @@ static void brcmf_p2p_stop_wait_next_action_frame(struct brcmf_cfg80211_info* cf
  *
  * return true if recevied action frame is to be dropped.
  */
-static bool brcmf_p2p_gon_req_collision(struct brcmf_p2p_info* p2p, u8* mac) {
+static bool brcmf_p2p_gon_req_collision(struct brcmf_p2p_info* p2p, uint8_t* mac) {
     struct brcmf_cfg80211_info* cfg = p2p->cfg;
     struct brcmf_if* ifp;
 
@@ -1275,16 +1275,16 @@ int brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct brcmf_ev
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
     struct wireless_dev* wdev;
-    u32 mgmt_frame_len = e->datalen - sizeof(struct brcmf_rx_mgmt_data);
+    uint32_t mgmt_frame_len = e->datalen - sizeof(struct brcmf_rx_mgmt_data);
     struct brcmf_rx_mgmt_data* rxframe = (struct brcmf_rx_mgmt_data*)data;
-    u8* frame = (u8*)(rxframe + 1);
+    uint8_t* frame = (uint8_t*)(rxframe + 1);
     struct brcmf_p2p_pub_act_frame* act_frm;
     struct brcmf_p2psd_gas_pub_act_frame* sd_act_frm;
     struct brcmu_chan ch;
     struct ieee80211_mgmt* mgmt_frame;
-    s32 freq;
-    u16 mgmt_type;
-    u8 action;
+    int32_t freq;
+    uint16_t mgmt_type;
+    uint8_t action;
 
     if (e->datalen < sizeof(*rxframe)) {
         brcmf_dbg(SCAN, "Event data to small. Ignore\n");
@@ -1306,7 +1306,7 @@ int brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct brcmf_ev
     if (brcmf_p2p_is_pub_action(frame, mgmt_frame_len)) {
         act_frm = (struct brcmf_p2p_pub_act_frame*)frame;
         action = act_frm->subtype;
-        if ((action == P2P_PAF_GON_REQ) && (brcmf_p2p_gon_req_collision(p2p, (u8*)e->addr))) {
+        if ((action == P2P_PAF_GON_REQ) && (brcmf_p2p_gon_req_collision(p2p, (uint8_t*)e->addr))) {
             if (test_bit(BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL, &p2p->status) &&
                     (ether_addr_equal(afx_hdl->tx_dst_addr, e->addr))) {
                 afx_hdl->peer_chan = ch.control_ch_num;
@@ -1352,7 +1352,7 @@ int brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct brcmf_ev
         ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
 
     wdev = &ifp->vif->wdev;
-    cfg80211_rx_mgmt(wdev, freq, 0, (u8*)mgmt_frame, mgmt_frame_len, 0);
+    cfg80211_rx_mgmt(wdev, freq, 0, (uint8_t*)mgmt_frame, mgmt_frame_len, 0);
 
     kfree(mgmt_frame);
     return 0;
@@ -1410,11 +1410,11 @@ int brcmf_p2p_notify_action_tx_complete(struct brcmf_if* ifp, const struct brcmf
  * The WLC_E_ACTION_FRAME_COMPLETE event will be received when the action
  * frame is transmitted.
  */
-static s32 brcmf_p2p_tx_action_frame(struct brcmf_p2p_info* p2p,
+static int32_t brcmf_p2p_tx_action_frame(struct brcmf_p2p_info* p2p,
                                      struct brcmf_fil_af_params_le* af_params) {
     struct brcmf_cfg80211_vif* vif;
-    s32 err = 0;
-    s32 timeout = 0;
+    int32_t err = 0;
+    int32_t timeout = 0;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -1457,14 +1457,14 @@ exit:
  *
  * routine which transmits ation frame public type.
  */
-static s32 brcmf_p2p_pub_af_tx(struct brcmf_cfg80211_info* cfg,
+static int32_t brcmf_p2p_pub_af_tx(struct brcmf_cfg80211_info* cfg,
                                struct brcmf_fil_af_params_le* af_params,
                                struct brcmf_config_af_params* config_af_params) {
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct brcmf_fil_action_frame_le* action_frame;
     struct brcmf_p2p_pub_act_frame* act_frm;
-    s32 err = 0;
-    u16 ie_len;
+    int32_t err = 0;
+    uint16_t ie_len;
 
     action_frame = &af_params->action_frame;
     act_frm = (struct brcmf_p2p_pub_act_frame*)(action_frame->data);
@@ -1558,12 +1558,12 @@ bool brcmf_p2p_send_action_frame(struct brcmf_cfg80211_info* cfg, struct net_dev
     struct brcmf_fil_action_frame_le* action_frame;
     struct brcmf_config_af_params config_af_params;
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
-    u16 action_frame_len;
+    uint16_t action_frame_len;
     bool ack = false;
-    u8 category;
-    u8 action;
-    s32 tx_retry;
-    s32 extra_listen_time;
+    uint8_t category;
+    uint8_t action;
+    int32_t tx_retry;
+    int32_t extra_listen_time;
     uint delta_ms;
 
     action_frame = &af_params->action_frame;
@@ -1737,7 +1737,7 @@ exit:
  * @e: even message.
  * @data: payload of event message (probe request).
  */
-s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+int32_t brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                           void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct brcmf_p2p_info* p2p = &cfg->p2p;
@@ -1745,10 +1745,10 @@ s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brc
     struct brcmf_cfg80211_vif* vif = ifp->vif;
     struct brcmf_rx_mgmt_data* rxframe = (struct brcmf_rx_mgmt_data*)data;
     struct brcmu_chan ch;
-    u8* mgmt_frame;
-    u32 mgmt_frame_len;
-    s32 freq;
-    u16 mgmt_type;
+    uint8_t* mgmt_frame;
+    uint32_t mgmt_frame_len;
+    int32_t freq;
+    uint16_t mgmt_type;
 
     brcmf_dbg(INFO, "Enter: event %d reason %d\n", e->event_code, e->reason);
 
@@ -1786,7 +1786,7 @@ s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brc
         return 0;
     }
 
-    mgmt_frame = (u8*)(rxframe + 1);
+    mgmt_frame = (uint8_t*)(rxframe + 1);
     mgmt_frame_len = e->datalen - sizeof(*rxframe);
     freq = ieee80211_channel_to_frequency(
         ch.control_ch_num, ch.band == BRCMU_CHAN_BAND_2G ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ);
@@ -1805,12 +1805,12 @@ s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brc
  * @p2p: P2P specific data.
  * @chanspec: chanspec to be returned.
  */
-static void brcmf_p2p_get_current_chanspec(struct brcmf_p2p_info* p2p, u16* chanspec) {
+static void brcmf_p2p_get_current_chanspec(struct brcmf_p2p_info* p2p, uint16_t* chanspec) {
     struct brcmf_if* ifp;
-    u8 mac_addr[ETH_ALEN];
+    uint8_t mac_addr[ETH_ALEN];
     struct brcmu_chan ch;
     struct brcmf_bss_info_le* bi;
-    u8* buf;
+    uint8_t* buf;
 
     ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
 
@@ -1844,8 +1844,8 @@ int brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg, enum brcmf_fil_p2p_if_ty
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_fil_p2p_if_le if_request;
-    s32 err;
-    u16 chanspec;
+    int32_t err;
+    uint16_t chanspec;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -1867,7 +1867,7 @@ int brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg, enum brcmf_fil_p2p_if_ty
     /* then start the virtual interface on that.                          */
     brcmf_p2p_get_current_chanspec(p2p, &chanspec);
 
-    if_request.type = cpu_to_le16((u16)if_type);
+    if_request.type = cpu_to_le16((uint16_t)if_type);
     if_request.chspec = cpu_to_le16(chanspec);
     memcpy(if_request.addr, p2p->int_addr, sizeof(if_request.addr));
 
@@ -1891,17 +1891,17 @@ int brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg, enum brcmf_fil_p2p_if_ty
 }
 
 static int brcmf_p2p_request_p2p_if(struct brcmf_p2p_info* p2p, struct brcmf_if* ifp,
-                                    u8 ea[ETH_ALEN], enum brcmf_fil_p2p_if_types iftype) {
+                                    uint8_t ea[ETH_ALEN], enum brcmf_fil_p2p_if_types iftype) {
     struct brcmf_fil_p2p_if_le if_request;
     int err;
-    u16 chanspec;
+    uint16_t chanspec;
 
     /* we need a default channel */
     brcmf_p2p_get_current_chanspec(p2p, &chanspec);
 
     /* fill the firmware request */
     memcpy(if_request.addr, ea, ETH_ALEN);
-    if_request.type = cpu_to_le16((u16)iftype);
+    if_request.type = cpu_to_le16((uint16_t)iftype);
     if_request.chspec = cpu_to_le16(chanspec);
 
     err = brcmf_fil_iovar_data_set(ifp, "p2p_ifadd", &if_request, sizeof(if_request));
@@ -1913,7 +1913,7 @@ static int brcmf_p2p_disable_p2p_if(struct brcmf_cfg80211_vif* vif) {
     struct brcmf_cfg80211_info* cfg = wdev_to_cfg(&vif->wdev);
     struct net_device* pri_ndev = cfg_to_ndev(cfg);
     struct brcmf_if* ifp = netdev_priv(pri_ndev);
-    u8* addr = vif->wdev.netdev->dev_addr;
+    uint8_t* addr = vif->wdev.netdev->dev_addr;
 
     return brcmf_fil_iovar_data_set(ifp, "p2p_ifdis", addr, ETH_ALEN);
 }
@@ -1922,7 +1922,7 @@ static int brcmf_p2p_release_p2p_if(struct brcmf_cfg80211_vif* vif) {
     struct brcmf_cfg80211_info* cfg = wdev_to_cfg(&vif->wdev);
     struct net_device* pri_ndev = cfg_to_ndev(cfg);
     struct brcmf_if* ifp = netdev_priv(pri_ndev);
-    u8* addr = vif->wdev.netdev->dev_addr;
+    uint8_t* addr = vif->wdev.netdev->dev_addr;
 
     return brcmf_fil_iovar_data_set(ifp, "p2p_ifdel", addr, ETH_ALEN);
 }
@@ -1935,12 +1935,12 @@ static int brcmf_p2p_release_p2p_if(struct brcmf_cfg80211_vif* vif) {
  * @addr: mac address for this new interface.
  */
 static struct wireless_dev* brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wiphy* wiphy,
-                                                    u8* addr) {
+                                                    uint8_t* addr) {
     struct brcmf_cfg80211_vif* p2p_vif;
     struct brcmf_if* p2p_ifp;
     struct brcmf_if* pri_ifp;
     int err;
-    u32 bsscfgidx;
+    uint32_t bsscfgidx;
 
     if (p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif) {
         return ERR_PTR(-ENOSPC);
@@ -1991,7 +1991,7 @@ static struct wireless_dev* brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, 
         goto fail;
     }
 
-    WARN_ON(p2p_ifp->bsscfgidx != (s32)bsscfgidx);
+    WARN_ON(p2p_ifp->bsscfgidx != (int32_t)bsscfgidx);
 
     init_completion(&p2p->send_af_done);
     INIT_WORK(&p2p->afx_hdl.afx_work, brcmf_p2p_afx_handler);
@@ -2229,10 +2229,10 @@ void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev) {
  * @cfg: driver private data for cfg80211 interface.
  * @p2pdev_forced: create p2p device interface at attach.
  */
-s32 brcmf_p2p_attach(struct brcmf_cfg80211_info* cfg, bool p2pdev_forced) {
+int32_t brcmf_p2p_attach(struct brcmf_cfg80211_info* cfg, bool p2pdev_forced) {
     struct brcmf_p2p_info* p2p;
     struct brcmf_if* pri_ifp;
-    s32 err = 0;
+    int32_t err = 0;
     void* err_ptr;
 
     p2p = &cfg->p2p;

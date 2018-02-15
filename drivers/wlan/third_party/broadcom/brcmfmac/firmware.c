@@ -52,13 +52,13 @@ enum nvram_parser_state { IDLE, KEY, VALUE, COMMENT, END };
  */
 struct nvram_parser {
     enum nvram_parser_state state;
-    const u8* data;
-    u8* nvram;
-    u32 nvram_len;
-    u32 line;
-    u32 column;
-    u32 pos;
-    u32 entry;
+    const uint8_t* data;
+    uint8_t* nvram;
+    uint32_t nvram_len;
+    uint32_t line;
+    uint32_t column;
+    uint32_t pos;
+    uint32_t entry;
     bool multi_dev_v1;
     bool multi_dev_v2;
     bool boardrev_found;
@@ -144,7 +144,7 @@ static enum nvram_parser_state brcmf_nvram_handle_value(struct nvram_parser* nvp
     char c;
     char* skv;
     char* ekv;
-    u32 cplen;
+    uint32_t cplen;
 
     c = nvp->data[nvp->pos];
     if (!is_nvram_char(c)) {
@@ -197,7 +197,7 @@ static enum nvram_parser_state (*nv_parser_states[])(struct nvram_parser* nvp) =
     brcmf_nvram_handle_comment, brcmf_nvram_handle_end
 };
 
-static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const u8* data, size_t data_len) {
+static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8_t* data, size_t data_len) {
     size_t size;
 
     memset(nvp, 0, sizeof(*nvp));
@@ -209,7 +209,7 @@ static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const u8* data, siz
         size = data_len;
     }
     /* Alloc for extra 0 byte + roundup by 4 + length field */
-    size += 1 + 3 + sizeof(u32);
+    size += 1 + 3 + sizeof(uint32_t);
     nvp->nvram = kzalloc(size, GFP_KERNEL);
     if (!nvp->nvram) {
         return -ENOMEM;
@@ -225,19 +225,19 @@ static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const u8* data, siz
  * which data is to be returned. v1 is the version where nvram is stored
  * compressed and "devpath" maps to index for valid entries.
  */
-static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, u16 domain_nr, u16 bus_nr) {
+static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, uint16_t domain_nr, uint16_t bus_nr) {
     /* Device path with a leading '=' key-value separator */
     char pci_path[] = "=pci/?/?";
     size_t pci_len;
     char pcie_path[] = "=pcie/?/?";
     size_t pcie_len;
 
-    u32 i, j;
+    uint32_t i, j;
     bool found;
-    u8* nvram;
-    u8 id;
+    uint8_t* nvram;
+    uint8_t id;
 
-    nvram = kzalloc(nvp->nvram_len + 1 + 3 + sizeof(u32), GFP_KERNEL);
+    nvram = kzalloc(nvp->nvram_len + 1 + 3 + sizeof(uint32_t), GFP_KERNEL);
     if (!nvram) {
         goto fail;
     }
@@ -314,13 +314,13 @@ fail:
  * uncompressed, all relevant valid entries are identified by
  * pcie/domain_nr/bus_nr:
  */
-static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, u16 domain_nr, u16 bus_nr) {
+static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, uint16_t domain_nr, uint16_t bus_nr) {
     char prefix[BRCMF_FW_NVRAM_PCIEDEV_LEN];
     size_t len;
-    u32 i, j;
-    u8* nvram;
+    uint32_t i, j;
+    uint8_t* nvram;
 
-    nvram = kzalloc(nvp->nvram_len + 1 + 3 + sizeof(u32), GFP_KERNEL);
+    nvram = kzalloc(nvp->nvram_len + 1 + 3 + sizeof(uint32_t), GFP_KERNEL);
     if (!nvram) {
         goto fail;
     }
@@ -378,11 +378,11 @@ static void brcmf_fw_add_defaults(struct nvram_parser* nvp) {
  * and converts newlines to NULs. Shortens buffer as needed and pads with NULs.
  * End of buffer is completed with token identifying length of buffer.
  */
-static void* brcmf_fw_nvram_strip(const u8* data, size_t data_len, u32* new_length, u16 domain_nr,
-                                  u16 bus_nr) {
+static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t* new_length, uint16_t domain_nr,
+                                  uint16_t bus_nr) {
     struct nvram_parser nvp;
-    u32 pad;
-    u32 token;
+    uint32_t pad;
+    uint32_t token;
     __le32 token_le;
 
     if (brcmf_init_nvram_parser(&nvp, data, data_len) < 0) {
@@ -433,26 +433,26 @@ void brcmf_fw_nvram_free(void* nvram) {
 
 struct brcmf_fw {
     struct device* dev;
-    u16 flags;
+    uint16_t flags;
     const struct firmware* code;
     const char* nvram_name;
-    u16 domain_nr;
-    u16 bus_nr;
+    uint16_t domain_nr;
+    uint16_t bus_nr;
     void (*done)(struct device* dev, int err, const struct firmware* fw, void* nvram_image,
-                 u32 nvram_len);
+                 uint32_t nvram_len);
 };
 
 static void brcmf_fw_request_nvram_done(const struct firmware* fw, void* ctx) {
     struct brcmf_fw* fwctx = ctx;
-    u32 nvram_length = 0;
+    uint32_t nvram_length = 0;
     void* nvram = NULL;
-    u8* data = NULL;
+    uint8_t* data = NULL;
     size_t data_len;
     bool raw_nvram;
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(fwctx->dev));
     if (fw && fw->data) {
-        data = (u8*)fw->data;
+        data = (uint8_t*)fw->data;
         data_len = fw->size;
         raw_nvram = false;
     } else {
@@ -517,11 +517,11 @@ done:
     kfree(fwctx);
 }
 
-int brcmf_fw_get_firmwares_pcie(struct device* dev, u16 flags, const char* code, const char* nvram,
+int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code, const char* nvram,
                                 void (*fw_cb)(struct device* dev, int err,
                                               const struct firmware* fw, void* nvram_image,
-                                              u32 nvram_len),
-                                u16 domain_nr, u16 bus_nr) {
+                                              uint32_t nvram_len),
+                                uint16_t domain_nr, uint16_t bus_nr) {
     struct brcmf_fw* fwctx;
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(dev));
@@ -551,16 +551,16 @@ int brcmf_fw_get_firmwares_pcie(struct device* dev, u16 flags, const char* code,
                                    brcmf_fw_request_code_done);
 }
 
-int brcmf_fw_get_firmwares(struct device* dev, u16 flags, const char* code, const char* nvram,
+int brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code, const char* nvram,
                            void (*fw_cb)(struct device* dev, int err, const struct firmware* fw,
-                                         void* nvram_image, u32 nvram_len)) {
+                                         void* nvram_image, uint32_t nvram_len)) {
     return brcmf_fw_get_firmwares_pcie(dev, flags, code, nvram, fw_cb, 0, 0);
 }
 
-int brcmf_fw_map_chip_to_name(u32 chip, u32 chiprev, struct brcmf_firmware_mapping mapping_table[],
-                              u32 table_size, char fw_name[BRCMF_FW_NAME_LEN],
+int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev, struct brcmf_firmware_mapping mapping_table[],
+                              uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
                               char nvram_name[BRCMF_FW_NAME_LEN]) {
-    u32 i;
+    uint32_t i;
     char end;
 
     for (i = 0; i < table_size; i++) {

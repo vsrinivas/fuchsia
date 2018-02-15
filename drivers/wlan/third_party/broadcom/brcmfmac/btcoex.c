@@ -89,21 +89,21 @@ enum brcmf_btcoex_state {
 struct brcmf_btcoex_info {
     struct brcmf_cfg80211_vif* vif;
     struct timer_list timer;
-    u16 timeout;
+    uint16_t timeout;
     bool timer_on;
     bool dhcp_done;
     enum brcmf_btcoex_state bt_state;
     struct work_struct work;
     struct brcmf_cfg80211_info* cfg;
-    u32 reg66;
-    u32 reg41;
-    u32 reg68;
+    uint32_t reg66;
+    uint32_t reg41;
+    uint32_t reg68;
     bool saved_regs_part1;
-    u32 reg50;
-    u32 reg51;
-    u32 reg64;
-    u32 reg65;
-    u32 reg71;
+    uint32_t reg50;
+    uint32_t reg51;
+    uint32_t reg64;
+    uint32_t reg65;
+    uint32_t reg71;
     bool saved_regs_part2;
 };
 
@@ -113,7 +113,7 @@ struct brcmf_btcoex_info {
  * @addr: btc_params register number
  * @data: data to write
  */
-static s32 brcmf_btcoex_params_write(struct brcmf_if* ifp, u32 addr, u32 data) {
+static int32_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr, uint32_t data) {
     struct {
         __le32 addr;
         __le32 data;
@@ -130,7 +130,7 @@ static s32 brcmf_btcoex_params_write(struct brcmf_if* ifp, u32 addr, u32 data) {
  * @addr: btc_params register number
  * @data: read data
  */
-static s32 brcmf_btcoex_params_read(struct brcmf_if* ifp, u32 addr, u32* data) {
+static int32_t brcmf_btcoex_params_read(struct brcmf_if* ifp, uint32_t addr, uint32_t* data) {
     *data = addr;
 
     return brcmf_fil_iovar_int_get(ifp, "btc_params", data);
@@ -201,7 +201,7 @@ static bool brcmf_btcoex_is_sco_active(struct brcmf_if* ifp) {
     int ioc_res = 0;
     bool res = false;
     int sco_id_cnt = 0;
-    u32 param27;
+    uint32_t param27;
     int i;
 
     for (i = 0; i < BRCMF_BT_SCO_SAMPLES; i++) {
@@ -438,7 +438,7 @@ static void brcmf_btcoex_dhcp_end(struct brcmf_btcoex_info* btci) {
  * return: 0 on success
  */
 int brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
-                          u16 duration) {
+                          uint16_t duration) {
     struct brcmf_cfg80211_info* cfg = wiphy_priv(vif->wdev.wiphy);
     struct brcmf_btcoex_info* btci = cfg->btcoex;
     struct brcmf_if* ifp = brcmf_get_ifp(cfg->pub, 0);

@@ -103,18 +103,18 @@ enum brcmf_scan_status {
 
 /* dongle configuration */
 struct brcmf_cfg80211_conf {
-    u32 frag_threshold;
-    u32 rts_threshold;
-    u32 retry_short;
-    u32 retry_long;
+    uint32_t frag_threshold;
+    uint32_t rts_threshold;
+    uint32_t retry_short;
+    uint32_t retry_long;
 };
 
 /* security information with currently associated ap */
 struct brcmf_cfg80211_security {
-    u32 wpa_versions;
-    u32 auth_type;
-    u32 cipher_pairwise;
-    u32 cipher_group;
+    uint32_t wpa_versions;
+    uint32_t auth_type;
+    uint32_t cipher_pairwise;
+    uint32_t cipher_group;
 };
 
 enum brcmf_profile_fwsup {
@@ -131,7 +131,7 @@ enum brcmf_profile_fwsup {
  * @key: key information
  */
 struct brcmf_cfg80211_profile {
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
     struct brcmf_cfg80211_security sec;
     struct brcmf_wsec_key key[BRCMF_MAX_DEFAULT_KEYS];
     enum brcmf_profile_fwsup use_fwsup;
@@ -169,14 +169,14 @@ enum brcmf_vif_status {
  * @beacon_ie_len: IE info length for beacon frame.
  */
 struct vif_saved_ie {
-    u8 probe_req_ie[IE_MAX_LEN];
-    u8 probe_res_ie[IE_MAX_LEN];
-    u8 beacon_ie[IE_MAX_LEN];
-    u8 assoc_req_ie[IE_MAX_LEN];
-    u32 probe_req_ie_len;
-    u32 probe_res_ie_len;
-    u32 beacon_ie_len;
-    u32 assoc_req_ie_len;
+    uint8_t probe_req_ie[IE_MAX_LEN];
+    uint8_t probe_res_ie[IE_MAX_LEN];
+    uint8_t beacon_ie[IE_MAX_LEN];
+    uint8_t assoc_req_ie[IE_MAX_LEN];
+    uint32_t probe_req_ie_len;
+    uint32_t probe_res_ie_len;
+    uint32_t beacon_ie_len;
+    uint32_t assoc_req_ie_len;
 };
 
 /**
@@ -197,17 +197,17 @@ struct brcmf_cfg80211_vif {
     unsigned long sme_state;
     struct vif_saved_ie saved_ie;
     struct list_head list;
-    u16 mgmt_rx_reg;
+    uint16_t mgmt_rx_reg;
     bool mbss;
     int is_11d;
 };
 
 /* association inform */
 struct brcmf_cfg80211_connect_info {
-    u8* req_ie;
-    s32 req_ie_len;
-    u8* resp_ie;
-    s32 resp_ie_len;
+    uint8_t* req_ie;
+    int32_t req_ie_len;
+    uint8_t* resp_ie;
+    int32_t resp_ie_len;
 };
 
 /* assoc ie length */
@@ -220,11 +220,11 @@ struct brcmf_cfg80211_assoc_ielen_le {
 enum wl_escan_state { WL_ESCAN_STATE_IDLE, WL_ESCAN_STATE_SCANNING };
 
 struct escan_info {
-    u32 escan_state;
-    u8* escan_buf;
+    uint32_t escan_state;
+    uint8_t* escan_buf;
     struct wiphy* wiphy;
     struct brcmf_if* ifp;
-    s32 (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+    int32_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                struct cfg80211_scan_request* request);
 };
 
@@ -240,7 +240,7 @@ struct escan_info {
 struct brcmf_cfg80211_vif_event {
     wait_queue_head_t vif_wq;
     spinlock_t vif_event_lock;
-    u8 action;
+    uint8_t action;
     struct brcmf_cfg80211_vif* vif;
 };
 
@@ -257,7 +257,7 @@ struct brcmf_cfg80211_vif_event {
  */
 struct brcmf_cfg80211_wowl {
     bool active;
-    u32 pre_pmmode;
+    uint32_t pre_pmmode;
     struct cfg80211_wowlan_nd_match* nd;
     struct cfg80211_wowlan_nd_info* nd_info;
     wait_queue_head_t nd_data_wait;
@@ -313,14 +313,14 @@ struct brcmf_cfg80211_info {
     struct brcmf_pmk_list_le pmk_list;
     unsigned long scan_status;
     struct brcmf_pub* pub;
-    u32 channel;
-    u32 int_escan_map;
+    uint32_t channel;
+    uint32_t int_escan_map;
     bool ibss_starter;
     bool pwr_save;
     bool dongle_up;
     bool scan_tried;
-    u8* dcmd_buf;
-    u8* extra_buf;
+    uint8_t* dcmd_buf;
+    uint8_t* extra_buf;
     struct dentry* debugfsdir;
     struct escan_info escan_info;
     struct timer_list escan_timeout;
@@ -342,9 +342,9 @@ struct brcmf_cfg80211_info {
  * @data: value buffer.
  */
 struct brcmf_tlv {
-    u8 id;
-    u8 len;
-    u8 data[1];
+    uint8_t id;
+    uint8_t len;
+    uint8_t data[1];
 };
 
 static inline struct wiphy* cfg_to_wiphy(struct brcmf_cfg80211_info* cfg) {
@@ -386,23 +386,23 @@ static inline struct brcmf_cfg80211_connect_info* cfg_to_conn(struct brcmf_cfg80
 struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr, struct device* busdev,
                                                   bool p2pdev_forced);
 void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg);
-s32 brcmf_cfg80211_up(struct net_device* ndev);
-s32 brcmf_cfg80211_down(struct net_device* ndev);
+int32_t brcmf_cfg80211_up(struct net_device* ndev);
+int32_t brcmf_cfg80211_down(struct net_device* ndev);
 enum nl80211_iftype brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
 
 struct brcmf_cfg80211_vif* brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg,
                                            enum nl80211_iftype type);
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 
-s32 brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, s32 pktflag, const u8* vndr_ie_buf,
-                          u32 vndr_ie_len);
-s32 brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
-u16 channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
+int32_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag, const uint8_t* vndr_ie_buf,
+                          uint32_t vndr_ie_len);
+int32_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
+uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif);
 bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg);
-int brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, u8 action, ulong timeout);
-s32 brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp, bool aborted,
+int brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, uint8_t action, ulong timeout);
+int32_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp, bool aborted,
                                 bool fw_abort);
 void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);

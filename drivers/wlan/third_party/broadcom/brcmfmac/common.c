@@ -40,7 +40,7 @@ MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
 MODULE_LICENSE("Dual BSD/GPL");
 
-const u8 ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+const uint8_t ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 #define BRCMF_DEFAULT_SCAN_CHANNEL_TIME 40
 #define BRCMF_DEFAULT_SCAN_UNASSOC_TIME 40
@@ -109,9 +109,9 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     }
 }
 
-static int brcmf_c_download(struct brcmf_if* ifp, u16 flag, struct brcmf_dload_data_le* dload_buf,
-                            u32 len) {
-    s32 err;
+static int brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dload_data_le* dload_buf,
+                            uint32_t len) {
+    int32_t err;
 
     flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);
     dload_buf->flag = cpu_to_le16(flag);
@@ -125,13 +125,13 @@ static int brcmf_c_download(struct brcmf_if* ifp, u16 flag, struct brcmf_dload_d
     return err;
 }
 
-static int brcmf_c_get_clm_name(struct brcmf_if* ifp, u8* clm_name) {
+static int brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name) {
     struct brcmf_bus* bus = ifp->drvr->bus_if;
     struct brcmf_rev_info* ri = &ifp->drvr->revinfo;
-    u8 fw_name[BRCMF_FW_NAME_LEN];
-    u8* ptr;
+    uint8_t fw_name[BRCMF_FW_NAME_LEN];
+    uint8_t* ptr;
     size_t len;
-    s32 err;
+    int32_t err;
 
     memset(fw_name, 0, BRCMF_FW_NAME_LEN);
     err = brcmf_bus_get_fwname(bus, ri->chipnum, ri->chiprev, fw_name);
@@ -141,7 +141,7 @@ static int brcmf_c_get_clm_name(struct brcmf_if* ifp, u8* clm_name) {
     }
 
     /* generate CLM blob file name */
-    ptr = (u8*)strrchr((char*)fw_name, '.');
+    ptr = (uint8_t*)strrchr((char*)fw_name, '.');
     if (!ptr) {
         err = -ENOENT;
         goto done;
@@ -162,13 +162,13 @@ static int brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     struct device* dev = ifp->drvr->bus_if->dev;
     struct brcmf_dload_data_le* chunk_buf;
     const struct firmware* clm = NULL;
-    u8 clm_name[BRCMF_FW_NAME_LEN];
-    u32 chunk_len;
-    u32 datalen;
-    u32 cumulative_len;
-    u16 dl_flag = DL_BEGIN;
-    u32 status;
-    s32 err;
+    uint8_t clm_name[BRCMF_FW_NAME_LEN];
+    uint32_t chunk_len;
+    uint32_t datalen;
+    uint32_t cumulative_len;
+    uint16_t dl_flag = DL_BEGIN;
+    uint32_t status;
+    int32_t err;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -230,13 +230,13 @@ done:
 }
 
 int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
-    s8 eventmask[BRCMF_EVENTING_MASK_LEN];
-    u8 buf[BRCMF_DCMD_SMLEN];
+    int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
+    uint8_t buf[BRCMF_DCMD_SMLEN];
     struct brcmf_rev_info_le revinfo;
     struct brcmf_rev_info* ri;
     char* clmver;
     char* ptr;
-    s32 err;
+    int32_t err;
 
     /* retreive mac address */
     err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", ifp->mac_addr, sizeof(ifp->mac_addr));
@@ -380,7 +380,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 #endif
 
 #if defined(CONFIG_BRCM_TRACING) || defined(CONFIG_BRCMDBG)
-void __brcmf_dbg(u32 level, const char* func, const char* fmt, ...) {
+void __brcmf_dbg(uint32_t level, const char* func, const char* fmt, ...) {
     struct va_format vaf = {
         .fmt = fmt,
         };
@@ -410,7 +410,7 @@ static void brcmf_mp_attach(void) {
 }
 
 struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
-                                               u32 chip, u32 chiprev) {
+                                               uint32_t chip, uint32_t chiprev) {
     struct brcmf_mp_device* settings;
     struct brcmfmac_pd_device* device_pd;
     bool found;
@@ -441,7 +441,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bu
         for (i = 0; i < brcmfmac_pdata->device_count; i++) {
             device_pd = &brcmfmac_pdata->devices[i];
             if ((device_pd->bus_type == bus_type) && (device_pd->id == chip) &&
-                ((device_pd->rev == (s32)chiprev) || (device_pd->rev == -1))) {
+                ((device_pd->rev == (int32_t)chiprev) || (device_pd->rev == -1))) {
                 brcmf_dbg(INFO, "Platform data for device found\n");
                 settings->country_codes = device_pd->country_codes;
                 if (device_pd->bus_type == BRCMF_BUSTYPE_SDIO) {

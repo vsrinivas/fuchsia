@@ -102,11 +102,11 @@ struct brcmf_bus_ops {
 struct brcmf_bus_msgbuf {
     struct brcmf_commonring* commonrings[BRCMF_NROF_COMMON_MSGRINGS];
     struct brcmf_commonring** flowrings;
-    u32 rx_dataoffset;
-    u32 max_rxbufpost;
-    u16 max_flowrings;
-    u16 max_submissionrings;
-    u16 max_completionrings;
+    uint32_t rx_dataoffset;
+    uint32_t max_rxbufpost;
+    uint16_t max_flowrings;
+    uint16_t max_submissionrings;
+    uint16_t max_completionrings;
 };
 
 /**
@@ -147,8 +147,8 @@ struct brcmf_bus {
     enum brcmf_bus_state state;
     struct brcmf_bus_stats stats;
     uint maxctl;
-    u32 chip;
-    u32 chiprev;
+    uint32_t chip;
+    uint32_t chiprev;
     bool always_use_fws_queue;
     bool wowl_supported;
 
@@ -227,7 +227,7 @@ void brcmf_dev_reset(struct device* dev);
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state);
 
 int brcmf_bus_started(struct device* dev);
-s32 brcmf_iovar_data_set(struct device* dev, char* name, void* data, u32 len);
+int32_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len);
 void brcmf_bus_add_txhdrlen(struct device* dev, uint len);
 
 #ifdef CONFIG_BRCMFMAC_SDIO

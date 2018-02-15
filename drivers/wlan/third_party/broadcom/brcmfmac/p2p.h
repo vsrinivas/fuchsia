@@ -98,11 +98,11 @@ struct afx_hdl {
     struct work_struct afx_work;
     struct completion act_frm_scan;
     bool is_active;
-    s32 peer_chan;
+    int32_t peer_chan;
     bool is_listen;
-    u16 my_listen_chan;
-    u16 peer_listen_chan;
-    u8 tx_dst_addr[ETH_ALEN];
+    uint16_t my_listen_chan;
+    uint16_t peer_listen_chan;
+    uint8_t tx_dst_addr[ETH_ALEN];
 };
 
 /**
@@ -130,17 +130,17 @@ struct afx_hdl {
 struct brcmf_p2p_info {
     struct brcmf_cfg80211_info* cfg;
     unsigned long status;
-    u8 dev_addr[ETH_ALEN];
-    u8 int_addr[ETH_ALEN];
+    uint8_t dev_addr[ETH_ALEN];
+    uint8_t int_addr[ETH_ALEN];
     struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];
     struct timer_list listen_timer;
-    u8 listen_channel;
+    uint8_t listen_channel;
     struct ieee80211_channel remain_on_channel;
-    u32 remain_on_channel_cookie;
-    u8 next_af_subtype;
+    uint32_t remain_on_channel_cookie;
+    uint8_t next_af_subtype;
     struct completion send_af_done;
     struct afx_hdl afx_hdl;
-    u32 af_sent_channel;
+    uint32_t af_sent_channel;
     unsigned long af_tx_sent_jiffies;
     struct completion wait_next_af;
     bool gon_req_action;
@@ -148,7 +148,7 @@ struct brcmf_p2p_info {
     bool p2pdev_dynamically;
 };
 
-s32 brcmf_p2p_attach(struct brcmf_cfg80211_info* cfg, bool p2pdev_forced);
+int32_t brcmf_p2p_attach(struct brcmf_cfg80211_info* cfg, bool p2pdev_forced);
 void brcmf_p2p_detach(struct brcmf_p2p_info* p2p);
 struct wireless_dev* brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
                                        unsigned char name_assign_type, enum nl80211_iftype type,
@@ -162,7 +162,7 @@ int brcmf_p2p_scan_prep(struct wiphy* wiphy, struct cfg80211_scan_request* reque
                         struct brcmf_cfg80211_vif* vif);
 int brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
                                 struct ieee80211_channel* channel, unsigned int duration,
-                                u64* cookie);
+                                uint64_t* cookie);
 int brcmf_p2p_notify_listen_complete(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                      void* data);
 void brcmf_p2p_cancel_remain_on_channel(struct brcmf_if* ifp);
@@ -174,6 +174,6 @@ bool brcmf_p2p_send_action_frame(struct brcmf_cfg80211_info* cfg, struct net_dev
                                  struct brcmf_fil_af_params_le* af_params);
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi);
-s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+int32_t brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                           void* data);
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_ */

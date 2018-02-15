@@ -64,7 +64,7 @@
 struct brcmf_sdiod_freezer {
     atomic_t freezing;
     atomic_t thread_count;
-    u32 frozen_count;
+    uint32_t frozen_count;
     wait_queue_head_t thread_freeze;
     struct completion resumed;
 };
@@ -103,8 +103,8 @@ static void brcmf_sdiod_dummy_irqhandler(struct sdio_func* func) {}
 int brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     struct brcmfmac_sdio_pd* pdata;
     int ret = 0;
-    u8 data;
-    u32 addr, gpiocontrol;
+    uint8_t data;
+    uint32_t addr, gpiocontrol;
 
     pdata = &sdiodev->settings->bus.sdio;
     if (pdata->oob_irq_supported) {
@@ -220,9 +220,9 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
     sdiodev->state = state;
 }
 
-static int brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiodev, u32 addr) {
-    u32 v;
-    u32 bar0 = addr & SBSDIO_SBWINDOW_MASK;
+static int brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiodev, uint32_t addr) {
+    uint32_t v;
+    uint32_t bar0 = addr & SBSDIO_SBWINDOW_MASK;
     int err = 0;
     int i;
 
@@ -243,8 +243,8 @@ static int brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiodev, u32 
     return err;
 }
 
-u32 brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, u32 addr, int* ret) {
-    u32 data = 0;
+uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, int* ret) {
+    uint32_t data = 0;
     int retval;
 
     retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
@@ -265,7 +265,7 @@ out:
     return data;
 }
 
-void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, u32 addr, u32 data, int* ret) {
+void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data, int* ret) {
     int retval;
 
     retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
@@ -284,7 +284,7 @@ out:
     }
 }
 
-static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func, u32 addr,
+static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func, uint32_t addr,
                                    struct sk_buff* skb) {
     unsigned int req_sz;
     int err;
@@ -295,10 +295,10 @@ static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_f
 
     switch (func->num) {
     case 1:
-        err = sdio_memcpy_fromio(func, ((u8*)(skb->data)), addr, req_sz);
+        err = sdio_memcpy_fromio(func, ((uint8_t*)(skb->data)), addr, req_sz);
         break;
     case 2:
-        err = sdio_readsb(func, ((u8*)(skb->data)), addr, req_sz);
+        err = sdio_readsb(func, ((uint8_t*)(skb->data)), addr, req_sz);
         break;
     default:
         /* bail out as things are really fishy here */
@@ -314,7 +314,7 @@ static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_f
 }
 
 static int brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                    u32 addr, struct sk_buff* skb) {
+                                    uint32_t addr, struct sk_buff* skb) {
     unsigned int req_sz;
     int err;
 
@@ -322,7 +322,7 @@ static int brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, struct sdio_
     req_sz = skb->len + 3;
     req_sz &= (uint)~3;
 
-    err = sdio_memcpy_toio(func, addr, ((u8*)(skb->data)), req_sz);
+    err = sdio_memcpy_toio(func, addr, ((uint8_t*)(skb->data)), req_sz);
 
     if (err == -ENOMEDIUM) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
@@ -344,7 +344,7 @@ static int brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, struct sdio_
  * caller has already been padded and aligned.
  */
 static int brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func, bool write,
-                                 u32 addr, struct sk_buff_head* pktlist) {
+                                 uint32_t addr, struct sk_buff_head* pktlist) {
     unsigned int req_sz, func_blk_sz, sg_cnt, sg_data_sz, pkt_offset;
     unsigned int max_req_sz, orig_offset, dst_offset;
     unsigned short max_seg_cnt, seg_sz;
@@ -508,7 +508,7 @@ exit:
     return ret;
 }
 
-int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes) {
+int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
     struct sk_buff* mypkt;
     int err;
 
@@ -528,7 +528,7 @@ int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes) {
 }
 
 int brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff* pkt) {
-    u32 addr = sdiodev->cc_core->base;
+    uint32_t addr = sdiodev->cc_core->base;
     int err = 0;
 
     brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pkt->len);
@@ -550,7 +550,7 @@ done:
 int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq, uint totlen) {
     struct sk_buff* glom_skb = NULL;
     struct sk_buff* skb;
-    u32 addr = sdiodev->cc_core->base;
+    uint32_t addr = sdiodev->cc_core->base;
     int err = 0;
 
     brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pktq->qlen);
@@ -588,9 +588,9 @@ done:
     return err;
 }
 
-int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes) {
+int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
     struct sk_buff* mypkt;
-    u32 addr = sdiodev->cc_core->base;
+    uint32_t addr = sdiodev->cc_core->base;
     int err;
 
     mypkt = brcmu_pkt_buf_get_skb(nbytes);
@@ -621,7 +621,7 @@ int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes) {
 
 int brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq) {
     struct sk_buff* skb;
-    u32 addr = sdiodev->cc_core->base;
+    uint32_t addr = sdiodev->cc_core->base;
     int err;
 
     brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pktq->qlen);
@@ -648,11 +648,11 @@ int brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pk
     return err;
 }
 
-int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, u32 address, u8* data,
+int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address, uint8_t* data,
                       uint size) {
     int err = 0;
     struct sk_buff* pkt;
-    u32 sdaddr;
+    uint32_t sdaddr;
     uint dsize;
 
     dsize = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);

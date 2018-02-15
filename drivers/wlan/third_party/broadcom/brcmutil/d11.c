@@ -23,7 +23,7 @@
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
 
-static u16 d11n_sb(enum brcmu_chan_sb sb) {
+static uint16_t d11n_sb(enum brcmu_chan_sb sb) {
     switch (sb) {
     case BRCMU_CHAN_SB_NONE:
         return BRCMU_CHSPEC_D11N_SB_N;
@@ -37,7 +37,7 @@ static u16 d11n_sb(enum brcmu_chan_sb sb) {
     return 0;
 }
 
-static u16 d11n_bw(enum brcmu_chan_bw bw) {
+static uint16_t d11n_bw(enum brcmu_chan_bw bw) {
     switch (bw) {
     case BRCMU_CHAN_BW_20:
         return BRCMU_CHSPEC_D11N_BW_20;
@@ -66,7 +66,7 @@ static void brcmu_d11n_encchspec(struct brcmu_chan* ch) {
     }
 }
 
-static u16 d11ac_bw(enum brcmu_chan_bw bw) {
+static uint16_t d11ac_bw(enum brcmu_chan_bw bw) {
     switch (bw) {
     case BRCMU_CHAN_BW_20:
         return BRCMU_CHSPEC_D11AC_BW_20;
@@ -98,9 +98,9 @@ static void brcmu_d11ac_encchspec(struct brcmu_chan* ch) {
 }
 
 static void brcmu_d11n_decchspec(struct brcmu_chan* ch) {
-    u16 val;
+    uint16_t val;
 
-    ch->chnum = (u8)(ch->chspec & BRCMU_CHSPEC_CH_MASK);
+    ch->chnum = (uint8_t)(ch->chspec & BRCMU_CHSPEC_CH_MASK);
     ch->control_ch_num = ch->chnum;
 
     switch (ch->chspec & BRCMU_CHSPEC_D11N_BW_MASK) {
@@ -138,9 +138,9 @@ static void brcmu_d11n_decchspec(struct brcmu_chan* ch) {
 }
 
 static void brcmu_d11ac_decchspec(struct brcmu_chan* ch) {
-    u16 val;
+    uint16_t val;
 
-    ch->chnum = (u8)(ch->chspec & BRCMU_CHSPEC_CH_MASK);
+    ch->chnum = (uint8_t)(ch->chspec & BRCMU_CHSPEC_CH_MASK);
     ch->control_ch_num = ch->chnum;
 
     switch (ch->chspec & BRCMU_CHSPEC_D11AC_BW_MASK) {

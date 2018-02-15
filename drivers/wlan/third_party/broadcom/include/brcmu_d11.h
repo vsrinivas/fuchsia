@@ -143,10 +143,10 @@ enum brcmu_chan_sb {
  * @sb: control sideband (location of control channel against the center one)
  */
 struct brcmu_chan {
-    u16 chspec;
-    u8 chnum;
-    u8 control_ch_num;
-    u8 band;
+    uint16_t chspec;
+    uint8_t chnum;
+    uint8_t control_ch_num;
+    uint8_t band;
     enum brcmu_chan_bw bw;
     enum brcmu_chan_sb sb;
 };
@@ -160,7 +160,7 @@ struct brcmu_chan {
  * @decchspec: decodes chanspec into generic info
  */
 struct brcmu_d11inf {
-    u8 io_type;
+    uint8_t io_type;
 
     void (*encchspec)(struct brcmu_chan* ch);
     void (*decchspec)(struct brcmu_chan* ch);

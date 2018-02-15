@@ -172,7 +172,7 @@ struct brcmf_sdiod_freezer;
 struct brcmf_sdio_dev {
     struct sdio_func* func1;
     struct sdio_func* func2;
-    u32 sbwad;                  /* Save backplane window address */
+    uint32_t sbwad;                  /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */
     struct brcmf_sdio* bus;
     struct device* dev;
@@ -198,91 +198,91 @@ struct brcmf_sdio_dev {
 
 /* sdio core registers */
 struct sdpcmd_regs {
-    u32 corecontrol; /* 0x00, rev8 */
-    u32 corestatus;  /* rev8 */
-    u32 PAD[1];
-    u32 biststatus; /* rev8 */
+    uint32_t corecontrol; /* 0x00, rev8 */
+    uint32_t corestatus;  /* rev8 */
+    uint32_t PAD[1];
+    uint32_t biststatus; /* rev8 */
 
     /* PCMCIA access */
-    u16 pcmciamesportaladdr; /* 0x010, rev8 */
-    u16 PAD[1];
-    u16 pcmciamesportalmask; /* rev8 */
-    u16 PAD[1];
-    u16 pcmciawrframebc; /* rev8 */
-    u16 PAD[1];
-    u16 pcmciaunderflowtimer; /* rev8 */
-    u16 PAD[1];
+    uint16_t pcmciamesportaladdr; /* 0x010, rev8 */
+    uint16_t PAD[1];
+    uint16_t pcmciamesportalmask; /* rev8 */
+    uint16_t PAD[1];
+    uint16_t pcmciawrframebc; /* rev8 */
+    uint16_t PAD[1];
+    uint16_t pcmciaunderflowtimer; /* rev8 */
+    uint16_t PAD[1];
 
     /* interrupt */
-    u32 intstatus;   /* 0x020, rev8 */
-    u32 hostintmask; /* rev8 */
-    u32 intmask;     /* rev8 */
-    u32 sbintstatus; /* rev8 */
-    u32 sbintmask;   /* rev8 */
-    u32 funcintmask; /* rev4 */
-    u32 PAD[2];
-    u32 tosbmailbox;       /* 0x040, rev8 */
-    u32 tohostmailbox;     /* rev8 */
-    u32 tosbmailboxdata;   /* rev8 */
-    u32 tohostmailboxdata; /* rev8 */
+    uint32_t intstatus;   /* 0x020, rev8 */
+    uint32_t hostintmask; /* rev8 */
+    uint32_t intmask;     /* rev8 */
+    uint32_t sbintstatus; /* rev8 */
+    uint32_t sbintmask;   /* rev8 */
+    uint32_t funcintmask; /* rev4 */
+    uint32_t PAD[2];
+    uint32_t tosbmailbox;       /* 0x040, rev8 */
+    uint32_t tohostmailbox;     /* rev8 */
+    uint32_t tosbmailboxdata;   /* rev8 */
+    uint32_t tohostmailboxdata; /* rev8 */
 
     /* synchronized access to registers in SDIO clock domain */
-    u32 sdioaccess; /* 0x050, rev8 */
-    u32 PAD[3];
+    uint32_t sdioaccess; /* 0x050, rev8 */
+    uint32_t PAD[3];
 
     /* PCMCIA frame control */
-    u8 pcmciaframectrl; /* 0x060, rev8 */
-    u8 PAD[3];
-    u8 pcmciawatermark; /* rev8 */
-    u8 PAD[155];
+    uint8_t pcmciaframectrl; /* 0x060, rev8 */
+    uint8_t PAD[3];
+    uint8_t pcmciawatermark; /* rev8 */
+    uint8_t PAD[155];
 
     /* interrupt batching control */
-    u32 intrcvlazy; /* 0x100, rev8 */
-    u32 PAD[3];
+    uint32_t intrcvlazy; /* 0x100, rev8 */
+    uint32_t PAD[3];
 
     /* counters */
-    u32 cmd52rd;      /* 0x110, rev8 */
-    u32 cmd52wr;      /* rev8 */
-    u32 cmd53rd;      /* rev8 */
-    u32 cmd53wr;      /* rev8 */
-    u32 abort;        /* rev8 */
-    u32 datacrcerror; /* rev8 */
-    u32 rdoutofsync;  /* rev8 */
-    u32 wroutofsync;  /* rev8 */
-    u32 writebusy;    /* rev8 */
-    u32 readwait;     /* rev8 */
-    u32 readterm;     /* rev8 */
-    u32 writeterm;    /* rev8 */
-    u32 PAD[40];
-    u32 clockctlstatus; /* rev8 */
-    u32 PAD[7];
+    uint32_t cmd52rd;      /* 0x110, rev8 */
+    uint32_t cmd52wr;      /* rev8 */
+    uint32_t cmd53rd;      /* rev8 */
+    uint32_t cmd53wr;      /* rev8 */
+    uint32_t abort;        /* rev8 */
+    uint32_t datacrcerror; /* rev8 */
+    uint32_t rdoutofsync;  /* rev8 */
+    uint32_t wroutofsync;  /* rev8 */
+    uint32_t writebusy;    /* rev8 */
+    uint32_t readwait;     /* rev8 */
+    uint32_t readterm;     /* rev8 */
+    uint32_t writeterm;    /* rev8 */
+    uint32_t PAD[40];
+    uint32_t clockctlstatus; /* rev8 */
+    uint32_t PAD[7];
 
-    u32 PAD[128]; /* DMA engines */
+    uint32_t PAD[128]; /* DMA engines */
 
     /* SDIO/PCMCIA CIS region */
     char cis[512]; /* 0x400-0x5ff, rev6 */
 
     /* PCMCIA function control registers */
     char pcmciafcr[256]; /* 0x600-6ff, rev6 */
-    u16 PAD[55];
+    uint16_t PAD[55];
 
     /* PCMCIA backplane access */
-    u16 backplanecsr;   /* 0x76E, rev6 */
-    u16 backplaneaddr0; /* rev6 */
-    u16 backplaneaddr1; /* rev6 */
-    u16 backplaneaddr2; /* rev6 */
-    u16 backplaneaddr3; /* rev6 */
-    u16 backplanedata0; /* rev6 */
-    u16 backplanedata1; /* rev6 */
-    u16 backplanedata2; /* rev6 */
-    u16 backplanedata3; /* rev6 */
-    u16 PAD[31];
+    uint16_t backplanecsr;   /* 0x76E, rev6 */
+    uint16_t backplaneaddr0; /* rev6 */
+    uint16_t backplaneaddr1; /* rev6 */
+    uint16_t backplaneaddr2; /* rev6 */
+    uint16_t backplaneaddr3; /* rev6 */
+    uint16_t backplanedata0; /* rev6 */
+    uint16_t backplanedata1; /* rev6 */
+    uint16_t backplanedata2; /* rev6 */
+    uint16_t backplanedata3; /* rev6 */
+    uint16_t PAD[31];
 
     /* sprom "size" & "blank" info */
-    u16 spromstatus; /* 0x7BE, rev2 */
-    u32 PAD[464];
+    uint16_t spromstatus; /* 0x7BE, rev2 */
+    uint32_t PAD[464];
 
-    u16 PAD[0x80];
+    uint16_t PAD[0x80];
 };
 
 /* Register/deregister interrupt handler. */
@@ -301,8 +301,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
 
 #define brcmf_sdiod_writeb(sdiodev, addr, v, ret) sdio_writeb((sdiodev)->func1, (v), (addr), (ret))
 
-u32 brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, u32 addr, int* ret);
-void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, u32 addr, u32 data, int* ret);
+uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, int* ret);
+void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data, int* ret);
 
 /* Buffer transfer to/from device (client) core via cmd53.
  *   fn:       function number
@@ -316,10 +316,10 @@ void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, u32 addr, u32 data, int*
  * NOTE: Async operation is not currently supported.
  */
 int brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq);
-int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes);
+int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
 
 int brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff* pkt);
-int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, u8* buf, uint nbytes);
+int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
 int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq, uint totlen);
 
 /* Flags bits */
@@ -336,7 +336,7 @@ int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* 
  *   nbytes:   number of bytes to transfer to/from buf
  * Returns 0 or error code.
  */
-int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, u32 address, u8* data, uint size);
+int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address, uint8_t* data, uint size);
 
 /* Issue an abort to the specified function */
 int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func);

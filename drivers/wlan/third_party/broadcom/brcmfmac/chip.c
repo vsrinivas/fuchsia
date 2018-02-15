@@ -114,43 +114,43 @@
     ((((sbidh)&SSB_IDHIGH_RCHI) >> SSB_IDHIGH_RCHI_SHIFT) | ((sbidh)&SSB_IDHIGH_RCLO))
 
 struct sbconfig {
-    u32 PAD[2];
-    u32 sbipsflag; /* initiator port ocp slave flag */
-    u32 PAD[3];
-    u32 sbtpsflag; /* target port ocp slave flag */
-    u32 PAD[11];
-    u32 sbtmerrloga; /* (sonics >= 2.3) */
-    u32 PAD;
-    u32 sbtmerrlog; /* (sonics >= 2.3) */
-    u32 PAD[3];
-    u32 sbadmatch3; /* address match3 */
-    u32 PAD;
-    u32 sbadmatch2; /* address match2 */
-    u32 PAD;
-    u32 sbadmatch1; /* address match1 */
-    u32 PAD[7];
-    u32 sbimstate;     /* initiator agent state */
-    u32 sbintvec;      /* interrupt mask */
-    u32 sbtmstatelow;  /* target state */
-    u32 sbtmstatehigh; /* target state */
-    u32 sbbwa0;        /* bandwidth allocation table0 */
-    u32 PAD;
-    u32 sbimconfiglow;  /* initiator configuration */
-    u32 sbimconfighigh; /* initiator configuration */
-    u32 sbadmatch0;     /* address match0 */
-    u32 PAD;
-    u32 sbtmconfiglow;  /* target configuration */
-    u32 sbtmconfighigh; /* target configuration */
-    u32 sbbconfig;      /* broadcast configuration */
-    u32 PAD;
-    u32 sbbstate; /* broadcast state */
-    u32 PAD[3];
-    u32 sbactcnfg; /* activate configuration */
-    u32 PAD[3];
-    u32 sbflagst; /* current sbflags */
-    u32 PAD[3];
-    u32 sbidlow;  /* identification */
-    u32 sbidhigh; /* identification */
+    uint32_t PAD[2];
+    uint32_t sbipsflag; /* initiator port ocp slave flag */
+    uint32_t PAD[3];
+    uint32_t sbtpsflag; /* target port ocp slave flag */
+    uint32_t PAD[11];
+    uint32_t sbtmerrloga; /* (sonics >= 2.3) */
+    uint32_t PAD;
+    uint32_t sbtmerrlog; /* (sonics >= 2.3) */
+    uint32_t PAD[3];
+    uint32_t sbadmatch3; /* address match3 */
+    uint32_t PAD;
+    uint32_t sbadmatch2; /* address match2 */
+    uint32_t PAD;
+    uint32_t sbadmatch1; /* address match1 */
+    uint32_t PAD[7];
+    uint32_t sbimstate;     /* initiator agent state */
+    uint32_t sbintvec;      /* interrupt mask */
+    uint32_t sbtmstatelow;  /* target state */
+    uint32_t sbtmstatehigh; /* target state */
+    uint32_t sbbwa0;        /* bandwidth allocation table0 */
+    uint32_t PAD;
+    uint32_t sbimconfiglow;  /* initiator configuration */
+    uint32_t sbimconfighigh; /* initiator configuration */
+    uint32_t sbadmatch0;     /* address match0 */
+    uint32_t PAD;
+    uint32_t sbtmconfiglow;  /* target configuration */
+    uint32_t sbtmconfighigh; /* target configuration */
+    uint32_t sbbconfig;      /* broadcast configuration */
+    uint32_t PAD;
+    uint32_t sbbstate; /* broadcast state */
+    uint32_t PAD[3];
+    uint32_t sbactcnfg; /* activate configuration */
+    uint32_t PAD[3];
+    uint32_t sbflagst; /* current sbflags */
+    uint32_t PAD[3];
+    uint32_t sbidlow;  /* identification */
+    uint32_t sbidhigh; /* identification */
 };
 
 /* bankidx and bankinfo reg defines corerev >= 8 */
@@ -174,40 +174,40 @@ struct sbconfig {
 #define SR_BSZ_BASE 14
 
 struct sbsocramregs {
-    u32 coreinfo;
-    u32 bwalloc;
-    u32 extracoreinfo;
-    u32 biststat;
-    u32 bankidx;
-    u32 standbyctrl;
+    uint32_t coreinfo;
+    uint32_t bwalloc;
+    uint32_t extracoreinfo;
+    uint32_t biststat;
+    uint32_t bankidx;
+    uint32_t standbyctrl;
 
-    u32 errlogstatus; /* rev 6 */
-    u32 errlogaddr;   /* rev 6 */
+    uint32_t errlogstatus; /* rev 6 */
+    uint32_t errlogaddr;   /* rev 6 */
     /* used for patching rev 3 & 5 */
-    u32 cambankidx;
-    u32 cambankstandbyctrl;
-    u32 cambankpatchctrl;
-    u32 cambankpatchtblbaseaddr;
-    u32 cambankcmdreg;
-    u32 cambankdatareg;
-    u32 cambankmaskreg;
-    u32 PAD[1];
-    u32 bankinfo; /* corev 8 */
-    u32 bankpda;
-    u32 PAD[14];
-    u32 extmemconfig;
-    u32 extmemparitycsr;
-    u32 extmemparityerrdata;
-    u32 extmemparityerrcnt;
-    u32 extmemwrctrlandsize;
-    u32 PAD[84];
-    u32 workaround;
-    u32 pwrctl; /* corerev >= 2 */
-    u32 PAD[133];
-    u32 sr_control; /* corerev >= 15 */
-    u32 sr_status;  /* corerev >= 15 */
-    u32 sr_address; /* corerev >= 15 */
-    u32 sr_data;    /* corerev >= 15 */
+    uint32_t cambankidx;
+    uint32_t cambankstandbyctrl;
+    uint32_t cambankpatchctrl;
+    uint32_t cambankpatchtblbaseaddr;
+    uint32_t cambankcmdreg;
+    uint32_t cambankdatareg;
+    uint32_t cambankmaskreg;
+    uint32_t PAD[1];
+    uint32_t bankinfo; /* corev 8 */
+    uint32_t bankpda;
+    uint32_t PAD[14];
+    uint32_t extmemconfig;
+    uint32_t extmemparitycsr;
+    uint32_t extmemparityerrdata;
+    uint32_t extmemparityerrcnt;
+    uint32_t extmemwrctrlandsize;
+    uint32_t PAD[84];
+    uint32_t workaround;
+    uint32_t pwrctl; /* corerev >= 2 */
+    uint32_t PAD[133];
+    uint32_t sr_control; /* corerev >= 15 */
+    uint32_t sr_status;  /* corerev >= 15 */
+    uint32_t sr_address; /* corerev >= 15 */
+    uint32_t sr_data;    /* corerev >= 15 */
 };
 
 #define SOCRAMREGOFFS(_f) offsetof(struct sbsocramregs, _f)
@@ -230,7 +230,7 @@ struct sbsocramregs {
 
 struct brcmf_core_priv {
     struct brcmf_core pub;
-    u32 wrapbase;
+    uint32_t wrapbase;
     struct list_head list;
     struct brcmf_chip_priv* chip;
 };
@@ -241,15 +241,15 @@ struct brcmf_chip_priv {
     void* ctx;
     /* assured first core is chipcommon, second core is buscore */
     struct list_head cores;
-    u16 num_cores;
+    uint16_t num_cores;
 
     bool (*iscoreup)(struct brcmf_core_priv* core);
-    void (*coredisable)(struct brcmf_core_priv* core, u32 prereset, u32 reset);
-    void (*resetcore)(struct brcmf_core_priv* core, u32 prereset, u32 reset, u32 postreset);
+    void (*coredisable)(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset);
+    void (*resetcore)(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset, uint32_t postreset);
 };
 
 static void brcmf_chip_sb_corerev(struct brcmf_chip_priv* ci, struct brcmf_core* core) {
-    u32 regdata;
+    uint32_t regdata;
 
     regdata = ci->ops->read32(ci->ctx, CORE_SB(core->base, sbidhigh));
     core->rev = SBCOREREV(regdata);
@@ -257,8 +257,8 @@ static void brcmf_chip_sb_corerev(struct brcmf_chip_priv* ci, struct brcmf_core*
 
 static bool brcmf_chip_sb_iscoreup(struct brcmf_core_priv* core) {
     struct brcmf_chip_priv* ci;
-    u32 regdata;
-    u32 address;
+    uint32_t regdata;
+    uint32_t address;
 
     ci = core->chip;
     address = CORE_SB(core->pub.base, sbtmstatelow);
@@ -269,7 +269,7 @@ static bool brcmf_chip_sb_iscoreup(struct brcmf_core_priv* core) {
 
 static bool brcmf_chip_ai_iscoreup(struct brcmf_core_priv* core) {
     struct brcmf_chip_priv* ci;
-    u32 regdata;
+    uint32_t regdata;
     bool ret;
 
     ci = core->chip;
@@ -282,9 +282,9 @@ static bool brcmf_chip_ai_iscoreup(struct brcmf_core_priv* core) {
     return ret;
 }
 
-static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, u32 prereset, u32 reset) {
+static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset) {
     struct brcmf_chip_priv* ci;
-    u32 val, base;
+    uint32_t val, base;
 
     ci = core->chip;
     base = core->pub.base;
@@ -343,9 +343,9 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, u32 prereset
     udelay(1);
 }
 
-static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, u32 prereset, u32 reset) {
+static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset) {
     struct brcmf_chip_priv* ci;
-    u32 regdata;
+    uint32_t regdata;
 
     ci = core->chip;
 
@@ -374,11 +374,11 @@ in_reset_configure:
     ci->ops->read32(ci->ctx, core->wrapbase + BCMA_IOCTL);
 }
 
-static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, u32 prereset, u32 reset,
-                                    u32 postreset) {
+static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
+                                    uint32_t postreset) {
     struct brcmf_chip_priv* ci;
-    u32 regdata;
-    u32 base;
+    uint32_t regdata;
+    uint32_t base;
 
     ci = core->chip;
     base = core->pub.base;
@@ -421,8 +421,8 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, u32 prereset, 
     udelay(1);
 }
 
-static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, u32 prereset, u32 reset,
-                                    u32 postreset) {
+static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
+                                    uint32_t postreset) {
     struct brcmf_chip_priv* ci;
     int count;
 
@@ -453,8 +453,8 @@ static char* brcmf_chip_name(uint chipid, char* buf, uint len) {
     return buf;
 }
 
-static struct brcmf_core* brcmf_chip_add_core(struct brcmf_chip_priv* ci, u16 coreid, u32 base,
-                                              u32 wrapbase) {
+static struct brcmf_core* brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t coreid, uint32_t base,
+                                              uint32_t wrapbase) {
     struct brcmf_core_priv* core;
 
     core = kzalloc(sizeof(*core), GFP_KERNEL);
@@ -514,17 +514,17 @@ static int brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
     return 0;
 }
 
-static u32 brcmf_chip_core_read32(struct brcmf_core_priv* core, u16 reg) {
+static uint32_t brcmf_chip_core_read32(struct brcmf_core_priv* core, uint16_t reg) {
     return core->chip->ops->read32(core->chip->ctx, core->pub.base + reg);
 }
 
-static void brcmf_chip_core_write32(struct brcmf_core_priv* core, u16 reg, u32 val) {
+static void brcmf_chip_core_write32(struct brcmf_core_priv* core, uint16_t reg, uint32_t val) {
     core->chip->ops->write32(core->chip->ctx, core->pub.base + reg, val);
 }
 
-static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, u8 idx, u32* banksize) {
-    u32 bankinfo;
-    u32 bankidx = (SOCRAM_MEMTYPE_RAM << SOCRAM_BANKIDX_MEMTYPE_SHIFT);
+static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, uint8_t idx, uint32_t* banksize) {
+    uint32_t bankinfo;
+    uint32_t bankidx = (SOCRAM_MEMTYPE_RAM << SOCRAM_BANKIDX_MEMTYPE_SHIFT);
 
     bankidx |= idx;
     brcmf_chip_core_write32(core, SOCRAMREGOFFS(bankidx), bankidx);
@@ -534,8 +534,8 @@ static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, u8 idx, u32
     return !!(bankinfo & SOCRAM_BANKINFO_RETNTRAM_MASK);
 }
 
-static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, u32* ramsize, u32* srsize) {
-    u32 coreinfo;
+static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, uint32_t* ramsize, uint32_t* srsize) {
+    uint32_t coreinfo;
     uint nb, banksize, lss;
     bool retent;
     int i;
@@ -595,12 +595,12 @@ static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, u32* ramsize, 
 }
 
 /** Return the SYS MEM size */
-static u32 brcmf_chip_sysmem_ramsize(struct brcmf_core_priv* sysmem) {
-    u32 memsize = 0;
-    u32 coreinfo;
-    u32 idx;
-    u32 nb;
-    u32 banksize;
+static uint32_t brcmf_chip_sysmem_ramsize(struct brcmf_core_priv* sysmem) {
+    uint32_t memsize = 0;
+    uint32_t coreinfo;
+    uint32_t idx;
+    uint32_t nb;
+    uint32_t banksize;
 
     if (!brcmf_chip_iscoreup(&sysmem->pub)) {
         brcmf_chip_resetcore(&sysmem->pub, 0, 0, 0);
@@ -618,14 +618,14 @@ static u32 brcmf_chip_sysmem_ramsize(struct brcmf_core_priv* sysmem) {
 }
 
 /** Return the TCM-RAM size of the ARMCR4 core. */
-static u32 brcmf_chip_tcm_ramsize(struct brcmf_core_priv* cr4) {
-    u32 corecap;
-    u32 memsize = 0;
-    u32 nab;
-    u32 nbb;
-    u32 totb;
-    u32 bxinfo;
-    u32 idx;
+static uint32_t brcmf_chip_tcm_ramsize(struct brcmf_core_priv* cr4) {
+    uint32_t corecap;
+    uint32_t memsize = 0;
+    uint32_t nab;
+    uint32_t nbb;
+    uint32_t totb;
+    uint32_t bxinfo;
+    uint32_t idx;
 
     corecap = brcmf_chip_core_read32(cr4, ARMCR4_CAP);
 
@@ -642,7 +642,7 @@ static u32 brcmf_chip_tcm_ramsize(struct brcmf_core_priv* cr4) {
     return memsize;
 }
 
-static u32 brcmf_chip_tcm_rambase(struct brcmf_chip_priv* ci) {
+static uint32_t brcmf_chip_tcm_rambase(struct brcmf_chip_priv* ci) {
     switch (ci->pub.chip) {
     case BRCM_CC_4345_CHIP_ID:
         return 0x198000;
@@ -722,8 +722,8 @@ static int brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
     return 0;
 }
 
-static u32 brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, u32* eromaddr, u8* type) {
-    u32 val;
+static uint32_t brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, uint32_t* eromaddr, uint8_t* type) {
+    uint32_t val;
 
     /* read next descriptor */
     val = ci->ops->read32(ci->ctx, *eromaddr);
@@ -742,12 +742,12 @@ static u32 brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, u32* eromaddr, u8
     return val;
 }
 
-static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, u32* eromaddr, u32* regbase,
-                                      u32* wrapbase) {
-    u8 desc;
-    u32 val;
-    u8 mpnum = 0;
-    u8 stype, sztype, wraptype;
+static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32_t* eromaddr, uint32_t* regbase,
+                                      uint32_t* wrapbase) {
+    uint8_t desc;
+    uint32_t val;
+    uint8_t mpnum = 0;
+    uint8_t stype, sztype, wraptype;
 
     *regbase = 0;
     *wrapbase = 0;
@@ -819,12 +819,12 @@ static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, u32* eromaddr,
 
 static int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
     struct brcmf_core* core;
-    u32 eromaddr;
-    u8 desc_type = 0;
-    u32 val;
-    u16 id;
-    u8 nmp, nsp, nmw, nsw, rev;
-    u32 base, wrap;
+    uint32_t eromaddr;
+    uint8_t desc_type = 0;
+    uint32_t val;
+    uint16_t id;
+    uint8_t nmp, nsp, nmw, nsw, rev;
+    uint32_t base, wrap;
     int err;
 
     eromaddr = ci->ops->read32(ci->ctx, CORE_CC_REG(SI_ENUM_BASE, eromptr));
@@ -884,8 +884,8 @@ static int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
 
 static int brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
     struct brcmf_core* core;
-    u32 regdata;
-    u32 socitype;
+    uint32_t regdata;
+    uint32_t socitype;
     int ret;
 
     /* Get CC core rev
@@ -952,10 +952,10 @@ static int brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
     return brcmf_chip_get_raminfo(ci);
 }
 
-static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, u16 id) {
+static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, uint16_t id) {
     struct brcmf_core* core;
     struct brcmf_core_priv* cpu;
-    u32 val;
+    uint32_t val;
 
     core = brcmf_chip_get_core(&chip->pub, id);
     if (!core) {
@@ -985,8 +985,8 @@ static int brcmf_chip_setup(struct brcmf_chip_priv* chip) {
     struct brcmf_chip* pub;
     struct brcmf_core_priv* cc;
     struct brcmf_core* pmu;
-    u32 base;
-    u32 val;
+    uint32_t base;
+    uint32_t val;
     int ret = 0;
 
     pub = &chip->pub;
@@ -1080,7 +1080,7 @@ void brcmf_chip_detach(struct brcmf_chip* pub) {
     kfree(chip);
 }
 
-struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* pub, u16 coreid) {
+struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* pub, uint16_t coreid) {
     struct brcmf_chip_priv* chip;
     struct brcmf_core_priv* core;
 
@@ -1127,14 +1127,14 @@ bool brcmf_chip_iscoreup(struct brcmf_core* pub) {
     return core->chip->iscoreup(core);
 }
 
-void brcmf_chip_coredisable(struct brcmf_core* pub, u32 prereset, u32 reset) {
+void brcmf_chip_coredisable(struct brcmf_core* pub, uint32_t prereset, uint32_t reset) {
     struct brcmf_core_priv* core;
 
     core = container_of(pub, struct brcmf_core_priv, pub);
     core->chip->coredisable(core, prereset, reset);
 }
 
-void brcmf_chip_resetcore(struct brcmf_core* pub, u32 prereset, u32 reset, u32 postreset) {
+void brcmf_chip_resetcore(struct brcmf_core* pub, uint32_t prereset, uint32_t reset, uint32_t postreset) {
     struct brcmf_core_priv* core;
 
     core = container_of(pub, struct brcmf_core_priv, pub);
@@ -1187,7 +1187,7 @@ static inline void brcmf_chip_cr4_set_passive(struct brcmf_chip_priv* chip) {
                          D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
 }
 
-static bool brcmf_chip_cr4_set_active(struct brcmf_chip_priv* chip, u32 rstvec) {
+static bool brcmf_chip_cr4_set_active(struct brcmf_chip_priv* chip, uint32_t rstvec) {
     struct brcmf_core* core;
 
     chip->ops->activate(chip->ctx, &chip->pub, rstvec);
@@ -1209,7 +1209,7 @@ static inline void brcmf_chip_ca7_set_passive(struct brcmf_chip_priv* chip) {
                          D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
 }
 
-static bool brcmf_chip_ca7_set_active(struct brcmf_chip_priv* chip, u32 rstvec) {
+static bool brcmf_chip_ca7_set_active(struct brcmf_chip_priv* chip, uint32_t rstvec) {
     struct brcmf_core* core;
 
     chip->ops->activate(chip->ctx, &chip->pub, rstvec);
@@ -1245,7 +1245,7 @@ void brcmf_chip_set_passive(struct brcmf_chip* pub) {
     }
 }
 
-bool brcmf_chip_set_active(struct brcmf_chip* pub, u32 rstvec) {
+bool brcmf_chip_set_active(struct brcmf_chip* pub, uint32_t rstvec) {
     struct brcmf_chip_priv* chip;
     struct brcmf_core* arm;
 
@@ -1269,8 +1269,8 @@ bool brcmf_chip_set_active(struct brcmf_chip* pub, u32 rstvec) {
 }
 
 bool brcmf_chip_sr_capable(struct brcmf_chip* pub) {
-    u32 base, addr, reg;
-    u32 pmu_cc3_mask = ~0;
+    uint32_t base, addr, reg;
+    uint32_t pmu_cc3_mask = ~0;
     struct brcmf_chip_priv* chip;
     struct brcmf_core* pmu = brcmf_chip_get_pmu(pub);
 

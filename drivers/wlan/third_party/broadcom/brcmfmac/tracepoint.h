@@ -50,9 +50,9 @@ TRACE_EVENT(brcmf_err, TP_PROTO(const char* func, struct va_format* vaf), TP_ARG
                                                   *vaf->va) >= MAX_MSG_LEN);),
             TP_printk("%s: %s", __get_str(func), __get_str(msg)));
 
-TRACE_EVENT(brcmf_dbg, TP_PROTO(u32 level, const char* func, struct va_format* vaf),
+TRACE_EVENT(brcmf_dbg, TP_PROTO(uint32_t level, const char* func, struct va_format* vaf),
             TP_ARGS(level, func, vaf),
-            TP_STRUCT__entry(__field(u32, level) __string(func, func)
+            TP_STRUCT__entry(__field(uint32_t, level) __string(func, func)
                                  __dynamic_array(char, msg, MAX_MSG_LEN)),
             TP_fast_assign(__entry->level = level; __assign_str(func, func);
                            WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg), MAX_MSG_LEN, vaf->fmt,
@@ -61,19 +61,19 @@ TRACE_EVENT(brcmf_dbg, TP_PROTO(u32 level, const char* func, struct va_format* v
 
 TRACE_EVENT(brcmf_hexdump, TP_PROTO(void* data, size_t len), TP_ARGS(data, len),
             TP_STRUCT__entry(__field(unsigned long, len) __field(unsigned long, addr)
-                                 __dynamic_array(u8, hdata, len)),
+                                 __dynamic_array(uint8_t, hdata, len)),
             TP_fast_assign(__entry->len = len; __entry->addr = (unsigned long)data;
                            memcpy(__get_dynamic_array(hdata), data, len);),
             TP_printk("hexdump [addr=%lx, length=%lu]", __entry->addr, __entry->len));
 
 TRACE_EVENT(brcmf_bcdchdr, TP_PROTO(void* data), TP_ARGS(data),
-            TP_STRUCT__entry(__field(u8, flags) __field(u8, prio) __field(u8, flags2)
-                                 __field(u32, siglen)
-                                     __dynamic_array(u8, signal, *((u8*)data + 3) * 4)),
-            TP_fast_assign(__entry->flags = *(u8*)data; __entry->prio = *((u8*)data + 1);
-                           __entry->flags2 = *((u8*)data + 2);
-                           __entry->siglen = *((u8*)data + 3) * 4;
-                           memcpy(__get_dynamic_array(signal), (u8*)data + 4, __entry->siglen);),
+            TP_STRUCT__entry(__field(uint8_t, flags) __field(uint8_t, prio) __field(uint8_t, flags2)
+                                 __field(uint32_t, siglen)
+                                     __dynamic_array(uint8_t, signal, *((uint8_t*)data + 3) * 4)),
+            TP_fast_assign(__entry->flags = *(uint8_t*)data; __entry->prio = *((uint8_t*)data + 1);
+                           __entry->flags2 = *((uint8_t*)data + 2);
+                           __entry->siglen = *((uint8_t*)data + 3) * 4;
+                           memcpy(__get_dynamic_array(signal), (uint8_t*)data + 4, __entry->siglen);),
             TP_printk("bcdc: prio=%d siglen=%d", __entry->prio, __entry->siglen));
 #endif  // LINUX cphoenix
 
@@ -88,14 +88,14 @@ TRACE_EVENT(brcmf_bcdchdr, TP_PROTO(void* data), TP_ARGS(data),
 #endif
 
 #if 0
-TRACE_EVENT(brcmf_sdpcm_hdr, TP_PROTO(u8 dir, void* data), TP_ARGS(dir, data),
-            TP_STRUCT__entry(__field(u8, dir) __field(u16, len)
-                                 __dynamic_array(u8, hdr, dir == SDPCM_GLOM ? 20 : 12)),
+TRACE_EVENT(brcmf_sdpcm_hdr, TP_PROTO(uint8_t dir, void* data), TP_ARGS(dir, data),
+            TP_STRUCT__entry(__field(uint8_t, dir) __field(uint16_t, len)
+                                 __dynamic_array(uint8_t, hdr, dir == SDPCM_GLOM ? 20 : 12)),
             TP_fast_assign(memcpy(__get_dynamic_array(hdr), data, dir == SDPCM_GLOM ? 20 : 12);
-                           __entry->len = *(u8*)data | (*((u8*)data + 1) << 8);
+                           __entry->len = *(uint8_t*)data | (*((uint8_t*)data + 1) << 8);
                            __entry->dir = dir;),
             TP_printk("sdpcm: %s len %u, seq %d", __entry->dir == SDPCM_RX ? "RX" : "TX",
-                      __entry->len, ((u8*)__get_dynamic_array(hdr))[4]));
+                      __entry->len, ((uint8_t*)__get_dynamic_array(hdr))[4]));
 
 #ifdef CONFIG_BRCM_TRACING
 

@@ -40,8 +40,8 @@
  * @nvram: name of nvram file.
  */
 struct brcmf_firmware_mapping {
-    u32 chipid;
-    u32 revmask;
+    uint32_t chipid;
+    uint32_t revmask;
     const char* fw;
     const char* nvram;
 };
@@ -61,8 +61,8 @@ struct brcmf_firmware_mapping {
 #define BRCMF_FW_ENTRY(chipid, mask, name) \
     { chipid, mask, BRCM_##name##_FIRMWARE_NAME, NULL }
 
-int brcmf_fw_map_chip_to_name(u32 chip, u32 chiprev, struct brcmf_firmware_mapping mapping_table[],
-                              u32 table_size, char fw_name[BRCMF_FW_NAME_LEN],
+int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev, struct brcmf_firmware_mapping mapping_table[],
+                              uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
                               char nvram_name[BRCMF_FW_NAME_LEN]);
 void brcmf_fw_nvram_free(void* nvram);
 /*
@@ -70,13 +70,13 @@ void brcmf_fw_nvram_free(void* nvram);
  * fails it will not use the callback, but call device_release_driver()
  * instead which will call the driver .remove() callback.
  */
-int brcmf_fw_get_firmwares_pcie(struct device* dev, u16 flags, const char* code, const char* nvram,
+int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code, const char* nvram,
                                 void (*fw_cb)(struct device* dev, int err,
                                               const struct firmware* fw, void* nvram_image,
-                                              u32 nvram_len),
-                                u16 domain_nr, u16 bus_nr);
-int brcmf_fw_get_firmwares(struct device* dev, u16 flags, const char* code, const char* nvram,
+                                              uint32_t nvram_len),
+                                uint16_t domain_nr, uint16_t bus_nr);
+int brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code, const char* nvram,
                            void (*fw_cb)(struct device* dev, int err, const struct firmware* fw,
-                                         void* nvram_image, u32 nvram_len));
+                                         void* nvram_image, uint32_t nvram_len));
 
 #endif /* BRCMFMAC_FIRMWARE_H */

@@ -65,8 +65,8 @@ static const char* const brcmf_quirk_names[] = {BRCMF_QUIRK_LIST};
  */
 static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
     struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
-    u32 feats = bus_if->drvr->feat_flags;
-    u32 quirks = bus_if->drvr->chip_quirks;
+    uint32_t feats = bus_if->drvr->feat_flags;
+    uint32_t quirks = bus_if->drvr->chip_quirks;
     int id;
 
     seq_printf(seq, "Features: %08x\n", feats);
@@ -95,7 +95,7 @@ static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
  * @name: iovar name.
  */
 static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id, char* name) {
-    u32 data;
+    uint32_t data;
     int err;
 
     err = brcmf_fil_iovar_int_get(ifp, name, &data);
@@ -147,8 +147,8 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
     struct brcmf_pno_macaddr_le pfn_mac;
     struct brcmf_gscan_config gscan_cfg;
-    u32 wowl_cap;
-    s32 err;
+    uint32_t wowl_cap;
+    int32_t err;
 
     brcmf_feat_firmware_capabilities(ifp);
     memset(&gscan_cfg, 0, sizeof(gscan_cfg));

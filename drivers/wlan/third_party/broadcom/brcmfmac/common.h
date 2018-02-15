@@ -23,7 +23,7 @@
 #include "core.h"
 #include "fwil_types.h"
 
-extern const u8 ALLFFMAC[ETH_ALEN];
+extern const uint8_t ALLFFMAC[ETH_ALEN];
 
 #define BRCMF_FW_ALTPATH_LEN 256
 
@@ -72,7 +72,7 @@ struct brcmf_mp_device {
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
 struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
-                                               u32 chip, u32 chiprev);
+                                               uint32_t chip, uint32_t chiprev);
 void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 
 /* Sets dongle media info (drv_version, mac address). */
