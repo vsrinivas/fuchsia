@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/serial.h>
+#include <zircon/device/serial.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <stdlib.h>
@@ -20,6 +21,8 @@ typedef struct {
     zx_handle_t event;  // event for signaling serial driver state changes
     thrd_t thread;
     mtx_t lock;
+    uint32_t serial_class;
+    bool open;
 } serial_port_t;
 
 enum {
@@ -138,6 +141,9 @@ static int platform_serial_thread(void* arg) {
     zx_handle_close(port->socket);
     port->event = ZX_HANDLE_INVALID;
     port->socket = ZX_HANDLE_INVALID;
+    mtx_lock(&port->lock);
+    port->open = false;
+    mtx_unlock(&port->lock);
 
     return 0;
 }
@@ -146,20 +152,33 @@ static void platform_serial_state_cb(uint32_t state, void* cookie) {
     serial_port_t* port = cookie;
 
     // update our event handle signals with latest state from the serial driver
-    zx_signals_t set = 0;
-    zx_signals_t clear = 0;
+    zx_signals_t event_set = 0;
+    zx_signals_t event_clear = 0;
+    zx_signals_t device_set = 0;
+    zx_signals_t device_clear = 0;
+
     if (state & SERIAL_STATE_READABLE) {
-        set |= EVENT_READABLE_SIGNAL;
+        event_set |= EVENT_READABLE_SIGNAL;
+        device_set |= DEVICE_SIGNAL_READABLE;
     } else {
-        clear |= EVENT_READABLE_SIGNAL;
+        event_clear |= EVENT_READABLE_SIGNAL;
+        device_clear |= DEVICE_SIGNAL_READABLE;
     }
     if (state & SERIAL_STATE_WRITABLE) {
-        set |= EVENT_WRITABLE_SIGNAL;
+        event_set |= EVENT_WRITABLE_SIGNAL;
+        device_set |= DEVICE_SIGNAL_WRITABLE;
     } else {
-        clear |= EVENT_WRITABLE_SIGNAL;
+        event_clear |= EVENT_WRITABLE_SIGNAL;
+        device_clear |= DEVICE_SIGNAL_WRITABLE;
     }
 
-    zx_object_signal(port->event, clear, set);
+    if (port->socket != ZX_HANDLE_INVALID) {
+        // another driver bound to us
+        zx_object_signal(port->event, event_clear, event_set);
+    } else {
+        // someone opened us via /dev file system
+        device_state_clr_set(port->zxdev, device_clear, device_set);
+    }
 }
 
 static zx_status_t serial_port_get_info(void* ctx, serial_port_info_t* info) {
@@ -176,7 +195,7 @@ static zx_status_t serial_port_open_socket(void* ctx, zx_handle_t* out_handle) {
     serial_port_t* port = ctx;
 
     mtx_lock(&port->lock);
-    if (port->socket != ZX_HANDLE_INVALID) {
+    if (port->open) {
         mtx_unlock(&port->lock);
         return ZX_ERR_ALREADY_BOUND;
     }
@@ -208,6 +227,7 @@ static zx_status_t serial_port_open_socket(void* ctx, zx_handle_t* out_handle) {
     }
 
     *out_handle = socket;
+    port->open = true;
     mtx_unlock(&port->lock);
     return ZX_OK;
 
@@ -224,18 +244,107 @@ static serial_protocol_ops_t serial_ops = {
     .open_socket = serial_port_open_socket,
 };
 
-static void serial_release(void* ctx) {
-    serial_port_t* serial = ctx;
+static zx_status_t serial_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
+    serial_port_t* port = ctx;
 
-    serial_impl_enable(&serial->serial, false);
-    serial_impl_set_notify_callback(&serial->serial, NULL, NULL);
-    zx_handle_close(serial->event);
-    zx_handle_close(serial->socket);
-    free(serial);
+    mtx_lock(&port->lock);
+
+    if (port->open) {
+        mtx_unlock(&port->lock);
+        return ZX_ERR_ALREADY_BOUND;
+    }
+
+    serial_impl_set_notify_callback(&port->serial, platform_serial_state_cb, port);
+
+    zx_status_t status = serial_impl_enable(&port->serial, true);
+    if (status == ZX_OK) {
+        port->open = true;
+    }
+
+    mtx_unlock(&port->lock);
+    return status;
+}
+
+static zx_status_t serial_close(void* ctx, uint32_t flags) {
+    serial_port_t* port = ctx;
+
+    mtx_lock(&port->lock);
+
+    if (port->open) {
+        serial_impl_set_notify_callback(&port->serial, NULL, NULL);
+        serial_impl_enable(&port->serial, false);
+        port->open = false;
+        mtx_unlock(&port->lock);
+        return ZX_OK;
+    } else {
+        zxlogf(ERROR, "port_serial_close called when not open\n");
+        mtx_unlock(&port->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+}
+
+static zx_status_t serial_read(void* ctx, void* buf, size_t count, zx_off_t off,
+                                    size_t* actual) {
+    serial_port_t* port = ctx;
+
+    if (!port->open) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return serial_impl_read(&port->serial, buf, count, actual);
+}
+
+static zx_status_t serial_write(void* ctx, const void* buf, size_t count, zx_off_t off,
+                                     size_t* actual) {
+    serial_port_t* port = ctx;
+
+    if (!port->open) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return serial_impl_write(&port->serial, buf, count, actual);
+}
+
+
+static zx_status_t serial_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                     void* out_buf, size_t out_len, size_t* out_actual) {
+    serial_port_t* port = ctx;
+
+    switch (op) {
+    case IOCTL_SERIAL_CONFIG:
+        if (in_len != sizeof(serial_config_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        serial_config_t* config = (serial_config_t *)in_buf;
+        return serial_impl_config(&port->serial, config->baud_rate, config->flags);
+    case IOCTL_SERIAL_GET_CLASS:
+        if (out_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        *((uint32_t *)out_buf) = port->serial_class;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+static void serial_release(void* ctx) {
+    serial_port_t* port = ctx;
+
+    serial_impl_enable(&port->serial, false);
+    serial_impl_set_notify_callback(&port->serial, NULL, NULL);
+    zx_handle_close(port->event);
+    zx_handle_close(port->socket);
+    free(port);
 }
 
 static zx_protocol_device_t serial_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .open = serial_open,
+    .close = serial_close,
+    .read = serial_read,
+    .write = serial_write,
+    .ioctl = serial_ioctl,
     .release = serial_release,
 };
 
@@ -259,10 +368,11 @@ static zx_status_t serial_bind(void* ctx, zx_device_t* parent) {
         free(port);
         return status;
     }
+    port->serial_class = info.serial_class;
 
     zx_device_prop_t props[] = {
         { BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL },
-        { BIND_SERIAL_CLASS, 0, info.serial_class },
+        { BIND_SERIAL_CLASS, 0, port->serial_class },
     };
 
     device_add_args_t args = {

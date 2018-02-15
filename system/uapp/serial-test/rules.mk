@@ -6,12 +6,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := userapp
+MODULE_GROUP := misc
 
-MODULE_SRCS := $(LOCAL_DIR)/uart-test.c
+MODULE_SRCS := $(LOCAL_DIR)/serial-test.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
-
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/c
 
 include make/module.mk
