@@ -19,15 +19,17 @@ CMDLINE="TERM=uart"
 function HELP {
     echo "help:"
     echo "-b <build dir> : Build directory containing image to flash"
+    echo "-c <cmd line>  : Extra command line options"
     echo "-d <ramdisk>   : Use specified ramdisk file"
     echo "-m             : Add mexec option to command line"
     echo "-h for help"
     exit 1
 }
 
-while getopts "b:d:mh" FLAG; do
+while getopts "b:c:d:mh" FLAG; do
     case $FLAG in
         b) BUILD_DIR="${OPTARG}";;
+        c) CMDLINE+=" ${OPTARG}";;
         d) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
         h) HELP;;
