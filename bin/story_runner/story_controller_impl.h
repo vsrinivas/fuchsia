@@ -379,6 +379,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class DefocusCall;
   class BlockingModuleDataWriteCall;
   class ResolveModulesCall;
+  class AddDaisyCall;
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.

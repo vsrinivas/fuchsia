@@ -1586,6 +1586,67 @@ class StoryControllerImpl::ResolveModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
 };
 
+// An operation that first performs module resolution with the provided Daisy
+// and subsequently starts the most appropriate resolved module in the story
+// shell.
+class StoryControllerImpl::AddDaisyCall : Operation<> {
+ public:
+  AddDaisyCall(OperationContainer* const container,
+               StoryControllerImpl* const story_controller_impl,
+               fidl::Array<fidl::String> requesting_module_path,
+               const std::string& module_name,
+               DaisyPtr daisy,
+               SurfaceRelationPtr surface_relation,
+               ResultCall result_call)
+      : Operation("StoryControllerImpl::AddDaisyCall",
+                  container,
+                  std::move(result_call)),
+        story_controller_impl_(story_controller_impl),
+        requesting_module_path_(std::move(requesting_module_path)),
+        module_name_(module_name),
+        daisy_(std::move(daisy)),
+        surface_relation_(std::move(surface_relation)) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this};
+
+    new ResolveModulesCall(&operation_queue_, story_controller_impl_,
+                           std::move(daisy_),
+                           std::move(requesting_module_path_),
+                           [this, flow](FindModulesResultPtr result) {
+                             StartModuleFromFindResult(flow, std::move(result));
+                           });
+  }
+
+  void StartModuleFromFindResult(FlowToken flow, FindModulesResultPtr result) {
+    if (!result->modules.empty()) {
+      // Run the first module in story shell.
+      const auto& module_result = result->modules[0];
+      const auto& module_url = module_result->module_id;
+      const auto& create_chain_info = module_result->create_chain_info;
+
+      new StartModuleInShellCall(
+          &operation_queue_, story_controller_impl_, module_name_, module_url,
+          nullptr /* link_name */, create_chain_info.Clone(),
+          nullptr /* incoming_services */,
+          nullptr /* module_controller_request */, std::move(surface_relation_),
+          true, ModuleSource::INTERNAL, [flow] {});
+    }
+  }
+
+  OperationQueue operation_queue_;
+  StoryControllerImpl* story_controller_impl_ = nullptr;
+  fidl::Array<fidl::String> requesting_module_path_;
+  std::string module_name_;
+  DaisyPtr daisy_;
+  SurfaceRelationPtr surface_relation_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(AddDaisyCall);
+};
+
 StoryControllerImpl::StoryControllerImpl(
     const fidl::String& story_id,
     LedgerClient* const ledger_client,
@@ -2131,26 +2192,9 @@ void StoryControllerImpl::AddDaisy(fidl::Array<fidl::String> parent_module_path,
                                    const fidl::String& module_name,
                                    DaisyPtr daisy,
                                    SurfaceRelationPtr surface_relation) {
-  new ResolveModulesCall(
-      &operation_queue_, this, std::move(daisy), parent_module_path.Clone(),
-      fxl::MakeCopyable([this, module_name,
-                         parent_module_path = std::move(parent_module_path),
-                         surface_relation = std::move(surface_relation)](
-                            FindModulesResultPtr result) mutable {
-        if (!result->modules.empty()) {
-          // Run the first module in story shell.
-          const auto& module_result = result->modules[0];
-          const auto& module_url = module_result->module_id;
-          const auto& create_chain_info = module_result->create_chain_info;
-
-          StartModuleInShell(parent_module_path, module_name, module_url,
-                             nullptr /* link_name */, create_chain_info.Clone(),
-                             nullptr /* incoming_services */,
-                             nullptr /* module_controller */,
-                             std::move(surface_relation), true /* focus */,
-                             ModuleSource::INTERNAL);
-        }
-      }));
+  new AddDaisyCall(&operation_queue_, this, std::move(parent_module_path),
+                   module_name, std::move(daisy), std::move(surface_relation),
+                   [] {});
 }
 
 void StoryControllerImpl::StartStoryShell(
