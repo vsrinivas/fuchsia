@@ -114,6 +114,7 @@ type iostate struct {
 
 	writeLoopDone   chan struct{}
 	controlLoopDone chan struct{}
+	listenLoopDone  chan struct{}
 
 	withNewSocket bool // remove when we remove old FDIO support
 }
@@ -1066,6 +1067,9 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Sta
 }
 
 func (s *socketServer) loopListen(ios *iostate) {
+	ios.listenLoopDone = make(chan struct{})
+	defer func() { ios.listenLoopDone <- struct{}{} }()
+
 	// When an incoming connection is available, wait for the listening socket to
 	// enter a shareable state, then share it with zircon.
 	inEntry, inCh := waiter.NewChannelEntry(nil)
@@ -1390,8 +1394,8 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	s.mu.Unlock()
 
 	if ios.ep != nil {
-		// Signal that we're about to close. This tells the write loop to finish flushing
-		// all the data from the dataHandle to the endpoint, and let us know when it's done.
+		// Signal that we're about to close. This tells the various message loops to finish
+		// processing, and let us know when they're done.
 		err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
 
 		go func() {
@@ -1400,6 +1404,9 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 				<-ios.writeLoopDone
 				if ios.withNewSocket {
 					<-ios.controlLoopDone
+				}
+				if ios.listenLoopDone != nil {
+					<-ios.listenLoopDone
 				}
 			default:
 				log.Printf("close: signal failed: %v", err)
