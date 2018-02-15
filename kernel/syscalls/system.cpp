@@ -41,7 +41,7 @@ extern void mexec_asm(void);
 extern void mexec_asm_end(void);
 __END_CDECLS
 
-/* Allocates a page of memory that has the same physical and virtual addressresses.
+/* Allocates a page of memory that has the same physical and virtual addresses.
  */
 static zx_status_t identity_page_allocate(void** result_addr) {
     zx_status_t result;
