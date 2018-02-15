@@ -823,21 +823,8 @@ static int ax88179_thread(void* arg) {
         goto fail;
     }
 
-    // Create the device
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ax88179",
-        .ctx = eth,
-        .ops = &ax88179_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
-        .proto_ops = &ethmac_ops,
-    };
-
-    status = device_add(eth->usb_device, &args, &eth->device);
-    if (status < 0) {
-        zxlogf(ERROR, "ax88179: failed to create device: %d\n", status);
-        goto fail;
-    }
+    // Make the device visible
+    device_make_visible(eth->device);
 
     uint64_t count = 0;
     usb_request_t* req = eth->interrupt_req;
@@ -858,7 +845,7 @@ static int ax88179_thread(void* arg) {
     }
 
 fail:
-    ax88179_free(eth);
+    device_remove(eth->device);
     return status;
 }
 
@@ -964,9 +951,28 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     }
     */
 
+    // Create the device
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ax88179",
+        .ctx = eth,
+        .ops = &ax88179_device_proto,
+        .flags = DEVICE_ADD_INVISIBLE,
+        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_ops = &ethmac_ops,
+    };
+
+    status = device_add(eth->usb_device, &args, &eth->device);
+    if (status < 0) {
+        zxlogf(ERROR, "ax88179: failed to create device: %d\n", status);
+        goto fail;
+    }
+
+
     int ret = thrd_create_with_name(&eth->thread, ax88179_thread, eth, "ax88179_thread");
     if (ret != thrd_success) {
-        goto fail;
+        device_remove(eth->device);
+        return ZX_ERR_BAD_STATE;
     }
     return ZX_OK;
 
