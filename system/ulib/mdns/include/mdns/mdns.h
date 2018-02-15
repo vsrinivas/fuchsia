@@ -31,6 +31,13 @@ extern "C" {
 
 // A DNS message header.
 //
+// The message header should not be modified by hand.  When creating a message
+// for sending, invalid changes, such as specifying a qd_count that differs from
+// the actual number of questions in a message, are replaced with their correct
+// values.  When reading a received message, modifying the header can obviously
+// lead to confusing inconsistencies between the header information and its
+// corresponding message.
+//
 // id is a unique identifier used to match queries with responses.
 //
 // flags is a set of flags represented as a collection of sub-fields.
@@ -79,7 +86,7 @@ typedef struct mdns_header_t {
 
 // An mDNS question.
 typedef struct mdns_question_t {
-    char domain[MAX_DOMAIN_LENGTH];
+    char domain[MAX_DOMAIN_LENGTH+1];
     uint16_t qtype;
     uint16_t qclass;
     struct mdns_question_t* next;
@@ -96,7 +103,7 @@ typedef struct mdns_rr_t {
     struct mdns_rr_t* next;
 } mdns_rr;
 
-// An mDNS query packet
+// An mDNS query packet.
 typedef struct mdns_message_t {
     mdns_header header;
     mdns_question* questions;
@@ -107,6 +114,27 @@ typedef struct mdns_message_t {
 
 // Zeroes the values contained in the given mdns_message.
 void mdns_init_message(mdns_message* message);
+
+// Appends a question to a message.
+//
+// Assumes mdns_init_message(&message) has been called.
+//
+// If domain is longer than MAX_DOMAIN_LENGTH bytes, a negative value is
+// returned and errno is set to ENAMETOOLONG. The message header's question
+// count is incremented by one.  This count is guaranteed to be in-sync with
+// the actual number of questions in the message.  If memory cannot be
+// allocated for the question, a negative value is returned and errno is set to
+// ENOMEM.
+int mdns_add_question(mdns_message* message,
+                      const char* domain,
+                      uint16_t qtype,
+                      uint16_t qclass);
+
+// Zeroes all pointers and values associated with the given message.
+//
+// Clients should free(message) after calling mdns_free_message(message) if the
+// message was allocated on the heap.
+void mdns_free_message(mdns_message* message);
 
 #ifdef __cplusplus
 }  // extern "C"
