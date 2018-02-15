@@ -118,6 +118,11 @@ static int gauss_start_thread(void* arg) {
     gauss_bus_t* bus = arg;
     zx_status_t status;
 
+    if ((status = gauss_clk_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_clk_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = gauss_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_gpio_init failed: %d\n", status);
         goto fail;
