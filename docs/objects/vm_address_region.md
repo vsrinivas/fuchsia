@@ -26,6 +26,12 @@ For example, the root VMAR allows read, write, and executable mapping.  One
 could create a child VMAR that only allows read and write mappings, in which
 it would be illegal to create a child that allows executable mappings.
 
+When a VMAR is created using vmar_allocate, its parent VMAR retains a reference
+to it.  Because of this, if all handles to the child VMAR are closed, the child
+and its descendents will remain active in the address space.  In order to
+disconnect the child from the address space, [vmar_destroy](../syscalls/vmar_destroy.md)
+must be called on a handle to the child.
+
 By default, all allocations of address space are randomized.  At VMAR
 creation time, the caller can choose which randomization algorithm is used.
 The default allocator attempts to spread allocations widely across the full
