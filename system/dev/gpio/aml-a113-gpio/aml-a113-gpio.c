@@ -403,7 +403,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     }
 
     for (unsigned i = 0; i < countof(gpio->mmios); i++) {
-        status = pdev_map_mmio_buffer(&gpio->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        status = pdev_map_mmio_buffer(&gpio->pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                       &gpio->mmios[i]);
         if (status != ZX_OK) {
             zxlogf(ERROR, "aml_gpio_bind: pdev_map_mmio_buffer failed\n");
