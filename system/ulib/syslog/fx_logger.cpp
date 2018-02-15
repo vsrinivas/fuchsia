@@ -34,7 +34,6 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
     fx_log_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     constexpr size_t kDataSize = sizeof(packet.data);
-    packet.metadata.version = 0;
     packet.metadata.pid = pid_;
     packet.metadata.tid = GetCurrentThreadKoid();
     packet.metadata.time = time;

@@ -17,12 +17,11 @@
 #define FX_LOG_MAX_DATAGRAM_LEN (2032)
 
 typedef struct fx_log_metadata {
-    int version;
-    fx_log_severity_t severity;
     zx_koid_t pid;
     zx_koid_t tid;
     zx_time_t time;
-    uint64_t dropped_logs;
+    fx_log_severity_t severity;
+    uint32_t dropped_logs;
 } fx_log_metadata_t;
 
 // Packet to transfer over socket.

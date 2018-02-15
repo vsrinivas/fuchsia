@@ -69,7 +69,7 @@ private:
 
     zx_koid_t pid_;
     fbl::atomic<fx_log_severity_t> severity_;
-    fbl::atomic<uint64_t> dropped_logs_;
+    fbl::atomic<uint32_t> dropped_logs_;
     fbl::unique_fd console_fd_;
     zx::socket socket_;
     fbl::Vector<fbl::String> tags_;
