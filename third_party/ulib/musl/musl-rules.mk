@@ -287,12 +287,10 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/linux/utimes.c \
     $(LOCAL_DIR)/src/locale/__lctrans.c \
     $(LOCAL_DIR)/src/locale/__mo_lookup.c \
-    $(LOCAL_DIR)/src/locale/bind_textdomain_codeset.c \
     $(LOCAL_DIR)/src/locale/c_locale.c \
     $(LOCAL_DIR)/src/locale/catclose.c \
     $(LOCAL_DIR)/src/locale/catgets.c \
     $(LOCAL_DIR)/src/locale/catopen.c \
-    $(LOCAL_DIR)/src/locale/dcngettext.c \
     $(LOCAL_DIR)/src/locale/duplocale.c \
     $(LOCAL_DIR)/src/locale/freelocale.c \
     $(LOCAL_DIR)/src/locale/iconv.c \
@@ -305,7 +303,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/locale/strcoll.c \
     $(LOCAL_DIR)/src/locale/strfmon.c \
     $(LOCAL_DIR)/src/locale/strxfrm.c \
-    $(LOCAL_DIR)/src/locale/textdomain.c \
     $(LOCAL_DIR)/src/locale/uselocale.c \
     $(LOCAL_DIR)/src/locale/wcscoll.c \
     $(LOCAL_DIR)/src/locale/wcsxfrm.c \

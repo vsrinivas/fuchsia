@@ -489,10 +489,6 @@ module NonLibc [extern_c] {
     header "grp.h" // Non-functional in Fuchsia
     export *
   }
-  module libintl { // GNU extension (gettext)
-    header "libintl.h"
-    export *
-  }
   module mntent { // Unimplemented - common header
     header "mntent.h" // Unimplemented in Fuchsia
     export *
