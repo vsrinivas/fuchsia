@@ -27,7 +27,7 @@
 zx_status_t configure_canvas(vim2_display_t* display)
 {
     uint32_t fbh = display->disp_info.height * 2;
-    uint32_t fbw = display->disp_info.width * 2;
+    uint32_t fbw = display->disp_info.width * 4;
 
     DISP_INFO("Canvas Diminsions: w=%d h=%d\n", fbw, fbh);
 

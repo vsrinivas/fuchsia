@@ -70,6 +70,16 @@ void osd_debug_dump_register_all(vim2_display_t* display)
     }
 }
 
+enum {
+    VPU_VIU_OSD2_BLK_CFG_TBL_ADDR_SHIFT = 16,
+    VPU_VIU_OSD2_BLK_CFG_LITTLE_ENDIAN = (1 << 15),
+    VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_32_BIT = 5,
+    VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_SHIFT = 8,
+    VPU_VIU_OSD2_BLK_CFG_RGB_EN = (1 << 7),
+    VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_ARGB = 1,
+    VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_SHIFT = 2,
+};
+
 zx_status_t configure_osd2(vim2_display_t* display)
 {
     uint32_t x_start, x_end, y_start, y_end;
@@ -83,6 +93,12 @@ zx_status_t configure_osd2(vim2_display_t* display)
 
     DISP_INFO("0x%x 0x%x\n", READ32_VPU_REG(VPU_VPP_MISC), READ32_VPU_REG(VPU_VPP_OSD_SC_CTRL0));
 
+    uint32_t cfg_w0 = (OSD2_DMC_CAV_INDEX << VPU_VIU_OSD2_BLK_CFG_TBL_ADDR_SHIFT) |
+                      VPU_VIU_OSD2_BLK_CFG_LITTLE_ENDIAN | VPU_VIU_OSD2_BLK_CFG_RGB_EN |
+                      (VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_32_BIT << VPU_VIU_OSD2_BLK_CFG_OSD_BLK_MODE_SHIFT) |
+                      (VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_ARGB << VPU_VIU_OSD2_BLK_CFG_COLOR_MATRIX_SHIFT);
+
+    WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W0, cfg_w0);
     WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W1, (x_end << 16) | (x_start));
     WRITE32_VPU_REG(VPU_VIU_OSD2_BLK0_CFG_W3, (x_end << 16) | (x_start));
 

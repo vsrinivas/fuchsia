@@ -170,7 +170,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // allocate frame buffer
-    display->disp_info.format = ZX_PIXEL_FORMAT_RGB_565;
+    display->disp_info.format = ZX_PIXEL_FORMAT_RGB_x888;
     display->disp_info.width  = display->p->timings.hactive;
     display->disp_info.height = display->p->timings.vactive;
     display->disp_info.stride = display->p->timings.hactive;
