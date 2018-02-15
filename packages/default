@@ -33,6 +33,7 @@
         "garnet/packages/iperf",
         "garnet/packages/libc-tests",
         "garnet/packages/listen",
+        "garnet/packages/logger",
         "garnet/packages/make-efi",
         "garnet/packages/make-fuchsia-vol",
         "garnet/packages/mdns",

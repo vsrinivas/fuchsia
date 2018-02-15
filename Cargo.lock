@@ -414,6 +414,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "garnet_public_lib_logger_fidl"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-core 0.1.12",
+ "tokio-fuchsia 0.1.0",
+]
+
+[[package]]
 name = "garnet_public_lib_mdns_fidl"
 version = "0.1.0"
 dependencies = [
@@ -515,6 +526,19 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "logger"
+version = "0.1.0"
+dependencies = [
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fidl 0.1.0",
+ "fuchsia-app 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "garnet_public_lib_logger_fidl 0.1.0",
+ "tokio-core 0.1.12",
 ]
 
 [[package]]

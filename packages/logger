@@ -1,0 +1,9 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "packages": {
+        "logger": "//garnet/bin/logger",
+        "logger_tests": "//garnet/bin/logger:logger_tests"
+    }
+}
