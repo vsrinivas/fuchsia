@@ -221,24 +221,28 @@ type Library struct {
 type Union struct {
 	Name    Identifier    `json:"name"`
 	Members []UnionMember `json:"members"`
+	Size    int           `json:"size"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL2 union.
 type UnionMember struct {
-	Type Type       `json:"type"`
-	Name Identifier `json:"name"`
+	Type   Type       `json:"type"`
+	Name   Identifier `json:"name"`
+	Offset int        `json:"offset"`
 }
 
 // Struct represents a declaration of a FIDL2 struct.
 type Struct struct {
 	Name    Identifier     `json:"name"`
 	Members []StructMember `json:"members"`
+	Size    int            `json:"size"`
 }
 
 // StructMember represents the declaration of a field in a FIDL2 struct.
 type StructMember struct {
 	Type              Type       `json:"type"`
 	Name              Identifier `json:"name"`
+	Offset            int        `json:"offset"`
 	MaybeDefaultValue Constant   `json:"maybe_default_value,omitempty"`
 }
 

@@ -49,13 +49,15 @@ class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
       $message.closeHandles();
       return;
     }
-    final $b.Decoder $decoder = new $b.Decoder($message);
+    final $b.Decoder $decoder = new $b.Decoder($message)
+      ..claimMemory(_kMessageHeaderSize);
     const int $offset = _kMessageHeaderSize;
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
     {{- if .HasResponse }}
       case {{ .OrdinalName }}:
+        $decoder.claimMemory({{ .ResponseSize }});
         $callback(
       {{- range .Response }}
           {{ .Type.Decode .Offset }},
@@ -83,7 +85,7 @@ class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
 
     final $b.Encoder $encoder = new $b.Encoder({{ if .HasResponse }}ctrl.getNextTxid(){{ else }}0{{ end }}, {{ .OrdinalName }});
     {{- if .Request }}
-    const int $offset = _kMessageHeaderSize;
+    final int $offset = $encoder.alloc({{ .RequestSize }});
     {{- end }}
     {{- range .Request }}
     {{ .Type.Encode .Name .Offset }};
@@ -122,7 +124,7 @@ class {{ .BindingName }} extends $b.Binding<{{ .Name }}> {
     return ({{ template "Params" .Response }}) {
       final $b.Encoder $encoder = new $b.Encoder($txid, {{ .OrdinalName }});
       {{- if .Response }}
-      const int $offset = _kMessageHeaderSize;
+      final int $offset = $encoder.alloc({{ .ResponseSize }});
       {{- end }}
       {{- range .Response }}
       {{ .Type.Encode .Name .Offset }};
@@ -136,12 +138,14 @@ class {{ .BindingName }} extends $b.Binding<{{ .Name }}> {
 
   @override
   void handleMessage($b.Message $message, $b.MessageSink $respond) {
-    final $b.Decoder $decoder = new $b.Decoder($message);
+    final $b.Decoder $decoder = new $b.Decoder($message)
+      ..claimMemory(_kMessageHeaderSize);
     const int $offset = _kMessageHeaderSize;
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
       case {{ .OrdinalName }}:
+        $decoder.claimMemory({{ .RequestSize }});
         impl.{{ .Name }}(
     {{- range .Request }}
           {{ .Type.Decode .Offset }},

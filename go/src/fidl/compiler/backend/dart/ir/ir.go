@@ -132,13 +132,15 @@ type Interface struct {
 }
 
 type Method struct {
-	Ordinal     types.Ordinal
-	OrdinalName string
-	Name        string
-	HasRequest  bool
-	Request     []Parameter
-	HasResponse bool
-	Response    []Parameter
+	Ordinal      types.Ordinal
+	OrdinalName  string
+	Name         string
+	HasRequest   bool
+	Request      []Parameter
+	RequestSize  int
+	HasResponse  bool
+	Response     []Parameter
+	ResponseSize int
 }
 
 type Parameter struct {
@@ -438,8 +440,10 @@ func compileInterface(val types.Interface) Interface {
 			name,
 			v.HasRequest,
 			compileParameterArray(v.Request),
+			0, // TODO(TO-758): Need the method size from the frontend.
 			v.HasResponse,
 			compileParameterArray(v.Response),
+			0, // TODO(TO-758): Need the method size from the frontend.
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -451,7 +455,7 @@ func compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		compileType(val.Type),
 		changeIfReserved(val.Name),
-		0, // TODO(TO-758): Need the member offset from the frontend.
+		val.Offset,
 	}
 }
 
@@ -459,7 +463,7 @@ func compileStruct(val types.Struct) Struct {
 	r := Struct{
 		changeIfReserved(val.Name),
 		[]StructMember{},
-		0, // TODO(TO-758): Need the encoded size from the frontend.
+		val.Size,
 	}
 
 	for _, v := range val.Members {
@@ -473,7 +477,7 @@ func compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		compileType(val.Type),
 		changeIfReserved(val.Name),
-		0, // TODO(TO-758): Need the member offset from the frontend.
+		val.Offset,
 	}
 }
 
@@ -482,7 +486,7 @@ func compileUnion(val types.Union) Union {
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Tag"),
 		[]UnionMember{},
-		0, // TODO(TO-758): Need the encoded size from the frontend.
+		val.Size,
 	}
 
 	for _, v := range val.Members {
