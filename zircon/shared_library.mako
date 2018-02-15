@@ -95,6 +95,7 @@ sdk_atom("${data.name}_sdk") {
 
   tags = [
     "type:compiled_shared",
+    "arch:target",
   ]
 
   files = [

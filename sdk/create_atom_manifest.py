@@ -121,8 +121,8 @@ def main():
                         required=True)
     args = parser.parse_args()
 
-    if (args.name):
-	name = args.name
+    if args.name:
+        name = args.name
     else:
         with open(args.name_file, 'r') as name_file:
             name = name_file.read()
@@ -157,6 +157,7 @@ def main():
         'name': name,
     }
     tags = dict(map(lambda t: t.split(':', 1), args.tags))
+    tags['domain'] = args.domain
     atoms.update([Atom({
         'id': id,
         'gn-label': args.gn_label,

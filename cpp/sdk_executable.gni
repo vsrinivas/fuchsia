@@ -26,6 +26,16 @@ template("sdk_executable") {
     domain = "exe"
     name = output_name
 
+    if (is_fuchsia) {
+      tags = [
+        "arch:target",
+      ]
+    } else {
+      tags = [
+        "arch:host",
+      ]
+    }
+
     files = [
       {
         source = "$root_out_dir/$output_name"

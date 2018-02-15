@@ -144,6 +144,16 @@ template("go_build") {
     domain = "exe"
     name = output_name
 
+    if (is_fuchsia) {
+      tags = [
+        "arch:target",
+      ]
+    } else {
+      tags = [
+        "arch:host",
+      ]
+    }
+
     files = [
       {
         source = output_path

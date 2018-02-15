@@ -51,6 +51,7 @@ sdk_atom("${data.name}_sdk") {
 
   tags = [
     "type:compiled_static",
+    "arch:target",
   ]
 
   files = [
