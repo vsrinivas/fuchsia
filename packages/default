@@ -10,6 +10,7 @@
         "garnet/packages/build_info",
         "garnet/packages/cmdutils",
         "garnet/packages/cobalt_client",
+        "garnet/packages/debug_agent",
         "garnet/packages/debugserver",
         "garnet/packages/device_settings",
         "garnet/packages/drivers",

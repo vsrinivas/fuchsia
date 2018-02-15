@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "debug_agent": "//garnet/bin/debug_agent"
+    }
+}
