@@ -43,6 +43,11 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
  public:
   FakeCobaltEncoderImpl() {}
 
+  void AddObservation(uint32_t metric_id,
+                      uint32_t encoding_id,
+                      ValuePtr observation,
+                      const AddObservationCallback& callback) override {}
+
   void AddStringObservation(
       uint32_t metric_id,
       uint32_t encoding_id,
