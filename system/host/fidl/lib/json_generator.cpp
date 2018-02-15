@@ -457,11 +457,15 @@ void JSONGenerator::Generate(const flat::Interface::Method& value) {
         GenerateObjectMember("ordinal", value.ordinal, Position::First);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("has_request", value.has_request);
-        if (value.has_request)
+        if (value.has_request) {
             GenerateObjectMember("maybe_request", value.maybe_request);
+            GenerateObjectMember("maybe_request_size", value.maybe_request_size);
+        }
         GenerateObjectMember("has_response", value.has_response);
-        if (value.has_response)
+        if (value.has_response) {
             GenerateObjectMember("maybe_response", value.maybe_response);
+            GenerateObjectMember("maybe_response_size", value.maybe_response_size);
+        }
     });
 }
 
@@ -469,6 +473,7 @@ void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::First);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("offset", value.offset);
     });
 }
 

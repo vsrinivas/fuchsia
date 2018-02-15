@@ -75,6 +75,8 @@ struct Interface {
                 : type(std::move(type)), name(std::move(name)) {}
             std::unique_ptr<ast::Type> type;
             std::unique_ptr<ast::Identifier> name;
+            // TODO(TO-758) Compute this.
+            uint64_t offset = 0u;
         };
 
         Method(Method&&) = default;
@@ -93,8 +95,12 @@ struct Interface {
         std::unique_ptr<ast::Identifier> name;
         bool has_request;
         std::vector<Parameter> maybe_request;
+        // TODO(TO-758) Compute this.
+        uint64_t maybe_request_size = 0;
         bool has_response;
         std::vector<Parameter> maybe_response;
+        // TODO(TO-758) Compute this.
+        uint64_t maybe_response_size = 0;
     };
 
     Interface(Name name, std::vector<Method> methods)

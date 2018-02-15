@@ -131,6 +131,9 @@
                         "$ref": "#/definitions/interface-method-parameter"
                     }
                 },
+                "maybe_request_size": {
+                    "$ref": "#/definitions/size"
+                },
                 "has_response": {
                     "type": "boolean"
                 },
@@ -139,18 +142,24 @@
                     "items": {
                         "$ref": "#/definitions/interface-method-parameter"
                     }
+                },
+                "maybe_response_size": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
         "interface-method-parameter": {
             "type": "object",
-            "required": [ "type", "name" ],
+            "required": [ "type", "name", "offset" ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "offset": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
