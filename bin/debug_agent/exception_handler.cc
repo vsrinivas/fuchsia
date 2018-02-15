@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "exception_handler.h"
+#include "garnet/bin/debug_agent/exception_handler.h"
 
 #include <stdio.h>
 #include <utility>
@@ -41,7 +41,7 @@ struct ExceptionHandler::DebuggedProcess {
 ExceptionHandler::ExceptionHandler() {}
 
 ExceptionHandler::~ExceptionHandler() {
-  thrd_join(thread_, nullptr);
+  thread_->join();
 }
 
 bool ExceptionHandler::Start(zx::socket socket) {
@@ -55,24 +55,17 @@ bool ExceptionHandler::Start(zx::socket socket) {
   if (status != ZX_OK)
     return false;
 
-  int c_status =
-      thrd_create(&thread_,
-                  [](void* ctx) -> int {
-                    return static_cast<ExceptionHandler*>(ctx)->DoThread();
-                  },
-                  this);
-  if (c_status != thrd_success)
-    return false;
+  thread_ = std::make_unique<std::thread>(&ExceptionHandler::DoThread, this);
   return true;
 }
 
 bool ExceptionHandler::Attach(zx::process&& in_process) {
-  auto owned_deb_proc = fbl::make_unique<DebuggedProcess>();
+  auto owned_deb_proc = std::make_unique<DebuggedProcess>();
   DebuggedProcess* deb_proc = owned_deb_proc.get();  // Used after move below.
   deb_proc->koid = KoidForProcess(in_process);
   deb_proc->process = std::move(in_process);
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     processes_.push_back(std::move(owned_deb_proc));
   }
 
@@ -92,14 +85,14 @@ bool ExceptionHandler::Attach(zx::process&& in_process) {
   return true;
 }
 
-int ExceptionHandler::DoThread() {
+void ExceptionHandler::DoThread() {
   zx_port_packet_t packet;
   while (port_.wait(zx::time::infinite(), &packet, 0) == ZX_OK) {
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
       const DebuggedProcess* proc = ProcessForKoid(packet.exception.pid);
       if (!proc) {
         fprintf(stderr, "Got exception for a process we're not debugging.\n");
-        return 0;
+        return;
       }
       zx::thread thread = ThreadForKoid(proc->process, packet.exception.tid);
 
@@ -140,26 +133,33 @@ int ExceptionHandler::DoThread() {
     } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
                packet.signal.observed & ZX_PROCESS_TERMINATED) {
       if (OnProcessTerminated(packet))
-        return 1;
+        return;
     } else {
       fprintf(stderr, "Unknown signal.\n");
     }
   }
-  return 0;
+  return;
 }
 
 void ExceptionHandler::OnSocketReadable() {
-  fprintf(stderr, "Socket readable\n");
+  size_t available = 0;
+  zx_status_t status = socket_.read(0, nullptr, 0, &available);
+  if (status != ZX_OK)
+    return;
+
+  std::vector<char> buffer(available);
+  socket_.read(0, &buffer[0], available, &available);
+  socket_buffer_.AddData(std::move(buffer));
 }
 
 bool ExceptionHandler::OnProcessTerminated(const zx_port_packet_t& packet) {
   fprintf(stderr, "Process %llu terminated.\n", (unsigned long long)packet.key);
   {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     for (size_t i = 0; i < processes_.size(); i++) {
       if (processes_[i]->koid == packet.key) {
-        processes_.erase(i);
-        return processes_.is_empty();
+        processes_.erase(processes_.begin() + i);
+        return processes_.empty();
       }
     }
   }
@@ -216,7 +216,7 @@ void ExceptionHandler::OnThreadPolicyError(const zx_port_packet_t& packet,
 
 const ExceptionHandler::DebuggedProcess* ExceptionHandler::ProcessForKoid(
     zx_koid_t koid) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   for (const auto& proc : processes_) {
     if (proc->koid == koid)
       return proc.get();

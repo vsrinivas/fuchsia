@@ -1,0 +1,23 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("debug_ipc") {
+  sources = [
+    "stream_buffer.cc",
+    "stream_buffer.h",
+  ]
+}
+
+# Unit tests for this directory. These are intended to be referenced by unit
+# test targets for the consumers of this library.
+source_set("tests") {
+  testonly = true
+  sources = [
+    "stream_buffer_unittest.cc",
+  ]
+
+  deps = [
+    "//third_party/gtest",
+  ]
+}

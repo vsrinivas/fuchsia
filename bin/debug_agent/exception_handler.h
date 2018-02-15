@@ -4,14 +4,17 @@
 
 #pragma once
 
-#include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <threads.h>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
 #include <zx/port.h>
 #include <zx/process.h>
 #include <zx/socket.h>
 #include <zx/thread.h>
+
+#include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/public/lib/fxl/synchronization/thread_annotations.h"
 
 // This exception handler class runs a background thread that blocks on
 // exceptions from processes being debugged.
@@ -30,7 +33,7 @@ class ExceptionHandler {
   struct DebuggedProcess;
 
   // Implements the background thread.
-  int DoThread();
+  void DoThread();
 
   void OnSocketReadable();
 
@@ -61,14 +64,18 @@ class ExceptionHandler {
   // nullptr on not.
   const DebuggedProcess* ProcessForKoid(zx_koid_t koid);
 
-  zx::socket socket_;  // Commands from client.
+  // Reads and buffers commands from the client.
+  zx::socket socket_;
+  StreamBuffer socket_buffer_;
 
-  thrd_t thread_;
+  // This is a unique_ptr so that it can be started explicitly in Start(),
+  // giving time to do initialization while single-threaded.
+  std::unique_ptr<std::thread> thread_;
   zx::port port_;
 
   // The list of all debugged processes. Protected by the Mutex. This uses
-  // pointers so the
-  // DebuggedProcess data is stable across mutations.
-  fbl::Mutex mutex_;
-  fbl::Vector<fbl::unique_ptr<DebuggedProcess>> processes_;
+  // pointers so the DebuggedProcess data is stable across mutations.
+  std::mutex mutex_;
+  std::vector<std::unique_ptr<DebuggedProcess>> processes_
+      FXL_GUARDED_BY(mutex_);
 };

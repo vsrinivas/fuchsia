@@ -4,17 +4,30 @@
 
 import("//build/package.gni")
 
-executable("bin") {
-  output_name = "debug_agent"
+static_library("lib") {
   sources = [
-    "debug_agent.cc",
+    "debug_commands.cc",
+    "debug_commands.h",
     "exception_handler.cc",
     "exception_handler.h",
   ]
 
-  deps = [
+  public_deps = [
+    "//garnet/lib/debug_ipc",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/launchpad",
+  ]
+}
+
+executable("bin") {
+  output_name = "debug_agent"
+  sources = [
+    "debug_agent.cc",
+  ]
+
+  deps = [
+    ":lib",
   ]
 }
 
@@ -24,15 +37,20 @@ package("debug_agent") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "debug_agent"
-      } ]
+  binaries = [
+    {
+      name = "debug_agent"
+    },
+  ]
 }
 
-executable("debug_agent_unittests") {
+executable("unittests") {
   testonly = true
+  output_name = "debug_agent_tests"
 
   deps = [
+    ":lib",
+    "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
   ]
@@ -45,10 +63,12 @@ package("debug_agent_tests") {
   package_name = "debug_agent_tests"
 
   deps = [
-    ":debug_agent_unittests",
+    ":unittests",
   ]
 
-  tests = [ {
-        name = "debug_agent_unittests"
-      } ]
+  tests = [
+    {
+      name = "debug_agent_tests"
+    },
+  ]
 }

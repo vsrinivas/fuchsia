@@ -7,7 +7,7 @@
 #include <launchpad/launchpad.h>
 #include <zx/process.h>
 
-#include "exception_handler.h"
+#include "garnet/bin/debug_agent/exception_handler.h"
 
 // Currently this is just a manual test that sets up the exception handler and
 // spawns a process for
@@ -54,13 +54,13 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Can't create socket.\n");
 
   ExceptionHandler handler;
-  if (!handler.Start(fbl::move(router_socket))) {
+  if (!handler.Start(std::move(router_socket))) {
     fprintf(stderr, "Can't start thread.\n");
     return 1;
   }
 
   zx::process process = Launch("/boot/bin/ps");
-  if (!handler.Attach(fbl::move(process)))
+  if (!handler.Attach(std::move(process)))
     fprintf(stderr, "Couldn't attach.\n");
 
   // TEST
