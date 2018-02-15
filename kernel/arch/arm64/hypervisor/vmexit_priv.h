@@ -6,15 +6,14 @@
 
 #pragma once
 
-#include <fbl/atomic.h>
+#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/trap_map.h>
 #include <zircon/types.h>
 
 typedef struct zx_port_packet zx_port_packet_t;
 
-class GuestPhysicalAddressSpace;
 struct GuestState;
 struct GichState;
-class TrapMap;
 
 // clang-format off
 
@@ -81,5 +80,5 @@ struct DataAbort {
 // clang-format on
 
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet);

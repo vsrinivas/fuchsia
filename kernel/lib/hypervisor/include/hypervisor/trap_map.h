@@ -13,6 +13,8 @@
 #include <object/port_dispatcher.h>
 #include <object/semaphore.h>
 
+namespace hypervisor {
+
 // Blocks on allocation if the arena is empty.
 class BlockingPortAllocator final : public PortAllocator {
 public:
@@ -72,3 +74,5 @@ private:
 
     TrapTree* TreeOf(uint32_t kind);
 };
+
+} // namespace hypervisor

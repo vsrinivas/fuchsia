@@ -89,7 +89,8 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t *mul, int8_t* shift) {
 
 extern fbl::atomic<int64_t> utc_offset;
 
-zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_paddr) {
+zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                     zx_vaddr_t guest_paddr) {
     static const uint32_t kNanoseconds = 1000000000;
     // KVM doesn't provide any protection against concurrent wall time requests from different
     // VCPUs, but documentation doesn't mention that it cannot happen and moreover it properly
@@ -98,7 +99,7 @@ zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t
     static fbl::Mutex mutex;
     static uint32_t version __TA_GUARDED(mutex);
 
-    GuestPtr guest_ptr;
+    hypervisor::GuestPtr guest_ptr;
     zx_status_t status = gpas->CreateGuestPtr(guest_paddr,
                                               sizeof(pvclock_boot_time),
                                               "pvclock-boot-time-guest-mapping",
@@ -122,7 +123,7 @@ zx_status_t pvclock_update_boot_time(GuestPhysicalAddressSpace* gpas, zx_vaddr_t
     return ZX_OK;
 }
 
-zx_status_t pvclock_reset_clock(PvClockState* pvclock, GuestPhysicalAddressSpace* gpas,
+zx_status_t pvclock_reset_clock(PvClockState* pvclock, hypervisor::GuestPhysicalAddressSpace* gpas,
                                 zx_vaddr_t guest_paddr) {
     zx_status_t status = gpas->CreateGuestPtr(guest_paddr,
                                               sizeof(pvclock_system_time),
@@ -136,7 +137,8 @@ zx_status_t pvclock_reset_clock(PvClockState* pvclock, GuestPhysicalAddressSpace
     return ZX_OK;
 }
 
-void pvclock_update_system_time(PvClockState* pvclock, GuestPhysicalAddressSpace* gpas) {
+void pvclock_update_system_time(PvClockState* pvclock,
+                                hypervisor::GuestPhysicalAddressSpace* gpas) {
     if (!pvclock->system_time) {
         return;
     }

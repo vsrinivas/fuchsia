@@ -37,7 +37,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), vmid, &guest->gpas_);
+    status = hypervisor::GuestPhysicalAddressSpace::Create(fbl::move(physmem), vmid, &guest->gpas_);
     if (status != ZX_OK)
         return status;
 

@@ -97,7 +97,7 @@ zx_status_t El2StatePtr::Alloc() {
 
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out) {
-    GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
+    hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (entry >= gpas->size()) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -110,7 +110,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
     // For efficiency, we pin the thread to the CPU.
-    thread_t* thread = pin_thread(vpid);
+    thread_t* thread = hypervisor::pin_thread(vpid);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -158,7 +158,7 @@ Vcpu::~Vcpu() {
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-    if (!check_pinned_cpu_invariant(vpid_, thread_))
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     const ArchVmAspace& aspace = guest_->AddressSpace()->aspace()->arch_aspace();
     zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
@@ -195,13 +195,13 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (status != ZX_OK) {
         return status;
     } else if (!signaled && running_.load()) {
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)), 0);
     }
     return ZX_OK;
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    if (!check_pinned_cpu_invariant(vpid_, thread_)) {
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {
         return ZX_ERR_INVALID_ARGS;
@@ -215,7 +215,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    if (!check_pinned_cpu_invariant(vpid_, thread_)) {
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {
         return ZX_ERR_INVALID_ARGS;

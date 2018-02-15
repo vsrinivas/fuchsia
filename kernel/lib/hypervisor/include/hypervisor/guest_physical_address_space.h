@@ -11,6 +11,8 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 
+namespace hypervisor {
+
 // RAII object that holds a mapping of guest physical address space to the host
 // kernel virtual address space. Can be used to map a frequently accessed
 // portion of guest physical memory for faster access.
@@ -81,3 +83,5 @@ static inline zx_status_t guest_lookup_page(void* context, size_t offset, size_t
     *static_cast<paddr_t*>(context) = pa;
     return ZX_OK;
 }
+
+} // namespace hypervisor

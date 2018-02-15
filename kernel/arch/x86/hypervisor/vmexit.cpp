@@ -295,7 +295,7 @@ static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                         GuestState* guest_state, TrapMap* traps,
+                                         GuestState* guest_state, hypervisor::TrapMap* traps,
                                          zx_port_packet_t* packet) {
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat) {
@@ -303,7 +303,7 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    Trap* trap;
+    hypervisor::Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
     if (status != ZX_OK) {
         dprintf(CRITICAL, "Unhandled IO port %s %#x\n",
@@ -545,7 +545,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                     GuestState* guest_state, LocalApicState* local_apic_state,
-                                    PvClockState* pvclock, GuestPhysicalAddressSpace* gpas) {
+                                    PvClockState* pvclock,
+                                    hypervisor::GuestPhysicalAddressSpace* gpas) {
     zx_paddr_t guest_paddr = BITS(guest_state->rax, 31, 0) | (BITS(guest_state->rdx, 31, 0) << 32);
 
     next_rip(exit_info, vmcs);
@@ -568,7 +569,8 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
                                 LocalApicState* local_apic_state, PvClockState* pvclock,
-                                GuestPhysicalAddressSpace* gpas, zx_port_packet* packet) {
+                                hypervisor::GuestPhysicalAddressSpace* gpas,
+                                zx_port_packet* packet) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rdx != 0)
@@ -628,7 +630,7 @@ static zx_paddr_t page_addr(zx_paddr_t pt_addr, size_t level, zx_vaddr_t guest_v
     return (pt_addr & X86_PG_FRAME) + (off & X86_PG_FRAME);
 }
 
-static zx_status_t get_page(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpas,
+static zx_status_t get_page(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAddressSpace* gpas,
                             zx_vaddr_t guest_vaddr, zx_paddr_t* host_paddr) {
     size_t indices[X86_PAGING_LEVELS] = {
         VADDR_TO_PML4_INDEX(guest_vaddr),
@@ -653,7 +655,7 @@ static zx_status_t get_page(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpa
     return ZX_OK;
 }
 
-static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpas,
+static zx_status_t fetch_data(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAddressSpace* gpas,
                               zx_vaddr_t guest_vaddr, uint8_t* data, size_t size) {
     // TODO(abdulla): Make this handle a fetch that crosses more than two pages.
     if (size > PAGE_SIZE)
@@ -683,12 +685,12 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
 }
 
 static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
-                               GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                               zx_port_packet_t* packet) {
+                               hypervisor::GuestPhysicalAddressSpace* gpas,
+                               hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
     if (exit_info.exit_instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
-    Trap* trap;
+    hypervisor::Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     if (status != ZX_OK)
         return status;
@@ -723,8 +725,8 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vad
 }
 
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                                        zx_port_packet_t* packet) {
+                                        hypervisor::GuestPhysicalAddressSpace* gpas,
+                                        hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
     zx_status_t status = handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     switch (status) {
@@ -784,7 +786,7 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, PvClockState* pvclock,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
     ExitInfo exit_info(*vmcs);
 

@@ -22,10 +22,6 @@
 #include <kernel/timer.h>
 #include <zircon/types.h>
 
-typedef struct vm_page vm_page_t;
-
-class GuestPhysicalAddressSpace;
-class HostMapping;
 class VmObject;
 struct VmxInfo;
 
@@ -47,16 +43,16 @@ public:
     zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
-    GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
-    TrapMap* Traps() { return &traps_; }
+    hypervisor::GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
+    hypervisor::TrapMap* Traps() { return &traps_; }
     zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
     zx_status_t AllocVpid(uint16_t* vpid);
     zx_status_t FreeVpid(uint16_t vpid);
 
 private:
-    fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    TrapMap traps_;
+    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas_;
+    hypervisor::TrapMap traps_;
     VmxPage msr_bitmaps_page_;
 
     fbl::Mutex vcpu_mutex_;
@@ -84,7 +80,7 @@ struct pvclock_system_time;
 struct PvClockState {
     uint32_t version = 0;
     pvclock_system_time* system_time = nullptr;
-    GuestPtr guest_ptr;
+    hypervisor::GuestPtr guest_ptr;
 };
 
 // Represents a virtual CPU within a guest.

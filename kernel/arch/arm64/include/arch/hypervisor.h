@@ -9,6 +9,7 @@
 #include <arch/arm64/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
@@ -23,7 +24,6 @@ static constexpr uint16_t kNumInterrupts = 256;
 typedef struct zx_port_packet zx_port_packet_t;
 using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;
 
-class GuestPhysicalAddressSpace;
 class PortDispatcher;
 class VmObject;
 
@@ -36,16 +36,16 @@ public:
     zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
-    GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
-    TrapMap* Traps() { return &traps_; }
+    hypervisor::GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
+    hypervisor::TrapMap* Traps() { return &traps_; }
     uint8_t Vmid() const { return vmid_; }
 
     zx_status_t AllocVpid(uint8_t* vpid);
     zx_status_t FreeVpid(uint8_t vpid);
 
 private:
-    fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    TrapMap traps_;
+    fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas_;
+    hypervisor::TrapMap traps_;
     const uint8_t vmid_;
 
     fbl::Mutex vcpu_mutex_;

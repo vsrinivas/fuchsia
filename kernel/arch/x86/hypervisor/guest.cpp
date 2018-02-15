@@ -43,7 +43,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
+    status = hypervisor::GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
     if (status != ZX_OK)
         return status;
 

@@ -11,7 +11,9 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
-__UNUSED static const size_t kMaxPacketsPerRange = 256;
+static constexpr size_t kMaxPacketsPerRange = 256;
+
+namespace hypervisor {
 
 BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
@@ -114,3 +116,5 @@ TrapMap::TrapTree* TrapMap::TreeOf(uint32_t kind) {
         return nullptr;
     }
 }
+
+} // namespace hypervisor

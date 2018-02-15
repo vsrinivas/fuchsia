@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/trap_map.h>
 #include <zircon/types.h>
 
 // clang-format off
@@ -218,11 +220,9 @@ enum class InterruptDestinationMode : bool {
 typedef struct zx_port_packet zx_port_packet_t;
 
 class AutoVmcs;
-class GuestPhysicalAddressSpace;
 struct GuestState;
 struct LocalApicState;
 struct PvClockState;
-class TrapMap;
 
 // Stores VM exit info from VMCS fields.
 struct ExitInfo {
@@ -277,5 +277,5 @@ struct InterruptCommandRegister {
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, PvClockState* pvclock,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet);

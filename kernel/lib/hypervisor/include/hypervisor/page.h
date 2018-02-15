@@ -52,4 +52,4 @@ private:
     zx_paddr_t pa_ = 0;
 };
 
-}
+} // namespace hypervisor

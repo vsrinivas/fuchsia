@@ -174,7 +174,7 @@ enum class VmcsFieldXX : uint64_t {
 // clang-format on
 
 // Loads a VMCS within a given scope.
-class AutoVmcs : public StateInvalidator {
+class AutoVmcs : public hypervisor::StateInvalidator {
 public:
     AutoVmcs(paddr_t vmcs_address_);
     ~AutoVmcs();

@@ -206,7 +206,7 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
 }
 
 AutoPin::AutoPin(uint16_t vpid)
-    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(pin_thread(vpid)) {}
+    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(hypervisor::pin_thread(vpid)) {}
 
 AutoPin::~AutoPin() {
     thread_set_cpu_affinity(thread_, prev_cpu_mask_);
@@ -546,7 +546,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
 
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* out) {
-    GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
+    hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (entry >= gpas->size())
         return ZX_ERR_INVALID_ARGS;
 
@@ -570,7 +570,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     // 2. The state of the VMCS associated with the VCPU is cached within the
     //    CPU. To move to a different CPU, we must perform an explicit migration
     //    which will cost us performance.
-    thread_t* thread = pin_thread(vpid);
+    thread_t* thread = hypervisor::pin_thread(vpid);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -643,7 +643,7 @@ static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-    if (!check_pinned_cpu_invariant(vpid_, thread_))
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     zx_status_t status;
     do {
@@ -699,7 +699,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (status != ZX_OK) {
         return status;
     } else if (!signaled && running_.load()) {
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)), 0);
     }
     return ZX_OK;
 }
@@ -724,7 +724,7 @@ static void register_copy(Out* out, const In& in) {
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    if (!check_pinned_cpu_invariant(vpid_, thread_))
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {
@@ -742,7 +742,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    if (!check_pinned_cpu_invariant(vpid_, thread_))
+    if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     switch (kind) {
     case ZX_VCPU_STATE: {

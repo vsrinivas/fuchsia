@@ -11,14 +11,20 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 
+namespace {
+
 struct percpu_state {
     fbl::atomic<cpu_mask_t> cpu_mask;
-    percpu_task_t task;
+    hypervisor::percpu_task_t task;
     void* context;
 
-    percpu_state(percpu_task_t _task, void* _context)
+    percpu_state(hypervisor::percpu_task_t _task, void* _context)
         : cpu_mask(0), task(_task), context(_context) {}
 };
+
+} // namespace
+
+namespace hypervisor {
 
 static void percpu_task(void* arg) {
     auto state = static_cast<percpu_state*>(arg);
@@ -50,3 +56,5 @@ bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread) {
            thread->cpu_affinity & cpu_num_to_mask(cpu) &&
            arch_curr_cpu_num() == cpu;
 }
+
+} // namespace hypervisor

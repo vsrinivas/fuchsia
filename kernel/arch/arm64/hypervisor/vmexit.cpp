@@ -14,8 +14,6 @@
 #include <arch/hypervisor.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
-#include <hypervisor/guest_physical_address_space.h>
-#include <hypervisor/trap_map.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -142,7 +140,7 @@ static void invalidate_cache(zx_paddr_t table, size_t index_shift) {
 }
 
 static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state,
-                                             GuestPhysicalAddressSpace* gpas) {
+                                             hypervisor::GuestPhysicalAddressSpace* gpas) {
     const SystemInstruction si(iss);
     const uint64_t reg = guest_state->x[si.xt];
 
@@ -192,13 +190,14 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas) {
+static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr,
+                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
     uint pf_flags = VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_WRITE | VMM_PF_FLAG_INSTRUCTION;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
 static zx_status_t handle_instruction_abort(GuestState* guest_state,
-                                            GuestPhysicalAddressSpace* gpas) {
+                                            hypervisor::GuestPhysicalAddressSpace* gpas) {
     zx_status_t status = handle_page_fault(guest_state->hpfar_el2, gpas);
     if (status != ZX_OK) {
         dprintf(CRITICAL, "Unhandled instruction abort %#lx\n",
@@ -208,10 +207,11 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
 }
 
 static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
-                                     GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                                     hypervisor::GuestPhysicalAddressSpace* gpas,
+                                     hypervisor::TrapMap* traps,
                                      zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
-    Trap* trap;
+    hypervisor::Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
@@ -265,7 +265,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
 }
 
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
-                           GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);

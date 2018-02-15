@@ -9,6 +9,8 @@
 #include <kernel/cpu.h>
 #include <kernel/thread.h>
 
+namespace hypervisor {
+
 typedef zx_status_t (* percpu_task_t)(void* context, cpu_num_t cpu_num);
 
 // Executes a task on each online CPU, and returns a CPU mask containing each
@@ -24,3 +26,5 @@ thread_t* pin_thread(uint16_t vpid);
 
 // Check that the current thread is correctly pinned, based on the given VPID.
 bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread);
+
+} // namespace hypervisor

@@ -12,23 +12,24 @@
 #include <vm/vm_object_physical.h>
 #include <fbl/alloc_checker.h>
 
-static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
-static const uint kMmuFlags =
+static constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
+static constexpr uint kMmuFlags =
     ARCH_MMU_FLAG_CACHED |
     ARCH_MMU_FLAG_PERM_READ |
     ARCH_MMU_FLAG_PERM_WRITE |
     ARCH_MMU_FLAG_PERM_EXECUTE;
 
-static const uint kInterruptMmuFlags =
+static constexpr uint kInterruptMmuFlags =
     ARCH_MMU_FLAG_PERM_READ |
     ARCH_MMU_FLAG_PERM_WRITE;
 
-static const uint kGuestMmuFlags =
+static constexpr uint kGuestMmuFlags =
     ARCH_MMU_FLAG_CACHED |
     ARCH_MMU_FLAG_PERM_READ |
     ARCH_MMU_FLAG_PERM_WRITE;
 
 namespace {
+
 // Locate a VMO for a given vaddr.
 struct AspaceVmoLocator final : public VmEnumerator {
     AspaceVmoLocator(vaddr_t vaddr_) : vaddr(vaddr_) {}
@@ -47,7 +48,10 @@ struct AspaceVmoLocator final : public VmEnumerator {
     vaddr_t base = 0;
     const vaddr_t vaddr;
 };
+
 } // namespace
+
+namespace hypervisor {
 
 zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_mem,
 #ifdef ARCH_ARM64
@@ -170,3 +174,5 @@ zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_vaddr_t guest_paddr, si
     *guest_ptr = fbl::move(ptr);
     return ZX_OK;
 }
+
+} // namespace hypervisor
