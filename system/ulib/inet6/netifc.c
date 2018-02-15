@@ -16,6 +16,7 @@
 
 #include "eth-client.h"
 
+#include <zircon/device/device.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -254,26 +255,42 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
 
     printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
+    mtx_lock(&eth_lock);
     if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {
+        mtx_unlock(&eth_lock);
         return ZX_OK;
+    }
+
+    // If an interface was specified, check the topological path of this device and reject it if it
+    // doesn't match.
+    if (cookie != NULL) {
+        const char* interface = cookie;
+        char buf[1024];
+        if (ioctl_device_get_topo_path(netfd, buf, sizeof(buf)) < 0) {
+            goto fail_close_fd;
+        }
+        const char* topo_path = buf;
+        // Skip the instance sigil if it's present in either the topological path or the given
+        // interface path.
+        if (topo_path[0] == '@') topo_path++;
+        if (interface[0] == '@') interface++;
+
+        if (strncmp(topo_path, interface, sizeof(buf))) {
+            goto fail_close_fd;
+        }
     }
 
     eth_info_t info;
     if (ioctl_ethernet_get_info(netfd, &info) < 0) {
-        close(netfd);
-        netfd = -1;
-        return ZX_OK;
+        goto fail_close_fd;
     }
     if (info.features & (ETH_FEATURE_WLAN | ETH_FEATURE_SYNTH)) {
         // Don't run netsvc for wireless or synthetic network devices
-        close(netfd);
-        netfd = -1;
-        return ZX_OK;
+        goto fail_close_fd;
     }
     memcpy(netmac, info.mac, sizeof(netmac));
     netmtu = info.mtu;
 
-    mtx_lock(&eth_lock);
     zx_status_t status;
 
     // we only do this the very first time
@@ -335,6 +352,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     }
 
     mtx_unlock(&eth_lock);
+    printf("netsvc: using /dev/class/ethernet/%s\n", fn);
 
     // stop polling
     return ZX_ERR_STOP;
@@ -349,13 +367,14 @@ fail_close_fd:
     return ZX_OK;
 }
 
-int netifc_open(void) {
+int netifc_open(const char* interface) {
     int dirfd;
     if ((dirfd = open("/dev/class/ethernet", O_DIRECTORY|O_RDONLY)) < 0) {
         return -1;
     }
 
-    zx_status_t status = fdio_watch_directory(dirfd, netifc_open_cb, ZX_TIME_INFINITE, NULL);
+    zx_status_t status =
+        fdio_watch_directory(dirfd, netifc_open_cb, ZX_TIME_INFINITE, (void*)interface);
     close(dirfd);
 
     // callback returns STOP if it finds and successfully

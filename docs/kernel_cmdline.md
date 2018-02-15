@@ -291,6 +291,16 @@ currently running instance of zircon.
 
 This setting implies **zircon.system.disable-automount=true**
 
+## netsvc.interface=\<path>
+
+This option instructs netsvc to use only the ethernet device at the given
+topological path. All other ethernet devices are ignored by netsvc. The
+topological path for a device can be determined from the shell by running the
+`lsdev` command on the ethernet class device (e.g., `/dev/class/ethernet/000`).
+
+This is useful for configuring network booting for a device with multiple
+ethernet ports which may be enumerated in a non-deterministic order.
+
 ## userboot=\<path>
 
 This option instructs the userboot process (the first userspace process) to

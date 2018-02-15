@@ -123,10 +123,20 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    const char* interface = NULL;
     bool nodename_provided = false;
     while (argc > 1) {
         if (!strncmp(argv[1], "--netboot", 9)) {
             netbootloader = true;
+        } else if (!strncmp(argv[1], "--interface", 11)) {
+            if (argc < 3) {
+                printf("netsvc: fatal error: missing argument to --interface\n");
+                return -1;
+            }
+            interface = argv[2];
+            // Advance args one position. The second arg will be advanced below.
+            argv++;
+            argc--;
         } else {
             nodename = argv[1];
             nodename_provided = true;
@@ -134,9 +144,12 @@ int main(int argc, char** argv) {
         argv++;
         argc--;
     }
+    if (interface != NULL) {
+        printf("netsvc: looking for interface %s\n", interface);
+    }
 
     for (;;) {
-        if (netifc_open() != 0) {
+        if (netifc_open(interface) != 0) {
             printf("netsvc: fatal error initializing network\n");
             return -1;
         }

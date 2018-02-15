@@ -5,7 +5,8 @@
 #pragma once
 
 // setup networking
-int netifc_open(void);
+// if interface != NULL, only use the given topological path for networking
+int netifc_open(const char* interface);
 
 // process inbound packet(s)
 int netifc_poll(void);
