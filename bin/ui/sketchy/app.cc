@@ -9,9 +9,8 @@ namespace sketchy_service {
 App::App(escher::Escher* escher)
     : loop_(fsl::MessageLoop::GetCurrent()),
       context_(app::ApplicationContext::CreateFromStartupInfo()),
-      scene_manager_(
-          context_->ConnectToEnvironmentService<scenic::SceneManager>()),
-      session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
+      mozart_(context_->ConnectToEnvironmentService<ui_mozart::Mozart>()),
+      session_(std::make_unique<scenic_lib::Session>(mozart_.get())),
       canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {
   context_->outgoing_services()->AddService<sketchy::Canvas>(
       [this](f1dl::InterfaceRequest<sketchy::Canvas> request) {
@@ -23,8 +22,8 @@ App::App(escher::Escher* escher)
     FXL_LOG(INFO) << "Sketchy service lost connection to Session.";
     loop_->QuitNow();
   });
-  scene_manager_.set_error_handler([this] {
-    FXL_LOG(INFO) << "Sketchy service lost connection to SceneManager.";
+  mozart_.set_error_handler([this] {
+    FXL_LOG(INFO) << "Sketchy service lost connection to Mozart.";
     loop_->QuitNow();
   });
 }

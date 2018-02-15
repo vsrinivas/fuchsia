@@ -63,8 +63,7 @@ class Presentation : private mozart::ViewTreeListener,
                      private mozart::ViewContainerListener,
                      private mozart::Presentation {
  public:
-  Presentation(mozart::ViewManager* view_manager,
-               scenic::SceneManager* scene_manager);
+  Presentation(mozart::ViewManager* view_manager, ui_mozart::Mozart* mozart);
 
   ~Presentation() override;
 
@@ -144,7 +143,7 @@ class Presentation : private mozart::ViewTreeListener,
   bool UpdateAnimation(uint64_t presentation_time);
 
   mozart::ViewManager* const view_manager_;
-  scenic::SceneManager* const scene_manager_;
+  ui_mozart::Mozart* const mozart_;
 
   scenic_lib::Session session_;
   scenic_lib::DisplayCompositor compositor_;

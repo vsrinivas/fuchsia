@@ -98,12 +98,12 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   void HitTest(uint32_t node_id,
                scenic::vec3Ptr ray_origin,
                scenic::vec3Ptr ray_direction,
-               const scenic::Session::HitTestCallback& callback);
+               const ui_mozart::Session::HitTestCallback& callback);
 
   // Called by SessionHandler::HitTestDeviceRay().
   void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
                         scenic::vec3Ptr ray_direction,
-                        const scenic::Session::HitTestCallback& callback);
+                        const ui_mozart::Session::HitTestCallback& callback);
 
  protected:
   friend class SessionHandler;

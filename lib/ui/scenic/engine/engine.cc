@@ -8,6 +8,7 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/ui/mozart/session.h"
 #include "garnet/lib/ui/scenic/engine/frame_scheduler.h"
 #include "garnet/lib/ui/scenic/engine/frame_timings.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
@@ -89,15 +90,17 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
   }
 }
 
-void Engine::CreateSession(
-    ::f1dl::InterfaceRequest<scenic::Session> request,
-    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
+std::unique_ptr<mz::CommandDispatcher> Engine::CreateCommandDispatcher(
+    mz::CommandDispatcherContext context) {
   SessionId session_id = next_session_id_++;
 
+  mz::Session* session = context.session();
   auto handler =
-      CreateSessionHandler(session_id, std::move(request), std::move(listener));
-  sessions_.insert({session_id, std::move(handler)});
+      CreateSessionHandler(std::move(context), session_id, session, session);
+  sessions_.insert({session_id, handler.get()});
   ++session_count_;
+
+  return handler;
 }
 
 std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
@@ -112,17 +115,18 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
 }
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
+    mz::CommandDispatcherContext context,
     SessionId session_id,
-    ::f1dl::InterfaceRequest<scenic::Session> request,
-    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
-  return std::make_unique<SessionHandler>(this, session_id, std::move(request),
-                                          std::move(listener));
+    mz::EventReporter* event_reporter,
+    mz::ErrorReporter* error_reporter) {
+  return std::make_unique<SessionHandler>(std::move(context), this, session_id,
+                                          event_reporter, error_reporter);
 }
 
 SessionHandler* Engine::FindSession(SessionId id) {
   auto it = sessions_.find(id);
   if (it != sessions_.end()) {
-    return it->second.get();
+    return it->second;
   }
   return nullptr;
 }
@@ -131,16 +135,15 @@ void Engine::TearDownSession(SessionId id) {
   auto it = sessions_.find(id);
   FXL_DCHECK(it != sessions_.end());
   if (it != sessions_.end()) {
-    std::unique_ptr<SessionHandler> handler = std::move(it->second);
+    SessionHandler* handler = std::move(it->second);
     sessions_.erase(it);
     FXL_DCHECK(session_count_ > 0);
     --session_count_;
-    handler->TearDown();
 
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        fxl::MakeCopyable([handler = std::move(handler)] {}));
+        [handler] { handler->TearDown(); });
   }
 }
 

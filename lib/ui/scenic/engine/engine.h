@@ -15,6 +15,8 @@
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/vk/simple_image_factory.h"
 
+#include "garnet/lib/ui/mozart/command_dispatcher.h"
+#include "garnet/lib/ui/mozart/event_reporter.h"
 #include "garnet/lib/ui/scenic/displays/display_manager.h"
 #include "garnet/lib/ui/scenic/engine/frame_scheduler.h"
 #include "garnet/lib/ui/scenic/engine/resource_linker.h"
@@ -81,8 +83,8 @@ class Engine : private FrameSchedulerDelegate {
   // a new Image to present.
   void ScheduleUpdate(uint64_t presentation_time);
 
-  void CreateSession(::f1dl::InterfaceRequest<scenic::Session> request,
-                     ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
+  std::unique_ptr<mz::CommandDispatcher> CreateCommandDispatcher(
+      mz::CommandDispatcherContext context);
 
   // Create a swapchain for the specified display.  The display must not already
   // be claimed by another swapchain.
@@ -117,9 +119,10 @@ class Engine : private FrameSchedulerDelegate {
 
   // Allow overriding to support tests.
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
+      mz::CommandDispatcherContext context,
       SessionId id,
-      ::f1dl::InterfaceRequest<scenic::Session> request,
-      ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
+      mz::EventReporter* event_reporter,
+      mz::ErrorReporter* error_reporter);
 
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);
@@ -163,7 +166,7 @@ class Engine : private FrameSchedulerDelegate {
   std::set<Compositor*> compositors_;
 
   // Map of all the sessions.
-  std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
+  std::unordered_map<SessionId, SessionHandler*> sessions_;
   std::atomic<size_t> session_count_;
   SessionId next_session_id_ = 1;
 

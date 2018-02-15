@@ -21,7 +21,8 @@ source_set("testing_deps") {
   ]
   public_deps = [
     ":util",
-    "//garnet/bin/ui/scene_manager:common",
+    "//garnet/lib/ui/scenic",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_vulkan",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/tests",
@@ -64,6 +65,11 @@ executable("unittests") {
   deps = [
     ":testing_deps",
     "//garnet/bin/ui/tests:main",
+  ]
+
+  include_dirs = [
+    "//garnet/public/lib/escher",
+    "//third_party/glm",
   ]
 }
 

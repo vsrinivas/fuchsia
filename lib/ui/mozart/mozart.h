@@ -52,6 +52,7 @@ class Mozart : public ui_mozart::Mozart {
 
   f1dl::BindingSet<ui_mozart::Session, std::unique_ptr<Session>>
       session_bindings_;
+  f1dl::BindingSet<ui_mozart::Mozart> mozart_bindings_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
@@ -71,6 +72,9 @@ class Mozart : public ui_mozart::Mozart {
   // If a System is not initially initialized, this method will be called when
   // it is ready.
   void OnSystemInitialized(System* system);
+
+  void GetDisplayInfo(
+      const ui_mozart::Mozart::GetDisplayInfoCallback& callback) override;
 
   size_t next_session_id_ = 1;
 

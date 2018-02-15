@@ -128,7 +128,7 @@ class BaseView : private ViewListener,
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(f1dl::Array<scenic::EventPtr> events);
+  virtual void OnSessionEvent(f1dl::Array<ui_mozart::EventPtr> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -165,7 +165,7 @@ class BaseView : private ViewListener,
                const OnEventCallback& callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(f1dl::Array<scenic::EventPtr> events);
+  void HandleSessionEvents(f1dl::Array<ui_mozart::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;

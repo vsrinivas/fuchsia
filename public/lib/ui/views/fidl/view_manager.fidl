@@ -5,6 +5,7 @@
 module mozart;
 
 import "lib/ui/scenic/fidl/scene_manager.fidl";
+import "lib/ui/mozart/fidl/mozart.fidl";
 import "lib/ui/views/fidl/view_trees.fidl";
 import "lib/ui/views/fidl/views.fidl";
 
@@ -26,7 +27,7 @@ interface ViewManager {
   // Gets the scene manager associated with this view manager.
   // All graphical content for this view manager's views and view trees
   // must come from sessions created by this |scene_manager|.
-  GetSceneManager@0(scenic.SceneManager& scene_manager);
+  GetMozart@0(ui_mozart.Mozart& mozart);
 
   // Creates a view.
   //
@@ -51,7 +52,7 @@ interface ViewManager {
   // attached.
   //
   // To present graphical content, the view must obtain a |Session| from
-  // the |SceneManager|, create an event pair, bind one endpoint to an
+  // |Mozart|, create an event pair, bind one endpoint to an
   // |ImportResourceOp| using |ImportSpec.NODE|, attach its content nodes as
   // descendants of the imported node, and pass the other endpoint of the
   // event pair to this method as |parent_export_token|.

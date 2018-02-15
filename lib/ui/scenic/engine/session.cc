@@ -1306,7 +1306,7 @@ bool Session::ApplyUpdate(Session::Update* update) {
 void Session::HitTest(uint32_t node_id,
                       scenic::vec3Ptr ray_origin,
                       scenic::vec3Ptr ray_direction,
-                      const scenic::Session::HitTestCallback& callback) {
+                      const ui_mozart::Session::HitTestCallback& callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {
     HitTester hit_tester;
     std::vector<Hit> hits = hit_tester.HitTest(
@@ -1327,7 +1327,7 @@ void Session::HitTest(uint32_t node_id,
 void Session::HitTestDeviceRay(
     scenic::vec3Ptr ray_origin,
     scenic::vec3Ptr ray_direction,
-    const scenic::Session::HitTestCallback& callback) {
+    const ui_mozart::Session::HitTestCallback& callback) {
   escher::ray4 ray =
       escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
 

@@ -8,6 +8,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/ui/mozart/fidl/commands.fidl.h"
+// TODO(MZ-469): Remove this once Scenic's session is factored away.
+#include "lib/ui/mozart/fidl/session.fidl.h"
 
 namespace mz {
 
@@ -20,6 +22,9 @@ class CommandDispatcherContext final {
  public:
   explicit CommandDispatcherContext(Mozart* mozart, Session* session);
   CommandDispatcherContext(CommandDispatcherContext&& context);
+
+  Mozart* mozart() { return mozart_; }
+  Session* session() { return session_; }
 
  private:
   Mozart* mozart_;
@@ -38,6 +43,31 @@ class CommandDispatcher {
  private:
   CommandDispatcherContext context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
+};
+
+// TODO(MZ-469): Remove this once Scenic's session is refactored away.
+class TempSessionDelegate : public CommandDispatcher {
+ public:
+  explicit TempSessionDelegate(CommandDispatcherContext context);
+
+  virtual void Enqueue(::f1dl::Array<ui_mozart::CommandPtr> ops) = 0;
+  virtual void Present(uint64_t presentation_time,
+                       ::f1dl::Array<zx::event> acquire_fences,
+                       ::f1dl::Array<zx::event> release_fences,
+                       const ui_mozart::Session::PresentCallback& callback) = 0;
+
+  virtual void HitTest(uint32_t node_id,
+                       scenic::vec3Ptr ray_origin,
+                       scenic::vec3Ptr ray_direction,
+                       const ui_mozart::Session::HitTestCallback& callback) = 0;
+
+  virtual void HitTestDeviceRay(
+      scenic::vec3Ptr ray_origin,
+      scenic::vec3Ptr ray_direction,
+      const ui_mozart::Session::HitTestCallback& clback) = 0;
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };
 
 }  // namespace mz

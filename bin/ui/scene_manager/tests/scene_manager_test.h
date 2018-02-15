@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(MZ-540): Re-enable tests.
+/*
 #ifndef GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_
 #define GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_
 
@@ -48,4 +50,4 @@ class SceneManagerTest : public ::testing::Test {
 }  // namespace test
 }  // namespace scene_manager
 
-#endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_
+#endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_ */

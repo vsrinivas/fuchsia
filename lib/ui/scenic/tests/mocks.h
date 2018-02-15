@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_UI_SCENIC_TESTS_MOCKS_H_
 #define GARNET_LIB_UI_SCENIC_TESTS_MOCKS_H_
 
-#include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "garnet/lib/ui/scenic/displays/display_manager.h"
 #include "garnet/lib/ui/scenic/engine/engine.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
@@ -27,18 +26,18 @@ class SessionForTest : public Session {
 
 class SessionHandlerForTest : public SessionHandler {
  public:
-  SessionHandlerForTest(
-      Engine* engine,
-      SessionId session_id,
-      ::f1dl::InterfaceRequest<scenic::Session> request,
-      ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
+  SessionHandlerForTest(mz::CommandDispatcherContext context,
+                        Engine* engine,
+                        SessionId session_id,
+                        mz::EventReporter* event_reporter,
+                        mz::ErrorReporter* error_reporter);
 
   // scenic::Session interface methods.
-  void Enqueue(::f1dl::Array<scenic::OpPtr> ops) override;
+  void Enqueue(::f1dl::Array<ui_mozart::CommandPtr> ops) override;
   void Present(uint64_t presentation_time,
                ::f1dl::Array<zx::event> acquire_fences,
                ::f1dl::Array<zx::event> release_fences,
-               const PresentCallback& callback) override;
+               const ui_mozart::Session::PresentCallback& callback) override;
 
   // Return the number of Enqueue()/Present()/Connect() messages that have
   // been processed.
@@ -70,13 +69,13 @@ class EngineForTest : public Engine {
   EngineForTest(DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
                 escher::Escher* escher = nullptr);
-  using Engine::FindSession;
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
+      mz::CommandDispatcherContext context,
       SessionId id,
-      ::f1dl::InterfaceRequest<scenic::Session> request,
-      ::f1dl::InterfaceHandle<scenic::SessionListener> listener) override;
+      mz::EventReporter* event_reporter,
+      mz::ErrorReporter* error_reporter) override;
 };
 
 }  // namespace test

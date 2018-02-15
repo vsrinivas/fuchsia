@@ -8,6 +8,7 @@ source_set("mozart") {
     "clock.h",
     "command_dispatcher.cc",
     "command_dispatcher.h",
+    "event_reporter.h",
     "mozart.cc",
     "mozart.h",
     "session.cc",

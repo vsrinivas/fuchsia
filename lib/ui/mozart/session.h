@@ -8,7 +8,10 @@
 #include <array>
 #include <memory>
 
+#include "garnet/lib/ui/mozart/event_reporter.h"
+#include "garnet/lib/ui/mozart/mozart.h"
 #include "garnet/lib/ui/mozart/system.h"
+#include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/mozart/fidl/session.fidl.h"
@@ -20,7 +23,9 @@ class Mozart;
 
 using SessionId = uint64_t;
 
-class Session final : public ui_mozart::Session {
+class Session final : public ui_mozart::Session,
+                      public EventReporter,
+                      public ErrorReporter {
  public:
   Session(Mozart* owner,
           SessionId id,
@@ -41,6 +46,27 @@ class Session final : public ui_mozart::Session {
                ::f1dl::Array<zx::event> acquire_fences,
                ::f1dl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
+
+  // |ui_mozart::Session|
+  // TODO(MZ-422): Remove this after it's removed from session.fidl.
+  void HitTest(uint32_t node_id,
+               scenic::vec3Ptr ray_origin,
+               scenic::vec3Ptr ray_direction,
+               const HitTestCallback& callback) override;
+
+  // |ui_mozart::Session|
+  // TODO(MZ-422): Remove this after it's removed from session.fidl.
+  void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
+                        scenic::vec3Ptr ray_direction,
+                        const HitTestCallback& callback) override;
+
+  // |mz::EventReporter|
+  void SendEvents(::f1dl::Array<ui_mozart::EventPtr> events) override;
+
+  // |mz::ErrorReporter|
+  // Customize behavior of mz::ErrorReporter::ReportError().
+  void ReportError(fxl::LogSeverity severity,
+                   std::string error_string) override;
 
   SessionId id() const { return id_; }
 

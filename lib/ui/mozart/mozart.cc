@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/mozart/mozart.h"
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace mz {
@@ -15,6 +16,12 @@ Mozart::Mozart(app::ApplicationContext* app_context,
   FXL_DCHECK(app_context_);
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(clock_);
+
+  app_context->outgoing_services()->AddService<ui_mozart::Mozart>(
+      [this](f1dl::InterfaceRequest<ui_mozart::Mozart> request) {
+        FXL_VLOG(1) << "Accepting connection to Mozart";
+        mozart_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 Mozart::~Mozart() = default;
@@ -76,6 +83,14 @@ void Mozart::CreateSessionImmediately(
   session->SetCommandDispatchers(std::move(dispatchers));
 
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
+}
+
+void Mozart::GetDisplayInfo(
+    const ui_mozart::Mozart::GetDisplayInfoCallback& callback) {
+  FXL_DCHECK(systems_[System::kScenic]);
+  TempSystemDelegate* delegate =
+      reinterpret_cast<TempSystemDelegate*>(systems_[System::kScenic].get());
+  delegate->GetDisplayInfo(callback);
 }
 
 }  // namespace mz

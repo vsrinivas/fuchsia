@@ -7,7 +7,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 
 #ifdef MOZART_ENABLE_SCENIC_SUBSYSTEM
-#error not implemented
+#include "garnet/lib/ui/scenic/scenic_system.h"
 #endif
 
 #ifdef MOZART_ENABLE_DUMMY_SUBSYSTEM
@@ -22,7 +22,7 @@ App::App(app::ApplicationContext* app_context)
           fsl::MessageLoop::GetCurrent()->task_runner().get(),
           &clock_)) {
 #ifdef MOZART_ENABLE_SCENIC_SUBSYSTEM
-#error not implemented
+  mozart_->RegisterSystem<scene_manager::ScenicSystem>();
 #endif
 
 #ifdef MOZART_ENABLE_DUMMY_SUBSYSTEM

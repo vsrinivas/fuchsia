@@ -44,13 +44,13 @@ App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       loop_(fsl::MessageLoop::GetCurrent()) {
   // Connect to the SceneManager service.
-  scene_manager_ =
-      application_context_->ConnectToEnvironmentService<scenic::SceneManager>();
-  scene_manager_.set_error_handler([this] {
-    FXL_LOG(INFO) << "Lost connection to SceneManager service.";
+  mozart_ =
+      application_context_->ConnectToEnvironmentService<ui_mozart::Mozart>();
+  mozart_.set_error_handler([this] {
+    FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scene_manager_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
+  mozart_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -201,7 +201,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
-  session_ = std::make_unique<scenic_lib::Session>(scene_manager_.get());
+  session_ = std::make_unique<scenic_lib::Session>(mozart_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->QuitNow();

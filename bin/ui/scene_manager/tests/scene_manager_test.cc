@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(MZ-540): Re-enable tests.
+/*
 #include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
 
 #include "lib/fxl/synchronization/waitable_event.h"
@@ -49,3 +51,5 @@ void SceneManagerTest::TearDown() {
 
 }  // namespace test
 }  // namespace scene_manager
+
+*/

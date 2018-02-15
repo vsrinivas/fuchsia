@@ -106,14 +106,14 @@ mozart::TransformPtr ToTransform(scenic::mat4Ptr matrix) {
 
 ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
     : application_context_(application_context),
-      scene_manager_(application_context_
-                         ->ConnectToEnvironmentService<scenic::SceneManager>()),
-      session_(scene_manager_.get()),
+      mozart_(application_context_
+                  ->ConnectToEnvironmentService<ui_mozart::Mozart>()),
+      session_(mozart_.get()),
       weak_factory_(this) {
   // TODO(MZ-128): Register session listener and destroy views if their
   // content nodes become unavailable.
 
-  scene_manager_.set_error_handler([] {
+  mozart_.set_error_handler([] {
     FXL_LOG(ERROR) << "Exiting due to scene manager connection error.";
     exit(1);
   });
@@ -126,12 +126,11 @@ ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
 
 ViewRegistry::~ViewRegistry() {}
 
-void ViewRegistry::GetSceneManager(
-    f1dl::InterfaceRequest<scenic::SceneManager> scene_manager_request) {
+void ViewRegistry::GetMozart(
+    f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request) {
   // TODO(jeffbrown): We should have a better way to duplicate the
   // SceneManager connection without going back out through the environment.
-  application_context_->ConnectToEnvironmentService(
-      std::move(scene_manager_request));
+  application_context_->ConnectToEnvironmentService(std::move(mozart_request));
 }
 
 // CREATE / DESTROY VIEWS

@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/scenic/tests/mocks.h"
 
+#include "garnet/lib/ui/mozart/command_dispatcher.h"
+
 namespace scene_manager {
 namespace test {
 
@@ -18,26 +20,29 @@ void SessionForTest::TearDown() {
 }
 
 SessionHandlerForTest::SessionHandlerForTest(
+    mz::CommandDispatcherContext context,
     Engine* engine,
     SessionId session_id,
-    ::f1dl::InterfaceRequest<scenic::Session> request,
-    ::f1dl::InterfaceHandle<scenic::SessionListener> listener)
-    : SessionHandler(engine,
+    mz::EventReporter* event_reporter,
+    mz::ErrorReporter* error_reporter)
+    : SessionHandler(std::move(context),
+                     engine,
                      session_id,
-                     std::move(request),
-                     std::move(listener)),
+                     event_reporter,
+                     error_reporter),
       enqueue_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::f1dl::Array<scenic::OpPtr> ops) {
+void SessionHandlerForTest::Enqueue(::f1dl::Array<ui_mozart::CommandPtr> ops) {
   SessionHandler::Enqueue(std::move(ops));
   ++enqueue_count_;
 }
 
-void SessionHandlerForTest::Present(uint64_t presentation_time,
-                                    ::f1dl::Array<zx::event> acquire_fences,
-                                    ::f1dl::Array<zx::event> release_fences,
-                                    const PresentCallback& callback) {
+void SessionHandlerForTest::Present(
+    uint64_t presentation_time,
+    ::f1dl::Array<zx::event> acquire_fences,
+    ::f1dl::Array<zx::event> release_fences,
+    const ui_mozart::Session::PresentCallback& callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
   ++present_count_;
@@ -59,11 +64,12 @@ EngineForTest::EngineForTest(DisplayManager* display_manager,
     : Engine(display_manager, std::move(r), escher) {}
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
+    mz::CommandDispatcherContext context,
     SessionId session_id,
-    ::f1dl::InterfaceRequest<scenic::Session> request,
-    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
+    mz::EventReporter* event_reporter,
+    mz::ErrorReporter* error_reporter) {
   return std::make_unique<SessionHandlerForTest>(
-      this, session_id, std::move(request), std::move(listener));
+      std::move(context), this, session_id, event_reporter, error_reporter);
 }
 
 }  // namespace test

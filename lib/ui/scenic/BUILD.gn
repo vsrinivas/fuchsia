@@ -25,7 +25,6 @@ source_set("scenic") {
     "displays/display_watcher.h",
     "engine/engine.cc",
     "engine/engine.h",
-    "engine/event_reporter.h",
     "engine/frame_scheduler.cc",
     "engine/frame_scheduler.h",
     "engine/frame_timings.cc",
@@ -117,6 +116,8 @@ source_set("scenic") {
     "resources/shapes/shape.h",
     "resources/variable.cc",
     "resources/variable.h",
+    "scenic_system.cc",
+    "scenic_system.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
     "swapchain/magma_buffer.cc",
@@ -140,7 +141,7 @@ source_set("scenic") {
 
   defines = []
   if (scene_manager_vulkan_swapchain) {
-    defines += ["SCENE_MANAGER_VULKAN_SWAPCHAIN"]
+    defines += [ "SCENE_MANAGER_VULKAN_SWAPCHAIN" ]
   }
 
   public_configs = [ ":common_include_dirs" ]

@@ -13,10 +13,10 @@
 namespace mozart {
 namespace {
 
-scenic::SceneManagerPtr GetSceneManager(ViewManager* view_manager) {
-  scenic::SceneManagerPtr scene_manager;
-  view_manager->GetSceneManager(scene_manager.NewRequest());
-  return scene_manager;
+ui_mozart::MozartPtr GetMozart(ViewManager* view_manager) {
+  ui_mozart::MozartPtr mozart;
+  view_manager->GetMozart(mozart.NewRequest());
+  return mozart;
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
       view_listener_binding_(this),
       view_container_listener_binding_(this),
       input_listener_binding_(this),
-      session_(GetSceneManager(view_manager_.get()).get()),
+      session_(GetMozart(view_manager_.get()).get()),
       parent_node_(&session_) {
   FXL_DCHECK(view_manager_);
   FXL_DCHECK(view_owner_request);
@@ -114,12 +114,15 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
       });
 }
 
-void BaseView::HandleSessionEvents(f1dl::Array<scenic::EventPtr> events) {
+void BaseView::HandleSessionEvents(f1dl::Array<ui_mozart::EventPtr> events) {
   scenic::Metrics* new_metrics = nullptr;
   for (const auto& event : events) {
-    if (event->is_metrics() &&
-        event->get_metrics()->node_id == parent_node_.id()) {
-      new_metrics = event->get_metrics()->metrics.get();
+    if (event->is_scenic()) {
+      scenic::EventPtr scenic_event = std::move(event->get_scenic());
+      if (scenic_event->is_metrics() &&
+          scenic_event->get_metrics()->node_id == parent_node_.id()) {
+        new_metrics = scenic_event->get_metrics()->metrics.get();
+      }
     }
   }
 
@@ -156,7 +159,7 @@ void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 void BaseView::OnSceneInvalidated(
     ui_mozart::PresentationInfoPtr presentation_info) {}
 
-void BaseView::OnSessionEvent(f1dl::Array<scenic::EventPtr> events) {}
+void BaseView::OnSessionEvent(f1dl::Array<ui_mozart::EventPtr> events) {}
 
 bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
   return false;

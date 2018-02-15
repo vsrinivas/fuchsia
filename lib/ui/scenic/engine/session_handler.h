@@ -9,10 +9,12 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
+#include "garnet/lib/ui/mozart/command_dispatcher.h"
+#include "garnet/lib/ui/mozart/event_reporter.h"
 #include "garnet/lib/ui/mozart/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/engine/engine.h"
-#include "garnet/lib/ui/scenic/engine/event_reporter.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
+#include "lib/ui/mozart/fidl/events.fidl.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scene_manager {
@@ -23,15 +25,14 @@ class SceneManagerImpl;
 // operations from Enqueue() before passing them all to |session_| when
 // Commit() is called.  Eventually, this class may do more work if performance
 // profiling suggests to.
-class SessionHandler : public scenic::Session,
-                       public EventReporter,
-                       private mz::ErrorReporter {
+class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
  public:
-  SessionHandler(Engine* engine,
+  SessionHandler(mz::CommandDispatcherContext context,
+                 Engine* engine,
                  SessionId session_id,
-                 ::f1dl::InterfaceRequest<scenic::Session> request,
-                 ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
-  ~SessionHandler() override;
+                 mz::EventReporter* event_reporter,
+                 mz::ErrorReporter* error_reporter);
+  virtual ~SessionHandler();
 
   scene_manager::Session* session() const { return session_.get(); }
 
@@ -39,29 +40,27 @@ class SessionHandler : public scenic::Session,
   void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
 
  protected:
-  // scenic::Session interface methods.
-  void Enqueue(::f1dl::Array<scenic::OpPtr> ops) override;
+  // |ui_mozart::Session|
+  void Enqueue(::f1dl::Array<ui_mozart::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
                ::f1dl::Array<zx::event> acquire_fences,
                ::f1dl::Array<zx::event> release_fences,
-               const PresentCallback& callback) override;
+               const ui_mozart::Session::PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,
                scenic::vec3Ptr ray_origin,
                scenic::vec3Ptr ray_direction,
-               const HitTestCallback& callback) override;
+               const ui_mozart::Session::HitTestCallback& callback) override;
 
   void HitTestDeviceRay(
       scenic::vec3Ptr ray_origin,
       scenic::vec3Ptr ray_direction,
-      const scenic::Session::HitTestCallback& callback) override;
+      const ui_mozart::Session::HitTestCallback& clback) override;
+
+  bool ApplyCommand(const ui_mozart::CommandPtr& command) override;
 
  private:
   friend class Engine;
-
-  // Customize behavior of mz::ErrorReporter::ReportError().
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override;
 
   // Called by |binding_| when the connection closes. Must be invoked within
   // the SessionHandler MessageLoop.
@@ -72,10 +71,10 @@ class SessionHandler : public scenic::Session,
   void TearDown();
 
   Engine* const engine_;
-  scene_manager::SessionPtr session_;
 
-  ::f1dl::BindingSet<scenic::Session> bindings_;
-  ::f1dl::InterfacePtr<scenic::SessionListener> listener_;
+  mz::EventReporter* const event_reporter_;
+  mz::ErrorReporter* const error_reporter_;
+  scene_manager::SessionPtr session_;
 
   ::f1dl::Array<scenic::OpPtr> buffered_ops_;
 };

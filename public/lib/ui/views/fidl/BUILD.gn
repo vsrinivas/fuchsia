@@ -20,6 +20,7 @@ fidl("fidl") {
     "//garnet/public/lib/app/fidl:service_provider",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/mozart/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
   ]
 }

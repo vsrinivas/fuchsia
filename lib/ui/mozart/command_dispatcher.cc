@@ -27,4 +27,7 @@ CommandDispatcher::CommandDispatcher(CommandDispatcherContext context)
 
 CommandDispatcher::~CommandDispatcher() = default;
 
+TempSessionDelegate::TempSessionDelegate(CommandDispatcherContext context)
+    : CommandDispatcher(std::move(context)) {}
+
 }  // namespace mz

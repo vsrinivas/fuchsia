@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 
 namespace view_manager {
 
@@ -19,8 +19,8 @@ class ViewManagerImpl : public mozart::ViewManager {
 
  private:
   // |ViewManager|:
-  void GetSceneManager(f1dl::InterfaceRequest<scenic::SceneManager>
-                           scene_manager_request) override;
+  void GetMozart(
+      f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request) override;
   void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   f1dl::InterfaceHandle<mozart::ViewListener> view_listener,

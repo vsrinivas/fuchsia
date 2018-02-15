@@ -41,11 +41,10 @@ void App::Present(
   InitializeServices();
 
   auto presentation =
-      std::make_unique<Presentation>(view_manager_.get(), scene_manager_.get());
+      std::make_unique<Presentation>(view_manager_.get(), mozart_.get());
   presentation->Present(
-      view_owner_handle.Bind(),
-      std::move(presentation_request),
-      [ this, presentation = presentation.get() ] {
+      view_owner_handle.Bind(), std::move(presentation_request),
+      [this, presentation = presentation.get()] {
         auto it = std::find_if(
             presentations_.begin(), presentations_.end(),
             [presentation](const std::unique_ptr<Presentation>& other) {
@@ -112,9 +111,9 @@ void App::InitializeServices() {
       Reset();
     });
 
-    view_manager_->GetSceneManager(scene_manager_.NewRequest());
-    scene_manager_.set_error_handler([this] {
-      FXL_LOG(ERROR) << "SceneManager died, destroying view trees.";
+    view_manager_->GetMozart(mozart_.NewRequest());
+    mozart_.set_error_handler([this] {
+      FXL_LOG(ERROR) << "Mozart died, destroying view trees.";
       Reset();
     });
   }
@@ -123,7 +122,7 @@ void App::InitializeServices() {
 void App::Reset() {
   presentations_.clear();  // must be first, holds pointers to services
   view_manager_.Unbind();
-  scene_manager_.Unbind();
+  mozart_.Unbind();
 }
 
 }  // namespace root_presenter

@@ -8,11 +8,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/ui/scenic/client/session.h"
-#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
-#include "lib/ui/views/fidl/view_trees.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
@@ -21,8 +16,14 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/ui/mozart/fidl/mozart.fidl.h"
+#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/views/fidl/view_trees.fidl.h"
+#include "lib/ui/views/fidl/views.fidl.h"
 
 namespace view_manager {
 
@@ -35,8 +36,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW MANAGER REQUESTS
 
-  void GetSceneManager(
-      f1dl::InterfaceRequest<scenic::SceneManager> scene_manager_request);
+  void GetMozart(f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request);
   void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
@@ -222,7 +222,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   app::ApplicationContext* application_context_;
-  scenic::SceneManagerPtr scene_manager_;
+  ui_mozart::MozartPtr mozart_;
   scenic_lib::Session session_;
 
   bool traversal_scheduled_ = false;

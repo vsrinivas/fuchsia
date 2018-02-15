@@ -48,10 +48,10 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(mozart::ViewManager* view_manager,
-                           scenic::SceneManager* scene_manager)
+                           ui_mozart::Mozart* mozart)
     : view_manager_(view_manager),
-      scene_manager_(scene_manager),
-      session_(scene_manager_),
+      mozart_(mozart),
+      session_(mozart_),
       compositor_(&session_),
       layer_stack_(&session_),
       layer_(&session_),
@@ -116,15 +116,15 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
-    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-    presentation_request = std::move(presentation_request)
-  ](scenic::DisplayInfoPtr display_info) mutable {
-    if (weak)
-      weak->CreateViewTree(std::move(view_owner),
-                           std::move(presentation_request),
-                           std::move(display_info));
-  }));
+  mozart_->GetDisplayInfo(fxl::MakeCopyable(
+      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+       presentation_request = std::move(presentation_request)](
+          scenic::DisplayInfoPtr display_info) mutable {
+        if (weak)
+          weak->CreateViewTree(std::move(view_owner),
+                               std::move(presentation_request),
+                               std::move(display_info));
+      }));
 }
 
 void Presentation::CreateViewTree(
@@ -604,16 +604,16 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_.Present(
-      0, [weak = weak_factory_.GetWeakPtr()](ui_mozart::PresentationInfoPtr info) {
-        if (auto self = weak.get()) {
-          uint64_t next_presentation_time =
-              info->presentation_time + info->presentation_interval;
-          if (self->UpdateAnimation(next_presentation_time)) {
-            self->PresentScene();
-          }
-        }
-      });
+  session_.Present(0, [weak = weak_factory_.GetWeakPtr()](
+                          ui_mozart::PresentationInfoPtr info) {
+    if (auto self = weak.get()) {
+      uint64_t next_presentation_time =
+          info->presentation_time + info->presentation_interval;
+      if (self->UpdateAnimation(next_presentation_time)) {
+        self->PresentScene();
+      }
+    }
+  });
 }
 
 void Presentation::Shutdown() {

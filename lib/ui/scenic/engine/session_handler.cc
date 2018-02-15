@@ -4,50 +4,58 @@
 
 #include "garnet/lib/ui/scenic/engine/session_handler.h"
 
-#include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
+#include "garnet/lib/ui/mozart/session.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 namespace scene_manager {
 
-SessionHandler::SessionHandler(
-    Engine* engine,
-    SessionId session_id,
-    ::f1dl::InterfaceRequest<scenic::Session> request,
-    ::f1dl::InterfaceHandle<scenic::SessionListener> listener)
-    : engine_(engine),
+SessionHandler::SessionHandler(mz::CommandDispatcherContext dispatcher_context,
+                               Engine* engine,
+                               SessionId session_id,
+                               mz::EventReporter* event_reporter,
+                               mz::ErrorReporter* error_reporter)
+    : mz::TempSessionDelegate(std::move(dispatcher_context)),
+      engine_(engine),
+      event_reporter_(event_reporter),
+      error_reporter_(error_reporter),
       session_(::fxl::MakeRefCounted<scene_manager::Session>(
           session_id,
           engine_,
-          this,
-          static_cast<mz::ErrorReporter*>(this))),
-      listener_(listener.Bind()) {
+          static_cast<EventReporter*>(this),
+          error_reporter)) {
   FXL_DCHECK(engine);
-
-  bindings_.set_empty_set_handler([this]() { BeginTearDown(); });
-  bindings_.AddBinding(this, std::move(request));
 }
 
-SessionHandler::~SessionHandler() {}
+SessionHandler::~SessionHandler() {
+  TearDown();
+}
 
 void SessionHandler::SendEvents(::f1dl::Array<scenic::EventPtr> events) {
-  if (listener_) {
-    listener_->OnEvent(std::move(events));
+  auto mozart_events = ::f1dl::Array<ui_mozart::EventPtr>::New(events.size());
+  for (size_t i = 0; i < events.size(); i++) {
+    mozart_events[i] = ui_mozart::Event::New();
+    mozart_events[i]->set_scenic(std::move(events[i]));
   }
+
+  event_reporter_->SendEvents(std::move(mozart_events));
 }
 
-void SessionHandler::Enqueue(::f1dl::Array<scenic::OpPtr> ops) {
+void SessionHandler::Enqueue(::f1dl::Array<ui_mozart::CommandPtr> commands) {
   // TODO: Add them all at once instead of iterating.  The problem
-  // is that ::f1dl::Array doesn't support this.  Or, at least reserve
-  // enough space.  But ::f1dl::Array doesn't support this, either.
-  for (auto& op : ops) {
-    buffered_ops_.push_back(std::move(op));
+  // is that ::fidl::Array doesn't support this.  Or, at least reserve
+  // enough space.  But ::fidl::Array doesn't support this, either.
+  for (auto& command : commands) {
+    FXL_CHECK(command->which() == ui_mozart::Command::Tag::SCENIC);
+    buffered_ops_.push_back(std::move(command->get_scenic()));
   }
 }
 
-void SessionHandler::Present(uint64_t presentation_time,
-                             ::f1dl::Array<zx::event> acquire_fences,
-                             ::f1dl::Array<zx::event> release_fences,
-                             const PresentCallback& callback) {
+void SessionHandler::Present(
+    uint64_t presentation_time,
+    ::f1dl::Array<zx::event> acquire_fences,
+    ::f1dl::Array<zx::event> release_fences,
+    const ui_mozart::Session::PresentCallback& callback) {
   if (!session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
                                 std::move(acquire_fences),
                                 std::move(release_fences), callback)) {
@@ -55,10 +63,11 @@ void SessionHandler::Present(uint64_t presentation_time,
   }
 }
 
-void SessionHandler::HitTest(uint32_t node_id,
-                             scenic::vec3Ptr ray_origin,
-                             scenic::vec3Ptr ray_direction,
-                             const HitTestCallback& callback) {
+void SessionHandler::HitTest(
+    uint32_t node_id,
+    scenic::vec3Ptr ray_origin,
+    scenic::vec3Ptr ray_direction,
+    const ui_mozart::Session::HitTestCallback& callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }
@@ -66,33 +75,15 @@ void SessionHandler::HitTest(uint32_t node_id,
 void SessionHandler::HitTestDeviceRay(
     scenic::vec3Ptr ray_origin,
     scenic::vec3Ptr ray_direction,
-    const scenic::Session::HitTestDeviceRayCallback& callback) {
+    const ui_mozart::Session::HitTestDeviceRayCallback& callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);
 }
 
-void SessionHandler::ReportError(fxl::LogSeverity severity,
-                                 std::string error_string) {
-  switch (severity) {
-    case fxl::LOG_INFO:
-      FXL_LOG(INFO) << error_string;
-      break;
-    case fxl::LOG_WARNING:
-      FXL_LOG(WARNING) << error_string;
-      break;
-    case fxl::LOG_ERROR:
-      FXL_LOG(ERROR) << error_string;
-      if (listener_) {
-        listener_->OnError(error_string);
-      }
-      break;
-    case fxl::LOG_FATAL:
-      FXL_LOG(FATAL) << error_string;
-      break;
-    default:
-      // Invalid severity.
-      FXL_DCHECK(false);
-  }
+bool SessionHandler::ApplyCommand(const ui_mozart::CommandPtr& command) {
+  // TODO(MZ-469): Implement once we push session management into Mozart.
+  FXL_CHECK(false);
+  return false;
 }
 
 void SessionHandler::BeginTearDown() {
@@ -101,9 +92,12 @@ void SessionHandler::BeginTearDown() {
 }
 
 void SessionHandler::TearDown() {
-  bindings_.CloseAll();
-  listener_.Unbind();
   session_->TearDown();
+
+  // Close the parent Mozart session.
+  if (context() && context()->session()) {
+    context()->mozart()->CloseSession(context()->session());
+  }
 }
 
 }  // namespace scene_manager

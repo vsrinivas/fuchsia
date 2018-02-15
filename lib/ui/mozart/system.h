@@ -7,6 +7,8 @@
 
 #include "garnet/lib/ui/mozart/command_dispatcher.h"
 #include "lib/fxl/memory/ref_counted.h"
+// TODO(MZ-453): Don't support GetDisplayInfo in mozart fidl API.
+#include "lib/ui/mozart/fidl/mozart.fidl.h"
 
 namespace app {
 class ApplicationContext;
@@ -88,6 +90,15 @@ class System {
   SystemContext context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(System);
+};
+
+// TODO(MZ-452): Remove when we get rid of Mozart.GetDisplayInfo().
+class TempSystemDelegate : public System {
+ public:
+  explicit TempSystemDelegate(SystemContext context,
+                              bool initialized_after_construction);
+  virtual void GetDisplayInfo(
+      const ui_mozart::Mozart::GetDisplayInfoCallback& callback) = 0;
 };
 
 }  // namespace mz
