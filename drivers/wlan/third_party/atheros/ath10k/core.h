@@ -882,9 +882,9 @@ struct ath10k {
     mtx_t conf_mutex;
 
     /* protects shared structure data */
-    spinlock_t data_lock;
+    mtx_t data_lock;
     /* protects: ar->txqs, artxq->list */
-    spinlock_t txqs_lock;
+    mtx_t txqs_lock;
 
     struct list_head txqs;
     struct list_head arvifs;

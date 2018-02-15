@@ -1665,13 +1665,13 @@ struct ath10k_htt {
         struct timer_list refill_retry_timer;
 
         /* Protects access to all rx ring buffer state variables */
-        spinlock_t lock;
+        mtx_t lock;
     } rx_ring;
 
     unsigned int prefetch_len;
 
     /* Protects access to pending_tx, num_pending_tx */
-    spinlock_t tx_lock;
+    mtx_t tx_lock;
     int max_num_pending_tx;
     int num_pending_tx;
     int num_pending_mgmt_tx;

@@ -1213,7 +1213,7 @@ static struct ath10k_sdio_bus_request
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_bus_request* bus_req;
 
-    spin_lock_bh(&ar_sdio->lock);
+    mtx_lock(&ar_sdio->lock);
 
     if (list_empty(&ar_sdio->bus_req_freeq)) {
         bus_req = NULL;
@@ -1225,7 +1225,7 @@ static struct ath10k_sdio_bus_request
     list_del(&bus_req->list);
 
 out:
-    spin_unlock_bh(&ar_sdio->lock);
+    mtx_unlock(&ar_sdio->lock);
     return bus_req;
 }
 
@@ -1235,9 +1235,9 @@ static void ath10k_sdio_free_bus_req(struct ath10k* ar,
 
     memset(bus_req, 0, sizeof(*bus_req));
 
-    spin_lock_bh(&ar_sdio->lock);
+    mtx_lock(&ar_sdio->lock);
     list_add_tail(&bus_req->list, &ar_sdio->bus_req_freeq);
-    spin_unlock_bh(&ar_sdio->lock);
+    mtx_unlock(&ar_sdio->lock);
 }
 
 static void __ath10k_sdio_write_async(struct ath10k* ar,
@@ -1268,16 +1268,16 @@ static void ath10k_sdio_write_async_work(struct work_struct* work) {
     struct ath10k* ar = ar_sdio->ar;
     struct ath10k_sdio_bus_request* req, *tmp_req;
 
-    spin_lock_bh(&ar_sdio->wr_async_lock);
+    mtx_lock(&ar_sdio->wr_async_lock);
 
     list_for_each_entry_safe(req, tmp_req, &ar_sdio->wr_asyncq, list) {
         list_del(&req->list);
-        spin_unlock_bh(&ar_sdio->wr_async_lock);
+        mtx_unlock(&ar_sdio->wr_async_lock);
         __ath10k_sdio_write_async(ar, req);
-        spin_lock_bh(&ar_sdio->wr_async_lock);
+        mtx_lock(&ar_sdio->wr_async_lock);
     }
 
-    spin_unlock_bh(&ar_sdio->wr_async_lock);
+    mtx_unlock(&ar_sdio->wr_async_lock);
 }
 
 static int ath10k_sdio_prep_async_req(struct ath10k* ar, uint32_t addr,
@@ -1302,9 +1302,9 @@ static int ath10k_sdio_prep_async_req(struct ath10k* ar, uint32_t addr,
     bus_req->htc_msg = htc_msg;
     bus_req->comp = comp;
 
-    spin_lock_bh(&ar_sdio->wr_async_lock);
+    mtx_lock(&ar_sdio->wr_async_lock);
     list_add_tail(&bus_req->list, &ar_sdio->wr_asyncq);
-    spin_unlock_bh(&ar_sdio->wr_async_lock);
+    mtx_unlock(&ar_sdio->wr_async_lock);
 
     return 0;
 }
@@ -1725,7 +1725,7 @@ static void ath10k_sdio_hif_stop(struct ath10k* ar) {
 
     cancel_work_sync(&ar_sdio->wr_async_work);
 
-    spin_lock_bh(&ar_sdio->wr_async_lock);
+    mtx_lock(&ar_sdio->wr_async_lock);
 
     /* Free all bus requests that have not been handled */
     list_for_each_entry_safe(req, tmp_req, &ar_sdio->wr_asyncq, list) {
@@ -1742,7 +1742,7 @@ static void ath10k_sdio_hif_stop(struct ath10k* ar) {
         ath10k_sdio_free_bus_req(ar, req);
     }
 
-    spin_unlock_bh(&ar_sdio->wr_async_lock);
+    mtx_unlock(&ar_sdio->wr_async_lock);
 }
 
 #ifdef CONFIG_PM
@@ -1969,8 +1969,8 @@ static int ath10k_sdio_probe(struct sdio_func* func,
     ar_sdio->is_disabled = true;
     ar_sdio->ar = ar;
 
-    spin_lock_init(&ar_sdio->lock);
-    spin_lock_init(&ar_sdio->wr_async_lock);
+    mtx_init(&ar_sdio->lock, mtx_plain);
+    mtx_init(&ar_sdio->wr_async_lock, mtx_plain);
     mtx_init(&ar_sdio->irq_data.mtx, mtx_plain);
 
     INIT_LIST_HEAD(&ar_sdio->bus_req_freeq);

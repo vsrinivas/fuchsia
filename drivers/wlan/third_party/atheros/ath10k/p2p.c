@@ -117,9 +117,9 @@ void ath10k_p2p_noa_update(struct ath10k_vif* arvif,
                            const struct wmi_p2p_noa_info* noa) {
     struct ath10k* ar = arvif->ar;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     __ath10k_p2p_noa_update(arvif, noa);
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 }
 
 struct ath10k_p2p_noa_arg {

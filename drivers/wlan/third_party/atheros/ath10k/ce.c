@@ -374,10 +374,10 @@ int ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     int ret;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     ret = ath10k_ce_send_nolock(ce_state, per_transfer_context,
                                 buffer, nbytes, transfer_id, flags);
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -387,11 +387,11 @@ int ath10k_ce_num_free_src_entries(struct ath10k_ce_pipe* pipe) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     int delta;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     delta = CE_RING_DELTA(pipe->src_ring->nentries_mask,
                           pipe->src_ring->write_index,
                           pipe->src_ring->sw_index - 1);
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return delta;
 }
@@ -463,9 +463,9 @@ int ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     int ret;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     ret = __ath10k_ce_rx_post_buf(pipe, ctx, paddr);
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -530,11 +530,11 @@ int ath10k_ce_completed_recv_next(struct ath10k_ce_pipe* ce_state,
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     int ret;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     ret = ath10k_ce_completed_recv_next_nolock(ce_state,
             per_transfer_contextp,
             nbytesp);
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -559,7 +559,7 @@ int ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
     ar = ce_state->ar;
     ar_pci = ath10k_pci_priv(ar);
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
 
     nentries_mask = dest_ring->nentries_mask;
     sw_index = dest_ring->sw_index;
@@ -587,7 +587,7 @@ int ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
         ret = -EIO;
     }
 
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -670,7 +670,7 @@ int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
     ar = ce_state->ar;
     ar_pci = ath10k_pci_priv(ar);
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
 
     nentries_mask = src_ring->nentries_mask;
     sw_index = src_ring->sw_index;
@@ -701,7 +701,7 @@ int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
         ret = -EIO;
     }
 
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -712,10 +712,10 @@ int ath10k_ce_completed_send_next(struct ath10k_ce_pipe* ce_state,
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     int ret;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     ret = ath10k_ce_completed_send_next_nolock(ce_state,
             per_transfer_contextp);
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     return ret;
 }
@@ -732,12 +732,12 @@ void ath10k_ce_per_engine_service(struct ath10k* ar, unsigned int ce_id) {
     struct ath10k_hw_ce_host_wm_regs* wm_regs = ar->hw_ce_regs->wm_regs;
     uint32_t ctrl_addr = ce_state->ctrl_addr;
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
 
     /* Clear the copy-complete interrupts that will be handled here. */
     ath10k_ce_engine_int_status_clear(ar, ctrl_addr, wm_regs->cc_mask);
 
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 
     if (ce_state->recv_cb) {
         ce_state->recv_cb(ce_state);
@@ -747,7 +747,7 @@ void ath10k_ce_per_engine_service(struct ath10k* ar, unsigned int ce_id) {
         ce_state->send_cb(ce_state);
     }
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
 
     /*
      * Misc CE interrupts are not being handled, but still need
@@ -755,7 +755,7 @@ void ath10k_ce_per_engine_service(struct ath10k* ar, unsigned int ce_id) {
      */
     ath10k_ce_engine_int_status_clear(ar, ctrl_addr, wm_regs->wm_mask);
 
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 }
 
 /*
@@ -1142,7 +1142,7 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
 
     ath10k_err("Copy Engine register dump:\n");
 
-    spin_lock_bh(&ar_pci->ce_lock);
+    mtx_lock(&ar_pci->ce_lock);
     for (id = 0; id < CE_COUNT; id++) {
         addr = ath10k_ce_base_address(ar, id);
         ce.base_addr = addr;
@@ -1168,5 +1168,5 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
                    ce.dst_r_idx);
     }
 
-    spin_unlock_bh(&ar_pci->ce_lock);
+    mtx_unlock(&ar_pci->ce_lock);
 }

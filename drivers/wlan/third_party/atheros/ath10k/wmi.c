@@ -1736,7 +1736,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
     bool deliver_cab;
     int ret;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     bcn = arvif->beacon;
 
@@ -1752,7 +1752,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
         break;
     case ATH10K_BEACON_SCHEDULED:
         arvif->beacon_state = ATH10K_BEACON_SENDING;
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
 
         dtim_zero = !!(cb->flags & ATH10K_SKB_F_DTIM_ZERO);
         deliver_cab = !!(cb->flags & ATH10K_SKB_F_DELIVER_CAB);
@@ -1763,7 +1763,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
                                                 dtim_zero,
                                                 deliver_cab);
 
-        spin_lock_bh(&ar->data_lock);
+        mtx_lock(&ar->data_lock);
 
         if (ret == 0) {
             arvif->beacon_state = ATH10K_BEACON_SENT;
@@ -1773,7 +1773,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
     }
 
 unlock:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 }
 
 static void ath10k_wmi_tx_beacons_iter(void* data, uint8_t* mac,
@@ -2076,7 +2076,7 @@ int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb) {
     scan_id = arg.scan_id;
     vdev_id = arg.vdev_id;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "scan event %s type %d reason %d freq %d req_id %d scan_id %d vdev_id %d state %s (%d)\n",
@@ -2109,7 +2109,7 @@ int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb) {
         break;
     }
 
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
     return 0;
 }
 
@@ -2137,9 +2137,9 @@ static void ath10k_wmi_handle_wep_reauth(struct ath10k* ar,
     keyidx = skb->data[hdrlen + (IEEE80211_WEP_IV_LEN - 1)] >> WEP_KEYID_SHIFT;
     addr = ieee80211_get_SA(hdr);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     peer_key = ath10k_mac_is_peer_wep_key_set(ar, addr, keyidx);
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (peer_key) {
         ath10k_dbg(ar, ATH10K_DBG_MAC,
@@ -2472,7 +2472,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
                err_code, freq, cmd_flags, noise_floor, rx_clear_count,
                cycle_count);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
@@ -2516,7 +2516,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
     }
 
 exit:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 }
 
 void ath10k_wmi_event_echo(struct ath10k* ar, struct sk_buff* skb) {
@@ -3573,7 +3573,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
         ath10k_wmi_update_tim(ar, arvif, bcn, tim_info);
         ath10k_wmi_update_noa(ar, arvif, bcn, noa_info);
 
-        spin_lock_bh(&ar->data_lock);
+        mtx_lock(&ar->data_lock);
 
         if (arvif->beacon) {
             switch (arvif->beacon_state) {
@@ -3622,7 +3622,7 @@ void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb) {
         trace_ath10k_tx_payload(ar, bcn->data, bcn->len);
 
 skip:
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
     }
 
     ath10k_wmi_tx_beacons_nowait(ar);
@@ -3667,7 +3667,7 @@ static void ath10k_dfs_radar_report(struct ath10k* ar,
         return;
     }
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     ch = ar->rx_channel;
 
     /* fetch target operating channel during channel change */
@@ -3675,7 +3675,7 @@ static void ath10k_dfs_radar_report(struct ath10k* ar,
         ch = ar->tgt_oper_chan;
     }
 
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (!ch) {
         ath10k_warn("failed to derive channel for radar pulse, treating as radar\n");
@@ -4930,7 +4930,7 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
                "wmi event pdev bss chan info:\n freq: %d noise: %d cycle: busy %llu total %llu tx %llu rx %llu rx_bss %llu\n",
                freq, noise_floor, busy, total, tx, rx, rx_bss);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     idx = freq_to_idx(ar, freq);
     if (idx >= ARRAY_SIZE(ar->survey)) {
         ath10k_warn("bss chan info: invalid frequency %d (idx %d out of bounds)\n",
@@ -4951,14 +4951,14 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
                          SURVEY_INFO_TIME_RX |
                          SURVEY_INFO_TIME_TX);
 exit:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
     completion_signal(&ar->bss_survey_done);
     return 0;
 }
 
 static inline void ath10k_wmi_queue_set_coverage_class_work(struct ath10k* ar) {
     if (ar->hw_params.hw_ops->set_coverage_class) {
-        spin_lock_bh(&ar->data_lock);
+        mtx_lock(&ar->data_lock);
 
         /* This call only ensures that the modified coverage class
          * persists in case the firmware sets the registers back to
@@ -4969,7 +4969,7 @@ static inline void ath10k_wmi_queue_set_coverage_class_work(struct ath10k* ar) {
             queue_work(ar->workqueue, &ar->set_coverage_class_work);
         }
 
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
     }
 }
 
@@ -7554,7 +7554,7 @@ void ath10k_wmi_main_op_fw_stats_fill(struct ath10k* ar,
     size_t num_peers;
     size_t num_vdevs;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
@@ -7591,7 +7591,7 @@ void ath10k_wmi_main_op_fw_stats_fill(struct ath10k* ar,
     }
 
 unlock:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (len >= buf_len) {
         buf[len - 1] = 0;
@@ -7611,7 +7611,7 @@ void ath10k_wmi_10x_op_fw_stats_fill(struct ath10k* ar,
     size_t num_peers;
     size_t num_vdevs;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
@@ -7649,7 +7649,7 @@ void ath10k_wmi_10x_op_fw_stats_fill(struct ath10k* ar,
     }
 
 unlock:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (len >= buf_len) {
         buf[len - 1] = 0;
@@ -7691,7 +7691,7 @@ void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
     size_t num_peers;
     size_t num_vdevs;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     pdev = list_first_entry_or_null(&fw_stats->pdevs,
                                     struct ath10k_fw_stats_pdev, list);
@@ -7755,7 +7755,7 @@ void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
     }
 
 unlock:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (len >= buf_len) {
         buf[len - 1] = 0;
@@ -7870,9 +7870,9 @@ int
 ath10k_wmi_barrier(struct ath10k* ar) {
     int ret;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     completion_reset(&ar->wmi.barrier);
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     ret = ath10k_wmi_echo(ar, ATH10K_WMI_BARRIER_ECHO_ID);
     if (ret) {

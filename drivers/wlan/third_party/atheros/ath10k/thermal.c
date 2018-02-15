@@ -98,9 +98,9 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
         goto out;
     }
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     temperature = ar->thermal.temperature;
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     /* display in millidegree celcius */
     ret = snprintf(buf, PAGE_SIZE, "%d\n", temperature * 1000);
@@ -110,9 +110,9 @@ out:
 }
 
 void ath10k_thermal_event_temperature(struct ath10k* ar, int temperature) {
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     ar->thermal.temperature = temperature;
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
     completion_signal(&ar->thermal.wmi_sync);
 }
 

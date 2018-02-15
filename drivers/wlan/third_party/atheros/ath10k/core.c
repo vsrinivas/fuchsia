@@ -2552,8 +2552,8 @@ struct ath10k* ath10k_core_create(size_t priv_size, struct device* dev,
     }
 
     mtx_init(&ar->conf_mutex, mtx_plain);
-    spin_lock_init(&ar->data_lock);
-    spin_lock_init(&ar->txqs_lock);
+    mtx_init(&ar->data_lock, mtx_plain);
+    mtx_init(&ar->txqs_lock, mtx_plain);
 
     INIT_LIST_HEAD(&ar->txqs);
     INIT_LIST_HEAD(&ar->peers);

@@ -199,7 +199,7 @@ struct ath10k_sdio {
     /* free list of bus requests */
     struct list_head bus_req_freeq;
     /* protects access to bus_req_freeq */
-    spinlock_t lock;
+    mtx_t lock;
 
     struct ath10k_sdio_rx_data rx_pkts[ATH10K_SDIO_MAX_RX_MSGS];
     size_t n_rx_pkts;
@@ -218,7 +218,7 @@ struct ath10k_sdio {
     struct work_struct wr_async_work;
     struct list_head wr_asyncq;
     /* protects access to wr_asyncq */
-    spinlock_t wr_async_lock;
+    mtx_t wr_async_lock;
 };
 
 static inline struct ath10k_sdio* ath10k_sdio_priv(struct ath10k* ar) {

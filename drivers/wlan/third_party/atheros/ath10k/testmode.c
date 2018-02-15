@@ -52,7 +52,7 @@ bool ath10k_tm_event_wmi(struct ath10k* ar, uint32_t cmd_id, struct sk_buff* skb
 
     ath10k_dbg_dump(ar, ATH10K_DBG_TESTMODE, NULL, "", skb->data, skb->len);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     if (!ar->testmode.utf_monitor) {
         consumed = false;
@@ -100,7 +100,7 @@ bool ath10k_tm_event_wmi(struct ath10k* ar, uint32_t cmd_id, struct sk_buff* skb
     cfg80211_testmode_event(nl_skb, GFP_ATOMIC);
 
 out:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     return consumed;
 }
@@ -256,9 +256,9 @@ static int ath10k_tm_cmd_utf_start(struct ath10k* ar, struct nlattr* tb[]) {
         }
     }
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     ar->testmode.utf_monitor = true;
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     ath10k_dbg(ar, ATH10K_DBG_TESTMODE, "testmode wmi version %d\n",
                ar->testmode.utf_mode_fw.fw_file.wmi_op_version);
@@ -316,11 +316,11 @@ static void __ath10k_tm_cmd_utf_stop(struct ath10k* ar) {
     ath10k_core_stop(ar);
     ath10k_hif_power_down(ar);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
 
     ar->testmode.utf_monitor = false;
 
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (ar->testmode.utf_mode_fw.fw_file.codeswap_data &&
             ar->testmode.utf_mode_fw.fw_file.codeswap_len)

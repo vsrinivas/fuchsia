@@ -176,7 +176,7 @@ static void ath10k_htt_rx_msdu_buff_replenish(struct ath10k_htt* htt) {
      * This probably comes at a cost of lower maximum throughput but
      * improves the average and stability.
      */
-    spin_lock_bh(&htt->rx_ring.lock);
+    mtx_lock(&htt->rx_ring.lock);
     num_deficit = htt->rx_ring.fill_level - htt->rx_ring.fill_cnt;
     num_to_fill = min(ATH10K_HTT_MAX_NUM_REFILL, num_deficit);
     num_deficit -= num_to_fill;
@@ -194,7 +194,7 @@ static void ath10k_htt_rx_msdu_buff_replenish(struct ath10k_htt* htt) {
         mod_timer(&htt->rx_ring.refill_retry_timer, jiffies +
                   msecs_to_jiffies(HTT_RX_RING_REFILL_RESCHED_MS));
     }
-    spin_unlock_bh(&htt->rx_ring.lock);
+    mtx_unlock(&htt->rx_ring.lock);
 }
 
 static void ath10k_htt_rx_ring_refill_retry(unsigned long arg) {
@@ -207,10 +207,10 @@ int ath10k_htt_rx_ring_refill(struct ath10k* ar) {
     struct ath10k_htt* htt = &ar->htt;
     int ret;
 
-    spin_lock_bh(&htt->rx_ring.lock);
+    mtx_lock(&htt->rx_ring.lock);
     ret = ath10k_htt_rx_ring_fill_n(htt, (htt->rx_ring.fill_level -
                                           htt->rx_ring.fill_cnt));
-    spin_unlock_bh(&htt->rx_ring.lock);
+    mtx_unlock(&htt->rx_ring.lock);
 
     if (ret) {
         ath10k_htt_rx_ring_free(htt);
@@ -505,7 +505,7 @@ int ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     /* Initialize the Rx refill retry timer */
     setup_timer(timer, ath10k_htt_rx_ring_refill_retry, (unsigned long)htt);
 
-    spin_lock_init(&htt->rx_ring.lock);
+    mtx_init(&htt->rx_ring.lock, mtx_plain);
 
     htt->rx_ring.fill_cnt = 0;
     htt->rx_ring.sw_rd_idx.msdu_payld = 0;
@@ -801,7 +801,7 @@ static bool ath10k_htt_rx_h_channel(struct ath10k* ar,
                                     uint32_t vdev_id) {
     struct ieee80211_channel* ch;
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     ch = ar->scan_channel;
     if (!ch) {
         ch = ar->rx_channel;
@@ -818,7 +818,7 @@ static bool ath10k_htt_rx_h_channel(struct ath10k* ar,
     if (!ch) {
         ch = ar->tgt_oper_chan;
     }
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     if (!ch) {
         return false;
@@ -1556,13 +1556,13 @@ static int ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
 
     __skb_queue_head_init(&amsdu);
 
-    spin_lock_bh(&htt->rx_ring.lock);
+    mtx_lock(&htt->rx_ring.lock);
     if (htt->rx_confused) {
-        spin_unlock_bh(&htt->rx_ring.lock);
+        mtx_unlock(&htt->rx_ring.lock);
         return -EIO;
     }
     ret = ath10k_htt_rx_amsdu_pop(htt, &amsdu);
-    spin_unlock_bh(&htt->rx_ring.lock);
+    mtx_unlock(&htt->rx_ring.lock);
 
     if (ret < 0) {
         ath10k_warn("rx ring became corrupted: %d\n", ret);
@@ -1676,12 +1676,12 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
                "htt rx addba tid %hu peer_id %hu size %hhu\n",
                tid, peer_id, ev->window_size);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
         ath10k_warn("received addba event for invalid peer_id: %hu\n",
                     peer_id);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
         return;
     }
 
@@ -1689,7 +1689,7 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
     if (!arvif) {
         ath10k_warn("received addba event for invalid vdev_id: %u\n",
                     peer->vdev_id);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
         return;
     }
 
@@ -1698,7 +1698,7 @@ static void ath10k_htt_rx_addba(struct ath10k* ar, struct htt_resp* resp) {
                peer->addr, tid, ev->window_size);
 
     ieee80211_start_rx_ba_session_offl(arvif->vif, peer->addr, tid);
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 }
 
 static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
@@ -1715,12 +1715,12 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
                "htt rx delba tid %hu peer_id %hu\n",
                tid, peer_id);
 
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
         ath10k_warn("received addba event for invalid peer_id: %hu\n",
                     peer_id);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
         return;
     }
 
@@ -1728,7 +1728,7 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
     if (!arvif) {
         ath10k_warn("received addba event for invalid vdev_id: %u\n",
                     peer->vdev_id);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
         return;
     }
 
@@ -1737,7 +1737,7 @@ static void ath10k_htt_rx_delba(struct ath10k* ar, struct htt_resp* resp) {
                peer->addr, tid);
 
     ieee80211_stop_rx_ba_session_offl(arvif->vif, peer->addr, tid);
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 }
 
 static int ath10k_htt_rx_extract_amsdu(struct sk_buff_head* list,
@@ -2024,9 +2024,9 @@ static void ath10k_htt_rx_tx_fetch_ind(struct ath10k* ar, struct sk_buff* skb) {
             continue;
         }
 
-        spin_lock_bh(&ar->data_lock);
+        mtx_lock(&ar->data_lock);
         txq = ath10k_mac_txq_lookup(ar, peer_id, tid);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
 
         /* It is okay to release the lock and use txq because RCU read
          * lock is held.
@@ -2181,9 +2181,9 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
             continue;
         }
 
-        spin_lock_bh(&ar->data_lock);
+        mtx_lock(&ar->data_lock);
         txq = ath10k_mac_txq_lookup(ar, peer_id, tid);
-        spin_unlock_bh(&ar->data_lock);
+        mtx_unlock(&ar->data_lock);
 
         /* It is okay to release the lock and use txq because RCU read
          * lock is held.
@@ -2195,10 +2195,10 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
             continue;
         }
 
-        spin_lock_bh(&ar->htt.tx_lock);
+        mtx_lock(&ar->htt.tx_lock);
         artxq = (void*)txq->drv_priv;
         artxq->num_push_allowed = record->num_max_msdus;
-        spin_unlock_bh(&ar->htt.tx_lock);
+        mtx_unlock(&ar->htt.tx_lock);
     }
 
     rcu_read_unlock();
@@ -2317,7 +2317,7 @@ static void ath10k_htt_fetch_peer_stats(struct ath10k* ar,
     peer_id = tx_stats->peer_id;
 
     rcu_read_lock();
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     peer = ath10k_peer_find_by_id(ar, peer_id);
     if (!peer) {
         ath10k_warn("Invalid peer id %d peer stats buffer\n",
@@ -2344,7 +2344,7 @@ static void ath10k_htt_fetch_peer_stats(struct ath10k* ar,
     }
 
 out:
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
     rcu_read_unlock();
 }
 
@@ -2414,9 +2414,9 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb) {
 
         status = ath10k_txrx_tx_unref(htt, &tx_done);
         if (!status) {
-            spin_lock_bh(&htt->tx_lock);
+            mtx_lock(&htt->tx_lock);
             ath10k_htt_tx_mgmt_dec_pending(htt);
-            spin_unlock_bh(&htt->tx_lock);
+            mtx_unlock(&htt->tx_lock);
         }
         break;
     }
@@ -2534,7 +2534,6 @@ int ath10k_htt_txrx_compl_task(struct ath10k* ar, int budget) {
     struct htt_tx_done tx_done = {};
     struct sk_buff_head tx_ind_q;
     struct sk_buff* skb;
-    unsigned long flags;
     int quota = 0, done, num_rx_msdus;
     bool resched_napi = false;
 
@@ -2554,9 +2553,9 @@ int ath10k_htt_txrx_compl_task(struct ath10k* ar, int budget) {
             goto exit;
         }
 
-        spin_lock_bh(&htt->rx_ring.lock);
+        mtx_lock(&htt->rx_ring.lock);
         num_rx_msdus = ath10k_htt_rx_in_ord_ind(ar, skb);
-        spin_unlock_bh(&htt->rx_ring.lock);
+        mtx_unlock(&htt->rx_ring.lock);
         if (num_rx_msdus < 0) {
             resched_napi = true;
             goto exit;
@@ -2615,9 +2614,9 @@ int ath10k_htt_txrx_compl_task(struct ath10k* ar, int budget) {
 
     ath10k_mac_tx_push_pending(ar);
 
-    spin_lock_irqsave(&htt->tx_fetch_ind_q.lock, flags);
+    mtx_lock(&htt->tx_fetch_ind_q.lock);
     skb_queue_splice_init(&htt->tx_fetch_ind_q, &tx_ind_q);
-    spin_unlock_irqrestore(&htt->tx_fetch_ind_q.lock, flags);
+    mtx_unlock(&htt->tx_fetch_ind_q.lock);
 
     while ((skb = __skb_dequeue(&tx_ind_q))) {
         ath10k_htt_rx_tx_fetch_ind(ar, skb);

@@ -141,7 +141,7 @@ struct ath10k_pci_pipe {
     size_t buf_sz;
 
     /* protects compl_free and num_send_allowed */
-    spinlock_t pipe_lock;
+    mtx_t pipe_lock;
 };
 
 struct ath10k_pci_supp_chip {
@@ -177,7 +177,7 @@ struct ath10k_pci {
     struct ath10k_ce_pipe* ce_diag;
 
     /* FIXME: document what this really protects */
-    spinlock_t ce_lock;
+    mtx_t ce_lock;
 
     /* Map CE id to ce_state */
     struct ath10k_ce_pipe ce_states[CE_COUNT_MAX];
@@ -190,7 +190,7 @@ struct ath10k_pci {
     uint16_t link_ctl;
 
     /* Protects ps_awake and ps_wake_refcount */
-    spinlock_t ps_lock;
+    mtx_t ps_lock;
 
     /* The device has a special powersave-oriented register. When device is
      * considered asleep it drains less power and driver is forbidden from

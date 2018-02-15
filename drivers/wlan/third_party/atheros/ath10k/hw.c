@@ -565,9 +565,9 @@ static void ath10k_hw_qca988x_set_coverage_class(struct ath10k* ar,
 
 store_regs:
     /* After an error we will not retry setting the coverage class. */
-    spin_lock_bh(&ar->data_lock);
+    mtx_lock(&ar->data_lock);
     ar->fw_coverage.coverage_class = value;
-    spin_unlock_bh(&ar->data_lock);
+    mtx_unlock(&ar->data_lock);
 
     ar->fw_coverage.reg_slottime_conf = slottime_reg;
     ar->fw_coverage.reg_ack_cts_timeout_conf = timeout_reg;
