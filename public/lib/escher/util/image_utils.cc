@@ -59,7 +59,7 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
     default:
       FXL_DCHECK(false);
   }
-  create_info.tiling = vk::ImageTiling::eOptimal;
+  create_info.tiling = info.tiling;
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;

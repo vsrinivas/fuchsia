@@ -25,6 +25,8 @@ class ScenicSystem : public TempSystemDelegate {
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(fidl::StringPtr filename,
+                      ui::Scenic::TakeScreenshotCallback callback) override;
 
  private:
   void Initialize();

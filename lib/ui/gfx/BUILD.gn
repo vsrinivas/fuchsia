@@ -124,6 +124,8 @@ source_set("gfx") {
     "resources/variable.h",
     "scenic_system.cc",
     "scenic_system.h",
+    "screenshotter.cc",
+    "screenshotter.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
     "swapchain/magma_buffer.cc",

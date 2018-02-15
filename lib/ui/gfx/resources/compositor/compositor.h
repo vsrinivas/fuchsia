@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_
 
 #include <set>
+#include <utility>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
@@ -62,7 +63,21 @@ class Compositor : public Resource {
                  escher::PaperRenderer* renderer,
                  escher::ShadowMapRenderer* shadow_renderer);
 
+  // Determine the appropriate order to render all layers, and then combine them
+  // into a single output image, which is drawn into |output_image|. When done,
+  // signals |frame_done_semaphore|.
+  void DrawToImage(escher::PaperRenderer* escher_renderer,
+                   escher::ShadowMapRenderer* shadow_renderer,
+                   const escher::ImagePtr& output_image,
+                   const escher::SemaphorePtr& frame_done_semaphore);
+
+  std::pair<uint32_t, uint32_t> GetBottomLayerSize() const;
+  int GetNumDrawableLayers() const;
+
  protected:
+  // Returns the list of drawable layers from the layer stack.
+  std::vector<Layer*> GetDrawableLayers() const;
+
   escher::Escher* escher() const { return escher_; }
 
   Compositor(Session* session,
@@ -71,6 +86,14 @@ class Compositor : public Resource {
              std::unique_ptr<Swapchain> swapchain);
 
  private:
+  // Draws all the overlays to textures, which are then drawn using the
+  // returned model. "Overlays" are all the layers except the bottom one.
+  std::unique_ptr<escher::Model> DrawOverlaysToModel(
+      const std::vector<Layer*>& drawable_layers,
+      const escher::FramePtr& frame,
+      const FrameTimingsPtr& frame_timings,
+      escher::PaperRenderer* escher_renderer,
+      escher::ShadowMapRenderer* shadow_renderer);
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
   void DrawLayer(const escher::FramePtr& frame,

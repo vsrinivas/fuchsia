@@ -104,6 +104,8 @@ class TempSystemDelegate : public System {
   explicit TempSystemDelegate(SystemContext context,
                               bool initialized_after_construction);
   virtual void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) = 0;
+  virtual void TakeScreenshot(fidl::StringPtr filename,
+                              ui::Scenic::TakeScreenshotCallback callback) = 0;
 };
 
 }  // namespace scenic

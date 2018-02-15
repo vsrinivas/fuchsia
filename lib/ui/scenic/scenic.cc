@@ -92,4 +92,12 @@ void Scenic::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   delegate->GetDisplayInfo(callback);
 }
 
+void Scenic::TakeScreenshot(fidl::StringPtr filename,
+                            ui::Scenic::TakeScreenshotCallback callback) {
+  FXL_DCHECK(systems_[System::kGfx]);
+  TempSystemDelegate* delegate =
+      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
+  delegate->TakeScreenshot(filename, callback);
+}
+
 }  // namespace scenic

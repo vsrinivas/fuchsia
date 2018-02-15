@@ -114,6 +114,76 @@ static void InitEscherStage(
   }
 }
 
+std::pair<uint32_t, uint32_t> Compositor::GetBottomLayerSize() const {
+  std::vector<Layer*> drawable_layers = GetDrawableLayers();
+  FXL_CHECK(!drawable_layers.empty()) << "No drawable layers";
+  return {drawable_layers[0]->width(), drawable_layers[0]->height()};
+}
+
+int Compositor::GetNumDrawableLayers() const {
+  return GetDrawableLayers().size();
+}
+
+std::vector<Layer*> Compositor::GetDrawableLayers() const {
+  if (!layer_stack_) {
+    return std::vector<Layer*>();
+  }
+  std::vector<Layer*> drawable_layers;
+  for (auto& layer : layer_stack_->layers()) {
+    if (layer->IsDrawable()) {
+      drawable_layers.push_back(layer.get());
+    }
+  }
+
+  // Sort the layers from bottom to top.
+  std::sort(drawable_layers.begin(), drawable_layers.end(), [](auto a, auto b) {
+    return a->translation().z < b->translation().z;
+  });
+
+  return drawable_layers;
+}
+
+std::unique_ptr<escher::Model> Compositor::DrawOverlaysToModel(
+    const std::vector<Layer*>& drawable_layers,
+    const escher::FramePtr& frame,
+    const FrameTimingsPtr& frame_timings,
+    escher::PaperRenderer* escher_renderer,
+    escher::ShadowMapRenderer* shadow_renderer) {
+  TRACE_DURATION("gfx", "Compositor::DrawOverlaysToModel");
+
+  if (drawable_layers.empty())
+    return nullptr;
+
+  std::vector<escher::Object> layer_objects;
+  layer_objects.reserve(drawable_layers.size() - 1);
+
+  // Render each layer, except the bottom one. Create an escher::Object for
+  // each layer, which will be composited as part of rendering the final
+  // layer.
+  auto recycler = escher()->resource_recycler();
+  for (size_t i = 1; i < drawable_layers.size(); ++i) {
+    auto layer = drawable_layers[i];
+    auto texture = escher::Texture::New(
+        recycler, GetLayerFramebufferImage(layer->width(), layer->height()),
+        vk::Filter::eLinear);
+
+    DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
+              drawable_layers[i], texture->image(), nullptr);
+    auto semaphore = escher::Semaphore::New(escher()->vk_device());
+    frame->SubmitPartialFrame(semaphore);
+    texture->image()->SetWaitSemaphore(std::move(semaphore));
+
+    auto material = escher::Material::New(layer->color(), std::move(texture));
+    material->set_opaque(layer->opaque());
+
+    layer_objects.push_back(escher::Object::NewRect(
+        escher::Transform(layer->translation()), std::move(material)));
+  }
+
+  return std::unique_ptr<escher::Model>(
+      new escher::Model(std::move(layer_objects)));
+}
+
 void Compositor::DrawLayer(const escher::FramePtr& frame,
                            const FrameTimingsPtr& frame_timings,
                            escher::PaperRenderer* escher_renderer,
@@ -187,61 +257,26 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
                            escher::ShadowMapRenderer* shadow_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
 
-  // Obtain a list of drawable layers.
-  if (!layer_stack_)
-    return false;
-  std::vector<Layer*> drawable_layers;
-  for (auto& layer : layer_stack_->layers()) {
-    if (layer->IsDrawable()) {
-      drawable_layers.push_back(layer.get());
-    }
-  }
-  if (drawable_layers.empty())
-    return false;
-
-  // Sort the layers from bottom to top.
-  std::sort(drawable_layers.begin(), drawable_layers.end(), [](auto a, auto b) {
-    return a->translation().z < b->translation().z;
-  });
-
-  // Render each layer, except the bottom one.  Create an escher::Object for
-  // each layer, which will be composited as part of rendering the final
-  // layer.
-  std::vector<escher::Object> layer_objects;
-  layer_objects.reserve(drawable_layers.size() - 1);
+  std::vector<Layer*> drawable_layers = GetDrawableLayers();
+  if (drawable_layers.empty()) return false;
 
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor");
-  auto recycler = escher()->resource_recycler();
-  for (size_t i = 1; i < drawable_layers.size(); ++i) {
-    auto layer = drawable_layers[i];
-    auto texture = escher::Texture::New(
-        recycler, GetLayerFramebufferImage(layer->width(), layer->height()),
-        vk::Filter::eLinear);
 
-    DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
-              drawable_layers[i], texture->image(), nullptr);
-    auto semaphore = escher::Semaphore::New(escher()->vk_device());
-    frame->SubmitPartialFrame(semaphore);
-    texture->image()->SetWaitSemaphore(std::move(semaphore));
-
-    auto material = escher::Material::New(layer->color(), std::move(texture));
-    material->set_opaque(layer->opaque());
-
-    layer_objects.push_back(escher::Object::NewRect(
-        escher::Transform(layer->translation()), std::move(material)));
-  }
-  escher::Model overlay_model(std::move(layer_objects));
+  auto overlay_model = DrawOverlaysToModel(
+      drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
+  if (overlay_model == nullptr) return false;
 
   bool success = swapchain_->DrawAndPresentFrame(
       frame_timings,
       [this, frame{std::move(frame)}, frame_timings, escher_renderer,
-       shadow_renderer, layer = drawable_layers[0], overlay = &overlay_model](
+       shadow_renderer, bottom_layer = drawable_layers[0],
+       overlay = overlay_model.get()](
           const escher::ImagePtr& output_image,
           const escher::SemaphorePtr& acquire_semaphore,
           const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
-        DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer, layer,
-                  output_image, overlay);
+        DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
+                  bottom_layer, output_image, overlay);
         frame->EndFrame(frame_done_semaphore, nullptr);
       });
 
@@ -253,6 +288,36 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   }
 
   return success;
+}
+
+void Compositor::DrawToImage(escher::PaperRenderer* escher_renderer,
+                             escher::ShadowMapRenderer* shadow_renderer,
+                             const escher::ImagePtr& output_image,
+                             const escher::SemaphorePtr& frame_done_semaphore) {
+  TRACE_DURATION("gfx", "Compositor::DrawToImage");
+
+  FrameTimingsPtr frame_timings;
+
+  const std::vector<Layer*> drawable_layers = GetDrawableLayers();
+  if (drawable_layers.empty()) {
+    return;
+  }
+  escher::FramePtr frame = escher()->NewFrame("Scenic Compositor");
+  auto overlay_model =
+      DrawOverlaysToModel(drawable_layers, frame, frame_timings,
+                          escher_renderer, shadow_renderer);
+  if (overlay_model == nullptr) {
+    FXL_LOG(FATAL) << "Failed to generate overlay model";
+  }
+  const auto& bottom_layer = drawable_layers[0];
+  DrawLayer(frame,
+            frame_timings,
+            escher_renderer,
+            shadow_renderer,
+            bottom_layer,
+            output_image,
+            overlay_model.get());
+  frame->EndFrame(frame_done_semaphore, nullptr);
 }
 
 escher::ImagePtr Compositor::GetLayerFramebufferImage(uint32_t width,

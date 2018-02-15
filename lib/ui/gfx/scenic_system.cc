@@ -6,6 +6,7 @@
 
 #include <fs/pseudo-file.h>
 
+#include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "lib/app/cpp/application_context.h"
@@ -111,6 +112,14 @@ void ScenicSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
         [this, callback]() { GetDisplayInfoImmediately(callback); });
   }
 };
+
+void ScenicSystem::TakeScreenshot(
+    fidl::StringPtr filename,
+    ui::Scenic::TakeScreenshotCallback callback) {
+  FXL_CHECK(initialized_);
+  Screenshotter screenshotter(engine_.get());
+  screenshotter.TakeScreenshot(filename.get(), callback);
+}
 
 }  // namespace gfx
 }  // namespace scenic

@@ -75,6 +75,8 @@ class Scenic : public ui::Scenic {
   void OnSystemInitialized(System* system);
 
   void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(fidl::StringPtr filename,
+                      ui::Scenic::TakeScreenshotCallback callback) override;
 
   size_t next_session_id_ = 1;
 

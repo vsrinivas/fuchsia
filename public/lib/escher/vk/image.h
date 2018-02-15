@@ -21,6 +21,7 @@ struct ImageInfo {
   vk::ImageUsageFlags usage;
   vk::MemoryPropertyFlags memory_flags =
       vk::MemoryPropertyFlagBits::eDeviceLocal;
+  vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
 
   bool operator==(const ImageInfo& other) const {
     return format == other.format && width == other.width &&

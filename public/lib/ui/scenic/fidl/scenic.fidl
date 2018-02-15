@@ -16,4 +16,11 @@ interface Scenic {
   // TODO(MZ-453): in the future there will probably be a DisplayManager, and
   // info about which displays to use will be provided to the SceneManager.
   2: GetDisplayInfo() -> (gfx.DisplayInfo info);
+
+  // Take a screenshot and store it in "filename".
+  // TODO(SCN-211): Have this return a virtual memory object instead of writing
+  // to a file.
+  // TODO(SCN-678): The permissions here are too wide (anyone can take a
+  // screenshot), we should narrow them.
+  3: TakeScreenshot(string filename) -> (bool s);
 };

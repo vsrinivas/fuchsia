@@ -43,6 +43,13 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   ~Engine() override;
 
+  escher::PaperRenderer* paper_renderer() {
+    return paper_renderer_.get();
+  }
+  escher::ShadowMapRenderer* shadow_renderer() {
+    return shadow_renderer_.get();
+  }
+
   DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_; }
 
