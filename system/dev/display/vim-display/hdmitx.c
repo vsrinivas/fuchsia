@@ -65,6 +65,15 @@ void hdmi_scdc_write(vim2_display_t* display, uint8_t addr, uint8_t val) {
     usleep(2000);
 }
 
+void hdmi_shutdown(vim2_display_t* display)
+{
+        /* Close HDMITX PHY */
+        WRITE32_REG(HHI,HHI_HDMI_PHY_CNTL0, 0);
+        WRITE32_REG(HHI,HHI_HDMI_PHY_CNTL3, 0);
+        /* Disable HPLL */
+        WRITE32_REG(HHI,HHI_HDMI_PLL_CNTL, 0);
+}
+
 zx_status_t init_hdmi_hardware(vim2_display_t* display) {
 
     /* Step 1: Initialize various clocks related to the HDMI Interface*/

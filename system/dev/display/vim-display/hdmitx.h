@@ -1629,4 +1629,6 @@ zx_status_t init_hdmi_hardware(vim2_display_t* display);
 void dump_regs(vim2_display_t* display);
 zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param* p);
 void hdmi_test(vim2_display_t* display, uint32_t width);
-zx_status_t configure_pll(vim2_display_t* display, const struct hdmi_param* p, const struct pll_param* pll);
+zx_status_t configure_pll(vim2_display_t* display, const struct hdmi_param* p,
+    const struct pll_param* pll);
+void hdmi_shutdown(vim2_display_t* display);

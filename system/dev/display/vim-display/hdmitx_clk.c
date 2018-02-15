@@ -25,22 +25,27 @@
 
 #define WAIT_FOR_PLL_LOCKED(reg)                \
     do {                            \
-        unsigned int st = 0, cnt = 1000;          \
+        err = 0;                \
+        unsigned int st = 0, cnt = 10000;          \
         while (cnt--) {                                 \
             usleep(5);              \
             st = !!(READ32_HHI_REG(reg) & (1 << 31));  \
-            if (st)                 \
+            if (st) {                 \
+                err = 0; \
                 break;              \
-            else { /* reset hpll */         \
+            } else { /* reset hpll */         \
                 SET_BIT32(HHI, reg, 1, 1, 28); \
                 SET_BIT32(HHI, reg, 0, 1, 28); \
             }                   \
         }                       \
-        DISP_ERROR("pll[0x%x] reset %d times\n", reg, 999 - cnt);\
-    } while (0)
+        DISP_ERROR("pll[0x%x] reset %d times\n", reg, 9999 - cnt);\
+        if (cnt <= 0) \
+            err = 1; \
+    } while (err)
 
 void configure_hpll_clk_out(vim2_display_t* display, uint32_t hpll)
 {
+    int err = 0;
     switch (hpll) {
     case 5940000:
         WRITE32_REG(HHI, HHI_HDMI_PLL_CNTL, 0x4000027b);

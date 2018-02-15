@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "edid.h"
+#include <ddk/protocol/gpio.h>
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -26,6 +27,13 @@ typedef struct {
     zx_device_t*                        zxdev;
     platform_device_protocol_t          pdev;
     zx_device_t*                        parent;
+    zx_device_t*                        mydevice;
+    zx_device_t*                        fbdevice;
+
+    gpio_protocol_t                     gpio;
+
+    thrd_t                              main_thread;
+
     pdev_vmo_buffer_t                   mmio_preset;
     pdev_vmo_buffer_t                   mmio_hdmitx;
     pdev_vmo_buffer_t                   mmio_hiu;

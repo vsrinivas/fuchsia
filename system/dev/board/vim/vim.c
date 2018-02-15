@@ -19,6 +19,7 @@
 #include <hw/reg.h>
 
 #include <soc/aml-s912/s912-hw.h>
+#include <soc/aml-s912/s912-gpio.h>
 
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -55,6 +56,14 @@ static pbus_mmio_t vim_display_mmios[] = {
     },
 };
 
+
+const pbus_gpio_t vim_display_gpios[] = {
+    {
+        // HPD
+        .gpio = S912_GPIOH(20),
+    },
+};
+
 static const pbus_dev_t display_dev = {
     .name = "display",
     .vid = PDEV_VID_KHADAS,
@@ -62,6 +71,8 @@ static const pbus_dev_t display_dev = {
     .did = PDEV_DID_VIM_DISPLAY,
     .mmios = vim_display_mmios,
     .mmio_count = countof(vim_display_mmios),
+    .gpios = vim_display_gpios,
+    .gpio_count = countof(vim_display_gpios),
 };
 
 static void vim_bus_release(void* ctx) {

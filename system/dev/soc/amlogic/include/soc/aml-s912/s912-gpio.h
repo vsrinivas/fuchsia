@@ -6,7 +6,7 @@
 
 #define S912_GPIOX_PINS     19
 #define S912_GPIODV_PINS    30
-#define S912_GPIOH_PINS     10
+#define S912_GPIOH_PINS     32
 #define S912_GPIOBOOT_PINS  16
 #define S912_GPIOCARD_PINS  7
 #define S912_GPIOCLK_PINS   2

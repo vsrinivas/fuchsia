@@ -16,7 +16,6 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
 #include <hw/reg.h>
@@ -39,7 +38,6 @@ enum {
 
 
 static zx_status_t vc_set_mode(void* ctx, zx_display_info_t* info) {
-    DISP_INFO("?\n");
     return ZX_OK;
 }
 
@@ -86,86 +84,29 @@ static void display_release(void* ctx) {
     free(display);
 }
 
-static zx_protocol_device_t display_device_proto = {
+static zx_protocol_device_t main_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release =  display_release,
 };
 
-zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
-    vim2_display_t* display = calloc(1, sizeof(vim2_display_t));
-    if (!display) {
-        DISP_ERROR("Could not allocated display structure\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+static zx_protocol_device_t display_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+};
 
-   platform_device_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
-    if (status !=  ZX_OK) {
-        DISP_ERROR("Could not get parent protocol\n");
-        goto fail;
-    }
-
-    // Map all the various MMIOs
-    status = pdev_map_mmio_buffer(&pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_preset);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO PRESET\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hdmitx);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO HDMITX\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hiu);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO HIU\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_vpu);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO VPU\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_hdmitx_sec);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&pdev, MMIO_DMC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_dmc);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO DMC\n");
-        goto fail;
-    }
-
+static zx_status_t setup_hdmi(vim2_display_t* display)
+{
+    zx_status_t status;
     // initialize HDMI
     status = init_hdmi_hardware(display);
     if (status != ZX_OK) {
         DISP_ERROR("HDMI hardware initialization failed\n");
-        goto fail;
-    }
-
-    // Create EDID Buffer
-    display->edid_buf = calloc(1, EDID_BUF_SIZE);
-    if (!display->edid_buf) {
-        DISP_ERROR("Could not allocated EDID BUf of size %d\n", EDID_BUF_SIZE);
-        goto fail;
+        return status;
     }
 
     status = get_preferred_res(display, EDID_BUF_SIZE);
     if (status != ZX_OK) {
         DISP_ERROR("No display connected!\n");
-        goto fail;
+        return status;
 
     }
 
@@ -175,14 +116,14 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     display->disp_info.height = display->p->timings.vactive;
     display->disp_info.stride = display->p->timings.hactive;
 
-   status = pdev_map_contig_buffer(&pdev,
+   status = pdev_map_contig_buffer(&display->pdev,
                         (display->disp_info.stride * display->disp_info.height *
                             ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)),
                         0,
                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                         &display->fbuffer);
     if (status != ZX_OK) {
-        goto fail;
+        return status;
     }
 
 
@@ -193,7 +134,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     status = init_hdmi_interface(display, display->p);
     if (status != ZX_OK) {
         DISP_ERROR("HDMI interface initialization failed\n");
-        goto fail;
+        return status;
     }
 
     /* Configure Canvas memory */
@@ -216,12 +157,138 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         .proto_ops = &vc_display_proto,
     };
 
-    status = device_add(parent, &vc_fbuff_args, NULL);
+    status = device_add(display->mydevice, &vc_fbuff_args, &display->fbdevice);
     if (status != ZX_OK) {
         free(display);
+        return status;
     }
-    return status;
+    return ZX_OK;
+}
 
+static int main_hdmi_thread(void *arg)
+{
+    vim2_display_t* display = arg;
+    static bool hdmi_inited = false;
+    static bool print_once = true;
+    uint8_t hpd_val;
+
+    if (gpio_config(&display->gpio, 0, GPIO_DIR_IN) != ZX_OK) {
+        DISP_ERROR("Invalid HPD Pin!! Will try and connect to display anyways\n");
+        // try once
+        setup_hdmi(display);
+        return ZX_OK;
+    }
+
+    while (1) {
+        // check HPD GPIO Pins
+        gpio_read(&display->gpio, 0, &hpd_val);
+
+        if (hpd_val == 0) {
+            if (print_once) {
+                DISP_ERROR("No Display Connected. Will try again later\n");
+                print_once = false;
+            }
+            if (hdmi_inited) {
+                // let's shutdown hdmi
+                DISP_ERROR("Display Disconnected!\n");
+                hdmi_shutdown(display);
+                pdev_vmo_buffer_release(&display->fbuffer);
+                device_remove(display->fbdevice);
+                hdmi_inited = false;
+            }
+        } else {
+            if (!hdmi_inited) {
+                DISP_ERROR("Display is connected\n");
+                setup_hdmi(display);
+                hdmi_inited = true;
+            }
+        }
+        usleep(500000); // sleep with 500ms
+    }
+}
+
+zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
+    vim2_display_t* display = calloc(1, sizeof(vim2_display_t));
+    if (!display) {
+        DISP_ERROR("Could not allocated display structure\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    display->parent = parent;
+
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
+    if (status !=  ZX_OK) {
+        DISP_ERROR("Could not get parent protocol\n");
+        goto fail;
+    }
+
+    status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &display->gpio);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get Display GPIO protocol\n");
+        goto fail;
+    }
+
+    // Map all the various MMIOs
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_preset);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO PRESET\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_hdmitx);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO HDMITX\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_hiu);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO HIU\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_vpu);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO VPU\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_hdmitx_sec);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_DMC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_dmc);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO DMC\n");
+        goto fail;
+    }
+
+    // Create EDID Buffer
+    display->edid_buf = calloc(1, EDID_BUF_SIZE);
+    if (!display->edid_buf) {
+        DISP_ERROR("Could not allocated EDID BUf of size %d\n", EDID_BUF_SIZE);
+        goto fail;
+    }
+
+    device_add_args_t vc_fbuff_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "vim2-display",
+        .ctx = display,
+        .ops = &main_device_proto,
+        .flags = (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE),
+    };
+
+    status = device_add(display->parent, &vc_fbuff_args, &display->mydevice);
+
+    thrd_create_with_name(&display->main_thread, main_hdmi_thread, display, "main_hdmi_thread");
     return ZX_OK;
 
 fail:
