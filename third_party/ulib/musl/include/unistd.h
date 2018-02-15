@@ -68,7 +68,6 @@ int access(const char*, int);
 int faccessat(int, const char*, int, int);
 
 int chdir(const char*);
-int fchdir(int);
 char* getcwd(char*, size_t);
 
 unsigned alarm(unsigned);
