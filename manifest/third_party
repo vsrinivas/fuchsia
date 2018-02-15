@@ -231,7 +231,6 @@
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
-             revision="620515639a6e3649bb2a4585522a5aae69e8653b"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/vim"
              path="third_party/vim"
