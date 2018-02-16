@@ -254,18 +254,21 @@ type Interface struct {
 
 // Method represents the declaration of a FIDL2 method.
 type Method struct {
-	Ordinal     Ordinal     `json:"ordinal"`
-	Name        Identifier  `json:"name"`
-	HasRequest  bool        `json:"has_request"`
-	Request     []Parameter `json:"maybe_request,omitempty"`
-	HasResponse bool        `json:"has_response"`
-	Response    []Parameter `json:"maybe_response,omitempty"`
+	Ordinal      Ordinal     `json:"ordinal"`
+	Name         Identifier  `json:"name"`
+	HasRequest   bool        `json:"has_request"`
+	Request      []Parameter `json:"maybe_request,omitempty"`
+	RequestSize  int         `json:"maybe_request_size,omitempty"`
+	HasResponse  bool        `json:"has_response"`
+	Response     []Parameter `json:"maybe_response,omitempty"`
+	ResponseSize int         `json:"maybe_response_size,omitempty"`
 }
 
 // Parameter represents a parameter to a FIDL2 method.
 type Parameter struct {
-	Type Type       `json:"type"`
-	Name Identifier `json:"name"`
+	Type   Type       `json:"type"`
+	Name   Identifier `json:"name"`
+	Offset int        `json:"offset"`
 }
 
 // Enum represents a FIDL2 delcaration of an enum.

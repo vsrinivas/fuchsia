@@ -416,7 +416,7 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 		p := Parameter{
 			compileType(v.Type),
 			changeIfReserved(v.Name),
-			0, // TODO(TO-758): Need the parameter offset from the frontend.
+			v.Offset,
 		}
 		r = append(r, p)
 	}
@@ -440,10 +440,10 @@ func compileInterface(val types.Interface) Interface {
 			name,
 			v.HasRequest,
 			compileParameterArray(v.Request),
-			0, // TODO(TO-758): Need the method size from the frontend.
+			v.RequestSize,
 			v.HasResponse,
 			compileParameterArray(v.Response),
-			0, // TODO(TO-758): Need the method size from the frontend.
+			v.ResponseSize,
 		}
 		r.Methods = append(r.Methods, m)
 	}
