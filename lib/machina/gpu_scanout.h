@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_GPU_SCANOUT_H_
 #define GARNET_LIB_MACHINA_GPU_SCANOUT_H_
 
+#include <fbl/function.h>
 #include <virtio/gpu.h>
 #include <zircon/types.h>
 
@@ -32,12 +33,23 @@ class GpuScanout {
 
   void SetResource(GpuResource* res, const virtio_gpu_set_scanout_t* request);
 
+  using OnReadyCallback = fbl::Function<void()>;
+  void WhenReady(OnReadyCallback callback);
+
+ protected:
+  void SetReady(bool ready);
+
  private:
+  void InvokeReadyCallback();
+
   GpuBitmap surface_;
 
   // Scanout parameters.
   GpuResource* resource_ = nullptr;
   GpuRect rect_;
+
+  bool ready_ = true;
+  OnReadyCallback ready_callback_;
 };
 
 }  // namespace machina

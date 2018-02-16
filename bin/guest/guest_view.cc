@@ -7,79 +7,68 @@
 #include <semaphore.h>
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/ui/view_framework/view_provider_app.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 
 // For now we expose a fixed size display to the guest. Scenic will scale this
 // buffer to the actual window size on the host.
 static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
 
-ScenicScanout::ScenicScanout(GuestView* view)
-    : view_(view),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
+// static
+zx_status_t ScenicScanout::Create(app::ApplicationContext* application_context,
+                                  machina::InputDispatcher* input_dispatcher,
+                                  fbl::unique_ptr<GpuScanout>* out) {
+  *out = fbl::make_unique<ScenicScanout>(application_context, input_dispatcher);
+  return ZX_OK;
+}
+
+ScenicScanout::ScenicScanout(app::ApplicationContext* application_context,
+                             machina::InputDispatcher* input_dispatcher)
+    : input_dispatcher_(input_dispatcher),
+      application_context_(application_context),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
+  // The actual framebuffer can't be created until we've connected to the
+  // mozart service.
+  SetReady(false);
+
+  application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
+      [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+}
+
+void ScenicScanout::CreateView(
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<app::ServiceProvider> view_services) {
+  if (view_) {
+    FXL_LOG(ERROR) << "CreateView called when a view already exists";
+    return;
+  }
+  auto view_manager =
+      application_context_->ConnectToEnvironmentService<mozart::ViewManager>();
+  view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
+                                      fbl::move(view_manager),
+                                      fbl::move(view_owner_request));
+  if (view_) {
+    view_->SetReleaseHandler([this] { view_.reset(); });
+  }
+  SetReady(true);
+}
 
 void ScenicScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
   GpuScanout::FlushRegion(rect);
   task_runner_->PostTask([this] { view_->InvalidateScene(); });
 }
 
-struct ViewTaskArgs {
-  machina::VirtioGpu* gpu;
-  machina::InputDispatcher* input_dispatcher;
-  sem_t semaphore;
-};
-
-static int view_task(void* ctx) {
-  ViewTaskArgs* args = reinterpret_cast<ViewTaskArgs*>(ctx);
-
-  fsl::MessageLoop loop;
-  mozart::ViewProviderApp app([args](mozart::ViewContext view_context) {
-    auto view = std::make_unique<GuestView>(
-        args->gpu, args->input_dispatcher, std::move(view_context.view_manager),
-        std::move(view_context.view_owner_request));
-    sem_post(&args->semaphore);
-    return view;
-  });
-
-  loop.Run();
-  return 0;
-}
-
-// static
-zx_status_t GuestView::Start(machina::VirtioGpu* gpu,
-                             machina::InputDispatcher* input_dispatcher) {
-  ViewTaskArgs args = {
-      .gpu = gpu,
-      .input_dispatcher = input_dispatcher,
-  };
-  int ret = sem_init(&args.semaphore, 0, 0);
-  if (ret != 0) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  thrd_t thread;
-  ret = thrd_create_with_name(&thread, view_task, &args, "guest-view");
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-  ret = thrd_detach(thread);
-  if (ret != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  sem_wait(&args.semaphore);
-  return ZX_OK;
-}
-
 GuestView::GuestView(
-    machina::VirtioGpu* gpu,
+    machina::GpuScanout* scanout,
     machina::InputDispatcher* input_dispatcher,
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
-      scanout_(this),
       input_dispatcher_(input_dispatcher) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
@@ -95,8 +84,7 @@ GuestView::GuestView(
   machina::GpuBitmap bitmap(kDisplayWidth, kDisplayHeight,
                             ZX_PIXEL_FORMAT_ARGB_8888,
                             reinterpret_cast<uint8_t*>(memory_->data_ptr()));
-  scanout_.SetBitmap(std::move(bitmap));
-  gpu->AddScanout(&scanout_);
+  scanout->SetBitmap(std::move(bitmap));
 }
 
 GuestView::~GuestView() = default;

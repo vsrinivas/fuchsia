@@ -47,4 +47,21 @@ void GpuScanout::SetResource(GpuResource* res,
   rect_.height = request->r.height;
 }
 
+void GpuScanout::WhenReady(OnReadyCallback callback) {
+  ready_callback_ = fbl::move(callback);
+  InvokeReadyCallback();
+}
+
+void GpuScanout::SetReady(bool ready) {
+  ready_ = ready;
+  InvokeReadyCallback();
+}
+
+void GpuScanout::InvokeReadyCallback() {
+  if (ready_ && ready_callback_) {
+    ready_callback_();
+    ready_callback_ = nullptr;
+  }
+}
+
 }  // namespace machina

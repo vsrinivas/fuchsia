@@ -160,9 +160,16 @@ zx_status_t setup_zircon_framebuffer(
 }
 
 zx_status_t setup_scenic_framebuffer(
+    app::ApplicationContext* application_context,
     machina::VirtioGpu* gpu,
-    machina::InputDispatcher* input_dispatcher) {
-  return GuestView::Start(gpu, input_dispatcher);
+    machina::InputDispatcher* input_dispatcher,
+    fbl::unique_ptr<machina::GpuScanout>* scanout) {
+  zx_status_t status =
+      ScenicScanout::Create(application_context, input_dispatcher, scanout);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return gpu->AddScanout(scanout->get());
 }
 
 zx_status_t read_guest_config(GuestConfig* options,
@@ -435,7 +442,8 @@ int main(int argc, char** argv) {
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
-      status = setup_scenic_framebuffer(&gpu, &input_dispatcher);
+      status = setup_scenic_framebuffer(application_context.get(), &gpu,
+                                        &input_dispatcher, &gpu_scanout);
       if (status != ZX_OK) {
         return status;
       }
@@ -461,9 +469,22 @@ int main(int argc, char** argv) {
     }
   }
 
-  status = guest.StartVcpu(guest_ip, 0 /* id */);
-  if (status != ZX_OK) {
-    return status;
+  // GPU back-ends can take some time to initialize. Wait for them to be
+  // created before starting the VCPU so that we can ensure we have the
+  // framebuffer allocated before software attempts to interface with it.
+  auto start_task = [&loop, &guest, guest_ip] {
+    zx_status_t status = guest.StartVcpu(guest_ip, 0 /* id */);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
+      loop.PostQuitTask();
+    }
+  };
+  if (gpu_scanout) {
+    gpu_scanout->WhenReady(
+        [&loop, &start_task] { loop.task_runner()->PostTask(start_task); });
+
+  } else {
+    start_task();
   }
 
   loop.Run();
