@@ -40,6 +40,7 @@ typedef struct {
     pdev_vmo_buffer_t                   mmio_vpu;
     pdev_vmo_buffer_t                   mmio_hdmitx_sec;
     pdev_vmo_buffer_t                   mmio_dmc;
+    pdev_vmo_buffer_t                   mmio_cbus;
     pdev_vmo_buffer_t                   fbuffer;
     zx_display_info_t                   disp_info;
 

@@ -7,6 +7,8 @@
 // Display Related Register
 #define S912_PRESET_BASE                0xC1104000
 #define S912_PRESET_LENGTH              0x1000
+#define S912_CBUS_REG_BASE              0xC8834000
+#define S912_CBUS_REG_LENGTH            0x1000
 #define S912_DMC_REG_BASE               0xC8838000
 #define S912_DMC_REG_LENGTH             0x1000
 #define S912_HDMITX_BASE                0xC883A000

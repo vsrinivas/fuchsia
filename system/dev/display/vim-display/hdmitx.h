@@ -39,6 +39,8 @@
 #define READ32_HDMITX_SEC_REG(a)         readl(display->mmio_hdmitx_sec.vaddr + a)
 #define WRITE32_HDMITX_SEC_REG(a, v)     writel(v, display->mmio_hdmitx_sec.vaddr + a)
 
+#define READ32_CBUS_REG(a)              readl(display->mmio_cbus.vaddr + 0x400 + a)
+#define WRITE32_CBUS_REG(a, v)          writel(v, display->mmio_cbus.vaddr + 0x400+ a)
 
 #define SET_BIT32(x, dest, value, count, start) \
             WRITE32_##x##_REG(dest, (READ32_##x##_REG(dest) & ~DISPLAY_MASK(start, count)) | \
@@ -1192,6 +1194,11 @@
 #define VPU_VPP_OSD_SCALE_COEF_IDX                      (0x1dcc << 2)
 #define VPU_VPP_OSD_SCALE_COEF                      (0x1dcd << 2)
 #define VPU_VPP_INT_LINE_NUM                        (0x1dce << 2)
+
+#define PAD_PULL_UP_EN_REG1                             (0x49 << 2)
+#define PAD_PULL_UP_REG1                                (0x3d << 2)
+#define P_PREG_PAD_GPIO1_EN_N                           (0x0f << 2)
+#define PERIPHS_PIN_MUX_6                               (0x32 << 2)
 
 struct reg_val_pair {
     uint32_t    reg;

@@ -54,6 +54,10 @@ static pbus_mmio_t vim_display_mmios[] = {
         .base =     S912_DMC_REG_BASE,
         .length =   S912_DMC_REG_LENGTH,
     },
+    {
+        .base =     S912_CBUS_REG_BASE,
+        .length =   S912_CBUS_REG_LENGTH,
+    },
 };
 
 

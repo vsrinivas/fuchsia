@@ -76,7 +76,12 @@ void hdmi_shutdown(vim2_display_t* display)
 
 zx_status_t init_hdmi_hardware(vim2_display_t* display) {
 
+
     /* Step 1: Initialize various clocks related to the HDMI Interface*/
+    SET_BIT32(CBUS, PAD_PULL_UP_EN_REG1, 0, 2, 21);
+    SET_BIT32(CBUS, PAD_PULL_UP_REG1, 0, 2, 21);
+    SET_BIT32(CBUS, P_PREG_PAD_GPIO1_EN_N, 3, 2, 21);
+    SET_BIT32(CBUS, PERIPHS_PIN_MUX_6, 3, 2, 29);
 
     // enable clocks
     SET_BIT32(HHI, HHI_HDMI_CLK_CNTL, 0x0100, 16, 0);

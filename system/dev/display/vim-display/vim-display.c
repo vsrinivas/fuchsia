@@ -34,6 +34,7 @@ enum {
     MMIO_VPU,
     MMIO_HDMTX_SEC,
     MMIO_DMC,
+    MMIO_CBUS,
 };
 
 
@@ -78,6 +79,7 @@ static void display_release(void* ctx) {
         pdev_vmo_buffer_release(&display->mmio_vpu);
         pdev_vmo_buffer_release(&display->mmio_hdmitx_sec);
         pdev_vmo_buffer_release(&display->mmio_dmc);
+        pdev_vmo_buffer_release(&display->mmio_cbus);
         pdev_vmo_buffer_release(&display->fbuffer);
         free(display->edid_buf);
     }
@@ -268,6 +270,13 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_dmc);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO DMC\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_cbus);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO CBUS\n");
         goto fail;
     }
 
