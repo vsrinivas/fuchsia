@@ -16,21 +16,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_LIBS := \
-    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async.cpp \
-    system/ulib/async \
-    system/ulib/async.loop-cpp \
-    system/ulib/async.loop \
-    system/ulib/fbl \
     system/ulib/hypervisor \
     system/ulib/zx \
-    system/ulib/zxcpp \
 
 MODULE_CPPFLAGS := \
     -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
