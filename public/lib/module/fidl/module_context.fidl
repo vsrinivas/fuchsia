@@ -7,7 +7,6 @@ module modular;
 import "lib/app/fidl/service_provider.fidl";
 import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/component/fidl/component_context.fidl";
-import "lib/story/fidl/chain.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/surface/fidl/surface.fidl";
 import "lib/module/fidl/module_controller.fidl";
@@ -20,9 +19,6 @@ import "lib/ui/views/fidl/view_token.fidl";
 // Next ordinal: 13
 [ServiceName="modular.ModuleContext"]
 interface ModuleContext {
-  // Gets the Chain instance for this Module.
-  GetChain@12(Chain& chain);
-
   // Gets a Link instance with the given name.
   //
   // The link instance has a name so that it can be recognized when
@@ -30,8 +26,8 @@ interface ModuleContext {
   // Module instance. If the method is called again by the same Module
   // instance, a new connection to the same Link instance is obtained.
   // It's up to the Module instance to ensure the name is unique
-  // within the scope of itself. If |name| is null, the link which this
-  // module was started with is obtained.
+  // within the scope of itself. A null |name| is allowed for backwards
+  // compatibility reasons. MI4-739
   GetLink@0(string? name, Link& link);
 
   // Starts a new Module instance. The Module to execute is identified

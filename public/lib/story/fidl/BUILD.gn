@@ -7,7 +7,6 @@ import("//garnet/public/lib/fidl/fidl.gni")
 # For consumption outside modular.
 fidl("fidl") {
   sources = [
-    "chain.fidl",
     "create_chain.fidl",
     "create_link.fidl",
     "link.fidl",

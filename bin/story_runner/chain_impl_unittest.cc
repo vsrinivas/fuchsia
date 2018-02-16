@@ -27,84 +27,42 @@ class ChainImplTest : public gtest::TestWithMessageLoop {
       key_link_data->link_path = std::move(link_path);
       chain_data->key_to_link_map.push_back(std::move(key_link_data));
     }
-    impl_.reset(new ChainImpl(std::move(path), std::move(chain_data),
-                              &story_controller_));
-    impl_->Connect(chain_.NewRequest());
+    impl_.reset(new ChainImpl(std::move(path), std::move(chain_data)));
   }
 
  protected:
-  ChainPtr chain_;
   std::unique_ptr<ChainImpl> impl_;
-
-  StoryControllerMock story_controller_;
 };
 
 TEST_F(ChainImplTest, Empty) {
   Reset({"one", "two"}, {});
 
-  // |chain_path()| is only available on ChainImpl.
   const auto& path = impl_->chain_path();
   ASSERT_EQ(2lu, path.size());
   EXPECT_EQ("one", path[0]);
   EXPECT_EQ("two", path[1]);
 
-  bool done{false};
-  chain_->GetKeys([&done](const fidl::Array<fidl::String>& keys) {
-    done = true;
-    EXPECT_EQ(0ul, keys.size());
-  });
-  ASSERT_TRUE(RunLoopUntil([&done] { return done; }));
-
-  bool saw_error{false};
-  LinkPtr link;
-  chain_->GetLink("someKey", link.NewRequest());
-  link.set_error_handler([&saw_error] { saw_error = true; });
-  ASSERT_TRUE(RunLoopUntil([&saw_error] { return saw_error; }));
+  EXPECT_FALSE(impl_->GetLinkPathForKey("foo"));
 }
 
-TEST_F(ChainImplTest, chain_path) {
-  Reset({"one", "two"}, {});
-}
-
-TEST_F(ChainImplTest, GetKeys) {
-  // We test the empty keys case above in Empty.
-  Reset({"one", "two"},
-        {{"key1", {"link", "path1"}}, {"key2", {"link", "path2"}}});
-
-  bool done{false};
-  chain_->GetKeys([&done](const fidl::Array<fidl::String>& keys) {
-    done = true;
-    ASSERT_EQ(2ul, keys.size());
-    EXPECT_EQ("key1", keys[0]);
-    EXPECT_EQ("key2", keys[1]);
-  });
-  ASSERT_TRUE(RunLoopUntil([&done] { return done; }));
-}
-
-TEST_F(ChainImplTest, GetLink) {
+TEST_F(ChainImplTest, GetLinkPath) {
   // Show that the GetLink call is proxied to the StoryController.
   // StoryController owns all Links.
   Reset({"one", "two"},
         {{"key1", {"link", "path1"}}, {"key2", {"link", "path2"}}});
 
-  LinkPtr link;
-  chain_->GetLink("key1", link.NewRequest());
-  ASSERT_TRUE(RunLoopUntil(
-      [this]() { return story_controller_.get_link_calls.size() > 0; }));
-  ASSERT_EQ(1lu, story_controller_.get_link_calls.size());
-  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(
-      fidl::Array<fidl::String>{"link", "path1"}));
-  EXPECT_FALSE(story_controller_.get_link_calls[0].name);
+  EXPECT_FALSE(impl_->GetLinkPathForKey("foo"));
 
-  link.Unbind();
-  story_controller_.get_link_calls.clear();
-  chain_->GetLink("key2", link.NewRequest());
-  ASSERT_TRUE(RunLoopUntil(
-      [this]() { return story_controller_.get_link_calls.size() > 0; }));
-  ASSERT_EQ(1lu, story_controller_.get_link_calls.size());
-  EXPECT_TRUE(story_controller_.get_link_calls[0].module_path.Equals(
+  auto path = impl_->GetLinkPathForKey("key1");
+  ASSERT_TRUE(path);
+  EXPECT_TRUE(path->module_path.Equals(
+      fidl::Array<fidl::String>{"link", "path1"}));
+
+  path = impl_->GetLinkPathForKey("key2");
+  ASSERT_TRUE(path);
+  EXPECT_TRUE(path->module_path.Equals(
       fidl::Array<fidl::String>{"link", "path2"}));
-  EXPECT_FALSE(story_controller_.get_link_calls[0].name);
+
 }
 
 }  // namespace

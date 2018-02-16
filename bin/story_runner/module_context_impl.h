@@ -54,8 +54,6 @@ class ModuleContextImpl : ModuleContext {
 
  private:
   // |ModuleContext|
-  void GetChain(fidl::InterfaceRequest<Chain> reuqest) override;
-  // |ModuleContext|
   void GetLink(const fidl::String& name,
                fidl::InterfaceRequest<Link> request) override;
   // |ModuleContext|

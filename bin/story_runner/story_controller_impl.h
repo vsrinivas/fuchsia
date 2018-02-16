@@ -137,10 +137,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void RequestStoryFocus();
 
   // Called by ModuleContextImpl.
-  void ConnectChainPath(fidl::Array<fidl::String> chain_path,
-                        fidl::InterfaceRequest<Chain> request);
-
-  // Called by ModuleContextImpl.
   void ConnectLinkPath(LinkPathPtr link_path,
                        LinkImpl::ConnectionType connection_type,
                        fidl::InterfaceRequest<Link> request);

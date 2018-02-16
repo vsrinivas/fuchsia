@@ -284,8 +284,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         });
     if (i == story_controller_impl_->chains_.end()) {
       story_controller_impl_->chains_.emplace_back(new ChainImpl(
-          module_data_->module_path.Clone(), module_data_->chain_data.Clone(),
-          story_controller_impl_));
+          module_data_->module_path.Clone(), module_data_->chain_data.Clone()));
     }
 
     // ModuleControllerImpl's constructor launches the child application.
@@ -1776,19 +1775,6 @@ const fidl::String& StoryControllerImpl::GetStoryId() const {
 
 void StoryControllerImpl::RequestStoryFocus() {
   story_provider_impl_->RequestStoryFocus(story_id_);
-}
-
-void StoryControllerImpl::ConnectChainPath(
-    fidl::Array<fidl::String> chain_path,
-    fidl::InterfaceRequest<Chain> request) {
-  auto i = std::find_if(chains_.begin(), chains_.end(),
-                        [&chain_path](const std::unique_ptr<ChainImpl>& ptr) {
-                          return ptr->chain_path().Equals(chain_path);
-                        });
-  // We expect a Chain for each Module to have been created during Module
-  // initialization.
-  FXL_CHECK(i != chains_.end()) << PathString(chain_path);
-  (*i)->Connect(std::move(request));
 }
 
 void StoryControllerImpl::ConnectLinkPath(
