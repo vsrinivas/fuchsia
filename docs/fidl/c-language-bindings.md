@@ -240,7 +240,7 @@ typedef struct fidl_message_header {
 } fidl_message_header_t;
 
 enum {
-    // Specified that the message body is contains in the VMO which
+    // Specified that the message body is contained in the VMO which
     // was passed as the last handle in the handle table.
     FIDL_MSG_VMO = 0x00000001,
 };
