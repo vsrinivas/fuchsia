@@ -76,7 +76,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
 
   auto add_module = AddModuleToStory::New();
   add_module->story_id = action_data.story_id;
-  add_module->module_url = "file:///system/apps/email/composer";
+  add_module->module_url = "email_composer";
   add_module->module_name = video_id;
 
   for (auto segment = action_data.module_path.begin();
@@ -131,7 +131,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   SuggestionDisplayImagePtr displayImage(SuggestionDisplayImage::New());
   displayImage->url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
   displayImage->image_type = SuggestionImageType::OTHER;
-  
+
   SuggestionDisplayPtr display(SuggestionDisplay::New());
   if (has_title) {
     display->headline = "Share \"" + video_title + "\" Video via email";
