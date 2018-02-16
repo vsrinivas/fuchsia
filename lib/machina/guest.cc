@@ -21,6 +21,10 @@
 #include "garnet/lib/machina/io.h"
 #include "lib/fxl/logging.h"
 
+#ifdef __x86_64__
+static constexpr uint32_t kIpiHaltInterrupt = 0xf6;
+#endif
+
 static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
 
 // Number of threads reading from the async device port.
@@ -67,7 +71,7 @@ static constexpr zx_handle_t get_trap_port(machina::TrapType type,
 
 namespace machina {
 
-zx_status_t Guest::Init(size_t mem_size) {
+zx_status_t Guest::Init(size_t mem_size, fsl::MessageLoop* loop) {
   zx_status_t status = phys_mem_.Init(mem_size);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create guest physical memory";
@@ -111,6 +115,7 @@ zx_status_t Guest::Init(size_t mem_size) {
     }
   }
 
+  loop_ = loop;
   return ZX_OK;
 }
 
@@ -226,6 +231,18 @@ zx_status_t Guest::Join() {
   }
 
   return status;
+}
+
+void Guest::Shutdown() {
+  loop_->PostQuitTask();
+  for (size_t id = 0; id != kMaxVcpus; ++id) {
+    if (vcpus_[id] != nullptr) {
+      // TODO(PD-81): Add support for the ARM equivalent.
+#ifdef __x86_64__
+      vcpus_[id]->Interrupt(kIpiHaltInterrupt);
+#endif
+    }
+  }
 }
 
 }  // namespace machina

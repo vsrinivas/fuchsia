@@ -276,6 +276,11 @@ void Vcpu::WaitForStateChangeLocked(State initial_state) {
   }
 }
 
+void Vcpu::SetState(State new_state) {
+  fbl::AutoLock lock(&mutex_);
+  SetStateLocked(new_state);
+}
+
 static zx_status_t handle_packet(Vcpu* vcpu, zx_port_packet_t* packet) {
   switch (packet->type) {
     case ZX_PKT_TYPE_GUEST_MEM:
@@ -296,23 +301,27 @@ zx_status_t Vcpu::Loop() {
   zx_port_packet_t packet;
   while (true) {
     zx_status_t status = zx_vcpu_resume(vcpu_, &packet);
+    if (status == ZX_ERR_STOP) {
+      SetState(State::TERMINATED);
+      return ZX_OK;
+    }
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to resume VCPU-" << id_ << ": " << status;
-      fbl::AutoLock lock(&mutex_);
-      SetStateLocked(State::ERROR_FAILED_TO_RESUME);
+      guest_->Shutdown();
+      SetState(State::ERROR_FAILED_TO_RESUME);
       return status;
     }
+
     status = handle_packet(this, &packet);
     if (status == ZX_ERR_STOP) {
-      fbl::AutoLock lock(&mutex_);
-      SetStateLocked(State::TERMINATED);
+      SetState(State::TERMINATED);
       return ZX_OK;
     }
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to handle guest packet " << packet.type << ": "
                      << status;
-      fbl::AutoLock lock(&mutex_);
-      SetStateLocked(State::ERROR_ABORTED);
+      guest_->Shutdown();
+      SetState(State::ERROR_ABORTED);
       return status;
     }
   }

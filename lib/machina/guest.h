@@ -13,6 +13,7 @@
 
 #include "garnet/lib/machina/phys_mem.h"
 #include "garnet/lib/machina/vcpu.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace machina {
 
@@ -33,7 +34,7 @@ class Guest {
 
   ~Guest();
 
-  zx_status_t Init(size_t mem_size);
+  zx_status_t Init(size_t mem_size, fsl::MessageLoop* message_loop);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   zx_handle_t handle() const { return guest_; }
@@ -57,6 +58,9 @@ class Guest {
   // Waits for all VCPUs associated with the guest to finish executing.
   zx_status_t Join();
 
+  // Force all VCPUs to halt.
+  void Shutdown();
+
  private:
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
   static constexpr size_t kMaxVcpus = 16u;
@@ -76,6 +80,8 @@ class Guest {
         return ZX_ERR_BAD_STATE;
       };
   fbl::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
+
+  fsl::MessageLoop* loop_;
 };
 
 // Convert a key from a port packet into a pointer to the mapping object.

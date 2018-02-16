@@ -99,6 +99,8 @@ class Vcpu {
   // Block until |state_| != |initial_state|.
   void WaitForStateChangeLocked(State initial_state) __TA_REQUIRES(mutex_);
 
+  void SetState(State new_state);
+
   Guest* guest_;
   uint64_t id_;
   thrd_t thread_;
