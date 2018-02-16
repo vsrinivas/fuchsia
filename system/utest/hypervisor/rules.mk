@@ -22,18 +22,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/hypervisor \
     system/ulib/zx \
-
-MODULE_CPPFLAGS := \
-    -Isystem/ulib/hypervisor/arch/$(ARCH)/include \
-
-ifeq ($(ARCH),x86)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/decode.cpp \
-
-MODULE_STATIC_LIBS += \
-    system/ulib/pretty
-endif
 
 include make/module.mk
