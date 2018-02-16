@@ -9,6 +9,14 @@
 
 namespace registers {
 
+static constexpr uint32_t kTransCount = 4;
+
+enum Trans { TRANS_A, TRANS_B, TRANS_C, TRANS_EDP };
+
+static const Trans kTrans[kTransCount] = {
+    TRANS_A, TRANS_B, TRANS_C, TRANS_EDP,
+};
+
 // TRANS_HTOTAL, TRANS_HBLANK,
 // TRANS_VTOTAL, TRANS_VBLANK
 class TransHVTotal : public hwreg::RegisterBase<TransHVTotal, uint32_t> {
@@ -44,6 +52,10 @@ public:
     DEF_FIELD(19, 18, port_sync_mode_master_select);
     DEF_FIELD(17, 16, sync_polarity);
     DEF_BIT(15, port_sync_mode_enable);
+    DEF_FIELD(14, 12, edp_input_select);
+    static constexpr uint32_t kPipeA = 0;
+    static constexpr uint32_t kPipeB = 5;
+    static constexpr uint32_t kPipeC = 6;
     DEF_BIT(8, dp_vc_payload_allocate);
     DEF_FIELD(3, 1, dp_port_width_selection);
 };
@@ -112,8 +124,8 @@ public:
 
 class TranscoderRegs {
 public:
-    TranscoderRegs(Pipe pipe) : pipe_(pipe) {
-        offset_ = pipe * 0x1000;
+    TranscoderRegs(Trans trans) : trans_(trans) {
+        offset_ = trans == TRANS_EDP ? 0xf000 : (trans * 0x1000);
     }
 
     hwreg::RegisterAddr<TransHVTotal> HTotal() { return GetReg<TransHVTotal>(0x60000); }
@@ -128,8 +140,9 @@ public:
     hwreg::RegisterAddr<TransConf> Conf() { return GetReg<TransConf>(0x70008); }
 
     hwreg::RegisterAddr<TransClockSelect> ClockSelect() {
+        ZX_ASSERT(trans_ != TRANS_EDP);
         // This uses a different offset from the other transcoder registers.
-        return hwreg::RegisterAddr<TransClockSelect>(0x46140 + pipe_ * 4);
+        return hwreg::RegisterAddr<TransClockSelect>(0x46140 + trans_ * 4);
     }
     hwreg::RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
     hwreg::RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }
@@ -142,7 +155,7 @@ private:
         return hwreg::RegisterAddr<RegType>(base_addr + offset_);
     }
 
-    Pipe pipe_;
+    Trans trans_;
     uint32_t offset_;
 
 };

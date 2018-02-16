@@ -21,13 +21,15 @@
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
+DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi, registers::Dpll dpll,
+                             registers::Trans trans, registers::Pipe pipe)
         : DisplayDeviceType(controller->zxdev()), controller_(controller)
-        , ddi_(ddi), pipe_(pipe) {}
+        , ddi_(ddi), dpll_(dpll), trans_(trans), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
     if (inited_) {
         ResetPipe();
+        ResetTrans();
         ResetDdi();
     }
     if (framebuffer_) {
@@ -101,8 +103,12 @@ bool DisplayDevice::EnablePowerWell2() {
     return true;
 }
 
-bool DisplayDevice::ResetPipe() {
-    return controller_->ResetPipe(pipe_);
+void DisplayDevice::ResetPipe() {
+    controller_->ResetPipe(pipe_);
+}
+
+bool DisplayDevice::ResetTrans() {
+    return controller_->ResetTrans(trans_);
 }
 
 bool DisplayDevice::ResetDdi() {

@@ -817,15 +817,33 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 }
 
+static registers::Dpll select_dpll(registers::Ddi ddi) {
+    if (ddi == registers::DDI_A) {
+        return registers::DPLL_0;
+    } else {
+        // TODO(ZX-1413): Do a smarter mapping for stuff like HDPORT or sharing
+        return static_cast<registers::Dpll>(ddi + 1);
+    }
+}
+
+static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
+    if (ddi == registers::DDI_A) {
+        return registers::TRANS_EDP;
+    } else {
+        return static_cast<registers::Trans>(pipe);
+    }
+}
+
 } // namespace
 
 namespace i915 {
 
 DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, pipe) { }
+        : DisplayDevice(controller, ddi, select_dpll(ddi), select_trans(ddi, pipe), pipe) { }
 
 bool DpDisplay::Init(zx_display_info* info) {
-    if (!ResetPipe() || !ResetDdi()) {
+    ResetPipe();
+    if (!ResetTrans() || !ResetDdi()) {
         return false;
     }
 
@@ -844,7 +862,7 @@ bool DpDisplay::Init(zx_display_info* info) {
     static constexpr uint32_t kLinkRateMhz = 2700;
     static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
 
-    registers::TranscoderRegs trans(pipe());
+    registers::TranscoderRegs trans_regs(trans());
 
     // Configure this DPLL to produce a suitable clock signal.
     auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
@@ -889,9 +907,11 @@ bool DpDisplay::Init(zx_display_info* info) {
     }
 
     // Configure Transcoder Clock Select
-    auto clock_select = trans.ClockSelect().ReadFrom(mmio_space());
-    clock_select.set_trans_clock_select(ddi() + 1);
-    clock_select.WriteTo(mmio_space());
+    if (trans() != registers::TRANS_EDP) {
+        auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+        clock_select.set_trans_clock_select(ddi() + 1);
+        clock_select.WriteTo(mmio_space());
+    }
 
     // Pixel clock rate: The rate at which pixels are sent, in pixels per
     // second (Hz), divided by 10000.
@@ -918,20 +938,20 @@ bool DpDisplay::Init(zx_display_info* info) {
     uint32_t data_n;
     CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
 
-    auto data_m_reg = trans.DataM().FromValue(0);
+    auto data_m_reg = trans_regs.DataM().FromValue(0);
     data_m_reg.set_tu_or_vcpayload_size(63); // Size - 1, default TU size is 64
     data_m_reg.set_data_m_value(data_m);
     data_m_reg.WriteTo(mmio_space());
 
-    auto data_n_reg = trans.DataN().FromValue(0);
+    auto data_n_reg = trans_regs.DataN().FromValue(0);
     data_n_reg.set_data_n_value(data_n);
     data_n_reg.WriteTo(mmio_space());
 
-    auto link_m_reg = trans.LinkM().FromValue(0);
+    auto link_m_reg = trans_regs.LinkM().FromValue(0);
     link_m_reg.set_link_m_value(link_m);
     link_m_reg.WriteTo(mmio_space());
 
-    auto link_n_reg = trans.LinkN().FromValue(0);
+    auto link_n_reg = trans_regs.LinkN().FromValue(0);
     link_n_reg.set_link_n_value(link_n);
     link_n_reg.WriteTo(mmio_space());
 
@@ -946,35 +966,35 @@ bool DpDisplay::Init(zx_display_info* info) {
     uint32_t v_sync_end = v_sync_start + timing.vertical_sync_pulse;
     uint32_t v_total = v_sync_end + timing.vertical_back_porch;
 
-    auto h_total_reg = trans.HTotal().FromValue(0);
+    auto h_total_reg = trans_regs.HTotal().FromValue(0);
     h_total_reg.set_count_total(h_total);
     h_total_reg.set_count_active(h_active);
     h_total_reg.WriteTo(mmio_space());
-    auto v_total_reg = trans.VTotal().FromValue(0);
+    auto v_total_reg = trans_regs.VTotal().FromValue(0);
     v_total_reg.set_count_total(v_total);
     v_total_reg.set_count_active(v_active);
     v_total_reg.WriteTo(mmio_space());
 
-    auto h_sync_reg = trans.HSync().FromValue(0);
+    auto h_sync_reg = trans_regs.HSync().FromValue(0);
     h_sync_reg.set_sync_start(h_sync_start);
     h_sync_reg.set_sync_end(h_sync_end);
     h_sync_reg.WriteTo(mmio_space());
-    auto v_sync_reg = trans.VSync().FromValue(0);
+    auto v_sync_reg = trans_regs.VSync().FromValue(0);
     v_sync_reg.set_sync_start(v_sync_start);
     v_sync_reg.set_sync_end(v_sync_end);
     v_sync_reg.WriteTo(mmio_space());
 
     // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
-    trans.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space());
-    trans.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
+    trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space());
+    trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
 
-    auto msa_misc = trans.MsaMisc().FromValue(0);
+    auto msa_misc = trans_regs.MsaMisc().FromValue(0);
     msa_misc.set_sync_clock(1);
     msa_misc.set_bits_per_color(msa_misc.k8Bbc); // kPixelFormat
     msa_misc.set_color_format(msa_misc.kRgb); // kPixelFormat
     msa_misc.WriteTo(mmio_space());
 
-    auto ddi_func = trans.DdiFuncControl().ReadFrom(mmio_space());
+    auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
     ddi_func.set_trans_ddi_function_enable(1);
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
@@ -982,10 +1002,12 @@ bool DpDisplay::Init(zx_display_info* info) {
     ddi_func.set_sync_polarity(timing.vertical_sync_polarity << 1 | timing.horizontal_sync_polarity);
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_dp_vc_payload_allocate(0);
+    ddi_func.set_edp_input_select(pipe() == registers::PIPE_A ? ddi_func.kPipeA :
+            (pipe() == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
     ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
     ddi_func.WriteTo(mmio_space());
 
-    auto trans_conf = trans.Conf().FromValue(0);
+    auto trans_conf = trans_regs.Conf().FromValue(0);
     trans_conf.set_transcoder_enable(1);
     trans_conf.set_interlaced_mode(timing.interlaced);
     trans_conf.WriteTo(mmio_space());

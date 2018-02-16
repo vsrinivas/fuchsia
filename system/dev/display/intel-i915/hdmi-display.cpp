@@ -164,7 +164,10 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 namespace i915 {
 
 HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, pipe) { }
+        : DisplayDevice(controller, ddi,
+                        // TODO(ZX-1413): Do a smarter mapping for stuff like HDPORT or sharing
+                        static_cast<registers::Dpll>(ddi + 1),
+                        static_cast<registers::Trans>(pipe), pipe) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -460,7 +463,8 @@ bool HdmiDisplay::Init(zx_display_info* info) {
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
     registers::GMBus4::Get().FromValue(0).WriteTo(mmio_space());
 
-    if (!ResetPipe() || !ResetDdi()) {
+    ResetPipe();
+    if (!ResetTrans() || !ResetDdi()) {
         return false;
     }
 
@@ -561,7 +565,7 @@ bool HdmiDisplay::Init(zx_display_info* info) {
         return false;
     }
 
-    registers::TranscoderRegs trans_regs(pipe());
+    registers::TranscoderRegs trans_regs(trans());
 
     // Configure Transcoder Clock Select
     auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());

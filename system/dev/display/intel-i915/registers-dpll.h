@@ -10,20 +10,28 @@
 
 namespace registers {
 
+static constexpr uint32_t kDpllCount = 4;
+
+enum Dpll { DPLL_0, DPLL_1, DPLL_2, DPLL_3 };
+
+static const Dpll kDplls[kDpllCount] = {
+    DPLL_0, DPLL_1, DPLL_2, DPLL_3,
+};
+
 // DPLL_CTRL1
 class DpllControl1 : public hwreg::RegisterBase<DpllControl1, uint32_t> {
 public:
-    hwreg::BitfieldRef<uint32_t> dpll_hdmi_mode(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_hdmi_mode(Dpll dpll) {
         int bit = dpll * 6 + 5;
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    hwreg::BitfieldRef<uint32_t> dpll_ssc_enable(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_ssc_enable(Dpll dpll) {
         int bit = dpll * 6 + 4;
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
-    hwreg::BitfieldRef<uint32_t> dpll_link_rate(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_link_rate(Dpll dpll) {
         int bit = dpll * 6 + 1;
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
     }
@@ -34,7 +42,7 @@ public:
     static constexpr int kLinkRate1080Mhz = 4; // DisplayPort 2.16 GHz
     static constexpr int kLinkRate2160Mhz = 5; // DisplayPort 4.32 GHz
 
-    hwreg::BitfieldRef<uint32_t> dpll_override(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_override(Dpll dpll) {
         int bit = dpll * 6;
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
@@ -70,9 +78,9 @@ public:
     DEF_FIELD(23, 9, dco_fraction);
     DEF_FIELD(8, 0, dco_integer);
 
-    static auto Get(int index) {
-        assert(index == 1 || index == 2 || index == 3);
-        return hwreg::RegisterAddr<DpllConfig1>(0x6c040 + ((index - 1) * 8));
+    static auto Get(Dpll dpll) {
+        ZX_ASSERT(dpll == DPLL_1 || dpll == DPLL_2 || dpll == DPLL_3);
+        return hwreg::RegisterAddr<DpllConfig1>(0x6c040 + ((dpll - 1) * 8));
     }
 };
 
@@ -99,8 +107,9 @@ public:
     static constexpr uint8_t k9000Mhz = 1;
     static constexpr uint8_t k8400Mhz = 3;
 
-    static auto Get(int index) {
-        return hwreg::RegisterAddr<DpllConfig2>(0x6c044 + ((index - 1) * 8));
+    static auto Get(int dpll) {
+        ZX_ASSERT(dpll == DPLL_1 || dpll == DPLL_2 || dpll == DPLL_3);
+        return hwreg::RegisterAddr<DpllConfig2>(0x6c044 + ((dpll - 1) * 8));
     }
 };
 
@@ -110,7 +119,7 @@ class DpllEnable : public hwreg::RegisterBase<DpllEnable, uint32_t> {
 public:
     DEF_BIT(31, enable_dpll);
 
-    static auto Get(int dpll) {
+    static auto Get(Dpll dpll) {
         if (dpll == 0) {
             return hwreg::RegisterAddr<DpllEnable>(0x46010); // LCPLL1_CTL
         } else if (dpll == 1) {
@@ -127,7 +136,7 @@ public:
 // DPLL_STATUS
 class DpllStatus : public hwreg::RegisterBase<DpllStatus, uint32_t> {
 public:
-    hwreg::BitfieldRef<uint32_t> dpll_lock(int dpll) {
+    hwreg::BitfieldRef<uint32_t> dpll_lock(Dpll dpll) {
         int bit = dpll * 8;
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }

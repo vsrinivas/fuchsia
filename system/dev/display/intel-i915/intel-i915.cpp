@@ -243,7 +243,7 @@ bool Controller::BringUpDisplayEngine() {
 
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
     // something special (i.e. for eDP), assume that the BIOS already enabled it.
-    auto dpll_enable = registers::DpllEnable::Get(0).ReadFrom(mmio_space_.get());
+    auto dpll_enable = registers::DpllEnable::Get(registers::DPLL_0).ReadFrom(mmio_space_.get());
     if (!dpll_enable.enable_dpll()) {
         // Set the cd_clk frequency to the minimum
         auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space_.get());
@@ -253,10 +253,10 @@ bool Controller::BringUpDisplayEngine() {
 
         // Configure DPLL0
         auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space_.get());
-        dpll_ctl1.dpll_link_rate(0).set(dpll_ctl1.kLinkRate810Mhz);
-        dpll_ctl1.dpll_override(0).set(1);
-        dpll_ctl1.dpll_hdmi_mode(0).set(0);
-        dpll_ctl1.dpll_ssc_enable(0).set(0);
+        dpll_ctl1.dpll_link_rate(registers::DPLL_0).set(dpll_ctl1.kLinkRate810Mhz);
+        dpll_ctl1.dpll_override(registers::DPLL_0).set(1);
+        dpll_ctl1.dpll_hdmi_mode(registers::DPLL_0).set(0);
+        dpll_ctl1.dpll_ssc_enable(registers::DPLL_0).set(0);
         dpll_ctl1.WriteTo(mmio_space_.get());
 
         // Enable DPLL0 and wait for it
@@ -336,9 +336,8 @@ bool Controller::BringUpDisplayEngine() {
     return true;
 }
 
-bool Controller::ResetPipe(registers::Pipe pipe) {
+void Controller::ResetPipe(registers::Pipe pipe) {
     registers::PipeRegs pipe_regs(pipe);
-    registers::TranscoderRegs trans_regs(pipe);
 
     // Disable planes
     pipe_regs.PlaneControl().FromValue(0).WriteTo(mmio_space());
@@ -351,6 +350,10 @@ bool Controller::ResetPipe(registers::Pipe pipe) {
         pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
         pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
     }
+}
+
+bool Controller::ResetTrans(registers::Trans trans) {
+    registers::TranscoderRegs trans_regs(trans);
 
     // Disable transcoder and wait it to stop
     auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
@@ -367,9 +370,11 @@ bool Controller::ResetPipe(registers::Pipe pipe) {
     trans_ddi_ctl.set_ddi_select(0);
     trans_ddi_ctl.WriteTo(mmio_space());
 
-    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    trans_clk_sel.set_trans_clock_select(0);
-    trans_clk_sel.WriteTo(mmio_space());
+    if (trans != registers::TRANS_EDP) {
+        auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
+        trans_clk_sel.set_trans_clock_select(0);
+        trans_clk_sel.WriteTo(mmio_space());
+    }
 
     return true;
 }
@@ -403,10 +408,13 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     dpll_ctrl2.ddi_clock_off(ddi).set(1);
     dpll_ctrl2.WriteTo(mmio_space());
 
-    uint8_t dpll_number = static_cast<uint8_t>(dpll_ctrl2.ddi_clock_select(ddi).get());
-    auto dpll_enable = registers::DpllEnable::Get(dpll_number).ReadFrom(mmio_space());
-    dpll_enable.set_enable_dpll(1);
-    dpll_enable.WriteTo(mmio_space());
+    // We don't want to disable DPLL0, since that drives cdclk
+    registers::Dpll dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
+    if (dpll != registers::DPLL_0) {
+        auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
+        dpll_enable.set_enable_dpll(1);
+        dpll_enable.WriteTo(mmio_space());
+    }
 
     return true;
 }
@@ -489,6 +497,10 @@ zx_status_t Controller::InitDisplays() {
 
         for (unsigned i = 0; i < registers::kPipeCount; i++) {
             ResetPipe(registers::kPipes[i]);
+        }
+
+        for (unsigned i = 0; i < registers::kTransCount; i++) {
+            ResetTrans(registers::kTrans[i]);
         }
 
         for (unsigned i = 0; i < registers::kDdiCount; i++) {

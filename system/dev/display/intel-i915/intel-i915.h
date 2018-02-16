@@ -16,6 +16,9 @@
 #include "display-device.h"
 #include "gtt.h"
 #include "igd.h"
+#include "registers-ddi.h"
+#include "registers-pipe.h"
+#include "registers-transcoder.h"
 
 namespace i915 {
 
@@ -40,7 +43,8 @@ public:
 
     int IrqLoop();
 
-    bool ResetPipe(registers::Pipe pipe);
+    void ResetPipe(registers::Pipe pipe);
+    bool ResetTrans(registers::Trans trans);
     bool ResetDdi(registers::Ddi ddi);
 
 private:

@@ -13,7 +13,9 @@
 #include "edid.h"
 #include "gtt.h"
 #include "registers-ddi.h"
+#include "registers-dpll.h"
 #include "registers-pipe.h"
+#include "registers-transcoder.h"
 
 namespace i915 {
 
@@ -24,7 +26,8 @@ using DisplayDeviceType = ddk::Device<DisplayDevice>;
 
 class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
 public:
-    DisplayDevice(Controller* device, registers::Ddi ddi, registers::Pipe pipe);
+    DisplayDevice(Controller* device, registers::Ddi ddi, registers::Dpll dpll,
+                  registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
     void DdkRelease();
@@ -41,11 +44,8 @@ public:
     const zx_display_info_t& info() const { return info_; }
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
-    int dpll() const {
-        // Skip over dpll0 because changing it requires messing around with CDCLK
-        // TODO(ZX-1413): Do a smarter mapping to handle stuff like HDPORT claims or sharing clocks
-        return pipe_ + 1;
-    }
+    registers::Trans trans() const { return trans_; }
+    registers::Dpll dpll() const { return dpll_; }
     const Controller* controller() { return controller_; }
 
 protected:
@@ -53,7 +53,8 @@ protected:
 
     hwreg::RegisterIo* mmio_space() const;
     bool EnablePowerWell2();
-    bool ResetPipe();
+    void ResetPipe();
+    bool ResetTrans();
     bool ResetDdi();
 
 private:
@@ -61,6 +62,8 @@ private:
     Controller* controller_;
 
     registers::Ddi ddi_;
+    registers::Dpll dpll_;
+    registers::Trans trans_;
     registers::Pipe pipe_;
 
     uintptr_t framebuffer_;
