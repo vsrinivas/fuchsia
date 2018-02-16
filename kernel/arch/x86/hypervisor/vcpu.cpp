@@ -666,14 +666,20 @@ Vcpu::~Vcpu() {
 }
 
 // Injects an interrupt into the guest, if there is one pending.
-static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
     uint32_t vector;
     zx_status_t status = local_apic_state->interrupt_tracker.Pop(&vector);
     if (status != ZX_OK) {
-        return;
+        return status == ZX_ERR_NOT_FOUND ? ZX_OK : status;
     }
 
-    if (vector <= X86_INT_MAX_INTEL_DEFINED || vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
+    if (vector == X86_INT_IPI_HALT) {
+        // Short circuit HALT IPIs so we can be sure the VCPU will exit.
+        return ZX_ERR_STOP;
+    }
+
+    if (vector <= X86_INT_MAX_INTEL_DEFINED ||
+        vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
         // If the vector is non-maskable or interrupts are enabled, we inject
         // an interrupt.
         vmcs->IssueInterrupt(vector);
@@ -682,6 +688,7 @@ static void local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
         // If interrupts are disabled, we set VM exit on interrupt enable.
         vmcs->InterruptWindowExiting(true);
     }
+    return ZX_OK;
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
@@ -690,7 +697,10 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_status_t status;
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-        local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
+        status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
+        if (status != ZX_OK) {
+            return status;
+        }
         if (x86_feature_test(X86_FEATURE_XSAVE)) {
             // Save the host XCR0, and load the guest XCR0.
             vmx_state_.host_state.xcr0 = x86_xgetbv(0);
