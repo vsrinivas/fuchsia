@@ -55,6 +55,7 @@ source_set("tests") {
 
   deps = [
     ":gap",
+    "//garnet/drivers/bluetooth/lib/gatt:testing",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/googletest:gtest",

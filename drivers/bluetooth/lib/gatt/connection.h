@@ -25,6 +25,8 @@ namespace gatt {
 
 class Server;
 
+namespace internal {
+
 // Represents the GATT data channel between the local adapter and a single
 // remote peer. A Connection supports simultaneous GATT client and server
 // functionality. An instance of Connection should exist on each ACL logical
@@ -39,13 +41,18 @@ class Connection final {
              fxl::RefPtr<att::Database> local_db);
   ~Connection();
 
-  gatt::Server* server() const { return server_.get(); }
+  Connection() = default;
+  Connection(Connection&&) = default;
+  Connection& operator=(Connection&&) = default;
+
+  Server* server() const { return server_.get(); }
 
  private:
-  std::unique_ptr<gatt::Server> server_;
+  std::unique_ptr<Server> server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
+}  // namespace internal
 }  // namespace gatt
 }  // namespace btlib

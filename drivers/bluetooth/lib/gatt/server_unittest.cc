@@ -6,7 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/att/database.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "lib/fxl/macros.h"
 

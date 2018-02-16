@@ -25,14 +25,17 @@ namespace btlib {
 namespace gap {
 
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
-                 fbl::RefPtr<l2cap::L2CAP> l2cap)
+                 fbl::RefPtr<l2cap::L2CAP> l2cap,
+                 fbl::RefPtr<gatt::GATT> gatt)
     : identifier_(fxl::GenerateUUID()),
       hci_(hci),
       init_state_(State::kNotInitialized),
       l2cap_(l2cap),
+      gatt_(gatt),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
   FXL_DCHECK(l2cap_);
+  FXL_DCHECK(gatt_);
 
   auto message_loop = fsl::MessageLoop::GetCurrent();
   FXL_DCHECK(message_loop)
@@ -402,7 +405,7 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
       Mode::kLegacy, hci_, &device_cache_);
 
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
-      hci_, hci_le_connector_.get(), &device_cache_, l2cap_);
+      hci_, hci_le_connector_.get(), &device_cache_, l2cap_, gatt_);
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 

@@ -16,11 +16,11 @@
 namespace bthost {
 
 // Implements the gatt::Server FIDL interface.
-class GattServerServer : public ServerBase<bluetooth::gatt::Server> {
+class GattServerServer : public GattServerBase<bluetooth::gatt::Server> {
  public:
   // |adapter_manager| is used to lazily request a handle to the corresponding
   // adapter. It MUST out-live this GattServerServer instance.
-  GattServerServer(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
+  GattServerServer(fbl::RefPtr<btlib::gatt::GATT> gatt,
                    f1dl::InterfaceRequest<bluetooth::gatt::Server> request);
 
   ~GattServerServer() override;

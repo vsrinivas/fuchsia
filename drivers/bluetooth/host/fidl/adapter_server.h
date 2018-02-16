@@ -24,7 +24,7 @@ class RemoteDevice;
 namespace bthost {
 
 // Implements the control.Adapter FIDL interface.
-class AdapterServer : public ServerBase<::bluetooth::control::Adapter> {
+class AdapterServer : public AdapterServerBase<::bluetooth::control::Adapter> {
  public:
   AdapterServer(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
                 f1dl::InterfaceRequest<bluetooth::control::Adapter> request);

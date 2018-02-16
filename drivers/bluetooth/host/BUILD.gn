@@ -8,22 +8,46 @@ import("//build/package.gni")
 driver_module("host") {
   output_name = "bthost"
 
+  deps = [
+    ":sources",
+  ]
+}
+
+source_set("sources") {
   sources = [
     "binding.c",
     "driver.cc",
+    "gatt_host.cc",
+    "gatt_host.h",
     "host.cc",
     "host.h",
     "host_device.cc",
     "host_device.h",
+
+    # FIDL servers
+    "fidl/adapter_server.cc",
+    "fidl/adapter_server.h",
+    "fidl/gatt_server_server.cc",
+    "fidl/gatt_server_server.h",
+    "fidl/helpers.cc",
+    "fidl/helpers.h",
+    "fidl/host_server.cc",
+    "fidl/host_server.h",
+    "fidl/low_energy_central_server.cc",
+    "fidl/low_energy_central_server.h",
+    "fidl/low_energy_peripheral_server.cc",
+    "fidl/low_energy_peripheral_server.h",
+    "fidl/server_base.h",
   ]
 
   deps = [
-    "fidl",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/lib/bluetooth/fidl",
+    "//garnet/lib/bluetooth/c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

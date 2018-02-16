@@ -19,11 +19,15 @@
 
 namespace bthost {
 
+class GattHost;
+
 // Implements the Host FIDL interface. Owns all FIDL connections that have been
 // opened through it.
-class HostServer : public ServerBase<::bluetooth::host::Host> {
+class HostServer : public AdapterServerBase<::bluetooth::host::Host> {
  public:
-  HostServer(zx::channel channel, fxl::WeakPtr<btlib::gap::Adapter> adapter);
+  HostServer(zx::channel channel,
+             fxl::WeakPtr<btlib::gap::Adapter> adapter,
+             fbl::RefPtr<GattHost> gatt_host);
   ~HostServer() override = default;
 
  private:
@@ -54,6 +58,9 @@ class HostServer : public ServerBase<::bluetooth::host::Host> {
         std::bind(&HostServer::OnConnectionError, this, server.get()));
     servers_[server.get()] = std::move(server);
   }
+
+  // We hold a reference to GattHost for dispatching GATT FIDL requests.
+  fbl::RefPtr<GattHost> gatt_host_;
 
   // All active FIDL interface servers.
   // NOTE: Each key is a raw pointer that is owned by the corresponding value.

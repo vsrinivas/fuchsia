@@ -12,7 +12,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "gatt.h"
+#include "gatt_defs.h"
 
 namespace btlib {
 namespace gatt {

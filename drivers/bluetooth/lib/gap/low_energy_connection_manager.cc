@@ -4,7 +4,6 @@
 
 #include "low_energy_connection_manager.h"
 
-#include "garnet/drivers/bluetooth/lib/gatt/connection.h"
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -81,21 +80,18 @@ class LowEnergyConnection {
   // Initializes the fixed channels. Packets will start being processed
   // asynchronously.
   void InitializeFixedChannels(fbl::RefPtr<l2cap::L2CAP> l2cap,
-                               fxl::RefPtr<att::Database> local_db) {
-    FXL_DCHECK(!gatt_);
+                               fbl::RefPtr<gatt::GATT> gatt) {
     FXL_DCHECK(l2cap);
-    FXL_DCHECK(local_db);
+    FXL_DCHECK(gatt);
 
     auto weak = weak_ptr_factory_.GetWeakPtr();
-    auto callback = [weak, this, local_db](fbl::RefPtr<l2cap::Channel> chan) {
+    auto callback = [weak, this, gatt](fbl::RefPtr<l2cap::Channel> chan) {
       if (!weak || !chan) {
         FXL_VLOG(1) << "gap: link was closed before opening fixed channels";
         return;
       }
 
-      FXL_DCHECK(!gatt_);
-      gatt_ =
-          std::make_unique<gatt::Connection>(id_, std::move(chan), local_db);
+      gatt->AddConnection(id_, std::move(chan));
     };
 
     l2cap->OpenFixedChannel(link_->handle(), l2cap::kATTChannelId, callback,
@@ -107,7 +103,6 @@ class LowEnergyConnection {
   const std::string& id() const { return id_; }
   hci::ConnectionHandle handle() const { return link_->handle(); }
   hci::Connection* link() const { return link_.get(); }
-  gatt::Connection* gatt() const { return gatt_.get(); }
 
  private:
   void CloseRefs() {
@@ -122,8 +117,6 @@ class LowEnergyConnection {
   std::unique_ptr<hci::Connection> link_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
-
-  std::unique_ptr<gatt::Connection> gatt_;
 
   // LowEnergyConnectionManager is responsible for making sure that these
   // pointers are always valid.
@@ -184,19 +177,20 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     fxl::RefPtr<hci::Transport> hci,
     hci::LowEnergyConnector* connector,
     RemoteDeviceCache* device_cache,
-    fbl::RefPtr<l2cap::L2CAP> l2cap)
+    fbl::RefPtr<l2cap::L2CAP> l2cap,
+    fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       l2cap_(l2cap),
-      gatt_registry_(std::make_unique<gatt::LocalServiceManager>()),
+      gatt_(gatt),
       connector_(connector),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(device_cache_);
   FXL_DCHECK(l2cap_);
-  FXL_DCHECK(gatt_registry_);
+  FXL_DCHECK(gatt_);
   FXL_DCHECK(hci_);
   FXL_DCHECK(connector_);
 
@@ -363,15 +357,6 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
   return InitializeConnection(peer->identifier(), std::move(link));
 }
 
-gatt::Connection* LowEnergyConnectionManager::GetGattConnection(
-    const std::string& peer_id) {
-  auto iter = connections_.find(peer_id);
-  if (iter == connections_.end())
-    return nullptr;
-
-  return iter->second->gatt();
-}
-
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(
     const ConnectionParametersCallback& callback) {
   test_conn_params_cb_ = callback;
@@ -505,7 +490,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
       device_id, std::move(link), task_runner_, weak_ptr_factory_.GetWeakPtr());
-  conn->InitializeFixedChannels(l2cap_, gatt_registry_->database());
+  conn->InitializeFixedChannels(l2cap_, gatt_);
 
   auto first_ref = conn->AddRef();
   connections_[device_id] = std::move(conn);
@@ -546,6 +531,7 @@ void LowEnergyConnectionManager::CleanUpConnection(
   peer->set_connection_state(RemoteDevice::ConnectionState::kNotConnected);
 
   // This will disable L2CAP on this link.
+  gatt_->RemoveConnection(conn->id());
   l2cap_->Unregister(conn->handle());
 
   if (!close_link) {

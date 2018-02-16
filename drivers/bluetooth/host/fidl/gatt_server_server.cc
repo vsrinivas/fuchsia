@@ -7,8 +7,10 @@
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/connection.h"
-#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "garnet/drivers/bluetooth/lib/gatt/server.h"
+
+#include "lib/fxl/functional/make_copyable.h"
 
 #include "helpers.h"
 
@@ -185,14 +187,13 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
 // Implements the gatt::Service FIDL interface. Instances of this class are only
 // created by a GattServerServer.
 class GattServerServer::ServiceImpl
-    : public ServerBase<::bluetooth::gatt::Service> {
+    : public GattServerBase<::bluetooth::gatt::Service> {
  public:
   ServiceImpl(GattServerServer* owner,
               uint64_t id,
               ::bluetooth::gatt::ServiceDelegatePtr delegate,
-              fxl::WeakPtr<::btlib::gap::Adapter> adapter,
               ::f1dl::InterfaceRequest<::bluetooth::gatt::Service> request)
-      : ServerBase(adapter, this, std::move(request)),
+      : GattServerBase(owner->gatt(), this, std::move(request)),
         owner_(owner),
         id_(id),
         delegate_(std::move(delegate)) {
@@ -223,39 +224,14 @@ class GattServerServer::ServiceImpl
                    const ::f1dl::String& peer_id,
                    ::f1dl::Array<uint8_t> value,
                    bool confirm) override {
-    auto* connmgr = adapter()->le_connection_manager();
-    ::btlib::gatt::LocalServiceManager::ClientCharacteristicConfig config;
-    if (!connmgr->gatt_registry()->GetCharacteristicConfig(
-            id_, characteristic_id, peer_id, &config)) {
-      FXL_VLOG(2) << "Client has not configured characteristic (id: " << peer_id
-                  << ")";
-      return;
-    }
-
-    // Make sure that the client has subscribed to the requested protocol
-    // method.
-    if ((confirm && !config.indicate) || (!confirm && !config.notify)) {
-      FXL_VLOG(2) << "Client has not subscribed to "
-                  << (confirm ? "indications" : "notifications")
-                  << " (id: " << peer_id << ")";
-      return;
-    }
-
-    auto* gatt = adapter()->le_connection_manager()->GetGattConnection(peer_id);
-    if (!gatt) {
-      FXL_VLOG(2) << "Client not connected (id: " << peer_id << ")";
-      return;
-    }
-
-    gatt->server()->SendNotification(
-        config.handle,
-        ::btlib::common::BufferView(value->data(), value->size()), confirm);
+    gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),
+                             confirm);
   }
 
   // Unregisters the underlying service if it is still active.
   void CleanUp() {
     delegate_ = nullptr;  // Closes the delegate handle.
-    adapter()->le_connection_manager()->gatt_registry()->UnregisterService(id_);
+    gatt()->UnregisterService(id_);
   }
 
   // |owner_| owns this instance and is expected to outlive it.
@@ -271,9 +247,9 @@ class GattServerServer::ServiceImpl
 };
 
 GattServerServer::GattServerServer(
-    fxl::WeakPtr<::btlib::gap::Adapter> adapter,
+    fbl::RefPtr<btlib::gatt::GATT> gatt,
     f1dl::InterfaceRequest<bluetooth::gatt::Server> request)
-    : ServerBase(adapter, this, std::move(request)), weak_ptr_factory_(this) {}
+    : GattServerBase(gatt, this, std::move(request)), weak_ptr_factory_(this) {}
 
 GattServerServer::~GattServerServer() {
   // This will remove all of our services from their adapter.
@@ -347,6 +323,8 @@ void GattServerServer::PublishService(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
+
+  // Set up event handlers.
   auto read_handler = [self](auto svc_id, auto id, auto offset,
                              const auto& responder) {
     if (self) {
@@ -370,36 +348,47 @@ void GattServerServer::PublishService(
       self->OnCharacteristicConfig(svc_id, id, peer_id, notify, indicate);
   };
 
-  auto id =
-      adapter()->le_connection_manager()->gatt_registry()->RegisterService(
-          std::move(service), read_handler, write_handler, ccc_callback);
-  if (!id) {
-    // TODO(armansito): Report a more detailed string if registration fails due
-    // to duplicate ids.
-    auto error = fidl_helpers::NewErrorStatus(ErrorCode::FAILED,
-                                              "Failed to publish service");
-    callback(std::move(error));
-    return;
-  }
+  auto id_cb = fxl::MakeCopyable(
+      [self, delegate = std::move(delegate),
+       service_iface = std::move(service_iface),
+       callback = std::move(callback)](btlib::gatt::IdType id) mutable {
+        if (!self)
+          return;
 
-  FXL_DCHECK(services_.find(id) == services_.end());
+        if (!id) {
+          // TODO(armansito): Report a more detailed string if registration
+          // fails due to duplicate ids.
+          auto error = fidl_helpers::NewErrorStatus(
+              ErrorCode::FAILED, "Failed to publish service");
+          callback(std::move(error));
+          return;
+        }
 
-  auto connection_error_cb = [self, id] {
-    FXL_VLOG(1) << "Removing GATT service (id: " << id << ")";
-    if (self)
-      self->RemoveService(id);
-  };
+        FXL_DCHECK(self->services_.find(id) == self->services_.end());
 
-  auto delegate_ptr = delegate.Bind();
-  delegate_ptr.set_error_handler(connection_error_cb);
+        // This will be called if either the delegate or the service connection
+        // closes.
+        auto connection_error_cb = [self, id] {
+          FXL_VLOG(1) << "Removing GATT service (id: " << id << ")";
+          if (self)
+            self->RemoveService(id);
+        };
 
-  auto service_server = std::make_unique<ServiceImpl>(
-      this, id, std::move(delegate_ptr), adapter()->AsWeakPtr(),
-      std::move(service_iface));
-  service_server->set_error_handler(connection_error_cb);
-  services_[id] = std::move(service_server);
+        auto delegate_ptr = delegate.Bind();
+        delegate_ptr.set_error_handler(connection_error_cb);
 
-  callback(Status::New());
+        auto service_server = std::make_unique<ServiceImpl>(
+            self.get(), id, std::move(delegate_ptr), std::move(service_iface));
+        service_server->set_error_handler(connection_error_cb);
+        self->services_[id] = std::move(service_server);
+
+        callback(Status::New());
+      });
+
+  gatt()->RegisterService(std::move(service), std::move(id_cb),
+                          std::move(read_handler), std::move(write_handler),
+                          std::move(ccc_callback),
+                          fsl::MessageLoop::GetCurrent()->task_runner());
 }
 
 void GattServerServer::OnReadRequest(

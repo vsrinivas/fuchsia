@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 #include "lib/fxl/memory/ref_counted.h"
@@ -18,10 +19,9 @@
 
 namespace bthost {
 
+class GattHost;
 class HostServer;
 
-// TODO(armansito): Move GATT into its own domain.
-//
 // Host is the top-level object of this driver and it is responsible for
 // managing the host subsystem stack. It owns the core gap::Adapter object, and
 // the FIDL server implementations. A Host's core responsibility is to relay
@@ -34,11 +34,14 @@ class HostServer;
 //     * GAP-related FIDL control messaging,
 //     * HCI command/event processing (gap::Adapter),
 //     * L2CAP fixed channel protocols that are handled internally (e.g. SMP),
-//     * GATT
 //
 // - L2CAP:
 //     * Channel <-> ACL routing
 //     * Sockets
+//
+// - GATT:
+//     * All GATT FIDL messages
+//     * All ATT protocol processing
 //
 // THREAD SAFETY: This class IS NOT thread-safe. All of its public methods
 // should be called on the Host thread only.
@@ -63,6 +66,9 @@ class Host final : public fxl::RefCountedThreadSafe<Host> {
 
   fbl::RefPtr<::btlib::l2cap::L2CAP> l2cap_;
   std::unique_ptr<::btlib::gap::Adapter> gap_;
+
+  // The GATT profile layer and bus.
+  fbl::RefPtr<GattHost> gatt_host_;
 
   // Currently connected Host interface handle. A Host allows only one of these
   // to be connected at a time.

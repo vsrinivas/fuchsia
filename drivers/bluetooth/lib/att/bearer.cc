@@ -219,6 +219,7 @@ Bearer::~Bearer() {
 }
 
 bool Bearer::Activate() {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   rx_task_.Reset(fbl::BindMember(this, &Bearer::OnRxBFrame));
   return chan_->Activate(rx_task_.callback(),
                          fbl::BindMember(this, &Bearer::OnChannelClosed),
@@ -226,6 +227,7 @@ bool Bearer::Activate() {
 }
 
 void Bearer::ShutDown() {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (is_open())
     ShutDownInternal(false /* due_to_timeout */);
 }
@@ -265,6 +267,7 @@ bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
 bool Bearer::SendInternal(common::ByteBufferPtr pdu,
                           const TransactionCallback& callback,
                           const ErrorCallback& error_callback) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
     FXL_VLOG(2) << "att: Bearer closed";
     return false;
@@ -341,6 +344,7 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
 }
 
 void Bearer::UnregisterHandler(HandlerId id) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(id != kInvalidHandlerId);
 
   auto iter = handler_id_map_.find(id);
@@ -431,6 +435,8 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
 void Bearer::SendErrorResponse(OpCode request_opcode,
                                Handle attribute_handle,
                                ErrorCode error_code) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
   auto buffer =
       common::NewSlabBuffer(sizeof(Header) + sizeof(ErrorResponseParams));
   FXL_CHECK(buffer);
@@ -556,6 +562,8 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
 }
 
 Bearer::RemoteTransaction* Bearer::FindRemoteTransaction(TransactionId id) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
   if (remote_request_ && remote_request_->id == id) {
     return &remote_request_;
   }

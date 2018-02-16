@@ -19,7 +19,7 @@ namespace bthost {
 
 // Implements the low_energy::Central FIDL interface.
 class LowEnergyCentralServer
-    : public ServerBase<bluetooth::low_energy::Central> {
+    : public AdapterServerBase<bluetooth::low_energy::Central> {
  public:
   LowEnergyCentralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,

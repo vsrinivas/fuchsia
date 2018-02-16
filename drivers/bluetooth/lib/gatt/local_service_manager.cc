@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 
 #include "lib/fxl/memory/weak_ptr.h"
 

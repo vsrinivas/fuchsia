@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <shared_mutex>
+#include <mutex>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>

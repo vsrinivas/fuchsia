@@ -9,6 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -48,7 +49,8 @@ class Adapter final {
   //
   // This will take ownership of |hci_device|.
   explicit Adapter(fxl::RefPtr<hci::Transport> hci,
-                   fbl::RefPtr<l2cap::L2CAP> l2cap);
+                   fbl::RefPtr<l2cap::L2CAP> l2cap,
+                   fbl::RefPtr<gatt::GATT> gatt);
   ~Adapter();
 
   // Returns a 128-bit UUID that uniquely identifies this adapter on the current
@@ -171,6 +173,10 @@ class Adapter final {
   // The L2CAP layer. We use this reference to manage logical links and obtain
   // fixed channels.
   fbl::RefPtr<l2cap::L2CAP> l2cap_;
+
+  // The GATT profile. We use this reference to add and remove data bearers and
+  // for service discovery.
+  fbl::RefPtr<gatt::GATT> gatt_;
 
   // Objects that abstract the controller for connection and advertising
   // procedures.

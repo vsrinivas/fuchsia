@@ -9,6 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
@@ -66,7 +67,8 @@ class LowEnergyConnectionManagerTest : public TestingBase {
         [this](auto link) { OnIncomingConnection(std::move(link)); });
 
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
-        transport(), connector_.get(), dev_cache_.get(), l2cap_);
+        transport(), connector_.get(), dev_cache_.get(), l2cap_,
+        gatt::testing::FakeLayer::Create());
 
     test_device()->SetConnectionStateCallback(
         std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged,

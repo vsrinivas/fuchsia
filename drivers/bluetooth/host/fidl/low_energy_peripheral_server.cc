@@ -67,7 +67,8 @@ void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
 LowEnergyPeripheralServer::LowEnergyPeripheralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
     f1dl::InterfaceRequest<Peripheral> request)
-    : ServerBase(adapter, this, std::move(request)), weak_ptr_factory_(this) {}
+    : AdapterServerBase(adapter, this, std::move(request)),
+      weak_ptr_factory_(this) {}
 
 LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
   auto* advertising_manager = adapter()->le_advertising_manager();

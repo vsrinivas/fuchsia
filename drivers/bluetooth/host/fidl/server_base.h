@@ -6,16 +6,22 @@
 
 #include <functional>
 
+#include <fbl/ref_ptr.h>
+
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace btlib {
+
 namespace gap {
-
 class Adapter;
-
 }  // namespace gap
+
+namespace gatt {
+class GATT;
+}  // namespace gatt
+
 }  // namespace btlib
 
 namespace bthost {
@@ -25,6 +31,8 @@ namespace bthost {
 class Server {
  public:
   virtual ~Server() = default;
+
+  virtual void set_error_handler(std::function<void()> handler) = 0;
 };
 
 // ServerBase is a common base implementation for FIDL interface servers.
@@ -32,37 +40,77 @@ template <typename Interface>
 class ServerBase : public Server, public Interface {
  public:
   // Constructs a FIDL server by binding a f1dl::InterfaceRequest.
-  ServerBase(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-             Interface* impl,
-             f1dl::InterfaceRequest<Interface> request)
-      : ServerBase(adapter, impl, request.PassChannel()) {}
+  ServerBase(Interface* impl, f1dl::InterfaceRequest<Interface> request)
+      : ServerBase(impl, request.PassChannel()) {}
 
   // Constructs a FIDL server by binding a zx::channel.
-  ServerBase(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-             Interface* impl,
-             zx::channel channel)
-      : binding_(impl, std::move(channel)), adapter_(adapter) {
+  ServerBase(Interface* impl, zx::channel channel)
+      : binding_(impl, std::move(channel)) {
     FXL_DCHECK(binding_.is_bound());
-    FXL_DCHECK(adapter_);
   }
 
   ~ServerBase() override = default;
 
-  void set_error_handler(std::function<void()> handler) {
+  void set_error_handler(std::function<void()> handler) override {
     binding_.set_error_handler(std::move(handler));
   }
-
- protected:
-  ::btlib::gap::Adapter* adapter() const { return adapter_.get(); }
 
  private:
   // Holds the channel from the FIDL client.
   ::f1dl::Binding<Interface> binding_;
 
-  // The underlying library Adapter.
-  fxl::WeakPtr<::btlib::gap::Adapter> adapter_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(ServerBase);
+};
+
+// Base template for GAP FIDL interface servers. The GAP profile is accessible
+// through an Adapter object.
+template <typename Interface>
+class AdapterServerBase : public ServerBase<Interface> {
+ public:
+  AdapterServerBase(fxl::WeakPtr<btlib::gap::Adapter> adapter,
+                    Interface* impl,
+                    f1dl::InterfaceRequest<Interface> request)
+      : AdapterServerBase(adapter, impl, request.PassChannel()) {}
+
+  AdapterServerBase(fxl::WeakPtr<btlib::gap::Adapter> adapter,
+                    Interface* impl,
+                    zx::channel channel)
+      : ServerBase<Interface>(impl, std::move(channel)), adapter_(adapter) {
+    FXL_DCHECK(adapter_);
+  }
+
+  ~AdapterServerBase() override = default;
+
+ protected:
+  btlib::gap::Adapter* adapter() const { return adapter_.get(); }
+
+ private:
+  fxl::WeakPtr<btlib::gap::Adapter> adapter_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdapterServerBase);
+};
+
+// Base template for GATT FIDL interface servers. The GATT profile is accessible
+// through an Adapter object.
+template <typename Interface>
+class GattServerBase : public ServerBase<Interface> {
+ public:
+  GattServerBase(fbl::RefPtr<btlib::gatt::GATT> gatt,
+                 Interface* impl,
+                 f1dl::InterfaceRequest<Interface> request)
+      : ServerBase<Interface>(impl, std::move(request)), gatt_(gatt) {
+    FXL_DCHECK(gatt_);
+  }
+
+  ~GattServerBase() override = default;
+
+ protected:
+  fbl::RefPtr<btlib::gatt::GATT> gatt() const { return gatt_; }
+
+ private:
+  fbl::RefPtr<btlib::gatt::GATT> gatt_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(GattServerBase);
 };
 
 }  // namespace bthost

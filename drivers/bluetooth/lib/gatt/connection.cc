@@ -10,6 +10,7 @@
 
 namespace btlib {
 namespace gatt {
+namespace internal {
 
 Connection::Connection(const std::string& peer_id,
                        fbl::RefPtr<l2cap::Channel> att_chan,
@@ -22,5 +23,6 @@ Connection::Connection(const std::string& peer_id,
 
 Connection::~Connection() {}
 
+}  // namespace internal
 }  // namespace gatt
 }  // namespace btlib

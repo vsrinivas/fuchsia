@@ -24,7 +24,7 @@ namespace bthost {
 AdapterServer::AdapterServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
     f1dl::InterfaceRequest<bluetooth::control::Adapter> request)
-    : ServerBase(adapter, this, std::move(request)),
+    : AdapterServerBase(adapter, this, std::move(request)),
       requesting_discovery_(false),
       weak_ptr_factory_(this) {}
 

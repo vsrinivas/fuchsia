@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 
 namespace btlib {
 namespace gatt {
