@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 import os
 import shutil
 import struct
@@ -49,9 +50,9 @@ def build_package(pm_bin, pkg_key, far_stg_dir, manifest, pkg_name):
     try:
         subprocess.check_call(init_cmd)
     except subprocess.CalledProcessError as e:
-        return None, "Could not initialize package: %s" % e
+        return None, None, "Could not initialize package: %s" % e
     except OSError as e:
-        return None, "Could not start package initializer: %s" % e
+        return None, None, "Could not start package initializer: %s" % e
 
     build_cmd = [pm_bin, "-o", far_stg_dir, "-k", pkg_key, "-m", manifest, "build"]
     try:
@@ -59,13 +60,14 @@ def build_package(pm_bin, pkg_key, far_stg_dir, manifest, pkg_name):
     except subprocess.CalledProcessError as e:
         return None, "Could not create package metadata FAR: %s" % e
     except OSError as e:
-        return None, "Could not start packging tool %s" % e
+        return None, None, "Could not start packging tool %s" % e
 
     far_path = os.path.join(far_stg_dir, "meta.far")
-    if os.path.exists(far_path):
-        return far_path, None
+    pkg_json = os.path.join(far_stg_dir, "meta", "package.json")
+    if os.path.exists(far_path) and os.path.exists(pkg_json):
+        return far_path, pkg_json, None
     else:
-        return None, "Unknown failure, metadata package not produced"
+        return None, None, "Unknown failure, metadata package not produced"
 
 def assemble_manifest(manifests_dir, output_stream):
     """Create a single manifest from the joining of the system and boot
@@ -78,7 +80,7 @@ def assemble_manifest(manifests_dir, output_stream):
 
     No returns, but may raise an exception if writing to output_stream fails.
     """
-    inputs = ["final_package_manifest", "final_archive_manifest"]
+    inputs = ["final_package_manifest"]
     for input in inputs:
         manifest = os.path.join(manifests_dir, input)
         if os.path.exists(manifest) and os.stat(manifest).st_size > 0:
@@ -87,7 +89,7 @@ def assemble_manifest(manifests_dir, output_stream):
                     output_stream.write(line)
             break
 
-def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir):
+def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir, version=0):
     """Add a FAR to the update repository under the specified name
 
     amber_bin: path to the amber binary
@@ -100,7 +102,7 @@ def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir):
     On success returns None, otherwise returns a string describing the error
     that occurred.
     """
-    cmd = [amber_bin, "-r", repo_dir, "-p", "-f", far, "-n", name, "-k", key_dir]
+    cmd = [amber_bin, "-r", repo_dir, "-p", "-f", far, "-n", "%s/%d" % (name, version), "-k", key_dir]
 
     try:
         subprocess.check_call(cmd)
@@ -185,12 +187,23 @@ def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
             for line in man_fd:
                 master_fd.write(line)
 
-        meta_far, err = build_package(pm_bin, pkg_key, far_stg, manifest, pkg)
+        meta_far, pkg_json, err = build_package(pm_bin, pkg_key, far_stg, manifest, pkg)
         if err is not None:
-            print "Building package failed: %s" % e
+            print "Building package failed: %s" % err
             break
 
-        result = add_far_to_repo(amber_bin, "%s.far" % pkg, meta_far, repo_key_dir, update_repo)
+        pkg_version = None
+        with open(pkg_json, 'r') as pkg_meta:
+            meta = json.load(pkg_meta)
+            print meta
+            pkg_version = int(meta["version"])
+
+        if pkg_version is None:
+            print "Could not read version from %q" % pkg_json
+            break
+
+        result = add_far_to_repo(amber_bin, pkg, meta_far, repo_key_dir, update_repo,
+                                 version=pkg_version)
         if result is not None:
             print "Package not added to update repo: %s" % result
             break
