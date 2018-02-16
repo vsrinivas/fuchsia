@@ -19,10 +19,6 @@
 
 namespace network {
 
-namespace {
-const size_t kMaxRedirects = 20;
-}  // namespace
-
 URLLoaderImpl::URLLoaderImpl(Coordinator* coordinator)
     : coordinator_(coordinator) {}
 
@@ -99,7 +95,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   response_body_mode_ = request->response_body_mode;
 
   asio::io_service io_service;
-  size_t redirectsLeft = kMaxRedirects;
+  bool redirect = false;
 
   current_url_ = url::GURL(url_str);
   if (!current_url_.is_valid()) {
@@ -108,6 +104,11 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   }
 
   do {
+    if (redirect) {
+      io_service.reset();
+      redirect = false;
+    }
+
     if (current_url_.SchemeIs("https")) {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
@@ -122,25 +123,25 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
-        return;
+        break;
       }
       c.Start(current_url_.host(),
               current_url_.has_port() ? current_url_.port() : "https");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
+        redirect = true;
         current_url_ = url::GURL(c.redirect_location_);
         if (!current_url_.is_valid()) {
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
-          return;
+          break;
         }
-        io_service.reset();
       }
 #else
       FXL_LOG(WARNING) << "https is not built-in. "
                           "please build with NETWORK_SERVICE_USE_HTTPS";
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
-      return;
+      break;
 #endif
     } else if (current_url_.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
@@ -151,27 +152,26 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
-        return;
+        break;
       }
       c.Start(current_url_.host(),
               current_url_.has_port() ? current_url_.port() : "http");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
+        redirect = true;
         current_url_ = url::GURL(c.redirect_location_);
         if (!current_url_.is_valid()) {
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
-          return;
+          break;
         }
-        io_service.reset();
       }
     } else {
       // unknown protocol
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
-      return;
+      break;
     }
-  } while (--redirectsLeft);
-  SendError(network::NETWORK_ERR_TOO_MANY_REDIRECTS);
+  } while (redirect);
 }
 
 }  // namespace network
