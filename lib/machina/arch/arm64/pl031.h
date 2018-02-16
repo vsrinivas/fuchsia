@@ -6,11 +6,12 @@
 #define GARNET_LIB_MACHINA_ARCH_ARM64_PL031_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/io.h>
 
-class Guest;
+#include "garnet/lib/machina/io.h"
 
 namespace machina {
+
+class Guest;
 
 // Implements the PL031 RTC.
 class Pl031 : public IoHandler {

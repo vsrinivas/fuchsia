@@ -25,7 +25,7 @@ class VirtioBalloon : public VirtioDevice {
  public:
   // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
   // of the guest page size.
-  static const uint32_t kPageSize = 4096;
+  static constexpr uint32_t kPageSize = 4096;
 
   VirtioBalloon(const PhysMem& phys_mem);
   ~VirtioBalloon() override = default;

@@ -6,13 +6,14 @@
 #define GARNET_LIB_MACHINA_ARCH_X86_IO_APIC_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/io.h>
 #include <zircon/compiler.h>
+
+#include "garnet/lib/machina/io.h"
+
+namespace machina {
 
 class Guest;
 class Vcpu;
-
-namespace machina {
 
 // Implements the IO APIC.
 class IoApic : public IoHandler {

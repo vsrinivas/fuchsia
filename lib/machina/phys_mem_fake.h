@@ -5,7 +5,9 @@
 #ifndef GARNET_LIB_MACHINA_PHYS_MEM_FAKE_H_
 #define GARNET_LIB_MACHINA_PHYS_MEM_FAKE_H_
 
-#include <hypervisor/phys_mem.h>
+#include "garnet/lib/machina/phys_mem.h"
+
+namespace machina {
 
 class PhysMemFake : public PhysMem {
  public:
@@ -19,5 +21,7 @@ class PhysMemFake : public PhysMem {
     addr_ = addr;
   }
 };
+
+}  // namespace machina
 
 #endif  // GARNET_LIB_MACHINA_PHYS_MEM_FAKE_H_

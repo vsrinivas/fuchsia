@@ -5,11 +5,11 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_TPM_H_
 
-#include <hypervisor/guest.h>
-#include <hypervisor/io.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/guest.h"
+#include "garnet/lib/machina/io.h"
 
 namespace machina {
 

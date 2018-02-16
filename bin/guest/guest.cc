@@ -9,13 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ios>
 #include <vector>
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <hypervisor/guest.h>
-#include <hypervisor/vcpu.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -26,11 +25,13 @@
 #include "garnet/bin/guest/zircon.h"
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
+#include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/hid_event_source.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/uart.h"
+#include "garnet/lib/machina/vcpu.h"
 #include "garnet/lib/machina/virtio_balloon.h"
 #include "garnet/lib/machina/virtio_block.h"
 #include "garnet/lib/machina/virtio_console.h"
@@ -44,21 +45,21 @@
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
 
-static const size_t kNumUarts = 1;
-static const uint64_t kUartBases[kNumUarts] = {
+static constexpr size_t kNumUarts = 1;
+static constexpr uint64_t kUartBases[kNumUarts] = {
     // TODO(abdulla): Considering parsing this from the MDI.
     machina::kPl011PhysBase,
 };
 #elif __x86_64__
-#include <hypervisor/x86/acpi.h>
+#include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/io_port.h"
 #include "garnet/lib/machina/arch/x86/page_table.h"
 #include "garnet/lib/machina/arch/x86/tpm.h"
 
-static const char kDsdtPath[] = "/pkg/data/dsdt.aml";
-static const char kMcfgPath[] = "/pkg/data/mcfg.aml";
-static const size_t kNumUarts = 4;
-static const uint64_t kUartBases[kNumUarts] = {
+static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
+static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
+static constexpr size_t kNumUarts = 4;
+static constexpr uint64_t kUartBases[kNumUarts] = {
     machina::kI8250Base0,
     machina::kI8250Base1,
     machina::kI8250Base2,
@@ -66,7 +67,7 @@ static const uint64_t kUartBases[kNumUarts] = {
 };
 #endif
 
-static const size_t kInputQueueDepth = 64;
+static constexpr size_t kInputQueueDepth = 64;
 
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                                   uint32_t threshold,
@@ -89,7 +90,7 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
                   << " -> " << std::hex << target_pages;
     zx_status_t status = balloon->UpdateNumPages(target_pages);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " updating balloon size.";
+      FXL_LOG(ERROR) << "Error " << status << " updating balloon size";
     }
     return;
   }
@@ -124,14 +125,14 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   int ret = thrd_create_with_name(&thread, balloon_stats_task, args,
                                   "virtio-balloon");
   if (ret != thrd_success) {
-    FXL_LOG(ERROR) << "Failed to create balloon thread " << ret << ".";
+    FXL_LOG(ERROR) << "Failed to create balloon thread " << ret;
     delete args;
     return ZX_ERR_INTERNAL;
   }
 
   ret = thrd_detach(thread);
   if (ret != thrd_success) {
-    FXL_LOG(ERROR) << "Failed to detach balloon thread " << ret << ".";
+    FXL_LOG(ERROR) << "Failed to detach balloon thread " << ret;
     return ZX_ERR_INTERNAL;
   }
 
@@ -191,7 +192,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  Guest guest;
+  machina::Guest guest;
   status = guest.Init(options.memory());
   if (status != ZX_OK)
     return status;
@@ -207,14 +208,13 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  struct acpi_config acpi_config = {
+  machina::AcpiConfig acpi_cfg = {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
       .io_apic_addr = machina::kIoApicPhysBase,
       .num_cpus = 1,
   };
-  status =
-      create_acpi_table(acpi_config, physmem_addr, physmem_size, pt_end_off);
+  status = create_acpi_table(acpi_cfg, physmem_addr, physmem_size, pt_end_off);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create ACPI table";
     return status;
@@ -275,18 +275,18 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  auto initialize_vcpu = [boot_ptr, &interrupt_controller](Guest* guest,
-                                                           uintptr_t guest_ip,
-                                                           uint64_t id, Vcpu* vcpu) {
+  auto initialize_vcpu = [boot_ptr, &interrupt_controller](
+                             machina::Guest* guest, uintptr_t guest_ip,
+                             uint64_t id, machina::Vcpu* vcpu) {
     zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU.";
+      FXL_LOG(ERROR) << "Failed to create VCPU";
       return status;
     }
     // Register VCPU with ID 0.
     status = interrupt_controller.RegisterVcpu(id, vcpu);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller.";
+      FXL_LOG(ERROR) << "Failed to register VCPU with interrupt controller";
       return status;
     }
     // Setup initial VCPU state.
@@ -301,7 +301,6 @@ int main(int argc, char** argv) {
   };
 
   guest.RegisterVcpuFactory(initialize_vcpu);
-
 
 #if __aarch64__
   machina::Pl031 pl031;

@@ -5,16 +5,16 @@
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/bits.h>
-#include <hypervisor/guest.h>
-#include <hypervisor/vcpu.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/guest.h"
+#include "garnet/lib/machina/vcpu.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
-static const uint64_t kGicRevision = 2;
+static constexpr uint64_t kGicRevision = 2;
 
 // clang-format off
 

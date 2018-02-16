@@ -19,7 +19,7 @@ namespace machina {
 // Stores the state of a block device.
 class VirtioBlock : public VirtioDevice {
  public:
-  static const size_t kSectorSize = 512;
+  static constexpr size_t kSectorSize = 512;
 
   VirtioBlock(const PhysMem& phys_mem);
   ~VirtioBlock() override = default;

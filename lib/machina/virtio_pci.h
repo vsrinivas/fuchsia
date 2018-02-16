@@ -16,7 +16,7 @@ class VirtioDevice;
 
 typedef struct virtio_queue virtio_queue_t;
 
-static const size_t kVirtioPciNumCapabilities = 4;
+static constexpr size_t kVirtioPciNumCapabilities = 4;
 
 /* Virtio PCI transport implementation. */
 class VirtioPci : public PciDevice {

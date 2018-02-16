@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/arch/x86/page_table.h"
-
 #include <limits.h>
 #include <stdlib.h>
 #include <cinttypes>
 
+#include "garnet/lib/machina/arch/x86/page_table.h"
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "gtest/gtest.h"
 
@@ -101,7 +100,8 @@ TEST(PageTableTest, 1gb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 1 << 30), &pte_off),
+  ASSERT_EQ(machina::create_page_table(
+                machina::PhysMemFake((uintptr_t)actual, 1 << 30), &pte_off),
             ZX_OK);
 
   // pml4
@@ -117,7 +117,8 @@ TEST(PageTableTest, 2mb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 2 << 20), &pte_off),
+  ASSERT_EQ(machina::create_page_table(
+                machina::PhysMemFake((uintptr_t)actual, 2 << 20), &pte_off),
             ZX_OK);
 
   // pml4
@@ -135,9 +136,9 @@ TEST(PageTableTest, 4kb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(
-      machina::create_page_table(PhysMemFake((uintptr_t)actual, 4 * 4 << 10), &pte_off),
-      ZX_OK);
+  ASSERT_EQ(machina::create_page_table(
+                machina::PhysMemFake((uintptr_t)actual, 4 * 4 << 10), &pte_off),
+            ZX_OK);
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -159,8 +160,9 @@ TEST(PageTableTest, MixedPages) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10)),
-                                       &pte_off),
+  ASSERT_EQ(machina::create_page_table(
+                machina::PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10)),
+                &pte_off),
             ZX_OK);
 
   // pml4
@@ -199,7 +201,8 @@ TEST(PageTableTest, Complex) {
   //
   // PT
   // >  264 mapped pages
-  ASSERT_EQ(machina::create_page_table(PhysMemFake((uintptr_t)actual, 0x87B08000), &pte_off),
+  ASSERT_EQ(machina::create_page_table(
+                machina::PhysMemFake((uintptr_t)actual, 0x87B08000), &pte_off),
             ZX_OK);
 
   // pml4

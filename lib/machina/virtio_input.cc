@@ -12,9 +12,9 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hypervisor/bits.h>
 #include <virtio/virtio_ids.h>
 
+#include "garnet/lib/machina/bits.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {

@@ -6,13 +6,13 @@
 #define GARNET_LIB_MACHINA_PCI_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/guest.h>
-#include <hypervisor/io.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
+#include "garnet/lib/machina/io.h"
 
 // clang-format off
 

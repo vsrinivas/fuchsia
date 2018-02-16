@@ -7,24 +7,24 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/guest.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/guest.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
 // Use an async trap for the first port (TX port) only.
-static const uint64_t kI8250AsyncBase = 0;
-static const uint64_t kI8250AsyncSize = 1;
-static const uint64_t kI8250AsyncOffset = 0;
-static const uint64_t kI8250SyncBase = kI8250AsyncSize;
-static const uint64_t kI8250SyncSize = kI8250Size - kI8250AsyncSize;
-static const uint64_t kI8250SyncOffset = kI8250AsyncSize;
+static constexpr uint64_t kI8250AsyncBase = 0;
+static constexpr uint64_t kI8250AsyncSize = 1;
+static constexpr uint64_t kI8250AsyncOffset = 0;
+static constexpr uint64_t kI8250SyncBase = kI8250AsyncSize;
+static constexpr uint64_t kI8250SyncSize = kI8250Size - kI8250AsyncSize;
+static constexpr uint64_t kI8250SyncOffset = kI8250AsyncSize;
 
 // I8250 state flags.
-static const uint64_t kI8250LineStatusEmpty = 1u << 5;
-static const uint64_t kI8250LineStatusIdle = 1u << 6;
+static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
+static constexpr uint64_t kI8250LineStatusIdle = 1u << 6;
 
 // clang-format off
 

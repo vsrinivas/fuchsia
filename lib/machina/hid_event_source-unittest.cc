@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/hid_event_source.h"
-
 #include <fbl/vector.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 
+#include "garnet/lib/machina/hid_event_source.h"
 #include "gtest/gtest.h"
 
 // Yanked from system/ulib/hid/hid.c
@@ -19,7 +18,7 @@ namespace {
 
 static constexpr size_t kInputQueueSize = 8;
 
-static const hid_keys_t kAllKeysUp = {};
+static constexpr hid_keys_t kAllKeysUp = {};
 
 // Utility class for performing verifications on the state of an
 // InputDispatcher.

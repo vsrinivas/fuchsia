@@ -6,9 +6,8 @@
 
 #include <stdio.h>
 
-#include <hypervisor/guest.h>
-
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/rtc.h"
 #include "lib/fxl/logging.h"
 

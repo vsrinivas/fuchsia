@@ -20,7 +20,7 @@
 
 namespace machina {
 
-static const char kInputDirPath[] = "/dev/class/input";
+static constexpr char kInputDirPath[] = "/dev/class/input";
 
 zx_status_t HidInputDevice::Start() {
   thrd_t thread;
@@ -80,7 +80,7 @@ zx_status_t HidInputDevice::HidEventLoop() {
 
     zx_status_t status = HandleHidKeys(curr_keys);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to handle HID keys.";
+      FXL_LOG(ERROR) << "Failed to handle HID keys";
       return status;
     }
   }
@@ -145,7 +145,7 @@ zx_status_t HidEventSource::AddInputDevice(int dirfd,
 
   int proto = INPUT_PROTO_NONE;
   if (ioctl_input_get_protocol(fd.get(), &proto) < 0) {
-    FXL_LOG(ERROR) << "Failed to get input device protocol.";
+    FXL_LOG(ERROR) << "Failed to get input device protocol";
     return ZX_ERR_INVALID_ARGS;
   }
 

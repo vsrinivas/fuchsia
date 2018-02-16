@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/pci.h"
-
 #include <hw/pci.h>
-#include <hypervisor/bits.h>
 
+#include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/pci.h"
 #include "gtest/gtest.h"
 
 #define PCI_CONFIG_ADDRESS_PORT_BASE 0

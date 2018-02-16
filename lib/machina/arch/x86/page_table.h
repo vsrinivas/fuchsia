@@ -7,9 +7,9 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_PAGE_TABLE_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_PAGE_TABLE_H_
 
-class PhysMem;
-
 namespace machina {
+
+class PhysMem;
 
 /**
  * Create an identity-mapped page table.

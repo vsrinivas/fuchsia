@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MACHINA_SERIAL_SERVICE_IMPL_H_
+#define GARNET_LIB_MACHINA_SERIAL_SERVICE_IMPL_H_
 
 #include <zx/socket.h>
 
@@ -28,3 +29,5 @@ class SerialServiceImpl : public SerialService {
 };
 
 }  // namespace machina
+
+#endif  // GARNET_LIB_MACHINA_SERIAL_SERVICE_IMPL_H_

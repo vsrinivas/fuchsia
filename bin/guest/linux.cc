@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/guest/linux.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libfdt.h>
@@ -12,27 +14,26 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <hypervisor/bits.h>
-#include <hypervisor/guest.h>
 
 #include "garnet/bin/guest/efi.h"
 #include "garnet/bin/guest/kernel.h"
-#include "garnet/bin/guest/linux.h"
+#include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/guest.h"
 
 #if __x86_64__
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
 
-static const uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader
-static const uint16_t kMinBootProtocol = 0x200;      // bzImage boot protocol
-static const uint16_t kBootFlagMagic = 0xaa55;
-static const uint32_t kHeaderMagic = 0x53726448;
-static const uintptr_t kEntryOffset = 0x200;
-__UNUSED static const uintptr_t kE820MapOffset = 0x02d0;
-__UNUSED static const size_t kMaxE820Entries = 128;
-__UNUSED static const size_t kSectorSize = 512;
+static constexpr uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader
+static constexpr uint16_t kMinBootProtocol = 0x200;  // bzImage boot protocol
+static constexpr uint16_t kBootFlagMagic = 0xaa55;
+static constexpr uint32_t kHeaderMagic = 0x53726448;
+static constexpr uintptr_t kEntryOffset = 0x200;
+__UNUSED static constexpr uintptr_t kE820MapOffset = 0x02d0;
+__UNUSED static constexpr size_t kMaxE820Entries = 128;
+__UNUSED static constexpr size_t kSectorSize = 512;
 
-static const char kDtbPath[] = "/pkg/data/board.dtb";
+static constexpr char kDtbPath[] = "/pkg/data/board.dtb";
 
 // clang-format off
 

@@ -134,7 +134,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
   zx_status_t status = HandleQueueNotify(kicked_queue);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to handle queue notify event.";
+    FXL_LOG(ERROR) << "Failed to handle queue notify event";
     return status;
   }
 
@@ -201,7 +201,7 @@ static int virtio_queue_poll_task(void* ctx) {
     if (status == ZX_ERR_STOP)
       break;
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " while handling queue buffer.";
+      FXL_LOG(ERROR) << "Error " << status << " while handling queue buffer";
       result = status;
       break;
     }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/guest/zircon.h"
+
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -9,19 +11,18 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <hypervisor/guest.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
 
 #include "garnet/bin/guest/efi.h"
 #include "garnet/bin/guest/kernel.h"
-#include "garnet/bin/guest/zircon.h"
+#include "garnet/lib/machina/guest.h"
 
 #if __x86_64__
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
 
-static const uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
+static constexpr uint64_t kBuildSigStartMagic = 0x5452545347495342;  // BSIGSTRT
 
 static bool is_bootdata(const bootdata_t* header) {
   return header->type == BOOTDATA_CONTAINER &&

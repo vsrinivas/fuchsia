@@ -8,13 +8,13 @@
 #include <limits.h>
 
 #include <fbl/mutex.h>
-#include <hypervisor/io.h>
+
+#include "garnet/lib/machina/io.h"
+
+namespace machina {
 
 class Guest;
 class Vcpu;
-struct SoftwareGeneratedInterrupt;
-
-namespace machina {
 
 // Implements GIC distributor.
 class GicDistributor : public IoHandler {

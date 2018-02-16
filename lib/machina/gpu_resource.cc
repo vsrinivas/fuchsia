@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
 #include "garnet/lib/machina/gpu_resource.h"
+
+#include <string.h>
 
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "lib/fxl/logging.h"

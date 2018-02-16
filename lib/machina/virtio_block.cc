@@ -38,7 +38,7 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem)
 zx_status_t VirtioBlock::SetDispatcher(
     fbl::unique_ptr<BlockDispatcher> dispatcher) {
   if (dispatcher_ != nullptr) {
-    FXL_LOG(ERROR) << "Block device has already been initialized.";
+    FXL_LOG(ERROR) << "Block device has already been initialized";
     return ZX_ERR_BAD_STATE;
   }
 

@@ -161,7 +161,7 @@ int main(int argc, const char** argv) {
   app::ApplicationControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
   controller.set_error_handler([&loop] {
-    FXL_LOG(INFO) << "Launched application terminated.";
+    FXL_LOG(INFO) << "Launched application terminated";
     loop.PostQuitTask();
   });
 

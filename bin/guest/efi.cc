@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "efi.h"
+#include "garnet/bin/guest/efi.h"
 
-static const uint16_t kMzSignature = 0x5a4d;  // MZ
-static const uint32_t kMzMagic = 0x644d5241;  // ARM\x64
+static constexpr uint16_t kMzSignature = 0x5a4d;  // MZ
+static constexpr uint32_t kMzMagic = 0x644d5241;  // ARM\x64
 
 // MZ header used to boot ARM64 kernels.
 //

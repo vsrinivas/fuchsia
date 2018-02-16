@@ -114,7 +114,8 @@ static GuestConfigParser::OptionHandler append_option(
   };
 }
 
-static GuestConfigParser::OptionHandler append_string(std::string* out, const char* delim) {
+static GuestConfigParser::OptionHandler append_string(std::string* out,
+                                                      const char* delim) {
   return [out, delim](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
@@ -280,26 +281,23 @@ GuestConfig::GuestConfig()
 GuestConfig::~GuestConfig() = default;
 
 GuestConfigParser::GuestConfigParser(GuestConfig* config)
-    : config_(config),
-      options_{
-          {"kernel", save_option(&config_->kernel_path_)},
-          {"ramdisk", save_option(&config_->ramdisk_path_)},
-          {"block",
-           append_option<BlockSpec>(&config_->block_specs_, parse_block_spec)},
-          {"cmdline", save_option(&config_->cmdline_)},
-          {"cmdline-append", append_string(&config_->cmdline_, " ")},
+    : config_(config), options_ {
+  {"kernel", save_option(&config_->kernel_path_)},
+      {"ramdisk", save_option(&config_->ramdisk_path_)},
+      {"block",
+       append_option<BlockSpec>(&config_->block_specs_, parse_block_spec)},
+      {"cmdline", save_option(&config_->cmdline_)},
+      {"cmdline-append", append_string(&config_->cmdline_, " ")},
 #if __x86_64__
-          {"memory", parse_mem_size(&config_->memory_)},
+      {"memory", parse_mem_size(&config_->memory_)},
 #endif
-          {"balloon-demand-page",
-           set_flag(&config_->balloon_demand_page_, true)},
-          {"balloon-interval",
-           parse_number(&config_->balloon_interval_seconds_)},
-          {"balloon-threshold",
-           parse_number(&config_->balloon_pages_threshold_)},
-          {"nogpu", set_flag(&config_->enable_gpu_, false)},
-          {"block-wait", set_flag(&config_->block_wait_, true)},
-      } {}
+      {"balloon-demand-page", set_flag(&config_->balloon_demand_page_, true)},
+      {"balloon-interval", parse_number(&config_->balloon_interval_seconds_)},
+      {"balloon-threshold", parse_number(&config_->balloon_pages_threshold_)},
+      {"nogpu", set_flag(&config_->enable_gpu_, false)},
+      {"block-wait", set_flag(&config_->block_wait_, true)},
+}
+{}
 
 GuestConfigParser::~GuestConfigParser() = default;
 

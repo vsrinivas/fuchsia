@@ -7,9 +7,9 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/bits.h>
 #include <virtio/virtio_ids.h>
 
+#include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/virtio.h"
 #include "lib/fxl/logging.h"
 
@@ -40,19 +40,19 @@ static uint16_t kPciVendorIdVirtio = 0x1af4;
 //     |            |      |   Notify   |
 //      ------------        ------------
 // These structures are defined in Virtio 1.0 Section 4.1.4.
-static const uint8_t kVirtioPciBar = 0;
-static const uint8_t kVirtioPciNotifyBar = 1;
+static constexpr uint8_t kVirtioPciBar = 0;
+static constexpr uint8_t kVirtioPciNotifyBar = 1;
 
 // Common configuration.
-static const size_t kVirtioPciCommonCfgBase = 0;
-static const size_t kVirtioPciCommonCfgSize = 0x38;
-static const size_t kVirtioPciCommonCfgTop =
+static constexpr size_t kVirtioPciCommonCfgBase = 0;
+static constexpr size_t kVirtioPciCommonCfgSize = 0x38;
+static constexpr size_t kVirtioPciCommonCfgTop =
     kVirtioPciCommonCfgBase + kVirtioPciCommonCfgSize - 1;
 static_assert(kVirtioPciCommonCfgSize == sizeof(virtio_pci_common_cfg_t),
               "virtio_pci_common_cfg_t has unexpected size");
 // Virtio 1.0 Section 4.1.4.3.1: offset MUST be 4-byte aligned.
 static_assert(is_aligned(kVirtioPciCommonCfgBase, 4),
-              "Virtio PCI common config has illegal alignment.");
+              "Virtio PCI common config has illegal alignment");
 
 // Notification configuration.
 //
@@ -72,26 +72,26 @@ static_assert(is_aligned(kVirtioPciCommonCfgBase, 4),
 //      cap.offset + 4  -> Notify Queue 1
 //      ...
 //      cap.offset + 4n -> Notify Queuen 'n'
-static const size_t kVirtioPciNotifyCfgMultiplier = 4;
-static const size_t kVirtioPciNotifyCfgBase = 0;
+static constexpr size_t kVirtioPciNotifyCfgMultiplier = 4;
+static constexpr size_t kVirtioPciNotifyCfgBase = 0;
 // Virtio 1.0 Section 4.1.4.4.1: offset MUST be 2-byte aligned.
 static_assert(is_aligned(kVirtioPciNotifyCfgBase, 2),
-              "Virtio PCI notify config has illegal alignment.");
+              "Virtio PCI notify config has illegal alignment");
 
 // Interrupt status configuration.
-static const size_t kVirtioPciIsrCfgBase = 0x38;
-static const size_t kVirtioPciIsrCfgSize = 1;
-static const size_t kVirtioPciIsrCfgTop =
+static constexpr size_t kVirtioPciIsrCfgBase = 0x38;
+static constexpr size_t kVirtioPciIsrCfgSize = 1;
+static constexpr size_t kVirtioPciIsrCfgTop =
     kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
 // Virtio 1.0 Section 4.1.4.5: The offset for the ISR status has no alignment
 // requirements.
 
 // Device-specific configuration.
-static const size_t kVirtioPciDeviceCfgBase = 0x3c;
+static constexpr size_t kVirtioPciDeviceCfgBase = 0x3c;
 // Virtio 1.0 Section 4.1.4.6.1: The offset for the device-specific
 // configuration MUST be 4-byte aligned.
 static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
-              "Virtio PCI notify config has illegal alignment.");
+              "Virtio PCI notify config has illegal alignment");
 
 // Handle reads to the common configuration structure as defined in
 // Virtio 1.0 Section 4.1.4.3.
@@ -396,12 +396,12 @@ void VirtioPci::SetupCaps() {
   // used by Linux or Zircon.
 
   static_assert(kVirtioPciNumCapabilities == 4,
-                "Incorrect number of capabilities.");
+                "Incorrect number of capabilities");
   set_capabilities(capabilities_, kVirtioPciNumCapabilities);
 
   static_assert(
       kVirtioPciBar < PCI_MAX_BARS && kVirtioPciNotifyBar < PCI_MAX_BARS,
-      "Not enough BAR registers available.");
+      "Not enough BAR registers available");
   bar_[kVirtioPciBar].size = static_cast<uint32_t>(
       kVirtioPciDeviceCfgBase + device_->device_config_size_);
   bar_[kVirtioPciBar].trap_type = TrapType::MMIO_SYNC;

@@ -8,11 +8,11 @@
 #include <unistd.h>
 
 #include <fbl/unique_ptr.h>
-#include <hypervisor/vcpu.h>
 #include <virtio/block.h>
 #include <virtio/virtio_ring.h>
 
 #include "garnet/lib/machina/phys_mem_fake.h"
+#include "garnet/lib/machina/vcpu.h"
 #include "garnet/lib/machina/virtio.h"
 #include "garnet/lib/machina/virtio_block.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"

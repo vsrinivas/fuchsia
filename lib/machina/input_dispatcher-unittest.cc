@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/machina/input_dispatcher.h"
-
 #include "gtest/gtest.h"
 
 namespace machina {

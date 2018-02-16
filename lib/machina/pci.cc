@@ -8,8 +8,9 @@
 
 #include <fbl/auto_lock.h>
 #include <hw/pci.h>
-#include <hypervisor/bits.h>
 #include <zircon/assert.h>
+
+#include "garnet/lib/machina/bits.h"
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
@@ -53,10 +54,8 @@ constexpr uint8_t kPciCapNextOffset = 1;
 //
 // The device tree and DSDT define interrupts for 12 devices (IRQ 32-43).
 // Adding  additional devices beyond that will require updates to both.
-constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34,
-                                                               35, 36, 37,
-                                                               38, 39, 40,
-                                                               41, 42, 43};
+constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
 
 uint32_t PciBar::aspace() const {
   switch (trap_type) {
@@ -114,7 +113,7 @@ zx_status_t PciEcamHandler::Write(uint64_t addr, const IoValue& value) {
   return bus_->WriteEcam(addr, value);
 }
 
-static const PciDevice::Attributes kRootComplexAttributes = {
+static constexpr PciDevice::Attributes kRootComplexAttributes = {
     .device_id = PCI_DEVICE_ID_INTEL_Q35,
     .vendor_id = PCI_VENDOR_ID_INTEL,
     .subsystem_id = 0,

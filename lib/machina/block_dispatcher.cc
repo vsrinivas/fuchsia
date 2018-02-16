@@ -19,11 +19,12 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
+#include "garnet/lib/machina/phys_mem.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
-static const char kBlockDirPath[] = "/dev/class/block";
+static constexpr char kBlockDirPath[] = "/dev/class/block";
 
 // Dispatcher that fulfills block requests using file-descriptor IO
 // (ex: read/write to a file descriptor).

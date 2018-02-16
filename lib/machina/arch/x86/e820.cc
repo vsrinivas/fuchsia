@@ -6,16 +6,16 @@
 
 #include "garnet/lib/machina/address.h"
 
-static const uint32_t kE820Ram = 1;
-static const uint32_t kE820Reserved = 2;
+static constexpr uint32_t kE820Ram = 1;
+static constexpr uint32_t kE820Reserved = 2;
 
 // clang-format off
 
-static const uint64_t kAddr32kb     = 0x0000000000008000;
-static const uint64_t kAddr64kb     = 0x0000000000010000;
-static const uint64_t kAddr1mb      = 0x0000000000100000;
-static const uint64_t kAddr3500mb   = 0x00000000e0000000;
-static const uint64_t kAddr4000mb   = 0x0000000100000000;
+static constexpr uint64_t kAddr32kb     = 0x0000000000008000;
+static constexpr uint64_t kAddr64kb     = 0x0000000000010000;
+static constexpr uint64_t kAddr1mb      = 0x0000000000100000;
+static constexpr uint64_t kAddr3500mb   = 0x00000000e0000000;
+static constexpr uint64_t kAddr4000mb   = 0x0000000100000000;
 
 // clang-format on
 

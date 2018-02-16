@@ -6,11 +6,12 @@
 #define GARNET_LIB_MACHINA_ARCH_ARM64_PL011_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/io.h>
 
-class Guest;
+#include "garnet/lib/machina/io.h"
 
 namespace machina {
+
+class Guest;
 
 // Implements the PL011 UART.
 class Pl011 : public IoHandler {
@@ -22,7 +23,7 @@ class Pl011 : public IoHandler {
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
  private:
-  static const size_t kBufferSize = 128;
+  static constexpr size_t kBufferSize = 128;
   mutable fbl::Mutex mutex_;
 
   uint8_t tx_buffer_[kBufferSize] __TA_GUARDED(mutex_) = {};

@@ -30,7 +30,7 @@ class VirtioNet : public VirtioDevice {
   virtio_queue_t* tx_queue() { return &queues_[1]; }
 
  private:
-  static const uint16_t kNumQueues = 2;
+  static constexpr uint16_t kNumQueues = 2;
   static_assert(kNumQueues % 2 == 0,
                 "There must be a queue for both RX and TX");
 

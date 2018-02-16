@@ -10,8 +10,8 @@
 
 // NOTE(abdulla): Do not change this without testing both Linux and Zircon
 // running on both arm64 and x86.
-static const uintptr_t kKernelOffset = 0x100000;
-static const uintptr_t kRamdiskOffset = 0x4000000;
+static constexpr uintptr_t kKernelOffset = 0x100000;
+static constexpr uintptr_t kRamdiskOffset = 0x4000000;
 
 static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;

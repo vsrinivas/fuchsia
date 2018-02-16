@@ -6,12 +6,14 @@
 #define GARNET_LIB_MACHINA_ARCH_X86_IO_PORT_H_
 
 #include <fbl/mutex.h>
-#include <hypervisor/guest.h>
-#include <hypervisor/io.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include "garnet/lib/machina/io.h"
+
 namespace machina {
+
+class Guest;
 
 class PicHandler : public IoHandler {
  public:

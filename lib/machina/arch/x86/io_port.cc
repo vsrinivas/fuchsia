@@ -7,26 +7,24 @@
 #include <time.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/address.h>
-#include <hypervisor/bits.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/rtc.h"
 #include "lib/fxl/logging.h"
 
 // clang-format off
 
-namespace machina {
-
-// PIC constatants.
+// PIC constants.
 constexpr uint16_t kPicDataPort                 = 1;
 constexpr uint8_t kPicInvalid                   = UINT8_MAX;
 
 // PM1 relative port mappings.
-constexpr uint16_t kPm1StatusPort               = 0;
-constexpr uint16_t kPm1EnablePort               = 2;
-constexpr uint16_t kPm1ControlPort              = PM1_CONTROL_PORT - PM1_EVENT_PORT;
-constexpr uint16_t kPm1Size                     = kPm1EnablePort + 1;
+constexpr uint16_t kPm1StatusPortOffset         = 0;
+constexpr uint16_t kPm1EnablePortOffset         = 2;
+constexpr uint16_t kPm1ControlPortOffset        = machina::kPm1ControlPort - machina::kPm1EventPort;
+constexpr uint16_t kPm1Size                     = kPm1EnablePortOffset + 1;
 
 // RTC relative port mappings.
 constexpr uint16_t kRtcIndexPort                = 0;
@@ -64,6 +62,8 @@ constexpr uint8_t kI8042DataTestResponse        = 0x55;
 
 // clang-format on
 
+namespace machina {
+
 zx_status_t PicHandler::Init(Guest* guest, uint16_t base) {
   return guest->CreateMapping(TrapType::PIO_SYNC, base, kPicSize, 0, this);
 }
@@ -95,27 +95,27 @@ zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) {
 
 zx_status_t Pm1Handler::Init(Guest* guest) {
   // Map 2 distinct register blocks for event and control registers.
-  zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, PM1_EVENT_PORT,
+  zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, kPm1EventPort,
                                             kPm1Size, 0, this);
   if (status != ZX_OK)
     return status;
-  return guest->CreateMapping(TrapType::PIO_SYNC, PM1_CONTROL_PORT, kPm1Size,
+  return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size,
                               kPm1ControlPort, this);
 }
 
 zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
   switch (addr) {
-    case kPm1StatusPort:
+    case kPm1StatusPortOffset:
       value->access_size = 2;
       value->u16 = 0;
       break;
-    case kPm1EnablePort: {
+    case kPm1EnablePortOffset: {
       value->access_size = 2;
       fbl::AutoLock lock(&mutex_);
       value->u16 = enable_;
       break;
     }
-    case kPm1ControlPort:
+    case kPm1ControlPortOffset:
       value->u32 = 0;
       break;
     default:
@@ -126,16 +126,16 @@ zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
 
 zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
   switch (addr) {
-    case kPm1StatusPort:
+    case kPm1StatusPortOffset:
       break;
-    case kPm1EnablePort: {
+    case kPm1EnablePortOffset: {
       if (value.access_size != 2)
         return ZX_ERR_IO_DATA_INTEGRITY;
       fbl::AutoLock lock(&mutex_);
       enable_ = value.u16;
       break;
     }
-    case kPm1ControlPort: {
+    case kPm1ControlPortOffset: {
       uint16_t slp_en = bit_shift(value.u16, 13);
       uint16_t slp_type = bits_shift(value.u16, 12, 10);
       if (slp_en != 0) {

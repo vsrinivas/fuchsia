@@ -7,14 +7,14 @@
 #include <string.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/bits.h>
-#include <hypervisor/guest.h>
-#include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "garnet/lib/machina/address.h"
+#include "garnet/lib/machina/bits.h"
+#include "garnet/lib/machina/guest.h"
+#include "garnet/lib/machina/vcpu.h"
 #include "lib/fxl/logging.h"
 
 // clang-format off

@@ -9,10 +9,11 @@
 #include <vector>
 
 #include <fbl/unique_ptr.h>
-#include <hypervisor/phys_mem.h>
 #include <zircon/types.h>
 
 namespace machina {
+
+class PhysMem;
 
 class BlockDispatcher {
  public:
