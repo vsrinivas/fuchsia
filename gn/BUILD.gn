@@ -927,6 +927,68 @@ foreach(platform, zircon_platforms) {
       zedboot = ":zedboot-${platform}"
     }
   }
+
+
+  # install.blk creates a minfs partition image that includes all of the images
+  # required to install a Fuchsia build.
+  action("install-${platform}.blk") {
+    minfs_path = "//out/build-zircon/tools/minfs"
+    installer_label = "//garnet/bin/installer:install-fuchsia"
+    installer_out_dir = get_label_info(installer_label, "root_out_dir")
+    installer_path = installer_out_dir + "/install-fuchsia"
+
+    inputs = [
+      minfs_path,
+      installer_path,
+    ]
+
+    # The installer needs all images except for `fvm.blk` (it uses fvm.sparse.blk):
+    input_images = [
+      "fvm.sparse.blk",
+      "fvm.data.sparse.blk",
+    ]
+    input_images += [ "zircon-${platform}.vboot" ]
+    if (target_cpu == "x64") {
+      input_images += [
+        "local-${platform}.esp.blk",
+        "zedboot-${platform}.esp.blk",
+        "zedboot-${platform}.vboot",
+      ]
+    }
+
+    # Add all of the input images as dependencies
+    deps = [installer_label]
+    foreach(image, input_images) {
+      deps += [ ":${image}" ]
+    }
+
+    install_manifest = "$root_build_dir/install_manifest"
+    # Produce a manifest of images to be added to the filesystem
+    manifest_lines = []
+    rebased_installer_path=rebase_path(installer_path, root_build_dir)
+    manifest_lines += [ "install-fuchsia=${rebased_installer_path}" ]
+    foreach(image, input_images) {
+      image_src_path = rebase_path("${images_dir}/${image}", root_build_dir)
+      manifest_lines += [ "${image}=${image_src_path}" ]
+    }
+    write_file(install_manifest, manifest_lines)
+
+    output_image_path = "${images_dir}/${target_name}"
+    outputs = [ output_image_path ]
+    sources = ["mkminfs.py"]
+
+    script = "//build/gn_run_binary.sh"
+    args = [
+      clang_prefix,
+      rebase_path(sources[0]),
+      "--minfs",
+      rebase_path(minfs_path),
+      "--output",
+      rebase_path(output_image_path),
+      "--manifest",
+      rebase_path(install_manifest),
+    ]
+  }
 }
 
 group("zedboot") {
@@ -965,6 +1027,15 @@ group("images") {
         ":zedboot-${platform}.vboot",
       ]
     }
+  }
+}
+
+group("install") {
+  deps = []
+  foreach(platform, zircon_platforms) {
+    deps += [
+      ":install-${platform}.blk"
+    ]
   }
 }
 
