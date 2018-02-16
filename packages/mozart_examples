@@ -6,6 +6,7 @@
         "garnet/packages/mozart"
     ],
     "packages": {
+        "hello_pose_buffer": "//garnet/examples/ui:hello_pose_buffer",
         "hello_scene_manager": "//garnet/examples/ui:hello_scene_manager",
         "shadertoy_client": "//garnet/examples/ui:shadertoy_client",
         "shadertoy_service": "//garnet/examples/ui:shadertoy_service",

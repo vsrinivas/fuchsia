@@ -129,12 +129,26 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
 
-  // Obtain a uniform buffer and write the ViewProjection data to it.
-  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection),
-                                     kMinUniformBufferOffsetAlignment);
-  auto view_projection = reinterpret_cast<ModelData::ViewProjection*>(
-      &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
-  view_projection->vp_matrix = projection_transform_ * view_transform_;
+  BufferPtr vp_uniform_buffer;
+  uint32_t vp_uniform_buffer_offset = 0;
+  if (camera.pose_buffer()) {
+    // If the camera has a pose buffer bind the output of the late latching
+    // shader to the VP uniform
+    vp_uniform_buffer = camera.latched_pose_buffer();
+    // Pose buffer latching shader writes the latched pose before the VP matrix
+    // so we need to offset past it.
+    vp_uniform_buffer_offset = sizeof(hmd::Pose);
+  } else {
+    // If the camera does not have a pose buffer obtain a uniform buffer
+    // in the usual way and write the ViewProjection data into it directly.
+    PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection),
+                                       kMinUniformBufferOffsetAlignment);
+    auto view_projection = reinterpret_cast<ModelData::ViewProjection*>(
+        &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
+    view_projection->vp_matrix = projection_transform_ * view_transform_;
+    vp_uniform_buffer = uniform_buffer_;
+    vp_uniform_buffer_offset = uniform_buffer_write_index_;
+  }
 
   auto& vp_buffer_write = writes[2];
   vp_buffer_write.dstSet = per_model_descriptor_set_;
@@ -144,9 +158,9 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   vp_buffer_write.descriptorCount = 1;
   vp_buffer_write.descriptorType = vk::DescriptorType::eUniformBuffer;
   vk::DescriptorBufferInfo vp_buffer_info;
-  vp_buffer_info.buffer = uniform_buffer_->get();
+  vp_buffer_info.buffer = vp_uniform_buffer->get();
   vp_buffer_info.range = sizeof(ModelData::ViewProjection);
-  vp_buffer_info.offset = uniform_buffer_write_index_;
+  vp_buffer_info.offset = vp_uniform_buffer_offset;
   vp_buffer_write.pBufferInfo = &vp_buffer_info;
 
   uniform_buffer_write_index_ += sizeof(ModelData::ViewProjection);

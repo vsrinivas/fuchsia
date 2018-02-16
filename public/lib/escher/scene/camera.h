@@ -38,10 +38,19 @@ class Camera {
   }
   const hmd::PoseBuffer& pose_buffer() const { return pose_buffer_; }
 
+  void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer) {
+    latched_pose_buffer_ = latched_pose_buffer;
+  }
+  const BufferPtr& latched_pose_buffer() const { return latched_pose_buffer_; }
+
  private:
   mat4 transform_;
   mat4 projection_;
   hmd::PoseBuffer pose_buffer_;
+
+  // Contains the latched pose and vp matrices latched out of pose_buffer_.
+  // See pose_buffer_latching_shader.h for details on buffer layout.
+  BufferPtr latched_pose_buffer_;
 };
 
 // Debugging.

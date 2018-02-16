@@ -31,8 +31,6 @@ void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
   num_entries_ = num_entries;
   base_time_ = base_time;
   time_interval_ = time_interval;
-  error_reporter()->ERROR() << "SetPoseBuffer is only partially implemented, "
-                               "please do not use outside of tests yet";
 }
 
 escher::Camera Camera::GetEscherCamera(

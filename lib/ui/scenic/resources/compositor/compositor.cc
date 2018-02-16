@@ -14,7 +14,9 @@
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/vk/image.h"
+#include "lib/escher/hmd/pose_buffer_latching_shader.h"
 
+#include "garnet/lib/ui/scenic/engine/frame_timings.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
 #include "garnet/lib/ui/scenic/resources/camera.h"
 #include "garnet/lib/ui/scenic/resources/compositor/layer.h"
@@ -36,7 +38,9 @@ Compositor::Compositor(Session* session,
                        std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),
       escher_(session->engine()->escher()),
-      swapchain_(std::move(swapchain)) {
+      swapchain_(std::move(swapchain)),
+      pose_buffer_latching_shader_(
+          std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
   FXL_DCHECK(swapchain_.get());
 
   session->engine()->AddCompositor(this);
@@ -110,6 +114,7 @@ static void InitEscherStage(
 }
 
 void Compositor::DrawLayer(const escher::FramePtr& frame,
+                           const FrameTimingsPtr& frame_timings,
                            escher::PaperRenderer* escher_renderer,
                            escher::ShadowMapRenderer* shadow_map_renderer,
                            Layer* layer,
@@ -143,6 +148,12 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
                                                   escher::vec2(layer->size())));
   escher::Camera camera =
       renderer->camera()->GetEscherCamera(stage.viewing_volume());
+
+  if (camera.pose_buffer()) {
+    camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
+        frame, camera, camera.pose_buffer(),
+        frame_timings->target_presentation_time()));
+  }
 
   // Set the renderer's shadow mode, and generate a shadow map if necessary.
   escher::ShadowMapPtr shadow_map;
@@ -206,8 +217,8 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
         recycler, GetLayerFramebufferImage(layer->width(), layer->height()),
         vk::Filter::eLinear);
 
-    DrawLayer(frame, escher_renderer, shadow_renderer, drawable_layers[i],
-              texture->image(), nullptr);
+    DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
+              drawable_layers[i], texture->image(), nullptr);
     auto semaphore = escher::Semaphore::New(escher()->vk_device());
     frame->SubmitPartialFrame(semaphore);
     texture->image()->SetWaitSemaphore(std::move(semaphore));
@@ -222,14 +233,15 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
 
   bool success = swapchain_->DrawAndPresentFrame(
       frame_timings,
-      [this, frame{std::move(frame)}, escher_renderer, shadow_renderer,
-       layer = drawable_layers[0], overlay = &overlay_model](
-          const escher::ImagePtr& output_image,
-          const escher::SemaphorePtr& acquire_semaphore,
-          const escher::SemaphorePtr& frame_done_semaphore) {
+      [
+        this, frame{std::move(frame)}, frame_timings, escher_renderer,
+        shadow_renderer, layer = drawable_layers[0], overlay = &overlay_model
+      ](const escher::ImagePtr& output_image,
+        const escher::SemaphorePtr& acquire_semaphore,
+        const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
-        DrawLayer(frame, escher_renderer, shadow_renderer, layer, output_image,
-                  overlay);
+        DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer, layer,
+                  output_image, overlay);
         frame->EndFrame(frame_done_semaphore, nullptr);
       });
 

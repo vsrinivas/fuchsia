@@ -6,6 +6,7 @@ import("//build/package.gni")
 
 group("ui") {
   public_deps = [
+    "hello_pose_buffer",
     "hello_scene_manager",
     "shadertoy/client",
     "shadertoy/service",
@@ -23,9 +24,24 @@ package("hello_scene_manager") {
     "hello_scene_manager",
   ]
 
-  binaries = [ {
-        name = "hello_scene_manager"
-      } ]
+  binaries = [
+    {
+      name = "hello_scene_manager"
+    },
+  ]
+}
+
+package("hello_pose_buffer") {
+  system_image = true
+  deps = [
+    "hello_pose_buffer",
+  ]
+
+  binaries = [
+    {
+      name = "hello_pose_buffer"
+    },
+  ]
 }
 
 package("shadertoy_client") {
@@ -43,10 +59,12 @@ package("shadertoy_service") {
 
   binary = "shadertoy_service"
 
-  meta = [ {
-        path = rebase_path("shadertoy/service/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("shadertoy/service/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("shapes_view") {

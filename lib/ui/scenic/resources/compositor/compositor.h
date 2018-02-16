@@ -20,6 +20,9 @@ class Stage;
 using FramePtr = fxl::RefPtr<Frame>;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
+namespace hmd {
+class PoseBufferLatchingShader;
+}
 }  // namespace escher
 
 namespace scene_manager {
@@ -68,6 +71,7 @@ class Compositor : public Resource {
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
   void DrawLayer(const escher::FramePtr& frame,
+                 const FrameTimingsPtr& frame_timings,
                  escher::PaperRenderer* escher_renderer,
                  escher::ShadowMapRenderer* shadow_renderer,
                  Layer* layer,
@@ -77,6 +81,8 @@ class Compositor : public Resource {
   escher::Escher* const escher_;
   std::unique_ptr<Swapchain> swapchain_;
   LayerStackPtr layer_stack_;
+  std::unique_ptr<escher::hmd::PoseBufferLatchingShader>
+      pose_buffer_latching_shader_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Compositor);
 };
