@@ -6,6 +6,8 @@
 
 #include "gtest/gtest.h"
 
+namespace debug_ipc {
+
 TEST(StreamBuffer, Basic) {
   StreamBuffer buf;
   char output[16];
@@ -71,3 +73,5 @@ TEST(StreamBuffer, Basic) {
 
   EXPECT_FALSE(buf.IsAvailable(1));
 }
+
+}  // namespace debug_ipc

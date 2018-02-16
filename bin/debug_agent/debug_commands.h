@@ -4,8 +4,10 @@
 
 #pragma once
 
+namespace debug_ipc {
 class StreamBuffer;
+}
 
 // Sink for data read from the debug command socket. This will deserialize
 // the messages and execute the commands reqesuted.
-void HandleDebugCommandData(StreamBuffer* stream);
+void HandleDebugCommandData(debug_ipc::StreamBuffer* stream);

@@ -2,10 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("debug_ipc") {
+# This library is shared between the client and agent code. You should depend
+# on it via one of those targets.
+static_library("shared") {
+  visibility = [ ":*" ]
   sources = [
+    "message_reader.cc",
+    "message_reader.h",
+    "message_writer.cc",
+    "protocol.cc",
+    "protocol.h",
+    "records.h",
+    "message_writer.h",
     "stream_buffer.cc",
     "stream_buffer.h",
+  ]
+}
+
+static_library("agent") {
+  sources = [
+    "agent_protocol.cc",
+    "agent_protocol.h",
+  ]
+  public_deps = [
+    ":shared",
+  ]
+}
+
+static_library("client") {
+  sources = [
+    "client_protocol.cc",
+    "client_protocol.h",
+  ]
+  public_deps = [
+    ":shared",
   ]
 }
 
@@ -14,10 +44,14 @@ static_library("debug_ipc") {
 source_set("tests") {
   testonly = true
   sources = [
+    "message_unittests.cc",
+    "protocol_unittests.cc",
     "stream_buffer_unittest.cc",
   ]
 
   deps = [
+    ":agent",
+    ":client",
     "//third_party/gtest",
   ]
 }

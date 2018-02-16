@@ -13,7 +13,7 @@ static_library("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/debug_ipc",
+    "//garnet/lib/debug_ipc:agent",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/launchpad",

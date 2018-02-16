@@ -7,6 +7,8 @@
 #include <deque>
 #include <vector>
 
+namespace debug_ipc {
+
 // This class is a buffer that sits between an asynchronous OS data source and
 // a consumer of that stream. The data source supplies data in chunks which
 // are buffered
@@ -37,3 +39,5 @@ class StreamBuffer {
   std::deque<const std::vector<char>> buffers_;
   size_t first_node_offset_ = 0;  // Read position of buffer_[0].
 };
+
+}  // namespace debug_ipc

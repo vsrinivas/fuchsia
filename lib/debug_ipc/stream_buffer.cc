@@ -8,6 +8,8 @@
 
 #include <string.h>
 
+namespace debug_ipc {
+
 StreamBuffer::StreamBuffer() = default;
 StreamBuffer::~StreamBuffer() = default;
 
@@ -67,3 +69,5 @@ size_t StreamBuffer::ReadOrPeek(char* buffer,
   }
   return buffer_pos;
 }
+
+}  // namespace debug_ipc

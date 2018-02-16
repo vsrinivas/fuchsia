@@ -6,7 +6,7 @@
 
 #include "garnet/lib/debug_ipc/stream_buffer.h"
 
-void HandleDebugCommandData(StreamBuffer* stream) {
+void HandleDebugCommandData(debug_ipc::StreamBuffer* stream) {
   uint32_t message_size;
   size_t bytes_read = stream->Peek(
       reinterpret_cast<char*>(&message_size), sizeof(message_size));

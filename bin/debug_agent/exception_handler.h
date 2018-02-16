@@ -66,7 +66,7 @@ class ExceptionHandler {
 
   // Reads and buffers commands from the client.
   zx::socket socket_;
-  StreamBuffer socket_buffer_;
+  debug_ipc::StreamBuffer socket_buffer_;
 
   // This is a unique_ptr so that it can be started explicitly in Start(),
   // giving time to do initialization while single-threaded.
