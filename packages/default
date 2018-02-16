@@ -31,6 +31,7 @@
         "garnet/packages/icu_data",
         "garnet/packages/image-pipe-swapchain",
         "garnet/packages/insntrace",
+        "garnet/packages/installer",
         "garnet/packages/iperf",
         "garnet/packages/lib_tests",
         "garnet/packages/libc-tests",
