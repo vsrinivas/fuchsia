@@ -83,6 +83,8 @@ enum {
     // TODO: IBSS, PBSS, mesh
 };
 
+#define WLAN_MAC_MODE_ALL (WLAN_MAC_MODE_STA | WLAN_MAC_MODE_AP)
+
 // Basic capabilities. IEEE Std 802.11-2016, 9.4.1.4
 enum {
     WLAN_CAP_SHORT_PREAMBLE = (1 << 0),
@@ -139,6 +141,10 @@ typedef struct wlan_band_info {
     wlan_chan_list_t supported_channels;
 } wlan_band_info_t;
 
+// For now up to 2 bands are supported in order to keep the wlanmac_info struct a small, fixed
+// size.
+#define WLAN_MAX_BANDS 2
+
 typedef struct wlanmac_info {
     ethmac_info_t eth_info;
     // Bitmask indicating the WLAN_PHY_* values supported by the hardware.
@@ -149,10 +155,9 @@ typedef struct wlanmac_info {
     uint16_t mac_modes;
     // Bitmask indicating WLAN_CAP_* capabilities supported by the hardware.
     uint32_t caps;
-    // Supported bands. For now up to 2 bands are supported, in order to keep the size of this
-    // struct fixed.
+    // Supported bands.
     uint8_t num_bands;
-    wlan_band_info_t bands[2];
+    wlan_band_info_t bands[WLAN_MAX_BANDS];
 } wlanmac_info_t;
 
 enum {
