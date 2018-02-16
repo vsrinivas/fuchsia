@@ -18,10 +18,6 @@ declare_args() {
 #
 # Parameters
 #
-#   app (bool, optional)
-#     If true, changes the default location of binaries from
-#     |"bin/" + binary.name| to |"apps/" + binary.name|.
-#
 #   fuchsia_package (bool, optional)
 #     If true, the package is constructed and signed ready for distribution and
 #     inclusion in /pkgfs. system_image supersedes fuchsia_package. Eventually all
@@ -153,7 +149,6 @@ declare_args() {
 template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
-      app = false
       # By default we want to build Fuchsia packages, but they are not
       # supported under bootfs, so in that case we build the old archive format
       # packages.
@@ -266,9 +261,6 @@ template("package") {
           sources += [ "$root_build_dir/${binary.name}" ]
         }
         dirname = "bin"
-        if (pkg.app) {
-          dirname = "apps"
-        }
         basename = binary.name
         if (defined(binary.dest)) {
           basename = binary.dest
