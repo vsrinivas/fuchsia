@@ -61,12 +61,8 @@ class Host final : public fxl::RefCountedThreadSafe<Host> {
   explicit Host(const bt_hci_protocol_t& hci_proto);
   ~Host();
 
-  // The L2CAP layer.
-  fxl::RefPtr<fxl::TaskRunner> l2cap_runner_;
   fbl::RefPtr<::btlib::l2cap::L2CAP> l2cap_;
-
-  // Represents the host subsystem stack for this Host's Bluetooth controller.
-  std::unique_ptr<::btlib::gap::Adapter> adapter_;
+  std::unique_ptr<::btlib::gap::Adapter> gap_;
 
   // Currently connected Host interface handle. A Host allows only one of these
   // to be connected at a time.

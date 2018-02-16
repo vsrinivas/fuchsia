@@ -25,7 +25,7 @@ HostDevice::HostDevice(zx_device_t* device) : dev_(nullptr), parent_(device) {
 }
 
 zx_status_t HostDevice::Bind() {
-  FXL_VLOG(1) << "bthost: bind";
+  FXL_VLOG(1) << "bt-host: bind";
 
   std::lock_guard<std::mutex> lock(mtx_);
 
@@ -33,28 +33,28 @@ zx_status_t HostDevice::Bind() {
   zx_status_t status =
       device_get_protocol(parent_, ZX_PROTOCOL_BT_HCI, &hci_proto);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "bthost: Failed to obtain bt-hci protocol ops: "
+    FXL_LOG(ERROR) << "bt-host: Failed to obtain bt-hci protocol ops: "
                    << zx_status_get_string(status);
     return status;
   }
 
   if (!hci_proto.ops) {
-    FXL_LOG(ERROR) << "bthost: bt-hci device ops required!";
+    FXL_LOG(ERROR) << "bt-host: bt-hci device ops required!";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_command_channel) {
-    FXL_LOG(ERROR) << "bthost: bt-hci op required: open_command_channel";
+    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_command_channel";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_acl_data_channel) {
-    FXL_LOG(ERROR) << "bthost: bt-hci op required: open_acl_data_channel";
+    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_acl_data_channel";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!hci_proto.ops->open_snoop_channel) {
-    FXL_LOG(ERROR) << "bthost: bt-hci op required: open_snoop_channel";
+    FXL_LOG(ERROR) << "bt-host: bt-hci op required: open_snoop_channel";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -73,7 +73,7 @@ zx_status_t HostDevice::Bind() {
 
   status = device_add(parent_, &args, &dev_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "bthost: Failed to publish device: "
+    FXL_LOG(ERROR) << "bt-host: Failed to publish device: "
                    << zx_status_get_string(status);
     return status;
   }
@@ -95,12 +95,12 @@ zx_status_t HostDevice::Bind() {
           return;
 
         if (success) {
-          FXL_VLOG(1) << "bthost: Adapter initialized; make device visible";
+          FXL_VLOG(1) << "bt-host: Adapter initialized; make device visible";
           device_make_visible(dev_);
           return;
         }
 
-        FXL_LOG(ERROR) << "bthost: Failed to initialize adapter";
+        FXL_LOG(ERROR) << "bt-host: Failed to initialize adapter";
         CleanUp();
       }
 
@@ -115,7 +115,7 @@ zx_status_t HostDevice::Bind() {
 }
 
 void HostDevice::Unbind() {
-  FXL_VLOG(1) << "bthost: unbind";
+  FXL_VLOG(1) << "bt-host: unbind";
 
   std::lock_guard<std::mutex> lock(mtx_);
 
@@ -128,7 +128,7 @@ void HostDevice::Unbind() {
 }
 
 void HostDevice::Release() {
-  FXL_VLOG(1) << "bthost: release";
+  FXL_VLOG(1) << "bt-host: release";
   delete this;
 }
 
@@ -138,7 +138,7 @@ zx_status_t HostDevice::Ioctl(uint32_t op,
                               void* out_buf,
                               size_t out_len,
                               size_t* out_actual) {
-  FXL_VLOG(1) << "bthost: ioctl";
+  FXL_VLOG(1) << "bt-host: ioctl";
 
   if (!out_buf)
     return ZX_ERR_INVALID_ARGS;

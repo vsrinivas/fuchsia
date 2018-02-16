@@ -19,56 +19,61 @@ Host::Host(const bt_hci_protocol_t& hci_proto) {
   auto dev = std::make_unique<hci::DdkDeviceWrapper>(hci_proto);
   auto hci = hci::Transport::Create(std::move(dev));
 
-  std::thread l2cap_thread =
-      fsl::CreateThread(&l2cap_runner_, "bt-host (l2cap)");
-  FXL_DCHECK(l2cap_runner_);
-
-  l2cap_ = l2cap::L2CAP::Create(hci, l2cap_runner_);
+  l2cap_ = l2cap::L2CAP::Create(hci, "bt-host (l2cap)");
   FXL_DCHECK(l2cap_);
 
-  adapter_ = std::make_unique<gap::Adapter>(hci, l2cap_);
-  FXL_DCHECK(adapter_);
-
-  l2cap_thread.detach();
+  gap_ = std::make_unique<gap::Adapter>(hci, l2cap_);
+  FXL_DCHECK(gap_);
 }
 
-Host::~Host() {
-  ShutDown();
-}
+Host::~Host() {}
 
 bool Host::Initialize(InitCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(l2cap_);
 
-  // This will also initialize the L2CAP layer.
-  return adapter_->Initialize(callback, [] {
-    FXL_VLOG(1) << "bthost: adapter closed";
+  auto gap_init_callback = [l2cap = l2cap_,
+                            callback = std::move(callback)](bool success) {
+    FXL_VLOG(1) << "bt-host: GAP initialized";
 
-    // TODO(armansito): Report this to HostDevice so it can remove itself?
+    if (success) {
+      // Set up the L2CAP system. This must be done after |hci_| is initialized
+      // as L2CAP needs to interact with the ACL channel.
+      l2cap->Initialize();
+    }
+
+    callback(success);
+  };
+
+  return gap_->Initialize(gap_init_callback, [] {
+    FXL_VLOG(1) << "bt-host: HCI transport has closed";
   });
 }
 
 void Host::ShutDown() {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_VLOG(1) << "bt-host: shutting down";
+
   // Closes all FIDL channels owned by |host_server_|.
   host_server_ = nullptr;
 
-  // This also shuts down L2CAP (to mirror initialization).
-  adapter_->ShutDown();
-
-  l2cap_runner_->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+  gap_->ShutDown();
+  l2cap_->ShutDown();
 }
 
 void Host::BindHostInterface(zx::channel channel) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (host_server_) {
-    FXL_LOG(WARNING) << "host: Host interface channel already open!";
+    FXL_LOG(WARNING) << "bt-host: Host interface channel already open!";
     return;
   }
 
-  FXL_DCHECK(adapter_);
+  FXL_DCHECK(gap_);
   host_server_ =
-      std::make_unique<HostServer>(std::move(channel), adapter_->AsWeakPtr());
+      std::make_unique<HostServer>(std::move(channel), gap_->AsWeakPtr());
   host_server_->set_error_handler([this] {
     FXL_DCHECK(host_server_);
-    FXL_VLOG(1) << "host: Host disconnected";
+    FXL_VLOG(1) << "bt-host: Host disconnected";
     host_server_ = nullptr;
   });
 }

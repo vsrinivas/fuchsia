@@ -23,8 +23,8 @@ class Channel;
 //
 //   * Waiting on L2CAP sockets;
 //
-// L2CAP is handed a TaskRunner on initialization which will be used to serially
-// dispatch all internal L2CAP tasks.
+// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with a
+// TaskRunner which is used to serially dispatch all internal L2CAP tasks.
 //
 // L2CAP is defined as a pure-virtual interface, so that a fake can be injected
 // while testing layers that depend on it.
@@ -38,8 +38,10 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
 
   // Constructs an uninitialized L2CAP object that can be used in production.
+  // This spawns a thread on which L2CAP tasks will be scheduled (using
+  // |thread_name| as the name).
   static fbl::RefPtr<L2CAP> Create(fxl::RefPtr<hci::Transport> hci,
-                                   fxl::RefPtr<fxl::TaskRunner> l2cap_runner);
+                                   std::string thread_name);
 
   // These send a Initialize/Shutdown message to the L2CAP task runner. It is
   // safe for the caller to drop its reference after ShutDown is called.

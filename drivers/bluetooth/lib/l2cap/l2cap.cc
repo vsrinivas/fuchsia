@@ -4,6 +4,7 @@
 
 #include "l2cap.h"
 
+#include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 
 #include "channel_manager.h"
@@ -12,25 +13,34 @@ namespace btlib {
 namespace l2cap {
 namespace {
 
-class Impl final : public L2CAP {
+class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
  public:
-  Impl(fxl::RefPtr<hci::Transport> hci,
-       fxl::RefPtr<fxl::TaskRunner> l2cap_runner)
-      : L2CAP(), hci_(hci), l2cap_runner_(l2cap_runner) {
+  Impl(fxl::RefPtr<hci::Transport> hci, std::string thread_name)
+      : L2CAP(),
+        common::TaskDomain<Impl, L2CAP>(this, std::move(thread_name)),
+        hci_(hci) {
     FXL_DCHECK(hci_);
-    FXL_DCHECK(l2cap_runner_);
   }
 
   void Initialize() override {
     PostMessage([this] {
       // This can only run once during initialization.
       FXL_DCHECK(!chanmgr_);
-      chanmgr_ = std::make_unique<ChannelManager>(hci_, l2cap_runner_);
+      chanmgr_ = std::make_unique<ChannelManager>(hci_, task_runner());
+
+      FXL_VLOG(1) << "l2cap: Initialized";
     });
   }
 
   void ShutDown() override {
-    PostMessage([this] { chanmgr_ = nullptr; });
+    common::TaskDomain<Impl, L2CAP>::ScheduleCleanUp();
+  }
+
+  // Called on the L2CAP runner as a result of ScheduleCleanUp().
+  void CleanUp() {
+    FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+    FXL_VLOG(1) << "l2cap: Shutting down";
+    chanmgr_ = nullptr;
   }
 
   void RegisterLE(hci::ConnectionHandle handle,
@@ -67,16 +77,9 @@ class Impl final : public L2CAP {
   }
 
  private:
-  void PostMessage(std::function<void()> func) {
-    // Capture a reference so the object remains alive.
-    l2cap_runner_->PostTask([refptr = fbl::RefPtr<L2CAP>(this),
-                             func = std::move(func)] { func(); });
-  }
-
   fxl::RefPtr<hci::Transport> hci_;
-  fxl::RefPtr<fxl::TaskRunner> l2cap_runner_;
 
-  // This must be only accessed on |l2cap_runner_|.
+  // This must be only accessed on the L2CAP task runner.
   std::unique_ptr<ChannelManager> chanmgr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Impl);
@@ -86,11 +89,10 @@ class Impl final : public L2CAP {
 
 // static
 fbl::RefPtr<L2CAP> L2CAP::Create(fxl::RefPtr<hci::Transport> hci,
-                                 fxl::RefPtr<fxl::TaskRunner> l2cap_runner) {
+                                 std::string thread_name) {
   FXL_DCHECK(hci);
-  FXL_DCHECK(l2cap_runner);
 
-  return AdoptRef(new Impl(hci, l2cap_runner));
+  return AdoptRef(new Impl(hci, std::move(thread_name)));
 }
 
 }  // namespace l2cap

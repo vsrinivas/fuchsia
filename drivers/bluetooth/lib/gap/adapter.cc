@@ -147,6 +147,8 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 
 void Adapter::ShutDown() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_VLOG(1) << "gap: shutting down";
+
   if (IsInitializing()) {
     FXL_DCHECK(!init_seq_runner_->IsReady());
     init_seq_runner_->Cancel();
@@ -292,10 +294,6 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
     callback(false);
     return;
   }
-
-  // Set up the L2CAP system. This must be done after |hci_| is initialized as
-  // L2CAP needs to interact with the ACL channel.
-  l2cap_->Initialize();
 
   FXL_DCHECK(init_seq_runner_->IsReady());
   FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
@@ -449,8 +447,6 @@ void Adapter::CleanUp() {
 
   hci_le_connector_ = nullptr;
   hci_le_advertiser_ = nullptr;
-
-  l2cap_->ShutDown();
 
   // TODO(armansito): hci::Transport::ShutDown() should send a shutdown message
   // to the bt-hci device, which would be responsible for sending HCI_Reset upon
