@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(const_size_of)]
 
 extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app;
 extern crate fuchsia_zircon as zircon;
 extern crate futures;
+
+#[macro_use]
 extern crate tokio_core;
 
 use failure::{Error, ResultExt};
@@ -18,6 +21,8 @@ use tokio_core::reactor;
 
 extern crate garnet_public_lib_logger_fidl;
 use garnet_public_lib_logger_fidl::Log;
+
+pub mod logger;
 
 struct LogManager {}
 

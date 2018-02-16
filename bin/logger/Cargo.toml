@@ -8,10 +8,14 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
+byteorder = "1.2"
 failure = "0.1.1"
 fidl = "0.1"
 fuchsia-app = "0.1"
 fuchsia-zircon = "0.3"
 futures = "0.1"
-tokio-core = "0.1"
 garnet_public_lib_logger_fidl = "0.1"
+libc = "0.2"
+tokio-core = "0.1"
+tokio-fuchsia = "0.1"
+
