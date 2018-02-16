@@ -93,12 +93,12 @@ constexpr char g_kernel_src[] = R"GLSL(
 
 static constexpr size_t k4x4MatrixSIze = 16 * sizeof(float);
 
-PoseBufferLatchingShader::PoseBufferLatchingShader(Escher* escher,
-                                                   PoseBuffer pose_buffer)
-    : escher_(escher), pose_buffer_(pose_buffer) {}
+PoseBufferLatchingShader::PoseBufferLatchingShader(Escher* escher)
+    : escher_(escher) {}
 
 BufferPtr PoseBufferLatchingShader::LatchPose(const FramePtr& frame,
                                               const Camera& camera,
+                                              PoseBuffer pose_buffer,
                                               uint64_t latch_time,
                                               bool host_accessible_output) {
   vk::DeviceSize buffer_size = k4x4MatrixSIze + sizeof(Pose);
@@ -128,8 +128,8 @@ BufferPtr PoseBufferLatchingShader::LatchPose(const FramePtr& frame,
   auto command_buffer = frame->command_buffer();
 
   uint32_t latch_index =
-      ((latch_time - pose_buffer_.base_time) / pose_buffer_.time_interval) %
-      pose_buffer_.num_entries;
+      ((latch_time - pose_buffer.base_time) / pose_buffer.time_interval) %
+      pose_buffer.num_entries;
 
   FXL_DCHECK(vp_matrices_buffer->ptr() != nullptr);
   glm::mat4* vp_matrices =
@@ -149,7 +149,7 @@ BufferPtr PoseBufferLatchingShader::LatchPose(const FramePtr& frame,
   std::vector<TexturePtr> textures;
   std::vector<BufferPtr> buffers;
   buffers.push_back(vp_matrices_buffer);
-  buffers.push_back(pose_buffer_.buffer);
+  buffers.push_back(pose_buffer.buffer);
   buffers.push_back(output_buffer);
 
   kernel_->Dispatch(textures, buffers, command_buffer, 1, 1, 1, &latch_index);

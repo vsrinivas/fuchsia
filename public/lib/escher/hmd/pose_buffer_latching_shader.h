@@ -15,7 +15,7 @@ namespace hmd {
 // See //garnet/public/lib/ui/scenic/fidl/ops.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
-  PoseBufferLatchingShader(Escher* escher, PoseBuffer pose_buffer);
+  PoseBufferLatchingShader(Escher* escher);
 
   // Latches a pose from the pose buffer for |latch_time|
   // The returned buffer will contain the raw latched pose as well as a
@@ -32,13 +32,13 @@ class PoseBufferLatchingShader {
   // //garnet/public/lib/ui/scenic/fidl/ops.fidl
   BufferPtr LatchPose(const FramePtr& frame,
                       const Camera& camera,
+                      PoseBuffer pose_buffer,
                       uint64_t latch_time,
                       bool host_accessible_output = false);
 
  private:
   Escher* const escher_;
   std::unique_ptr<impl::ComputeShader> kernel_;
-  PoseBuffer pose_buffer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PoseBufferLatchingShader);
 };

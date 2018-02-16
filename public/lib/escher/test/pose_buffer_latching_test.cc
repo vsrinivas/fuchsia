@@ -130,7 +130,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
                           memory_property_flags),
       num_entries, base_time, time_interval);
 
-  hmd::PoseBufferLatchingShader test_shader(escher.get(), pose_buffer);
+  hmd::PoseBufferLatchingShader test_shader(escher.get());
 
   // Fill the pose buffer.
   ASSERT_NE(nullptr, pose_buffer.buffer->ptr());
@@ -162,7 +162,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
 
     uint64_t latch_time = base_time + (time_interval * (0.5 + i));
     output_buffers.push_back(
-        test_shader.LatchPose(frame, camera, latch_time, true));
+        test_shader.LatchPose(frame, camera, pose_buffer, latch_time, true));
     cameras.push_back(camera);
   }
 
