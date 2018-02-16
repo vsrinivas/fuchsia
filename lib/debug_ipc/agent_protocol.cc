@@ -6,25 +6,29 @@
 
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
+#include "garnet/lib/debug_ipc/protocol_helpers.h"
 
 namespace debug_ipc {
 
-namespace {
-
-void WriteProcessTreeRecord(MessageWriter* writer,
-                            const ProcessTreeRecord& record) {
+void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(record.type));
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
-
-  uint32_t size = static_cast<uint32_t>(record.children.size());
-  writer->WriteUint32(size);
-  for (uint32_t i = 0; i < size; i++) {
-    WriteProcessTreeRecord(writer, record.children[i]);
-  }
+  Serialize(record.children, writer);
 }
 
-}  // namespace
+void Serialize(const ThreadRecord& record, MessageWriter* writer) {
+  writer->WriteUint64(record.koid);
+  writer->WriteString(record.name);
+}
+
+void Serialize(const MemoryBlock& block, MessageWriter* writer) {
+  writer->WriteUint64(block.address);
+  writer->WriteUint32(block.valid ? 1 : 0);
+  writer->WriteUint64(block.size);
+  if (block.valid && block.size > 0)
+    writer->WriteBytes(&block.data[0], block.size);
+}
 
 bool ReadRequest(MessageReader* reader,
                  HelloRequest* request,
@@ -44,6 +48,25 @@ void WriteReply(const HelloReply& reply,
 }
 
 bool ReadRequest(MessageReader* reader,
+                 LaunchRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return Deserialize(reader, &request->argv);
+}
+
+void WriteReply(const LaunchReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
+  writer->WriteUint32(reply.status);
+  writer->WriteUint64(reply.process_koid);
+}
+
+bool ReadRequest(MessageReader* reader,
                  ProcessTreeRequest* request,
                  uint32_t* transaction_id) {
   MsgHeader header;
@@ -57,7 +80,7 @@ void WriteReply(const ProcessTreeReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kProcessTree, transaction_id);
-  WriteProcessTreeRecord(writer, reply.root);
+  Serialize(reply.root, writer);
 }
 
 bool ReadRequest(MessageReader* reader,
@@ -75,12 +98,7 @@ void WriteReply(const ThreadsReply& reply,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kThreads, transaction_id);
 
-  uint32_t size = static_cast<uint32_t>(reply.threads.size());
-  writer->WriteUint32(size);
-  for (uint32_t i = 0; i < size; i++) {
-    writer->WriteUint64(reply.threads[i].koid);
-    writer->WriteString(reply.threads[i].name);
-  }
+  Serialize(reply.threads, writer);
 }
 
 bool ReadRequest(MessageReader* reader,
@@ -97,17 +115,7 @@ void WriteReply(const ReadMemoryReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadMemory, transaction_id);
-
-  uint32_t block_count = static_cast<uint32_t>(reply.blocks.size());
-  writer->WriteUint32(block_count);
-  for (const auto& block : reply.blocks) {
-    writer->WriteUint64(block.address);
-    writer->WriteUint32(block.valid ? 1 : 0);
-    writer->WriteUint64(block.size);
-    if (block.valid && block.size > 0) {
-      writer->WriteBytes(&block.data[0], block.size);
-    }
-  }
+  Serialize(reply.blocks, writer);
 }
 
 }  // namespace debug_ipc

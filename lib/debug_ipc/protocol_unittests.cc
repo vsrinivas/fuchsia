@@ -6,7 +6,7 @@
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
-
+#include "garnet/lib/debug_ipc/protocol_helpers.h"
 #include "gtest/gtest.h"
 
 namespace debug_ipc {
@@ -59,6 +59,29 @@ TEST(Protocol, HelloReply) {
   HelloReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.version, second.version);
+}
+
+TEST(Protocol, LaunchRequest) {
+  LaunchRequest initial;
+  initial.argv.push_back("/usr/bin/WINWORD.EXE");
+  initial.argv.push_back("--dosmode");
+
+  LaunchRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_EQ(initial.argv.size(), second.argv.size());
+  for (size_t i = 0; i < initial.argv.size(); i++)
+    EXPECT_EQ(initial.argv[i], second.argv[i]);
+}
+
+TEST(Protocol, LaunchReply) {
+  LaunchReply initial;
+  initial.status = 67;
+  initial.process_koid = 0x1234;
+
+  LaunchReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.status, second.status);
+  EXPECT_EQ(initial.process_koid, second.process_koid);
 }
 
 TEST(Protocol, ProcessTreeRequest) {

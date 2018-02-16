@@ -12,10 +12,13 @@
 
 namespace {
 
-// Key used for waiting on a port for the socket. Everything related to a
-// debugged process uses
-// that process' KOID for the key, so this value is explicitly an invalid KOID.
-constexpr uint64_t kSocketKey = 0;
+// Key used for waiting on a port for the socket and quit events. Everything
+// related to a debugged process uses that process' koid for the key, so this
+// value is explicitly an invalid koid.
+constexpr uint64_t kMetaKey = 0;
+
+// This signal on the quit_event_ signals that the loop should exit.
+constexpr uint32_t kQuitSignal = ZX_USER_SIGNAL_0;
 
 zx::thread ThreadForKoid(const zx::process& process, uint64_t thread_koid) {
   zx_handle_t thread_handle = ZX_HANDLE_INVALID;
@@ -38,25 +41,45 @@ struct ExceptionHandler::DebuggedProcess {
   zx::process process;
 };
 
-ExceptionHandler::ExceptionHandler() {}
-
-ExceptionHandler::~ExceptionHandler() {
-  thread_->join();
+ExceptionHandler::ExceptionHandler() {
+  socket_buffer_.set_writer(this);
 }
+
+ExceptionHandler::~ExceptionHandler() {}
 
 bool ExceptionHandler::Start(zx::socket socket) {
   zx_status_t status = zx::port::create(0, &port_);
   if (status != ZX_OK)
     return false;
 
+  // Create and hook up the quit event.
+  status = zx::event::create(0, &quit_event_);
+  if (status != ZX_OK)
+    return false;
+  status = quit_event_.wait_async(port_, kMetaKey, kQuitSignal,
+                              ZX_WAIT_ASYNC_REPEATING);
+
+  // Attach the socket for commands.
   socket_ = std::move(socket);
-  status = socket_.wait_async(port_, kSocketKey, ZX_SOCKET_READABLE,
+  status = socket_.wait_async(port_, kMetaKey, ZX_SOCKET_READABLE,
+                              ZX_WAIT_ASYNC_REPEATING);
+  if (status != ZX_OK)
+    return false;
+  status = socket_.wait_async(port_, kMetaKey, ZX_SOCKET_WRITABLE,
                               ZX_WAIT_ASYNC_REPEATING);
   if (status != ZX_OK)
     return false;
 
   thread_ = std::make_unique<std::thread>(&ExceptionHandler::DoThread, this);
   return true;
+}
+
+void ExceptionHandler::Shutdown() {
+  // Signal the quit event, which is user signal 0 on the socket. This will
+  // cause the background thread to wake up and terminate.
+  quit_event_.signal(0, kQuitSignal);
+  thread_->join();
+  set_sink(nullptr);
 }
 
 bool ExceptionHandler::Attach(zx::process&& in_process) {
@@ -83,6 +106,12 @@ bool ExceptionHandler::Attach(zx::process&& in_process) {
     return false;
 
   return true;
+}
+
+size_t ExceptionHandler::ConsumeStreamBufferData(const char* data, size_t len) {
+  size_t written = 0;
+  socket_.write(0, data, len, &written);
+  return written;
 }
 
 void ExceptionHandler::DoThread() {
@@ -116,10 +145,10 @@ void ExceptionHandler::DoThread() {
           OnUnalignedAccess(packet, thread);
           break;
         case ZX_EXCP_THREAD_STARTING:
-          OnThreadStarting(packet, thread);
+          sink_->OnThreadStarting(thread);
           break;
         case ZX_EXCP_THREAD_EXITING:
-          OnThreadExiting(packet, thread);
+          sink_->OnThreadExiting(thread);
           break;
         case ZX_EXCP_POLICY_ERROR:
           OnThreadPolicyError(packet, thread);
@@ -127,13 +156,20 @@ void ExceptionHandler::DoThread() {
         default:
           fprintf(stderr, "Unknown exception.\n");
       }
-    } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == kSocketKey &&
+    } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == kMetaKey &&
                packet.signal.observed & ZX_SOCKET_READABLE) {
       OnSocketReadable();
+    } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == kMetaKey &&
+               packet.signal.observed & ZX_SOCKET_WRITABLE) {
+      // Note: this will reenter us and call ConsumeStreamBufferData().
+      socket_buffer_.SetWritable();
     } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
                packet.signal.observed & ZX_PROCESS_TERMINATED) {
-      if (OnProcessTerminated(packet))
-        return;
+      OnProcessTerminated(packet);
+    } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == kMetaKey &&
+               packet.signal.observed & kQuitSignal) {
+      // Quit event
+      return;
     } else {
       fprintf(stderr, "Unknown signal.\n");
     }
@@ -149,22 +185,23 @@ void ExceptionHandler::OnSocketReadable() {
 
   std::vector<char> buffer(available);
   socket_.read(0, &buffer[0], available, &available);
-  socket_buffer_.AddData(std::move(buffer));
+  socket_buffer_.AddReadData(std::move(buffer));
+
+  sink_->OnStreamData();
 }
 
-bool ExceptionHandler::OnProcessTerminated(const zx_port_packet_t& packet) {
+void ExceptionHandler::OnProcessTerminated(const zx_port_packet_t& packet) {
   fprintf(stderr, "Process %llu terminated.\n", (unsigned long long)packet.key);
   {
     std::lock_guard<std::mutex> lock(mutex_);
     for (size_t i = 0; i < processes_.size(); i++) {
       if (processes_[i]->koid == packet.key) {
         processes_.erase(processes_.begin() + i);
-        return processes_.empty();
+        return;
       }
     }
   }
   fprintf(stderr, "Got terminated for a process we're not watching.\n");
-  return false;
 }
 
 void ExceptionHandler::OnGeneralException(const zx_port_packet_t& packet,
@@ -195,18 +232,6 @@ void ExceptionHandler::OnHardwareBreakpoint(const zx_port_packet_t& packet,
 void ExceptionHandler::OnUnalignedAccess(const zx_port_packet_t& packet,
                                          const zx::thread& thread) {
   fprintf(stderr, "Exception: unaligned access.\n");
-}
-
-void ExceptionHandler::OnThreadStarting(const zx_port_packet_t& packet,
-                                        const zx::thread& thread) {
-  fprintf(stderr, "Exception: thread starting.\n");
-  thread.resume(ZX_RESUME_EXCEPTION);
-}
-
-void ExceptionHandler::OnThreadExiting(const zx_port_packet_t& packet,
-                                       const zx::thread& thread) {
-  fprintf(stderr, "Exception: thread exiting.\n");
-  thread.resume(ZX_RESUME_EXCEPTION);
 }
 
 void ExceptionHandler::OnThreadPolicyError(const zx_port_packet_t& packet,

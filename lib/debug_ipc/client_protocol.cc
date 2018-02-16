@@ -6,31 +6,48 @@
 
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
+#include "garnet/lib/debug_ipc/protocol_helpers.h"
 
 namespace debug_ipc {
 
-namespace {
-
-bool ReadProcessTreeRecord(MessageReader* reader, ProcessTreeRecord* record) {
+bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
   if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&record->type)))
     return false;
   if (!reader->ReadUint64(&record->koid))
     return false;
   if (!reader->ReadString(&record->name))
     return false;
+  return Deserialize(reader, &record->children);
+}
 
-  uint32_t size = 0;
-  if (!reader->ReadUint32(&size))
+bool Deserialize(MessageReader* reader, ThreadRecord* record) {
+  if (!reader->ReadUint64(&record->koid))
     return false;
-  record->children.resize(size);
-  for (uint32_t i = 0; i < size; i++) {
-    if (!ReadProcessTreeRecord(reader, &record->children[i]))
+  if (!reader->ReadString(&record->name))
+    return false;
+  return true;
+}
+
+bool Deserialize(MessageReader* reader, MemoryBlock* block) {
+  if (!reader->ReadUint64(&block->address))
+    return false;
+
+  uint32_t valid_flag;
+  if (!reader->ReadUint32(&valid_flag))
+    return false;
+  block->valid = !!valid_flag;
+
+  if (!reader->ReadUint64(&block->size))
+    return false;
+  if (block->size > reader->remaining())
+    return false;
+  if (block->valid && block->size > 0) {
+    block->data.resize(block->size);
+    if (!reader->ReadBytes(block->size, &block->data[0]))
       return false;
   }
   return true;
 }
-
-}  // namespace
 
 void WriteRequest(const HelloRequest& request,
                   uint32_t transaction_id,
@@ -48,6 +65,28 @@ bool ReadReply(MessageReader* reader,
   return reader->ReadBytes(sizeof(HelloReply), reply);
 }
 
+void WriteRequest(const LaunchRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
+  Serialize(request.argv, writer);
+}
+
+bool ReadReply(MessageReader* reader,
+               LaunchReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint32(&reply->status))
+    return false;
+  if (!reader->ReadUint64(&reply->process_koid))
+    return false;
+  return true;
+}
+
 void WriteRequest(const ProcessTreeRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -62,7 +101,7 @@ bool ReadReply(MessageReader* reader,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return ReadProcessTreeRecord(reader, &reply->root);
+  return Deserialize(reader, &reply->root);
 }
 
 void WriteRequest(const ThreadsRequest& request,
@@ -80,18 +119,7 @@ bool ReadReply(MessageReader* reader,
     return false;
   *transaction_id = header.transaction_id;
 
-  uint32_t size = 0;
-  if (!reader->ReadUint32(&size))
-    return false;
-  reply->threads.resize(size);
-  for (uint32_t i = 0; i < size; i++) {
-    ThreadRecord* thread = &reply->threads[i];
-    if (!reader->ReadUint64(&thread->koid))
-      return false;
-    if (!reader->ReadString(&thread->name))
-      return false;
-  }
-  return true;
+  return Deserialize(reader, &reply->threads);
 }
 
 void WriteRequest(const ReadMemoryRequest& request,
@@ -109,30 +137,7 @@ bool ReadReply(MessageReader* reader,
     return false;
   *transaction_id = header.transaction_id;
 
-  uint32_t block_count = 0;
-  if (!reader->ReadUint32(&block_count))
-    return false;
-  reply->blocks.resize(block_count);
-  for (auto& block : reply->blocks) {
-    if (!reader->ReadUint64(&block.address))
-      return false;
-
-    uint32_t valid_flag;
-    if (!reader->ReadUint32(&valid_flag))
-      return false;
-    block.valid = !!valid_flag;
-
-    if (!reader->ReadUint64(&block.size))
-      return false;
-    if (block.size > reader->remaining())
-      return false;
-    if (block.valid && block.size > 0) {
-      block.data.resize(block.size);
-      if (!reader->ReadBytes(block.size, &block.data[0]))
-        return false;
-    }
-  }
-  return true;
+  return Deserialize(reader, &reply->blocks);
 }
 
 }  // namespace debug_ipc

@@ -5,6 +5,6 @@
 #include <stdio.h>
 
 int main(int argc, char* argv[]) {
-  printf("Unimplemented, sorry.\n");
+  printf("[Host] Unimplemented, sorry.\n");
   return 0;
 }

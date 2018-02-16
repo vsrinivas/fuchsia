@@ -35,8 +35,7 @@ class MessageWriter {
   void WriteHeader(MsgHeader::Type type, uint32_t transaction_id);
 
   // Writes the size of the current buffer to the first 4 bytes, and
-  // destructively returns the buffer. The size will also be written to the
-  // given out param.
+  // destructively returns the buffer.
   std::vector<char> MessageComplete();
 
  private:

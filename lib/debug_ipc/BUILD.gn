@@ -12,6 +12,8 @@ static_library("shared") {
     "message_writer.cc",
     "protocol.cc",
     "protocol.h",
+    "protocol_helpers.cc",
+    "protocol_helpers.h",
     "records.h",
     "message_writer.h",
     "stream_buffer.cc",

@@ -19,6 +19,13 @@ void WriteReply(const HelloReply& reply,
                 MessageWriter* writer);
 
 bool ReadRequest(MessageReader* reader,
+                 LaunchRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const LaunchReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
+bool ReadRequest(MessageReader* reader,
                  ProcessTreeRequest* request,
                  uint32_t* transaction_id);
 void WriteReply(const ProcessTreeReply& reply,

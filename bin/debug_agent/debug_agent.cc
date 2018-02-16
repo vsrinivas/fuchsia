@@ -2,75 +2,125 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/io.h>
-#include <stdio.h>
-#include <launchpad/launchpad.h>
-#include <zx/process.h>
+#include "garnet/bin/debug_agent/debug_agent.h"
 
-#include "garnet/bin/debug_agent/exception_handler.h"
+#include <zircon/syscalls/exception.h>
 
-// Currently this is just a manual test that sets up the exception handler and
-// spawns a process for
-// it to listen to.
+#include "garnet/lib/debug_ipc/agent_protocol.h"
+#include "garnet/lib/debug_ipc/message_reader.h"
+#include "garnet/lib/debug_ipc/message_writer.h"
+#include "garnet/lib/debug_ipc/stream_buffer.h"
 
-zx::process Launch(const char* path) {
-  launchpad_t* lp;
-  zx_status_t status = launchpad_create(0, path, &lp);
-  if (status != ZX_OK)
-    return zx::process();
+namespace {
 
-  status = launchpad_load_from_file(lp, path);
-  if (status != ZX_OK)
-    return zx::process();
+// Deserializes the request based on type, calls the given hander in the
+// DebugAgent, and then sends the reply back.
+template<typename RequestMsg, typename ReplyMsg>
+void DispatchMessage(DebugAgent* agent,
+                     void (DebugAgent::*handler)(const RequestMsg&, ReplyMsg*),
+                     std::vector<char> data,
+                     const char* type_string) {
+  debug_ipc::MessageReader reader(std::move(data));
 
-  // Command line arguments.
-  const char* argv[1] = {path};
-  status = launchpad_set_args(lp, 1, argv);
-  if (status != ZX_OK)
-    return zx::process();
-
-  // Transfer STDIO handles.
-  status = launchpad_transfer_fd(lp, 1, FDIO_FLAG_USE_FOR_STDIO | 0);
-  if (status != ZX_OK)
-    return zx::process();
-
-  launchpad_clone(
-      lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
-  if (status != ZX_OK)
-    return zx::process();
-
-  zx_handle_t child;
-  status = launchpad_go(lp, &child, NULL);
-  if (status != ZX_OK)
-    return zx::process();
-
-  return zx::process(child);
-}
-
-int main(int argc, char* argv[]) {
-  zx::socket client_socket, router_socket;
-  if (zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &router_socket) !=
-      ZX_OK)
-    fprintf(stderr, "Can't create socket.\n");
-
-  ExceptionHandler handler;
-  if (!handler.Start(std::move(router_socket))) {
-    fprintf(stderr, "Can't start thread.\n");
-    return 1;
+  RequestMsg request;
+  uint32_t transaction_id = 0;
+  if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
+    fprintf(stderr, "Got bad debugger %sRequest, ignoring.\n", type_string);
+    return;
   }
 
-  zx::process process = Launch("/boot/bin/ps");
-  if (!handler.Attach(std::move(process)))
-    fprintf(stderr, "Couldn't attach.\n");
+  ReplyMsg reply;
+  (agent->*handler)(request, &reply);
 
-  // TEST
-  char hello[] = "hello";
-  size_t written = 0;
-  client_socket.write(0, hello, 5, &written);
-  fprintf(stderr, "Wrote %d\n", (int)written);
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteReply(reply, transaction_id, &writer);
 
-  fprintf(stderr, "Sleeping...\n");
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(1000)));
-  fprintf(stderr, "Done sleeping, exiting.\n");
-  return 0;
+  agent->stream().Write(writer.MessageComplete());
+}
+
+}  // namespace
+
+DebugAgent::DebugAgent(ExceptionHandler* handler) : handler_(handler) {}
+
+DebugAgent::~DebugAgent() {}
+
+void DebugAgent::OnStreamData() {
+  debug_ipc::MsgHeader header;
+  size_t bytes_read = stream().Peek(
+      reinterpret_cast<char*>(&header), sizeof(header));
+  if (bytes_read != sizeof(header))
+    return;  // Don't have enough data for the header.
+  if (!stream().IsAvailable(header.size))
+    return;  // Entire message hasn't arrived yet.
+
+  // The message size includes the header.
+  std::vector<char> buffer(header.size);
+  stream().Read(&buffer[0], header.size);
+
+  // Range check the message type.
+  if (header.type == debug_ipc::MsgHeader::Type::kNone ||
+      header.type >= debug_ipc::MsgHeader::Type::kNumMessages) {
+    fprintf(stderr, "Invalid message type %u, ignoring.\n",
+            static_cast<unsigned>(header.type));
+    return;
+  }
+
+  // Dispatches a message type assuming the handler function name, request
+  // struct type, and reply struct type are all based on the message type name.
+  // For example, MsgHeader::Type::kFoo will call:
+  //   OnFoo(FooRequest, FooReply*);
+  #define DISPATCH(msg_type) \
+    case debug_ipc::MsgHeader::Type::k##msg_type: \
+      DispatchMessage<debug_ipc::msg_type##Request, \
+                      debug_ipc::msg_type##Reply>( \
+                          this, &DebugAgent::On##msg_type, std::move(buffer), \
+                          #msg_type); \
+      break
+
+  switch (header.type) {
+    DISPATCH(Hello);
+    DISPATCH(Launch);
+    DISPATCH(ProcessTree);
+    DISPATCH(Threads);
+    DISPATCH(ReadMemory);
+
+    // Explicitly no "default" to get warnings about unhandled message types,
+    // but need to handle these "not a message" types to avoid this warning.
+    case debug_ipc::MsgHeader::Type::kNone:
+    case debug_ipc::MsgHeader::Type::kNumMessages:
+      break;  // Avoid warning
+  }
+
+  #undef DISPATCH
+}
+
+void DebugAgent::OnThreadStarting(const zx::thread& thread) {
+  fprintf(stderr, "Exception: thread starting.\n");
+  thread.resume(ZX_RESUME_EXCEPTION);
+}
+
+void DebugAgent::OnThreadExiting(const zx::thread& thread) {
+  fprintf(stderr, "Exception: thread exiting.\n");
+  thread.resume(ZX_RESUME_EXCEPTION);
+}
+
+void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
+                         debug_ipc::HelloReply* reply) {
+  reply->version = 1;
+}
+
+void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
+                          debug_ipc::LaunchReply* reply) {
+}
+
+void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
+                               debug_ipc::ProcessTreeReply* reply) {
+}
+
+void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
+                           debug_ipc::ThreadsReply* reply) {
+}
+
+void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                              debug_ipc::ReadMemoryReply* reply) {
 }

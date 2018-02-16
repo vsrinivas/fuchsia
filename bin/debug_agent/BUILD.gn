@@ -6,8 +6,8 @@ import("//build/package.gni")
 
 static_library("lib") {
   sources = [
-    "debug_commands.cc",
-    "debug_commands.h",
+    "debug_agent.cc",
+    "debug_agent.h",
     "exception_handler.cc",
     "exception_handler.h",
   ]
@@ -23,7 +23,7 @@ static_library("lib") {
 executable("bin") {
   output_name = "debug_agent"
   sources = [
-    "debug_agent.cc",
+    "main.cc",
   ]
 
   deps = [

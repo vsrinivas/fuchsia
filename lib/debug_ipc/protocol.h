@@ -22,6 +22,7 @@ struct MsgHeader {
   enum class Type : uint32_t {
     kNone = 0,
     kHello,
+    kLaunch,
     kProcessTree,
     kThreads,
     kReadMemory,
@@ -46,6 +47,15 @@ struct MsgHeader {
 struct HelloRequest {};
 struct HelloReply {
   uint32_t version = 0;
+};
+
+struct LaunchRequest {
+  // argv[0] is the app to launch.
+  std::vector<std::string> argv;
+};
+struct LaunchReply {
+  uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
+  uint64_t process_koid = 0;
 };
 
 struct ProcessTreeRequest {};

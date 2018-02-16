@@ -9,15 +9,28 @@
 
 namespace debug_ipc {
 
-// This class is a buffer that sits between an asynchronous OS data source and
-// a consumer of that stream. The data source supplies data in chunks which
-// are buffered
+// This class is a buffer that sits between an asynchronous OS read/write
+// source and producers and consumer of stream data.
 class StreamBuffer {
  public:
+  class Writer {
+   public:
+    // Consumes as much of the given data as possible, returning how many bytes
+    // were consumed.
+    virtual size_t ConsumeStreamBufferData(const char* data, size_t len) = 0;
+  };
+
   StreamBuffer();
   ~StreamBuffer();
 
-  void AddData(std::vector<char> data);
+  // Sets the writer which flushes write data to the OS.
+  void set_writer(Writer* writer) { writer_ = writer; }
+
+  // Provides data from the OS source for reading.
+  void AddReadData(std::vector<char> data);
+
+  // Notification from the OS that data can be written.
+  void SetWritable();
 
   // Returns true if the given number of bytes are available for reading.
   bool IsAvailable(size_t count) const;
@@ -31,13 +44,25 @@ class StreamBuffer {
   // supplied for a subsequent Peek() or Read() call.
   size_t Peek(char* buffer, size_t buffer_len) const;
 
+  // Writes the data to the OS sink.
+  void Write(std::vector<char> data);
+
  private:
   size_t ReadOrPeek(char* buffer, size_t buffer_len, bool erase_consumed);
 
-  // Stores the buffered data in a sequence of ordered buffers. Read at the
+  void FlushWriteBuffer();
+
+  Writer* writer_ = nullptr;
+
+  // Read buffer in a sequence of ordered buffers. Read at the
   // front, add data at the back.
-  std::deque<const std::vector<char>> buffers_;
-  size_t first_node_offset_ = 0;  // Read position of buffer_[0].
+  std::deque<const std::vector<char>> read_buffer_;
+  size_t first_read_buffer_offset_ = 0;  // Position of read_buffer_[0].
+
+  // Write buffer.
+  std::deque<const std::vector<char>> write_buffer_;
+  bool can_write_ = true;
+  size_t first_write_buffer_offset_ = 0;  // Position of write_buffer_[0].
 };
 
 }  // namespace debug_ipc

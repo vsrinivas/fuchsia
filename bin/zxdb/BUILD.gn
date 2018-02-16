@@ -8,9 +8,15 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "zxdb"
 
-  sources = [
-    "zxdb.cpp",
-  ]
+  sources = []
+  deps = []
+
+  if (current_toolchain == host_toolchain) {
+    sources += [ "main_host.cc" ]
+  } else {
+    sources += [ "main_target.cc" ]
+    deps += [ "//garnet/bin/debug_agent:lib" ]
+  }
 }
 
 package("zxdb") {
