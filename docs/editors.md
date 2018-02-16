@@ -1,49 +1,64 @@
 # Editor integration for Zircon
 
-## YouCompleteMe for Vim/Atom
+## YouCompleteMe
 
 [YouCompleteMe](https://valloric.github.io/YouCompleteMe/) is a semantic
-code-completion engine for Vim and Atom. You can use
-[Bear](https://github.com/rizsotto/Bear) to build its database from the Zircon
-makefiles.
+code-completion engine. YouCompleteMe works natively with Vim but it can also be
+integrated with other editors through [ycmd](https://github.com/Valloric/ycmd).
 
 ### Install YouCompleteMe in your editor
 
-Vim: https://valloric.github.io/YouCompleteMe/#installation
+See the [installation
+guide](https://github.com/Valloric/YouCompleteMe#installation).
 
-Atom: https://atom.io/packages/you-complete-me
+**Note**: Installing YCM on MacOS with Homebrew is not recommended because of
+library compatibility errors. Use the official installation guide instead.
 
-### Install Bear 2.2.1 or later
+#### gLinux (Googlers only)
 
-Bear intercepts `exec(3)` calls made during a build and scrapes commandlines
-that look like C/C++ compiler invocations.
+(This applies to anyone compiling on gLinux, even if editing over SSHFS on
+MacOS) Ignore the above. Search the Google intranet for "YouCompleteMe" for
+installation instructions.
 
-You can try using your system's package manager (apt-get, brew) to install Bear,
-but you will need version 2.2.1 or later to match the compiler names that
-Zircon uses.
+### Generate compilation database
 
-Example installation:
+YouCompleteMe (and other tools like clang-tidy) require a [JSON compilation
+database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) that
+specifies how each file is compiled. This database is normally stored in a file
+called `compile_commands.json`. There are multiple ways to generate this
+database for Zircon.
 
-``` bash
-mkdir "${HOME}/src"
-cd "${HOME}/src"
-git clone https://github.com/rizsotto/Bear.git
-cd Bear
-mkdir OUT
-cd OUT
+#### compiledb-generator
 
-# If you want to install a copy for only your user:
-  mkdir "${HOME}/local"
-  cmake -DCMAKE_INSTALL_PREFIX="${HOME}/local" ..
-  # And add ${HOME}/local/bin to your PATH.
-# Or, to default to /usr/local:
-  cmake ..
+[compiledb-generator](https://github.com/nickdiego/compiledb-generator) is the
+recommended way to generate a compilation database. It works by running make in
+no-op mode and parsing the output. Thus it may be less accurate than bear, but
+it should be able to produce a complete database very quickly and without
+requiring a clean build.
 
-make all
-make install  # Or 'sudo make install' to install to /usr/local
+To use it, download it from GitHub and run
+
+```bash
+cd "${ZIRCON_DIR}"
+compiledb-gen-make <make args> > compile_commands.json
 ```
 
-### Invoke Bear on the Zircon build system
+#### Bear
+
+Bear intercepts `exec(3)` calls made during a build and scrapes commandlines
+that look like C/C++ compiler invocations. Thus it is guaranteed to accurately
+capture the commands used during compilation. However it can't incrementally
+maintain a compilation database, so it requires performing a clean build.
+
+##### Install Bear
+
+You can try using your system's package manager (apt-get, brew) to install Bear,
+but you will need version 2.2.1 or later to match the compiler names that Zircon
+uses. Both homebrew's and Debian testing's versions are sufficiently new. You
+can also fall back to installing it from
+[GitHub](https://github.com/rizsotto/Bear).
+
+##### Invoke Bear on the Zircon build system
 
 You'll need to do this whenever the sources or makefiles change in a way that
 affects includes or types, or when you add/delete/move files, though it doesn't
@@ -51,10 +66,10 @@ hurt to use a stale database.
 
 As easy as:
 
-``` bash
+```bash
 cd "${ZIRCON_DIR}"
 make clean
-bear make -j20
+bear make -j$(getconf _NPROCESSORS_ONLN)
 ```
 
 This will create a `compile_commands.json` file in the local directory.
