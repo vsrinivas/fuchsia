@@ -578,15 +578,14 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 	debugLog("pkgfs:packagesroot:read")
 
-	var names []string
+	var names = map[string]struct{}{}
 	if pr.fs.static != nil {
 		pkgs, err := pr.fs.static.List()
 		if err != nil {
 			return nil, err
 		}
-		names = make([]string, len(pkgs))
-		for i, p := range pkgs {
-			names[i] = p.Name
+		for _, p := range pkgs {
+			names[p.Name] = struct{}{}
 		}
 	}
 
@@ -594,12 +593,13 @@ func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 	if err != nil {
 		return nil, goErrToFSErr(err)
 	}
+	for _, name := range dnames {
+		names[filepath.Base(name)] = struct{}{}
+	}
 
-	names = append(names, dnames...)
-
-	dirents := make([]fs.Dirent, len(names))
-	for i := range names {
-		dirents[i] = fileDirEnt(filepath.Base(names[i]))
+	dirents := make([]fs.Dirent, 0, len(names))
+	for name := range names {
+		dirents = append(dirents, fileDirEnt(name))
 	}
 	return dirents, nil
 }
