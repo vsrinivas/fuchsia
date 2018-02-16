@@ -75,4 +75,9 @@ kernel = {
     arm-timer = {
         irq-phys = 30
     }
+    hdmi-hdcp = {
+        preset-virt = PERIPH_VIRT + 0x1104000
+        hiu-virt =  PERIPH_VIRT + 0x883C000
+        hdmitx-virt = PERIPH_VIRT + 0x883A000
+    }
 }

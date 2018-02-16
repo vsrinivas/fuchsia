@@ -82,3 +82,9 @@ list    kernel.s905-uart                  MDI_S905_UART                         
 list    kernel.hisi-power                 MDI_HISI_POWER                        1100
 uint64  kernel.hisi-power.sctrl-base-virt MDI_HISI_POWER_SCTRL_BASE_VIRT        1101
 uint64  kernel.hisi-power.pmu-base-virt   MDI_HISI_POWER_PMU_BASE_VIRT          1102
+
+// AmLogic S912
+list kernel.hdmi-hdcp                       MDI_HDMI_HDCP                       1200
+uint64  kernel.hdmi-hdcp.preset-virt        MDI_HDMI_HDCP_PRESET_BASE_VIRT      1201
+uint64  kernel.hdmi-hdcp.hiu-virt           MDI_HDMI_HDCP_HIU_BASE_VIRT         1202
+uint64  kernel.hdmi-hdcp.hdmitx-virt        MDI_HDMI_HDCP_HDMITX_BASE_VIRT      1203
