@@ -36,7 +36,7 @@ works for both QEMU and for real hardware, but not for the
 Run a test using `//garnet/bin/test_runner/run_test`. For example:
 
 ```sh
-$ fx exec garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
+$ fx exec garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/agent_trigger_test"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
@@ -106,9 +106,9 @@ The JSON file looks similar to this:
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_module",
       "copy":{
-        "/system/apps/modular_tests":[
+        "/system/test/modular_tests":[
           "parent_module",
           "child_module"
         ]

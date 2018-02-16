@@ -20,7 +20,7 @@ namespace app {
 //     [ "app_with_args", "arg1", "arg2", "arg3" ]
 //   ],
 //   "path": [
-//     "/system/apps"
+//     "/system/bin"
 //   ],
 //   "include": [
 //     "/system/data/appmgr/startup.config"
