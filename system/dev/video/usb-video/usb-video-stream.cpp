@@ -107,24 +107,9 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
 
         list_initialize(&free_reqs_);
 
-        for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
-            usb_request_t* req;
-            zx_status_t status = usb_request_alloc(&req,
-                                                   max_bandwidth,
-                                                   usb_ep_addr_);
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
-                return status;
-            }
-
-            req->cookie = this;
-            req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
-                ZX_DEBUG_ASSERT(cookie != nullptr);
-                reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(req);
-            };
-            list_add_head(&free_reqs_, &req->node);
-            num_free_reqs_++;
-            num_allocated_reqs_++;
+        zx_status_t status = AllocUsbRequestsLocked(max_bandwidth);
+        if (status != ZX_OK) {
+            return status;
         }
     }
 
@@ -211,6 +196,8 @@ zx_status_t UsbVideoStream::SetFormat() {
         clock_frequency_hz_ = negotiation_result_.dwClockFrequency;
     }
 
+    send_req_size_ = setting_bandwidth(*cur_streaming_setting_);
+
     zxlogf(INFO, "configured video: format index %u frame index %u\n",
            cur_format_->index, cur_frame_desc_->index);
     zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
@@ -218,6 +205,45 @@ zx_status_t UsbVideoStream::SetFormat() {
            cur_streaming_setting_->max_packet_size,
            cur_streaming_setting_->transactions_per_microframe);
 
+    return ZX_OK;
+}
+
+zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
+    if (streaming_state_ != StreamingState::STOPPED) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (size <= allocated_req_size_) {
+        // Can reuse existing usb requests.
+       return ZX_OK;
+    }
+    // Need to allocate new usb requests, release any existing ones.
+    while (!list_is_empty(&free_reqs_)) {
+        usb_request_release(list_remove_head_type(&free_reqs_, usb_request_t, node));
+    }
+
+    zxlogf(TRACE, "allocating %d usb requests of size %lu\n",
+           MAX_OUTSTANDING_REQS, size);
+
+    for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
+        usb_request_t* req;
+        zx_status_t status = usb_request_alloc(&req,
+                                               size,
+                                               usb_ep_addr_);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
+            return status;
+        }
+
+        req->cookie = this;
+        req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
+            ZX_DEBUG_ASSERT(cookie != nullptr);
+            reinterpret_cast<UsbVideoStream*>(cookie)->RequestComplete(req);
+        };
+        list_add_head(&free_reqs_, &req->node);
+        num_free_reqs_++;
+        num_allocated_reqs_++;
+    }
+    allocated_req_size_ = size;
     return ZX_OK;
 }
 
@@ -452,7 +478,7 @@ void UsbVideoStream::QueueRequestLocked() {
     auto req = list_remove_head_type(&free_reqs_, usb_request_t, node);
     ZX_DEBUG_ASSERT(req != nullptr);
     num_free_reqs_--;
-    req->header.length = setting_bandwidth(*cur_streaming_setting_);
+    req->header.length = send_req_size_;
     usb_request_queue(&usb_, req);
 }
 

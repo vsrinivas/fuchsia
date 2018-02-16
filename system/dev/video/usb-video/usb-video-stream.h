@@ -125,6 +125,11 @@ private:
     zx_status_t StartStreaming();
     zx_status_t StopStreaming();
 
+    // Populates the free_reqs_ list with usb requests of the specified size.
+    // Returns immediately if the list already contains large enough usb
+    // requests, otherwise frees existing requests before allocating new ones.
+    // The current streaming state must be StreamingState::STOPPED.
+    zx_status_t AllocUsbRequestsLocked(uint64_t size) __TA_REQUIRES(lock_);
     // Queues a usb request against the underlying device.
     void QueueRequestLocked() __TA_REQUIRES(lock_);
     void RequestComplete(usb_request_t* req);
@@ -194,6 +199,11 @@ private:
     list_node_t free_reqs_ __TA_GUARDED(lock_);
     uint32_t num_free_reqs_ __TA_GUARDED(lock_);
     uint32_t num_allocated_reqs_ = 0;
+    // Size of underlying VMO backing the USB request.
+    uint64_t allocated_req_size_ = 0;
+    // The number of bytes to request in a USB request to a streaming endpoint.
+    // This should be equal or less than allocated_req_size_.
+    uint64_t send_req_size_ = 0;
 
     fbl::Mutex lock_;
 };
