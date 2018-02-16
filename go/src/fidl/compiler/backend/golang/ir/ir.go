@@ -14,6 +14,37 @@ import (
 // Type represents a golang type.
 type Type string
 
+// Enum represents the idiomatic representation of an enum in golang.
+//
+// That is, something like:
+// type MyEnum int32
+// const (
+//    MyEnumMember1 MyEnum = 1
+//    MyEnumMember2        = 2
+//    ...
+// )
+type Enum struct {
+	// Name is the name of the enum type alias.
+	Name string
+
+	// Type is the underlying primitive type for the enum.
+	Type Type
+
+	// Members is the list of enum variants that are a part of this enum.
+	// The values of the Members must not overlap.
+	Members []EnumMember
+}
+
+// EnumMember represents a single enum variant. See Enum for more details.
+type EnumMember struct {
+	// Name is the name of the enum variant without any prefix.
+	Name string
+
+	// Value is the raw value of the enum variant, represented as a string
+	// to support many types.
+	Value string
+}
+
 // Struct represents a golang struct.
 type Struct struct {
 	// Name is the name of the golang struct.
@@ -35,9 +66,12 @@ type StructMember struct {
 // The golang backend IR structure is loosely modeled after an abstract syntax
 // tree, and is used to generate golang code from templates.
 type Root struct {
-	// TODO(mknyszek): Support enums, unions, interfaces, and constants.
+	// TODO(mknyszek): Support unions, interfaces, and constants.
 
-	// Structs represents the list of structs
+	// Enums represents a list of FIDL enums represented as Go enums.
+	Enums []Enum
+
+	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
 }
 
@@ -125,6 +159,32 @@ func changeIfReserved(val types.Identifier) string {
 	return str
 }
 
+func compileLiteral(val types.Literal) string {
+	switch val.Kind {
+	// TODO(mknyszek): Support string and default literals.
+	case types.NumericLiteral:
+		return val.Value
+	case types.TrueLiteral:
+		return "true"
+	case types.FalseLiteral:
+		return "false"
+	default:
+		log.Fatal("Unknown literal kind:", val.Kind)
+		return ""
+	}
+}
+
+func compileConstant(val types.Constant) string {
+	switch val.Kind {
+	// TODO(mknyszek): Support identifiers.
+	case types.LiteralConstant:
+		return compileLiteral(val.Literal)
+	default:
+		log.Fatal("Unknown constant kind:", val.Kind)
+		return ""
+	}
+}
+
 func compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	t, ok := primitiveTypes[val]
 	if !ok {
@@ -142,6 +202,24 @@ func compileType(val types.Type) Type {
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
+	}
+	return r
+}
+
+func compileEnumMember(val types.EnumMember) EnumMember {
+	return EnumMember{
+		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Value: compileConstant(val.Value),
+	}
+}
+
+func compileEnum(val types.Enum) Enum {
+	r := Enum{
+		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Type: compilePrimitiveSubtype(val.Type),
+	}
+	for _, v := range val.Members {
+		r.Members = append(r.Members, compileEnumMember(v))
 	}
 	return r
 }
@@ -166,6 +244,9 @@ func compileStruct(val types.Struct) Struct {
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
 	r := Root{}
+	for _, v := range fidlData.Enums {
+		r.Enums = append(r.Enums, compileEnum(v))
+	}
 	for _, v := range fidlData.Structs {
 		r.Structs = append(r.Structs, compileStruct(v))
 	}
