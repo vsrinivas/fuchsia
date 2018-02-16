@@ -76,7 +76,7 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 // Example:  zxlogf(ERROR, "oh no! ...");
 //
-// By default drivers have ERROR and INFO debug levels enabled.
+// By default drivers have ERROR, WARN, and INFO debug levels enabled.
 // The kernel commandline option driver.NAME.log may be used to override
 // this.  Its value is a comma-separated list of log levels to enable (prefixed
 // with '+') or disable (prefixed with '-').  The levels are the strings
