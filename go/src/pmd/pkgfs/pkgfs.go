@@ -460,16 +460,6 @@ func importPackage(fs *Filesystem, root string) {
 		go fs.amberPxy.GetBlob(root)
 	}
 
-	if needsCount == 0 {
-		pkgIndexDir := fs.index.PackagePath(p.Name)
-		os.MkdirAll(pkgIndexDir, os.ModePerm)
-
-		if err := ioutil.WriteFile(filepath.Join(pkgIndexDir, p.Version), []byte(root), os.ModePerm); err != nil {
-			// XXX(raggi): is this a really bad state?
-			log.Printf("pkgfs: error writing package installed index for %s/%s: %s", p.Name, p.Version, err)
-		}
-	}
-
 	// XXX(raggi): there's a potential race here where needs could be fulfilled
 	// before this is written, so this should get re-orgnized to execute before the
 	// needs files are written, and then the move should be done as if checkNeeds
@@ -480,6 +470,12 @@ func importPackage(fs *Filesystem, root string) {
 	if err := ioutil.WriteFile(pkgInstalling, []byte(root), os.ModePerm); err != nil {
 		log.Printf("error writing package installing index for %s/%s: %s", p.Name, p.Version, err)
 	}
+
+	if needsCount == 0 {
+		activatePackage(p, fs)
+	}
+
+	checkNeeds(fs, root)
 }
 
 func checkNeeds(fs *Filesystem, root string) {
@@ -513,16 +509,37 @@ func checkNeeds(fs *Filesystem, root string) {
 				continue
 			}
 
-			from := filepath.Join(fs.index.InstallingDir(), pkgNameVersion)
-			to := filepath.Join(fs.index.PackagesDir(), pkgNameVersion)
-			os.MkdirAll(filepath.Dir(to), os.ModePerm)
-			debugLog("package %s ready, moving %s to %s", pkgNameVersion, from, to)
-			if err := os.Rename(from, to); err != nil {
-				// TODO(raggi): this kind of state will need to be cleaned up by a general garbage collector at a later time.
-				log.Printf("pkgfs: error moving package from installing to packages: %s", err)
-			}
+			parts := strings.SplitN(pkgNameVersion, "/", 2)
+			p := pkg.Package{Name: parts[0], Version: parts[1]}
+
+			activatePackage(p, fs)
+
 		}
 	}
+}
+
+func activatePackage(p pkg.Package, fs *Filesystem) {
+	from := filepath.Join(fs.index.InstallingDir(), p.Name, p.Version)
+	b, err := ioutil.ReadFile(from)
+	if err != nil {
+		log.Printf("pkgfs: error reading package installing manifest for %s: %s", p, err)
+		return
+	}
+	root := string(b)
+	if _, ok := fs.static[p]; ok {
+		fs.static[p] = root
+		debugLog("package %s ready, updated static index", p)
+		os.Remove(from)
+	} else {
+		to := filepath.Join(fs.index.PackagesDir(), p.Name, p.Version)
+		os.MkdirAll(filepath.Dir(to), os.ModePerm)
+		debugLog("package %s ready, moving %s to %s", p, from, to)
+		if err := os.Rename(from, to); err != nil {
+			// TODO(raggi): this kind of state will need to be cleaned up by a general garbage collector at a later time.
+			log.Printf("pkgfs: error moving package from installing to packages: %s", err)
+		}
+	}
+
 }
 
 type packagesRoot struct {
