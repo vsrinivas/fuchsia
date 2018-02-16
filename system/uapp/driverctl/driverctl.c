@@ -19,6 +19,7 @@ static void usage(void) {
             "Command \"log\":\n"
             "  options are zero or more of:\n"
             "    \"error\" or \"e\":   DDK_LOG_ERROR\n"
+            "    \"warn\" or \"w\":    DDK_LOG_WARN\n"
             "    \"info\" or \"i\":    DDK_LOG_INFO\n"
             "    \"trace\" or \"t\":   DDK_LOG_TRACE\n"
             "    \"spew\" or \"s\":    DDK_LOG_SPEW\n"
@@ -88,6 +89,9 @@ int main(int argc, char **argv) {
             if (flags & DDK_LOG_ERROR) {
                 printf(" ERROR");
             }
+            if (flags & DDK_LOG_WARN) {
+                printf(" WARN");
+            }
             if (flags & DDK_LOG_INFO) {
                 printf(" INFO");
             }
@@ -141,6 +145,8 @@ int main(int argc, char **argv) {
 
         if (!strcasecmp(arg, "e") || !strcasecmp(arg, "error")) {
             flag = DDK_LOG_ERROR;
+        } else if (!strcasecmp(arg, "w") || !strcasecmp(arg, "warn")) {
+            flag = DDK_LOG_WARN;
         } else if (!strcasecmp(arg, "i") || !strcasecmp(arg, "info")) {
             flag = DDK_LOG_INFO;
         } else if (!strcasecmp(arg, "t") || !strcasecmp(arg, "trace")) {
