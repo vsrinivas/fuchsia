@@ -106,6 +106,56 @@ func (c *Client) Close() {
 	c.mlmeChan.Close()
 }
 
+func ConvertWapToAp(ap AP) (wlan_service.Ap) {
+	bssid := make([]uint8, len(ap.BSSID))
+	copy(bssid, ap.BSSID[:])
+	// Currently we indicate the AP is secure if it supports RSN.
+	// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
+	is_secure := ap.BSSDesc.Rsn != nil
+	// TODO: Revisit this RSSI conversion.
+	last_rssi := int8(ap.LastRSSI)
+	return wlan_service.Ap{bssid, ap.SSID, int32(last_rssi), is_secure}
+}
+
+func (c *Client) Status() (wlan_service.WlanStatus) {
+	var state = wlan_service.State_Unknown
+
+	switch fmt.Sprintf("%v", c.state) {
+	case "starting-bss":
+		state = wlan_service.State_Bss
+	case "querying":
+		state = wlan_service.State_Querying
+	case "scanning":
+		state = wlan_service.State_Scanning
+	case "joining":
+		state = wlan_service.State_Joining
+	case "authenticating":
+		state = wlan_service.State_Authenticating
+	case "associating":
+		state = wlan_service.State_Associating
+	case "associated":
+		state = wlan_service.State_Associated
+	default:
+		state = wlan_service.State_Unknown
+	}
+
+	var current_ap *wlan_service.Ap = nil
+
+	if c.ap != nil &&
+		 state != wlan_service.State_Scanning &&
+		 state != wlan_service.State_Bss &&
+		 state != wlan_service.State_Querying {
+			 ap := ConvertWapToAp(*c.ap)
+			 current_ap = &ap
+	}
+
+	return wlan_service.WlanStatus{
+		wlan_service.Error{wlan_service.ErrCode_Ok, "OK"},
+		state,
+		current_ap,
+	}
+}
+
 func (c *Client) PostCommand(cmd Command, arg interface{}, respC chan *CommandResult) {
 	c.cmdC <- &commandRequest{cmd, arg, respC}
 }

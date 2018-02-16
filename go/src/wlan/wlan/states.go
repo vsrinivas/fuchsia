@@ -310,6 +310,9 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 			}
 		} else {
 			c.cfg = newCfg
+			if c.cfg != nil && c.cfg.SSID != "" {
+				s.pause = false
+			}
 			if debug {
 				log.Printf("New cfg: SSID %v, interval %v",
 					c.cfg.SSID, c.cfg.ScanInterval)
@@ -778,6 +781,7 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		if debug {
 			PrintSignalReportIndication(v)
 		}
+		c.ap.LastRSSI = v.Rssi
 		return s, nil
 	case *mlme_ext.EapolIndication:
 		if c.eapolC != nil {

@@ -20,6 +20,7 @@ const (
 	cmdScan       = "scan"
 	cmdConnect    = "connect"
 	cmdDisconnect = "disconnect"
+	cmdStatus     = "status"
 )
 
 type ToolApp struct {
@@ -28,7 +29,11 @@ type ToolApp struct {
 }
 
 func (a *ToolApp) Scan(seconds uint8) {
-	expiry := (time.Duration(seconds) + 5) * time.Second
+	expiry := 15 * time.Second
+	if seconds > 0 {
+		expiry = time.Duration(seconds) * time.Second
+	}
+
 	t := time.NewTimer(expiry)
 
 	rxed := make(chan struct{})
@@ -82,10 +87,51 @@ func (a *ToolApp) Disconnect() {
 	}
 }
 
+func (a *ToolApp) Status() {
+	res, err := a.wlan.Status()
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else if res.Error.Code != wlan_service.ErrCode_Ok {
+		fmt.Println("Error:", res.Error.Description)
+	} else {
+		state := "unknown"
+		switch res.State {
+		case wlan_service.State_Bss:
+			state = "starting-bss"
+		case wlan_service.State_Querying:
+			state = "querying"
+		case wlan_service.State_Scanning:
+			state = "scanning"
+		case wlan_service.State_Joining:
+			state = "joining"
+		case wlan_service.State_Authenticating:
+			state = "authenticating"
+		case wlan_service.State_Associating:
+			state = "associating"
+		case wlan_service.State_Associated:
+			state = "associated"
+		default:
+			state = "unknown"
+		}
+		fmt.Printf("Status: %v\n", state)
+
+		if res.CurrentAp != nil {
+			ap := res.CurrentAp
+			prot := " "
+			if ap.IsSecure {
+				prot = "*"
+			}
+			fmt.Printf("%x (RSSI: %d) %v %q\n",
+				ap.Bssid, ap.LastRssi, prot, ap.Ssid)
+		}
+	}
+}
+
 var Usage = func() {
 	fmt.Printf("Usage: %v %v [-t <timeout>]\n", os.Args[0], cmdScan)
 	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] [-b <bssid>] ssid\n", os.Args[0], cmdConnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdDisconnect)
+	fmt.Printf("       %v %v\n", os.Args[0], cmdStatus)
 }
 
 func main() {
@@ -149,6 +195,14 @@ func main() {
 			return
 		}
 		a.Disconnect()
+	case cmdStatus:
+		statusFlagSet := flag.NewFlagSet("status", flag.ExitOnError)
+		statusFlagSet.Parse(os.Args[2:])
+		if statusFlagSet.NArg() != 0 {
+			Usage()
+			return
+		}
+		a.Status()
 	default:
 		Usage()
 	}

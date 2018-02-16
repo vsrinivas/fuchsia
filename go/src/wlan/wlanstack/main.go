@@ -59,14 +59,7 @@ func (ws *Wlanstack) Scan(sr wlan_service.ScanRequest) (res wlan_service.ScanRes
 	}
 	aps := []wlan_service.Ap{}
 	for _, wap := range waps {
-		bssid := make([]uint8, len(wap.BSSID))
-		copy(bssid, wap.BSSID[:])
-		// Currently we indicate the AP is secure if it supports RSN.
-		// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
-		is_secure := wap.BSSDesc.Rsn != nil
-		// TODO: Revisit this RSSI conversion.
-		last_rssi := int8(wap.LastRSSI)
-		ap := wlan_service.Ap{bssid, wap.SSID, int32(last_rssi), is_secure}
+		ap := wlan.ConvertWapToAp(wap)
 		aps = append(aps, ap)
 	}
 	return wlan_service.ScanResult{
@@ -111,6 +104,20 @@ func (ws *Wlanstack) Disconnect() (wserr wlan_service.Error, err error) {
 		return *resp.Err, nil
 	}
 	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
+}
+
+func (ws *Wlanstack) Status() (res wlan_service.WlanStatus, err error) {
+	cli := ws.getCurrentClient()
+	if cli == nil {
+		return wlan_service.WlanStatus{
+			wlan_service.Error{
+				wlan_service.ErrCode_NotFound,
+				"No wlan interface found"},
+			wlan_service.State_Unknown,
+			nil,
+		}, nil
+	}
+	return cli.Status(), nil
 }
 
 func (ws *Wlanstack) Bind(r wlan_service.Wlan_Request) {
