@@ -26,7 +26,17 @@ SystemContext::SystemContext(SystemContext&& context)
   context.clock_ = nullptr;
 }
 
-System::System(SystemContext context) : context_(std::move(context)) {}
+System::System(SystemContext context, bool initialized_after_construction)
+    : initialized_(initialized_after_construction),
+      context_(std::move(context)) {}
+
+void System::SetToInitialized() {
+  initialized_ = true;
+  if (on_initialized_callback_) {
+    on_initialized_callback_(this);
+    on_initialized_callback_ = nullptr;
+  }
+}
 
 System::~System() = default;
 

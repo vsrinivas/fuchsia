@@ -56,7 +56,12 @@ class System {
     kMaxSystems = 2,
   };
 
-  explicit System(SystemContext context);
+  using OnInitializedCallback = std::function<void(System* system)>;
+
+  // If |initialized_after_construction| is false, the System must call
+  // SetToInitialized() after initialization is complete.
+  explicit System(SystemContext context,
+                  bool initialized_after_construction = true);
   virtual ~System();
 
   virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
@@ -64,7 +69,22 @@ class System {
 
   SystemContext* context() { return &context_; }
 
+  bool initialized() { return initialized_; };
+
+  void set_on_initialized_callback(OnInitializedCallback callback) {
+    FXL_DCHECK(!on_initialized_callback_);
+    on_initialized_callback_ = callback;
+  }
+
+ protected:
+  bool initialized_ = true;
+
+  // Marks this system as initialized and invokes callback if it's set.
+  void SetToInitialized();
+
  private:
+  OnInitializedCallback on_initialized_callback_;
+
   SystemContext context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(System);

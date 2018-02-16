@@ -2,6 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":unittests",
+  ]
+}
+
+executable("unittests") {
+  output_name = "mozart_unittests"
+
+  testonly = true
+
+  sources = [
+    "mozart_unittest.cc",
+  ]
+
+  deps = [
+    "//third_party/gtest",
+    "//garnet/bin/ui/tests:main",
+    "//garnet/lib/ui/mozart",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 source_set("dummy_system") {
   sources = [
     "dummy_system.cc",

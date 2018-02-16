@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/mozart/mozart.h"
 
+#include "lib/fxl/functional/make_copyable.h"
+
 namespace mz {
 
 Mozart::Mozart(app::ApplicationContext* app_context,
@@ -17,7 +19,45 @@ Mozart::Mozart(app::ApplicationContext* app_context,
 
 Mozart::~Mozart() = default;
 
+void Mozart::OnSystemInitialized(System* system) {
+  size_t num_erased = uninitialized_systems_.erase(system);
+  FXL_CHECK(num_erased == 1);
+
+  if (uninitialized_systems_.empty()) {
+    for (auto& closure : run_after_all_systems_initialized_) {
+      closure();
+    }
+    run_after_all_systems_initialized_.clear();
+  }
+}
+
+void Mozart::CloseSession(Session* session) {
+  for (auto& binding : session_bindings_.bindings()) {
+    if (binding->impl().get() == session) {
+      // A Session is only added to the bindings once, so we can return
+      // immediately after finding one and unbinding it.
+      binding->Unbind();
+      return;
+    }
+  }
+}
+
 void Mozart::CreateSession(
+    ::fidl::InterfaceRequest<ui_mozart::Session> session_request,
+    ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) {
+  if (uninitialized_systems_.empty()) {
+    CreateSessionImmediately(std::move(session_request), std::move(listener));
+  } else {
+    run_after_all_systems_initialized_.push_back(
+        fxl::MakeCopyable([this, session_request = std::move(session_request),
+                           listener = std::move(listener)]() mutable {
+          CreateSessionImmediately(std::move(session_request),
+                                   std::move(listener));
+        }));
+  }
+}
+
+void Mozart::CreateSessionImmediately(
     ::fidl::InterfaceRequest<ui_mozart::Session> session_request,
     ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) {
   auto session =
@@ -36,17 +76,6 @@ void Mozart::CreateSession(
   session->SetCommandDispatchers(std::move(dispatchers));
 
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
-}
-
-void Mozart::CloseSession(Session* session) {
-  for (auto& binding : session_bindings_.bindings()) {
-    if (binding->impl().get() == session) {
-      // A Session is only added to the bindings once, so we can return
-      // immediately after finding one and unbinding it.
-      binding->Unbind();
-      return;
-    }
-  }
 }
 
 }  // namespace mz
