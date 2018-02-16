@@ -85,9 +85,7 @@ class Bss : public fbl::RefCounted<Bss> {
     // TODO(porce): Separate into class BeaconTracker.
     BeaconHash bcn_hash_{0};
     size_t bcn_len_{0};
-    // A channel from which the beacon is received.
-    // Different from current_channel.primary.
-    wlan_channel_t bcn_chan_;
+    wlan_channel_t bcn_rx_chan_;
 
     // TODO(porce): Add ProbeResponse.
 
@@ -102,7 +100,7 @@ class Bss : public fbl::RefCounted<Bss> {
     uint8_t ssid_[SsidElement::kMaxLen]{0};
     size_t ssid_len_{0};
     std::vector<uint8_t> supported_rates_{0};
-    wlan_channel_t current_chan_;
+    uint8_t dsss_param_set_chan_;  // TODO(porce): Clarify where this information is to be used
     std::string country_{""};
     std::unique_ptr<uint8_t[]> rsne_;
     size_t rsne_len_{0};
