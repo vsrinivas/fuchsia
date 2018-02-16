@@ -341,6 +341,16 @@ void DriverOutput::OnDriverConfigComplete() {
     return;
   }
 
+  // Now that our driver is completely configured, we should have all the info
+  // we need in order to compute the minimum clock lead time requrirement for
+  // this output.
+  int64_t fifo_depth_nsec = TimelineRate::Scale(driver_->fifo_depth_frames(),
+                                                ZX_SEC(1),
+                                                driver_->frames_per_sec());
+  min_clock_lead_time_nsec_ = driver_->external_delay_nsec() +
+                              fifo_depth_nsec +
+                              kDefaultHighWaterNsec;
+
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);
   const auto& rb = *driver_ring_buffer();

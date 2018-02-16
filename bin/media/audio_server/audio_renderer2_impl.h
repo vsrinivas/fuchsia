@@ -63,6 +63,10 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
       f1dl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) final;
   void GetMinLeadTime(const GetMinLeadTimeCallback& callback) final;
 
+ protected:
+  // Hook called when the minimum clock lead time requirement changes.
+  void ReportNewMinClockLeadTime() final;
+
  private:
   // TODO(johngro): When AudioPipe is fully retired, eliminate the V1/V2
   // versions of audio packet refs, and fold this definition into the global
@@ -160,6 +164,9 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   int64_t pause_time_frac_frames_;
   bool pause_time_frac_frames_valid_ = false;
   TimelineRate frac_frames_per_ref_tick_;
+
+  // Minimum Clock Lead Time state
+  AudioRendererMinLeadTimeChangedEventPtr min_clock_lead_time_cbk_;
 
   fbl::Mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);

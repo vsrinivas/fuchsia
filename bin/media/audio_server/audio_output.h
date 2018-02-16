@@ -29,8 +29,13 @@ class AudioOutput : public AudioDevice {
     db_gain_.store(db_gain, std::memory_order_release);
   }
 
+  // Minimum clock lead time (in nanoseconds) for this output
+  int64_t min_clock_lead_time_nsec() const { return min_clock_lead_time_nsec_; }
+
  protected:
   explicit AudioOutput(AudioDeviceManager* manager);
+
+  int64_t min_clock_lead_time_nsec_ = 0;
 
  private:
   // TODO(johngro): Someday, when we expose output enumeration and control from

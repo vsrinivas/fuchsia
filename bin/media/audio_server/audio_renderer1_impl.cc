@@ -271,8 +271,7 @@ void AudioRenderer1Impl::SetGain(float db_gain) {
 }
 
 void AudioRenderer1Impl::GetMinDelay(const GetMinDelayCallback& callback) {
-  // TODO: Compute an actual value.
-  callback(ZX_MSEC(40));
+  callback(min_clock_lead_nsec_);
 }
 
 zx_status_t AudioRenderer1Impl::InitializeDestLink(const AudioLinkPtr& link) {

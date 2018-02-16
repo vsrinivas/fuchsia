@@ -46,6 +46,7 @@ void AudioRenderer2Impl::Shutdown() {
   // to destroy us.  Run some FXL_DCHECK sanity checks and get out.
   if (is_shutdown_) {
     FXL_DCHECK(!audio_renderer_binding_.is_bound());
+    FXL_DCHECK(!min_clock_lead_time_cbk_.is_bound());
     return;
   }
 
@@ -59,6 +60,7 @@ void AudioRenderer2Impl::Shutdown() {
   }
 
   gain_control_bindings_.CloseAll();
+  min_clock_lead_time_cbk_.Unbind();
   payload_buffer_.reset();
 }
 
@@ -493,11 +495,23 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
   //
   // TODO(johngro): We need to use our reference clock here, and not just assume
   // clock monotonic is our reference clock.
-  //
-  // TODO(johngro): Actually go over our link list and figure out our minimum
-  // lead time.  Don't just hardcode 50mSec.
   if (reference_time == AudioPacket::kNoTimestamp) {
-    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(50);
+    // TODO(johngro): How much more than the minimum clock lead time do we want
+    // to pad this by?  Also, if/when lead time requirements change, do we want
+    // to introduce a discontinuity?
+    //
+    // Perhaps we should consider an explicit mode (make it the default) where
+    // timing across outputs is considered to be loose.  In particular, make no
+    // effort to take external latency into account, and no effort to
+    // synchronize streams across multiple parallel outputs.  In a world like
+    // this, we might need to update this lead time beacuse of a change in
+    // internal interconnect requirements, but in general, the impact should
+    // usually be pretty small since internal requirements for lead times tend
+    // to be small, (while external requirements can be huge).
+    constexpr int64_t lead_time_padding = ZX_MSEC(20);
+    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC)
+                   + lead_time_padding
+                   + min_clock_lead_nsec_;
   }
 
   // If the user did not specify a media time, use the media time of the first
@@ -662,14 +676,19 @@ void AudioRenderer2Impl::DuplicateGainControlInterface(
 
 void AudioRenderer2Impl::EnableMinLeadTimeEvents(
     f1dl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  min_clock_lead_time_cbk_.Bind(std::move(evt));
+  ReportNewMinClockLeadTime();
 }
 
 void AudioRenderer2Impl::GetMinLeadTime(
     const GetMinLeadTimeCallback& callback) {
-  auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
-  FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
+  callback(min_clock_lead_nsec_);
+}
+
+void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
+  if (min_clock_lead_time_cbk_.is_bound()) {
+    min_clock_lead_time_cbk_->OnMinLeadTimeChanged(min_clock_lead_nsec_);
+  }
 }
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
