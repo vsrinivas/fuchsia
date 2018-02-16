@@ -34,6 +34,7 @@ source_set("host_compatible") {
     "callback_joiner.h",
     "incident.cc",
     "incident.h",
+    "thread_aware_shared_ptr.h",
     "priority_queue_of_unique_ptr.h",
     "safe_clone.h",
   ]

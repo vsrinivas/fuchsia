@@ -17,7 +17,7 @@ class TransformStageImpl : public TransformStage, public StageImpl {
   ~TransformStageImpl() override;
 
   // StageImpl implementation.
-  void ShutDown() override;
+  void OnShutDown() override;
 
   size_t input_count() const override;
 
@@ -44,8 +44,6 @@ class TransformStageImpl : public TransformStage, public StageImpl {
  protected:
   // StageImpl implementation.
   GenericNode* GetGenericNode() override;
-
-  void ReleaseNode() override;
 
   void Update() override;
 

@@ -47,8 +47,6 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   // StageImpl implementation.
   GenericNode* GetGenericNode() override;
 
-  void ReleaseNode() override;
-
   void Update() override;
 
  private:

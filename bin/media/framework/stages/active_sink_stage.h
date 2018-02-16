@@ -45,8 +45,6 @@ class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
   // StageImpl implementation.
   GenericNode* GetGenericNode() override;
 
-  void ReleaseNode() override;
-
   void Update() override;
 
  private:

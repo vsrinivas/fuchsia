@@ -5,12 +5,19 @@
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 
 namespace media {
+
+// static
+std::shared_ptr<FidlPacketProducer> FidlPacketProducer::Create() {
+  return ThreadAwareSharedPtr(new FidlPacketProducer(),
+                              fsl::MessageLoop::GetCurrent()->task_runner());
+}
 
 FidlPacketProducer::FidlPacketProducer() : binding_(this) {
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();

@@ -54,10 +54,6 @@ GenericNode* ActiveMultistreamSinkStageImpl::GetGenericNode() {
   return sink_.get();
 }
 
-void ActiveMultistreamSinkStageImpl::ReleaseNode() {
-  sink_ = nullptr;
-}
-
 void ActiveMultistreamSinkStageImpl::Update() {
   FXL_DCHECK(sink_);
 

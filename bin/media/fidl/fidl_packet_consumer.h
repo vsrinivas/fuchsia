@@ -17,9 +17,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   using FlushRequestedCallback =
       std::function<void(bool hold_frame, const FlushCallback&)>;
 
-  static std::shared_ptr<FidlPacketConsumer> Create() {
-    return std::shared_ptr<FidlPacketConsumer>(new FidlPacketConsumer());
-  }
+  static std::shared_ptr<FidlPacketConsumer> Create();
 
   ~FidlPacketConsumer() override;
 

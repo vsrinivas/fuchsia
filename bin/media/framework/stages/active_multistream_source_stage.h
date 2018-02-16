@@ -50,8 +50,6 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
   // StageImpl implementation.
   GenericNode* GetGenericNode() override;
 
-  void ReleaseNode() override;
-
   void Update() override;
 
  private:

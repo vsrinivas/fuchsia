@@ -17,8 +17,7 @@ TransformStageImpl::TransformStageImpl(std::shared_ptr<Transform> transform)
 
 TransformStageImpl::~TransformStageImpl() {}
 
-void TransformStageImpl::ShutDown() {
-  StageImpl::ShutDown();
+void TransformStageImpl::OnShutDown() {
   allocator_ = nullptr;
 }
 
@@ -66,10 +65,6 @@ void TransformStageImpl::UnprepareOutput(size_t index,
 
 GenericNode* TransformStageImpl::GetGenericNode() {
   return transform_.get();
-}
-
-void TransformStageImpl::ReleaseNode() {
-  transform_ = nullptr;
 }
 
 void TransformStageImpl::Update() {

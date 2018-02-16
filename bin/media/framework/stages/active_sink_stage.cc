@@ -48,10 +48,6 @@ GenericNode* ActiveSinkStageImpl::GetGenericNode() {
   return sink_.get();
 }
 
-void ActiveSinkStageImpl::ReleaseNode() {
-  sink_ = nullptr;
-}
-
 void ActiveSinkStageImpl::Update() {
   FXL_DCHECK(sink_);
 

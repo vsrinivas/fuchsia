@@ -5,9 +5,16 @@
 #include "garnet/bin/media/fidl/fidl_packet_consumer.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
+
+// static
+std::shared_ptr<FidlPacketConsumer> FidlPacketConsumer::Create() {
+  return ThreadAwareSharedPtr(new FidlPacketConsumer(),
+                              fsl::MessageLoop::GetCurrent()->task_runner());
+}
 
 FidlPacketConsumer::FidlPacketConsumer() {}
 

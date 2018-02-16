@@ -12,31 +12,29 @@ StageImpl::StageImpl() : update_counter_(0) {}
 
 StageImpl::~StageImpl() {}
 
-void StageImpl::ShutDown() {
-  {
-    fxl::MutexLocker locker(&tasks_mutex_);
-    tasks_suspended_ = true;
-  }
-
-  GenericNode* generic_node = GetGenericNode();
-  FXL_DCHECK(generic_node);
-
-  generic_node->SetGenericStage(nullptr);
-
-  fxl::RefPtr<fxl::TaskRunner> node_task_runner = generic_node->GetTaskRunner();
-  if (node_task_runner) {
-    // Release the node in the node-provided task runner.
-    PostShutdownTask([this]() { ReleaseNode(); });
-  } else {
-    // Release the node on this thread.
-    ReleaseNode();
-  }
-}
+void StageImpl::OnShutDown() {}
 
 void StageImpl::UnprepareInput(size_t index) {}
 
 void StageImpl::UnprepareOutput(size_t index,
                                 const UpstreamCallback& callback) {}
+
+void StageImpl::ShutDown() {
+  PostTask([shared_this = shared_from_this()]() {
+    {
+      fxl::MutexLocker locker(&shared_this->tasks_mutex_);
+      shared_this->tasks_suspended_ = true;
+      shared_this->purge_tasks_ = true;
+    }
+
+    shared_this->OnShutDown();
+
+    GenericNode* generic_node = shared_this->GetGenericNode();
+    FXL_DCHECK(generic_node);
+
+    generic_node->SetGenericStage(nullptr);
+  });
+}
 
 void StageImpl::NeedsUpdate() {
   if (++update_counter_ == 1) {
@@ -44,9 +42,9 @@ void StageImpl::NeedsUpdate() {
     PostTask([this]() { UpdateUntilDone(); });
   } else {
     // This stage already has an update either pending in the task queue or
-    // running. Set the counter to 2 so it will never go out of range. We don't
-    // set it to 1, because, if we're in |UpdateUntilDone|, that would indicate
-    // we no longer need to update.
+    // running. Set the counter to 2 so it will never go out of range. We
+    // don't set it to 1, because, if we're in |UpdateUntilDone|, that would
+    // indicate we no longer need to update.
     update_counter_ = 2;
   }
 }
@@ -106,6 +104,10 @@ void StageImpl::PostTask(const fxl::Closure& task) {
 
   {
     fxl::MutexLocker locker(&tasks_mutex_);
+    if (purge_tasks_) {
+      return;
+    }
+
     tasks_.push(task);
     if (tasks_.size() != 1 || tasks_suspended_) {
       // Don't need to run tasks, either because there were already tasks in
@@ -140,6 +142,12 @@ void StageImpl::RunTasks() {
     task = nullptr;
     tasks_mutex_.Lock();
     tasks_.pop();
+  }
+
+  if (purge_tasks_) {
+    while (!tasks_.empty()) {
+      tasks_.pop();
+    }
   }
 
   tasks_mutex_.Unlock();

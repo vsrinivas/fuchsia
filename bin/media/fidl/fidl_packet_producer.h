@@ -24,9 +24,7 @@ class FidlPacketProducer
   using ConnectionStateChangedCallback = std::function<void()>;
   using FlushConnectionCallback = std::function<void()>;
 
-  static std::shared_ptr<FidlPacketProducer> Create() {
-    return std::shared_ptr<FidlPacketProducer>(new FidlPacketProducer());
-  }
+  static std::shared_ptr<FidlPacketProducer> Create();
 
   ~FidlPacketProducer() override;
 

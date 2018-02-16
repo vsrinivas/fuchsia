@@ -69,10 +69,6 @@ GenericNode* ActiveMultistreamSourceStageImpl::GetGenericNode() {
   return source_.get();
 }
 
-void ActiveMultistreamSourceStageImpl::ReleaseNode() {
-  source_ = nullptr;
-}
-
 void ActiveMultistreamSourceStageImpl::Update() {
   fxl::MutexLocker locker(&mutex_);
 

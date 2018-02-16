@@ -72,10 +72,6 @@ GenericNode* ActiveSourceStageImpl::GetGenericNode() {
   return source_.get();
 }
 
-void ActiveSourceStageImpl::ReleaseNode() {
-  source_ = nullptr;
-}
-
 void ActiveSourceStageImpl::Update() {
   Demand demand = output_.demand();
 

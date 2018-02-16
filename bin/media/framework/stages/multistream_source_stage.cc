@@ -69,10 +69,6 @@ GenericNode* MultistreamSourceStageImpl::GetGenericNode() {
   return source_.get();
 }
 
-void MultistreamSourceStageImpl::ReleaseNode() {
-  source_ = nullptr;
-}
-
 void MultistreamSourceStageImpl::Update() {
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {

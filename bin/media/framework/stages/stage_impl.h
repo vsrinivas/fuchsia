@@ -29,8 +29,9 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
 
   virtual ~StageImpl();
 
-  // Shuts down the stage prior to destruction.
-  virtual void ShutDown();
+  // Called when the stage is shutting down. The default implementation does
+  // nothing.
+  virtual void OnShutDown();
 
   // Returns the number of input connections.
   virtual size_t input_count() const = 0;
@@ -75,6 +76,9 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;
 
+  // Shuts down the stage.
+  void ShutDown();
+
   // Queues the stage for update if it isn't already queued. This method may
   // be called on any thread.
   void NeedsUpdate();
@@ -102,9 +106,6 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
  protected:
   // Gets the generic node.
   virtual GenericNode* GetGenericNode() = 0;
-
-  // Releases ownership of the node.
-  virtual void ReleaseNode() = 0;
 
   // Updates packet supply and demand.
   virtual void Update() = 0;
@@ -139,6 +140,8 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   std::queue<fxl::Closure> tasks_ FXL_GUARDED_BY(tasks_mutex_);
   // Set to true to suspend task execution.
   bool tasks_suspended_ FXL_GUARDED_BY(tasks_mutex_) = false;
+  // Set to true to purge queued tasks.
+  bool purge_tasks_ FXL_GUARDED_BY(tasks_mutex_) = false;
 };
 
 }  // namespace media
