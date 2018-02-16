@@ -40,7 +40,15 @@ class SystemContext final {
   Clock* clock_;
 };
 
-class System : public fxl::RefCountedThreadSafe<System> {
+// Systems are a composable way to add functionality to Mozart. A System creates
+// CommandDispatcher objects, which handle a subset of the Commands that a
+// Mozart Session can support. A Mozart Session creates multiple
+// CommandDispatchers, one per unique System, which handle different subsets of
+// Commands.
+//
+// Systems are not expected to be thread-safe; they are only created, used, and
+// destroyed on the main Mozart thread.
+class System {
  public:
   enum TypeId {
     kScenic = 0,
