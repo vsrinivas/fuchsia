@@ -3286,7 +3286,7 @@ static int brcmf_cfg80211_sched_scan_stop(struct wiphy* wiphy, struct net_device
     return 0;
 }
 
-static __always_inline void brcmf_delay(uint32_t ms) {
+static __ALWAYS_INLINE void brcmf_delay(uint32_t ms) {
     if (ms < 1000 / HZ) {
         cond_resched();
         mdelay(ms);
@@ -3586,7 +3586,7 @@ exit:
     return 0;
 }
 
-static __used int32_t brcmf_update_pmklist(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp) {
+static __USED int32_t brcmf_update_pmklist(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp) {
     struct brcmf_pmk_list_le* pmk_list;
     int i;
     uint32_t npmk;

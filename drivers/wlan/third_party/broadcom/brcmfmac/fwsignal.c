@@ -540,11 +540,11 @@ static int brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_fws_tlv_
 }
 #undef BRCMF_FWS_TLV_DEF
 
-static void brcmf_fws_lock(struct brcmf_fws_info* fws) __acquires(&fws->spinlock) {
+static void brcmf_fws_lock(struct brcmf_fws_info* fws) __TA_ACQUIRE(&fws->spinlock) {
     spin_lock_irqsave(&fws->spinlock, fws->flags);
 }
 
-static void brcmf_fws_unlock(struct brcmf_fws_info* fws) __releases(&fws->spinlock) {
+static void brcmf_fws_unlock(struct brcmf_fws_info* fws) __TA_RELEASE(&fws->spinlock) {
     spin_unlock_irqrestore(&fws->spinlock, fws->flags);
 }
 

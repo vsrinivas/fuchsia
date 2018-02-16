@@ -463,7 +463,7 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
     kfree(module_param);
 }
 
-static int __init brcmf_common_pd_probe(struct platform_device* pdev) {
+static int brcmf_common_pd_probe(struct platform_device* pdev) {
     brcmf_dbg(INFO, "Enter\n");
 
     brcmfmac_pdata = dev_get_platdata(&pdev->dev);
@@ -492,7 +492,7 @@ static struct platform_driver brcmf_pd = {
     }
 };
 
-static int __init brcmfmac_module_init(void) {
+static int brcmfmac_module_init(void) {
     int err;
 
     /* Initialize debug system first */
@@ -519,7 +519,7 @@ static int __init brcmfmac_module_init(void) {
     return err;
 }
 
-static void __exit brcmfmac_module_exit(void) {
+static void brcmfmac_module_exit(void) {
     brcmf_core_exit();
     if (brcmfmac_pdata) {
         platform_driver_unregister(&brcmf_pd);

@@ -233,7 +233,7 @@ struct brcm_ethhdr {
     uint8_t version;
     uint8_t oui[3];
     __be16 usr_subtype;
-} __packed;
+} __PACKED;
 
 struct brcmf_event_msg_be {
     __be16 version;
@@ -247,7 +247,7 @@ struct brcmf_event_msg_be {
     char ifname[IFNAMSIZ];
     uint8_t ifidx;
     uint8_t bsscfgidx;
-} __packed;
+} __PACKED;
 
 /**
  * struct brcmf_event - contents of broadcom event packet.
@@ -260,7 +260,7 @@ struct brcmf_event {
     struct ethhdr eth;
     struct brcm_ethhdr hdr;
     struct brcmf_event_msg_be msg;
-} __packed;
+} __PACKED;
 
 /**
  * struct brcmf_event_msg - firmware event message.

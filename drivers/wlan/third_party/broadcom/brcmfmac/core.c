@@ -1198,7 +1198,7 @@ static void brcmf_driver_register(struct work_struct* work) {
 }
 static DECLARE_WORK(brcmf_driver_work, brcmf_driver_register);
 
-int __init brcmf_core_init(void) {
+int brcmf_core_init(void) {
     if (!schedule_work(&brcmf_driver_work)) {
         return -EBUSY;
     }
@@ -1206,7 +1206,7 @@ int __init brcmf_core_init(void) {
     return 0;
 }
 
-void __exit brcmf_core_exit(void) {
+void brcmf_core_exit(void) {
     cancel_work_sync(&brcmf_driver_work);
 
 #ifdef CONFIG_BRCMFMAC_SDIO

@@ -101,9 +101,6 @@ typedef struct {
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define min_t(t, a, b) (((t)(a) < (t)(b)) ? (t)(a) : (t)(b))
 
-#define __packed __attribute__((packed))
-#define __aligned(n) __attribute__((aligned(n)))
-
 #define rounddown(n, m) ((n) - ((n) % (m)))
 #define roundup(n, m) (((n) % (m) == 0) ? (n) : (n) + ((m) - ((n) % (m))))
 
@@ -864,16 +861,8 @@ extern uint64_t jiffies;
 #define EXPORT_SYMBOL(a)
 #define MODULE_SUPPORTED_DEVICE(a)
 
-#define __init
-#define __exit
-#define __iomem
-#define __always_inline
-#define __used
-#undef __restrict  // conflicts with zircon/public/sysroot/sysroot/include/features.h
-#define __restrict
-#define __acquires(a)
-#define __releases(a)
-#define IS_ENABLED(a) (a)
+#define __iomem            // May want it later
+#define IS_ENABLED(a) (a)  // not in compiler.h
 #define PTR_ERR_OR_ZERO(a) (0)
 #define HZ (60)
 

@@ -56,14 +56,14 @@ void brcmf_commonring_config(struct brcmf_commonring* commonring, uint16_t depth
     commonring->f_ptr = 0;
 }
 
-void brcmf_commonring_lock(struct brcmf_commonring* commonring) __acquires(&commonring->lock) {
+void brcmf_commonring_lock(struct brcmf_commonring* commonring) __TA_ACQUIRE(&commonring->lock) {
     unsigned long flags;
 
     spin_lock_irqsave(&commonring->lock, flags);
     commonring->flags = flags;
 }
 
-void brcmf_commonring_unlock(struct brcmf_commonring* commonring) __releases(&commonring->lock) {
+void brcmf_commonring_unlock(struct brcmf_commonring* commonring) __TA_RELEASE(&commonring->lock) {
     spin_unlock_irqrestore(&commonring->lock, commonring->flags);
 }
 
