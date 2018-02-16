@@ -120,20 +120,20 @@ func ConvertWapToAp(ap AP) (wlan_service.Ap) {
 func (c *Client) Status() (wlan_service.WlanStatus) {
 	var state = wlan_service.State_Unknown
 
-	switch fmt.Sprintf("%v", c.state) {
-	case "starting-bss":
+	switch c.state.(type) {
+	case *startBSSState:
 		state = wlan_service.State_Bss
-	case "querying":
+	case *queryState:
 		state = wlan_service.State_Querying
-	case "scanning":
+	case *scanState:
 		state = wlan_service.State_Scanning
-	case "joining":
+	case *joinState:
 		state = wlan_service.State_Joining
-	case "authenticating":
+	case *authState:
 		state = wlan_service.State_Authenticating
-	case "associating":
+	case *assocState:
 		state = wlan_service.State_Associating
-	case "associated":
+	case *associatedState:
 		state = wlan_service.State_Associated
 	default:
 		state = wlan_service.State_Unknown
