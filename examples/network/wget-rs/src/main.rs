@@ -105,13 +105,7 @@ fn main_res() -> Result<(), Error> {
 
             // Copy the bytes from the socket to stdout
             copy(socket, AllowStdIo::new(io::stdout()))
-                .map(|_| ())
-                .or_else(|e| if e.kind() == io::ErrorKind::ConnectionAborted {
-                    println!("\n>>> EOF <<<");
-                    Ok(())
-                } else {
-                    Err(e)
-                })
+                .map(|_| println!("\n>>> EOF <<<"))
                 .map_err(Error::from)
         })
     }).map(|_| ());

@@ -74,6 +74,9 @@ impl Socket {
             return Err(io::ErrorKind::WouldBlock.into());
         }
         let res = self.socket.read(buf);
+        if res == Err(zircon::Status::PEER_CLOSED) {
+            return Ok(0);
+        }
         if res == Err(zircon::Status::SHOULD_WAIT) {
             self.evented.need_read();
         }
@@ -87,6 +90,9 @@ impl Socket {
             return Err(io::ErrorKind::WouldBlock.into());
         }
         let res = self.socket.write(buf);
+        if res == Err(zircon::Status::PEER_CLOSED) {
+            return Ok(0);
+        }
         if res == Err(zircon::Status::SHOULD_WAIT) {
             self.evented.need_write();
         }
