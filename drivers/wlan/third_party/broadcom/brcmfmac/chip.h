@@ -88,7 +88,8 @@ struct brcmf_core* brcmf_chip_get_chipcommon(struct brcmf_chip* chip);
 struct brcmf_core* brcmf_chip_get_pmu(struct brcmf_chip* pub);
 bool brcmf_chip_iscoreup(struct brcmf_core* core);
 void brcmf_chip_coredisable(struct brcmf_core* core, uint32_t prereset, uint32_t reset);
-void brcmf_chip_resetcore(struct brcmf_core* core, uint32_t prereset, uint32_t reset, uint32_t postreset);
+void brcmf_chip_resetcore(struct brcmf_core* core, uint32_t prereset, uint32_t reset,
+                          uint32_t postreset);
 void brcmf_chip_set_passive(struct brcmf_chip* ci);
 bool brcmf_chip_set_active(struct brcmf_chip* ci, uint32_t rstvec);
 bool brcmf_chip_sr_capable(struct brcmf_chip* pub);

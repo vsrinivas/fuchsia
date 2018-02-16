@@ -115,12 +115,12 @@ struct brcmf_btcoex_info {
  */
 static int32_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr, uint32_t data) {
     struct {
-        __le32 addr;
-        __le32 data;
+        uint32_t addr;
+        uint32_t data;
     } reg_write;
 
-    reg_write.addr = cpu_to_le32(addr);
-    reg_write.data = cpu_to_le32(data);
+    reg_write.addr = addr;
+    reg_write.data = data;
     return brcmf_fil_iovar_data_set(ifp, "btc_params", &reg_write, sizeof(reg_write));
 }
 

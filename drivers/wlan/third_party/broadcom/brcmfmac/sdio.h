@@ -172,7 +172,7 @@ struct brcmf_sdiod_freezer;
 struct brcmf_sdio_dev {
     struct sdio_func* func1;
     struct sdio_func* func2;
-    uint32_t sbwad;                  /* Save backplane window address */
+    uint32_t sbwad;             /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */
     struct brcmf_sdio* bus;
     struct device* dev;
@@ -336,7 +336,8 @@ int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* 
  *   nbytes:   number of bytes to transfer to/from buf
  * Returns 0 or error code.
  */
-int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address, uint8_t* data, uint size);
+int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address, uint8_t* data,
+                      uint size);
 
 /* Issue an abort to the specified function */
 int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func);

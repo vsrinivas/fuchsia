@@ -843,11 +843,11 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct sk_buff* skb
     uint8_t* wlh;
     uint16_t data_offset = 0;
     uint8_t fillers;
-    __le32 pkttag = cpu_to_le32(brcmf_skbcb(skb)->htod);
-    __le16 pktseq = cpu_to_le16(brcmf_skbcb(skb)->htod_seq);
+    uint32_t pkttag = brcmf_skbcb(skb)->htod;
+    uint16_t pktseq = brcmf_skbcb(skb)->htod_seq;
 
     brcmf_dbg(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X\n", entry->name,
-              brcmf_skb_if_flags_get_field(skb, INDEX), (le32_to_cpu(pkttag) >> 8) & 0xffff,
+              brcmf_skb_if_flags_get_field(skb, INDEX), (pkttag) >> 8 & 0xffff,
               brcmf_skbcb(skb)->htod, brcmf_skbcb(skb)->htod_seq);
     if (entry->send_tim_signal) {
         data_offset += 2 + BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
@@ -1472,8 +1472,8 @@ static int brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws, uint8_t
 }
 
 static int brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data) {
-    __le32 status_le;
-    __le16 seq_le;
+    uint32_t status_le;
+    uint16_t seq_le;
     uint32_t status;
     uint32_t hslot;
     uint32_t genbit;
@@ -1482,13 +1482,13 @@ static int brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data
 
     fws->stats.txs_indicate++;
     memcpy(&status_le, data, sizeof(status_le));
-    status = le32_to_cpu(status_le);
+    status = status_le;
     flags = brcmf_txstatus_get_field(status, FLAGS);
     hslot = brcmf_txstatus_get_field(status, HSLOT);
     genbit = brcmf_txstatus_get_field(status, GENERATION);
     if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
         memcpy(&seq_le, &data[BRCMF_FWS_TYPE_PKTTAG_LEN], sizeof(seq_le));
-        seq = le16_to_cpu(seq_le);
+        seq = seq_le;
     } else {
         seq = 0;
     }
@@ -1500,10 +1500,10 @@ static int brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data
 }
 
 static int brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_t* data) {
-    __le32 timestamp;
+    uint32_t timestamp;
 
     memcpy(&timestamp, &data[2], sizeof(timestamp));
-    brcmf_dbg(CTL, "received: seq %d, timestamp %d\n", data[1], le32_to_cpu(timestamp));
+    brcmf_dbg(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
     return 0;
 }
 

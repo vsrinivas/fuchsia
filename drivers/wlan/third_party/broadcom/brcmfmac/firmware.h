@@ -61,16 +61,17 @@ struct brcmf_firmware_mapping {
 #define BRCMF_FW_ENTRY(chipid, mask, name) \
     { chipid, mask, BRCM_##name##_FIRMWARE_NAME, NULL }
 
-int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev, struct brcmf_firmware_mapping mapping_table[],
-                              uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
-                              char nvram_name[BRCMF_FW_NAME_LEN]);
+int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
+                              struct brcmf_firmware_mapping mapping_table[], uint32_t table_size,
+                              char fw_name[BRCMF_FW_NAME_LEN], char nvram_name[BRCMF_FW_NAME_LEN]);
 void brcmf_fw_nvram_free(void* nvram);
 /*
  * Request firmware(s) asynchronously. When the asynchronous request
  * fails it will not use the callback, but call device_release_driver()
  * instead which will call the driver .remove() callback.
  */
-int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code, const char* nvram,
+int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code,
+                                const char* nvram,
                                 void (*fw_cb)(struct device* dev, int err,
                                               const struct firmware* fw, void* nvram_image,
                                               uint32_t nvram_len),

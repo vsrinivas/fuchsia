@@ -175,5 +175,5 @@ bool brcmf_p2p_send_action_frame(struct brcmf_cfg80211_info* cfg, struct net_dev
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi);
 int32_t brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-                                          void* data);
+                                              void* data);
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_ */

@@ -212,8 +212,8 @@ struct brcmf_cfg80211_connect_info {
 
 /* assoc ie length */
 struct brcmf_cfg80211_assoc_ielen_le {
-    __le32 req_len;
-    __le32 resp_len;
+    uint32_t req_len;
+    uint32_t resp_len;
 };
 
 /* dongle escan state */
@@ -225,7 +225,7 @@ struct escan_info {
     struct wiphy* wiphy;
     struct brcmf_if* ifp;
     int32_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-               struct cfg80211_scan_request* request);
+                   struct cfg80211_scan_request* request);
 };
 
 /**
@@ -394,16 +394,16 @@ struct brcmf_cfg80211_vif* brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg,
                                            enum nl80211_iftype type);
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 
-int32_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag, const uint8_t* vndr_ie_buf,
-                          uint32_t vndr_ie_len);
+int32_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag,
+                              const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len);
 int32_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif);
 bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg);
 int brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, uint8_t action, ulong timeout);
-int32_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp, bool aborted,
-                                bool fw_abort);
+int32_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                                    bool aborted, bool fw_abort);
 void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_cfg80211_free_netdev(struct net_device* ndev);

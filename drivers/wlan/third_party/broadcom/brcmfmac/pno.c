@@ -115,7 +115,7 @@ static int brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, uint32_t m
     int32_t err;
 
     memset(&pfn_param, 0, sizeof(pfn_param));
-    pfn_param.version = cpu_to_le32(BRCMF_PNO_VERSION);
+    pfn_param.version = BRCMF_PNO_VERSION;
 
     /* set extra pno params */
     flags = BIT(BRCMF_PNO_IMMEDIATE_SCAN_BIT) | BIT(BRCMF_PNO_ENABLE_ADAPTSCAN_BIT);
@@ -123,7 +123,7 @@ static int brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, uint32_t m
     pfn_param.exp = BRCMF_PNO_FREQ_EXPO_MAX;
 
     /* set up pno scan fr */
-    pfn_param.scan_freq = cpu_to_le32(scan_freq);
+    pfn_param.scan_freq = scan_freq;
 
     if (mscan) {
         pfnmem = bestn;
@@ -147,7 +147,7 @@ static int brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, uint32_t m
         brcmf_dbg(INFO, "mscan=%d, bestn=%d\n", mscan, bestn);
     }
 
-    pfn_param.flags = cpu_to_le16(flags);
+    pfn_param.flags = flags;
     err = brcmf_fil_iovar_data_set(ifp, "pfn_set", &pfn_param, sizeof(pfn_param));
     if (err) {
         brcmf_err("pfn_set failed, err=%d\n", err);
@@ -201,15 +201,15 @@ static int brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid* ssid, 
     struct brcmf_pno_net_param_le pfn;
     int err;
 
-    pfn.auth = cpu_to_le32(WLAN_AUTH_OPEN);
-    pfn.wpa_auth = cpu_to_le32(BRCMF_PNO_WPA_AUTH_ANY);
-    pfn.wsec = cpu_to_le32(0);
-    pfn.infra = cpu_to_le32(1);
+    pfn.auth = WLAN_AUTH_OPEN;
+    pfn.wpa_auth = BRCMF_PNO_WPA_AUTH_ANY;
+    pfn.wsec = 0;
+    pfn.infra = 1;
     pfn.flags = 0;
     if (active) {
-        pfn.flags = cpu_to_le32(1 << BRCMF_PNO_HIDDEN_BIT);
+        pfn.flags = 1 << BRCMF_PNO_HIDDEN_BIT;
     }
-    pfn.ssid.SSID_len = cpu_to_le32(ssid->ssid_len);
+    pfn.ssid.SSID_len = ssid->ssid_len;
     memcpy(pfn.ssid.SSID, ssid->ssid, ssid->ssid_len);
 
     brcmf_dbg(SCAN, "adding ssid=%.32s (active=%d)\n", ssid->ssid, active);
@@ -271,7 +271,7 @@ static int brcmf_pno_clean(struct brcmf_if* ifp) {
 
 static int brcmf_pno_get_bucket_channels(struct cfg80211_sched_scan_request* r,
                                          struct brcmf_pno_config_le* pno_cfg) {
-    uint32_t n_chan = le32_to_cpu(pno_cfg->channel_num);
+    uint32_t n_chan = pno_cfg->channel_num;
     uint16_t chan;
     int i;
     int err = 0;
@@ -283,12 +283,12 @@ static int brcmf_pno_get_bucket_channels(struct cfg80211_sched_scan_request* r,
         }
         chan = r->channels[i]->hw_value;
         brcmf_dbg(SCAN, "[%d] Chan : %u\n", n_chan, chan);
-        pno_cfg->channel_list[n_chan++] = cpu_to_le16(chan);
+        pno_cfg->channel_list[n_chan++] = chan;
     }
     /* return number of channels */
     err = n_chan;
 done:
-    pno_cfg->channel_num = cpu_to_le32(n_chan);
+    pno_cfg->channel_num = n_chan;
     return err;
 }
 
@@ -345,7 +345,7 @@ static int brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi, struct brcmf_pno_c
         for (i = 0; i < pi->n_reqs; i++) {
             brcmf_err("[%d] period %u max %u repeat %u flag %x idx %u\n", i,
                       fw_buckets[i].bucket_freq_multiple,
-                      le16_to_cpu(fw_buckets[i].max_freq_multiple), fw_buckets[i].repeat,
+                      fw_buckets[i].max_freq_multiple, fw_buckets[i].repeat,
                       fw_buckets[i].flag, fw_buckets[i].bucket_end_index);
         }
     }
@@ -425,7 +425,7 @@ static int brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
         goto clean;
     }
 
-    gscan_cfg->version = cpu_to_le16(BRCMF_GSCAN_CFG_VERSION);
+    gscan_cfg->version = BRCMF_GSCAN_CFG_VERSION;
     gscan_cfg->retry_threshold = GSCAN_RETRY_THRESHOLD;
     gscan_cfg->buffer_threshold = GSCAN_BATCH_NO_THR_SET;
     gscan_cfg->flags = BRCMF_GSCAN_CFG_ALL_BUCKETS_IN_1ST_SCAN;

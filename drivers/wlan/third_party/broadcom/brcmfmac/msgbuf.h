@@ -32,8 +32,8 @@
 #define BRCMF_H2D_TXFLOWRING_ITEMSIZE 48
 
 struct msgbuf_buf_addr {
-    __le32 low_addr;
-    __le32 high_addr;
+    uint32_t low_addr;
+    uint32_t high_addr;
 };
 
 int brcmf_proto_msgbuf_rx_trigger(struct device* dev);

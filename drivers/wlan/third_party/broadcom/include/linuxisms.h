@@ -26,6 +26,7 @@
 
 #include <ddk/debug.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
@@ -33,9 +34,6 @@
 typedef uint16_t __be16;
 typedef uint32_t __be32;
 typedef uint64_t __be64;
-typedef uint16_t __le16;
-typedef uint32_t __le32;
-typedef uint64_t __le64;
 typedef struct {
     int counter;
 } atomic_t;
@@ -201,7 +199,6 @@ LINUX_FUNCII(atomic_or)
 LINUX_FUNCVI(atomic_xchg)
 LINUX_FUNCVI(atomic_dec)
 LINUX_FUNCUU(cpu_to_be16)
-LINUX_FUNCUU(cpu_to_le16)
 LINUX_FUNCUU(cpu_to_be32)
 LINUX_FUNCUU(be16_to_cpu)
 LINUX_FUNCUU(be32_to_cpu)
@@ -211,11 +208,7 @@ LINUX_FUNCVU(get_unaligned_be32)
 LINUX_FUNCVU(get_unaligned_le16)
 LINUX_FUNCVU(get_unaligned_le32)
 LINUX_FUNCUU(put_unaligned_le32)
-#define cpu_to_le32(a) (a)
-LINUX_FUNCUU(le32_to_cpu)
-LINUX_FUNC(le32_to_cpup, uint32_t*, uint32_t)
-LINUX_FUNCUU(le16_to_cpu)
-LINUX_FUNC(le64_to_cpu, uint64_t, uint64_t)
+#define a (a)
 LINUX_FUNCVI(brcmf_dbg_hex_dump)
 LINUX_FUNCVI(trace_brcmf_hexdump)
 LINUX_FUNCVI(trace_brcmf_debug)
@@ -433,7 +426,6 @@ LINUX_FUNCVI(__skb_insert)
 LINUX_FUNCVI(strnstr)
 LINUX_FUNCX(get_random_int)
 LINUX_FUNCII(gcd)
-LINUX_FUNCVI(cpu_to_le16p)
 LINUX_FUNCVI(usb_fill_control_urb)
 LINUX_FUNCVI(usb_submit_urb)
 LINUX_FUNCVI(usb_sndctrlpipe)

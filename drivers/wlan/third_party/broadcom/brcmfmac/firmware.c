@@ -383,7 +383,7 @@ static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t
     struct nvram_parser nvp;
     uint32_t pad;
     uint32_t token;
-    __le32 token_le;
+    uint32_t token_le;
 
     if (brcmf_init_nvram_parser(&nvp, data, data_len) < 0) {
         return NULL;
@@ -419,7 +419,7 @@ static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t
 
     token = *new_length / 4;
     token = (~token << 16) | (token & 0x0000FFFF);
-    token_le = cpu_to_le32(token);
+    token_le = token;
 
     memcpy(&nvp.nvram[*new_length], &token_le, sizeof(token_le));
     *new_length += sizeof(token_le);

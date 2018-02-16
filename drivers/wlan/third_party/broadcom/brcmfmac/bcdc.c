@@ -36,11 +36,11 @@
 #include "tracepoint.h"
 
 struct brcmf_proto_bcdc_dcmd {
-    __le32 cmd;    /* dongle command value */
-    __le32 len;    /* lower 16: output buflen;
+    uint32_t cmd;    /* dongle command value */
+    uint32_t len;    /* lower 16: output buflen;
                     * upper 16: input buflen (excludes header) */
-    __le32 flags;  /* flag defns given below */
-    __le32 status; /* status code returned from the device */
+    uint32_t flags;  /* flag defns given below */
+    uint32_t status; /* status code returned from the device */
 };
 
 // clang-format off
@@ -126,14 +126,14 @@ static int brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, voi
 
     memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
 
-    msg->cmd = cpu_to_le32(cmd);
-    msg->len = cpu_to_le32(len);
+    msg->cmd = cmd;
+    msg->len = len;
     flags = (++bcdc->reqid << BCDC_DCMD_ID_SHIFT);
     if (set) {
         flags |= BCDC_DCMD_SET;
     }
     flags = (flags & ~BCDC_DCMD_IF_MASK) | (ifidx << BCDC_DCMD_IF_SHIFT);
-    msg->flags = cpu_to_le32(flags);
+    msg->flags = flags;
 
     if (buf) {
         memcpy(bcdc->buf, buf, len);
@@ -159,7 +159,7 @@ static int brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, uint32_t 
         if (ret < 0) {
             break;
         }
-    } while (BCDC_DCMD_ID(le32_to_cpu(bcdc->msg.flags)) != id);
+    } while (BCDC_DCMD_ID(bcdc->msg.flags) != id);
 
     return ret;
 }
@@ -189,7 +189,7 @@ retry:
         goto done;
     }
 
-    flags = le32_to_cpu(msg->flags);
+    flags = msg->flags;
     id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
 
     if ((id < bcdc->reqid) && (++retries < RETRIES)) {
@@ -217,7 +217,7 @@ retry:
 
     /* Check the ERROR flag */
     if (flags & BCDC_DCMD_ERROR) {
-        *fwerr = le32_to_cpu(msg->status);
+        *fwerr = msg->status;
     }
 done:
     return ret;
@@ -243,7 +243,7 @@ static int brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd
         goto done;
     }
 
-    flags = le32_to_cpu(msg->flags);
+    flags = msg->flags;
     id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
 
     if (id != bcdc->reqid) {
@@ -257,7 +257,7 @@ static int brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd
 
     /* Check the ERROR flag */
     if (flags & BCDC_DCMD_ERROR) {
-        *fwerr = le32_to_cpu(msg->status);
+        *fwerr = msg->status;
     }
 
 done:

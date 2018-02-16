@@ -114,10 +114,10 @@ static int brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dl
     int32_t err;
 
     flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);
-    dload_buf->flag = cpu_to_le16(flag);
-    dload_buf->dload_type = cpu_to_le16(DL_TYPE_CLM);
-    dload_buf->len = cpu_to_le32(len);
-    dload_buf->crc = cpu_to_le32(0);
+    dload_buf->flag = flag;
+    dload_buf->dload_type = DL_TYPE_CLM;
+    dload_buf->len = len;
+    dload_buf->crc = 0;
     len = sizeof(*dload_buf) + len - 1;
 
     err = brcmf_fil_iovar_data_set(ifp, "clmload", dload_buf, len);
@@ -251,23 +251,23 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     if (err < 0) {
         brcmf_err("retrieving revision info failed, %d\n", err);
     } else {
-        ri->vendorid = le32_to_cpu(revinfo.vendorid);
-        ri->deviceid = le32_to_cpu(revinfo.deviceid);
-        ri->radiorev = le32_to_cpu(revinfo.radiorev);
-        ri->chiprev = le32_to_cpu(revinfo.chiprev);
-        ri->corerev = le32_to_cpu(revinfo.corerev);
-        ri->boardid = le32_to_cpu(revinfo.boardid);
-        ri->boardvendor = le32_to_cpu(revinfo.boardvendor);
-        ri->boardrev = le32_to_cpu(revinfo.boardrev);
-        ri->driverrev = le32_to_cpu(revinfo.driverrev);
-        ri->ucoderev = le32_to_cpu(revinfo.ucoderev);
-        ri->bus = le32_to_cpu(revinfo.bus);
-        ri->chipnum = le32_to_cpu(revinfo.chipnum);
-        ri->phytype = le32_to_cpu(revinfo.phytype);
-        ri->phyrev = le32_to_cpu(revinfo.phyrev);
-        ri->anarev = le32_to_cpu(revinfo.anarev);
-        ri->chippkg = le32_to_cpu(revinfo.chippkg);
-        ri->nvramrev = le32_to_cpu(revinfo.nvramrev);
+        ri->vendorid = revinfo.vendorid;
+        ri->deviceid = revinfo.deviceid;
+        ri->radiorev = revinfo.radiorev;
+        ri->chiprev = revinfo.chiprev;
+        ri->corerev = revinfo.corerev;
+        ri->boardid = revinfo.boardid;
+        ri->boardvendor = revinfo.boardvendor;
+        ri->boardrev = revinfo.boardrev;
+        ri->driverrev = revinfo.driverrev;
+        ri->ucoderev = revinfo.ucoderev;
+        ri->bus = revinfo.bus;
+        ri->chipnum = revinfo.chipnum;
+        ri->phytype = revinfo.phytype;
+        ri->phyrev = revinfo.phyrev;
+        ri->anarev = revinfo.anarev;
+        ri->chippkg = revinfo.chippkg;
+        ri->nvramrev = revinfo.nvramrev;
     }
     ri->result = err;
 

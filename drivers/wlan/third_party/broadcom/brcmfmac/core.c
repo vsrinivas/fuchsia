@@ -112,7 +112,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     struct net_device* ndev;
     struct netdev_hw_addr* ha;
     uint32_t cmd_value, cnt;
-    __le32 cnt_le;
+    uint32_t cnt_le;
     char* buf;
     char* bufp;
     uint32_t buflen;
@@ -136,7 +136,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     }
     bufp = buf;
 
-    cnt_le = cpu_to_le32(cnt);
+    cnt_le = cnt;
     memcpy(bufp, &cnt_le, sizeof(cnt_le));
     bufp += sizeof(cnt_le);
 

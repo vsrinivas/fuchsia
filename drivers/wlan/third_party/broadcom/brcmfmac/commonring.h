@@ -50,8 +50,8 @@ void brcmf_commonring_lock(struct brcmf_commonring* commonring);
 void brcmf_commonring_unlock(struct brcmf_commonring* commonring);
 bool brcmf_commonring_write_available(struct brcmf_commonring* commonring);
 void* brcmf_commonring_reserve_for_write(struct brcmf_commonring* commonring);
-void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring, uint16_t n_items,
-                                                  uint16_t* alloced);
+void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring,
+                                                  uint16_t n_items, uint16_t* alloced);
 int brcmf_commonring_write_complete(struct brcmf_commonring* commonring);
 void brcmf_commonring_write_cancel(struct brcmf_commonring* commonring, uint16_t n_items);
 void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, uint16_t* n_items);

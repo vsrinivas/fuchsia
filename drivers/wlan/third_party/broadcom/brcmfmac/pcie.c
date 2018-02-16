@@ -284,18 +284,18 @@ struct brcmf_pcie_ringbuf {
  * @max_completionrings: maximum number of completion rings(d2h) supported.
  */
 struct brcmf_pcie_dhi_ringinfo {
-    __le32 ringmem;
-    __le32 h2d_w_idx_ptr;
-    __le32 h2d_r_idx_ptr;
-    __le32 d2h_w_idx_ptr;
-    __le32 d2h_r_idx_ptr;
+    uint32_t ringmem;
+    uint32_t h2d_w_idx_ptr;
+    uint32_t h2d_r_idx_ptr;
+    uint32_t d2h_w_idx_ptr;
+    uint32_t d2h_r_idx_ptr;
     struct msgbuf_buf_addr h2d_w_idx_hostaddr;
     struct msgbuf_buf_addr h2d_r_idx_hostaddr;
     struct msgbuf_buf_addr d2h_w_idx_hostaddr;
     struct msgbuf_buf_addr d2h_r_idx_hostaddr;
-    __le16 max_flowrings;
-    __le16 max_submissionrings;
-    __le16 max_completionrings;
+    uint16_t max_flowrings;
+    uint16_t max_submissionrings;
+    uint16_t max_completionrings;
 };
 
 static const uint32_t brcmf_ring_max_item[BRCMF_NROF_COMMON_MSGRINGS] = {
@@ -379,8 +379,8 @@ static void brcmf_pcie_write_ram32(struct brcmf_pciedev_info* devinfo, uint32_t 
 static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                       void* srcaddr, uint32_t len) {
     void __iomem* address = devinfo->tcm + mem_offset;
-    __le32* src32;
-    __le16* src16;
+    uint32_t* src32;
+    uint16_t* src16;
     uint8_t* src8;
 
     if (((ulong)address & 4) || ((ulong)srcaddr & 4) || (len & 4)) {
@@ -394,9 +394,9 @@ static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32
             }
         } else {
             len = len / 2;
-            src16 = (__le16*)srcaddr;
+            src16 = (uint16_t*)srcaddr;
             while (len) {
-                iowrite16(le16_to_cpu(*src16), address);
+                iowrite16(*src16, address);
                 address += 2;
                 src16++;
                 len--;
@@ -404,9 +404,9 @@ static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32
         }
     } else {
         len = len / 4;
-        src32 = (__le32*)srcaddr;
+        src32 = (uint32_t*)srcaddr;
         while (len) {
-            iowrite32(le32_to_cpu(*src32), address);
+            iowrite32(*src32, address);
             address += 4;
             src32++;
             len--;
@@ -417,8 +417,8 @@ static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32
 static void brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                       void* dstaddr, uint32_t len) {
     void __iomem* address = devinfo->tcm + mem_offset;
-    __le32* dst32;
-    __le16* dst16;
+    uint32_t* dst32;
+    uint16_t* dst16;
     uint8_t* dst8;
 
     if (((ulong)address & 4) || ((ulong)dstaddr & 4) || (len & 4)) {
@@ -432,9 +432,9 @@ static void brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info* devinfo, uint32
             }
         } else {
             len = len / 2;
-            dst16 = (__le16*)dstaddr;
+            dst16 = (uint16_t*)dstaddr;
             while (len) {
-                *dst16 = cpu_to_le16(ioread16(address));
+                *dst16 = ioread16(address);
                 address += 2;
                 dst16++;
                 len--;
@@ -442,9 +442,9 @@ static void brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info* devinfo, uint32
         }
     } else {
         len = len / 4;
-        dst32 = (__le32*)dstaddr;
+        dst32 = (uint32_t*)dstaddr;
         while (len) {
-            *dst32 = cpu_to_le32(ioread32(address));
+            *dst32 = ioread32(address);
             address += 4;
             dst32++;
             len--;
@@ -958,11 +958,11 @@ static int brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinfo) {
 
     memcpy_fromio(&ringinfo, devinfo->tcm + devinfo->shared.ring_info_addr, sizeof(ringinfo));
     if (devinfo->shared.version >= 6) {
-        max_submissionrings = le16_to_cpu(ringinfo.max_submissionrings);
-        max_flowrings = le16_to_cpu(ringinfo.max_flowrings);
-        max_completionrings = le16_to_cpu(ringinfo.max_completionrings);
+        max_submissionrings = ringinfo.max_submissionrings;
+        max_flowrings = ringinfo.max_flowrings;
+        max_completionrings = ringinfo.max_completionrings;
     } else {
-        max_submissionrings = le16_to_cpu(ringinfo.max_flowrings);
+        max_submissionrings = ringinfo.max_flowrings;
         max_flowrings = max_submissionrings - BRCMF_NROF_H2D_COMMON_MSGRINGS;
         max_completionrings = BRCMF_NROF_D2H_COMMON_MSGRINGS;
     }
@@ -977,10 +977,10 @@ static int brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinfo) {
     }
 
     if (devinfo->dma_idx_sz == 0) {
-        d2h_w_idx_ptr = le32_to_cpu(ringinfo.d2h_w_idx_ptr);
-        d2h_r_idx_ptr = le32_to_cpu(ringinfo.d2h_r_idx_ptr);
-        h2d_w_idx_ptr = le32_to_cpu(ringinfo.h2d_w_idx_ptr);
-        h2d_r_idx_ptr = le32_to_cpu(ringinfo.h2d_r_idx_ptr);
+        d2h_w_idx_ptr = ringinfo.d2h_w_idx_ptr;
+        d2h_r_idx_ptr = ringinfo.d2h_r_idx_ptr;
+        h2d_w_idx_ptr = ringinfo.h2d_w_idx_ptr;
+        h2d_r_idx_ptr = ringinfo.h2d_r_idx_ptr;
         idx_offset = sizeof(uint32_t);
         devinfo->write_ptr = brcmf_pcie_write_tcm16;
         devinfo->read_ptr = brcmf_pcie_read_tcm16;
@@ -994,29 +994,29 @@ static int brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinfo) {
 
         h2d_w_idx_ptr = 0;
         address = (uint64_t)devinfo->idxbuf_dmahandle;
-        ringinfo.h2d_w_idx_hostaddr.low_addr = cpu_to_le32(address & 0xffffffff);
-        ringinfo.h2d_w_idx_hostaddr.high_addr = cpu_to_le32(address >> 32);
+        ringinfo.h2d_w_idx_hostaddr.low_addr = address & 0xffffffff;
+        ringinfo.h2d_w_idx_hostaddr.high_addr = address >> 32;
 
         h2d_r_idx_ptr = h2d_w_idx_ptr + max_submissionrings * idx_offset;
         address += max_submissionrings * idx_offset;
-        ringinfo.h2d_r_idx_hostaddr.low_addr = cpu_to_le32(address & 0xffffffff);
-        ringinfo.h2d_r_idx_hostaddr.high_addr = cpu_to_le32(address >> 32);
+        ringinfo.h2d_r_idx_hostaddr.low_addr = address & 0xffffffff;
+        ringinfo.h2d_r_idx_hostaddr.high_addr = address >> 32;
 
         d2h_w_idx_ptr = h2d_r_idx_ptr + max_submissionrings * idx_offset;
         address += max_submissionrings * idx_offset;
-        ringinfo.d2h_w_idx_hostaddr.low_addr = cpu_to_le32(address & 0xffffffff);
-        ringinfo.d2h_w_idx_hostaddr.high_addr = cpu_to_le32(address >> 32);
+        ringinfo.d2h_w_idx_hostaddr.low_addr = address & 0xffffffff;
+        ringinfo.d2h_w_idx_hostaddr.high_addr = address >> 32;
 
         d2h_r_idx_ptr = d2h_w_idx_ptr + max_completionrings * idx_offset;
         address += max_completionrings * idx_offset;
-        ringinfo.d2h_r_idx_hostaddr.low_addr = cpu_to_le32(address & 0xffffffff);
-        ringinfo.d2h_r_idx_hostaddr.high_addr = cpu_to_le32(address >> 32);
+        ringinfo.d2h_r_idx_hostaddr.low_addr = address & 0xffffffff;
+        ringinfo.d2h_r_idx_hostaddr.high_addr = address >> 32;
 
         memcpy_toio(devinfo->tcm + devinfo->shared.ring_info_addr, &ringinfo, sizeof(ringinfo));
         brcmf_dbg(PCIE, "Using host memory indices\n");
     }
 
-    ring_mem_ptr = le32_to_cpu(ringinfo.ringmem);
+    ring_mem_ptr = ringinfo.ringmem;
 
     for (i = 0; i < BRCMF_NROF_H2D_COMMON_MSGRINGS; i++) {
         ring = brcmf_pcie_alloc_dma_and_ring(devinfo, i, ring_mem_ptr);
@@ -1197,19 +1197,19 @@ static const struct brcmf_bus_ops brcmf_pcie_bus_ops = {
 };
 
 static void brcmf_pcie_adjust_ramsize(struct brcmf_pciedev_info* devinfo, uint8_t* data, uint32_t data_len) {
-    __le32* field;
+    uint32_t* field;
     uint32_t newsize;
 
     if (data_len < BRCMF_RAMSIZE_OFFSET + 8) {
         return;
     }
 
-    field = (__le32*)&data[BRCMF_RAMSIZE_OFFSET];
-    if (le32_to_cpup(field) != BRCMF_RAMSIZE_MAGIC) {
+    field = (uint32_t*)&data[BRCMF_RAMSIZE_OFFSET];
+    if (*field != BRCMF_RAMSIZE_MAGIC) {
         return;
     }
     field++;
-    newsize = le32_to_cpup(field);
+    newsize = *field;
 
     brcmf_dbg(PCIE, "Found ramsize info in FW, adjusting to 0x%x\n", newsize);
     devinfo->ci->ramsize = newsize;

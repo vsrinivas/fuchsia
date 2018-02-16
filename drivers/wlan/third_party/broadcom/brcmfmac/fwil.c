@@ -162,7 +162,7 @@ int32_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, u
 
 int32_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data) {
     int32_t err;
-    __le32 data_le = cpu_to_le32(data);
+    uint32_t data_le = data;
 
     mutex_lock(&ifp->drvr->proto_block);
     brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, data);
@@ -174,12 +174,12 @@ int32_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data)
 
 int32_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data) {
     int32_t err;
-    __le32 data_le = cpu_to_le32(*data);
+    uint32_t data_le = *data;
 
     mutex_lock(&ifp->drvr->proto_block);
     err = brcmf_fil_cmd_data(ifp, cmd, &data_le, sizeof(data_le), false);
     mutex_unlock(&ifp->drvr->proto_block);
-    *data = le32_to_cpu(data_le);
+    *data = data_le;
     brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, *data);
 
     return err;
@@ -252,18 +252,18 @@ int32_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, u
 }
 
 int32_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
-    __le32 data_le = cpu_to_le32(data);
+    uint32_t data_le = data;
 
     return brcmf_fil_iovar_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
 int32_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
-    __le32 data_le = cpu_to_le32(*data);
+    uint32_t data_le = *data;
     int32_t err;
 
     err = brcmf_fil_iovar_data_get(ifp, name, &data_le, sizeof(data_le));
     if (err == 0) {
-        *data = le32_to_cpu(data_le);
+        *data = data_le;
     }
     return err;
 }
@@ -275,7 +275,7 @@ static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, u
     uint32_t prefixlen;
     uint32_t namelen;
     uint32_t iolen;
-    __le32 bsscfgidx_le;
+    uint32_t bsscfgidx_le;
 
     if (bsscfgidx == 0) {
         return brcmf_create_iovar(name, data, datalen, buf, buflen);
@@ -301,7 +301,7 @@ static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, u
     p += namelen;
 
     /* bss config index as first data */
-    bsscfgidx_le = cpu_to_le32(bsscfgidx);
+    bsscfgidx_le = bsscfgidx;
     memcpy(p, &bsscfgidx_le, sizeof(bsscfgidx_le));
     p += sizeof(bsscfgidx_le);
 
@@ -364,18 +364,18 @@ int32_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, 
 }
 
 int32_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
-    __le32 data_le = cpu_to_le32(data);
+    uint32_t data_le = data;
 
     return brcmf_fil_bsscfg_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
 int32_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
-    __le32 data_le = cpu_to_le32(*data);
+    uint32_t data_le = *data;
     int32_t err;
 
     err = brcmf_fil_bsscfg_data_get(ifp, name, &data_le, sizeof(data_le));
     if (err == 0) {
-        *data = le32_to_cpu(data_le);
+        *data = data_le;
     }
     return err;
 }

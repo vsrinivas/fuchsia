@@ -103,27 +103,27 @@ static struct brcmf_firmware_mapping brcmf_usb_fwnames[] = {
 #define DL_IMAGE_TOOBIG 7 /* firmware image too big */
 
 struct trx_header_le {
-    __le32 magic;                   /* "HDR0" */
-    __le32 len;                     /* Length of file including header */
-    __le32 crc32;                   /* CRC from flag_version to end of file */
-    __le32 flag_version;            /* 0:15 flags, 16:31 version */
-    __le32 offsets[TRX_MAX_OFFSET]; /* Offsets of partitions from start of
+    uint32_t magic;                   /* "HDR0" */
+    uint32_t len;                     /* Length of file including header */
+    uint32_t crc32;                   /* CRC from flag_version to end of file */
+    uint32_t flag_version;            /* 0:15 flags, 16:31 version */
+    uint32_t offsets[TRX_MAX_OFFSET]; /* Offsets of partitions from start of
                                      * header
                                      */
 };
 
 struct rdl_state_le {
-    __le32 state;
-    __le32 bytes;
+    uint32_t state;
+    uint32_t bytes;
 };
 
 struct bootrom_id_le {
-    __le32 chip;      /* Chip id */
-    __le32 chiprev;   /* Chip rev */
-    __le32 ramsize;   /* Size of  RAM */
-    __le32 remapbase; /* Current remap base address */
-    __le32 boardtype; /* Type of board */
-    __le32 boardrev;  /* Board revision */
+    uint32_t chip;      /* Chip id */
+    uint32_t chiprev;   /* Chip rev */
+    uint32_t ramsize;   /* Size of  RAM */
+    uint32_t remapbase; /* Current remap base address */
+    uint32_t boardtype; /* Type of board */
+    uint32_t boardrev;  /* Board revision */
 };
 
 struct brcmf_usb_image {
@@ -247,7 +247,7 @@ static int brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t* buf, i
     }
 
     size = len;
-    devinfo->ctl_write.wLength = cpu_to_le16p(&size);
+    devinfo->ctl_write.wLength = size;
     devinfo->ctl_urb->transfer_buffer_length = size;
     devinfo->ctl_urb_status = 0;
     devinfo->ctl_urb_actual_length = 0;
@@ -274,7 +274,7 @@ static int brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t* buf, i
     }
 
     size = len;
-    devinfo->ctl_read.wLength = cpu_to_le16p(&size);
+    devinfo->ctl_read.wLength = size;
     devinfo->ctl_urb->transfer_buffer_length = size;
 
     devinfo->ctl_read.bRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
@@ -626,14 +626,14 @@ static int brcmf_usb_up(struct device* dev) {
         /* CTL Write */
         devinfo->ctl_write.bRequestType = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
         devinfo->ctl_write.bRequest = 0;
-        devinfo->ctl_write.wValue = cpu_to_le16(0);
-        devinfo->ctl_write.wIndex = cpu_to_le16(devinfo->ifnum);
+        devinfo->ctl_write.wValue = 0;
+        devinfo->ctl_write.wIndex = devinfo->ifnum;
 
         /* CTL Read */
         devinfo->ctl_read.bRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
         devinfo->ctl_read.bRequest = 1;
-        devinfo->ctl_read.wValue = cpu_to_le16(0);
-        devinfo->ctl_read.wIndex = cpu_to_le16(devinfo->ifnum);
+        devinfo->ctl_read.wValue = 0;
+        devinfo->ctl_read.wIndex = devinfo->ifnum;
     }
     brcmf_usb_rx_fill_all(devinfo);
     return 0;
@@ -691,7 +691,7 @@ static int brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t cmd, void
     size = buflen;
     devinfo->ctl_urb->transfer_buffer_length = size;
 
-    devinfo->ctl_read.wLength = cpu_to_le16p(&size);
+    devinfo->ctl_read.wLength = size;
     devinfo->ctl_read.bRequestType = USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_INTERFACE;
     devinfo->ctl_read.bRequest = cmd;
 
@@ -729,11 +729,11 @@ static bool brcmf_usb_dlneeded(struct brcmf_usbdev_info* devinfo) {
     }
 
     /* Check if firmware downloaded already by querying runtime ID */
-    id.chip = cpu_to_le32(0xDEAD);
+    id.chip = 0xDEAD;
     brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
 
-    chipid = le32_to_cpu(id.chip);
-    chiprev = le32_to_cpu(id.chiprev);
+    chipid = id.chip;
+    chiprev = id.chiprev;
 
     if ((chipid & 0x4300) == 0x4300) {
         brcmf_dbg(USB, "chip %x rev 0x%x\n", chipid, chiprev);
@@ -762,19 +762,19 @@ static int brcmf_usb_resetcfg(struct brcmf_usbdev_info* devinfo) {
     do {
         mdelay(BRCMF_USB_RESET_GETVER_SPINWAIT);
         loop_cnt++;
-        id.chip = cpu_to_le32(0xDEAD); /* Get the ID */
+        id.chip = 0xDEAD; /* Get the ID */
         err = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
         if ((err) && (err != -ETIMEDOUT)) {
             return err;
         }
-        if (id.chip == cpu_to_le32(BRCMF_POSTBOOT_ID)) {
+        if (id.chip == BRCMF_POSTBOOT_ID) {
             break;
         }
     } while (loop_cnt < BRCMF_USB_RESET_GETVER_LOOP_CNT);
 
-    if (id.chip == cpu_to_le32(BRCMF_POSTBOOT_ID)) {
-        brcmf_dbg(USB, "postboot chip 0x%x/rev 0x%x\n", le32_to_cpu(id.chip),
-                  le32_to_cpu(id.chiprev));
+    if (id.chip == BRCMF_POSTBOOT_ID) {
+        brcmf_dbg(USB, "postboot chip 0x%x/rev 0x%x\n", id.chip,
+                  id.chiprev);
 
         brcmf_usb_dl_cmd(devinfo, DL_RESETCFG, &id, sizeof(id));
         return 0;
@@ -827,8 +827,8 @@ static int brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, uint8_t* f
     /* 1) Prepare USB boot loader for runtime image */
     brcmf_usb_dl_cmd(devinfo, DL_START, &state, sizeof(state));
 
-    rdlstate = le32_to_cpu(state.state);
-    rdlbytes = le32_to_cpu(state.bytes);
+    rdlstate = state.state;
+    rdlbytes = state.bytes;
 
     /* 2) Check we are in the Waiting state */
     if (rdlstate != DL_WAITING) {
@@ -876,8 +876,8 @@ static int brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, uint8_t* f
             goto fail;
         }
 
-        rdlstate = le32_to_cpu(state.state);
-        rdlbytes = le32_to_cpu(state.bytes);
+        rdlstate = state.state;
+        rdlbytes = state.bytes;
 
         /* restart if an error is reported */
         if (rdlstate == DL_BAD_HDR || rdlstate == DL_BAD_CRC) {
@@ -934,7 +934,7 @@ static int brcmf_usb_dlrun(struct brcmf_usbdev_info* devinfo) {
     brcmf_usb_dl_cmd(devinfo, DL_GETSTATE, &state, sizeof(state));
 
     /* Start the image */
-    if (state.state == cpu_to_le32(DL_RUNNABLE)) {
+    if (state.state == DL_RUNNABLE) {
         if (brcmf_usb_dl_cmd(devinfo, DL_GO, &state, sizeof(state))) {
             return -ENODEV;
         }
@@ -995,14 +995,14 @@ static int check_file(const uint8_t* headers) {
     brcmf_dbg(USB, "Enter\n");
     /* Extract trx header */
     trx = (struct trx_header_le*)headers;
-    if (trx->magic != cpu_to_le32(TRX_MAGIC)) {
+    if (trx->magic != TRX_MAGIC) {
         return -1;
     }
 
     headers += sizeof(struct trx_header_le);
 
-    if (le32_to_cpu(trx->flag_version) & TRX_UNCOMP_IMAGE) {
-        actual_len = le32_to_cpu(trx->offsets[TRX_OFFSETS_DLFWLEN_IDX]);
+    if (trx->flag_version & TRX_UNCOMP_IMAGE) {
+        actual_len = trx->offsets[TRX_OFFSETS_DLFWLEN_IDX];
         return actual_len + sizeof(struct trx_header_le);
     }
     return -1;

@@ -73,7 +73,8 @@ TRACE_EVENT(brcmf_bcdchdr, TP_PROTO(void* data), TP_ARGS(data),
             TP_fast_assign(__entry->flags = *(uint8_t*)data; __entry->prio = *((uint8_t*)data + 1);
                            __entry->flags2 = *((uint8_t*)data + 2);
                            __entry->siglen = *((uint8_t*)data + 3) * 4;
-                           memcpy(__get_dynamic_array(signal), (uint8_t*)data + 4, __entry->siglen);),
+                           memcpy(__get_dynamic_array(signal), (uint8_t*)data + 4,
+                                  __entry->siglen);),
             TP_printk("bcdc: prio=%d siglen=%d", __entry->prio, __entry->siglen));
 #endif  // LINUX cphoenix
 
