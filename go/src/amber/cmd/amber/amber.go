@@ -28,11 +28,14 @@ import (
 	tuf "github.com/flynn/go-tuf/client"
 )
 
+const lhIP = "http://127.0.0.1"
+const port = 8083
+
 var (
 	// TODO(jmatt) replace hard-coded values with something better/more flexible
 	usage = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
 	store = flag.String("s", "/data/amber/tuf", "The path to the local file store")
-	addr  = flag.String("u", "http://192.168.3.1:8083", "The URL (including port if not using port 80)  of the update server.")
+	addr  = flag.String("u", fmt.Sprintf("%s:%d", lhIP, port), "The URL (including port if not using port 80)  of the update server.")
 	keys  = flag.String("k", "/pkg/data/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
 	delay = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
 
