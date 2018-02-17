@@ -579,7 +579,8 @@ zx_status_t Device::EnableRadio() {
 
     // Wait for MAC status ready
     MacStatusReg msr;
-    status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, zx::msec(10));
+    status =
+        BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, zx::msec(10));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("BBP busy\n"); }
         return status;
@@ -3136,8 +3137,13 @@ void Device::HandleRxComplete(usb_request_t* request) {
             // and does not reflect how the incoming frame is received, which
             // shall be referred by rxwi.
             wlan_rx_info.chan = cfg_chan_;
-            wlanmac_proxy_->Recv(0u, data + rx_hdr_size, rxwi0.mpdu_total_byte_count(),
-                                 &wlan_rx_info);
+
+            // TODO(porce): Pass up the byte stream after stripping off the zero padding.
+            // Keep MLME ignorant of Ralink-specific L2Padding
+            uint16_t mpdu_len_ota = rxwi0.mpdu_total_byte_count();
+            uint16_t l2pad_len = rx_desc.l2pad() ? 2 : 0;  // 2 bytes if padded, by Ralink spec.
+            uint16_t mpdu_len = mpdu_len_ota + l2pad_len;
+            wlanmac_proxy_->Recv(0u, data + rx_hdr_size, mpdu_len, &wlan_rx_info);
         }
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
