@@ -40,7 +40,6 @@ function main {
   # pkgs is the last argument
   local pkgs
 
-
   if [[ $# -eq 0 ]]; then
     pkgs=$(echo $(<"${FUCHSIA_BUILD_DIR}/gen/build/gn/packages"))
   else
@@ -49,7 +48,7 @@ function main {
 
   # The target doesn't support expansions, and a local expansion makes a command
   # too long to spawn, so sending a loop makes things work ok.
-  local cmd="for c in $pkgs; do echo -n '' > /pkgfs/needs/\${c}.far; done"
+  local cmd="for c in $pkgs; do amber_ctl get_up -n \${c}; done"
   if [[ -n "${device}" ]]; then
     fx-command-run ssh "${device}" "${cmd}"
   else
