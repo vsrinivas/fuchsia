@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### set up a reverse tunnel for amber
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+fx-command-run ssh -q -R 8083:localhost:8083 "$(fx-command-run netaddr --fuchsia)" "$@"
+result=$?
+if [[ "${result}" -ne 0 ]]; then
+  echo "ssh exited with a non-zero status: ${result}." >&2
+fi
+
