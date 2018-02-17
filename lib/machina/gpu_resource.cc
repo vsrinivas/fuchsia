@@ -9,17 +9,28 @@
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "lib/fxl/logging.h"
 
+static zx_pixel_format_t pixel_format(uint32_t virtio_format) {
+  switch (virtio_format) {
+  case VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM:
+    return ZX_PIXEL_FORMAT_ARGB_8888;
+  case VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM:
+    return ZX_PIXEL_FORMAT_RGB_x888;
+  default:
+    return ZX_PIXEL_FORMAT_NONE;
+  }
+}
+
 namespace machina {
 
 fbl::unique_ptr<GpuResource> GpuResource::Create(
     const virtio_gpu_resource_create_2d_t* request,
     VirtioGpu* gpu) {
-  if (request->format != VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM &&
-      request->format != VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM) {
+  zx_pixel_format_t format = pixel_format(request->format);
+  if (format == ZX_PIXEL_FORMAT_NONE) {
     FXL_LOG(INFO) << "Unsupported GPU format " << request->format;
     return nullptr;
   }
-  GpuBitmap bitmap(request->width, request->height, ZX_PIXEL_FORMAT_ARGB_8888);
+  GpuBitmap bitmap(request->width, request->height, format);
   return fbl::make_unique<GpuResource>(gpu, request->resource_id,
                                        fbl::move(bitmap));
 }

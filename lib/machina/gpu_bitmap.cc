@@ -12,6 +12,13 @@ namespace machina {
 
 static constexpr uint8_t kSrcPixelSize = 4;
 
+static void argb8888_to_rgbx888(uint8_t* dst, const uint8_t* src, size_t size) {
+  for (size_t i = 0; i < size; i += 4, dst += 4, src += 4) {
+    uint32_t in = *reinterpret_cast<const uint32_t*>(src);
+    *reinterpret_cast<uint32_t*>(dst) = 0xff000000 | in;
+  }
+}
+
 // NOTE(abdulla): These functions are lightly modified versions of the same
 // functions in the Zircon GFX library.
 
@@ -62,8 +69,9 @@ static void copy(uint8_t* dst,
                  zx_pixel_format_t format) {
   switch (format) {
     case ZX_PIXEL_FORMAT_ARGB_8888:
-    case ZX_PIXEL_FORMAT_RGB_x888:
       return static_cast<void>(memcpy(dst, src, size));
+    case ZX_PIXEL_FORMAT_RGB_x888:
+      return argb8888_to_rgbx888(dst, src, size);
     case ZX_PIXEL_FORMAT_RGB_565:
       return argb8888_to_rgb565(dst, src, size);
     case ZX_PIXEL_FORMAT_RGB_332:
