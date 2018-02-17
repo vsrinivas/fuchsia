@@ -107,8 +107,11 @@ def main():
     update_file(args.system_manifest, system_manifest_contents)
     update_file(args.targets_file, '\n'.join(amalgamation.packages) + '\n')
 
-    sys.stdout.write("\n".join(amalgamation.deps))
-    sys.stdout.write("\n")
+    packages = ", ".join(['"%s"' % p for p in amalgamation.packages])
+    sys.stdout.write("packages = [%s]\n" % packages)
+    deps = ", ".join(['"%s"' % d for d in amalgamation.deps])
+    sys.stdout.write("deps = [%s]\n" % deps)
+
     return 0
 
 if __name__ == "__main__":

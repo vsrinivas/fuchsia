@@ -55,20 +55,19 @@ action("finalize_manifests") {
   system_manifest_file = "$target_gen_dir/system.bootfs.manifest"
   build_id_file = "$root_out_dir/ids.txt"
 
-  deps = exec_script("process_build_packages.py",
-                     [
-                       "--targets-file",
-                       rebase_path(packages_file),
-                       "--system-manifest",
-                       rebase_path(system_manifest_file),
-                       "--packages",
-                       fuchsia_packages,
-                       "--build-root",
-                       rebase_path(root_build_dir),
-                     ],
-                     "trim list lines",
-                     rebase_path(packages_imported))
-  package_list = read_file(packages_file, "trim list lines")
+  _result = exec_script("process_build_packages.py",
+                        [
+                          "--targets-file",
+                          rebase_path(packages_file),
+                          "--system-manifest",
+                          rebase_path(system_manifest_file),
+                          "--packages",
+                          fuchsia_packages,
+                          "--build-root",
+                          rebase_path(root_build_dir),
+                        ],
+                        "scope",
+                        rebase_path(packages_imported))
 
   script = "finalize_manifests.py"
   inputs = finalize_manifests_extra
@@ -90,7 +89,7 @@ action("finalize_manifests") {
   # they just supply libraries that might satisfy dependencies.
 
   # TODO(TO-471): Remove this when toolchain_manifests are in the source tree.
-  deps += [ ":generate_clang_toolchain_manifest" ]
+  deps = _result.deps + [ ":generate_clang_toolchain_manifest" ]
 
   sources += toolchain_manifests
   foreach(manifest, toolchain_manifests) {
@@ -142,7 +141,7 @@ action("finalize_manifests") {
   #sources += [ system_manifest_file ]
   args += [ "--manifest=" + rebase_path(system_manifest_file) ]
 
-  foreach(package, package_list) {
+  foreach(package, _result.packages) {
     package_manifest = "$root_build_dir/package/$package/system_manifest"
 
     # GN won't let us make these sources because they're in the build
@@ -150,10 +149,11 @@ action("finalize_manifests") {
     # action.  We're relying on the depfile to notice their changes.
     #sources += [ package_manifest ]
 
-    args += [ "--optional-manifest=" + rebase_path(package_manifest, root_build_dir) ]
+    args += [ "--optional-manifest=" +
+              rebase_path(package_manifest, root_build_dir) ]
   }
 
-  foreach(package, package_list) {
+  foreach(package, _result.packages) {
     package_manifest = "$root_build_dir/package/$package/archive_manifest"
     final_manifest = "$root_build_dir/package/$package/final_archive_manifest"
 
@@ -169,7 +169,7 @@ action("finalize_manifests") {
     ]
   }
 
-  foreach(package, package_list) {
+  foreach(package, _result.packages) {
     package_manifest = "$root_build_dir/package/$package/package_manifest"
     final_manifest = "$root_build_dir/package/$package/final_package_manifest"
 
@@ -204,11 +204,12 @@ action("pkgbuilds") {
   package_signing_key = system_package_key
 
   deps = [
-    amber_publish_label,
+    ":finalize_manifests",
+
     # TODO(raggi): cleanup these files, they shouldn't be in the root_build_dir
     "//garnet/go/src/amber:amber-srv-keys",
+    amber_publish_label,
     pm_label,
-    ":finalize_manifests"
   ]
   inputs = [
     pm_path,
@@ -225,10 +226,11 @@ action("pkgbuilds") {
   outputs = [
     packages_blobs_manifest,
     pkgsvr_index,
-    "$root_out_dir/amber-files/repository/targets.json"
+    "$root_out_dir/amber-files/repository/targets.json",
   ]
 
   script = "//build/gn_run_binary.sh"
+
   # TODO(raggi): technically this script inputs/outputs these things
   # inputs += [
   #   package_json_file,
@@ -258,6 +260,7 @@ action("pkgbuilds") {
     "--amber-publish",
     rebase_path(amber_publish_path),
     "--amber-repo",
+
     # TODO(raggi): re-arrange and formalize these paths:
     rebase_path("$root_out_dir/amber-files"),
     "--amber-keys",
@@ -292,7 +295,7 @@ action("system.pkg") {
     pkgsvr_bin,
     pm_bin,
     system_package_key,
-    pkgsvr_index
+    pkgsvr_index,
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -356,8 +359,8 @@ action("blobstore.blk") {
   ]
   deps = [
     ":finalize_manifests",
-    ":system.pkg",
     ":pkgbuilds",
+    ":system.pkg",
   ]
 }
 
@@ -878,7 +881,9 @@ foreach(platform, zircon_platforms) {
       }
       zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
       zedboot = ":zedboot-${platform}"
-      deps = [ ":bootdata-blobstore-${platform}" ]
+      deps = [
+        ":bootdata-blobstore-${platform}",
+      ]
     }
 
     esp("zedboot-${platform}") {
@@ -908,8 +913,8 @@ group("images") {
   deps = [
     ":blobstore.blk",
     ":fvm.blk",
+    ":fvm.data.sparse.blk",
     ":fvm.sparse.blk",
-    ":fvm.data.sparse.blk"
   ]
 
   foreach(platform, zircon_platforms) {

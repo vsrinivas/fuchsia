@@ -159,7 +159,7 @@ template("package") {
       libraries = []
       meta = []
       package_name = target_name
-      package_version = 0 # placeholder
+      package_version = "0"  # placeholder
       resources = []
       tests = []
       forward_variables_from(invoker, "*")
@@ -172,16 +172,17 @@ template("package") {
 
     assert(pkg.drivers == [] || pkg.system_image)
 
-    mkfs_target = target_name + "_mkfs"
-
     package_manifest = "$pkg_out_dir/package_manifest"
-    system_manifest = "$pkg_out_dir/system_manifest"
     archive_manifest = "$pkg_out_dir/archive_manifest"
+    system_manifest = "$pkg_out_dir/system_manifest"
+
+    manifest_target_name = "${target_name}__manifest"
 
     # If there are extra build-time entries to put into the package, then
     # collect GN-time entries in partial_package_manifest, and concatenate them
     # with the build-time entries into package_manifest.
     if (defined(pkg.extra)) {
+      extra_target_name = "${target_name}__extra"
       if (pkg.fuchsia_package) {
         partial_archive_manifest = archive_manifest
         partial_package_manifest = "$pkg_out_dir/partial_package_manifest"
@@ -193,174 +194,243 @@ template("package") {
         partial = partial_archive_manifest
         output = archive_manifest
       }
-      action("${mkfs_target}_extra") {
-        deps = invoker.deps
+      action(extra_target_name) {
+        deps = [ ":${manifest_target_name}" ] + invoker.deps
         inputs = [ partial ] + pkg.extra
-        outputs = [ output ]
-        script = "/bin/sh"
-        rebased_partial = rebase_path(partial)
-        rebased_output = rebase_path(output)
-        rebased_extra = ""
-        foreach(e, pkg.extra) {
-          rebased_e = rebase_path(e)
-          rebased_extra = "$rebased_extra $rebased_e"
-        }
-        args = [
-          "-c",
-          "/bin/cat $rebased_partial $rebased_extra > $rebased_output",
+        outputs = [
+          output,
         ]
+        script = "//build/gn/combine_manifests.py"
+        args = [
+          rebase_path(output, root_build_dir),
+          rebase_path(partial, root_build_dir),
+        ]
+        foreach(extra, pkg.extra) {
+          args += [ rebase_path(extra, root_build_dir) ]
+        }
       }
     } else {
       partial_package_manifest = package_manifest
       partial_archive_manifest = archive_manifest
     }
 
-    # This action assembles an image containing all binaries, tests, drivers,
-    # libraries, and resources defined in the package.
-    action(mkfs_target) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
+    contents = []
 
-      package_manifest_contents = []
+    foreach(entry, pkg.meta) {
+      assert(!pkg.system_image, "Metadata cannot be used in system packages.")
+      source = entry.path
+      dest = "meta/${entry.dest}"
+      contents += [ "$dest=$source" ]
+    }
+    if (defined(pkg.binary)) {
+      assert(
+          !pkg.system_image,
+          "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
+      source = rebase_path("$root_build_dir/${pkg.binary}")
+      contents += [ "bin/app=$source" ]
+    }
+    foreach(binary, pkg.binaries) {
+      assert(
+          pkg.system_image,
+          "Binaries cannot be used in archived packages. Consider using 'binary'.")
 
-      sources = []
-
-      if (defined(pkg.extra)) {
-        deps += [ ":${target_name}_extra" ]
-      }
-
-      foreach(entry, pkg.meta) {
-        assert(!pkg.system_image, "Metadata cannot be used in system packages.")
-        source = entry.path
-        sources += [ entry.path ]
-        dest = "meta/${entry.dest}"
-        package_manifest_contents += [ "$dest=$source" ]
-      }
-      if (defined(pkg.binary)) {
-        assert(
-            !pkg.system_image,
-            "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
-        source = rebase_path("$root_build_dir/${pkg.binary}")
-        sources += [ "$root_build_dir/${pkg.binary}" ]
-        package_manifest_contents += [ "bin/app=$source" ]
-      }
-      foreach(binary, pkg.binaries) {
-        assert(
-            pkg.system_image,
-            "Binaries cannot be used in archived packages. Consider using 'binary'.")
-
-        # Binary paths are relative to the root of the build dir.
-        if (defined(binary.source)) {
-          source = rebase_path("$root_build_dir/${binary.source}")
-          sources += [ "$root_build_dir/${binary.source}" ]
-        } else {
-          source = rebase_path("$root_build_dir/${binary.name}")
-          sources += [ "$root_build_dir/${binary.name}" ]
-        }
-        dirname = "bin"
-        basename = binary.name
-        if (defined(binary.dest)) {
-          basename = binary.dest
-        }
-        package_manifest_contents += [ "$dirname/$basename=$source" ]
-      }
-      foreach(test, pkg.tests) {
-        source = rebase_path("$root_build_dir/${test.name}")
-        sources += [ "$root_build_dir/${test.name}" ]
-        basename = test.name
-        if (defined(test.dest)) {
-          basename = test.dest
-        }
-        if (defined(test.disabled) && test.disabled) {
-          dest = "test/disabled/" + basename
-        } else {
-          dest = "test/" + basename
-        }
-        package_manifest_contents += [ "$dest=$source" ]
-      }
-      foreach(driver, pkg.drivers) {
-        # Driver paths are relative to the root of the build dir.
-        source = rebase_path("$root_build_dir/${driver.name}")
-        sources += [ "$root_build_dir/${driver.name}" ]
-        dest = "driver/" + driver.name
-
-        package_manifest_contents += [ "$dest=$source" ]
-      }
-      foreach(library, pkg.libraries) {
-        # Library paths are relative to the root of the build dir.
-        if (defined(library.source)) {
-          library_path = rebase_path(library.source)
-        } else {
-          library_path = "$shared_toolchain_out_dir/${library.name}"
-        }
-        source = rebase_path(library_path)
-        sources += [ library_path ]
-        if (defined(library.dest)) {
-          dest = "lib/" + library.dest
-        } else {
-          dest = "lib/" + library.name
-        }
-        package_manifest_contents += [ "$dest=$source" ]
-      }
-      foreach(resource, pkg.resources) {
-        # Resource path are absolute.
-        source = resource.path
-        sources += [ resource.path ]
-        dest = "data/" + resource.dest
-        package_manifest_contents += [ "$dest=$source" ]
-      }
-
-      if (pkg.system_image) {
-        write_file(system_manifest, package_manifest_contents)
-        write_file(partial_archive_manifest, [])
-        write_file(partial_package_manifest, [])
-
-        # We have to do something in our action
-        script = "/usr/bin/touch"
-        output = "$pkg_out_dir/.stamp"
-        outputs = [
-          output,
-        ]
-        args = [ rebase_path(output) ]
-      } else if (pkg.fuchsia_package) {
-        # If the caller doesn't supply a package.json, we'll generate one
-        need_package_json = true
-        foreach(meta, pkg.meta) {
-          if (meta == "package.json") {
-            need_package_json = false
-          }
-        }
-
-        package_json_file = "$pkg_out_dir/package.json"
-        if (need_package_json) {
-          write_file(package_json_file, "{\"name\": \"${pkg.package_name}\", \"version\": \"${pkg.package_version}\"}")
-          full_pkg_json_file = rebase_path(package_json_file)
-          package_manifest_contents += [ "meta/package.json=${full_pkg_json_file}" ]
-        }
-        script = "/usr/bin/touch"
-        outputs = [package_json_file]
-        args = [ rebase_path(outputs[0]) ]
-
-        write_file(partial_package_manifest, package_manifest_contents)
-        write_file(partial_archive_manifest, [])
-        write_file(system_manifest, [])
-
+      # Binary paths are relative to the root of the build dir.
+      if (defined(binary.source)) {
+        source = rebase_path("$root_build_dir/${binary.source}")
       } else {
-        assert(package_manifest_contents != [])
-        write_file(partial_package_manifest, [])
+        source = rebase_path("$root_build_dir/${binary.name}")
+      }
+      dirname = "bin"
+      basename = binary.name
+      if (defined(binary.dest)) {
+        basename = binary.dest
+      }
+      contents += [ "$dirname/$basename=$source" ]
+    }
+    foreach(test, pkg.tests) {
+      source = rebase_path("$root_build_dir/${test.name}")
+      basename = test.name
+      if (defined(test.dest)) {
+        basename = test.dest
+      }
+      if (defined(test.disabled) && test.disabled) {
+        dest = "test/disabled/" + basename
+      } else {
+        dest = "test/" + basename
+      }
+      contents += [ "$dest=$source" ]
+    }
+    foreach(driver, pkg.drivers) {
+      # Driver paths are relative to the root of the build dir.
+      source = rebase_path("$root_build_dir/${driver.name}")
+      dest = "driver/" + driver.name
 
-        write_file(partial_archive_manifest, package_manifest_contents)
+      contents += [ "$dest=$source" ]
+    }
+    foreach(library, pkg.libraries) {
+      # Library paths are relative to the root of the build dir.
+      if (defined(library.source)) {
+        library_path = rebase_path(library.source)
+      } else {
+        library_path = "$shared_toolchain_out_dir/${library.name}"
+      }
+      source = rebase_path(library_path)
+      if (defined(library.dest)) {
+        dest = "lib/" + library.dest
+      } else {
+        dest = "lib/" + library.name
+      }
+      contents += [ "$dest=$source" ]
+    }
+    foreach(resource, pkg.resources) {
+      # Resource path are absolute.
+      source = resource.path
+      dest = "data/" + resource.dest
+      contents += [ "$dest=$source" ]
+    }
+
+    if (pkg.system_image) {
+      action(manifest_target_name) {
+        script = "//build/gn/write_manifest.py"
+        outputs = [
+          partial_package_manifest,
+          partial_archive_manifest,
+          system_manifest,
+        ]
+        args = [
+                 "--manifest",
+                 rebase_path(partial_package_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(partial_archive_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(system_manifest, root_build_dir),
+               ] + contents
+      }
+
+      group(target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [ ":${manifest_target_name}" ]
+        if (defined(pkg.extra)) {
+          deps += [ ":${extra_target_name}" ]
+        }
+      }
+    } else if (pkg.fuchsia_package) {
+      # If the caller doesn't supply a package.json, we'll generate one
+      need_package_json = true
+      foreach(meta, pkg.meta) {
+        if (meta == "package.json") {
+          need_package_json = false
+        }
+      }
+
+      if (need_package_json) {
+        package_json_file = "$pkg_out_dir/package.json"
+        package_json_target_name = "${target_name}_package_json"
+
+        action(package_json_target_name) {
+          script = "//build/gn/write_package_json.py"
+          outputs = [
+            package_json_file,
+          ]
+          args = [
+            "--name",
+            pkg.package_name,
+            "--version",
+            pkg.package_version,
+            rebase_path(package_json_file, root_build_dir),
+          ]
+        }
+
+        full_pkg_json_file = rebase_path(package_json_file)
+        contents += [ "meta/package.json=${full_pkg_json_file}" ]
+      }
+
+      action(manifest_target_name) {
+        script = "//build/gn/write_manifest.py"
+        outputs = [
+          partial_package_manifest,
+          partial_archive_manifest,
+          system_manifest,
+        ]
+        args = [
+                 "--manifest",
+                 rebase_path(partial_archive_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(system_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(partial_package_manifest, root_build_dir),
+               ] + contents
+      }
+
+      group(target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+
+        if (!defined(deps)) {
+          deps = []
+        }
+        if (need_package_json) {
+          deps += [ ":${package_json_target_name}" ]
+        }
+        deps += [ ":${manifest_target_name}" ]
+        if (defined(pkg.extra)) {
+          deps += [ ":${extra_target_name}" ]
+        }
+      }
+    } else {
+      output = "$pkg_out_dir/${pkg.package_name}.far"
+
+      action(manifest_target_name) {
+        script = "//build/gn/write_manifest.py"
+        outputs = [
+          partial_package_manifest,
+          partial_archive_manifest,
+          system_manifest,
+        ]
+        args = [
+                 "--manifest",
+                 rebase_path(partial_package_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(system_manifest, root_build_dir),
+                 "pkgs/${pkg.package_name}=" + rebase_path(output),
+                 "--manifest",
+                 rebase_path(partial_archive_manifest, root_build_dir),
+               ] + contents
+      }
+
+      # This action assembles an image containing all binaries, tests, drivers,
+      # libraries, and resources defined in the package.
+      action(target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [ ":${manifest_target_name}" ]
+        if (defined(pkg.extra)) {
+          deps += [ ":${extra_target_name}" ]
+        }
 
         archiver_label = "//garnet/bin/far:bin($host_toolchain)"
         deps += [ archiver_label ]
 
         archiver_out_dir = get_label_info(archiver_label, "root_out_dir")
         far_path = "$archiver_out_dir/far"
-
-        output = "$pkg_out_dir/${pkg.package_name}.far"
 
         script = "//build/gn_run_binary.sh"
         inputs = [
@@ -377,17 +447,7 @@ template("package") {
           "--archive=" + rebase_path(output),
           "--manifest=" + rebase_path(archive_manifest),
         ]
-
-        write_file(system_manifest,
-                   [ "pkgs/${pkg.package_name}=" + rebase_path(output) ])
       }
-    }
-    group(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      deps = [
-        ":" + mkfs_target,
-      ]
     }
   } else {
     group(target_name) {
