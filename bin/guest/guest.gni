@@ -20,8 +20,35 @@ template("guest_app") {
   if (defined(invoker.cli) && invoker.cli) {
     assert(!defined(invoker.kernel) && !defined(invoker.ramdisk), "")
   }
+
+  guest_config_target_name = "${target_name}_guest_config"
+  guest_config_file = "${target_out_dir}/guest.cfg"
+
+  action(guest_config_target_name) {
+    script = "//garnet/bin/guest/generate_guest_config.py"
+    outputs = [ guest_config_file ]
+
+    args = []
+    if (defined(invoker.cmdline)) {
+      args += [
+        "--cmdline",
+        invoker.cmdline,
+      ]
+    }
+
+    if (defined(invoker.block_devices)) {
+      foreach(block_spec, invoker.block_devices) {
+        args += [
+          "--block",
+          block_spec,
+        ]
+      }
+    }
+  }
+
   package(target_name) {
     deps = [
+      ":${guest_config_target_name}",
       "//garnet/bin/guest:bin",
     ]
     inputs = []
@@ -75,29 +102,6 @@ template("guest_app") {
           } ]
     }
 
-    config_args = []
-    if (defined(invoker.cmdline)) {
-      config_args += [
-        "--cmdline",
-        invoker.cmdline,
-      ]
-    }
-
-    if (defined(invoker.block_devices)) {
-      foreach(block_spec, invoker.block_devices) {
-        config_args += [
-          "--block",
-          block_spec,
-        ]
-      }
-    }
-
-    # Add config file resource.
-    guest_config_file = "${target_out_dir}/guest.cfg"
-    guest_config = exec_script("//garnet/bin/guest/generate_guest_config.py",
-                               config_args,
-                               "string")
-    write_file(guest_config_file, guest_config)
     resources += [ {
           path = rebase_path(guest_config_file)
           dest = "guest.cfg"

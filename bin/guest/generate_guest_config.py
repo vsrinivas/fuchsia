@@ -5,22 +5,27 @@
 
 import argparse
 import json
+import sys
 
-def parse_args():
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cmdline', help='Kernel cmdline string')
     parser.add_argument('--block', action='append', help='Block device spec')
-    return parser.parse_args()
+    parser.add_argument('filename', help='Path to output filename')
+    args = parser.parse_args()
 
-def main():
-    args = parse_args()
     config = {}
-    if (args.cmdline):
+    if args.cmdline:
         config['cmdline'] = args.cmdline
-    if (args.block):
+    if args.block:
         config['block'] = args.block
-    print json.dumps(config, indent=4, separators=(',', ': '))
+
+    with open(args.filename, 'w') as f:
+        json.dump(config, f, indent=4, separators=(',', ': '))
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
