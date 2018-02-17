@@ -36,7 +36,7 @@ var (
 	manifestFile = flag.Bool("m", false, "Publish a the contents of a manifest as as content blobs.")
 	filePath     = flag.String("f", "", "Path of the file to publish")
 	name         = flag.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
-	repoPath     = flag.String("r", filepath.Join(os.Getenv("FUCHSIA_BUILD_DIR"), serverBase), "Path to the TUF repository directory.")
+	repoPath     = flag.String("r", "", "Path to the TUF repository directory.")
 	keySrc       = flag.String("k", fuchsiaBuildDir, "Directory containing the signing keys.")
 )
 
@@ -47,9 +47,12 @@ func main() {
 	}
 	flag.Parse()
 
-	if *repoPath == serverBase {
-		log.Fatal("Either set $FUCHSIA_BUILD_DIR or supply a path with -r.")
-		return
+	if *repoPath == "" {
+		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
+			*repoPath = filepath.Join(buildDir, serverBase)
+		} else {
+			log.Fatal("Either set $FUCHSIA_BUILD_DIR or supply a path with -r.")
+		}
 	}
 
 	modeCheck := false
