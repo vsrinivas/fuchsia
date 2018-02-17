@@ -109,7 +109,7 @@ To use these shell extensions, first source fx-env.sh into your shell:
 END
 }
 
-buildtools_whitelist="gn ninja go"
+buildtools_whitelist="gn ninja"
 
 fuchsia_dir="${FUCHSIA_DIR}"
 if [[ -z "${fuchsia_dir}" ]]; then
