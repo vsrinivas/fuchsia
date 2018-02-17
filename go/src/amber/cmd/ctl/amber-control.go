@@ -85,7 +85,14 @@ func main() {
 		if strings.Index(*pkgName, "/") != 0 {
 			*pkgName = fmt.Sprintf("/%s", *pkgName)
 		}
-		blobID, err := proxy.GetUpdate(*pkgName, pkgVersion)
+		if *pkgVersion == "" {
+			*pkgVersion = "0"
+		}
+		// combine name and 'version' here, because the FIDL interface is talking
+		// about an amber version as opposed to human version. the human version is
+		// part of the package name
+		*pkgName = fmt.Sprintf("%s/%s", *pkgName, *pkgVersion)
+		blobID, err := proxy.GetUpdate(*pkgName, nil)
 		if err == nil {
 			fmt.Printf("Wrote update to blob %s\n", *blobID)
 		} else {
