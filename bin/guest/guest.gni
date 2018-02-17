@@ -26,7 +26,9 @@ template("guest_app") {
 
   action(guest_config_target_name) {
     script = "//garnet/bin/guest/generate_guest_config.py"
-    outputs = [ guest_config_file ]
+    outputs = [
+      guest_config_file,
+    ]
 
     args = []
     if (defined(invoker.cmdline)) {
@@ -44,6 +46,8 @@ template("guest_app") {
         ]
       }
     }
+
+    args += [ rebase_path("$guest_config_file") ]
   }
 
   package(target_name) {
@@ -59,16 +63,20 @@ template("guest_app") {
 
     binary = "guest"
 
-    meta = [ {
-          path = rebase_path("//garnet/bin/guest/meta/sandbox")
-          dest = "sandbox"
-        } ]
+    meta = [
+      {
+        path = rebase_path("//garnet/bin/guest/meta/sandbox")
+        dest = "sandbox"
+      },
+    ]
 
     if (target_cpu == "arm64") {
-      resources = [ {
-            path = rebase_path("//garnet/lib/machina/arch/arm64/dts/board.dtb")
-            dest = "board.dtb"
-          } ]
+      resources = [
+        {
+          path = rebase_path("//garnet/lib/machina/arch/arm64/dts/board.dtb")
+          dest = "board.dtb"
+        },
+      ]
     } else if (current_cpu == "x64") {
       resources = [
         {
@@ -86,26 +94,32 @@ template("guest_app") {
     if (defined(invoker.kernel)) {
       kernel = rebase_path(invoker.kernel)
       inputs += [ kernel ]
-      resources += [ {
-            path = kernel
-            dest = "kernel"
-          } ]
+      resources += [
+        {
+          path = kernel
+          dest = "kernel"
+        },
+      ]
     }
 
     # Add ramdisk resource.
     if (defined(invoker.ramdisk)) {
       ramdisk = rebase_path(invoker.ramdisk)
       inputs += [ ramdisk ]
-      resources += [ {
-            path = ramdisk
-            dest = "ramdisk"
-          } ]
+      resources += [
+        {
+          path = ramdisk
+          dest = "ramdisk"
+        },
+      ]
     }
 
-    resources += [ {
-          path = rebase_path(guest_config_file)
-          dest = "guest.cfg"
-        } ]
+    resources += [
+      {
+        path = rebase_path(guest_config_file)
+        dest = "guest.cfg"
+      },
+    ]
 
     # Pass-through any additional resources.
     if (defined(invoker.resources)) {
