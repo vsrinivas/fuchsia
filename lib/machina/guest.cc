@@ -81,7 +81,7 @@ zx_status_t Guest::Init(size_t mem_size) {
     return status;
   }
 
-  status = zx_guest_create(resource, 0, phys_mem_.vmo(), &guest_);
+  status = zx_guest_create(resource, 0, phys_mem_.vmo().get(), &guest_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create guest";
     return status;

@@ -108,8 +108,8 @@ class FifoBlockDispatcher : public BlockDispatcher {
         fbl::MakeAutoCall([fd, txnid]() { ioctl_block_free_txn(fd, &txnid); });
 
     zx_handle_t vmo_dup;
-    zx_status_t status =
-        zx_handle_duplicate(phys_mem.vmo(), ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+    zx_status_t status = zx_handle_duplicate(phys_mem.vmo().get(),
+                                             ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
     if (status != ZX_OK)
       return ZX_ERR_IO;
 

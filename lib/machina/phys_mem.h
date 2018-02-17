@@ -16,7 +16,7 @@ class PhysMem {
 
   ~PhysMem();
 
-  zx_handle_t vmo() const { return vmo_.get(); }
+  const zx::vmo& vmo() const { return vmo_; }
   uintptr_t addr() const { return addr_; }
   size_t size() const { return vmo_size_; }
 

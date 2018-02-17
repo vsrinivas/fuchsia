@@ -58,7 +58,7 @@ zx_status_t VirtioNet::Start(const char* path) {
   // is exposed to the Ethernet server.
   zx_handle_t vmo;
   zx_status_t status =
-      zx_handle_duplicate(phys_mem().vmo(), ZX_RIGHT_SAME_RIGHTS, &vmo);
+      zx_handle_duplicate(phys_mem().vmo().get(), ZX_RIGHT_SAME_RIGHTS, &vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate guest physical memory";
     return status;

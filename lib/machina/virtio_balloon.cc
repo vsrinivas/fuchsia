@@ -10,22 +10,12 @@
 
 namespace machina {
 
-static zx_status_t decommit_pages(zx_handle_t vmo,
-                                  uint64_t addr,
-                                  uint64_t len) {
-  return zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, addr, len, nullptr, 0);
-}
-
-static zx_status_t commit_pages(zx_handle_t vmo, uint64_t addr, uint64_t len) {
-  return zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, addr, len, nullptr, 0);
-}
-
-/* Structure passed to the inflate/deflate queue handler. */
+// Structure passed to the inflate/deflate queue handler.
 typedef struct queue_ctx {
-  // Operation to perform on the queue (inflate or deflate).
-  zx_status_t (*op)(zx_handle_t vmo, uint64_t addr, uint64_t len);
   // The VMO to invoke |op| on.
   zx_handle_t vmo;
+  // Operation to perform on the queue (inflate or deflate).
+  uint32_t op;
 } queue_ctx_t;
 
 /* Handle balloon inflate/deflate requests.
@@ -51,7 +41,7 @@ static zx_status_t queue_range_op(void* addr,
                                   uint16_t flags,
                                   uint32_t* used,
                                   void* ctx) {
-  queue_ctx_t* balloon_op_ctx = static_cast<queue_ctx_t*>(ctx);
+  queue_ctx_t* balloon_ctx = static_cast<queue_ctx_t*>(ctx);
   uint32_t* pfns = static_cast<uint32_t*>(addr);
   uint32_t pfn_count = len / 4;
 
@@ -68,9 +58,10 @@ static zx_status_t queue_range_op(void* addr,
 
     // If we have an existing region; invoke the inflate/deflate op.
     if (region_length > 0) {
-      zx_status_t status = balloon_op_ctx->op(
-          balloon_op_ctx->vmo, region_base * VirtioBalloon::kPageSize,
-          region_length * VirtioBalloon::kPageSize);
+      zx_status_t status =
+          zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
+                          region_base * VirtioBalloon::kPageSize,
+                          region_length * VirtioBalloon::kPageSize, nullptr, 0);
       if (status != ZX_OK)
         return status;
     }
@@ -82,9 +73,10 @@ static zx_status_t queue_range_op(void* addr,
 
   // Handle the last region.
   if (region_length > 0) {
-    zx_status_t status = balloon_op_ctx->op(
-        balloon_op_ctx->vmo, region_base * VirtioBalloon::kPageSize,
-        region_length * VirtioBalloon::kPageSize);
+    zx_status_t status =
+        zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
+                        region_base * VirtioBalloon::kPageSize,
+                        region_length * VirtioBalloon::kPageSize, nullptr, 0);
     if (status != ZX_OK)
       return status;
   }
@@ -98,17 +90,17 @@ zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue_sel) {
     case VIRTIO_BALLOON_Q_STATSQ:
       return ZX_OK;
     case VIRTIO_BALLOON_Q_INFLATEQ:
-      ctx.op = &decommit_pages;
+      ctx.op = ZX_VMO_OP_DECOMMIT;
       break;
     case VIRTIO_BALLOON_Q_DEFLATEQ:
       if (deflate_on_demand_)
         return ZX_OK;
-      ctx.op = &commit_pages;
+      ctx.op = ZX_VMO_OP_COMMIT;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  ctx.vmo = phys_mem().vmo();
+  ctx.vmo = phys_mem().vmo().get();
   return virtio_queue_handler(&queues_[queue_sel], &queue_range_op, &ctx);
 }
 
