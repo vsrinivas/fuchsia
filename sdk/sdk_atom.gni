@@ -60,6 +60,9 @@
 #     List of strings characterizing this element.
 #     Examples: "service:networking", "language:rust", "layer:garnet"
 #
+#   manifest_file (optional)
+#     Path to the manifest to generate.
+#
 # File scopes
 #
 # Each scope describe a file to be added to the SDK element. The supported
@@ -166,7 +169,11 @@ template("sdk_atom") {
   action(target_name) {
     forward_variables_from(invoker, ["testonly"])
 
-    manifest = "$target_gen_dir/$target_name.sdk"
+    if (defined(invoker.manifest_file)) {
+      manifest = invoker.manifest_file
+    } else {
+      manifest = "$target_gen_dir/$target_name.sdk"
+    }
 
     script = "//build/sdk/create_atom_manifest.py"
 

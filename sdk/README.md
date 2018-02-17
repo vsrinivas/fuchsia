@@ -35,6 +35,7 @@ way to provide hierarchy to SDK atoms.
 
 There are a few GN templates developers should use to enable the inclusion of
 their code in an SDK:
+- [`prebuilt_shared_library`](/cpp/prebuilt_shared_library.gni)
 - [`sdk_shared_library`](/cpp/sdk_shared_library.gni)
 - [`sdk_source_set`](/cpp/sdk_source_set.gni)
 - [`sdk_static_library`](/cpp/sdk_static_library.gni)
