@@ -32,7 +32,7 @@ executable("bin") {
   output_name = "guest"
 
   sources = [
-    "guest.cc",
+    "main.cc",
   ]
 
   deps = [
