@@ -5,6 +5,8 @@
 #pragma once
 
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/packet.h>
+#include <wlan/protocol/mac.h>
 
 namespace wlan {
 namespace debug {
@@ -22,6 +24,9 @@ std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len);
 std::string Describe(const BlockAckParameters& param);
 std::string Describe(const AddBaRequestFrame& req);
 std::string Describe(const AddBaResponseFrame& resp);
+std::string Describe(const wlan_rx_info_t& rxinfo);
+std::string Describe(Packet::Peer peer);
+std::string Describe(const Packet& packet);
 
 }  // namespace debug
 }  // namespace wlan
