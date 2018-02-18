@@ -33,7 +33,10 @@ impl WlanPhy {
         let dev = OpenOptions::new().read(true).write(true).open(&path)?;
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        Ok(WlanPhy { dev_path: path_buf, dev_node: dev })
+        Ok(WlanPhy {
+            dev_path: path_buf,
+            dev_node: dev,
+        })
     }
 
     /// Queries the WLAN Phy device for its capabilities.
@@ -54,6 +57,8 @@ impl WlanPhy {
 
 impl fmt::Debug for WlanPhy {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("WlanPhy").field("path", &self.dev_path).finish()
+        f.debug_struct("WlanPhy")
+            .field("path", &self.dev_path)
+            .finish()
     }
 }
