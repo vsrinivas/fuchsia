@@ -40,7 +40,7 @@ LOG_CATEGORY(kLogFinspect, 23);  // Packet decoder log
 constexpr uint64_t kLogLevel = kLogInfos;
 constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 
-#define finspect(args...) wlogf(kLogFinspect, "[finspect] ", args)
+#define finspect(args...) wlogf(wlan::kLogFinspect, "[finspect] ", args)
 
 #define wlogf(level, level_prefix, args...)                                       \
     do {                                                                          \

@@ -12,6 +12,7 @@
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
@@ -2975,12 +2976,8 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
     debugf("  rxwi2 : rssi0=%u rssi1=%u rssi2=%u\n", rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
     debugf("  rxwi3 : snr0=%u snr1=%u\n", rxwi3.snr0(), rxwi3.snr1());
 
-    size_t i = 0;
-    for (; i < request->response.actual; i++) {
-        std::printf("0x%02x ", data[i]);
-        if (i % 8 == 7) std::printf("\n");
-    }
-    if (i % 8) { std::printf("\n"); }
+    finspect("[Ralink] Inbound USB request:\n");
+    finspect("  Dump: %s\n", wlan::debug::HexDump(data, request->response.actual).c_str());
 #endif  // RALINK_DUMP_RX
 }
 
@@ -3199,6 +3196,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
             }
         }
 
+        dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
         if (wlanmac_proxy_ != nullptr) {
             wlan_rx_info_t wlan_rx_info = {};
             fill_rx_info(&wlan_rx_info, rx_desc, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
@@ -3217,7 +3215,6 @@ void Device::HandleRxComplete(usb_request_t* request) {
             wlanmac_proxy_->Recv(0u, data + rx_hdr_size, mpdu_len, &wlan_rx_info);
         }
 
-        dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
     } else {
         if (request->response.status != ZX_ERR_IO_REFUSED) {
             errorf("rx req status %d\n", request->response.status);
