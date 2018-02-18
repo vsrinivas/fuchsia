@@ -12,6 +12,7 @@
 #include <wlan/common/mac_frame.h>
 #include <wlan/mlme/ap_mlme.h>
 #include <wlan/mlme/client_mlme.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/serialize.h>
@@ -31,50 +32,6 @@ template <unsigned int N, typename T> T align(T t) {
     return (t + (N - 1)) & ~(N - 1);
 }
 
-void DumpPacket(const Packet& packet) {
-    const uint8_t* p = packet.data();
-    for (size_t i = 0; i < packet.len(); i++) {
-        if (i % 16 == 0) { std::printf("\nwlan: "); }
-        std::printf("%02x ", p[i]);
-    }
-    std::printf("\n");
-}
-
-void DumpRxInfo(const wlan_rx_info_t& rxinfo) {
-    std::printf(
-        "WLAN RxInfo: "
-        "flags %08x valid_fields %08x phy %u data_rate %u chan %s "
-        "mcs %u rssi %u rcpi %u snr %u \n",
-        rxinfo.rx_flags, rxinfo.valid_fields, rxinfo.phy, rxinfo.data_rate,
-        common::ChanStr(rxinfo.chan).c_str(), rxinfo.mcs, rxinfo.rssi, rxinfo.rcpi, rxinfo.snr);
-}
-
-void DumpFrameHeader(const FrameHeader& hdr, size_t len) {
-    // TODO(porce): Introspect the frame type in general, and support Control Frames.
-    std::printf(
-        "WLAN Frame:  Len %zu"
-        "\n       "
-        "Proto %u Type %u Subtype %u ToDs %u FromDs %u Frag %u Retry %u PwrMgmt %u MoreData %u "
-        "Protected %u Htc %u Duration %u Seq [%u:%u]"
-        "\n       "
-        "[Addr1] %s  [Addr2] %s  [Addr3] %s"
-        "\n",
-        len, hdr.fc.protocol_version(), hdr.fc.type(), hdr.fc.subtype(), hdr.fc.to_ds(),
-        hdr.fc.from_ds(), hdr.fc.more_frag(), hdr.fc.retry(), hdr.fc.pwr_mgmt(), hdr.fc.more_data(),
-        hdr.fc.protected_frame(), hdr.fc.htc_order(), hdr.duration, hdr.sc.frag(), hdr.sc.seq(),
-        MACSTR(hdr.addr1), MACSTR(hdr.addr2), MACSTR(hdr.addr3));
-}
-
-#define DEBUG_DUMP_WLAN_FRAME(packet)                          \
-    do {                                                       \
-        if (kLogLevel & kLogWlanFrameTrace) {                  \
-            auto rxinfo = packet->ctrl_data<wlan_rx_info_t>(); \
-            DumpRxInfo(*rxinfo);                               \
-            auto hdr = packet->field<FrameHeader>(0);          \
-            DumpFrameHeader(*hdr, packet->len());              \
-        }                                                      \
-    } while (false)
-
 }  // namespace
 
 Dispatcher::Dispatcher(DeviceInterface* device) : device_(device) {
@@ -91,14 +48,8 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
 
     ZX_DEBUG_ASSERT(packet != nullptr);
     ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
-    debughdr("packet data=%p len=%zu peer=%s\n", packet->data(), packet->len(),
-             packet->peer() == Packet::Peer::kWlan
-                 ? "Wlan"
-                 : packet->peer() == Packet::Peer::kEthernet
-                       ? "Ethernet"
-                       : packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
-    if (kLogLevel & kLogDataPacketTrace) { DumpPacket(*packet); }
+    finspect("Packet: %s\n", debug::Describe(*packet).c_str());
 
     // If there is no active MLME, block all packets but service ones.
     // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the MLME.
@@ -119,7 +70,6 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
         break;
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
-        debughdr("FrameControl type: %u subtype: %u\n", fc->type(), fc->subtype());
 
         // TODO(porce): Handle HTC field.
         if (fc->HasHtCtrl()) {
@@ -131,14 +81,12 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
 
         switch (fc->type()) {
         case FrameType::kManagement:
-            DEBUG_DUMP_WLAN_FRAME(packet);
             status = HandleMgmtPacket(packet);
             break;
         case FrameType::kControl:
             status = HandleCtrlPacket(packet);
             break;
         case FrameType::kData:
-            DEBUG_DUMP_WLAN_FRAME(packet);
             status = HandleDataPacket(packet);
             break;
         default:
