@@ -103,7 +103,7 @@ zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
 zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     zxlogf(INFO, "wlan::testing::PhyDevice::Query()\n");
-    auto info = wlan::phy::WlanInfo::New();
+    auto info = wlan::phy::WlanPhyInfo::New();
     info->supported_phys = fidl::Array<wlan::phy::SupportedPhy>::New(0);
     info->driver_features = fidl::Array<wlan::phy::DriverFeature>::New(0);
     info->mac_roles = fidl::Array<wlan::phy::MacRole>::New(0);
@@ -186,7 +186,7 @@ zx_status_t PhyDevice::CreateIface(const void* in_buf, size_t in_len, void* out_
 
     // Build the response now, so if the return buffer is too small we find out before we create the
     // device.
-    auto info = wlan::iface::WlanIface::New();
+    auto info = wlan::iface::WlanIfaceInfo::New();
     info->id = id;
     if (out_len < info->GetSerializedSize()) { return ZX_ERR_BUFFER_TOO_SMALL; }
     if (!info->Serialize(out_buf, info->GetSerializedSize(), out_actual)) { return ZX_ERR_IO; }

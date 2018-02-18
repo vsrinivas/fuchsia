@@ -8,11 +8,11 @@ import "garnet/lib/wlan/fidl/phy.fidl";
 import "garnet/lib/wlan/fidl/iface.fidl";
 
 struct ListPhysResponse {
-    array<wlan.phy.WlanInfo> phys;
+    array<wlan.phy.WlanPhyInfo> phys;
 };
 
 struct ListIfacesResponse {
-    array<wlan.iface.WlanIface> ifaces;
+    array<wlan.iface.WlanIfaceInfo> ifaces;
 };
 
 struct CreateIfaceRequest {

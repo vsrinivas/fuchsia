@@ -4,6 +4,6 @@
 
 module wlan.iface;
 
-struct WlanIface {
+struct WlanIfaceInfo {
     uint16 id;
 };

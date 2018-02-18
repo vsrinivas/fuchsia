@@ -73,7 +73,7 @@ struct BandInfo {
   ChannelList supported_channels;
 };
 
-struct WlanInfo {
+struct WlanPhyInfo {
   array<SupportedPhy> supported_phys;
   array<DriverFeature> driver_features;
   array<MacRole> mac_roles;

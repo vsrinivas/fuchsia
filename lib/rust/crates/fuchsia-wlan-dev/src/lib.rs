@@ -40,12 +40,12 @@ impl WlanPhy {
     }
 
     /// Queries the WLAN Phy device for its capabilities.
-    pub fn query(&self) -> Result<wlan::WlanInfo, zircon::Status> {
+    pub fn query(&self) -> Result<wlan::WlanPhyInfo, zircon::Status> {
         sys::query_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)
     }
 
     /// Creates a new WLAN Iface with the given role.
-    pub fn create_iface(&self, role: wlan::MacRole) -> Result<wlan::WlanIface, zircon::Status> {
+    pub fn create_iface(&self, role: wlan::MacRole) -> Result<wlan::WlanIfaceInfo, zircon::Status> {
         sys::create_wlaniface(&self.dev_node, role).map_err(|_| zircon::Status::INTERNAL)
     }
 
