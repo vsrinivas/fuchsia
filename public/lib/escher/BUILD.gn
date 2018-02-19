@@ -192,6 +192,8 @@ source_set("escher") {
     "impl/vulkan_utils.h",
     "impl/wobble_modifier_absorber.cc",
     "impl/wobble_modifier_absorber.h",
+    "impl/z_sort.cc",
+    "impl/z_sort.h",
     "material/color_utils.cc",
     "material/color_utils.h",
     "material/material.cc",

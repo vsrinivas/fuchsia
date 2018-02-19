@@ -24,6 +24,7 @@ union Command {
   SetRotationCmd set_rotation;
   SetAnchorCmd set_anchor;
   SetSizeCmd set_size;
+  SetOpacityCmd set_opacity;
 
   // Node-specific commands.
   AddChildCmd add_child;  // TODO: Should we require a DetachCmd before
@@ -268,6 +269,16 @@ struct SetAnchorCmd {
 struct SetSizeCmd {
   uint32 id;
   Vector2Value value;
+};
+
+// Sets a node's opacity.
+//
+// Constraints:
+// - |node_id| refs a |Node| with the has_opacity characteristic.
+// - |opacity| is in the range [0, 1].
+struct SetOpacityCmd {
+  uint32 node_id;
+  float32 opacity;
 };
 
 // Sets/clears a node's shape.

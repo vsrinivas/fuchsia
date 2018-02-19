@@ -20,6 +20,7 @@
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
@@ -91,6 +92,13 @@ void DumpVisitor::Visit(ImagePipe* r) {
 
 void DumpVisitor::Visit(EntityNode* r) {
   BeginItem("EntityNode", r);
+  VisitNode(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(OpacityNode* r) {
+  BeginItem("OpacityNode", r);
+  WriteProperty("opacity") << r->opacity();
   VisitNode(r);
   EndItem();
 }

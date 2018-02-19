@@ -18,6 +18,7 @@
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
@@ -47,7 +48,7 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
   TRACE_DURATION("gfx", "Renderer::CreateDisplayList");
 
   // Construct a display list from the tree.
-  Visitor v(default_material_, disable_clipping_);
+  Visitor v(default_material_, 1, disable_clipping_);
   scene->Accept(&v);
   return v.TakeDisplayList();
 }
@@ -70,8 +71,9 @@ void Renderer::DisableClipping(bool disable_clipping) {
 }
 
 Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material,
-                           bool disable_clipping)
+                           float opacity, bool disable_clipping)
     : default_material_(default_material),
+      opacity_(opacity),
       disable_clipping_(disable_clipping) {}
 
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
@@ -90,6 +92,19 @@ void Renderer::Visitor::Visit(Buffer* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(EntityNode* r) { VisitNode(r); }
 
+void Renderer::Visitor::Visit(OpacityNode* r) {
+  if (r->opacity() == 0) {
+    return;
+  }
+
+  float old_opacity = opacity_;
+  opacity_ *= r->opacity();
+
+  VisitNode(r);
+
+  opacity_ = old_opacity;
+}
+
 void Renderer::Visitor::VisitNode(Node* r) {
   // If not clipping, recursively visit all descendants in the normal fashion.
   if (!r->clip_to_self() || disable_clipping_) {
@@ -100,7 +115,8 @@ void Renderer::Visitor::VisitNode(Node* r) {
 
   // We might need to apply a clip.
   // Gather the escher::Objects corresponding to the children and imports.
-  Renderer::Visitor clippee_visitor(default_material_, disable_clipping_);
+  Renderer::Visitor clippee_visitor(default_material_, opacity_,
+                                    disable_clipping_);
   ForEachChildAndImportFrontToBack(
       *r, [&clippee_visitor](Node* node) { node->Accept(&clippee_visitor); });
 
@@ -116,7 +132,7 @@ void Renderer::Visitor::VisitNode(Node* r) {
   // Shapes/ShapeNodes amongst the node's parts.  First gather the
   // escher::Objects corresponding to these ShapeNodes.
   const escher::MaterialPtr kNoMaterial;
-  Renderer::Visitor clipper_visitor(kNoMaterial, disable_clipping_);
+  Renderer::Visitor clipper_visitor(kNoMaterial, opacity_, disable_clipping_);
   ForEachPartFrontToBack(*r, [&clipper_visitor](Node* node) {
     if (node->IsKindOf<ShapeNode>()) {
       node->Accept(&clipper_visitor);
@@ -172,9 +188,21 @@ void Renderer::Visitor::Visit(ShapeNode* r) {
     material->Accept(this);
   }
   if (shape) {
-    display_list_.push_back(shape->GenerateRenderObject(
-        r->GetGlobalTransform(),
-        material ? material->escher_material() : default_material_));
+    escher::MaterialPtr escher_material =
+        material ? material->escher_material() : default_material_;
+    if (escher_material && opacity_ < 1) {
+      // When we want to support other material types (e.g. metallic shaders),
+      // we'll need to change this. If we want to support semitransparent
+      // textures and materials, we'll need more pervasive changes.
+      glm::vec4 color = escher_material->color();
+      color.a *= opacity_;
+      escher_material =
+          escher::Material::New(color, escher_material->texture());
+      escher_material->set_opaque(false);
+    }
+
+    display_list_.push_back(
+        shape->GenerateRenderObject(r->GetGlobalTransform(), escher_material));
   }
   // We don't need to call |VisitNode| because shape nodes don't have
   // children or parts.

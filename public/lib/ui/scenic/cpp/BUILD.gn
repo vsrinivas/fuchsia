@@ -37,5 +37,6 @@ source_set("cpp") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
   ]
 }

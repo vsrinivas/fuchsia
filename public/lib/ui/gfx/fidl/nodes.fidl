@@ -44,6 +44,17 @@ struct ClipNodeArgs {
 };
 
 // Characteristics:
+// - has_transform
+// - has_parent
+// - has_children
+// - has_parts
+// - has_opacity
+struct OpacityNodeArgs {
+    uint32 unused = 0;
+};
+
+// Characteristics:
+// - has_transform
 // - has_children
 // - has_parent
 // - has_parts

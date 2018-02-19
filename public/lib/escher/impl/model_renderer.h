@@ -32,17 +32,12 @@ class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
 
   ResourceRecycler* resource_recycler() const { return resource_recycler_; }
 
-  ModelDisplayListPtr CreateDisplayList(const Stage& stage,
-                                        const Model& model,
-                                        const Camera& camera,
-                                        const ModelRenderPassPtr& render_pass,
-                                        ModelDisplayListFlags flags,
-                                        float scale,
-                                        const TexturePtr& shadow_texture,
-                                        const mat4& shadow_matrix,
-                                        vec3 ambient_light_color,
-                                        vec3 direct_light_color,
-                                        CommandBuffer* command_buffer);
+  ModelDisplayListPtr CreateDisplayList(
+      const Stage& stage, const Model& model, const Camera& camera,
+      const ModelRenderPassPtr& render_pass, ModelDisplayListFlags flags,
+      float scale, const TexturePtr& shadow_texture, const mat4& shadow_matrix,
+      vec3 ambient_light_color, vec3 direct_light_color,
+      CommandBuffer* command_buffer);
 
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
 
@@ -65,6 +60,21 @@ class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
   MeshPtr circle_;
 
   TexturePtr white_texture_;
+
+  // Used to accumulate indices of objects in render order. Kept as an instance
+  // field to reuse memory.
+  // TODO(rosswang): maybe shrink to fit if capacity ≫ size after drawing.
+  std::vector<uint32_t> opaque_objects_;
+  // Used for semitransparent objects, sorted back-to-front.
+  // TODO(jjosh): relax this ordering requirement in cases where we can prove
+  //  that the semitransparent objects don't overlap.
+  // TODO(rosswang): take advantage of relatively stable ordering in retained
+  //  mode (bubble sort).
+  // TODO(rosswang): This needs to be better factored with
+  //  |ModelDisplayListBuilder|, as the latter handles all clip children. Having
+  //  them separate allows for edge cases where clip groups with semitransparent
+  //  geometry are not sorted against one another.
+  std::vector<uint32_t> alpha_objects_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(ModelRenderer);
   FXL_DISALLOW_COPY_AND_ASSIGN(ModelRenderer);

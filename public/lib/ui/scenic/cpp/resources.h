@@ -396,7 +396,7 @@ class OpacityNode final : public ContainerNode {
 
   // The opacity with which to render the contents of the hierarchy rooted at
   // this node. The opacity values are clamped 0.0 to 1.0.
-  void SetOpacity(double opacity);
+  void SetOpacity(float opacity);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);

@@ -15,7 +15,7 @@ class Image;
 class ImagePipe;
 class Buffer;
 class EntityNode;
-class Node;
+class OpacityNode;
 class ShapeNode;
 class Scene;
 class CircleShape;
@@ -44,6 +44,7 @@ class ResourceVisitor {
 
   // Nodes.
   virtual void Visit(EntityNode* r) = 0;
+  virtual void Visit(OpacityNode* r) = 0;
   virtual void Visit(ShapeNode* r) = 0;
 
   // Shapes.

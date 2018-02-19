@@ -4,6 +4,8 @@
 
 #include "lib/ui/scenic/cpp/resources.h"
 
+#include <fbl/algorithm.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/fidl_helpers.h"
 
@@ -327,9 +329,7 @@ ClipNode::ClipNode(ClipNode&& moved) : ContainerNode(std::move(moved)) {}
 ClipNode::~ClipNode() = default;
 
 OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
-  // TODO(MZ-139): Opacities are not currently implemented. Create an
-  // entity node for now.
-  session->Enqueue(NewCreateEntityNodeCmd(id()));
+  session->Enqueue(NewCreateOpacityNodeCmd(id()));
 }
 
 OpacityNode::OpacityNode(OpacityNode&& moved)
@@ -337,13 +337,9 @@ OpacityNode::OpacityNode(OpacityNode&& moved)
 
 OpacityNode::~OpacityNode() = default;
 
-void OpacityNode::SetOpacity(double opacity) {
-  if (opacity < 0.0) {
-    opacity = 0.0;
-  } else if (opacity > 1.0) {
-    opacity = 1.0;
-  }
-  // TODO(MZ-139): Opacities are not currently implemented.
+void OpacityNode::SetOpacity(float opacity) {
+  opacity = fbl::clamp(opacity, 0.f, 1.f);
+  session()->Enqueue(NewSetOpacityCmd(id(), opacity));
 }
 
 Variable::Variable(Session* session, fuchsia::ui::gfx::Value initial_value)

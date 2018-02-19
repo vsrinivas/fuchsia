@@ -11,7 +11,7 @@ namespace scenic {
 namespace gfx {
 
 // All subclasses of Resource are represented here.
-enum ResourceType {
+enum ResourceType : uint64_t {
   // Support for importing/exporting resources.
   kImport = 1 << 0,
 
@@ -40,13 +40,14 @@ enum ResourceType {
   kNode = 1 << 16,
   kClipNode = 1 << 17,
   kEntityNode = 1 << 18,
-  kShapeNode = 1 << 19,
+  kOpacityNode = 1 << 19,
+  kShapeNode = 1 << 20,
 
   // Compositor, layers.
-  kCompositor = 1 << 20,
-  kDisplayCompositor = 1 << 21,
-  kLayer = 1 << 22,
-  kLayerStack = 1 << 23,
+  kCompositor = 1 << 21,
+  kDisplayCompositor = 1 << 22,
+  kLayer = 1 << 23,
+  kLayerStack = 1 << 24,
 
   // Scene, camera, lighting.
   kScene = 1 << 24,

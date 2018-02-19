@@ -28,6 +28,7 @@ union ResourceArgs {
   ShapeNodeArgs shape_node;
   ClipNodeArgs clip_node;
   EntityNodeArgs entity_node;
+  OpacityNodeArgs opacity_node;
   SpaceArgs space_node;
   SpaceHolderArgs space_holder_node;
 

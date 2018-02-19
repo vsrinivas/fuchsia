@@ -22,6 +22,7 @@
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
@@ -47,6 +48,8 @@ void ImagePipe::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 void Buffer::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void EntityNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
+
+void OpacityNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void ShapeNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 

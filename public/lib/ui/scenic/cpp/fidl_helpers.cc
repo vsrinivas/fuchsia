@@ -359,6 +359,15 @@ fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id) {
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
+fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id) {
+  fuchsia::ui::gfx::OpacityNodeArgs node;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_opacity_node(std::move(node));
+
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
   fuchsia::ui::gfx::ShapeNodeArgs node;
 
@@ -658,6 +667,17 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id,
 
   fuchsia::ui::gfx::Command command;
   command.set_set_anchor(std::move(set_anchor));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity) {
+  fuchsia::ui::gfx::SetOpacityCmd set_opacity;
+  set_opacity.node_id = node_id;
+  set_opacity.opacity = opacity;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_opacity(std::move(set_opacity));
 
   return command;
 }

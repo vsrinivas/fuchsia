@@ -14,6 +14,7 @@ namespace scenic {
 namespace gfx {
 
 class Camera;
+class Node;
 class Scene;
 using CameraPtr = fxl::RefPtr<Camera>;
 using ScenePtr = fxl::RefPtr<Scene>;
@@ -66,6 +67,7 @@ class Renderer : public Resource {
     void Visit(ImagePipe* r) override;
     void Visit(Buffer* r) override;
     void Visit(EntityNode* r) override;
+    void Visit(OpacityNode* r) override;
     void Visit(ShapeNode* r) override;
     void Visit(CircleShape* r) override;
     void Visit(RectangleShape* r) override;
@@ -86,12 +88,16 @@ class Renderer : public Resource {
    protected:
    private:
     friend class Renderer;
-    Visitor(const escher::MaterialPtr& default_material, bool disable_clipping);
+    Visitor(const escher::MaterialPtr& default_material, float opacity,
+            bool disable_clipping);
 
     void VisitNode(Node* r);
 
     std::vector<escher::Object> display_list_;
-    const escher::MaterialPtr& default_material_;
+    escher::MaterialPtr default_material_;
+    // Opacity needs to be separate from default material since default material
+    // is null for geometry that can serve as clippers.
+    float opacity_;
     const bool disable_clipping_;
   };
 
@@ -99,7 +105,6 @@ class Renderer : public Resource {
   escher::MaterialPtr default_material_;
   ::fuchsia::ui::gfx::ShadowTechnique shadow_technique_ =
       ::fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE;
-  bool render_continuously_ = false;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

@@ -81,6 +81,7 @@ fuchsia::ui::gfx::Command NewCreateMeshCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateMaterialCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateClipNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id);
+fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateSpaceCmd(uint32_t id, zx::eventpair token,
                                             const std::string& debug_name);
@@ -137,6 +138,7 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id,
 fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id,
                                           uint32_t variable_id);
 
+fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity);
 fuchsia::ui::gfx::Command NewSetShapeCmd(uint32_t node_id, uint32_t shape_id);
 fuchsia::ui::gfx::Command NewSetMaterialCmd(uint32_t node_id,
                                             uint32_t material_id);

@@ -122,26 +122,21 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   void BeginTearDown();
 
   // Cmderation application functions, called by ApplyCommand().
-  bool ApplyCreateResourceCmd(
-      ::fuchsia::ui::gfx::CreateResourceCmd command);
-  bool ApplyReleaseResourceCmd(
-      ::fuchsia::ui::gfx::ReleaseResourceCmd command);
-  bool ApplyExportResourceCmd(
-      ::fuchsia::ui::gfx::ExportResourceCmd command);
-  bool ApplyImportResourceCmd(
-      ::fuchsia::ui::gfx::ImportResourceCmd command);
+  bool ApplyCreateResourceCmd(::fuchsia::ui::gfx::CreateResourceCmd command);
+  bool ApplyReleaseResourceCmd(::fuchsia::ui::gfx::ReleaseResourceCmd command);
+  bool ApplyExportResourceCmd(::fuchsia::ui::gfx::ExportResourceCmd command);
+  bool ApplyImportResourceCmd(::fuchsia::ui::gfx::ImportResourceCmd command);
   bool ApplyAddChildCmd(::fuchsia::ui::gfx::AddChildCmd command);
   bool ApplyAddPartCmd(::fuchsia::ui::gfx::AddPartCmd command);
   bool ApplyDetachCmd(::fuchsia::ui::gfx::DetachCmd command);
-  bool ApplyDetachChildrenCmd(
-      ::fuchsia::ui::gfx::DetachChildrenCmd command);
+  bool ApplyDetachChildrenCmd(::fuchsia::ui::gfx::DetachChildrenCmd command);
   bool ApplySetTagCmd(::fuchsia::ui::gfx::SetTagCmd command);
-  bool ApplySetTranslationCmd(
-      ::fuchsia::ui::gfx::SetTranslationCmd command);
+  bool ApplySetTranslationCmd(::fuchsia::ui::gfx::SetTranslationCmd command);
   bool ApplySetScaleCmd(::fuchsia::ui::gfx::SetScaleCmd command);
   bool ApplySetRotationCmd(::fuchsia::ui::gfx::SetRotationCmd command);
   bool ApplySetAnchorCmd(::fuchsia::ui::gfx::SetAnchorCmd command);
   bool ApplySetSizeCmd(::fuchsia::ui::gfx::SetSizeCmd command);
+  bool ApplySetOpacityCmd(::fuchsia::ui::gfx::SetOpacityCmd command);
   bool ApplySetShapeCmd(::fuchsia::ui::gfx::SetShapeCmd command);
   bool ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command);
   bool ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command);
@@ -158,29 +153,23 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       ::fuchsia::ui::gfx::SetStereoCameraProjectionCmd command);
   bool ApplySetCameraPoseBufferCmd(
       ::fuchsia::ui::gfx::SetCameraPoseBufferCmd command);
-  bool ApplySetLightColorCmd(
-      ::fuchsia::ui::gfx::SetLightColorCmd command);
+  bool ApplySetLightColorCmd(::fuchsia::ui::gfx::SetLightColorCmd command);
   bool ApplySetLightDirectionCmd(
       ::fuchsia::ui::gfx::SetLightDirectionCmd command);
   bool ApplyAddLightCmd(::fuchsia::ui::gfx::AddLightCmd command);
   bool ApplyDetachLightCmd(::fuchsia::ui::gfx::DetachLightCmd command);
-  bool ApplyDetachLightsCmd(
-      ::fuchsia::ui::gfx::DetachLightsCmd command);
+  bool ApplyDetachLightsCmd(::fuchsia::ui::gfx::DetachLightsCmd command);
   bool ApplySetTextureCmd(::fuchsia::ui::gfx::SetTextureCmd command);
   bool ApplySetColorCmd(::fuchsia::ui::gfx::SetColorCmd command);
-  bool ApplyBindMeshBuffersCmd(
-      ::fuchsia::ui::gfx::BindMeshBuffersCmd command);
+  bool ApplyBindMeshBuffersCmd(::fuchsia::ui::gfx::BindMeshBuffersCmd command);
   bool ApplyAddLayerCmd(::fuchsia::ui::gfx::AddLayerCmd command);
   bool ApplyRemoveLayerCmd(::fuchsia::ui::gfx::RemoveLayerCmd command);
-  bool ApplyRemoveAllLayersCmd(
-      ::fuchsia::ui::gfx::RemoveAllLayersCmd command);
-  bool ApplySetLayerStackCmd(
-      ::fuchsia::ui::gfx::SetLayerStackCmd command);
+  bool ApplyRemoveAllLayersCmd(::fuchsia::ui::gfx::RemoveAllLayersCmd command);
+  bool ApplySetLayerStackCmd(::fuchsia::ui::gfx::SetLayerStackCmd command);
   bool ApplySetRendererCmd(::fuchsia::ui::gfx::SetRendererCmd command);
   bool ApplySetRendererParamCmd(
       ::fuchsia::ui::gfx::SetRendererParamCmd command);
-  bool ApplySetEventMaskCmd(
-      ::fuchsia::ui::gfx::SetEventMaskCmd command);
+  bool ApplySetEventMaskCmd(::fuchsia::ui::gfx::SetEventMaskCmd command);
   bool ApplySetLabelCmd(::fuchsia::ui::gfx::SetLabelCmd command);
   bool ApplySetDisableClippingCmd(
       ::fuchsia::ui::gfx::SetDisableClippingCmd command);
@@ -220,6 +209,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                            ::fuchsia::ui::gfx::ClipNodeArgs args);
   bool ApplyCreateEntityNode(scenic::ResourceId id,
                              ::fuchsia::ui::gfx::EntityNodeArgs args);
+  bool ApplyCreateOpacityNode(scenic::ResourceId id,
+                              ::fuchsia::ui::gfx::OpacityNodeArgs args);
   bool ApplyCreateShapeNode(scenic::ResourceId id,
                             ::fuchsia::ui::gfx::ShapeNodeArgs args);
   bool ApplyCreateSpace(scenic::ResourceId id,
@@ -260,6 +251,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                              ::fuchsia::ui::gfx::ClipNodeArgs args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,
                                ::fuchsia::ui::gfx::EntityNodeArgs args);
+  ResourcePtr CreateOpacityNode(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::OpacityNodeArgs args);
   ResourcePtr CreateShapeNode(scenic::ResourceId id,
                               ::fuchsia::ui::gfx::ShapeNodeArgs args);
   ResourcePtr CreateDisplayCompositor(

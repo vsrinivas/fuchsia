@@ -29,10 +29,7 @@ class Material : public Resource {
   float red() const { return escher_material_->color().x; }
   float green() const { return escher_material_->color().y; }
   float blue() const { return escher_material_->color().z; }
-  float alpha() const {
-    FXL_CHECK(false);
-    return 0.f;
-  }
+  float alpha() const { return escher_material_->color().w; }
   const ImageBasePtr& texture_image() const { return texture_; }
   const escher::MaterialPtr& escher_material() const {
     return escher_material_;

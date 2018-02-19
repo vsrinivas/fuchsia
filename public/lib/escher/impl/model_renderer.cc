@@ -5,6 +5,7 @@
 #include "lib/escher/impl/model_renderer.h"
 
 #include <glm/gtx/transform.hpp>
+
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/image_cache.h"
@@ -15,6 +16,8 @@
 #include "lib/escher/impl/model_pipeline.h"
 #include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/impl/z_sort.h"
+#include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/shape.h"
 #include "lib/escher/scene/stage.h"
@@ -58,14 +61,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
       !(flags & ModelDisplayListFlag::kShareDescriptorSetsBetweenObjects))
       << "unimplemented (ES-29).";
 
-  // Used to accumulate indices of objects in render-order.
-  std::vector<uint32_t> opaque_objects;
-  opaque_objects.reserve(objects.size());
-  // TODO: Translucency.  When rendering translucent objects, we will need a
-  // separate bin for all translucent objects, and need to sort the objects in
-  // that bin from back-to-front.  Conceivably, we could relax this ordering
-  // requirement in cases where we can prove that the translucent objects don't
-  // overlap.
+  opaque_objects_.clear();
+  // Beware that this function only handles top-level objects. Clippees are
+  // handled by |ModelDisplayListBuilder|.
+  alpha_objects_.clear();
 
   // TODO: We should sort according to more different metrics, and look for
   // performance differences between them.  At the same time, we should
@@ -74,7 +73,12 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   if (!sort_by_pipeline) {
     // Simply render objects in the order that they appear in the model.
     for (uint32_t i = 0; i < objects.size(); ++i) {
-      opaque_objects.push_back(i);
+      const escher::MaterialPtr& material = objects[i].material();
+      if (!material || material->opaque()) {
+        opaque_objects_.push_back(i);
+      } else {
+        alpha_objects_.push_back(i);
+      }
     }
   } else {
     TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[sort]");
@@ -87,7 +91,9 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
       if (obj.shape().type() == Shape::Type::kNone) {
         // The Object is a clip-group; immediately add this to list of opaque
         // objects without binning.
-        opaque_objects.push_back(i);
+        opaque_objects_.push_back(i);
+      } else if (obj.material() && !obj.material()->opaque()) {
+        alpha_objects_.push_back(i);
       } else {
         ModelPipelineSpec spec;
         spec.mesh_spec = GetMeshForShape(obj.shape())->spec();
@@ -98,11 +104,13 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
     for (auto& pair : pipeline_bins) {
       for (uint32_t object_index : pair.second) {
-        opaque_objects.push_back(object_index);
+        opaque_objects_.push_back(object_index);
       }
     }
   }
-  FXL_DCHECK(opaque_objects.size() == objects.size());
+  FXL_DCHECK(opaque_objects_.size() + alpha_objects_.size() == objects.size());
+
+  ZSort(&alpha_objects_, objects, camera);
 
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[build]");
 
@@ -110,7 +118,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
                                   white_texture_, shadow_texture, shadow_matrix,
                                   ambient_light_color, direct_light_color,
                                   model_data_.get(), this, render_pass, flags);
-  for (uint32_t object_index : opaque_objects) {
+  for (uint32_t object_index : opaque_objects_) {
+    builder.AddObject(objects[object_index]);
+  }
+  for (uint32_t object_index : alpha_objects_) {
     builder.AddObject(objects[object_index]);
   }
   return builder.Build(command_buffer);

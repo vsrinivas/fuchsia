@@ -104,6 +104,8 @@ source_set("gfx") {
     "resources/nodes/entity_node.h",
     "resources/nodes/node.cc",
     "resources/nodes/node.h",
+    "resources/nodes/opacity_node.cc",
+    "resources/nodes/opacity_node.h",
     "resources/nodes/scene.cc",
     "resources/nodes/scene.h",
     "resources/nodes/shape_node.cc",

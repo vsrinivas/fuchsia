@@ -44,6 +44,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "Detach";
     case Command::Tag::kDetachChildren:
       return stream << "DetachChildren";
+    case Command::Tag::kSetOpacity:
+      return stream << "SetOpacity";
     case Command::Tag::kSetShape:
       return stream << "SetShape";
     case Command::Tag::kSetMaterial:
@@ -103,9 +105,8 @@ std::ostream& operator<<(std::ostream& stream,
   }
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::CreateResourceCmd& command) {
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::CreateResourceCmd& command) {
   stream << "CreateResourceCmd(id:" << command.id << " ";
   switch (command.resource.Which()) {
     case ResourceArgs::Tag::kMemory:
@@ -159,6 +160,9 @@ std::ostream& operator<<(
     case ResourceArgs::Tag::kEntityNode:
       stream << "EntityNode";
       break;
+    case ResourceArgs::Tag::kOpacityNode:
+      stream << "OpacityNode";
+      break;
     case ResourceArgs::Tag::kShapeNode:
       stream << "ShapeNode";
       break;
@@ -190,9 +194,8 @@ std::ostream& operator<<(
   return stream << ")";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::SetRendererParamCmd& command) {
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::SetRendererParamCmd& command) {
   stream << "SetRendererParamCmd(id=" << command.renderer_id << " ";
   switch (command.param.Which()) {
     case RendererParam::Tag::kShadowTechnique:

@@ -10,6 +10,7 @@
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
+#include "lib/escher/impl/z_sort.h"
 #include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/util/align.h"
@@ -216,9 +217,23 @@ void ModelDisplayListBuilder::AddClipperAndClippeeObjects(
 
   ++clip_depth_;
 
-  // Recursively draw clipped children.
-  for (auto& o : object.clippees()) {
-    AddObject(o);
+  // Recursively draw clipped children, z-sorting the semitransparent ones.
+  // TODO(rosswang): See TODOs in |ModelRenderer|.
+  const std::vector<Object>& clippees = object.clippees();
+  std::vector<uint32_t> alpha_children;
+  for (size_t i = 0; i < clippees.size(); i++) {
+    const Object& o = clippees[i];
+    if (!o.material() || o.material()->opaque()) {
+      AddObject(o);
+    } else {
+      alpha_children.push_back(i);
+    }
+  }
+
+  ZSort(&alpha_children, clippees, view_transform_ * projection_transform_);
+
+  for (uint32_t i : alpha_children) {
+    AddObject(clippees[i]);
   }
 
   // Revert the stencil buffer to the previous state.
@@ -299,7 +314,8 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   // Push uniforms for scale/translation and color.
   per_object->model_transform = object.transform();
   per_object->shadow_transform = shadow_matrix_ * object.transform();
-  per_object->color = mat ? mat->color() : vec4(1, 1, 1, 1);  // always opaque
+  per_object->color =
+      mat ? mat->color() : vec4(1, 1, 1, 1);  // opaque by default
 
   // Find the texture to use, either the object's material's texture, or
   // the default texture if the material doesn't have one.

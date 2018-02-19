@@ -17,12 +17,15 @@ namespace gfx {
 
 namespace {
 
-constexpr ResourceTypeFlags kHasChildren =
-    ResourceType::kEntityNode | ResourceType::kScene;
-constexpr ResourceTypeFlags kHasParts =
-    ResourceType::kEntityNode | ResourceType::kClipNode;
+constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode |
+                                           ResourceType::kOpacityNode |
+                                           ResourceType::kScene;
+constexpr ResourceTypeFlags kHasParts = ResourceType::kEntityNode |
+                                        ResourceType::kOpacityNode |
+                                        ResourceType::kClipNode;
 constexpr ResourceTypeFlags kHasTransform =
-    ResourceType::kClipNode | ResourceType::kEntityNode | ResourceType::kScene |
+    ResourceType::kClipNode | ResourceType::kEntityNode |
+    ResourceType::kOpacityNode | ResourceType::kScene |
     ResourceType::kShapeNode;
 constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
 

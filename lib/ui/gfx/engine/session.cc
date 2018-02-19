@@ -28,6 +28,7 @@
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
@@ -122,6 +123,8 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
       return ApplySetAnchorCmd(std::move(command.set_anchor()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetSize:
       return ApplySetSizeCmd(std::move(command.set_size()));
+    case ::fuchsia::ui::gfx::Command::Tag::kSetOpacity:
+      return ApplySetOpacityCmd(command.set_opacity());
     case ::fuchsia::ui::gfx::Command::Tag::kSetShape:
       return ApplySetShapeCmd(std::move(command.set_shape()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetMaterial:
@@ -164,22 +167,19 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
     case ::fuchsia::ui::gfx::Command::Tag::kSetColor:
       return ApplySetColorCmd(std::move(command.set_color()));
     case ::fuchsia::ui::gfx::Command::Tag::kBindMeshBuffers:
-      return ApplyBindMeshBuffersCmd(
-          std::move(command.bind_mesh_buffers()));
+      return ApplyBindMeshBuffersCmd(std::move(command.bind_mesh_buffers()));
     case ::fuchsia::ui::gfx::Command::Tag::kAddLayer:
       return ApplyAddLayerCmd(std::move(command.add_layer()));
     case ::fuchsia::ui::gfx::Command::Tag::kRemoveLayer:
       return ApplyRemoveLayerCmd(std::move(command.remove_layer()));
     case ::fuchsia::ui::gfx::Command::Tag::kRemoveAllLayers:
-      return ApplyRemoveAllLayersCmd(
-          std::move(command.remove_all_layers()));
+      return ApplyRemoveAllLayersCmd(std::move(command.remove_all_layers()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetLayerStack:
       return ApplySetLayerStackCmd(std::move(command.set_layer_stack()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetRenderer:
       return ApplySetRendererCmd(std::move(command.set_renderer()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetRendererParam:
-      return ApplySetRendererParamCmd(
-          std::move(command.set_renderer_param()));
+      return ApplySetRendererParamCmd(std::move(command.set_renderer_param()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetEventMask:
       return ApplySetEventMaskCmd(std::move(command.set_event_mask()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetLabel:
@@ -241,6 +241,8 @@ bool Session::ApplyCreateResourceCmd(
       return ApplyCreateMaterial(id, std::move(command.resource.material()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
       return ApplyCreateClipNode(id, std::move(command.resource.clip_node()));
+    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kOpacityNode:
+      return ApplyCreateOpacityNode(id, command.resource.opacity_node());
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kEntityNode:
       return ApplyCreateEntityNode(id,
                                    std::move(command.resource.entity_node()));
@@ -306,8 +308,7 @@ bool Session::ApplyImportResourceCmd(
          resources_.AddResource(command.id, std::move(import));
 }
 
-bool Session::ApplyAddChildCmd(
-    ::fuchsia::ui::gfx::AddChildCmd command) {
+bool Session::ApplyAddChildCmd(::fuchsia::ui::gfx::AddChildCmd command) {
   // Find the parent and child nodes.
   if (auto parent_node = resources_.FindResource<Node>(command.node_id)) {
     if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
@@ -364,8 +365,7 @@ bool Session::ApplySetTranslationCmd(
   return false;
 }
 
-bool Session::ApplySetScaleCmd(
-    ::fuchsia::ui::gfx::SetScaleCmd command) {
+bool Session::ApplySetScaleCmd(::fuchsia::ui::gfx::SetScaleCmd command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
@@ -379,8 +379,7 @@ bool Session::ApplySetScaleCmd(
   return false;
 }
 
-bool Session::ApplySetRotationCmd(
-    ::fuchsia::ui::gfx::SetRotationCmd command) {
+bool Session::ApplySetRotationCmd(::fuchsia::ui::gfx::SetRotationCmd command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<QuaternionVariable>(
@@ -394,8 +393,7 @@ bool Session::ApplySetRotationCmd(
   return false;
 }
 
-bool Session::ApplySetAnchorCmd(
-    ::fuchsia::ui::gfx::SetAnchorCmd command) {
+bool Session::ApplySetAnchorCmd(::fuchsia::ui::gfx::SetAnchorCmd command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
@@ -411,9 +409,8 @@ bool Session::ApplySetAnchorCmd(
 bool Session::ApplySetSizeCmd(::fuchsia::ui::gfx::SetSizeCmd command) {
   if (auto layer = resources_.FindResource<Layer>(command.id)) {
     if (IsVariable(command.value)) {
-      error_reporter_->ERROR()
-          << "scenic::gfx::Session::ApplySetSizeCmd(): "
-             "unimplemented for variable value.";
+      error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetSizeCmd(): "
+                                  "unimplemented for variable value.";
       return false;
     }
     return layer->SetSize(UnwrapVector2(command.value));
@@ -421,8 +418,15 @@ bool Session::ApplySetSizeCmd(::fuchsia::ui::gfx::SetSizeCmd command) {
   return false;
 }
 
-bool Session::ApplySetShapeCmd(
-    ::fuchsia::ui::gfx::SetShapeCmd command) {
+bool Session::ApplySetOpacityCmd(::fuchsia::ui::gfx::SetOpacityCmd command) {
+  if (auto node = resources_.FindResource<OpacityNode>(command.node_id)) {
+    node->SetOpacity(command.opacity);
+    return true;
+  }
+  return false;
+}
+
+bool Session::ApplySetShapeCmd(::fuchsia::ui::gfx::SetShapeCmd command) {
   if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
     if (auto shape = resources_.FindResource<Shape>(command.shape_id)) {
       node->SetShape(std::move(shape));
@@ -432,8 +436,7 @@ bool Session::ApplySetShapeCmd(
   return false;
 }
 
-bool Session::ApplySetMaterialCmd(
-    ::fuchsia::ui::gfx::SetMaterialCmd command) {
+bool Session::ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command) {
   if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
     if (auto material =
             resources_.FindResource<Material>(command.material_id)) {
@@ -447,9 +450,8 @@ bool Session::ApplySetMaterialCmd(
 bool Session::ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command) {
   if (command.clip_id != 0) {
     // TODO(MZ-167): Support non-zero clip_id.
-    error_reporter_->ERROR()
-        << "scenic::gfx::Session::ApplySetClipCmd(): only "
-           "clip_to_self is implemented.";
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetClipCmd(): only "
+                                "clip_to_self is implemented.";
     return false;
   }
 
@@ -475,8 +477,7 @@ bool Session::ApplySetSpacePropertiesCmd(
   return false;
 }
 
-bool Session::ApplySetCameraCmd(
-    ::fuchsia::ui::gfx::SetCameraCmd command) {
+bool Session::ApplySetCameraCmd(::fuchsia::ui::gfx::SetCameraCmd command) {
   if (auto renderer = resources_.FindResource<Renderer>(command.renderer_id)) {
     if (command.camera_id == 0) {
       renderer->SetCamera(nullptr);
@@ -490,8 +491,7 @@ bool Session::ApplySetCameraCmd(
   return false;
 }
 
-bool Session::ApplySetTextureCmd(
-    ::fuchsia::ui::gfx::SetTextureCmd command) {
+bool Session::ApplySetTextureCmd(::fuchsia::ui::gfx::SetTextureCmd command) {
   if (auto material = resources_.FindResource<Material>(command.material_id)) {
     if (command.texture_id == 0) {
       material->SetTexture(nullptr);
@@ -505,13 +505,11 @@ bool Session::ApplySetTextureCmd(
   return false;
 }
 
-bool Session::ApplySetColorCmd(
-    ::fuchsia::ui::gfx::SetColorCmd command) {
+bool Session::ApplySetColorCmd(::fuchsia::ui::gfx::SetColorCmd command) {
   if (auto material = resources_.FindResource<Material>(command.material_id)) {
     if (IsVariable(command.color)) {
-      error_reporter_->ERROR()
-          << "scenic::gfx::Session::ApplySetColorCmd(): "
-             "unimplemented for variable color.";
+      error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetColorCmd(): "
+                                  "unimplemented for variable color.";
       return false;
     }
 
@@ -542,8 +540,7 @@ bool Session::ApplyBindMeshBuffersCmd(
   return false;
 }
 
-bool Session::ApplyAddLayerCmd(
-    ::fuchsia::ui::gfx::AddLayerCmd command) {
+bool Session::ApplyAddLayerCmd(::fuchsia::ui::gfx::AddLayerCmd command) {
   auto layer_stack =
       resources_.FindResource<LayerStack>(command.layer_stack_id);
   auto layer = resources_.FindResource<Layer>(command.layer_id);
@@ -553,8 +550,7 @@ bool Session::ApplyAddLayerCmd(
   return false;
 }
 
-bool Session::ApplyRemoveLayerCmd(
-    ::fuchsia::ui::gfx::RemoveLayerCmd command) {
+bool Session::ApplyRemoveLayerCmd(::fuchsia::ui::gfx::RemoveLayerCmd command) {
   auto layer_stack =
       resources_.FindResource<LayerStack>(command.layer_stack_id);
   auto layer = resources_.FindResource<Layer>(command.layer_id);
@@ -585,8 +581,7 @@ bool Session::ApplySetLayerStackCmd(
   return false;
 }
 
-bool Session::ApplySetRendererCmd(
-    ::fuchsia::ui::gfx::SetRendererCmd command) {
+bool Session::ApplySetRendererCmd(::fuchsia::ui::gfx::SetRendererCmd command) {
   auto layer = resources_.FindResource<Layer>(command.layer_id);
   auto renderer = resources_.FindResource<Renderer>(command.renderer_id);
 
@@ -749,8 +744,7 @@ bool Session::ApplySetLightDirectionCmd(
   return false;
 }
 
-bool Session::ApplyAddLightCmd(
-    ::fuchsia::ui::gfx::AddLightCmd command) {
+bool Session::ApplyAddLightCmd(::fuchsia::ui::gfx::AddLightCmd command) {
   if (auto scene = resources_.FindResource<Scene>(command.scene_id)) {
     if (auto light = resources_.FindResource<Light>(command.light_id)) {
       return scene->AddLight(std::move(light));
@@ -762,8 +756,7 @@ bool Session::ApplyAddLightCmd(
   return false;
 }
 
-bool Session::ApplyDetachLightCmd(
-    ::fuchsia::ui::gfx::DetachLightCmd command) {
+bool Session::ApplyDetachLightCmd(::fuchsia::ui::gfx::DetachLightCmd command) {
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyDetachLightCmd(): unimplemented.";
   return false;
@@ -776,8 +769,7 @@ bool Session::ApplyDetachLightsCmd(
   return false;
 }
 
-bool Session::ApplySetLabelCmd(
-    ::fuchsia::ui::gfx::SetLabelCmd command) {
+bool Session::ApplySetLabelCmd(::fuchsia::ui::gfx::SetLabelCmd command) {
   if (auto r = resources_.FindResource<Resource>(command.id)) {
     return r->SetLabel(command.label.get());
   }
@@ -959,6 +951,12 @@ bool Session::ApplyCreateEntityNode(scenic::ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
+bool Session::ApplyCreateOpacityNode(scenic::ResourceId id,
+                                     ::fuchsia::ui::gfx::OpacityNodeArgs args) {
+  auto node = CreateOpacityNode(id, args);
+  return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
 bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
                                    ::fuchsia::ui::gfx::ShapeNodeArgs args) {
   auto node = CreateShapeNode(id, std::move(args));
@@ -1096,6 +1094,11 @@ ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
 ResourcePtr Session::CreateEntityNode(scenic::ResourceId id,
                                       ::fuchsia::ui::gfx::EntityNodeArgs args) {
   return fxl::MakeRefCounted<EntityNode>(this, id);
+}
+
+ResourcePtr Session::CreateOpacityNode(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::OpacityNodeArgs args) {
+  return fxl::MakeRefCounted<OpacityNode>(this, id);
 }
 
 ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
@@ -1360,9 +1363,10 @@ bool Session::ScheduleUpdate(
             weak->engine_, requested_presentation_time, SessionPtr(weak.get()));
     });
 
-    scheduled_updates_.push(Update{
-        requested_presentation_time, std::move(commands),
-        std::move(acquire_fence_set), std::move(release_events), std::move(callback)});
+    scheduled_updates_.push(
+        Update{requested_presentation_time, std::move(commands),
+               std::move(acquire_fence_set), std::move(release_events),
+               std::move(callback)});
   }
   return true;
 }
