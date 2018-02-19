@@ -31,10 +31,14 @@ static struct x86_model_info model_info;
 
 bool g_x86_feature_fsgsbase;
 
+enum x86_hypervisor_list x86_hypervisor;
+
 static int initialized = 0;
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info);
 static void select_microarch_config(void);
+
+static enum x86_hypervisor_list get_hypervisor();
 
 void x86_feature_init(void) {
     if (atomic_swap(&initialized, 1)) {
@@ -52,15 +56,14 @@ void x86_feature_init(void) {
     /* figure out the vendor */
     union {
         uint32_t vendor_id[3];
-        char vendor_string[13];
+        char vendor_string[12];
     } vu;
     vu.vendor_id[0] = _cpuid[0].b;
     vu.vendor_id[1] = _cpuid[0].d;
     vu.vendor_id[2] = _cpuid[0].c;
-    vu.vendor_string[12] = '\0';
-    if (!strcmp(vu.vendor_string, "GenuineIntel")) {
+    if (!memcmp(vu.vendor_string, "GenuineIntel", sizeof(vu.vendor_string))) {
         x86_vendor = X86_VENDOR_INTEL;
-    } else if (!strcmp(vu.vendor_string, "AuthenticAMD")) {
+    } else if (!memcmp(vu.vendor_string, "AuthenticAMD", sizeof(vu.vendor_string))) {
         x86_vendor = X86_VENDOR_AMD;
     } else {
         x86_vendor = X86_VENDOR_UNKNOWN;
@@ -108,6 +111,8 @@ void x86_feature_init(void) {
     select_microarch_config();
 
     g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
+
+    x86_hypervisor = get_hypervisor();
 }
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
@@ -157,6 +162,27 @@ static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
         }
     }
     return X86_MICROARCH_UNKNOWN;
+}
+
+static enum x86_hypervisor_list get_hypervisor() {
+    if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
+        return X86_HYPERVISOR_UNKNOWN;
+    }
+    uint32_t a, b, c, d;
+    cpuid(X86_CPUID_HYP_VENDOR, &a, &b, &c, &d);
+    union {
+        uint32_t vendor_id[3];
+        char vendor_string[12];
+    } vu;
+    vu.vendor_id[0] = b;
+    vu.vendor_id[1] = c;
+    vu.vendor_id[2] = d;
+    if (a >= X86_CPUID_KVM_FEATURES &&
+        !memcmp(vu.vendor_string, "KVMKVMKVM\0\0\0", sizeof(vu.vendor_string))) {
+        return X86_HYPERVISOR_KVM;
+    } else {
+        return X86_HYPERVISOR_UNKNOWN;
+    }
 }
 
 bool x86_get_cpuid_subleaf(

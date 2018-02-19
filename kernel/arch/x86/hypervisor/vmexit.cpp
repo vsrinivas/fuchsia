@@ -20,6 +20,7 @@
 #include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
 #include <platform.h>
+#include <arch/x86/pvclock.h>
 #include <platform/pc/timer.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>

@@ -261,6 +261,13 @@ extern enum x86_microarch_list x86_microarch;
 
 extern bool g_x86_feature_fsgsbase;
 
+enum x86_hypervisor_list {
+    X86_HYPERVISOR_UNKNOWN,
+    X86_HYPERVISOR_KVM,
+};
+
+extern enum x86_hypervisor_list x86_hypervisor;
+
 /* returns 0 if unknown, otherwise value in Hz */
 typedef uint64_t (*x86_get_timer_freq_func_t)(void);
 

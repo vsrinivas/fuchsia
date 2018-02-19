@@ -9,15 +9,6 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <zircon/types.h>
 
-static const uint32_t kKvmSystemTimeMsrOld = 0x12;
-static const uint32_t kKvmSystemTimeMsr = 0x4b564d01;
-
-static const uint32_t kKvmBootTimeOld = 0x11;
-static const uint32_t kKvmBootTime = 0x4b564d00;
-
-static const uint32_t kKvmFeatureClockSourceOld = (1 << 0);
-static const uint32_t kKvmFeatureClockSource = (1 << 3);
-
 struct PvClockState;
 
 // Updates guest boot time.

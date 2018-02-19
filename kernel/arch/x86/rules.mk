@@ -62,6 +62,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/ops.S \
 	$(LOCAL_DIR)/perf_mon.cpp \
 	$(LOCAL_DIR)/proc_trace.cpp \
+	$(LOCAL_DIR)/pvclock.cpp \
 	$(LOCAL_DIR)/registers.cpp \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/syscall.S \
