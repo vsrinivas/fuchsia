@@ -73,6 +73,10 @@ syscall clock_adjust
 
 # Global system information
 
+syscall system_get_dcache_line_size vdsocall const
+    ()
+    returns (uint32_t);
+
 syscall system_get_num_cpus vdsocall const
     ()
     returns (uint32_t);
