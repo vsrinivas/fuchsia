@@ -29,13 +29,6 @@ std::string IdpString(IdentityProvider idp) {
   }
 }
 
-// Generates a user id key string based on the given |index|.
-std::string UserIdString(uint32_t index) {
-  std::string out(15, 0);
-  std::snprintf(&out[0], out.size(), "uid_%d", index);
-  return out;
-}
-
 // Generates a idp userid string based on the given |index| and |idp|.
 std::string IdpUserIdString(uint32_t index, IdentityProvider idp) {
   std::string out(15, 0);
@@ -71,24 +64,38 @@ CredentialValue MakeCredentialValue(uint32_t index,
   return CredentialValue(MakeCredentialIdentifier(index, idp), rt);
 }
 
-// Verify each row of the store.
-void VerifyRows(AuthDbFileImpl* db) {
-  EXPECT_FALSE(db == nullptr);
-
-  for (int i = 1; i <= 10; i++) {
-    std::vector<CredentialValue> vals;
-    EXPECT_EQ(Status::kOK, db->GetAllCredentials(UserIdString(i), &vals));
-
-    EXPECT_TRUE(vals.size() == 1);
-    for (auth::store::CredentialValue cred : vals) {
-      EXPECT_EQ(cred.credential_id.id,
-                IdpUserIdString(i, IdentityProvider::GOOGLE));
-      EXPECT_EQ(cred.credential_id.identity_provider, IdentityProvider::GOOGLE);
-      EXPECT_EQ(cred.refresh_token,
-                RefreshTokenString(i, IdentityProvider::GOOGLE));
-    }
+void AddRows(AuthDbFileImpl* db, uint32_t num) {
+  // Add rows
+  for (uint32_t i = 1; i <= num; i++) {
+    EXPECT_EQ(Status::kOK, db->AddCredential(MakeCredentialValue(
+                               i, IdentityProvider::GOOGLE)));
   }
 }
+
+void VerifyRow(AuthDbFileImpl* db,
+               uint32_t index,
+               IdentityProvider idp = IdentityProvider::GOOGLE) {
+  std::string refresh_token;
+  auto cred_value = MakeCredentialValue(index, IdentityProvider::GOOGLE);
+  EXPECT_EQ(Status::kOK,
+            db->GetRefreshToken(cred_value.credential_id, &refresh_token));
+  EXPECT_EQ(cred_value.refresh_token, refresh_token);
+}
+
+// Verify each row of the store.
+void VerifyRows(AuthDbFileImpl* db, uint32_t num) {
+  EXPECT_FALSE(db == nullptr);
+
+  std::vector<CredentialValue> vals;
+  EXPECT_EQ(Status::kOK, db->GetAllCredentials(&vals));
+
+  EXPECT_TRUE(vals.size() == num);
+
+  for (uint32_t i = 1; i <= num; i++) {
+    VerifyRow(db, i);
+  }
+}
+
 }  // namespace
 
 class AuthStoreTest : public ::testing::Test {
@@ -118,168 +125,144 @@ TEST_F(AuthStoreTest, ParseEmptyAndExistingCreds) {
   AuthDbFileImpl* db = new AuthDbFileImpl(tmp_creds_file_);
   EXPECT_EQ(db->Load(), Status::kOK);
 
-  // Add rows
-  for (uint32_t i = 1; i <= 10; i++) {
-    EXPECT_EQ(Status::kOK, db->AddCredential(UserIdString(i),
-                                             MakeCredentialValue(
-                                                 i, IdentityProvider::GOOGLE)));
-  }
-  VerifyRows(db);
+  AddRows(db, 3);
+  VerifyRows(db, 3);
 
   // Test re-loading the file with existing users
   AuthDbFileImpl* db2 = new AuthDbFileImpl(tmp_creds_file_);
   EXPECT_EQ(db2->Load(), Status::kOK);
-  VerifyRows(db2);
+  VerifyRows(db2, 3);
 }
 
-TEST_F(AuthStoreTest, AddUpdateAndDeleteSingleCred) {
+TEST_F(AuthStoreTest, AddUpdateAndDeleteSingleProvider) {
   AuthDbFileImpl* db = new AuthDbFileImpl(tmp_creds_file_);
   EXPECT_EQ(db->Load(), Status::kOK);
 
   // Delete credential when the store is empty.
   EXPECT_EQ(Status::kCredentialNotFound,
             db->DeleteCredential(
-                "5", CredentialIdentifier("cred_1", IdentityProvider::GOOGLE)));
+                CredentialIdentifier("cred_1", IdentityProvider::GOOGLE)));
 
   // Add credential failure testcases
   EXPECT_EQ(Status::kInvalidArguments,
-            db->AddCredential(
-                "", MakeCredentialValue(
-                        999, IdentityProvider::GOOGLE)));  // empty user id
-  EXPECT_EQ(
-      Status::kInvalidArguments,
-      db->AddCredential(
-          "test_id_1",
-          CredentialValue(CredentialIdentifier("", IdentityProvider::GOOGLE),
-                          "refresh_token")));  // empty idp credential id
-  EXPECT_EQ(
-      Status::kInvalidArguments,
-      db->AddCredential("test_id_1",
-                        CredentialValue(CredentialIdentifier(
-                                            "idp_id_1", IdentityProvider::TEST),
-                                        "")));  // empty refresh token
+            db->AddCredential(CredentialValue(
+                CredentialIdentifier("", IdentityProvider::GOOGLE),
+                "refresh_token")));  // empty idp credential id
+  EXPECT_EQ(Status::kInvalidArguments,
+            db->AddCredential(CredentialValue(
+                CredentialIdentifier("idp_id_1", IdentityProvider::TEST),
+                "")));  // empty refresh token
 
-  // Add single user cred for each user
-  for (uint32_t i = 1; i <= 10; i++) {
-    EXPECT_EQ(Status::kOK, db->AddCredential(UserIdString(i),
-                                             MakeCredentialValue(
-                                                 i, IdentityProvider::GOOGLE)));
-  }
+  // Add multiple
+  AddRows(db, 3);
 
-  VerifyRows(db);
+  VerifyRows(db, 3);
 
   // Update credential for the given IDP
-  int updateIndex = 7;
-  std::string updateUserId = UserIdString(updateIndex);
+  int updateIndex = 2;
   CredentialIdentifier updateCid =
       MakeCredentialIdentifier(updateIndex, IdentityProvider::GOOGLE);
   std::string old_refresh_token;
-  EXPECT_EQ(Status::kOK,
-            db->GetRefreshToken(updateUserId, updateCid, &old_refresh_token));
+  std::string new_refresh_token;
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(updateCid, &old_refresh_token));
+
   EXPECT_FALSE(old_refresh_token.empty());
   auto newCredVal =
       MakeCredentialValue(updateIndex, IdentityProvider::GOOGLE, true);
-  EXPECT_EQ(Status::kOK, db->AddCredential(updateUserId, newCredVal));
+  EXPECT_EQ(Status::kOK, db->AddCredential(newCredVal));
   std::vector<CredentialValue> vals;
-  EXPECT_EQ(Status::kOK, db->GetAllCredentials(updateUserId, &vals));
-  EXPECT_TRUE(vals.size() == 1);
-  EXPECT_TRUE(newCredVal == vals[0]);
-  EXPECT_TRUE(old_refresh_token != vals[0].refresh_token);
+  EXPECT_EQ(Status::kOK, db->GetAllCredentials(&vals));
+  EXPECT_TRUE(vals.size() == 3);
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(updateCid, &new_refresh_token));
+
+  EXPECT_EQ(newCredVal.refresh_token, new_refresh_token);
+  EXPECT_NE(old_refresh_token, new_refresh_token);
 
   // Delete credential for the given IDP
-  int deleteIndex = 5;
-  std::string deleteUserId = UserIdString(deleteIndex);
+  int deleteIndex = 1;
   CredentialIdentifier deleteCid =
       MakeCredentialIdentifier(deleteIndex, IdentityProvider::GOOGLE);
-  EXPECT_EQ(Status::kOK,
-            db->GetRefreshToken(deleteUserId, deleteCid, &old_refresh_token));
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(deleteCid, &old_refresh_token));
   EXPECT_FALSE(old_refresh_token.empty());
-  EXPECT_EQ(Status::kOK, db->DeleteCredential(deleteUserId, deleteCid));
-  std::vector<CredentialValue> deletedVals;
-  EXPECT_EQ(Status::kCredentialNotFound,
-            db->GetAllCredentials(deleteUserId, &deletedVals));
-  EXPECT_TRUE(deletedVals.size() == 0);
+  EXPECT_EQ(Status::kOK, db->DeleteCredential(deleteCid));
+  std::vector<CredentialValue> remainingVals;
+  EXPECT_EQ(Status::kOK, db->GetAllCredentials(&remainingVals));
+  EXPECT_TRUE(remainingVals.size() == 2);
 
   // Delete credential failure testcases
-  // empty user id
-  EXPECT_EQ(Status::kInvalidArguments, db->DeleteCredential("", deleteCid));
   // empty IDP cred id
   EXPECT_EQ(
       Status::kInvalidArguments,
-      db->DeleteCredential(deleteUserId,
-                           CredentialIdentifier("", IdentityProvider::GOOGLE)));
+      db->DeleteCredential(CredentialIdentifier("", IdentityProvider::GOOGLE)));
   // invalid IDP cred id
   EXPECT_EQ(Status::kCredentialNotFound,
-            db->DeleteCredential(
-                deleteUserId, CredentialIdentifier("invalid_user",
-                                                   IdentityProvider::GOOGLE)));
-  // invalid IDP cred id which pointsto a different user
-  EXPECT_EQ(Status::kCredentialNotFound,
-            db->DeleteCredential(
-                deleteUserId, CredentialIdentifier(
-                                  IdpUserIdString(6, IdentityProvider::GOOGLE),
-                                  IdentityProvider::GOOGLE)));
+            db->DeleteCredential(CredentialIdentifier(
+                "invalid_idp_user", IdentityProvider::GOOGLE)));
   // invalid IDP
-  EXPECT_EQ(Status::kCredentialNotFound,
-            db->DeleteCredential(
-                deleteUserId,
-                CredentialIdentifier(IdpUserIdString(5, IdentityProvider::TEST),
-                                     IdentityProvider::TEST)));
+  EXPECT_EQ(
+      Status::kCredentialNotFound,
+      db->DeleteCredential(CredentialIdentifier(
+          IdpUserIdString(5, IdentityProvider::TEST), IdentityProvider::TEST)));
 }
 
-TEST_F(AuthStoreTest, AddUpdateAndDeleteMultipleCreds) {
+TEST_F(AuthStoreTest, AddUpdateAndDeleteMultipleProviders) {
   AuthDbFileImpl* db = new AuthDbFileImpl(tmp_creds_file_);
   EXPECT_EQ(db->Load(), Status::kOK);
 
   // add multiple creds for each user
   for (uint32_t i = 1; i <= 5; i++) {
-    std::string id = UserIdString(i);
-    EXPECT_EQ(Status::kOK,
-              db->AddCredential(
-                  id, MakeCredentialValue(i, IdentityProvider::GOOGLE)));
-    EXPECT_EQ(
-        Status::kOK,
-        db->AddCredential(id, MakeCredentialValue(i, IdentityProvider::TEST)));
+    EXPECT_EQ(Status::kOK, db->AddCredential(MakeCredentialValue(
+                               i, IdentityProvider::GOOGLE)));
+    EXPECT_EQ(Status::kOK, db->AddCredential(
+                               MakeCredentialValue(i, IdentityProvider::TEST)));
   }
 
   // Update TEST idp credential
   int updateIndex = 3;
-  std::string updateUserId = UserIdString(updateIndex);
   auto updateCid =
       MakeCredentialIdentifier(updateIndex, IdentityProvider::TEST);
   std::string old_refresh_token;
-  EXPECT_EQ(Status::kOK,
-            db->GetRefreshToken(updateUserId, updateCid, &old_refresh_token));
+  std::string new_refresh_token;
+
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(updateCid, &old_refresh_token));
   EXPECT_FALSE(old_refresh_token.empty());
 
   auto newVal = MakeCredentialValue(updateIndex, IdentityProvider::TEST, true);
-  EXPECT_EQ(Status::kOK, db->AddCredential(updateUserId, newVal));
+  EXPECT_EQ(Status::kOK, db->AddCredential(newVal));
 
   std::vector<CredentialValue> vals;
-  EXPECT_EQ(Status::kOK, db->GetAllCredentials(updateUserId, &vals));
-  EXPECT_TRUE(vals.size() == 2);
-  for (auto val : vals) {
-    if (val.credential_id.identity_provider == IdentityProvider::TEST) {
-      EXPECT_TRUE(val == newVal);
-      EXPECT_TRUE(val.refresh_token != old_refresh_token);
-    } else {
-      EXPECT_TRUE(val ==
-                  MakeCredentialValue(updateIndex, IdentityProvider::GOOGLE));
+  EXPECT_EQ(Status::kOK, db->GetAllCredentials(&vals));
+  EXPECT_TRUE(vals.size() == 10);
+
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(updateCid, &old_refresh_token));
+  EXPECT_NE(old_refresh_token, new_refresh_token);
+
+  // Make sure remaining values untouched
+  for (uint32_t i = 1; i <= 5; i++) {
+    VerifyRow(db, i, IdentityProvider::GOOGLE);
+    if (i != 3) {
+      VerifyRow(db, i, IdentityProvider::TEST);
     }
   }
 
   // Delete TEST idp credential
   int deleteIndex = 5;
-  std::string deleteUserId = UserIdString(deleteIndex);
   CredentialIdentifier deleteCid =
       MakeCredentialIdentifier(deleteIndex, IdentityProvider::TEST);
-  EXPECT_EQ(Status::kOK,
-            db->GetRefreshToken(deleteUserId, deleteCid, &old_refresh_token));
+  EXPECT_EQ(Status::kOK, db->GetRefreshToken(deleteCid, &old_refresh_token));
   EXPECT_FALSE(old_refresh_token.empty());
-  EXPECT_EQ(Status::kOK, db->DeleteCredential(deleteUserId, deleteCid));
-  std::vector<CredentialValue> deletedVals;
-  EXPECT_EQ(Status::kOK, db->GetAllCredentials(deleteUserId, &deletedVals));
-  EXPECT_TRUE(deletedVals.size() == 1);
+  EXPECT_EQ(Status::kOK, db->DeleteCredential(deleteCid));
+  std::vector<CredentialValue> remainingVals;
+  EXPECT_EQ(Status::kOK, db->GetAllCredentials(&remainingVals));
+  EXPECT_TRUE(remainingVals.size() == 9);
+
+  // Make sure remaining values untouched
+  for (uint32_t i = 1; i <= 5; i++) {
+    VerifyRow(db, i, IdentityProvider::GOOGLE);
+    if (i != 3 && i != 9) {
+      VerifyRow(db, i, IdentityProvider::TEST);
+    }
+  }
 }
 
 }  // namespace store

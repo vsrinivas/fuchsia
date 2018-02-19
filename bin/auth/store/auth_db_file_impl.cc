@@ -99,34 +99,31 @@ Status AuthDbFileImpl::Load() {
   return Status::kOK;
 }
 
-Status AuthDbFileImpl::AddCredential(const std::string& user_id,
-                                     const CredentialValue& val) {
-  auto status = Validate(user_id, val.credential_id);
+Status AuthDbFileImpl::AddCredential(const CredentialValue& val) {
+  auto status = Validate(val.credential_id);
   if (status != Status::kOK) {
     return status;
   }
 
   if (val.refresh_token.empty()) {
-    FXL_LOG(ERROR) << "Refresh token is empty for user id: " << user_id;
+    FXL_LOG(ERROR) << "Refresh token is empty";
     return Status::kInvalidArguments;
   }
 
-  return UpdateDb(user_id, val.credential_id, val.refresh_token);
+  return UpdateDb(val.credential_id, val.refresh_token);
 }
 
 Status AuthDbFileImpl::DeleteCredential(
-    const std::string& user_id,
     const CredentialIdentifier& credential_id) {
-  auto status = Validate(user_id, credential_id);
+  auto status = Validate(credential_id);
   if (status != Status::kOK) {
     return status;
   }
 
-  return UpdateDb(user_id, credential_id, "");
+  return UpdateDb(credential_id, "");
 }
 
 Status AuthDbFileImpl::GetAllCredentials(
-    const std::string& user_id,
     std::vector<CredentialValue>* credentials_out) {
   FXL_CHECK(credentials_out);
   credentials_out->clear();
@@ -142,16 +139,11 @@ Status AuthDbFileImpl::GetAllCredentials(
 
   if (cred_store != nullptr) {
     for (const auto* credential : *cred_store->creds()) {
-      if (credential->user_id()->str() == user_id) {
-        for (const auto* token : *credential->tokens()) {
-          credentials_out->push_back(CredentialValue(
-              CredentialIdentifier(
-                  token->id()->str(),
-                  MapToAuthIdentityProvider(token->identity_provider())),
-              token->refresh_token()->str()));
-        }
-        break;
-      }
+      credentials_out->push_back(CredentialValue(
+          CredentialIdentifier(
+              credential->id()->str(),
+              MapToAuthIdentityProvider(credential->identity_provider())),
+          credential->refresh_token()->str()));
     }
   }
   if (credentials_out->size() == 0) {
@@ -162,12 +154,11 @@ Status AuthDbFileImpl::GetAllCredentials(
 }
 
 Status AuthDbFileImpl::GetRefreshToken(
-    const std::string& user_id,
     const CredentialIdentifier& credential_id,
     std::string* refresh_token_out) {
   FXL_CHECK(refresh_token_out);
 
-  auto status = Validate(user_id, credential_id);
+  auto status = Validate(credential_id);
   if (status != Status::kOK) {
     return status;
   }
@@ -184,15 +175,11 @@ Status AuthDbFileImpl::GetRefreshToken(
     auth::IdentityProvider fbs_idp =
         MapToFbsIdentityProvider(credential_id.identity_provider);
 
-    for (const auto* credential : *cred_store->creds()) {
-      if (credential->user_id()->str() == user_id) {
-        for (const auto* token : *credential->tokens()) {
-          if (fbs_idp == token->identity_provider() &&
-              credential_id.id == token->id()->str()) {
-            *refresh_token_out = token->refresh_token()->str();
-            return Status::kOK;
-          }
-        }
+    for (const auto* token : *cred_store->creds()) {
+      if (fbs_idp == token->identity_provider() &&
+          credential_id.id == token->id()->str()) {
+        *refresh_token_out = token->refresh_token()->str();
+        return Status::kOK;
       }
     }
   }
@@ -200,20 +187,14 @@ Status AuthDbFileImpl::GetRefreshToken(
   return Status::kCredentialNotFound;
 }
 
-Status AuthDbFileImpl::Validate(const std::string& user_id,
-                                const CredentialIdentifier& credential_id) {
+Status AuthDbFileImpl::Validate(const CredentialIdentifier& credential_id) {
   if (!isLoaded) {
     FXL_LOG(ERROR) << "Load() must be called before invoking this api.";
     return Status::kDbNotInitialized;
   }
 
-  if (user_id.empty()) {
-    FXL_LOG(ERROR) << "User id is empty.";
-    return Status::kInvalidArguments;
-  }
-
   if (credential_id.id.empty()) {
-    FXL_LOG(ERROR) << "Idp user id is empty for user id: " << user_id;
+    FXL_LOG(ERROR) << "Idp user id is empty";
     return Status::kInvalidArguments;
   }
 
@@ -249,94 +230,50 @@ Status AuthDbFileImpl::Commit(const std::string& serialized_creds) {
   return Status::kOK;
 }
 
-Status AuthDbFileImpl::UpdateDb(const std::string& user_id,
-                                const CredentialIdentifier& credential_id,
+Status AuthDbFileImpl::UpdateDb(const CredentialIdentifier& credential_id,
                                 const std::string& refresh_token) {
   flatbuffers::FlatBufferBuilder builder;
-  std::vector<flatbuffers::Offset<::auth::UserCredential>> creds;
+  std::vector<flatbuffers::Offset<::auth::IdpCredential>> creds;
 
   auth::IdentityProvider idp =
       MapToFbsIdentityProvider(credential_id.identity_provider);
 
-  bool user_found = false;
-  bool update_cred = !refresh_token.empty();
+  bool delete_cred = refresh_token.empty();
+  bool cred_found = false;
 
-  // Reserialize existing users.
   if (!cred_store_buffer_.empty()) {
     // Get a pointer to the root object inside the buffer.
     auto cred_store = ::auth::GetCredentialStore(
         reinterpret_cast<const uint8_t*>(cred_store_buffer_.c_str()));
-
     if (cred_store != nullptr) {
-      // TODO(ukode): Sort userids for future optimization.
-      for (const auto* cred : *cred_store->creds()) {
-        std::vector<flatbuffers::Offset<::auth::IdpCredential>> idp_creds;
+      for (const auto* idp_cred : *cred_store->creds()) {
+        if (idp == idp_cred->identity_provider() &&
+            credential_id.id == idp_cred->id()->str()) {
+          cred_found = true;
 
-        if (cred->user_id()->str() != user_id) {
-          for (const auto* idp_cred : *cred->tokens()) {
-            idp_creds.push_back(MakeIdpCredential(
-                idp_cred->id()->str(), idp_cred->identity_provider(),
-                idp_cred->refresh_token()->str(), &builder));
+          // Perform in-place update for an existing credential or delete it.
+          if (!delete_cred) {
+            creds.push_back(MakeIdpCredential(credential_id.id, idp,
+                                              refresh_token, &builder));
           }
         } else {
-          user_found = true;
-
-          bool cred_exists = false;
-          for (const auto* idp_cred : *cred->tokens()) {
-            if (idp == idp_cred->identity_provider() &&
-                credential_id.id == idp_cred->id()->str()) {
-              cred_exists = true;
-
-              // Perform in-place update for an existing credential.
-              if (update_cred) {
-                idp_creds.push_back(MakeIdpCredential(credential_id.id, idp,
-                                                      refresh_token, &builder));
-              }
-            } else {
-              // Carry over existing credentials.
-              idp_creds.push_back(MakeIdpCredential(
-                  idp_cred->id()->str(), idp_cred->identity_provider(),
-                  idp_cred->refresh_token()->str(), &builder));
-            }
-          }
-
-          // Add new IDP credential to the existing credentials.
-          if (!cred_exists && update_cred) {
-            idp_creds.push_back(MakeIdpCredential(credential_id.id, idp,
-                                                  refresh_token, &builder));
-          }
-
-          // Delete fails if the requested credential is not found.
-          if (!cred_exists && !update_cred) {
-            return Status::kCredentialNotFound;
-          }
-        }
-
-        if (!idp_creds.empty()) {
-          creds.push_back(::auth::CreateUserCredential(
-            builder, builder.CreateString(cred->user_id()),
-            builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
-                idp_creds)));
+          // Carry over existing credentials.
+          creds.push_back(MakeIdpCredential(
+              idp_cred->id()->str(), idp_cred->identity_provider(),
+              idp_cred->refresh_token()->str(), &builder));
         }
       }
     }
   }
 
-  // Delete fails if the requested user is not found.
-  if (!user_found && !update_cred) {
+  // Delete fails if the requested credential is not found.
+  if (delete_cred && !cred_found) {
     return Status::kCredentialNotFound;
   }
 
-  // Handle first-time user by adding a new UserCredential.
-  if (!user_found && update_cred) {
-    std::vector<flatbuffers::Offset<::auth::IdpCredential>> new_idp_creds;
-    new_idp_creds.push_back(
+  if (!delete_cred && !cred_found) {
+    creds.push_back(
         MakeIdpCredential(credential_id.id, idp, refresh_token, &builder));
-
-    creds.push_back(::auth::CreateUserCredential(
-        builder, builder.CreateString(user_id),
-        builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
-            new_idp_creds)));
   }
 
   builder.Finish(

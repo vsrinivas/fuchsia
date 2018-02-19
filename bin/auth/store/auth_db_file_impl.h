@@ -31,30 +31,26 @@ class AuthDbFileImpl : public AuthDb {
   // new user or a replacement of existing user credential.
   //
   // Returns kOK on success or an error status on failure.
-  Status AddCredential(const std::string& user_id,
-                       const CredentialValue& val) override;
+  Status AddCredential(const CredentialValue& val) override;
 
   // Deletes an existing user credential identified by |credential_id| from auth
   // db.
   //
   // Returns kOK on success or an error status on failure.
-  Status DeleteCredential(const std::string& user_id,
-                          const CredentialIdentifier& credential_id) override;
+  Status DeleteCredential(const CredentialIdentifier& credential_id) override;
 
   // Fetches list of all credentials provisioned for user |user_id| with
   // different Identity Providers in |credentials_out|.
   //
   // Returns kOK on success or an error status on failure.
   Status GetAllCredentials(
-      const std::string& user_id,
       std::vector<CredentialValue>* credentials_out) override;
 
   // Fetches |refresh_token| from the token store for the given user with unique
   // |user_id| and identity provider |idp|.
   //
   // Returns kOK on success or an error status on failure.
-  Status GetRefreshToken(const std::string& user_id,
-                         const CredentialIdentifier& credential_id,
+  Status GetRefreshToken(const CredentialIdentifier& credential_id,
                          std::string* refresh_token) override;
 
  private:
@@ -64,8 +60,7 @@ class AuthDbFileImpl : public AuthDb {
   //
   // Returns kOK status if input is valid or an error status for invalid input
   // or if the in-memory credentials database is not initialized.
-  Status Validate(const std::string& user_id,
-                  const CredentialIdentifier& credential_id);
+  Status Validate(const CredentialIdentifier& credential_id);
 
   // Verifies |serialized_creds| flatbuffer during a read or a write operation
   // to |credentials_file_|.
@@ -84,8 +79,7 @@ class AuthDbFileImpl : public AuthDb {
   // saved as a new credential or upgraded in-place for an existing credential.
   //
   // Returns kOK on success or an error status on failure.
-  Status UpdateDb(const std::string& user_id,
-                  const CredentialIdentifier& credential_id,
+  Status UpdateDb(const CredentialIdentifier& credential_id,
                   const std::string& refresh_token);
 
   // In-memory buffer for storing serialized credential store contents.

@@ -97,31 +97,27 @@ class AuthDb {
   // because it has expired or invalidated by the Identity Provider.
   //
   // Returns kOK on success or an error status on failure.
-  virtual Status AddCredential(const std::string& user_id,
-                               const CredentialValue& val) = 0;
+  virtual Status AddCredential(const CredentialValue& val) = 0;
 
   // Deletes an existing user credential identified by |credential_id| from auth
   // db.
   //
   // Returns kOK on success or an error status on failure.
   virtual Status DeleteCredential(
-      const std::string& user_id,
       const CredentialIdentifier& credential_id) = 0;
 
-  // Fetches list of all credentials provisioned for user |user_id| with
+  // Fetches list of all credentials provisioned for current user with
   // different Identity Providers in |credentials_out|.
   //
   // Returns kOK on success or an error status on failure.
   virtual Status GetAllCredentials(
-      const std::string& user_id,
       std::vector<CredentialValue>* credentials_out) = 0;
 
   // Fetches |refresh_token| from the token store for the given user with unique
   // |user_id| and identity provider |idp|.
   //
   // Returns kOK on success or an error status on failure.
-  virtual Status GetRefreshToken(const std::string& user_id,
-                                 const CredentialIdentifier& credential_id,
+  virtual Status GetRefreshToken(const CredentialIdentifier& credential_id,
                                  std::string* refresh_token) = 0;
 };
 
