@@ -1172,7 +1172,7 @@ class Rxwi2 : public AddressableBitField<uint16_t, uint32_t, 3> {
     constexpr explicit Rxwi2(uint32_t val) : AddressableBitField(val) {}
     WLAN_BIT_FIELD(rssi0, 0, 8);
     WLAN_BIT_FIELD(rssi1, 8, 8);
-    WLAN_BIT_FIELD(rssi2, 8, 8);
+    WLAN_BIT_FIELD(rssi2, 16, 8);
 };
 
 class Rxwi3 : public AddressableBitField<uint16_t, uint32_t, 4> {
