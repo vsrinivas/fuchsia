@@ -10,31 +10,15 @@ config("fidl_config") {
 source_set("compiler") {
   public_configs = [ ":fidl_config" ]
   sources = [
-    "lib/ast.h",
     "lib/error_reporter.cpp",
-    "lib/error_reporter.h",
     "lib/c_generator.cpp",
-    "lib/c_generator.h",
     "lib/identifier_table.cpp",
-    "lib/identifier_table.h",
     "lib/json_generator.cpp",
-    "lib/json_generator.h",
     "lib/lexer.cpp",
-    "lib/lexer.h",
     "lib/library.cpp",
-    "lib/library.h",
     "lib/parser.cpp",
-    "lib/parser.h",
     "lib/source_file.cpp",
-    "lib/source_file.h",
     "lib/source_location.cpp",
-    "lib/source_location.h",
     "lib/source_manager.cpp",
-    "lib/source_manager.h",
-    "lib/string_view.h",
-    "lib/token.h",
-    "lib/token_definitions.inc",
-    "lib/types.h",
-    "lib/type_shape.h",
   ]
 }
