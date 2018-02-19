@@ -8,10 +8,11 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-# Don't forget to update BUILD.gn as well for the Fuchsia build.
+MODULE_PACKAGE := static
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/item.cpp \
-    $(LOCAL_DIR)/parser.cpp
+    $(LOCAL_DIR)/parser.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
@@ -20,7 +21,5 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon
-
-MODULE_PACKAGE := src
 
 include make/module.mk
