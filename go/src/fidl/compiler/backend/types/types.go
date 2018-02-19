@@ -291,13 +291,24 @@ type Const struct {
 	Value Constant   `json:"value"`
 }
 
+type DeclarationType string
+
+const (
+	ConstDeclarationType     DeclarationType = "const"
+	EnumDeclarationType                      = "enum"
+	InterfaceDeclarationType                 = "interface"
+	StructDeclarationType                    = "struct"
+	UnionDeclarationType                     = "union"
+)
+
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Consts     []Const     `json:"const_declarations,omitempty"`
-	Enums      []Enum      `json:"enum_declarations,omitempty"`
-	Interfaces []Interface `json:"interface_declarations,omitempty"`
-	Structs    []Struct    `json:"struct_declarations,omitempty"`
-	Unions     []Union     `json:"union_declarations,omitempty"`
-	Libraries  []Library   `json:"library_dependencies,omitempty"`
+	Consts       []Const                        `json:"const_declarations,omitempty"`
+	Enums        []Enum                         `json:"enum_declarations,omitempty"`
+	Interfaces   []Interface                    `json:"interface_declarations,omitempty"`
+	Structs      []Struct                       `json:"struct_declarations,omitempty"`
+	Unions       []Union                        `json:"union_declarations,omitempty"`
+	Declarations map[Identifier]DeclarationType `json:"declarations,omitempty"`
+	Libraries    []Library                      `json:"library_dependencies,omitempty"`
 }
