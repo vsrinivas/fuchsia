@@ -92,7 +92,7 @@ zx_status_t ZirconDevice::Enumerate(
             total += snprintf(buf + total, sizeof(buf) - total, "%s/", dev_path);
             total += snprintf(buf + total, sizeof(buf) - total, dev_fmt, id);
 
-            zx_status_t res = cbk(ctx, id, buf);
+            res = cbk(ctx, id, buf);
             if (res != ZX_OK)
                 goto done;
         }
