@@ -18,6 +18,7 @@
 #include "lib/escher/material/color_utils.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
+#include "lib/escher/renderer/moment_shadow_map_renderer.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/escher/vk/vulkan_swapchain_helper.h"
@@ -32,6 +33,7 @@ class WaterfallDemo : public Demo {
     kNone,
     kSsdo,
     kShadowMap,
+    kMomentShadowMap,
     kNumShadowModes,
   };
 
@@ -75,6 +77,7 @@ class WaterfallDemo : public Demo {
   std::vector<std::unique_ptr<Scene>> scenes_;
   escher::PaperRendererPtr renderer_;
   escher::ShadowMapRendererPtr shadow_renderer_;
+  escher::ShadowMapRendererPtr moment_shadow_renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
   double light_azimuth_radians_ = 0.f;

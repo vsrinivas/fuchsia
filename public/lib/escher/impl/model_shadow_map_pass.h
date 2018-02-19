@@ -13,16 +13,6 @@ namespace impl {
 // a shadow map.
 class ModelShadowMapPass : public ModelRenderPass {
  public:
-  // |ModelRenderPass|
-  bool UseMaterialTextures() override { return true; }
-
-  // |ModelRenderPass|
-  bool OmitFragmentShader() override { return false; }
-
-  // |ModelRenderPass|
-  std::string GetFragmentShaderSourceCode(
-      const ModelPipelineSpec& spec) override;
-
   ModelShadowMapPass(ResourceRecycler* recycler,
                      ModelDataPtr model_data,
                      vk::Format color_format,
@@ -31,7 +21,17 @@ class ModelShadowMapPass : public ModelRenderPass {
 
  protected:
   // |ModelRenderPass|
-  std::string GetVertexShaderMainSourceCode() override;
+  std::string GetVertexShaderMainSourceCode() final;
+
+  // |ModelRenderPass|
+  std::string GetFragmentShaderSourceCode(
+      const ModelPipelineSpec& spec) override;
+
+  // |ModelRenderPass|
+  bool UseMaterialTextures() final { return true; }
+
+  // |ModelRenderPass|
+  bool OmitFragmentShader() final { return false; }
 };
 
 }  // namespace impl

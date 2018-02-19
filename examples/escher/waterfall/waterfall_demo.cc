@@ -36,6 +36,10 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
           escher::ShadowMapRenderer::New(escher(),
                                          renderer_->model_data(),
                                          renderer_->model_renderer())),
+      moment_shadow_renderer_(
+          escher::MomentShadowMapRenderer::New(escher(),
+                                               renderer_->model_data(),
+                                               renderer_->model_renderer())),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {
@@ -246,6 +250,10 @@ void WaterfallDemo::DrawFrame() {
     case ShadowMode::kShadowMap:
       renderer_->set_shadow_type(escher::PaperRendererShadowType::kShadowMap);
       break;
+    case ShadowMode::kMomentShadowMap:
+      renderer_->set_shadow_type(
+          escher::PaperRendererShadowType::kMomentShadowMap);
+      break;
     default:
       FXL_LOG(ERROR) << "Invalid shadow_mode_: " << shadow_mode_;
       shadow_mode_ = ShadowMode::kNone;
@@ -295,10 +303,12 @@ void WaterfallDemo::DrawFrame() {
   auto frame = escher()->NewFrame("Waterfall Demo", profile_one_frame_);
 
   escher::ShadowMapPtr shadow_map;
-  if (shadow_mode_ == kShadowMap) {
+  if (shadow_mode_ == kShadowMap || shadow_mode_ == kMomentShadowMap) {
     const vec3 directional_light_color(kLightIntensity);
     renderer_->set_ambient_light_color(vec3(1.f) - directional_light_color);
-    shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
+    const auto& shadow_renderer = shadow_mode_ == kShadowMap ?
+        shadow_renderer_ : moment_shadow_renderer_;
+    shadow_map = shadow_renderer->GenerateDirectionalShadowMap(
         frame, stage_, *model, light_direction, directional_light_color);
   }
 
