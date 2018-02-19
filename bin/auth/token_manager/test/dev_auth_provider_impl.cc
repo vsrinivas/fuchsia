@@ -34,7 +34,8 @@ void DevAuthProviderImpl::GetPersistentCredential(
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(
-    const f1dl::String& credential, const f1dl::String& app_client_id,
+    const f1dl::String& credential,
+    const f1dl::String& app_client_id,
     const f1dl::Array<f1dl::String> app_scopes,
     const GetAppAccessTokenCallback& callback) {
   AuthTokenPtr access_token = auth::AuthToken::New();
@@ -58,9 +59,17 @@ void DevAuthProviderImpl::GetAppIdToken(const f1dl::String& credential,
 }
 
 void DevAuthProviderImpl::GetAppFirebaseToken(
-    const f1dl::String& id_token, const f1dl::String& firebase_api_key,
+    const f1dl::String& id_token,
+    const f1dl::String& firebase_api_key,
     const GetAppFirebaseTokenCallback& callback) {
-  callback(AuthProviderStatus::OK, nullptr);
+  FirebaseTokenPtr fb_token = auth::FirebaseToken::New();
+  fb_token->id_token =
+      std::string(firebase_api_key) + ":fbt_" + GenerateRandomString();
+  fb_token->email = GenerateRandomString() + "@devauthprovider.com";
+  fb_token->local_id = "local_id_" + GenerateRandomString();
+  fb_token->expires_in = 3600;
+
+  callback(AuthProviderStatus::OK, std::move(fb_token));
 }
 
 void DevAuthProviderImpl::RevokeAppOrPersistentCredential(

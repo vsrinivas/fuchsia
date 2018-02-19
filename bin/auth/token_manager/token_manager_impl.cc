@@ -105,10 +105,10 @@ void TokenManagerImpl::GetAccessToken(
   f1dl::String credential = "TODO";
   f1dl::String idp_credential_id = "TODO";
 
-  auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
+  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
   cache::OAuthTokens tokens;
 
-  if (token_cache_.Get(cacheKey, &tokens) == cache::Status::kOK &&
+  if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
       tokens.access_token.IsValid()) {
     callback(Status::OK, tokens.access_token.token);
     return;
@@ -116,8 +116,8 @@ void TokenManagerImpl::GetAccessToken(
 
   it->second->GetAppAccessToken(
       idp_credential_id, app_client_id, std::move(app_scopes),
-      [this, callback, cacheKey, &tokens](AuthProviderStatus status,
-                                          AuthTokenPtr access_token) {
+      [this, callback, cache_key, &tokens](AuthProviderStatus status,
+                                           AuthTokenPtr access_token) {
         std::string access_token_val;
         if (access_token) {
           access_token_val = access_token->token;
@@ -133,8 +133,8 @@ void TokenManagerImpl::GetAccessToken(
             fxl::TimeDelta::FromSeconds(access_token->expires_in);
         tokens.access_token.token = access_token_val;
 
-        auto cacheStatus = token_cache_.Put(cacheKey, tokens);
-        if (cacheStatus != cache::Status::kOK) {
+        auto cache_status = token_cache_.Put(cache_key, tokens);
+        if (cache_status != cache::Status::kOK) {
           // TODO: log error
           callback(Status::OK, access_token_val);
           return;
@@ -158,10 +158,10 @@ void TokenManagerImpl::GetIdToken(
   f1dl::String credential = "TODO";
   f1dl::String idp_credential_id = "TODO";
 
-  auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
+  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
   cache::OAuthTokens tokens;
 
-  if (token_cache_.Get(cacheKey, &tokens) == cache::Status::kOK &&
+  if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
       tokens.id_token.IsValid()) {
     callback(Status::OK, tokens.id_token.token);
     return;
@@ -169,8 +169,8 @@ void TokenManagerImpl::GetIdToken(
 
   it->second->GetAppIdToken(
       credential, audience,
-      [this, callback, cacheKey, &tokens](AuthProviderStatus status,
-                                          AuthTokenPtr id_token) {
+      [this, callback, cache_key, &tokens](AuthProviderStatus status,
+                                           AuthTokenPtr id_token) {
         std::string id_token_val;
         if (id_token) {
           id_token_val = id_token->token;
@@ -186,8 +186,8 @@ void TokenManagerImpl::GetIdToken(
             fxl::TimeDelta::FromSeconds(id_token->expires_in);
         tokens.id_token.token = id_token_val;
 
-        auto cacheStatus = token_cache_.Put(cacheKey, tokens);
-        if (cacheStatus != cache::Status::kOK) {
+        auto cache_status = token_cache_.Put(cache_key, tokens);
+        if (cache_status != cache::Status::kOK) {
           // TODO: log error
           callback(Status::OK, id_token_val);
           return;
@@ -200,28 +200,70 @@ void TokenManagerImpl::GetIdToken(
 
 void TokenManagerImpl::GetFirebaseToken(
     const auth::AuthProviderType auth_provider_type,
+    const f1dl::String& audience,
     const f1dl::String& firebase_api_key,
     const GetFirebaseTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
-  //  TODO: Return from cache if not expired
 
-  // TODO: Fetch fresh id_token
-  f1dl::String id_token = "TODO";
+  f1dl::String idp_credential_id = "TODO";
 
-  it->second->GetAppFirebaseToken(
-      id_token, firebase_api_key,
-      [this, callback](AuthProviderStatus status, FirebaseTokenPtr fb_token) {
-        if (status != AuthProviderStatus::OK) {
-          callback(Status::AUTH_PROVIDER_SERVER_ERROR, std::move(fb_token));
-          return;
-        }
+  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
+  cache::OAuthTokens tokens;
 
-        callback(Status::OK, std::move(fb_token));
-        return;
-      });
+  if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK) {
+    auto fb_token_it = tokens.firebase_tokens_map.find(firebase_api_key);
+    if (fb_token_it != tokens.firebase_tokens_map.end()) {
+      auto fb_token = auth::FirebaseToken::New();
+      fb_token->id_token = fb_token_it->second.fb_id_token;
+      fb_token->email = fb_token_it->second.email;
+      fb_token->local_id = fb_token_it->second.local_id;
+
+      callback(Status::OK, std::move(fb_token));
+      return;
+    }
+  }
+
+  GetIdToken(auth_provider_type, audience,
+             [this, it, callback, cache_key, firebase_api_key](
+                 Status status, f1dl::String id_token) {
+               if (status != Status::OK) {
+                 callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
+                 // TODO: log error here
+                 return;
+               }
+
+               it->second->GetAppFirebaseToken(
+                   id_token, firebase_api_key,
+                   [this, callback, cache_key, firebase_api_key](
+                       AuthProviderStatus status, FirebaseTokenPtr fb_token) {
+                     if (status != AuthProviderStatus::OK) {
+                       callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
+                       return;
+                     }
+
+                     cache::FirebaseAuthToken cached_token;
+                     cached_token.fb_id_token = fb_token->id_token;
+                     cached_token.expiration_time =
+                         fxl::TimePoint::Now() +
+                         fxl::TimeDelta::FromSeconds(fb_token->expires_in);
+                     cached_token.local_id = fb_token->local_id;
+                     cached_token.email = fb_token->email;
+
+                     if (token_cache_.AddFirebaseToken(
+                             cache_key, firebase_api_key,
+                             std::move(cached_token)) != cache::Status::kOK) {
+                       callback(Status::OK, std::move(fb_token));
+                       // TODO: log error
+                       return;
+                     }
+
+                     callback(Status::OK, std::move(fb_token));
+                     return;
+                   });
+             });
 }
 
 void TokenManagerImpl::DeleteAllTokens(
@@ -235,18 +277,19 @@ void TokenManagerImpl::DeleteAllTokens(
   // TODO: Fetch credential from data store
   f1dl::String credential = "TODO";
   f1dl::String idp_credential_id = "TODO";
-  cache::CacheKey cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
+  cache::CacheKey cache_key =
+      GetCacheKey(auth_provider_type, idp_credential_id);
 
   it->second->RevokeAppOrPersistentCredential(
-      credential, [this, cacheKey, callback](AuthProviderStatus status) {
+      credential, [this, cache_key, callback](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);
           return;
         }
 
-        auto cacheStatus = token_cache_.Delete(cacheKey);
-        if (cacheStatus != cache::Status::kOK &&
-            cacheStatus != cache::Status::kKeyNotFound) {
+        auto cache_status = token_cache_.Delete(cache_key);
+        if (cache_status != cache::Status::kOK &&
+            cache_status != cache::Status::kKeyNotFound) {
           callback(Status::INTERNAL_CACHE_ERROR);
           return;
         }

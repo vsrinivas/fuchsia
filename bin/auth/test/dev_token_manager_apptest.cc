@@ -126,11 +126,46 @@ TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
   auth::FirebaseTokenPtr firebase_token;
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "",
+      kDevAuthProvider, "", "",
       callback::Capture(MakeQuitTask(), &status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
-  EXPECT_FALSE(firebase_token);
+  EXPECT_TRUE(firebase_token->id_token.get().find(":fbt_") !=
+              std::string::npos);
+  EXPECT_TRUE(firebase_token->email.get().find("@devauthprovider.com") !=
+              std::string::npos);
+  EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
+              std::string::npos);
+}
+
+TEST_F(DevTokenManagerAppTest, GetCachedFirebaseToken) {
+  auth::Status status;
+  auth::FirebaseTokenPtr firebase_token;
+  auth::FirebaseTokenPtr other_firebase_token;
+  auth::FirebaseTokenPtr cached_firebase_token;
+
+  token_mgr_->GetFirebaseToken(
+      kDevAuthProvider, "", "key1",
+      callback::Capture(MakeQuitTask(), &status, &firebase_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetFirebaseToken(
+      kDevAuthProvider, "", "key2",
+      callback::Capture(MakeQuitTask(), &status, &other_firebase_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetFirebaseToken(
+      kDevAuthProvider, "", "key1",
+      callback::Capture(MakeQuitTask(), &status, &cached_firebase_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  ASSERT_NE(firebase_token->id_token, other_firebase_token->id_token);
+  ASSERT_EQ(firebase_token->id_token, cached_firebase_token->id_token);
+  ASSERT_EQ(firebase_token->email, cached_firebase_token->email);
+  ASSERT_EQ(firebase_token->local_id, cached_firebase_token->local_id);
 }
 
 TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
@@ -141,6 +176,8 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   f1dl::String old_access_token;
   f1dl::String new_id_token;
   f1dl::String new_access_token;
+  auth::FirebaseTokenPtr old_firebase_token;
+  auth::FirebaseTokenPtr new_firebase_token;
 
   token_mgr_->GetIdToken(
       kDevAuthProvider, "",
@@ -151,6 +188,12 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   token_mgr_->GetAccessToken(
       kDevAuthProvider, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &old_access_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  token_mgr_->GetFirebaseToken(
+      kDevAuthProvider, "", "",
+      callback::Capture(MakeQuitTask(), &status, &old_firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
@@ -172,8 +215,15 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
+  token_mgr_->GetFirebaseToken(
+      kDevAuthProvider, "", "",
+      callback::Capture(MakeQuitTask(), &status, &new_firebase_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
   ASSERT_NE(old_id_token, new_id_token);
   ASSERT_NE(old_access_token, new_access_token);
+  ASSERT_NE(old_firebase_token->id_token, new_firebase_token->id_token);
 }
 
 TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {

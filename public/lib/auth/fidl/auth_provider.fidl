@@ -58,6 +58,9 @@ struct FirebaseToken {
   // Use this to uniquely identify user's email address provided by the
   // Auth Provider Firebase server.
   string? email;
+
+  // The remaining lifetime of the token in seconds.
+  uint64 expires_in;
 };
 
 // This interface is implemented by device shell. It is used to notify the

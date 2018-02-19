@@ -49,6 +49,7 @@ class TokenManagerImpl : public TokenManager {
                   const GetIdTokenCallback& callback) override;
 
   void GetFirebaseToken(const auth::AuthProviderType identity_provider,
+                        const f1dl::String& audience,
                         const f1dl::String& firebase_api_key,
                         const GetFirebaseTokenCallback& callback) override;
 

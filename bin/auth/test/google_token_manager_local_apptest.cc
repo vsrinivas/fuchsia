@@ -142,7 +142,7 @@ TEST_F(GoogleTokenManagerAppTest, GetFirebaseToken) {
   auth::FirebaseTokenPtr firebase_token;
 
   token_mgr_->GetFirebaseToken(
-      kGoogleAuthProvider, "",
+      kGoogleAuthProvider, "", "",
       callback::Capture(MakeQuitTask(), &status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);

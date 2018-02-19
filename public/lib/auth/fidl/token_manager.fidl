@@ -137,12 +137,14 @@ interface TokenManager {
 
   // Gets the |FirebaseToken| for the given |firebase_api_key| from the specified
   // |auth_provider_type|. This api invokes firebase auth's VerifyAssertion
-  // endpoint that takes an OAuth IdToken as the input.
+  // endpoint that takes an OAuth IdToken as the input. The audience is
+  // to retrieve the id token for this.
   //
   // Firebase auth token is returned from cache if not expired, otherwise
   // refreshed from the auth provider backend server.
-  GetFirebaseToken@3(AuthProviderType auth_provider_type, string firebase_api_key)
-      => (Status status, FirebaseToken? firebase_token);
+  GetFirebaseToken@3(AuthProviderType auth_provider_type, string audience,
+      string firebase_api_key) =>
+      (Status status, FirebaseToken? firebase_token);
 
   // Deletes all long lived and short lived tokens generated for
   // |auth_provider_type| for the scoped user. This involves:
