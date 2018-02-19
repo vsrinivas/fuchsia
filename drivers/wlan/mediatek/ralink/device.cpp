@@ -3104,6 +3104,17 @@ void Device::HandleRxComplete(usb_request_t* request) {
     auto ac = fbl::MakeAutoCall([&]() { usb_request_queue(&usb_, request); });
 
     if (request->response.status == ZX_OK) {
+        // Total bytes received is (request->response.actual) bytes
+
+        // RxInfo      :   4 bytes
+        // RxWI        :  16 bytes
+        // RxWI-Extra  :   8 bytes // Present only for RT5592
+        // MAC header  : (a) bytes // (a) + (b) is rxwi0.mpdu_total_byte_count()
+        // L2PAD       :   2 bytes // Present only if rx_desc.l2pad() is 1
+        // MAC payload : (b) bytes
+        // Padding     : 0~3 bytes // To align in 4 bytes
+        // RxDesc      :   4 bytes
+
         size_t rx_hdr_size = (rt_type_ == RT5592) ? 28 : 20;
 
         // Handle completed rx
@@ -3121,12 +3132,11 @@ void Device::HandleRxComplete(usb_request_t* request) {
             return;
         }
 
-        RxDesc rx_desc(*(uint32_t*)(data + 4 + rx_info.usb_dma_rx_pkt_len()));
-
         Rxwi0 rxwi0(letoh32(data32[Rxwi0::addr()]));
         Rxwi1 rxwi1(letoh32(data32[Rxwi1::addr()]));
         Rxwi2 rxwi2(letoh32(data32[Rxwi2::addr()]));
         Rxwi3 rxwi3(letoh32(data32[Rxwi3::addr()]));
+        RxDesc rx_desc(*(uint32_t*)(data + 4 + rx_info.usb_dma_rx_pkt_len()));
 
         if (wlanmac_proxy_ != nullptr) {
             wlan_rx_info_t wlan_rx_info = {};
