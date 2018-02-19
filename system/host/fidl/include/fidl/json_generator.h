@@ -5,10 +5,10 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_JSON_GENERATOR_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_JSON_GENERATOR_H_
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "coded_ast.h"
 #include "flat_ast.h"
@@ -29,32 +29,33 @@ namespace fidl {
 
 class JSONGenerator {
 public:
-    explicit JSONGenerator(Library* library) : library_(library) {}
+    explicit JSONGenerator(Library* library)
+        : library_(library) {}
 
     ~JSONGenerator() = default;
 
     void ProduceJSON(std::ostringstream* json_file_out);
 
- private:
+private:
     enum class Position {
         First,
         Subsequent,
     };
 
-    template<typename Collection>
+    template <typename Collection>
     void GenerateArray(const Collection& collection);
 
-    template<typename Callback>
+    template <typename Callback>
     void GenerateObject(Callback callback);
 
-    template<typename Type>
+    template <typename Type>
     void GenerateObjectMember(StringView key, const Type& value,
                               Position position = Position::Subsequent);
 
-    template<typename T>
+    template <typename T>
     void Generate(const std::unique_ptr<T>& value);
 
-    template<typename T>
+    template <typename T>
     void Generate(const std::vector<T>& value);
 
     void Generate(bool value);
@@ -83,6 +84,8 @@ public:
     void Generate(const flat::Struct::Member& value);
     void Generate(const flat::Union& value);
     void Generate(const flat::Union::Member& value);
+
+    void GenerateDeclarationMapEntry(int count, const flat::Name& name, StringView decl);
 
     Library* library_;
     int indent_level_;

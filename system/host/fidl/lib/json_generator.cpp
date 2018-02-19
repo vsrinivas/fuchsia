@@ -1,4 +1,4 @@
- // Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -213,7 +213,7 @@ void EmitArrayEnd(std::ostream* file) {
 
 } // namespace
 
-template<typename Collection>
+template <typename Collection>
 void JSONGenerator::GenerateArray(const Collection& collection) {
     EmitArrayBegin(&json_file_);
 
@@ -232,7 +232,7 @@ void JSONGenerator::GenerateArray(const Collection& collection) {
     EmitArrayEnd(&json_file_);
 }
 
-template<typename Callback>
+template <typename Callback>
 void JSONGenerator::GenerateObject(Callback callback) {
     int original_indent_level = indent_level_;
 
@@ -246,7 +246,7 @@ void JSONGenerator::GenerateObject(Callback callback) {
     EmitObjectEnd(&json_file_);
 }
 
-template<typename Type>
+template <typename Type>
 void JSONGenerator::GenerateObjectMember(StringView key, const Type& value, Position position) {
     switch (position) {
     case Position::First:
@@ -260,12 +260,12 @@ void JSONGenerator::GenerateObjectMember(StringView key, const Type& value, Posi
     Generate(value);
 }
 
-template<typename T>
+template <typename T>
 void JSONGenerator::Generate(const std::unique_ptr<T>& value) {
     Generate(*value);
 }
 
-template<typename T>
+template <typename T>
 void JSONGenerator::Generate(const std::vector<T>& value) {
     GenerateArray(value);
 }
@@ -511,6 +511,15 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     });
 }
 
+void JSONGenerator::GenerateDeclarationMapEntry(int count, const flat::Name& name, StringView decl) {
+    if (count == 0)
+        EmitNewlineAndIndent(&json_file_, ++indent_level_);
+    else
+        EmitObjectSeparator(&json_file_, indent_level_);
+    EmitObjectKey(&json_file_, indent_level_, LongName(name));
+    EmitString(&json_file_, decl);
+}
+
 void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
     indent_level_ = 0;
     GenerateObject([&]() {
@@ -522,6 +531,26 @@ void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
+
+        EmitObjectSeparator(&json_file_, indent_level_);
+        EmitObjectKey(&json_file_, indent_level_, "declarations");
+        GenerateObject([&]() {
+            int count = 0;
+            for (auto& decl : library_->const_declarations_)
+                GenerateDeclarationMapEntry(count++, decl.name, "const");
+
+            for (auto& decl : library_->enum_declarations_)
+                GenerateDeclarationMapEntry(count++, decl.name, "enum");
+
+            for (auto& decl : library_->interface_declarations_)
+                GenerateDeclarationMapEntry(count++, decl.name, "interface");
+
+            for (auto& decl : library_->struct_declarations_)
+                GenerateDeclarationMapEntry(count++, decl.name, "struct");
+
+            for (auto& decl : library_->union_declarations_)
+                GenerateDeclarationMapEntry(count++, decl.name, "union");
+        });
     });
 
     *json_file_out = std::move(json_file_);

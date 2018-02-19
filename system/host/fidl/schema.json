@@ -8,6 +8,7 @@
         "interface_declarations",
         "struct_declarations",
         "union_declarations",
+        "declarations",
         "library_dependencies"
     ],
     "properties": {
@@ -42,6 +43,21 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/union"
+            }
+        },
+        "declarations": {
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "string",
+                    "enum": [
+                        "const",
+                        "enum",
+                        "interface",
+                        "struct",
+                        "union"
+                    ]
+                }
             }
         },
         "library_dependencies": {
