@@ -365,7 +365,7 @@ mod test {
         write_object(
             &tx,
             zircon::Status::BAD_PATH,
-            FDIO_PROTOCOL_REMOTE,
+            FDIO_PROTOCOL_SERVICE,
             &[1, 2, 3, 4],
             &mut vec![h.into()],
         ).unwrap();
@@ -378,7 +378,7 @@ mod test {
         assert_eq!(zircon::Status::BAD_PATH, zircon::Status::from_raw(unsafe {
             *(ptr as *const i32)
         }));
-        assert_eq!(FDIO_PROTOCOL_REMOTE, unsafe {
+        assert_eq!(FDIO_PROTOCOL_SERVICE, unsafe {
             *(ptr.offset(4) as *const u32)
         });
         assert_eq!([1, 2, 3, 4], unsafe {

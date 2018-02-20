@@ -134,7 +134,7 @@ impl Connection {
         let open_flags = flags & (!fdio::fdio_sys::ZX_FS_FLAG_DESCRIBE as i32);
 
         let mut status = zircon::Status::OK;
-        let mut proto = fdio::fdio_sys::FDIO_PROTOCOL_REMOTE;
+        let mut proto = fdio::fdio_sys::FDIO_PROTOCOL_SERVICE;
         let mut handles: Vec<zircon::Handle> = vec![];
 
         match self.vfs.open(&self.vn, path, open_flags, mode) {

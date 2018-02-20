@@ -598,12 +598,10 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 		// kind of object this is.
 		ro := fdio.RioDescription{
 			Status: errStatus(nil),
-			Type:   uint32(fdio.ProtocolSocket),
 		}
+		ro.Info.Tag = fdio.ProtocolSocket
 		ro.SetOp(fdio.OpOnOpen)
-		if peerS != 0 {
-			ro.Handle = peerS
-		}
+		ro.Info.Socket().Handle = peerS
 		ro.Write(h, 0)
 	}
 
@@ -1480,7 +1478,6 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		if err != nil {
 			ro := fdio.RioDescription{
 				Status: errStatus(err),
-				Type:   uint32(fdio.ProtocolSocket),
 			}
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
@@ -1494,7 +1491,6 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
 			ro := fdio.RioDescription{
 				Status: errStatus(err),
-				Type:   uint32(fdio.ProtocolSocket),
 			}
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)

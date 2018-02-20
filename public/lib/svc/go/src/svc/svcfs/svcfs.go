@@ -48,8 +48,8 @@ func (n *Namespace) opClone(msg *fdio.Msg, h zx.Handle) zx.Status {
 	if describe(msg) {
 		ro := fdio.RioDescription{
 			Status: errStatus(err),
-			Type:   uint32(fdio.ProtocolRemote),
 		}
+		ro.Info.Tag = fdio.ProtocolService
 		ro.SetOp(fdio.OpOnOpen)
 		ro.Write(h, 0)
 	}
@@ -85,8 +85,8 @@ func (n *Namespace) handler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Sta
 		if describe(msg) {
 			ro := fdio.RioDescription{
 				Status: zx.ErrOk,
-				Type:   uint32(fdio.ProtocolService),
 			}
+			ro.Info.Tag = fdio.ProtocolService
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(h, 0)
 		}

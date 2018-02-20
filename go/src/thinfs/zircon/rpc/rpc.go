@@ -214,13 +214,12 @@ func openFlagsToRIO(f fs.OpenFlags) (arg uint32, mode uint32) {
 }
 
 func describe(msg *fdio.Msg) bool {
-	return msg.Arg & syscall.FsFlagDescribe != 0
+	return msg.Arg&syscall.FsFlagDescribe != 0
 }
 
 func indirectError(h zx.Handle, status zx.Status) {
 	ro := &fdio.RioDescription{
 		Status: status,
-		Type:   uint32(fdio.ProtocolRemote),
 	}
 	ro.SetOp(fdio.OpOnOpen)
 	ro.Write(h, 0)
@@ -241,8 +240,8 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 		if describe(msg) {
 			ro := &fdio.RioDescription{
 				Status: zx.ErrOk,
-				Type:   uint32(fdio.ProtocolRemote),
 			}
+			ro.Info.Tag = fdio.ProtocolFile
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 		}
@@ -417,7 +416,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		if describe(msg) {
 			ro := &fdio.RioDescription{
 				Status: zx.ErrOk,
-				Type:   uint32(fdio.ProtocolRemote),
+			}
+			if f != nil {
+				ro.Info.Tag = fdio.ProtocolFile
+			} else {
+				ro.Info.Tag = fdio.ProtocolDirectory
 			}
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
@@ -442,8 +445,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		if describe(msg) {
 			ro := &fdio.RioDescription{
 				Status: zx.ErrOk,
-				Type:   uint32(fdio.ProtocolRemote),
 			}
+			ro.Info.Tag = fdio.ProtocolDirectory
 			ro.SetOp(fdio.OpOnOpen)
 			ro.Write(msg.Handle[0], 0)
 		}
