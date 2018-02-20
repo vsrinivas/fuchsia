@@ -108,10 +108,17 @@ sdk_atom("${data.name}_sdk") {
     {
       source = "${data.prebuilt}"
       dest = "lib/${data.lib_name}"
+      packaged = true
     },
     {
       source = "${data.debug_prebuilt}"
       dest = "debug/${data.lib_name}"
     },
+  ]
+
+  package_deps = [
+    % for dep in sorted(data.deps):
+    "../${dep}:${dep}_sdk",
+    % endfor
   ]
 }

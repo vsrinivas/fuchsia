@@ -65,14 +65,20 @@
         },
         "files": {
           "description": "The files making up the atom",
-          "type": "object",
-          "additionalProperties": {
-            "description": "The property name is the path of the file relative to the destination root of the atom; the value is the path to the source file",
-            "type": "string"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomFile"
           }
         },
         "deps": {
           "description": "The ids of the atoms this atom directly depends on",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomId"
+          }
+        },
+        "package_deps": {
+          "description": "The ids of the atoms this atom needs at runtime",
           "type": "array",
           "items": {
             "$ref": "#/definitions/atomId"
@@ -95,7 +101,32 @@
         "files",
         "id",
         "tags",
-        "gn-label"
+        "gn-label",
+        "package_deps"
+      ],
+      "additionalProperties": false
+    },
+    "atomFile": {
+      "description": "Description of a file pertaining to an atom",
+      "type": "object",
+      "properties": {
+        "source": {
+          "description": "Path to the source file",
+          "type": "string"
+        },
+        "destination": {
+          "description": "Destination path of the file relative to the root of the atom",
+          "type": "string"
+        },
+        "packaged": {
+          "description": "Whether this file should be included in a Fuchsia package containing this atom",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "destination",
+        "packaged"
       ],
       "additionalProperties": false
     },

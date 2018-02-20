@@ -67,10 +67,10 @@ def main():
 
     for atom in atoms:
         dir = get_atom_dir(atom['id']['name'])
-        for relative_destination, source in atom['files'].iteritems():
-            destination = os.path.join(dir, relative_destination)
+        for file in atom['files']:
+            destination = os.path.join(dir, file['destination'])
             make_dir(destination)
-            shutil.copyfile(source, destination)
+            shutil.copyfile(file['source'], destination)
 
     with open(args.depfile, 'w') as dep_file:
         dep_file.write('%s:\n' % args.depname)

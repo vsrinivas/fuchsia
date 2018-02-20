@@ -40,6 +40,7 @@ class Atom(object):
         self.json = json
         self.id = AtomId(json['id'])
         self.label = json['gn-label']
+        self.package_deps = map(lambda i: AtomId(i), json['package_deps'])
 
     def __str__(self):
         return str(self.id)
@@ -107,6 +108,9 @@ def main():
     parser.add_argument('--deps',
                         help='List of manifest paths for dependencies',
                         nargs='*')
+    parser.add_argument('--package-deps',
+                        help='List of manifest paths for runtime dependencies',
+                        nargs='*')
     parser.add_argument('--files',
                         help='A source=destination mapping',
                         nargs='*')
@@ -129,9 +133,13 @@ def main():
 
     # Gather the definitions of other atoms this atom depends on.
     (deps, atoms) = gather_dependencies(args.deps)
+    (_, package_atoms) = gather_dependencies(args.package_deps)
+    all_atoms = atoms
+    all_atoms.update(package_atoms)
 
     # Build the list of files making up this atom.
-    files = {}
+    files = []
+    has_packaged_files = False
     base = os.path.realpath(args.base)
     mappings = args.files
     if args.file_manifest:
@@ -139,7 +147,9 @@ def main():
             additional_mappings = [l.strip() for l in manifest_file.readlines()]
             mappings.extend(additional_mappings)
     for mapping in mappings:
-        destination, source = mapping.split('=', 1)
+        mode, pair = mapping.split(':', 1)
+        is_packaged = (mode == 'packaged')
+        destination, source = pair.split('=', 1)
         real_source = os.path.realpath(source)
         if not os.path.exists(real_source):
             raise Exception('Missing source file: %s' % real_source)
@@ -150,28 +160,41 @@ def main():
             destination = os.path.relpath(real_source, base)
         if os.path.isabs(destination):
             raise Exception('Destination cannot be absolute: %s' % destination)
-        files[destination] = real_source
+        files.append({
+            'source': real_source,
+            'destination': destination,
+            'packaged': is_packaged
+        })
+        has_packaged_files = has_packaged_files or is_packaged
 
     id = {
         'domain': args.domain,
         'name': name,
     }
+
+    all_package_deps = set()
+    if has_packaged_files:
+        all_package_deps.add(AtomId(id))
+    for atom in all_atoms:
+        all_package_deps.update(atom.package_deps)
+
     tags = dict(map(lambda t: t.split(':', 1), args.tags))
     tags['domain'] = args.domain
-    atoms.update([Atom({
+    all_atoms.update([Atom({
         'id': id,
         'gn-label': args.gn_label,
         'tags': tags,
         'deps': map(lambda i: i.json, sorted(list(deps))),
+        'package_deps': map(lambda i: i.json, sorted(list(all_package_deps))),
         'files': files,
     })])
-    if detect_collisions(atoms):
+    if detect_collisions(all_atoms):
         print('Name collisions detected!')
         return 1
 
     manifest = {
         'ids': [id],
-        'atoms': map(lambda a: a.json, sorted(list(atoms))),
+        'atoms': map(lambda a: a.json, sorted(list(all_atoms))),
     }
 
     with open(os.path.abspath(args.out), 'w') as out:

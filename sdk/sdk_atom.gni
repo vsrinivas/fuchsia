@@ -42,7 +42,13 @@
 #     directly under the directory where the GN rules are declared.
 #
 #   deps (optional)
-#     List of GN labels for other SDK elements this element depends on.
+#     List of GN labels for other SDK elements this element depends on at build
+#     time.
+#     These labels must point to "sdk_atom" targets.
+#
+#   package_deps (optional)
+#     List of GN labels for other SDK elements this element depends on at
+#     runtime.
 #     These labels must point to "sdk_atom" targets.
 #
 #   non_sdk_deps (optional)
@@ -67,6 +73,9 @@
 #     This attribute is required unless "source" points to a file located under
 #     the target's source directory, in which case the relative path of that
 #     file to the target's directory will be used as the default value.
+#
+#   packaged (optional)
+#     Whether this file should be added to Fuchsia packages.
 
 template("sdk_atom") {
 
@@ -104,6 +113,16 @@ template("sdk_atom") {
     }
   }
 
+  package_dep_manifests = []
+  if (defined(invoker.package_deps)) {
+    gn_deps += invoker.package_deps
+    foreach(dep, invoker.package_deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+    }
+  }
+
   assert(defined(invoker.files) || defined(invoker.file_manifest),
       "At least one of 'files' and 'file_manifest' must be defined")
   file_mappings = []
@@ -119,8 +138,12 @@ template("sdk_atom") {
       if (defined(file.dest)) {
         destination = file.dest
       }
+      prefix = "internal"
+      if (defined(file.packaged)) {
+        prefix = "packaged"
+      }
       file_mappings += [
-        "$destination=$source",
+        "$prefix:$destination=$source",
       ]
     }
   }
@@ -164,6 +187,8 @@ template("sdk_atom") {
       full_label,
       "--deps",
     ] + dep_manifests + [
+      "--package-deps",
+    ] + package_dep_manifests + [
       "--files",
     ] + file_mappings + [
       "--tags",
