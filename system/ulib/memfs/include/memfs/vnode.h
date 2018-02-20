@@ -46,6 +46,7 @@ public:
     virtual ~VnodeMemfs();
 
     Vfs* vfs() const { return vfs_; }
+    uint64_t ino() const { return ino_; }
 
     fbl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;

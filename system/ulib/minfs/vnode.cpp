@@ -1824,6 +1824,10 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
     // If either the 'src' or 'dst' must be directories, BOTH of them must be directories.
     if (!oldvn->IsDirectory() && (src_must_be_dir || dst_must_be_dir)) {
         return ZX_ERR_NOT_DIR;
+    } else if ((newdir->ino_ == ino_) && (oldname == newname)) {
+        // Renaming a file or directory to itself?
+        // Shortcut success case.
+        return ZX_OK;
     }
 
     // if the entry for 'newname' exists, make sure it can be replaced by

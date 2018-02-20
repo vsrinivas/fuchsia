@@ -162,6 +162,10 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
 
     if (!olddn->IsDirectory() && (src_must_be_dir || dst_must_be_dir)) {
         return ZX_ERR_NOT_DIR;
+    } else if ((newdir->ino() == ino_) && (oldname == newname)) {
+        // Renaming a file or directory to itself?
+        // Shortcut success case
+        return ZX_OK;
     }
 
     // Verify that the destination is not a subdirectory of the source (if

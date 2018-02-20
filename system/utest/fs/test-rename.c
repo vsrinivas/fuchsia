@@ -22,9 +22,14 @@ bool test_rename_basic(void) {
     // Cannot rename when src does not exist
     ASSERT_EQ(rename("::alpha", "::bravo"), -1, "");
 
-    // Cannot rename to self
+    // Renaming to self is fine
     ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
-    ASSERT_EQ(rename("::alpha", "::alpha"), -1, "");
+    ASSERT_EQ(rename("::alpha", "::alpha"), 0, "");
+    ASSERT_EQ(rename("::alpha/.", "::alpha/."), 0, "");
+    ASSERT_EQ(rename("::alpha/", "::alpha"), 0, "");
+    ASSERT_EQ(rename("::alpha", "::alpha/"), 0, "");
+    ASSERT_EQ(rename("::alpha/", "::alpha/"), 0, "");
+    ASSERT_EQ(rename("::alpha/./../alpha", "::alpha/./../alpha"), 0, "");
 
     // Cannot rename dir to file
     int fd = open("::bravo", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -43,6 +48,12 @@ bool test_rename_basic(void) {
     fd = open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(rename("::alpha/charlie", "::alpha/delta"), 0, "");
+    // File rename to self
+    ASSERT_EQ(rename("::alpha/delta", "::alpha/delta"), 0, "");
+    // Not permitted with trailing '/'
+    ASSERT_EQ(rename("::alpha/delta", "::alpha/delta/"), -1, "");
+    ASSERT_EQ(rename("::alpha/delta/", "::alpha/delta"), -1, "");
+    ASSERT_EQ(rename("::alpha/delta/", "::alpha/delta/"), -1, "");
     ASSERT_EQ(close(fd), 0, "");
 
     // Rename file (dst does not exist)
