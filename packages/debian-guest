@@ -1,0 +1,13 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/guest-tool",
+        "garnet/packages/pmd",
+        "garnet/packages/runtime"
+    ],
+    "packages": {
+        "debian-guest": "//garnet/bin/guest/debian-guest"
+    }
+}

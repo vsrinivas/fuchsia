@@ -74,7 +74,7 @@ build_dash() {
 
   pushd $dash_src
   ./autogen.sh
-  ./configure CC="${CROSS_COMPILE}gcc" LDFLAGS="-static" --host=arm64-linux-gnueabi
+  ./configure LDFLAGS="-static" --host="${AC_HOST}" --build=x86_64-linux-gnu
   make -j100
   popd
 
@@ -175,10 +175,10 @@ arm64)
     { echo "Required package gcc-aarch64-linux-gnu is not installed."
       echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
   declare -x ARCH=arm64;
-  declare -x CROSS_COMPILE=aarch64-linux-gnu-;;
+  declare -x AC_HOST="aarch64-linux-gnu";;
 x86)
   declare -x ARCH=x86;
-  declare -x CROSS_COMPILE=x86_64-linux-gnu-;;
+  declare -x AC_HOST="x86_64-linux-gnu";;
 *)
   usage;;
 esac

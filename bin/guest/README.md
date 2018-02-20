@@ -5,7 +5,7 @@ hypervisor.
 
 These instructions will guide you through creating minimal Zircon and Linux
 guests. For instructions on building a more comprehensive linux guest system
-see [Hypervisor Benchmarking](docs/benchmarking.md).
+see the [debian-guest](debian-guest/README.md) package.
 
 These instructions assume a general familiarity with how to netboot the target
 device.
