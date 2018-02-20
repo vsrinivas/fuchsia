@@ -19,8 +19,14 @@ import "lib/media/fidl/video_renderer.fidl";
 // Primary media service definition.
 [ServiceName="media::MediaService"]
 interface MediaService {
-  // Creates a player.
-  CreatePlayer@0(SeekingReader? reader,
+  // Creates a player that reads from a file specified by channel.
+  CreateFilePlayer@0(handle<channel> file_channel,
+                     MediaRenderer? audio_renderer,
+                     MediaRenderer? video_renderer,
+                     MediaPlayer& player);
+
+  // Creates a player that reads from a seeking reader.
+  CreatePlayer@1(SeekingReader? reader,
                  MediaRenderer? audio_renderer,
                  MediaRenderer? video_renderer,
                  MediaPlayer& player);
@@ -29,31 +35,31 @@ interface MediaService {
   // added to each stream as needed to make the media type of the stream match
   // one of the allowed types. If a stream cannot be converted to one of the
   // allowed types, the source will not expose that stream.
-  CreateSource@1(SeekingReader reader,
+  CreateSource@2(SeekingReader reader,
                  array<MediaTypeSet>? allowed_media_types,
                  MediaSource& source);
 
   // Creates a sink.
-  CreateSink@2(MediaRenderer renderer, MediaSink& sink);
+  CreateSink@3(MediaRenderer renderer, MediaSink& sink);
 
   // Creates a demux.
-  CreateDemux@3(SeekingReader reader, MediaSource& demux);
+  CreateDemux@4(SeekingReader reader, MediaSource& demux);
 
   // Creates a decoder.
-  CreateDecoder@4(MediaType input_media_type, MediaTypeConverter& decoder);
+  CreateDecoder@5(MediaType input_media_type, MediaTypeConverter& decoder);
 
   // Creates a network reader.
-  CreateNetworkReader@5(string url, SeekingReader& reader);
+  CreateNetworkReader@6(string url, SeekingReader& reader);
 
   // Creates a file reader.
-  CreateFileReader@6(string path, SeekingReader& reader);
+  CreateFileReader@7(string path, SeekingReader& reader);
 
   // Creates an audio renderer.
-  CreateAudioRenderer@7(AudioRenderer& audio_renderer,
+  CreateAudioRenderer@8(AudioRenderer& audio_renderer,
                         MediaRenderer& media_renderer);
 
   // Creates a video renderer.
-  CreateVideoRenderer@8(VideoRenderer& video_renderer,
+  CreateVideoRenderer@9(VideoRenderer& video_renderer,
                         MediaRenderer& media_renderer);
 
   // Creates a timeline controller reader.

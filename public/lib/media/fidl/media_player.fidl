@@ -30,8 +30,11 @@ interface MediaPlayer {
   GetStatus@3(uint64 version_last_seen)
       => (uint64 version, MediaPlayerStatus status);
 
-  // Sets the reader.
-  SetReader@4(SeekingReader? reader);
+  // Sets a file channel to read from.
+  SetFileChannel@4(handle<channel> file_channel);
+
+  // Sets a reader to read from.
+  SetReader@5(SeekingReader? reader);
 };
 
 // MediaPlayer status information.

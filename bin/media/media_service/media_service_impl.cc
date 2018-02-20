@@ -41,6 +41,18 @@ MediaServiceImpl::~MediaServiceImpl() {
   FLOG_DESTROY();
 }
 
+void MediaServiceImpl::CreateFilePlayer(
+    zx::channel file_channel,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaPlayer> player) {
+  fidl::InterfaceHandle<SeekingReader> reader;
+  CreateFileChannelReader(std::move(file_channel), reader.NewRequest());
+  AddProduct(MediaPlayerImpl::Create(
+      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
+      std::move(player), this));
+}
+
 void MediaServiceImpl::CreatePlayer(
     fidl::InterfaceHandle<SeekingReader> reader,
     fidl::InterfaceHandle<MediaRenderer> audio_renderer,
@@ -151,6 +163,18 @@ void MediaServiceImpl::CreateLpcmReformatter(
     return LpcmReformatterImpl::Create(std::move(input_media_type),
                                        output_sample_format, std::move(request),
                                        this);
+  }));
+}
+
+void MediaServiceImpl::CreateFileChannelReader(
+    zx::channel file_channel,
+    fidl::InterfaceRequest<SeekingReader> request) {
+  CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable([
+    this, file_channel = std::move(file_channel),
+    request = std::move(request)
+  ]() mutable {
+    return FileReaderImpl::Create(std::move(file_channel),
+                                  std::move(request), this);
   }));
 }
 

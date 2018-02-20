@@ -45,6 +45,8 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
+  void SetFileChannel(zx::channel file_channel) override;
+
   void SetReader(fidl::InterfaceHandle<SeekingReader> reader_handle) override;
 
  private:

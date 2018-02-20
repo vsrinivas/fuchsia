@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "garnet/bin/media/util/file_channel.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/logging.h"
@@ -19,15 +20,26 @@ std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
     const fidl::String& path,
     fidl::InterfaceRequest<SeekingReader> request,
     MediaServiceImpl* owner) {
+  // TODO(dalesat): This version requires filesystem access. Remove it.
   return std::shared_ptr<FileReaderImpl>(
-      new FileReaderImpl(path, std::move(request), owner));
+      new FileReaderImpl(fxl::UniqueFD(open(path.get().c_str(), O_RDONLY)),
+                         std::move(request), owner));
 }
 
-FileReaderImpl::FileReaderImpl(const fidl::String& path,
+// static
+std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
+    zx::channel file_channel,
+    fidl::InterfaceRequest<SeekingReader> request,
+    MediaServiceImpl* owner) {
+  return std::shared_ptr<FileReaderImpl>(new FileReaderImpl(
+      FdFromChannel(std::move(file_channel)), std::move(request), owner));
+}
+
+FileReaderImpl::FileReaderImpl(fxl::UniqueFD fd,
                                fidl::InterfaceRequest<SeekingReader> request,
                                MediaServiceImpl* owner)
     : MediaServiceImpl::Product<SeekingReader>(this, std::move(request), owner),
-      fd_(open(path.get().c_str(), O_RDONLY)),
+      fd_(std::move(fd)),
       buffer_(kBufferSize) {
   result_ = fd_.is_valid() ? MediaResult::OK : MediaResult::NOT_FOUND;
 
@@ -71,8 +83,9 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
+    FXL_LOG(ERROR) << "seek failed, result " << seek_result << " errno "
+                   << errno;
     // TODO(dalesat): More specific error code.
-    FXL_LOG(ERROR) << "seek failed, result " << seek_result;
     result_ = MediaResult::UNKNOWN_ERROR;
     callback(result_, zx::socket());
     return;
@@ -81,8 +94,8 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   zx::socket other_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
   if (status != ZX_OK) {
-    // TODO(dalesat): More specific error code.
     FXL_LOG(ERROR) << "zx::socket::create failed, status " << status;
+    // TODO(dalesat): More specific error code.
     result_ = MediaResult::UNKNOWN_ERROR;
     callback(result_, zx::socket());
     return;

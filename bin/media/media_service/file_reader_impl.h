@@ -25,6 +25,11 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
       fidl::InterfaceRequest<SeekingReader> request,
       MediaServiceImpl* owner);
 
+  static std::shared_ptr<FileReaderImpl> Create(
+      zx::channel file_channel,
+      fidl::InterfaceRequest<SeekingReader> request,
+      MediaServiceImpl* owner);
+
   ~FileReaderImpl() override;
 
   // SeekingReader implementation.
@@ -35,7 +40,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
  private:
   static constexpr size_t kBufferSize = 8192;
 
-  FileReaderImpl(const fidl::String& path,
+  FileReaderImpl(fxl::UniqueFD fd,
                  fidl::InterfaceRequest<SeekingReader> request,
                  MediaServiceImpl* owner);
 

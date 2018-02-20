@@ -191,8 +191,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
         source_->GetPacketProducer(index, producer.NewRequest());
 
         // Capture producer so it survives through the callback.
-        producer->Connect(consumer.Bind(),
-                          fxl::MakeCopyable([
+        producer->Connect(consumer.Bind(), fxl::MakeCopyable([
                             this, callback, producer = std::move(producer)
                           ]() { callback(); }));
       });
@@ -244,7 +243,7 @@ void MediaPlayerImpl::Update() {
         if (!reader_transition_pending_) {
           return;
         }
-        // Falls through.
+      // Falls through.
 
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of
@@ -488,6 +487,13 @@ void MediaPlayerImpl::Seek(int64_t position) {
   FLOG(log_channel_, SeekRequested(position));
   target_position_ = position;
   Update();
+}
+
+void MediaPlayerImpl::SetFileChannel(zx::channel file_channel) {
+  fidl::InterfaceHandle<SeekingReader> reader;
+  owner()->CreateFileChannelReader(std::move(file_channel),
+                                   reader.NewRequest());
+  SetReader(std::move(reader));
 }
 
 void MediaPlayerImpl::SetReader(

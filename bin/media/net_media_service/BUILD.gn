@@ -6,17 +6,16 @@ import("//garnet/public/build/test.gni")
 import("//build/package.gni")
 
 package("net_media_service") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "net_media_service"
-    },
-  ]
+  binary = "net_media_service"
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
 }
 
 executable("bin") {

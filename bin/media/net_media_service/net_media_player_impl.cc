@@ -4,6 +4,9 @@
 
 #include "garnet/bin/media/net_media_service/net_media_player_impl.h"
 
+#include <fcntl.h>
+
+#include "garnet/bin/media/util/file_channel.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/url/gurl.h"
@@ -62,12 +65,12 @@ void NetMediaPlayerImpl::SetUrl(const fidl::String& url_as_string) {
   SeekingReaderPtr reader;
 
   if (url.SchemeIsFile()) {
-    media_service_->CreateFileReader(url.path(), reader.NewRequest());
+    media_player_->SetFileChannel(
+        ChannelFromFd(fxl::UniqueFD(open(url.path().c_str(), O_RDONLY))));
   } else {
     media_service_->CreateNetworkReader(url_as_string, reader.NewRequest());
+    media_player_->SetReader(std::move(reader));
   }
-
-  media_player_->SetReader(std::move(reader));
 }
 
 void NetMediaPlayerImpl::Play() {

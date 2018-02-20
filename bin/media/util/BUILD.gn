@@ -8,6 +8,8 @@ source_set("util") {
   sources = [
     "factory_service_base.h",
     "fidl_publisher.h",
+    "file_channel.cc",
+    "file_channel.h",
     "multiproc_task_runner.cc",
     "multiproc_task_runner.h",
     "timeline_control_point.cc",
