@@ -495,6 +495,8 @@ zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unuse
     ZX_DEBUG_ASSERT(method == Method::DEVICE_QUERY_request);
 
     auto resp = DeviceQueryResponse::New();
+    resp->modes.resize(0);
+    resp->bands.resize(0);
     const wlanmac_info_t& info = device_->GetWlanInfo();
     if (info.mac_modes & WLAN_MAC_MODE_STA) { resp->modes.push_back(MacMode::STA); }
     if (info.mac_modes & WLAN_MAC_MODE_AP) { resp->modes.push_back(MacMode::AP); }
