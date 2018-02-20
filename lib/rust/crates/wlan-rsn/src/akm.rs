@@ -20,6 +20,23 @@ macro_rules! return_none_if_unknown_algo {
     };
 }
 
+// IEEE Std 802.11-2016, 9.4.2.25.3, Table 9-133
+// 0 - Reserved.
+pub const EAP: u8 = 1;
+pub const PSK: u8 = 2;
+pub const FT_EAP: u8 = 3;
+pub const FT_PSK: u8 = 4;
+pub const EAP_SHA256: u8 = 5;
+pub const PSK_SHA256: u8 = 6;
+pub const TDLS: u8 = 7;
+pub const SAE: u8 = 8;
+pub const FT_SAE: u8 = 9;
+pub const AP_PEERKEY: u8 = 10;
+pub const EAP_SUITEB: u8 = 11;
+pub const EAP_SUITEB_SHA384: u8 = 12;
+pub const FT_EAP_SHA384: u8 = 13;
+// 14-255 - Reserved.
+
 pub struct Akm<'a> {
     pub oui: &'a [u8],
     pub suite_type: u8,
@@ -74,6 +91,17 @@ impl<'a> Akm<'a> {
         match self.suite_type {
             1 ... 11 => Some(128),
             12 | 13 => Some(256),
+            _ => None,
+        }
+    }
+
+    pub fn pmk_bits(&self) -> Option<u16> {
+        return_none_if_unknown_algo!(self);
+
+        // IEEE 802.11-2016, 12.7.1.3
+        match self.suite_type {
+            1 ... 11 | 13 => Some(256),
+            12 => Some(384),
             _ => None,
         }
     }

@@ -15,6 +15,22 @@ macro_rules! return_none_if_unknown_usage {
     };
 }
 
+// IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
+pub const GROUP_CIPHER_SUITE: u8 = 0;
+pub const WEP_40: u8 = 1;
+pub const TKIP: u8 = 2;
+// 3 - Reserved.
+pub const CCMP_128: u8 = 4;
+pub const WEP_104: u8 = 5;
+pub const BIP_CMAC_128: u8 = 6;
+pub const GROUP_ADDRESSED_TRAFFIC_NOT_ALLOWED: u8 = 7;
+pub const GCMP_128: u8 = 8;
+pub const GCMP_256: u8 = 9;
+pub const CCMP_256: u8 = 10;
+pub const BIP_GMAC_128: u8 = 11;
+pub const BIP_GMAC_256: u8 = 12;
+pub const BIP_CMAC_256: u8 = 13;
+// 14-255 - Reserved.
 
 pub struct Cipher<'a> {
     oui: &'a [u8],
@@ -68,6 +84,19 @@ impl<'a> Cipher<'a> {
         match self.suite_type {
             6 | 11 ... 13 => Some(true),
             0 | 1 ... 5 | 8 ... 10 => Some(false),
+            _ => None,
+        }
+    }
+
+    pub fn tk_bits(&self) -> Option<u16> {
+        return_none_if_unknown_usage!(self);
+
+        // IEEE 802.11-2016, 12.7.2, Table 12-4
+        match self.suite_type {
+            1 => Some(40),
+            5 => Some(104),
+            4 | 6 | 8 | 11 => Some(128),
+            2 | 9 | 10 | 12 | 13 => Some(256),
             _ => None,
         }
     }

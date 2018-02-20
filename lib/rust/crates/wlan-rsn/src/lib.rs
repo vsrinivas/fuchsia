@@ -16,15 +16,16 @@ extern crate rand;
 extern crate test;
 extern crate time;
 
-mod crypto_utils;
-pub mod rsne;
-mod integrity;
-mod keywrap;
-mod suite_selector;
-mod cipher;
 mod akm;
-mod pmkid;
 mod auth;
+mod cipher;
+mod crypto_utils;
+mod integrity;
+mod key;
+mod keywrap;
+mod pmkid;
+pub mod rsne;
+mod suite_selector;
 
 use std::result;
 
@@ -50,6 +51,12 @@ pub enum Error {
     InvalidBitSize(usize),
     #[fail(display = "nonce could not be generated")]
     NonceError,
+    #[fail(display = "error deriving PTK; invalid PMK")]
+    PtkHierarchyInvalidPmkError,
+    #[fail(display = "error deriving PTK; unsupported AKM suite")]
+    PtkHierarchyUnsupportedAkmError,
+    #[fail(display = "error deriving PTK; unsupported cipher suite")]
+    PtkHierarchyUnsupportedCipherError,
 }
 
 impl From<std::io::Error> for Error {
