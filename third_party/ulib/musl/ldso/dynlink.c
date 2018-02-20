@@ -811,9 +811,6 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
             continue;
 
         if (ph->p_flags & PF_W) {
-            // TODO(mcgrathr,ZX-698): When ZX-698 is fixed, we can clone to
-            // a size that's not whole pages, and then extending it with
-            // set_size will do the partial-page zeroing for us implicitly.
             size_t data_size =
                 ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
                 this_min;
