@@ -85,6 +85,10 @@ group("${data.name}") {
     ":${data.name}_config",
     ":${data.name}_lib_config",
   ]
+
+  data_deps = [
+    ":${data.name}_copy_lib",
+  ]
 }
 
 }  # !is_pic_default
