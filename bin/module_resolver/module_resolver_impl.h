@@ -64,7 +64,7 @@ class ModuleResolverImpl : modular::ModuleResolver,
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name,
                           std::string id,
-                          modular::ModuleManifestSource::Entry entry);
+                          modular::ModuleManifestPtr entry);
   void OnRemoveManifestEntry(const std::string& source_name, std::string id);
 
   void PeriodicCheckIfSourcesAreReady();
@@ -82,7 +82,7 @@ class ModuleResolverImpl : modular::ModuleResolver,
   // sent us all entries they knew about at construction time.
   std::set<std::string> ready_sources_;
   // Map of (repo name, module manifest ID) -> entry.
-  std::map<EntryId, modular::ModuleManifestSource::Entry> entries_;
+  std::map<EntryId, modular::ModuleManifestPtr> entries_;
 
   // verb -> key in |entries_|
   std::map<std::string, std::set<EntryId>> verb_to_entries_;

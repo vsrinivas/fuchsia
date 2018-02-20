@@ -100,7 +100,7 @@ struct ModuleResolverResult {
   // The |local_name| within the Module's manifest file (see
   // docs/manifests/module.md). The verb to be invoked and constraints on its
   // parameters can be derived by looking at the Module's manifest.
-  string local_name;
+  string? local_name;
 
   // The initial set of noun Entities to set on the Link to this Module once it
   // is initialized. This map is keyed by the noun's name as given in the

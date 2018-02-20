@@ -214,7 +214,7 @@ void DirectoryModuleManifestSource::OnNewFile(const std::string& name,
   bool read_result = files::ReadFileToString(path, &data);
   FXL_CHECK(read_result) << "Couldn't read file: " << path;
 
-  Entry entry;
+  auto entry = modular::ModuleManifest::New();
   if (!ModuleManifestEntryFromJson(data, &entry)) {
     FXL_LOG(WARNING) << "Could not parse Module manifest from: " << path;
     return;

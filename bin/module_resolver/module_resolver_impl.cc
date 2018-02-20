@@ -58,8 +58,8 @@ void ModuleResolverImpl::AddSource(
   repo->Watch(fsl::MessageLoop::GetCurrent()->task_runner(),
               [this, name]() { OnSourceIdle(name); },
               [this, name](std::string id,
-                           const modular::ModuleManifestSource::Entry& entry) {
-                OnNewManifestEntry(name, std::move(id), entry);
+                           const modular::ModuleManifestPtr& entry) {
+                OnNewManifestEntry(name, std::move(id), entry.Clone());
               },
               [this, name](std::string id) {
                 OnRemoveManifestEntry(name, std::move(id));
@@ -121,7 +121,7 @@ class ModuleResolverImpl::FindModulesCall
           module_resolver_impl_->entries_.begin(),
           module_resolver_impl_->entries_.end(),
           std::inserter(candidates_, candidates_.begin()),
-          [](const std::pair<EntryId, modular::ModuleManifestSource::Entry>&
+          [](std::pair<const EntryId, modular::ModuleManifestPtr>&
                  key_value) { return key_value.first; });
     } else {
       auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
@@ -251,8 +251,8 @@ class ModuleResolverImpl::FindModulesCall
 
       } else {
         auto result = modular::ModuleResolverResult::New();
-        result->module_id = entry.binary;
-        result->local_name = entry.local_name;
+        result->module_id = entry->binary;
+        result->local_name = entry->local_name;
         CopyNounsToModuleResolverResult(query_, &result);
 
         result_->modules.push_back(std::move(result));
@@ -267,11 +267,11 @@ class ModuleResolverImpl::FindModulesCall
   // populate each of the entry nouns.
   f1dl::Array<modular::ModuleResolverResultPtr>
   MatchQueryNounsToEntryNounsByType(
-      const modular::ModuleManifestSource::Entry& entry) {
+      const modular::ModuleManifestPtr& entry) {
     f1dl::Array<modular::ModuleResolverResultPtr> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
-    if (query_->noun_constraints.size() < entry.noun_constraints.size()) {
+    if (query_->noun_constraints.size() < entry->noun_constraints.size()) {
       return modules;
     }
 
@@ -289,8 +289,8 @@ class ModuleResolverImpl::FindModulesCall
     // For each of the possible mappings, create a resolver result.
     for (const auto& noun_mapping : noun_mappings) {
       auto result = modular::ModuleResolverResult::New();
-      result->module_id = entry.binary;
-      result->local_name = entry.local_name;
+      result->module_id = entry->binary;
+      result->local_name = entry->local_name;
       CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
       modules.push_back(std::move(result));
     }
@@ -302,17 +302,18 @@ class ModuleResolverImpl::FindModulesCall
   // all the |query_| nouns that are type-compatible with that |entry| noun.
   std::map<std::string, std::vector<std::string>>
   MapEntryNounsToCompatibleQueryNouns(
-      const modular::ModuleManifestSource::Entry& entry) {
+      const modular::ModuleManifestPtr& entry) {
     std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
-    for (const auto& entry_noun : entry.noun_constraints) {
+    for (const auto& entry_noun : entry->noun_constraints) {
       std::vector<std::string> matching_query_nouns;
       for (const auto& query_noun : query_->noun_constraints) {
+        std::vector<std::string> entry_noun_types = ToArray(entry_noun->types);
         if (DoTypesIntersect(noun_types_cache_[query_noun.GetKey()],
-                             entry_noun.types)) {
+                             entry_noun_types)) {
           matching_query_nouns.push_back(query_noun.GetKey());
         }
       }
-      entry_noun_to_query_nouns[entry_noun.name] = matching_query_nouns;
+      entry_noun_to_query_nouns[entry_noun->name] = matching_query_nouns;
     }
     return entry_noun_to_query_nouns;
   }
@@ -399,6 +400,14 @@ class ModuleResolverImpl::FindModulesCall
                           second_type_set.begin(), second_type_set.end(),
                           std::inserter(intersection, intersection.begin()));
     return !intersection.empty();
+  }
+
+  std::vector<std::string> ToArray(f1dl::Array<f1dl::String>& values) {
+    std::vector<std::string> ret;
+    for (f1dl::String str : values.storage()) {
+      ret.push_back(str.get());
+    }
+    return ret;
   }
 
   // Copies the nouns from |query| to the provided resolver result.
@@ -531,15 +540,16 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     // Simply prefix match on the last element of the verb.
     // Verbs have a convention of being namespaced like java classes:
     // com.google.subdomain.verb
-    auto parts = fxl::SplitString(entry.verb, ".", fxl::kKeepWhitespace,
+    std::string verb = entry->verb;
+    auto parts = fxl::SplitString(verb, ".", fxl::kKeepWhitespace,
                                   fxl::kSplitWantAll);
     const auto& last_part = parts.back();
-    if (StringStartsWith(entry.verb, query->text) ||
+    if (StringStartsWith(entry->verb, query->text) ||
         StringStartsWith(last_part.ToString(), query->text)) {
       auto proposal = Proposal::New();
-      proposal->id = entry.binary;
+      proposal->id = entry->binary;
       auto create_story = CreateStory::New();
-      create_story->module_id = entry.binary;
+      create_story->module_id = entry->binary;
       auto action = Action::New();
       action->set_create_story(std::move(create_story));
       proposal->on_selected.push_back(std::move(action));
@@ -547,7 +557,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
       proposal->display = SuggestionDisplay::New();
       proposal->display->headline =
           std::string("Go go gadget ") + last_part.ToString();
-      proposal->display->subheadline = entry.binary;
+      proposal->display->subheadline = entry->binary;
       proposal->display->color = 0xffffffff;
       proposal->display->annoyance = AnnoyanceType::NONE;
 
@@ -587,10 +597,10 @@ void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
 void ModuleResolverImpl::OnNewManifestEntry(
     const std::string& source_name,
     std::string id_in,
-    modular::ModuleManifestSource::Entry new_entry) {
+    modular::ModuleManifestPtr new_entry) {
   FXL_LOG(INFO) << "New Module manifest " << id_in
-                << ": verb = " << new_entry.verb
-                << ", binary = " << new_entry.binary;
+                << ": verb = " << new_entry->verb
+                << ", binary = " << new_entry->binary;
   // Add this new entry info to our local index.
   if (entries_.count(EntryId(source_name, id_in)) > 0) {
     // Remove this existing entry first, then add it back in.
@@ -601,11 +611,11 @@ void ModuleResolverImpl::OnNewManifestEntry(
   FXL_CHECK(ret.second);
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
-  verb_to_entries_[entry.verb].insert(id);
+  verb_to_entries_[entry->verb].insert(id);
 
-  for (const auto& constraint : entry.noun_constraints) {
-    for (const auto& type : constraint.types) {
-      noun_type_and_name_to_entries_[std::make_pair(type, constraint.name)]
+  for (const auto& constraint : entry->noun_constraints) {
+    for (const auto& type : constraint->types) {
+      noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
           .insert(id);
       noun_type_to_entries_[type].insert(id);
     }
@@ -622,11 +632,11 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   }
 
   const auto& entry = it->second;
-  verb_to_entries_[entry.verb].erase(id);
+  verb_to_entries_[entry->verb].erase(id);
 
-  for (const auto& constraint : entry.noun_constraints) {
-    for (const auto& type : constraint.types) {
-      noun_type_and_name_to_entries_[std::make_pair(type, constraint.name)]
+  for (const auto& constraint : entry->noun_constraints) {
+    for (const auto& type : constraint->types) {
+      noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
           .erase(id);
       noun_type_to_entries_[type].erase(id);
     }

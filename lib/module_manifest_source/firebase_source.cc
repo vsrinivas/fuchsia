@@ -23,17 +23,17 @@ namespace modular {
 
 namespace {
 
-// TODO(thatguy): This is duplicated from directory_source. Put into a shared
+// TODO(thatguy): This is duplicated from json.cc. Put into a shared
 // file.
 void XdrNounConstraint(
     modular::XdrContext* const xdr,
-    ModuleManifestSource::Entry::NounConstraint* const data) {
+    modular::NounConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("types", &data->types);
 }
 
 void XdrEntry(modular::XdrContext* const xdr,
-              ModuleManifestSource::Entry* const data) {
+              modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("local_name", &data->local_name);
   xdr->Field("verb", &data->verb);
@@ -140,13 +140,13 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
       return;
     }
 
-    Entry entry;
+    auto entry = modular::ModuleManifest::New();
     if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
       return;
     }
 
-    new_fn_(name, entry);
+    new_fn_(name, std::move(entry));
   }
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

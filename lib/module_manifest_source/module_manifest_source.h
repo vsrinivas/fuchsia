@@ -10,14 +10,14 @@
 #include <vector>
 
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/module/fidl/module_manifest.fidl.h"
 
 namespace modular {
 
 // Abstract base class for all Module Manifest Source implementations.
 class ModuleManifestSource {
  public:
-  struct Entry;
-  using NewEntryFn = std::function<void(std::string, Entry)>;
+  using NewEntryFn = std::function<void(std::string, ModuleManifestPtr)>;
   using RemovedEntryFn = std::function<void(std::string)>;
   using IdleFn = std::function<void()>;
 
@@ -40,22 +40,6 @@ class ModuleManifestSource {
                      IdleFn idle_fn,
                      NewEntryFn new_fn,
                      RemovedEntryFn removed_fn) = 0;
-};
-
-// These fields mirror those in the Module manifest doc:
-// https://fuchsia.googlesource.com/peridot/+/HEAD/docs/modular/manifests/module.md
-struct ModuleManifestSource::Entry {
-  struct NounConstraint;
-
-  std::string binary;
-  std::string local_name;
-  std::string verb;
-  std::vector<NounConstraint> noun_constraints;
-};
-
-struct ModuleManifestSource::Entry::NounConstraint {
-  std::string name;
-  std::vector<std::string> types;
 };
 
 }  // namespace modular

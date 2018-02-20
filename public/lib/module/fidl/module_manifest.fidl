@@ -1,0 +1,32 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Module metadata that defined the runtime capabilities of a single module.
+struct ModuleManifest {
+  // The relative path from the root of the package where the Module executable
+  // file can be found.
+  string binary;
+
+  //TODO(thatguy): This property makes no sense any more. Consider removing it.
+  string local_name;
+
+  // Identifies which verb this Module implements.
+  string verb;
+
+  // Includes the name and types of entities for the nouns requires to execute |verb|.
+  array<NounConstraint> noun_constraints;
+
+  // Identifies the pattern with which to compose this module with others.
+  string? composition_pattern;
+};
+
+struct NounConstraint {
+  // The name of the noun.
+  string name;
+
+  // An array of the types that are valid for this noun
+  array<string> types;
+};

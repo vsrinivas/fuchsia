@@ -14,13 +14,13 @@ namespace {
 
 void XdrNounConstraint(
     modular::XdrContext* const xdr,
-    ModuleManifestSource::Entry::NounConstraint* const data) {
+    modular::NounConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("types", &data->types);
 }
 
 void XdrEntry(modular::XdrContext* const xdr,
-              ModuleManifestSource::Entry* const data) {
+              modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("local_name", &data->local_name);
   xdr->Field("verb", &data->verb);
@@ -30,7 +30,7 @@ void XdrEntry(modular::XdrContext* const xdr,
 }  // namespace
 
 bool ModuleManifestEntryFromJson(const std::string& json,
-                                 ModuleManifestSource::Entry* entry) {
+                                 modular::ModuleManifestPtr* entry) {
   rapidjson::Document doc;
   // Schema validation of the JSON is happening at publish time. By the time we
   // get here, we assume it's valid manifest JSON.
@@ -51,10 +51,10 @@ bool ModuleManifestEntryFromJson(const std::string& json,
   return true;
 }
 
-void ModuleManifestEntryToJson(const ModuleManifestSource::Entry& entry,
+void ModuleManifestEntryToJson(const modular::ModuleManifestPtr& entry,
                                std::string* json) {
   rapidjson::Document doc;
-  ModuleManifestSource::Entry local_entry{entry};
+  modular::ModuleManifestPtr local_entry = entry.Clone();
   modular::XdrWrite(&doc, &local_entry, XdrEntry);
 
   *json = JsonValueToPrettyString(doc);
