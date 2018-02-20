@@ -111,6 +111,82 @@ bool is_pow2_test() {
     END_TEST;
 }
 
+bool max_element_test() {
+    BEGIN_TEST;
+    int* null = nullptr;
+    EXPECT_EQ(fbl::max_element(null, null), null);
+
+    int value = 5;
+    EXPECT_EQ(fbl::max_element(&value, &value), &value);
+
+    int values[] = { 1, 3, 7, -2, 5, 7 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::max_element(first, last), values + 2);
+
+    END_TEST;
+}
+
+bool max_compare(int a, int b) {
+    return a > b;
+}
+
+bool max_element_compare_test() {
+    BEGIN_TEST;
+    int* null = nullptr;
+    EXPECT_EQ(fbl::max_element(null, null, max_compare), null);
+
+    int value = 5;
+    EXPECT_EQ(fbl::max_element(&value, &value, max_compare), &value);
+
+    int values[] = { 1, 3, 7, -2, 5, 7 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::max_element(first, last, max_compare), values + 2);
+
+    END_TEST;
+}
+
+bool min_element_test() {
+    BEGIN_TEST;
+    int* null = nullptr;
+    EXPECT_EQ(fbl::min_element(null, null), null);
+
+    int value = 5;
+    EXPECT_EQ(fbl::min_element(&value, &value), &value);
+
+    int values[] = { 1, 3, -7, -2, 5, -7 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::min_element(first, last), values + 2);
+
+    END_TEST;
+}
+
+bool min_compare(int a, int b) {
+    return a < b;
+}
+
+bool min_element_compare_test() {
+    BEGIN_TEST;
+    int* null = nullptr;
+    EXPECT_EQ(fbl::min_element(null, null, min_compare), null);
+
+    int value = 5;
+    EXPECT_EQ(fbl::min_element(&value, &value, min_compare), &value);
+
+    int values[] = { 1, 3, -7, -2, 5, -7 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::min_element(first, last, min_compare), values + 2);
+
+    END_TEST;
+}
+
 bool lower_bound_test() {
     BEGIN_TEST;
 
@@ -299,6 +375,10 @@ RUN_NAMED_TEST("is_pow2<uint16_t>", is_pow2_test<uint16_t>)
 RUN_NAMED_TEST("is_pow2<uint32_t>", is_pow2_test<uint32_t>)
 RUN_NAMED_TEST("is_pow2<uint64_t>", is_pow2_test<uint64_t>)
 RUN_NAMED_TEST("is_pow2<size_t>",   is_pow2_test<size_t>)
+RUN_NAMED_TEST("max_element test", max_element_test)
+RUN_NAMED_TEST("max_element_compare test", max_element_compare_test)
+RUN_NAMED_TEST("min_element test", min_element_test)
+RUN_NAMED_TEST("min_element_compare test", min_element_compare_test)
 RUN_NAMED_TEST("lower_bound test", lower_bound_test)
 RUN_NAMED_TEST("lower_bound_compare test", lower_bound_compare_test)
 RUN_NAMED_TEST("gcd_test<uint8_t>",  gcd_test<uint8_t>)

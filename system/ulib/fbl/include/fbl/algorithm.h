@@ -72,6 +72,76 @@ constexpr const T round_down(const T& val, const U& multiple) {
                 (val / multiple) * multiple;
 }
 
+// Returns an iterator to the maximum element in the range [|first|, |last|).
+//
+// |first| and |last| must be forward iterators.
+//
+// Similar to: <http://en.cppreference.com/w/cpp/algorithm/max_element>
+template<class FwIterator>
+FwIterator max_element(FwIterator first, FwIterator last) {
+    FwIterator max = first;
+    while (first < last) {
+        if (*first > *max) {
+            max = first;
+        }
+        first++;
+    }
+    return max;
+}
+
+// Returns an iterator to the maximum element in the range [|first|, |last|).
+// using |comp| to compare elements instead of operator>
+//
+// |first| and |last| must be forward iterators.
+//
+// Similar to: <http://en.cppreference.com/w/cpp/algorithm/max_element>
+template<class FwIterator, class Compare>
+FwIterator max_element(FwIterator first, FwIterator last, Compare comp) {
+    FwIterator max = first;
+    while (first < last) {
+        if (comp(*first, *max)) {
+            max = first;
+        }
+        first++;
+    }
+    return max;
+}
+
+// Returns an iterator to the minimum element in the range [|first|, |last|).
+//
+// |first| and |last| must be forward iterators.
+//
+// Similar to: <http://en.cppreference.com/w/cpp/algorithm/min_element>
+template<class FwIterator>
+FwIterator min_element(FwIterator first, FwIterator last) {
+    FwIterator min = first;
+    while (first < last) {
+        if (*first < *min) {
+            min = first;
+        }
+        first++;
+    }
+    return min;
+}
+
+// Returns an iterator to the minimum element in the range [|first|, |last|)
+// using |comp| to compare elements instead of operator<
+//
+// |first| and |last| must be forward iterators.
+//
+// Similar to: <http://en.cppreference.com/w/cpp/algorithm/min_element>
+template<class FwIterator, class Compare>
+FwIterator min_element(FwIterator first, FwIterator last, Compare comp) {
+    FwIterator min = first;
+    while (first < last) {
+        if (comp(*first, *min)) {
+            min = first;
+        }
+        first++;
+    }
+    return min;
+}
+
 // Returns a pointer to the first element that is not less than |value|, or
 // |last| if no such element is found.
 //
