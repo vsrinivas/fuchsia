@@ -467,7 +467,7 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
     // TODO(ZX-1631): While this limits reading to the mapped address space of
     // this VMO, it should be reading from multiple VMOs, not a single one.
     // Additionally, it is racy with the mapping going away.
-    len = MIN(len, vm_mapping->size() - offset);
+    len = MIN(len, vm_mapping->size() - (vaddr - vm_mapping->base()));
     zx_status_t st = vmo->ReadUser(_buffer, offset, len, &read);
 
     if (st == ZX_OK) {
@@ -536,7 +536,7 @@ zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
     // TODO(ZX-1631): While this limits writing to the mapped address space of
     // this VMO, it should be writing to multiple VMOs, not a single one.
     // Additionally, it is racy with the mapping going away.
-    len = MIN(len, vm_mapping->size() - offset);
+    len = MIN(len, vm_mapping->size() - (vaddr - vm_mapping->base()));
     zx_status_t st = vmo->WriteUser(_buffer, offset, len, &written);
 
     if (st == ZX_OK) {
