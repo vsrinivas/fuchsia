@@ -13,6 +13,7 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 #include "garnet/bin/media/util/incident.h"
 #include "garnet/bin/media/util/safe_clone.h"
+#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -144,7 +145,9 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
 // static
 std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
-  return std::shared_ptr<Demux>(new FfmpegDemuxImpl(reader));
+  return ThreadAwareSharedPtr<Demux>(
+      new FfmpegDemuxImpl(reader),
+      fsl::MessageLoop::GetCurrent()->task_runner());
 }
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
