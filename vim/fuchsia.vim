@@ -67,7 +67,7 @@ if jiri_manifest != ""
   " This may be called twice because autocmds arrive in different orders on
   " different platforms.
   function FuchsiaCppBuffer()
-    if g:loaded_youcompleteme
+    if exists('g:loaded_youcompleteme')
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
     endif
