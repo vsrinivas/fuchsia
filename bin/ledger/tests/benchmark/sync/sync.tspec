@@ -10,11 +10,6 @@
       "event_name": "sync latency",
       "event_category": "benchmark",
       "split_samples_at": [1]
-    },
-    {
-      "type": "duration",
-      "event_name": "get and verify backlog",
-      "event_category": "benchmark"
     }
   ]
 }

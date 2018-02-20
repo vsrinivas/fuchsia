@@ -128,7 +128,7 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
 
 void SyncBenchmark::RunSingle(size_t i) {
   if (i == entry_count_) {
-    Backlog();
+    ShutDown();
     return;
   }
 
@@ -145,59 +145,11 @@ void SyncBenchmark::RunSingle(size_t i) {
       });
 }
 
-void SyncBenchmark::Backlog() {
-  std::string gamma_path = gamma_tmp_dir_.path() + "/sync_user";
-  bool ret = files::CreateDirectory(gamma_path);
-  FXL_DCHECK(ret);
-
-  cloud_provider::CloudProviderPtr cloud_provider_gamma;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "", cloud_provider_gamma.NewRequest());
-  ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &gamma_controller_, std::move(cloud_provider_gamma), "sync", gamma_path,
-      &gamma_);
-  QuitOnError(status, "backlog");
-  TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
-  gamma_->GetPage(page_id_.Clone(), gamma_page_.NewRequest(),
-                  [this](ledger::Status status) {
-                    if (benchmark::QuitOnError(status, "GetPage")) {
-                      return;
-                    }
-                    VerifyBacklog();
-                  });
-}
-
-void SyncBenchmark::VerifyBacklog() {
-  ledger::PageSnapshotPtr snapshot;
-  gamma_page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
-                           benchmark::QuitOnErrorCallback("GetSnapshot"));
-
-  ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetEntries(
-      nullptr, nullptr,
-      fxl::MakeCopyable(
-          [this, snapshot = std::move(snapshot)](
-              ledger::Status status, auto entries, auto next_token) {
-            if (benchmark::QuitOnError(status, "GetEntries")) {
-              return;
-            }
-            if (entries.size() == static_cast<size_t>(entry_count_)) {
-              TRACE_ASYNC_END("benchmark", "get and verify backlog", 0);
-            }
-            // If the number of entries does not match, don't record the end of
-            // the verify backlog even, which will fail the benchmark.
-            ShutDown();
-          }));
-}
-
 void SyncBenchmark::ShutDown() {
   alpha_controller_->Kill();
   alpha_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   beta_controller_->Kill();
   beta_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-  gamma_controller_->Kill();
-  gamma_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
