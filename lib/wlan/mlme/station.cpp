@@ -551,8 +551,8 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaRequest);
 
     auto addbar = rx_frame.body;
-    fishark("Inbound ADDBA Req frame: len %zu\n", rx_frame.body_len);
-    fishark("  addba req: %s\n", debug::Describe(*addbar).c_str());
+    finspect("Inbound ADDBA Req frame: len %zu\n", rx_frame.body_len);
+    finspect("  addba req: %s\n", debug::Describe(*addbar).c_str());
 
     // Construct AddBaResponse frame
     fbl::unique_ptr<Packet> packet = nullptr;
@@ -613,8 +613,8 @@ zx_status_t Station::HandleAddBaResponseFrame(
 
     auto hdr = rx_frame.hdr;
     auto addba_resp = rx_frame.body;
-    fishark("Inbound ADDBA Resp frame: len %zu\n", hdr->len() + rx_frame.body_len);
-    fishark("  addba resp: %s\n", debug::Describe(*addba_resp).c_str());
+    finspect("Inbound ADDBA Resp frame: len %zu\n", hdr->len() + rx_frame.body_len);
+    finspect("  addba resp: %s\n", debug::Describe(*addba_resp).c_str());
 
     // TODO(porce): Keep the result of negotiation.
     return ZX_OK;
@@ -649,7 +649,7 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
 zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
                                      const wlan_rx_info_t& rxinfo) {
     debugfn();
-    if (kFisharkEnabled) { DumpDataFrame(frame); }
+    if (kFinspectEnabled) { DumpDataFrame(frame); }
 
     auto associated = (state_ == WlanState::kAssociated);
     if (!associated) {
@@ -809,10 +809,10 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     std::memcpy(llc->payload, eth->payload, frame.body_len);
 
-    fishark("Outbound data frame: len %zu\n", wlan_packet->len());
-    fishark("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    fishark("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    fishark("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
+    finspect("Outbound data frame: len %zu\n", wlan_packet->len());
+    finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
+    finspect("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
 
     wlan_packet->CopyCtrlFrom(txinfo);
 
@@ -1067,8 +1067,8 @@ zx_status_t Station::SendAddBaRequestFrame() {
     req->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
     req->seq_ctrl.set_starting_seq(0);
 
-    fishark("Outbound ADDBA Req frame: len %zu\n", packet->len());
-    fishark("  addba req: %s\n", debug::Describe(*req).c_str());
+    finspect("Outbound ADDBA Req frame: len %zu\n", packet->len());
+    finspect("  addba req: %s\n", debug::Describe(*req).c_str());
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
@@ -1295,10 +1295,10 @@ void Station::DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame) {
     auto llc = frame.body;
     auto frame_len = hdr->len() + frame.body_len;
 
-    fishark("Inbound data frame: len %zu\n", frame_len);
-    fishark("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    fishark("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    fishark("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
+    finspect("Inbound data frame: len %zu\n", frame_len);
+    finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
+    finspect("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {

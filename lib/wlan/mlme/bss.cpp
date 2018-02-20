@@ -40,7 +40,7 @@ zx_status_t Bss::ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_i
 }
 
 std::string Bss::ToString() const {
-    // TODO(porce): Convert to fishark Describe()
+    // TODO(porce): Convert to finspect Describe()
     char buf[1024];
     snprintf(buf, sizeof(buf),
              "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",

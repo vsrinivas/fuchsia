@@ -32,15 +32,15 @@ LOG_CATEGORY(kLogDataPacketTrace, 19);
 LOG_CATEGORY(kLogDataBeaconTrace, 20);
 LOG_CATEGORY(kLogWlanFrameTrace, 21);
 LOG_CATEGORY(kLogFrameHandlerTrace, 22);
-LOG_CATEGORY(kLogFishark, 23);  // Packet decoder log
+LOG_CATEGORY(kLogFinspect, 23);  // Packet decoder log
 
 #undef LOG_CATEGORY
 
 // Set this to tune log output
 constexpr uint64_t kLogLevel = kLogInfos;
-constexpr bool kFisharkEnabled = kLogLevel & kLogFishark;
+constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 
-#define fishark(args...) wlogf(kLogFishark, "[fishark] ", args)
+#define finspect(args...) wlogf(kLogFinspect, "[finspect] ", args)
 
 #define wlogf(level, level_prefix, args...)                                       \
     do {                                                                          \
