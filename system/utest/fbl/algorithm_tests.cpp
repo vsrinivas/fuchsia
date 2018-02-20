@@ -362,6 +362,45 @@ bool lcm_test() {
     END_TEST;
 }
 
+bool accumulate_test() {
+    BEGIN_TEST;
+
+    int* null = nullptr;
+    EXPECT_EQ(fbl::accumulate(null, null, 42), 42);
+
+    int value = 5;
+    EXPECT_EQ(fbl::accumulate(&value, &value, 42), 42);
+
+    int values[] = { 9, 11, 8, 12 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::accumulate(first, last, 2), 42);
+
+    END_TEST;
+}
+
+int accumulate_op(int a, int b) {
+    return a + b;
+}
+
+bool accumulate_op_test() {
+    BEGIN_TEST;
+
+    int* null = nullptr;
+    EXPECT_EQ(fbl::accumulate(null, null, 42, accumulate_op), 42);
+
+    int value = 5;
+    EXPECT_EQ(fbl::accumulate(&value, &value, 42, accumulate_op), 42);
+
+    int values[] = { 9, 11, 8, 12 };
+    constexpr size_t count = fbl::count_of(values);
+    int* first = values;
+    int* last = values + count;
+    EXPECT_EQ(fbl::accumulate(first, last, 2, accumulate_op), 42);
+
+    END_TEST;
+}
 }  // namespace
 
 BEGIN_TEST_CASE(algorithm_tests)
@@ -391,4 +430,6 @@ RUN_NAMED_TEST("lcm_test<uint16_t>", lcm_test<uint16_t>)
 RUN_NAMED_TEST("lcm_test<uint32_t>", lcm_test<uint32_t>)
 RUN_NAMED_TEST("lcm_test<uint64_t>", lcm_test<uint64_t>)
 RUN_NAMED_TEST("lcm_test<size_t>",   lcm_test<size_t>)
+RUN_NAMED_TEST("accumulate test", accumulate_test)
+RUN_NAMED_TEST("accumulate_op test", accumulate_op_test)
 END_TEST_CASE(algorithm_tests);

@@ -217,4 +217,34 @@ T lcm(T first, T second) {
     return static_cast<T>((first / gcd(first, second)) * second);
 }
 
+// Accumulates the elements in the range [|first|, |last|) with |initial_value|.
+// Returns the accumulated value.
+//
+// |first| and |last| must be InputIterators.
+//
+// Similar to <http://en.cppreference.com/w/cpp/algorithm/accumulate>.
+template <class InputIterator, class T>
+T accumulate(InputIterator first, InputIterator last, T initial_value) {
+    while(first < last) {
+        initial_value += *first;
+        first++;
+    }
+    return initial_value;
+}
+
+// Accumulates the elements in the range [|first|, |last|) with |initial_value|
+// using |op| instead of operator+.  Returns the accumulated value.
+//
+// |first| and |last| must be InputIterators.
+//
+// Similar to <http://en.cppreference.com/w/cpp/algorithm/accumulate>.
+template <class InputIterator, class T, class BinaryOp>
+T accumulate(InputIterator first, InputIterator last, T initial_value, BinaryOp op) {
+    while(first < last) {
+        initial_value = op(initial_value, *first);
+        first++;
+    }
+    return initial_value;
+}
+
 }  // namespace fbl
