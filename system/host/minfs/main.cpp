@@ -214,10 +214,15 @@ zx_status_t process_manifest_line(FILE* manifest, const char* dir_path) {
 
     *eq_ptr = '\0';
     char src[PATH_MAX];
+    src[0] = '\0';
     char dst[PATH_MAX];
     strncpy(dst, line, PATH_MAX);
-    strncpy(src, dir_path, PATH_MAX);
-    strncat(src, "/", PATH_MAX - strlen(src));
+
+    if (eq_ptr[1] != '/') {
+        strncpy(src, dir_path, PATH_MAX);
+        strncat(src, "/", PATH_MAX - strlen(src));
+    }
+
     strncat(src, eq_ptr + 1, PATH_MAX - strlen(src));
 
     // Create directories if they don't exist
