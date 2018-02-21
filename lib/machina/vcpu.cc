@@ -189,9 +189,12 @@ static zx_status_t handle_io(machina::Vcpu* vcpu,
 static zx_status_t handle_vcpu(machina::Vcpu* vcpu,
                                const zx_packet_guest_vcpu_t* packet,
                                uint64_t trap_key) {
-  FXL_LOG(ERROR) << "Got VCPU packet with addr = 0x" << std::hex << packet->addr
-                 << ", apic_id = " << std::dec << packet->id;
-  return vcpu->StartSecondaryProcessor(packet->addr, packet->id);
+  switch (packet->type) {
+    case ZX_PKT_GUEST_VCPU_STARTUP:
+      return vcpu->StartSecondaryProcessor(packet->startup.entry, packet->startup.id);
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 namespace machina {
