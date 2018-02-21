@@ -9,7 +9,9 @@ executable("bin") {
   output_name = "zxdb"
 
   sources = []
-  deps = []
+  deps = [
+    "//garnet/lib/debug_ipc:client",
+  ]
 
   if (current_toolchain == host_toolchain) {
     sources += [ "main_host.cc" ]

@@ -8,8 +8,18 @@ static_library("lib") {
   sources = [
     "debug_agent.cc",
     "debug_agent.h",
+    "debugged_process.cc",
+    "debugged_process.h",
     "exception_handler.cc",
     "exception_handler.h",
+    "launch.cc",
+    "launch.h",
+    "object_util.cc",
+    "object_util.h",
+    "process_info.cc",
+    "process_info.h",
+    "system_info.cc",
+    "system_info.h",
   ]
 
   public_deps = [

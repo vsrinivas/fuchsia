@@ -6,6 +6,10 @@
 
 #include <zircon/syscalls/exception.h>
 
+#include "garnet/bin/debug_agent/launch.h"
+#include "garnet/bin/debug_agent/object_util.h"
+#include "garnet/bin/debug_agent/process_info.h"
+#include "garnet/bin/debug_agent/system_info.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
@@ -94,6 +98,10 @@ void DebugAgent::OnStreamData() {
   #undef DISPATCH
 }
 
+void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
+  RemoveDebuggedProcess(process_koid);
+}
+
 void DebugAgent::OnThreadStarting(const zx::thread& thread) {
   fprintf(stderr, "Exception: thread starting.\n");
   thread.resume(ZX_RESUME_EXCEPTION);
@@ -111,16 +119,43 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
                           debug_ipc::LaunchReply* reply) {
+  zx::process process;
+  reply->status = Launch(request.argv, &process);
+  if (reply->status != ZX_OK)
+    return;
+  reply->process_koid = KoidForProcess(process);
+  AddDebuggedProcess(reply->process_koid, std::move(process));
 }
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
+  GetProcessTree(&reply->root);
 }
 
 void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
                            debug_ipc::ThreadsReply* reply) {
+  auto found = procs_.find(request.process_koid);
+  if (found == procs_.end())
+    return;
+  GetProcessThreads(found->second.process().get(), &reply->threads);
 }
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                               debug_ipc::ReadMemoryReply* reply) {
+}
+
+void DebugAgent::AddDebuggedProcess(zx_koid_t koid, zx::process proc) {
+  handler_->Attach(koid, proc.get());
+  procs_.emplace(std::piecewise_construct,
+                 std::forward_as_tuple(koid),
+                 std::forward_as_tuple(koid, std::move(proc)));
+}
+
+void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
+  auto found = procs_.find(koid);
+  if (found == procs_.end())
+    return;
+
+  handler_->Detach(found->second.koid());
+  procs_.erase(found);
 }

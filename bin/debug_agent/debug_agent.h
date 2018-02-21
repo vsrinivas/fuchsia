@@ -4,8 +4,12 @@
 
 #pragma once
 
+#include <map>
+
+#include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
 #include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 // Main state and control for the debug agent. The exception handler reports
 // exceptions in the debugged program directly to this class and data from
@@ -22,6 +26,7 @@ class DebugAgent : public ExceptionHandler::Sink {
 
   // ExceptionHandler::Sink implementation.
   void OnStreamData() override;
+  void OnProcessTerminated(zx_koid_t process_koid) override;
   void OnThreadStarting(const zx::thread& thread) override;
   void OnThreadExiting(const zx::thread& thread) override;
 
@@ -38,5 +43,12 @@ class DebugAgent : public ExceptionHandler::Sink {
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply);
 
+  void AddDebuggedProcess(zx_koid_t koid, zx::process proc);
+  void RemoveDebuggedProcess(zx_koid_t koid);
+
   ExceptionHandler* handler_;  // Non-owning.
+
+  std::map<zx_koid_t, DebuggedProcess> procs_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };
