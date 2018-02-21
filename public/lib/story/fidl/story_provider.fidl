@@ -16,17 +16,23 @@ import "lib/story/fidl/story_state.fidl";
 // Closing a |StoryProvider| connection has no effect on the state of the
 // framework.
 interface StoryProvider {
-  // Creates a new story containing the module at |module_url| as the first
-  // module. The returned |story_id| can be used to obtain a StoryController
-  // connection to perform actions on the newly created story, specifically
-  // starting it.
-  CreateStory@0(string module_url) => (string story_id);
+  // Creates a new story. If |module_url| is supplied, adds it to the story as
+  // the first module.  The returned |story_id| can be used to obtain a
+  // StoryController connection to perform actions on the newly created story,
+  // specifically starting it.
+  //
+  // Providing |module_url| is deprecated. It is preferred to GetController()
+  // and call StoryController.AddDaisy().
+  CreateStory@0(string? module_url) => (string story_id);
 
   // Like CreateStory(), but with extra info and with values for the root link
   // atomically set. Otherwise, if SetInfoExtra() is called separately on the
   // story controller, separate StoryProviderWatcher notifications are
   // generated, which is inconvenient.
-  CreateStoryWithInfo@1(string module_url, map<string, string>? extra_info,
+  //
+  // Providing |module_url| is deprecated. It is preferred to GetController()
+  // and call StoryController.AddDaisy().
+  CreateStoryWithInfo@1(string? module_url, map<string, string>? extra_info,
                         string? root_json) => (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns when the

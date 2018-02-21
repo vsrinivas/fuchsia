@@ -255,10 +255,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void DisposeLink(LinkImpl* link);
   void AddModuleWatcher(ModuleControllerPtr module_controller,
                         const f1dl::Array<f1dl::String>& module_path);
-  void OnRootStateChange(ModuleState state);
+  void UpdateStoryState(ModuleState state);
   void ProcessPendingViews();
 
-  static bool IsRootModule(const f1dl::Array<f1dl::String>& module_path);
   bool IsExternalModule(const f1dl::Array<f1dl::String>& module_path);
 
   // The ID of the story, its state and the context to obtain it from and
@@ -342,6 +341,11 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
+
+  // Module state is used to inform Story state (see OnModuleStateChange() and
+  // MaybeUpdateStoryState()). We keep track of the first Module to start in this
+  // Story as a proxy 'root' Module.
+  f1dl::Array<f1dl::String> first_module_path_;
 
   // A dummy service that allows applications that can run both as modules in a
   // story and standalone from the shell to determine whether they are in a

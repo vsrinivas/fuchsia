@@ -120,7 +120,7 @@ class TestApp : public ModuleWatcher {
   f1dl::Binding<ModuleWatcher> module_watcher_binding_;
 
   TestPoint start_daisy_{"Started child Daisy"};
-  TestPoint child_module_stopped_{"Child Module stopped"};
+  TestPoint child_module_stopped_{"Child module observed to have stopped"};
   TestPoint initialized_{"Parent module initialized"};
   TestPoint stopped_{"Parent module stopped"};
 };

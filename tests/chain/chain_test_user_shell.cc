@@ -10,6 +10,7 @@
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/daisy/fidl/daisy.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -31,10 +32,14 @@ constexpr char kModuleUrl[] =
 
 // Tests starting Modules with a Daisy and the subsequent initialization of the
 // Module's Links based on the values of Daisy.nouns.
-class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
+class TestApp : public testing::ComponentBase<UserShell>,
+                StoryWatcher,
+                ModuleWatcher {
  public:
   TestApp(app::ApplicationContext* const application_context)
-      : ComponentBase(application_context), story_watcher_binding_(this) {
+      : ComponentBase(application_context),
+        story_watcher_binding_(this),
+        module_watcher_binding_(this) {
     TestInit(__FILE__);
   }
 
@@ -49,9 +54,7 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
   void Initialize(
       f1dl::InterfaceHandle<UserShellContext> user_shell_context) override {
     initialize_.Pass();
-
     user_shell_context_.Bind(std::move(user_shell_context));
-
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     CreateStory();
@@ -63,25 +66,51 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
       Logout();
   }
 
+  // |ModuleWatcher|
+  void OnStateChange(ModuleState state) override {
+    if (state == ModuleState::DONE) {
+      // When our child Module exits, we should exit.
+      // child_module_->Stop([this] { module_context_->Done(); });
+      child_module_->Stop([] {});
+    }
+  }
+
   // |StoryWatcher|
   void OnModuleAdded(ModuleDataPtr module_data) override {}
 
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    // TODO(thatguy): CreateStory() should take a Daisy as well, or not add any
-    // Module in the first place.
-    story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::String& story_id) {
-                                   story_id_ = story_id;
-                                   create_story_.Pass();
-                                   StartStory();
-                                 });
+    // Create an empty Story. Once it has been created, add our first Module.
+    story_provider_->CreateStory(
+        nullptr /* module_url */, [this](const f1dl::String& story_id) {
+          create_story_.Pass();
+          story_id_ = story_id;
+          story_provider_->GetController(story_id_,
+                                         story_controller_.NewRequest());
+          AddRootModule();
+        });
+  }
+
+  void AddRootModule() {
+    auto daisy = Daisy::New();
+    daisy->url = kModuleUrl;
+
+    auto noun = Noun::New();
+    noun->set_json(R"("initial data for the story")");
+    daisy->nouns["rootModuleNoun1"] = std::move(noun);
+    story_controller_->AddDaisy({}, "rootMod", std::move(daisy),
+                                nullptr /* surface_relation */);
+    story_controller_->GetModuleController({"rootMod"},
+                                           child_module_.NewRequest());
+    ModuleWatcherPtr watcher;
+    module_watcher_binding_.Bind(watcher.NewRequest());
+    child_module_->Watch(std::move(watcher));
+
+    StartStory();
   }
 
   void StartStory() {
-    story_provider_->GetController(story_id_, story_controller_.NewRequest());
-
     // Start and show the new story.
     f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -99,7 +128,10 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
   f1dl::String story_id_;
   StoryControllerPtr story_controller_;
 
+  ModuleControllerPtr child_module_;
+
   f1dl::Binding<StoryWatcher> story_watcher_binding_;
+  f1dl::Binding<ModuleWatcher> module_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

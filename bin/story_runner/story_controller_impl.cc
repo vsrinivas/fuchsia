@@ -544,12 +544,11 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
         // We create N ConnectLinkCall operations. We rely on the fact that
         // once all refcounted instances of |flow| are destroyed, the
         // InitializeChainCall will automatically finish.
-        new ConnectLinkCall(&operation_queue_, story_controller_impl_,
-                            mapping->link_path.Clone(),
-                            LinkImpl::ConnectionType::Secondary,
-                            info->get_create_link().Clone(),
-                            false /* notify_watchers */,
-                            nullptr /* interface request */, [flow] {});
+        new ConnectLinkCall(
+            &operation_queue_, story_controller_impl_,
+            mapping->link_path.Clone(), LinkImpl::ConnectionType::Secondary,
+            info->get_create_link().Clone(), false /* notify_watchers */,
+            nullptr /* interface request */, [flow] {});
       }
 
       result_->key_to_link_map.push_back(std::move(mapping));
@@ -610,14 +609,22 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // flutter only allows one ViewOwner per flutter application,
     // and we need one ViewOwner instance per Module instance.
 
+    // If this is a root Module and we don't have a link name, give it a root
+    // link of the same name.
+    if (!link_name_ && ParentModulePath(module_path_).empty()) {
+      link_name_ = module_path_[0];
+    }
+
+    // TODO(thatguy): Remove any root link initialization. MI4-739
     if (link_name_) {
       link_path_ = LinkPath::New();
       link_path_->module_path = ParentModulePath(module_path_);
       link_path_->link_name = link_name_;
       InitializeModuleData(flow);
     } else {
-      // If the link name is null, this module receives the default link of its
-      // parent module. We need to retrieve which one it is from story storage.
+      // If the link name is null, this module receives the default link of
+      // its parent module. We need to retrieve which one it is from story
+      // storage.
       new ReadDataCall<ModuleData>(
           &operation_queue_, story_controller_impl_->page(),
           MakeModuleKey(ParentModulePath(module_path_)),
@@ -685,7 +692,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const f1dl::Array<f1dl::String> module_path_;
   const f1dl::String module_url_;
-  const f1dl::String link_name_;
+  f1dl::String link_name_;
   CreateChainInfoPtr create_chain_info_;
   const ModuleSource module_source_;
   const SurfaceRelationPtr surface_relation_;
@@ -944,7 +951,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       new ConnectLinkCall(
           &operation_queue_, story_controller_impl_, std::move(link_path),
           LinkImpl::ConnectionType::Primary, std::move(create_link_info_),
-          true /* notify_watchers */, link_.NewRequest(), [flow]{});
+          true /* notify_watchers */, link_.NewRequest(), [flow] {});
     }
 
     auto module_path = f1dl::Array<f1dl::String>::New(0);
@@ -1715,6 +1722,10 @@ void StoryControllerImpl::AddForCreate(const f1dl::String& module_name,
                                        const f1dl::String& link_name,
                                        CreateLinkInfoPtr create_link_info,
                                        const std::function<void()>& done) {
+  if (!module_url) {
+    done();
+  }
+
   new AddForCreateCall(&operation_queue_, this, module_name, module_url,
                        link_name, std::move(create_link_info), done);
 }
@@ -1778,7 +1789,8 @@ void StoryControllerImpl::RequestStoryFocus() {
 }
 
 void StoryControllerImpl::ConnectLinkPath(
-    LinkPathPtr link_path, LinkImpl::ConnectionType connection_type,
+    LinkPathPtr link_path,
+    LinkImpl::ConnectionType connection_type,
     f1dl::InterfaceRequest<Link> request) {
   new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
                       connection_type, nullptr /* create_link_info */,
@@ -2223,11 +2235,6 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
-bool StoryControllerImpl::IsRootModule(
-    const f1dl::Array<f1dl::String>& module_path) {
-  return module_path.size() == 1 && module_path[0] == kRootModuleName;
-}
-
 bool StoryControllerImpl::IsExternalModule(
     const f1dl::Array<f1dl::String>& module_path) {
   auto* const i = FindConnection(module_path);
@@ -2245,8 +2252,11 @@ void StoryControllerImpl::OnModuleStateChange(
     return;
   }
 
-  if (IsRootModule(module_path)) {
-    OnRootStateChange(state);
+  if (first_module_path_.is_null()) {
+    first_module_path_ = module_path.Clone();
+  }
+  if (first_module_path_.Equals(module_path)) {
+    UpdateStoryState(state);
   }
 
   if (IsExternalModule(module_path) && state == ModuleState::DONE) {
@@ -2254,7 +2264,8 @@ void StoryControllerImpl::OnModuleStateChange(
   }
 }
 
-void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
+void StoryControllerImpl::UpdateStoryState(
+    const ModuleState state) {
   switch (state) {
     case ModuleState::STARTING:
       state_ = StoryState::STARTING;
