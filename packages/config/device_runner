@@ -1,0 +1,8 @@
+{
+    "resources": [
+        {
+            "bootfs_path": "data/sysmgr/device_runner.config",
+            "file": "peridot/bin/device_runner/config/device_runner.config"
+        }
+    ]
+}

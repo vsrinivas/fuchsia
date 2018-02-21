@@ -1,11 +1,7 @@
 {
     "imports": [
-        "peridot/packages/default"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "data/sysmgr/apps.config",
-            "file": "peridot/tests/boot_test.config"
-        }
+        "garnet/packages/config/test_runner",
+        "garnet/packages/default",
+        "peridot/packages/all"
     ]
 }

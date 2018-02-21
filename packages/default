@@ -1,13 +1,7 @@
 {
     "imports": [
         "garnet/packages/default",
-        "peridot/packages/bup",
-        "peridot/packages/ledger",
-        "peridot/packages/leveldb",
-        "peridot/packages/maxwell",
-        "peridot/packages/modular",
-        "peridot/packages/modular_examples",
-        "peridot/packages/peridot_lib",
-        "peridot/packages/re2"
+        "peridot/packages/all",
+        "peridot/packages/config/device_runner"
     ]
 }
