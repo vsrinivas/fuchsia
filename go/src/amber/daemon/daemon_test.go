@@ -35,6 +35,7 @@ type testSrc struct {
 	interval   time.Duration
 	pkgs       map[string]struct{}
 	replyDelay time.Duration
+	limit      uint64
 }
 
 func (t *testSrc) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
@@ -81,7 +82,7 @@ func (t *testSrc) Equals(o source.Source) bool {
 }
 
 func (t *testSrc) CheckLimit() uint64 {
-	return 1
+	return t.limit
 }
 
 type testTicker struct {
@@ -116,8 +117,7 @@ func processPackage(r *GetResult, pkgs *pkg.PackageSet) error {
 	return nil
 }
 
-// TestDaemon tests daemon.go with a fake package source. The test runs for ~30
-// seconds.
+// TestDaemon tests daemon.go with a fake package source.
 func TestDaemon(t *testing.T) {
 	tickers := []testTicker{}
 	muTickers := sync.Mutex{}
@@ -136,6 +136,10 @@ func TestDaemon(t *testing.T) {
 
 	d := NewDaemon(pkgSet, processPackage)
 	for _, src := range sources {
+		// allow very high request rates for this test since rate limiting isn't
+		// really the target of this test
+		src.limit = 3
+		src.interval = 1 * time.Nanosecond
 		d.AddSource(src)
 	}
 
@@ -173,7 +177,8 @@ func TestGetRequest(t *testing.T) {
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 
 	pkgs = make(map[string]struct{})
 	pkgs[videoPkg.Name] = struct{}{}
@@ -181,7 +186,8 @@ func TestGetRequest(t *testing.T) {
 	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 	sources := []*testSrc{&tSrc, &tSrc2}
 
 	tickers := []testTicker{}
@@ -224,7 +230,8 @@ func TestRateLimit(t *testing.T) {
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
-		pkgs:     make(map[string]struct{})}
+		pkgs:     make(map[string]struct{}),
+		limit:    1}
 	wrapped := NewSourceKeeper(&tSrc)
 	dummy := []*pkg.Package{&pkg.Package{Name: "None", Version: "aaaaaa"}}
 
@@ -261,7 +268,8 @@ func TestRequestCollapse(t *testing.T) {
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 
 	pkgs = make(map[string]struct{})
 	pkgs[videoPkg.Name] = struct{}{}
@@ -269,7 +277,8 @@ func TestRequestCollapse(t *testing.T) {
 	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: srcRateLimit,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 	sources := []*testSrc{&tSrc, &tSrc2}
 
 	tickers := []testTicker{}
@@ -339,7 +348,8 @@ func createTestSrcs() []*testSrc {
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: time.Millisecond * 3,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 
 	pkgs = make(map[string]struct{})
 	pkgs["video"] = struct{}{}
@@ -347,7 +357,8 @@ func createTestSrcs() []*testSrc {
 	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[pkg.Package]*struct{}),
 		interval: time.Millisecond * 5,
-		pkgs:     pkgs}
+		pkgs:     pkgs,
+		limit:    1}
 	return []*testSrc{&tSrc, &tSrc2}
 }
 
