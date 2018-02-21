@@ -16,6 +16,7 @@
 #include <zx/vmo.h>
 
 #include "usb-video.h"
+#include "video-buffer.h"
 
 namespace video {
 namespace usb {
@@ -59,15 +60,6 @@ private:
         STOPPED,
         STOPPING,
         STARTED,
-    };
-
-    struct RingBuffer {
-        zx_status_t Init(uint32_t size);
-
-        zx::vmo vmo;
-        void* virt = nullptr;
-        uint32_t size = 0;
-        uint32_t offset = 0;
     };
 
     // Maps between a camera video format proto and pointers
@@ -131,9 +123,9 @@ private:
                                 const camera::camera_proto::SetFormatReq& req)
         __TA_REQUIRES(lock_);
 
-    // Creates a new ring buffer and maps it into our address space.
+    // Creates a new video buffer and maps it into our address space.
     // The current streaming state must be StreamingState::STOPPED.
-    zx_status_t CreateDataRingBuffer();
+    zx_status_t CreateDataVideoBuffer();
     zx_status_t StartStreaming();
     zx_status_t StopStreaming();
 
@@ -155,7 +147,7 @@ private:
                                          uint32_t* out_header_length)
         __TA_REQUIRES(lock_);
     // Extracts the payload data from the usb request response,
-    // and stores it in the ring buffer.
+    // and stores it in the video buffer.
     void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
 
     void DeactivateStreamChannel(const dispatcher::Channel* channel);
@@ -208,7 +200,9 @@ private:
 
     FrameState cur_frame_state_;
 
-    RingBuffer data_ring_buffer_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<VideoBuffer> video_buffer_ __TA_GUARDED(lock_);
+    // Offset into the video buffer of the current frame we're writing to.
+    uint64_t video_buffer_offset_ __TA_GUARDED(lock_);
 
     volatile StreamingState streaming_state_
         __TA_GUARDED(lock_) = StreamingState::STOPPED;
