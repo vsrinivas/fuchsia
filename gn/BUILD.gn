@@ -480,6 +480,42 @@ action("fvm.blk") {
   ]
 }
 
+# Convert fvm.blk into a Qemu Copy on Write compressed image. This provides a
+# runtime-mountable qemu disk image that is significantly smaller than a raw FVM
+# partition image, but not as small as a compressed sparse FVM image.
+action("fvm.blk.qcow2") {
+  visibility = [ ":*" ]
+  qemu_img_path = "//buildtools/${host_platform}/qemu/bin/qemu-img"
+
+  inputs = [
+    qemu_img_path,
+    fvm_image_path,
+  ]
+
+  fvm_qcow2_image_path = fvm_image_path + ".qcow2"
+  outputs = [
+    fvm_qcow2_image_path,
+  ]
+
+  deps = [
+    ":fvm.blk",
+  ]
+
+  script = "//build/gn_run_binary.sh"
+  args = [
+    clang_prefix,
+    rebase_path(qemu_img_path),
+    "convert",
+    "-f",
+    "raw",
+    "-O",
+    "qcow2",
+    "-c",
+    rebase_path(fvm_image_path),
+    rebase_path(fvm_qcow2_image_path),
+  ]
+}
+
 # This packs (compressed) fvm.blk into BOOTDATA_RAMDISK format,
 # used by the netboot-* targets below.
 bootdata_ramdisk("bootdata-fvm") {
