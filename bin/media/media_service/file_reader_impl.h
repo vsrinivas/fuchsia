@@ -21,11 +21,6 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
                        public SeekingReader {
  public:
   static std::shared_ptr<FileReaderImpl> Create(
-      const fidl::String& path,
-      fidl::InterfaceRequest<SeekingReader> request,
-      MediaServiceImpl* owner);
-
-  static std::shared_ptr<FileReaderImpl> Create(
       zx::channel file_channel,
       fidl::InterfaceRequest<SeekingReader> request,
       MediaServiceImpl* owner);

@@ -51,22 +51,19 @@ interface MediaService {
   // Creates a network reader.
   CreateNetworkReader@6(string url, SeekingReader& reader);
 
-  // Creates a file reader.
-  CreateFileReader@7(string path, SeekingReader& reader);
-
   // Creates an audio renderer.
-  CreateAudioRenderer@8(AudioRenderer& audio_renderer,
+  CreateAudioRenderer@7(AudioRenderer& audio_renderer,
                         MediaRenderer& media_renderer);
 
   // Creates a video renderer.
-  CreateVideoRenderer@9(VideoRenderer& video_renderer,
+  CreateVideoRenderer@8(VideoRenderer& video_renderer,
                         MediaRenderer& media_renderer);
 
   // Creates a timeline controller reader.
-  CreateTimelineController@10(MediaTimelineController& timeline_controller);
+  CreateTimelineController@9(MediaTimelineController& timeline_controller);
 
   // Creates a reformatter for LPCM audio.
-  CreateLpcmReformatter@11(MediaType input_media_type,
+  CreateLpcmReformatter@10(MediaType input_media_type,
                           AudioSampleFormat output_sample_format,
                           MediaTypeConverter& lpcm_reformatter);
 };

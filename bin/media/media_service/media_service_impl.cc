@@ -109,15 +109,6 @@ void MediaServiceImpl::CreateNetworkReader(
       }));
 }
 
-void MediaServiceImpl::CreateFileReader(
-    const fidl::String& path,
-    fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable(
-      [ this, path = path, request = std::move(request) ]() mutable {
-        return FileReaderImpl::Create(path, std::move(request), this);
-      }));
-}
-
 void MediaServiceImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
@@ -170,11 +161,10 @@ void MediaServiceImpl::CreateFileChannelReader(
     zx::channel file_channel,
     fidl::InterfaceRequest<SeekingReader> request) {
   CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable([
-    this, file_channel = std::move(file_channel),
-    request = std::move(request)
+    this, file_channel = std::move(file_channel), request = std::move(request)
   ]() mutable {
-    return FileReaderImpl::Create(std::move(file_channel),
-                                  std::move(request), this);
+    return FileReaderImpl::Create(std::move(file_channel), std::move(request),
+                                  this);
   }));
 }
 

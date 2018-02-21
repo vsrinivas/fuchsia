@@ -17,17 +17,6 @@ namespace media {
 
 // static
 std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
-    const fidl::String& path,
-    fidl::InterfaceRequest<SeekingReader> request,
-    MediaServiceImpl* owner) {
-  // TODO(dalesat): This version requires filesystem access. Remove it.
-  return std::shared_ptr<FileReaderImpl>(
-      new FileReaderImpl(fxl::UniqueFD(open(path.get().c_str(), O_RDONLY)),
-                         std::move(request), owner));
-}
-
-// static
-std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
     zx::channel file_channel,
     fidl::InterfaceRequest<SeekingReader> request,
     MediaServiceImpl* owner) {

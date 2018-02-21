@@ -74,9 +74,6 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       const fidl::String& url,
       fidl::InterfaceRequest<SeekingReader> reader) override;
 
-  void CreateFileReader(const fidl::String& path,
-                        fidl::InterfaceRequest<SeekingReader> reader) override;
-
   void CreateAudioRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
