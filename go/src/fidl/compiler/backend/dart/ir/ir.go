@@ -285,7 +285,11 @@ func changeIfReserved(val types.Identifier) string {
 	return str
 }
 
-func compileCompoundIdentifier(val types.CompoundIdentifier) string {
+type compiler struct {
+	declarations *types.DeclarationMap
+}
+
+func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	for _, v := range val {
 		strs = append(strs, changeIfReserved(v))
@@ -293,7 +297,7 @@ func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	return strings.Join(strs, ".")
 }
 
-func compileLiteral(val types.Literal) string {
+func (c *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	case types.StringLiteral:
 		// TODO(abarth): Escape more characters (e.g., newline).
@@ -313,19 +317,19 @@ func compileLiteral(val types.Literal) string {
 	}
 }
 
-func compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return compileCompoundIdentifier(val.Identifier)
+		return c.compileCompoundIdentifier(val.Identifier)
 	case types.LiteralConstant:
-		return compileLiteral(val.Literal)
+		return c.compileLiteral(val.Literal)
 	default:
 		log.Fatal("Unknown constant kind:", val.Kind)
 		return ""
 	}
 }
 
-func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
+func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
@@ -333,19 +337,19 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return ""
 }
 
-func maybeCompileConstant(val *types.Constant) string {
+func (c *compiler) maybeCompileConstant(val *types.Constant) string {
 	if val == nil {
 		return "null"
 	}
-	return compileConstant(*val)
+	return c.compileConstant(*val)
 }
 
-func compileType(val types.Type) Type {
+func (c *compiler) compileType(val types.Type) Type {
 	r := Type{}
 	r.Nullable = val.Nullable
 	switch val.Kind {
 	case types.ArrayType:
-		t := compileType(*val.ElementType)
+		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
 			r.encodingType = typedArrayEncodingType
@@ -353,9 +357,9 @@ func compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
 			r.encodingType = arrayEncodingType
 		}
-		r.ElementCount = compileConstant(*val.ElementCount)
+		r.ElementCount = c.compileConstant(*val.ElementCount)
 	case types.VectorType:
-		t := compileType(*val.ElementType)
+		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
 			r.encodingType = typedVectorEncodingType
@@ -363,26 +367,26 @@ func compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
 			r.encodingType = vectorEncodingType
 		}
-		r.ElementCount = maybeCompileConstant(val.ElementCount)
+		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
 	case types.StringType:
 		r.Decl = "String"
 		r.encodingType = stringEncodingType
-		r.ElementCount = maybeCompileConstant(val.ElementCount)
+		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
 	case types.HandleType:
 		r.Decl = "Handle"
 		r.encodingType = handleEncodingType
 	case types.RequestType:
-		t := compileCompoundIdentifier(val.RequestSubtype)
+		t := c.compileCompoundIdentifier(val.RequestSubtype)
 		r.Decl = fmt.Sprintf("InterfaceRequest<%s>", t)
 		r.baseDecl = "InterfaceRequest"
 		r.encodingType = encodableEncodingType
 	case types.PrimitiveType:
-		r.Decl = compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.encodingType = primitiveEncodingType
 		r.codecSuffix = primitiveCodecSuffix[val.PrimitiveSubtype]
 	case types.IdentifierType:
-		t := compileCompoundIdentifier(val.Identifier)
+		t := c.compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
 		r.Decl = fmt.Sprintf("InterfaceHandle<%s>", t)
 		r.baseDecl = "InterfaceHandle"
@@ -393,7 +397,7 @@ func compileType(val types.Type) Type {
 	return r
 }
 
-func compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
 		changeIfReserved(val.Name),
 		[]EnumMember{},
@@ -403,18 +407,18 @@ func compileEnum(val types.Enum) Enum {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
 			changeIfReserved(v.Name),
-			compileConstant(v.Value),
+			c.compileConstant(v.Value),
 		})
 	}
 	return e
 }
 
-func compileParameterArray(val []types.Parameter) []Parameter {
+func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	r := []Parameter{}
 
 	for _, v := range val {
 		p := Parameter{
-			compileType(v.Type),
+			c.compileType(v.Type),
 			changeIfReserved(v.Name),
 			v.Offset,
 		}
@@ -424,7 +428,7 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 	return r
 }
 
-func compileInterface(val types.Interface) Interface {
+func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Proxy"),
@@ -439,10 +443,10 @@ func compileInterface(val types.Interface) Interface {
 			fmt.Sprintf("_k%s_%s_Ordinal", r.Name, v.Name),
 			name,
 			v.HasRequest,
-			compileParameterArray(v.Request),
+			c.compileParameterArray(v.Request),
 			v.RequestSize,
 			v.HasResponse,
-			compileParameterArray(v.Response),
+			c.compileParameterArray(v.Response),
 			v.ResponseSize,
 		}
 		r.Methods = append(r.Methods, m)
@@ -451,15 +455,15 @@ func compileInterface(val types.Interface) Interface {
 	return r
 }
 
-func compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
-		compileType(val.Type),
+		c.compileType(val.Type),
 		changeIfReserved(val.Name),
 		val.Offset,
 	}
 }
 
-func compileStruct(val types.Struct) Struct {
+func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		changeIfReserved(val.Name),
 		[]StructMember{},
@@ -467,21 +471,21 @@ func compileStruct(val types.Struct) Struct {
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileStructMember(v))
+		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
 	return r
 }
 
-func compileUnionMember(val types.UnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
-		compileType(val.Type),
+		c.compileType(val.Type),
 		changeIfReserved(val.Name),
 		val.Offset,
 	}
 }
 
-func compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Tag"),
@@ -490,7 +494,7 @@ func compileUnion(val types.Union) Union {
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileUnionMember(v))
+		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
 	return r
@@ -498,21 +502,22 @@ func compileUnion(val types.Union) Union {
 
 func Compile(fidlData types.Root) Root {
 	root := Root{}
+	c := compiler{&fidlData.Declarations}
 
 	for _, v := range fidlData.Enums {
-		root.Enums = append(root.Enums, compileEnum(v))
+		root.Enums = append(root.Enums, c.compileEnum(v))
 	}
 
 	for _, v := range fidlData.Interfaces {
-		root.Interfaces = append(root.Interfaces, compileInterface(v))
+		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
 	}
 
 	for _, v := range fidlData.Structs {
-		root.Structs = append(root.Structs, compileStruct(v))
+		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 
 	for _, v := range fidlData.Unions {
-		root.Unions = append(root.Unions, compileUnion(v))
+		root.Unions = append(root.Unions, c.compileUnion(v))
 	}
 
 	return root
