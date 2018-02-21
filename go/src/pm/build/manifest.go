@@ -72,9 +72,9 @@ func (m *Manifest) Meta() map[string]string {
 	return meta
 }
 
-// Package loads the package descriptor from the package.json listed in the manifest and returns it.
+// Package loads the package descriptor from the package listed in the manifest and returns it.
 func (m *Manifest) Package() (*pkg.Package, error) {
-	f, err := os.Open(m.Paths["meta/package.json"])
+	f, err := os.Open(m.Paths["meta/package"])
 	if err != nil {
 		return nil, fmt.Errorf("build.Manifest.Package: %s", err)
 	}

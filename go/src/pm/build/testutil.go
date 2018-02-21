@@ -27,7 +27,7 @@ func TestPackage(cfg *Config) {
 	if err := os.MkdirAll(filepath.Join(pkgPath, "meta"), os.ModePerm); err != nil {
 		panic(err)
 	}
-	pkgJSON := filepath.Join(pkgPath, "meta", "package.json")
+	pkgJSON := filepath.Join(pkgPath, "meta", "package")
 	b, err := json.Marshal(&p)
 	if err != nil {
 		panic(err)
@@ -48,7 +48,7 @@ func TestPackage(cfg *Config) {
 	if err != nil {
 		panic(err)
 	}
-	if _, err := fmt.Fprintf(mfst, "meta/package.json=%s\n", pkgJSON); err != nil {
+	if _, err := fmt.Fprintf(mfst, "meta/package=%s\n", pkgJSON); err != nil {
 		panic(err)
 	}
 

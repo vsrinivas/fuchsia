@@ -30,7 +30,7 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := os.Open(filepath.Join(cfg.OutputDir, "meta", "package.json"))
+	f, err := os.Open(filepath.Join(cfg.OutputDir, "meta", "package"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err = os.Open(filepath.Join(cfg.OutputDir, "meta", "package.json"))
+	f, err = os.Open(filepath.Join(cfg.OutputDir, "meta", "package"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -45,7 +45,7 @@ func Init(cfg *Config) error {
 		return err
 	}
 
-	meta := filepath.Join(metadir, "package.json")
+	meta := filepath.Join(metadir, "package")
 	if _, err := os.Stat(meta); os.IsNotExist(err) {
 		f, err := os.Create(meta)
 		if err != nil {
@@ -255,7 +255,7 @@ func (e ErrRequiredFileMissing) Error() string {
 }
 
 // RequiredFiles is a list of files that are required before a package can be sealed.
-var RequiredFiles = []string{"meta/contents", "meta/signature", "meta/pubkey", "meta/package.json"}
+var RequiredFiles = []string{"meta/contents", "meta/signature", "meta/pubkey", "meta/package"}
 
 // Validate ensures that the package contains the required files and that it has a verified signature.
 func Validate(cfg *Config) error {

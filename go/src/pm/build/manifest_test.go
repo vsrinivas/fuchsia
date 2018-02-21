@@ -137,10 +137,10 @@ func TestNewManifest_withManifest(t *testing.T) {
 func TestManifestMeta(t *testing.T) {
 	m := &Manifest{
 		Paths: map[string]string{
-			"meta/package.json": "",
-			"meta/contents":     "",
-			"alpha":             "",
-			"beta":              "",
+			"meta/package":  "",
+			"meta/contents": "",
+			"alpha":         "",
+			"beta":          "",
 		},
 	}
 
@@ -157,10 +157,10 @@ func TestManifestMeta(t *testing.T) {
 func TestManifestContent(t *testing.T) {
 	m := &Manifest{
 		Paths: map[string]string{
-			"meta/package.json": "",
-			"meta/contents":     "",
-			"alpha":             "",
-			"beta":              "",
+			"meta/package":  "",
+			"meta/contents": "",
+			"alpha":         "",
+			"beta":          "",
 		},
 	}
 
@@ -178,14 +178,14 @@ func TestManifestContent(t *testing.T) {
 func TestManifestSigningfiles(t *testing.T) {
 	m := &Manifest{
 		Paths: map[string]string{
-			"meta/package.json": "",
-			"meta/contents":     "",
-			"meta/signature":    "",
-			"alpha":             "",
-			"beta":              "",
+			"meta/package":   "",
+			"meta/contents":  "",
+			"meta/signature": "",
+			"alpha":          "",
+			"beta":           "",
 		},
 	}
-	want := []string{"meta/package.json", "meta/contents"}
+	want := []string{"meta/package", "meta/contents"}
 	sort.Strings(want)
 
 	got := m.SigningFiles()
