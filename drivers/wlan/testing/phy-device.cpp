@@ -65,6 +65,11 @@ zx_status_t PhyDevice::Bind() {
 
 void PhyDevice::Unbind() {
     zxlogf(INFO, "wlan::testing::PhyDevice::Unbind()\n");
+    std::lock_guard<std::mutex> guard(lock_);
+    for (auto it = ifaces_.begin(); it != ifaces_.end(); ) {
+        device_remove(it->second->zxdev());
+        it = ifaces_.erase(it);
+    }
     device_remove(zxdev_);
 }
 
@@ -221,7 +226,7 @@ zx_status_t PhyDevice::DestroyIface(const void* in_buf, size_t in_len) {
     auto intf = ifaces_.find(req->id);
     if (intf == ifaces_.end()) { return ZX_ERR_NOT_FOUND; }
 
-    intf->second->Unbind();
+    device_remove(intf->second->zxdev());
     // Remove the device from our map. We do NOT free the memory, since the devhost owns it and will
     // call release when it's safe to free the memory.
     ifaces_.erase(req->id);

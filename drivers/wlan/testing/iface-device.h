@@ -18,8 +18,9 @@ class IfaceDevice {
    public:
     IfaceDevice(zx_device_t* device);
 
-    zx_status_t Bind();
+    zx_device_t* zxdev() { return zxdev_; }
 
+    zx_status_t Bind();
     void Unbind();
     void Release();
 
