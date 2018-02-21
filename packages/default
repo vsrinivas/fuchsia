@@ -11,6 +11,7 @@
         "garnet/packages/cmdutils",
         "garnet/packages/cobalt_client",
         "garnet/packages/config/network",
+        "garnet/packages/config/amber",
         "garnet/packages/debug_agent",
         "garnet/packages/debugserver",
         "garnet/packages/device_settings",
