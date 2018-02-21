@@ -18,9 +18,7 @@
 
 // From uBoot source
 #define VFIFO2VD_TO_HDMI_LATENCY 2
-
 #define OSD2_DMC_CAV_INDEX 0x43
-
 #define EDID_BUF_SIZE       256
 
 typedef struct {
@@ -56,17 +54,6 @@ typedef struct {
 
 
 } vim2_display_t;
-
-extern struct hdmi_param hdmi_640x480p60Hz_vft;
-extern struct hdmi_param hdmi_720x480p60Hz_vft;
-extern struct hdmi_param hdmi_800X600p60Hz_vft;
-extern struct hdmi_param hdmi_1024x768p60Hz_vft;
-extern struct hdmi_param hdmi_1280x720p60Hz_vft;
-extern struct hdmi_param hdmi_1280x800p60Hz_vft;
-extern struct hdmi_param hdmi_1280x1024p60Hz_vft;
-extern struct hdmi_param hdmi_1920x1080p60Hz_vft;
-extern struct hdmi_param hdmi_1920x1200p60Hz_vft;
-
 
 zx_status_t configure_canvas(vim2_display_t* display);
 zx_status_t configure_osd2(vim2_display_t* display);

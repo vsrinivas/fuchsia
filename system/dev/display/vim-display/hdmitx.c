@@ -375,10 +375,24 @@ static void hdmi_config_encoder(vim2_display_t* display, const struct hdmi_param
 
 
     SET_BIT32(VPU, VPU_ENCP_VIDEO_MODE, 1, 1, 14);      // DE Signal polarity
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_HAVON_BEGIN, p->timings.hsync + p->timings.hback);
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_HAVON_END, p->timings.hsync + p->timings.hback +
+        p->timings.hactive - 1);
+
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_VAVON_BLINE, p->timings.vsync + p->timings.vback);
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_VAVON_ELINE, p->timings.vsync + p->timings.vback +
+        p->timings.vactive - 1);
+
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_HSO_BEGIN, 0);
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_HSO_END, p->timings.hsync);
+
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_VSO_BLINE, 0);
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_VSO_ELINE, p->timings.vsync);
 
     // Below calculations assume no pixel repeat and progressive mode.
     // HActive Start/End
-    h_begin = READ32_REG(VPU, VPU_ENCP_VIDEO_HAVON_BEGIN) + 2;  // 2 is the HDMI Latency
+    h_begin = p->timings.hsync + p->timings.hback + 2;  // 2 is the HDMI Latency
+
     h_begin = h_begin % venc_total_pixels; // wrap around if needed
     h_end = h_begin + venc_active_pixels;
     h_end = h_end % venc_total_pixels;   // wrap around if needed
@@ -386,7 +400,7 @@ static void hdmi_config_encoder(vim2_display_t* display, const struct hdmi_param
     WRITE32_REG(VPU, VPU_ENCP_DE_H_END, h_end);
 
     // VActive Start/End
-    v_begin = READ32_REG(VPU, VPU_ENCP_VIDEO_VAVON_BLINE);
+    v_begin = p->timings.vsync + p->timings.vback;
     v_end = v_begin + active_lines;
     WRITE32_REG(VPU, VPU_ENCP_DE_V_BEGIN_EVEN, v_begin);
     WRITE32_REG(VPU, VPU_ENCP_DE_V_END_EVEN, v_end);
@@ -428,12 +442,9 @@ static void hdmi_config_encoder(vim2_display_t* display, const struct hdmi_param
     // hsync, vsync active high. output CbYCr (GRB)
     // TODO: output desired format is hardcoded here to CbYCr (GRB)
     WRITE32_REG(VPU, VPU_HDMI_SETTING, (p->timings.hpol << 2) | (p->timings.vpol << 3) | (4 << 5));
-    switch (p->vic) {
-        case VIC_1280x720p_60Hz_16x9:
-        case VIC_720x480p_60Hz_16x9:
-            SET_BIT32(VPU, VPU_HDMI_SETTING, 1, 1, 8);
-        default:
-            break;
+
+    if (p->timings.venc_pixel_repeat) {
+        SET_BIT32(VPU, VPU_HDMI_SETTING, 1, 1, 8);
     }
 
     // Select ENCP data to HDMI
@@ -611,7 +622,7 @@ static void hdmi_config_hdmitx(vim2_display_t* display, const struct hdmi_param*
     // C1C0 = 0, M1M0=0x2 (16:9), R3R2R1R0=0x8 (same of M1M0)
     hdmi_data = FC_AVICONF1_R3R0; // set to 0x8 (same as coded frame aspect ratio)
     hdmi_data |= FC_AVICONF1_M1M0(p->aspect_ratio);
-    hdmi_data |= FC_AVICONF1_C1C0(p->colorimety);
+    hdmi_data |= FC_AVICONF1_C1C0(p->colorimetry);
     hdmitx_writereg(display, HDMITX_DWC_FC_AVICONF1, hdmi_data);
 
     // Since we are support RGB/444, no need to write to ECx
@@ -621,7 +632,7 @@ static void hdmi_config_hdmitx(vim2_display_t* display, const struct hdmi_param*
     hdmitx_writereg(display, HDMITX_DWC_FC_AVICONF3, 0x0);
 
     // Set AVI InfoFrame VIC
-    hdmitx_writereg(display, HDMITX_DWC_FC_AVIVID, (p->vic >= VESA_OFFSET)? 0 : p->vic);
+    // hdmitx_writereg(display, HDMITX_DWC_FC_AVIVID, (p->vic >= VESA_OFFSET)? 0 : p->vic);
 
     hdmitx_writereg(display, HDMITX_DWC_FC_ACTSPC_HDLR_CFG, 0);
 
@@ -707,7 +718,6 @@ static void hdmi_config_phy(vim2_display_t* display, const struct hdmi_param* p)
     SET_BIT32(HHI, HHI_HDMI_PHY_CNTL1, 0xe, 4, 0);
     usleep(2);
 
-    // set to 1.485 Gbps
     switch (p->phy_mode) {
         case 1: /* 5.94Gbps, 3.7125Gbsp */
             WRITE32_REG(HHI, HHI_HDMI_PHY_CNTL0, 0x333d3282);
@@ -729,7 +739,6 @@ static void hdmi_config_phy(vim2_display_t* display, const struct hdmi_param* p)
     }
     usleep(20);
     DISP_INFO("done!\n");
-
 }
 
 #if 0
@@ -763,13 +772,20 @@ zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param
 
     uint8_t scdc_data = 0;
     uint32_t regval = 0;
-    // const struct reg_val_pair* enc_lut;
 
     // FIXME: Need documentation for HDMI PLL initialization
     configure_pll(display, p, &p->pll_p_24b);
 
-    for (size_t i = 0; p->enc_lut[i].reg != 0xFFFFFFFF; i++) {
-        WRITE32_REG(VPU, p->enc_lut[i].reg, p->enc_lut[i].val);
+    for (size_t i = 0; ENC_LUT_GEN[i].reg != 0xFFFFFFFF; i++) {
+        WRITE32_REG(VPU, ENC_LUT_GEN[i].reg, ENC_LUT_GEN[i].val);
+    }
+
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_MAX_PXCNT, (p->timings.venc_pixel_repeat)?
+                ((p->timings.htotal << 1) - 1) : (p->timings.htotal - 1));
+    WRITE32_REG(VPU, VPU_ENCP_VIDEO_MAX_LNCNT, p->timings.vtotal - 1);
+
+    if (p->timings.venc_pixel_repeat) {
+        SET_BIT32(VPU, VPU_ENCP_VIDEO_MODE_ADV, 1, 1, 0);
     }
 
     // Configure Encoder with detailed timing info (based on resolution)
@@ -782,9 +798,18 @@ zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param
     // Configure HDMI TX IP
     hdmi_config_hdmitx(display, p);
 
-    // Setup TMDS Clocks (magic numbers)
-    hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_01, 0x001f001f);
-    hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_23, 0x001f001f);
+    if (p->is4K) {
+        // Setup TMDS Clocks (magic numbers)
+        hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_01, 0);
+        hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_23, 0x03ff03ff);
+        hdmitx_writereg(display, HDMITX_DWC_FC_SCRAMBLER_CTRL,
+            hdmitx_readreg(display, HDMITX_DWC_FC_SCRAMBLER_CTRL) | (1 << 0));
+    } else {
+        hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_01, 0x001f001f);
+        hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_23, 0x001f001f);
+        hdmitx_writereg(display, HDMITX_DWC_FC_SCRAMBLER_CTRL, 0);
+    }
+
     hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_CNTL, 0x1);
     usleep(2);
     hdmitx_writereg(display, HDMITX_TOP_TMDS_CLK_PTTN_CNTL, 0x2);
@@ -795,8 +820,14 @@ zx_status_t init_hdmi_interface(vim2_display_t* display, const struct hdmi_param
     // TODO: find scdc register def
     hdmi_scdc_write(display, 0x2, 0x1);
     hdmi_scdc_write(display, 0x2, 0x1);
-    hdmi_scdc_write(display, 0x20, 0);
-    hdmi_scdc_write(display, 0x20, 0);
+
+    if (p->is4K) {
+        hdmi_scdc_write(display, 0x20, 3);
+        hdmi_scdc_write(display, 0x20, 3);
+    } else {
+        hdmi_scdc_write(display, 0x20, 0);
+        hdmi_scdc_write(display, 0x20, 0);
+    }
 
     // Setup HDMI related registers in VPU
 

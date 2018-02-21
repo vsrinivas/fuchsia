@@ -82,6 +82,7 @@ static void display_release(void* ctx) {
         pdev_vmo_buffer_release(&display->mmio_cbus);
         pdev_vmo_buffer_release(&display->fbuffer);
         free(display->edid_buf);
+        free(display->p);
     }
     free(display);
 }
@@ -201,7 +202,9 @@ static int main_hdmi_thread(void *arg)
         } else {
             if (!hdmi_inited) {
                 DISP_ERROR("Display is connected\n");
-                setup_hdmi(display);
+                if (setup_hdmi(display) != ZX_OK) {
+                    return ZX_ERR_UNAVAILABLE;
+                }
                 hdmi_inited = true;
             }
         }
@@ -284,6 +287,12 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     display->edid_buf = calloc(1, EDID_BUF_SIZE);
     if (!display->edid_buf) {
         DISP_ERROR("Could not allocated EDID BUf of size %d\n", EDID_BUF_SIZE);
+        goto fail;
+    }
+
+    display->p = calloc(1, sizeof(struct hdmi_param));
+    if (!display->p) {
+        DISP_ERROR("Could not allocated hdmi param structure\n");
         goto fail;
     }
 

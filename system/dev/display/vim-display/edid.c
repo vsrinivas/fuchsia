@@ -38,6 +38,13 @@ bool edid_rgb_disp(const uint8_t* edid_buf)
     return (!!((edid->feature_support & (1 << 2)) >> 2));
 }
 
+void edid_get_max_size(const uint8_t* edid_buf, uint8_t* hoz, uint8_t* ver)
+{
+    const edid_t* edid = (edid_t *) edid_buf;
+    *hoz = edid->max_hoz_img_size;
+    *ver = edid->max_ver_img_size;
+}
+
 static char* get_mfg_id(const uint8_t* edid_buf)
 {
     char *mfg_str = calloc(1, sizeof(char));;
@@ -99,7 +106,6 @@ static void populate_timings(detailed_timing_t* raw_dtd, disp_timing_t* disp_tim
     disp_timing->HBorder = raw_dtd->raw_HBorder;
     disp_timing->VBorder = raw_dtd->raw_VBorder;
     disp_timing->Flags = raw_dtd->raw_Flags;
-
 }
 
 
@@ -159,41 +165,164 @@ zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, detailed_timing_t
     return ZX_OK;
 }
 
-static void get_vic(vim2_display_t* display)
+static uint8_t getInterlaced(uint8_t flag)
 {
-    uint32_t i;
-    ZX_DEBUG_ASSERT(display);
+    return ((flag & (0x80)) >> 7); // TODO: bit defs)
+}
 
-    disp_timing_t* disp_timing = &display->std_disp_timing;
+static uint8_t getHPol(uint8_t flag)
+{
+    ZX_DEBUG_ASSERT(((flag & 0x18) >> 3) == 0x3);
+    // sync type is 3 (i.e. digitail separate)
+    return ((flag & (0x02)) >> 1);
+}
+
+static uint8_t getVPol(uint8_t flag)
+{
+    ZX_DEBUG_ASSERT(((flag & 0x18) >> 3) == 0x3);
+    // sync type is 3 (i.e. digitail separate)
+    return ((flag & (0x04)) >> 2);
+}
+
+static zx_status_t get_vic(vim2_display_t* display)
+{
+    disp_timing_t* disp_timing;
+    disp_timing= &display->std_disp_timing;
     ZX_DEBUG_ASSERT(disp_timing);
 
-    struct hdmi_param** supportedFormats = get_supported_formats();
-    ZX_DEBUG_ASSERT(supportedFormats);
+    // Monitor has its own preferred timings. Use that
+    display->p->timings.interlace_mode =     getInterlaced(disp_timing->Flags);
+    display->p->timings.pfreq =              (disp_timing->pixel_clk * 10); // KHz
+    //TODO: pixel repetition is 0 for most progressive. We don't support interlaced
+    display->p->timings.pixel_repeat =       0;
+    display->p->timings.hactive =            disp_timing->HActive;
+    display->p->timings.hblank =             disp_timing->HBlanking;
+    display->p->timings.hfront =             disp_timing->HSyncOffset;
+    display->p->timings.hsync =              disp_timing->HSyncPulseWidth;
+    display->p->timings.htotal =             (display->p->timings.hactive) +
+                                                (display->p->timings.hblank);
+    display->p->timings.hback =              (display->p->timings.hblank) -
+                                                (display->p->timings.hfront +
+                                                    display->p->timings.hsync);
+    display->p->timings.hpol =               getHPol(disp_timing->Flags);
 
-    for (i = 0; supportedFormats[i] != NULL; i++) {
-        if (supportedFormats[i]->timings.hactive != disp_timing->HActive) {
-            continue;
-        }
-        if (supportedFormats[i]->timings.vactive != disp_timing->VActive) {
-            continue;
-        }
-        // FIXME: for some reason 1920x1200 doesn't work. go to a lower resolution
-        if (disp_timing->HActive == 1920 && disp_timing->VActive == 1200) {
-            DISP_ERROR("Preferred Resolution of 1920x1200-60Hz is not supported\n");
-            DISP_ERROR("Switching to 1024x768-60Hz instead\n");
-            display->p = &hdmi_1024x768p60Hz_vft;
-            return;
-        }
-        display->p = supportedFormats[i];
-        return;
+    display->p->timings.vactive =            disp_timing->VActive;
+    display->p->timings.vblank0 =            disp_timing->VBlanking;
+    display->p->timings.vfront =             disp_timing->VSyncOffset;
+    display->p->timings.vsync =              disp_timing->VSyncPulseWidth;
+    display->p->timings.vtotal =             (display->p->timings.vactive) +
+                                                (display->p->timings.vblank0);
+    display->p->timings.vback =              (display->p->timings.vblank0) -
+                                                (display->p->timings.vfront +
+                                                    display->p->timings.vsync);
+    display->p->timings.vpol =               getVPol(disp_timing->Flags);
+
+    //FIXE: VENC Repeat is undocumented. It seems to be only needed for the following
+    // resolutions: 1280x720p60, 1280x720p50, 720x480p60, 720x480i60, 720x576p50, 720x576i50
+    // For now, we will simply not support this feature.
+    display->p->timings.venc_pixel_repeat = 0;
+    // Let's make sure we support what we've got so far
+    if (display->p->timings.interlace_mode) {
+        DISP_ERROR("ERROR: UNSUPPORTED DISPLAY!!!! Pixel Freq = %d (%s mode)\n",
+            display->p->timings.pfreq,
+            display->p->timings.interlace_mode? "Interlaced": "Progressive");
+        DISP_ERROR("Loading 640x480p as Default\n");
+
+        display->p->timings.interlace_mode =     0;
+        display->p->timings.pfreq =              (25175); // KHz
+        display->p->timings.pixel_repeat =       0;
+        display->p->timings.hactive =            640;
+        display->p->timings.hblank =             160;
+        display->p->timings.hfront =             16;
+        display->p->timings.hsync =              96;
+        display->p->timings.htotal =             (display->p->timings.hactive) +
+                                                    (display->p->timings.hblank);
+        display->p->timings.hback =              (display->p->timings.hblank) -
+                                                    (display->p->timings.hfront +
+                                                        display->p->timings.hsync);
+        display->p->timings.hpol =               1;
+        display->p->timings.vactive =            480;
+        display->p->timings.vblank0 =            45;
+        display->p->timings.vfront =             10;
+        display->p->timings.vsync =              2;
+        display->p->timings.vtotal =             (display->p->timings.vactive) +
+                                                    (display->p->timings.vblank0);
+        display->p->timings.vback =              (display->p->timings.vblank0) -
+                                                    (display->p->timings.vfront +
+                                                        display->p->timings.vsync);
+        display->p->timings.vpol =               1;
     }
 
-    DISP_ERROR("Display preferred resolution not supported (%d x %d%c [flag = 0x%x])\n",
-        disp_timing->HActive, disp_timing->VActive, disp_timing->Flags & (0x80) ? 'i' : 'p',
-        disp_timing->Flags);
-    DISP_ERROR("Use default: 640x480p60Hz\n");
-    display->p = &hdmi_640x480p60Hz_vft;
-    return;
+    if (display->p->timings.vactive == 2160) {
+        DISP_INFO("4K Monitor Detected.\n");
+    }
+
+    if (display->p->timings.pfreq > 500000) {
+        display->p->is4K = true;
+    } else {
+        display->p->is4K = false;
+    }
+
+    // Aspect ratio determination. 4:3 otherwise 16:9
+    uint8_t h, v, tmp;
+    edid_get_max_size(display->edid_buf, &h, &v);
+    if ( (h % 4 == 0) && (v % 3) == 0) {
+        tmp = h / 4;
+        if ( ((v % tmp) == 0) && ((v / tmp) == 3)) {
+                display->p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
+        } else {
+            display->p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
+        }
+    } else {
+        display->p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
+    }
+
+    display->p->colorimetry = HDMI_COLORIMETRY_ITU601;
+
+    if (display->p->timings.pfreq > 500000) {
+        display->p->phy_mode = 1;
+    } else if (display->p->timings.pfreq > 200000) {
+        display->p->phy_mode = 2;
+    } else if (display->p->timings.pfreq > 100000) {
+        display->p->phy_mode = 3;
+    } else {
+        display->p->phy_mode = 4;
+    }
+
+    //TODO: We probably need a more sophisticated method for calculating
+    // clocks. This will do for now.
+    display->p->pll_p_24b.viu_channel =          1;
+    display->p->pll_p_24b.viu_type =             VIU_ENCP;
+    display->p->pll_p_24b.vid_pll_div =          VID_PLL_DIV_5;
+    display->p->pll_p_24b.vid_clk_div =          2;
+    display->p->pll_p_24b.hdmi_tx_pixel_div =    1;
+    display->p->pll_p_24b.encp_div =             1;
+    display->p->pll_p_24b.od1 =                  1;
+    display->p->pll_p_24b.od2 =                  1;
+    display->p->pll_p_24b.od3 =                  1;
+
+    display->p->pll_p_24b.hpll_clk_out = (display->p->timings.pfreq * 10);
+    while (display->p->pll_p_24b.hpll_clk_out < 2900000) {
+        if (display->p->pll_p_24b.od1 < 4) {
+            display->p->pll_p_24b.od1 *= 2;
+            display->p->pll_p_24b.hpll_clk_out *= 2;
+        } else if (display->p->pll_p_24b.od2 < 4) {
+            display->p->pll_p_24b.od2 *= 2;
+            display->p->pll_p_24b.hpll_clk_out *= 2;
+        } else if (display->p->pll_p_24b.od3 < 4) {
+            display->p->pll_p_24b.od3 *= 2;
+            display->p->pll_p_24b.hpll_clk_out *= 2;
+        } else {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+    }
+    if(display->p->pll_p_24b.hpll_clk_out > 6000000) {
+        DISP_ERROR("Something went wrong in clock calculation (pll_out = %d)\n",
+            display->p->pll_p_24b.hpll_clk_out);
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return ZX_OK;
 }
 
 static void dump_raw_edid(const uint8_t* edid_buf, uint16_t edid_buf_size)
@@ -215,6 +344,7 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
     ZX_DEBUG_ASSERT(edid_buf_size <= EDID_BUF_SIZE);
     ZX_DEBUG_ASSERT(display);
     ZX_DEBUG_ASSERT(display->edid_buf);
+    ZX_DEBUG_ASSERT(display->p);
 
     memset(display->edid_buf, 0, edid_buf_size);
 
@@ -250,7 +380,12 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
     }
 
     // Find out whether we support the preferred format or not
-    get_vic(display);
+    status = get_vic(display);
+
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get a proper display timing\n");
+        return status;
+    }
 
     // See if we need to change output color to RGB
     if (edid_rgb_disp(display->edid_buf)) {
@@ -258,7 +393,6 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
     } else {
         display->output_color_format = HDMI_COLOR_FORMAT_444;
     }
-
     return ZX_OK;
 
 }
