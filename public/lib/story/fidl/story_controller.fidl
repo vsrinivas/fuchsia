@@ -6,7 +6,7 @@ module modular;
 
 import "lib/module/fidl/module_controller.fidl";
 import "lib/module/fidl/module_data.fidl";
-import "lib/module_resolver/fidl/daisy.fidl";
+import "lib/daisy/fidl/daisy.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/story/fidl/story_info.fidl";
 import "lib/story/fidl/story_state.fidl";

@@ -6,7 +6,7 @@
 #define LIB_MODULE_RESOLVER_CPP_FORMATTING_H_
 
 #include "lib/fidl/cpp/bindings/formatting.h"
-#include "lib/module_resolver/fidl/daisy.fidl.h"
+#include "lib/daisy/fidl/daisy.fidl.h"
 
 namespace modular {
 

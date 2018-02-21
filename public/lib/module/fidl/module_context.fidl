@@ -11,7 +11,7 @@ import "lib/story/fidl/chain.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/surface/fidl/surface.fidl";
 import "lib/module/fidl/module_controller.fidl";
-import "lib/module_resolver/fidl/daisy.fidl";
+import "lib/daisy/fidl/daisy.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to

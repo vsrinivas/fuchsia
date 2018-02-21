@@ -4,7 +4,7 @@
 
 module modular;
 
-import "daisy.fidl";
+import "lib/daisy/fidl/daisy.fidl";
 import "lib/story/fidl/create_chain.fidl";
 import "lib/story/fidl/create_link.fidl";
 import "lib/module/fidl/link_path.fidl";

@@ -11,18 +11,14 @@ fidl("fidl") {
   ]
 
   deps = [
+    "//peridot/public/lib/daisy/fidl",
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/story/fidl",
   ]
 
   public_deps = [
-    ":daisy",
+    "//peridot/public/lib/daisy/fidl",
   ]
-}
 
-fidl("daisy") {
-  sources = [
-    "daisy.fidl",
-  ]
 }
