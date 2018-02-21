@@ -40,9 +40,10 @@ FIDL supports C-style single-line and multiline comments. They may contain UTF-8
 content (which is of course ignored).
 
 ```
-    // this is a single-line comment
-    /* this is a multi-
-     * line comment */
+// this is a single-line comment
+
+/* this is a multi-
+ * line comment */
 ```
 
 #### Document Comments
@@ -68,7 +69,7 @@ whose name is "interface".
 
 #### Identifiers
 
-FIDL identifiers must match the regex "@?[a-zA-Z_][0-9a-zA-Z]*". The "@" prefix,
+FIDL identifiers must match the regex "@?[a-zA-Z_][0-9a-zA-Z]\*". The "@" prefix,
 if present, serves to distinguish identifiers from reserved words in the FIDL
 language. The "@" prefix itself is ignored for the purposes of naming the
 identifier. This allows reserved words in the FIDL language to nevertheless be
@@ -77,14 +78,14 @@ used as identifiers (when escaped with "@").
 Identifiers are case-sensitive.
 
 ```
-    // a library named "foo"
-    library foo;
+// a library named "foo"
+library foo;
 
-    // a struct named "Foo"
-    struct Foo { };
+// a struct named "Foo"
+struct Foo { };
 
-    // a struct named "struct"
-    struct @struct { };
+// a struct named "struct"
+struct @struct { };
 ```
 
 #### Qualified Identifiers
@@ -180,7 +181,7 @@ qualifying them with the library alias as in _"geo.Rect"_.
 ```
 
 In the source tree, each library consists of a directory with some number of
-***.fidl** files. The name of the directory is irrelevant to the FIDL compiler
+**.fidl** files. The name of the directory is irrelevant to the FIDL compiler
 but by convention it should resemble the library name itself. A directory should
 not contain FIDL files for more than one library.
 
@@ -195,8 +196,8 @@ library cannot be found.
 
 The build system generally takes care of providing the FIDL compiler with a
 suitable library path argument derived from the build dependencies for the
-target. eg. _"--library mozart.geometry=apps/mozart/services/geometry --library
-mozart.buffers=apps/mozart/services/buffers"_
+target. eg. `--library mozart.geometry=apps/mozart/services/geometry --library
+mozart.buffers=apps/mozart/services/buffers`
 
 The library's name may be used by certain language bindings to provide scoping
 for symbols emitted by the code generator.
@@ -225,31 +226,25 @@ Topics for discussion:
 
 The following primitive types are supported:
 
-    Boolean         **<code>bool</code></strong>
+*    Boolean         **`bool`**
+*    Signed integer          **`int8 int16 int32 int64`**
+*    Unsigned integer        **`uint8 uint16 uint32 uint64`**
+*    IEEE 754 Floating-point **`float32 float64`**
 
-
-    Signed integer          **<code>int8 int16 int32 int64</code></strong>
-
-
-    Unsigned integer        **<code>uint8 uint16 uint32 uint64</code></strong>
-
-
-    IEEE 754 Floating-point **<code>float32 float64</code></strong>
-
-Numbers are suffixed with their size in bits, **<code>bool</code></strong> is 1
+Numbers are suffixed with their size in bits, **`bool`** is 1
 byte.
 
 ##### Use
 
 ```
-    // A record which contains fields of a few primitive types.
-    struct Sprite {
+// A record which contains fields of a few primitive types.
+struct Sprite {
     float32 x;
     float32 y;
     uint32 index;
     uint32 color;
     bool visible;
-    };
+};
 ```
 
 #### Enums
@@ -268,31 +263,31 @@ uint64**. If omitted, the underlying type is assumed to be **uint32**.
 Enums may be scoped within: **library, struct, union, interface**.
 
 ```
-    // An enum declared at library scope.
-    enum Beverage : uint8 {
-        WATER = 0,
-        COFFEE = 1,
-        TEA = 2,
-        WHISKEY = 3,
-    };
+// An enum declared at library scope.
+enum Beverage : uint8 {
+    WATER = 0,
+    COFFEE = 1,
+    TEA = 2,
+    WHISKEY = 3,
+};
 
-    // An enum declared at library scope.
-    // Underlying type is assumed to be uint32.
-    enum Vessel {
-        CUP = 0,
-        BOWL = 1,
-        TUREEN = 2,
-        JUG = 3,
-    };
+// An enum declared at library scope.
+// Underlying type is assumed to be uint32.
+enum Vessel {
+    CUP = 0,
+    BOWL = 1,
+    TUREEN = 2,
+    JUG = 3,
+};
 
-    // An enum declared within an interface scope.
-    interface VendingMachine {
-        enum PaymentMethod {
-            CASH = 0,
-            CREDIT = 1,
-            HONOR_SYSTEM = 2,
-        };
+// An enum declared within an interface scope.
+interface VendingMachine {
+    enum PaymentMethod {
+        CASH = 0,
+        CREDIT = 1,
+        HONOR_SYSTEM = 2,
     };
+};
 ```
 
 ##### Use
@@ -300,11 +295,11 @@ Enums may be scoped within: **library, struct, union, interface**.
 Enum types are denoted by their identifier, which may be qualified if needed.
 
 ```
-    // A record which contains two enum fields.
-    struct Order {
+// A record which contains two enum fields.
+struct Order {
     Beverage beverage;
     Vessel vessel;
-    };
+};
 ```
 
 #### Arrays
@@ -316,56 +311,55 @@ Enum types are denoted by their identifier, which may be qualified if needed.
 
 ##### Use
 
-Arrays are denoted **<code>T[n]</code></strong> where <em>T</em> can
-be any FIDL type (including an array) and <em>n</em> is a positive
+Arrays are denoted **`T[n]`** where _T_ can
+be any FIDL type (including an array) and _n_ is a positive
 integer constant expression which specified the number of elements in
 the array.
 
 ```
-    // A record which contains some arrays.
-    struct Record {
-        // array of exactly 16 floating point numbers
+// A record which contains some arrays.
+struct Record {
+    // array of exactly 16 floating point numbers
     float32[16] matrix;
 
-        // array of exactly 10 arrays of 4 strings each
+    // array of exactly 10 arrays of 4 strings each
     string[4][10] form;
-    };
+};
 ```
 
 #### Strings
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
 *   Nullable; null strings and empty strings are distinct.
-*   Can specify a maximum size, eg. **<code>string:40</code></strong> for a
+*   Can specify a maximum size, eg. **`string:40`** for a
     maximum 40 byte string.
 
 ##### Use
 
 Strings are denoted as follows:
 
-*   **<code>string</code></strong> : non-nullable string (validation error
+*   **`string`** : non-nullable string (validation error
     occurs if null is encountered)
-*   <strong><code>string?</code></strong> : nullable string
-*   <strong><code>string:N, string:N?</code></strong> : string with maximum
-    length of <em>N</em> bytes
+*   **`string?`** : nullable string
+*   **`string:N, string:N?`** : string with maximum
+    length of _N_ bytes
 
-    ```
-    // A record which contains some strings.
-    struct Record {
-        // title string, maximum of 40 bytes long
-        string:40 title;
+```
+// A record which contains some strings.
+struct Record {
+    // title string, maximum of 40 bytes long
+    string:40 title;
 
-        // description string, may be null, no upper bound on size
+    // description string, may be null, no upper bound on size
     string? description;
-    };
-
-    ```
+};
+```
 
 #### Vectors
 
 *   Variable-length sequence of homogeneous elements.
 *   Nullable; null vectors and empty vectors are distinct.
-*   Can specify a maximum size, eg. **<code>vector<T>:40</code></strong> for a
+*   Can specify a maximum size, eg. **`vector<T>:40`** for a
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
@@ -374,33 +368,33 @@ Strings are denoted as follows:
 
 Vectors are denoted as follows:
 
-*   **<code>vector<T></code></strong> : non-nullable vector of element type
-    <em>T</em> (validation error occurs if null is encountered)
-*   <strong><code>vector<T>?</code></strong> : nullable vector of element type
-    <em>T</em>
-*   <strong><code>vector<T>:N, vector<T>:N?</code></strong> : vector with
-    maximum length of <em>N</em> elements
+*   **`vector<T>`** : non-nullable vector of element type
+    _T_ (validation error occurs if null is encountered)
+*   **`vector<T>?`** : nullable vector of element type
+    _T_
+*   **`vector<T>:N, vector<T>:N?`** : vector with
+    maximum length of _N_ elements
 
-<em>T</em> can be any FIDL type.
+_T_ can be any FIDL type.
 
 ```
-    // A record which contains some vectors.
-    struct Record {
-        // a vector of up to 10 integers
-        vector<int32>:10 params;
+// A record which contains some vectors.
+struct Record {
+    // a vector of up to 10 integers
+    vector<int32>:10 params;
 
-        // a vector of bytes, no upper bound on size
-        vector<uint8> blob;
+    // a vector of bytes, no upper bound on size
+    vector<uint8> blob;
 
-        // a nullable vector of up to 24 strings
-        vector<string>:24? nullable_vector_of_strings;
+    // a nullable vector of up to 24 strings
+    vector<string>:24? nullable_vector_of_strings;
 
-        // a vector of nullable strings
-        vector<string?> vector_of_nullable_strings;
+    // a vector of nullable strings
+    vector<string?> vector_of_nullable_strings;
 
-        // a vector of vectors of arrays of floating point numbers
-        vector<vector<float32[16]>> complex;
-    };
+    // a vector of vectors of arrays of floating point numbers
+    vector<vector<float32[16]>> complex;
+};
 ```
 
 #### Handles
@@ -413,27 +407,27 @@ Vectors are denoted as follows:
 
 Handles are denoted:
 
-*   **<code>handle</code></strong> : non-nullable Zircon handle of
+*   **`handle`** : non-nullable Zircon handle of
     unspecified type
-*   <strong><code>handle?</code></strong> : nullable Zircon handle of
+*   **`handle?`** : nullable Zircon handle of
     unspecified type
-*   <strong><code>handle<H></code></strong> : non-nullable Zircon handle
-    of type <em>H</em>
-*   <strong><code>handle<H>?</code></strong> : nullable Zircon handle of
-    type <em>H</em>
+*   **`handle<H>`** : non-nullable Zircon handle
+    of type _H_
+*   **`handle<H>?`** : nullable Zircon handle of
+    type _H_
 
-<em>H</em> can be one of[^1]: **<code>channel, event, eventpair, fifo, job,
-process, port, resource, socket, thread, vmo</code></strong>
+_H_ can be one of[¹](#footnote1): **`channel, event, eventpair, fifo, job,
+process, port, resource, socket, thread, vmo`**
 
 ```
-    // A record which contains some handles.
-    struct Record {
-        // a handle of unspecified type
-        handle h;
+// A record which contains some handles.
+struct Record {
+    // a handle of unspecified type
+    handle h;
 
-        // an optional channel
-        handle<channel>? c;
-    };
+    // an optional channel
+    handle<channel>? c;
+};
 ```
 
 #### Structs
@@ -446,27 +440,26 @@ process, port, resource, socket, thread, vmo</code></strong>
 ##### Declaration
 
 ```
-    struct Point { float32 x, y; };
-    struct Color { float32 r, g, b; };
+struct Point { float32 x, y; };
+struct Color { float32 r, g, b; };
 ```
 
 ##### Use
 
 Structs are denoted by their declared name (eg. **Circle**) and nullability:
 
-*   **<code>Circle</code></strong> : non-nullable Circle
-*   <strong><code>Circle?</code></strong> : nullable Circle
+*   **`Circle`** : non-nullable Circle
+*   **`Circle?`** : nullable Circle
 
-    ```
-    struct Circle {
-        bool filled;
-        Point center;    // Point will be stored in-line
-        float32 radius;
-        Color? color;    // Color will be stored out-of-line
-        bool dashed;
-    };
-
-    ```
+```
+struct Circle {
+    bool filled;
+    Point center;    // Point will be stored in-line
+    float32 radius;
+    Color? color;    // Color will be stored out-of-line
+    bool dashed;
+};
+```
 
 #### Unions
 
@@ -478,28 +471,27 @@ Structs are denoted by their declared name (eg. **Circle**) and nullability:
 ##### Declaration
 
 ```
-    union Pattern {
-        Color color;
-        Texture texture;
-    };
-    struct Color { float32 r, g, b; };
-    struct Texture { string name; };
+union Pattern {
+    Color color;
+    Texture texture;
+};
+struct Color { float32 r, g, b; };
+struct Texture { string name; };
 ```
 
 ##### Use
 
 Union are denoted by their declared name (eg. **Pattern**) and nullability:
 
-*   **<code>Pattern</code></strong> : non-nullable Shape
-*   <strong><code>Pattern?</code></strong> : nullable Shape
+*   **`Pattern`** : non-nullable Shape
+*   **`Pattern?`** : nullable Shape
 
-    ```
-    struct Paint {
-        Pattern fg;
-        Pattern? bg;
-    };
-
-    ```
+```
+struct Paint {
+    Pattern fg;
+    Pattern? bg;
+};
+```
 
 #### Interfaces
 
@@ -525,36 +517,36 @@ Union are denoted by their declared name (eg. **Pattern**) and nullability:
     *   32-bit protocol-specific code: meaning is left up to the interface in
         question
     *   a string: a human-readable message explaining the disposition
-*   **Interface extension: **New methods can be added to existing interfaces as
+*   **Interface extension:** New methods can be added to existing interfaces as
     long as they do not collide with existing methods.
-*   **Interface derivation: **New interfaces can be derived from any number of
+*   **Interface derivation:** New interfaces can be derived from any number of
     existing interfaces as long as none of their methods use the same ordinals.
     (This is purely a FIDL language feature, does not affect the wire format.)
 
 ##### Declaration
 
 ```
-    interface Calculator {
-        1: Add(int32 a, int32 b) -> (int32 sum);
-        2: Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder);
-        3: Clear();
-    };
+interface Calculator {
+    1: Add(int32 a, int32 b) -> (int32 sum);
+    2: Divide(int32 dividend, int32 divisor)
+    -> (int32 quotient, int32 remainder);
+    3: Clear();
+};
 
-    interface RealCalculator : Calculator {
-        1001: AddFloats(float32 a, float32 b) -> (float32 sum);
-    };
+interface RealCalculator : Calculator {
+    1001: AddFloats(float32 a, float32 b) -> (float32 sum);
+};
 
-    interface Science {
-        2001: Hypothesize();
-        2002: Investigate();
-        2003: Explode();
-        2004: Reproduce();
-    };
+interface Science {
+    2001: Hypothesize();
+    2002: Investigate();
+    2003: Explode();
+    2004: Reproduce();
+};
 
-    interface ScientificCalculator : RealCalculator, Science {
-        3001: Sin(float32 x) -> (float32 result);
-    };
+interface ScientificCalculator : RealCalculator, Science {
+    3001: Sin(float32 x) -> (float32 result);
+};
 ```
 
 TODO: Bikeshed away…
@@ -566,37 +558,36 @@ TODO: Bikeshed away…
     implicitly by using interface numbering instead: assign a number to each
     interface (default 0), construct actual method ordinal given (iface_number
     << 16 | method_number)
-    *   interface Foo@5 { Add@2(int32 a, int32 b) -> (int32 result); };
+    *   `interface Foo@5 { Add@2(int32 a, int32 b) -> (int32 result); };`
 
 ##### Use
 
 Interfaces are denoted by their name, directionality of the channel, and
 optionality:
 
-*   **<code>Interface</code></strong> : non-nullable FIDL interface (client
+*   **`Interface`** : non-nullable FIDL interface (client
     endpoint of channel)
-*   <strong><code>Interface?</code></strong> : nullable FIDL interface (client
+*   **`Interface?`** : nullable FIDL interface (client
     endpoint of channel)
-*   <strong><code>request<Interface></code></strong> : non-nullable FIDL interface
+*   **`request<Interface>`** : non-nullable FIDL interface
     request (server endpoint of channel)
-*   <strong><code>request<Interface>?</code></strong> : nullable FIDL interface request
+*   **`request<Interface>?`** : nullable FIDL interface request
     (server endpoint of channel)
 
-    ```
-    // A record which contains interface-bound channels.
-    struct Record {
-        // client endpoint of a channel bound to the Calculator interface
-        Calculator c;
+```
+// A record which contains interface-bound channels.
+struct Record {
+    // client endpoint of a channel bound to the Calculator interface
+    Calculator c;
 
-        // server endpoint of a channel bound to the Science interface
-        request<Science> s;
+    // server endpoint of a channel bound to the Science interface
+    request<Science> s;
 
-        // optional client endpoint of a channel bound to the
-        // RealCalculator interface
-        RealCalculator? r;
-    };
-
-    ```
+    // optional client endpoint of a channel bound to the
+    // RealCalculator interface
+    RealCalculator? r;
+};
+```
 
 ### Constant Declarations
 
@@ -606,13 +597,13 @@ must be either a primitive or an enum.
 Constants may be scoped within: **library, struct, union, interface**.
 
 ```
-    // a constant declared at library scope
-    const int32 kFavoriteNumber = 42;
+// a constant declared at library scope
+const int32 kFavoriteNumber = 42;
 
-    // a constant declared within an interface scope
-    interface VendingMachine {
+// a constant declared within an interface scope
+interface VendingMachine {
     const Beverage kFavoriteBeverage = WHISKEY;
-    };
+};
 ```
 
 ### Constant Expressions
@@ -628,9 +619,9 @@ interface ordinals and enum values, maybe defer?
 
 See also [FIDL 2.0: I/O Sketch](io-sketch.md).
 
-<!-- Footnotes themselves at the bottom. -->
-
 ## Notes
 
-[^1]: New handle types can easily be added to the language without affecting the
-    wire format since all handles are transferred the same way.
+### 1 {#footnote1}
+
+New handle types can easily be added to the language
+without affecting the  wire format since all handles are transferred the same way.
