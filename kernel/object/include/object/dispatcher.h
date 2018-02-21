@@ -119,6 +119,7 @@ public:
     zx_status_t SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie);
     zx_status_t GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie);
     zx_status_t InvalidateCookie(CookieJar *cookiejar);
+    zx_status_t InvalidateCookieLocked(CookieJar *cookiejar) TA_REQ(get_lock());
 
     // Interface for derived classes.
 

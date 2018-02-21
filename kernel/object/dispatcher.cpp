@@ -343,16 +343,19 @@ zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
     return ZX_ERR_ACCESS_DENIED;
 }
 
-zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
+zx_status_t Dispatcher::InvalidateCookieLocked(CookieJar* cookiejar) {
     ZX_DEBUG_ASSERT(has_state_tracker());
 
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    AutoLock lock(get_lock());
-
     cookiejar->scope_ = ZX_KOID_KERNEL;
     return ZX_OK;
+}
+
+zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
+    AutoLock lock(get_lock());
+    return InvalidateCookieLocked(cookiejar);
 }
 
 StateObserver::Flags Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {

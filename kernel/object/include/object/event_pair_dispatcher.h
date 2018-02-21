@@ -38,7 +38,5 @@ private:
     // Set in Init(); never changes otherwise.
     zx_koid_t other_koid_;
 
-    // Protects |other_| (except in Init(), where it's not needed).
-    fbl::Mutex lock_;
-    fbl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(lock_);
+    fbl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(get_lock());
 };

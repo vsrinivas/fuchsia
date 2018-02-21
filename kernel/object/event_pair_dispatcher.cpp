@@ -44,33 +44,36 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
 
 EventPairDispatcher::~EventPairDispatcher() {}
 
-void EventPairDispatcher::on_zero_handles() {
+void EventPairDispatcher::on_zero_handles()
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    fbl::AutoLock locker(&lock_);
+    fbl::AutoLock locker(get_lock());
     DEBUG_ASSERT(other_);
 
-    other_->InvalidateCookie(other_->get_cookie_jar());
-    other_->UpdateState(0u, ZX_EPAIR_PEER_CLOSED);
+    other_->InvalidateCookieLocked(other_->get_cookie_jar());
+    other_->UpdateStateLocked(0u, ZX_EPAIR_PEER_CLOSED);
     other_.reset();
 }
 
-zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
         return ZX_ERR_INVALID_ARGS;
 
+    fbl::AutoLock locker(get_lock());
+
     if (!peer) {
-        UpdateState(clear_mask, set_mask);
+        UpdateStateLocked(clear_mask, set_mask);
         return ZX_OK;
     }
 
-    fbl::AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
         return ZX_ERR_PEER_CLOSED;
-    other_->UpdateState(clear_mask, set_mask);
+    other_->UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
 }
 
