@@ -86,70 +86,58 @@ zx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
     if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
         return ZX_ERR_INVALID_ARGS;
 
+    AutoLock lock(get_lock());
+
     if (!peer) {
-        UpdateState(clear_mask, set_mask);
+        UpdateStateLocked(clear_mask, set_mask);
         return ZX_OK;
     }
 
-    fbl::RefPtr<FifoDispatcher> other;
-    {
-        AutoLock lock(&lock_);
-        if (!other_)
-            return ZX_ERR_PEER_CLOSED;
-        other = other_;
-    }
-
-    return other->UserSignalSelf(clear_mask, set_mask);
+    if (!other_)
+        return ZX_ERR_PEER_CLOSED;
+    return other_->UserSignalSelfLocked(clear_mask, set_mask);
 }
 
-zx_status_t FifoDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+zx_status_t FifoDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
-    UpdateState(clear_mask, set_mask);
+    UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
 }
 
 void FifoDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    fbl::RefPtr<FifoDispatcher> fifo;
-    {
-        AutoLock lock(&lock_);
-        fifo = fbl::move(other_);
-    }
-    if (fifo)
-        fifo->OnPeerZeroHandles();
+    AutoLock lock(get_lock());
+    fbl::RefPtr<FifoDispatcher> other = fbl::move(other_);
+    if (other != nullptr)
+        other->OnPeerZeroHandlesLocked();
 }
 
-void FifoDispatcher::OnPeerZeroHandles() {
+void FifoDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
     other_.reset();
-    UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
+    UpdateStateLocked(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
 zx_status_t FifoDispatcher::WriteFromUser(user_in_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
     canary_.Assert();
 
-    fbl::RefPtr<FifoDispatcher> other;
-    {
-        AutoLock lock(&lock_);
-        if (!other_)
-            return ZX_ERR_PEER_CLOSED;
-        other = other_;
-    }
+    AutoLock lock(get_lock());
+    if (!other_)
+        return ZX_ERR_PEER_CLOSED;
 
-    return other->WriteSelf(ptr, len, actual);
+    return other_->WriteSelfLocked(ptr, len, actual);
 }
 
-zx_status_t FifoDispatcher::WriteSelf(user_in_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteSelfLocked(user_in_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
     if (count == 0)
         return ZX_ERR_OUT_OF_RANGE;
-
-    AutoLock lock(&lock_);
 
     uint32_t old_head = head_;
 
@@ -190,24 +178,25 @@ zx_status_t FifoDispatcher::WriteSelf(user_in_ptr<const uint8_t> ptr, size_t byt
 
     // if was empty, we've become readable
     if (was_empty)
-        UpdateState(0u, ZX_FIFO_READABLE);
+        UpdateStateLocked(0u, ZX_FIFO_READABLE);
 
     // if now full, we're no longer writable
     if (elem_count_ == (head_ - tail_))
-        other_->UpdateState(ZX_FIFO_WRITABLE, 0u);
+        other_->UpdateStateLocked(ZX_FIFO_WRITABLE, 0u);
 
     *actual = (head_ - old_head);
     return ZX_OK;
 }
 
-zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
     if (count == 0)
         return ZX_ERR_OUT_OF_RANGE;
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
 
     uint32_t old_tail = tail_;
 
@@ -248,11 +237,11 @@ zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen
 
     // if we were full, we have become writable
     if (was_full && other_)
-        other_->UpdateState(0u, ZX_FIFO_WRITABLE);
+        other_->UpdateStateLocked(0u, ZX_FIFO_WRITABLE);
 
     // if we've become empty, we're no longer readable
     if ((head_ - tail_) == 0)
-        UpdateState(ZX_FIFO_READABLE, 0u);
+        UpdateStateLocked(ZX_FIFO_READABLE, 0u);
 
     *actual = (tail_ - old_tail);
     return ZX_OK;
