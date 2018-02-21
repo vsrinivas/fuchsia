@@ -59,16 +59,16 @@ zx_status_t PciInterruptDispatcher::Create(
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    fbl::AutoLock lock(&interrupt_dispatcher->lock_);
+    fbl::AutoLock lock(interrupt_dispatcher->get_lock());
 
     // bind our PCI interrupt
-    zx_status_t result = interrupt_dispatcher->AddSlot(ZX_PCI_INTERRUPT_SLOT, irq_id,
-                                                       INTERRUPT_UNMASK_PREWAIT);
+    zx_status_t result = interrupt_dispatcher->AddSlotLocked(ZX_PCI_INTERRUPT_SLOT, irq_id,
+                                                             INTERRUPT_UNMASK_PREWAIT);
     if (result != ZX_OK)
         return result;
 
     // prebind ZX_INTERRUPT_SLOT_USER
-    result = interrupt_dispatcher->AddSlot(ZX_INTERRUPT_SLOT_USER, 0, INTERRUPT_VIRTUAL);
+    result = interrupt_dispatcher->AddSlotLocked(ZX_INTERRUPT_SLOT_USER, 0, INTERRUPT_VIRTUAL);
     if (result != ZX_OK)
         return result;
 
@@ -94,9 +94,9 @@ zx_status_t PciInterruptDispatcher::Bind(uint32_t slot, uint32_t vector, uint32_
     if (options != ZX_INTERRUPT_VIRTUAL)
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(get_lock());
 
-    return AddSlot(slot, vector, INTERRUPT_VIRTUAL);
+    return AddSlotLocked(slot, vector, INTERRUPT_VIRTUAL);
 }
 
 void PciInterruptDispatcher::MaskInterrupt(uint32_t vector) {

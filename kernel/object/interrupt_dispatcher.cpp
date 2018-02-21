@@ -6,15 +6,13 @@
 
 #include <object/interrupt_dispatcher.h>
 
-#include <fbl/auto_lock.h>
-
 InterruptDispatcher::InterruptDispatcher() : signals_(0) {
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
     reported_signals_.store(0);
     memset(slot_map_, 0xff, sizeof(slot_map_));
 }
 
-zx_status_t InterruptDispatcher::AddSlot(uint32_t slot, uint32_t vector, uint32_t flags) {
+zx_status_t InterruptDispatcher::AddSlotLocked(uint32_t slot, uint32_t vector, uint32_t flags) {
     size_t index = interrupts_.size();
     bool is_virtual = !!(flags & INTERRUPT_VIRTUAL);
 

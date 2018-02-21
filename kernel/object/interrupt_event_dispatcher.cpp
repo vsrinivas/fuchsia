@@ -28,10 +28,10 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
     // cleaned up automatically.
     auto disp_ref = fbl::AdoptRef<Dispatcher>(disp);
 
-    fbl::AutoLock lock(&disp->lock_);
+    fbl::AutoLock lock(disp->get_lock());
 
     // prebind ZX_INTERRUPT_SLOT_USER
-    zx_status_t status = disp->AddSlot(ZX_INTERRUPT_SLOT_USER, 0, INTERRUPT_VIRTUAL);
+    zx_status_t status = disp->AddSlotLocked(ZX_INTERRUPT_SLOT_USER, 0, INTERRUPT_VIRTUAL);
     if (status != ZX_OK)
         return status;
 
@@ -103,9 +103,9 @@ zx_status_t InterruptEventDispatcher::Bind(uint32_t slot, uint32_t vector, uint3
         }
     }
 
-    fbl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(get_lock());
 
-    zx_status_t status = AddSlot(slot, vector, interrupt_flags);
+    zx_status_t status = AddSlotLocked(slot, vector, interrupt_flags);
     if (status != ZX_OK)
         return status;
 
