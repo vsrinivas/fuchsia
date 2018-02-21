@@ -159,7 +159,7 @@ protected:
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
     void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(get_lock());
 
-    zx_signals_t GetSignalsState() const {
+    zx_signals_t GetSignalsStateLocked() const TA_REQ(get_lock()) {
         ZX_DEBUG_ASSERT(has_state_tracker());
         return signals_;
     }
