@@ -49,6 +49,7 @@ struct BandCapabilities {
 // TODO(tkilbourn): add more fields for debugging. For now, we just have the information
 // necessary for the SME.
 struct DeviceQueryResponse {
+    array<uint8, 6> mac_addr;
     array<MacMode> modes;
     array<BandCapabilities> bands;
 };

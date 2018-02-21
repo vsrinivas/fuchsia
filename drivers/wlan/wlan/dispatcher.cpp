@@ -498,6 +498,10 @@ zx_status_t Dispatcher::HandleMlmeMethod<DeviceQueryRequest>(const Packet* unuse
     resp->modes.resize(0);
     resp->bands.resize(0);
     const wlanmac_info_t& info = device_->GetWlanInfo();
+
+    resp->mac_addr.resize(ETH_MAC_SIZE);
+    memcpy(resp->mac_addr.data(), info.eth_info.mac, ETH_MAC_SIZE);
+
     if (info.mac_modes & WLAN_MAC_MODE_STA) { resp->modes.push_back(MacMode::STA); }
     if (info.mac_modes & WLAN_MAC_MODE_AP) { resp->modes.push_back(MacMode::AP); }
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {

@@ -217,6 +217,9 @@ func PrintSignalReportIndication(ind *mlme_ext.SignalReportIndication) {
 
 func PrintDeviceQueryResponse(resp *mlme_ext.DeviceQueryResponse) {
 	log.Print("DeviceQueryResponse")
+	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+		resp.MacAddr[0], resp.MacAddr[1], resp.MacAddr[2],
+		resp.MacAddr[3], resp.MacAddr[4], resp.MacAddr[5])
 	log.Print("  Modes:")
 	for _, mode := range resp.Modes {
 		switch mode {

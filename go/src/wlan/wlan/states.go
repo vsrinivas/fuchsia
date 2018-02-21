@@ -155,6 +155,7 @@ func (s *queryState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 			PrintDeviceQueryResponse(v)
 		}
 		c.wlanInfo, _ = msg.(*mlme_ext.DeviceQueryResponse)
+		c.staAddr = c.wlanInfo.MacAddr
 
 		// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
 		// TODO(tkilbourn): confirm that the device capabilities include the desired mode

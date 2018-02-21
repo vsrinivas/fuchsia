@@ -49,7 +49,7 @@ type Client struct {
 	cfg      *Config
 	apCfg    *APConfig
 	ap       *AP
-	staAddr  [6]byte
+	staAddr  [6]uint8
 	txid     uint64
 	eapolC   *eapol.Client
 	wlanInfo *mlme_ext.DeviceQueryResponse
@@ -95,7 +95,6 @@ func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error)
 		cfg:      config,
 		apCfg:    apConfig,
 		state:    nil,
-		staAddr:  info.MAC,
 	}
 	success = true
 	return c, nil
