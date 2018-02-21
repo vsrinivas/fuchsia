@@ -24,6 +24,9 @@ function main {
     fi
   fi
 
+  # Pre-process GN files before Ninja sees them
+  python "${FUCHSIA_DIR}/scripts/devshell/"process-gn.py 2>/dev/null
+
   local env_args=
 
   # PATH is required to find a number of tools on the host system.
