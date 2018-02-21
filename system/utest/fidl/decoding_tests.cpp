@@ -1393,95 +1393,133 @@ bool decode_nested_nullable_structs() {
     END_TEST;
 }
 
+void SetUpRecursionMessage(recursion_message_layout* message) {
+    message->inline_struct.inline_union.tag = maybe_recurse_union_kMore;
+    message->inline_struct.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_0.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_0.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_1.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_1.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_2.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_2.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_3.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_3.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_4.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_4.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_5.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_5.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_6.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_6.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_7.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_7.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_8.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_8.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_9.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_9.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_10.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_10.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_11.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_11.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_12.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_12.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_13.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_13.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_14.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_14.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_15.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_15.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_16.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_16.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_17.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_17.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_18.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_18.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_19.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_19.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_20.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_20.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_21.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_21.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_22.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_22.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_23.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_23.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_24.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_24.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_25.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_25.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_26.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_26.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message->depth_27.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_27.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+}
+
 bool decode_nested_struct_recursion_too_deep_error() {
     BEGIN_TEST;
 
     recursion_message_layout message = {};
 
-    message.inline_struct.start.tag = maybe_recurse_union_kMore;
-
-    message.depth_0.tag = maybe_recurse_union_kMore;
-    message.depth_0.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_1.tag = maybe_recurse_union_kMore;
-    message.depth_1.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_2.tag = maybe_recurse_union_kMore;
-    message.depth_2.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_3.tag = maybe_recurse_union_kMore;
-    message.depth_3.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_4.tag = maybe_recurse_union_kMore;
-    message.depth_4.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_5.tag = maybe_recurse_union_kMore;
-    message.depth_5.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_6.tag = maybe_recurse_union_kMore;
-    message.depth_6.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_7.tag = maybe_recurse_union_kMore;
-    message.depth_7.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_8.tag = maybe_recurse_union_kMore;
-    message.depth_8.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_9.tag = maybe_recurse_union_kMore;
-    message.depth_9.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_10.tag = maybe_recurse_union_kMore;
-    message.depth_10.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_11.tag = maybe_recurse_union_kMore;
-    message.depth_11.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_12.tag = maybe_recurse_union_kMore;
-    message.depth_12.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_13.tag = maybe_recurse_union_kMore;
-    message.depth_13.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_14.tag = maybe_recurse_union_kMore;
-    message.depth_14.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_15.tag = maybe_recurse_union_kMore;
-    message.depth_15.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_16.tag = maybe_recurse_union_kMore;
-    message.depth_16.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_17.tag = maybe_recurse_union_kMore;
-    message.depth_17.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_18.tag = maybe_recurse_union_kMore;
-    message.depth_18.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_19.tag = maybe_recurse_union_kMore;
-    message.depth_19.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_20.tag = maybe_recurse_union_kMore;
-    message.depth_20.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_21.tag = maybe_recurse_union_kMore;
-    message.depth_21.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_22.tag = maybe_recurse_union_kMore;
-    message.depth_22.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_23.tag = maybe_recurse_union_kMore;
-    message.depth_23.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_24.tag = maybe_recurse_union_kMore;
-    message.depth_24.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_25.tag = maybe_recurse_union_kMore;
-    message.depth_25.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_26.tag = maybe_recurse_union_kMore;
-    message.depth_26.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_27.tag = maybe_recurse_union_kMore;
-    message.depth_27.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_28.tag = maybe_recurse_union_kMore;
-    message.depth_28.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_29.tag = maybe_recurse_union_kMore;
-    message.depth_29.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_30.tag = maybe_recurse_union_kMore;
-    message.depth_30.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_31.tag = maybe_recurse_union_kMore;
-    message.depth_31.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_32.tag = maybe_recurse_union_kMore;
-    message.depth_32.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_33.tag = maybe_recurse_union_kMore;
-    message.depth_33.more = reinterpret_cast<maybe_recurse*>(FIDL_ALLOC_PRESENT);
-    message.depth_34.tag = maybe_recurse_union_kDone;
-    message.depth_34.done = reinterpret_cast<recursion_done*>(FIDL_ALLOC_PRESENT);
-    message.done.handle = FIDL_HANDLE_PRESENT;
+    // First we check that FIDL_RECURSION_DEPTH - 1 levels of recursion is OK.
+    SetUpRecursionMessage(&message);
+    message.depth_28.inline_union.tag = maybe_recurse_union_kDone;
+    message.depth_28.inline_union.handle = FIDL_HANDLE_PRESENT;
 
     zx_handle_t handles[] = {
         dummy_handle_0,
     };
 
-    const char* error = nullptr;
-    auto status = fidl_decode(&recursion_message_type, &message, sizeof(message), handles,
-                              ArrayCount(handles), &error);
 
+    const char* error = nullptr;
+    auto status = fidl_decode(&recursion_message_type, &message,
+        // Tell it to ignore everything after we stop recursion.
+        offsetof(recursion_message_layout, depth_29), handles, ArrayCount(handles), &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    // Now add another level of recursion.
+    SetUpRecursionMessage(&message);
+    message.depth_28.inline_union.tag = maybe_recurse_union_kMore;
+    message.depth_28.inline_union.more =
+        reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
+    message.depth_29.inline_union.tag = maybe_recurse_union_kDone;
+    message.depth_29.inline_union.handle = FIDL_HANDLE_PRESENT;
+
+    error = nullptr;
+    status = fidl_decode(&recursion_message_type, &message, sizeof(message), handles,
+                         ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
+    const char expected_error_msg[] = "recursion depth exceeded decoding struct";
+    EXPECT_STR_EQ(expected_error_msg, error, sizeof(expected_error_msg), "wrong error msg");
 
     END_TEST;
 }

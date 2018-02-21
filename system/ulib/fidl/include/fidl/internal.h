@@ -69,13 +69,16 @@ struct FidlCodedStructPointer {
 // this points to an array of |fidl_type*| rather than |FidlField|.
 //
 // On-the-wire unions begin with a tag which is an index into |types|.
+// |data_offset| is the offset of the data in the wire format (tag + padding).
 struct FidlCodedUnion {
     const fidl_type* const* types;
     const uint32_t type_count;
+    const uint32_t data_offset;
     const uint32_t size;
 
-    constexpr FidlCodedUnion(const fidl_type* const* types, uint32_t type_count, uint32_t size)
-        : types(types), type_count(type_count), size(size) {}
+    constexpr FidlCodedUnion(const fidl_type* const* types, uint32_t type_count,
+                             uint32_t data_offset, uint32_t size)
+        : types(types), type_count(type_count), data_offset(data_offset), size(size) {}
 };
 
 struct FidlCodedUnionPointer {

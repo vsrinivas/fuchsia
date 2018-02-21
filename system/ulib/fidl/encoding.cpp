@@ -92,6 +92,7 @@ private:
                 state = kStateUnion;
                 union_state.types = fidl_type->coded_union.types;
                 union_state.type_count = fidl_type->coded_union.type_count;
+                union_state.data_offset = fidl_type->coded_union.data_offset;
                 break;
             case fidl::kFidlTypeUnionPointer:
                 state = kStateUnionPointer;
@@ -132,6 +133,7 @@ private:
             state = kStateUnion;
             union_state.types = coded_union->types;
             union_state.type_count = coded_union->type_count;
+            union_state.data_offset = coded_union->data_offset;
         }
 
         Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
@@ -197,6 +199,7 @@ private:
             struct {
                 const fidl_type_t* const* types;
                 uint32_t type_count;
+                uint32_t data_offset;
             } union_state;
             struct {
                 const fidl::FidlCodedUnion* union_type;
@@ -345,7 +348,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
                 return WithError("Tried to encode a bad union discriminant");
             }
             const fidl_type_t* member = frame->union_state.types[union_tag];
-            frame->offset += static_cast<uint32_t>(sizeof(union_tag));
+            frame->offset += frame->union_state.data_offset;
             *frame = Frame(member, frame->offset);
             continue;
         }
@@ -357,7 +360,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
             }
             if (!ClaimOutOfLineStorage(frame->union_pointer_state.union_type->size, *union_ptr_ptr,
                                        &frame->offset)) {
-                return WithError("messange wanted to store too large of a nullable union");
+                return WithError("message wanted to store too large of a nullable union");
             }
             *union_ptr_ptr = reinterpret_cast<fidl_union_tag_t*>(FIDL_ALLOC_PRESENT);
             const fidl::FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;

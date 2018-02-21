@@ -325,7 +325,9 @@ static const fidl_type_t* nonnullable_handle_union_members[] = {
     &nonnullable_handle,
 };
 static const fidl_type_t nonnullable_handle_union_type = fidl_type_t(fidl::FidlCodedUnion(
-    nonnullable_handle_union_members, ArrayCount(nonnullable_handle_union_members),
+    nonnullable_handle_union_members,
+    ArrayCount(nonnullable_handle_union_members),
+    offsetof(nonnullable_handle_union, handle),
     sizeof(nonnullable_handle_union)));
 static const fidl::FidlField nonnullable_handle_union_fields[] = {
     fidl::FidlField(&nonnullable_handle_union_type,
@@ -340,10 +342,11 @@ static const fidl_type_t* array_of_nonnullable_handles_union_members[] = {
     &array_of_two_nonnullable_handles,
     &array_of_two_arrays_of_two_nonnullable_handles,
 };
-static const fidl_type_t array_of_nonnullable_handles_union_type =
-    fidl_type_t(fidl::FidlCodedUnion(array_of_nonnullable_handles_union_members,
-                                     ArrayCount(array_of_nonnullable_handles_union_members),
-                                     sizeof(array_of_nonnullable_handles_union)));
+static const fidl_type_t array_of_nonnullable_handles_union_type = fidl_type_t(
+    fidl::FidlCodedUnion(array_of_nonnullable_handles_union_members,
+                         ArrayCount(array_of_nonnullable_handles_union_members),
+                         offsetof(array_of_nonnullable_handles_union, handle),
+                         sizeof(array_of_nonnullable_handles_union)));
 static const fidl::FidlField array_of_nonnullable_handles_union_fields[] = {
     fidl::FidlField(
         &array_of_nonnullable_handles_union_type,
@@ -461,19 +464,17 @@ const fidl_type_t nested_struct_ptrs_message_type = fidl_type_t(
                           sizeof(nested_struct_ptrs_inline_data)));
 
 // Recursive struct pointer messages.
-static const fidl::FidlField recursion_done_fields[] = {
-    fidl::FidlField(&nonnullable_handle, offsetof(recursion_done, handle)),
-};
-static const fidl_type_t recursion_done_type = fidl_type_t(fidl::FidlCodedStruct(
-    recursion_done_fields, ArrayCount(recursion_done_fields), sizeof(recursion_done)));
+const fidl_type_t recursion_message_ptr_type = fidl_type_t(fidl::FidlCodedStructPointer(
+    &recursion_message_type.coded_struct));
 static const fidl_type_t* maybe_recurse_union_members[] = {
-    &recursion_done_type,
-    &maybe_recurse_type,
+    &nonnullable_handle,
+    &recursion_message_ptr_type,
 };
 const fidl_type_t maybe_recurse_type = fidl_type_t(fidl::FidlCodedUnion(
-    maybe_recurse_union_members, ArrayCount(maybe_recurse_union_members), sizeof(maybe_recurse)));
+    maybe_recurse_union_members, ArrayCount(maybe_recurse_union_members),
+    offsetof(maybe_recurse, handle), sizeof(maybe_recurse)));
 static const fidl::FidlField recursion_fields[] = {
-    fidl::FidlField(&maybe_recurse_type, offsetof(recursion_inline_data, start)),
+    fidl::FidlField(&maybe_recurse_type, offsetof(recursion_inline_data, inline_union)),
 };
 const fidl_type_t recursion_message_type = fidl_type_t(fidl::FidlCodedStruct(
     recursion_fields, ArrayCount(recursion_fields), sizeof(recursion_inline_data)));

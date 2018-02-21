@@ -1381,93 +1381,103 @@ bool encode_nested_nullable_structs() {
     END_TEST;
 }
 
+void SetUpRecursionMessage(recursion_message_layout* message) {
+    message->inline_struct.inline_union.tag = maybe_recurse_union_kMore;
+    message->inline_struct.inline_union.more = &message->depth_0;
+    message->depth_0.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_0.inline_union.more = &message->depth_1;
+    message->depth_1.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_1.inline_union.more = &message->depth_2;
+    message->depth_2.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_2.inline_union.more = &message->depth_3;
+    message->depth_3.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_3.inline_union.more = &message->depth_4;
+    message->depth_4.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_4.inline_union.more = &message->depth_5;
+    message->depth_5.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_5.inline_union.more = &message->depth_6;
+    message->depth_6.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_6.inline_union.more = &message->depth_7;
+    message->depth_7.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_7.inline_union.more = &message->depth_8;
+    message->depth_8.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_8.inline_union.more = &message->depth_9;
+    message->depth_9.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_9.inline_union.more = &message->depth_10;
+    message->depth_10.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_10.inline_union.more = &message->depth_11;
+    message->depth_11.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_11.inline_union.more = &message->depth_12;
+    message->depth_12.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_12.inline_union.more = &message->depth_13;
+    message->depth_13.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_13.inline_union.more = &message->depth_14;
+    message->depth_14.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_14.inline_union.more = &message->depth_15;
+    message->depth_15.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_15.inline_union.more = &message->depth_16;
+    message->depth_16.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_16.inline_union.more = &message->depth_17;
+    message->depth_17.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_17.inline_union.more = &message->depth_18;
+    message->depth_18.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_18.inline_union.more = &message->depth_19;
+    message->depth_19.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_19.inline_union.more = &message->depth_20;
+    message->depth_20.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_20.inline_union.more = &message->depth_21;
+    message->depth_21.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_21.inline_union.more = &message->depth_22;
+    message->depth_22.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_22.inline_union.more = &message->depth_23;
+    message->depth_23.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_23.inline_union.more = &message->depth_24;
+    message->depth_24.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_24.inline_union.more = &message->depth_25;
+    message->depth_25.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_25.inline_union.more = &message->depth_26;
+    message->depth_26.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_26.inline_union.more = &message->depth_27;
+    message->depth_27.inline_union.tag = maybe_recurse_union_kMore;
+    message->depth_27.inline_union.more = &message->depth_28;
+}
+
 bool encode_nested_struct_recursion_too_deep_error() {
     BEGIN_TEST;
 
     recursion_message_layout message = {};
-    message.inline_struct.start.tag = maybe_recurse_union_kMore;
-    message.inline_struct.start.more = &message.depth_0;
-    message.depth_0.tag = maybe_recurse_union_kMore;
-    message.depth_0.more = &message.depth_1;
-    message.depth_1.tag = maybe_recurse_union_kMore;
-    message.depth_1.more = &message.depth_2;
-    message.depth_2.tag = maybe_recurse_union_kMore;
-    message.depth_2.more = &message.depth_3;
-    message.depth_3.tag = maybe_recurse_union_kMore;
-    message.depth_3.more = &message.depth_4;
-    message.depth_4.tag = maybe_recurse_union_kMore;
-    message.depth_4.more = &message.depth_5;
-    message.depth_5.tag = maybe_recurse_union_kMore;
-    message.depth_5.more = &message.depth_6;
-    message.depth_6.tag = maybe_recurse_union_kMore;
-    message.depth_6.more = &message.depth_7;
-    message.depth_7.tag = maybe_recurse_union_kMore;
-    message.depth_7.more = &message.depth_8;
-    message.depth_8.tag = maybe_recurse_union_kMore;
-    message.depth_8.more = &message.depth_9;
-    message.depth_9.tag = maybe_recurse_union_kMore;
-    message.depth_9.more = &message.depth_10;
-    message.depth_10.tag = maybe_recurse_union_kMore;
-    message.depth_10.more = &message.depth_11;
-    message.depth_11.tag = maybe_recurse_union_kMore;
-    message.depth_11.more = &message.depth_12;
-    message.depth_12.tag = maybe_recurse_union_kMore;
-    message.depth_12.more = &message.depth_13;
-    message.depth_13.tag = maybe_recurse_union_kMore;
-    message.depth_13.more = &message.depth_14;
-    message.depth_14.tag = maybe_recurse_union_kMore;
-    message.depth_14.more = &message.depth_15;
-    message.depth_15.tag = maybe_recurse_union_kMore;
-    message.depth_15.more = &message.depth_16;
-    message.depth_16.tag = maybe_recurse_union_kMore;
-    message.depth_16.more = &message.depth_17;
-    message.depth_17.tag = maybe_recurse_union_kMore;
-    message.depth_17.more = &message.depth_18;
-    message.depth_18.tag = maybe_recurse_union_kMore;
-    message.depth_18.more = &message.depth_19;
-    message.depth_19.tag = maybe_recurse_union_kMore;
-    message.depth_19.more = &message.depth_20;
-    message.depth_20.tag = maybe_recurse_union_kMore;
-    message.depth_20.more = &message.depth_21;
-    message.depth_21.tag = maybe_recurse_union_kMore;
-    message.depth_21.more = &message.depth_22;
-    message.depth_22.tag = maybe_recurse_union_kMore;
-    message.depth_22.more = &message.depth_23;
-    message.depth_23.tag = maybe_recurse_union_kMore;
-    message.depth_23.more = &message.depth_24;
-    message.depth_24.tag = maybe_recurse_union_kMore;
-    message.depth_24.more = &message.depth_25;
-    message.depth_25.tag = maybe_recurse_union_kMore;
-    message.depth_25.more = &message.depth_26;
-    message.depth_26.tag = maybe_recurse_union_kMore;
-    message.depth_26.more = &message.depth_27;
-    message.depth_27.tag = maybe_recurse_union_kMore;
-    message.depth_27.more = &message.depth_28;
-    message.depth_28.tag = maybe_recurse_union_kMore;
-    message.depth_28.more = &message.depth_29;
-    message.depth_29.tag = maybe_recurse_union_kMore;
-    message.depth_29.more = &message.depth_30;
-    message.depth_30.tag = maybe_recurse_union_kMore;
-    message.depth_30.more = &message.depth_31;
-    message.depth_31.tag = maybe_recurse_union_kMore;
-    message.depth_31.more = &message.depth_32;
-    message.depth_32.tag = maybe_recurse_union_kMore;
-    message.depth_32.more = &message.depth_33;
-    message.depth_33.tag = maybe_recurse_union_kMore;
-    message.depth_33.more = &message.depth_34;
-    message.depth_34.tag = maybe_recurse_union_kDone;
-    message.depth_34.done = &message.done;
-    message.done.handle = dummy_handle_0;
+    // First we check that FIDL_RECURSION_DEPTH - 1 levels of recursion is OK.
+    SetUpRecursionMessage(&message);
+    message.depth_28.inline_union.tag = maybe_recurse_union_kDone;
+    message.depth_28.inline_union.handle = dummy_handle_0;
 
     zx_handle_t handles[1] = {};
 
     const char* error = nullptr;
     uint32_t actual_handles = 0u;
-    auto status = fidl_encode(&recursion_message_type, &message, sizeof(message), handles,
-                              ArrayCount(handles), &actual_handles, &error);
+    auto status =
+        fidl_encode(&recursion_message_type, &message,
+                    // Tell it to ignore everything after we stop recursion.
+                    offsetof(recursion_message_layout, depth_29), handles,
+                    ArrayCount(handles), &actual_handles, &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
 
+    // Now add another level of recursion.
+    SetUpRecursionMessage(&message);
+    message.depth_28.inline_union.tag = maybe_recurse_union_kMore;
+    message.depth_28.inline_union.more = &message.depth_29;
+    message.depth_29.inline_union.tag = maybe_recurse_union_kDone;
+    message.depth_29.inline_union.handle = dummy_handle_0;
+
+    error = nullptr;
+    actual_handles = 0u;
+    status = fidl_encode(&recursion_message_type, &message, sizeof(message), handles,
+                         ArrayCount(handles), &actual_handles, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
+    const char expected_error_msg[] = "recursion depth exceeded encoding struct";
+    EXPECT_STR_EQ(expected_error_msg, error, sizeof(expected_error_msg), "wrong error msg");
 
     END_TEST;
 }

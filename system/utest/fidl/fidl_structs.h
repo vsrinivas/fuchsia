@@ -365,56 +365,48 @@ struct alignas(FIDL_ALIGNMENT) nested_struct_ptrs_message_layout {
 // Recursive types.
 #define maybe_recurse_union_kDone UINT32_C(0)
 #define maybe_recurse_union_kMore UINT32_C(1)
-struct alignas(FIDL_ALIGNMENT) recursion_done {
-    zx_handle_t handle;
-};
+struct alignas(FIDL_ALIGNMENT) recursion_inline_data;
 struct alignas(FIDL_ALIGNMENT) maybe_recurse {
     fidl_union_tag_t tag;
     union {
-        recursion_done* done;
-        maybe_recurse* more;
+        zx_handle_t handle;
+        recursion_inline_data* more;
     };
 };
 struct alignas(FIDL_ALIGNMENT) recursion_inline_data {
     fidl_message_header_t header;
-    maybe_recurse start;
+    maybe_recurse inline_union;
 };
 struct alignas(FIDL_ALIGNMENT) recursion_message_layout {
     recursion_inline_data inline_struct;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_0;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_1;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_2;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_3;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_4;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_5;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_6;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_7;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_8;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_9;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_10;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_11;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_12;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_13;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_14;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_15;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_16;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_17;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_18;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_19;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_20;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_21;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_22;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_23;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_24;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_25;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_26;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_27;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_28;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_29;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_30;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_31;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_32;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_33;
-    alignas(FIDL_ALIGNMENT) maybe_recurse depth_34;
-    alignas(FIDL_ALIGNMENT) recursion_done done;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_0;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_1;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_2;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_3;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_4;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_5;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_6;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_7;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_8;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_9;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_10;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_11;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_12;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_13;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_14;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_15;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_16;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_17;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_18;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_19;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_20;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_21;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_22;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_23;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_24;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_25;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_26;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_27;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_28;
+    alignas(FIDL_ALIGNMENT) recursion_inline_data depth_29;
 };
