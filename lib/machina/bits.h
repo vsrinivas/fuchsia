@@ -46,9 +46,20 @@ static inline constexpr T bits_shift(T x, size_t high, size_t low) {
 }
 
 template <typename T>
-static inline constexpr T align(T x, size_t alignment) {
+static inline constexpr T round_up(T x, size_t alignment) {
   auto mask = static_cast<T>(alignment - 1);
-  return static_cast<T>(x + mask) & static_cast<T>(~mask);
+  return (x + mask) & ~mask;
+}
+
+template <typename T>
+static inline constexpr T round_down(T x, size_t alignment) {
+  auto mask = static_cast<T>(alignment - 1);
+  return x & ~mask;
+}
+
+template <typename T>
+static inline constexpr T align(T x, size_t alignment) {
+  return round_up<T>(x, alignment);
 }
 
 template <typename T>

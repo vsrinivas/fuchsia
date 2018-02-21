@@ -28,6 +28,7 @@
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/hid_event_source.h"
 #include "garnet/lib/machina/input_dispatcher.h"
+#include "garnet/lib/machina/inspect_service_impl.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/uart.h"
@@ -204,10 +205,13 @@ int main(int argc, char** argv) {
   if (status != ZX_OK)
     return status;
 
+  machina::InspectServiceImpl inspect_service(application_context.get(), guest.phys_mem());
+
+  // TODO(abdulla): Remove these variables. We should use PhysMem directly.
   uintptr_t physmem_addr = guest.phys_mem().addr();
   size_t physmem_size = guest.phys_mem().size();
-  uintptr_t pt_end_off = 0;
 
+  uintptr_t pt_end_off = 0;
 #if __x86_64__
   status = machina::create_page_table(guest.phys_mem(), &pt_end_off);
   if (status != ZX_OK) {

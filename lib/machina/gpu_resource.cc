@@ -11,12 +11,12 @@
 
 static zx_pixel_format_t pixel_format(uint32_t virtio_format) {
   switch (virtio_format) {
-  case VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM:
-    return ZX_PIXEL_FORMAT_ARGB_8888;
-  case VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM:
-    return ZX_PIXEL_FORMAT_RGB_x888;
-  default:
-    return ZX_PIXEL_FORMAT_NONE;
+    case VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM:
+      return ZX_PIXEL_FORMAT_ARGB_8888;
+    case VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM:
+      return ZX_PIXEL_FORMAT_RGB_x888;
+    default:
+      return ZX_PIXEL_FORMAT_NONE;
   }
 }
 

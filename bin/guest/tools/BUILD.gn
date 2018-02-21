@@ -9,10 +9,14 @@ package("tools") {
   package_name = "guest_tools"
 
   deps = [
+    "//garnet/bin/guest/tools/inspect-guest",
     "//garnet/bin/guest/tools/launch_guest",
   ]
 
   binaries = [
+    {
+      name = "inspect-guest"
+    },
     {
       name = "launch_guest"
     },

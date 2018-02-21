@@ -23,6 +23,8 @@ shared_library("machina") {
     "hid_event_source.h",
     "input_dispatcher.cc",
     "input_dispatcher.h",
+    "inspect_service_impl.cc",
+    "inspect_service_impl.h",
     "io.h",
     "pci.cc",
     "pci.h",
