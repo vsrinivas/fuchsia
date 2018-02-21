@@ -71,15 +71,57 @@ int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
 
 namespace ralink {
 
+#define DEV(c) static_cast<Device*>(c)
+static zx_protocol_device_t device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open = nullptr,
+    .open_at = nullptr,
+    .close = nullptr,
+    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
+    .release = [](void* ctx) { DEV(ctx)->Release(); },
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = nullptr,
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+};
+
+static wlanmac_protocol_ops_t wlanmac_ops = {
+    .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
+        return DEV(ctx)->WlanmacQuery(options, info);
+    },
+    .start = [](void* ctx, wlanmac_ifc_t* info, void* cookie) -> zx_status_t {
+        return DEV(ctx)->WlanmacStart(info, cookie);
+    },
+    .stop = [](void* ctx) { DEV(ctx)->WlanmacStop(); },
+    .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
+        return DEV(ctx)->WlanmacQueueTx(options, pkt);
+    },
+    .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
+        return DEV(ctx)->WlanmacSetChannel(options, chan);
+    },
+    .set_bss = nullptr, // deprecated
+    .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
+        return DEV(ctx)->WlanmacConfigureBss(options, config);
+    },
+    .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
+        return DEV(ctx)->WlanmacSetKey(options, key_config);
+    },
+};
+#undef DEV
+
 constexpr zx::duration Device::kDefaultBusyWait;
 
-Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
+Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-    : ddk::Device<Device, ddk::Unbindable>(device),
-      usb_(*usb),
+    : parent_(device),
+      usb_(usb),
       rx_endpt_(bulk_in),
       tx_endpts_(std::move(bulk_out)) {
-    debugf("Device dev=%p bulk_in=%u\n", parent(), rx_endpt_);
+    debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
 
 Device::~Device() {
@@ -190,7 +232,15 @@ zx_status_t Device::Bind() {
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
-    status = DdkAdd("ralink");
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ralink";
+    args.ctx = this;
+    args.ops = &device_ops;
+    args.proto_id = ZX_PROTOCOL_WLANMAC;
+    args.proto_ops = &wlanmac_ops;
+
+    status = device_add(parent_, &args, &zxdev_);
     if (status != ZX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
@@ -390,7 +440,7 @@ zx_status_t Device::LoadFirmware() {
     debugfn();
     zx_handle_t fw_handle;
     size_t fw_size = 0;
-    zx_status_t status = load_firmware(zxdev(), kFirmwareFile, &fw_handle, &fw_size);
+    zx_status_t status = load_firmware(zxdev_, kFirmwareFile, &fw_handle, &fw_size);
     if (status != ZX_OK) {
         errorf("failed to load firmware '%s': err=%d\n", kFirmwareFile, status);
         return status;
@@ -3189,12 +3239,12 @@ void Device::HandleTxComplete(usb_request_t* request) {
     free_write_reqs_.push_back(request);
 }
 
-void Device::DdkUnbind() {
+void Device::Unbind() {
     debugfn();
-    device_remove(zxdev());
+    device_remove(zxdev_);
 }
 
-void Device::DdkRelease() {
+void Device::Release() {
     debugfn();
     delete this;
 }
@@ -3333,7 +3383,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 
@@ -3437,7 +3487,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     status = SetRxFilter();
     if (status != ZX_OK) { return status; }
 
-    wlanmac_proxy_.swap(proxy);
+    wlanmac_proxy_.reset(new WlanmacIfcProxy(ifc, cookie));
 
     wlan_channel_t chan;
     chan.primary = 1;

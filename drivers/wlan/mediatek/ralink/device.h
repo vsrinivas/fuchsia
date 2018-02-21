@@ -5,9 +5,8 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/protocol/wlan.h>
 #include <ddk/usb-request.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/wlan.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
@@ -31,21 +30,38 @@ enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
 struct TxPacket;
 
-class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
+class WlanmacIfcProxy {
    public:
-    Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
+    WlanmacIfcProxy(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
+
+    void Status(uint32_t status) { ifc_->status(cookie_, status); }
+    void Recv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
+        ifc_->recv(cookie_, flags, data, length, info);
+    }
+    void CompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
+        ifc_->complete_tx(cookie_, pkt, status);
+    }
+
+   private:
+    wlanmac_ifc_t* ifc_;
+    void* cookie_;
+};
+
+class Device {
+   public:
+    Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
     ~Device();
 
     zx_status_t Bind();
 
-    // ddk::Device methods
-    void DdkUnbind();
-    void DdkRelease();
+    // ddk device methods
+    void Unbind();
+    void Release();
 
-    // ddk::WlanmacProtocol methods
+    // ddk wlanmac_protocol_ops methods
     zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
-    zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    zx_status_t WlanmacStart(wlanmac_ifc_t* ifc, void* cookie);
     void WlanmacStop();
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
@@ -188,8 +204,11 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     size_t terminal_pad_len();
     size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
 
+    zx_device_t* zxdev_;
+    zx_device_t* parent_;
+
     usb_protocol_t usb_;
-    fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     uint8_t rx_endpt_ = 0;
     std::vector<uint8_t> tx_endpts_;
