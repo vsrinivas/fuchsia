@@ -29,9 +29,11 @@
 #
 #   file_manifest (optional)
 #     File containing a description of the files contributing to this element.
-#     Lines in this file should be formatted as "destination=source". See
+#     Lines in this file should be formatted as "prefix:destination=source". See
 #     the next section for expected values of "source" and "destination"; note
-#     that sources in a manifest file must be passed as absolute paths.
+#     that sources in a manifest file must be passed as absolute paths. "prefix"
+#     is either "packaged" for files which need to be added to Fuchsia packages,
+#     or "internal" for files that are not.
 #     This parameter is useful to specify files that are only known at build
 #     time.
 #     At least one of "files" and "file_mappings" must be set.

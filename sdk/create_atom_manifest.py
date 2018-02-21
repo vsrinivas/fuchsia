@@ -40,7 +40,7 @@ class Atom(object):
         self.json = json
         self.id = AtomId(json['id'])
         self.label = json['gn-label']
-        self.package_deps = map(lambda i: AtomId(i), json['package_deps'])
+        self.package_deps = map(lambda i: AtomId(i), json['package-deps'])
 
     def __str__(self):
         return str(self.id)
@@ -185,7 +185,7 @@ def main():
         'gn-label': args.gn_label,
         'tags': tags,
         'deps': map(lambda i: i.json, sorted(list(deps))),
-        'package_deps': map(lambda i: i.json, sorted(list(all_package_deps))),
+        'package-deps': map(lambda i: i.json, sorted(list(all_package_deps))),
         'files': files,
     })])
     if detect_collisions(all_atoms):

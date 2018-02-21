@@ -77,7 +77,7 @@
             "$ref": "#/definitions/atomId"
           }
         },
-        "package_deps": {
+        "package-deps": {
           "description": "The ids of the atoms this atom needs at runtime",
           "type": "array",
           "items": {
@@ -102,7 +102,7 @@
         "id",
         "tags",
         "gn-label",
-        "package_deps"
+        "package-deps"
       ],
       "additionalProperties": false
     },
