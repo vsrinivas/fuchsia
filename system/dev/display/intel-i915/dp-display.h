@@ -51,6 +51,9 @@ private:
 
     edid::Edid edid_;
     uint8_t dp_lane_count_;
+    uint32_t dp_link_rate_mhz_;
+    uint8_t dp_link_rate_idx_plus1_;
+    bool dp_enhanced_framing_enabled_;
 
     uint8_t dpcd_capabilities_[16];
     uint8_t dpcd_edp_capabilities_[5];

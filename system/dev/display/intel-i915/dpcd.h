@@ -13,8 +13,11 @@ namespace dpcd {
 enum {
     DPCD_CAP_START = 0x0,
     DPCD_REV = 0x0,
+    DPCD_MAX_LINK_RATE = 0x1,
     DPCD_MAX_LANE_COUNT = 0x2,
     DPCD_EDP_CONFIG = 0xd,
+    DPCD_SUPPORTED_LINK_RATE_START = 0x10,
+    DPCD_SUPPORTED_LINK_RATE_END = 0x1f,
     DPCD_LINK_BW_SET = 0x100,
     DPCD_COUNT_SET = 0x101,
     DPCD_TRAINING_PATTERN_SET = 0x102,
@@ -22,6 +25,7 @@ enum {
     DPCD_TRAINING_LANE1_SET = 0x104,
     DPCD_TRAINING_LANE2_SET = 0x105,
     DPCD_TRAINING_LANE3_SET = 0x106,
+    DPCD_LINK_RATE_SET = 0x115,
     DPCD_LANE0_1_STATUS = 0x202,
     DPCD_ADJUST_REQUEST_LANE0_1 = 0x206,
     DPCD_SET_POWER = 0x600,
@@ -37,9 +41,11 @@ enum {
 // DPCD register: MAX_LINK_RATE and LINK_BW_SET
 class LinkBw : public hwreg::RegisterBase<LinkBw, uint8_t> {
 public:
-    DEF_FIELD(7, 0, link_bw_set);
+    DEF_FIELD(7, 0, link_bw);
     static constexpr int k1620Mbps = 0x06;
     static constexpr int k2700Mbps = 0x0A;
+    static constexpr int k5400Mbps = 0x14;
+    static constexpr int k8100Mbps = 0x1e;
 };
 
 // DPCD register: MAX_LANE_COUNT and LANE_COUNT_SET
@@ -173,6 +179,15 @@ public:
     DEF_BIT(5, set_dn_device_dp_pwr_5v);
     DEF_BIT(6, set_dn_device_dp_pwr_12v);
     DEF_BIT(7, set_dn_device_dp_pwr_18v);
+};
+
+// DPCD registers:: LINK_RATE_SET
+class LinkRateSet : public hwreg::RegisterBase<LinkRateSet, uint8_t> {
+public:
+    DEF_FIELD(2, 0, link_rate_idx);
+    DEF_BIT(3, tx_gtc_cap);
+    DEF_BIT(4, tx_gtc_slave_cap);
+    DEF_RSVDZ_FIELD(7, 5);
 };
 
 } // dpcd

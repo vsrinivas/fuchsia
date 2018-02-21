@@ -572,20 +572,11 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
 bool DpDisplay::LinkTrainingSetup() {
     registers::DdiRegs ddi_regs(ddi());
 
-    uint8_t max_lc_byte;
-    if (!DpcdRead(dpcd::DPCD_MAX_LANE_COUNT, &max_lc_byte, 1)) {
-        zxlogf(ERROR, "Failed to read lane count\n");
-        return false;
-    }
-    dpcd::LaneCount max_lc;
-    max_lc.set_reg_value(max_lc_byte);
-    dp_lane_count_ = max_lc.lane_count_set();
-
     // Tell the source device to emit the training pattern.
     auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
     dp_tp.set_transport_enable(1);
     dp_tp.set_transport_mode_select(0);
-    dp_tp.set_enhanced_framing_enable(max_lc.enhanced_frame_enabled());
+    dp_tp.set_enhanced_framing_enable(dp_enhanced_framing_enabled_);
     dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern1);
     dp_tp.WriteTo(mmio_space());
 
@@ -631,13 +622,35 @@ bool DpDisplay::LinkTrainingSetup() {
     buf_ctl.WriteTo(mmio_space());
     zx_nanosleep(zx_deadline_after(ZX_USEC(518)));
 
+    uint16_t link_rate_reg;
+    uint8_t link_rate_val;
+    if (dp_link_rate_idx_plus1_) {
+        dpcd::LinkRateSet link_rate_set;
+        link_rate_set.set_link_rate_idx(static_cast<uint8_t>(dp_link_rate_idx_plus1_ - 1));
+        link_rate_reg = dpcd::DPCD_LINK_RATE_SET;
+        link_rate_val = link_rate_set.reg_value();
+    } else {
+        uint8_t target_bw;
+        if (dp_link_rate_mhz_ == 1620) {
+            target_bw = dpcd::LinkBw::k1620Mbps;
+        } else if (dp_link_rate_mhz_ == 2700) {
+            target_bw = dpcd::LinkBw::k2700Mbps;
+        } else {
+            ZX_ASSERT(dp_link_rate_mhz_ = 5400);
+            target_bw = dpcd::LinkBw::k5400Mbps;
+        }
+
+        dpcd::LinkBw bw_setting;
+        bw_setting.set_link_bw(target_bw);
+        link_rate_reg = dpcd::DPCD_LINK_BW_SET;
+        link_rate_val = bw_setting.reg_value();
+    }
+
     // Configure the bandwidth and lane count settings
-    dpcd::LinkBw bw_setting;
-    bw_setting.set_link_bw_set(bw_setting.k2700Mbps); // kLinkRateMhz
     dpcd::LaneCount lc_setting;
     lc_setting.set_lane_count_set(dp_lane_count_);
-    lc_setting.set_enhanced_frame_enabled(max_lc.enhanced_frame_enabled());
-    if (!DpcdWrite(dpcd::DPCD_LINK_BW_SET, bw_setting.reg_value_ptr(), 1)
+    lc_setting.set_enhanced_frame_enabled(dp_enhanced_framing_enabled_);
+    if (!DpcdWrite(link_rate_reg, &link_rate_val, 1)
             || !DpcdWrite(dpcd::DPCD_COUNT_SET, lc_setting.reg_value_ptr(), 1)) {
         zxlogf(ERROR, "DP: Link training: failed to configure settings\n");
         return false;
@@ -872,6 +885,58 @@ bool DpDisplay::QueryDevice(zx_display_info* info) {
         }
     }
 
+    dpcd::LaneCount max_lc;
+    max_lc.set_reg_value(dpcd_capabilities_[dpcd::DPCD_MAX_LANE_COUNT - dpcd::DPCD_CAP_START]);
+    dp_lane_count_ = max_lc.lane_count_set();
+    if ((ddi() == registers::DDI_A || ddi() == registers::DDI_E) && dp_lane_count_ == 4
+            && !registers::DdiRegs(registers::DDI_A).DdiBufControl().ReadFrom(mmio_space())
+                    .ddi_a_lane_capability_control()) {
+        dp_lane_count_ = 2;
+    }
+    dp_enhanced_framing_enabled_ = max_lc.enhanced_frame_enabled();
+
+    dpcd::LinkBw max_link_bw;
+    max_link_bw.set_reg_value(dpcd_capabilities_[dpcd::DPCD_MAX_LINK_RATE - dpcd::DPCD_CAP_START]);
+    dp_link_rate_idx_plus1_ = 0;
+    dp_link_rate_mhz_ = 0;
+    switch (max_link_bw.link_bw()) {
+        case max_link_bw.k1620Mbps:
+            dp_link_rate_mhz_ = 1620;
+            break;
+        case max_link_bw.k2700Mbps:
+            dp_link_rate_mhz_ = 2700;
+            break;
+        case max_link_bw.k5400Mbps:
+        case max_link_bw.k8100Mbps:
+            dp_link_rate_mhz_ = 5400;
+            break;
+        case 0:
+            for (unsigned i = dpcd::DPCD_SUPPORTED_LINK_RATE_START;
+                    i <= dpcd::DPCD_SUPPORTED_LINK_RATE_END; i += 2) {
+                uint8_t high = 0;
+                uint8_t low = 0;
+                // Go until there's a failure or we find a 0 to mark the end
+                if (!DpcdRead(i, &low, 1) || !DpcdRead(i + 1, &high, 1) || (!high && !low)) {
+                    break;
+                }
+                // Convert from the dpcd field's units of 200kHz to mHz.
+                uint32_t val = ((high << 8) | low) / 5;
+                // Make sure we support it. The list is ascending, so this will pick the max.
+                if (val == 1620 || val == 2700 || val == 5400) {
+                    dp_link_rate_mhz_ = val;
+                    dp_link_rate_idx_plus1_ = static_cast<uint8_t>(
+                            ((i - dpcd::DPCD_SUPPORTED_LINK_RATE_START) / 2) + 1);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (!dp_link_rate_mhz_) {
+        zxlogf(ERROR, "Unsupported max link bandwidth %d\n", max_link_bw.link_bw());
+        return false;
+    }
+
     // TODO(ZX-1416): Parameterized this
     static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
     info->width = timing.horizontal_addressable;
@@ -928,16 +993,23 @@ bool DpDisplay::DefaultModeset() {
     edid::timing_params_t timing;
     edid_.GetPreferredTiming(&timing);
 
-    // TODO(ZX-1416): Parameterized these and update what references them
-    static constexpr uint32_t kLinkRateMhz = 2700;
-
     registers::TranscoderRegs trans_regs(trans());
 
+
+    uint8_t dpll_link_rate;
+    if (dp_link_rate_mhz_ == 1620) {
+        dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
+    } else if (dp_link_rate_mhz_ == 2700) {
+        dpll_link_rate = registers::DpllControl1::kLinkRate1350Mhz;
+    } else {
+        ZX_ASSERT(dp_link_rate_mhz_ == 5400);
+        dpll_link_rate = registers::DpllControl1::kLinkRate2700Mhz;
+    }
     // Configure this DPLL to produce a suitable clock signal.
     auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
     dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
     dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-    dpll_ctrl1.dpll_link_rate(dpll()).set(dpll_ctrl1.kLinkRate1350Mhz); // kLinkRateMhz
+    dpll_ctrl1.dpll_link_rate(dpll()).set(dpll_link_rate);
     dpll_ctrl1.dpll_override(dpll()).set(1);
     dpll_ctrl1.WriteTo(mmio_space());
     dpll_ctrl1.ReadFrom(mmio_space()); // Posting read
@@ -988,7 +1060,7 @@ bool DpDisplay::DefaultModeset() {
 
     // This is the rate at which bits are sent on a single DisplayPort
     // lane, in raw bits per second, divided by 10000.
-    uint32_t link_raw_bit_rate = kLinkRateMhz * 100;
+    uint32_t link_raw_bit_rate = dp_link_rate_mhz_ * 100;
     // Link symbol rate: The rate at which link symbols are sent on a
     // single DisplayPort lane.  A link symbol is 10 raw bits (using 8b/10b
     // encoding, which usually encodes an 8-bit data byte).
@@ -1006,6 +1078,11 @@ bool DpDisplay::DefaultModeset() {
     uint32_t data_m;
     uint32_t data_n;
     CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
+
+    if (pixel_clock_rate > link_symbol_rate || pixel_bit_rate > total_link_bit_rate) {
+        zxlogf(ERROR, "i915: Insufficient link rate for resolution\n");
+        return false;
+    }
 
     auto data_m_reg = trans_regs.DataM().FromValue(0);
     data_m_reg.set_tu_or_vcpayload_size(63); // Size - 1, default TU size is 64
