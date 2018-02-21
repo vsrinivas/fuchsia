@@ -33,6 +33,9 @@ __BEGIN_CDECLS
 #define ZX_PKT_IS_GUEST_VCPU(type)  ((type) == ZX_PKT_TYPE_GUEST_VCPU)
 #define ZX_PKT_IS_EXCEPTION(type)   (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
 
+#define ZX_PKT_GUEST_VCPU_INTERRUPT  0
+#define ZX_PKT_GUEST_VCPU_STARTUP    1
+
 // port_packet_t::type ZX_PKT_TYPE_USER.
 typedef union zx_packet_user {
     uint64_t u64[4];
@@ -97,10 +100,18 @@ typedef struct zx_packet_guest_io {
 } zx_packet_guest_io_t;
 
 typedef struct zx_packet_guest_vcpu {
-    zx_vaddr_t addr;
-    uint64_t id;
-    uint64_t reserved0;
-    uint64_t reserved1;
+    uint8_t type;
+    union {
+        struct {
+            uint32_t mask;
+            uint8_t vector;
+        } interrupt;
+        struct {
+            uint32_t id;
+            zx_vaddr_t entry;
+        } startup;
+    };
+    uint64_t reserved;
 } zx_packet_guest_vcpu_t;
 
 typedef struct zx_port_packet {

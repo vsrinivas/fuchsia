@@ -200,19 +200,24 @@ enum class X2ApicMsr : uint64_t {
     SELF_IPI            = 0x83f,
 };
 
-// Interprocess interrupt delivery mode.
 enum class InterruptDeliveryMode : uint8_t {
-    IPI_FIXED           = 0,
-    IPI_LOWEST_PRIORITY = 1,
-    IPI_SMI             = 2,
-    IPI_NMI             = 4,
-    IPI_INIT            = 5,
-    IPI_START_UP        = 6,
+    FIXED               = 0,
+    SMI                 = 2,
+    NMI                 = 4,
+    INIT                = 5,
+    STARTUP             = 6,
 };
 
 enum class InterruptDestinationMode : bool {
     PHYSICAL            = 0,
     LOGICAL             = 1,
+};
+
+enum class InterruptDestinationShorthand : uint8_t {
+    NO_SHORTHAND        = 0,
+    SELF                = 1,
+    ALL_INCLUDING_SELF  = 2,
+    ALL_EXCLUDING_SELF  = 3,
 };
 
 // clang-format on
@@ -270,7 +275,8 @@ struct InterruptCommandRegister {
     uint32_t destination;
     enum InterruptDestinationMode destination_mode;
     enum InterruptDeliveryMode delivery_mode;
-    uint32_t addr;
+    enum InterruptDestinationShorthand destination_shorthand;
+    uint8_t vector;
 
     InterruptCommandRegister(uint32_t hi, uint32_t lo);
 };

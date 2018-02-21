@@ -27,8 +27,8 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
-#include "vcpu_priv.h"
 #include "pvclock_priv.h"
+#include "vcpu_priv.h"
 
 #define LOCAL_TRACE 0
 
@@ -105,7 +105,8 @@ InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
     destination = hi;
     destination_mode = static_cast<InterruptDestinationMode>(BIT_SHIFT(lo, 11));
     delivery_mode = static_cast<InterruptDeliveryMode>(BITS_SHIFT(lo, 10, 8));
-    addr = BITS(lo, 7, 0) << 12;
+    destination_shorthand = static_cast<InterruptDestinationShorthand>(BITS_SHIFT(lo, 19, 18));
+    vector = static_cast<uint8_t>(BITS(lo, 7, 0));
 }
 
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
@@ -460,29 +461,56 @@ static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
     }
 }
 
+static uint32_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
+    switch (icr.destination_shorthand) {
+    case InterruptDestinationShorthand::NO_SHORTHAND:
+        return 1u << icr.destination;
+    case InterruptDestinationShorthand::SELF:
+        return 1u << (self - 1);
+    case InterruptDestinationShorthand::ALL_INCLUDING_SELF:
+        return UINT32_MAX;
+    case InterruptDestinationShorthand::ALL_EXCLUDING_SELF:
+        return ~(1u << (self - 1));
+    }
+    return 0;
+}
+
 static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
                               zx_port_packet* packet) {
     if (guest_state->rax > UINT32_MAX || guest_state->rdx > UINT32_MAX)
         return ZX_ERR_INVALID_ARGS;
     InterruptCommandRegister icr(static_cast<uint32_t>(guest_state->rdx),
                                  static_cast<uint32_t>(guest_state->rax));
+    if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
+        dprintf(CRITICAL, "Logical IPI destination mode is not supported\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     switch (icr.delivery_mode) {
-    case InterruptDeliveryMode::IPI_INIT:
-        next_rip(exit_info, vmcs);
-        return ZX_OK;
-    case InterruptDeliveryMode::IPI_START_UP:
-        if (icr.destination_mode != InterruptDestinationMode::PHYSICAL) {
-            dprintf(CRITICAL, "Unsupported IPI destination mode %d\n", static_cast<bool>(icr.destination_mode));
-            return ZX_ERR_NOT_SUPPORTED;
-        }
+    case InterruptDeliveryMode::FIXED: {
+        uint16_t self = static_cast<uint16_t>(vmcs->Read(VmcsField16::VPID) - 1);
         memset(packet, 0, sizeof(*packet));
         packet->type = ZX_PKT_TYPE_GUEST_VCPU;
-        packet->guest_vcpu.addr = icr.addr;
-        packet->guest_vcpu.id = icr.destination;
+        packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+        packet->guest_vcpu.interrupt.mask = ipi_target_mask(icr, self);
+        packet->guest_vcpu.interrupt.vector = icr.vector;
+        next_rip(exit_info, vmcs);
+        return ZX_ERR_NEXT;
+    }
+    case InterruptDeliveryMode::INIT:
+        // Ignore INIT IPIs, we only need STARTUP to bring up a VCPU.
+        next_rip(exit_info, vmcs);
+        return ZX_OK;
+    case InterruptDeliveryMode::STARTUP:
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+        packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
+        packet->guest_vcpu.startup.id = icr.destination;
+        packet->guest_vcpu.startup.entry = icr.vector << 12;
         next_rip(exit_info, vmcs);
         return ZX_ERR_NEXT;
     default:
-        dprintf(CRITICAL, "Unsupported IPI delivery mode %#x\n", static_cast<uint8_t>(icr.delivery_mode));
+        dprintf(CRITICAL, "Unsupported IPI delivery mode %#x\n",
+                static_cast<uint8_t>(icr.delivery_mode));
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
