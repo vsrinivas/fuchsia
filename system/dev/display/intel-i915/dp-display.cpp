@@ -439,7 +439,7 @@ bool DpDisplay::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, s
         return false;
     }
     memcpy(&msg.data[4], buf, size);
-    msg.size = msg.size + 4;
+    msg.size = static_cast<uint32_t>(size + 4);
     if (!SendDpAuxMsgWithRetry(msg, &reply)) {
         return false;
     }
