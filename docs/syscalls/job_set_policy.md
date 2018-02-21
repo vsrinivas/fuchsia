@@ -11,7 +11,7 @@ job_set_policy - Set job security and resource policies.
 #include <zircon/syscalls/policy.h>
 
 zx_status_t zx_job_set_policy(zx_handle_t job_handle, uint32_t options,
-                              uint32_t topic, void* policy, size_t count);
+                              uint32_t topic, const void* policy, uint32_t count);
 
 ```
 
@@ -105,7 +105,8 @@ or *policy* was not **ZX_JOB_POL_RELATIVE** or **ZX_JOB_POL_ABSOLUTE**, or
 
 **ZX_ERR_BAD_STATE**  the job has existing jobs or processes alive.
 
-**ZX_ERR_OUT_OF_RANGE** *count* is bigger than ZX_MAX_POLICY.
+**ZX_ERR_OUT_OF_RANGE** *count* is bigger than ZX_POL_MAX or *condition* is
+bigger than ZX_POL_MAX.
 
 **ZX_ERR_ALREADY_EXISTS** existing policy conflicts with the new policy.
 
