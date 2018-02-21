@@ -9,6 +9,7 @@ executable("tts") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
   ]
 }

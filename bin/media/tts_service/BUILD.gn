@@ -11,6 +11,7 @@ executable("tts_service") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//third_party/flite",
     "//zircon/public/lib/zx",

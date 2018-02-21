@@ -32,6 +32,7 @@ source_set("gtest_main") {
     "//garnet/public/lib/test_runner/cpp/reporting",
   ]
   public_deps = [
-    "//third_party/gtest",
+   "//garnet/public/lib/fsl",
+   "//third_party/gtest",
   ]
 }

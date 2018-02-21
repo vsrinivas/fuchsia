@@ -18,6 +18,7 @@ executable("client") {
     "//garnet/examples/ui/shadertoy/service/services",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",

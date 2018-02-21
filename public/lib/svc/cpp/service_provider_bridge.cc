@@ -4,6 +4,7 @@
 
 #include "lib/svc/cpp/service_provider_bridge.h"
 
+#include <async/default.h>
 #include <fcntl.h>
 #include <fdio/util.h>
 #include <fs/service.h>
@@ -11,12 +12,10 @@
 
 #include <utility>
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : vfs_(fsl::MessageLoop::GetCurrent()->async()), weak_factory_(this) {
+    : vfs_(async_get_default()), weak_factory_(this) {
   directory_ =
       fbl::AdoptRef(new ServiceProviderDir(weak_factory_.GetWeakPtr()));
 }

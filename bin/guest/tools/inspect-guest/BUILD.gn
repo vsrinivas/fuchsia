@@ -18,6 +18,7 @@ executable("inspect-guest") {
     "//garnet/lib/machina/fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
     "//zircon/public/lib/pretty",
   ]
 }

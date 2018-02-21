@@ -109,6 +109,7 @@ executable("cobalt_system_metrics_bin") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/cobalt/fidl:fidl",
+    "//garnet/public/lib/fsl",
   ]
 }
 

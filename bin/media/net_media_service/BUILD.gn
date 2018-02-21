@@ -61,7 +61,7 @@ source_set("serialization") {
 
   deps = [
     "//garnet/public/lib/fxl",
-  ]
+ ]
 }
 
 test("tests") {
