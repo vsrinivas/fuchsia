@@ -539,6 +539,7 @@ void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
+        GenerateObjectMember("declaration_order", library_->declaration_order_);
 
         EmitObjectSeparator(&json_file_, indent_level_);
         EmitObjectKey(&json_file_, indent_level_, "declarations");

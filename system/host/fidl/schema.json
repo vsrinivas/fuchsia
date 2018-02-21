@@ -8,6 +8,7 @@
         "interface_declarations",
         "struct_declarations",
         "union_declarations",
+        "declaration_order",
         "declarations",
         "library_dependencies"
     ],
@@ -45,6 +46,12 @@
                 "$ref": "#/definitions/union"
             }
         },
+        "declaration_order": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/identifier"
+            }
+        },
         "declarations": {
             "type": "object",
             "patternProperties": {
@@ -70,7 +77,11 @@
     "definitions": {
         "const": {
             "type": "object",
-            "required": [ "name", "type", "value" ],
+            "required": [
+                "name",
+                "type",
+                "value"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -85,7 +96,11 @@
         },
         "enum": {
             "type": "object",
-            "required": [ "name", "type", "members" ],
+            "required": [
+                "name",
+                "type",
+                "members"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -103,7 +118,10 @@
         },
         "enum-member": {
             "type": "object",
-            "required": [ "name", "value" ],
+            "required": [
+                "name",
+                "value"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -115,7 +133,10 @@
         },
         "interface": {
             "type": "object",
-            "required": [ "name", "methods" ],
+            "required": [
+                "name",
+                "methods"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -130,7 +151,12 @@
         },
         "interface-method": {
             "type": "object",
-            "required": [ "ordinal", "name", "has_request", "has_response" ],
+            "required": [
+                "ordinal",
+                "name",
+                "has_request",
+                "has_response"
+            ],
             "properties": {
                 "ordinal": {
                     "$ref": "#/definitions/ordinal"
@@ -166,7 +192,11 @@
         },
         "interface-method-parameter": {
             "type": "object",
-            "required": [ "type", "name", "offset" ],
+            "required": [
+                "type",
+                "name",
+                "offset"
+            ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
@@ -181,7 +211,11 @@
         },
         "struct": {
             "type": "object",
-            "required": [ "name", "members", "size" ],
+            "required": [
+                "name",
+                "members",
+                "size"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -199,7 +233,11 @@
         },
         "struct-member": {
             "type": "object",
-            "required": [ "type", "name", "offset" ],
+            "required": [
+                "type",
+                "name",
+                "offset"
+            ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
@@ -217,7 +255,11 @@
         },
         "union": {
             "type": "object",
-            "required": [ "name", "members", "size" ],
+            "required": [
+                "name",
+                "members",
+                "size"
+            ],
             "properties": {
                 "name": {
                     "$ref": "#/definitions/identifier"
@@ -235,7 +277,11 @@
         },
         "union-member": {
             "type": "object",
-            "required": [ "type", "name", "offset" ],
+            "required": [
+                "type",
+                "name",
+                "offset"
+            ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/type"
@@ -250,8 +296,7 @@
         },
         "library": {
             "type": "object",
-            "properties": {
-            }
+            "properties": {}
         },
         "type": {
             "oneOf": [
@@ -280,11 +325,17 @@
         },
         "array-type": {
             "type": "object",
-            "required": [ "kind", "element_type", "element_count" ],
+            "required": [
+                "kind",
+                "element_type",
+                "element_count"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "array" ]
+                    "enum": [
+                        "array"
+                    ]
                 },
                 "element_type": {
                     "$ref": "#/definitions/type"
@@ -296,11 +347,17 @@
         },
         "vector-type": {
             "type": "object",
-            "required": [ "kind", "element_type", "nullable" ],
+            "required": [
+                "kind",
+                "element_type",
+                "nullable"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "vector" ]
+                    "enum": [
+                        "vector"
+                    ]
                 },
                 "element_type": {
                     "$ref": "#/definitions/type"
@@ -315,11 +372,16 @@
         },
         "string-type": {
             "type": "object",
-            "required": [ "kind", "nullable" ],
+            "required": [
+                "kind",
+                "nullable"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "string" ]
+                    "enum": [
+                        "string"
+                    ]
                 },
                 "maybe_element_count": {
                     "$ref": "#/definitions/constant"
@@ -331,11 +393,17 @@
         },
         "handle-type": {
             "type": "object",
-            "required": [ "kind", "subtype", "nullable" ],
+            "required": [
+                "kind",
+                "subtype",
+                "nullable"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "handle" ]
+                    "enum": [
+                        "handle"
+                    ]
                 },
                 "subtype": {
                     "$ref": "#/definitions/handle-subtype"
@@ -347,11 +415,17 @@
         },
         "request-type": {
             "type": "object",
-            "required": [ "kind", "subtype", "nullable" ],
+            "required": [
+                "kind",
+                "subtype",
+                "nullable"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "request" ]
+                    "enum": [
+                        "request"
+                    ]
                 },
                 "subtype": {
                     "$ref": "#/definitions/compound-identifier"
@@ -363,11 +437,16 @@
         },
         "primitive-type": {
             "type": "object",
-            "required": [ "kind", "subtype" ],
+            "required": [
+                "kind",
+                "subtype"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "primitive" ]
+                    "enum": [
+                        "primitive"
+                    ]
                 },
                 "subtype": {
                     "$ref": "#/definitions/primitive-subtype"
@@ -376,11 +455,17 @@
         },
         "identifier-type": {
             "type": "object",
-            "required": [ "kind", "identifier", "nullable" ],
+            "required": [
+                "kind",
+                "identifier",
+                "nullable"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "identifier" ]
+                    "enum": [
+                        "identifier"
+                    ]
                 },
                 "identifier": {
                     "$ref": "#/definitions/compound-identifier"
@@ -402,11 +487,16 @@
         },
         "identifier-constant": {
             "type": "object",
-            "required": [ "kind", "identifier" ],
+            "required": [
+                "kind",
+                "identifier"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "identifier" ]
+                    "enum": [
+                        "identifier"
+                    ]
                 },
                 "identifier": {
                     "$ref": "#/definitions/compound-identifier"
@@ -415,11 +505,16 @@
         },
         "literal-constant": {
             "type": "object",
-            "required": [ "kind", "literal" ],
+            "required": [
+                "kind",
+                "literal"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "literal" ]
+                    "enum": [
+                        "literal"
+                    ]
                 },
                 "literal": {
                     "$ref": "#/definitions/literal"
@@ -447,11 +542,16 @@
         },
         "string-literal": {
             "type": "object",
-            "required": [ "kind", "value" ],
+            "required": [
+                "kind",
+                "value"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "string" ]
+                    "enum": [
+                        "string"
+                    ]
                 },
                 "value": {
                     "type": "string"
@@ -460,11 +560,16 @@
         },
         "numeric-literal": {
             "type": "object",
-            "required": [ "kind", "value" ],
+            "required": [
+                "kind",
+                "value"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "numeric" ]
+                    "enum": [
+                        "numeric"
+                    ]
                 },
                 "value": {
                     "type": "string"
@@ -473,31 +578,43 @@
         },
         "true-literal": {
             "type": "object",
-            "required": [ "kind" ],
+            "required": [
+                "kind"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "true" ]
+                    "enum": [
+                        "true"
+                    ]
                 }
             }
         },
         "false-literal": {
             "type": "object",
-            "required": [ "kind" ],
+            "required": [
+                "kind"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "false" ]
+                    "enum": [
+                        "false"
+                    ]
                 }
             }
         },
         "default-literal": {
             "type": "object",
-            "required": [ "kind" ],
+            "required": [
+                "kind"
+            ],
             "properties": {
                 "kind": {
                     "type": "string",
-                    "enum": [ "default" ]
+                    "enum": [
+                        "default"
+                    ]
                 }
             }
         },

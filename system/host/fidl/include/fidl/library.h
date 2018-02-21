@@ -146,6 +146,10 @@ public:
     std::vector<flat::Struct> struct_declarations_;
     std::vector<flat::Union> union_declarations_;
 
+    // TODO(TO-773) Compute this based on the DAG of aggregates
+    // including each other as members.
+    std::vector<flat::Name> declaration_order_;
+
 private:
     std::set<flat::Name> registered_types_;
     std::map<flat::Name, TypeShape> resolved_types_;
