@@ -91,6 +91,8 @@ func init() {
 	armZxBuildDir := zxBuildDir + "build-user-arm64/"
 	x86BuildDir := "out/release-x86-64/"
 	armBuildDir := "out/release-aarch64/"
+	x86BuildBootfsDir := "out/release-x86-64-bootfs/"
+	armBuildBootfsDir := "out/release-aarch64-bootfs/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
@@ -208,12 +210,12 @@ func init() {
 		// TODO(marshallk): Remove this when bootfs is deprecated.
 		{
 			bootdata,
-			x86BuildDir + "user.bootfs",
+			x86BuildBootfsDir + "user.bootfs",
 			"target/x86_64/bootdata.bin",
 		},
 		{
 			bootdata,
-			armBuildDir + "user.bootfs",
+			armBuildBootfsDir + "user.bootfs",
 			"target/aarch64/bootdata.bin",
 		},
 	}
