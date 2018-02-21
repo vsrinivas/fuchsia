@@ -1,0 +1,14 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start the update server and open a tunnel to the fuchsia target so
+### it can reach the server
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+fx-command-run run-update-svr -d
+
+fx-command-run amber-tunnel
