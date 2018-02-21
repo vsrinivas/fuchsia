@@ -1064,15 +1064,12 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Sta
 	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) loopListen(ios *iostate) {
+func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 	ios.listenLoopDone = make(chan struct{})
 	defer func() { ios.listenLoopDone <- struct{}{} }()
 
 	// When an incoming connection is available, wait for the listening socket to
 	// enter a shareable state, then share it with zircon.
-	inEntry, inCh := waiter.NewChannelEntry(nil)
-	ios.wq.EventRegister(&inEntry, waiter.EventIn)
-	defer ios.wq.EventUnregister(&inEntry)
 	for range inCh {
 		obs, err := ios.dataHandle.WaitOne(
 			zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
@@ -1130,6 +1127,9 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 		}
 		return zx.ErrBadState
 	}
+
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 	if err := ios.ep.Listen(int(backlog)); err != nil {
 		if debug {
 			log.Printf("listen: %v", err)
@@ -1138,16 +1138,17 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 	}
 
 	if ios.withNewSocket {
-		go s.loopListen(ios)
+		go func() {
+			defer ios.wq.EventUnregister(&inEntry)
+			s.loopListen(ios, inCh)
+		}()
 	} else {
 		go func() {
+			defer ios.wq.EventUnregister(&inEntry)
 			// When an incoming connection is queued up (that is,
 			// calling accept would return a new connection),
 			// signal the fdio socket that it exists. This allows
 			// the socket API client to implement a blocking accept.
-			inEntry, inCh := waiter.NewChannelEntry(nil)
-			ios.wq.EventRegister(&inEntry, waiter.EventIn)
-			defer ios.wq.EventUnregister(&inEntry)
 			for range inCh {
 				err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
 				switch mxerror.Status(err) {
