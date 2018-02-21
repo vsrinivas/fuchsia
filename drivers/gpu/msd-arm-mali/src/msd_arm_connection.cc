@@ -328,8 +328,13 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_
     DASSERT(prev_committed_page_count <= mapping->size() / PAGE_SIZE);
     uint64_t committed_page_count =
         std::min(buffer->committed_page_count(), mapping->size() / PAGE_SIZE);
-    if (prev_committed_page_count == committed_page_count)
+    if (prev_committed_page_count == committed_page_count) {
+        // Sometimes an access to a growable region that was just grown can fault.  Unlock the MMU
+        // if that's detected so the access can be retried.
+        if (committed_page_count > 0)
+            address_space_->Unlock();
         return true;
+    }
 
     if (committed_page_count < prev_committed_page_count) {
         uint64_t pages_to_remove = prev_committed_page_count - committed_page_count;

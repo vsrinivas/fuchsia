@@ -46,6 +46,10 @@ public:
     virtual void FlushAddressMappingRange(AddressSpace* address_space, uint64_t start,
                                           uint64_t length, bool synchronous) = 0;
 
+    // Tells the GPU to retry any memory lookup using this address space. Also
+    // happens implicitly upon flush.
+    virtual void UnlockAddressSpace(AddressSpace* address_space) = 0;
+
     virtual void ReleaseSpaceMappings(const AddressSpace* address_space) = 0;
 };
 
@@ -73,6 +77,7 @@ public:
                 uint64_t flags);
 
     bool Clear(gpu_addr_t start, uint64_t length);
+    void Unlock() { owner_->GetAddressSpaceObserver()->UnlockAddressSpace(this); }
 
     bool ReadPteForTesting(gpu_addr_t addr, mali_pte_t* entry);
 

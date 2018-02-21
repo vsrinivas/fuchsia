@@ -13,22 +13,44 @@
 
 namespace {
 
+class TestAddressSpaceObserver : public AddressSpaceObserver {
+public:
+    void FlushAddressMappingRange(AddressSpace*, uint64_t start, uint64_t length,
+                                  bool synchronous) override
+    {
+    }
+    void UnlockAddressSpace(AddressSpace* address_space) override
+    {
+        unlocked_address_spaces_.push_back(address_space);
+    }
+    void ReleaseSpaceMappings(const AddressSpace* address_space) override {}
+
+    const std::vector<AddressSpace*>& unlocked_address_spaces() const
+    {
+        return unlocked_address_spaces_;
+    }
+
+private:
+    std::vector<AddressSpace*> unlocked_address_spaces_;
+};
+
 class FakeConnectionOwner : public MsdArmConnection::Owner {
 public:
-    FakeConnectionOwner() : address_manager_(nullptr, 8) {}
+    FakeConnectionOwner() {}
 
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override { atoms_list_.push_back(atom); }
     void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override
     {
         cancel_atoms_list_.push_back(connection.get());
     }
-    AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_manager_; }
+    AddressSpaceObserver* GetAddressSpaceObserver() override { return &observer_; }
+    TestAddressSpaceObserver* GetTestAddressSpaceObserver() { return &observer_; }
 
     const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
     const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
 
 private:
-    AddressManager address_manager_;
+    TestAddressSpaceObserver observer_;
     std::vector<MsdArmConnection*> cancel_atoms_list_;
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };
@@ -233,6 +255,12 @@ public:
         EXPECT_NE(kInvalidPte, pte);
         EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 95) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
+
+        // Address space size didn't change, so it should be unlocked.
+        EXPECT_EQ(0u, owner.GetTestAddressSpaceObserver()->unlocked_address_spaces().size());
+        EXPECT_TRUE(connection->PageInMemory((kGpuOffset[0] + 94) * PAGE_SIZE));
+        EXPECT_LE(1u, owner.GetTestAddressSpaceObserver()->unlocked_address_spaces().size());
+
         connection->ReleaseBuffer(&abi_buffer);
     }
 

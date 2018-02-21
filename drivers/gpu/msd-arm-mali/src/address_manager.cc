@@ -108,6 +108,30 @@ void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint6
     slot->lock.unlock();
 }
 
+void AddressManager::UnlockAddressSpace(AddressSpace* address_space)
+{
+    HardwareSlot* slot;
+    std::shared_ptr<AddressSlotMapping> mapping;
+    {
+        std::lock_guard<std::mutex> lock(address_slot_lock_);
+        mapping = AddressManager::GetMappingForAddressSpaceUnlocked(address_space);
+        if (!mapping)
+            return;
+        slot = registers_[mapping->slot_number()].get();
+        // Grab the hardware lock inside the address slot lock so we can be
+        // sure the address slot still maps to the same address space.
+        // std::unique_lock can't be used because it interacts poorly with
+        // thread-safety analysis
+        slot->lock.lock();
+    }
+    slot->UnlockMmu(owner_->register_io());
+
+    // The mapping will be released before the hardware lock, so that we
+    // can be sure that the mapping will be expired after ReleaseSpaceMappings
+    // acquires the hardware lock.
+    slot->lock.unlock();
+}
+
 std::shared_ptr<AddressSlotMapping>
 AddressManager::AllocateMappingForAddressSpace(std::shared_ptr<MsdArmConnection> connection)
 {
@@ -240,4 +264,10 @@ void AddressManager::HardwareSlot::FlushMmuRange(RegisterIo* io, uint64_t start,
         registers.Command().FromValue(registers::AsCommand::kCmdFlushPageTable).WriteTo(io);
     }
     WaitForMmuIdle(io);
+}
+
+void AddressManager::HardwareSlot::UnlockMmu(RegisterIo* io)
+{
+    WaitForMmuIdle(io);
+    registers.Command().FromValue(registers::AsCommand::kCmdUnlock).WriteTo(io);
 }

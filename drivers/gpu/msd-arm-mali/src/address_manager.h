@@ -39,6 +39,8 @@ public:
                                   bool synchronous) override;
     void ReleaseSpaceMappings(const AddressSpace* address_space) override;
 
+    void UnlockAddressSpace(AddressSpace*) override;
+
 private:
     struct AddressSlot {
         std::weak_ptr<AddressSlotMapping> mapping;
@@ -58,6 +60,7 @@ private:
         // Wait for the MMU to finish processing any existing commands.
         void WaitForMmuIdle(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
         void InvalidateSlot(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+        void UnlockMmu(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
 
         std::mutex lock;
         FXL_GUARDED_BY(lock) registers::AsRegisters registers;

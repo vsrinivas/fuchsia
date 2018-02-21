@@ -45,6 +45,7 @@ public:
                                   bool synchronous) override
     {
     }
+    void UnlockAddressSpace(AddressSpace*) override {}
     void ReleaseSpaceMappings(const AddressSpace* address_space) override {}
 };
 
