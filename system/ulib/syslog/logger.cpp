@@ -23,8 +23,7 @@ zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity,
     if (logger == nullptr) {
         return ZX_ERR_BAD_STATE;
     }
-    va_list empty_args;
-    return logger->VLogWrite(severity, tag, msg, empty_args);
+    return logger->LogWrite(severity, tag, msg);
 }
 
 zx_status_t fx_vlogf(fx_logger_t* logger, fx_log_severity_t severity,

@@ -48,7 +48,15 @@ public:
     ~fx_logger() = default;
 
     zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag,
-                          const char* format, va_list args);
+                          const char* format, va_list args) {
+        return VLogWrite(severity, tag, format, args, true);
+    }
+
+    zx_status_t LogWrite(fx_log_severity_t severity, const char* tag,
+                          const char* msg) {
+        va_list empty_args;
+        return VLogWrite(severity, tag, msg, empty_args, false);
+    }
 
     void SetSeverity(fx_log_severity_t log_severity) {
         severity_.store(log_severity, fbl::memory_order_relaxed);
@@ -59,11 +67,14 @@ public:
     }
 
 private:
+    zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag,
+                          const char* format, va_list args, bool perform_format);
+
     zx_status_t VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
-                                  const char* msg, va_list args);
+                                  const char* msg, va_list args, bool perform_format);
 
     zx_status_t VLogWriteToConsoleFd(fx_log_severity_t severity, const char* tag,
-                                     const char* msg, va_list args);
+                                     const char* msg, va_list args, bool perform_format);
 
     zx_status_t AddTags(const char** tags, size_t ntags);
 

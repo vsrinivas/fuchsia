@@ -29,7 +29,7 @@ zx_koid_t GetCurrentThreadKoid() {
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
                                          const char* tag, const char* msg,
-                                         va_list args) {
+                                         va_list args, bool perform_format) {
     zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
     fx_log_packet_t packet;
     memset(&packet, 0, sizeof(packet));
@@ -64,9 +64,19 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
     ZX_DEBUG_ASSERT(pos < kDataSize);
     // Write msg
     int n = static_cast<int>(kDataSize - pos);
-    int count = vsnprintf(packet.data + pos, n, msg, args);
-    if (count < 0) {
-        return ZX_ERR_INVALID_ARGS;
+    int count = 0;
+    if (!perform_format) {
+        size_t write_len =
+            fbl::min(strlen(msg), static_cast<size_t>(n - 1));
+        memcpy(packet.data + pos, msg, write_len);
+        pos += write_len;
+        packet.data[pos] = 0;
+        count = static_cast<int>(write_len + 1);
+    } else {
+        count = vsnprintf(packet.data + pos, n, msg, args);
+        if (count < 0) {
+            return ZX_ERR_INVALID_ARGS;
+        }
     }
     if (count >= n) {
         // truncated
@@ -90,7 +100,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
 
 zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
                                             const char* tag, const char* msg,
-                                            va_list args) {
+                                            va_list args, bool perform_format) {
     zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
     constexpr char kEllipsis[] = "...";
     constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
@@ -138,7 +148,11 @@ zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
     }
     buf.Append(": ");
 
-    buf.AppendVPrintf(msg, args);
+    if (!perform_format) {
+        buf.Append(msg);
+    } else {
+        buf.AppendVPrintf(msg, args);
+    }
     if (buf.size() > kMaxMessageSize) {
         buf.Resize(kMaxMessageSize);
         buf.Append(kEllipsis);
@@ -152,7 +166,7 @@ zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
 }
 
 zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
-                                 const char* msg, va_list args) {
+                                 const char* msg, va_list args, bool perform_format) {
     if (msg == NULL || severity > FX_LOG_FATAL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -162,9 +176,9 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
 
     zx_status_t status;
     if (socket_.is_valid()) {
-        status = VLogWriteToSocket(severity, tag, msg, args);
+        status = VLogWriteToSocket(severity, tag, msg, args, perform_format);
     } else if (console_fd_.get() != -1) {
-        status = VLogWriteToConsoleFd(severity, tag, msg, args);
+        status = VLogWriteToConsoleFd(severity, tag, msg, args, perform_format);
     } else {
         return ZX_ERR_BAD_STATE;
     }

@@ -89,6 +89,23 @@ bool test_log_write(void) {
   END_TEST;
 }
 
+bool test_log_preprocessed_message(void) {
+  BEGIN_TEST;
+  fx_log_reset_global();
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+    FX_LOG(INFO, NULL, "%d, %s");
+  char buf[256];
+  size_t n = read(pipefd[1], &buf, 256);
+  EXPECT_GT(n, 0u, "");
+  buf[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "INFO: %d, %s\n"), buf);
+  close(pipefd[1]);
+  fx_log_reset_global();
+  END_TEST;
+}
+
 bool test_log_severity(void) {
   struct pollfd fd;
   BEGIN_TEST;
@@ -173,12 +190,21 @@ bool test_msg_length_limit(void) {
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   char msg[2048] = {0};
+  char buf[2048] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   FX_LOGF(INFO, NULL, "%s", msg);
-  size_t n = read(pipefd[1], &msg, sizeof(msg));
+  size_t n = read(pipefd[1], &buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   msg[n] = 0;
-  EXPECT_TRUE(ends_with(msg, "a...\n"), msg);
+  EXPECT_TRUE(ends_with(buf, "a...\n"), buf);
+
+  msg[0] = '%';
+  msg[1] = 's';
+  FX_LOG(INFO, NULL, msg);
+  n = read(pipefd[1], &buf, sizeof(buf));
+  EXPECT_GT(n, 0u, "");
+  msg[n] = 0;
+  EXPECT_TRUE(ends_with(buf, "a...\n"), buf);
   close(pipefd[1]);
   fx_log_reset_global();
   END_TEST;
@@ -224,6 +250,7 @@ BEGIN_TEST_CASE(syslog_tests)
 RUN_TEST(test_log_init)
 RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)
+RUN_TEST(test_log_preprocessed_message)
 RUN_TEST(test_log_severity)
 RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)

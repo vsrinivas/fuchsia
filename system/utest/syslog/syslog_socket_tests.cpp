@@ -96,6 +96,18 @@ bool test_log_write(void) {
     END_TEST;
 }
 
+bool test_log_preprocessed_message(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
+    FX_LOG(INFO, nullptr, "%d, %s");
+    output_compare_helper(fbl::move(local), FX_LOG_INFO, "%d, %s",
+                          nullptr, 0);
+    END_TEST;
+}
+
 bool test_log_severity(void) {
     BEGIN_TEST;
     Cleanup cleanup;
@@ -169,6 +181,31 @@ bool test_msg_length_limit(void) {
     int msg_size = sizeof(packet.data) - 4 - 12;
     char expected[msg_size];
     memset(expected, 'a', msg_size - 4);
+    memset(expected + msg_size - 4, '.', 3);
+    expected[msg_size - 1] = 0;
+    const char* tags[] = {"gtag", "gtag2", "tag"};
+    output_compare_helper(fbl::move(local), FX_LOG_INFO, expected, tags, 3);
+    END_TEST;
+}
+
+bool test_msg_length_limit_for_preprocessed_msg(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
+    const char* gtags[] = {"gtag", "gtag2"};
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2), "");
+    char msg[2048] = {0};
+    memset(msg, 'a', sizeof(msg) - 1);
+    msg[0] = '%';
+    msg[1] = 's';
+    FX_LOG(INFO, "tag", msg);
+    fx_log_packet_t packet;
+    int msg_size = sizeof(packet.data) - 4 - 12;
+    char expected[msg_size];
+    memset(expected, 'a', msg_size - 4);
+    expected[0] = '%';
+    expected[1] = 's';
     memset(expected + msg_size - 4, '.', 3);
     expected[msg_size - 1] = 0;
     const char* tags[] = {"gtag", "gtag2", "tag"};
@@ -276,6 +313,7 @@ bool test_log_verbosity(void) {
 BEGIN_TEST_CASE(syslog_socket_tests)
 RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)
+RUN_TEST(test_log_preprocessed_message)
 RUN_TEST(test_log_severity)
 RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)
@@ -289,4 +327,5 @@ END_TEST_CASE(syslog_socket_tests)
 BEGIN_TEST_CASE(syslog_socket_tests_edge_cases)
 RUN_TEST(test_msg_length_limit)
 RUN_TEST(test_tag_length_limit)
+RUN_TEST(test_msg_length_limit_for_preprocessed_msg)
 END_TEST_CASE(syslog_socket_tests_edge_cases)
