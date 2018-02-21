@@ -178,9 +178,8 @@ private:
     void UnlinkExceptionPort(ExceptionPort* eport);
 
     fbl::Canary<fbl::magic("PORT")> canary_;
-    fbl::Mutex lock_;
     Semaphore sema_;
-    bool zero_handles_ TA_GUARDED(lock_);
-    fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
-    fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(lock_);
+    bool zero_handles_ TA_GUARDED(get_lock());
+    fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
+    fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
 };

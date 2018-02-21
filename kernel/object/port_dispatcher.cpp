@@ -189,7 +189,7 @@ void PortDispatcher::on_zero_handles() {
     canary_.Assert();
 
     {
-        AutoLock al(&lock_);
+        AutoLock al(get_lock());
         zero_handles_ = true;
 
         // Unlink and unbind exception ports.
@@ -197,9 +197,9 @@ void PortDispatcher::on_zero_handles() {
             auto eport = eports_.pop_back();
 
             // Tell the eport to unbind itself, then drop our ref to it.
-            lock_.Release();  // The eport may call our ::UnlinkExceptionPort
+            get_lock()->Release();  // The eport may call our ::UnlinkExceptionPort
             eport->OnPortZeroHandles();
-            lock_.Acquire();
+            get_lock()->Acquire();
         }
     }
     while (Dequeue(0ull, nullptr) == ZX_OK) {}
@@ -226,7 +226,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
 
     int wake_count = 0;
     {
-        AutoLock al(&lock_);
+        AutoLock al(get_lock());
         if (zero_handles_)
             return ZX_ERR_BAD_STATE;
 
@@ -255,7 +255,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
     while (true) {
         {
-            AutoLock al(&lock_);
+            AutoLock al(get_lock());
 
             PortPacket* port_packet = packets_.pop_front();
             if (port_packet == nullptr)
@@ -289,7 +289,7 @@ wait:
 bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     canary_.Assert();
 
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
     if (!port_packet->InContainer())
         return true;
     // The destruction will happen when the packet is dequeued or in CancelQueued()
@@ -333,7 +333,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     canary_.Assert();
 
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
 
     // This loop can take a while if there are many items.
     // In practice, the number of pending signal packets is
@@ -379,7 +379,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
     eports_.push_back(fbl::move(AdoptRef(eport)));
@@ -388,7 +388,7 @@ void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
-    AutoLock al(&lock_);
+    AutoLock al(get_lock());
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
     if (eport->InContainer()) {
         eports_.erase(*eport);
