@@ -1,7 +1,7 @@
 {
     "imports": [
-        "garnet/packages/vulkan",
-        "garnet/packages/runtime_config"
+        "garnet/packages/config/network",
+        "garnet/packages/vulkan"
     ],
     "packages": {
         "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain",

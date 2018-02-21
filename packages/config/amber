@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "garnet/packages/config/network"
+    ],
     "resources": [
         {
             "bootfs_path": "data/sysmgr/amber.config",

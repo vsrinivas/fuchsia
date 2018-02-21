@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/config/runtime"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/sysmgr/services.config",
+            "file": "garnet/bin/sysmgr/config/services.config"
+        }
+    ]
+}

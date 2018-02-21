@@ -13,10 +13,10 @@ bootfs=$fuchsia_root/out/user.bootfs
 
 if [ "$1" == "--debug" ]; then
 	build=debug
-else 
+else
 if [ "$1" == "--release" ]; then
 	build=release
-else 
+else
 if [ "$1" != "" ]; then
 	echo Unrecognized arg: $1
 	exit 1
@@ -30,7 +30,6 @@ args="msd_intel_wait_for_flip=true"
 args="$args magma_enable_tracing=false"
 
 packages="magma-dev"
-#packages="$modules,tracing,runtime_config,escher"
 
 rm -f $bootfs
 cd $fuchsia_root

@@ -1,11 +1,11 @@
 {
     "imports": [
         "build/packages/bootfs",
+        "garnet/packages/config/network",
         "garnet/packages/media_audio",
         "garnet/packages/netstack",
         "garnet/packages/openssh",
         "garnet/packages/runtime",
-        "garnet/packages/runtime_config",
         "garnet/packages/sbase",
         "garnet/packages/tracing"
     ]

@@ -3,12 +3,12 @@
         "cpp"
     ],
     "imports": [
+        "garnet/packages/config/network"
         "garnet/packages/guest_tests",
         "garnet/packages/guest_tools",
+        "garnet/packages/linux-guest"
         "garnet/packages/pmd",
         "garnet/packages/runtime",
-        "garnet/packages/runtime_config",
         "garnet/packages/zircon-guest",
-        "garnet/packages/linux-guest"
     ]
 }

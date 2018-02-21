@@ -1,0 +1,8 @@
+{
+    "resources": [
+        {
+            "bootfs_path": "data/appmgr/initial.config",
+            "file": "garnet/bin/appmgr/initial.config"
+        }
+    ]
+}
