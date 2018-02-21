@@ -67,19 +67,23 @@ public:
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
-    // overflow).
     zx_status_t copy_array_to_user(const T* src, size_t count) const {
         static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
-        return arch_copy_to_user(ptr_, src, count * internal::type_size<T>());
+        size_t len;
+        if (mul_overflow(count, internal::type_size<T>(), &len)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return arch_copy_to_user(ptr_, src, len);
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
-    // overflow).
     zx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
         static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
-        return arch_copy_to_user(ptr_ + offset, src, count * internal::type_size<T>());
+        size_t len;
+        if (mul_overflow(count, internal::type_size<T>(), &len)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return arch_copy_to_user(ptr_ + offset, src, len);
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
@@ -91,20 +95,24 @@ public:
 
     // Copies an array of T from user memory. Note: This takes a count not a size, unless T is
     // |void|.
-    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
-    // overflow).
     zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
-        return arch_copy_from_user(dst, ptr_, count * internal::type_size<T>());
+        size_t len;
+        if (mul_overflow(count, internal::type_size<T>(), &len)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return arch_copy_from_user(dst, ptr_, len);
     }
 
     // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
     // |void|.
-    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
-    // overflow).
     zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count, size_t offset) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
-        return arch_copy_from_user(dst, ptr_ + offset, count * internal::type_size<T>());
+        size_t len;
+        if (mul_overflow(count, internal::type_size<T>(), &len)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return arch_copy_from_user(dst, ptr_ + offset, len);
     }
 
 private:

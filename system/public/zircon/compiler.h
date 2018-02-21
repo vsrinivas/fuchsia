@@ -145,3 +145,7 @@
 #else
 #define __CONSTEXPR
 #endif
+
+#define add_overflow(a, b, c) __builtin_add_overflow(a, b, c)
+#define sub_overflow(a, b, c) __builtin_sub_overflow(a, b, c)
+#define mul_overflow(a, b, c) __builtin_mul_overflow(a, b, c)
