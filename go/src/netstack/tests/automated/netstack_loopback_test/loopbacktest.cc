@@ -346,7 +346,7 @@ void NonBlockingConnectRead() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingConnectRead) {
+TEST(NetStreamTest, DISABLED_NonBlockingConnectRead) {
   for (int i = 0; i < kRepeatEach; i++) {
     NonBlockingConnectRead();
   }
