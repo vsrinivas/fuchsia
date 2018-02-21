@@ -24,7 +24,6 @@ driver_module("wlan_driver") {
   deps = [
     "//garnet/lib/wlan/mlme",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

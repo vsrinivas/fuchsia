@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <ddk/device.h>
 #include <fbl/limits.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
@@ -28,6 +29,27 @@
 namespace wlan {
 
 #define DEV(c) static_cast<Device*>(c)
+static zx_protocol_device_t device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open = nullptr,
+    .open_at = nullptr,
+    .close = nullptr,
+    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
+    .release = [](void* ctx) { DEV(ctx)->Release(); },
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                size_t out_len, size_t* out_actual) -> zx_status_t {
+                    return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len,
+                            out_actual);
+    },
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+};
+
 static wlanmac_ifc_t wlanmac_ifc_ops = {
     .status = [](void* cookie, uint32_t status) {
         DEV(cookie)->WlanmacStatus(status);
@@ -40,10 +62,28 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
         DEV(cookie)->WlanmacCompleteTx(pkt, status);
     },
 };
+
+static ethmac_protocol_ops_t ethmac_ops = {
+    .query = [](void* ctx, uint32_t options, ethmac_info_t* info) -> zx_status_t {
+        return DEV(ctx)->EthmacQuery(options, info);
+    },
+    .stop = [](void* ctx) {
+        DEV(ctx)->EthmacStop();
+    },
+    .start = [](void* ctx, ethmac_ifc_t* ifc, void* cookie) -> zx_status_t {
+        return DEV(ctx)->EthmacStart(ifc, cookie);
+    },
+    .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t {
+        return DEV(ctx)->EthmacQueueTx(options, netbuf);
+    },
+    .set_param = [](void* ctx, uint32_t param, int32_t value, void* data) -> zx_status_t {
+        return DEV(ctx)->EthmacSetParam(param, value, data);
+    },
+};
 #undef DEV
 
 Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
-    : WlanBaseDevice(device), wlanmac_proxy_(wlanmac_proto), dispatcher_(this) {
+    : parent_(device), wlanmac_proxy_(wlanmac_proto), dispatcher_(this) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -74,7 +114,15 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = DdkAdd("wlan");
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "wlan";
+    args.ctx = this;
+    args.ops = &device_ops;
+    args.proto_id = ZX_PROTOCOL_ETHERMAC;
+    args.proto_ops = &ethmac_ops;
+
+    status = device_add(parent_, &args, &zxdev_);
     if (status != ZX_OK) {
         errorf("could not add device err=%d\n", status);
         zx_status_t shutdown_status = QueueDevicePortPacket(DevicePacket::kShutdown);
@@ -119,17 +167,17 @@ zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
     return ZX_OK;
 }
 
-void Device::DdkUnbind() {
+void Device::Unbind() {
     debugfn();
     {
         std::lock_guard<std::mutex> lock(lock_);
         channel_.reset();
         dead_ = true;
     }
-    device_remove(zxdev());
+    device_remove(zxdev_);
 }
 
-void Device::DdkRelease() {
+void Device::Release() {
     debugfn();
     if (port_.is_valid()) {
         zx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
@@ -141,7 +189,7 @@ void Device::DdkRelease() {
     delete this;
 }
 
-zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                              size_t out_len, size_t* out_actual) {
     debugfn();
     if (op != IOCTL_WLAN_GET_CHANNEL) { return ZX_ERR_NOT_SUPPORTED; }
@@ -169,9 +217,9 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t Device::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+zx_status_t Device::EthmacStart(ethmac_ifc_t* ifc, void* cookie) {
     debugfn();
-    ZX_DEBUG_ASSERT(proxy != nullptr);
+    ZX_DEBUG_ASSERT(ifc != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
@@ -179,7 +227,7 @@ zx_status_t Device::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     if (status != ZX_OK) {
         errorf("could not start wlanmac: %d\n", status);
     } else {
-        ethmac_proxy_.swap(proxy);
+        ethmac_proxy_.reset(new EthmacIfcProxy(ifc, cookie));
     }
     return status;
 }

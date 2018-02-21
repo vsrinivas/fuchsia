@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlan.h>
 #include <zircon/types.h>
 
 #include <stdint.h>
+#include <stdlib.h>
 
 namespace wlan {
 
@@ -46,6 +48,28 @@ class WlanmacProxy {
 
    private:
     wlanmac_protocol_t proto_;
+};
+
+// Helper class for use with ethmac ifcs
+class EthmacIfcProxy {
+   public:
+    EthmacIfcProxy(ethmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
+
+    void Status(uint32_t status) {
+        ifc_->status(cookie_, status);
+    }
+
+    void Recv(void* data, size_t length, uint32_t flags) {
+        ifc_->recv(cookie_, data, length, flags);
+    }
+
+    void CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
+        ifc_->complete_tx(cookie_, netbuf, status);
+    }
+
+   private:
+    ethmac_ifc_t* ifc_;
+    void* cookie_;
 };
 
 }  // namespace wlan
