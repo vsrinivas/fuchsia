@@ -108,7 +108,6 @@ public:
     // accessors
     ProcessDispatcher* process() const { return process_.get(); }
 
-    FutexNode* futex_node() { return &futex_node_; }
     zx_status_t set_name(const char* name, size_t len) final;
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
@@ -198,9 +197,6 @@ private:
     // our State
     State state_ TA_GUARDED(state_lock_) = State::INITIAL;
     fbl::Mutex state_lock_;
-
-    // Node for linked list of threads blocked on a futex
-    FutexNode futex_node_;
 
     // A thread-level exception port for this thread.
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);

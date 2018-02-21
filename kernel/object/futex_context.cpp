@@ -36,8 +36,6 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int curren
     if (futex_key % sizeof(int))
         return ZX_ERR_INVALID_ARGS;
 
-    FutexNode* node;
-
     // FutexWait() checks that the address value_ptr still contains
     // current_value, and if so it sleeps awaiting a FutexWake() on value_ptr.
     // Those two steps must together be atomic with respect to FutexWake().
@@ -57,17 +55,16 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int curren
         return ZX_ERR_BAD_STATE;
     }
 
-    ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
-    node = thread->futex_node();
-    node->set_hash_key(futex_key);
-    node->SetAsSingletonList();
+    FutexNode node;
+    node.set_hash_key(futex_key);
+    node.SetAsSingletonList();
 
-    QueueNodesLocked(node);
+    QueueNodesLocked(&node);
 
     // Block current thread.  This releases lock_ and does not reacquire it.
-    result = node->BlockThread(&lock_, deadline);
+    result = node.BlockThread(&lock_, deadline);
     if (result == ZX_OK) {
-        DEBUG_ASSERT(!node->IsInQueue());
+        DEBUG_ASSERT(!node.IsInQueue());
         // All the work necessary for removing us from the hash table was done by FutexWake()
         return ZX_OK;
     }
@@ -79,7 +76,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int curren
     // We need to ensure that the thread's node is removed from the wait
     // queue, because FutexWake() probably didn't do that.
     AutoLock lock(&lock_);
-    if (UnqueueNodeLocked(node)) {
+    if (UnqueueNodeLocked(&node)) {
         return result;
     }
     // The current thread was not found on the wait queue.  This means
