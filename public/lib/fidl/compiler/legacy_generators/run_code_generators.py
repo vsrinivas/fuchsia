@@ -45,6 +45,7 @@ def _ParseCLIArgs():
   parser.add_argument("--generate-type-info", dest="generate_type_info",
                       action="store_true",
                       help="generate mojom type descriptors")
+  parser.add_argument("--map-file", dest="map_file")
   parser.set_defaults(generate_type_info=False)
 
   return parser.parse_known_args()
@@ -172,6 +173,9 @@ def main():
                          if arg.startswith(prefix)]
       if args.generate_type_info:
         filtered_args.append("--generate_type_info")
+
+      if args.map_file:
+        filtered_args.append("--map_file=%s" % args.map_file)
 
       generator.GenerateFiles(filtered_args)
 

@@ -95,7 +95,12 @@ template("fidl") {
   generator_python_zip_output = "$target_out_dir/${target_name}_python.pyzip"
   if (generate_fidl_for_rust) {
     generator_rust_crate_output = "$target_gen_dir/${target_name}"
+  }
+
+  generate_map = generate_fidl_for_rust || generate_fidl_for_dart
+  if (generate_map) {
     map_target = "${target_name}_map"
+    map_path = "${target_gen_dir}/${target_name}_map.txt"
   }
 
   if (defined(invoker.sources)) {
@@ -156,12 +161,11 @@ template("fidl") {
         generators,
       ]
 
-      if (generate_fidl_for_rust) {
-        # Plumb map to generator (for Rust)
+      if (generate_map) {
+        # Plumb map to generator (for Rust and Dart)
         args += [
           "--gen-arg",
-          "map-file=" + rebase_path("${generator_rust_crate_output}_map.txt",
-                                    root_build_dir),
+          "map-file=" + rebase_path(map_path, root_build_dir),
         ]
       }
 
@@ -381,7 +385,9 @@ template("fidl") {
         args += [ "--inputs=$rebase_inputs" ]
       }
     }
+  }
 
+  if (generate_map) {
     # Creates a map from fidl file to GN build target which supplies it. Used primarily
     # for resolving dependencies in the Rust binding generation.
     save_target = target_name
@@ -418,15 +424,14 @@ template("fidl") {
         rebase_map_public_deps = rebase_path(map_public_deps, root_build_dir)
       }
 
-      output_fn = "${generator_rust_crate_output}_map.txt"
       outputs = [
-        output_fn,
+        map_path,
       ]
 
       if (defined(invoker.sources)) {
         arg_sources = invoker.sources
       }
-      rebase_output = rebase_path(output_fn, root_build_dir)
+      rebase_output = rebase_path(map_path, root_build_dir)
       target_dir = get_label_info("${save_target}", "label_no_toolchain")
       args = [
         "--target=$target_dir",

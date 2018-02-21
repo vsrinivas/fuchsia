@@ -8,6 +8,7 @@ import errno
 import os
 import re
 import shutil
+import string
 import sys
 
 import mojom.fileutil as fileutil
@@ -522,13 +523,22 @@ def _remove_sdk_dir(label):
       return label[len(prefix):]
   return label
 
-def GetPackage(module):
-  if module.path.startswith('/'):
-    raise Exception('Uh oh, path %s looks absolute' % module.path)
-  return os.path.dirname(_remove_sdk_dir(module.path)).replace('/', '.')
+# For target //foo/bar:blah, the package name will be foo.bar._blah.
+# For default targets //foo/bar:bar, the package name will be foo.bar.
+def LabelToPackageName(label):
+  if not label.startswith("//"):
+      raise Exception("expected label to start with //, got %s\n" % label)
+  base = _remove_sdk_dir(label[2:])
+  separator_index = string.rfind(base, ":")
+  if separator_index < 0:
+      raise Exception("could not find target name in label %s\n" % label)
+  path = base[:separator_index].split("/")
+  name = base[separator_index+1:]
+  if path[-1] == name:
+      return ".".join(path)
+  else:
+      return "%s._%s" % (".".join(path), name)
 
-def GetImportUri(module):
-  return os.path.join(GetPackage(module), module.name)
 
 def RaiseHelper(msg):
     raise Exception(msg)
@@ -568,6 +578,9 @@ class Generator(generator.Generator):
 
   # If set to True, then mojom type information will be generated.
   should_gen_fidl_types = False
+
+  # Map of Fuchsia-root relative source file paths to gn target names.
+  source_gn = {}
 
   def GetParameters(self, args):
     package = self.module.name.split('.')[0]
@@ -633,18 +646,45 @@ class Generator(generator.Generator):
   def GenerateLibModule(self, args):
     return self.GetParameters(args)
 
+  def ReadMapFile(self, path):
+    for line in open(path):
+      source, targets = line.strip().split(': ', 1)
+      if source.startswith('pub '):
+        # ignore that the dependency is public
+        source = source[4:]
+      # we want it root relative so trim the leading //
+      if not source.startswith('//'):
+        raise Exception("Expected %s to being with // in %s." %
+                        (source, map_file))
+      source = source[2:]
+      # split the targets
+      targets = targets.split()
+      # we want to most specific target
+      target = targets[-1]
+      self.source_gn[source] = target
 
   def GenerateFiles(self, args):
     self.should_gen_fidl_types = "--generate_type_info" in args
+    for arg in args:
+      if not arg.startswith('--map_file='):
+        continue
+      map_file = arg.split('=', 1)[1]
+      self.ReadMapFile(map_file)
 
     elements = self.module.namespace.split('.')
     elements.append("%s.dart" % self.module.name)
 
     lib_module = self.GenerateLibModule(args)
 
-    package_name = GetPackage(self.module)
+    package_name = self.GetPackage(self.module)
     gen_path = self.MatchFidlFilePath("%s.dart" % self.module.name)
     self.Write(lib_module, gen_path)
+
+  def GetPackage(self, module):
+    module_package_label = self.source_gn.get(module.path)
+    if module_package_label is None:
+      raise Exception('Could not find package for %s.' % module.path)
+    return LabelToPackageName(module_package_label)
 
   def GetImports(self, args):
     used_imports = self.GetUsedImports(self.module)
@@ -664,7 +704,9 @@ class Generator(generator.Generator):
       each_import["unique_name"] = unique_name + '_fidl'
       counter += 1
 
-      each_import["rebased_path"] = GetImportUri(each_import['module'])
+      module_package_name = self.GetPackage(each_import['module'])
+
+      each_import["rebased_path"] = os.path.join(module_package_name, each_import['module'].name)
     return sorted(used_imports.values(), key=lambda x: x['rebased_path'])
 
   def GetImportedInterfaces(self):
