@@ -311,7 +311,7 @@ struct Order {
 
 ##### Use
 
-Arrays are denoted **`T[n]`** where _T_ can
+Arrays are denoted **`array<T>:n`** where _T_ can
 be any FIDL type (including an array) and _n_ is a positive
 integer constant expression which specified the number of elements in
 the array.
@@ -320,10 +320,10 @@ the array.
 // A record which contains some arrays.
 struct Record {
     // array of exactly 16 floating point numbers
-    float32[16] matrix;
+    array<float32>:16 matrix;
 
     // array of exactly 10 arrays of 4 strings each
-    string[4][10] form;
+    array<array<string>:4>:10 form;
 };
 ```
 
@@ -393,7 +393,7 @@ struct Record {
     vector<string?> vector_of_nullable_strings;
 
     // a vector of vectors of arrays of floating point numbers
-    vector<vector<float32[16]>> complex;
+    vector<vector<array<float32>:16>> complex;
 };
 ```
 
@@ -440,8 +440,15 @@ struct Record {
 ##### Declaration
 
 ```
-struct Point { float32 x, y; };
-struct Color { float32 r, g, b; };
+struct Point {
+    float32 x;
+    float32 y;
+};
+struct Color {
+    float32 r;
+    float32 g;
+    float32 b;
+};
 ```
 
 ##### Use
@@ -475,7 +482,11 @@ union Pattern {
     Color color;
     Texture texture;
 };
-struct Color { float32 r, g, b; };
+struct Color {
+    float32 r;
+    float32 g;
+    float32 b;
+};
 struct Texture { string name; };
 ```
 
