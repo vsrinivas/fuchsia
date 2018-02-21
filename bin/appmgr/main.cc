@@ -37,27 +37,22 @@ int main(int argc, char** argv) {
     config.ReadIfExistsFrom(config_file);
   }
 
-  auto initial_apps = config.TakeInitialApps();
-  if (!positional_args.empty()) {
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = positional_args[0];
-    for (size_t i = 1; i < positional_args.size(); ++i)
-      launch_info->arguments.push_back(positional_args[i]);
-    initial_apps.push_back(std::move(launch_info));
-  }
-
   fsl::MessageLoop message_loop;
   fs::ManagedVfs vfs(message_loop.async());
 
   app::RootEnvironmentHost root(config.TakePath(), &vfs);
 
-  if (!initial_apps.empty()) {
-    message_loop.task_runner()->PostTask([&root, &initial_apps] {
-      for (auto& launch_info : initial_apps) {
-        root.job_holder()->CreateApplication(std::move(launch_info), nullptr);
-      }
-    });
-  }
+  app::ApplicationControllerPtr sysmgr;
+  auto run_sysmgr = [&root, &sysmgr] {
+    auto launch_info = app::ApplicationLaunchInfo::New();
+    launch_info->url = "sysmgr";
+    root.job_holder()->CreateApplication(std::move(launch_info), sysmgr.NewRequest());
+  };
+
+  message_loop.task_runner()->PostTask([&run_sysmgr, &sysmgr] {
+    run_sysmgr();
+    sysmgr.set_error_handler(run_sysmgr);
+  });
 
   message_loop.Run();
   return 0;

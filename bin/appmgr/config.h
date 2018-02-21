@@ -15,10 +15,6 @@ namespace app {
 
 // The configuration file should be specified as:
 // {
-//   "initial-apps": [
-//     "app_without_args",
-//     [ "app_with_args", "arg1", "arg2", "arg3" ]
-//   ],
 //   "path": [
 //     "/system/bin"
 //   ],
@@ -36,9 +32,6 @@ class Config {
 
   // Gets path for finding apps on root file system.
   std::vector<std::string> TakePath();
-
-  // Gets initial apps to launch.
-  std::vector<ApplicationLaunchInfoPtr> TakeInitialApps();
 
  private:
   bool Parse(const std::string& string);

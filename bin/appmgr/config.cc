@@ -13,7 +13,6 @@
 namespace app {
 namespace {
 
-constexpr char kInitialApps[] = "initial-apps";
 constexpr char kPath[] = "path";
 constexpr char kInclude[] = "include";
 
@@ -35,38 +34,10 @@ bool Config::ReadIfExistsFrom(const std::string& config_file) {
 }
 
 bool Config::Parse(const std::string& string) {
-  initial_apps_.clear();
-
   rapidjson::Document document;
   document.Parse(string);
   if (!document.IsObject())
     return false;
-
-  auto inital_apps_it = document.FindMember(kInitialApps);
-  if (inital_apps_it != document.MemberEnd()) {
-    const auto& value = inital_apps_it->value;
-    if (!value.IsArray())
-      return false;
-    for (const auto& application : value.GetArray()) {
-      auto launch_info = ApplicationLaunchInfo::New();
-      if (application.IsString()) {
-        launch_info->url = application.GetString();
-      } else if (application.IsArray()) {
-        const auto& array = application.GetArray();
-        if (array.Empty() || !array[0].IsString())
-          return false;
-        launch_info->url = array[0].GetString();
-        for (size_t i = 1; i < array.Size(); ++i) {
-          if (!array[i].IsString())
-            return false;
-          launch_info->arguments.push_back(array[i].GetString());
-        }
-      } else {
-        return false;
-      }
-      initial_apps_.push_back(std::move(launch_info));
-    }
-  }
 
   auto path_it = document.FindMember(kPath);
   if (path_it != document.MemberEnd()) {
@@ -98,10 +69,6 @@ bool Config::Parse(const std::string& string) {
 
 std::vector<std::string> Config::TakePath() {
   return std::move(path_);
-}
-
-std::vector<ApplicationLaunchInfoPtr> Config::TakeInitialApps() {
-  return std::move(initial_apps_);
 }
 
 }  // namespace app
