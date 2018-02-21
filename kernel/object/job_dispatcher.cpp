@@ -51,7 +51,7 @@ uint32_t JobDispatcher::ChildCountLocked<ProcessDispatcher>() const {
 //
 //  LiveRefsArray refs;
 //  {
-//      AutoLock lock(&lock_);
+//      AutoLock lock(get_lock());
 //      refs = ForEachChildInLocked(...);
 //  }
 //
@@ -94,7 +94,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(
         *result = func(cref);
         // |cref| might be the last reference at this point. If so,
         // when we drop it in the next iteration the object dtor
-        // would be called here with the |lock_| held. To avoid that
+        // would be called here with the |get_lock()| held. To avoid that
         // we keep the reference alive in the |refs| array and pass
         // the responsibility of releasing them outside the lock to
         // the caller.
@@ -161,7 +161,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
         AutoLock lock(&importance_lock_);
         importance_list_.push_back(this);
     } else {
-        AutoLock plock(&parent_->lock_);
+        AutoLock plock(parent_->get_lock());
         JobDispatcher* neighbor;
         if (!parent_->jobs_.is_empty()) {
             // Our youngest sibling.
@@ -169,7 +169,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
             // IMPORTANT: We must hold the parent's lock during list insertion
             // to ensure that our sibling stays alive until we're done with it.
             // The sibling may be in its dtor right now, trying to remove itself
-            // from parent_->jobs_ but blocked on parent_->lock_, and could be
+            // from parent_->jobs_ but blocked on parent_->get_lock(), and could be
             // freed if we released the lock.
             neighbor = &parent_->jobs_.back();
 
@@ -207,7 +207,7 @@ zx_koid_t JobDispatcher::get_related_koid() const {
 bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     if (state_ != State::READY)
         return false;
     procs_.push_back(process);
@@ -219,7 +219,7 @@ bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
 bool JobDispatcher::AddChildJob(JobDispatcher* job) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     if (state_ != State::READY)
         return false;
 
@@ -232,7 +232,7 @@ bool JobDispatcher::AddChildJob(JobDispatcher* job) {
 void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     // The process dispatcher can call us in its destructor, Kill(),
     // or RemoveThread().
     if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
@@ -245,7 +245,7 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
 void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     if (!JobDispatcher::ListTraitsRaw::node_state(*job).InContainer())
         return;
     jobs_.erase(*job);
@@ -256,7 +256,7 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
 void JobDispatcher::UpdateSignalsDecrementLocked() {
     canary_.Assert();
 
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(get_lock()->IsHeld());
     // removing jobs or processes.
     zx_signals_t set = 0u;
     if (process_count_ == 0u) {
@@ -280,13 +280,13 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
         }
     }
 
-    UpdateState(0u, set);
+    UpdateStateLocked(0u, set);
 }
 
 void JobDispatcher::UpdateSignalsIncrementLocked() {
     canary_.Assert();
 
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(get_lock()->IsHeld());
     // Adding jobs or processes.
     zx_signals_t clear = 0u;
     if (process_count_ == 1u) {
@@ -297,11 +297,11 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
         DEBUG_ASSERT(!jobs_.is_empty());
         clear |= ZX_JOB_NO_JOBS;
     }
-    UpdateState(clear, 0u);
+    UpdateStateLocked(clear, 0u);
 }
 
 pol_cookie_t JobDispatcher::GetPolicy() {
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     return policy_;
 }
 
@@ -315,7 +315,7 @@ void JobDispatcher::Kill() {
     LiveRefsArray proc_refs;
 
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(get_lock());
         if (state_ != State::READY)
             return;
 
@@ -352,7 +352,7 @@ void JobDispatcher::Kill() {
 zx_status_t JobDispatcher::SetPolicy(
     uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count) {
     // Can't set policy when there are active processes or jobs.
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
 
     if (!procs_.is_empty() || !jobs_.is_empty())
         return ZX_ERR_BAD_STATE;
@@ -377,7 +377,7 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     zx_status_t result = ZX_OK;
 
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(get_lock());
 
         proc_refs = ForEachChildInLocked(
             procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
@@ -412,7 +412,7 @@ JobDispatcher::LookupProcessById(zx_koid_t koid) {
 
     fbl::RefPtr<ProcessDispatcher> found_proc;
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(get_lock());
         zx_status_t result;
 
         proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
@@ -434,7 +434,7 @@ JobDispatcher::LookupJobById(zx_koid_t koid) {
 
     fbl::RefPtr<JobDispatcher> found_job;
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(get_lock());
         zx_status_t result;
 
         jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
@@ -486,7 +486,7 @@ zx_status_t JobDispatcher::get_importance(zx_job_importance_t* out) const {
 // Does not resolve ZX_JOB_IMPORTANCE_INHERITED.
 zx_job_importance_t JobDispatcher::GetRawImportance() const {
     canary_.Assert();
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     return importance_;
 }
 
@@ -498,7 +498,7 @@ zx_status_t JobDispatcher::set_importance(zx_job_importance_t importance) {
         importance != ZX_JOB_IMPORTANCE_INHERITED) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     // No-one is allowed to change the importance of the root job.  Note that
     // the actual root job ("<superroot>") typically isn't seen by userspace, so
     // no userspace program should see this error.  The job that userspace calls
@@ -548,7 +548,7 @@ zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
 
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     if (exception_port_)
         return ZX_ERR_BAD_STATE;
     exception_port_ = fbl::move(eport);
@@ -577,7 +577,7 @@ bool JobDispatcher::ResetExceptionPort(bool quietly) {
 
     fbl::RefPtr<ExceptionPort> eport;
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(get_lock());
         exception_port_.swap(eport);
         if (eport == nullptr) {
             // Attempted to unbind when no exception port is bound.
@@ -614,6 +614,6 @@ bool JobDispatcher::ResetExceptionPort(bool quietly) {
 }
 
 fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
-    AutoLock lock(&lock_);
+    AutoLock lock(get_lock());
     return exception_port_;
 }

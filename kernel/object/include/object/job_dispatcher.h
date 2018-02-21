@@ -148,15 +148,15 @@ private:
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
 
-    void UpdateSignalsIncrementLocked() TA_REQ(lock_);
-    void UpdateSignalsDecrementLocked() TA_REQ(lock_);
+    void UpdateSignalsIncrementLocked() TA_REQ(get_lock());
+    void UpdateSignalsDecrementLocked() TA_REQ(get_lock());
 
     template <typename T, typename Fn>
      __attribute__((warn_unused_result)) LiveRefsArray ForEachChildInLocked(
-        T& children, zx_status_t* status, Fn func) TA_REQ(lock_);
+        T& children, zx_status_t* status, Fn func) TA_REQ(get_lock());
 
     template <typename T>
-    uint32_t ChildCountLocked() const TA_REQ(lock_);
+    uint32_t ChildCountLocked() const TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("JOBD")> canary_;
 
@@ -170,12 +170,11 @@ private:
     // is, there is no mechanism to mint a handle to a job via this name.
     fbl::Name<ZX_MAX_NAME_LEN> name_;
 
-    // The |lock_| protects all members below.
-    mutable fbl::Mutex lock_;
-    State state_ TA_GUARDED(lock_);
-    uint32_t process_count_ TA_GUARDED(lock_);
-    uint32_t job_count_ TA_GUARDED(lock_);
-    zx_job_importance_t importance_ TA_GUARDED(lock_);
+    // The common |get_lock()| protects all members below.
+    State state_ TA_GUARDED(get_lock());
+    uint32_t process_count_ TA_GUARDED(get_lock());
+    uint32_t job_count_ TA_GUARDED(get_lock());
+    zx_job_importance_t importance_ TA_GUARDED(get_lock());
 
     using RawJobList =
         fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
@@ -191,12 +190,12 @@ private:
     // RefPtr, must be handled very carefully, because the children can die
     // even when |lock_| is held. See ForEachChildInLocked() for more details
     // and for a safe way to enumerate them.
-    RawJobList jobs_ TA_GUARDED(lock_);
-    RawProcessList procs_ TA_GUARDED(lock_);
+    RawJobList jobs_ TA_GUARDED(get_lock());
+    RawProcessList procs_ TA_GUARDED(get_lock());
 
-    pol_cookie_t policy_ TA_GUARDED(lock_);
+    pol_cookie_t policy_ TA_GUARDED(get_lock());
 
-    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(lock_);
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
 
     // Global list of JobDispatchers, ordered by relative importance. Used to
     // find victims in low-resource situations.
