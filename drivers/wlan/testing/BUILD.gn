@@ -26,7 +26,6 @@ driver_module("wlanphy-testdev") {
     "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

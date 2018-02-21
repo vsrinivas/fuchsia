@@ -26,7 +26,6 @@ driver_module("ath10k_driver") {
   ]
 
   deps = [
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
   ]
