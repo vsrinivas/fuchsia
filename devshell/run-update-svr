@@ -1,0 +1,17 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start the update server, serving the default directory
+### '-d' will detach the update server process and print its process ID
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+if [[ $1 == "-d" ]]; then
+  ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} &
+  echo "amber-srv running at $!"
+else
+  ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR}
+fi
