@@ -27,11 +27,6 @@
 namespace fidl {
 namespace ast {
 
-enum struct Nullability {
-    Nullable,
-    Nonnullable,
-};
-
 struct Identifier {
     explicit Identifier(SourceLocation location)
         : location(location) {}
@@ -150,69 +145,54 @@ struct ArrayType : public Type {
 
 struct VectorType : public Type {
     VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
-               Nullability nullability)
+               types::Nullability nullability)
         : Type(Kind::Vector),
           element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> maybe_element_count;
-    Nullability nullability;
+    types::Nullability nullability;
 };
 
 struct StringType : public Type {
-    StringType(std::unique_ptr<Constant> maybe_element_count, Nullability nullability)
+    StringType(std::unique_ptr<Constant> maybe_element_count, types::Nullability nullability)
         : Type(Kind::String), maybe_element_count(std::move(maybe_element_count)),
           nullability(nullability) {}
 
     std::unique_ptr<Constant> maybe_element_count;
-    Nullability nullability;
+    types::Nullability nullability;
 };
 
 struct HandleType : public Type {
-    HandleType(types::HandleSubtype subtype, Nullability nullability)
+    HandleType(types::HandleSubtype subtype, types::Nullability nullability)
         : Type(Kind::Handle), subtype(subtype), nullability(nullability) {}
 
     types::HandleSubtype subtype;
-    Nullability nullability;
+    types::Nullability nullability;
 };
 
 struct RequestType : public Type {
-    RequestType(std::unique_ptr<CompoundIdentifier> subtype, Nullability nullability)
+    RequestType(std::unique_ptr<CompoundIdentifier> subtype, types::Nullability nullability)
         : Type(Kind::Request), subtype(std::move(subtype)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> subtype;
-    Nullability nullability;
+    types::Nullability nullability;
 };
 
 struct PrimitiveType : public Type {
-    enum struct Subtype {
-        Bool,
-        Status,
-        Int8,
-        Int16,
-        Int32,
-        Int64,
-        Uint8,
-        Uint16,
-        Uint32,
-        Uint64,
-        Float32,
-        Float64,
-    };
-
-    explicit PrimitiveType(Subtype subtype)
+    explicit PrimitiveType(types::PrimitiveSubtype subtype)
         : Type(Kind::Primitive), subtype(subtype) {}
 
-    Subtype subtype;
+    types::PrimitiveSubtype subtype;
 };
 
 struct IdentifierType : public Type {
-    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, Nullability nullability)
+    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
         : Type(Kind::Identifier), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
-    Nullability nullability;
+    types::Nullability nullability;
 };
 
 struct Using {

@@ -15,31 +15,31 @@ std::string LongName(const flat::Name& name) {
     return name.get()->location.data();
 }
 
-std::string PrimitiveSubtypeName(ast::PrimitiveType::Subtype subtype) {
+std::string PrimitiveSubtypeName(types::PrimitiveSubtype subtype) {
     switch (subtype) {
-    case ast::PrimitiveType::Subtype::Int8:
+    case types::PrimitiveSubtype::Int8:
         return "int8";
-    case ast::PrimitiveType::Subtype::Int16:
+    case types::PrimitiveSubtype::Int16:
         return "int16";
-    case ast::PrimitiveType::Subtype::Int32:
+    case types::PrimitiveSubtype::Int32:
         return "int32";
-    case ast::PrimitiveType::Subtype::Int64:
+    case types::PrimitiveSubtype::Int64:
         return "int64";
-    case ast::PrimitiveType::Subtype::Uint8:
+    case types::PrimitiveSubtype::Uint8:
         return "uint8";
-    case ast::PrimitiveType::Subtype::Uint16:
+    case types::PrimitiveSubtype::Uint16:
         return "uint16";
-    case ast::PrimitiveType::Subtype::Uint32:
+    case types::PrimitiveSubtype::Uint32:
         return "uint32";
-    case ast::PrimitiveType::Subtype::Uint64:
+    case types::PrimitiveSubtype::Uint64:
         return "uint64";
-    case ast::PrimitiveType::Subtype::Bool:
+    case types::PrimitiveSubtype::Bool:
         return "bool";
-    case ast::PrimitiveType::Subtype::Status:
+    case types::PrimitiveSubtype::Status:
         return "status";
-    case ast::PrimitiveType::Subtype::Float32:
+    case types::PrimitiveSubtype::Float32:
         return "float32";
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Float64:
         return "float64";
     }
 }
@@ -294,18 +294,18 @@ void JSONGenerator::Generate(types::HandleSubtype value) {
     EmitString(&json_file_, HandleSubtypeName(value));
 }
 
-void JSONGenerator::Generate(ast::Nullability value) {
+void JSONGenerator::Generate(types::Nullability value) {
     switch (value) {
-    case ast::Nullability::Nullable:
+    case types::Nullability::Nullable:
         EmitBoolean(&json_file_, true);
         break;
-    case ast::Nullability::Nonnullable:
+    case types::Nullability::Nonnullable:
         EmitBoolean(&json_file_, false);
         break;
     }
 }
 
-void JSONGenerator::Generate(ast::PrimitiveType::Subtype value) {
+void JSONGenerator::Generate(types::PrimitiveSubtype value) {
     EmitString(&json_file_, PrimitiveSubtypeName(value));
 }
 

@@ -131,7 +131,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<ast::EnumDeclaration> enum_
     }
     std::unique_ptr<ast::PrimitiveType> type = std::move(enum_declaration->maybe_subtype);
     if (!type)
-        type = std::make_unique<ast::PrimitiveType>(ast::PrimitiveType::Subtype::Uint32);
+        type = std::make_unique<ast::PrimitiveType>(types::PrimitiveSubtype::Uint32);
     auto name = flat::Name(std::move(enum_declaration->identifier));
 
     if (!RegisterTypeName(name))
@@ -328,23 +328,23 @@ bool Library::ResolveEnum(const flat::Enum& enum_declaration) {
     TypeShape typeshape;
 
     switch (enum_declaration.type->subtype) {
-    case ast::PrimitiveType::Subtype::Int8:
-    case ast::PrimitiveType::Subtype::Int16:
-    case ast::PrimitiveType::Subtype::Int32:
-    case ast::PrimitiveType::Subtype::Int64:
-    case ast::PrimitiveType::Subtype::Uint8:
-    case ast::PrimitiveType::Subtype::Uint16:
-    case ast::PrimitiveType::Subtype::Uint32:
-    case ast::PrimitiveType::Subtype::Uint64:
+    case types::PrimitiveSubtype::Int8:
+    case types::PrimitiveSubtype::Int16:
+    case types::PrimitiveSubtype::Int32:
+    case types::PrimitiveSubtype::Int64:
+    case types::PrimitiveSubtype::Uint8:
+    case types::PrimitiveSubtype::Uint16:
+    case types::PrimitiveSubtype::Uint32:
+    case types::PrimitiveSubtype::Uint64:
         // These are allowed as enum subtypes. Resolve the size and alignment.
         if (!ResolveType(enum_declaration.type.get(), &typeshape))
             return false;
         break;
 
-    case ast::PrimitiveType::Subtype::Bool:
-    case ast::PrimitiveType::Subtype::Status:
-    case ast::PrimitiveType::Subtype::Float32:
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Bool:
+    case types::PrimitiveSubtype::Status:
+    case types::PrimitiveSubtype::Float32:
+    case types::PrimitiveSubtype::Float64:
         // These are not allowed as enum subtypes.
         return false;
     }
@@ -524,40 +524,40 @@ bool Library::ResolveRequestType(const ast::RequestType& request_type, TypeShape
 bool Library::ResolvePrimitiveType(const ast::PrimitiveType& primitive_type,
                                   TypeShape* out_typeshape) {
     switch (primitive_type.subtype) {
-    case ast::PrimitiveType::Subtype::Int8:
+    case types::PrimitiveSubtype::Int8:
         *out_typeshape = kInt8TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Int16:
+    case types::PrimitiveSubtype::Int16:
         *out_typeshape = kInt16TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Int32:
+    case types::PrimitiveSubtype::Int32:
         *out_typeshape = kInt32TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Int64:
+    case types::PrimitiveSubtype::Int64:
         *out_typeshape = kInt64TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Uint8:
+    case types::PrimitiveSubtype::Uint8:
         *out_typeshape = kUint8TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Uint16:
+    case types::PrimitiveSubtype::Uint16:
         *out_typeshape = kUint16TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Uint32:
+    case types::PrimitiveSubtype::Uint32:
         *out_typeshape = kUint32TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Uint64:
+    case types::PrimitiveSubtype::Uint64:
         *out_typeshape = kUint64TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Bool:
+    case types::PrimitiveSubtype::Bool:
         *out_typeshape = kBoolTypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Status:
+    case types::PrimitiveSubtype::Status:
         *out_typeshape = kStatusTypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Float32:
+    case types::PrimitiveSubtype::Float32:
         *out_typeshape = kFloat32TypeShape;
         break;
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Float64:
         *out_typeshape = kFloat64TypeShape;
         break;
     }

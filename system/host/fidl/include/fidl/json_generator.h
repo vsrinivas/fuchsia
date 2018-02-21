@@ -65,9 +65,9 @@ private:
     void Generate(uint64_t value);
 
     void Generate(types::HandleSubtype value);
+    void Generate(types::Nullability value);
+    void Generate(types::PrimitiveSubtype value);
 
-    void Generate(ast::Nullability value);
-    void Generate(ast::PrimitiveType::Subtype value);
     void Generate(const ast::Identifier& value);
     void Generate(const ast::CompoundIdentifier& value);
     void Generate(const ast::Literal& value);

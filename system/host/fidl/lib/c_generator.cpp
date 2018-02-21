@@ -31,29 +31,29 @@ std::string UnionTagName(StringView union_name,
 
 std::string PrimitiveTypeName(const ast::PrimitiveType* type) {
     switch (type->subtype) {
-    case ast::PrimitiveType::Subtype::Int8:
+    case types::PrimitiveSubtype::Int8:
         return "int8_t";
-    case ast::PrimitiveType::Subtype::Int16:
+    case types::PrimitiveSubtype::Int16:
         return "int16_t";
-    case ast::PrimitiveType::Subtype::Int32:
+    case types::PrimitiveSubtype::Int32:
         return "int32_t";
-    case ast::PrimitiveType::Subtype::Int64:
+    case types::PrimitiveSubtype::Int64:
         return "int64_t";
-    case ast::PrimitiveType::Subtype::Uint8:
+    case types::PrimitiveSubtype::Uint8:
         return "uint8_t";
-    case ast::PrimitiveType::Subtype::Uint16:
+    case types::PrimitiveSubtype::Uint16:
         return "uint16_t";
-    case ast::PrimitiveType::Subtype::Uint32:
+    case types::PrimitiveSubtype::Uint32:
         return "uint32_t";
-    case ast::PrimitiveType::Subtype::Uint64:
+    case types::PrimitiveSubtype::Uint64:
         return "uint64_t";
-    case ast::PrimitiveType::Subtype::Bool:
+    case types::PrimitiveSubtype::Bool:
         return "bool";
-    case ast::PrimitiveType::Subtype::Status:
+    case types::PrimitiveSubtype::Status:
         return "zx_status_t";
-    case ast::PrimitiveType::Subtype::Float32:
+    case types::PrimitiveSubtype::Float32:
         return "float";
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Float64:
         return "double";
     }
 }
@@ -132,7 +132,7 @@ std::string TypeName(const ast::Type* type) {
             const auto& components = identifier_type->identifier->components;
             assert(components.size() == 1);
             std::string name = components[0]->location.data();
-            if (identifier_type->nullability == ast::Nullability::Nullable) {
+            if (identifier_type->nullability == types::Nullability::Nullable) {
                 name.push_back('*');
             }
             return name;
@@ -176,42 +176,42 @@ void EmitBlank(std::ostream* file) {
 
 // Various computational helper routines.
 
-CGenerator::IntegerConstantType EnumType(ast::PrimitiveType::Subtype type) {
+CGenerator::IntegerConstantType EnumType(types::PrimitiveSubtype type) {
     switch (type) {
-    case ast::PrimitiveType::Subtype::Int8:
+    case types::PrimitiveSubtype::Int8:
         return CGenerator::IntegerConstantType::kInt8;
-    case ast::PrimitiveType::Subtype::Int16:
+    case types::PrimitiveSubtype::Int16:
         return CGenerator::IntegerConstantType::kInt16;
-    case ast::PrimitiveType::Subtype::Int32:
+    case types::PrimitiveSubtype::Int32:
         return CGenerator::IntegerConstantType::kInt32;
-    case ast::PrimitiveType::Subtype::Int64:
+    case types::PrimitiveSubtype::Int64:
         return CGenerator::IntegerConstantType::kInt64;
-    case ast::PrimitiveType::Subtype::Uint8:
+    case types::PrimitiveSubtype::Uint8:
         return CGenerator::IntegerConstantType::kUint8;
-    case ast::PrimitiveType::Subtype::Uint16:
+    case types::PrimitiveSubtype::Uint16:
         return CGenerator::IntegerConstantType::kUint16;
-    case ast::PrimitiveType::Subtype::Uint32:
+    case types::PrimitiveSubtype::Uint32:
         return CGenerator::IntegerConstantType::kUint32;
-    case ast::PrimitiveType::Subtype::Uint64:
+    case types::PrimitiveSubtype::Uint64:
         return CGenerator::IntegerConstantType::kUint64;
-    case ast::PrimitiveType::Subtype::Bool:
-    case ast::PrimitiveType::Subtype::Status:
-    case ast::PrimitiveType::Subtype::Float32:
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Bool:
+    case types::PrimitiveSubtype::Status:
+    case types::PrimitiveSubtype::Float32:
+    case types::PrimitiveSubtype::Float64:
     default:
         assert(false && "bad primitive type for an enum");
         break;
     }
 }
 
-void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
+void EnumValue(types::PrimitiveSubtype type, const ast::Constant* constant,
                Library* library, std::string* out_value) {
     // TODO(kulakowski) Move this into library resolution.
 
     std::ostringstream member_value;
 
     switch (type) {
-    case ast::PrimitiveType::Subtype::Int8: {
+    case types::PrimitiveSubtype::Int8: {
         int8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -222,7 +222,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << static_cast<int>(value);
         break;
     }
-    case ast::PrimitiveType::Subtype::Int16: {
+    case types::PrimitiveSubtype::Int16: {
         int16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -231,7 +231,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Int32: {
+    case types::PrimitiveSubtype::Int32: {
         int32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -240,7 +240,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Int64: {
+    case types::PrimitiveSubtype::Int64: {
         int64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -249,7 +249,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Uint8: {
+    case types::PrimitiveSubtype::Uint8: {
         uint8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -260,7 +260,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << static_cast<unsigned int>(value);
         break;
     }
-    case ast::PrimitiveType::Subtype::Uint16: {
+    case types::PrimitiveSubtype::Uint16: {
         uint16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -269,7 +269,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Uint32: {
+    case types::PrimitiveSubtype::Uint32: {
         uint32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -278,7 +278,7 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Uint64: {
+    case types::PrimitiveSubtype::Uint64: {
         uint64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -287,10 +287,10 @@ void EnumValue(ast::PrimitiveType::Subtype type, const ast::Constant* constant,
         member_value << value;
         break;
     }
-    case ast::PrimitiveType::Subtype::Bool:
-    case ast::PrimitiveType::Subtype::Status:
-    case ast::PrimitiveType::Subtype::Float32:
-    case ast::PrimitiveType::Subtype::Float64:
+    case types::PrimitiveSubtype::Bool:
+    case types::PrimitiveSubtype::Status:
+    case types::PrimitiveSubtype::Float32:
+    case types::PrimitiveSubtype::Float64:
         assert(false && "bad primitive type for an enum");
         break;
     }

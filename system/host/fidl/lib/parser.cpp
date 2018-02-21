@@ -246,9 +246,9 @@ std::unique_ptr<ast::VectorType> Parser::ParseVectorType() {
             return Fail();
     }
 
-    auto nullability = ast::Nullability::Nonnullable;
+    auto nullability = types::Nullability::Nonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = ast::Nullability::Nullable;
+        nullability = types::Nullability::Nullable;
     }
 
     return std::make_unique<ast::VectorType>(std::move(element_type),
@@ -269,9 +269,9 @@ std::unique_ptr<ast::StringType> Parser::ParseStringType() {
             return Fail();
     }
 
-    auto nullability = ast::Nullability::Nonnullable;
+    auto nullability = types::Nullability::Nonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = ast::Nullability::Nullable;
+        nullability = types::Nullability::Nullable;
     }
 
     return std::make_unique<ast::StringType>(std::move(maybe_element_count), nullability);
@@ -357,53 +357,53 @@ std::unique_ptr<ast::HandleType> Parser::ParseHandleType() {
             return Fail();
     }
 
-    auto nullability = ast::Nullability::Nonnullable;
+    auto nullability = types::Nullability::Nonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = ast::Nullability::Nullable;
+        nullability = types::Nullability::Nullable;
     }
 
     return std::make_unique<ast::HandleType>(subtype, nullability);
 }
 
 std::unique_ptr<ast::PrimitiveType> Parser::ParsePrimitiveType() {
-    ast::PrimitiveType::Subtype subtype;
+    types::PrimitiveSubtype subtype;
 
     switch (Peek()) {
     case Token::Kind::Bool:
-        subtype = ast::PrimitiveType::Subtype::Bool;
+        subtype = types::PrimitiveSubtype::Bool;
         break;
     case Token::Kind::Status:
-        subtype = ast::PrimitiveType::Subtype::Status;
+        subtype = types::PrimitiveSubtype::Status;
         break;
     case Token::Kind::Int8:
-        subtype = ast::PrimitiveType::Subtype::Int8;
+        subtype = types::PrimitiveSubtype::Int8;
         break;
     case Token::Kind::Int16:
-        subtype = ast::PrimitiveType::Subtype::Int16;
+        subtype = types::PrimitiveSubtype::Int16;
         break;
     case Token::Kind::Int32:
-        subtype = ast::PrimitiveType::Subtype::Int32;
+        subtype = types::PrimitiveSubtype::Int32;
         break;
     case Token::Kind::Int64:
-        subtype = ast::PrimitiveType::Subtype::Int64;
+        subtype = types::PrimitiveSubtype::Int64;
         break;
     case Token::Kind::Uint8:
-        subtype = ast::PrimitiveType::Subtype::Uint8;
+        subtype = types::PrimitiveSubtype::Uint8;
         break;
     case Token::Kind::Uint16:
-        subtype = ast::PrimitiveType::Subtype::Uint16;
+        subtype = types::PrimitiveSubtype::Uint16;
         break;
     case Token::Kind::Uint32:
-        subtype = ast::PrimitiveType::Subtype::Uint32;
+        subtype = types::PrimitiveSubtype::Uint32;
         break;
     case Token::Kind::Uint64:
-        subtype = ast::PrimitiveType::Subtype::Uint64;
+        subtype = types::PrimitiveSubtype::Uint64;
         break;
     case Token::Kind::Float32:
-        subtype = ast::PrimitiveType::Subtype::Float32;
+        subtype = types::PrimitiveSubtype::Float32;
         break;
     case Token::Kind::Float64:
-        subtype = ast::PrimitiveType::Subtype::Float64;
+        subtype = types::PrimitiveSubtype::Float64;
         break;
     default:
         return Fail();
@@ -429,9 +429,9 @@ std::unique_ptr<ast::RequestType> Parser::ParseRequestType() {
     if (!Ok())
         return Fail();
 
-    auto nullability = ast::Nullability::Nonnullable;
+    auto nullability = types::Nullability::Nonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = ast::Nullability::Nullable;
+        nullability = types::Nullability::Nullable;
     }
 
     return std::make_unique<ast::RequestType>(std::move(identifier), nullability);
@@ -443,11 +443,11 @@ std::unique_ptr<ast::Type> Parser::ParseType() {
         auto identifier = ParseCompoundIdentifier();
         if (!Ok())
             return Fail();
-        auto nullability = ast::Nullability::Nonnullable;
+        auto nullability = types::Nullability::Nonnullable;
         if (MaybeConsumeToken(Token::Kind::Question)) {
             if (!Ok())
                 return Fail();
-            nullability = ast::Nullability::Nullable;
+            nullability = types::Nullability::Nullable;
         }
         return std::make_unique<ast::IdentifierType>(std::move(identifier), nullability);
     }
