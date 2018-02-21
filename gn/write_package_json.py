@@ -9,10 +9,10 @@ import sys
 
 
 def main():
-    parser = argparse.ArgumentParser('Write a package.json file')
+    parser = argparse.ArgumentParser('Write a package file')
     parser.add_argument('--name', help='Package name', required=True)
     parser.add_argument('--version', help='Package version', required=True)
-    parser.add_argument('path', help='Path to the package.json file')
+    parser.add_argument('path', help='Path to the package file')
     args = parser.parse_args()
 
     with open(args.path, 'w') as f:

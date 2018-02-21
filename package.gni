@@ -323,16 +323,16 @@ template("package") {
         }
       }
     } else if (pkg.fuchsia_package) {
-      # If the caller doesn't supply a package.json, we'll generate one
+      # If the caller doesn't supply a package, we'll generate one
       need_package_json = true
       foreach(meta, pkg.meta) {
-        if (meta == "package.json") {
+        if (meta == "package") {
           need_package_json = false
         }
       }
 
       if (need_package_json) {
-        package_json_file = "$pkg_out_dir/package.json"
+        package_json_file = "$pkg_out_dir/package"
         package_json_target_name = "${target_name}_package_json"
 
         action(package_json_target_name) {
@@ -350,7 +350,7 @@ template("package") {
         }
 
         full_pkg_json_file = rebase_path(package_json_file)
-        contents += [ "meta/package.json=${full_pkg_json_file}" ]
+        contents += [ "meta/package=${full_pkg_json_file}" ]
       }
 
       action(manifest_target_name) {

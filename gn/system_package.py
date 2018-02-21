@@ -82,16 +82,16 @@ def main():
             subprocess.check_call(
                 [args.pm, "-k", args.system_package_key, "genkey"])
 
-        # Create a package.json as required for all packages.
-        pkgjson_path = os.path.join(args.system_package_dir, "package.json")
+        # Create a meta/package as required for all packages.
+        pkgjson_path = os.path.join(args.system_package_dir, "package")
         with open(pkgjson_path, "w") as pkgjson:
             pkgjson.write('{"name": "system.pkg", "version": "0"}')
 
         # Create a package manifest that includes a copy of all the contents
-        # from args.system_manifest, plus meta/package.json and pkgsvr-index.
+        # from args.system_manifest, plus meta/package and pkgsvr-index.
         package_manifest = os.path.join(args.system_package_dir, "package_manifest")
         with open(package_manifest, "w") as manifest:
-            manifest.write("meta/package.json=%s\n" % os.path.relpath(pkgjson_path))
+            manifest.write("meta/package=%s\n" % os.path.relpath(pkgjson_path))
             manifest.write("data/static_packages=%s\n" % os.path.relpath(args.pkgsvr_index))
             with open(args.system_manifest, "r") as sys_manifest:
                 for line in sys_manifest:
