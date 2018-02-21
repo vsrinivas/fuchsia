@@ -1466,6 +1466,11 @@ __NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
         __builtin_trap();
 
     zxr_tp_set(thread_self, pthread_to_tp(td));
+
+    // Now that the thread descriptor is set up, it's safe to use the
+    // dlerror machinery.
+    runtime = 1;
+
     return td;
 }
 
@@ -1678,10 +1683,12 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
     if (ldso_fail)
         _exit(127);
 
-    /* Switch to runtime mode: any further failures in the dynamic
-     * linker are a reportable failure rather than a fatal startup
-     * error. */
-    runtime = 1;
+    // Logically we could now switch to "runtime mode", because
+    // startup-time dynamic linking work per se is done now.  However,
+    // the real concrete meaning of "runtime mode" is that the dlerror
+    // machinery is usable.  It's not usable until the thread descriptor
+    // has been set up.  So the switch to "runtime mode" happens in
+    // __init_main_thread instead.
 
     atomic_init(&unlogged_tail, (uintptr_t)tail);
 
