@@ -15,6 +15,8 @@ namespace scene_manager {
 
 class HostImage;
 using HostImagePtr = fxl::RefPtr<Image>;
+using ImageConversionFunction =
+    fbl::Function<void(void*, void*, uint32_t, uint32_t)>;
 
 // An Image whose contents come from host-accessible memory.
 class HostImage : public Image {
@@ -37,7 +39,7 @@ class HostImage : public Image {
   static ImagePtr New(Session* session,
                       scenic::ResourceId id,
                       HostMemoryPtr memory,
-                      const scenic::ImageInfoPtr& image_info,
+                      const scenic::ImageInfoPtr& host_image_info,
                       uint64_t memory_offset,
                       mz::ErrorReporter* error_reporter);
 
@@ -64,11 +66,15 @@ class HostImage : public Image {
             scenic::ResourceId id,
             HostMemoryPtr memory,
             escher::ImagePtr image,
-            uint64_t host_memory_offset);
+            uint64_t host_memory_offset,
+            scenic::ImageInfo host_image_format);
 
   HostMemoryPtr memory_;
   // The offset into |memory_| where the image is stored, in bytes.
   uint64_t memory_offset_;
+  // The format of the image stored in host memory.
+  scenic::ImageInfo host_image_format_;
+  ImageConversionFunction image_conversion_function_ = nullptr;
 };
 
 }  // namespace scene_manager

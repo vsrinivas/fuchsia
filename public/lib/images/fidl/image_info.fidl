@@ -9,6 +9,12 @@ struct ImageInfo {
     // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
     // Equivalent to Zircon |ARGB_8888| pixel format on little-endian arch.
     BGRA_8 = 0,
+    // A 32-bit component that contains information for 2 pixels:
+    // Byte order: Y1, U, Y2, V
+    // Unpacks to 2 RGB pixels, where RGB1 = func(Y1, U, V)
+    // and RGB2 = func(Y2, U, V)
+    // Equivalent to YUV422
+    YUY2 = 1,
   };
 
   // Specifies how pixel color information should be interpreted.
@@ -39,6 +45,23 @@ struct ImageInfo {
     // Blend function is: (src.RGB * src.A) + (dest.RGB * (1 - src.A))
     NON_PREMULTIPLIED = 2,
   };
+
+  enum Transform {
+    // Pixels are displayed normally.
+    NORMAL = 0,
+
+    // Pixels are mirrored left-right.
+    FLIP_HORIZONTAL = 1,
+
+    // Pixels are flipped vertically.
+    FLIP_VERTICAL = 2,
+
+    // Pixels are flipped vertically and mirrored left-right.
+    FLIP_VERTICAL_AND_HORIZONTAL = 3,
+  };
+
+  // Specifies if the image should be mirrored before displaying.
+  Transform transform = Transform.NORMAL;
 
   // The width and height of the image in pixels.
   uint32 width;

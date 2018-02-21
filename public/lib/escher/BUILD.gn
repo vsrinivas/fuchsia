@@ -229,6 +229,8 @@ source_set("escher") {
     "util/align.h",
     "util/depth_to_color.cc",
     "util/depth_to_color.h",
+    "util/image_formats.cc",
+    "util/image_formats.h",
     "util/image_utils.cc",
     "util/image_utils.h",
     "util/stopwatch.h",

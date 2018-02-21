@@ -110,6 +110,8 @@ size_t Image::ComputeSize(const scenic::ImageInfo& image_info) {
   switch (image_info.pixel_format) {
     case scenic::ImageInfo::PixelFormat::BGRA_8:
       return image_info.height * image_info.stride;
+    case scenic::ImageInfo::PixelFormat::YUY2:
+      return image_info.height * image_info.stride;
   }
 
   FXL_NOTREACHED();
