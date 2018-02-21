@@ -19,9 +19,14 @@ namespace usb {
 // supported by frame-based formats.
 struct UsbVideoFrameDesc {
     uint8_t index;
+
+    camera::camera_proto::CaptureType capture_type;
+    // Specified in 100ns units.
     uint32_t default_frame_interval;
     uint16_t width;
     uint16_t height;
+    // The number of bytes per line of video.
+    uint32_t stride;
 };
 
 struct UsbVideoFormat {

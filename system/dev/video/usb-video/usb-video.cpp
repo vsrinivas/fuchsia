@@ -119,9 +119,11 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
 
             video::usb::UsbVideoFrameDesc frame_desc = {
                 .index = desc->bFrameIndex,
+                .capture_type = STREAM,
                 .default_frame_interval = desc->dwDefaultFrameInterval,
                 .width = desc->wWidth,
-                .height = desc->wHeight
+                .height = desc->wHeight,
+                .stride = desc->dwMaxVideoFrameBufferSize / desc->wHeight
             };
             out_format->frame_descs.push_back(frame_desc);
             break;
