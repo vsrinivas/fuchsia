@@ -5,11 +5,11 @@
 #pragma once
 
 #include "dispatcher.h"
+#include "proxy_helpers.h"
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/wlan.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -35,10 +35,9 @@ using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
 class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
-               public ddk::WlanmacIfc<Device>,
                public DeviceInterface {
    public:
-    Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
+    Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto);
     ~Device();
 
     zx_status_t Bind();
@@ -49,7 +48,7 @@ class Device : public WlanBaseDevice,
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
-    // ddk::WlanmacIfc methods
+    // ddk wlanmac_ifc_t methods
     void WlanmacStatus(uint32_t status);
     void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
     void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status);
@@ -98,7 +97,7 @@ class Device : public WlanBaseDevice,
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
     void SetStatusLocked(uint32_t status);
 
-    ddk::WlanmacProtocolProxy wlanmac_proxy_;
+    WlanmacProxy wlanmac_proxy_;
     fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
     wlanmac_info_t wlanmac_info_ = {};

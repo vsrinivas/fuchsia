@@ -19,7 +19,7 @@ extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_INTERNAL;
     }
 
-    auto wlandev = std::make_unique<wlan::Device>(device, &wlanmac_proto);
+    auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto);
     auto status = wlandev->Bind();
     if (status != ZX_OK) {
         std::printf("wlan: could not bind: %d\n", status);

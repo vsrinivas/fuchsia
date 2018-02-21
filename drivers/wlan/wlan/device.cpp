@@ -27,7 +27,22 @@
 
 namespace wlan {
 
-Device::Device(zx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
+#define DEV(c) static_cast<Device*>(c)
+static wlanmac_ifc_t wlanmac_ifc_ops = {
+    .status = [](void* cookie, uint32_t status) {
+        DEV(cookie)->WlanmacStatus(status);
+    },
+    .recv = [](void* cookie, uint32_t flags, const void* data, size_t length,
+               wlan_rx_info_t* info) {
+        DEV(cookie)->WlanmacRecv(flags, data, length, info);
+    },
+    .complete_tx = [](void* cookie, wlan_tx_packet_t* pkt, zx_status_t status) {
+        DEV(cookie)->WlanmacCompleteTx(pkt, status);
+    },
+};
+#undef DEV
+
+Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
     : WlanBaseDevice(device), wlanmac_proxy_(wlanmac_proto), dispatcher_(this) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
@@ -160,7 +175,7 @@ zx_status_t Device::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
-    zx_status_t status = wlanmac_proxy_.Start(this);
+    zx_status_t status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, this);
     if (status != ZX_OK) {
         errorf("could not start wlanmac: %d\n", status);
     } else {
