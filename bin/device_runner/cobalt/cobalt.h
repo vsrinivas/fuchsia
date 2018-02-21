@@ -15,14 +15,15 @@ namespace modular {
 
 // Metric IDs that Cobalt requires to identify the data we are logging.
 // These are not events (events are tracked through ModularEvents index metric).
-// Data for each can be of different types: string, multipart, int, etc.
+// For information on datatypes and structure of each of these metrics, see
+// https://cobalt-analytics.googlesource.com/config/+/master/fuchsia/module_usage_tracking/config.yaml
 // Next enum value: 6
 enum class CobaltMetric : uint32_t {
   MODULE_LAUNCHED = 1,
   MODULE_PAIRS_IN_STORY = 2,
   MODULAR_EVENTS = 3,
-  MODULE_LAUNCH_TIME = 4,
-  STORY_LAUNCH_TIME = 5,
+  MODULE_LAUNCH_LATENCY = 4,
+  STORY_LAUNCH_LATENCY = 5,
 };
 
 // The events to report.

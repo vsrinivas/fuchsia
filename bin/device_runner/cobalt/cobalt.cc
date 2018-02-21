@@ -49,7 +49,7 @@ void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
  parts[1]->value->set_int_value(time_micros);
 
  cobalt::CobaltObservation observation(
-     static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_TIME), std::move(parts));
+     static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_LATENCY), std::move(parts));
  cobalt::ReportObservation(observation, g_cobalt_context);
 }
 
@@ -58,7 +58,7 @@ void ReportStoryLaunchTime(zx_time_t time_nanos) {
   cobalt::ValuePtr value = cobalt::Value::New();
   value->set_int_value(time_micros);
   cobalt::CobaltObservation observation(
-      static_cast<uint32_t>(CobaltMetric::STORY_LAUNCH_TIME),
+      static_cast<uint32_t>(CobaltMetric::STORY_LAUNCH_LATENCY),
       kCobaltNoOpEncodingId, std::move(value));
   cobalt::ReportObservation(observation, g_cobalt_context);
 }
