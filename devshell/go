@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -25,4 +25,4 @@ if [[ ! -d "${GOROOT}" ]]; then
 	exit 1
 fi
 
-ZIRCON_SYSROOT="${ZIRCON_BUILDROOT}/build-user-${ZARCH}/sysroot" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
+ZIRCON="${FUCHSIA_DIR}/zircon" CC="${GOROOT}/misc/fuchsia/gccwrap.sh" ZIRCON_SYSROOT="${ZIRCON_BUILDROOT}/build-user-${ZARCH}/sysroot" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
