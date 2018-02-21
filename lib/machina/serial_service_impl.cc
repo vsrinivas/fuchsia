@@ -23,7 +23,11 @@ SerialServiceImpl::SerialServiceImpl(
 }
 
 void SerialServiceImpl::Connect(const ConnectCallback& callback) {
-  callback(std::move(client_socket_));
+  zx::socket socket_out;
+  zx_status_t status =
+      client_socket_.duplicate(ZX_RIGHT_SAME_RIGHTS, &socket_out);
+  FXL_CHECK(status == ZX_OK) << "Failed to duplicate serial socket";
+  callback(std::move(socket_out));
 }
 
 }  // namespace machina

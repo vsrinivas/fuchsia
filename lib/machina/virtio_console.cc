@@ -61,6 +61,11 @@ zx_status_t VirtioConsole::Transmit(virtio_queue_t* queue,
       return status;
     }
 
+    status = zx_object_wait_one(serial_.socket(), ZX_SOCKET_WRITABLE,
+                                ZX_TIME_INFINITE, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
     status =
         zx_socket_write(serial_.socket(), 0,
                         static_cast<const void*>(desc.addr), desc.len, nullptr);
@@ -91,7 +96,6 @@ zx_status_t VirtioConsole::Receive(virtio_queue_t* queue,
     if (status != ZX_OK) {
       return status;
     }
-
     status = zx_socket_read(serial_.socket(), 0, static_cast<void*>(desc.addr),
                             desc.len, &bytes_read);
   } while (status == ZX_ERR_SHOULD_WAIT);

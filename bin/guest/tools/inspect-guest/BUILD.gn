@@ -6,7 +6,12 @@ executable("inspect-guest") {
   output_name = "inspect-guest"
 
   sources = [
+    "connect.h",
+    "dump.cc",
+    "dump.h",
     "main.cc",
+    "serial.cc",
+    "serial.h",
   ]
 
   deps = [

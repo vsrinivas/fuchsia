@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_INSPECTOR_SERVICE_IMPL_H_
-#define GARNET_LIB_MACHINA_INSPECTOR_SERVICE_IMPL_H_
+#ifndef GARNET_LIB_MACHINA_INSPECT_SERVICE_IMPL_H_
+#define GARNET_LIB_MACHINA_INSPECT_SERVICE_IMPL_H_
 
 #include "garnet/lib/machina/fidl/inspect.fidl.h"
 #include "garnet/lib/machina/phys_mem.h"
@@ -27,4 +27,4 @@ class InspectServiceImpl : public InspectService {
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_INSPECTOR_SERVICE_IMPL_H_
+#endif  // GARNET_LIB_MACHINA_INSPECT_SERVICE_IMPL_H_
