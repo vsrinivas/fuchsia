@@ -11,7 +11,6 @@ import (
 	mlme_ext "garnet/public/lib/wlan/fidl/wlan_mlme_ext"
 	"garnet/public/lib/wlan/fidl/wlan_service"
 	"log"
-	"netstack/link/eth"
 	"os"
 	"syscall"
 	"syscall/zx"
@@ -71,14 +70,6 @@ func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error)
 	m := syscall.FDIOForFD(int(f.Fd()))
 	if m == nil {
 		return nil, fmt.Errorf("wlan: no fdio for %s fd: %d", path, f.Fd())
-	}
-	info, err := eth.IoctlGetInfo(m)
-	if err != nil {
-		return nil, err
-	}
-
-	if info.Features&eth.FeatureWlan == 0 {
-		return nil, nil
 	}
 
 	log.Printf("found wlan device %q", path)

@@ -15,6 +15,7 @@ import (
 	"netstack/watcher"
 	"wlan/wlan"
 
+	"fmt"
 	"log"
 	"sync"
 )
@@ -149,10 +150,10 @@ func main() {
 	ws.readConfigFile()
 	ws.readAPConfigFile()
 
-	const ethdir = "/dev/class/ethernet"
+	const ethdir = "/dev/class/wlanif"
 	wt, err := watcher.NewWatcher(ethdir)
 	if err != nil {
-		log.Fatalf("ethernet: %v", err)
+		log.Fatalf("wlanif: %v", err)
 	}
 	log.Printf("watching for wlan devices")
 
@@ -194,15 +195,12 @@ func (ws *Wlanstack) readAPConfigFile() {
 }
 
 func (ws *Wlanstack) addDevice(path string) error {
-	log.Printf("trying ethernet device %q", path)
-
 	cli, err := wlan.NewClient(path, ws.cfg, ws.apCfg)
 	if err != nil {
 		return err
 	}
 	if cli == nil {
-		// the device is not wlan. skip
-		return nil
+		return fmt.Errorf("wlan.NewClient returned nil!!!")
 	}
 	log.Printf("found wlan device %q", path)
 

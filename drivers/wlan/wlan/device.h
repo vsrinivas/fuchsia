@@ -36,10 +36,12 @@ class Device : public DeviceInterface {
     zx_status_t Bind();
 
     // ddk device methods
-    void Unbind();
-    void Release();
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                      size_t out_len, size_t* out_actual);
+    void WlanUnbind();
+    void WlanRelease();
+    zx_status_t WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                          size_t out_len, size_t* out_actual);
+    void EthUnbind();
+    void EthRelease();
 
     // ddk wlanmac_ifc_t methods
     void WlanmacStatus(uint32_t status);
@@ -71,6 +73,9 @@ class Device : public DeviceInterface {
         kPacketQueued,
     };
 
+    zx_status_t AddWlanDevice();
+    zx_status_t AddEthDevice();
+
     fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
     template <typename T>
     fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
@@ -90,8 +95,9 @@ class Device : public DeviceInterface {
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
     void SetStatusLocked(uint32_t status);
 
-    zx_device_t* zxdev_;
     zx_device_t* parent_;
+    zx_device_t* zxdev_;
+    zx_device_t* ethdev_;
 
     WlanmacProxy wlanmac_proxy_;
     fbl::unique_ptr<EthmacIfcProxy> ethmac_proxy_;
