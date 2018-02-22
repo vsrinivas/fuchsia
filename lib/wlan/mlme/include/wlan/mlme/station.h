@@ -8,8 +8,8 @@
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
-#include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>

@@ -8,7 +8,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

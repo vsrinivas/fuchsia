@@ -10,7 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/macaddr_map.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/macros.h>

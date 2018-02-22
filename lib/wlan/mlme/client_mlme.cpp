@@ -15,7 +15,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

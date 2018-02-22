@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/public/lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "garnet/public/lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <cstdint>
 #include <string>

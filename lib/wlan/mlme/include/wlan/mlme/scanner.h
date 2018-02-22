@@ -7,7 +7,7 @@
 #include <wlan/mlme/bss.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>

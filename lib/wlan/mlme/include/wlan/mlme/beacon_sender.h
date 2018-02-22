@@ -8,7 +8,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/timer.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/types.h>
 

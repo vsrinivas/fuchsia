@@ -7,7 +7,7 @@
 #include <wlan/mlme/beacon_sender_interface.h>
 #include <wlan/mlme/device_interface.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/types.h>
 

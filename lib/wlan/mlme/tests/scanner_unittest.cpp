@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 namespace wlan {
 namespace {
