@@ -4,6 +4,7 @@
         "garnet/packages/media_audio",
         "garnet/packages/netstack",
         "garnet/packages/openssh",
+        "garnet/packages/pmd",
         "garnet/packages/runtime",
         "garnet/packages/sbase",
         "garnet/packages/tracing"
