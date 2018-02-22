@@ -4,7 +4,8 @@
 
 #include "garnet/bin/zxdb/console/main_loop.h"
 
-#include <iostream>
+#include <linenoise/linenoise.h>
+
 #include <string>
 
 #include "garnet/bin/zxdb/client/err.h"
@@ -14,15 +15,31 @@
 
 namespace zxdb {
 
+namespace {
+
+void CompletionCallback(const char* line, linenoiseCompletions* completions) {
+  for (const auto& str : GetCommandCompletions(line))
+    linenoiseAddCompletion(completions, str.c_str());
+}
+
+}  // namespace
+
 void RunMainLoop(Session* session) {
+  linenoiseSetCompletionCallback(&CompletionCallback);
+  linenoiseHistorySetMaxLen(256);
+
   FileOutputBuffer out(stdout);
   while (true) {
-    std::cout << "\n[zxdb] ";
-    std::string input;
-    std::getline(std::cin, input);
+    char* line = linenoise("[zxdb] ");
+    if (!line)
+      break;
+    linenoiseHistoryAdd(line);
+    std::string input(line);
+    linenoiseFree(line);
 
     Command cmd;
     Err err = ParseCommand(input, &cmd);
+
     if (err.has_error()) {
       out.OutputErr(err);
     } else if (cmd.noun == Noun::kZxdb && cmd.verb == Verb::kQuit) {

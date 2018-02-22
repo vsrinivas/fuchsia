@@ -142,6 +142,29 @@ const SwitchRecord* FindSwitch(char ch, const CommandRecord& record) {
   return nullptr;
 }
 
+bool StartsWith(const std::string& str, const std::string& starts_with) {
+  if (str.size() < starts_with.size())
+    return false;
+  for (size_t i = 0; i < starts_with.size(); i++) {
+    if (str[i] != starts_with[i])
+      return false;
+  }
+  return true;
+}
+
+std::vector<std::string> GetNounCompletions(const std::string& token) {
+  std::vector<std::string> result;
+  const ShortcutMap& shortcut_map = GetShortcutMap();
+
+  auto found_shortcut = shortcut_map.lower_bound(token);
+  while (found_shortcut != shortcut_map.end() &&
+         StartsWith(found_shortcut->first, token)) {
+    result.push_back(found_shortcut->first);
+    ++found_shortcut;
+  }
+  return result;
+}
+
 }  // namespace
 
 Err TokenizeCommand(const std::string& input,
@@ -286,6 +309,51 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
   output->args.insert(output->args.end(), tokens.begin() + token_index,
                       tokens.end());
   return Err();
+}
+
+std::vector<std::string> GetCommandCompletions(const std::string& input) {
+  std::vector<std::string> result;
+
+  std::vector<std::string> tokens;
+  Err err = TokenizeCommand(input, &tokens);
+  if (err.has_error() || tokens.empty())
+    return result;
+  bool ends_in_space = input.back() == ' ';
+
+  // Only one token means completion based on the noun. If it ends in a space,
+  // assume they're done typing the noun and want verb completions.
+  if (tokens.size() == 1 && !ends_in_space)
+    return GetNounCompletions(tokens[0]);
+
+  // Look up this noun.
+  const ShortcutMap& shortcut_map = GetShortcutMap();
+  auto found_shortcut = shortcut_map.find(tokens[0]);
+  if (found_shortcut == shortcut_map.end())
+    return result;
+
+  if (found_shortcut->second.verb == Verb::kNone) {
+    // This noun needs a verb.
+    const auto& verbs = GetVerbsForNoun(found_shortcut->second.noun);
+    if (tokens.size() == 1 && ends_in_space) {
+      // Complete based on all verbs for this noun.
+      for (const auto& pair : verbs) {
+        if (pair.first != Verb::kNone)
+          result.push_back(tokens[0] + " " + VerbToString(pair.first));
+      }
+    } else if (tokens.size() == 2 && !ends_in_space) {
+      // Complete based on verb prefixes.
+      for (const auto& pair : verbs) {
+        if (pair.first != Verb::kNone) {
+          std::string verb_str = VerbToString(pair.first);
+          if (StartsWith(verb_str, tokens[1]))
+            result.push_back(tokens[0] + " " + verb_str);
+        }
+      }
+      return result;
+    }
+  }
+
+  return result;
 }
 
 }  // namespace zxdb

@@ -22,6 +22,12 @@ static_library("console") {
   public_deps = [
     "//garnet/bin/zxdb/client",
   ]
+
+  if (current_toolchain == host_toolchain) {
+    public_deps += [ ":linenoise" ]
+  } else {
+    public_deps += [ "//zircon/public/lib/linenoise" ]
+  }
 }
 
 source_set("tests") {
@@ -35,4 +41,20 @@ source_set("tests") {
     ":console",
     "//third_party/gtest",
   ]
+}
+
+# Host build of linenoise.
+# TODO(brettw) remove this when host builds of Zircon libraries are
+# available. See ZX-1676.
+if (current_toolchain == host_toolchain) {
+  config("linenoise_config") {
+    include_dirs = [ "//zircon/third_party/ulib/linenoise/include" ]
+  }
+
+  static_library("linenoise") {
+    sources = [
+      "//zircon/third_party/ulib/linenoise/linenoise.c",
+    ]
+    public_configs = [ ":linenoise_config" ]
+  }
 }

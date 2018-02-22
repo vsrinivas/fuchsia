@@ -10,6 +10,16 @@
 
 namespace zxdb {
 
+namespace {
+
+bool CompletionContains(const std::vector<std::string>& suggestions,
+                        const std::string& contains) {
+  return std::find(suggestions.begin(), suggestions.end(), contains) !=
+      suggestions.end();
+}
+
+}  // namespace
+
 TEST(CommandParser, Tokenizer) {
   std::vector<std::string> output;
 
@@ -159,6 +169,25 @@ TEST(CommandParser, Switches) {
   err = ParseCommand("memory read -s", &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Parameter needed for \"-s\".", err.msg());
+}
+
+TEST(CommandParser, Completions) {
+  std::vector<std::string> comp;
+
+  // Noun completion
+  comp = GetCommandCompletions("me");
+  EXPECT_TRUE(CompletionContains(comp, "mem"));
+  EXPECT_TRUE(CompletionContains(comp, "memory"));
+
+  // Noun followed by space should give all verbs.
+  comp = GetCommandCompletions("memory ");
+  EXPECT_TRUE(CompletionContains(comp, "memory read"));
+  EXPECT_TRUE(CompletionContains(comp, "memory write"));
+
+  // Noun followed by a verb prefix.
+  comp = GetCommandCompletions("memory rea");
+  EXPECT_EQ(1u, comp.size());  // Should be only one completion for this.
+  EXPECT_TRUE(CompletionContains(comp, "memory read"));
 }
 
 }  // namespace zxdb
