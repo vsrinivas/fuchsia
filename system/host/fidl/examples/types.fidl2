@@ -1,7 +1,7 @@
 library types;
 
 struct this_is_a_struct {};
-union this_is_a_union {};
+union this_is_a_union { string s; };
 interface this_is_an_interface {};
 
 struct primitive_types {

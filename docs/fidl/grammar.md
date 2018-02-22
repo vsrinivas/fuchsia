@@ -32,6 +32,11 @@ Repetition (zero or more) is expressed with parentheses and a star.
 zero-or-more = ( list-part )* ;
 ```
 
+Repetition (one or more) is expressed with parentheses and a plus.
+```
+one-or-more = ( list-part )+ ;
+```
+
 ## The grammar
 
 `file` is the starting symbol.
@@ -87,7 +92,7 @@ struct-member = struct-field | const-declaration | enum-declaration ;
 
 struct-field = type , IDENTIFIER , ( "=" , constant ) ;
 
-union-declaration = "union" , IDENTIFIER , "{" , ( union-member , ";" )* , "}" ;
+union-declaration = "union" , IDENTIFIER , "{" , ( union-member , ";" )+ , "}" ;
 
 union-member = union-field | const-declaration | enum-declaration ;
 

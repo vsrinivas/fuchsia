@@ -474,6 +474,8 @@ struct Circle {
 *   Declaration is not intended to be modified once deployed; use interface
     extension instead.
 *   Reference may be nullable.
+*   Unions contain one or members. A union with no members would have
+    no inhabitants and make little sense in a wire format.
 
 ##### Declaration
 

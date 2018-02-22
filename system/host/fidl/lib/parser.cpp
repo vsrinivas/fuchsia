@@ -846,6 +846,9 @@ std::unique_ptr<ast::UnionDeclaration> Parser::ParseUnionDeclaration() {
     if (!Ok())
         Fail();
 
+    if (members.empty())
+        Fail();
+
     return std::make_unique<ast::UnionDeclaration>(std::move(identifier), std::move(const_members),
                                                    std::move(enum_members), std::move(members));
 }
