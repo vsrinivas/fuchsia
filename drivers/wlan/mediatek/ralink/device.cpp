@@ -6,13 +6,13 @@
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
-#include <ddk/protocol/wlan.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zx/vmo.h>

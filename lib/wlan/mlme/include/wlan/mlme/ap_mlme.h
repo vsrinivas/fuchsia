@@ -9,7 +9,7 @@
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 
-#include <ddk/protocol/wlan.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 namespace wlan {

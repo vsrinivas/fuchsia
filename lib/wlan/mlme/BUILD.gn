@@ -51,9 +51,9 @@ source_set("mlme") {
 
   public_deps = [
     "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/wlan/fidl:mlme_data_only",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

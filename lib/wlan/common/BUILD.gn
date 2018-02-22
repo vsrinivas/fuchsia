@@ -34,6 +34,6 @@ source_set("common") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
   deps = [
-    "//zircon/public/lib/ddk",
+    "//garnet/lib/wlan/protocol",
   ]
 }

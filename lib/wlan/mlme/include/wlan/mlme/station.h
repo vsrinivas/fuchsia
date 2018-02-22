@@ -11,10 +11,10 @@
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/moving_average.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 namespace wlan {

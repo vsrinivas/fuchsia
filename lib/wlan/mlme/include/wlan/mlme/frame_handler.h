@@ -9,11 +9,10 @@
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
-#include <ddk/protocol/wlan.h>
-#include <zircon/types.h>
-
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <wlan/protocol/mac.h>
+#include <zircon/types.h>
 
 #define WLAN_DECL_VIRT_FUNC_HANDLE(methodName, args...) \
     virtual zx_status_t methodName(args) { return ZX_OK; }

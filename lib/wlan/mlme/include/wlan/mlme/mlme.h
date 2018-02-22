@@ -9,8 +9,8 @@
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
-#include <ddk/protocol/wlan.h>
 #include <wlan/common/bitfield.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 namespace wlan {

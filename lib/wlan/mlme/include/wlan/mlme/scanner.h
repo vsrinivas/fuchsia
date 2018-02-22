@@ -9,8 +9,8 @@
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 #include <zx/time.h>
 

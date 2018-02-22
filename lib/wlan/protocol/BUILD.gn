@@ -9,8 +9,11 @@ config("wlan_protocol_config") {
 source_set("protocol") {
   sources = [
     "include/wlan/protocol/ioctl.h",
-    "include/wlan/protocol/device.h",
+    "include/wlan/protocol/mac.h",
+    "include/wlan/protocol/phy.h",
   ]
 
   public_configs = [ ":wlan_protocol_config" ]
+
+  public_deps = [ "//zircon/public/lib/ddk" ]
 }

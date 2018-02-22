@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 namespace wlan {

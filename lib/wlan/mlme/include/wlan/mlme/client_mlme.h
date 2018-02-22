@@ -6,8 +6,8 @@
 
 #include <wlan/mlme/mlme.h>
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/ref_ptr.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 namespace wlan {

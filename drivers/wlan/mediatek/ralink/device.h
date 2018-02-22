@@ -5,10 +5,10 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/wlan.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
 #include <zx/time.h>
 

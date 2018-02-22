@@ -7,7 +7,6 @@
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
@@ -16,6 +15,7 @@
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/serialize.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <cinttypes>

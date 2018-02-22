@@ -44,7 +44,7 @@ struct WlanChan {
     CBW cbw;
     uint8 secondary80;
 };
-// LINT.ThenChange(//zircon/system/ulib/ddk/include/ddk/protocol/wlan.h)
+// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 struct ScanRequest {
     BSSTypes bss_type;

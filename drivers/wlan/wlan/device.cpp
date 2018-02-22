@@ -11,9 +11,9 @@
 #include <wlan/mlme/serialize.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
+#include <wlan/protocol/ioctl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/device/wlan.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zx/thread.h>

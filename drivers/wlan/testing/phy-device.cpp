@@ -9,8 +9,8 @@
 #include "garnet/lib/wlan/fidl/phy.fidl.h"
 
 #include <ddk/debug.h>
-#include <wlan/protocol/device.h>
 #include <wlan/protocol/ioctl.h>
+#include <wlan/protocol/phy.h>
 
 #include <algorithm>
 #include <stdio.h>

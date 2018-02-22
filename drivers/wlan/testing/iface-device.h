@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_WLAN_TESTING_IFACE_DEVICE_H
 
 #include <ddk/device.h>
-#include <ddk/protocol/wlan.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <mutex>

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/wlan.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <stdint.h>

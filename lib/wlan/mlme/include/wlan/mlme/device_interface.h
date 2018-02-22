@@ -6,11 +6,11 @@
 
 #include <wlan/mlme/mac_frame.h>
 
-#include <ddk/protocol/wlan.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <cstdint>
