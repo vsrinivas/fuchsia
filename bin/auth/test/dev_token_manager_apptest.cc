@@ -22,6 +22,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/svc/cpp/services.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -42,10 +43,10 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
  protected:
   // ::testing::Test:
   void SetUp() override {
-    app::ServiceProviderPtr services;
+    app::Services services;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "token_manager";
-    launch_info->services = services.NewRequest();
+    launch_info->service_request = services.NewRequest();
     {
       std::ostringstream stream;
       stream << "--verbose=" << fxl::GetVlogVerbosity();
@@ -57,7 +58,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 
-    app::ConnectToService(services.get(), token_mgr_factory_.NewRequest());
+    services.ConnectToService(token_mgr_factory_.NewRequest());
 
     auto dev_config_ptr = auth::AuthProviderConfig::New();
     dev_config_ptr->auth_provider_type = kDevAuthProvider;

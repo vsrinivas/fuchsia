@@ -7,6 +7,7 @@
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "garnet/public/lib/auth/fidl/auth_provider_factory.fidl.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/svc/cpp/services.h"
 
 namespace auth {
 
@@ -29,8 +30,8 @@ TokenManagerImpl::TokenManagerImpl(
 
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = config->url;
-    app::ServiceProviderPtr service_provider;
-    launch_info->services = service_provider.NewRequest();
+    app::Services services;
+    launch_info->service_request = services.NewRequest();
 
     app::ApplicationControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
@@ -45,8 +46,7 @@ TokenManagerImpl::TokenManagerImpl(
         std::move(controller);
 
     auth::AuthProviderFactoryPtr auth_provider_factory;
-    app::ConnectToService(service_provider.get(),
-                          auth_provider_factory.NewRequest());
+    services.ConnectToService(auth_provider_factory.NewRequest());
 
     auth::AuthProviderPtr auth_provider_ptr;
     auth_provider_factory->GetAuthProvider(
