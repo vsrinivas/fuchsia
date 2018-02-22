@@ -62,14 +62,11 @@ void NetMediaPlayerImpl::SetUrl(const fidl::String& url_as_string) {
     return;
   }
 
-  SeekingReaderPtr reader;
-
   if (url.SchemeIsFile()) {
     media_player_->SetFileChannel(
         ChannelFromFd(fxl::UniqueFD(open(url.path().c_str(), O_RDONLY))));
   } else {
-    media_service_->CreateNetworkReader(url_as_string, reader.NewRequest());
-    media_player_->SetReader(std::move(reader));
+    media_player_->SetHttpUrl(url_as_string);
   }
 }
 

@@ -489,6 +489,12 @@ void MediaPlayerImpl::Seek(int64_t position) {
   Update();
 }
 
+void MediaPlayerImpl::SetHttpUrl(const fidl::String& http_url) {
+  fidl::InterfaceHandle<SeekingReader> reader;
+  owner()->CreateHttpReader(http_url, reader.NewRequest());
+  SetReader(std::move(reader));
+}
+
 void MediaPlayerImpl::SetFileChannel(zx::channel file_channel) {
   fidl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateFileChannelReader(std::move(file_channel),

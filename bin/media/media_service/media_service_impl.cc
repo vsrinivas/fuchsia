@@ -41,6 +41,18 @@ MediaServiceImpl::~MediaServiceImpl() {
   FLOG_DESTROY();
 }
 
+void MediaServiceImpl::CreateHttpPlayer(
+    const fidl::String& http_url,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaPlayer> player) {
+  fidl::InterfaceHandle<SeekingReader> reader;
+  CreateHttpReader(http_url, reader.NewRequest());
+  AddProduct(MediaPlayerImpl::Create(
+      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
+      std::move(player), this));
+}
+
 void MediaServiceImpl::CreateFilePlayer(
     zx::channel file_channel,
     fidl::InterfaceHandle<MediaRenderer> audio_renderer,
@@ -100,15 +112,6 @@ void MediaServiceImpl::CreateDecoder(
   }));
 }
 
-void MediaServiceImpl::CreateNetworkReader(
-    const fidl::String& url,
-    fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
-      [ this, url = url, request = std::move(request) ]() mutable {
-        return NetworkReaderImpl::Create(url, std::move(request), this);
-      }));
-}
-
 void MediaServiceImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
@@ -155,6 +158,15 @@ void MediaServiceImpl::CreateLpcmReformatter(
                                        output_sample_format, std::move(request),
                                        this);
   }));
+}
+
+void MediaServiceImpl::CreateHttpReader(
+    const std::string& http_url,
+    fidl::InterfaceRequest<SeekingReader> request) {
+  CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
+      [ this, http_url = http_url, request = std::move(request) ]() mutable {
+        return NetworkReaderImpl::Create(http_url, std::move(request), this);
+      }));
 }
 
 void MediaServiceImpl::CreateFileChannelReader(

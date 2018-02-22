@@ -51,6 +51,12 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       fidl::InterfaceHandle<media::MediaRenderer> video_renderer,
       fidl::InterfaceRequest<media::MediaPlayer> player) override;
 
+  void CreateHttpPlayer(
+      const fidl::String& http_url,
+      fidl::InterfaceHandle<media::MediaRenderer> audio_renderer,
+      fidl::InterfaceHandle<media::MediaRenderer> video_renderer,
+      fidl::InterfaceRequest<media::MediaPlayer> player) override;
+
   void CreatePlayer(fidl::InterfaceHandle<SeekingReader> reader,
                     fidl::InterfaceHandle<MediaRenderer> audio_renderer,
                     fidl::InterfaceHandle<MediaRenderer> video_renderer,
@@ -70,10 +76,6 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       MediaTypePtr input_media_type,
       fidl::InterfaceRequest<MediaTypeConverter> decoder) override;
 
-  void CreateNetworkReader(
-      const fidl::String& url,
-      fidl::InterfaceRequest<SeekingReader> reader) override;
-
   void CreateAudioRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
@@ -89,6 +91,10 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
       MediaTypePtr input_media_type,
       AudioSampleFormat output_sample_format,
       fidl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter) override;
+
+  // Creates a |SeekingReader| that reads from an HTTP service.
+  void CreateHttpReader(const std::string& http_url,
+                        fidl::InterfaceRequest<SeekingReader> reader);
 
   // Creates a |SeekingReader| that reads from an fdio channel for a file.
   void CreateFileChannelReader(zx::channel file_channel,

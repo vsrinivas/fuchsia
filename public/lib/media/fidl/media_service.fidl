@@ -19,14 +19,20 @@ import "lib/media/fidl/video_renderer.fidl";
 // Primary media service definition.
 [ServiceName="media::MediaService"]
 interface MediaService {
+  // Creates a player that reads from an HTTP service specified by URL.
+  CreateHttpPlayer@0(string url,
+                     MediaRenderer? audio_renderer,
+                     MediaRenderer? video_renderer,
+                     MediaPlayer& player);
+
   // Creates a player that reads from a file specified by channel.
-  CreateFilePlayer@0(handle<channel> file_channel,
+  CreateFilePlayer@1(handle<channel> file_channel,
                      MediaRenderer? audio_renderer,
                      MediaRenderer? video_renderer,
                      MediaPlayer& player);
 
   // Creates a player that reads from a seeking reader.
-  CreatePlayer@1(SeekingReader? reader,
+  CreatePlayer@2(SeekingReader? reader,
                  MediaRenderer? audio_renderer,
                  MediaRenderer? video_renderer,
                  MediaPlayer& player);
@@ -35,21 +41,18 @@ interface MediaService {
   // added to each stream as needed to make the media type of the stream match
   // one of the allowed types. If a stream cannot be converted to one of the
   // allowed types, the source will not expose that stream.
-  CreateSource@2(SeekingReader reader,
+  CreateSource@3(SeekingReader reader,
                  array<MediaTypeSet>? allowed_media_types,
                  MediaSource& source);
 
   // Creates a sink.
-  CreateSink@3(MediaRenderer renderer, MediaSink& sink);
+  CreateSink@4(MediaRenderer renderer, MediaSink& sink);
 
   // Creates a demux.
-  CreateDemux@4(SeekingReader reader, MediaSource& demux);
+  CreateDemux@5(SeekingReader reader, MediaSource& demux);
 
   // Creates a decoder.
-  CreateDecoder@5(MediaType input_media_type, MediaTypeConverter& decoder);
-
-  // Creates a network reader.
-  CreateNetworkReader@6(string url, SeekingReader& reader);
+  CreateDecoder@6(MediaType input_media_type, MediaTypeConverter& decoder);
 
   // Creates an audio renderer.
   CreateAudioRenderer@7(AudioRenderer& audio_renderer,
