@@ -70,10 +70,10 @@ typedef struct {
 #define IOCTL_PTY_READ_EVENTS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PTY, 0x13)
 
-#define PTY_EVENT_HANGUP (1u)    // no active client
+#define PTY_EVENT_HANGUP    (1u) // no active client
 #define PTY_EVENT_INTERRUPT (2u) // ^c
-#define PTY_EVENT_SUSPEND (4u)   // ^z
-#define PTY_EVENT_MASK (7u)      // all events
+#define PTY_EVENT_SUSPEND   (4u) // ^z
+#define PTY_EVENT_MASK      (7u) // all events
 
 // When an event is pending, this signal is asserted
 // On the Controlling Client PTY
