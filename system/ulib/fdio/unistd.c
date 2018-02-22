@@ -517,6 +517,17 @@ void __libc_extensions_init(uint32_t handle_count,
                             uint32_t handle_info[],
                             uint32_t name_count,
                             char** names) {
+
+#ifdef FDIO_LLDEBUG
+    const char* fdiodebug = getenv("FDIODEBUG");
+    if (fdiodebug) {
+        fdio_set_debug_level(strtoul(fdiodebug, NULL, 10));
+        LOG(1, "fdio: init: debuglevel = %s\n", fdiodebug);
+    } else {
+        LOG(1, "fdio: init()\n");
+    }
+#endif
+
     int stdio_fd = -1;
 
     // extract handles we care about
