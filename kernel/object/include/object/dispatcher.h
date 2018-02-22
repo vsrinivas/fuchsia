@@ -190,14 +190,7 @@ private:
     const zx_koid_t koid_;
     uint32_t handle_count_;
 
-    // TODO(kulakowski) Make signals_ TA_GUARDED(get_lock()).
-    // Right now, signals_ is almost entirely accessed under the
-    // common dispatcher lock_. Once we migrate the per-object locks
-    // to instead use the common dispatcher lock_, all of the unlocked
-    // accesses (all of which go via GetSignalsState) will be
-    // statically under this lock_, rather than maybe under this lock
-    // or the more specific object lock.
-    zx_signals_t signals_;
+    zx_signals_t signals_ TA_GUARDED(get_lock());
 
     // Active observers are elements in |observers_|.
     ObserverList observers_ TA_GUARDED(get_lock());
