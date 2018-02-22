@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS2_INTERNAL_MESSAGE_READER_H_
 #define LIB_FIDL_CPP_BINDINGS2_INTERNAL_MESSAGE_READER_H_
 
-#include <async/cpp/wait.h>
+#include <async/wait.h>
 #include <fidl/cpp/message.h>
 #include <fidl/cpp/message_buffer.h>
 #include <zx/channel.h>
@@ -104,15 +104,19 @@ class MessageReader {
   }
 
  private:
+  static async_wait_result_t CallHandler(async_t* async,
+                                         async_wait_t* wait,
+                                         zx_status_t status,
+                                         const zx_packet_signal_t* signal);
   async_wait_result_t OnHandleReady(async_t* async,
                                     zx_status_t status,
                                     const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
   void NotifyError();
 
+  async_wait_t wait_;  // Must be first.
   zx::channel channel_;
   async_t* async_;
-  async::WaitMethod<MessageReader, &MessageReader::OnHandleReady> wait_;
   MessageHandler* message_handler_;
   std::function<void()> error_handler_;
 };

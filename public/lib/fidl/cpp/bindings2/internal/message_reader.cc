@@ -16,14 +16,22 @@ constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
 }  // namespace
 
+static_assert(std::is_standard_layout<MessageReader>::value,
+              "We need offsetof to work");
+
 MessageReader::MessageReader(MessageHandler* message_handler)
-    : async_(nullptr),
-      wait_(this, ZX_HANDLE_INVALID, kSignals),
+    : wait_{{ASYNC_STATE_INIT},
+            &MessageReader::CallHandler,
+            ZX_HANDLE_INVALID,
+            kSignals,
+            0u,
+            {}},
+      async_(nullptr),
       message_handler_(message_handler) {}
 
 MessageReader::~MessageReader() {
   if (async_)
-    wait_.Cancel(async_);
+    async_cancel_wait(async_, &wait_);
 }
 
 zx_status_t MessageReader::Bind(zx::channel channel) {
@@ -33,8 +41,8 @@ zx_status_t MessageReader::Bind(zx::channel channel) {
     return ZX_OK;
   channel_ = std::move(channel);
   async_ = async_get_default();
-  wait_.set_object(channel_.get());
-  zx_status_t status = wait_.Begin(async_);
+  wait_.object = channel_.get();
+  zx_status_t status = async_begin_wait(async_, &wait_);
   if (status != ZX_OK)
     Unbind();
   return status;
@@ -43,8 +51,8 @@ zx_status_t MessageReader::Bind(zx::channel channel) {
 zx::channel MessageReader::Unbind() {
   if (!is_bound())
     return zx::channel();
-  wait_.Cancel(async_);
-  wait_.set_object(ZX_HANDLE_INVALID);
+  async_cancel_wait(async_, &wait_);
+  wait_.object = ZX_HANDLE_INVALID;
   async_ = nullptr;
   zx::channel channel = std::move(channel_);
   if (message_handler_)
@@ -86,6 +94,17 @@ zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   ZX_DEBUG_ASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
   NotifyError();
   return ZX_ERR_PEER_CLOSED;
+}
+
+async_wait_result_t MessageReader::CallHandler(
+    async_t* async,
+    async_wait_t* wait,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
+  static_assert(offsetof(MessageReader, wait_) == 0,
+                "The wait must be the first member for this cast to be valid.");
+  return reinterpret_cast<MessageReader*>(wait)->OnHandleReady(async, status,
+                                                               signal);
 }
 
 async_wait_result_t MessageReader::OnHandleReady(

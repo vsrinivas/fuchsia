@@ -12,10 +12,10 @@ source_set("bindings2") {
     "interface_request.h",
     "internal/header.h",
     "internal/implementation.h",
-    "internal/message_reader.cc",
-    "internal/message_reader.h",
     "internal/message_handler.cc",
     "internal/message_handler.h",
+    "internal/message_reader.cc",
+    "internal/message_reader.h",
     "internal/pending_response.cc",
     "internal/pending_response.h",
     "internal/proxy_controller.cc",
@@ -36,7 +36,6 @@ source_set("bindings2") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
