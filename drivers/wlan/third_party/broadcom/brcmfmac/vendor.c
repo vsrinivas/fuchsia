@@ -29,7 +29,7 @@
 #include "p2p.h"
 #include "vendor.h"
 
-static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wireless_dev* wdev,
+static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wireless_dev* wdev,
                                                  const void* data, int len) {
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_if* ifp;
@@ -100,7 +100,7 @@ static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wir
         if (nla_put(reply, BRCMF_NLATTR_DATA, msglen, wr_pointer) ||
                 nla_put_u16(reply, BRCMF_NLATTR_LEN, msglen)) {
             kfree_skb(reply);
-            ret = -ENOBUFS;
+            ret = ZX_ERR_NO_RESOURCES;
             break;
         }
 

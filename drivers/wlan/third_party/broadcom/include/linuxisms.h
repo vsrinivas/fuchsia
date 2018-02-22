@@ -521,19 +521,17 @@ struct linuxwait {
 #define WQ_MEM_RECLAIM (17)
 enum {
     ENOENT,
-    ENOBUFS,
-    ERANGE,
-    ENAVAIL,
-    ESRCH,
-    ENFILE,
-    EOPNOTSUPP,
+    ENAVAIL, // Used when brcmf_fws_borrow_credit() fails
+    ESRCH, // no such process. Used when mac_descriptor->occupied is false.
+    ENFILE, // file table overflow.
+    EOPNOTSUPP, // ZX_ERR_NOT_SUPPORTED
     EBADE,
     EPROTO,
     EIO,
     ENODATA,
     EINVAL,
     ENXIO,
-    ENOMEM,
+    ENOMEM, // ZX_ERR_NO_MEMORY
     ENODEV,
     ENOTBLK,
     ENOSR,

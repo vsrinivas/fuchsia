@@ -164,8 +164,7 @@ static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
 #define BRCMF_FWS_HTOD_FLAG_PKTFROMHOST 0x01
 #define BRCMF_FWS_HTOD_FLAG_PKT_REQUESTED 0x02
 
-#define BRCMF_FWS_RET_OK_NOSCHEDULE 0
-#define BRCMF_FWS_RET_OK_SCHEDULE 1
+enum should_schedule {BRCMF_FWS_NOSCHEDULE, BRCMF_FWS_SCHEDULE};
 
 #define BRCMF_FWS_MODE_REUSESEQ_SHIFT 3 /* seq reuse */
 #define BRCMF_FWS_MODE_SET_REUSESEQ(x, val)                \
@@ -1019,7 +1018,7 @@ static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, 
     return 0;
 }
 
-static int brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
+static enum should_schedule brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
     struct brcmf_fws_mac_descriptor* entry;
     uint8_t mac_handle;
     int ret;
@@ -1028,7 +1027,8 @@ static int brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws, uint8_t 
     entry = &fws->desc.nodes[mac_handle & 0x1F];
     if (!entry->occupied) {
         fws->stats.mac_ps_update_failed++;
-        return -ESRCH;
+        brcmf_err("Unoccupied entry\n");
+        return BRCMF_FWS_NOSCHEDULE;
     }
     brcmf_fws_lock(fws);
     /* a state update should wipe old credits */
@@ -1036,34 +1036,36 @@ static int brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws, uint8_t 
     entry->requested_packet = 0;
     if (type == BRCMF_FWS_TYPE_MAC_OPEN) {
         entry->state = BRCMF_FWS_STATE_OPEN;
-        ret = BRCMF_FWS_RET_OK_SCHEDULE;
+        ret = BRCMF_FWS_SCHEDULE;
     } else {
         entry->state = BRCMF_FWS_STATE_CLOSE;
         brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BK, false);
         brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BE, false);
         brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VI, false);
         brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VO, true);
-        ret = BRCMF_FWS_RET_OK_NOSCHEDULE;
+        ret = BRCMF_FWS_NOSCHEDULE;
     }
     brcmf_fws_unlock(fws);
     return ret;
 }
 
-static int brcmf_fws_interface_state_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
+static enum should_schedule brcmf_fws_interface_state_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
     struct brcmf_fws_mac_descriptor* entry;
     uint8_t ifidx;
-    int ret;
+    enum should_schedule ret;
 
     ifidx = data[0];
 
     if (ifidx >= BRCMF_MAX_IFS) {
-        ret = -ERANGE;
+        brcmf_err("ifidx %d bigger than BRCMF_MAX_IFS\n", ifidx);
+        ret = BRCMF_FWS_NOSCHEDULE;
         goto fail;
     }
 
     entry = &fws->desc.iface[ifidx];
     if (!entry->occupied) {
-        ret = -ESRCH;
+        brcmf_err("Entry %d unoccupied\n", ifidx);
+        ret = BRCMF_FWS_NOSCHEDULE;
         goto fail;
     }
 
@@ -1072,14 +1074,15 @@ static int brcmf_fws_interface_state_indicate(struct brcmf_fws_info* fws, uint8_
     switch (type) {
     case BRCMF_FWS_TYPE_INTERFACE_OPEN:
         entry->state = BRCMF_FWS_STATE_OPEN;
-        ret = BRCMF_FWS_RET_OK_SCHEDULE;
+        ret = BRCMF_FWS_SCHEDULE;
         break;
     case BRCMF_FWS_TYPE_INTERFACE_CLOSE:
         entry->state = BRCMF_FWS_STATE_CLOSE;
-        ret = BRCMF_FWS_RET_OK_NOSCHEDULE;
+        ret = BRCMF_FWS_NOSCHEDULE;
         break;
     default:
-        ret = -EINVAL;
+        brcmf_err("Invalid type %d\n", type);
+        ret = BRCMF_FWS_NOSCHEDULE;
         brcmf_fws_unlock(fws);
         goto fail;
     }
@@ -1091,7 +1094,7 @@ fail:
     return ret;
 }
 
-static int brcmf_fws_request_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
+static enum should_schedule brcmf_fws_request_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
     struct brcmf_fws_mac_descriptor* entry;
 
     entry = &fws->desc.nodes[data[1] & 0x1F];
@@ -1101,7 +1104,8 @@ static int brcmf_fws_request_indicate(struct brcmf_fws_info* fws, uint8_t type, 
         } else {
             fws->stats.packet_request_failed++;
         }
-        return -ESRCH;
+        brcmf_err("Unoccupied entry %d\n", data[1] & 0x1F);
+        return BRCMF_FWS_NOSCHEDULE;
     }
 
     brcmf_dbg(TRACE, "%s (%d): %s cnt %d bmp %d\n", brcmf_fws_get_tlv_name(type), type, entry->name,
@@ -1115,7 +1119,7 @@ static int brcmf_fws_request_indicate(struct brcmf_fws_info* fws, uint8_t type, 
 
     entry->ac_bitmap = data[2];
     brcmf_fws_unlock(fws);
-    return BRCMF_FWS_RET_OK_SCHEDULE;
+    return BRCMF_FWS_SCHEDULE;
 }
 
 static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* entry,
@@ -1452,12 +1456,12 @@ static int brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t flags, uint
     return 0;
 }
 
-static int brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws, uint8_t* data) {
+static enum should_schedule brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws, uint8_t* data) {
     int i;
 
     if (fws->fcmode != BRCMF_FWS_FCMODE_EXPLICIT_CREDIT) {
         brcmf_dbg(INFO, "ignored\n");
-        return BRCMF_FWS_RET_OK_NOSCHEDULE;
+        return BRCMF_FWS_NOSCHEDULE;
     }
 
     brcmf_dbg(DATA, "enter: data %pM\n", data);
@@ -1468,10 +1472,10 @@ static int brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws, uint8_t
 
     brcmf_dbg(DATA, "map: credit %x delay %x\n", fws->fifo_credit_map, fws->fifo_delay_map);
     brcmf_fws_unlock(fws);
-    return BRCMF_FWS_RET_OK_SCHEDULE;
+    return BRCMF_FWS_SCHEDULE;
 }
 
-static int brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data) {
+static enum should_schedule brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data) {
     uint32_t status_le;
     uint16_t seq_le;
     uint32_t status;
@@ -1496,7 +1500,7 @@ static int brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws, uint8_t* data
     brcmf_fws_lock(fws);
     brcmf_fws_txs_process(fws, flags, hslot, genbit, seq);
     brcmf_fws_unlock(fws);
-    return BRCMF_FWS_RET_OK_NOSCHEDULE;
+    return BRCMF_FWS_NOSCHEDULE;
 }
 
 static int brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_t* data) {
@@ -1743,8 +1747,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
     uint8_t type;
     uint8_t len;
     uint8_t* data;
-    int32_t status;
-    int32_t err;
+    enum should_schedule schedule_status;
 
     brcmf_dbg(HDRS, "enter: ifidx %d, skblen %u, sig %d\n", ifp->ifidx, skb->len, siglen);
 
@@ -1763,7 +1766,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
     data_len = siglen;
     signal_data = skb->data;
 
-    status = BRCMF_FWS_RET_OK_NOSCHEDULE;
+    schedule_status = BRCMF_FWS_NOSCHEDULE;
     while (data_len > 0) {
         /* extract tlv info */
         type = signal_data[0];
@@ -1791,7 +1794,6 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
             break;
         }
 
-        err = BRCMF_FWS_RET_OK_NOSCHEDULE;
         switch (type) {
         case BRCMF_FWS_TYPE_COMP_TXSTATUS:
             break;
@@ -1805,21 +1807,22 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
             break;
         case BRCMF_FWS_TYPE_MAC_OPEN:
         case BRCMF_FWS_TYPE_MAC_CLOSE:
-            err = brcmf_fws_macdesc_state_indicate(fws, type, data);
+            schedule_status = brcmf_fws_macdesc_state_indicate(fws, type, data);
             break;
         case BRCMF_FWS_TYPE_INTERFACE_OPEN:
         case BRCMF_FWS_TYPE_INTERFACE_CLOSE:
-            err = brcmf_fws_interface_state_indicate(fws, type, data);
+            schedule_status = brcmf_fws_interface_state_indicate(fws, type, data);
             break;
         case BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT:
         case BRCMF_FWS_TYPE_MAC_REQUEST_PACKET:
-            err = brcmf_fws_request_indicate(fws, type, data);
+            schedule_status = brcmf_fws_request_indicate(fws, type, data);
             break;
         case BRCMF_FWS_TYPE_TXSTATUS:
+            // TODO(cphoenix): Should this set schedule_status?
             brcmf_fws_txstatus_indicate(fws, data);
             break;
         case BRCMF_FWS_TYPE_FIFO_CREDITBACK:
-            err = brcmf_fws_fifocreditback_indicate(fws, data);
+            schedule_status = brcmf_fws_fifocreditback_indicate(fws, data);
             break;
         case BRCMF_FWS_TYPE_RSSI:
             brcmf_fws_rssi_indicate(fws, *data);
@@ -1833,9 +1836,6 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
             fws->stats.tlv_invalid_type++;
             break;
         }
-        if (err == BRCMF_FWS_RET_OK_SCHEDULE) {
-            status = BRCMF_FWS_RET_OK_SCHEDULE;
-        }
         signal_data += len + 2;
         data_len -= len + 2;
     }
@@ -1844,7 +1844,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
         fws->stats.tlv_parse_failed++;
     }
 
-    if (status == BRCMF_FWS_RET_OK_SCHEDULE) {
+    if (schedule_status == BRCMF_FWS_SCHEDULE) {
         brcmf_fws_schedule_deq(fws);
     }
 
