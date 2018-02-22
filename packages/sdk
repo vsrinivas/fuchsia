@@ -7,5 +7,8 @@
         "garnet/packages/runtime",
         "garnet/packages/sbase",
         "garnet/packages/tracing"
+    ],
+    "labels": [
+        "//build/gn:fvm.blk.qcow2"
     ]
 }
