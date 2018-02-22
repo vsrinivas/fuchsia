@@ -29,7 +29,7 @@ unsafe fn ioctl(
     } else {
         ::std::ptr::null_mut()
     };
-    match fdio::ioctl(
+    match fdio::ioctl_raw(
         dev.as_raw_fd(),
         op,
         in_ptr,

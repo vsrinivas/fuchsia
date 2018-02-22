@@ -5,24 +5,13 @@
 #![deny(warnings)]
 
 use failure::Error;
-use fdio::{self, fdio_sys};
+use fdio::{fdio_sys, ioctl};
 use std::ffi::{CString, OsStr, OsString};
 use std::fs::File;
 use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::io::AsRawFd;
-use zircon;
 
 use super::open_rdwr;
-
-// TODO(tkilbourn): consider whether this belongs in the fdio crate
-unsafe fn ioctl(dev: &File, op: raw::c_int, in_buf: *const raw::c_void, in_len: usize,
-         out_buf: *mut raw::c_void, out_len: usize) -> Result<i32, Error> {
-   match fdio::ioctl(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
-     e if e < 0 => Err(zircon::Status::from_raw(e).into()),
-     e => Ok(e),
-   }
-}
 
 pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<OsString, Error> {
     let test_dev = open_rdwr(test_path)?;
@@ -57,7 +46,7 @@ pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {
               devname.as_ptr() as *const raw::c_void,
               devname.as_bytes_with_nul().len(),
               ::std::ptr::null_mut() as *mut raw::c_void,
-              0).map(|_| ())
+              0).map(|_| ()).map_err(|e| e.into())
     }
 }
 
@@ -69,7 +58,7 @@ pub fn destroy_test_device(device: &File) -> Result<(), Error> {
               ::std::ptr::null() as *const raw::c_void,
               0,
               ::std::ptr::null_mut() as *mut raw::c_void,
-              0).map(|_| ())
+              0).map(|_| ()).map_err(|e| e.into())
     }
 }
 

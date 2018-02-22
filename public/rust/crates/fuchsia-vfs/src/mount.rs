@@ -32,7 +32,7 @@ impl Drop for Mount {
         let mut h: zircon::sys::zx_handle_t = zircon::sys::ZX_HANDLE_INVALID;
 
         let sz = unsafe {
-            fdio::ioctl(
+            fdio::ioctl_raw(
                 self.mountfd,
                 fdio::IOCTL_VFS_UNMOUNT_NODE,
                 std::ptr::null_mut(),
@@ -72,7 +72,7 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
     let h = chan.into_handle().into_raw();
 
     let sz = unsafe {
-        fdio::ioctl(
+        fdio::ioctl_raw(
             mount.mountfd,
             fdio::IOCTL_VFS_MOUNT_FS,
             &h as *const _ as *const std::os::raw::c_void,

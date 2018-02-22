@@ -26,7 +26,15 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
-pub use fdio_sys::fdio_ioctl as ioctl;
+pub use fdio_sys::fdio_ioctl as ioctl_raw;
+
+pub unsafe fn ioctl(dev: &File, op: raw::c_int, in_buf: *const raw::c_void, in_len: usize,
+         out_buf: *mut raw::c_void, out_len: usize) -> Result<i32, zircon::Status> {
+   match ioctl_raw(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
+     e if e < 0 => Err(zircon::Status::from_raw(e)),
+     e => Ok(e),
+   }
+}
 
 /// Connects a channel to a named service.
 pub fn service_connect(service_path: &str, channel: zircon::Channel) -> Result<(), zircon::Status> {

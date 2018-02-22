@@ -75,7 +75,7 @@ impl Watcher {
         };
         zircon::Status::ok(
             // This is safe because no memory ownership is passed via fdio::ioctl.
-            unsafe { fdio::ioctl(dir.as_raw_fd(),
+            unsafe { fdio::ioctl_raw(dir.as_raw_fd(),
                                  IOCTL_VFS_WATCH_DIR,
                                  &vwd as *const _ as *const raw::c_void,
                                  ::std::mem::size_of::<vfs_watch_dir_t>(),
