@@ -70,6 +70,17 @@ private:
         uint32_t offset = 0;
     };
 
+    // Maps between a camera video format proto and pointers
+    // to the corresponding driver format and frame descriptors.
+    struct FormatMapping {
+        FormatMapping(const UsbVideoFormat* format,
+                      const UsbVideoFrameDesc* frame_desc);
+        camera::camera_proto::VideoFormat proto;
+
+        const UsbVideoFormat* format;
+        const UsbVideoFrameDesc* frame_desc;
+    };
+
      UsbVideoStream(zx_device_t* parent,
                     usb_protocol_t* usb,
                     fbl::Vector<UsbVideoFormat>* formats,
@@ -112,6 +123,10 @@ private:
 
     zx_status_t ProcessChannel(dispatcher::Channel* channel);
 
+    // Creates mappings between video format protos and their original
+    // format and frame descriptors. The result will be stored in format_mappings_.
+    zx_status_t GenerateFormatMappings();
+
     zx_status_t GetFormatsLocked(dispatcher::Channel* channel,
                                  const camera::camera_proto::GetFormatsReq& req)
         __TA_REQUIRES(lock_);
@@ -152,6 +167,8 @@ private:
 
     fbl::Vector<UsbVideoFormat> formats_;
     fbl::Vector<UsbVideoStreamingSetting> streaming_settings_;
+
+    fbl::Vector<FormatMapping> format_mappings_;
 
     usb_video_vc_probe_and_commit_controls negotiation_result_;
     const UsbVideoFormat* cur_format_;

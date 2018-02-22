@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -21,6 +22,7 @@ namespace usb {
 // TODO(jocelyndang): calculate this rather than hardcoding.
 static constexpr uint32_t RING_BUFFER_NUM_FRAMES = 30;
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
+static constexpr uint32_t NANOSECS_IN_SEC = 1e9;
 
 UsbVideoStream::~UsbVideoStream() {
     // List may not have been initialized.
@@ -113,7 +115,12 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
         }
     }
 
-    zx_status_t status = UsbVideoStreamBase::DdkAdd(devname, DEVICE_ADD_INVISIBLE);
+    zx_status_t status = GenerateFormatMappings();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = UsbVideoStreamBase::DdkAdd(devname, DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
         return status;
     }
@@ -135,6 +142,50 @@ zx_status_t UsbVideoStream::Init() {
         return status;
     }
     DdkMakeVisible();
+    return ZX_OK;
+}
+
+UsbVideoStream::FormatMapping::FormatMapping(const UsbVideoFormat* format,
+                                             const UsbVideoFrameDesc* frame_desc) {
+    this->proto.capture_type = frame_desc->capture_type;
+    this->proto.pixel_format = format->pixel_format;
+    this->proto.width = frame_desc->width;
+    this->proto.height = frame_desc->height;
+    this->proto.stride = frame_desc->stride;
+    this->proto.bits_per_pixel = format->bits_per_pixel;
+    // The frame descriptor frame interval is expressed in 100ns units.
+    // e.g. a frame interval of 333333 is equivalent to 30fps (1e7 / 333333).
+    this->proto.frames_per_sec_numerator = NANOSECS_IN_SEC / 100;
+    this->proto.frames_per_sec_denominator = frame_desc->default_frame_interval;
+
+    this->format = format;
+    this->frame_desc = frame_desc;
+}
+
+zx_status_t UsbVideoStream::GenerateFormatMappings() {
+    size_t num_mappings = 0;
+    for (const auto& format : formats_) {
+        num_mappings += format.frame_descs.size();
+    }
+
+    // The camera interface limits the number of formats we can send to the
+    // client, so flag an error early in case this ever happens.
+    if (num_mappings > fbl::numeric_limits<uint16_t>::max()) {
+        zxlogf(ERROR, "too many format mappings (%lu count)\n", num_mappings);
+        return ZX_ERR_INTERNAL;
+    }
+
+    fbl::AllocChecker ac;
+    this->format_mappings_.reserve(num_mappings, &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    for (const auto& format : formats_) {
+        for (const auto& frame : format.frame_descs) {
+            format_mappings_.push_back(FormatMapping(&format, &frame));
+        }
+    }
     return ZX_OK;
 }
 
