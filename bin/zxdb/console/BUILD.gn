@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("console") {
+  sources = [
+    "command.cc",
+    "command.h",
+    "command_parser.cc",
+    "command_parser.h",
+    "command_utils.cc",
+    "command_utils.h",
+    "main_loop.cc",
+    "main_loop.h",
+    "noun_memory.cc",
+    "noun_process.cc",
+    "noun_zxdb.cc",
+    "output_buffer.cc",
+    "output_buffer.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/zxdb/client",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "command_parser_unittest.cc",
+    "command_utils_unittest.cc",
+  ]
+
+  deps = [
+    ":console",
+    "//third_party/gtest",
+  ]
+}

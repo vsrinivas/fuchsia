@@ -10,6 +10,8 @@ executable("bin") {
 
   sources = []
   deps = [
+    "//garnet/bin/zxdb/client",
+    "//garnet/bin/zxdb/console",
     "//garnet/lib/debug_ipc:client",
   ]
 
@@ -39,5 +41,36 @@ install_host_tools("host") {
   ]
   outputs = [
     "zxdb",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "zxdb_tests"
+
+  sources = [
+  ]
+
+  deps = [
+    "//garnet/bin/zxdb/console:tests",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/gtest",
+  ]
+}
+
+package("zxdb_tests") {
+  testonly = true
+  system_image = true
+
+  package_name = "zxdb_tests"
+
+  deps = [
+    ":unittests",
+  ]
+
+  tests = [
+    {
+      name = "zxdb_tests"
+    },
   ]
 }
