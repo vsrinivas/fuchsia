@@ -78,18 +78,12 @@ zx_status_t sys_channel_create(uint32_t options,
     return result;
 }
 
-template <typename HandleInfoT>
-void MapHandleToValue(
-    ProcessDispatcher* up, const Handle* handle, HandleInfoT* out);
-
-template<>
-void MapHandleToValue<uint32_t>(
+static void MapHandleToValue(
     ProcessDispatcher* up, const Handle* handle, uint32_t* out) {
     *out = up->MapHandleToValue(handle);
 }
 
-template<>
-void MapHandleToValue<zx_handle_info_t>(
+static void MapHandleToValue(
     ProcessDispatcher* up, const Handle* handle, zx_handle_info_t* out) {
     out->handle = up->MapHandleToValue(handle);
     out->type = handle->dispatcher()->get_type();
