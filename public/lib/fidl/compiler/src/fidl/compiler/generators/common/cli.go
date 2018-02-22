@@ -44,6 +44,9 @@ func GetCliConfigWithFlagSet(args []string, flagSet *flag.FlagSet) GeneratorConf
 		"Do not generate type information inside the core.")
 	flagSet.StringVar(&config.dependencyMapFile, "map-file", "",
 		"file containing dependency map info.")
+	var legacyLanguages string
+	flagSet.StringVar(&legacyLanguages, "legacy-languages", "",
+		"List of legacy languages to generate")
 
 	err := flagSet.Parse(args[1:])
 	if err == flag.ErrHelp {

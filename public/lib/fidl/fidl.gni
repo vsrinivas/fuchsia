@@ -85,11 +85,11 @@ template("fidl") {
         [ "{{source_gen_dir}}/{{source_name_part}}_fidl.py" ]
     if (generate_fidl_for_rust) {
       rust_gen_path = rebase_path("${root_build_dir}/host_x64/fidl-rust")
-      generator_rust_outputs =
-          # "{{source_gen_dir}}/${target_name}/src/{{source_name_part}}.rs" would be
-          # a cleaner directory structure for the generated crate, but would require
-          # changes to the generator
-          [ "{{source_gen_dir}}/{{source_name_part}}.rs" ]
+
+      # "{{source_gen_dir}}/${target_name}/src/{{source_name_part}}.rs" would be
+      # a cleaner directory structure for the generated crate, but would require
+      # changes to the generator
+      generator_rust_outputs = [ "{{source_gen_dir}}/{{source_name_part}}.rs" ]
     }
   }
   generator_python_zip_output = "$target_out_dir/${target_name}_python.pyzip"
@@ -131,8 +131,10 @@ template("fidl") {
       inputs = invoker.sources
       outputs = generator_cpp_outputs + generator_python_outputs
 
+      legacy_languages_to_generate = "c++,python"
       if (generate_fidl_for_dart) {
         outputs += generator_dart_outputs
+        legacy_languages_to_generate += ",dart"
       }
       if (generate_fidl_for_rust) {
         outputs += generator_rust_outputs
@@ -159,6 +161,8 @@ template("fidl") {
         "--no-gen-imports",
         "--generators",
         generators,
+        "--gen-arg",
+        "legacy-languages=" + legacy_languages_to_generate,
       ]
 
       if (generate_map) {

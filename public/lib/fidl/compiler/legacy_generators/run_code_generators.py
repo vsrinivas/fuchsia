@@ -30,10 +30,10 @@ def _ParseCLIArgs():
                       '(default "-")', default='-')
   parser.add_argument("-o", "--output-dir", dest="output_dir", default=".",
                       help="output directory for generated files")
-  parser.add_argument("-g", "--generators", dest="generators_string",
+  parser.add_argument("-g", "--legacy-languages", dest="generators_string",
                       metavar="GENERATORS",
                       default="c++,dart,python",
-                      help="comma-separated list of generators")
+                      help="comma-separated list of languages to generate for")
   parser.add_argument("-s", "--src-root-path", dest="src_root_path",
                       default=".",
                       help="relative path to the root of the source tree.")
