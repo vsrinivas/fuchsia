@@ -57,6 +57,11 @@ magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t b
 // alignment must be a power of 2 and at least PAGE_SIZE.
 magma_status_t magma_map_aligned(struct magma_connection_t* connection, magma_buffer_t buffer,
                                  uint64_t alignment, void** addr_out);
+
+// Attempt to map the buffer at a specific address. Fails if the buffer was
+// previously mapped or if something already is at that address.
+magma_status_t magma_map_specific(struct magma_connection_t* connection, magma_buffer_t buffer,
+                                  uint64_t addr);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);
 
 // Maps |page_count| pages of |buffer| from |page_offset| onto the GPU in the connection's address

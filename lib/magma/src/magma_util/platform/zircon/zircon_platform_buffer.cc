@@ -165,6 +165,7 @@ public:
     bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
     bool MapCpu(void** addr_out, uintptr_t alignment) override;
     bool UnmapCpu() override;
+    bool MapAtCpuAddr(uint64_t addr) override;
 
     bool PinPages(uint32_t start_page_index, uint32_t page_count) override;
     bool UnpinPages(uint32_t start_page_index, uint32_t page_count) override;
@@ -208,6 +209,49 @@ bool ZirconPlatformBuffer::GetFd(int* fd_out) const
     *fd_out = fdio_vmo_fd(duplicate.release(), 0, size());
     if (!*fd_out)
         return DRETF(false, "fdio_vmo_fd failed");
+    return true;
+}
+
+// static
+uint64_t PlatformBuffer::MinimumMappableAddress()
+{
+    zx_info_vmar_t root_info;
+    zx::vmar::root_self().get_info(ZX_INFO_VMAR, &root_info, sizeof(root_info), nullptr, nullptr);
+    return root_info.base;
+}
+
+bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr)
+{
+    if (!magma::is_page_aligned(addr))
+        return DRETF(false, "addr %lx isn't page aligned", addr);
+    if (map_count_ > 0)
+        return DRETF(false, "buffer is already mapped");
+
+    uint64_t minimum_mappable = MinimumMappableAddress();
+    if (addr < minimum_mappable)
+        return DRETF(false, "addr %lx below vmar base %lx", addr, minimum_mappable);
+
+    uint64_t child_addr;
+    zx_status_t status =
+        zx::vmar::root_self().allocate(addr - minimum_mappable, size(),
+                                       ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
+                                           ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
+                                       &vmar_, &child_addr);
+    if (status != ZX_OK)
+        return DRETF(false, "Failed to create vmar, status %d", status);
+    DASSERT(child_addr == addr);
+
+    uintptr_t ptr;
+    status = vmar_.map(0, vmo_, 0, size(),
+                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC, &ptr);
+    if (status != ZX_OK)
+        return DRETF(false, "failed to map vmo");
+    DASSERT(ptr == addr);
+    virt_addr_ = reinterpret_cast<void*>(ptr);
+
+    map_count_++;
+
+    DLOG("mapped vmo %p got %p, map_count_ = %u", this, virt_addr_, map_count_);
     return true;
 }
 

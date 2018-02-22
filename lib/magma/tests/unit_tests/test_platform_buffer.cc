@@ -78,6 +78,47 @@ public:
         EXPECT_TRUE(buffer->UnpinPages(0, num_pages));
     }
 
+    static void MapSpecific()
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        // Unaligned
+        EXPECT_FALSE(buffer->MapAtCpuAddr(0x1000001));
+
+        // Below bottom of root vmar
+        EXPECT_FALSE(buffer->MapAtCpuAddr(PAGE_SIZE));
+        uint64_t addr = 0x10000000;
+        uint32_t i;
+        // Try multiple times in case something is already mapped there.
+        for (i = 0; i < 100; i++) {
+            addr += PAGE_SIZE * 100;
+            if (buffer->MapAtCpuAddr(addr))
+                break;
+        }
+
+        EXPECT_LT(i, 100u);
+        EXPECT_EQ(0u, *reinterpret_cast<uint64_t*>(addr));
+        void* new_addr;
+        EXPECT_TRUE(buffer->MapCpu(&new_addr));
+        EXPECT_EQ(reinterpret_cast<uint64_t>(new_addr), addr);
+
+        for (i = 0; i < 100; i++) {
+            addr += PAGE_SIZE * 100;
+            if (buffer->MapAtCpuAddr(addr))
+                break;
+        }
+        EXPECT_EQ(100u, i);
+        EXPECT_TRUE(buffer->UnmapCpu());
+        EXPECT_TRUE(buffer->UnmapCpu());
+        for (i = 0; i < 100; i++) {
+            addr += PAGE_SIZE * 100;
+            if (buffer->MapAtCpuAddr(addr))
+                break;
+        }
+
+        EXPECT_LT(i, 100u);
+    }
+
     static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)
     {
         EXPECT_EQ(buf1->size(), buf->size());
@@ -304,6 +345,8 @@ TEST(PlatformBuffer, Basic)
     TestPlatformBuffer::Basic(20 * PAGE_SIZE);
     TestPlatformBuffer::Basic(10 * 1024 * 1024);
 }
+
+TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
 TEST(PlatformBuffer, BufferFdPassing) { TestPlatformBuffer::BufferFdPassing(); }
