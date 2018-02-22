@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <zircon/compiler.h>
 
+__BEGIN_CDECLS
+
 /* scheduler interface, used internally by thread.c */
 /* not intended to be used by regular kernel code */
 void sched_init_early(void);
@@ -35,3 +37,5 @@ bool sched_unblock(thread_t* t) __WARN_UNUSED_RESULT;
 bool sched_unblock_list(struct list_node* list) __WARN_UNUSED_RESULT;
 
 void sched_transition_off_cpu(cpu_num_t old_cpu);
+
+__END_CDECLS

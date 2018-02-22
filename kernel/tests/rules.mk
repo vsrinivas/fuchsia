@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/clock_tests.cpp \
     $(LOCAL_DIR)/fibo.cpp \
     $(LOCAL_DIR)/mem_tests.cpp \
+    $(LOCAL_DIR)/preempt_disable_tests.cpp \
     $(LOCAL_DIR)/printf_tests.cpp \
     $(LOCAL_DIR)/sleep_tests.cpp \
     $(LOCAL_DIR)/string_tests.c \
