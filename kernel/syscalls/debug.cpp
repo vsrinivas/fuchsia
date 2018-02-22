@@ -13,6 +13,7 @@
 #include <trace.h>
 
 #include <lib/console.h>
+#include <lib/debuglog.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
@@ -70,7 +71,10 @@ zx_status_t sys_debug_write(user_in_ptr<const void> ptr, uint32_t len) {
     if (ptr.copy_array_from_user(buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    __kernel_serial_write(buf, len);
+    // This path to serial out arbitrates with the debug log
+    // drainer and/or kernel ll debug path to minimize interleaving
+    // of serial output between various sources
+    dlog_serial_write(buf, len);
 
     return len;
 }

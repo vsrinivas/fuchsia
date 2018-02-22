@@ -265,6 +265,23 @@ static int debuglog_notifier(void* arg) {
     return ZX_OK;
 }
 
+// Common bottleneck between sys_debug_write() and debuglog_dumper()
+// to reduce interleaved messages between the serial console and the
+// debuglog drainer.
+void dlog_serial_write(const char* data, size_t len) {
+#if ENABLE_KERNEL_LL_DEBUG
+    // If LL DEBUG is enabled we take this path which uses a spinlock
+    // and prevents the direct writes from the kernel from interleaving
+    // with our output
+    __kernel_serial_write(data, len);
+#else
+    // Otherwise we can use a mutex and avoid time under spinlock
+    static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
+    mutex_acquire(&lock);
+    platform_dputs(data, len);
+    mutex_release(&lock);
+#endif
+}
 
 // The debuglog dumper thread creates a reader to observe
 // debuglog writes and dump them to the kernel consoles
@@ -308,13 +325,12 @@ static int debuglog_dumper(void *arg) {
                 n = sizeof(tmp);
             }
             __kernel_console_write(tmp, n);
-            __kernel_serial_write(tmp, n);
+            dlog_serial_write(tmp, n);
         }
     }
 
     return 0;
 }
-
 
 void dlog_bluescreen_init(void) {
     // if we're panicing, stop processing log writes

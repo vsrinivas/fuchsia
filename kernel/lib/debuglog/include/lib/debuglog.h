@@ -78,6 +78,9 @@ void dlog_reader_destroy(dlog_reader_t* rdr);
 zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len);
 zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* actual);
 
+// used by sys_debug_write()
+void dlog_serial_write(const char* data, size_t len);
+
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)
 // is captured or displayed to the user
