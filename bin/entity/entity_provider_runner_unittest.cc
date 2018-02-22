@@ -108,7 +108,6 @@ class MyEntityProvider : AgentImpl::Delegate,
         [this](fidl::InterfaceRequest<EntityProvider> request) {
           entity_provider_binding_.Bind(std::move(request));
         });
-    outgoing_services_.AddBinding(std::move(launch_info_->services));
     outgoing_services_.ServeDirectory(std::move(launch_info_->service_request));
     agent_impl_ = std::make_unique<AgentImpl>(
         &outgoing_services_, static_cast<AgentImpl::Delegate*>(this));
