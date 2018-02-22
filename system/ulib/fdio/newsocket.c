@@ -262,7 +262,6 @@ static zx_status_t zxsio_unwrap_stream(fdio_t* io, zx_handle_t* handles, uint32_
     handles[0] = sio->s;
     types[0] = PA_FDIO_SOCKET;
     r = 1;
-    free(io);
     return r;
 }
 

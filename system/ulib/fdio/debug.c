@@ -73,3 +73,38 @@ void fdio_set_debug_level(unsigned level) {
     debug_level = level;
 #endif
 }
+
+#ifdef FDIO_ALLOCDEBUG
+
+#define PSZ 128
+
+static char POOL[PSZ * 256];
+static char* NEXT = POOL;
+static mtx_t pool_lock;
+
+void* fdio_alloc(size_t n, size_t sz) {
+    if ((n > 1) || (sz > PSZ)) {
+        return NULL;
+    }
+    void* ptr = NULL;
+    mtx_lock(&pool_lock);
+    if ((NEXT - POOL) < (int)sizeof(POOL)) {
+        ptr = NEXT;
+        NEXT += PSZ;
+    } else {
+        LOG(1, "fdio: OUT OF FDIO_T POOL SPACE\n");
+    }
+    mtx_unlock(&pool_lock);
+    LOG(5, "fdio: io: alloc: %p\n", ptr);
+    return ptr;
+}
+#endif
+
+void fdio_free(fdio_t* io) {
+    LOG(5, "fdio: io: free: %p\n", io);
+    io->magic = 0xDEAD0123;
+    io->ops = NULL;
+#ifndef FDIO_ALLOCDEBUG
+    free(io);
+#endif
+}

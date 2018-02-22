@@ -89,7 +89,7 @@ static fdio_ops_t fdio_waitable_ops = {
 
 fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
                              zx_signals_t signals_out, bool shared_handle) {
-    mxwio_t* wio = calloc(1, sizeof(*wio));
+    mxwio_t* wio = fdio_alloc(sizeof(*wio));
     if (wio == NULL) {
         if (!shared_handle) {
             zx_handle_close(h);

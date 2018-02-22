@@ -111,12 +111,6 @@ static zx_status_t vmofile_close(fdio_t* io) {
     return 0;
 }
 
-static void vmofile_release(fdio_t* io) {
-    vmofile_t* vf = (vmofile_t*)io;
-    zx_handle_close(vf->vmo);
-    free(io);
-}
-
 static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* ptr, size_t len) {
     vmofile_t* vf = (vmofile_t*)io;
     switch (op) {
@@ -218,7 +212,7 @@ static fdio_ops_t vmofile_ops = {
 };
 
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_off_t off, zx_off_t len) {
-    vmofile_t* vf = calloc(1, sizeof(vmofile_t));
+    vmofile_t* vf = fdio_alloc(sizeof(vmofile_t));
     if (vf == NULL) {
         zx_handle_close(h);
         return NULL;

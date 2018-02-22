@@ -175,7 +175,6 @@ zx_status_t zx_pipe_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zx_pipe_t* p = (void*)io;
     handles[0] = p->h;
     types[0] = PA_FDIO_PIPE;
-    free(p);
     return 1;
 }
 
@@ -224,7 +223,7 @@ static fdio_ops_t zx_pipe_ops = {
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t h) {
-    zx_pipe_t* p = calloc(1, sizeof(*p));
+    zx_pipe_t* p = fdio_alloc(sizeof(*p));
     if (p == NULL) {
         zx_handle_close(h);
         return NULL;

@@ -59,6 +59,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     fdio_t* io_to_close = NULL;
 
     mtx_lock(&fdio_lock);
+    LOG(1, "fdio: bind_to_fd(%p, %d, %d)\n", io, fd, starting_fd);
     if (fd < 0) {
         // A negative fd implies that any free fd value can be used
         //TODO: bitmap, ffs, etc
@@ -78,6 +79,8 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
         io_to_close = fdio_fdtab[fd];
         if (io_to_close) {
             io_to_close->dupcount--;
+            LOG(1, "fdio: bind_to_fd: closed fd=%d, io=%p, dupcount=%d\n",
+                fd, io_to_close, io_to_close->dupcount);
             if (io_to_close->dupcount > 0) {
                 // still alive in another fdtab slot
                 fdio_release(io_to_close);
@@ -87,6 +90,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     }
 
 free_fd_found:
+    LOG(1, "fdio: bind_to_fd() OK fd=%d\n", fd);
     io->dupcount++;
     fdio_fdtab[fd] = io;
     mtx_unlock(&fdio_lock);
@@ -105,6 +109,7 @@ free_fd_found:
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
     zx_status_t status;
     mtx_lock(&fdio_lock);
+    LOG(1, "fdio: unbind_from_fd(%d)\n", fd);
     if (fd >= FDIO_MAX_FD) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
@@ -146,8 +151,9 @@ fdio_t* __fdio_fd_to_io(int fd) {
 
 zx_status_t fdio_close(fdio_t* io) {
     if (io->dupcount > 0) {
-        printf("fdio_close(%p): dupcount nonzero!\n", io);
+        LOG(1, "fdio: close(%p): nonzero dupcount!\n", io);
     }
+    LOG(1, "fdio: io: close(%p)\n", io);
     return io->ops->close(io);
 }
 
@@ -549,20 +555,24 @@ void __libc_extensions_init(uint32_t handle_count,
             } else {
                 fdio_fdtab[arg_fd] = fdio_remote_create(h, 0);
             }
+            LOG(1, "fdio: inherit fd=%d (rio)\n", arg_fd);
             fdio_fdtab[arg_fd]->dupcount++;
             break;
         case PA_FDIO_PIPE:
             fdio_fdtab[arg_fd] = fdio_pipe_create(h);
             fdio_fdtab[arg_fd]->dupcount++;
+            LOG(1, "fdio: inherit fd=%d (pipe)\n", arg_fd);
             break;
         case PA_FDIO_LOGGER:
             fdio_fdtab[arg_fd] = fdio_logger_create(h);
             fdio_fdtab[arg_fd]->dupcount++;
+            LOG(1, "fdio: inherit fd=%d (log)\n", arg_fd);
             break;
         case PA_FDIO_SOCKET:
 #if WITH_NEW_SOCKET
             fdio_fdtab[arg] = fdio_socket_create(h, IOFLAG_SOCKET_CONNECTED);
             fdio_fdtab[arg]->dupcount++;
+            LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
             break;
 #else
             // socket objects have a second handle
@@ -571,6 +581,7 @@ void __libc_extensions_init(uint32_t handle_count,
                 fdio_fdtab[arg_fd] = fdio_socket_create(h, handle[n + 1], FDIO_FLAG_SOCKET_CONNECTED);
                 handle_info[n + 1] = 0;
                 fdio_fdtab[arg_fd]->dupcount++;
+                LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
             } else {
                 zx_handle_close(h);
             }
@@ -605,9 +616,6 @@ void __libc_extensions_init(uint32_t handle_count,
         }
     }
 
-    // Set up thread local storage for rchannels.
-    __fdio_rchannel_init();
-
     const char* cwd = getenv("PWD");
     cwd = (cwd == NULL) ? "/" : cwd;
 
@@ -624,6 +632,7 @@ void __libc_extensions_init(uint32_t handle_count,
                 fdio_fdtab[n] = fdio_null_create();
             }
             fdio_fdtab[n]->dupcount++;
+            LOG(1, "fdio: inherit fd=%u (dup of fd=%d)\n", n, stdio_fd);
         }
     }
 
@@ -736,7 +745,9 @@ zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* 
     if ((status = fdio_unbind_from_fd(fd, &io)) < 0) {
         return status;
     }
-    if ((status = io->ops->unwrap(io, handles, types)) < 0) {
+    status = io->ops->unwrap(io, handles, types);
+    fdio_release(io);
+    if (status < 0) {
         return status;
     }
     for (int n = 0; n < status; n++) {
@@ -1087,6 +1098,7 @@ int close(int fd) {
     fdio_t* io = fdio_fdtab[fd];
     io->dupcount--;
     fdio_fdtab[fd] = NULL;
+    LOG(1, "fdio: close(%d) dupcount=%u\n", io->dupcount);
     if (io->dupcount > 0) {
         // still alive in other fdtab slots
         mtx_unlock(&fdio_lock);
@@ -1478,9 +1490,11 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
     fdio_t* io;
     zx_status_t r;
 
+    LOG(1,"fdio: fstatat(%d, '%s',...)\n", dirfd, fn);
     if ((r = __fdio_open_at(&io, dirfd, fn, O_PATH, 0)) < 0) {
         return ERROR(r);
     }
+    LOG(1,"fdio: fstatat io=%p\n", io);
     r = fdio_stat(io, s);
     fdio_close(io);
     fdio_release(io);

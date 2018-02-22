@@ -11,6 +11,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <threads.h>
@@ -150,16 +151,6 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
 
 void fdio_free(fdio_t* io);
 
-static inline void fdio_acquire(fdio_t* io) {
-    atomic_fetch_add(&io->refcount, 1);
-}
-
-static inline void fdio_release(fdio_t* io) {
-    if (atomic_fetch_sub(&io->refcount, 1) == 1) {
-        fdio_free(io);
-    }
-}
-
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
 // io will be consumed by this and must not be shared
@@ -245,3 +236,29 @@ void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 
 void fdio_set_debug_level(unsigned level);
 
+
+// Enable intrusive allocation debugging
+//
+//#define FDIO_ALLOCDEBUG
+
+static inline void fdio_acquire(fdio_t* io) {
+    LOG(6, "fdio: acquire: %p\n", io);
+    atomic_fetch_add(&io->refcount, 1);
+}
+
+static inline void fdio_release(fdio_t* io) {
+    LOG(6, "fdio: release: %p\n", io);
+    if (atomic_fetch_sub(&io->refcount, 1) == 1) {
+        fdio_free(io);
+    }
+}
+
+#ifdef FDIO_ALLOCDEBUG
+void* fdio_alloc(size_t sz);
+#else
+static inline void* fdio_alloc(size_t sz) {
+    void* ptr = calloc(1, sz);
+    LOG(5, "fdio: io: alloc: %p\n", ptr);
+    return ptr;
+}
+#endif

@@ -43,25 +43,6 @@ static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
 
-static pthread_key_t rchannel_key;
-
-static void rchannel_cleanup(void* data) {
-    if (data == NULL) {
-        return;
-    }
-    zx_handle_t* handles = (zx_handle_t*)data;
-    if (handles[0] != ZX_HANDLE_INVALID)
-        zx_handle_close(handles[0]);
-    if (handles[1] != ZX_HANDLE_INVALID)
-        zx_handle_close(handles[1]);
-    free(handles);
-}
-
-void __fdio_rchannel_init(void) {
-    if (pthread_key_create(&rchannel_key, &rchannel_cleanup) != 0)
-        abort();
-}
-
 static const char* _opnames[] = ZXRIO_OPNAMES;
 const char* fdio_opname(uint32_t op) {
     op = ZXRIO_OPNAME(op);
@@ -492,6 +473,7 @@ zx_status_t zxrio_close(fdio_t* io) {
         zx_handle_close(h);
     }
 
+    LOG(1, "rio: close(%p)\n", io);
     return r;
 }
 
@@ -945,6 +927,7 @@ zx_status_t __zxrio_clone(zx_handle_t h, zx_handle_t* handles, uint32_t* types) 
 
 static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
     zxrio_t* rio = (void*)io;
+    LOG(1, "fdio: zxrio_unwrap(%p,...)\n");
     zx_status_t r;
     handles[0] = rio->h;
     types[0] = PA_FDIO_REMOTE;
@@ -955,7 +938,6 @@ static zx_status_t zxrio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
     } else {
         r = 1;
     }
-    free(io);
     return r;
 }
 
@@ -1006,7 +988,7 @@ static fdio_ops_t zx_remote_ops = {
 };
 
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {
-    zxrio_t* rio = calloc(1, sizeof(*rio));
+    zxrio_t* rio = fdio_alloc(sizeof(*rio));
     if (rio == NULL) {
         zx_handle_close(h);
         zx_handle_close(e);

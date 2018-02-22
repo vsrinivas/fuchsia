@@ -54,7 +54,7 @@ static fdio_ops_t out_io_ops = {
 
 fdio_t* fdio_output_create(ssize_t (*func)(void* cookie, const void* data, size_t len),
                            void* cookie) {
-    fdio_out_t* out = calloc(1, sizeof(fdio_out_t));
+    fdio_out_t* out = fdio_alloc(sizeof(fdio_out_t));
     if (out == NULL) {
         return NULL;
     }

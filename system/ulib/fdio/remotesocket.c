@@ -225,7 +225,6 @@ static zx_status_t zxsio_unwrap_stream(fdio_t* io, zx_handle_t* handles, uint32_
     } else {
         r = 1;
     }
-    free(io);
     return r;
 }
 
@@ -552,7 +551,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
 };
 
 fdio_t* fdio_socket_create(zx_handle_t h, zx_handle_t s, int flags) {
-    zxrio_t* rio = calloc(1, sizeof(*rio));
+    zxrio_t* rio = fdio_alloc(1, sizeof(*rio));
     if (rio == NULL) {
         zx_handle_close(h);
         zx_handle_close(s);

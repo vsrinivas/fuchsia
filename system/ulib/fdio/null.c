@@ -13,12 +13,6 @@
 
 #include "private.h"
 
-void fdio_free(fdio_t* io) {
-    io->magic = 0xDEAD0123;
-    io->ops = NULL;
-    free(io);
-}
-
 ssize_t fdio_default_read(fdio_t* io, void* _data, size_t len) {
     return 0;
 }
@@ -124,7 +118,7 @@ static fdio_ops_t zx_null_ops = {
 };
 
 fdio_t* fdio_null_create(void) {
-    fdio_t* io = calloc(1, sizeof(*io));
+    fdio_t* io = fdio_alloc(sizeof(*io));
     if (io == NULL) {
         return NULL;
     }

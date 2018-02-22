@@ -48,7 +48,7 @@ static fdio_ops_t zx_svc_ops = {
 };
 
 fdio_t* fdio_service_create(zx_handle_t h) {
-    mxsvc_t* svc = calloc(1, sizeof(*svc));
+    mxsvc_t* svc = fdio_alloc(sizeof(*svc));
     if (svc == NULL) {
         zx_handle_close(h);
         return NULL;

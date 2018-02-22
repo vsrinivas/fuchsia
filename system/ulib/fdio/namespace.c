@@ -512,7 +512,7 @@ static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn, zx_handle_t h) 
 
 zx_status_t fdio_ns_create(fdio_ns_t** out) {
     // +1 is for the "" name
-    fdio_ns_t* ns = calloc(1, sizeof(fdio_ns_t) + 1);
+    fdio_ns_t* ns = fdio_alloc(sizeof(fdio_ns_t) + 1);
     if (ns == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
