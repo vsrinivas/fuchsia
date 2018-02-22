@@ -98,14 +98,14 @@ class FifoBlockDispatcher : public BlockDispatcher {
     ssize_t result = ioctl_block_get_fifos(fd, &fifo);
     if (result != sizeof(fifo))
       return ZX_ERR_IO;
-    auto close_fifo = fbl::MakeAutoCall([fifo]() { zx_handle_close(fifo); });
+    auto close_fifo = fbl::MakeAutoCall([fifo] { zx_handle_close(fifo); });
 
     txnid_t txnid = TXNID_INVALID;
     result = ioctl_block_alloc_txn(fd, &txnid);
     if (result != sizeof(txnid_))
       return ZX_ERR_IO;
     auto free_txn =
-        fbl::MakeAutoCall([fd, txnid]() { ioctl_block_free_txn(fd, &txnid); });
+        fbl::MakeAutoCall([fd, txnid] { ioctl_block_free_txn(fd, &txnid); });
 
     zx_handle_t vmo_dup;
     zx_status_t status = zx_handle_duplicate(phys_mem.vmo().get(),
@@ -130,7 +130,7 @@ class FifoBlockDispatcher : public BlockDispatcher {
     // The fifo handle is now owned by the block client.
     fifo = ZX_HANDLE_INVALID;
     auto free_fifo_client = fbl::MakeAutoCall(
-        [fifo_client]() { block_fifo_release_client(fifo_client); });
+        [fifo_client] { block_fifo_release_client(fifo_client); });
 
     fbl::AllocChecker ac;
     auto dispatcher = fbl::make_unique_checked<FifoBlockDispatcher>(

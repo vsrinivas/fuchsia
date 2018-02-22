@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/tools/inspect-guest/serial.h"
+#include "garnet/bin/guest/tool/serial.h"
 
 #include <async/cpp/wait.h>
-#include <async/default.h>
 #include <poll.h>
 #include <iostream>
 
-#include "garnet/bin/guest/tools/inspect-guest/connect.h"
-#include "garnet/lib/machina/fidl/serial.fidl.h"
+#include "garnet/bin/guest/tool/service.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -111,17 +109,19 @@ class OutputWriter : public fsl::SocketDrainer::Client {
 static fbl::unique_ptr<InputReader> input_reader;
 // Write socket output to stdout.
 static fbl::unique_ptr<OutputWriter> output_writer;
-// Serial service of the guest.
-static fidl::InterfacePtr<machina::SerialService> serial_service;
 
-void handle_serial() {
+void handle_serial(ConnectFunc func) {
   input_reader.reset(new InputReader);
   output_writer.reset(new OutputWriter);
-  zx_status_t status = connect(&serial_service);
+  zx_status_t status = func(inspect_svc.NewRequest());
   if (status != ZX_OK) {
     return;
   }
-  serial_service->Connect([](zx::socket socket) {
+  inspect_svc.set_error_handler([] {
+    std::cerr << "Package is not running\n";
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+  inspect_svc->FetchGuestSerial([](zx::socket socket) {
     input_reader->Start(socket.get());
     output_writer->Start(std::move(socket));
   });

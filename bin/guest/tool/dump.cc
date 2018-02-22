@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/tools/inspect-guest/dump.h"
+#include "garnet/bin/guest/tool/dump.h"
 
 #include <pretty/hexdump.h>
 #include <iostream>
 
-#include "garnet/bin/guest/tools/inspect-guest/connect.h"
-#include "garnet/lib/machina/fidl/inspect.fidl.h"
+#include "garnet/bin/guest/tool/service.h"
 #include "lib/fsl/tasks/message_loop.h"
-
-// Inspect service of the guest.
-static fidl::InterfacePtr<machina::InspectService> inspect_service;
 
 static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   uint64_t vmo_size;
@@ -39,12 +35,17 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
 }
 
 void handle_dump(zx_vaddr_t addr, size_t len) {
-  zx_status_t status = connect(&inspect_service);
+  zx_status_t status = connect(inspect_svc.NewRequest());
   if (status != ZX_OK) {
     return;
   }
-  inspect_service->FetchGuestMemory([addr, len](zx::vmo vmo) {
+  inspect_svc.set_error_handler([] {
+    std::cerr << "Package is not running\n";
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+  inspect_svc->FetchGuestMemory([addr, len](zx::vmo vmo) {
     dump(fbl::move(vmo), addr, len);
+    inspect_svc.Unbind();
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 }

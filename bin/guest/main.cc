@@ -205,7 +205,9 @@ int main(int argc, char** argv) {
   if (status != ZX_OK)
     return status;
 
-  machina::InspectServiceImpl inspect_service(application_context.get(), guest.phys_mem());
+  // Instantiate the inspect service.
+  machina::InspectServiceImpl inspect_svc(application_context.get(),
+                                          guest.phys_mem());
 
   // TODO(abdulla): Remove these variables. We should use PhysMem directly.
   uintptr_t physmem_addr = guest.phys_mem().addr();
@@ -405,7 +407,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup console
-  machina::VirtioConsole console(guest.phys_mem(), application_context.get());
+  machina::VirtioConsole console(guest.phys_mem(), inspect_svc.TakeSocket());
   status = console.Start();
   if (status != ZX_OK) {
     return status;

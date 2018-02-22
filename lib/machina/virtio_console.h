@@ -5,20 +5,16 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
-#include <iostream>
-
 #include <virtio/console.h>
 #include <zx/socket.h>
 
-#include "garnet/lib/machina/serial_service_impl.h"
 #include "garnet/lib/machina/virtio.h"
-#include "lib/app/cpp/application_context.h"
 
 namespace machina {
 
 class VirtioConsole : public VirtioDevice {
  public:
-  VirtioConsole(const PhysMem&, app::ApplicationContext*);
+  VirtioConsole(const PhysMem&, zx::socket socket);
   ~VirtioConsole() override;
 
   zx_status_t Start();
@@ -37,7 +33,7 @@ class VirtioConsole : public VirtioDevice {
   virtio_queue_t queues_[kNumQueues];
   virtio_console_config_t config_ = {};
 
-  SerialServiceImpl serial_;
+  zx::socket socket_;
 };
 
 }  // namespace machina

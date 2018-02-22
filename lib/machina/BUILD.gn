@@ -30,8 +30,6 @@ shared_library("machina") {
     "pci.h",
     "phys_mem.cc",
     "phys_mem.h",
-    "serial_service_impl.cc",
-    "serial_service_impl.h",
     "vcpu.cc",
     "vcpu.h",
     "virtio.cc",

@@ -19,10 +19,15 @@ class InspectServiceImpl : public InspectService {
 
   // |InspectService|
   void FetchGuestMemory(const FetchGuestMemoryCallback& callback) override;
+  void FetchGuestSerial(const FetchGuestSerialCallback& callback) override;
+
+  zx::socket TakeSocket() { return fbl::move(server_socket_); }
 
  private:
   fidl::BindingSet<InspectService> bindings_;
   const zx::vmo vmo_;
+  zx::socket server_socket_;
+  zx::socket client_socket_;
 };
 
 }  // namespace machina

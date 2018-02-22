@@ -9,11 +9,12 @@
 static constexpr zx_rights_t kVmoRights =
     ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC;
 
-static zx::vmo duplicate(const zx::vmo& vmo, zx_rights_t rights) {
-  zx::vmo vmo_out;
-  zx_status_t status = vmo.duplicate(rights, &vmo_out);
-  FXL_CHECK(status == ZX_OK) << "Failed to duplicate guest memory";
-  return vmo_out;
+template <typename T>
+static T duplicate(const T& handle, zx_rights_t rights) {
+  T handle_out;
+  zx_status_t status = handle.duplicate(rights, &handle_out);
+  FXL_CHECK(status == ZX_OK) << "Failed to duplicate handle";
+  return handle_out;
 }
 
 namespace machina {
@@ -22,6 +23,9 @@ InspectServiceImpl::InspectServiceImpl(
     app::ApplicationContext* application_context,
     const PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
+  zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
+  FXL_CHECK(status == ZX_OK) << "Failed to create socket";
+
   application_context->outgoing_services()->AddService<InspectService>(
       [this](fidl::InterfaceRequest<InspectService> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -31,6 +35,11 @@ InspectServiceImpl::InspectServiceImpl(
 void InspectServiceImpl::FetchGuestMemory(
     const FetchGuestMemoryCallback& callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
+}
+
+void InspectServiceImpl::FetchGuestSerial(
+    const FetchGuestSerialCallback& callback) {
+  callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
 }  // namespace machina

@@ -14,15 +14,14 @@
 
 namespace machina {
 
-VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
-                             app::ApplicationContext* application_context)
+VirtioConsole::VirtioConsole(const PhysMem& phys_mem, zx::socket socket)
     : VirtioDevice(VIRTIO_ID_CONSOLE,
                    &config_,
                    sizeof(config_),
                    queues_,
                    kNumQueues,
                    phys_mem),
-      serial_(application_context) {}
+      socket_(fbl::move(socket)) {}
 
 VirtioConsole::~VirtioConsole() = default;
 
@@ -61,14 +60,13 @@ zx_status_t VirtioConsole::Transmit(virtio_queue_t* queue,
       return status;
     }
 
-    status = zx_object_wait_one(serial_.socket(), ZX_SOCKET_WRITABLE,
-                                ZX_TIME_INFINITE, nullptr);
+    status =
+        socket_.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       return status;
     }
-    status =
-        zx_socket_write(serial_.socket(), 0,
-                        static_cast<const void*>(desc.addr), desc.len, nullptr);
+    status = socket_.write(0, static_cast<const void*>(desc.addr), desc.len,
+                           nullptr);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to write to socket";
       return status;
@@ -91,13 +89,13 @@ zx_status_t VirtioConsole::Receive(virtio_queue_t* queue,
 
   size_t bytes_read = 0;
   do {
-    status = zx_object_wait_one(serial_.socket(), ZX_SOCKET_READABLE,
-                                ZX_TIME_INFINITE, nullptr);
+    status =
+        socket_.wait_one(ZX_SOCKET_READABLE, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       return status;
     }
-    status = zx_socket_read(serial_.socket(), 0, static_cast<void*>(desc.addr),
-                            desc.len, &bytes_read);
+    status =
+        socket_.read(0, static_cast<void*>(desc.addr), desc.len, &bytes_read);
   } while (status == ZX_ERR_SHOULD_WAIT);
 
   if (status != ZX_OK) {

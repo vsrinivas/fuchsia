@@ -6,5 +6,11 @@ module machina;
 
 [ServiceName="machina.InspectService"]
 interface InspectService {
+  // Fetch a read-only VMO that represents the physical memory of the guest.
   FetchGuestMemory@0() => (handle<vmo> vmo);
+
+  // Fetch a socket for the primary serial device of the guest. The details
+  // regarding what output is produced and what input is accepted are determined
+  // by each guest.
+  FetchGuestSerial@1() => (handle<socket> socket);
 };

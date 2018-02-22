@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_LIB_MACHINA_VOLATILE_WRITE_BLOCK_DISPATCHER_H_
+#define GARNET_LIB_MACHINA_VOLATILE_WRITE_BLOCK_DISPATCHER_H_
+
 #include <inttypes.h>
 #include <sys/types.h>
 
@@ -47,3 +50,5 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 };
 
 }  // namespace machina
+
+#endif  // GARNET_LIB_MACHINA_VOLATILE_WRITE_BLOCK_DISPATCHER_H_
