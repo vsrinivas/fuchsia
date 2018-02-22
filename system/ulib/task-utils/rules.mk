@@ -8,8 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_PACKAGE := static
-
 MODULE_SRCS += \
     $(LOCAL_DIR)/get.c \
     $(LOCAL_DIR)/walker.cpp
