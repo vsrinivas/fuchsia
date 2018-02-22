@@ -3069,9 +3069,9 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
     case PhyMode::kLegacyOfdm:
         return WLAN_PHY_OFDM;
     case PhyMode::kHtMixMode:
-        return WLAN_PHY_HT_MIXED;
     case PhyMode::kHtGreenfield:
-        return WLAN_PHY_HT_GREENFIELD;
+        // TODO(tkilbourn): set a bit somewhere indicating greenfield format, if we ever support it.
+        return WLAN_PHY_HT;
     default:
         warnf("received unknown PHY: %u\n", ralink_phy);
         ZX_DEBUG_ASSERT(0);  // TODO: Define Undefined Phy in DDK.
@@ -3085,10 +3085,8 @@ static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
         return PhyMode::kLegacyCck;
     case WLAN_PHY_OFDM:
         return PhyMode::kLegacyOfdm;
-    case WLAN_PHY_HT_MIXED:
+    case WLAN_PHY_HT:
         return PhyMode::kHtMixMode;
-    case WLAN_PHY_HT_GREENFIELD:
-        return PhyMode::kHtGreenfield;
     default:
         warnf("invalid DDK phy: %u. Fallback to PHY_OFDM\n", ddk_phy);
         return PhyMode::kLegacyOfdm;
@@ -3256,8 +3254,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     std::memcpy(info->eth_info.mac, mac_addr_, ETH_MAC_SIZE);
     info->eth_info.features |= ETHMAC_FEATURE_WLAN;
 
-    info->supported_phys =
-        WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT_MIXED | WLAN_PHY_HT_GREENFIELD;
+    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     // TODO(tkilbourn): update this when we add AP support
     info->mac_modes = WLAN_MAC_MODE_STA;
     info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;

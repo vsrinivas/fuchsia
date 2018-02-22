@@ -48,9 +48,8 @@ enum {
     WLAN_PHY_DSSS = (1 << 0),
     WLAN_PHY_CCK = (1 << 1),
     WLAN_PHY_OFDM = (1 << 2),
-    WLAN_PHY_HT_MIXED = (1 << 3),
-    WLAN_PHY_HT_GREENFIELD = (1 << 4),
-    WLAN_PHY_VHT = (1 << 5),
+    WLAN_PHY_HT = (1 << 3),
+    WLAN_PHY_VHT = (1 << 4),
 };
 
 enum {

@@ -24,8 +24,7 @@ enum SupportedPhy {
   DSSS,
   CCK,
   OFDM,
-  HT_MIXED,
-  HT_GREENFIELD,
+  HT,
   VHT,
 };
 

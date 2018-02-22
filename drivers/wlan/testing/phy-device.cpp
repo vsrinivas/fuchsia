@@ -110,8 +110,7 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
     info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);
     info->supported_phys.push_back(wlan::phy::SupportedPhy::OFDM);
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::HT_MIXED);
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::HT_GREENFIELD);
+    info->supported_phys.push_back(wlan::phy::SupportedPhy::HT);
 
     info->mac_roles.push_back(wlan::phy::MacRole::CLIENT);
     info->mac_roles.push_back(wlan::phy::MacRole::AP);

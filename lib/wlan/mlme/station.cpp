@@ -736,7 +736,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         // TODO(porce): Determine PHY and CBW based on the association negotiation.
         .tx_flags = 0x0,
         .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH,
-        .phy = WLAN_PHY_HT_MIXED,
+        .phy = WLAN_PHY_HT,
         .cbw = CBW20,
         //.date_rate = 0x0,
         //.mcs = 0x0,

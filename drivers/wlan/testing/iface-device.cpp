@@ -93,7 +93,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     std::memcpy(info->eth_info.mac, mac, ETH_MAC_SIZE);
 
     // Fill out a minimal set of wlan device capabilities
-    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT_MIXED;
+    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     info->driver_features = 0;
     info->mac_modes = WLAN_MAC_MODE_STA;
     info->caps = 0;
