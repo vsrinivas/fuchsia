@@ -627,6 +627,7 @@ void __libc_extensions_init(uint32_t handle_count,
     for (uint32_t n = 0; n < 3; n++) {
         if (fdio_fdtab[n] == NULL) {
             if (use_for_stdio) {
+                fdio_acquire(use_for_stdio);
                 fdio_fdtab[n] = use_for_stdio;
             } else {
                 fdio_fdtab[n] = fdio_null_create();
