@@ -195,7 +195,6 @@ def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
         pkg_version = None
         with open(pkg_json, 'r') as pkg_meta:
             meta = json.load(pkg_meta)
-            print meta
             pkg_version = int(meta["version"])
 
         if pkg_version is None:
