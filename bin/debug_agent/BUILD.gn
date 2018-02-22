@@ -58,8 +58,15 @@ executable("unittests") {
   testonly = true
   output_name = "debug_agent_tests"
 
+  sources = [
+    "process_info_unittests.cc",
+    "system_info_unittests.cc",
+  ]
+
   deps = [
     ":lib",
+
+    # This target also runs these debug_ipc tests.
     "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",

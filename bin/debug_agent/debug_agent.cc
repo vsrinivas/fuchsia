@@ -123,7 +123,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
   reply->status = Launch(request.argv, &process);
   if (reply->status != ZX_OK)
     return;
-  reply->process_koid = KoidForProcess(process);
+  reply->process_koid = KoidForObject(process);
   AddDebuggedProcess(reply->process_koid, std::move(process));
 }
 
