@@ -56,9 +56,11 @@ type Struct struct {
 
 // StructMember represents the member of a golang struct.
 type StructMember struct {
-	// Type is the type of the golang struct.
-	Type Type
+	// Name is the name of the golang struct member.
 	Name string
+
+	// Type is the type of the golang struct member.
+	Type Type
 }
 
 // Root is the root of the golang backend IR structure.
@@ -108,22 +110,22 @@ var reservedWords = map[string]bool{
 	"var":         true,
 
 	// Reserved types.
-	"bool": true,
-	"byte": true,
-	"int8": true,
-	"int16": true,
-	"int32": true,
-	"int64": true,
-	"rune": true,
+	"bool":   true,
+	"byte":   true,
+	"int8":   true,
+	"int16":  true,
+	"int32":  true,
+	"int64":  true,
+	"rune":   true,
 	"string": true,
-	"uint8": true,
+	"uint8":  true,
 	"uint16": true,
 	"uint32": true,
 	"uint64": true,
 
 	// Reserved values.
 	"false": true,
-	"true": true,
+	"true":  true,
 }
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -208,7 +210,7 @@ func compileType(val types.Type) Type {
 
 func compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Name:  changeIfReserved(exportIdentifier(val.Name)),
 		Value: compileConstant(val.Value),
 	}
 }

@@ -12,5 +12,12 @@ const Library = `
 
 package main
 
+{{ range $enum := .Enums -}}
+{{ template "EnumDefinition" $enum }}
+{{ end -}}
+{{ range $struct := .Structs -}}
+{{ template "StructDefinition" $struct }}
+{{ end -}}
+
 {{- end -}}
 `

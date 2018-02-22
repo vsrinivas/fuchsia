@@ -7,8 +7,8 @@ package main
 import (
 	"encoding/json"
 	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/dart"
+	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/types"
 	"flag"

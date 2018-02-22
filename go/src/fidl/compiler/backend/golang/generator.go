@@ -32,7 +32,9 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	tree := ir.Compile(fidl)
 
 	tmpls := template.New("GoTemplates")
+	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Library))
+	template.Must(tmpls.Parse(templates.Struct))
 
 	libraryPath := config.FidlStem + ".go"
 	return writeFile(libraryPath, "GenerateLibraryFile", tmpls, tree)

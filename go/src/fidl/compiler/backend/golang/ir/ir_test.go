@@ -16,7 +16,7 @@ func numericLiteral(value int) types.Constant {
 	return types.Constant{
 		Kind: types.LiteralConstant,
 		Literal: types.Literal{
-			Kind: types.NumericLiteral,
+			Kind:  types.NumericLiteral,
 			Value: strconv.Itoa(value),
 		},
 	}
@@ -39,7 +39,7 @@ func boolLiteral(val bool) types.Constant {
 
 func primitiveType(kind types.PrimitiveSubtype) types.Type {
 	return types.Type{
-		Kind: types.PrimitiveType,
+		Kind:             types.PrimitiveType,
 		PrimitiveSubtype: kind,
 	}
 }
@@ -126,11 +126,11 @@ func TestCompileEnum(t *testing.T) {
 			Type: types.Int64,
 			Members: []types.EnumMember{
 				{
-					Name: types.Identifier("One"),
+					Name:  types.Identifier("One"),
 					Value: numericLiteral(1),
 				},
 				{
-					Name: types.Identifier("Two"),
+					Name:  types.Identifier("Two"),
 					Value: numericLiteral(2),
 				},
 			},
@@ -141,11 +141,11 @@ func TestCompileEnum(t *testing.T) {
 			Type: "int64",
 			Members: []EnumMember{
 				{
-					Name: "One",
+					Name:  "One",
 					Value: "1",
 				},
 				{
-					Name: "Two",
+					Name:  "Two",
 					Value: "2",
 				},
 			},
@@ -158,11 +158,11 @@ func TestCompileEnum(t *testing.T) {
 			Type: types.Bool,
 			Members: []types.EnumMember{
 				{
-					Name: types.Identifier("One"),
+					Name:  types.Identifier("One"),
 					Value: boolLiteral(true),
 				},
 				{
-					Name: types.Identifier("Two"),
+					Name:  types.Identifier("Two"),
 					Value: boolLiteral(false),
 				},
 			},
@@ -173,11 +173,11 @@ func TestCompileEnum(t *testing.T) {
 			Type: "bool",
 			Members: []EnumMember{
 				{
-					Name: "One",
+					Name:  "One",
 					Value: "true",
 				},
 				{
-					Name: "Two",
+					Name:  "Two",
 					Value: "false",
 				},
 			},
@@ -190,7 +190,7 @@ func TestCompileEnum(t *testing.T) {
 			Type: types.Uint32,
 			Members: []types.EnumMember{
 				{
-					Name: types.Identifier("test"),
+					Name:  types.Identifier("test"),
 					Value: numericLiteral(125412512),
 				},
 			},
@@ -201,7 +201,7 @@ func TestCompileEnum(t *testing.T) {
 			Type: "uint32",
 			Members: []EnumMember{
 				{
-					Name: "Test",
+					Name:  "Test",
 					Value: "125412512",
 				},
 			},
