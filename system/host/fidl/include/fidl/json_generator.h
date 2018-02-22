@@ -12,7 +12,6 @@
 
 #include "coded_ast.h"
 #include "flat_ast.h"
-#include "library.h"
 #include "string_view.h"
 
 namespace fidl {
@@ -29,7 +28,7 @@ namespace fidl {
 
 class JSONGenerator {
 public:
-    explicit JSONGenerator(Library* library)
+    explicit JSONGenerator(flat::Library* library)
         : library_(library) {}
 
     ~JSONGenerator() = default;
@@ -89,7 +88,7 @@ private:
 
     void GenerateDeclarationMapEntry(int count, const flat::Name& name, StringView decl);
 
-    Library* library_;
+    flat::Library* library_;
     int indent_level_;
     std::ostringstream json_file_;
 };

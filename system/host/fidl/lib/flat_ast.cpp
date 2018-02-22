@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/library.h"
+#include "fidl/flat_ast.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -15,6 +15,7 @@
 #include "fidl/parser.h"
 
 namespace fidl {
+namespace flat {
 
 namespace {
 
@@ -113,7 +114,7 @@ TypeShape StringTypeShape(uint64_t count) {
 // so on.
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<ast::ConstDeclaration> const_declaration) {
-    auto name = flat::Name(std::move(const_declaration->identifier));
+    auto name = Name(std::move(const_declaration->identifier));
 
     if (!RegisterTypeName(name))
         return false;
@@ -123,16 +124,16 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<ast::ConstDeclaration> con
 }
 
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<ast::EnumDeclaration> enum_declaration) {
-    std::vector<flat::Enum::Member> members;
+    std::vector<Enum::Member> members;
     for (auto& member : enum_declaration->members) {
-        auto name = flat::Name(std::move(member->identifier));
+        auto name = Name(std::move(member->identifier));
         auto value = std::move(member->value);
         members.emplace_back(std::move(name), std::move(value));
     }
     std::unique_ptr<ast::PrimitiveType> type = std::move(enum_declaration->maybe_subtype);
     if (!type)
         type = std::make_unique<ast::PrimitiveType>(types::PrimitiveSubtype::Uint32);
-    auto name = flat::Name(std::move(enum_declaration->identifier));
+    auto name = Name(std::move(enum_declaration->identifier));
 
     if (!RegisterTypeName(name))
         return false;
@@ -142,7 +143,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<ast::EnumDeclaration> enum_
 
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<ast::InterfaceDeclaration> interface_declaration) {
-    auto name = flat::Name(std::move(interface_declaration->identifier));
+    auto name = Name(std::move(interface_declaration->identifier));
 
     for (auto& const_member : interface_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -151,7 +152,7 @@ bool Library::ConsumeInterfaceDeclaration(
         if (!ConsumeEnumDeclaration(std::move(enum_member)))
             return false;
 
-    std::vector<flat::Interface::Method> methods;
+    std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->method_members) {
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
@@ -159,12 +160,12 @@ bool Library::ConsumeInterfaceDeclaration(
             return false;
         if (value == 0u)
             return false;
-        flat::Ordinal ordinal(std::move(ordinal_literal), value);
+        Ordinal ordinal(std::move(ordinal_literal), value);
 
         auto method_name = std::move(method->identifier);
 
         bool has_request = static_cast<bool>(method->maybe_request);
-        std::vector<flat::Interface::Method::Parameter> maybe_request;
+        std::vector<Interface::Method::Parameter> maybe_request;
         if (has_request) {
             for (auto& parameter : method->maybe_request->parameter_list) {
                 auto parameter_name = std::move(parameter->identifier);
@@ -173,7 +174,7 @@ bool Library::ConsumeInterfaceDeclaration(
         }
 
         bool has_response = static_cast<bool>(method->maybe_response);
-        std::vector<flat::Interface::Method::Parameter> maybe_response;
+        std::vector<Interface::Method::Parameter> maybe_response;
         if (has_response) {
             for (auto& parameter : method->maybe_response->parameter_list) {
                 auto response_paramater_name = std::move(parameter->identifier);
@@ -196,7 +197,7 @@ bool Library::ConsumeInterfaceDeclaration(
 }
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<ast::StructDeclaration> struct_declaration) {
-    auto name = flat::Name(std::move(struct_declaration->identifier));
+    auto name = Name(std::move(struct_declaration->identifier));
 
     for (auto& const_member : struct_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -205,7 +206,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<ast::StructDeclaration> s
         if (!ConsumeEnumDeclaration(std::move(enum_member)))
             return false;
 
-    std::vector<flat::Struct::Member> members;
+    std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
         auto name = std::move(member->identifier);
         members.emplace_back(std::move(member->type), std::move(name),
@@ -219,12 +220,12 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<ast::StructDeclaration> s
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<ast::UnionDeclaration> union_declaration) {
-    std::vector<flat::Union::Member> members;
+    std::vector<Union::Member> members;
     for (auto& member : union_declaration->members) {
         auto name = std::move(member->identifier);
         members.emplace_back(std::move(member->type), std::move(name));
     }
-    auto name = flat::Name(std::move(union_declaration->identifier));
+    auto name = Name(std::move(union_declaration->identifier));
 
     if (!RegisterTypeName(name))
         return false;
@@ -289,14 +290,14 @@ bool Library::ConsumeFile(std::unique_ptr<ast::File> file) {
     return true;
 }
 
-bool Library::RegisterTypeName(const flat::Name& name) {
+bool Library::RegisterTypeName(const Name& name) {
     // TODO(TO-701) Should this copy the Name?
     // auto iter = registered_types_.insert(name);
     // return iter.second;
     return true;
 }
 
-bool Library::RegisterResolvedType(const flat::Name& name, TypeShape typeshape) {
+bool Library::RegisterResolvedType(const Name& name, TypeShape typeshape) {
     // TODO(TO-701) Should this copy the Name?
     // auto key_value = std::make_pair(name, typeshape);
     // auto iter = resolved_types_.insert(std::move(key_value));
@@ -304,7 +305,7 @@ bool Library::RegisterResolvedType(const flat::Name& name, TypeShape typeshape) 
     return true;
 }
 
-bool Library::LookupTypeShape(const flat::Name& name, TypeShape* out_typeshape) {
+bool Library::LookupTypeShape(const Name& name, TypeShape* out_typeshape) {
     auto iter = resolved_types_.find(name);
     if (iter == resolved_types_.end()) {
         return false;
@@ -316,7 +317,7 @@ bool Library::LookupTypeShape(const flat::Name& name, TypeShape* out_typeshape) 
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-bool Library::ResolveConst(const flat::Const& const_declaration) {
+bool Library::ResolveConst(const Const& const_declaration) {
     if (!ResolveType(const_declaration.type.get())) {
         return false;
     }
@@ -324,7 +325,7 @@ bool Library::ResolveConst(const flat::Const& const_declaration) {
     return true;
 }
 
-bool Library::ResolveEnum(const flat::Enum& enum_declaration) {
+bool Library::ResolveEnum(const Enum& enum_declaration) {
     TypeShape typeshape;
 
     switch (enum_declaration.type->subtype) {
@@ -357,7 +358,7 @@ bool Library::ResolveEnum(const flat::Enum& enum_declaration) {
     return true;
 }
 
-bool Library::ResolveInterface(const flat::Interface& interface_declaration) {
+bool Library::ResolveInterface(const Interface& interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
@@ -388,7 +389,7 @@ bool Library::ResolveInterface(const flat::Interface& interface_declaration) {
     return true;
 }
 
-bool Library::ResolveStruct(const flat::Struct& struct_declaration) {
+bool Library::ResolveStruct(const Struct& struct_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
     for (const auto& member : struct_declaration.members) {
@@ -407,7 +408,7 @@ bool Library::ResolveStruct(const flat::Struct& struct_declaration) {
     return true;
 }
 
-bool Library::ResolveUnion(const flat::Union& union_declaration) {
+bool Library::ResolveUnion(const Union& union_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
     for (const auto& member : union_declaration.members) {
@@ -620,4 +621,5 @@ bool Library::ResolveTypeName(const ast::CompoundIdentifier* name) {
     return true;
 }
 
+} // namespace flat
 } // namespace fidl

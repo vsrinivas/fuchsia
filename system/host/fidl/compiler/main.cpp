@@ -13,10 +13,10 @@
 #include <vector>
 
 #include <fidl/c_generator.h>
+#include <fidl/flat_ast.h>
 #include <fidl/identifier_table.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
-#include <fidl/library.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 
@@ -134,7 +134,7 @@ enum struct Behavior {
 
 bool Parse(Arguments* args, fidl::SourceManager* source_manager,
            fidl::IdentifierTable* identifier_table, fidl::ErrorReporter* error_reporter,
-           fidl::Library* library) {
+           fidl::flat::Library* library) {
     while (args->Remaining()) {
         std::string filename = args->Claim();
         const fidl::SourceFile* source = source_manager->CreateSource(filename.data());
@@ -158,14 +158,14 @@ bool Parse(Arguments* args, fidl::SourceManager* source_manager,
     }
 
     if (!library->Resolve()) {
-        fprintf(stderr, "Library resolution failed!\n");
+        fprintf(stderr, "flat::Library resolution failed!\n");
         return false;
     }
 
     return true;
 }
 
-bool GenerateC(fidl::Library* library, std::fstream header_output) {
+bool GenerateC(fidl::flat::Library* library, std::fstream header_output) {
     std::ostringstream header_file;
     fidl::CGenerator c_generator(library);
 
@@ -178,7 +178,7 @@ bool GenerateC(fidl::Library* library, std::fstream header_output) {
     return true;
 }
 
-bool GenerateJSON(fidl::Library* library, std::fstream json_output) {
+bool GenerateJSON(fidl::flat::Library* library, std::fstream json_output) {
     std::ostringstream json_file;
     fidl::JSONGenerator json_generator(library);
 
@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
     fidl::SourceManager source_manager;
     fidl::IdentifierTable identifier_table;
     fidl::ErrorReporter error_reporter;
-    fidl::Library library;
+    fidl::flat::Library library;
     if (!Parse(args, &source_manager, &identifier_table, &error_reporter, &library)) {
         return 1;
     }

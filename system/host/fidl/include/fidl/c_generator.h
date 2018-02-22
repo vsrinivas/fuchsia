@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "coded_ast.h"
-#include "library.h"
+#include "flat_ast.h"
 #include "string_view.h"
 
 namespace fidl {
@@ -27,7 +27,7 @@ namespace fidl {
 
 class CGenerator {
 public:
-    explicit CGenerator(Library* library) : library_(library) {}
+    explicit CGenerator(flat::Library* library) : library_(library) {}
 
     ~CGenerator() = default;
 
@@ -111,7 +111,7 @@ public:
     void ProduceStructDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
 
-    Library* library_;
+    flat::Library* library_;
     std::ostringstream header_file_;
 };
 

@@ -12,10 +12,10 @@ source_set("compiler") {
   sources = [
     "lib/error_reporter.cpp",
     "lib/c_generator.cpp",
+    "lib/flat_ast.cpp",
     "lib/identifier_table.cpp",
     "lib/json_generator.cpp",
     "lib/lexer.cpp",
-    "lib/library.cpp",
     "lib/parser.cpp",
     "lib/source_file.cpp",
     "lib/source_location.cpp",
