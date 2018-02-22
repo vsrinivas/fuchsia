@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <hid/usages.h>
 #include <string.h>
 #include <sys/param.h>
-#include <hid/usages.h>
 #include <zircon/device/pty.h>
 
 #include "keyboard-vt100.h"
@@ -93,7 +93,7 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
 // Process key sequences that affect the low-level control of the system
 // (switching display ownership, rebooting).  This returns whether this key press
 // was handled.
-static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers){
+static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
     switch (keycode) {
     case HID_USAGE_KEY_DELETE:
         // Provide a CTRL-ALT-DEL reboot sequence
@@ -153,7 +153,7 @@ void vc_show_active() {
     vc_t* vc = NULL;
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         vc_attach_gfx(vc);
-        if (vc->fd) {
+        if (vc->fd >= 0) {
             pty_window_size_t wsz = {
                 .width = vc->columns,
                 .height = vc->rows,
