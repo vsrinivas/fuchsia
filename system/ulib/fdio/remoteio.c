@@ -801,7 +801,7 @@ zx_status_t fdio_from_handles(uint32_t type, zx_handle_t* handles, int hcount,
     }
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
-        int flags = (type == FDIO_PROTOCOL_SOCKET_CONNECTED) ? FDIO_FLAG_SOCKET_CONNECTED : 0;
+        int flags = (type == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
 #if WITH_NEW_SOCKET
         if (hcount != 2) {
             r = ZX_ERR_INVALID_ARGS;

@@ -52,25 +52,25 @@ typedef struct fdio_ops {
     zx_status_t (*get_vmo)(fdio_t* io, zx_handle_t* out, size_t* off, size_t* len);
 } fdio_ops_t;
 
-// fdio_t flags
-#define FDIO_FLAG_CLOEXEC ((int32_t)1 << 0)
-#define FDIO_FLAG_SOCKET ((int32_t)1 << 1)
-#define FDIO_FLAG_EPOLL ((int32_t)1 << 2)
-#define FDIO_FLAG_WAITABLE ((int32_t)1 << 3)
-#define FDIO_FLAG_SOCKET_CONNECTING ((int32_t)1 << 4)
-#define FDIO_FLAG_SOCKET_CONNECTED ((int32_t)1 << 5)
-#define FDIO_FLAG_NONBLOCK ((int32_t)1 << 6)
+// fdio_t ioflag values
+#define IOFLAG_CLOEXEC              (1 << 0)
+#define IOFLAG_SOCKET               (1 << 1)
+#define IOFLAG_EPOLL                (1 << 2)
+#define IOFLAG_WAITABLE             (1 << 3)
+#define IOFLAG_SOCKET_CONNECTING    (1 << 4)
+#define IOFLAG_SOCKET_CONNECTED     (1 << 5)
+#define IOFLAG_NONBLOCK             (1 << 6)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
-#define FDIO_FD_FLAGS FDIO_FLAG_CLOEXEC
+#define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
 typedef struct fdio {
     fdio_ops_t* ops;
     uint32_t magic;
     atomic_int_fast32_t refcount;
     int32_t dupcount;
-    uint32_t flags;
+    uint32_t ioflag;
 } fdio_t;
 
 // Lifecycle notes:

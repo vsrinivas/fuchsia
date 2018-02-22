@@ -21,7 +21,7 @@ static int checksocket(int fd, int sock_err, int err) {
         errno = EBADF;
         return -1;
     }
-    int32_t is_socket = io->flags & FDIO_FLAG_SOCKET;
+    int32_t is_socket = io->ioflag & IOFLAG_SOCKET;
     fdio_release(io);
     if (!is_socket) {
         errno = sock_err;
@@ -39,7 +39,7 @@ static ssize_t zx_socketpair_recvfrom(fdio_t* io, void* data, size_t len, int fl
         return ZX_ERR_INVALID_ARGS;
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
-    int nonblock = (io->flags & FDIO_FLAG_NONBLOCK) || flags & MSG_DONTWAIT;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     return zx_pipe_read_internal(p->h, data, len, nonblock);
 }
 
@@ -51,7 +51,7 @@ static ssize_t zx_socketpair_sendto(fdio_t* io, const void* data, size_t len, in
         return ZX_ERR_INVALID_ARGS;  // should set errno to EISCONN
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
-    int nonblock = (io->flags & FDIO_FLAG_NONBLOCK) || flags & MSG_DONTWAIT;
+    int nonblock = (io->ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     return zx_pipe_write_internal(p->h, data, len, nonblock);
 }
 

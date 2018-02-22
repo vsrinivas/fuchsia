@@ -40,7 +40,7 @@
 #include "private.h"
 #include "unistd.h"
 
-static_assert(FDIO_FLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
+static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
 // non-thread-safe emulation of unistd io functions
 // using the fdio transports
@@ -550,7 +550,7 @@ void __libc_extensions_init(uint32_t handle_count,
             break;
         case PA_FDIO_SOCKET:
 #if WITH_NEW_SOCKET
-            fdio_fdtab[arg] = fdio_socket_create(h, FDIO_FLAG_SOCKET_CONNECTED);
+            fdio_fdtab[arg] = fdio_socket_create(h, IOFLAG_SOCKET_CONNECTED);
             fdio_fdtab[arg]->dupcount++;
             break;
 #else
@@ -953,7 +953,7 @@ ssize_t read(int fd, void* buf, size_t count) {
     zx_status_t status;
     for (;;) {
         status = io->ops->read(io, buf, count);
-        if (status != ZX_ERR_SHOULD_WAIT || io->flags & FDIO_FLAG_NONBLOCK) {
+        if (status != ZX_ERR_SHOULD_WAIT || io->ioflag & IOFLAG_NONBLOCK) {
             break;
         }
         fdio_wait_fd(fd, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
@@ -974,7 +974,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
     zx_status_t status;
     for (;;) {
         status = io->ops->write(io, buf, count);
-        if (status != ZX_ERR_SHOULD_WAIT || io->flags & FDIO_FLAG_NONBLOCK) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
             break;
         }
         fdio_wait_fd(fd, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
@@ -1016,7 +1016,7 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
     zx_status_t status;
     for (;;) {
         status = io->ops->read_at(io, buf, size, ofs);
-        if (status != ZX_ERR_SHOULD_WAIT || io->flags & FDIO_FLAG_NONBLOCK) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
             break;
         }
         fdio_wait_fd(fd, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
@@ -1058,7 +1058,7 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
     zx_status_t status;
     for (;;) {
         status = io->ops->write_at(io, buf, size, ofs);
-        if (status != ZX_ERR_SHOULD_WAIT || io->flags & FDIO_FLAG_NONBLOCK) {
+        if ((status != ZX_ERR_SHOULD_WAIT) || (io->ioflag & IOFLAG_NONBLOCK)) {
             break;
         }
         fdio_wait_fd(fd, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, NULL, ZX_TIME_INFINITE);
@@ -1147,7 +1147,7 @@ int fcntl(int fd, int cmd, ...) {
         if (io == NULL) {
             return ERRNO(EBADF);
         }
-        int flags = (int)(io->flags & FDIO_FD_FLAGS);
+        int flags = (int)(io->ioflag & IOFLAG_FD_FLAGS);
         // POSIX mandates that the return value be nonnegative if successful.
         assert(flags >= 0);
         fdio_release(io);
@@ -1160,8 +1160,8 @@ int fcntl(int fd, int cmd, ...) {
         }
         GET_INT_ARG(flags);
         // TODO(ZX-973) Implement CLOEXEC.
-        io->flags &= ~FDIO_FD_FLAGS;
-        io->flags |= (int32_t)flags & FDIO_FD_FLAGS;
+        io->ioflag &= ~IOFLAG_FD_FLAGS;
+        io->ioflag |= (uint32_t)flags & IOFLAG_FD_FLAGS;
         fdio_release(io);
         return 0;
     }
@@ -1180,7 +1180,7 @@ int fcntl(int fd, int cmd, ...) {
             r = ZX_OK;
         }
         flags = zxio_flags_to_fdio(flags);
-        if (io->flags & FDIO_FLAG_NONBLOCK) {
+        if (io->ioflag & IOFLAG_NONBLOCK) {
             flags |= O_NONBLOCK;
         }
         fdio_release(io);
@@ -1210,9 +1210,9 @@ int fcntl(int fd, int cmd, ...) {
             n = STATUS(r);
         } else {
             if (n & O_NONBLOCK) {
-                io->flags |= FDIO_FLAG_NONBLOCK;
+                io->ioflag |= IOFLAG_NONBLOCK;
             } else {
-                io->flags &= ~FDIO_FLAG_NONBLOCK;
+                io->ioflag &= ~IOFLAG_NONBLOCK;
             }
             n = 0;
         }
@@ -1385,7 +1385,7 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
         return ERROR(r);
     }
     if (flags & O_NONBLOCK) {
-        io->flags |= FDIO_FLAG_NONBLOCK;
+        io->ioflag |= IOFLAG_NONBLOCK;
     }
     if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
         io->ops->close(io);

@@ -91,12 +91,12 @@ ssize_t zx_pipe_write_internal(zx_handle_t h, const void* data, size_t len, int 
 
 ssize_t zx_pipe_write(fdio_t* io, const void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
-    return zx_pipe_write_internal(p->h, data, len, io->flags & FDIO_FLAG_NONBLOCK);
+    return zx_pipe_write_internal(p->h, data, len, io->ioflag & IOFLAG_NONBLOCK);
 }
 
 ssize_t zx_pipe_read(fdio_t* io, void* data, size_t len) {
     zx_pipe_t* p = (zx_pipe_t*)io;
-    return zx_pipe_read_internal(p->h, data, len, io->flags & FDIO_FLAG_NONBLOCK);
+    return zx_pipe_read_internal(p->h, data, len, io->ioflag & IOFLAG_NONBLOCK);
 }
 zx_status_t zx_pipe_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
     switch (op) {

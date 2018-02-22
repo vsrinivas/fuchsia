@@ -99,7 +99,7 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
     wio->io.ops = &fdio_waitable_ops;
     wio->io.magic = FDIO_MAGIC;
     wio->io.refcount = 1;
-    wio->io.flags |= FDIO_FLAG_WAITABLE;
+    wio->io.ioflag |= IOFLAG_WAITABLE;
     wio->h = h;
     wio->signals_in = signals_in;
     wio->signals_out = signals_out;

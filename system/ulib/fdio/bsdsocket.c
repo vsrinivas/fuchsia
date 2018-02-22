@@ -80,7 +80,7 @@ int socket(int domain, int type, int protocol) {
     }
 
     if (type & SOCK_NONBLOCK) {
-        io->flags |= FDIO_FLAG_NONBLOCK;
+        io->ioflag |= IOFLAG_NONBLOCK;
     }
 
     // TODO(ZX-973): Implement CLOEXEC.
@@ -105,15 +105,15 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     zx_status_t r;
     r = io->ops->misc(io, ZXRIO_CONNECT, 0, 0, (void*)addr, len);
     if (r == ZX_ERR_SHOULD_WAIT) {
-        if (io->flags & FDIO_FLAG_NONBLOCK) {
-            io->flags |= FDIO_FLAG_SOCKET_CONNECTING;
+        if (io->ioflag & IOFLAG_NONBLOCK) {
+            io->ioflag |= IOFLAG_SOCKET_CONNECTING;
             fdio_release(io);
             return ERRNO(EINPROGRESS);
         }
         // going to wait for the completion
     } else {
         if (r == ZX_OK) {
-            io->flags |= FDIO_FLAG_SOCKET_CONNECTED;
+            io->ioflag |= IOFLAG_SOCKET_CONNECTED;
         }
         fdio_release(io);
         return STATUS(r);
@@ -144,7 +144,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERRNO(EIO);
     }
     if (status == ZX_OK) {
-        io->flags |= FDIO_FLAG_SOCKET_CONNECTED;
+        io->ioflag |= IOFLAG_SOCKET_CONNECTED;
     }
     fdio_release(io);
     if (status != ZX_OK) {
@@ -199,7 +199,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     }
 
     fdio_t* io2;
-    if ((io2 = fdio_socket_create(s2, FDIO_FLAG_SOCKET_CONNECTED)) == NULL) {
+    if ((io2 = fdio_socket_create(s2, IOFLAG_SOCKET_CONNECTED)) == NULL) {
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 #else
@@ -234,10 +234,10 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     fdio_release(io);
 
     fdio_socket_set_stream_ops(io2);
-    io2->flags |= FDIO_FLAG_SOCKET_CONNECTED;
+    io2->ioflag |= IOFLAG_SOCKET_CONNECTED;
 
     if (flags & SOCK_NONBLOCK) {
-        io2->flags |= FDIO_FLAG_NONBLOCK;
+        io2->ioflag |= IOFLAG_NONBLOCK;
     }
 
     if (addr != NULL && len != NULL) {
