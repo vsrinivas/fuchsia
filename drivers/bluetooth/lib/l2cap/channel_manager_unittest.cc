@@ -638,6 +638,27 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
   EXPECT_TRUE(common::ContainersEqual(expected_acl_1, *acl_fragments[1]));
 }
 
+TEST_F(L2CAP_ChannelManagerTest, ChannelSignalLinkError) {
+  bool link_error = false;
+  auto link_error_cb = [&link_error, this] {
+    link_error = true;
+    message_loop()->QuitNow();
+  };
+  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
+                        [](auto) {}, link_error_cb,
+                        message_loop()->task_runner());
+
+  // Activate a new a channel to signal the error.
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  chan->SignalLinkError();
+
+  // The event will run asynchronously.
+  EXPECT_FALSE(link_error);
+
+  RunMessageLoop(1);
+  EXPECT_TRUE(link_error);
+}
+
 TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
   bool conn_param_cb_called = false;
   auto conn_param_cb = [&conn_param_cb_called, this](const auto& params) {
@@ -650,7 +671,8 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
   };
 
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        conn_param_cb, message_loop()->task_runner());
+                        conn_param_cb, DoNothing,
+                        message_loop()->task_runner());
 
   // clang-format off
   test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(

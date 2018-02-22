@@ -56,10 +56,9 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     settings.ApplyLegacyLEConfig();
     test_device()->set_settings(settings);
 
+    dev_cache_ = std::make_unique<RemoteDeviceCache>();
     l2cap_ = l2cap::testing::FakeLayer::Create();
     l2cap_->Initialize();
-
-    dev_cache_ = std::make_unique<RemoteDeviceCache>();
 
     // TODO(armansito): Pass a fake connector here.
     connector_ = std::make_unique<hci::LowEnergyConnector>(
@@ -71,9 +70,8 @@ class LowEnergyConnectionManagerTest : public TestingBase {
         gatt::testing::FakeLayer::Create());
 
     test_device()->SetConnectionStateCallback(
-        std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged,
-                  this, std::placeholders::_1, std::placeholders::_2,
-                  std::placeholders::_3),
+        fbl::BindMember(
+            this, &LowEnergyConnectionManagerTest::OnConnectionStateChanged),
         message_loop()->task_runner());
 
     test_device()->StartCmdChannel(test_cmd_chan());
@@ -784,6 +782,35 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
 
   EXPECT_EQ(preferred, *dev->le_preferred_connection_params());
   EXPECT_EQ(actual, *dev->le_connection_params());
+}
+
+TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPSignalLinkError) {
+  // Set up a fake device and a connection over which to process the L2CAP
+  // request.
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+  auto* dev = dev_cache()->NewDevice(kAddress0, true);
+  ASSERT_TRUE(dev);
+
+  fbl::RefPtr<l2cap::Channel> att_chan;
+  auto l2cap_chan_cb = [&att_chan](auto chan) { att_chan = chan; };
+  fake_l2cap()->set_channel_callback(l2cap_chan_cb);
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto conn_cb = [&conn_ref](const auto& dev_id, auto cr) {
+    conn_ref = std::move(cr);
+  };
+  ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), conn_cb));
+
+  RunUntilIdle();
+  ASSERT_TRUE(conn_ref);
+  ASSERT_TRUE(att_chan);
+  ASSERT_EQ(1u, connected_devices().size());
+
+  // Signaling a link error through the channel should disconnect the link.
+  att_chan->SignalLinkError();
+
+  RunUntilIdle();
+  EXPECT_TRUE(connected_devices().empty());
 }
 
 }  // namespace

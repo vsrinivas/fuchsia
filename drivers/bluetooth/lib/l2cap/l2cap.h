@@ -36,6 +36,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   using ChannelCallback = std::function<void(fbl::RefPtr<Channel>)>;
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
+  using LinkErrorCallback = std::function<void()>;
 
   // Constructs an uninitialized L2CAP object that can be used in production.
   // This spawns a thread on which L2CAP tasks will be scheduled (using
@@ -59,10 +60,12 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   // the given |task_runner|.
   //
   // Has no effect if L2CAP is uninitialized or shut down.
-  virtual void RegisterLE(hci::ConnectionHandle handle,
-                          hci::Connection::Role role,
-                          const LEConnectionParameterUpdateCallback& callback,
-                          fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
+  virtual void RegisterLE(
+      hci::ConnectionHandle handle,
+      hci::Connection::Role role,
+      LEConnectionParameterUpdateCallback conn_param_callback,
+      LinkErrorCallback link_error_callback,
+      fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.

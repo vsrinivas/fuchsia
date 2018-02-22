@@ -85,6 +85,18 @@ class Channel : public fbl::RefCounted<Channel> {
   // This method is idempotent.
   virtual void Deactivate() = 0;
 
+  // Signals that the underlying link should be disconnected. This should be
+  // called when a service layer protocol error requires the connection to be
+  // severed.
+  //
+  // The link error callback (provided to L2CAP::Register* methods) is invoked
+  // as a result of this operation. The handler is responsible for actually
+  // disconnecting the link.
+  //
+  // This does not deactivate the channel, though the channel is expected to
+  // close when the link gets removed later.
+  virtual void SignalLinkError() = 0;
+
   // Sends the given SDU payload over this channel. This takes ownership of
   // |sdu|. Returns false if the SDU is rejected, for example because it exceeds
   // the channel's MTU or because the link has been closed.
@@ -123,6 +135,7 @@ class ChannelImpl : public Channel {
                 ClosedCallback closed_callback,
                 fxl::RefPtr<fxl::TaskRunner> task_runner) override;
   void Deactivate() override;
+  void SignalLinkError() override;
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
 
  private:

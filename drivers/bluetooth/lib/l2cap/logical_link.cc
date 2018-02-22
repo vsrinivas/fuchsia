@@ -187,6 +187,16 @@ void LogicalLink::SendBasicFrame(ChannelId id,
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
+void LogicalLink::set_error_callback(std::function<void()> callback,
+                                     fxl::RefPtr<fxl::TaskRunner> runner) {
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(callback);
+  FXL_DCHECK(runner);
+
+  link_error_cb_ = std::move(callback);
+  link_error_runner_ = runner;
+}
+
 LESignalingChannel* LogicalLink::le_signaling_channel() const {
   return (type_ == hci::Connection::LinkType::kLE)
              ? static_cast<LESignalingChannel*>(signaling_channel_.get())
@@ -214,6 +224,18 @@ void LogicalLink::RemoveChannel(Channel* chan) {
 
   pending_pdus_.erase(chan->id());
   channels_.erase(iter);
+}
+
+void LogicalLink::SignalError() {
+  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+
+  if (link_error_cb_) {
+    link_error_runner_->PostTask(link_error_cb_);
+
+    // Clear this so that the same callback is not called twice.
+    link_error_cb_ = {};
+    link_error_runner_ = nullptr;
+  }
 }
 
 void LogicalLink::Close() {

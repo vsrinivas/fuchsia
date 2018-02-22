@@ -45,11 +45,14 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   void RegisterLE(hci::ConnectionHandle handle,
                   hci::Connection::Role role,
-                  const LEConnectionParameterUpdateCallback& callback,
+                  LEConnectionParameterUpdateCallback conn_param_callback,
+                  LinkErrorCallback link_error_callback,
                   fxl::RefPtr<fxl::TaskRunner> task_runner) override {
-    PostMessage([this, handle, role, callback, task_runner] {
+    PostMessage([this, handle, role, cpc = std::move(conn_param_callback),
+                 lec = std::move(link_error_callback), task_runner] {
       if (chanmgr_) {
-        chanmgr_->RegisterLE(handle, role, callback, task_runner);
+        chanmgr_->RegisterLE(handle, role, std::move(cpc), std::move(lec),
+                             task_runner);
       }
     });
   }

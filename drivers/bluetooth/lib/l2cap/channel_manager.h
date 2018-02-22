@@ -53,6 +53,8 @@ class LogicalLink;
 // thread where this is used.
 class ChannelManager final {
  public:
+  using LinkErrorCallback = std::function<void()>;
+
   ChannelManager(fxl::RefPtr<hci::Transport> hci,
                  fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~ChannelManager();
@@ -73,14 +75,19 @@ class ChannelManager final {
   // opened on the logical link represented by |handle| after a call to this
   // method.
   //
-  // |callback| will be used to notify the caller if new connection parameters
-  // were accepted from the remote end of the link. |callback| will be posted on
-  // |task_runner|.
+  // |conn_param_callback| will be used to notify the caller if new connection
+  // parameters were accepted from the remote end of the link.
+  //
+  // |link_error_callback| will be used to notify when a channel signals a link
+  // error.
+  //
+  // Both callbacks will be posted onto |task_runner|.
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
   void RegisterLE(hci::ConnectionHandle handle,
                   hci::Connection::Role role,
-                  const LEConnectionParameterUpdateCallback& callback,
+                  LEConnectionParameterUpdateCallback conn_param_callback,
+                  LinkErrorCallback link_error_callback,
                   fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Removes a previously registered connection. All corresponding Channels will

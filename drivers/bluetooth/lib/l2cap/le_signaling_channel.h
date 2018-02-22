@@ -16,6 +16,9 @@ namespace internal {
 // Implements the L2CAP LE signaling fixed channel.
 class LESignalingChannel : public SignalingChannel {
  public:
+  using ConnectionParameterUpdateCallback =
+      std::function<void(const hci::LEPreferredConnectionParameters& params)>;
+
   LESignalingChannel(fbl::RefPtr<Channel> chan, hci::Connection::Role role);
   ~LESignalingChannel() override = default;
 
@@ -25,14 +28,12 @@ class LESignalingChannel : public SignalingChannel {
   // implementation of |callback| to apply them to the controller.
   //
   // This task will be posted onto the given |task_runner|.
-  using ConnectionParameterUpdateCallback =
-      std::function<void(const hci::LEPreferredConnectionParameters& params)>;
   void set_conn_param_update_callback(
-      const ConnectionParameterUpdateCallback& callback,
+      ConnectionParameterUpdateCallback callback,
       fxl::RefPtr<fxl::TaskRunner> task_runner) {
     FXL_DCHECK(IsCreationThreadCurrent());
     FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(task_runner));
-    conn_param_update_cb_ = callback;
+    conn_param_update_cb_ = std::move(callback);
     conn_param_update_runner_ = task_runner;
   }
 

@@ -44,13 +44,15 @@ void ChannelManager::Register(hci::ConnectionHandle handle,
 void ChannelManager::RegisterLE(
     hci::ConnectionHandle handle,
     hci::Connection::Role role,
-    const LEConnectionParameterUpdateCallback& callback,
+    LEConnectionParameterUpdateCallback conn_param_cb,
+    LinkErrorCallback link_error_cb,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FXL_VLOG(1) << "l2cap: register LE link (handle: " << handle << ")";
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kLE, role);
-  ll->le_signaling_channel()->set_conn_param_update_callback(callback,
+  ll->set_error_callback(std::move(link_error_cb), task_runner);
+  ll->le_signaling_channel()->set_conn_param_update_callback(conn_param_cb,
                                                              task_runner);
 }
 

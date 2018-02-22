@@ -36,15 +36,19 @@ class ATT_BearerTest : public l2cap::testing::FakeChannelTest {
  protected:
   void SetUp() override {
     ChannelOptions options(l2cap::kATTChannelId);
-    auto fake_chan = CreateFakeChannel(options);
-    bearer_ = Bearer::Create(std::move(fake_chan));
+    fake_att_chan_ = CreateFakeChannel(options);
+    bearer_ = Bearer::Create(fake_att_chan_);
   }
 
   void TearDown() override { bearer_ = nullptr; }
 
   Bearer* bearer() const { return bearer_.get(); }
+  l2cap::testing::FakeChannel* fake_att_chan() const {
+    return fake_att_chan_.get();
+  }
 
  private:
+  fbl::RefPtr<l2cap::testing::FakeChannel> fake_att_chan_;
   fxl::RefPtr<Bearer> bearer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ATT_BearerTest);
@@ -60,6 +64,7 @@ TEST_F(ATT_BearerTest, CreateFailsToActivate) {
 
 TEST_F(ATT_BearerTest, ShutDown) {
   ASSERT_TRUE(bearer()->is_open());
+  ASSERT_FALSE(fake_att_chan()->link_error());
 
   // Verify that shutting down an open bearer notifies the closed callback.
   bool called = false;
@@ -69,6 +74,9 @@ TEST_F(ATT_BearerTest, ShutDown) {
   bearer()->ShutDown();
   EXPECT_TRUE(called);
   EXPECT_FALSE(bearer()->is_open());
+
+  // Bearer should also signal a link error over the channel.
+  EXPECT_TRUE(fake_att_chan()->link_error());
 
   // ShutDown() on a closed bearer does nothing.
   bearer()->ShutDown();
@@ -128,12 +136,14 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
       message_loop()->QuitNow();
   };
 
+  ASSERT_FALSE(fake_att_chan()->link_error());
   EXPECT_TRUE(bearer()->StartTransaction(common::NewBuffer(kTestRequest),
                                          NopCallback, err_cb));
 
   RunMessageLoop();
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
+  EXPECT_TRUE(fake_att_chan()->link_error());
 }
 
 // Queue many requests but make sure that FakeChannel only receives one.

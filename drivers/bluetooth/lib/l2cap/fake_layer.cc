@@ -28,13 +28,14 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
       << "l2cap: fake link not found: (handle: " << handle << ")";
 
   LinkData& link_data = iter->second;
-  link_data.le_conn_param_runner->PostTask(
+  link_data.callback_runner->PostTask(
       [params, cb = link_data.le_conn_param_cb] { cb(params); });
 }
 
 void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
                            hci::Connection::Role role,
-                           const LEConnectionParameterUpdateCallback& callback,
+                           LEConnectionParameterUpdateCallback conn_param_cb,
+                           LinkErrorCallback link_error_cb,
                            fxl::RefPtr<fxl::TaskRunner> task_runner) {
   if (!initialized_)
     return;
@@ -46,8 +47,9 @@ void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
   data.handle = handle;
   data.role = role;
   data.type = hci::Connection::LinkType::kLE;
-  data.le_conn_param_cb = callback;
-  data.le_conn_param_runner = task_runner;
+  data.le_conn_param_cb = std::move(conn_param_cb);
+  data.link_error_cb = std::move(link_error_cb);
+  data.callback_runner = task_runner;
 
   links_.emplace(handle, std::move(data));
 }
@@ -68,9 +70,14 @@ void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
     return;
   }
 
+  const auto& link = iter->second;
   auto chan = fbl::AdoptRef(new FakeChannel(id, handle, iter->second.type));
+  chan->SetLinkErrorCallback(link.link_error_cb, link.callback_runner);
 
   callback_runner->PostTask([chan, cb = std::move(callback)] { cb(chan); });
+
+  if (chan_cb_)
+    chan_cb_(chan);
 }
 
 }  // namespace testing

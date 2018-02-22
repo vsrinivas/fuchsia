@@ -99,6 +99,16 @@ void ChannelImpl::Deactivate() {
   link_.reset();
 }
 
+void ChannelImpl::SignalLinkError() {
+  std::lock_guard<std::mutex> lock(mtx_);
+
+  // Cannot signal an error on a closed or deactivated link.
+  if (!link_ || !task_runner_)
+    return;
+
+  link_->task_runner()->PostTask([link = link_] { link->SignalError(); });
+}
+
 bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 

@@ -68,6 +68,11 @@ class LogicalLink final {
   // frame is coming from. This must be called on the creation thread.
   void SendBasicFrame(ChannelId id, const common::ByteBuffer& payload);
 
+  // Assigns the link error callback to be invoked when a channel signals a link
+  // error.
+  void set_error_callback(std::function<void()> callback,
+                          fxl::RefPtr<fxl::TaskRunner> task_runner);
+
   // Returns task runner that this LogicalLink operates on.
   fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
 
@@ -85,9 +90,10 @@ class LogicalLink final {
 
   // Called by ChannelImpl::Deactivate(). Removes the channel from the given
   // link.
-  //
-  // This is the only internal member that is accessed by ChannelImpl.
   void RemoveChannel(Channel* chan);
+
+  // Called by ChannelImpl::SignalLinkError().
+  void SignalError();
 
   // Notifies and closes all open channels on this link. Called by the
   // destructor.
@@ -101,12 +107,15 @@ class LogicalLink final {
   hci::Connection::LinkType type_;
   hci::Connection::Role role_;
 
+  std::function<void()> link_error_cb_;
+  fxl::RefPtr<fxl::TaskRunner> link_error_runner_;
+
   // Owns and manages the L2CAP signaling channel on this logical link.
   // Depending on |type_| this will either implement the LE or BR/EDR signaling
   // commands.
   std::unique_ptr<SignalingChannel> signaling_channel_;
 
-  // Fragmenter and Recombiner should always be accessed on the HCI I/O thread.
+  // Fragmenter and Recombiner are always accessed on the L2CAP thread.
   Fragmenter fragmenter_;
   Recombiner recombiner_;
 

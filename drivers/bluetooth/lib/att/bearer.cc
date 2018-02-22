@@ -238,6 +238,10 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
   FXL_VLOG(1) << "att: Bearer shutting down";
 
   rx_task_.Cancel();
+
+  // This will have no effect if the channel is already closed (e.g. if
+  // ShutDown() was called by OnChannelClosed()).
+  chan_->SignalLinkError();
   chan_ = nullptr;
 
   request_queue_.InvokeErrorAll(due_to_timeout, ErrorCode::kNoError);
@@ -591,9 +595,9 @@ void Bearer::HandlePDUWithoutResponse(const PacketReader& packet) {
 
 void Bearer::OnChannelClosed() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  ShutDown();
 
-  // TODO(armansito): Notify a "closed callback" here.
+  // This will deactivate the channel and notify |closed_cb_|.
+  ShutDown();
 }
 
 void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {

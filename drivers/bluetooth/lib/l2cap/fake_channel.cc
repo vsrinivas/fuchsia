@@ -16,6 +16,7 @@ FakeChannel::FakeChannel(ChannelId id,
     : Channel(id, link_type),
       fragmenter_(handle),
       activate_fails_(false),
+      link_error_(false),
       weak_ptr_factory_(this) {}
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
@@ -32,6 +33,15 @@ void FakeChannel::SetSendCallback(const SendCallback& callback,
 
   send_cb_ = callback;
   send_task_runner_ = task_runner;
+}
+
+void FakeChannel::SetLinkErrorCallback(
+    L2CAP::LinkErrorCallback callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(task_runner));
+
+  link_err_cb_ = std::move(callback);
+  link_err_runner_ = task_runner;
 }
 
 void FakeChannel::Close() {
@@ -63,12 +73,20 @@ void FakeChannel::Deactivate() {
   rx_cb_ = {};
 }
 
+void FakeChannel::SignalLinkError() {
+  link_error_ = true;
+
+  if (link_err_cb_) {
+    link_err_runner_->PostTask(link_err_cb_);
+  }
+}
+
 bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   if (!send_cb_)
     return false;
 
   FXL_DCHECK(sdu);
-  FXL_DCHECK(send_cb_);
+  FXL_DCHECK(send_task_runner_);
 
   send_task_runner_->PostTask(fxl::MakeCopyable(
       [cb = send_cb_, sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); }));

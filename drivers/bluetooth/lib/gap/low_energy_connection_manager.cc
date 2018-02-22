@@ -484,7 +484,15 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
     }
   };
 
-  l2cap_->RegisterLE(link->handle(), link->role(), conn_param_update_cb,
+  auto link_error_cb = [self, device_id] {
+    FXL_VLOG(1) << "gap: Link error received from L2CAP";
+    if (self) {
+      self->Disconnect(device_id);
+    }
+  };
+
+  l2cap_->RegisterLE(link->handle(), link->role(),
+                     std::move(conn_param_update_cb), std::move(link_error_cb),
                      task_runner_);
 
   // Initialize connection.
