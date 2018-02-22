@@ -531,8 +531,11 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         local_apic_state->lvt_divide_config = static_cast<uint32_t>(guest_state->rax);
         update_timer(local_apic_state, lvt_deadline(local_apic_state));
         return ZX_OK;
-    case X2ApicMsr::SELF_IPI:
-        return ZX_ERR_NOT_SUPPORTED;
+    case X2ApicMsr::SELF_IPI: {
+        next_rip(exit_info, vmcs);
+        uint32_t vector = static_cast<uint32_t>(guest_state->rax) & UINT8_MAX;
+        return local_apic_state->interrupt_tracker.Interrupt(vector, nullptr);
+    }
     case X2ApicMsr::ICR:
         return handle_ipi(exit_info, vmcs, guest_state, packet);
     default:
