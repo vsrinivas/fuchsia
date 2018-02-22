@@ -171,8 +171,26 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
+  // |source_url| is the url of the source of the proposal containing the
+  // provided actions.
   void PerformActions(const f1dl::Array<maxwell::ActionPtr>& actions,
+                      const std::string& source_url,
                       uint32_t story_color);
+
+  void PerformCreateStoryAction(const ActionPtr& action, uint32_t story_color);
+
+  void PerformFocusStoryAction(const ActionPtr& action);
+
+  // This call is deprecated, as the AddModuleToStory proposal action is
+  // replaced by the AddModule action.
+  void PerformAddModuleToStoryAction(const ActionPtr& action);
+
+  void PerformAddModuleAction(const ActionPtr& action,
+                              const std::string& source_url);
+
+  void PerformCustomAction(const ActionPtr& action,
+                           const std::string& source_url,
+                           uint32_t story_color);
 
   void PlayMediaResponse(MediaResponsePtr media_response);
   void HandleMediaUpdates(uint64_t version,

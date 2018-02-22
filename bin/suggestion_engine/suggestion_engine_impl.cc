@@ -177,7 +177,8 @@ void SuggestionEngineImpl::NotifyInteraction(
 
     auto& proposal = suggestion->prototype->proposal;
     if (interaction->type == InteractionType::SELECTED) {
-      PerformActions(proposal->on_selected, proposal->display->color);
+      PerformActions(proposal->on_selected, suggestion->prototype->source_url,
+                     proposal->display->color);
     }
 
     if (suggestion_in_ask) {
@@ -259,6 +260,7 @@ SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
 
 void SuggestionEngineImpl::PerformActions(
     const f1dl::Array<maxwell::ActionPtr>& actions,
+    const std::string& source_url,
     uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
@@ -266,96 +268,129 @@ void SuggestionEngineImpl::PerformActions(
   for (const auto& action : actions) {
     switch (action->which()) {
       case Action::Tag::CREATE_STORY: {
-        const auto& create_story = action->get_create_story();
-
-        if (story_provider_) {
-          // TODO(afergan): Make this more robust later. For now, we
-          // always assume that there's extra info and that it's a color.
-          f1dl::Map<f1dl::String, f1dl::String> extra_info;
-          char hex_color[11];
-          sprintf(hex_color, "0x%x", story_color);
-          extra_info["color"] = hex_color;
-          auto& initial_data = create_story->initial_data;
-          auto& module_id = create_story->module_id;
-          story_provider_->CreateStoryWithInfo(
-              create_story->module_id, std::move(extra_info),
-              std::move(initial_data),
-              [this, module_id](const f1dl::String& story_id) {
-                modular::StoryControllerPtr story_controller;
-                story_provider_->GetController(story_id,
-                                               story_controller.NewRequest());
-                FXL_LOG(INFO) << "Creating story with module " << module_id;
-
-                story_controller->GetInfo(fxl::MakeCopyable(
-                    // TODO(thatguy): We should not be std::move()ing
-                    // story_controller *while we're calling it*.
-                    [this, controller = std::move(story_controller)](
-                        modular::StoryInfoPtr story_info,
-                        modular::StoryState state) {
-                      FXL_LOG(INFO)
-                          << "Requesting focus for story_id " << story_info->id;
-                      focus_provider_ptr_->Request(story_info->id);
-                    }));
-              });
-        } else {
-          FXL_LOG(WARNING) << "Unable to add module; no story provider";
-        }
+        PerformCreateStoryAction(action, story_color);
         break;
       }
       case Action::Tag::FOCUS_STORY: {
-        const auto& focus_story = action->get_focus_story();
-        FXL_LOG(INFO) << "Requesting focus for story_id "
-                      << focus_story->story_id;
-        focus_provider_ptr_->Request(focus_story->story_id);
+        PerformFocusStoryAction(action);
         break;
       }
       case Action::Tag::ADD_MODULE_TO_STORY: {
-        if (story_provider_) {
-          const auto& add_module_to_story = action->get_add_module_to_story();
-          const auto& story_id = add_module_to_story->story_id;
-          const auto& module_name = add_module_to_story->module_name;
-          const auto& module_url = add_module_to_story->module_url;
-          const auto& link_name = add_module_to_story->link_name;
-          const auto& module_path = add_module_to_story->module_path;
-          const auto& surface_relation = add_module_to_story->surface_relation;
-
-          FXL_LOG(INFO) << "Adding module " << module_url << " to story "
-                        << story_id;
-
-          modular::StoryControllerPtr story_controller;
-          story_provider_->GetController(story_id,
-                                         story_controller.NewRequest());
-          if (!add_module_to_story->initial_data.is_null()) {
-            modular::LinkPtr link;
-            story_controller->GetLink(module_path.Clone(), link_name,
-                                      link.NewRequest());
-            link->Set(nullptr /* json_path */,
-                      add_module_to_story->initial_data);
-          }
-
-          story_controller->AddModule(module_path.Clone(), module_name,
-                                      module_url, link_name,
-                                      surface_relation.Clone());
-        } else {
-          FXL_LOG(WARNING) << "Unable to add module; no story provider";
-        }
-
+        PerformAddModuleToStoryAction(action);
+        break;
+      }
+      case Action::Tag::ADD_MODULE: {
+        PerformAddModuleAction(action, source_url);
         break;
       }
       case Action::Tag::CUSTOM_ACTION: {
-        auto custom_action = action->get_custom_action().Bind();
-        custom_action->Execute(fxl::MakeCopyable(
-            [this, custom_action = std::move(custom_action),
-             story_color](f1dl::Array<maxwell::ActionPtr> actions) {
-              if (actions)
-                PerformActions(std::move(actions), story_color);
-            }));
+        PerformCustomAction(action, source_url, story_color);
         break;
       }
       default:
         FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action->which();
     }
   }
+}
+
+void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
+                                                    uint32_t story_color) {
+  const auto& create_story = action->get_create_story();
+
+  if (story_provider_) {
+    // TODO(afergan): Make this more robust later. For now, we
+    // always assume that there's extra info and that it's a color.
+    f1dl::Map<f1dl::String, f1dl::String> extra_info;
+    char hex_color[11];
+    sprintf(hex_color, "0x%x", story_color);
+    extra_info["color"] = hex_color;
+    auto& initial_data = create_story->initial_data;
+    auto& module_id = create_story->module_id;
+    story_provider_->CreateStoryWithInfo(
+        create_story->module_id, std::move(extra_info), std::move(initial_data),
+        [this, module_id](const f1dl::String& story_id) {
+          modular::StoryControllerPtr story_controller;
+          story_provider_->GetController(story_id,
+                                         story_controller.NewRequest());
+          FXL_LOG(INFO) << "Creating story with module " << module_id;
+
+          story_controller->GetInfo(fxl::MakeCopyable(
+              // TODO(thatguy): We should not be std::move()ing
+              // story_controller *while we're calling it*.
+              [ this, controller = std::move(story_controller) ](
+                  modular::StoryInfoPtr story_info, modular::StoryState state) {
+                FXL_LOG(INFO) << "Requesting focus for story_id "
+                              << story_info->id;
+                focus_provider_ptr_->Request(story_info->id);
+              }));
+        });
+  } else {
+    FXL_LOG(WARNING) << "Unable to add module; no story provider";
+  }
+}
+
+void SuggestionEngineImpl::PerformFocusStoryAction(const ActionPtr& action) {
+  const auto& focus_story = action->get_focus_story();
+  FXL_LOG(INFO) << "Requesting focus for story_id " << focus_story->story_id;
+  focus_provider_ptr_->Request(focus_story->story_id);
+}
+
+void SuggestionEngineImpl::PerformAddModuleToStoryAction(
+    const ActionPtr& action) {
+  if (story_provider_) {
+    const auto& add_module_to_story = action->get_add_module_to_story();
+    const auto& story_id = add_module_to_story->story_id;
+    const auto& module_name = add_module_to_story->module_name;
+    const auto& module_url = add_module_to_story->module_url;
+    const auto& link_name = add_module_to_story->link_name;
+    const auto& module_path = add_module_to_story->module_path;
+    const auto& surface_relation = add_module_to_story->surface_relation;
+
+    FXL_LOG(INFO) << "Adding module " << module_url << " to story " << story_id;
+
+    modular::StoryControllerPtr story_controller;
+    story_provider_->GetController(story_id, story_controller.NewRequest());
+    if (!add_module_to_story->initial_data.is_null()) {
+      modular::LinkPtr link;
+      story_controller->GetLink(module_path.Clone(), link_name,
+                                link.NewRequest());
+      link->Set(nullptr /* json_path */, add_module_to_story->initial_data);
+    }
+
+    story_controller->AddModule(module_path.Clone(), module_name, module_url,
+                                link_name, surface_relation.Clone());
+  } else {
+    FXL_LOG(WARNING) << "Unable to add module; no story provider";
+  }
+}
+
+void SuggestionEngineImpl::PerformAddModuleAction(
+    const ActionPtr& action,
+    const std::string& source_url) {
+  if (story_provider_) {
+    const auto& add_module = action->get_add_module();
+    const auto& module_name = add_module->module_name;
+    const auto& story_id = add_module->story_id;
+    modular::StoryControllerPtr story_controller;
+    story_provider_->GetController(story_id, story_controller.NewRequest());
+    story_controller->AddDaisy({source_url}, module_name,
+                               add_module->daisy.Clone(),
+                               add_module->surface_relation.Clone());
+  } else {
+    FXL_LOG(WARNING) << "Unable to add module; no story provider";
+  }
+}
+
+void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
+                                               const std::string& source_url,
+                                               uint32_t story_color) {
+  auto custom_action = action->get_custom_action().Bind();
+  custom_action->Execute(fxl::MakeCopyable([
+    this, custom_action = std::move(custom_action), source_url, story_color
+  ](f1dl::Array<maxwell::ActionPtr> actions) {
+    if (actions)
+      PerformActions(std::move(actions), source_url, story_color);
+  }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {

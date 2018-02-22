@@ -4,6 +4,7 @@
 
 module maxwell;
 
+import "lib/daisy/fidl/daisy.fidl";
 import "lib/suggestion/fidl/suggestion_display.fidl";
 import "lib/surface/fidl/surface.fidl";
 
@@ -51,7 +52,10 @@ union ExpiryCondition {
 union Action {
   CreateStory create_story;
   FocusStory focus_story;
+  // This action is deprectaed, please use the Daisy based AddModule action
+  // instead.
   AddModuleToStory add_module_to_story;
+  AddModule add_module;
   CustomAction custom_action;
 
   // TODO(thatguy): Add other actions.
@@ -106,6 +110,23 @@ struct AddModuleToStory {
   array<string> module_path;
 
   // Advise the framework on how to layout the newly added module.
+  modular.SurfaceRelation surface_relation;
+};
+
+// Adds a module from a Daisy to an existing story.
+struct AddModule {
+  // The identifier of the story that the Daisy is to be added to.
+  string story_id;
+
+  // The name of the module that will be added as a result of this proposal.
+  // A proposal for the same |story_id| and |module_name| from the same Agent
+  // will result in replacing the module at |module_name|, not adding a new one.
+  string module_name;
+
+  // The Daisy that is to be added to the story.
+  modular.Daisy daisy;
+
+  // The relation to use when adding a module as a result of resolving the Daisy.
   modular.SurfaceRelation surface_relation;
 };
 
