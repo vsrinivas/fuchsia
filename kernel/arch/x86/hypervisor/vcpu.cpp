@@ -309,6 +309,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
                                  kProcbasedCtlsIoExiting |
                                  // Enable use of MSR bitmaps.
                                  kProcbasedCtlsMsrBitmaps |
+                                 // Enable VM exit on pause instruction.
+                                 kProcbasedCtlsPauseExiting |
                                  // Enable secondary processor-based controls.
                                  kProcbasedCtlsProcbasedCtls2,
                              // Disable VM exit on CR3 load.

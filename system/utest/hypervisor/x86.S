@@ -84,6 +84,11 @@ FUNCTION(vcpu_hlt_start)
     hlt
 FUNCTION(vcpu_hlt_end)
 
+FUNCTION(vcpu_pause_start)
+    pause
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION(vcpu_pause_end)
+
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)
     add $1, %rax

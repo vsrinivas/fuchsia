@@ -815,6 +815,13 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
     return ZX_OK;
 }
 
+static zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
+    next_rip(exit_info, vmcs);
+    vmcs->Invalidate();
+    thread_reschedule();
+    return ZX_OK;
+}
+
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, PvClockState* pvclock,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
@@ -851,6 +858,8 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, vmcs, guest_state);
+    case ExitReason::PAUSE:
+        return handle_pause(exit_info, vmcs);
     case ExitReason::EXCEPTION:
         // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
         // and handled by host via IDT as any other interrupt/exception.

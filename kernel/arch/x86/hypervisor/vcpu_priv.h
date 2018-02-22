@@ -38,6 +38,7 @@ static const uint32_t kProcbasedCtlsCr8StoreExiting     = 1u << 20;
 static const uint32_t kProcbasedCtlsTprShadow           = 1u << 21;
 static const uint32_t kProcbasedCtlsIoExiting           = 1u << 24;
 static const uint32_t kProcbasedCtlsMsrBitmaps          = 1u << 28;
+static const uint32_t kProcbasedCtlsPauseExiting        = 1u << 30;
 static const uint32_t kProcbasedCtlsProcbasedCtls2      = 1u << 31;
 
 // PINBASED_CTLS flags.
