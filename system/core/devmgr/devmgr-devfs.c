@@ -333,8 +333,7 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
         const char* name = dev->name;
         size_t namelen = 0;
 
-        if ((dev->protocol_id != ZX_PROTOCOL_MISC) &&
-            (dev->protocol_id != ZX_PROTOCOL_CONSOLE)) {
+        if (dev->protocol_id != ZX_PROTOCOL_CONSOLE) {
 
             for (unsigned n = 0; n < 1000; n++) {
                 snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
