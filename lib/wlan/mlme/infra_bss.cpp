@@ -59,6 +59,21 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     return ZX_OK;
 }
 
+void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
+                                       RemoteClient::StateId to) {
+    debugfn();
+    ZX_DEBUG_ASSERT(clients_.Has(client));
+
+    // If client enters deauthenticated state after being authenticated, remove client.
+    if (to == RemoteClient::StateId::kDeauthenticated &&
+        from != RemoteClient::StateId::kUninitialized) {
+        auto status = clients_.Remove(client);
+        if (status != ZX_OK) {
+            errorf("[infra-bss] couldn't remove client %s: %d\n", MACSTR(client), status);
+        }
+    }
+}
+
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
     debugfn();
     auto status = clients_.AssignAid(client, out_aid);

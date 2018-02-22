@@ -20,7 +20,7 @@ namespace wlan {
 class ObjectId;
 
 // An infrastructure BSS which keeps track of its client and owned by the AP MLME.
-class InfraBss : public BssInterface, public FrameHandler {
+class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::Listener {
    public:
     InfraBss(DeviceInterface* device, const common::MacAddr& bssid)
         : bssid_(bssid), device_(device) {
@@ -42,7 +42,10 @@ class InfraBss : public BssInterface, public FrameHandler {
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    // TODO(hahnr): Remove clients which reported to be deauthenticated.
+
+    // RemoteClient::Listener implementation
+    void HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
+                                 RemoteClient::StateId to) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
