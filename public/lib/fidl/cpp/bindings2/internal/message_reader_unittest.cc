@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/cpp/loop.h>
 #include <zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings2/internal/message_reader.h"
-#include "lib/fidl/cpp/test/loop_config.h"
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 
 namespace fidl {
 namespace internal {
@@ -80,7 +79,7 @@ TEST(MessageReader, Control) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   EXPECT_FALSE(reader.is_bound());
   zx_handle_t saved = h1.get();
@@ -136,7 +135,7 @@ TEST(MessageReader, HandlerError) {
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -160,7 +159,7 @@ TEST(MessageReader, HandlerErrorWithoutErrorHandler) {
   MessageReader reader;
   reader.set_message_handler(&handler);
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -185,7 +184,7 @@ TEST(MessageReader, HandlerStop) {
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -218,7 +217,7 @@ TEST(MessageReader, HandlerStop) {
 
 TEST(MessageReader, BindTwice) {
   MessageReader reader;
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2, j1, j2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -244,7 +243,7 @@ TEST(MessageReader, WaitAndDispatchOneMessageUntilErrors) {
             reader.WaitAndDispatchOneMessageUntil(zx::time()));
   EXPECT_EQ(0, error_count);
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -296,7 +295,7 @@ TEST(MessageReader, UnbindDuringHandler) {
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -349,7 +348,7 @@ TEST(MessageReader, ShouldWaitFromRead) {
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
   EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
@@ -399,7 +398,7 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   int error_count = 0;
   reader.set_error_handler([&error_count] { ++error_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
   EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
@@ -428,7 +427,7 @@ TEST(MessageReader, NoHandler) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
   EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
@@ -450,7 +449,7 @@ TEST(MessageReader, Reset) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
   EXPECT_TRUE(reader.is_bound());
@@ -478,7 +477,7 @@ TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
   MessageReader reader2;
   reader2.set_message_handler(&handler2);
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));

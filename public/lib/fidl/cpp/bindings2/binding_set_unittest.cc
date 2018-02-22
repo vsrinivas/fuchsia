@@ -5,9 +5,9 @@
 #include "lib/fidl/cpp/bindings2/binding_set.h"
 
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator_impl.h"
-#include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
 namespace {
@@ -27,7 +27,7 @@ TEST(BindingSet, Control) {
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   for (size_t i = 0; i < kCount; ++i) {
     if (i % 2 == 0) {
@@ -90,7 +90,7 @@ TEST(BindingSet, Iterator) {
 
   BindingSet<test::Frobinator> binding_set;
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   for (size_t i = 0; i < kCount; i++)
     ptrs[i] = binding_set.AddBinding(&impls[i]).Bind();
@@ -116,7 +116,7 @@ TEST(BindingSet, EmptyHandler) {
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   for (size_t i = 0; i < kCount; ++i)
     binding_set.AddBinding(&impls[i], ptrs[i].NewRequest());
@@ -154,7 +154,7 @@ TEST(BindingSet, EmptyHandlerOnManualClose) {
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   // Add the binding.
   binding_set.AddBinding(&impl, ptr.NewRequest());

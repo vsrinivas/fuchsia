@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings2/interface_handle.h"
 
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator.h"
-#include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
 namespace {
@@ -18,7 +18,7 @@ TEST(InterfaceHandle, Trivial) {
 }
 
 TEST(InterfaceHandle, InterfacePtrConversion) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorPtr ptr;
   auto request = ptr.NewRequest();
@@ -34,7 +34,7 @@ TEST(InterfaceHandle, InterfacePtrConversion) {
 }
 
 TEST(InterfaceHandle, NewRequest) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   InterfaceHandle<test::Frobinator> handle;
   EXPECT_FALSE(handle.is_valid());

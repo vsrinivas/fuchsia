@@ -4,17 +4,15 @@
 
 #include "lib/fidl/cpp/bindings2/binding.h"
 
-#include <async/loop.h>
-
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings2/interface_ptr.h"
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator_impl.h"
-#include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
 namespace {
@@ -24,7 +22,7 @@ TEST(Binding, Trivial) {
 }
 
 TEST(Binding, Control) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
   Binding<test::Frobinator> binding(&impl);
@@ -65,7 +63,7 @@ TEST(Binding, Control) {
 }
 
 TEST(Binding, Bind) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
   Binding<test::Frobinator> binding(&impl);
@@ -90,7 +88,7 @@ TEST(Binding, Bind) {
 }
 
 TEST(Binding, ConstructBound) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   InterfaceHandle<test::Frobinator> handle;
 
@@ -102,7 +100,7 @@ TEST(Binding, ConstructBound) {
 }
 
 TEST(Binding, ErrorHandler) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   InterfaceHandle<test::Frobinator> handle;
 
@@ -127,7 +125,7 @@ TEST(Binding, ErrorHandler) {
 }
 
 TEST(Binding, DestructDuringErrorHandler) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   InterfaceHandle<test::Frobinator> handle;
 
@@ -154,7 +152,7 @@ TEST(Binding, DestructDuringErrorHandler) {
 }
 
 TEST(Binding, PeerClosedTriggersErrorHandler) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   InterfaceHandle<test::Frobinator> handle;
   test::FrobinatorImpl impl;
   Binding<test::Frobinator> binding(&impl, handle.NewRequest());
@@ -172,7 +170,7 @@ TEST(Binding, PeerClosedTriggersErrorHandler) {
 }
 
 TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
   InterfaceHandle<test::Frobinator> handle;
   test::FrobinatorImpl impl;
   Binding<test::Frobinator> binding(&impl, handle.NewRequest());

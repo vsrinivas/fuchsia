@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/cpp/loop.h>
 #include <fidl/cpp/message_buffer.h>
 #include <fidl/cpp/message_builder.h>
 #include <zx/channel.h>
@@ -10,8 +9,8 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings2/internal/proxy_controller.h"
 #include "lib/fidl/cpp/bindings2/string.h"
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/bindings2/test/fidl_types.h"
-#include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
 namespace internal {
@@ -34,7 +33,7 @@ TEST(ProxyController, Send) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
@@ -60,7 +59,7 @@ TEST(ProxyController, Callback) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
@@ -107,7 +106,7 @@ TEST(ProxyController, BadSend) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
@@ -141,7 +140,7 @@ TEST(ProxyController, BadReply) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
@@ -177,7 +176,7 @@ TEST(ProxyController, ShortReply) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
@@ -212,7 +211,7 @@ TEST(ProxyController, Move) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller1;
   EXPECT_EQ(ZX_OK, controller1.reader().Bind(std::move(h1)));
@@ -263,7 +262,7 @@ TEST(ProxyController, Reset) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));

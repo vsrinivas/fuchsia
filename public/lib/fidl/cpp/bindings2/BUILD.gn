@@ -44,7 +44,19 @@ source_set("bindings2") {
   public_configs = [ "//garnet/public:config" ]
 }
 
-executable("fidl_bindings2_unittests") {
+source_set("bindings2_test_support") {
+  testonly = true
+
+  sources = [
+    "test/async_loop_for_test.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async-default",
+  ]
+}
+
+source_set("bindings2_test_sources") {
   testonly = true
 
   sources = [
@@ -65,10 +77,27 @@ executable("fidl_bindings2_unittests") {
 
   deps = [
     ":bindings2",
+    ":bindings2_test_support",
     "//garnet/public/lib/fidl/cpp/bindings2/test",
+    "//third_party/gtest",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+executable("fidl_bindings2_unittests") {
+  testonly = true
+
+  sources = [
+    "test/async_loop_for_test.cc",
+  ]
+
+  deps = [
+    ":bindings2_test_sources",
     "//garnet/public/lib/fidl/cpp/test",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/gtest",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/fbl",
   ]
 }

@@ -8,9 +8,9 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings2/binding.h"
+#include "lib/fidl/cpp/bindings2/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator.h"
 #include "lib/fidl/cpp/bindings2/test/frobinator_impl.h"
-#include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {
 namespace {
@@ -20,7 +20,7 @@ TEST(InterfacePtr, Trivial) {
 }
 
 TEST(InterfacePtr, Control) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
   Binding<test::Frobinator> binding(&impl);
@@ -46,7 +46,7 @@ TEST(InterfacePtr, Control) {
 }
 
 TEST(InterfacePtr, MoveWithOutstandingTransaction) {
-  async::Loop loop(&kTestLoopConfig);
+  fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
