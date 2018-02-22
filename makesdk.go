@@ -172,8 +172,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			armBuildDir + "images/fvm.blk",
-			"target/aarch64/fvm.blk",
+			armBuildDir + "images/fvm.blk.qcow2",
+			"target/aarch64/fvm.blk.qcow2",
 		},
 
 		{
@@ -198,8 +198,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			x86BuildDir + "images/fvm.blk",
-			"target/x86_64/fvm.blk",
+			x86BuildDir + "images/fvm.blk.qcow2",
+			"target/x86_64/fvm.blk.qcow2",
 		},
 		{
 			kernelImg,
