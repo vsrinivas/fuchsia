@@ -5,7 +5,7 @@
 
 ### configure jiri to manage a specific fuchsia layer cake
 
-## usage: fx set-layer garnet|peridot|topaz
+## usage: fx set-layer zircon|garnet|peridot|topaz
 ## Configures jiri to fetch the source code for the given layer and its
 ## dependencies.
 
