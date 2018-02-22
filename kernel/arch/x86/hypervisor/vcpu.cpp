@@ -673,11 +673,6 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
         return status == ZX_ERR_NOT_FOUND ? ZX_OK : status;
     }
 
-    if (vector == X86_INT_IPI_HALT) {
-        // Short circuit HALT IPIs so we can be sure the VCPU will exit.
-        return ZX_ERR_STOP;
-    }
-
     if (vector <= X86_INT_MAX_INTEL_DEFINED ||
         vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
         // If the vector is non-maskable or interrupts are enabled, we inject
