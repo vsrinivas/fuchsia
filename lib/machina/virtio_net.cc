@@ -111,7 +111,7 @@ zx_status_t VirtioNet::Start(const char* path) {
   }
 
   FXL_LOG(INFO) << "Polling device " << path << " for Ethernet frames";
-  return ZX_ERR_STOP;
+  return ZX_OK;
 }
 
 zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
