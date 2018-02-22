@@ -119,8 +119,9 @@ class SourceLibrary(object):
 
     def __init__(self, name):
         self.name = name
+        self.includes = {}
         self.include_dirs = set()
-        self.sources = []
+        self.sources = {}
         self.deps = []
         self.libs = set()
 
@@ -133,13 +134,13 @@ def generate_source_library(package, context):
     # Includes.
     for name, path in package.get('includes', {}).iteritems():
         (file, folder) = extract_file(name, path, context)
-        data.sources.append('//%s' % file)
+        data.includes[name] = '//%s' % file
         data.include_dirs.add('//%s' % folder)
 
     # Source files.
     for name, path in package.get('src', {}).iteritems():
         (file, _) = extract_file(name, path, context)
-        data.sources.append('//%s' % file)
+        data.sources[name] = '//%s' % file
 
     # Dependencies.
     data.deps += filter_deps(package.get('deps', []))

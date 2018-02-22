@@ -102,6 +102,8 @@ sdk_atom("${data.name}_sdk") {
     "arch:target",
   ]
 
+  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+
   files = [
     % for dest, source in sorted(data.includes.iteritems()):
     {
@@ -110,12 +112,12 @@ sdk_atom("${data.name}_sdk") {
     },
     % endfor
     {
-      source = "${data.prebuilt}"
+      source = "$shared_out_dir/${data.lib_name}"
       dest = "lib/${data.lib_name}"
       packaged = true
     },
     {
-      source = "${data.debug_prebuilt}"
+      source = "$shared_out_dir/lib.unstripped/${data.lib_name}"
       dest = "debug/${data.lib_name}"
     },
   ]
@@ -124,5 +126,9 @@ sdk_atom("${data.name}_sdk") {
     % for dep in sorted(data.deps):
     "../${dep}:${dep}_sdk",
     % endfor
+  ]
+
+  non_sdk_deps = [
+    ":${data.name}",
   ]
 }

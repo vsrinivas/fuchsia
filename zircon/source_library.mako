@@ -1,6 +1,6 @@
 <%include file="header.mako" />
 
-import("//build/cpp/sdk_source_set.gni")
+import("//build/sdk/sdk_atom.gni")
 
 config("${data.name}_config") {
   include_dirs = [
@@ -14,10 +14,12 @@ config("${data.name}_config") {
   ]
 }
 
-sdk_source_set("${data.name}") {
-
+source_set("${data.name}") {
   sources = [
-    % for source in sorted(data.sources):
+    % for _, source in sorted(data.sources.iteritems()):
+    "${source}",
+    % endfor
+    % for _, source in sorted(data.includes.iteritems()):
     "${source}",
     % endfor
   ]
@@ -40,5 +42,35 @@ sdk_source_set("${data.name}") {
 
   defines = [
     "_ALL_SOURCE=1",
+  ]
+}
+
+sdk_atom("${data.name}_sdk") {
+  domain = "c-pp"
+  name = "${data.name}"
+
+  tags = [
+    "type:source_set",
+  ]
+
+  files = [
+    % for dest, source in sorted(data.includes.iteritems()):
+    {
+      source = "${source}"
+      dest = "include/${dest}"
+    },
+    % endfor
+    % for dest, source in sorted(data.sources.iteritems()):
+    {
+      source = "${source}"
+      dest = "${dest}"
+    },
+    % endfor
+  ]
+
+  package_deps = [
+    % for dep in sorted(data.deps):
+    "../${dep}:${dep}_sdk",
+    % endfor
   ]
 }
