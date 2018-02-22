@@ -5,8 +5,6 @@
 [DartPackage="modular"]
 module modular;
 
-import "lib/module/fidl/link_path.fidl";
-
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
 struct Daisy {
