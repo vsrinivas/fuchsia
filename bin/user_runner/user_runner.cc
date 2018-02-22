@@ -13,18 +13,28 @@
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
+fxl::AutoCall<fxl::Closure> SetupCobalt(
+    const bool disable_statistics,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    app::ApplicationContext* const application_context) {
+  if (disable_statistics) {
+    return fxl::MakeAutoCall<fxl::Closure>([] {});
+  }
+  return modular::InitializeCobalt(task_runner, application_context);
+}
+
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-
   std::unique_ptr<app::ApplicationContext> app_context =
       app::ApplicationContext::CreateFromStartupInfo();
-  fxl::AutoCall<fxl::Closure> cobalt_cleanup = modular::InitializeCobalt(
-      std::move(loop.task_runner()),
-      app_context.get());
+
+  fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
+      test, std::move(loop.task_runner()), app_context.get());
+
   modular::AppDriver<modular::UserRunnerImpl> driver(
       app_context->outgoing_services(),
       std::make_unique<modular::UserRunnerImpl>(app_context.get(), test),
