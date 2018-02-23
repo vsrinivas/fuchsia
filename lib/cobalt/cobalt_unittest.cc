@@ -170,7 +170,7 @@ class CobaltTest : public gtest::TestWithMessageLoop {
           app_launcher_request_ = std::move(request);
         });
     return std::make_unique<app::ApplicationContext>(
-        service_provider.OpenAsDirectory(), zx::channel(), nullptr);
+        service_provider.OpenAsDirectory(), zx::channel());
   }
 
   app::ServiceProviderBridge service_provider;
