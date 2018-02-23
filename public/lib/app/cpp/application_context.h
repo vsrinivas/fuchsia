@@ -26,8 +26,7 @@ class ApplicationContext {
  public:
   // The constructor is normally called by CreateFromStartupInfo().
   ApplicationContext(zx::channel service_root,
-                     zx::channel service_request,
-                     fidl::InterfaceRequest<ServiceProvider> outgoing_services);
+                     zx::channel service_request);
 
   ~ApplicationContext();
 

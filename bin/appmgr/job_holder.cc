@@ -62,12 +62,6 @@ std::vector<const char*> GetArgv(const std::string& argv0,
   return argv;
 }
 
-zx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
-  if (launch_info->services)
-    return launch_info->services.TakeChannel();
-  return zx::channel();
-}
-
 // The very first nested environment process we create gets the
 // PA_SERVICE_REQUEST given to us by our parent. It's slightly awkward that we
 // don't publish the root environment's services. We should consider
@@ -122,12 +116,6 @@ zx::process CreateProcess(const zx::job& job,
 
   std::vector<uint32_t> ids;
   std::vector<zx_handle_t> handles;
-
-  zx::channel app_services = TakeAppServices(launch_info);
-  if (app_services) {
-    ids.push_back(PA_APP_SERVICES);
-    handles.push_back(app_services.release());
-  }
 
   zx::channel service_request = std::move(launch_info->service_request);
   if (service_request) {

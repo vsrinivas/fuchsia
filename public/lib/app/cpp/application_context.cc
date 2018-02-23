@@ -22,10 +22,8 @@ constexpr char kServiceRootPath[] = "/svc";
 
 ApplicationContext::ApplicationContext(
     zx::channel service_root,
-    zx::channel service_request,
-    fidl::InterfaceRequest<ServiceProvider> outgoing_services)
-    : outgoing_services_(std::move(outgoing_services)),
-      service_root_(std::move(service_root)) {
+    zx::channel service_request)
+    : service_root_(std::move(service_root)) {
   ConnectToEnvironmentService(environment_.NewRequest());
   ConnectToEnvironmentService(launcher_.NewRequest());
 
@@ -47,10 +45,8 @@ ApplicationContext::CreateFromStartupInfo() {
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfoNotChecked() {
   zx_handle_t service_request = zx_get_startup_handle(PA_SERVICE_REQUEST);
-  zx_handle_t services = zx_get_startup_handle(PA_APP_SERVICES);
   return std::make_unique<ApplicationContext>(
-      subtle::CreateStaticServiceRootHandle(), zx::channel(service_request),
-      fidl::InterfaceRequest<ServiceProvider>(zx::channel(services)));
+      subtle::CreateStaticServiceRootHandle(), zx::channel(service_request));
 }
 
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
@@ -69,8 +65,7 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
 
   return std::make_unique<ApplicationContext>(
       std::move(service_root),
-      std::move(startup_info->launch_info->service_request),
-      std::move(startup_info->launch_info->services));
+      std::move(startup_info->launch_info->service_request));
 }
 
 void ApplicationContext::ConnectToEnvironmentService(
