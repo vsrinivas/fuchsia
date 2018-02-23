@@ -63,10 +63,12 @@
 // Clock Control
 #define AXG_HIU_BASE_PHYS 0xff63c000
 
-#define AXG_HHI_GCLK_MPEG0 0x50
-#define AXG_HHI_GCLK_MPEG1 0x51
-#define AXG_HHI_GCLK_MPEG2 0x52
-#define AXG_HHI_GCLK_AO    0x55
+#define AXG_HHI_PCIE_PLL_CNTL6   0x3C
+#define AXG_HHI_GCLK_MPEG0       0x50
+#define AXG_HHI_GCLK_MPEG1       0x51
+#define AXG_HHI_GCLK_MPEG2       0x52
+#define AXG_HHI_GCLK_AO          0x55
+#define AXG_HHI_MPEG_CLK_CNTL    0x5D
 
 typedef enum axg_clk_gate_idx {
     // MPEG0 Reg Clocks
@@ -120,6 +122,10 @@ typedef enum axg_clk_gate_idx {
     CLK_AXG_AO_AHB_BUS,
     CLK_AXG_AO_IFACE,
     CLK_AXG_AO_I2C,
+
+    // Etc...
+    CLK_AXG_CLK81,
+    CLK_CML0_EN,
 
     // NB: This must be the last entry
     CLK_AXG_COUNT,

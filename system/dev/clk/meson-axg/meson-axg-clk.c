@@ -69,13 +69,17 @@ static const axg_clk_gate_t axg_clk_gates[] = {
     {.reg = AXG_HHI_GCLK_MPEG2, .bit = 25},    // CLK_AXG_VPU_INTR
     {.reg = AXG_HHI_GCLK_MPEG2, .bit = 26},    // CLK_AXG_SEC_AHB_AHB3_BRIDGE
     {.reg = AXG_HHI_GCLK_MPEG2, .bit = 30},    // CLK_AXG_GIC
-    
+
     // AO Domain Clock Gates
     {.reg = AXG_HHI_GCLK_AO, .bit = 0},       // CLK_AXG_AO_MEDIA_CPU
     {.reg = AXG_HHI_GCLK_AO, .bit = 1},       // CLK_AXG_AO_AHB_SRAM
     {.reg = AXG_HHI_GCLK_AO, .bit = 2},       // CLK_AXG_AO_AHB_BUS
     {.reg = AXG_HHI_GCLK_AO, .bit = 3},       // CLK_AXG_AO_IFACE
     {.reg = AXG_HHI_GCLK_AO, .bit = 4},       // CLK_AXG_AO_I2C
+
+    // Etc...
+    {.reg = AXG_HHI_MPEG_CLK_CNTL, .bit = 7},     // CLK_AXG_CLK81
+    {.reg = AXG_HHI_PCIE_PLL_CNTL6, .bit = 4},    // CLK_CML0_EN
 };
 
 static_assert(CLK_AXG_COUNT == countof(axg_clk_gates),
