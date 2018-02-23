@@ -64,9 +64,9 @@ Example: `driver.usb-audio.disable`
 Set the log flags for a driver.  Flags are one or more comma-separated
 values which must be preceeded by a "+" (in which case that flag is enabled)
 or a "-" (in which case that flag is disabled).  The textual constants
-"error", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4"
+"error", "warn", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4"
 may be used, and they map to the corresponding bits in DDK_LOG_... in `ddk/debug.h`
-The default log flags for a driver is "error" and "info".
+The default log flags for a driver is "error", "warn", and "info".
 
 Individual drivers may define their own log flags beyond the eight mentioned
 above.
