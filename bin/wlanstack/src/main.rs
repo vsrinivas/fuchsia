@@ -67,8 +67,9 @@ fn main_res() -> Result<(), Error> {
     let services_server = ServicesServer::new()
         .add_service({
             let devmgr = devmgr.clone();
+            let handle = handle.clone();
             move || {
-                let server = service::DeviceServiceServer::new(devmgr.clone());
+                let server = service::DeviceServiceServer::new(devmgr.clone(), &handle);
                 DeviceService::Dispatcher(server)
             }
         })

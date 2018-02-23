@@ -3,20 +3,26 @@
 // found in the LICENSE file.
 
 use device;
+use failure::Error;
 use fidl;
 use futures::future;
-use wlan_service::{self, DeviceService};
+use tokio_core::reactor;
+use wlan_service::{self, DeviceListener, DeviceService};
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct DeviceServiceServer {
     devmgr: Rc<RefCell<device::DeviceManager>>,
+    handle: reactor::Handle,
 }
 
 impl DeviceServiceServer {
-    pub fn new(devmgr: Rc<RefCell<device::DeviceManager>>) -> Self {
-        DeviceServiceServer { devmgr: devmgr }
+    pub fn new(devmgr: Rc<RefCell<device::DeviceManager>>, handle: &reactor::Handle) -> Self {
+        DeviceServiceServer {
+            devmgr: devmgr,
+            handle: handle.clone(),
+        }
     }
 }
 
@@ -56,5 +62,29 @@ impl DeviceService::Server for DeviceServiceServer {
             Ok(_) => future::ok(()),
             Err(_) => future::err(fidl::CloseChannel),
         }
+    }
+
+    type RegisterListener = future::FutureResult<(), fidl::CloseChannel>;
+    fn register_listener(
+        &mut self,
+        listener: fidl::InterfacePtr<fidl::ClientEnd<DeviceListener::Service>>,
+    ) -> Self::RegisterListener {
+        info!("register listener");
+        if let Ok(proxy) = DeviceListener::new_proxy(listener.inner, &self.handle) {
+            self.devmgr.borrow_mut().add_listener(Box::new(proxy));
+            future::ok(())
+        } else {
+            future::err(fidl::CloseChannel)
+        }
+    }
+}
+
+impl device::EventListener for DeviceListener::Proxy {
+    fn on_phy_added(&self, id: u16) -> Result<(), Error> {
+        DeviceListener::Client::on_phy_added(self, id).map_err(|e| e.into())
+    }
+
+    fn on_phy_removed(&self, id: u16) -> Result<(), Error> {
+        DeviceListener::Client::on_phy_removed(self, id).map_err(|e| e.into())
     }
 }

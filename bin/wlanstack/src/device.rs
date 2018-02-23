@@ -31,9 +31,21 @@ impl PhyDevice {
     }
 }
 
+/// Called by the `DeviceManager` in response to device events.
+pub trait EventListener {
+    /// Called when a phy device is added. On error, the listener is removed from the
+    /// `DeviceManager`.
+    fn on_phy_added(&self, id: u16) -> Result<(), Error>;
+
+    /// Called when a phy device is removed. On error, the listener is removed from the
+    /// `DeviceManager`.
+    fn on_phy_removed(&self, id: u16) -> Result<(), Error>;
+}
+
 /// Manages the wlan devices used by the wlanstack.
 pub struct DeviceManager {
     phys: HashMap<u16, PhyDevice>,
+    listeners: Vec<Box<EventListener>>,
 }
 
 impl DeviceManager {
@@ -41,15 +53,21 @@ impl DeviceManager {
     pub fn new() -> Self {
         DeviceManager {
             phys: HashMap::new(),
+            listeners: Vec::new(),
         }
     }
 
     fn add_phy(&mut self, phy: PhyDevice) {
+        let id = phy.id;
         self.phys.insert(phy.id, phy);
+        self.listeners
+            .retain(|listener| listener.on_phy_added(id).is_ok());
     }
 
     fn rm_phy(&mut self, id: u16) {
         self.phys.remove(&id);
+        self.listeners
+            .retain(|listener| listener.on_phy_removed(id).is_ok());
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
@@ -77,6 +95,17 @@ impl DeviceManager {
     pub fn destroy_iface(&mut self, phy_id: u16, iface_id: u16) -> Result<(), Error> {
         let phy = self.phys.get(&phy_id).ok_or(zx::Status::INVALID_ARGS)?;
         phy.dev.destroy_iface(iface_id).map_err(|e| e.into())
+    }
+
+    /// Adds an `EventListener`. The event methods will be called for each existing object tracked
+    /// by this device manager.
+    pub fn add_listener(&mut self, listener: Box<EventListener>) {
+        if self.phys
+            .values()
+            .all(|ref phy| listener.on_phy_added(phy.id).is_ok())
+        {
+            self.listeners.push(listener);
+        }
     }
 }
 
