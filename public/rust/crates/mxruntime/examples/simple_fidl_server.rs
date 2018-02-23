@@ -24,7 +24,7 @@ fn write_le32(buf: &mut [u8], val: u32) {
 }
 
 fn main() {
-    let h1 = get_startup_handle(HandleType::OutgoingServices)
+    let h1 = get_startup_handle(HandleType::ServiceRequest)
         .expect("couldn't get outgoing services handle");
     // wait for ConnectToService request
     let c1 = Channel::from(h1);
