@@ -38,6 +38,9 @@ struct Name {
     explicit Name(std::unique_ptr<raw::Identifier> name)
         : name_(std::move(name)) {}
 
+    Name(Name&&) = default;
+    Name& operator=(Name&&) = default;
+
     const raw::Identifier* get() const { return name_.get(); }
 
     bool operator<(const Name& other) const {
@@ -48,15 +51,35 @@ private:
     std::unique_ptr<raw::Identifier> name_;
 };
 
-struct Const {
-    Const(Name name, std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Constant> value)
-        : name(std::move(name)), type(std::move(type)), value(std::move(value)) {}
+struct Decl {
+    virtual ~Decl() {}
+
+    enum struct Kind {
+        kConst,
+        kEnum,
+        kInterface,
+        kStruct,
+        kUnion,
+    };
+
+    Decl(Kind kind, Name name)
+        : kind(kind), name(std::move(name)) {}
+
+    Decl(Decl&&) = default;
+    Decl& operator=(Decl&&) = default;
+
+    const Kind kind;
     Name name;
+};
+
+struct Const : public Decl {
+    Const(Name name, std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Constant> value)
+        : Decl(Kind::kConst, std::move(name)), type(std::move(type)), value(std::move(value)) {}
     std::unique_ptr<raw::Type> type;
     std::unique_ptr<raw::Constant> value;
 };
 
-struct Enum {
+struct Enum : public Decl {
     struct Member {
         Member(Name name, std::unique_ptr<raw::Constant> value)
             : name(std::move(name)), value(std::move(value)) {}
@@ -65,14 +88,13 @@ struct Enum {
     };
 
     Enum(Name name, std::unique_ptr<raw::PrimitiveType> type, std::vector<Member> members)
-        : name(std::move(name)), type(std::move(type)), members(std::move(members)) {}
+        : Decl(Kind::kEnum, std::move(name)), type(std::move(type)), members(std::move(members)) {}
 
-    Name name;
     std::unique_ptr<raw::PrimitiveType> type;
     std::vector<Member> members;
 };
 
-struct Interface {
+struct Interface : public Decl {
     struct Method {
         struct Parameter {
             Parameter(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name)
@@ -108,13 +130,12 @@ struct Interface {
     };
 
     Interface(Name name, std::vector<Method> methods)
-        : name(std::move(name)), methods(std::move(methods)) {}
+        : Decl(Kind::kInterface, std::move(name)), methods(std::move(methods)) {}
 
-    Name name;
     std::vector<Method> methods;
 };
 
-struct Struct {
+struct Struct : public Decl {
     struct Member {
         Member(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name,
                std::unique_ptr<raw::Constant> maybe_default_value)
@@ -128,15 +149,14 @@ struct Struct {
     };
 
     Struct(Name name, std::vector<Member> members)
-        : name(std::move(name)), members(std::move(members)) {}
+        : Decl(Kind::kStruct, std::move(name)), members(std::move(members)) {}
 
-    Name name;
     std::vector<Member> members;
     // TODO(TO-758) Compute this.
     uint64_t size = 8;
 };
 
-struct Union {
+struct Union : public Decl {
     struct Member {
         Member(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name)
             : type(std::move(type)), name(std::move(name)) {}
@@ -147,9 +167,8 @@ struct Union {
     };
 
     Union(Name name, std::vector<Member> members)
-        : name(std::move(name)), members(std::move(members)) {}
+        : Decl(Kind::kUnion, std::move(name)), members(std::move(members)) {}
 
-    Name name;
     std::vector<Member> members;
     // TODO(TO-758) Compute this.
     uint64_t size = 8;
