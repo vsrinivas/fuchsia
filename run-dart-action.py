@@ -86,7 +86,7 @@ Extra flags will be passed to the supporting Dart tool if applicable.
 
     tree = args.tree
     if args.action == 'analyze':
-        tree = '%s(//build/dart/config:dartlang)' % tree
+        tree = '%s(//build/dart:dartlang)' % tree
 
     # Ask gn about all the dart analyzer scripts.
     scripts = []
