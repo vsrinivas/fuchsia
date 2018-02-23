@@ -67,7 +67,7 @@
 + [port_create](syscalls/port_create.md) - create a port
 + [port_queue](syscalls/port_queue.md) - send a packet to a port
 + [port_wait](syscalls/port_wait.md) - wait for packets to arrive on a port
-+ [port_cancel](syscalls/port_cancel.md) - cancel notificaitons from async_wait
++ [port_cancel](syscalls/port_cancel.md) - cancel notifications from async_wait
 
 ## Futexes
 + [futex_wait](syscalls/futex_wait.md) - wait on a futex
