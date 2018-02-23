@@ -44,6 +44,15 @@ func primitiveType(kind types.PrimitiveSubtype) types.Type {
 	}
 }
 
+func arrayType(elementType types.Type, elementCount int) types.Type {
+	countConst := numericLiteral(elementCount)
+	return types.Type{
+		Kind:         types.ArrayType,
+		ElementType:  &elementType,
+		ElementCount: &countConst,
+	}
+}
+
 func compileExpect(t *testing.T, testName string, input types.Root, expect Root) {
 	t.Run(testName, func(t *testing.T) {
 		actual := Compile(input)
@@ -111,6 +120,36 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "int8",
 					Name: "Test",
+				},
+			},
+		},
+	})
+
+	compileStructsExpect(t, "Struct with array types", []types.Struct{
+		{
+			Name: types.Identifier("Test"),
+			Members: []types.StructMember{
+				{
+					Type: arrayType(primitiveType(types.Uint8), 10),
+					Name: types.Identifier("Flat"),
+				},
+				{
+					Type: arrayType(arrayType(primitiveType(types.Bool), 1), 27),
+					Name: types.Identifier("Nested"),
+				},
+			},
+		},
+	}, []Struct{
+		{
+			Name: "Test",
+			Members: []StructMember{
+				{
+					Type: "[10]uint8",
+					Name: "Flat",
+				},
+				{
+					Type: "[27][1]bool",
+					Name: "Nested",
 				},
 			},
 		},

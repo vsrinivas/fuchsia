@@ -5,6 +5,7 @@
 package ir
 
 import (
+	"fmt"
 	"log"
 
 	"fidl/compiler/backend/common"
@@ -197,9 +198,11 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 
 func compileType(val types.Type) Type {
 	var r Type
-	// TODO(mknyszek): Support arrays, vectors, strings, handles, requests,
-	// and identifiers.
+	// TODO(mknyszek): Support vectors, strings, handles, requests and identifiers.
 	switch val.Kind {
+	case types.ArrayType:
+		t := compileType(*val.ElementType)
+		r = Type(fmt.Sprintf("[%s]%s", compileConstant(*val.ElementCount), t))
 	case types.PrimitiveType:
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:
