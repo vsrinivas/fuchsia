@@ -4,6 +4,7 @@
 members =  [
   "bin/device_settings",
   "bin/logger",
+  "bin/wlancfg",
   "bin/wlanstack",
   "bin/wlantool",
   "drivers/wlan/testing/util",
