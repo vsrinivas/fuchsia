@@ -5,8 +5,10 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_
 
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
@@ -35,7 +37,7 @@ class NextProcessor {
                       const std::string& proposal_id);
 
   // Reranks suggestions if dirty and updates listeners
-  void Validate();
+  void UpdateRanking(const ContextUpdatePtr& context_update);
 
   // Notify the listeners of new suggestions
   void NotifyAllOfResults();

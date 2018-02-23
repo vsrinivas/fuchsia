@@ -81,15 +81,18 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_ =
       suggestion_services_.ConnectToService<maxwell::SuggestionEngine>();
 
-  // Generate a ContextWriter to pass to the SuggestionEngine.
+  // Generate a ContextWriter and ContextReader to pass to the SuggestionEngine.
+  f1dl::InterfaceHandle<ContextReader> context_reader;
   f1dl::InterfaceHandle<ContextWriter> context_writer;
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
-  context_engine_->GetWriter(std::move(scope), context_writer.NewRequest());
+  context_engine_->GetWriter(scope.Clone(), context_writer.NewRequest());
+  context_engine_->GetReader(scope.Clone(), context_reader.NewRequest());
 
   suggestion_engine_->Initialize(Duplicate(story_provider_),
                                  Duplicate(focus_provider_),
-                                 std::move(context_writer));
+                                 std::move(context_writer),
+                                 std::move(context_reader));
 
   StartActionLog(suggestion_engine_.get());
 }

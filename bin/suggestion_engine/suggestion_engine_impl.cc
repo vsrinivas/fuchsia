@@ -5,6 +5,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/time/time_delta.h"
@@ -23,8 +24,12 @@
 
 namespace maxwell {
 
+namespace {
+constexpr char kContextListenerStoriesKey[] = "stories";
+}
+
 SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
-    : next_processor_(this) {
+    : next_processor_(this), context_listener_binding_(this) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](f1dl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -122,8 +127,8 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
                                                    std::move(input), count);
 }
 
-void SuggestionEngineImpl::Validate() {
-  next_processor_.Validate();
+void SuggestionEngineImpl::UpdateRanking() {
+  next_processor_.UpdateRanking(latest_context_update_);
 }
 
 // |SuggestionProvider|
@@ -184,7 +189,7 @@ void SuggestionEngineImpl::NotifyInteraction(
       RemoveNextProposal(suggestion->prototype->source_url, proposal->id);
     }
 
-    Validate();
+    UpdateRanking();
   } else {
     FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
                      << suggestion_uuid;
@@ -217,12 +222,28 @@ void SuggestionEngineImpl::RegisterQueryHandler(
 void SuggestionEngineImpl::Initialize(
     f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
     f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    f1dl::InterfaceHandle<ContextWriter> context_writer) {
+    f1dl::InterfaceHandle<ContextWriter> context_writer,
+    f1dl::InterfaceHandle<ContextReader> context_reader) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
   context_writer_.Bind(std::move(context_writer));
+  context_reader_.Bind(std::move(context_reader));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
+
+  // Get context updates every time a story is focused to rerank suggestions
+  // based on the story that is focused at the moment.
+  auto query = ContextQuery::New();
+  auto selector = ContextSelector::New();
+  selector->type = ContextValueType::MODULE;
+  selector->meta = ContextMetadata::New();
+  selector->meta->story = StoryMetadata::New();
+  selector->meta->story->focused = FocusedState::New();
+  selector->meta->story->focused->state = FocusedState::State::FOCUSED;
+  AddToContextQuery(query.get(), kContextListenerStoriesKey,
+                    std::move(selector));
+  context_reader_->Subscribe(
+      std::move(query), context_listener_binding_.NewBinding());
 }
 
 // end SuggestionEngine
@@ -450,6 +471,11 @@ void SuggestionEngineImpl::HandleMediaUpdates(
           HandleMediaUpdates(next_version, std::move(next_status));
         });
   }
+}
+
+void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
+  latest_context_update_ = std::move(update);
+  UpdateRanking();
 }
 
 }  // namespace maxwell

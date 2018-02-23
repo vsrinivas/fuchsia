@@ -13,8 +13,10 @@ RankingFeature::RankingFeature() = default;
 RankingFeature::~RankingFeature() = default;
 
 double RankingFeature::ComputeFeature(const UserInput& query,
-                                      const RankedSuggestion& suggestion) {
-  const double feature = ComputeFeatureInternal(query, suggestion);
+                                      const RankedSuggestion& suggestion,
+                                      const ContextUpdatePtr& context_update) {
+  const double feature = ComputeFeatureInternal(
+      query, suggestion, context_update);
   FXL_CHECK(feature <= kMaxConfidence);
   FXL_CHECK(feature >= kMinConfidence);
   return feature;

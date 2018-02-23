@@ -5,12 +5,14 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_
 
-#include "lib/suggestion/fidl/user_input.fidl.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
-#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
-
 #include <functional>
 #include <vector>
+
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/suggestion/fidl/user_input.fidl.h"
+
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace maxwell {
 using MatchPredicate =
@@ -26,7 +28,8 @@ class RankedSuggestionsList {
 
   void AddRankingFeature(double weight,
                          std::shared_ptr<RankingFeature> ranking_feature);
-  void Rank(const UserInput& query = UserInput());
+  void Rank(const UserInput& query = UserInput(),
+            const ContextUpdatePtr& context_update = nullptr);
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 

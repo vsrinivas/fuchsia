@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
 
+#include "lib/context/fidl/context_reader.fidl.h"
+
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
 namespace maxwell {
@@ -15,8 +17,9 @@ class KronkRankingFeature : public RankingFeature {
   ~KronkRankingFeature() override;
 
  protected:
-  double ComputeFeatureInternal(const UserInput& query,
-                                const RankedSuggestion& suggestion) override;
+  double ComputeFeatureInternal(
+      const UserInput& query, const RankedSuggestion& suggestion,
+      const ContextUpdatePtr& context_update) override;
 };
 
 }  // namespace maxwell

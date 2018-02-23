@@ -60,12 +60,14 @@ void RankedSuggestionsList::AddRankingFeature(
     normalization_factor_ += weight;
 }
 
-void RankedSuggestionsList::Rank(const UserInput& query) {
+void RankedSuggestionsList::Rank(
+    const UserInput& query, const ContextUpdatePtr& context_update) {
   for (auto& suggestion : suggestions_) {
     double confidence = 0.0;
     for (auto& feature : ranking_features_) {
       confidence +=
-          feature.first * feature.second->ComputeFeature(query, *suggestion);
+          feature.first *
+          feature.second->ComputeFeature(query, *suggestion, context_update);
     }
     // TODO(jwnichols): Reconsider this normalization approach.
     // Weights may be negative, so there is some chance that the calculated

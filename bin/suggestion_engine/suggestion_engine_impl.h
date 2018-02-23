@@ -24,6 +24,7 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
@@ -69,7 +70,8 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 //
 // 3) Acts as a SuggestionProvider for those wishing to subscribe to
 //    Suggestions.
-class SuggestionEngineImpl : public SuggestionEngine,
+class SuggestionEngineImpl : public ContextListener,
+                             public SuggestionEngine,
                              public SuggestionProvider {
  public:
   SuggestionEngineImpl(app::ApplicationContext* app_context);
@@ -138,10 +140,11 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // |SuggestionEngine|
   void Initialize(f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
                   f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
-                  f1dl::InterfaceHandle<ContextWriter> context_writer) override;
+                  f1dl::InterfaceHandle<ContextWriter> context_writer,
+                  f1dl::InterfaceHandle<ContextReader> context_reader) override;
 
   // re-ranks dirty channels and dispatches updates
-  void Validate();
+  void UpdateRanking();
 
   void Terminate(std::function<void()> done) { done(); }
 
@@ -200,6 +203,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void HandleMediaUpdates(uint64_t version,
                           media::MediaTimelineControlPointStatusPtr status);
 
+  // |ContextListener|
+  void OnContextUpdate(ContextUpdatePtr update) override;
+
   f1dl::BindingSet<SuggestionEngine> bindings_;
   f1dl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
   f1dl::BindingSet<SuggestionDebug> debug_bindings_;
@@ -246,6 +252,14 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // The ContextWriter that publishes the current user query to the
   // ContextEngine.
   ContextWriterPtr context_writer_;
+
+  // The context reader that is used to rank suggestions using the current
+  // context.
+  ContextReaderPtr context_reader_;
+  f1dl::Binding<ContextListener> context_listener_binding_;
+
+  // Latest context update received.
+  ContextUpdatePtr latest_context_update_;
 
   std::unique_ptr<QueryProcessor> active_query_;
 

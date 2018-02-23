@@ -5,7 +5,9 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
 
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
+
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
 namespace maxwell {
@@ -21,12 +23,14 @@ class RankingFeature {
   // Compute the numeric value for a feature, ensuring bounds on the result
   // in the range of [0.0,1.0]
   double ComputeFeature(const UserInput& query,
-                        const RankedSuggestion& suggestion);
+                        const RankedSuggestion& suggestion,
+                        const ContextUpdatePtr& context_update);
 
  protected:
   // Compute the numeric feature for a feature, to be overridden by subclasses
-  virtual double ComputeFeatureInternal(const UserInput& query,
-                                        const RankedSuggestion& suggestion) = 0;
+  virtual double ComputeFeatureInternal(
+      const UserInput& query, const RankedSuggestion& suggestion,
+      const ContextUpdatePtr& context_update) = 0;
 };
 
 }  // namespace maxwell

@@ -44,6 +44,7 @@ executable("bin") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
@@ -97,6 +98,7 @@ source_set("state") {
     ":models",
     ":ranking",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
   ]
 }

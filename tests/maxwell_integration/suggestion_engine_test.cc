@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -199,14 +200,18 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     focus_provider_handle.NewRequest();
 
     f1dl::InterfaceHandle<maxwell::ContextWriter> context_writer_handle;
+    f1dl::InterfaceHandle<maxwell::ContextReader> context_reader_handle;
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
     context_engine()->GetWriter(std::move(scope),
                                 context_writer_handle.NewRequest());
+    context_engine()->GetReader(std::move(scope),
+                                context_reader_handle.NewRequest());
 
     suggestion_engine()->Initialize(std::move(story_provider_handle),
                                     std::move(focus_provider_handle),
-                                    std::move(context_writer_handle));
+                                    std::move(context_writer_handle),
+                                    std::move(context_reader_handle));
   }
 
  protected:
