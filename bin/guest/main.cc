@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
   }
 
   machina::Guest guest;
-  status = guest.Init(options.memory(), &loop);
+  status = guest.Init(options.memory());
   if (status != ZX_OK)
     return status;
 

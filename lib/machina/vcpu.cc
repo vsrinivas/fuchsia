@@ -310,9 +310,7 @@ zx_status_t Vcpu::Loop() {
     }
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to resume VCPU-" << id_ << ": " << status;
-      guest_->Shutdown();
-      SetState(State::ERROR_FAILED_TO_RESUME);
-      return status;
+      exit(status);
     }
 
     status = handle_packet(this, &packet);
@@ -323,9 +321,7 @@ zx_status_t Vcpu::Loop() {
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to handle guest packet " << packet.type << ": "
                      << status;
-      guest_->Shutdown();
-      SetState(State::ERROR_ABORTED);
-      return status;
+      exit(status);
     }
   }
 }
