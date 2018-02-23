@@ -11,19 +11,21 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
+#include <lib/zx/time.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
-#include <lib/zx/time.h>
 #include <zxcrypt/volume.h>
 
 #include "test-device.h"
@@ -33,6 +35,9 @@
 namespace zxcrypt {
 namespace testing {
 namespace {
+
+// No test step should take longer than this
+const zx::duration kTimeout = zx::sec(3);
 
 // Takes a given |result|, e.g. from an ioctl, and translates into a zx_status_t.
 zx_status_t ToStatus(ssize_t result) {
@@ -79,7 +84,9 @@ bool BindAndOpen(const fbl::unique_fd& parent, const char* child, const char* dr
 
 } // namespace
 
-TestDevice::TestDevice() : block_count_(0), block_size_(0), client_(nullptr) {
+TestDevice::TestDevice()
+    : block_count_(0), block_size_(0), client_(nullptr), tid_(0), need_join_(false), wake_after_(0),
+      wake_deadline_(0) {
     memset(ramdisk_path_, 0, sizeof(ramdisk_path_));
     memset(fvm_part_path_, 0, sizeof(fvm_part_path_));
     memset(&req_, 0, sizeof(req_));
@@ -88,8 +95,10 @@ TestDevice::TestDevice() : block_count_(0), block_size_(0), client_(nullptr) {
 TestDevice::~TestDevice() {
     Disconnect();
     ramdisk_.reset();
-    if (strlen(ramdisk_path_) != 0) {
-        destroy_ramdisk(ramdisk_path_);
+    DestroyRamdisk();
+    if (need_join_) {
+        int res;
+        thrd_join(tid_, &res);
     }
 }
 
@@ -153,6 +162,60 @@ bool TestDevice::Rebind() {
 
     ASSERT_TRUE(Connect());
     END_HELPER;
+}
+
+bool TestDevice::SleepUntil(uint64_t num, bool deferred) {
+    BEGIN_HELPER;
+    fbl::AutoLock lock(&lock_);
+    ASSERT_EQ(wake_after_, 0);
+    ASSERT_NE(num, 0);
+    wake_after_ = num;
+    wake_deadline_ = zx::deadline_after(kTimeout);
+    ASSERT_EQ(thrd_create(&tid_, TestDevice::WakeThread, this), thrd_success);
+    need_join_ = true;
+    if (deferred) {
+        uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
+        ASSERT_OK(ToStatus(ioctl_ramdisk_set_flags(ramdisk_.get(), &flags)));
+    }
+    uint64_t sleep_after = 0;
+    ASSERT_OK(ToStatus(ioctl_ramdisk_sleep_after(ramdisk_.get(), &sleep_after)));
+    END_HELPER;
+}
+
+bool TestDevice::WakeUp() {
+    BEGIN_HELPER;
+    if (need_join_) {
+        fbl::AutoLock lock(&lock_);
+        ASSERT_NE(wake_after_, 0);
+        int res;
+        ASSERT_EQ(thrd_join(tid_, &res), thrd_success);
+        need_join_ = false;
+        wake_after_ = 0;
+        EXPECT_EQ(res, 0);
+    }
+    END_HELPER;
+}
+
+int TestDevice::WakeThread(void* arg) {
+    TestDevice* device = static_cast<TestDevice*>(arg);
+    fbl::AutoLock lock(&device->lock_);
+
+    // Always send a wake-up call; even if we failed to go to sleep.
+    auto cleanup = fbl::MakeAutoCall([&] { ioctl_ramdisk_wake_up(device->ramdisk_.get()); });
+
+    // Loop until timeout, |wake_after_| txns received, or error getting counts
+    ramdisk_txn_counts_t counts;
+    ssize_t res;
+    do {
+        zx::nanosleep(zx::deadline_after(zx::msec(100)));
+        if (device->wake_deadline_ < zx::clock::get(ZX_CLOCK_MONOTONIC)) {
+            return ZX_ERR_TIMED_OUT;
+        }
+        if ((res = ioctl_ramdisk_get_txn_counts(device->ramdisk_.get(), &counts)) < 0) {
+            return static_cast<zx_status_t>(res);
+        }
+    } while (counts.received < device->wake_after_);
+    return ZX_OK;
 }
 
 bool TestDevice::ReadFd(zx_off_t off, size_t len) {
@@ -230,6 +293,13 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     block_count_ = count;
 
     END_HELPER;
+}
+
+void TestDevice::DestroyRamdisk() {
+    if (strlen(ramdisk_path_) != 0) {
+        destroy_ramdisk(ramdisk_path_);
+        ramdisk_path_[0] = '\0';
+    }
 }
 
 // Creates a ramdisk, formats it, and binds to it.

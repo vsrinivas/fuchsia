@@ -17,12 +17,12 @@
 #include <ddktl/protocol/block.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/types.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/types.h>
 
 #include "extra.h"
 #include "worker.h"
@@ -39,10 +39,6 @@ using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::GetSizable, ddk::Unb
 // cryptographic transformations.
 class Device final : public DeviceType, public ddk::BlockProtocol<Device> {
 public:
-    // Maximum number of outstanding block operations.  The amount of memory used to buffer these
-    // operations will be |kNumOps| blocks.
-    static const size_t kMaxOps = 2048;
-
     explicit Device(zx_device_t* parent);
     ~Device();
 
@@ -99,29 +95,28 @@ private:
     void FinishTaskLocked() __TA_REQUIRES(mtx_);
 
     // Scans the VMO for |len| blocks not in use, and returns the found VMO offset in |out|. If
-    // |len| blocks cannot be found, it returns ZX_ERR_SHOULD_WAIT.
-    zx_status_t AcquireBlocks(uint64_t len, uint64_t* out) __TA_EXCLUDES(mtx_);
+    // |len| blocks cannot be found, it adds the block to an internal queue and returns
+    // ZX_ERR_SHOULD_WAIT.  In this case, the block can be re-queued using |BlockRequeue| when
+    // resources are available.
+    zx_status_t BlockAcquire(block_op_t* block, uint64_t* out_off);
 
-    // Marks the blocks from |off| to |off + len| as available.  Signals waiting callers if
-    // |AcquireBlocks| previously returned ZX_ERR_SHOULD_WAIT.
-    void ReleaseBlocks(uint64_t off, uint64_t len) __TA_EXCLUDES(mtx_);
+    // Scans the VMO for |len| blocks not in use, and returns the found VMO offset in |out|. If
+    // |len| blocks cannot be found, it returns ZX_ERR_SHOULD_WAIT.
+    zx_status_t BlockAcquireLocked(uint64_t len, uint64_t* out) __TA_REQUIRES(mtx_);
+
+    // Attempts to acquire resources for a previously deferred request.  Returns:
+    //  |ZX_ERR_NEXT| if successful and |ProcessBlock| can be called with |out_block| and |out_off|.
+    //  |ZX_ERR_STOP| if there are no outstanding deferred requests
+    //  |ZX_ERR_SHOULD_WAIT| if there still aren't enough resources available.
+    zx_status_t BlockRequeue(block_op_t** out_block, uint64_t* out_off);
 
     // Take a |block|, associate with the memory reserved for it as indicated by the given |offset|,
     // and send it to a worker.
     void ProcessBlock(block_op_t* block, uint64_t offset) __TA_EXCLUDES(mtx_);
 
-    // Defer this |block| request until later, due to insufficient memory for cryptographic
-    // transformations.
-    void EnqueueBlock(block_op_t* block) __TA_EXCLUDES(mtx_);
-
-    // Returns a previously deferred block request, in the order they were submitted via
-    // |EnqueueBlock|.
-    block_op_t* DequeueBlock() __TA_EXCLUDES(mtx_);
-
-    // Defers a previously deferred |block| request again, because there still aren't enough
-    // resources available.  This differs from |EnqueueBlock| as |block| will be the next item
-    // returned by |DequeueBlock|.
-    void RequeueBlock(block_op_t* block) __TA_EXCLUDES(mtx_);
+    // Marks the blocks from |off| to |off + len| as available.  Signals waiting callers if
+    // |AcquireBlocks| previously returned ZX_ERR_SHOULD_WAIT.
+    void ReleaseBlocks(uint64_t off, uint64_t len) __TA_EXCLUDES(mtx_);
 
     // Unsynchronized fields
 
@@ -134,8 +129,6 @@ private:
         block_info_t blk;
         // Indicates if the underlying device is an FVM partition.
         bool has_fvm;
-        // The size of mapped VMO used to work on I/O transactions.
-        size_t mapped_len;
         // The length of the reserved metadata, in bytes.
         uint64_t offset_dev;
         // The parent device's required block_op_t size.
@@ -173,7 +166,7 @@ private:
     uint8_t* base_;
 
     // Indicates which ops (and corresponding blocks in the VMO) are in use.
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxOps>> map_ __TA_GUARDED(mtx_);
+    bitmap::RawBitmapGeneric<bitmap::DefaultStorage> map_ __TA_GUARDED(mtx_);
     // Offset in the bitmap of the most recently allocated bit.
     size_t last_ __TA_GUARDED(mtx_);
 

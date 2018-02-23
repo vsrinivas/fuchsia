@@ -15,15 +15,15 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
+#include <lib/zx/port.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-#include <lib/zx/port.h>
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
 #include <zxcrypt/volume.h>
 
 #include "device.h"
@@ -34,12 +34,6 @@
 
 namespace zxcrypt {
 namespace {
-
-// TODO(aarongreen): See ZX-1616.  Tune this value.  Possibly break into several smaller VMOs if we
-// want to allow some to be recycled; support for this doesn't currently exist. Up to 64 MB may be
-// in flight at once.  max_transfer_size will be capped at 1/4 of this value.
-const uint64_t kVmoSize = 1UL << 24;
-static_assert(kVmoSize % PAGE_SIZE == 0, "kVmoSize must be PAGE_SIZE aligned");
 
 // Kick off |Init| thread when binding.
 int InitThread(void* arg) {
@@ -122,27 +116,26 @@ zx_status_t Device::Init() {
     info->proto.ops->query(info->proto.ctx, &blk, &info->op_size);
 
     // Save device sizes
-    if (info->blk.max_transfer_size == 0 || info->blk.max_transfer_size > kVmoSize / 4) {
-        info->blk.max_transfer_size = kVmoSize / 4;
+    if (info->blk.max_transfer_size == 0 || info->blk.max_transfer_size > Volume::kBufferSize / 4) {
+        info->blk.max_transfer_size = Volume::kBufferSize / 4;
     }
-    info->mapped_len = info->blk.block_size * kMaxOps;
     info->offset_dev = Volume::kReservedSlices * (fvm_.slice_size / info->blk.block_size);
     info->op_size += sizeof(extra_op_t);
     info->scale = info->blk.block_size / blk.block_size;
 
     // Reserve space for shadow I/O transactions
-    if ((rc = zx::vmo::create(info->mapped_len, 0, &info->vmo)) != ZX_OK) {
+    if ((rc = zx::vmo::create(Volume::kBufferSize, 0, &info->vmo)) != ZX_OK) {
         xprintf("zx::vmo::create failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    if ((rc = zx::vmar::root_self().map(0, info->vmo, 0, info->mapped_len,
+    if ((rc = zx::vmar::root_self().map(0, info->vmo, 0, Volume::kBufferSize,
                                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapped_)) !=
         ZX_OK) {
         xprintf("zx::vmar::map failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     base_ = reinterpret_cast<uint8_t*>(mapped_);
-    if ((rc = map_.Reset(kMaxOps)) != ZX_OK) {
+    if ((rc = map_.Reset(Volume::kBufferSize / info->blk.block_size)) != ZX_OK) {
         xprintf("bitmap allocation failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -287,9 +280,9 @@ void Device::DdkRelease() {
 
         workers_[i].Stop();
     }
-    if (mapped_ != 0 && (rc = zx::vmar::root_self().unmap(mapped_, info_->mapped_len)) != ZX_OK) {
-        xprintf("WARNING: failed to unmap %zu bytes at %" PRIuPTR ": %s\n", info_->mapped_len,
-                mapped_, zx_status_get_string(rc));
+    if (mapped_ != 0 && (rc = zx::vmar::root_self().unmap(mapped_, Volume::kBufferSize)) != ZX_OK) {
+        xprintf("WARNING: failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n",
+                Volume::kBufferSize, mapped_, zx_status_get_string(rc));
     }
     fbl::unique_ptr<DeviceInfo> info(const_cast<DeviceInfo*>(info_));
     info_ = nullptr;
@@ -339,8 +332,7 @@ void Device::BlockQueue(block_op_t* block) {
         block->completion_cb(block, ZX_ERR_INVALID_ARGS);
         return;
     }
-    if (block->rw.offset_dev >= info_->blk.block_count ||
-        info_->blk.block_count < end) {
+    if (block->rw.offset_dev >= info_->blk.block_count || info_->blk.block_count < end) {
         xprintf("[%" PRIu64 ", %" PRIu64 "] is not wholly within device\n", block->rw.offset_dev,
                 end);
         block->completion_cb(block, ZX_ERR_OUT_OF_RANGE);
@@ -349,13 +341,12 @@ void Device::BlockQueue(block_op_t* block) {
 
     // Reserve space to do cryptographic transformations
     uint64_t off;
-    rc = AcquireBlocks(block->rw.length, &off);
+    rc = BlockAcquire(block, &off);
     switch (rc) {
     case ZX_OK:
         ProcessBlock(block, off);
         break;
-    case ZX_ERR_NO_RESOURCES:
-        EnqueueBlock(block);
+    case ZX_ERR_SHOULD_WAIT:
         break;
     default:
         block->completion_cb(block, rc);
@@ -394,17 +385,18 @@ void Device::BlockRelease(block_op_t* block, zx_status_t rc) {
     ReleaseBlocks(off, len);
 
     // Try to re-visit any requests we had to defer.
-    while ((block = DequeueBlock())) {
-        rc = AcquireBlocks(block->rw.length, &off);
-        switch (rc) {
-        case ZX_OK:
+    while (true) {
+        switch ((rc = BlockRequeue(&block, &off))) {
+        case ZX_ERR_STOP:
+        case ZX_ERR_SHOULD_WAIT:
+            // Stop processing
+            return;
+        case ZX_ERR_NEXT:
             ProcessBlock(block, off);
-            break;
-        case ZX_ERR_NO_RESOURCES:
-            RequeueBlock(block);
             break;
         default:
             block->completion_cb(block, rc);
+            break;
         }
     }
 }
@@ -442,8 +434,27 @@ void Device::FinishTaskLocked() {
     }
 }
 
-zx_status_t Device::AcquireBlocks(uint64_t len, uint64_t* out) {
+zx_status_t Device::BlockAcquire(block_op_t* block, uint64_t* out_off) {
+    zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
+
+    extra_op_t* extra = BlockToExtra(block);
+    extra->next = nullptr;
+    if (tail_) {
+        tail_->next = extra;
+        tail_ = extra;
+        return ZX_ERR_SHOULD_WAIT;
+    }
+    if ((rc = BlockAcquireLocked(block->rw.length, out_off)) == ZX_ERR_SHOULD_WAIT) {
+        head_ = extra;
+        tail_ = extra;
+        return rc;
+    }
+
+    return rc;
+}
+
+zx_status_t Device::BlockAcquireLocked(uint64_t len, uint64_t* out) {
     zx_status_t rc;
 
     if ((rc = AddTaskLocked()) != ZX_OK) {
@@ -458,6 +469,9 @@ zx_status_t Device::AcquireBlocks(uint64_t len, uint64_t* out) {
     } else if ((rc = map_.Find(false, last_, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES) {
         rc = map_.Find(false, 0, last_, len, &off);
     }
+    if (rc == ZX_ERR_NO_RESOURCES) {
+        return ZX_ERR_SHOULD_WAIT;
+    }
 
     // Reserve space in the map
     if (rc != ZX_OK || (rc = map_.Set(off, off + len)) != ZX_OK) {
@@ -471,15 +485,25 @@ zx_status_t Device::AcquireBlocks(uint64_t len, uint64_t* out) {
     return ZX_OK;
 }
 
-void Device::ReleaseBlocks(uint64_t off, uint64_t len) {
+zx_status_t Device::BlockRequeue(block_op_t** out_block, uint64_t* out_off) {
     zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
 
-    if ((rc = map_.Clear(off, off + len)) != ZX_OK) {
-        xprintf("warning: could not clear [%zu, %zu]: %s\n", off, off + len,
-                zx_status_get_string(rc));
+    if (!head_) {
+        return ZX_ERR_STOP;
     }
-    FinishTaskLocked();
+    extra_op_t* extra = head_;
+    block_op_t* block = ExtraToBlock(extra);
+    if ((rc = BlockAcquireLocked(block->rw.length, out_off)) != ZX_OK) {
+        return rc;
+    }
+    if (!extra->next) {
+        tail_ = nullptr;
+    }
+    head_ = extra->next;
+    *out_block = block;
+
+    return ZX_ERR_NEXT;
 }
 
 void Device::ProcessBlock(block_op_t* block, uint64_t off) {
@@ -514,40 +538,15 @@ void Device::ProcessBlock(block_op_t* block, uint64_t off) {
     }
 }
 
-void Device::EnqueueBlock(block_op_t* block) {
-    fbl::AutoLock lock(&mtx_);
-    extra_op_t* extra = BlockToExtra(block);
-    extra->next = nullptr;
-    if (tail_) {
-        tail_->next = extra;
-    } else {
-        head_ = extra;
-    }
-    tail_ = extra;
-}
-
-block_op_t* Device::DequeueBlock() {
+void Device::ReleaseBlocks(uint64_t off, uint64_t len) {
+    zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
 
-    if (!head_) {
-        return nullptr;
+    if ((rc = map_.Clear(off, off + len)) != ZX_OK) {
+        xprintf("warning: could not clear [%zu, %zu]: %s\n", off, off + len,
+                zx_status_get_string(rc));
     }
-    extra_op_t* extra = head_;
-    if (!extra->next) {
-        tail_ = nullptr;
-    }
-    head_ = extra->next;
-    return ExtraToBlock(extra);
-}
-
-void Device::RequeueBlock(block_op_t* block) {
-    fbl::AutoLock lock(&mtx_);
-    extra_op_t* extra = BlockToExtra(block);
-    extra->next = head_;
-    head_ = extra;
-    if (!tail_) {
-        tail_ = extra;
-    }
+    FinishTaskLocked();
 }
 
 } // namespace zxcrypt

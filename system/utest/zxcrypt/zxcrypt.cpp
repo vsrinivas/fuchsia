@@ -14,6 +14,7 @@
 #include <fvm/fvm.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
+#include <zircon/device/ramdisk.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
@@ -464,6 +465,36 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(TestVmoManyToOne);
 
+bool TestVmoStall(Volume::Version version, bool fvm) {
+    BEGIN_TEST;
+    TestDevice device;
+    ASSERT_TRUE(device.Bind(version, fvm));
+    fbl::unique_fd zxcrypt = device.zxcrypt();
+
+    // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
+    // internally.
+    block_info_t zxcrypt_blk;
+    EXPECT_GE(ioctl_block_get_info(zxcrypt.get(), &zxcrypt_blk), 0);
+    size_t max = Volume::kBufferSize / device.block_size();
+    size_t num = max + 1;
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
+    ASSERT_TRUE(ac.check());
+    for (size_t i = 0; i < num; ++i) {
+        requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
+        requests[i].length = 1;
+        requests[i].dev_offset = 0;
+        requests[i].vmo_offset = 0;
+    }
+
+    EXPECT_TRUE(device.SleepUntil(max, true /* defer transactions */));
+    EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
+    EXPECT_TRUE(device.WakeUp());
+
+    END_TEST;
+}
+DEFINE_EACH_DEVICE(TestVmoStall);
+
 // TODO(aarongreen): Currently, we're using XTS, which provides no data integrity.  When possible,
 // we should switch to an AEAD, which would allow us to detect data corruption when doing I/O.
 // bool TestBadData(void) {
@@ -493,6 +524,7 @@ RUN_EACH_DEVICE(TestVmoAllBlocks)
 RUN_EACH_DEVICE(TestVmoOutOfBounds)
 RUN_EACH_DEVICE(TestVmoOneToMany)
 RUN_EACH_DEVICE(TestVmoManyToOne)
+RUN_EACH_DEVICE(TestVmoStall)
 END_TEST_CASE(ZxcryptTest)
 
 } // namespace

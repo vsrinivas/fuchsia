@@ -6,15 +6,18 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <block-client/client.h>
 #include <fbl/macros.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fvm/fvm.h>
+#include <lib/zx/vmo.h>
+#include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <lib/zx/vmo.h>
 
 #include "crypto/utils.h"
 
@@ -99,6 +102,15 @@ public:
         return ::block_fifo_txn(client_, &req_, 1);
     }
 
+    // Sends |num| requests over the block fifo to read or write blocks.
+    zx_status_t block_fifo_txn(block_fifo_request_t* requests, size_t num) {
+        for (size_t i = 0; i < num; ++i) {
+            requests[i].txnid = req_.txnid;
+            requests[i].vmoid = req_.vmoid;
+        }
+        return ::block_fifo_txn(client_, requests, num);
+    }
+
     // TEST HELPERS
 
     // Allocates a new block device of at least |device_size| bytes grouped into blocks of
@@ -113,6 +125,13 @@ public:
 
     // Test helper that rebinds the ramdisk and its children.
     bool Rebind();
+
+    // Tells the underlying ramdisk to sleep until |num| transactions have been received.  If
+    // |deferred| is true, the transactions will be handled on waking; else they will be failed.
+    bool SleepUntil(uint64_t num, bool deferred) __TA_EXCLUDES(lock_);
+
+    // Blocks until the ramdisk is awake.
+    bool WakeUp() __TA_EXCLUDES(lock_);
 
     // Test helpers that perform a |lseek| and a |read| or |write| together. |off| and |len| are in
     // bytes.  |ReadFd| additionally checks that the data read matches what was written.
@@ -137,6 +156,9 @@ private:
     // bytes, and opens it.
     bool CreateRamdisk(size_t device_size, size_t block_size);
 
+    // Destroys the ramdisk, killing any active transactions
+    void DestroyRamdisk();
+
     // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
     // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
     // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
@@ -147,6 +169,9 @@ private:
 
     // Disconnects the block client from the block server.
     bool Disconnect();
+
+    // Thread body to wake up the underlying ramdisk.
+    static int WakeThread(void* arg);
 
     // The pathname of the ramdisk
     char ramdisk_path_[PATH_MAX];
@@ -174,6 +199,16 @@ private:
     fbl::unique_ptr<uint8_t[]> to_write_;
     // An internal write buffer,  initially filled with zeros.
     fbl::unique_ptr<uint8_t[]> as_read_;
+    // Lock to coordinate waking thread
+    fbl::Mutex lock_;
+    // Thread used to manage sleeping/waking.
+    thrd_t tid_;
+    // It would be nice if thrd_t had a reserved invalid value...
+    bool need_join_;
+    // The number of transactions before waking.
+    uint64_t wake_after_ __TA_GUARDED(lock_);
+    // Timeout before waking regardless of transactions
+    zx::time wake_deadline_ __TA_GUARDED(lock_);
 };
 
 } // namespace testing

@@ -60,6 +60,10 @@ public:
     // The number of FVM-like slices reserved for volume metadata.
     static const size_t kReservedSlices;
 
+    // The amount of data that can "in-flight" to the underlying block device before the zxcrypt
+    // driver begins queuing transactions
+    static const uint32_t kBufferSize;
+
     ~Volume();
 
     ////////////////
