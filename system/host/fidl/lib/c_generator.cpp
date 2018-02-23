@@ -403,28 +403,28 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
 
 // TODO(TO-702) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
-std::vector<CGenerator::NamedConst> CGenerator::NameConsts(const std::vector<flat::Const>& const_infos) {
+std::vector<CGenerator::NamedConst> CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
     std::vector<CGenerator::NamedConst> named_consts;
     for (const auto& const_info : const_infos) {
-        named_consts.push_back({"", const_info});
+        named_consts.push_back({"", *const_info});
     }
     return named_consts;
 }
 
-std::vector<CGenerator::NamedEnum> CGenerator::NameEnums(const std::vector<flat::Enum>& enum_infos) {
+std::vector<CGenerator::NamedEnum> CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
     std::vector<CGenerator::NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
-        std::string enum_name = LongName(enum_info.name);
-        named_enums.push_back({std::move(enum_name), enum_info});
+        std::string enum_name = LongName(enum_info->name);
+        named_enums.push_back({std::move(enum_name), *enum_info});
     }
     return named_enums;
 }
 
-std::vector<CGenerator::NamedMessage> CGenerator::NameInterfaces(const std::vector<flat::Interface>& interface_infos) {
+std::vector<CGenerator::NamedMessage> CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
     std::vector<CGenerator::NamedMessage> named_messages;
     for (const auto& interface_info : interface_infos) {
-        for (const auto& method : interface_info.methods) {
-            std::string name = LongName(interface_info.name) + ShortName(method.name);
+        for (const auto& method : interface_info->methods) {
+            std::string name = LongName(interface_info->name) + ShortName(method.name);
             if (method.has_request) {
                 std::string c_name = name + "Msg";
                 std::string coded_name = name + "ReqCoded";
@@ -446,21 +446,21 @@ std::vector<CGenerator::NamedMessage> CGenerator::NameInterfaces(const std::vect
     return named_messages;
 }
 
-std::vector<CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<flat::Struct>& struct_infos) {
+std::vector<CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
     std::vector<CGenerator::NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
-        std::string c_name = LongName(struct_info.name);
-        std::string coded_name = LongName(struct_info.name) + "Coded";
-        named_structs.push_back({std::move(c_name), std::move(coded_name), struct_info});
+        std::string c_name = LongName(struct_info->name);
+        std::string coded_name = LongName(struct_info->name) + "Coded";
+        named_structs.push_back({std::move(c_name), std::move(coded_name), *struct_info});
     }
     return named_structs;
 }
 
-std::vector<CGenerator::NamedUnion> CGenerator::NameUnions(const std::vector<flat::Union>& union_infos) {
+std::vector<CGenerator::NamedUnion> CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
     std::vector<CGenerator::NamedUnion> named_unions;
     for (const auto& union_info : union_infos) {
-        std::string union_name = LongName(union_info.name);
-        named_unions.push_back({std::move(union_name), union_info});
+        std::string union_name = LongName(union_info->name);
+        named_unions.push_back({std::move(union_name), *union_info});
     }
     return named_unions;
 }

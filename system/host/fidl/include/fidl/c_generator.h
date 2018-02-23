@@ -92,11 +92,11 @@ public:
     void MaybeProduceCodingField(std::string field_name, uint32_t offset, const raw::Type* type,
                                  std::vector<coded::Field>* fields);
 
-    std::vector<NamedConst> NameConsts(const std::vector<flat::Const>& const_infos);
-    std::vector<NamedEnum> NameEnums(const std::vector<flat::Enum>& enum_infos);
-    std::vector<NamedMessage> NameInterfaces(const std::vector<flat::Interface>& interface_infos);
-    std::vector<NamedStruct> NameStructs(const std::vector<flat::Struct>& struct_infos);
-    std::vector<NamedUnion> NameUnions(const std::vector<flat::Union>& union_infos);
+    std::vector<NamedConst> NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
+    std::vector<NamedEnum> NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
+    std::vector<NamedMessage> NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
+    std::vector<NamedStruct> NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
+    std::vector<NamedUnion> NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
 
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);

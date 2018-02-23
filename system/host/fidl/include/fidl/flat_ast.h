@@ -43,12 +43,25 @@ struct Name {
 
     const raw::Identifier* get() const { return name_.get(); }
 
+    bool operator==(const Name& other) const {
+        return name_->location.data() == other.name_->location.data();
+    }
+    bool operator!=(const Name& other) const {
+        return name_->location.data() != other.name_->location.data();
+    }
+
     bool operator<(const Name& other) const {
-        return name_ < other.name_;
+        return name_->location.data() < other.name_->location.data();
     }
 
 private:
     std::unique_ptr<raw::Identifier> name_;
+};
+
+struct NamePtrCompare {
+    bool operator()(const Name* left, const Name* right) const {
+        return *left < *right;
+    }
 };
 
 struct Decl {
@@ -180,6 +193,8 @@ public:
     bool Resolve();
 
 private:
+    bool RegisterDecl(const Decl* decl);
+
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
@@ -187,7 +202,19 @@ private:
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
-    bool RegisterTypeName(const Name& name);
+    // Returns nullptr when |type| does not correspond directly to a
+    // declaration. For example, if |type| refers to int32 or if it is
+    // a struct pointer, this will return null. If it is a struct, it
+    // will return a pointer to the declaration of the type.
+    const Decl* LookupType(const raw::Type* type);
+
+    // Returns nullptr when the |identifier| cannot be resolved to a
+    // Name. Otherwise it returns the declaration.
+    const Decl* LookupType(const raw::CompoundIdentifier* identifier);
+
+    std::set<const Decl*> DeclDependencies(const Decl* decl);
+
+    bool SortDeclarations();
 
     bool ResolveConst(const Const& const_declaration);
     bool ResolveEnum(const Enum& enum_declaration);
@@ -286,18 +313,21 @@ public:
 
     std::unique_ptr<raw::Identifier> library_name_;
 
-    std::vector<Const> const_declarations_;
-    std::vector<Enum> enum_declarations_;
-    std::vector<Interface> interface_declarations_;
-    std::vector<Struct> struct_declarations_;
-    std::vector<Union> union_declarations_;
+    std::vector<std::unique_ptr<Const>> const_declarations_;
+    std::vector<std::unique_ptr<Enum>> enum_declarations_;
+    std::vector<std::unique_ptr<Interface>> interface_declarations_;
+    std::vector<std::unique_ptr<Struct>> struct_declarations_;
+    std::vector<std::unique_ptr<Union>> union_declarations_;
 
-    // TODO(TO-773) Compute this based on the DAG of aggregates
-    // including each other as members.
-    std::vector<Name> declaration_order_;
+    // All Decl pointers here are non-null and are owned by the
+    // various foo_declarations_.
+    std::vector<const Decl*> declaration_order_;
 
 private:
-    std::set<Name> registered_types_;
+    // All Name and Decl pointers here are non-null and are owned by the
+    // various foo_declarations_.
+    std::map<const Name*, const Decl*, NamePtrCompare> declarations_;
+
     std::map<Name, TypeShape> resolved_types_;
 };
 

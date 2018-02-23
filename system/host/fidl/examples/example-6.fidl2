@@ -4,7 +4,7 @@ using something;
 using my.import.path;
 using my.other.import.path as other;
 
-const int x = 23;
+const int32 x = 23;
 
 interface Hello {
   10243: Say(string req) -> (string response);

@@ -56,6 +56,8 @@ private:
     template <typename T>
     void Generate(const std::unique_ptr<T>& value);
 
+    void Generate(const flat::Decl* decl);
+
     template <typename T>
     void Generate(const std::vector<T>& value);
 

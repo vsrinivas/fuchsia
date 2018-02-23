@@ -268,6 +268,10 @@ void JSONGenerator::GenerateObjectMember(StringView key, const Type& value, Posi
     Generate(value);
 }
 
+void JSONGenerator::Generate(const flat::Decl* decl) {
+    Generate(decl->name);
+}
+
 template <typename T>
 void JSONGenerator::Generate(const std::unique_ptr<T>& value) {
     Generate(*value);
@@ -545,20 +549,20 @@ void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
         EmitObjectKey(&json_file_, indent_level_, "declarations");
         GenerateObject([&]() {
             int count = 0;
-            for (auto& decl : library_->const_declarations_)
-                GenerateDeclarationMapEntry(count++, decl.name, "const");
+            for (const auto& decl : library_->const_declarations_)
+                GenerateDeclarationMapEntry(count++, decl->name, "const");
 
-            for (auto& decl : library_->enum_declarations_)
-                GenerateDeclarationMapEntry(count++, decl.name, "enum");
+            for (const auto& decl : library_->enum_declarations_)
+                GenerateDeclarationMapEntry(count++, decl->name, "enum");
 
-            for (auto& decl : library_->interface_declarations_)
-                GenerateDeclarationMapEntry(count++, decl.name, "interface");
+            for (const auto& decl : library_->interface_declarations_)
+                GenerateDeclarationMapEntry(count++, decl->name, "interface");
 
-            for (auto& decl : library_->struct_declarations_)
-                GenerateDeclarationMapEntry(count++, decl.name, "struct");
+            for (const auto& decl : library_->struct_declarations_)
+                GenerateDeclarationMapEntry(count++, decl->name, "struct");
 
-            for (auto& decl : library_->union_declarations_)
-                GenerateDeclarationMapEntry(count++, decl.name, "union");
+            for (const auto& decl : library_->union_declarations_)
+                GenerateDeclarationMapEntry(count++, decl->name, "union");
         });
     });
     GenerateEOF();

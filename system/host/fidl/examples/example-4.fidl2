@@ -7,6 +7,6 @@ enum Enum {};
 interface Interface {
     const bool foo = true;
     const string s = "abc";
-    enum Enum {};
+    enum InnerEnum {};
     23: func(bool x) -> ();
 };
