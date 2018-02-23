@@ -89,7 +89,7 @@ public:
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
 
-    void MaybeProduceCodingField(std::string field_name, uint32_t offset, const ast::Type* type,
+    void MaybeProduceCodingField(std::string field_name, uint32_t offset, const raw::Type* type,
                                  std::vector<coded::Field>* fields);
 
     std::vector<NamedConst> NameConsts(const std::vector<flat::Const>& const_infos);

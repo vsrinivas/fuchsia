@@ -67,11 +67,11 @@ private:
     void Generate(types::Nullability value);
     void Generate(types::PrimitiveSubtype value);
 
-    void Generate(const ast::Identifier& value);
-    void Generate(const ast::CompoundIdentifier& value);
-    void Generate(const ast::Literal& value);
-    void Generate(const ast::Type& value);
-    void Generate(const ast::Constant& value);
+    void Generate(const raw::Identifier& value);
+    void Generate(const raw::CompoundIdentifier& value);
+    void Generate(const raw::Literal& value);
+    void Generate(const raw::Type& value);
+    void Generate(const raw::Constant& value);
 
     void Generate(const flat::Ordinal& value);
     void Generate(const flat::Name& value);

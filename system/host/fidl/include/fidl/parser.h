@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "ast.h"
 #include "error_reporter.h"
 #include "lexer.h"
+#include "raw_ast.h"
 
 namespace fidl {
 
@@ -17,7 +17,7 @@ class Parser {
 public:
     Parser(Lexer* lexer, ErrorReporter* error_reporter);
 
-    std::unique_ptr<ast::File> Parse() { return ParseFile(); }
+    std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
     bool Ok() const { return ok_; }
 
@@ -50,50 +50,50 @@ private:
         }
     }
 
-    bool LookupHandleSubtype(const ast::Identifier* identifier,
+    bool LookupHandleSubtype(const raw::Identifier* identifier,
                              types::HandleSubtype* subtype_out);
 
     decltype(nullptr) Fail();
 
-    std::unique_ptr<ast::Identifier> ParseIdentifier();
-    std::unique_ptr<ast::CompoundIdentifier> ParseCompoundIdentifier();
+    std::unique_ptr<raw::Identifier> ParseIdentifier();
+    std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
 
-    std::unique_ptr<ast::StringLiteral> ParseStringLiteral();
-    std::unique_ptr<ast::NumericLiteral> ParseNumericLiteral();
-    std::unique_ptr<ast::TrueLiteral> ParseTrueLiteral();
-    std::unique_ptr<ast::FalseLiteral> ParseFalseLiteral();
-    std::unique_ptr<ast::DefaultLiteral> ParseDefaultLiteral();
-    std::unique_ptr<ast::Literal> ParseLiteral();
+    std::unique_ptr<raw::StringLiteral> ParseStringLiteral();
+    std::unique_ptr<raw::NumericLiteral> ParseNumericLiteral();
+    std::unique_ptr<raw::TrueLiteral> ParseTrueLiteral();
+    std::unique_ptr<raw::FalseLiteral> ParseFalseLiteral();
+    std::unique_ptr<raw::DefaultLiteral> ParseDefaultLiteral();
+    std::unique_ptr<raw::Literal> ParseLiteral();
 
-    std::unique_ptr<ast::Constant> ParseConstant();
+    std::unique_ptr<raw::Constant> ParseConstant();
 
-    std::unique_ptr<ast::Using> ParseUsing();
+    std::unique_ptr<raw::Using> ParseUsing();
 
-    std::unique_ptr<ast::ArrayType> ParseArrayType();
-    std::unique_ptr<ast::VectorType> ParseVectorType();
-    std::unique_ptr<ast::StringType> ParseStringType();
-    std::unique_ptr<ast::HandleType> ParseHandleType();
-    std::unique_ptr<ast::PrimitiveType> ParsePrimitiveType();
-    std::unique_ptr<ast::RequestType> ParseRequestType();
-    std::unique_ptr<ast::Type> ParseType();
+    std::unique_ptr<raw::ArrayType> ParseArrayType();
+    std::unique_ptr<raw::VectorType> ParseVectorType();
+    std::unique_ptr<raw::StringType> ParseStringType();
+    std::unique_ptr<raw::HandleType> ParseHandleType();
+    std::unique_ptr<raw::PrimitiveType> ParsePrimitiveType();
+    std::unique_ptr<raw::RequestType> ParseRequestType();
+    std::unique_ptr<raw::Type> ParseType();
 
-    std::unique_ptr<ast::ConstDeclaration> ParseConstDeclaration();
+    std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration();
 
-    std::unique_ptr<ast::EnumMember> ParseEnumMember();
-    std::unique_ptr<ast::EnumDeclaration> ParseEnumDeclaration();
+    std::unique_ptr<raw::EnumMember> ParseEnumMember();
+    std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration();
 
-    std::unique_ptr<ast::Parameter> ParseParameter();
-    std::unique_ptr<ast::ParameterList> ParseParameterList();
-    std::unique_ptr<ast::InterfaceMemberMethod> ParseInterfaceMemberMethod();
-    std::unique_ptr<ast::InterfaceDeclaration> ParseInterfaceDeclaration();
+    std::unique_ptr<raw::Parameter> ParseParameter();
+    std::unique_ptr<raw::ParameterList> ParseParameterList();
+    std::unique_ptr<raw::InterfaceMemberMethod> ParseInterfaceMemberMethod();
+    std::unique_ptr<raw::InterfaceDeclaration> ParseInterfaceDeclaration();
 
-    std::unique_ptr<ast::StructMember> ParseStructMember();
-    std::unique_ptr<ast::StructDeclaration> ParseStructDeclaration();
+    std::unique_ptr<raw::StructMember> ParseStructMember();
+    std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration();
 
-    std::unique_ptr<ast::UnionMember> ParseUnionMember();
-    std::unique_ptr<ast::UnionDeclaration> ParseUnionDeclaration();
+    std::unique_ptr<raw::UnionMember> ParseUnionMember();
+    std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration();
 
-    std::unique_ptr<ast::File> ParseFile();
+    std::unique_ptr<raw::File> ParseFile();
 
     std::map<StringView, types::HandleSubtype> handle_subtype_table_;
 

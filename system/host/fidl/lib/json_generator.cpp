@@ -89,45 +89,45 @@ std::string HandleSubtypeName(types::HandleSubtype subtype) {
     }
 }
 
-std::string LiteralKindName(ast::Literal::Kind kind) {
+std::string LiteralKindName(raw::Literal::Kind kind) {
     switch (kind) {
-    case ast::Literal::Kind::String:
+    case raw::Literal::Kind::String:
         return "string";
-    case ast::Literal::Kind::Numeric:
+    case raw::Literal::Kind::Numeric:
         return "numeric";
-    case ast::Literal::Kind::True:
+    case raw::Literal::Kind::True:
         return "true";
-    case ast::Literal::Kind::False:
+    case raw::Literal::Kind::False:
         return "false";
-    case ast::Literal::Kind::Default:
+    case raw::Literal::Kind::Default:
         return "default";
     }
 }
 
-std::string TypeKindName(ast::Type::Kind kind) {
+std::string TypeKindName(raw::Type::Kind kind) {
     switch (kind) {
-    case ast::Type::Kind::Array:
+    case raw::Type::Kind::Array:
         return "array";
-    case ast::Type::Kind::Vector:
+    case raw::Type::Kind::Vector:
         return "vector";
-    case ast::Type::Kind::String:
+    case raw::Type::Kind::String:
         return "string";
-    case ast::Type::Kind::Handle:
+    case raw::Type::Kind::Handle:
         return "handle";
-    case ast::Type::Kind::Request:
+    case raw::Type::Kind::Request:
         return "request";
-    case ast::Type::Kind::Primitive:
+    case raw::Type::Kind::Primitive:
         return "primitive";
-    case ast::Type::Kind::Identifier:
+    case raw::Type::Kind::Identifier:
         return "identifier";
     }
 }
 
-std::string ConstantKindName(ast::Constant::Kind kind) {
+std::string ConstantKindName(raw::Constant::Kind kind) {
     switch (kind) {
-    case ast::Constant::Kind::Identifier:
+    case raw::Constant::Kind::Identifier:
         return "identifier";
-    case ast::Constant::Kind::Literal:
+    case raw::Constant::Kind::Literal:
         return "literal";
     }
 }
@@ -309,89 +309,89 @@ void JSONGenerator::Generate(types::PrimitiveSubtype value) {
     EmitString(&json_file_, PrimitiveSubtypeName(value));
 }
 
-void JSONGenerator::Generate(const ast::Identifier& value) {
+void JSONGenerator::Generate(const raw::Identifier& value) {
     EmitString(&json_file_, value.location.data());
 }
 
-void JSONGenerator::Generate(const ast::CompoundIdentifier& value) {
+void JSONGenerator::Generate(const raw::CompoundIdentifier& value) {
     Generate(value.components);
 }
 
-void JSONGenerator::Generate(const ast::Literal& value) {
+void JSONGenerator::Generate(const raw::Literal& value) {
     GenerateObject([&]() {
         GenerateObjectMember("kind", LiteralKindName(value.kind), Position::First);
 
         switch (value.kind) {
-        case ast::Literal::Kind::String: {
-            auto type = static_cast<const ast::StringLiteral*>(&value);
+        case raw::Literal::Kind::String: {
+            auto type = static_cast<const raw::StringLiteral*>(&value);
             EmitObjectSeparator(&json_file_, indent_level_);
             EmitObjectKey(&json_file_, indent_level_, "value");
             EmitLiteral(&json_file_, type->location.data());
             break;
         }
-        case ast::Literal::Kind::Numeric: {
-            auto type = static_cast<const ast::NumericLiteral*>(&value);
+        case raw::Literal::Kind::Numeric: {
+            auto type = static_cast<const raw::NumericLiteral*>(&value);
             GenerateObjectMember("value", type->location.data());
             break;
         }
-        case ast::Literal::Kind::True: {
+        case raw::Literal::Kind::True: {
             break;
         }
-        case ast::Literal::Kind::False: {
+        case raw::Literal::Kind::False: {
             break;
         }
-        case ast::Literal::Kind::Default: {
+        case raw::Literal::Kind::Default: {
             break;
         }
         }
     });
 }
 
-void JSONGenerator::Generate(const ast::Type& value) {
+void JSONGenerator::Generate(const raw::Type& value) {
     GenerateObject([&]() {
         GenerateObjectMember("kind", TypeKindName(value.kind), Position::First);
 
         switch (value.kind) {
-        case ast::Type::Kind::Array: {
-            auto type = static_cast<const ast::ArrayType*>(&value);
+        case raw::Type::Kind::Array: {
+            auto type = static_cast<const raw::ArrayType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
             GenerateObjectMember("element_count", type->element_count);
             break;
         }
-        case ast::Type::Kind::Vector: {
-            auto type = static_cast<const ast::VectorType*>(&value);
+        case raw::Type::Kind::Vector: {
+            auto type = static_cast<const raw::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
             if (type->maybe_element_count)
                 GenerateObjectMember("maybe_element_count", type->maybe_element_count);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case ast::Type::Kind::String: {
-            auto type = static_cast<const ast::StringType*>(&value);
+        case raw::Type::Kind::String: {
+            auto type = static_cast<const raw::StringType*>(&value);
             if (type->maybe_element_count)
                 GenerateObjectMember("maybe_element_count", type->maybe_element_count);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case ast::Type::Kind::Handle: {
-            auto type = static_cast<const ast::HandleType*>(&value);
+        case raw::Type::Kind::Handle: {
+            auto type = static_cast<const raw::HandleType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case ast::Type::Kind::Request: {
-            auto type = static_cast<const ast::RequestType*>(&value);
+        case raw::Type::Kind::Request: {
+            auto type = static_cast<const raw::RequestType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case ast::Type::Kind::Primitive: {
-            auto type = static_cast<const ast::PrimitiveType*>(&value);
+        case raw::Type::Kind::Primitive: {
+            auto type = static_cast<const raw::PrimitiveType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             break;
         }
-        case ast::Type::Kind::Identifier: {
-            auto type = static_cast<const ast::IdentifierType*>(&value);
+        case raw::Type::Kind::Identifier: {
+            auto type = static_cast<const raw::IdentifierType*>(&value);
             GenerateObjectMember("identifier", type->identifier);
             GenerateObjectMember("nullable", type->nullability);
             break;
@@ -400,18 +400,18 @@ void JSONGenerator::Generate(const ast::Type& value) {
     });
 }
 
-void JSONGenerator::Generate(const ast::Constant& value) {
+void JSONGenerator::Generate(const raw::Constant& value) {
     GenerateObject([&]() {
         GenerateObjectMember("kind", ConstantKindName(value.kind), Position::First);
 
         switch (value.kind) {
-        case ast::Constant::Kind::Identifier: {
-            auto type = static_cast<const ast::IdentifierConstant*>(&value);
+        case raw::Constant::Kind::Identifier: {
+            auto type = static_cast<const raw::IdentifierConstant*>(&value);
             GenerateObjectMember("identifier", type->identifier);
             break;
         }
-        case ast::Constant::Kind::Literal: {
-            auto type = static_cast<const ast::LiteralConstant*>(&value);
+        case raw::Constant::Kind::Literal: {
+            auto type = static_cast<const raw::LiteralConstant*>(&value);
             GenerateObjectMember("literal", type->literal);
             break;
         }
@@ -438,8 +438,8 @@ void JSONGenerator::Generate(const flat::Const& value) {
 void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
-        if (value.type->kind == ast::Type::Kind::Primitive) {
-            auto type = static_cast<const ast::PrimitiveType*>(value.type.get());
+        if (value.type->kind == raw::Type::Kind::Primitive) {
+            auto type = static_cast<const raw::PrimitiveType*>(value.type.get());
             GenerateObjectMember("type", type->subtype);
         }
         GenerateObjectMember("members", value.members);

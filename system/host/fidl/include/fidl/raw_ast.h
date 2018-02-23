@@ -21,11 +21,11 @@
 // here, like everywhere in the fidl compiler, are backed by a string
 // view whose contents are owned by a SourceManager.
 
-// An ast::File is produced by parsing a token stream. All of the
+// A raw::File is produced by parsing a token stream. All of the
 // Files in a library are then flattened out into a Library.
 
 namespace fidl {
-namespace ast {
+namespace raw {
 
 struct Identifier {
     explicit Identifier(SourceLocation location)

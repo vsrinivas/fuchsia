@@ -14,7 +14,7 @@ namespace {
 
 constexpr const char* kIndent = "    ";
 
-std::string ShortName(const std::unique_ptr<ast::Identifier>& name) {
+std::string ShortName(const std::unique_ptr<raw::Identifier>& name) {
     // TODO(TO-704) C name escaping and ergonomics.
     return name->location.data();
 }
@@ -25,11 +25,11 @@ std::string LongName(const flat::Name& name) {
 }
 
 std::string UnionTagName(StringView union_name,
-                         const std::unique_ptr<ast::Identifier>& member_name) {
+                         const std::unique_ptr<raw::Identifier>& member_name) {
     return std::string(union_name) + "_tag_" + ShortName(member_name);
 }
 
-std::string PrimitiveTypeName(const ast::PrimitiveType* type) {
+std::string PrimitiveTypeName(const raw::PrimitiveType* type) {
     switch (type->subtype) {
     case types::PrimitiveSubtype::Int8:
         return "int8_t";
@@ -103,31 +103,31 @@ std::string IntegerCConstantMacro(CGenerator::IntegerConstantType type) {
     }
 }
 
-std::string TypeName(const ast::Type* type) {
+std::string TypeName(const raw::Type* type) {
     for (;;) {
         switch (type->kind) {
-        case ast::Type::Kind::Handle:
-        case ast::Type::Kind::Request:
+        case raw::Type::Kind::Handle:
+        case raw::Type::Kind::Request:
             return "zx_handle_t";
 
-        case ast::Type::Kind::Vector:
+        case raw::Type::Kind::Vector:
             return "fidl_vector_t";
-        case ast::Type::Kind::String:
+        case raw::Type::Kind::String:
             return "fidl_string_t";
 
-        case ast::Type::Kind::Primitive: {
-            auto primitive_type = static_cast<const ast::PrimitiveType*>(type);
+        case raw::Type::Kind::Primitive: {
+            auto primitive_type = static_cast<const raw::PrimitiveType*>(type);
             return PrimitiveTypeName(primitive_type);
         }
 
-        case ast::Type::Kind::Array: {
-            auto array_type = static_cast<const ast::ArrayType*>(type);
+        case raw::Type::Kind::Array: {
+            auto array_type = static_cast<const raw::ArrayType*>(type);
             type = array_type->element_type.get();
             continue;
         }
 
-        case ast::Type::Kind::Identifier: {
-            auto identifier_type = static_cast<const ast::IdentifierType*>(type);
+        case raw::Type::Kind::Identifier: {
+            auto identifier_type = static_cast<const raw::IdentifierType*>(type);
             // TODO(TO-701) Handle longer names.
             const auto& components = identifier_type->identifier->components;
             assert(components.size() == 1);
@@ -204,7 +204,7 @@ CGenerator::IntegerConstantType EnumType(types::PrimitiveSubtype type) {
     }
 }
 
-void EnumValue(types::PrimitiveSubtype type, const ast::Constant* constant,
+void EnumValue(types::PrimitiveSubtype type, const raw::Constant* constant,
                flat::Library* library, std::string* out_value) {
     // TODO(kulakowski) Move this into library resolution.
 
@@ -298,14 +298,14 @@ void EnumValue(types::PrimitiveSubtype type, const ast::Constant* constant,
     *out_value = member_value.str();
 }
 
-std::vector<uint32_t> ArrayCounts(flat::Library* library, const ast::Type* type) {
+std::vector<uint32_t> ArrayCounts(flat::Library* library, const raw::Type* type) {
     std::vector<uint32_t> array_counts;
     for (;;) {
         switch (type->kind) {
         default: { return array_counts; }
-        case ast::Type::Kind::Array: {
-            auto array_type = static_cast<const ast::ArrayType*>(type);
-            const ast::Constant* count_constant = array_type->element_count.get();
+        case raw::Type::Kind::Array: {
+            auto array_type = static_cast<const raw::ArrayType*>(type);
+            const raw::Constant* count_constant = array_type->element_count.get();
             uint32_t array_count;
             bool success = library->ParseIntegerConstant(count_constant, &array_count);
             // TODO(TO-702) Better error handling around failure to validate constants.
@@ -320,7 +320,7 @@ std::vector<uint32_t> ArrayCounts(flat::Library* library, const ast::Type* type)
     }
 }
 
-CGenerator::Member CreateMember(flat::Library* library, const ast::Type* type, StringView name) {
+CGenerator::Member CreateMember(flat::Library* library, const raw::Type* type, StringView name) {
     auto type_name = TypeName(type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     return CGenerator::Member{type_name, name, std::move(array_counts)};
@@ -331,7 +331,7 @@ GenerateMembers(flat::Library* library, const std::vector<flat::Union::Member>& 
     std::vector<CGenerator::Member> members;
     members.reserve(union_members.size());
     for (const auto& union_member : union_members) {
-        const ast::Type* union_member_type = union_member.type.get();
+        const raw::Type* union_member_type = union_member.type.get();
         auto union_member_name = ShortName(union_member.name);
         members.push_back(CreateMember(library, union_member_type, union_member_name));
     }
@@ -511,7 +511,7 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& message) {
     members.reserve(1 + message.parameters.size());
     members.push_back(MessageHeader());
     for (const auto& parameter : message.parameters) {
-        const ast::Type* parameter_type = parameter.type.get();
+        const raw::Type* parameter_type = parameter.type.get();
         auto parameter_name = ShortName(parameter.name);
         members.push_back(CreateMember(library_, parameter_type, parameter_name));
     }
@@ -525,7 +525,7 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
     std::vector<CGenerator::Member> members;
     members.reserve(named_struct.struct_info.members.size());
     for (const auto& struct_member : named_struct.struct_info.members) {
-        const ast::Type* struct_member_type = struct_member.type.get();
+        const raw::Type* struct_member_type = struct_member.type.get();
         auto struct_member_name = ShortName(struct_member.name);
         members.push_back(CreateMember(library_, struct_member_type, struct_member_name));
     }
