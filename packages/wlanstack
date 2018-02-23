@@ -1,9 +1,12 @@
 {
     "languages": [
-        "go"
+        "go",
+        "rust"
     ],
     "packages": {
         "wlanstack": "//garnet/go/src/wlan:wlanstack",
-        "wlantool": "//garnet/go/src/wlan:wlantool"
+        "wlanstack2": "//garnet/bin/wlanstack:wlanstack2",
+        "wlantool": "//garnet/go/src/wlan:wlantool",
+        "wlantool2": "//garnet/bin/wlantool:wlantool2"
     }
 }
