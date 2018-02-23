@@ -1,15 +1,14 @@
 {
   "test_suite_name": "fuchsia.ledger",
   "app": "ledger_benchmark_sync",
-  "args": ["--change-count=10", "--entries-per-change=1", "--value-size=100", "--refs=off"],
+  "args": ["--change-count=10", "--entries-per-change=100", "--value-size=100", "--refs=off"],
   "categories": ["benchmark", "ledger"],
-  "duration": 120,
+  "duration": 240,
   "measure": [
     {
       "type": "duration",
       "event_name": "sync latency",
-      "event_category": "benchmark",
-      "split_samples_at": [1]
+      "event_category": "benchmark"
     }
   ]
 }

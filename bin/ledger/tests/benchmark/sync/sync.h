@@ -26,15 +26,18 @@ namespace benchmark {
 // run.
 //
 // Parameters:
-//   --entry-count=<int> the number of entries to be put
+//   --change-count=<int> the number of changes to be made to the page (each
+//   change is done as transaction and can include several put operations).
 //   --value-size=<int> the size of a single value in bytes
+//   --entries-per-change=<int> number of entries added in the transaction
 //   --refs=(on|off) reference strategy: on to put values as references, off to
 //     put them as FIDL arrays.
 //   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:
-  SyncBenchmark(size_t entry_count,
+  SyncBenchmark(size_t change_count,
                 size_t value_size,
+                size_t entries_per_change,
                 PageDataGenerator::ReferenceStrategy reference_strategy,
                 std::string server_id);
 
@@ -46,7 +49,7 @@ class SyncBenchmark : public ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
  private:
-  void RunSingle(size_t i);
+  void RunSingleChange(size_t i);
 
   void ShutDown();
 
@@ -54,8 +57,9 @@ class SyncBenchmark : public ledger::PageWatcher {
   PageDataGenerator page_data_generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-  const size_t entry_count_;
+  const size_t change_count_;
   const size_t value_size_;
+  const size_t entries_per_change_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
   std::string server_id_;
   f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
@@ -63,10 +67,11 @@ class SyncBenchmark : public ledger::PageWatcher {
   files::ScopedTempDir beta_tmp_dir_;
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
-  ledger::LedgerPtr gamma_;
   f1dl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
+
+  size_t changed_entries_received_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncBenchmark);
 };

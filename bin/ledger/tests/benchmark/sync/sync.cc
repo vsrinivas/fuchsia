@@ -24,8 +24,9 @@
 
 namespace {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
-constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kChangeCountFlag = "change-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kEntriesPerChangeFlag = "entries-per-change";
 constexpr fxl::StringView kRefsFlag = "refs";
 constexpr fxl::StringView kServerIdFlag = "server-id";
 
@@ -35,8 +36,9 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 constexpr size_t kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kRefsFlag << "=("
+  std::cout << "Usage: " << executable_name << " --" << kChangeCountFlag
+            << "=<int> --" << kValueSizeFlag << "=<int> --"
+            << kEntriesPerChangeFlag << "=<int> --" << kRefsFlag << "=("
             << kRefsOnFlag << "|" << kRefsOffFlag << ") --" << kServerIdFlag
             << "=<string>" << std::endl;
 }
@@ -47,21 +49,24 @@ namespace test {
 namespace benchmark {
 
 SyncBenchmark::SyncBenchmark(
-    size_t entry_count,
+    size_t change_count,
     size_t value_size,
+    size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
-      entry_count_(entry_count),
+      change_count_(change_count),
       value_size_(value_size),
+      entries_per_change_(entries_per_change),
       reference_strategy_(reference_strategy),
       server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
       beta_tmp_dir_(kStoragePath) {
-  FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(value_size > 0);
+  FXL_DCHECK(change_count_ > 0);
+  FXL_DCHECK(value_size_ > 0);
+  FXL_DCHECK(entries_per_change_ > 0);
   cloud_provider_firebase_factory_.Init();
 }
 
@@ -111,35 +116,46 @@ void SyncBenchmark::Run() {
                             if (benchmark::QuitOnError(status, "GetSnapshot")) {
                               return;
                             }
-                            RunSingle(0);
+                            RunSingleChange(0);
                           });
 }
 
 void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              ledger::ResultState result_state,
                              const OnChangeCallback& callback) {
-  FXL_DCHECK(page_change->changes.size() == 1);
-  FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
+  FXL_DCHECK(page_change->changes.size() > 0);
   size_t i = std::stoul(convert::ToString(page_change->changes[0]->key));
-  TRACE_ASYNC_END("benchmark", "sync latency", i);
-  RunSingle(i + 1);
+  changed_entries_received_ += page_change->changes.size();
+  if (result_state == ledger::ResultState::COMPLETED ||
+      result_state == ledger::ResultState::PARTIAL_STARTED) {
+    TRACE_ASYNC_END("benchmark", "sync latency", i);
+  }
+  if (result_state == ledger::ResultState::COMPLETED ||
+      result_state == ledger::ResultState::PARTIAL_COMPLETED) {
+    FXL_DCHECK(changed_entries_received_ == entries_per_change_);
+    RunSingleChange(i + 1);
+  }
   callback(nullptr);
 }
 
-void SyncBenchmark::RunSingle(size_t i) {
-  if (i == entry_count_) {
+void SyncBenchmark::RunSingleChange(size_t change_number) {
+  if (change_number == change_count_) {
     ShutDown();
     return;
   }
 
-  f1dl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
-  f1dl::Array<uint8_t> value = generator_.MakeValue(value_size_);
-  TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
+  std::vector<f1dl::Array<uint8_t>> keys(entries_per_change_);
+  for (size_t i = 0; i < entries_per_change_; i++) {
+    // Keys are distinct, but have the common prefix <i>.
+    keys[i] = generator_.MakeKey(change_number, kKeySize);
+  }
 
-  page_data_generator_.PutEntry(
-      &alpha_page_, std::move(key), std::move(value), reference_strategy_,
-      ledger::Priority::EAGER, [](ledger::Status status) {
-        if (benchmark::QuitOnError(status, "PageDataGenerator::PutEntry")) {
+  changed_entries_received_ = 0;
+  TRACE_ASYNC_BEGIN("benchmark", "sync latency", change_number);
+  page_data_generator_.Populate(
+      &alpha_page_, std::move(keys), value_size_, entries_per_change_,
+      reference_strategy_, ledger::Priority::EAGER, [](ledger::Status status) {
+        if (benchmark::QuitOnError(status, "PageDataGenerator::Populate")) {
           return;
         }
       });
@@ -159,20 +175,26 @@ void SyncBenchmark::ShutDown() {
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  std::string entry_count_str;
-  size_t entry_count;
+  std::string change_count_str;
+  size_t change_count;
   std::string value_size_str;
   size_t value_size;
+  std::string entries_per_change_str;
+  size_t entries_per_change;
   std::string reference_strategy_str;
   std::string server_id;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
-                                   &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
-      entry_count <= 0 ||
+  if (!command_line.GetOptionValue(kChangeCountFlag.ToString(),
+                                   &change_count_str) ||
+      !fxl::StringToNumberWithError(change_count_str, &change_count) ||
+      change_count <= 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(),
                                    &value_size_str) ||
       !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size <= 0 ||
+      !command_line.GetOptionValue(kEntriesPerChangeFlag.ToString(),
+                                   &entries_per_change_str) ||
+      !fxl::StringToNumberWithError(entries_per_change_str,
+                                    &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
       !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
@@ -195,7 +217,8 @@ int main(int argc, const char** argv) {
   }
 
   fsl::MessageLoop loop;
-  test::benchmark::SyncBenchmark app(entry_count, value_size,
-                                     reference_strategy, server_id);
+  test::benchmark::SyncBenchmark app(change_count, value_size,
+                                     entries_per_change, reference_strategy,
+                                     server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

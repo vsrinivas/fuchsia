@@ -230,6 +230,17 @@ package("ledger_tests") {
     },
 
     {
+      path = rebase_path("//peridot/bin/ledger/tests/benchmark/sync/sync.tspec")
+      dest = "ledger/benchmark/sync.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/sync/sync_big_change.tspec")
+      dest = "ledger/benchmark/sync_big_change.tspec"
+    },
+
+    {
       path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/put/transaction_size.tspec")
       dest = "ledger/benchmark/transaction_size.tspec"
@@ -239,11 +250,6 @@ package("ledger_tests") {
       path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/put/value_size.tspec")
       dest = "ledger/benchmark/value_size.tspec"
-    },
-
-    {
-      path = rebase_path("//peridot/bin/ledger/tests/benchmark/sync/sync.tspec")
-      dest = "ledger/benchmark/sync.tspec"
     },
 
     {
