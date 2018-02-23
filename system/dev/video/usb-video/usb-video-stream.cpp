@@ -426,7 +426,7 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op,
     dispatcher::Channel::ProcessHandler phandler(
     [stream = this](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-        return stream->ProcessChannel(channel);
+        return stream->ProcessStreamChannel(channel);
     });
 
     dispatcher::Channel::ChannelClosedHandler chandler(
@@ -458,7 +458,7 @@ case _cmd:                                                      \
     }                                                           \
     return _handler(channel, req._payload, ##__VA_ARGS__);
 
-zx_status_t UsbVideoStream::ProcessChannel(dispatcher::Channel* channel) {
+zx_status_t UsbVideoStream::ProcessStreamChannel(dispatcher::Channel* channel) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock lock(&lock_);
 
@@ -487,6 +487,10 @@ zx_status_t UsbVideoStream::ProcessChannel(dispatcher::Channel* channel) {
         zxlogf(ERROR, "Unrecognized command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
     }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t UsbVideoStream::ProcessVideoBufferChannel(dispatcher::Channel* channel) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 #undef HREQ
@@ -531,7 +535,66 @@ zx_status_t UsbVideoStream::GetFormatsLocked(dispatcher::Channel* channel,
 
 zx_status_t UsbVideoStream::SetFormatLocked(dispatcher::Channel* channel,
                                             const camera::camera_proto::SetFormatReq& req) {
-    return ZX_ERR_NOT_SUPPORTED;
+    camera::camera_proto::SetFormatResp resp;
+    resp.hdr = req.hdr;
+    resp.result = ZX_ERR_INTERNAL;
+
+    zx::channel client_vb_channel;
+
+    // Convert from the client's video format proto to the device driver format
+    // and frame descriptors.
+    const UsbVideoFormat* format;
+    const UsbVideoFrameDesc* frame_desc;
+    zx_status_t status = GetMapping(req.video_format, &format, &frame_desc);
+    if (status != ZX_OK) {
+        resp.result = status;
+        zxlogf(ERROR, "could not find a mapping for the requested format\n");
+        return channel->Write(&resp, sizeof(resp));
+    }
+
+    // Try setting the format on the device.
+    status = TryFormatLocked(format, frame_desc);
+    if (status != ZX_OK) {
+        resp.result = status;
+        zxlogf(ERROR, "setting format failed, err: %d\n", status);
+        return channel->Write(&resp, sizeof(resp));
+    }
+
+    resp.max_frame_size = max_frame_size_;
+
+    // Create a new video buffer channel to give to the client.
+    vb_channel_ = dispatcher::Channel::Create();
+    if (vb_channel_ == nullptr) {
+        resp.result = ZX_ERR_NO_MEMORY;
+    } else {
+        // Handler for channel messages.
+        dispatcher::Channel::ProcessHandler phandler(
+        [stream = this](dispatcher::Channel* channel) -> zx_status_t {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+            return stream->ProcessVideoBufferChannel(channel);
+        });
+
+        // Handler for channel deactivation.
+        dispatcher::Channel::ChannelClosedHandler chandler(
+        [stream = this](const dispatcher::Channel* channel) -> void {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+            stream->DeactivateVideoBufferChannel(channel);
+        });
+
+        resp.result = vb_channel_->Activate(&client_vb_channel,
+                                            default_domain_,
+                                            fbl::move(phandler),
+                                            fbl::move(chandler));
+        if (resp.result != ZX_OK) {
+            vb_channel_.reset();
+        }
+    }
+
+    if (resp.result == ZX_OK) {
+        return channel->Write(&resp, sizeof(resp), fbl::move(client_vb_channel));
+    } else {
+        return channel->Write(&resp, sizeof(resp));
+    }
 }
 
 // TODO(jocelyndang): this is only for temporary testing purposes and can be
@@ -790,7 +853,19 @@ void UsbVideoStream::DeactivateStreamChannel(const dispatcher::Channel* channel)
     fbl::AutoLock lock(&lock_);
 
     ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
+    ZX_DEBUG_ASSERT(vb_channel_.get() != channel);
     stream_channel_.reset();
+}
+
+void UsbVideoStream::DeactivateVideoBufferChannel(const dispatcher::Channel* channel) {
+    fbl::AutoLock lock(&lock_);
+
+    ZX_DEBUG_ASSERT(stream_channel_.get() != channel);
+    ZX_DEBUG_ASSERT(vb_channel_.get() == channel);
+    if (streaming_state_ != StreamingState::STOPPED) {
+        streaming_state_ = StreamingState::STOPPING;
+    }
+    vb_channel_.reset();
 }
 
 void UsbVideoStream::DdkUnbind() {

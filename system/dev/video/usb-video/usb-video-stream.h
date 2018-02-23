@@ -110,7 +110,8 @@ private:
                                 const UsbVideoFrameDesc* frame_desc)
         __TA_REQUIRES(lock_);
 
-    zx_status_t ProcessChannel(dispatcher::Channel* channel);
+    zx_status_t ProcessStreamChannel(dispatcher::Channel* channel);
+    zx_status_t ProcessVideoBufferChannel(dispatcher::Channel* channel);
 
     // Finds the matching format and frame descriptors for the given
     // video format proto.
@@ -159,6 +160,7 @@ private:
     void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
 
     void DeactivateStreamChannel(const dispatcher::Channel* channel);
+    void DeactivateVideoBufferChannel(const dispatcher::Channel* channel);
 
     usb_protocol_t usb_;
 
@@ -184,6 +186,7 @@ private:
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
+    fbl::RefPtr<dispatcher::Channel> vb_channel_     __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // Statistics for frame based formats.
