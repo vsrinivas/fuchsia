@@ -215,10 +215,15 @@ private:
 
         // Whether the frame contains an error.
         bool error;
-        // Presentation timestamp for the frame.
+        // Presentation timestamp for the frame. This is when the device
+        // begins raw frame capture.
         uint32_t pts;
-        // Source time clock value for the frame.
+        // Source time clock value for when the first video data of a
+        // video frame is put on the USB bus.
         uint32_t stc;
+        // The USB frame number at the time that STC was sampled.
+        // The largest value can have 11 bits set before wrapping around to zero.
+        uint16_t device_sof;
     };
 
     FrameState cur_frame_state_;

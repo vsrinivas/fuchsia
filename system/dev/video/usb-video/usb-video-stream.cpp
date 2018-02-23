@@ -764,27 +764,30 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     usb_request_copyfrom(req, &header,
                          sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
-    // PTS and STC should stay the same for payloads of the same frame,
+    // PTS should stay the same for payloads of the same frame,
     // but it's probably not a critical error if they're different.
-
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_PTS) {
         uint32_t new_pts = header.dwPresentationTime;
 
-        if (cur_frame_state_.pts != 0 && new_pts != cur_frame_state_.pts) {
+        // Use the first seen PTS value.
+        if (cur_frame_state_.pts == 0) {
+            cur_frame_state_.pts = new_pts;
+        } else if (new_pts != cur_frame_state_.pts) {
             zxlogf(ERROR, "#%u: PTS changed between payloads, from %u to %u\n",
             num_frames_, cur_frame_state_.pts, new_pts);
         }
-        cur_frame_state_.pts = new_pts;
     }
 
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_SCR) {
         uint32_t new_stc = header.scrSourceTimeClock;
+        uint16_t new_sof = header.scrSourceClockSOFCounter;
 
-        if (cur_frame_state_.stc != 0 && new_stc != cur_frame_state_.stc) {
-            zxlogf(ERROR, "#%u: STC changed between payloads, from %u to %u\n",
-            num_frames_, cur_frame_state_.stc, new_stc);
+        // The USB Video Class Spec 1.1 suggests that updated SCR values may
+        // be provided per payload of a frame. Only use the first seen value.
+        if (cur_frame_state_.stc == 0) {
+            cur_frame_state_.stc = new_stc;
+            cur_frame_state_.device_sof = new_sof;
         }
-        cur_frame_state_.stc = new_stc;
     }
 }
 
@@ -822,10 +825,11 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
             }
 
             if (clock_frequency_hz_ != 0) {
-                zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs\n",
+                zxlogf(TRACE, "#%u: PTS = %lfs, STC = %lfs, SOF = %u\n",
                        num_frames_,
                        cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
-                       cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_));
+                       cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
+                       cur_frame_state_.device_sof);
             }
         }
 
