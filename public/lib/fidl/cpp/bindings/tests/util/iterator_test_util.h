@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 template <typename Iterator, typename ValueType>
@@ -127,6 +127,6 @@ void ExpectBidiMutableIteratorConcept(
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_UTIL_ITERATOR_TEST_UTIL_H_

@@ -4,7 +4,7 @@
 
 #include "lib/media/timeline/fidl_type_conversions.h"
 
-namespace fidl {
+namespace f1dl {
 
 media::TimelineTransformPtr
 TypeConverter<media::TimelineTransformPtr, media::TimelineFunction>::Convert(
@@ -26,4 +26,4 @@ TypeConverter<media::TimelineFunction, media::TimelineTransformPtr>::Convert(
                : media::TimelineFunction();
 }
 
-}  // namespace fidl
+}  // namespace f1dl

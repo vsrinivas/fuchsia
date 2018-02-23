@@ -31,12 +31,12 @@ void DisplayProviderImpl::GetInfo(const GetInfoCallback& callback) {
 }
 
 void DisplayProviderImpl::BindPipe(
-    ::fidl::InterfaceRequest<scenic::ImagePipe> pipe) {
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> pipe) {
     image_pipe_.AddBinding(std::move(pipe));
 }
 
 void DisplayProviderImpl::AddBinding(
-    fidl::InterfaceRequest<DisplayProvider> request) {
+    f1dl::InterfaceRequest<DisplayProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 };  // namespace display_pipe

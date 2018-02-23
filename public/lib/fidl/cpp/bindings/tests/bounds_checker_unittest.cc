@@ -9,11 +9,11 @@
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 #include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
-using fidl::internal::WrappedHandle;
+using f1dl::internal::WrappedHandle;
 
 const void* ToPtr(uintptr_t ptr) {
   return reinterpret_cast<const void*>(ptr);
@@ -210,4 +210,4 @@ TEST(BoundsCheckerTest, ClaimMemory) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

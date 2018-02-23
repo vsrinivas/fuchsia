@@ -36,7 +36,7 @@ const auth::AuthProviderType kGoogleAuthProvider =
 class FakeAuthenticationUIContextImpl : public ::auth::AuthenticationUIContext {
  public:
   void StartOverlay(
-      ::fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override {
+      ::f1dl::InterfaceHandle<mozart::ViewOwner> view_owner) override {
     FXL_LOG(INFO)
         << "FakeAuthenticationUIContextImpl::StartOverlay() is unimplemented.";
   }
@@ -88,12 +88,12 @@ class GoogleTokenManagerAppTest : public gtest::TestWithMessageLoop {
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
   app::ApplicationControllerPtr app_controller_;
-  fidl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
+  f1dl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
  protected:
   auth::TokenManagerPtr token_mgr_;
   auth::TokenManagerFactoryPtr token_mgr_factory_;
-  fidl::BindingSet<auth::AuthenticationUIContext> ui_bindings_;
+  f1dl::BindingSet<auth::AuthenticationUIContext> ui_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GoogleTokenManagerAppTest);
 };
@@ -114,9 +114,9 @@ TEST_F(GoogleTokenManagerAppTest, Authorize) {
 }
 
 TEST_F(GoogleTokenManagerAppTest, GetAccessToken) {
-  auto scopes = fidl::Array<fidl::String>::New(0);
+  auto scopes = f1dl::Array<f1dl::String>::New(0);
   auth::Status status;
-  fidl::String access_token;
+  f1dl::String access_token;
 
   token_mgr_->GetAccessToken(
       kGoogleAuthProvider, "", std::move(scopes),
@@ -128,7 +128,7 @@ TEST_F(GoogleTokenManagerAppTest, GetAccessToken) {
 
 TEST_F(GoogleTokenManagerAppTest, GetIdToken) {
   auth::Status status;
-  fidl::String id_token;
+  f1dl::String id_token;
 
   token_mgr_->GetIdToken(kGoogleAuthProvider, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));

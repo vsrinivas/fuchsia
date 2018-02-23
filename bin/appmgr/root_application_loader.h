@@ -23,7 +23,7 @@ class RootApplicationLoader : public ApplicationLoader {
   ~RootApplicationLoader() override;
 
   void LoadApplication(
-      const fidl::String& url,
+      const f1dl::String& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override;
 
  private:

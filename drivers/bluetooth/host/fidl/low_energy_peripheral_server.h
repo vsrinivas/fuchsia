@@ -24,7 +24,7 @@ class LowEnergyPeripheralServer
  public:
   LowEnergyPeripheralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-      fidl::InterfaceRequest<bluetooth::low_energy::Peripheral> request);
+      f1dl::InterfaceRequest<bluetooth::low_energy::Peripheral> request);
   ~LowEnergyPeripheralServer() override;
 
  private:
@@ -62,13 +62,13 @@ class LowEnergyPeripheralServer
   void StartAdvertising(
       bluetooth::low_energy::AdvertisingDataPtr advertising_data,
       bluetooth::low_energy::AdvertisingDataPtr scan_result,
-      ::fidl::InterfaceHandle<bluetooth::low_energy::PeripheralDelegate>
+      ::f1dl::InterfaceHandle<bluetooth::low_energy::PeripheralDelegate>
           delegate,
       uint32_t interval,
       bool anonymous,
       const StartAdvertisingCallback& callback) override;
 
-  void StopAdvertising(const ::fidl::String& advertisement_id,
+  void StopAdvertising(const ::f1dl::String& advertisement_id,
                        const StopAdvertisingCallback& callback) override;
   bool StopAdvertisingInternal(const std::string& id);
 

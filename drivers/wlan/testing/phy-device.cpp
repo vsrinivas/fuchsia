@@ -106,11 +106,11 @@ zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     zxlogf(INFO, "wlan::testing::PhyDevice::Query()\n");
     auto info = wlan::phy::WlanPhyInfo::New();
-    info->supported_phys = fidl::Array<wlan::phy::SupportedPhy>::New(0);
-    info->driver_features = fidl::Array<wlan::phy::DriverFeature>::New(0);
-    info->mac_roles = fidl::Array<wlan::phy::MacRole>::New(0);
-    info->caps = fidl::Array<wlan::phy::Capability>::New(0);
-    info->bands = fidl::Array<wlan::phy::BandInfoPtr>::New(0);
+    info->supported_phys = f1dl::Array<wlan::phy::SupportedPhy>::New(0);
+    info->driver_features = f1dl::Array<wlan::phy::DriverFeature>::New(0);
+    info->mac_roles = f1dl::Array<wlan::phy::MacRole>::New(0);
+    info->caps = f1dl::Array<wlan::phy::Capability>::New(0);
+    info->bands = f1dl::Array<wlan::phy::BandInfoPtr>::New(0);
 
     info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
     info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);
@@ -129,12 +129,12 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     band24->description = "2.4 GHz";
     band24->ht_caps->ht_capability_info = 0x01fe;
     band24->ht_caps->supported_mcs_set =
-        fidl::Array<uint8_t>{0xff, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        f1dl::Array<uint8_t>{0xff, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
-    band24->basic_rates = fidl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+    band24->basic_rates = f1dl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
     band24->supported_channels->base_freq = 2417;
     band24->supported_channels->channels =
-        fidl::Array<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+        f1dl::Array<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
     info->bands.push_back(std::move(band24));
 
@@ -144,12 +144,12 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     band5->description = "5 GHz";
     band5->ht_caps->ht_capability_info = 0x01fe;
     band5->ht_caps->supported_mcs_set =
-        fidl::Array<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        f1dl::Array<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
-    band5->basic_rates = fidl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
+    band5->basic_rates = f1dl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
     band5->supported_channels->base_freq = 5000;
     band5->supported_channels->channels =
-        fidl::Array<uint8_t>{36, 38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
+        f1dl::Array<uint8_t>{36, 38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
                              60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
                              118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
                              149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196};

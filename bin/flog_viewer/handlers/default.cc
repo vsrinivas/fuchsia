@@ -17,7 +17,7 @@ Default::Default(const std::string& format) : ChannelHandler(format) {}
 
 Default::~Default() {}
 
-void Default::HandleMessage(fidl::Message* message) {
+void Default::HandleMessage(f1dl::Message* message) {
   terse_out() << EntryHeader(entry(), entry_index()) << "channel message, size "
               << message->data_num_bytes() << " name " << message->name()
               << "\n";

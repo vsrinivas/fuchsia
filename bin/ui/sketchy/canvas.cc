@@ -17,13 +17,13 @@ CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
       shared_buffer_pool_(session, escher),
       stroke_manager_(escher) {}
 
-void CanvasImpl::Init(fidl::InterfaceHandle<sketchy::CanvasListener> listener) {
+void CanvasImpl::Init(f1dl::InterfaceHandle<sketchy::CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
   FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
-void CanvasImpl::Enqueue(fidl::Array<sketchy::OpPtr> ops) {
-  // TODO: Use `AddAll()` when fidl::Array supports it.
+void CanvasImpl::Enqueue(f1dl::Array<sketchy::OpPtr> ops) {
+  // TODO: Use `AddAll()` when f1dl::Array supports it.
   for (auto& op : ops) {
     ops_.push_back(std::move(op));
   }

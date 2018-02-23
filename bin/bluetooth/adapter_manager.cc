@@ -118,7 +118,7 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
 
   FXL_DCHECK(host_channel);
 
-  fidl::InterfaceHandle<bluetooth::host::Host> handle(std::move(host_channel));
+  f1dl::InterfaceHandle<bluetooth::host::Host> handle(std::move(host_channel));
   FXL_DCHECK(handle.is_valid());
 
   // Bind the channel to a host interface pointer.

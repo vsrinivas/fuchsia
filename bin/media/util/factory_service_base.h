@@ -56,7 +56,7 @@ class FactoryServiceBase {
 
    protected:
     Product(Interface* impl,
-            fidl::InterfaceRequest<Interface> request,
+            f1dl::InterfaceRequest<Interface> request,
             Factory* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FXL_DCHECK(impl);
@@ -69,7 +69,7 @@ class FactoryServiceBase {
     }
 
     // Returns the binding established via the request in the constructor.
-    const fidl::Binding<Interface>& binding() { return binding_; }
+    const f1dl::Binding<Interface>& binding() { return binding_; }
 
     // Increments the retention count.
     void Retain() { ++retention_count_; }
@@ -99,7 +99,7 @@ class FactoryServiceBase {
 
    private:
     size_t retention_count_ = 0;
-    fidl::Binding<Interface> binding_;
+    f1dl::Binding<Interface> binding_;
   };
 
   FactoryServiceBase(
@@ -116,7 +116,7 @@ class FactoryServiceBase {
 
   // Connects to a service registered with the application environment.
   template <typename Interface>
-  fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
+  f1dl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
     return application_context_->ConnectToEnvironmentService<Interface>(
         interface_name);

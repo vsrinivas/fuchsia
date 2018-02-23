@@ -11,14 +11,14 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <typename I>
 class InterfaceHandle;
 
 namespace internal {
 
-// Please note that this is a different value than |fidl::kInvalidHandleValue|,
+// Please note that this is a different value than |f1dl::kInvalidHandleValue|,
 // which is the "decoded" invalid handle.
 const zx_handle_t kEncodedInvalidHandleValue = static_cast<zx_handle_t>(-1);
 
@@ -86,6 +86,6 @@ inline void InterfaceDataToHandle(Interface_Data* input,
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_SERIALIZATION_H_

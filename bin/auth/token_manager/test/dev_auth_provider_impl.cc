@@ -27,15 +27,15 @@ DevAuthProviderImpl::DevAuthProviderImpl() {}
 DevAuthProviderImpl::~DevAuthProviderImpl() {}
 
 void DevAuthProviderImpl::GetPersistentCredential(
-    fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+    f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
     const GetPersistentCredentialCallback& callback) {
   callback(AuthProviderStatus::OK, GenerateRandomString());
   return;
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(
-    const fidl::String& credential, const fidl::String& app_client_id,
-    const fidl::Array<fidl::String> app_scopes,
+    const f1dl::String& credential, const f1dl::String& app_client_id,
+    const f1dl::Array<f1dl::String> app_scopes,
     const GetAppAccessTokenCallback& callback) {
   AuthTokenPtr access_token = auth::AuthToken::New();
   access_token->token =
@@ -46,8 +46,8 @@ void DevAuthProviderImpl::GetAppAccessToken(
   callback(AuthProviderStatus::OK, std::move(access_token));
 }
 
-void DevAuthProviderImpl::GetAppIdToken(const fidl::String& credential,
-                                        const fidl::String& audience,
+void DevAuthProviderImpl::GetAppIdToken(const f1dl::String& credential,
+                                        const f1dl::String& audience,
                                         const GetAppIdTokenCallback& callback) {
   AuthTokenPtr id_token = auth::AuthToken::New();
   id_token->token = std::string(credential) + ":idt_" + GenerateRandomString();
@@ -58,13 +58,13 @@ void DevAuthProviderImpl::GetAppIdToken(const fidl::String& credential,
 }
 
 void DevAuthProviderImpl::GetAppFirebaseToken(
-    const fidl::String& id_token, const fidl::String& firebase_api_key,
+    const f1dl::String& id_token, const f1dl::String& firebase_api_key,
     const GetAppFirebaseTokenCallback& callback) {
   callback(AuthProviderStatus::OK, nullptr);
 }
 
 void DevAuthProviderImpl::RevokeAppOrPersistentCredential(
-    const fidl::String& credential,
+    const f1dl::String& credential,
     const RevokeAppOrPersistentCredentialCallback& callback) {
   callback(AuthProviderStatus::OK);
 }

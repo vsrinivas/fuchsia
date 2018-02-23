@@ -22,13 +22,13 @@ App::App(const fxl::CommandLine& command_line)
   input_reader_.Start();
 
   application_context_->outgoing_services()->AddService<mozart::Presenter>(
-      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
+      [this](f1dl::InterfaceRequest<mozart::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
   application_context_->outgoing_services()
       ->AddService<mozart::InputDeviceRegistry>(
-          [this](fidl::InterfaceRequest<mozart::InputDeviceRegistry> request) {
+          [this](f1dl::InterfaceRequest<mozart::InputDeviceRegistry> request) {
             input_receiver_bindings_.AddBinding(this, std::move(request));
           });
 }
@@ -36,8 +36,8 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::Present(
-    fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request) {
+    f1dl::InterfaceHandle<mozart::ViewOwner> view_owner_handle,
+    f1dl::InterfaceRequest<mozart::Presentation> presentation_request) {
   InitializeServices();
 
   auto presentation =
@@ -63,7 +63,7 @@ void App::Present(
 
 void App::RegisterDevice(
     mozart::DeviceDescriptorPtr descriptor,
-    fidl::InterfaceRequest<mozart::InputDevice> input_device_request) {
+    f1dl::InterfaceRequest<mozart::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;

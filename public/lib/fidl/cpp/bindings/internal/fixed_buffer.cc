@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 FixedBuffer::FixedBuffer() : ptr_(nullptr), cursor_(0), size_(0) {}
@@ -57,4 +57,4 @@ void* FixedBufferForTesting::Leak() {
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

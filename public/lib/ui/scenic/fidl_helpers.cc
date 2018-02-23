@@ -53,7 +53,7 @@ scenic::OpPtr NewCreateImageOp(uint32_t id,
 
 scenic::OpPtr NewCreateImagePipeOp(
     uint32_t id,
-    ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> request) {
   auto image_pipe = scenic::ImagePipeArgs::New();
   image_pipe->image_pipe_request = std::move(request);
 

@@ -28,7 +28,7 @@ void ApplicationRunnerHolder::StartApplication(
     ApplicationStartupInfoPtr startup_info,
     std::unique_ptr<archive::FileSystem> file_system,
     fxl::RefPtr<ApplicationNamespace> application_namespace,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    f1dl::InterfaceRequest<ApplicationController> controller) {
   file_systems_.push_back(std::move(file_system));
   namespaces_.push_back(std::move(application_namespace));
   runner_->StartApplication(std::move(package), std::move(startup_info),

@@ -22,8 +22,8 @@ class TraceManagerApp {
  private:
   std::unique_ptr<app::ApplicationContext> context_;
   TraceManager trace_manager_;
-  fidl::BindingSet<TraceRegistry> trace_registry_bindings_;
-  fidl::BindingSet<TraceController> trace_controller_bindings_;
+  f1dl::BindingSet<TraceRegistry> trace_registry_bindings_;
+  f1dl::BindingSet<TraceController> trace_controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
 };

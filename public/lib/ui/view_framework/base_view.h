@@ -32,7 +32,7 @@ class BaseView : private ViewListener,
                  private mozart::InputListener {
  public:
   BaseView(ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<ViewOwner> view_owner_request,
+           f1dl::InterfaceRequest<ViewOwner> view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
@@ -128,7 +128,7 @@ class BaseView : private ViewListener,
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(fidl::Array<scenic::EventPtr> events);
+  virtual void OnSessionEvent(f1dl::Array<scenic::EventPtr> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -165,13 +165,13 @@ class BaseView : private ViewListener,
                const OnEventCallback& callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(fidl::Array<scenic::EventPtr> events);
+  void HandleSessionEvents(f1dl::Array<scenic::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;
-  fidl::Binding<ViewListener> view_listener_binding_;
-  fidl::Binding<ViewContainerListener> view_container_listener_binding_;
-  fidl::Binding<InputListener> input_listener_binding_;
+  f1dl::Binding<ViewListener> view_listener_binding_;
+  f1dl::Binding<ViewContainerListener> view_container_listener_binding_;
+  f1dl::Binding<InputListener> input_listener_binding_;
 
   ViewPtr view_;
   app::ServiceProviderPtr view_service_provider_;

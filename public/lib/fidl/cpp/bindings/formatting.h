@@ -11,12 +11,12 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 
-namespace fidl {
+namespace f1dl {
 
 // Prints the contents of an array to an output stream in a human-readable
 // format.
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& array) {
+std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& array) {
   if (array) {
     os << "[";
     bool first = true;
@@ -38,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& array) {
 // Prints the contents of a map to an output stream in a human-readable
 // format.
 template <typename Key, typename Value>
-std::ostream& operator<<(std::ostream& os, const fidl::Map<Key, Value>& map) {
+std::ostream& operator<<(std::ostream& os, const f1dl::Map<Key, Value>& map) {
   if (map) {
     os << "{";
     bool first = true;
@@ -72,6 +72,6 @@ std::ostream& operator<<(std::ostream& os, const InlinedStructPtr<T>& value) {
   return os << value.get();
 }
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_FORMATTING_H_

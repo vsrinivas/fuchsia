@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -107,5 +107,5 @@ TEST(EqualsTest, EqualsMap) {
   EXPECT_TRUE(m1.Equals(m2));
 }
 
-}  // test
-}  // mojo
+}  // namespace test
+}  // namespace f1dl

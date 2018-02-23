@@ -21,7 +21,7 @@ MediaPacketConsumer::MediaPacketConsumer(const std::string& format)
 
 MediaPacketConsumer::~MediaPacketConsumer() {}
 
-void MediaPacketConsumer::HandleMessage(fidl::Message* message) {
+void MediaPacketConsumer::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 

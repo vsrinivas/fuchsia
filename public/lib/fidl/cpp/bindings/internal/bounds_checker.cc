@@ -10,7 +10,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 BoundsChecker::BoundsChecker(const void* data,
@@ -77,4 +77,4 @@ bool BoundsChecker::InternalIsValidRange(uintptr_t begin, uintptr_t end) const {
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

@@ -16,7 +16,7 @@ ViewManagerApp::ViewManagerApp()
   registry_.reset(new ViewRegistry(application_context_.get()));
 
   application_context_->outgoing_services()->AddService<mozart::ViewManager>(
-      [this](fidl::InterfaceRequest<mozart::ViewManager> request) {
+      [this](f1dl::InterfaceRequest<mozart::ViewManager> request) {
         view_manager_bindings_.AddBinding(
             std::make_unique<ViewManagerImpl>(registry_.get()),
             std::move(request));

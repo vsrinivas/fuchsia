@@ -7,7 +7,7 @@
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -73,4 +73,4 @@ TEST(MessageBuilderTest, ResponseMessageBuilder) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

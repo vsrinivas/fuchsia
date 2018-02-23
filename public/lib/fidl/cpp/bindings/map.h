@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 
-namespace fidl {
+namespace f1dl {
 
 // A move-only map that can handle move-only values. Map has the following
 // characteristics:
@@ -47,7 +47,7 @@ class Map {
 
   // Constructs a non-null Map containing the specified |keys| mapped to the
   // corresponding |values|.
-  Map(fidl::Array<KeyType> keys, fidl::Array<ValueType> values)
+  Map(f1dl::Array<KeyType> keys, f1dl::Array<ValueType> values)
       : is_null_(false) {
     ZX_DEBUG_ASSERT(keys.size() == values.size());
     for (size_t i = 0; i < keys.size(); ++i)
@@ -297,6 +297,6 @@ struct TypeConverter<std::map<STLKey, STLValue>, Map<FidlKey, FidlValue>> {
   }
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_MAP_H_

@@ -21,7 +21,7 @@ MediaSink::MediaSink(const std::string& format)
 
 MediaSink::~MediaSink() {}
 
-void MediaSink::HandleMessage(fidl::Message* message) {
+void MediaSink::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -40,7 +40,7 @@ void MediaSink::BoundAs(uint64_t koid) {
 
 void MediaSink::Config(media::MediaTypePtr input_type,
                        media::MediaTypePtr output_type,
-                       fidl::Array<uint64_t> converter_koids,
+                       f1dl::Array<uint64_t> converter_koids,
                        uint64_t renderer_koid) {
   FXL_DCHECK(input_type);
   FXL_DCHECK(output_type);

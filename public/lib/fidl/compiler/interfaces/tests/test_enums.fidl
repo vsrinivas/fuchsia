@@ -1,5 +1,5 @@
 
-module fidl.test;
+module f1dl.test;
 
 enum TestEnum {
   TEST = 0,

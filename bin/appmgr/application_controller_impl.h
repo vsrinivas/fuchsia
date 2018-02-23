@@ -22,7 +22,7 @@ class JobHolder;
 class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
-      fidl::InterfaceRequest<ApplicationController> request,
+      f1dl::InterfaceRequest<ApplicationController> request,
       JobHolder* job_holder,
       std::unique_ptr<archive::FileSystem> fs,
       zx::process process,
@@ -46,7 +46,7 @@ class ApplicationControllerImpl : public ApplicationController {
 
   bool SendReturnCodeIfTerminated();
 
-  fidl::Binding<ApplicationController> binding_;
+  f1dl::Binding<ApplicationController> binding_;
   JobHolder* job_holder_;
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;

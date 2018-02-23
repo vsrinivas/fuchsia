@@ -45,7 +45,7 @@ class TzUtil {
       return;
     }
     if (command_line.HasOption(kGetTimezoneIdCmd)) {
-      fidl::String timezone_id;
+      f1dl::String timezone_id;
       if (time_svc_->GetTimezoneId(&timezone_id)) {
         std::cout << timezone_id << std::endl;
       } else {

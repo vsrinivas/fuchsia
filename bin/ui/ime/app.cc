@@ -18,7 +18,7 @@ App::App(const fxl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
   application_context_->outgoing_services()->AddService<mozart::ImeService>(
-      [this](fidl::InterfaceRequest<mozart::ImeService> request) {
+      [this](f1dl::InterfaceRequest<mozart::ImeService> request) {
         ime_bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -29,8 +29,8 @@ void App::GetInputMethodEditor(
     mozart::KeyboardType keyboard_type,
     mozart::InputMethodAction action,
     mozart::TextInputStatePtr initial_state,
-    fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
+    f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+    f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
   FXL_DCHECK(initial_state);
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());

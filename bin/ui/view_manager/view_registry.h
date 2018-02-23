@@ -36,23 +36,23 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // VIEW MANAGER REQUESTS
 
   void GetSceneManager(
-      fidl::InterfaceRequest<scenic::SceneManager> scene_manager_request);
-  void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
-                  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<scenic::SceneManager> scene_manager_request);
+  void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
+                  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
                   zx::eventpair parent_export_token,
-                  const fidl::String& label);
+                  const f1dl::String& label);
   void CreateViewTree(
-      fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
+      f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       mozart::ViewTreeListenerPtr view_tree_listener,
-      const fidl::String& label);
+      const f1dl::String& label);
 
   // VIEW STUB REQUESTS
 
   void OnViewResolved(ViewStub* view_stub, mozart::ViewTokenPtr view_token);
   void TransferViewOwner(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // VIEW REQUESTS
 
@@ -70,7 +70,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Destroys |container_state| if an error occurs.
   void AddChild(ViewContainerState* container_state,
                 uint32_t child_key,
-                fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+                f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
                 zx::eventpair host_import_token);
 
   // Removes a child.
@@ -78,7 +78,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void RemoveChild(
       ViewContainerState* container_state,
       uint32_t child_key,
-      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // Sets a child's properties.
   // Destroys |container_state| if an error occurs.
@@ -95,13 +95,13 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewService(ViewState* view_state,
-                            const fidl::String& service_name,
+                            const f1dl::String& service_name,
                             zx::channel client_handle);
 
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewTreeService(ViewTreeState* tree_state,
-                                const fidl::String& service_name,
+                                const f1dl::String& service_name,
                                 zx::channel client_handle);
 
   // VIEW INSPECTOR REQUESTS
@@ -118,10 +118,10 @@ class ViewRegistry : public ViewInspector, public InputOwner {
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
+      f1dl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
   void GetImeService(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
+      f1dl::InterfaceRequest<mozart::ImeService> ime_service) override;
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
@@ -151,7 +151,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void HijackView(ViewState* view_state);
   void TransferOrUnregisterViewStub(
       std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // INVALIDATION
 
@@ -189,12 +189,12 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // INPUT CONNECTION
   void CreateInputConnection(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::InputConnection> request);
+      f1dl::InterfaceRequest<mozart::InputConnection> request);
 
   // INPUT DISPATCHER
   void CreateInputDispatcher(
       mozart::ViewTreeTokenPtr view_tree_token,
-      fidl::InterfaceRequest<mozart::InputDispatcher> request);
+      f1dl::InterfaceRequest<mozart::InputDispatcher> request);
 
   // LOOKUP
 

@@ -112,7 +112,7 @@ void SystemMetricsApp::Main() {
 void SystemMetricsApp::ConnectToEnvironmentService() {
   // Connect to the Cobalt FIDL service provided by the environment.
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&factory));
+  context_->ConnectToEnvironmentService(f1dl::GetSynchronousProxy(&factory));
   factory->GetEncoder(kSystemMetricsProjectId, GetSynchronousProxy(&encoder_));
 }
 

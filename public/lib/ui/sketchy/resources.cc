@@ -75,7 +75,7 @@ void Stroke::Begin(glm::vec2 pt) const {
 void Stroke::Extend(std::vector<glm::vec2> pts) const {
   auto extend_stroke = sketchy::ExtendStrokeOp::New();
   extend_stroke->stroke_id = id();
-  auto touches = ::fidl::Array<sketchy::TouchPtr>::New(pts.size());
+  auto touches = ::f1dl::Array<sketchy::TouchPtr>::New(pts.size());
   for (size_t i = 0; i < pts.size(); i++) {
     touches[i] = sketchy::Touch::New();
     touches[i]->position = scenic::vec2::New();
@@ -84,7 +84,7 @@ void Stroke::Extend(std::vector<glm::vec2> pts) const {
   }
   extend_stroke->touches = std::move(touches);
   // TODO(MZ-269): Populate predicted touches.
-  extend_stroke->predicted_touches = ::fidl::Array<sketchy::TouchPtr>::New(0);
+  extend_stroke->predicted_touches = ::f1dl::Array<sketchy::TouchPtr>::New(0);
   auto op = sketchy::Op::New();
   op->set_extend_stroke(std::move(extend_stroke));
   EnqueueOp(std::move(op));

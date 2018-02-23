@@ -12,13 +12,13 @@ TraceManagerApp::TraceManagerApp(const Config& config)
     : context_(app::ApplicationContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
   context_->outgoing_services()->AddService<TraceRegistry>(
-      [this](fidl::InterfaceRequest<TraceRegistry> request) {
+      [this](f1dl::InterfaceRequest<TraceRegistry> request) {
         trace_registry_bindings_.AddBinding(&trace_manager_,
                                             std::move(request));
       });
 
   context_->outgoing_services()->AddService<TraceController>(
-      [this](fidl::InterfaceRequest<TraceController> request) {
+      [this](f1dl::InterfaceRequest<TraceController> request) {
         trace_controller_bindings_.AddBinding(&trace_manager_,
                                               std::move(request));
       });

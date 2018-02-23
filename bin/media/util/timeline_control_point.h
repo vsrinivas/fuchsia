@@ -30,7 +30,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   ~TimelineControlPoint() override;
 
   // Binds to the control point. If a binding exists already, it is closed.
-  void Bind(fidl::InterfaceRequest<MediaTimelineControlPoint> request);
+  void Bind(f1dl::InterfaceRequest<MediaTimelineControlPoint> request);
 
   // Determines whether the control point is currently bound.
   bool is_bound() { return control_point_binding_.is_bound(); }
@@ -78,7 +78,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
                  const GetStatusCallback& callback) override;
 
   void GetTimelineConsumer(
-      fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+      f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
   void SetProgramRange(uint64_t program,
                        int64_t min_pts,
@@ -123,8 +123,8 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void SetTimelineTransformLocked(TimelineTransformPtr timeline_transform)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  fidl::Binding<TimelineConsumer> consumer_binding_;
+  f1dl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  f1dl::Binding<TimelineConsumer> consumer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   ProgramRangeSetCallback program_range_set_callback_;
   PrimeRequestedCallback prime_requested_callback_;

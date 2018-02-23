@@ -6,7 +6,7 @@
 
 #include <zircon/assert.h>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 namespace {
@@ -79,4 +79,4 @@ void DecodeHandle(Interface_Data* data, std::vector<zx_handle_t>* handles) {
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

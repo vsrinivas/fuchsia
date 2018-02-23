@@ -38,7 +38,7 @@ class SceneManagerTest : public ::testing::Test {
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   DisplayManager display_manager_;
   std::unique_ptr<Display> display_;
-  std::unique_ptr<fidl::Binding<scenic::SceneManager>> manager_binding_;
+  std::unique_ptr<f1dl::Binding<scenic::SceneManager>> manager_binding_;
   std::unique_ptr<fsl::Thread> thread_;
 
  private:

@@ -16,11 +16,11 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/compiler/interfaces/tests/serialization_test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
-using fidl::internal::ArrayValidateParams;
+using f1dl::internal::ArrayValidateParams;
 
 // Creates an array of arrays of handles (2 X 3) for testing.
 Array<Array<zx::handle>> CreateTestNestedHandleArray() {
@@ -45,29 +45,29 @@ class SerializationWarningTest : public testing::Test {
  protected:
   template <typename T>
   void TestWarning(StructPtr<T> obj,
-                   fidl::internal::ValidationError expected_warning) {
+                   f1dl::internal::ValidationError expected_warning) {
     TestStructWarningImpl<T>(std::move(obj), expected_warning);
   }
 
   template <typename T>
   void TestWarning(InlinedStructPtr<T> obj,
-                   fidl::internal::ValidationError expected_warning) {
+                   f1dl::internal::ValidationError expected_warning) {
     TestStructWarningImpl<T>(std::move(obj), expected_warning);
   }
 
   template <typename T, typename TPtr>
   void TestStructWarningImpl(TPtr obj,
-                             fidl::internal::ValidationError expected_warning) {
-    fidl::internal::FixedBufferForTesting buf(GetSerializedSize_(*obj));
+                             f1dl::internal::ValidationError expected_warning) {
+    f1dl::internal::FixedBufferForTesting buf(GetSerializedSize_(*obj));
     typename T::Data_* data;
     EXPECT_EQ(expected_warning, Serialize_(obj.get(), &buf, &data));
   }
 
   template <typename T>
   void TestArrayWarning(T obj,
-                        fidl::internal::ValidationError expected_warning,
+                        f1dl::internal::ValidationError expected_warning,
                         const ArrayValidateParams* validate_params) {
-    fidl::internal::FixedBufferForTesting buf(GetSerializedSize_(obj));
+    f1dl::internal::FixedBufferForTesting buf(GetSerializedSize_(obj));
     typename T::Data_* data;
     EXPECT_EQ(expected_warning,
               SerializeArray_(&obj, &buf, &data, validate_params));
@@ -80,7 +80,7 @@ TEST_F(SerializationWarningTest, HandleInStruct) {
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE);
+              f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE);
 #endif
 
   test_struct = Struct2::New();
@@ -88,7 +88,7 @@ TEST_F(SerializationWarningTest, HandleInStruct) {
   zx::channel::create(0, &handle0, &handle1);
   test_struct->hdl = std::move(handle1);
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 }
 
 TEST_F(SerializationWarningTest, StructInStruct) {
@@ -97,13 +97,13 @@ TEST_F(SerializationWarningTest, StructInStruct) {
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+              f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 #endif
 
   test_struct = Struct3::New();
   test_struct->struct_1 = Struct1::New();
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 }
 
 TEST_F(SerializationWarningTest, ArrayOfStructsInStruct) {
@@ -112,25 +112,25 @@ TEST_F(SerializationWarningTest, ArrayOfStructsInStruct) {
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+              f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 
   test_struct = Struct4::New();
   test_struct->data.resize(1);
 
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+              f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 #endif
 
   test_struct = Struct4::New();
   test_struct->data.resize(0);
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 
   test_struct = Struct4::New();
   test_struct->data.resize(1);
   test_struct->data[0] = Struct1::New();
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 }
 
 TEST_F(SerializationWarningTest, FixedArrayOfStructsInStruct) {
@@ -139,14 +139,14 @@ TEST_F(SerializationWarningTest, FixedArrayOfStructsInStruct) {
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+              f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 
   test_struct = Struct5::New();
   test_struct->pair.resize(1);
   test_struct->pair[0] = Struct1::New();
 
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER);
+              f1dl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER);
 #endif
 
   test_struct = Struct5::New();
@@ -154,7 +154,7 @@ TEST_F(SerializationWarningTest, FixedArrayOfStructsInStruct) {
   test_struct->pair[0] = Struct1::New();
   test_struct->pair[1] = Struct1::New();
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 }
 
 TEST_F(SerializationWarningTest, StringInStruct) {
@@ -163,13 +163,13 @@ TEST_F(SerializationWarningTest, StringInStruct) {
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
-              fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+              f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 #endif
-  
+
   test_struct = Struct6::New();
   test_struct->str = "hello world";
 
-  TestWarning(std::move(test_struct), fidl::internal::ValidationError::NONE);
+  TestWarning(std::move(test_struct), f1dl::internal::ValidationError::NONE);
 }
 
 TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
@@ -179,7 +179,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
 
   ArrayValidateParams validate_params_0(
       0, true, new ArrayValidateParams(0, true, nullptr));
-  TestArrayWarning(std::move(test_array), fidl::internal::ValidationError::NONE,
+  TestArrayWarning(std::move(test_array), f1dl::internal::ValidationError::NONE,
                    &validate_params_0);
 
 #ifdef NDEBUG // In debug builds serialization failures abort
@@ -188,7 +188,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
   ArrayValidateParams validate_params_1(
       0, false, new ArrayValidateParams(0, true, nullptr));
   TestArrayWarning(std::move(test_array),
-                   fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
+                   f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
                    &validate_params_1);
 
   test_array = CreateTestNestedHandleArray();
@@ -196,7 +196,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
   ArrayValidateParams validate_params_2(
       0, true, new ArrayValidateParams(0, false, nullptr));
   TestArrayWarning(std::move(test_array),
-                   fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
+                   f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
                    &validate_params_2);
 #endif
 }
@@ -208,7 +208,7 @@ TEST_F(SerializationWarningTest, ArrayOfStrings) {
 
   ArrayValidateParams validate_params_0(
       0, true, new ArrayValidateParams(0, false, nullptr));
-  TestArrayWarning(std::move(test_array), fidl::internal::ValidationError::NONE,
+  TestArrayWarning(std::move(test_array), f1dl::internal::ValidationError::NONE,
                    &validate_params_0);
 
 #ifdef NDEBUG // In debug builds serialization failures abort
@@ -216,20 +216,20 @@ TEST_F(SerializationWarningTest, ArrayOfStrings) {
   ArrayValidateParams validate_params_1(
       0, false, new ArrayValidateParams(0, false, nullptr));
   TestArrayWarning(std::move(test_array),
-                   fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
+                   f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
                    &validate_params_1);
 
   test_array = Array<String>::New(2);
   ArrayValidateParams validate_params_2(
       3, true, new ArrayValidateParams(0, false, nullptr));
   TestArrayWarning(std::move(test_array),
-                   fidl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
+                   f1dl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
                    &validate_params_2);
 #endif
 }
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif

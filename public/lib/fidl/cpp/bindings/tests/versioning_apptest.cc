@@ -6,7 +6,7 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "lib/fidl/compiler/interfaces/tests/versioning_test_client.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace versioning {
 
@@ -117,4 +117,4 @@ TEST_F(VersioningApplicationTest, CallNonexistentMethod) {
 
 }  // namespace versioning
 }  // namespace examples
-}  // namespace fidl
+}  // namespace f1dl

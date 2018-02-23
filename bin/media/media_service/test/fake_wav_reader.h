@@ -31,7 +31,7 @@ class FakeWavReader : public SeekingReader {
   }
 
   // Binds the reader.
-  void Bind(fidl::InterfaceRequest<SeekingReader> request);
+  void Bind(f1dl::InterfaceRequest<SeekingReader> request);
 
   // SeekingReader implementation.
   void Describe(const DescribeCallback& callback) override;
@@ -74,7 +74,7 @@ class FakeWavReader : public SeekingReader {
   // Gets the positionth byte of the file.
   uint8_t GetByte(size_t position);
 
-  fidl::Binding<SeekingReader> binding_;
+  f1dl::Binding<SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
   zx::socket socket_;

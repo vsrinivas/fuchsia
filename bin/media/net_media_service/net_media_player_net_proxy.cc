@@ -16,18 +16,18 @@ namespace media {
 
 // static
 std::shared_ptr<NetMediaPlayerNetProxy> NetMediaPlayerNetProxy::Create(
-    const fidl::String& device_name,
-    const fidl::String& service_name,
-    fidl::InterfaceRequest<NetMediaPlayer> request,
+    const f1dl::String& device_name,
+    const f1dl::String& service_name,
+    f1dl::InterfaceRequest<NetMediaPlayer> request,
     NetMediaServiceImpl* owner) {
   return std::shared_ptr<NetMediaPlayerNetProxy>(new NetMediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
 NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
-    const fidl::String& device_name,
-    const fidl::String& service_name,
-    fidl::InterfaceRequest<NetMediaPlayer> request,
+    const f1dl::String& device_name,
+    const f1dl::String& service_name,
+    f1dl::InterfaceRequest<NetMediaPlayer> request,
     NetMediaServiceImpl* owner)
     : NetMediaServiceImpl::Product<NetMediaPlayer>(this,
                                                    std::move(request),
@@ -72,7 +72,7 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
 
 NetMediaPlayerNetProxy::~NetMediaPlayerNetProxy() {}
 
-void NetMediaPlayerNetProxy::SetUrl(const fidl::String& url) {
+void NetMediaPlayerNetProxy::SetUrl(const f1dl::String& url) {
   message_relay_.SendMessage(
       Serializer::Serialize(NetMediaPlayerInMessage::SetUrlRequest(url)));
 }

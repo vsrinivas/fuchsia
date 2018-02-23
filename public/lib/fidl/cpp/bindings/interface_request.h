@@ -12,7 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/macros.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <typename I>
 class InterfacePtr;
@@ -71,6 +71,6 @@ class InterfaceRequest {
   FIDL_MOVE_ONLY_TYPE(InterfaceRequest);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERFACE_REQUEST_H_

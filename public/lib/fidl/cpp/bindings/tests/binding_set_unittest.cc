@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -127,4 +127,4 @@ TEST(BindingSetTest, Iterator) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

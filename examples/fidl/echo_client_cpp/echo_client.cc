@@ -14,7 +14,7 @@ namespace echo {
 
 class ResponsePrinter {
  public:
-  void Run(const fidl::String& value) const {
+  void Run(const f1dl::String& value) const {
     printf("***** Response: %s\n", value.get().c_str());
 
     fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -38,7 +38,7 @@ class EchoClientApp {
     echo_provider_.ConnectToService(echo_.NewRequest());
     FXL_DCHECK(echo_);
 
-    echo_->EchoString(msg, [this](fidl::String value) {
+    echo_->EchoString(msg, [this](f1dl::String value) {
       ResponsePrinter printer;
       printer.Run(std::move(value));
     });

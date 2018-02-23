@@ -23,8 +23,8 @@ class ImeImpl : public mozart::InputMethodEditor {
   ImeImpl(mozart::KeyboardType keyboard_type,
           mozart::InputMethodAction action,
           mozart::TextInputStatePtr initial_state,
-          fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-          fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request);
+          f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+          f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request);
   ~ImeImpl();
 
  private:
@@ -37,7 +37,7 @@ class ImeImpl : public mozart::InputMethodEditor {
 
   void OnEditorDied();
 
-  fidl::Binding<mozart::InputMethodEditor> editor_binding_;
+  f1dl::Binding<mozart::InputMethodEditor> editor_binding_;
   mozart::InputMethodEditorClientPtr client_;
   mozart::KeyboardType keyboard_type_;
   mozart::InputMethodAction action_ = mozart::InputMethodAction::UNSPECIFIED;

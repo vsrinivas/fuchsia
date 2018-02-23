@@ -19,23 +19,23 @@ void ViewTreeImpl::GetToken(const GetTokenCallback& callback) {
 }
 
 void ViewTreeImpl::GetServiceProvider(
-    fidl::InterfaceRequest<app::ServiceProvider> service_provider) {
+    f1dl::InterfaceRequest<app::ServiceProvider> service_provider) {
   service_provider_bindings_.AddBinding(this, std::move(service_provider));
 }
 
 void ViewTreeImpl::GetContainer(
-    fidl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
+    f1dl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, std::move(view_container_request));
 }
 
 void ViewTreeImpl::SetListener(
-    fidl::InterfaceHandle<mozart::ViewContainerListener> listener) {
+    f1dl::InterfaceHandle<mozart::ViewContainerListener> listener) {
   state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewTreeImpl::AddChild(
     uint32_t child_key,
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
     zx::eventpair host_import_token) {
   registry_->AddChild(state_, child_key, std::move(child_view_owner),
                       std::move(host_import_token));
@@ -43,7 +43,7 @@ void ViewTreeImpl::AddChild(
 
 void ViewTreeImpl::RemoveChild(
     uint32_t child_key,
-    fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          std::move(transferred_view_owner_request));
 }
@@ -59,7 +59,7 @@ void ViewTreeImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
-void ViewTreeImpl::ConnectToService(const fidl::String& service_name,
+void ViewTreeImpl::ConnectToService(const f1dl::String& service_name,
                                     zx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));

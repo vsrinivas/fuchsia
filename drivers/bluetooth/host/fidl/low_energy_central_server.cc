@@ -22,13 +22,13 @@ namespace bthost {
 
 LowEnergyCentralServer::LowEnergyCentralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<Central> request)
+    f1dl::InterfaceRequest<Central> request)
     : ServerBase(adapter, this, std::move(request)),
       requesting_scan_(false),
       weak_ptr_factory_(this) {}
 
 void LowEnergyCentralServer::SetDelegate(
-    ::fidl::InterfaceHandle<CentralDelegate> delegate) {
+    ::f1dl::InterfaceHandle<CentralDelegate> delegate) {
   if (!delegate) {
     FXL_VLOG(1) << "Cannot set a null delegate";
     return;
@@ -42,14 +42,14 @@ void LowEnergyCentralServer::SetDelegate(
 }
 
 void LowEnergyCentralServer::GetPeripherals(
-    ::fidl::Array<::fidl::String> service_uuids,
+    ::f1dl::Array<::f1dl::String> service_uuids,
     const GetPeripheralsCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralServer::GetPeripheral(
-    const ::fidl::String& identifier,
+    const ::f1dl::String& identifier,
     const GetPeripheralCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
@@ -125,7 +125,7 @@ void LowEnergyCentralServer::StopScan() {
 }
 
 void LowEnergyCentralServer::ConnectPeripheral(
-    const ::fidl::String& identifier,
+    const ::f1dl::String& identifier,
     const ConnectPeripheralCallback& callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 
@@ -209,7 +209,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
-    const ::fidl::String& identifier,
+    const ::f1dl::String& identifier,
     const DisconnectPeripheralCallback& callback) {
   auto iter = connections_.find(identifier.get());
   if (iter == connections_.end()) {

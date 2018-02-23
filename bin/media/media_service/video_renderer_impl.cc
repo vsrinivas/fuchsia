@@ -13,8 +13,8 @@ namespace media {
 
 // static
 std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
-    fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<VideoRendererImpl>(
       new VideoRendererImpl(std::move(video_renderer_request),
@@ -22,8 +22,8 @@ std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
 }
 
 VideoRendererImpl::VideoRendererImpl(
-    fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<VideoRenderer>(
           this,
@@ -41,7 +41,7 @@ void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void VideoRendererImpl::CreateView(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   FXL_DCHECK(video_frame_source_);
   new View(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
            std::move(view_owner_request), video_frame_source_);
@@ -49,7 +49,7 @@ void VideoRendererImpl::CreateView(
 
 VideoRendererImpl::View::View(
     mozart::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     std::shared_ptr<VideoFrameSource> video_frame_source)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),

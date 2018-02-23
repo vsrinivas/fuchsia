@@ -29,21 +29,21 @@ class SessionHandler : public scenic::Session,
  public:
   SessionHandler(Engine* engine,
                  SessionId session_id,
-                 ::fidl::InterfaceRequest<scenic::Session> request,
-                 ::fidl::InterfaceHandle<scenic::SessionListener> listener);
+                 ::f1dl::InterfaceRequest<scenic::Session> request,
+                 ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
   ~SessionHandler() override;
 
   scene_manager::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(::fidl::Array<scenic::EventPtr> events) override;
+  void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
 
  protected:
   // scenic::Session interface methods.
-  void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
+  void Enqueue(::f1dl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
-               ::fidl::Array<zx::event> acquire_fences,
-               ::fidl::Array<zx::event> release_fences,
+               ::f1dl::Array<zx::event> acquire_fences,
+               ::f1dl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,
@@ -74,10 +74,10 @@ class SessionHandler : public scenic::Session,
   Engine* const engine_;
   scene_manager::SessionPtr session_;
 
-  ::fidl::BindingSet<scenic::Session> bindings_;
-  ::fidl::InterfacePtr<scenic::SessionListener> listener_;
+  ::f1dl::BindingSet<scenic::Session> bindings_;
+  ::f1dl::InterfacePtr<scenic::SessionListener> listener_;
 
-  ::fidl::Array<scenic::OpPtr> buffered_ops_;
+  ::f1dl::Array<scenic::OpPtr> buffered_ops_;
 };
 
 }  // namespace scene_manager

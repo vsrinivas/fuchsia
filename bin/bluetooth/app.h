@@ -42,22 +42,22 @@ class App final {
   // Called when there is an interface request for the AdapterManager FIDL
   // service.
   void OnAdapterManagerRequest(
-      fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request);
+      f1dl::InterfaceRequest<::bluetooth::control::AdapterManager> request);
 
   // Called when there is an interface request for the low_energy::Central FIDL
   // service.
   void OnLowEnergyCentralRequest(
-      fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
+      f1dl::InterfaceRequest<::bluetooth::low_energy::Central> request);
 
   // Called when there is an interface request for the low_energy::Peripheral
   // FIDL service.
   void OnLowEnergyPeripheralRequest(
-      fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
+      f1dl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
 
   // Called when there is an interface request for the gatt::Server FIDL
   // service.
   void OnGattServerRequest(
-      fidl::InterfaceRequest<::bluetooth::gatt::Server> request);
+      f1dl::InterfaceRequest<::bluetooth::gatt::Server> request);
 
   // Called when a AdapterManagerServer that we own notifies a connection
   // error handler.

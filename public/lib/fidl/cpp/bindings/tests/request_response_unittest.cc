@@ -9,7 +9,7 @@
 #include "lib/fidl/compiler/interfaces/tests/sample_import.fidl.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -143,4 +143,4 @@ TEST_F(RequestResponseTest, EchoEnum) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

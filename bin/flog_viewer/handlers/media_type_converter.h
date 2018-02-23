@@ -27,11 +27,11 @@ class MediaTypeConverter : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
  private:
   // MediaTypeConverterChannel implementation.
-  void BoundAs(uint64_t koid, const fidl::String& converter_type) override;
+  void BoundAs(uint64_t koid, const f1dl::String& converter_type) override;
 
   void Config(media::MediaTypePtr input_type,
               media::MediaTypePtr output_type,

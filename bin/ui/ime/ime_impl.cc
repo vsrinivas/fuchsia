@@ -16,8 +16,8 @@ ImeImpl::ImeImpl(
     mozart::KeyboardType keyboard_type,
     mozart::InputMethodAction action,
     mozart::TextInputStatePtr initial_state,
-    fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request)
+    f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+    f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request)
     : editor_binding_(this, std::move(editor_request)),
       keyboard_type_(keyboard_type),
       action_(action),
@@ -70,7 +70,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
       int64_t extent = state_->selection->extent;
       extent = extent == -1 ? 0 : extent;
       text.replace(base, extent - base, replacement);
-      state_->text = fidl::String(text);
+      state_->text = f1dl::String(text);
       state_->selection->base = base + replacement.length();
       state_->selection->extent = state_->selection->base;
 

@@ -12,7 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // The Connector class is responsible for performing read/write operations on a
@@ -113,6 +113,6 @@ class Connector : public MessageReceiver {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_

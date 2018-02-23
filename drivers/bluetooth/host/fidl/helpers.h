@@ -50,12 +50,12 @@ bool PopulateDiscoveryFilter(
 }  // namespace fidl_helpers
 }  // namespace bthost
 
-// fidl::TypeConverter specializations for common::ByteBuffer and friends.
-namespace fidl {
+// f1dl::TypeConverter specializations for common::ByteBuffer and friends.
+namespace f1dl {
 
 template <>
 struct TypeConverter<Array<uint8_t>, ::btlib::common::ByteBuffer> {
   static Array<uint8_t> Convert(const ::btlib::common::ByteBuffer& from);
 };
 
-}  // namespace fidl
+}  // namespace f1dl

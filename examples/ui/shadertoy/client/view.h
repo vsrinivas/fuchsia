@@ -19,7 +19,7 @@ class View : public mozart::BaseView {
  public:
   View(app::ApplicationContext* application_context,
        mozart::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~View() override;
 

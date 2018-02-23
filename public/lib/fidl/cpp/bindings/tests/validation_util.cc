@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/tests/validation_test_input_parser.h"
 #include "mojo/public/cpp/test_support/test_support.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace validation_util {
 
@@ -104,4 +104,4 @@ std::vector<std::string> GetMatchingTests(const std::string& prefix) {
 
 }  // namespace validation_util
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

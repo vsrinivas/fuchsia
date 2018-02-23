@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/internal/array_internal.h"
 #include "lib/fidl/cpp/bindings/string.h"
 
-namespace fidl {
+namespace f1dl {
 
 size_t GetSerializedSize_(const String& input);
 void SerializeString_(const String& input,
@@ -17,6 +17,6 @@ void SerializeString_(const String& input,
 
 void Deserialize_(internal::String_Data* input, String* output);
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_STRING_SERIALIZATION_H_

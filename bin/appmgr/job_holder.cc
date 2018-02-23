@@ -216,8 +216,8 @@ uint32_t JobHolder::next_numbered_label_ = 1u;
 
 JobHolder::JobHolder(JobHolder* parent,
                      fs::Vfs* vfs,
-                     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-                     const fidl::String& label)
+                     f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+                     const f1dl::String& label)
     : parent_(parent),
       vfs_(vfs),
       default_namespace_(
@@ -253,10 +253,10 @@ JobHolder::~JobHolder() {
 }
 
 void JobHolder::CreateNestedJob(
-    fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-    fidl::InterfaceRequest<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
-    const fidl::String& label) {
+    f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+    f1dl::InterfaceRequest<ApplicationEnvironment> environment,
+    f1dl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
+    const f1dl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
       std::make_unique<JobHolder>(this, vfs_, std::move(host), label));
@@ -271,7 +271,7 @@ void JobHolder::CreateNestedJob(
 
 void JobHolder::CreateApplication(
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    f1dl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info->url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
@@ -286,7 +286,7 @@ void JobHolder::CreateApplication(
   launch_info->url = canon_url;
 
   // launch_info is moved before LoadApplication() gets at its first argument.
-  fidl::String url = launch_info->url;
+  f1dl::String url = launch_info->url;
   loader_->LoadApplication(
       url, fxl::MakeCopyable([
         this, launch_info = std::move(launch_info),
@@ -355,7 +355,7 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
 }
 
 void JobHolder::AddBinding(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+    f1dl::InterfaceRequest<ApplicationEnvironment> environment) {
   default_namespace_->AddBinding(std::move(environment));
 }
 
@@ -363,7 +363,7 @@ void JobHolder::CreateApplicationWithRunner(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     std::string runner,
-    fidl::InterfaceRequest<ApplicationController> controller,
+    f1dl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
@@ -398,7 +398,7 @@ void JobHolder::CreateApplicationWithRunner(
 void JobHolder::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller,
+    f1dl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
@@ -442,7 +442,7 @@ void JobHolder::CreateApplicationWithProcess(
 void JobHolder::CreateApplicationFromPackage(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller,
+    f1dl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)

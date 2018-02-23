@@ -21,7 +21,7 @@ class GattServerServer : public ServerBase<bluetooth::gatt::Server> {
   // |adapter_manager| is used to lazily request a handle to the corresponding
   // adapter. It MUST out-live this GattServerServer instance.
   GattServerServer(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-                   fidl::InterfaceRequest<bluetooth::gatt::Server> request);
+                   f1dl::InterfaceRequest<bluetooth::gatt::Server> request);
 
   ~GattServerServer() override;
 
@@ -36,8 +36,8 @@ class GattServerServer : public ServerBase<bluetooth::gatt::Server> {
   // ::bluetooth::gatt::Server overrides:
   void PublishService(
       bluetooth::gatt::ServiceInfoPtr service_info,
-      fidl::InterfaceHandle<bluetooth::gatt::ServiceDelegate> delegate,
-      fidl::InterfaceRequest<bluetooth::gatt::Service> service_iface,
+      f1dl::InterfaceHandle<bluetooth::gatt::ServiceDelegate> delegate,
+      f1dl::InterfaceRequest<bluetooth::gatt::Service> service_iface,
       const PublishServiceCallback& callback) override;
 
   // Called when a remote device issues a read request to one of our services.

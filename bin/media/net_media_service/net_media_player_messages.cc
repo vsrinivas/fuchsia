@@ -22,7 +22,7 @@ NetMediaPlayerInMessage::TimeCheckRequest(int64_t requestor_time) {
 
 // static
 std::unique_ptr<NetMediaPlayerInMessage> NetMediaPlayerInMessage::SetUrlRequest(
-    const fidl::String& url) {
+    const f1dl::String& url) {
   std::unique_ptr<NetMediaPlayerInMessage> message =
       std::make_unique<NetMediaPlayerInMessage>();
   message->type_ = NetMediaPlayerInMessageType::kSetUrlRequest;
@@ -86,7 +86,7 @@ NetMediaPlayerOutMessage::StatusNotification(MediaPlayerStatusPtr status) {
   return message;
 }
 
-Serializer& operator<<(Serializer& serializer, const fidl::String& value) {
+Serializer& operator<<(Serializer& serializer, const f1dl::String& value) {
   serializer << value.size();
   serializer.PutBytes(value.size(), value.data());
   return serializer;
@@ -206,14 +206,14 @@ Serializer& operator<<(Serializer& serializer,
   return serializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer, fidl::String& value) {
+Deserializer& operator>>(Deserializer& deserializer, f1dl::String& value) {
   size_t size;
   deserializer >> size;
   const char* bytes = reinterpret_cast<const char*>(deserializer.Bytes(size));
   if (bytes == nullptr) {
-    value = fidl::String();
+    value = f1dl::String();
   } else {
-    value = fidl::String(bytes, size);
+    value = f1dl::String(bytes, size);
   }
 
   return deserializer;

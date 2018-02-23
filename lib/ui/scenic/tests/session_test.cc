@@ -52,7 +52,7 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void SessionTest::SendEvents(::fidl::Array<scenic::EventPtr> events) {
+void SessionTest::SendEvents(::f1dl::Array<scenic::EventPtr> events) {
   for (auto& event : events) {
     events_.push_back(std::move(event));
   }

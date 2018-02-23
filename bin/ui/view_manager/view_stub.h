@@ -49,7 +49,7 @@ class ViewStub {
   // |host_import_token| is the import token associated with the node
   // that the parent view exported to host the view's graphical contents.
   ViewStub(ViewRegistry* registry,
-           fidl::InterfaceHandle<mozart::ViewOwner> owner,
+           f1dl::InterfaceHandle<mozart::ViewOwner> owner,
            zx::eventpair host_import_token);
   ~ViewStub();
 
@@ -115,7 +115,7 @@ class ViewStub {
   // be transferred
   void TransferViewOwnerWhenViewResolved(
       std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // Releases the host import token and host node.
   void ReleaseHost();

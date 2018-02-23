@@ -34,7 +34,7 @@ void FlogViewer::ProcessLogs() {
   FXL_DCHECK(service_);
 
   service_->GetLogDescriptions(
-      [this](fidl::Array<FlogDescriptionPtr> descriptions) {
+      [this](f1dl::Array<FlogDescriptionPtr> descriptions) {
         std::cout << "\n";
         std::cout << "     id  label\n";
         std::cout << "-------- ---------------------------------------------"
@@ -266,7 +266,7 @@ void FlogViewer::OnChannelMessage(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
     const FlogChannelMessageEntryDetailsPtr& details) {
-  fidl::AllocMessage message;
+  f1dl::AllocMessage message;
   message.AllocUninitializedData(details->data.size());
   memcpy(message.mutable_data(), details->data.data(), details->data.size());
 
@@ -323,7 +323,7 @@ void FlogViewer::Log::GetEntries(uint32_t start_index,
   entries_consumed_ = 0;
   reader_->GetEntries(
       start_index, kGetEntriesMaxCount,
-      [this, start_index, callback](fidl::Array<FlogEntryPtr> entries) {
+      [this, start_index, callback](f1dl::Array<FlogEntryPtr> entries) {
         entries_ = std::move(entries);
         callback();
       });

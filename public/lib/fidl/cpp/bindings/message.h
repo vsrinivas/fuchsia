@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
 
-namespace fidl {
+namespace f1dl {
 
 // Message represents a Zircon channel message.  It contains the message's
 // data and handles.
@@ -210,6 +210,6 @@ zx_status_t CallMessage(const zx::channel& channel,
                         Message* message,
                         PreallocMessage* response);
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_MESSAGE_H_

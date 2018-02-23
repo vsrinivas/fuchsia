@@ -21,24 +21,24 @@ class {{struct.name}} {
 
   template <typename U>
   static {{struct.name}}Ptr From(const U& u) {
-    return ::fidl::TypeConverter<{{struct.name}}Ptr, U>::Convert(u);
+    return ::f1dl::TypeConverter<{{struct.name}}Ptr, U>::Convert(u);
   }
 
   template <typename U>
   U To() const {
-    return ::fidl::TypeConverter<U, {{struct.name}}>::Convert(*this);
+    return ::f1dl::TypeConverter<U, {{struct.name}}>::Convert(*this);
   }
 
   {{struct.name}}();
   ~{{struct.name}}();
-  
+
   // Returns the number of bytes it would take to serialize this struct's data.
   size_t GetSerializedSize() const;
 
   // Returns true on successful serialization. On failure, part of the data may
   // be serialized, until the point of failure. This API does not support
   // serializing handles. If not null, |bytes_written| is set to the number of
-  // bytes written to |buf|, even if this function return false. 
+  // bytes written to |buf|, even if this function return false.
   //
   // TODO(vardhan): For now, we return true for success. Should we define a
   // public error type for serialization? Should we open up

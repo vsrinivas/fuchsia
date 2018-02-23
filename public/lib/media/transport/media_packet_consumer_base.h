@@ -60,10 +60,10 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   };
 
   // Binds to this MediaPacketConsumer.
-  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> request);
+  void Bind(f1dl::InterfaceRequest<MediaPacketConsumer> request);
 
   // Binds to this MediaPacketConsumer.
-  void Bind(fidl::InterfaceHandle<MediaPacketConsumer>* handle);
+  void Bind(f1dl::InterfaceHandle<MediaPacketConsumer>* handle);
 
   // Determines if the consumer is bound to a channel.
   bool is_bound();
@@ -192,7 +192,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Does nothing if pts_rate_ is zero.
   void SetPacketPtsRate(const MediaPacketPtr& packet);
 
-  fidl::Binding<MediaPacketConsumer> binding_;
+  f1dl::Binding<MediaPacketConsumer> binding_;
   bool accept_revised_media_type_ = false;
   MediaPacketDemand demand_;
   bool demand_update_required_ = false;

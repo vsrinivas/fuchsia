@@ -16,7 +16,7 @@ FlogServiceImpl::FlogServiceImpl(
     std::unique_ptr<app::ApplicationContext> application_context)
     : FactoryServiceBase(std::move(application_context)) {
   this->application_context()->outgoing_services()->AddService<FlogService>(
-      [this](fidl::InterfaceRequest<FlogService> request) {
+      [this](f1dl::InterfaceRequest<FlogService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
@@ -38,8 +38,8 @@ FlogServiceImpl::FlogServiceImpl(
 
 FlogServiceImpl::~FlogServiceImpl() {}
 
-void FlogServiceImpl::CreateLogger(fidl::InterfaceRequest<FlogLogger> request,
-                                   const fidl::String& label) {
+void FlogServiceImpl::CreateLogger(f1dl::InterfaceRequest<FlogLogger> request,
+                                   const f1dl::String& label) {
   ready_.When(fxl::MakeCopyable([
     this, request = std::move(request), label
   ]() mutable {
@@ -54,8 +54,8 @@ void FlogServiceImpl::GetLogDescriptions(
     const GetLogDescriptionsCallback& callback) {
   ready_.When([this, callback]() {
     FXL_DCHECK(log_labels_by_id_);
-    fidl::Array<FlogDescriptionPtr> descriptions =
-        fidl::Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
+    f1dl::Array<FlogDescriptionPtr> descriptions =
+        f1dl::Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
 
     size_t i = 0;
     for (std::pair<uint32_t, std::string> pair : *log_labels_by_id_) {
@@ -70,7 +70,7 @@ void FlogServiceImpl::GetLogDescriptions(
   });
 }
 
-void FlogServiceImpl::CreateReader(fidl::InterfaceRequest<FlogReader> reader,
+void FlogServiceImpl::CreateReader(f1dl::InterfaceRequest<FlogReader> reader,
                                    uint32_t log_id) {
   ready_.When(
       fxl::MakeCopyable([ this, reader = std::move(reader), log_id ]() mutable {

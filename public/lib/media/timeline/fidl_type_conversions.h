@@ -7,7 +7,7 @@
 #include "lib/media/fidl/timelines.fidl.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <>
 struct TypeConverter<media::TimelineTransformPtr, media::TimelineFunction> {
@@ -21,4 +21,4 @@ struct TypeConverter<media::TimelineFunction, media::TimelineTransformPtr> {
       const media::TimelineTransformPtr& input);
 };
 
-}  // namespace fidl
+}  // namespace f1dl

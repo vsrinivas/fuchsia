@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 template <typename Interface>
@@ -128,6 +128,6 @@ class InterfacePtrState {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_INTERFACE_PTR_INTERNAL_H_

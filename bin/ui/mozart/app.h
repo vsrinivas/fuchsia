@@ -19,7 +19,7 @@ class App {
  private:
   Clock clock_;
   std::unique_ptr<Mozart> mozart_;
-  fidl::BindingSet<Mozart> bindings_;
+  f1dl::BindingSet<Mozart> bindings_;
 };
 
 }  // namespace mz

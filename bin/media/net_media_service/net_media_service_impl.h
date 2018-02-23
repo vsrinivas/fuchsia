@@ -21,17 +21,17 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
 
   // NetMediaService implementation.
   void CreateNetMediaPlayer(
-      const fidl::String& service_name,
-      fidl::InterfaceHandle<MediaPlayer> media_player,
-      fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
+      const f1dl::String& service_name,
+      f1dl::InterfaceHandle<MediaPlayer> media_player,
+      f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
 
   void CreateNetMediaPlayerProxy(
-      const fidl::String& device_name,
-      const fidl::String& service_name,
-      fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
+      const f1dl::String& device_name,
+      const f1dl::String& service_name,
+      f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
 
  private:
-  fidl::BindingSet<NetMediaService> bindings_;
+  f1dl::BindingSet<NetMediaService> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaServiceImpl);
 };

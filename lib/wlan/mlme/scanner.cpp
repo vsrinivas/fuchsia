@@ -41,7 +41,7 @@ zx_status_t Scanner::Start(const ScanRequest& req) {
     ZX_DEBUG_ASSERT(channel_start_.get() == 0);
 
     resp_ = ScanResponse::New();
-    resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
+    resp_->bss_description_set = f1dl::Array<BSSDescriptionPtr>::New(0);
     resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
     if (req.channel_list.size() == 0) { return SendScanResponse(); }

@@ -90,8 +90,8 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
 }
 
 void Engine::CreateSession(
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
   SessionId session_id = next_session_id_++;
 
   auto handler =
@@ -113,8 +113,8 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
     SessionId session_id,
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
   return std::make_unique<SessionHandler>(this, session_id, std::move(request),
                                           std::move(listener));
 }

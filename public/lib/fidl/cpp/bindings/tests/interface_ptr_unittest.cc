@@ -15,7 +15,7 @@
 
 using std::placeholders::_1;
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -135,7 +135,7 @@ class ReentrantServiceImpl : public sample::Service {
 
   void Frobinate(sample::FooPtr foo,
                  sample::Service::BazOptions baz,
-                 fidl::InterfaceHandle<sample::Port> port,
+                 f1dl::InterfaceHandle<sample::Port> port,
                  const sample::Service::FrobinateCallback& callback) override {
     max_call_depth_ = std::max(++call_depth_, max_call_depth_);
     if (call_depth_ == 1) {
@@ -145,7 +145,7 @@ class ReentrantServiceImpl : public sample::Service {
     callback(5);
   }
 
-  void GetPort(fidl::InterfaceRequest<sample::Port> port) override {}
+  void GetPort(f1dl::InterfaceRequest<sample::Port> port) override {}
 
  private:
   int call_depth_;
@@ -589,4 +589,4 @@ TEST_F(InterfacePtrTest, Scoping) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

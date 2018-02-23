@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // Buffer provides a way to allocate memory. Allocations are 8-byte aligned and
@@ -19,6 +19,6 @@ class Buffer {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_BUFFER_H_

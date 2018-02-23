@@ -11,7 +11,7 @@
 namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
-                           fidl::Array<fidl::String> categories,
+                           f1dl::Array<f1dl::String> categories,
                            size_t trace_buffer_size,
                            fxl::Closure abort_handler)
     : destination_(std::move(destination)),

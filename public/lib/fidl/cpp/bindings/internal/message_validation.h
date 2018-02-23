@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // Validates that the message is a request which doesn't expect a response.
@@ -35,6 +35,6 @@ ValidationError ValidateMessagePayload(const Message* message,
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MESSAGE_VALIDATION_H_

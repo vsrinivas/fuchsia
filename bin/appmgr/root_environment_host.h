@@ -31,18 +31,18 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   // ApplicationEnvironmentHost implementation:
 
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<ServiceProvider> environment_services) override;
+      f1dl::InterfaceRequest<ServiceProvider> environment_services) override;
 
   // ServiceProvider implementation:
 
-  void ConnectToService(const fidl::String& interface_name,
+  void ConnectToService(const f1dl::String& interface_name,
                         zx::channel channel) override;
 
  private:
   RootApplicationLoader loader_;
-  fidl::Binding<ApplicationEnvironmentHost> host_binding_;
-  fidl::BindingSet<ApplicationLoader> loader_bindings_;
-  fidl::BindingSet<ServiceProvider> service_provider_bindings_;
+  f1dl::Binding<ApplicationEnvironmentHost> host_binding_;
+  f1dl::BindingSet<ApplicationLoader> loader_bindings_;
+  f1dl::BindingSet<ServiceProvider> service_provider_bindings_;
 
   std::vector<std::string> path_;
   std::unique_ptr<JobHolder> root_job_;

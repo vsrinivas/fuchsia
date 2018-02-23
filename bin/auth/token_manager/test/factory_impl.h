@@ -25,10 +25,10 @@ class FactoryImpl : public auth::AuthProviderFactory {
 
  private:
   // Factory:
-  void GetAuthProvider(fidl::InterfaceRequest<auth::AuthProvider> auth_provider,
+  void GetAuthProvider(f1dl::InterfaceRequest<auth::AuthProvider> auth_provider,
                        const GetAuthProviderCallback& callback) override;
 
-  fidl::BindingSet<
+  f1dl::BindingSet<
       AuthProvider,
       std::unique_ptr<auth::dev_auth_provider::DevAuthProviderImpl>>
       dev_bindings_;

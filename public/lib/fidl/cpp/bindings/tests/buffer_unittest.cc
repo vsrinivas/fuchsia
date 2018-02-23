@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -96,4 +96,4 @@ TEST(FixedBufferTest, TooBig) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_TYPE_CONVERTER_H_
 #define LIB_FIDL_CPP_BINDINGS_TYPE_CONVERTER_H_
 
-namespace fidl {
+namespace f1dl {
 
 // Specialize the following class:
 //   template <typename T, typename U> struct TypeConverter;
@@ -13,7 +13,7 @@ namespace fidl {
 // the target type; U is the input type.
 //
 // Specializations should implement the following interfaces:
-//   namespace fidl {
+//   namespace f1dl {
 //   template <>
 //   struct TypeConverter<X, Y> {
 //     static X Convert(const Y& input);
@@ -38,7 +38,7 @@ namespace fidl {
 // Now, imagine you wanted to write a TypeConverter specialization for
 // gfx::Point. It might look like this:
 //
-//   namespace fidl {
+//   namespace f1dl {
 //   template <>
 //   struct TypeConverter<geometry::PointPtr, gfx::Point> {
 //     static geometry::PointPtr Convert(const gfx::Point& input) {
@@ -87,6 +87,6 @@ inline T ConvertTo(const U& obj) {
   return TypeConverter<T, U>::Convert(obj);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TYPE_CONVERTER_H_

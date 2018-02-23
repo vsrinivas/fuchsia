@@ -15,15 +15,15 @@ namespace media {
 
 // static
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceRequest<MediaSource> request,
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
       new MediaDemuxImpl(std::move(reader), std::move(request), owner));
 }
 
-MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                               fidl::InterfaceRequest<MediaSource> request,
+MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
+                               f1dl::InterfaceRequest<MediaSource> request,
                                MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
@@ -128,14 +128,14 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
                                    const std::string& details) {
   problem_ = Problem::New();
   problem_->type = type;
-  problem_->details = details.empty() ? nullptr : fidl::String(details);
+  problem_->details = details.empty() ? nullptr : f1dl::String(details);
   status_publisher_.SendUpdates();
 }
 
 void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
-    fidl::Array<MediaTypePtr> result =
-        fidl::Array<MediaTypePtr>::New(streams_.size());
+    f1dl::Array<MediaTypePtr> result =
+        f1dl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       result[i] = MediaType::From(streams_[i]->stream_type());
     }
@@ -146,7 +146,7 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
 
 void MediaDemuxImpl::GetPacketProducer(
     uint32_t stream_index,
-    fidl::InterfaceRequest<MediaPacketProducer> producer) {
+    f1dl::InterfaceRequest<MediaPacketProducer> producer) {
   RCHECK(init_complete_.occurred());
 
   if (stream_index >= streams_.size()) {
@@ -197,7 +197,7 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
 MediaDemuxImpl::Stream::~Stream() {}
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
-    fidl::InterfaceRequest<MediaPacketProducer> producer) {
+    f1dl::InterfaceRequest<MediaPacketProducer> producer) {
   FXL_DCHECK(producer_);
   producer_->Bind(std::move(producer));
 }

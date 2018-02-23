@@ -50,7 +50,7 @@ class {{interface.name}}_SynchronousProxy
  public:
   explicit {{interface.name}}_SynchronousProxy(
       ::zx::channel channel,
-      ::fidl::internal::MessageValidatorList&& validators);
+      ::f1dl::internal::MessageValidatorList&& validators);
 
   bool is_bound() const { return !!channel_; }
   zx::channel TakeChannel_();
@@ -62,7 +62,7 @@ class {{interface.name}}_SynchronousProxy
 
  private:
   ::zx::channel channel_;
-  ::fidl::internal::MessageValidatorList const validators_;
+  ::f1dl::internal::MessageValidatorList const validators_;
 };
 {% endfor %}
 

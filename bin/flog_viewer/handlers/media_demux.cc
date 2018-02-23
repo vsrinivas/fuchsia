@@ -39,7 +39,7 @@ MediaDemux::MediaDemux(const std::string& format)
 
 MediaDemux::~MediaDemux() {}
 
-void MediaDemux::HandleMessage(fidl::Message* message) {
+void MediaDemux::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 

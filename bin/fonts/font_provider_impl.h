@@ -26,7 +26,7 @@ class FontProviderImpl : public FontProvider {
   // persistent storage.
   bool LoadFonts();
 
-  void AddBinding(fidl::InterfaceRequest<FontProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<FontProvider> request);
 
  private:
   // |FontProvider| implementation:
@@ -39,7 +39,7 @@ class FontProviderImpl : public FontProvider {
   // Discard all font data.
   void Reset();
 
-  fidl::BindingSet<FontProvider> bindings_;
+  f1dl::BindingSet<FontProvider> bindings_;
   std::string fallback_;
   std::unordered_map<std::string, std::unique_ptr<FontFamily>> families_;
 

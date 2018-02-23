@@ -23,7 +23,7 @@ ImagePipe::ImagePipe(Session* session, scenic::ResourceId id)
 
 ImagePipe::ImagePipe(Session* session,
                      scenic::ResourceId id,
-                     ::fidl::InterfaceRequest<scenic::ImagePipe> request)
+                     ::f1dl::InterfaceRequest<scenic::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
@@ -105,8 +105,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 void ImagePipe::PresentImage(
     uint32_t image_id,
     uint64_t presentation_time,
-    ::fidl::Array<zx::event> acquire_fences,
-    ::fidl::Array<zx::event> release_fences,
+    ::f1dl::Array<zx::event> acquire_fences,
+    ::f1dl::Array<zx::event> release_fences,
     const scenic::ImagePipe::PresentImageCallback& callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
@@ -153,7 +153,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
 
   bool present_next_image = false;
   scenic::ResourceId next_image_id = current_image_id_;
-  ::fidl::Array<zx::event> next_release_fences;
+  ::f1dl::Array<zx::event> next_release_fences;
 
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&

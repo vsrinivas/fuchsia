@@ -40,17 +40,17 @@ class App : public mozart::example::ShadertoyFactory {
 
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
-      ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) override;
+      ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
+      ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(
-      ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
+      ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       bool handle_input_events) override;
 
-  fidl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;
-  fidl::BindingSet<mozart::example::Shadertoy,
+  f1dl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;
+  f1dl::BindingSet<mozart::example::Shadertoy,
                    std::unique_ptr<mozart::example::Shadertoy>>
       shadertoy_bindings_;
 

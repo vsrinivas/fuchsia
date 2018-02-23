@@ -27,7 +27,7 @@ class AudioServerImpl;
 class AudioCapturerImpl : public AudioObject, public AudioCapturer {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
-      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+      f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
       AudioServerImpl* owner,
       bool loopback);
 
@@ -137,7 +137,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   };
 
   AudioCapturerImpl(
-      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+      f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
       AudioServerImpl* owner,
       bool loopback);
 
@@ -152,7 +152,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   void Flush() final;
   void FlushWithCallback(const FlushWithCallbackCallback& cbk) final;
   void StartAsyncCapture(
-      fidl::InterfaceHandle<AudioCapturerClient> callback_target,
+      f1dl::InterfaceHandle<AudioCapturerClient> callback_target,
       uint32_t frames_per_packet) final;
   void StopAsyncCapture() final;
   void StopAsyncCaptureWithCallback(
@@ -193,7 +193,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   // one cannot be found.
   zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
 
-  fidl::Binding<AudioCapturer> binding_;
+  f1dl::Binding<AudioCapturer> binding_;
   AudioServerImpl* owner_ = nullptr;
   std::atomic<State> state_;
   const bool loopback_;

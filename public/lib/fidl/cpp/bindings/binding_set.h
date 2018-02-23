@@ -14,7 +14,7 @@
 
 #include "lib/fidl/cpp/bindings/binding.h"
 
-namespace fidl {
+namespace f1dl {
 
 // Use this class to manage a set of bindings each of which is
 // owned by the channel it is bound to.
@@ -25,7 +25,7 @@ namespace fidl {
 template <typename Interface, typename ImplPtr = Interface*>
 class BindingSet {
  public:
-  using Binding = ::fidl::Binding<Interface, ImplPtr>;
+  using Binding = ::f1dl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;
 
   using iterator = typename StorageType::iterator;
@@ -104,6 +104,6 @@ class BindingSet {
   std::function<void()> empty_set_handler_;
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_BINDING_SET_H_

@@ -30,7 +30,7 @@ void ConnectToService(const zx::channel& directory,
 template <typename Interface>
 inline void ConnectToService(
     const zx::channel& directory,
-    fidl::InterfaceRequest<Interface> request,
+    f1dl::InterfaceRequest<Interface> request,
     const std::string& service_path = Interface::Name_) {
   ConnectToService(directory, request.TakeChannel(), service_path);
 }
@@ -41,10 +41,10 @@ inline void ConnectToService(
 // TODO(ZX-1358): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 template <typename Interface>
-inline fidl::InterfacePtr<Interface> ConnectToService(
+inline f1dl::InterfacePtr<Interface> ConnectToService(
     const zx::channel& directory,
     const std::string& service_path = Interface::Name_) {
-  fidl::InterfacePtr<Interface> client;
+  f1dl::InterfacePtr<Interface> client;
   ConnectToService(directory, client.NewRequest(), service_path);
   return client;
 }
@@ -53,7 +53,7 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
 //
 // Services holds an zx::channel that references the directory. Rather than
 // calling fdio_service_connect_at, you can call |ConnectToService|, which
-// satisfies a fidl::InterfaceRequest using the directory.
+// satisfies a f1dl::InterfaceRequest using the directory.
 //
 // Note that the directory may contain files and other objects in addition
 // to services.
@@ -85,7 +85,7 @@ class Services {
   // to a fully-typed interface request.
   // By default, uses the interface name as the service's path.
   template <typename Interface>
-  void ConnectToService(fidl::InterfaceRequest<Interface> request,
+  void ConnectToService(f1dl::InterfaceRequest<Interface> request,
                         const std::string& service_path = Interface::Name_) {
     app::ConnectToService<Interface>(directory_, std::move(request),
                                      service_path);
@@ -95,7 +95,7 @@ class Services {
   // fully-typed interface pointer.
   // By default, uses the interface name as the service's path.
   template <typename Interface>
-  fidl::InterfacePtr<Interface> ConnectToService(
+  f1dl::InterfacePtr<Interface> ConnectToService(
       const std::string& service_path = Interface::Name_) {
     return app::ConnectToService<Interface>(directory_, service_path);
   }

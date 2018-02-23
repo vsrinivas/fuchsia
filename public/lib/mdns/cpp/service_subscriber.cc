@@ -10,7 +10,7 @@ namespace mdns {
 namespace {
 
 template <typename T>
-bool operator==(const fidl::Array<T>& array_a, const fidl::Array<T>& array_b) {
+bool operator==(const f1dl::Array<T>& array_a, const f1dl::Array<T>& array_b) {
   if (array_a.size() != array_b.size()) {
     return false;
   }
@@ -29,7 +29,7 @@ bool operator==(const fidl::Array<T>& array_a, const fidl::Array<T>& array_b) {
 }
 
 template <typename T>
-bool operator!=(const fidl::Array<T>& array_a, const fidl::Array<T>& array_b) {
+bool operator!=(const f1dl::Array<T>& array_a, const f1dl::Array<T>& array_b) {
   return !(array_a == array_b);
 }
 
@@ -74,7 +74,7 @@ MdnsServiceSubscriptionPtr ServiceSubscriber::Reset() {
 
 void ServiceSubscriber::HandleInstanceUpdates(
     uint64_t version,
-    fidl::Array<MdnsServiceInstancePtr> instances) {
+    f1dl::Array<MdnsServiceInstancePtr> instances) {
   FXL_DCHECK(subscription_);
 
   if (instances) {
@@ -87,13 +87,13 @@ void ServiceSubscriber::HandleInstanceUpdates(
 
   subscription_->GetInstances(
       version,
-      [this](uint64_t version, fidl::Array<MdnsServiceInstancePtr> instances) {
+      [this](uint64_t version, f1dl::Array<MdnsServiceInstancePtr> instances) {
         HandleInstanceUpdates(version, std::move(instances));
       });
 }
 
 void ServiceSubscriber::IssueCallbacks(
-    const fidl::Array<MdnsServiceInstancePtr>& instances) {
+    const f1dl::Array<MdnsServiceInstancePtr>& instances) {
   // For each instance in the update, see if it represents a new instance or
   // a change with respect to an old instance.
   for (auto& new_instance : instances) {

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // Used to allocate an instance of T that can be shared via reference counting.
@@ -70,6 +70,6 @@ class SharedData {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_SHARED_DATA_H_

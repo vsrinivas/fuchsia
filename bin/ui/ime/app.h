@@ -30,14 +30,14 @@ class App : public mozart::ImeService {
       mozart::KeyboardType keyboard_type,
       mozart::InputMethodAction action,
       mozart::TextInputStatePtr initial_state,
-      fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-      fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
+      f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+      f1dl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
 
   void OnImeDisconnected(ImeImpl* ime);
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   std::vector<std::unique_ptr<ImeImpl>> ime_;
-  fidl::BindingSet<mozart::ImeService> ime_bindings_;
+  f1dl::BindingSet<mozart::ImeService> ime_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

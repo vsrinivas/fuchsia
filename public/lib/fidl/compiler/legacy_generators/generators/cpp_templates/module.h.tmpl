@@ -34,8 +34,8 @@ namespace {{namespace}} {
 
 // --- Interface Forward Declarations ---
 {%  for interface in interfaces %}
-using {{interface.name}}Ptr = ::fidl::InterfacePtr<{{interface.name}}>;
-using {{interface.name}}SyncPtr = ::fidl::SynchronousInterfacePtr<{{interface.name}}>;
+using {{interface.name}}Ptr = ::f1dl::InterfacePtr<{{interface.name}}>;
+using {{interface.name}}SyncPtr = ::f1dl::SynchronousInterfacePtr<{{interface.name}}>;
 {%  endfor %}
 
 // --- Interface Proxies ---

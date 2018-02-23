@@ -95,7 +95,7 @@ class MediaPacketConsumer : public ChannelHandler,
 
  protected:
   // ChannelHandler implementation.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
  private:
   // MediaPacketConsumerChannel implementation.

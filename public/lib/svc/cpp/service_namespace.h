@@ -40,7 +40,7 @@ class ServiceNamespace : public app::ServiceProvider {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      std::function<void(f1dl::InterfaceRequest<Interface> interface_request)>;
 
   // Constructs this service namespace implementation in an unbound state.
   ServiceNamespace();
@@ -49,7 +49,7 @@ class ServiceNamespace : public app::ServiceProvider {
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
   explicit ServiceNamespace(
-      fidl::InterfaceRequest<app::ServiceProvider> request);
+      f1dl::InterfaceRequest<app::ServiceProvider> request);
 
   ~ServiceNamespace() override;
 
@@ -59,7 +59,7 @@ class ServiceNamespace : public app::ServiceProvider {
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
   // remotely.
-  void AddBinding(fidl::InterfaceRequest<app::ServiceProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<app::ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -87,7 +87,7 @@ class ServiceNamespace : public app::ServiceProvider {
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler](zx::channel channel) {
-          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          handler(f1dl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
   }
@@ -117,7 +117,7 @@ class ServiceNamespace : public app::ServiceProvider {
 
  private:
   // Overridden from |app::ServiceProvider|:
-  void ConnectToService(const fidl::String& service_name,
+  void ConnectToService(const f1dl::String& service_name,
                         zx::channel channel) override;
 
   void Connect(fbl::StringPiece name, zx::channel channel);
@@ -127,7 +127,7 @@ class ServiceNamespace : public app::ServiceProvider {
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> directory_;
-  fidl::BindingSet<app::ServiceProvider> bindings_;
+  f1dl::BindingSet<app::ServiceProvider> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
 };

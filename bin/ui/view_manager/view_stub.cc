@@ -17,7 +17,7 @@ class PendingViewOwnerTransferState {
  public:
   PendingViewOwnerTransferState(
       std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request)
+      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request)
       : view_stub_(std::move(view_stub)),
         transferred_view_owner_request_(
             std::move(transferred_view_owner_request)) {}
@@ -28,11 +28,11 @@ class PendingViewOwnerTransferState {
   std::unique_ptr<ViewStub> view_stub_;
 
   // The |ViewOwner| we want to transfer ownership to.
-  fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request_;
 };
 
 ViewStub::ViewStub(ViewRegistry* registry,
-                   fidl::InterfaceHandle<mozart::ViewOwner> owner,
+                   f1dl::InterfaceHandle<mozart::ViewOwner> owner,
                    zx::eventpair host_import_token)
     : registry_(registry),
       owner_(owner.Bind()),
@@ -167,7 +167,7 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
 
 void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
-    fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FXL_DCHECK(!container());  // Make sure we've been removed from the view tree
   FXL_DCHECK(!pending_view_owner_transfer_);
 

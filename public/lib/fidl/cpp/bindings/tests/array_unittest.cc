@@ -12,14 +12,14 @@
 #include "lib/fidl/compiler/interfaces/tests/test_arrays.fidl.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
-using fidl::internal::Array_Data;
-using fidl::internal::ArrayValidateParams;
-using fidl::internal::FixedBufferForTesting;
-using fidl::internal::String_Data;
+using f1dl::internal::Array_Data;
+using f1dl::internal::ArrayValidateParams;
+using f1dl::internal::FixedBufferForTesting;
+using f1dl::internal::String_Data;
 
 // Tests that basic Array operations work.
 TEST(ArrayTest, Basic) {
@@ -214,7 +214,7 @@ TEST(ArrayTest, Serialization_ArrayOfPOD) {
   FixedBufferForTesting buf(size);
   Array_Data<int32_t>* data = nullptr;
   ArrayValidateParams validate_params(0, false, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   Array<int32_t> array2;
@@ -233,7 +233,7 @@ TEST(ArrayTest, Serialization_EmptyArrayOfPOD) {
   FixedBufferForTesting buf(size);
   Array_Data<int32_t>* data = nullptr;
   ArrayValidateParams validate_params(0, false, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   Array<int32_t> array2;
@@ -257,7 +257,7 @@ TEST(ArrayTest, Serialization_ArrayOfArrayOfPOD) {
   Array_Data<Array_Data<int32_t>*>* data = nullptr;
   ArrayValidateParams validate_params(
       0, false, new ArrayValidateParams(0, false, nullptr));
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   Array<Array<int32_t>> array2;
@@ -315,7 +315,7 @@ TEST(ArrayTest, Serialization_ArrayOfBool) {
   FixedBufferForTesting buf(size);
   Array_Data<bool>* data = nullptr;
   ArrayValidateParams validate_params(0, false, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   Array<bool> array2;
@@ -344,7 +344,7 @@ TEST(ArrayTest, Serialization_ArrayOfString) {
   Array_Data<String_Data*>* data = nullptr;
   ArrayValidateParams validate_params(
       0, false, new ArrayValidateParams(0, false, nullptr));
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   Array<String> array2;
@@ -377,12 +377,12 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
 
   // We're going to reuse this buffer.. twice.
   FixedBufferForTesting buf(size * 3);
-  Array_Data<fidl::internal::WrappedHandle>* data = nullptr;
+  Array_Data<f1dl::internal::WrappedHandle>* data = nullptr;
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   // 1.  Serialization should fail on non-nullable invalid Handle.
   ArrayValidateParams validate_params(4, false, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
+  EXPECT_EQ(f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   // We failed trying to transfer the first handle, so the rest are left valid.
@@ -394,7 +394,7 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
 
   // 2.  Serialization should pass on nullable invalid Handle.
   ArrayValidateParams validate_params_nullable(4, true, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params_nullable));
 
   EXPECT_FALSE(array[0]);
@@ -411,27 +411,27 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
 
 // Test serializing and deserializing an Array<InterfacePtr>.
 TEST(ArrayTest, Serialization_ArrayOfInterfacePtr) {
-  auto iface_array = Array<fidl::InterfaceHandle<TestInterface>>::New(1);
+  auto iface_array = Array<f1dl::InterfaceHandle<TestInterface>>::New(1);
   size_t size = GetSerializedSize_(iface_array);
   EXPECT_EQ(8U               // array header
                 + (8U * 1),  // Interface_Data * number of elements
             size);
 
   FixedBufferForTesting buf(size * 3);
-  Array_Data<fidl::internal::Interface_Data>* output = nullptr;
+  Array_Data<f1dl::internal::Interface_Data>* output = nullptr;
 
   // 1.  Invalid InterfacePtr should fail serialization.
   ArrayValidateParams validate_non_nullable(1, false, nullptr);
 #ifdef NDEBUG // In debug builds serialization failures abort
   EXPECT_EQ(
-      fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
+      f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
       SerializeArray_(&iface_array, &buf, &output, &validate_non_nullable));
   EXPECT_FALSE(iface_array[0]);
 #endif
 
   // 2.  Invalid InterfacePtr should pass if array elements are nullable.
   ArrayValidateParams validate_nullable(1, true, nullptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             SerializeArray_(&iface_array, &buf, &output, &validate_nullable));
   EXPECT_FALSE(iface_array[0]);
 
@@ -443,7 +443,7 @@ TEST(ArrayTest, Serialization_ArrayOfInterfacePtr) {
   EXPECT_TRUE(iface_array[0]);
 
   EXPECT_EQ(
-      fidl::internal::ValidationError::NONE,
+      f1dl::internal::ValidationError::NONE,
       SerializeArray_(&iface_array, &buf, &output, &validate_non_nullable));
   EXPECT_FALSE(iface_array[0]);
 
@@ -491,7 +491,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfInterfacePtr) {
 #ifdef NDEBUG // In debug builds serialization failures abort
   //  1. This should fail because |structs_array| has an invalid InterfacePtr<>
   //     and it is not nullable.
-  EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
+  EXPECT_EQ(f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
             Serialize_(&struct_arr_iface, &buf, &struct_arr_iface_data));
 #endif
 
@@ -504,7 +504,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfInterfacePtr) {
 
   struct_arr_iface.structs_array[0] = std::move(iface_struct);
   ASSERT_TRUE(struct_arr_iface.structs_array[0]->iptr);
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(&struct_arr_iface, &buf, &struct_arr_iface_data));
 
   EXPECT_FALSE(struct_arr_iface.structs_array[0]->iptr);
@@ -542,7 +542,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
   //  1. This should fail because |req_array| has an invalid InterfaceRequest<>
   //     and it is not nullable.
   EXPECT_EQ(
-      fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
+      f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
       Serialize_(&struct_arr_iface_req, &buf, &struct_arr_iface_req_data));
 #endif
 
@@ -552,7 +552,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
   EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_valid());
 
   EXPECT_EQ(
-      fidl::internal::ValidationError::NONE,
+      f1dl::internal::ValidationError::NONE,
       Serialize_(&struct_arr_iface_req, &buf, &struct_arr_iface_req_data));
 
   EXPECT_FALSE(struct_arr_iface_req.req_array[0].is_valid());
@@ -563,7 +563,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
 
 TEST(ArrayTest, Resize_Copyable) {
   ASSERT_EQ(0u, CopyableType::num_instances());
-  auto array = fidl::Array<CopyableType>::New(3);
+  auto array = f1dl::Array<CopyableType>::New(3);
   std::vector<CopyableType*> value_ptrs;
   value_ptrs.push_back(array[0].ptr());
   value_ptrs.push_back(array[1].ptr());
@@ -615,7 +615,7 @@ TEST(ArrayTest, Resize_Copyable) {
 
 TEST(ArrayTest, Resize_MoveOnly) {
   ASSERT_EQ(0u, MoveOnlyType::num_instances());
-  auto array = fidl::Array<MoveOnlyType>::New(3);
+  auto array = f1dl::Array<MoveOnlyType>::New(3);
   std::vector<MoveOnlyType*> value_ptrs;
   value_ptrs.push_back(array[0].ptr());
   value_ptrs.push_back(array[1].ptr());
@@ -667,7 +667,7 @@ TEST(ArrayTest, Resize_MoveOnly) {
 
 TEST(ArrayTest, PushBack_Copyable) {
   ASSERT_EQ(0u, CopyableType::num_instances());
-  auto array = fidl::Array<CopyableType>::New(2);
+  auto array = f1dl::Array<CopyableType>::New(2);
   array.reset();
   std::vector<CopyableType*> value_ptrs;
   size_t capacity = array.storage().capacity();
@@ -702,7 +702,7 @@ TEST(ArrayTest, PushBack_Copyable) {
 
 TEST(ArrayTest, PushBack_MoveOnly) {
   ASSERT_EQ(0u, MoveOnlyType::num_instances());
-  auto array = fidl::Array<MoveOnlyType>::New(2);
+  auto array = f1dl::Array<MoveOnlyType>::New(2);
   array.reset();
   std::vector<MoveOnlyType*> value_ptrs;
   size_t capacity = array.storage().capacity();
@@ -808,7 +808,7 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
   // the null first element.
   {
     FixedBufferForTesting buf_with_null(size_with_null);
-    EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
+    EXPECT_EQ(f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
               SerializeArray_(&array, &buf_with_null, &output_with_null,
                               &validate_non_nullable));
   }
@@ -817,7 +817,7 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
   // 2. Array with nullable structs should succeed.
   {
     FixedBufferForTesting buf_with_null(size_with_null);
-    EXPECT_EQ(fidl::internal::ValidationError::NONE,
+    EXPECT_EQ(f1dl::internal::ValidationError::NONE,
               SerializeArray_(&array, &buf_with_null, &output_with_null,
                               &validate_nullable));
 
@@ -848,7 +848,7 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
 
     FixedBufferForTesting buf_without_null(size_without_null);
     Array_Data<Rect::Data_*>* output_without_null = nullptr;
-    EXPECT_EQ(fidl::internal::ValidationError::NONE,
+    EXPECT_EQ(f1dl::internal::ValidationError::NONE,
               SerializeArray_(&array, &buf_without_null, &output_without_null,
                               &validate_non_nullable));
 
@@ -869,4 +869,4 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

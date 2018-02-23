@@ -8,20 +8,20 @@ namespace mz {
 
 Session::Session(Mozart* owner,
                  SessionId id,
-                 ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener)
+                 ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener)
     : mozart_(owner), id_(id), listener_(listener.Bind()), weak_factory_(this) {
   FXL_DCHECK(mozart_);
 }
 
 Session::~Session() = default;
 
-void Session::Enqueue(::fidl::Array<ui_mozart::CommandPtr> cmds) {
+void Session::Enqueue(::f1dl::Array<ui_mozart::CommandPtr> cmds) {
   FXL_DCHECK(false) << "unimplemented.";
 }
 
 void Session::Present(uint64_t presentation_time,
-                      ::fidl::Array<zx::event> acquire_fences,
-                      ::fidl::Array<zx::event> release_fences,
+                      ::f1dl::Array<zx::event> acquire_fences,
+                      ::f1dl::Array<zx::event> release_fences,
                       const PresentCallback& callback) {
   FXL_DCHECK(false) << "unimplemented.";
 }

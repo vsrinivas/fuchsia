@@ -74,9 +74,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdate(uint64_t presentation_time,
-                      ::fidl::Array<scenic::OpPtr> ops,
-                      ::fidl::Array<zx::event> acquire_fences,
-                      ::fidl::Array<zx::event> release_fences,
+                      ::f1dl::Array<scenic::OpPtr> ops,
+                      ::f1dl::Array<zx::event> acquire_fences,
+                      ::f1dl::Array<zx::event> release_fences,
                       const scenic::Session::PresentCallback& callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
@@ -268,9 +268,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   struct Update {
     uint64_t presentation_time;
 
-    ::fidl::Array<scenic::OpPtr> ops;
+    ::f1dl::Array<scenic::OpPtr> ops;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::fidl::Array<zx::event> release_fences;
+    ::f1dl::Array<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
@@ -278,7 +278,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
-  ::fidl::Array<zx::event> fences_to_release_on_next_update_;
+  ::f1dl::Array<zx::event> fences_to_release_on_next_update_;
 
   uint64_t last_applied_update_presentation_time_ = 0;
   uint64_t last_presentation_time_ = 0;
@@ -292,7 +292,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     }
   };
   std::priority_queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
-  ::fidl::Array<scenic::EventPtr> buffered_events_;
+  ::f1dl::Array<scenic::EventPtr> buffered_events_;
 
   const SessionId id_;
   Engine* const engine_;

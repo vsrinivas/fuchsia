@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/map.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 template <typename MapType,
@@ -107,7 +107,7 @@ inline size_t GetSerializedSize_(const Map<MapKey, MapValue>& input) {
   typedef typename internal::WrapperTraits<MapValue>::DataType DataValue;
 
   size_t count = input.size();
-  size_t struct_overhead = sizeof(fidl::internal::Map_Data<DataKey, DataValue>);
+  size_t struct_overhead = sizeof(f1dl::internal::Map_Data<DataKey, DataValue>);
   size_t key_base_size =
       sizeof(internal::ArrayHeader) +
       internal::MapSerializer<MapKey, DataKey>::GetBaseArraySize(count);
@@ -210,6 +210,6 @@ inline void Deserialize_(internal::Map_Data<DataKey, DataValue>* input,
   }
 }
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_SERIALIZATION_H_

@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 
-namespace fidl {
+namespace f1dl {
 
 // An InterfacePtrSet contains a collection of InterfacePtrs
 // that are automatically removed from the collection and destroyed
@@ -68,6 +68,6 @@ class InterfacePtrSet {
   std::vector<InterfacePtr<Interface>> ptrs_;
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERFACE_PTR_SET_H_

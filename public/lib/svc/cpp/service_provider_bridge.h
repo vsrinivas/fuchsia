@@ -36,7 +36,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
 
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      std::function<void(f1dl::InterfaceRequest<Interface> interface_request)>;
 
   void AddServiceForName(ServiceConnector connector,
                          const std::string& service_name);
@@ -46,7 +46,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler](zx::channel channel) {
-          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          handler(f1dl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
   }
@@ -55,7 +55,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
     backend_ = std::move(backend);
   }
 
-  void AddBinding(fidl::InterfaceRequest<app::ServiceProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<app::ServiceProvider> request);
   bool ServeDirectory(zx::channel channel);
 
   zx::channel OpenAsDirectory();
@@ -80,11 +80,11 @@ class ServiceProviderBridge : public app::ServiceProvider {
   };
 
   // Overridden from |app::ServiceProvider|:
-  void ConnectToService(const fidl::String& service_name,
+  void ConnectToService(const f1dl::String& service_name,
                         zx::channel channel) override;
 
   fs::ManagedVfs vfs_;
-  fidl::BindingSet<app::ServiceProvider> bindings_;
+  f1dl::BindingSet<app::ServiceProvider> bindings_;
   fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;

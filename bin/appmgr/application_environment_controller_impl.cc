@@ -12,7 +12,7 @@
 namespace app {
 
 ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
-    fidl::InterfaceRequest<ApplicationEnvironmentController> request,
+    f1dl::InterfaceRequest<ApplicationEnvironmentController> request,
     std::unique_ptr<JobHolder> job_holder)
     : binding_(this), job_holder_(std::move(job_holder)) {
   if (request.is_valid()) {

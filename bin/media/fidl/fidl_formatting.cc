@@ -7,7 +7,7 @@
 namespace media {
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
+std::ostream& operator<<(std::ostream& os, const f1dl::InterfacePtr<T>& value) {
   if (!value.is_bound()) {
     return os << "<not bound>\n";
   } else {
@@ -290,10 +290,10 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent;
-  os << begl << "fidl::String url: " << value->url << "\n";
-  os << begl << "fidl::String method: " << value->method << "\n";
+  os << begl << "f1dl::String url: " << value->url << "\n";
+  os << begl << "f1dl::String method: " << value->method << "\n";
   os << begl
-     << "fidl::Array<network::HttpHeaderPtr> headers: " << value->headers;
+     << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
   os << begl << "network::URLBody body: " << value->body;
   os << begl << "uint32_t response_body_buffer_size: "
      << value->response_body_buffer_size << "\n";
@@ -316,17 +316,17 @@ std::ostream& operator<<(std::ostream& os,
   os << indent;
   os << begl << "network::NetworkErrorPtr error: " << value->error;
   os << begl << "zx::socket body: " << value->body << "\n";
-  os << begl << "fidl::String url: " << value->url << "\n";
+  os << begl << "f1dl::String url: " << value->url << "\n";
   os << begl << "uint32_t status_code: " << value->status_code << "\n";
-  os << begl << "fidl::String status_line: " << value->status_line << "\n";
+  os << begl << "f1dl::String status_line: " << value->status_line << "\n";
   os << begl
-     << "fidl::Array<network::HttpHeaderPtr> headers: " << value->headers;
-  os << begl << "fidl::String mime_type: " << value->mime_type << "\n";
-  os << begl << "fidl::String charset: " << value->charset << "\n";
-  os << begl << "fidl::String redirect_method: " << value->redirect_method
+     << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
+  os << begl << "f1dl::String mime_type: " << value->mime_type << "\n";
+  os << begl << "f1dl::String charset: " << value->charset << "\n";
+  os << begl << "f1dl::String redirect_method: " << value->redirect_method
      << "\n";
-  os << begl << "fidl::String redirect_url: " << value->redirect_url << "\n";
-  os << begl << "fidl::String redirect_referrer: " << value->redirect_referrer
+  os << begl << "f1dl::String redirect_url: " << value->redirect_url << "\n";
+  os << begl << "f1dl::String redirect_referrer: " << value->redirect_referrer
      << "\n";
   return os << outdent;
 }
@@ -341,7 +341,7 @@ std::ostream& operator<<(std::ostream& os,
 
   os << indent;
   os << begl << "int32_t code: " << value->code << "\n";
-  os << begl << "fidl::String description: " << value->description << "\n";
+  os << begl << "f1dl::String description: " << value->description << "\n";
   return os << outdent;
 }
 

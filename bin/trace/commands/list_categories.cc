@@ -32,7 +32,7 @@ void ListCategories::Run(const fxl::CommandLine& command_line,
 
   trace_controller()->GetKnownCategories(
       [on_done = std::move(on_done)](
-          fidl::Map<fidl::String, fidl::String> known_categories) {
+          f1dl::Map<f1dl::String, f1dl::String> known_categories) {
         out() << "Known categories" << std::endl;
         for (auto it = known_categories.begin(); it != known_categories.end();
              ++it) {

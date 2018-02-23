@@ -33,7 +33,7 @@ class App : public app::ApplicationEnvironmentHost {
  private:
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
+      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 
   void RegisterSingleton(std::string service_name,
@@ -50,12 +50,12 @@ class App : public app::ApplicationEnvironmentHost {
   // Nested environment within which the apps started by sysmgr will run.
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
-  fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
+  f1dl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
   app::ServiceNamespace env_services_;
   app::ApplicationLauncherPtr env_launcher_;
 
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;
-  fidl::BindingSet<app::ApplicationLoader> app_loader_bindings_;
+  f1dl::BindingSet<app::ApplicationLoader> app_loader_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

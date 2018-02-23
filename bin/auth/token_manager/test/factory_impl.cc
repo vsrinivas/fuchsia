@@ -8,7 +8,7 @@ namespace auth {
 namespace dev_auth_provider {
 
 void FactoryImpl::GetAuthProvider(
-    fidl::InterfaceRequest<auth::AuthProvider> auth_provider,
+    f1dl::InterfaceRequest<auth::AuthProvider> auth_provider,
     const GetAuthProviderCallback& callback) {
   // TODO: Share the DevAuthProviderImpl instance across all connections
   std::unique_ptr<DevAuthProviderImpl> dev_auth_provider_impl =

@@ -27,26 +27,26 @@ class ApplicationNamespace
  public:
   ServiceProviderBridge& services() { return services_; }
 
-  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(f1dl::InterfaceRequest<ApplicationEnvironment> environment);
 
   // ApplicationEnvironment implementation:
 
   void CreateNestedEnvironment(
-      fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-      fidl::InterfaceRequest<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const fidl::String& label) override;
+      f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+      f1dl::InterfaceRequest<ApplicationEnvironment> environment,
+      f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      const f1dl::String& label) override;
 
   void GetApplicationLauncher(
-      fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
+      f1dl::InterfaceRequest<ApplicationLauncher> launcher) override;
 
-  void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
+  void GetServices(f1dl::InterfaceRequest<ServiceProvider> services) override;
 
   // ApplicationLauncher implementation:
 
   void CreateApplication(
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller) override;
+      f1dl::InterfaceRequest<ApplicationController> controller) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(ApplicationNamespace);
@@ -57,8 +57,8 @@ class ApplicationNamespace
   FRIEND_REF_COUNTED_THREAD_SAFE(ApplicationNamespace);
   ~ApplicationNamespace() override;
 
-  fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
-  fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
+  f1dl::BindingSet<ApplicationEnvironment> environment_bindings_;
+  f1dl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
   ServiceProviderBridge services_;
 

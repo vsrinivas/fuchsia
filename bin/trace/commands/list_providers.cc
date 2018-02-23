@@ -32,7 +32,7 @@ void ListProviders::Run(const fxl::CommandLine& command_line,
 
   trace_controller()->GetRegisteredProviders(
       [on_done =
-           std::move(on_done)](fidl::Array<TraceProviderInfoPtr> providers) {
+           std::move(on_done)](f1dl::Array<TraceProviderInfoPtr> providers) {
         out() << "Registered providers" << std::endl;
         for (const auto& provider : providers) {
           out() << "  #" << provider->id << ": '" << provider->label << "'"

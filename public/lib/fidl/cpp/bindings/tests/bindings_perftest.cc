@@ -8,7 +8,7 @@
 #include "mojo/public/cpp/utility/run_loop.h"
 #include "lib/fidl/compiler/interfaces/tests/ping_service.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace {
 
 const double kMojoTicksPerSecond = 1000000.0;
@@ -118,4 +118,4 @@ TEST_F(MojoBindingsPerftest, InProcessPingPong) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace f1dl

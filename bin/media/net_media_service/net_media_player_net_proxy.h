@@ -21,15 +21,15 @@ class NetMediaPlayerNetProxy
       public NetMediaPlayer {
  public:
   static std::shared_ptr<NetMediaPlayerNetProxy> Create(
-      const fidl::String& device_name,
-      const fidl::String& service_name,
-      fidl::InterfaceRequest<NetMediaPlayer> request,
+      const f1dl::String& device_name,
+      const f1dl::String& service_name,
+      f1dl::InterfaceRequest<NetMediaPlayer> request,
       NetMediaServiceImpl* owner);
 
   ~NetMediaPlayerNetProxy() override;
 
   // NetMediaPlayer implementation.
-  void SetUrl(const fidl::String& url) override;
+  void SetUrl(const f1dl::String& url) override;
 
   void Play() override;
 
@@ -41,9 +41,9 @@ class NetMediaPlayerNetProxy
                  const GetStatusCallback& callback) override;
 
  private:
-  NetMediaPlayerNetProxy(const fidl::String& device_name,
-                         const fidl::String& service_name,
-                         fidl::InterfaceRequest<NetMediaPlayer> request,
+  NetMediaPlayerNetProxy(const f1dl::String& device_name,
+                         const f1dl::String& service_name,
+                         f1dl::InterfaceRequest<NetMediaPlayer> request,
                          NetMediaServiceImpl* owner);
 
   void SendTimeCheckMessage();

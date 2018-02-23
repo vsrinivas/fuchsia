@@ -11,7 +11,7 @@ namespace flog {
 
 // static
 std::shared_ptr<FlogLoggerImpl> FlogLoggerImpl::Create(
-    fidl::InterfaceRequest<FlogLogger> request,
+    f1dl::InterfaceRequest<FlogLogger> request,
     uint32_t log_id,
     const std::string& label,
     std::shared_ptr<FlogDirectory> directory,
@@ -20,7 +20,7 @@ std::shared_ptr<FlogLoggerImpl> FlogLoggerImpl::Create(
       new FlogLoggerImpl(std::move(request), log_id, label, directory, owner));
 }
 
-FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
+FlogLoggerImpl::FlogLoggerImpl(f1dl::InterfaceRequest<FlogLogger> request,
                                uint32_t log_id,
                                const std::string& label,
                                std::shared_ptr<FlogDirectory> directory,
@@ -29,8 +29,8 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
       id_(log_id),
       label_(label),
       fd_(directory->GetFile(log_id, label, true)) {
-  fidl::internal::MessageValidatorList validators;
-  router_.reset(new fidl::internal::Router(request.TakeChannel(),
+  f1dl::internal::MessageValidatorList validators;
+  router_.reset(new f1dl::internal::Router(request.TakeChannel(),
                                            std::move(validators)));
   router_->set_incoming_receiver(this);
   router_->set_error_handler([this]() {
@@ -41,7 +41,7 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
 
 FlogLoggerImpl::~FlogLoggerImpl() {}
 
-bool FlogLoggerImpl::Accept(fidl::Message* message) {
+bool FlogLoggerImpl::Accept(f1dl::Message* message) {
   FXL_DCHECK(message != nullptr);
   FXL_DCHECK(message->data_num_bytes() > 0);
   FXL_DCHECK(message->data() != nullptr);
@@ -55,8 +55,8 @@ bool FlogLoggerImpl::Accept(fidl::Message* message) {
 }
 
 bool FlogLoggerImpl::AcceptWithResponder(
-    fidl::Message* message,
-    fidl::MessageReceiverWithStatus* responder) {
+    f1dl::Message* message,
+    f1dl::MessageReceiverWithStatus* responder) {
   FXL_DCHECK(false) << "FlogLogger has no methods with responses";
   abort();
 }

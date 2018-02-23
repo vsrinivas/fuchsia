@@ -353,7 +353,7 @@ class FidlTest {
 
     fsl::MessageLoop loop;
     RoundTripServiceImpl service_impl;
-    fidl::Binding<RoundTripService> binding(&service_impl, std::move(channel));
+    f1dl::Binding<RoundTripService> binding(&service_impl, std::move(channel));
     binding.set_error_handler(
         [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
     loop.Run();

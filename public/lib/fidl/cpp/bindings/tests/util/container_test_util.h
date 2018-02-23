@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 
-namespace fidl {
+namespace f1dl {
 
 class CopyableType {
  public:
@@ -49,6 +49,6 @@ class MoveOnlyType {
   FIDL_MOVE_ONLY_TYPE(MoveOnlyType);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_UTIL_CONTAINER_TEST_UTIL_H_

@@ -16,7 +16,7 @@ InputConnectionImpl::InputConnectionImpl(
     ViewInspector* inspector,
     InputOwner* owner,
     mozart::ViewTokenPtr view_token,
-    fidl::InterfaceRequest<mozart::InputConnection> request)
+    f1dl::InterfaceRequest<mozart::InputConnection> request)
     : inspector_(inspector),
       owner_(owner),
       view_token_(std::move(view_token)),
@@ -48,7 +48,7 @@ void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
 }
 
 void InputConnectionImpl::SetEventListener(
-    fidl::InterfaceHandle<mozart::InputListener> listener) {
+    f1dl::InterfaceHandle<mozart::InputListener> listener) {
   event_listener_ = listener.Bind();
 }
 
@@ -56,8 +56,8 @@ void InputConnectionImpl::GetInputMethodEditor(
     mozart::KeyboardType keyboard_type,
     mozart::InputMethodAction action,
     mozart::TextInputStatePtr initial_state,
-    fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
+    f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+    f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
   FXL_DCHECK(initial_state);
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());

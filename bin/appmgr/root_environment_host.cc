@@ -55,7 +55,7 @@ RootEnvironmentHost::RootEnvironmentHost(
     std::vector<std::string> application_path,
     fs::Vfs* vfs)
     : loader_(application_path), host_binding_(this), vfs_(vfs) {
-  fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
+  f1dl::InterfaceHandle<ApplicationEnvironmentHost> host;
   host_binding_.Bind(host.NewRequest());
   root_job_ =
       std::make_unique<JobHolder>(nullptr, vfs_, std::move(host), kRootLabel);
@@ -76,16 +76,16 @@ RootEnvironmentHost::RootEnvironmentHost(
 RootEnvironmentHost::~RootEnvironmentHost() = default;
 
 void RootEnvironmentHost::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<ServiceProvider> environment_services) {
+    f1dl::InterfaceRequest<ServiceProvider> environment_services) {
   service_provider_bindings_.AddBinding(this, std::move(environment_services));
 }
 
-void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
+void RootEnvironmentHost::ConnectToService(const f1dl::String& interface_name,
                                            zx::channel channel) {
   if (interface_name == ApplicationLoader::Name_) {
     loader_bindings_.AddBinding(
         &loader_,
-        fidl::InterfaceRequest<ApplicationLoader>(std::move(channel)));
+        f1dl::InterfaceRequest<ApplicationLoader>(std::move(channel)));
   }
 }
 

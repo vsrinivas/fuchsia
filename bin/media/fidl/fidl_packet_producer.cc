@@ -29,7 +29,7 @@ FidlPacketProducer::~FidlPacketProducer() {
 }
 
 void FidlPacketProducer::Bind(
-    fidl::InterfaceRequest<MediaPacketProducer> request) {
+    f1dl::InterfaceRequest<MediaPacketProducer> request) {
   binding_.Bind(std::move(request));
   binding_.set_error_handler([this]() {
     binding_.set_error_handler(nullptr);
@@ -89,7 +89,7 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
 }
 
 void FidlPacketProducer::Connect(
-    fidl::InterfaceHandle<MediaPacketConsumer> consumer,
+    f1dl::InterfaceHandle<MediaPacketConsumer> consumer,
     const ConnectCallback& callback) {
   FXL_DCHECK(consumer);
   MediaPacketProducerBase::Connect(consumer.Bind(), callback);

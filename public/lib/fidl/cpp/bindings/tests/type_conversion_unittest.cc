@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace {
 
 struct RedmondRect {
@@ -201,4 +201,4 @@ TEST(TypeConversionTest, CustomTypeConverter_Nested) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

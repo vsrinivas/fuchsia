@@ -9,7 +9,7 @@
 
 #include <string>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 namespace {
 
@@ -86,4 +86,4 @@ ValidationErrorStringStream::~ValidationErrorStringStream() {
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

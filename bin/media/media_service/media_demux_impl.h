@@ -28,8 +28,8 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
                        public MediaSource {
  public:
   static std::shared_ptr<MediaDemuxImpl> Create(
-      fidl::InterfaceHandle<SeekingReader> reader,
-      fidl::InterfaceRequest<MediaSource> request,
+      f1dl::InterfaceHandle<SeekingReader> reader,
+      f1dl::InterfaceRequest<MediaSource> request,
       MediaServiceImpl* owner);
 
   ~MediaDemuxImpl() override;
@@ -39,7 +39,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
 
   void GetPacketProducer(
       uint32_t stream_index,
-      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
+      f1dl::InterfaceRequest<MediaPacketProducer> producer) override;
 
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
@@ -49,8 +49,8 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
   void Seek(int64_t position, const SeekCallback& callback) override;
 
  private:
-  MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                 fidl::InterfaceRequest<MediaSource> request,
+  MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
+                 f1dl::InterfaceRequest<MediaSource> request,
                  MediaServiceImpl* owner);
 
   class Stream {
@@ -71,7 +71,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
 
     // Binds the producer.
     void BindPacketProducer(
-        fidl::InterfaceRequest<MediaPacketProducer> producer);
+        f1dl::InterfaceRequest<MediaPacketProducer> producer);
 
     // Tells the producer to flush its connection.
     void FlushConnection(

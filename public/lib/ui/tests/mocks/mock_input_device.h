@@ -19,7 +19,7 @@ class MockInputDevice : public mozart::InputDevice {
   MockInputDevice(
       uint32_t device_id,
       mozart::DeviceDescriptorPtr descriptor,
-      fidl::InterfaceRequest<mozart::InputDevice> input_device_request,
+      f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
       const OnReportCallback& on_report_callback);
   ~MockInputDevice();
 
@@ -32,7 +32,7 @@ class MockInputDevice : public mozart::InputDevice {
  private:
   uint32_t id_;
   mozart::DeviceDescriptorPtr descriptor_;
-  fidl::Binding<mozart::InputDevice> input_device_binding_;
+  f1dl::Binding<mozart::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockInputDevice);

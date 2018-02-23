@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 template <typename Struct>
@@ -176,6 +176,6 @@ class InlinedStructPtr {
   FIDL_MOVE_ONLY_TYPE(InlinedStructPtr);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_STRUCT_PTR_H_

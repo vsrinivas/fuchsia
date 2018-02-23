@@ -24,7 +24,7 @@ class InspectServiceImpl : public InspectService {
   zx::socket TakeSocket() { return fbl::move(server_socket_); }
 
  private:
-  fidl::BindingSet<InspectService> bindings_;
+  f1dl::BindingSet<InspectService> bindings_;
   const zx::vmo vmo_;
   zx::socket server_socket_;
   zx::socket client_socket_;

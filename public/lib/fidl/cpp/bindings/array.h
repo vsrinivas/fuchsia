@@ -21,7 +21,7 @@
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 
-namespace fidl {
+namespace f1dl {
 
 // Represents a moveable array with contents of type |T|. The array can be null,
 // meaning that no value has been assigned to it. Null is distinct from empty.
@@ -260,6 +260,6 @@ struct TypeConverter<std::set<E>, Array<T>> {
   }
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_ARRAY_H_

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 // Input Format of Mojo Message Validation Tests.
@@ -115,6 +115,6 @@ bool ParseValidationTestInput(const std::string& input,
                               std::string* error_message);
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_VALIDATION_TEST_INPUT_PARSER_H_

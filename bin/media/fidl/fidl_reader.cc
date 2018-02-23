@@ -13,7 +13,7 @@
 
 namespace media {
 
-FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
+FidlReader::FidlReader(f1dl::InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(seeking_reader.Bind()) {
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);

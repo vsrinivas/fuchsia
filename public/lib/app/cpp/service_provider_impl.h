@@ -40,7 +40,7 @@ class ServiceProviderImpl : public ServiceProvider {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      std::function<void(f1dl::InterfaceRequest<Interface> interface_request)>;
 
   // Constructs this service provider implementation in an unbound state.
   ServiceProviderImpl();
@@ -48,14 +48,14 @@ class ServiceProviderImpl : public ServiceProvider {
   // Constructs this service provider implementation, binding it to the given
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
-  explicit ServiceProviderImpl(fidl::InterfaceRequest<ServiceProvider> request);
+  explicit ServiceProviderImpl(f1dl::InterfaceRequest<ServiceProvider> request);
 
   ~ServiceProviderImpl() override;
 
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
   // remotely.
-  void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -83,7 +83,7 @@ class ServiceProviderImpl : public ServiceProvider {
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler](zx::channel channel) {
-          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          handler(f1dl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
   }
@@ -118,10 +118,10 @@ class ServiceProviderImpl : public ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(const fidl::String& service_name,
+  void ConnectToService(const f1dl::String& service_name,
                         zx::channel client_handle) override;
 
-  fidl::BindingSet<ServiceProvider> bindings_;
+  f1dl::BindingSet<ServiceProvider> bindings_;
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
   DefaultServiceConnector default_service_connector_;

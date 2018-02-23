@@ -55,7 +55,7 @@ class Bss : public fbl::RefCounted<Bss> {
     }
 
     BSSDescriptionPtr ToFidl();
-    fidl::String SsidToFidlString();
+    f1dl::String SsidToFidlString();
     const common::MacAddr& bssid() { return bssid_; }
     zx::time ts_refreshed() { return ts_refreshed_; }
 

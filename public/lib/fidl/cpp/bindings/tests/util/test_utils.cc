@@ -9,7 +9,7 @@
 
 #include <string>
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 bool WriteTextMessage(const zx::channel& handle,
@@ -58,4 +58,4 @@ bool DiscardMessage(const zx::channel& handle) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

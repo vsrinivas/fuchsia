@@ -23,7 +23,7 @@ class MediaSource : public ChannelHandler,
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
   // ChannelHandler implementation.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
   // MediaSourceChannel implementation.
   void BoundAs(uint64_t koid) override;
@@ -32,7 +32,7 @@ class MediaSource : public ChannelHandler,
 
   void NewStream(uint32_t index,
                  media::MediaTypePtr output_type,
-                 fidl::Array<uint64_t> converter_koids) override;
+                 f1dl::Array<uint64_t> converter_koids) override;
 
  private:
   media::logs::MediaSourceChannelStub stub_;

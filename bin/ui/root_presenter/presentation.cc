@@ -109,7 +109,7 @@ Presentation::~Presentation() {}
 
 void Presentation::Present(
     mozart::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+    f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
     fxl::Closure shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
@@ -129,7 +129,7 @@ void Presentation::Present(
 
 void Presentation::CreateViewTree(
     mozart::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+    f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
     scenic::DisplayInfoPtr display_info) {
   FXL_DCHECK(display_info);
 
@@ -171,7 +171,7 @@ void Presentation::CreateViewTree(
   });
 
   // Create root view.
-  fidl::InterfaceHandle<mozart::ViewOwner> root_view_owner;
+  f1dl::InterfaceHandle<mozart::ViewOwner> root_view_owner;
   auto root_view_owner_request = root_view_owner.NewRequest();
   mozart::ViewListenerPtr root_view_listener;
   view_listener_binding_.Bind(root_view_listener.NewRequest());
@@ -621,7 +621,7 @@ void Presentation::Shutdown() {
 }
 
 void Presentation::SetRendererParams(
-    ::fidl::Array<scenic::RendererParamPtr> params) {
+    ::f1dl::Array<scenic::RendererParamPtr> params) {
   for (auto& param : params) {
     renderer_.SetParam(std::move(param));
   }

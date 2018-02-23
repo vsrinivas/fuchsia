@@ -7,7 +7,7 @@
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace {
 using internal::MessageHeader;
 using internal::MessageHeaderWithRequestID;
@@ -56,4 +56,4 @@ void MessageBuilder::Initialize(size_t size) {
   buf_.Initialize(message_.mutable_data(), message_.data_num_bytes());
 }
 
-}  // namespace fidl
+}  // namespace f1dl

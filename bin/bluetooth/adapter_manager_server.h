@@ -24,7 +24,7 @@ class AdapterManagerServer : public bluetooth::control::AdapterManager {
   using ConnectionErrorHandler = std::function<void(AdapterManagerServer*)>;
   AdapterManagerServer(
       ::bluetooth_service::AdapterManager* adapter_manager,
-      fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request,
+      f1dl::InterfaceRequest<::bluetooth::control::AdapterManager> request,
       const ConnectionErrorHandler& connection_error_handler);
   ~AdapterManagerServer() override = default;
 
@@ -38,20 +38,20 @@ class AdapterManagerServer : public bluetooth::control::AdapterManager {
   void IsBluetoothAvailable(
       const IsBluetoothAvailableCallback& callback) override;
   void SetDelegate(
-      fidl::InterfaceHandle<::bluetooth::control::AdapterManagerDelegate>
+      f1dl::InterfaceHandle<::bluetooth::control::AdapterManagerDelegate>
           delegate) override;
   void ListAdapters(const ListAdaptersCallback& callback) override;
-  void SetActiveAdapter(const fidl::String& identifier,
+  void SetActiveAdapter(const f1dl::String& identifier,
                         const SetActiveAdapterCallback& callback) override;
   void GetActiveAdapter(
-      fidl::InterfaceRequest<::bluetooth::control::Adapter> adapter) override;
+      f1dl::InterfaceRequest<::bluetooth::control::Adapter> adapter) override;
 
   // The underlying AdapterManager. This is expected to outlive this instance.
   ::bluetooth_service::AdapterManager* adapter_manager_;  // weak
 
   // The interface binding that represents the connection to the client
   // application.
-  fidl::Binding<::bluetooth::control::AdapterManager> binding_;
+  f1dl::Binding<::bluetooth::control::AdapterManager> binding_;
 
   // The delegate that is set via SetDelegate().
   ::bluetooth::control::AdapterManagerDelegatePtr delegate_;

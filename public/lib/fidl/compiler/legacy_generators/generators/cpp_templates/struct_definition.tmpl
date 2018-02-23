@@ -18,45 +18,45 @@
 {%-     endif %}
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) <<
         "null {{name}} field in {{struct.name}} struct";
-    return ::fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER;
+    return ::f1dl::internal::ValidationError::UNEXPECTED_NULL_POINTER;
   }
 {%-   endif %}
 {%-   if not kind|is_union_kind %}
-  if (!::fidl::internal::ValidateEncodedPointer(&object->{{name}}.offset)) {
+  if (!::f1dl::internal::ValidateEncodedPointer(&object->{{name}}.offset)) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
-    return ::fidl::internal::ValidationError::ILLEGAL_POINTER;
+    return ::f1dl::internal::ValidationError::ILLEGAL_POINTER;
   }
 {%-   endif %}
 
 {%-   if kind|is_array_kind or kind|is_string_kind %}
-  const ::fidl::internal::ArrayValidateParams {{name}}_validate_params(
+  const ::f1dl::internal::ArrayValidateParams {{name}}_validate_params(
       {{kind|get_array_validate_params_ctor_args|indent(6)}});
   auto validate_retval =
       {{wrapper_type}}::Data_::Validate(
-          ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
+          ::f1dl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, &{{name}}_validate_params, {{err_string}});
-  if (validate_retval != ::fidl::internal::ValidationError::NONE) {
+  if (validate_retval != ::f1dl::internal::ValidationError::NONE) {
 {%-   elif kind|is_map_kind %}
-  const ::fidl::internal::ArrayValidateParams {{name}}_validate_params(
+  const ::f1dl::internal::ArrayValidateParams {{name}}_validate_params(
       {{kind.value_kind|get_map_validate_params_ctor_args|indent(6)}});
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
-              ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
+              ::f1dl::internal::DecodePointerRaw(&object->{{name}}.offset),
               bounds_checker, &{{name}}_validate_params, {{err_string}});
-  if (validate_retval != ::fidl::internal::ValidationError::NONE) {
+  if (validate_retval != ::f1dl::internal::ValidationError::NONE) {
 {%-   elif kind|is_struct_kind %}
   auto validate_retval = {{kind|get_name_for_kind}}::Data_::Validate(
-          ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
+          ::f1dl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, {{err_string}});
-  if (validate_retval != ::fidl::internal::ValidationError::NONE) {
+  if (validate_retval != ::f1dl::internal::ValidationError::NONE) {
 {%-   elif kind|is_union_kind %}
   auto validate_retval = {{kind|get_name_for_kind}}::Data_::Validate(
           &object->{{name}}, bounds_checker, true, {{err_string}});
-  if (validate_retval != ::fidl::internal::ValidationError::NONE) {
+  if (validate_retval != ::f1dl::internal::ValidationError::NONE) {
 {%-   else %}
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
-          ::fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
+          ::f1dl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, {{err_string}});
-  if (validate_retval != ::fidl::internal::ValidationError::NONE) {
+  if (validate_retval != ::f1dl::internal::ValidationError::NONE) {
 {%-   endif %}
     return validate_retval;
   }
@@ -69,40 +69,40 @@
 {%-   set name = packed_field.field.name %}
 {%-   set kind = packed_field.field.kind %}
 {%-   if kind|is_interface_kind %}
-  const ::fidl::internal::WrappedHandle {{name}}_handle{ object->{{name}}.handle };
+  const ::f1dl::internal::WrappedHandle {{name}}_handle{ object->{{name}}.handle };
 {%-   else %}
-  const ::fidl::internal::WrappedHandle {{name}}_handle{ object->{{name}} };
+  const ::f1dl::internal::WrappedHandle {{name}}_handle{ object->{{name}} };
 {%-   endif %}
 {%-   if not kind|is_nullable_kind %}
-  if ({{name}}_handle.value == ::fidl::internal::kEncodedInvalidHandleValue) {
+  if ({{name}}_handle.value == ::f1dl::internal::kEncodedInvalidHandleValue) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}})
         << "invalid {{name}} field in {{struct.name}} struct";
-    return ::fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE;
+    return ::f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE;
   }
 {%-   endif %}
   if (!bounds_checker->ClaimHandle({{name}}_handle)) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
-    return ::fidl::internal::ValidationError::ILLEGAL_HANDLE;
+    return ::f1dl::internal::ValidationError::ILLEGAL_HANDLE;
   }
 {%- endmacro %}
 
 // static
-{{class_name}}* {{class_name}}::New(::fidl::internal::Buffer* buf) {
+{{class_name}}* {{class_name}}::New(::f1dl::internal::Buffer* buf) {
   return new (buf->Allocate(sizeof({{class_name}}))) {{class_name}}();
 }
 
 // static
-::fidl::internal::ValidationError {{class_name}}::Validate(
+::f1dl::internal::ValidationError {{class_name}}::Validate(
     const void* data,
-    ::fidl::internal::BoundsChecker* bounds_checker,
+    ::f1dl::internal::BoundsChecker* bounds_checker,
     std::string* err) {
-  ::fidl::internal::ValidationError retval;
+  ::f1dl::internal::ValidationError retval;
 
   if (!data)
-    return ::fidl::internal::ValidationError::NONE;
+    return ::f1dl::internal::ValidationError::NONE;
 
   retval = ValidateStructHeaderAndClaimMemory(data, bounds_checker, err);
-  if (retval != ::fidl::internal::ValidationError::NONE)
+  if (retval != ::f1dl::internal::ValidationError::NONE)
     return retval;
 
   // NOTE: The memory backing |object| may be smaller than |sizeof(*object)| if
@@ -127,13 +127,13 @@
           break;
 
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-        return ::fidl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
+        return ::f1dl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
       }
     }
   } else if (object->header_.num_bytes <
                 kVersionSizes[{{ latest_version }}].num_bytes) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return ::fidl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
+    return ::f1dl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
   }
 
 {#- Before validating fields introduced at a certain version, we need to add
@@ -147,7 +147,7 @@
 {%-     if packed_field.min_version > last_checked_version %}
 {%-       set last_checked_version = packed_field.min_version %}
   if (object->header_.version < {{packed_field.min_version}})
-    return ::fidl::internal::ValidationError::NONE;
+    return ::f1dl::internal::ValidationError::NONE;
 {%-     endif %}
 {%-     if kind|is_object_kind %}
   {
@@ -161,7 +161,7 @@
 {%-   endif %}
 {%- endfor %}
 
-  return ::fidl::internal::ValidationError::NONE;
+  return ::f1dl::internal::ValidationError::NONE;
 }
 
 void {{class_name}}::EncodePointersAndHandles(
@@ -171,9 +171,9 @@ void {{class_name}}::EncodePointersAndHandles(
 {%-   if pf.field.kind|is_union_kind %}
   {{pf.field.name}}.EncodePointersAndHandles(handles);
 {%-   elif pf.field.kind|is_object_kind %}
-  ::fidl::internal::Encode(&this->{{pf.field.name}}, handles);
+  ::f1dl::internal::Encode(&this->{{pf.field.name}}, handles);
 {%-   elif pf.field.kind|is_any_handle_kind or pf.field.kind|is_interface_kind %}
-  ::fidl::internal::EncodeHandle(&this->{{pf.field.name}}, handles);
+  ::f1dl::internal::EncodeHandle(&this->{{pf.field.name}}, handles);
 {%-   endif %}
 {%- endfor %}
 }
@@ -201,9 +201,9 @@ void {{class_name}}::DecodePointersAndHandles(
     {{name}}.DecodePointersAndHandles(handles);
   }
 {%-     elif kind|is_object_kind %}
-  ::fidl::internal::Decode(&this->{{name}}, handles);
+  ::f1dl::internal::Decode(&this->{{name}}, handles);
 {%-     else %}
-  ::fidl::internal::DecodeHandle(&this->{{name}}, handles);
+  ::f1dl::internal::DecodeHandle(&this->{{name}}, handles);
 {%-     endif %}
 {%-   endif %}
 {%- endfor %}

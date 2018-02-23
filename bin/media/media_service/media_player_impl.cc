@@ -16,10 +16,10 @@ namespace media {
 
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    fidl::InterfaceHandle<SeekingReader> reader_handle,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
-    fidl::InterfaceRequest<MediaPlayer> request,
+    f1dl::InterfaceHandle<SeekingReader> reader_handle,
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+    f1dl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerImpl>(new MediaPlayerImpl(
       std::move(reader_handle), std::move(audio_renderer_handle),
@@ -27,10 +27,10 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
 }
 
 MediaPlayerImpl::MediaPlayerImpl(
-    fidl::InterfaceHandle<SeekingReader> reader_handle,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
-    fidl::InterfaceRequest<MediaPlayer> request,
+    f1dl::InterfaceHandle<SeekingReader> reader_handle,
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+    f1dl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
       reader_handle_(std::move(reader_handle)) {
@@ -118,7 +118,7 @@ void MediaPlayerImpl::MaybeCreateSource() {
   HandleSourceStatusUpdates();
 
   source_->Describe(
-      fxl::MakeCopyable([this](fidl::Array<MediaTypePtr> stream_types) mutable {
+      fxl::MakeCopyable([this](f1dl::Array<MediaTypePtr> stream_types) mutable {
         FLOG(log_channel_, ReceivedSourceDescription(stream_types.Clone()));
         stream_types_ = std::move(stream_types);
         ConnectSinks();
@@ -178,7 +178,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
   stream->sink_->ConsumeMediaType(
       input_media_type.Clone(),
       [this, stream, index,
-       callback](fidl::InterfaceHandle<MediaPacketConsumer> consumer) {
+       callback](f1dl::InterfaceHandle<MediaPacketConsumer> consumer) {
         if (!consumer) {
           // The sink couldn't build a conversion pipeline for the media type.
           callback();
@@ -489,21 +489,21 @@ void MediaPlayerImpl::Seek(int64_t position) {
   Update();
 }
 
-void MediaPlayerImpl::SetHttpUrl(const fidl::String& http_url) {
-  fidl::InterfaceHandle<SeekingReader> reader;
+void MediaPlayerImpl::SetHttpUrl(const f1dl::String& http_url) {
+  f1dl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateHttpReader(http_url, reader.NewRequest());
   SetReader(std::move(reader));
 }
 
 void MediaPlayerImpl::SetFileChannel(zx::channel file_channel) {
-  fidl::InterfaceHandle<SeekingReader> reader;
+  f1dl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateFileChannelReader(std::move(file_channel),
                                    reader.NewRequest());
   SetReader(std::move(reader));
 }
 
 void MediaPlayerImpl::SetReader(
-    fidl::InterfaceHandle<SeekingReader> reader_handle) {
+    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
   if (!reader_handle && !source_) {
     // There was already no reader. Nothing to do.
     return;

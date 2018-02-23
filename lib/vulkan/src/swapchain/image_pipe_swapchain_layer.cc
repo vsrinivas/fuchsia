@@ -423,7 +423,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
       GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)
           ->device_dispatch_table;
 
-  auto acquire_fences = fidl::Array<zx::event>::New(waitSemaphoreCount);
+  auto acquire_fences = f1dl::Array<zx::event>::New(waitSemaphoreCount);
   for (uint32_t i = 0; i < waitSemaphoreCount; i++) {
     VkSemaphoreGetFuchsiaHandleInfoKHR info = {
         VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
@@ -459,7 +459,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
 
   pending_images_.push_back({std::move(image_release_fence), index});
 
-  fidl::Array<zx::event> release_fences;
+  f1dl::Array<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
   ui_mozart::PresentationInfoPtr info;
@@ -507,7 +507,7 @@ CreateMagmaSurfaceKHR(VkInstance instance,
   surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height},
                                    formats};
   surface->image_pipe =
-      scenic::ImagePipeSyncPtr::Create(fidl::InterfaceHandle<scenic::ImagePipe>(
+      scenic::ImagePipeSyncPtr::Create(f1dl::InterfaceHandle<scenic::ImagePipe>(
           zx::channel(pCreateInfo->imagePipeHandle)));
   *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
   return VK_SUCCESS;

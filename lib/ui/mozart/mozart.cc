@@ -43,8 +43,8 @@ void Mozart::CloseSession(Session* session) {
 }
 
 void Mozart::CreateSession(
-    ::fidl::InterfaceRequest<ui_mozart::Session> session_request,
-    ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<ui_mozart::Session> session_request,
+    ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener) {
   if (uninitialized_systems_.empty()) {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
@@ -58,8 +58,8 @@ void Mozart::CreateSession(
 }
 
 void Mozart::CreateSessionImmediately(
-    ::fidl::InterfaceRequest<ui_mozart::Session> session_request,
-    ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<ui_mozart::Session> session_request,
+    ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener) {
   auto session =
       std::make_unique<Session>(this, next_session_id_++, std::move(listener));
 

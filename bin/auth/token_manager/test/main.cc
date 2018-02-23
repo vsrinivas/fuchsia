@@ -32,7 +32,7 @@ class DevAuthProviderApp {
 
   void Run() {
     app_context_->outgoing_services()->AddService<auth::AuthProviderFactory>(
-        [this](fidl::InterfaceRequest<auth::AuthProviderFactory> request) {
+        [this](f1dl::InterfaceRequest<auth::AuthProviderFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
     loop_.Run();
@@ -44,7 +44,7 @@ class DevAuthProviderApp {
   trace::TraceProvider trace_provider_;
 
   auth::dev_auth_provider::FactoryImpl factory_impl_;
-  fidl::BindingSet<auth::AuthProviderFactory> factory_bindings_;
+  f1dl::BindingSet<auth::AuthProviderFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevAuthProviderApp);
 };

@@ -40,7 +40,7 @@ class NetStubResponder {
         application_context
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-    fidl::InterfaceHandle<app::ServiceProvider> handle;
+    f1dl::InterfaceHandle<app::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
     FXL_DCHECK(handle);
 

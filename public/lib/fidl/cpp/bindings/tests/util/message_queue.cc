@@ -8,7 +8,7 @@
 
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 MessageQueue::MessageQueue() {}
@@ -42,4 +42,4 @@ void MessageQueue::Pop() {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

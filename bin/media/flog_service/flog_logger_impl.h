@@ -17,10 +17,10 @@ namespace flog {
 
 // FlogLogger implementation.
 class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
-                       private fidl::MessageReceiverWithResponderStatus {
+                       private f1dl::MessageReceiverWithResponderStatus {
  public:
   static std::shared_ptr<FlogLoggerImpl> Create(
-      fidl::InterfaceRequest<FlogLogger> request,
+      f1dl::InterfaceRequest<FlogLogger> request,
       uint32_t log_id,
       const std::string& label,
       std::shared_ptr<FlogDirectory> directory,
@@ -33,7 +33,7 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   const std::string& label() { return label_; }
 
  private:
-  FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
+  FlogLoggerImpl(f1dl::InterfaceRequest<FlogLogger> request,
                  uint32_t log_id,
                  const std::string& label,
                  std::shared_ptr<FlogDirectory> directory,
@@ -42,14 +42,14 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   void WriteData(uint32_t data_size, const void* data);
 
   // MessageReceiverWithResponderStatus implementation.
-  bool Accept(fidl::Message* message) override;
+  bool Accept(f1dl::Message* message) override;
 
-  bool AcceptWithResponder(fidl::Message* message,
-                           fidl::MessageReceiverWithStatus* responder) override;
+  bool AcceptWithResponder(f1dl::Message* message,
+                           f1dl::MessageReceiverWithStatus* responder) override;
 
   uint32_t id_;
   std::string label_;
-  std::unique_ptr<fidl::internal::Router> router_;
+  std::unique_ptr<f1dl::internal::Router> router_;
   fxl::UniqueFD fd_;
 };
 

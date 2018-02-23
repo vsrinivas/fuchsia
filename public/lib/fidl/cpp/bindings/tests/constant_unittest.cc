@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/test_constants.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 TEST(ConstantTest, GlobalConstants) {
@@ -39,4 +39,4 @@ TEST(ConstantTest, InterfaceConstants) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

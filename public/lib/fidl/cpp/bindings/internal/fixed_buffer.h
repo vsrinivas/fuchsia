@@ -7,7 +7,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/buffer.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // FixedBuffer provides a simple way to allocate objects within a fixed chunk
@@ -81,6 +81,6 @@ class FixedBufferForTesting : public FixedBuffer {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_FIXED_BUFFER_H_

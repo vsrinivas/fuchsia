@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 RectPtr MakeRect(int32_t factor = 1) {
@@ -101,4 +101,4 @@ TEST(FormattingTest, Structs) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

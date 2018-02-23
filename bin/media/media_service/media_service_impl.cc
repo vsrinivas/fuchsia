@@ -32,7 +32,7 @@ MediaServiceImpl::MediaServiceImpl(
       AdoptRef(new MultiprocTaskRunner(zx_system_get_num_cpus()));
 
   application_context()->outgoing_services()->AddService<MediaService>(
-      [this](fidl::InterfaceRequest<MediaService> request) {
+      [this](f1dl::InterfaceRequest<MediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -42,11 +42,11 @@ MediaServiceImpl::~MediaServiceImpl() {
 }
 
 void MediaServiceImpl::CreateHttpPlayer(
-    const fidl::String& http_url,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer,
-    fidl::InterfaceRequest<MediaPlayer> player) {
-  fidl::InterfaceHandle<SeekingReader> reader;
+    const f1dl::String& http_url,
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
+    f1dl::InterfaceRequest<MediaPlayer> player) {
+  f1dl::InterfaceHandle<SeekingReader> reader;
   CreateHttpReader(http_url, reader.NewRequest());
   AddProduct(MediaPlayerImpl::Create(
       std::move(reader), std::move(audio_renderer), std::move(video_renderer),
@@ -55,10 +55,10 @@ void MediaServiceImpl::CreateHttpPlayer(
 
 void MediaServiceImpl::CreateFilePlayer(
     zx::channel file_channel,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer,
-    fidl::InterfaceRequest<MediaPlayer> player) {
-  fidl::InterfaceHandle<SeekingReader> reader;
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
+    f1dl::InterfaceRequest<MediaPlayer> player) {
+  f1dl::InterfaceHandle<SeekingReader> reader;
   CreateFileChannelReader(std::move(file_channel), reader.NewRequest());
   AddProduct(MediaPlayerImpl::Create(
       std::move(reader), std::move(audio_renderer), std::move(video_renderer),
@@ -66,33 +66,33 @@ void MediaServiceImpl::CreateFilePlayer(
 }
 
 void MediaServiceImpl::CreatePlayer(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer,
-    fidl::InterfaceRequest<MediaPlayer> player) {
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
+    f1dl::InterfaceRequest<MediaPlayer> player) {
   AddProduct(MediaPlayerImpl::Create(
       std::move(reader), std::move(audio_renderer), std::move(video_renderer),
       std::move(player), this));
 }
 
 void MediaServiceImpl::CreateSource(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::Array<MediaTypeSetPtr> media_types,
-    fidl::InterfaceRequest<MediaSource> source) {
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::Array<MediaTypeSetPtr> media_types,
+    f1dl::InterfaceRequest<MediaSource> source) {
   AddProduct(MediaSourceImpl::Create(std::move(reader), media_types,
                                      std::move(source), this));
 }
 
 void MediaServiceImpl::CreateSink(
-    fidl::InterfaceHandle<MediaRenderer> renderer,
-    fidl::InterfaceRequest<MediaSink> sink_request) {
+    f1dl::InterfaceHandle<MediaRenderer> renderer,
+    f1dl::InterfaceRequest<MediaSink> sink_request) {
   AddProduct(MediaSinkImpl::Create(std::move(renderer), std::move(sink_request),
                                    this));
 }
 
 void MediaServiceImpl::CreateDemux(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceRequest<MediaSource> request) {
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::InterfaceRequest<MediaSource> request) {
   CreateProductOnNewThread<MediaDemuxImpl>(fxl::MakeCopyable([
     this, reader = std::move(reader), request = std::move(request)
   ]() mutable {
@@ -102,7 +102,7 @@ void MediaServiceImpl::CreateDemux(
 
 void MediaServiceImpl::CreateDecoder(
     MediaTypePtr input_media_type,
-    fidl::InterfaceRequest<MediaTypeConverter> request) {
+    f1dl::InterfaceRequest<MediaTypeConverter> request) {
   CreateProductOnNewThread<MediaDecoderImpl>(fxl::MakeCopyable([
     this, input_media_type = std::move(input_media_type),
     request = std::move(request)
@@ -113,8 +113,8 @@ void MediaServiceImpl::CreateDecoder(
 }
 
 void MediaServiceImpl::CreateAudioRenderer(
-    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+    f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
   AudioServerPtr audio_service =
       application_context()->ConnectToEnvironmentService<media::AudioServer>();
 
@@ -129,8 +129,8 @@ void MediaServiceImpl::CreateAudioRenderer(
 }
 
 void MediaServiceImpl::CreateVideoRenderer(
-    fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+    f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
   CreateProductOnNewThread<VideoRendererImpl>(fxl::MakeCopyable([
     this, video_renderer_request = std::move(video_renderer_request),
     media_renderer_request = std::move(media_renderer_request)
@@ -141,7 +141,7 @@ void MediaServiceImpl::CreateVideoRenderer(
 }
 
 void MediaServiceImpl::CreateTimelineController(
-    fidl::InterfaceRequest<MediaTimelineController> timeline_controller) {
+    f1dl::InterfaceRequest<MediaTimelineController> timeline_controller) {
   AddProduct(MediaTimelineControllerImpl::Create(std::move(timeline_controller),
                                                  this));
 }
@@ -149,7 +149,7 @@ void MediaServiceImpl::CreateTimelineController(
 void MediaServiceImpl::CreateLpcmReformatter(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
-    fidl::InterfaceRequest<MediaTypeConverter> request) {
+    f1dl::InterfaceRequest<MediaTypeConverter> request) {
   CreateProductOnNewThread<LpcmReformatterImpl>(fxl::MakeCopyable([
     this, input_media_type = std::move(input_media_type), output_sample_format,
     request = std::move(request)
@@ -162,7 +162,7 @@ void MediaServiceImpl::CreateLpcmReformatter(
 
 void MediaServiceImpl::CreateHttpReader(
     const std::string& http_url,
-    fidl::InterfaceRequest<SeekingReader> request) {
+    f1dl::InterfaceRequest<SeekingReader> request) {
   CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
       [ this, http_url = http_url, request = std::move(request) ]() mutable {
         return NetworkReaderImpl::Create(http_url, std::move(request), this);
@@ -171,7 +171,7 @@ void MediaServiceImpl::CreateHttpReader(
 
 void MediaServiceImpl::CreateFileChannelReader(
     zx::channel file_channel,
-    fidl::InterfaceRequest<SeekingReader> request) {
+    f1dl::InterfaceRequest<SeekingReader> request) {
   CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable([
     this, file_channel = std::move(file_channel), request = std::move(request)
   ]() mutable {

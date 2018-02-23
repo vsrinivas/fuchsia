@@ -33,14 +33,14 @@ ScenicScanout::ScenicScanout(app::ApplicationContext* application_context,
   SetReady(false);
 
   application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
-      [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
+      [this](f1dl::InterfaceRequest<mozart::ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
 void ScenicScanout::CreateView(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<app::ServiceProvider> view_services) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> view_services) {
   if (view_) {
     FXL_LOG(ERROR) << "CreateView called when a view already exists";
     return;
@@ -65,7 +65,7 @@ GuestView::GuestView(
     machina::GpuScanout* scanout,
     machina::InputDispatcher* input_dispatcher,
     mozart::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),

@@ -47,7 +47,7 @@ namespace {
   return ::btlib::att::ErrorCode::kUnlikelyError;
 }
 
-void ParseProperties(const fidl::Array<CharacteristicProperty>& properties,
+void ParseProperties(const f1dl::Array<CharacteristicProperty>& properties,
                      uint8_t* out_props,
                      uint16_t* out_ext_props) {
   FXL_DCHECK(out_props);
@@ -191,7 +191,7 @@ class GattServerServer::ServiceImpl
               uint64_t id,
               ::bluetooth::gatt::ServiceDelegatePtr delegate,
               fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-              ::fidl::InterfaceRequest<::bluetooth::gatt::Service> request)
+              ::f1dl::InterfaceRequest<::bluetooth::gatt::Service> request)
       : ServerBase(adapter, this, std::move(request)),
         owner_(owner),
         id_(id),
@@ -220,8 +220,8 @@ class GattServerServer::ServiceImpl
   }
 
   void NotifyValue(uint64_t characteristic_id,
-                   const ::fidl::String& peer_id,
-                   ::fidl::Array<uint8_t> value,
+                   const ::f1dl::String& peer_id,
+                   ::f1dl::Array<uint8_t> value,
                    bool confirm) override {
     auto* connmgr = adapter()->le_connection_manager();
     ::btlib::gatt::LocalServiceManager::ClientCharacteristicConfig config;
@@ -272,7 +272,7 @@ class GattServerServer::ServiceImpl
 
 GattServerServer::GattServerServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<bluetooth::gatt::Server> request)
+    f1dl::InterfaceRequest<bluetooth::gatt::Server> request)
     : ServerBase(adapter, this, std::move(request)), weak_ptr_factory_(this) {}
 
 GattServerServer::~GattServerServer() {
@@ -290,8 +290,8 @@ void GattServerServer::RemoveService(uint64_t id) {
 
 void GattServerServer::PublishService(
     ServiceInfoPtr service_info,
-    fidl::InterfaceHandle<ServiceDelegate> delegate,
-    fidl::InterfaceRequest<Service> service_iface,
+    f1dl::InterfaceHandle<ServiceDelegate> delegate,
+    f1dl::InterfaceRequest<Service> service_iface,
     const PublishServiceCallback& callback) {
   if (!service_info) {
     auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
@@ -414,7 +414,7 @@ void GattServerServer::OnReadRequest(
     return;
   }
 
-  auto cb = [responder](fidl::Array<uint8_t> value, auto error_code) {
+  auto cb = [responder](f1dl::Array<uint8_t> value, auto error_code) {
     responder(GattErrorCodeFromFidl(error_code, true /* is_read */),
               ::btlib::common::BufferView(value.data(), value.size()));
   };
@@ -436,7 +436,7 @@ void GattServerServer::OnWriteRequest(
     return;
   }
 
-  auto fidl_value = fidl::Array<uint8_t>::From(value);
+  auto fidl_value = f1dl::Array<uint8_t>::From(value);
   auto* delegate = iter->second->delegate();
   FXL_DCHECK(delegate);
 

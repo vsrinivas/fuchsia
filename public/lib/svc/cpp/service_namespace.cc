@@ -21,7 +21,7 @@ ServiceNamespace::ServiceNamespace()
       directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
 ServiceNamespace::ServiceNamespace(
-    fidl::InterfaceRequest<app::ServiceProvider> request)
+    f1dl::InterfaceRequest<app::ServiceProvider> request)
     : ServiceNamespace() {
   AddBinding(std::move(request));
 }
@@ -29,7 +29,7 @@ ServiceNamespace::ServiceNamespace(
 ServiceNamespace::~ServiceNamespace() = default;
 
 void ServiceNamespace::AddBinding(
-    fidl::InterfaceRequest<app::ServiceProvider> request) {
+    f1dl::InterfaceRequest<app::ServiceProvider> request) {
   if (request)
     bindings_.AddBinding(this, std::move(request));
 }
@@ -92,7 +92,7 @@ void ServiceNamespace::Connect(fbl::StringPiece name, zx::channel channel) {
   ConnectCommon(std::string(name.data(), name.length()), std::move(channel));
 }
 
-void ServiceNamespace::ConnectToService(const fidl::String& service_name,
+void ServiceNamespace::ConnectToService(const f1dl::String& service_name,
                                         zx::channel channel) {
   ConnectCommon(service_name, std::move(channel));
 }

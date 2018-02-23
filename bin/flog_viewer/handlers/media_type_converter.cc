@@ -21,7 +21,7 @@ MediaTypeConverter::MediaTypeConverter(const std::string& format)
 
 MediaTypeConverter::~MediaTypeConverter() {}
 
-void MediaTypeConverter::HandleMessage(fidl::Message* message) {
+void MediaTypeConverter::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -30,7 +30,7 @@ std::shared_ptr<Accumulator> MediaTypeConverter::GetAccumulator() {
 }
 
 void MediaTypeConverter::BoundAs(uint64_t koid,
-                                 const fidl::String& converter_type) {
+                                 const f1dl::String& converter_type) {
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTypeConverter.BoundAs\n";
   terse_out() << indent;

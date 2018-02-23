@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_UNION_ACCESSOR_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_UNION_ACCESSOR_H_
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // When serializing and deserializing Unions, it is necessary to access
@@ -28,6 +28,6 @@ class UnionAccessor {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_UNION_ACCESSOR_H_

@@ -13,7 +13,7 @@
 namespace examples {
 
 TileView::TileView(mozart::ViewManagerPtr view_manager,
-                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                    app::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
@@ -30,8 +30,8 @@ TileView::TileView(mozart::ViewManagerPtr view_manager,
 TileView::~TileView() {}
 
 void TileView::Present(
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-    fidl::InterfaceRequest<mozart::Presentation> presentation) {
+    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    f1dl::InterfaceRequest<mozart::Presentation> presentation) {
   const std::string empty_url;
   AddChildView(std::move(child_view_owner), empty_url, nullptr);
 }
@@ -52,7 +52,7 @@ void TileView::ConnectViews() {
     // Get the view provider back from the launched app.
     auto view_provider = services.ConnectToService<mozart::ViewProvider>();
 
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
+    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
     // Add the view, which increments child_key_.
@@ -61,7 +61,7 @@ void TileView::ConnectViews() {
 }
 
 void TileView::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
+    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
   env_services_.AddBinding(std::move(environment_services));
 }
 
@@ -75,7 +75,7 @@ void TileView::CreateNestedEnvironment() {
 
   // Add a binding for the presenter service
   env_services_.AddService<mozart::Presenter>(
-      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
+      [this](f1dl::InterfaceRequest<mozart::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -101,7 +101,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void TileView::AddChildView(
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
     const std::string& url,
     app::ApplicationControllerPtr app_controller) {
   const uint32_t view_key = next_child_view_key_++;

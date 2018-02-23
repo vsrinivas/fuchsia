@@ -23,22 +23,22 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
                       public MediaSink {
  public:
   static std::shared_ptr<MediaSinkImpl> Create(
-      fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-      fidl::InterfaceRequest<MediaSink> sink_request,
+      f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
+      f1dl::InterfaceRequest<MediaSink> sink_request,
       MediaServiceImpl* owner);
 
   ~MediaSinkImpl() override;
 
   // MediaSink implementation.
   void GetTimelineControlPoint(
-      fidl::InterfaceRequest<MediaTimelineControlPoint> req) override;
+      f1dl::InterfaceRequest<MediaTimelineControlPoint> req) override;
 
   void ConsumeMediaType(MediaTypePtr media_type,
                         const ConsumeMediaTypeCallback& callback) override;
 
  private:
-  MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-                fidl::InterfaceRequest<MediaSink> sink_request,
+  MediaSinkImpl(f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
+                f1dl::InterfaceRequest<MediaSink> sink_request,
                 MediaServiceImpl* owner);
 
   // Builds the conversion pipeline.

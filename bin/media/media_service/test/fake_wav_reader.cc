@@ -44,7 +44,7 @@ void FakeWavReader::WriteHeader() {
 
 FakeWavReader::~FakeWavReader() {}
 
-void FakeWavReader::Bind(fidl::InterfaceRequest<SeekingReader> request) {
+void FakeWavReader::Bind(f1dl::InterfaceRequest<SeekingReader> request) {
   binding_.Bind(std::move(request));
 }
 

@@ -33,8 +33,8 @@ class JobHolder {
  public:
   JobHolder(JobHolder* parent,
             fs::Vfs* vfs,
-            fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-            const fidl::String& label);
+            f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+            const f1dl::String& label);
   ~JobHolder();
 
   JobHolder* parent() const { return parent_; }
@@ -43,14 +43,14 @@ class JobHolder {
   const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
 
   void CreateNestedJob(
-      fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-      fidl::InterfaceRequest<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const fidl::String& label);
+      f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+      f1dl::InterfaceRequest<ApplicationEnvironment> environment,
+      f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      const f1dl::String& label);
 
   void CreateApplication(
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller);
+      f1dl::InterfaceRequest<ApplicationController> controller);
 
   // Removes the child job holder from this job holder and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -66,7 +66,7 @@ class JobHolder {
   std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
       ApplicationControllerImpl* controller);
 
-  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(f1dl::InterfaceRequest<ApplicationEnvironment> environment);
 
  private:
   static uint32_t next_numbered_label_;
@@ -77,17 +77,17 @@ class JobHolder {
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
       std::string runner,
-      fidl::InterfaceRequest<ApplicationController> controller,
+      f1dl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
   void CreateApplicationWithProcess(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller,
+      f1dl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
   void CreateApplicationFromPackage(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller,
+      f1dl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
 
   // TODO(ZX-1036): For scaffolding purposes, we make the information available

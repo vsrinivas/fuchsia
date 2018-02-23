@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Note: This file tests both binding.h (fidl::Binding) and strong_binding.h
-// (fidl::StrongBinding).
+// Note: This file tests both binding.h (f1dl::Binding) and strong_binding.h
+// (f1dl::StrongBinding).
 
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -44,7 +44,7 @@ class ServiceImpl : public sample::Service {
   // sample::Service implementation
   void Frobinate(sample::FooPtr foo,
                  BazOptions options,
-                 fidl::InterfaceHandle<sample::Port> port,
+                 f1dl::InterfaceHandle<sample::Port> port,
                  const FrobinateCallback& callback) override {
     callback(1);
   }
@@ -71,7 +71,7 @@ TEST_F(BindingTest, Close) {
   EXPECT_TRUE(called);
 }
 
-// Tests that destroying a fidl::Binding closes the bound channel handle.
+// Tests that destroying a f1dl::Binding closes the bound channel handle.
 TEST_F(BindingTest, DestroyClosesMessagePipe) {
   bool encountered_error = false;
   ServiceImpl impl;
@@ -201,4 +201,4 @@ TEST_F(BindingTest, Unbind) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

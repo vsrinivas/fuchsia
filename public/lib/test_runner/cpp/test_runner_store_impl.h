@@ -18,21 +18,21 @@ namespace test_runner {
 class TestRunnerStoreImpl : public TestRunnerStore {
  public:
   TestRunnerStoreImpl();
-  void AddBinding(fidl::InterfaceRequest<TestRunnerStore> req);
+  void AddBinding(f1dl::InterfaceRequest<TestRunnerStore> req);
 
  private:
   // |TestRunnerStore|
-  void Get(const fidl::String& key, const GetCallback& cb) override;
+  void Get(const f1dl::String& key, const GetCallback& cb) override;
   // |TestRunnerStore|
-  void Put(const fidl::String& key,
-           const fidl::String& value,
+  void Put(const f1dl::String& key,
+           const f1dl::String& value,
            const PutCallback& cb) override;
 
   void MaybeNotify(const std::string& key);
 
-  std::map<fidl::String, std::queue<GetCallback>> get_queue_;
-  std::map<fidl::String, std::queue<std::string>> store_;
-  fidl::BindingSet<TestRunnerStore> binding_set_;
+  std::map<f1dl::String, std::queue<GetCallback>> get_queue_;
+  std::map<f1dl::String, std::queue<std::string>> store_;
+  f1dl::BindingSet<TestRunnerStore> binding_set_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerStoreImpl);
 };

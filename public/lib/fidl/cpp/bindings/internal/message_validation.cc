@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 ValidationError ValidateMessageIsRequestWithoutResponse(const Message* message,
@@ -54,4 +54,4 @@ ValidationError ValidateMessageIsResponse(const Message* message,
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

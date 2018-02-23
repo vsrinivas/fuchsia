@@ -75,7 +75,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
   app::ApplicationControllerPtr app_controller_;
-  fidl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
+  f1dl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
  protected:
   auth::TokenManagerPtr token_mgr_;
@@ -98,9 +98,9 @@ TEST_F(DevTokenManagerAppTest, Authorize) {
 }
 
 TEST_F(DevTokenManagerAppTest, GetAccessToken) {
-  auto scopes = fidl::Array<fidl::String>::New(0);
+  auto scopes = f1dl::Array<f1dl::String>::New(0);
   auth::Status status;
-  fidl::String access_token;
+  f1dl::String access_token;
 
   token_mgr_->GetAccessToken(
       kDevAuthProvider, "", std::move(scopes),
@@ -112,7 +112,7 @@ TEST_F(DevTokenManagerAppTest, GetAccessToken) {
 
 TEST_F(DevTokenManagerAppTest, GetIdToken) {
   auth::Status status;
-  fidl::String id_token;
+  f1dl::String id_token;
 
   token_mgr_->GetIdToken(kDevAuthProvider, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
@@ -134,13 +134,13 @@ TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
 }
 
 TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
-  auto scopes = fidl::Array<fidl::String>::New(0);
+  auto scopes = f1dl::Array<f1dl::String>::New(0);
   auth::Status status;
 
-  fidl::String old_id_token;
-  fidl::String old_access_token;
-  fidl::String new_id_token;
-  fidl::String new_access_token;
+  f1dl::String old_id_token;
+  f1dl::String old_access_token;
+  f1dl::String new_id_token;
+  f1dl::String new_access_token;
 
   token_mgr_->GetIdToken(
       kDevAuthProvider, "",
@@ -159,7 +159,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
-  scopes = fidl::Array<fidl::String>::New(0);
+  scopes = f1dl::Array<f1dl::String>::New(0);
   token_mgr_->GetIdToken(
       kDevAuthProvider, "",
       callback::Capture(MakeQuitTask(), &status, &new_id_token));
@@ -178,8 +178,8 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
 
 TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
   auth::Status status;
-  fidl::String id_token;
-  fidl::String cached_id_token;
+  f1dl::String id_token;
+  f1dl::String cached_id_token;
 
   token_mgr_->GetIdToken(kDevAuthProvider, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
@@ -209,11 +209,11 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
 }
 
 TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
-  auto scopes = fidl::Array<fidl::String>::New(0);
+  auto scopes = f1dl::Array<f1dl::String>::New(0);
   auth::Status status;
-  fidl::String id_token;
-  fidl::String access_token;
-  fidl::String cached_access_token;
+  f1dl::String id_token;
+  f1dl::String access_token;
+  f1dl::String cached_access_token;
 
   token_mgr_->GetAccessToken(
       kDevAuthProvider, "", std::move(scopes),
@@ -226,7 +226,7 @@ TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
-  scopes = fidl::Array<fidl::String>::New(0);
+  scopes = f1dl::Array<f1dl::String>::New(0);
   token_mgr_->GetAccessToken(
       kDevAuthProvider, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &cached_access_token));

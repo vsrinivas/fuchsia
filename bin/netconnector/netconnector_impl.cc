@@ -46,7 +46,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       net_connector->GetKnownDeviceNames(
           NetConnector::kInitialKnownDeviceNames,
           fxl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
-              uint64_t version, fidl::Array<fidl::String> device_names) {
+              uint64_t version, f1dl::Array<f1dl::String> device_names) {
             if (device_names.size() == 0) {
               std::cout << "No remote devices found\n";
             } else {
@@ -66,14 +66,14 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
 
   // Running as listener.
   application_context_->outgoing_services()->AddService<NetConnector>(
-      [this](fidl::InterfaceRequest<NetConnector> request) {
+      [this](f1dl::InterfaceRequest<NetConnector> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
-        fidl::Array<fidl::String> device_names =
-            fidl::Array<fidl::String>::New(0);
+        f1dl::Array<f1dl::String> device_names =
+            f1dl::Array<f1dl::String>::New(0);
 
         for (auto& pair : params_->devices()) {
           device_names.push_back(pair.first);
@@ -111,7 +111,7 @@ void NetConnectorImpl::StartListener() {
 
   mdns_service_->PublishServiceInstance(
       kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
-      fidl::Array<fidl::String>(), [this](mdns::MdnsResult result) {
+      f1dl::Array<f1dl::String>(), [this](mdns::MdnsResult result) {
         switch (result) {
           case mdns::MdnsResult::OK:
             break;
@@ -182,8 +182,8 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 }
 
 void NetConnectorImpl::GetDeviceServiceProvider(
-    const fidl::String& device_name,
-    fidl::InterfaceRequest<app::ServiceProvider> request) {
+    const f1dl::String& device_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> request) {
   if (device_name == host_name_ || device_name == kLocalDeviceName) {
     responding_service_host_.AddBinding(std::move(request));
     return;
@@ -207,8 +207,8 @@ void NetConnectorImpl::GetKnownDeviceNames(
 }
 
 void NetConnectorImpl::RegisterServiceProvider(
-    const fidl::String& name,
-    fidl::InterfaceHandle<app::ServiceProvider> handle) {
+    const f1dl::String& name,
+    f1dl::InterfaceHandle<app::ServiceProvider> handle) {
   FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));
 }

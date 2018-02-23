@@ -13,7 +13,7 @@
 #include <set>
 #include <utility>
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -402,4 +402,4 @@ bool ParseValidationTestInput(const std::string& input,
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

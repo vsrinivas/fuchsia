@@ -200,7 +200,7 @@ bool PopulateDiscoveryFilter(
 }  // namespace fidl_helpers
 }  // namespace bthost
 
-namespace fidl {
+namespace f1dl {
 
 // static
 Array<uint8_t>
@@ -212,4 +212,4 @@ TypeConverter<Array<uint8_t>, ::btlib::common::ByteBuffer>::Convert(
   return to;
 }
 
-}  // namespace fidl
+}  // namespace f1dl

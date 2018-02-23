@@ -211,7 +211,7 @@ void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
 
   auto trace_options = TraceOptions::New();
   trace_options->categories =
-      fidl::Array<fidl::String>::From(options_.categories);
+      f1dl::Array<f1dl::String>::From(options_.categories);
   trace_options->buffer_size_megabytes_hint =
       options_.buffer_size_megabytes_hint;
 
@@ -320,8 +320,8 @@ void Record::DoneTrace() {
 
 void Record::LaunchApp() {
   auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = fidl::String::From(options_.app);
-  launch_info->arguments = fidl::Array<fidl::String>::From(options_.args);
+  launch_info->url = f1dl::String::From(options_.app);
+  launch_info->arguments = f1dl::Array<f1dl::String>::From(options_.args);
 
   out() << "Launching " << launch_info->url << std::endl;
   context()->launcher()->CreateApplication(std::move(launch_info),

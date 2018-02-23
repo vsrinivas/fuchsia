@@ -23,7 +23,7 @@ class InputDeviceImpl : public mozart::InputDevice {
   InputDeviceImpl(
       uint32_t id,
       mozart::DeviceDescriptorPtr descriptor,
-      fidl::InterfaceRequest<mozart::InputDevice> input_device_request,
+      f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
       Listener* listener);
   ~InputDeviceImpl();
 
@@ -36,7 +36,7 @@ class InputDeviceImpl : public mozart::InputDevice {
 
   uint32_t id_;
   mozart::DeviceDescriptorPtr descriptor_;
-  fidl::Binding<mozart::InputDevice> input_device_binding_;
+  f1dl::Binding<mozart::InputDevice> input_device_binding_;
   Listener* listener_;
 };
 

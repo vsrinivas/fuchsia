@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -21,7 +21,7 @@ class StructSerializationAPITest : public testing::Test {
   template <typename Type>
   void SerializeAndDeserialize(
       Type* val,
-      fidl::internal::ValidationError expected_validation_error) {
+      f1dl::internal::ValidationError expected_validation_error) {
     size_t bytes_written = 0;
     size_t num_bytes = val->GetSerializedSize();
     std::vector<uint8_t> bytes(num_bytes + 1);
@@ -33,17 +33,17 @@ class StructSerializationAPITest : public testing::Test {
     EXPECT_EQ(170u, bytes[num_bytes]);
     EXPECT_EQ(num_bytes, bytes_written);
 
-    fidl::internal::BoundsChecker bounds_checker(bytes.data(), num_bytes, 0);
+    f1dl::internal::BoundsChecker bounds_checker(bytes.data(), num_bytes, 0);
     auto actual_validation_error =
         Type::Data_::Validate(bytes.data(), &bounds_checker, nullptr);
     EXPECT_EQ(expected_validation_error, actual_validation_error);
 
     Type out_val;
     bool deserialize_ret = out_val.Deserialize(bytes.data(), bytes.size());
-    if (actual_validation_error == fidl::internal::ValidationError::NONE) {
+    if (actual_validation_error == f1dl::internal::ValidationError::NONE) {
       EXPECT_TRUE(val->Equals(out_val));
     }
-    EXPECT_EQ(actual_validation_error == fidl::internal::ValidationError::NONE,
+    EXPECT_EQ(actual_validation_error == f1dl::internal::ValidationError::NONE,
               deserialize_ret);
   }
 };
@@ -63,12 +63,12 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
   EXPECT_EQ(24u, handle_struct.GetSerializedSize());
 
   // + 8 bytes for initialized array, 0-sized array.
-  handle_struct.array_h = fidl::Array<zx::channel>::New(0);
+  handle_struct.array_h = f1dl::Array<zx::channel>::New(0);
   EXPECT_EQ(32u, handle_struct.GetSerializedSize());
 
   // + 4 bytes for array of size 1.
   // + 4 more bytes to make the array serialization 8-byte aligned.
-  handle_struct.array_h = fidl::Array<zx::channel>::New(1);
+  handle_struct.array_h = f1dl::Array<zx::channel>::New(1);
   EXPECT_EQ(16u, GetSerializedSize_(handle_struct.array_h));
   EXPECT_EQ(40u, handle_struct.GetSerializedSize());
 }
@@ -85,7 +85,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
     // ValidationError::ILLEGAL_HANDLE error, which shouldn't happen since
     // handles will be encoded even on failures).
     SerializeAndDeserialize(&handle_struct,
-                            fidl::internal::ValidationError::ILLEGAL_HANDLE);
+                            f1dl::internal::ValidationError::ILLEGAL_HANDLE);
   }
 
   {
@@ -96,10 +96,10 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
     // is invalid, so should be serializable.  Instead, we live with a
     // serialization error for an invalid handle.
     // TODO(vardhan): This should be
-    // fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE after handles
+    // f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE after handles
     // are encoded inline with serialization.
     SerializeAndDeserialize(&handle_struct,
-                            fidl::internal::ValidationError::ILLEGAL_HANDLE);
+                            f1dl::internal::ValidationError::ILLEGAL_HANDLE);
   }
 #endif
 
@@ -114,7 +114,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
     EXPECT_DEATH_IF_SUPPORTED(
         {
           SerializeAndDeserialize(&handle_struct,
-                                  fidl::internal::ValidationError::NONE);
+                                  f1dl::internal::ValidationError::NONE);
         },
         "does not support handles");
   }
@@ -126,14 +126,14 @@ TEST_F(StructSerializationAPITest, NullableHandleSerialization) {
   NullableHandleStruct handle_struct;
   handle_struct.data = 16;
   SerializeAndDeserialize(&handle_struct,
-                          fidl::internal::ValidationError::NONE);
+                          f1dl::internal::ValidationError::NONE);
 }
 
 // Test that |Deserialize()| appropriately fails on validation.
 TEST_F(StructSerializationAPITest, DeserializationFailure) {
   char buf_storage[100] = {};
   // Use an 8-byte aligned pointer of |buf_storage| to deserialize into.
-  char* buf = fidl::internal::AlignPointer(buf_storage);
+  char* buf = f1dl::internal::AlignPointer(buf_storage);
 
   EmptyStruct es;
 
@@ -174,4 +174,4 @@ TEST_F(StructSerializationAPITest, DeserializationWithoutValidation) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

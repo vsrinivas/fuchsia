@@ -11,7 +11,7 @@ using sample::SampleInterface;
 using sample::SampleInterface_SampleMethod1_Params;
 using sample::SampleInterface_SampleMethod1_ResponseParams;
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -75,4 +75,4 @@ TEST(SampleInterfaceGeneratedStructs, ResponseStruct) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

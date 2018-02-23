@@ -36,8 +36,8 @@ class Mozart : public ui_mozart::Mozart {
 
   // |ui_mozart::Mozart|
   void CreateSession(
-      ::fidl::InterfaceRequest<ui_mozart::Session> session,
-      ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener) override;
+      ::f1dl::InterfaceRequest<ui_mozart::Session> session,
+      ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener) override;
 
   app::ApplicationContext* app_context() const { return app_context_; }
   fxl::TaskRunner* task_runner() const { return task_runner_; }
@@ -50,7 +50,7 @@ class Mozart : public ui_mozart::Mozart {
   fxl::TaskRunner* const task_runner_;
   Clock* clock_;
 
-  fidl::BindingSet<ui_mozart::Session, std::unique_ptr<Session>>
+  f1dl::BindingSet<ui_mozart::Session, std::unique_ptr<Session>>
       session_bindings_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
@@ -65,8 +65,8 @@ class Mozart : public ui_mozart::Mozart {
   std::vector<fxl::Closure> run_after_all_systems_initialized_;
 
   void CreateSessionImmediately(
-      ::fidl::InterfaceRequest<ui_mozart::Session> session_request,
-      ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener);
+      ::f1dl::InterfaceRequest<ui_mozart::Session> session_request,
+      ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.

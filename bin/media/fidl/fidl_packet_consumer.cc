@@ -21,7 +21,7 @@ FidlPacketConsumer::FidlPacketConsumer() {}
 FidlPacketConsumer::~FidlPacketConsumer() {}
 
 void FidlPacketConsumer::Bind(
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();

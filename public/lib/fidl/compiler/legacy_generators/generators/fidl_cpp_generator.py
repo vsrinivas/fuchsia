@@ -19,30 +19,30 @@ _kind_to_cpp_type = {
   mojom.INT32:                 "int32_t",
   mojom.UINT32:                "uint32_t",
   mojom.FLOAT:                 "float",
-  mojom.HANDLE:                "::fidl::internal::WrappedHandle",
-  mojom.DCPIPE:                "::fidl::internal::WrappedHandle",
-  mojom.DPPIPE:                "::fidl::internal::WrappedHandle",
-  mojom.CHANNEL:               "::fidl::internal::WrappedHandle",
-  mojom.VMO:                   "::fidl::internal::WrappedHandle",
-  mojom.PROCESS:               "::fidl::internal::WrappedHandle",
-  mojom.THREAD:                "::fidl::internal::WrappedHandle",
-  mojom.EVENT:                 "::fidl::internal::WrappedHandle",
-  mojom.PORT:                  "::fidl::internal::WrappedHandle",
-  mojom.JOB:                   "::fidl::internal::WrappedHandle",
-  mojom.SOCKET:                "::fidl::internal::WrappedHandle",
-  mojom.EVENTPAIR:             "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_HANDLE:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_DCPIPE:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_DPPIPE:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_CHANNEL:      "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_VMO:          "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_PROCESS:      "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_THREAD:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_EVENT:        "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_PORT:         "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_JOB:          "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_SOCKET:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_EVENTPAIR:    "::fidl::internal::WrappedHandle",
+  mojom.HANDLE:                "::f1dl::internal::WrappedHandle",
+  mojom.DCPIPE:                "::f1dl::internal::WrappedHandle",
+  mojom.DPPIPE:                "::f1dl::internal::WrappedHandle",
+  mojom.CHANNEL:               "::f1dl::internal::WrappedHandle",
+  mojom.VMO:                   "::f1dl::internal::WrappedHandle",
+  mojom.PROCESS:               "::f1dl::internal::WrappedHandle",
+  mojom.THREAD:                "::f1dl::internal::WrappedHandle",
+  mojom.EVENT:                 "::f1dl::internal::WrappedHandle",
+  mojom.PORT:                  "::f1dl::internal::WrappedHandle",
+  mojom.JOB:                   "::f1dl::internal::WrappedHandle",
+  mojom.SOCKET:                "::f1dl::internal::WrappedHandle",
+  mojom.EVENTPAIR:             "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_HANDLE:       "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_DCPIPE:       "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_DPPIPE:       "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_CHANNEL:      "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_VMO:          "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_PROCESS:      "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_THREAD:       "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_EVENT:        "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_PORT:         "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_JOB:          "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_SOCKET:       "::f1dl::internal::WrappedHandle",
+  mojom.NULLABLE_EVENTPAIR:    "::f1dl::internal::WrappedHandle",
   mojom.INT64:                 "int64_t",
   mojom.UINT64:                "uint64_t",
   mojom.DOUBLE:                "double",
@@ -95,22 +95,22 @@ def GetCppTypeForKind(kind):
 
 def GetCppType(kind):
   if mojom.IsArrayKind(kind):
-    return "::fidl::internal::Array_Data<%s>*" % GetCppType(kind.kind)
+    return "::f1dl::internal::Array_Data<%s>*" % GetCppType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "::fidl::internal::Map_Data<%s, %s>*" % (
+    return "::f1dl::internal::Map_Data<%s, %s>*" % (
       GetCppType(kind.key_kind), GetCppType(kind.value_kind))
   if mojom.IsStructKind(kind):
     return "%s_Data*" % GetNameForKind(kind, internal=True)
   if mojom.IsUnionKind(kind):
     return "%s_Data" % GetNameForKind(kind, internal=True)
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::internal::Interface_Data"
+    return "::f1dl::internal::Interface_Data"
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::internal::WrappedHandle"
+    return "::f1dl::internal::WrappedHandle"
   if mojom.IsEnumKind(kind):
     return "int32_t"
   if mojom.IsStringKind(kind):
-    return "::fidl::internal::String_Data*"
+    return "::f1dl::internal::String_Data*"
   return GetCppTypeForKind(kind)
 
 def GetCppPodType(kind):
@@ -124,16 +124,16 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::fidl::Array<%s> " % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::Array<%s> " % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "::fidl::Map<%s, %s> " % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "::f1dl::Map<%s, %s> " % (GetCppArrayArgWrapperType(kind.key_kind),
                                    GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "::f1dl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::fidl::String"
+    return "::f1dl::String"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -162,16 +162,16 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "::fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "::f1dl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::fidl::String"
+    return "::f1dl::String"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -200,16 +200,16 @@ def GetCppWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "::fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "::f1dl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::fidl::String"
+    return "::f1dl::String"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -236,18 +236,18 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "::fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "::f1dl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsEnumKind(kind):
     return GetNameForKind(kind)
   if mojom.IsStringKind(kind):
-    return "const ::fidl::String&"
+    return "const ::f1dl::String&"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -274,34 +274,34 @@ def GetCppConstWrapperType(kind):
 
 def GetCppFieldType(kind):
   if mojom.IsStructKind(kind):
-    return ("::fidl::internal::StructPointer<%s_Data>" %
+    return ("::f1dl::internal::StructPointer<%s_Data>" %
         GetNameForKind(kind, internal=True))
   if mojom.IsUnionKind(kind):
     return "%s_Data" % GetNameForKind(kind, internal=True)
   if mojom.IsArrayKind(kind):
-    return "::fidl::internal::ArrayPointer<%s>" % GetCppType(kind.kind)
+    return "::f1dl::internal::ArrayPointer<%s>" % GetCppType(kind.kind)
   if mojom.IsMapKind(kind):
-    return ("::fidl::internal::StructPointer<::fidl::internal::Map_Data<%s, %s>>" %
+    return ("::f1dl::internal::StructPointer<::f1dl::internal::Map_Data<%s, %s>>" %
             (GetCppType(kind.key_kind), GetCppType(kind.value_kind)))
   if mojom.IsInterfaceKind(kind):
-    return "::fidl::internal::Interface_Data"
+    return "::f1dl::internal::Interface_Data"
   if mojom.IsInterfaceRequestKind(kind):
-    return "::fidl::internal::WrappedHandle"
+    return "::f1dl::internal::WrappedHandle"
   if mojom.IsEnumKind(kind):
     return GetNameForKind(kind)
   if mojom.IsStringKind(kind):
-    return "::fidl::internal::StringPointer"
+    return "::f1dl::internal::StringPointer"
   return GetCppTypeForKind(kind)
 
 def GetCppUnionFieldType(kind):
   if mojom.IsAnyHandleKind(kind):
-    return "fidl::internal::WrappedHandle"
+    return "f1dl::internal::WrappedHandle"
   if mojom.IsInterfaceKind(kind):
     return "uint64_t"
   if mojom.IsEnumKind(kind):
     return "int32_t"
   if mojom.IsUnionKind(kind):
-    return ("::fidl::internal::UnionPointer<%s_Data>" %
+    return ("::f1dl::internal::UnionPointer<%s_Data>" %
         GetNameForKind(kind, internal=True))
   return GetCppFieldType(kind)
 
@@ -422,7 +422,7 @@ def GetNewArrayValidateParams(kind):
       not mojom.IsStringKind(kind)):
     return "nullptr"
 
-  return "new ::fidl::internal::ArrayValidateParams(%s)" % (
+  return "new ::f1dl::internal::ArrayValidateParams(%s)" % (
       GetArrayValidateParamsCtorArgs(kind))
 
 def GetMapValidateParamsCtorArgs(value_kind):

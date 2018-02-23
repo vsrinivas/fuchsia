@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_factory.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -50,9 +50,9 @@ class SampleNamedObjectImpl : public sample::NamedObject {
       : binding_(this, std::move(request)) {
     binding_.set_error_handler([this](){ delete this; });
   }
-  void SetName(const fidl::String& name) override { name_ = name; }
+  void SetName(const f1dl::String& name) override { name_ = name; }
 
-  void GetName(const std::function<void(fidl::String)>& callback) override {
+  void GetName(const std::function<void(f1dl::String)>& callback) override {
     callback(name_);
   }
 
@@ -267,4 +267,4 @@ TEST_F(HandlePassingTest, CreateNamedObject) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

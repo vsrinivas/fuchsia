@@ -89,7 +89,7 @@ InputDispatcherImpl::InputDispatcherImpl(
     ViewInspector* inspector,
     InputOwner* owner,
     mozart::ViewTreeTokenPtr view_tree_token,
-    fidl::InterfaceRequest<mozart::InputDispatcher> request)
+    f1dl::InterfaceRequest<mozart::InputDispatcher> request)
     : inspector_(inspector),
       owner_(owner),
       view_tree_token_(std::move(view_tree_token)),

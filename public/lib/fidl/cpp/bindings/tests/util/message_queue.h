@@ -9,7 +9,7 @@
 
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 class Message;
 
 namespace test {
@@ -39,6 +39,6 @@ class MessageQueue {
 };
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_UTIL_MESSAGE_QUEUE_H_

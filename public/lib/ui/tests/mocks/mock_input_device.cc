@@ -10,7 +10,7 @@ namespace test {
 MockInputDevice::MockInputDevice(
     uint32_t device_id,
     mozart::DeviceDescriptorPtr descriptor,
-    fidl::InterfaceRequest<mozart::InputDevice> input_device_request,
+    f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
     const OnReportCallback& on_report_callback)
     : id_(device_id),
       descriptor_(std::move(descriptor)),

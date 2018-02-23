@@ -39,8 +39,8 @@ class TraceManager : public TraceRegistry, public TraceController {
 
   // |TraceRegistry| implementation.
   void RegisterTraceProvider(
-      fidl::InterfaceHandle<tracing::TraceProvider> provider,
-      const fidl::String& label) override;
+      f1dl::InterfaceHandle<tracing::TraceProvider> provider,
+      const f1dl::String& label) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();

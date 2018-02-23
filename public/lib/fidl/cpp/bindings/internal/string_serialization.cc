@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-namespace fidl {
+namespace f1dl {
 
 size_t GetSerializedSize_(const String& input) {
   if (!input)
@@ -37,4 +37,4 @@ void Deserialize_(internal::String_Data* input, String* output) {
   }
 }
 
-}  // namespace fidl
+}  // namespace f1dl

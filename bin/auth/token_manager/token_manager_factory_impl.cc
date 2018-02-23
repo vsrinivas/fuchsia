@@ -16,9 +16,9 @@ TokenManagerFactoryImpl::TokenManagerFactoryImpl(
 TokenManagerFactoryImpl::~TokenManagerFactoryImpl() {}
 
 void TokenManagerFactoryImpl::GetTokenManager(
-    const fidl::String& user_id,
-    fidl::Array<AuthProviderConfigPtr> auth_provider_configs,
-    fidl::InterfaceRequest<TokenManager> request) {
+    const f1dl::String& user_id,
+    f1dl::Array<AuthProviderConfigPtr> auth_provider_configs,
+    f1dl::InterfaceRequest<TokenManager> request) {
   // TODO: Share the TokenManagerImpl instance per user across connections.
   std::unique_ptr<TokenManagerImpl> token_manager_impl =
       std::make_unique<TokenManagerImpl>(app_context_,

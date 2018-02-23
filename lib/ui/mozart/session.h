@@ -24,7 +24,7 @@ class Session final : public ui_mozart::Session {
  public:
   Session(Mozart* owner,
           SessionId id,
-          ::fidl::InterfaceHandle<ui_mozart::SessionListener> listener);
+          ::f1dl::InterfaceHandle<ui_mozart::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(
@@ -34,12 +34,12 @@ class Session final : public ui_mozart::Session {
   bool ApplyCommand(const ui_mozart::CommandPtr& command);
 
   // |ui_mozart::Session|
-  void Enqueue(::fidl::Array<ui_mozart::CommandPtr> cmds) override;
+  void Enqueue(::f1dl::Array<ui_mozart::CommandPtr> cmds) override;
 
   // |ui_mozart::Session|
   void Present(uint64_t presentation_time,
-               ::fidl::Array<zx::event> acquire_fences,
-               ::fidl::Array<zx::event> release_fences,
+               ::f1dl::Array<zx::event> acquire_fences,
+               ::f1dl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   SessionId id() const { return id_; }
@@ -47,7 +47,7 @@ class Session final : public ui_mozart::Session {
  private:
   Mozart* const mozart_;
   const SessionId id_;
-  ::fidl::InterfacePtr<ui_mozart::SessionListener> listener_;
+  ::f1dl::InterfacePtr<ui_mozart::SessionListener> listener_;
 
   std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
       dispatchers_;

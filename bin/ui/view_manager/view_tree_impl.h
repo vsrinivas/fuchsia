@@ -27,18 +27,18 @@ class ViewTreeImpl : public mozart::ViewTree,
   // |ViewTree|:
   void GetToken(const GetTokenCallback& callback) override;
   void GetServiceProvider(
-      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
-  void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
+      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+  void GetContainer(f1dl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
 
   // |ViewContainer|:
   void SetListener(
-      fidl::InterfaceHandle<mozart::ViewContainerListener> listener) override;
+      f1dl::InterfaceHandle<mozart::ViewContainerListener> listener) override;
   void AddChild(uint32_t child_key,
-                fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+                f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
                 zx::eventpair host_import_token) override;
   void RemoveChild(uint32_t child_key,
-                   fidl::InterfaceRequest<mozart::ViewOwner>
+                   f1dl::InterfaceRequest<mozart::ViewOwner>
                        transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
@@ -46,13 +46,13 @@ class ViewTreeImpl : public mozart::ViewTree,
   void RequestFocus(uint32_t child_key) override;
 
   // |app::ServiceProvider|:
-  void ConnectToService(const fidl::String& service_name,
+  void ConnectToService(const f1dl::String& service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewTreeState* const state_;
-  fidl::BindingSet<app::ServiceProvider> service_provider_bindings_;
-  fidl::BindingSet<mozart::ViewContainer> container_bindings_;
+  f1dl::BindingSet<app::ServiceProvider> service_provider_bindings_;
+  f1dl::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
 };

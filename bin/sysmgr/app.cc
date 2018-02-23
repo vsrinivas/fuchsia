@@ -148,7 +148,7 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
           ->ConnectToEnvironmentService<app::ApplicationLoader>());
 
   env_services_.AddService<app::ApplicationLoader>(
-      [this](fidl::InterfaceRequest<app::ApplicationLoader> request) {
+      [this](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
         app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
       });
 }
@@ -159,7 +159,7 @@ void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
 }
 
 void App::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
+    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
   env_services_.AddBinding(std::move(environment_services));
 }
 

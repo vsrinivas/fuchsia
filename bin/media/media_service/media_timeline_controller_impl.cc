@@ -15,14 +15,14 @@ namespace media {
 // static
 std::shared_ptr<MediaTimelineControllerImpl>
 MediaTimelineControllerImpl::Create(
-    fidl::InterfaceRequest<MediaTimelineController> request,
+    f1dl::InterfaceRequest<MediaTimelineController> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaTimelineControllerImpl>(
       new MediaTimelineControllerImpl(std::move(request), owner));
 }
 
 MediaTimelineControllerImpl::MediaTimelineControllerImpl(
-    fidl::InterfaceRequest<MediaTimelineController> request,
+    f1dl::InterfaceRequest<MediaTimelineController> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaTimelineController>(this,
                                                          std::move(request),
@@ -56,7 +56,7 @@ MediaTimelineControllerImpl::~MediaTimelineControllerImpl() {
 }
 
 void MediaTimelineControllerImpl::AddControlPoint(
-    fidl::InterfaceHandle<MediaTimelineControlPoint> control_point) {
+    f1dl::InterfaceHandle<MediaTimelineControlPoint> control_point) {
   control_point_states_.push_back(std::unique_ptr<ControlPointState>(
       new ControlPointState(this, control_point.Bind())));
 
@@ -64,7 +64,7 @@ void MediaTimelineControllerImpl::AddControlPoint(
 }
 
 void MediaTimelineControllerImpl::GetControlPoint(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point) {
+    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point) {
   if (control_point_binding_.is_bound()) {
     control_point_binding_.Unbind();
   }
@@ -78,7 +78,7 @@ void MediaTimelineControllerImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void MediaTimelineControllerImpl::GetTimelineConsumer(
-    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
+    f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
     consumer_binding_.Unbind();
   }

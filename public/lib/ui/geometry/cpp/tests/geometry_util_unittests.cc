@@ -13,7 +13,7 @@ namespace {
 
 TransformPtr CreateTransformFromData(const std::array<float, 16>& data) {
   TransformPtr transform = Transform::New();
-  transform->matrix = fidl::Array<float>::New(16);
+  transform->matrix = f1dl::Array<float>::New(16);
 
   memcpy(transform->matrix.data(), &data.front(), 16 * sizeof(float));
   return transform;

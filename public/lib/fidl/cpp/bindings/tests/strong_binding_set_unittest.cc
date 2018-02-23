@@ -10,7 +10,7 @@
 #include "mojo/public/cpp/utility/run_loop.h"
 #include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace {
 
 class MinimalInterfaceImpl : public test::MinimalInterface {
@@ -111,4 +111,4 @@ TEST(StrongBindingSetTest, FullLifeCycle) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace f1dl

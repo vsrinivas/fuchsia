@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/strong_binding.h"
 #include "lib/fidl/compiler/interfaces/tests/versioning_test_service.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace versioning {
 
@@ -118,9 +118,9 @@ class HumanResourceSystemServer : public ApplicationImplBase {
 
 }  // namespace versioning
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 zx_status_t MojoMain(MojoHandle application_request) {
-  fidl::test::versioning::HumanResourceSystemServer hr_system_server;
-  return fidl::RunApplication(application_request, &hr_system_server);
+  f1dl::test::versioning::HumanResourceSystemServer hr_system_server;
+  return f1dl::RunApplication(application_request, &hr_system_server);
 }

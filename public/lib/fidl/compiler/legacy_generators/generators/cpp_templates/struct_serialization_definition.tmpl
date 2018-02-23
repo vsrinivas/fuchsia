@@ -9,18 +9,18 @@ bool {{struct.name}}::Serialize(void* buf,
                                 size_t* bytes_written) {
   ZX_DEBUG_ASSERT(buf);
 
-  ::fidl::internal::FixedBuffer overlay_buf;
+  ::f1dl::internal::FixedBuffer overlay_buf;
   overlay_buf.Initialize(buf, buf_size);
 
   internal::{{struct.name}}_Data* output_ptr;
   auto err = Serialize_(this, &overlay_buf, &output_ptr);
-  if (err != ::fidl::internal::ValidationError::NONE) {
+  if (err != ::f1dl::internal::ValidationError::NONE) {
     // TODO(vardhan): Once Serialize_() outputs handles that it serialized
     // (even partially, if there are failures), we should CHECK fail here if
     // handles are non-empty.
 #if !defined(NDEBUG)
     fprintf(stderr, "Could not serialize: %s (%s:%d)\n",
-            ::fidl::internal::ValidationErrorToString(err),
+            ::f1dl::internal::ValidationErrorToString(err),
             __FILE__, __LINE__);
 #endif
     if (bytes_written)
@@ -40,7 +40,7 @@ bool {{struct.name}}::Serialize(void* buf,
 bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
   ZX_DEBUG_ASSERT(buf);
 
-  ::fidl::internal::BoundsChecker checker(buf, buf_size, 0);
+  ::f1dl::internal::BoundsChecker checker(buf, buf_size, 0);
 
   std::string* err_str = nullptr;
 #if !defined(NDEBUG)
@@ -48,12 +48,12 @@ bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
   err_str = &err_str2;
 #endif
 
-  ::fidl::internal::ValidationError err =
+  ::f1dl::internal::ValidationError err =
       internal::{{struct.name}}_Data::Validate(buf, &checker, err_str);
-  if (err != ::fidl::internal::ValidationError::NONE) {
+  if (err != ::f1dl::internal::ValidationError::NONE) {
 #if !defined(NDEBUG)
     fprintf(stderr, "Deserialization error %s: %s",
-            ::fidl::internal::ValidationErrorToString(err),
+            ::f1dl::internal::ValidationErrorToString(err),
             err_str->c_str());
 #endif
     return false;
@@ -82,9 +82,9 @@ size_t GetSerializedSize_(const {{struct.name}}& input) {
   return size;
 }
 
-::fidl::internal::ValidationError Serialize_(
+::f1dl::internal::ValidationError Serialize_(
     {{struct.name}}* input,
-    ::fidl::internal::Buffer* buf,
+    ::f1dl::internal::Buffer* buf,
     internal::{{struct.name}}_Data** output) {
   if (input) {
     {{struct_macros.serialize(struct, struct.name ~ " struct", "input->%s", "result", "buf", true)|indent(2)}}
@@ -92,7 +92,7 @@ size_t GetSerializedSize_(const {{struct.name}}& input) {
   } else {
     *output = nullptr;
   }
-  return ::fidl::internal::ValidationError::NONE;
+  return ::f1dl::internal::ValidationError::NONE;
 }
 
 void Deserialize_(internal::{{struct.name}}_Data* input,

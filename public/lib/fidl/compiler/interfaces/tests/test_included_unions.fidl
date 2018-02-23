@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 [DartPackage="_fidl_for_test_only"]
-module fidl.test;
+module f1dl.test;
 
 union IncludedUnion {
   int8 a;

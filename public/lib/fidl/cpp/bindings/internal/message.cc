@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-namespace fidl {
+namespace f1dl {
 
 Message::Message() {
 }
@@ -194,4 +194,4 @@ zx_status_t CallMessage(const zx::channel& channel, Message* message,
   return ZX_ERR_PEER_CLOSED;
 }
 
-}  // namespace fidl
+}  // namespace f1dl

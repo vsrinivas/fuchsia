@@ -53,7 +53,7 @@ namespace test_runner {
 TestRunObserver::~TestRunObserver() = default;
 
 TestRunnerImpl::TestRunnerImpl(
-    fidl::InterfaceRequest<TestRunner> request,
+    f1dl::InterfaceRequest<TestRunner> request,
     TestRunContext* test_run_context)
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_error_handler([this] {
@@ -84,7 +84,7 @@ void TestRunnerImpl::TeardownAfterTermination() {
   teardown_after_termination_ = true;
 }
 
-void TestRunnerImpl::Identify(const fidl::String& program_name,
+void TestRunnerImpl::Identify(const f1dl::String& program_name,
                               const IdentifyCallback& callback) {
   program_name_ = program_name;
   callback();
@@ -94,7 +94,7 @@ void TestRunnerImpl::ReportResult(TestResultPtr result) {
   test_run_context_->ReportResult(std::move(result));
 }
 
-void TestRunnerImpl::Fail(const fidl::String& log_message) {
+void TestRunnerImpl::Fail(const f1dl::String& log_message) {
   test_run_context_->Fail(log_message);
 }
 
@@ -166,12 +166,12 @@ TestRunContext::TestRunContext(
 
   // 1.1 Setup child environment services
   child_env_scope_->AddService<TestRunner>(
-      [this](fidl::InterfaceRequest<TestRunner> request) {
+      [this](f1dl::InterfaceRequest<TestRunner> request) {
         test_runner_clients_.push_back(
             std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
   child_env_scope_->AddService<TestRunnerStore>(
-      [this](fidl::InterfaceRequest<TestRunnerStore> request) {
+      [this](f1dl::InterfaceRequest<TestRunnerStore> request) {
         test_runner_store_.AddBinding(std::move(request));
       });
 
@@ -182,7 +182,7 @@ TestRunContext::TestRunContext(
 
   auto info = app::ApplicationLaunchInfo::New();
   info->url = url;
-  info->arguments = fidl::Array<fidl::String>::From(args);
+  info->arguments = f1dl::Array<f1dl::String>::From(args);
   launcher->CreateApplication(std::move(info),
                               child_app_controller_.NewRequest());
 
@@ -215,7 +215,7 @@ void TestRunContext::ReportResult(TestResultPtr result) {
   test_runner_connection_->SendMessage(test_id_, "result", buffer.GetString());
 }
 
-void TestRunContext::Fail(const fidl::String& log_msg) {
+void TestRunContext::Fail(const f1dl::String& log_msg) {
   success_ = false;
   std::string msg("FAIL: ");
   msg += log_msg;

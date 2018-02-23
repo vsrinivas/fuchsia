@@ -15,7 +15,7 @@ namespace flog {
 
 // static
 std::shared_ptr<FlogReaderImpl> FlogReaderImpl::Create(
-    fidl::InterfaceRequest<FlogReader> request,
+    f1dl::InterfaceRequest<FlogReader> request,
     uint32_t log_id,
     const std::string& label,
     std::shared_ptr<FlogDirectory> directory,
@@ -24,7 +24,7 @@ std::shared_ptr<FlogReaderImpl> FlogReaderImpl::Create(
       new FlogReaderImpl(std::move(request), log_id, label, directory, owner));
 }
 
-FlogReaderImpl::FlogReaderImpl(fidl::InterfaceRequest<FlogReader> request,
+FlogReaderImpl::FlogReaderImpl(f1dl::InterfaceRequest<FlogReader> request,
                                uint32_t log_id,
                                const std::string& label,
                                std::shared_ptr<FlogDirectory> directory,
@@ -42,7 +42,7 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
                                 uint32_t max_count,
                                 const GetEntriesCallback& callback) {
   if (fault_) {
-    callback(fidl::Array<FlogEntryPtr>::New(0));
+    callback(f1dl::Array<FlogEntryPtr>::New(0));
     return;
   }
 
@@ -53,20 +53,20 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
 
   while (current_entry_index_ < start_index) {
     if (!DiscardEntry()) {
-      callback(fidl::Array<FlogEntryPtr>::New(0));
+      callback(f1dl::Array<FlogEntryPtr>::New(0));
       return;
     }
   }
 
   FXL_DCHECK(current_entry_index_ == start_index);
 
-  fidl::Array<FlogEntryPtr> entries = fidl::Array<FlogEntryPtr>::New(max_count);
+  f1dl::Array<FlogEntryPtr> entries = f1dl::Array<FlogEntryPtr>::New(max_count);
 
   for (uint32_t i = 0; i < max_count; i++) {
     FlogEntryPtr entry = GetEntry();
     if (!entry) {
       if (fault_) {
-        callback(fidl::Array<FlogEntryPtr>::New(0));
+        callback(f1dl::Array<FlogEntryPtr>::New(0));
         return;
       }
 
@@ -132,7 +132,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
     return nullptr;
   }
 
-  fidl::AllocMessage message;
+  f1dl::AllocMessage message;
   message.AllocUninitializedData(message_size);
 
   bytes_read = ReadData(message_size, message.mutable_data());
@@ -221,7 +221,7 @@ FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_ns, uint32_t channel_id) {
 
 void FlogReaderImpl::LogChannelCreation(int64_t time_ns,
                                         uint32_t channel_id,
-                                        const fidl::String& type_name,
+                                        const f1dl::String& type_name,
                                         uint64_t subject_address) {
   entry_ = CreateEntry(time_ns, channel_id);
   FlogChannelCreationEntryDetailsPtr details =
@@ -233,7 +233,7 @@ void FlogReaderImpl::LogChannelCreation(int64_t time_ns,
 
 void FlogReaderImpl::LogChannelMessage(int64_t time_ns,
                                        uint32_t channel_id,
-                                       fidl::Array<uint8_t> data) {
+                                       f1dl::Array<uint8_t> data) {
   entry_ = CreateEntry(time_ns, channel_id);
   FlogChannelMessageEntryDetailsPtr details =
       FlogChannelMessageEntryDetails::New();

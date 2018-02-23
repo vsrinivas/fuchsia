@@ -31,28 +31,28 @@ class DevAuthProviderImpl : public auth::AuthProvider {
  private:
   // |AuthProvider|
   void GetPersistentCredential(
-      fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+      f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
       const GetPersistentCredentialCallback& callback) override;
 
   // |AuthProvider|
-  void GetAppAccessToken(const fidl::String& credential,
-                         const fidl::String& app_client_id,
-                         const fidl::Array<fidl::String> app_scopes,
+  void GetAppAccessToken(const f1dl::String& credential,
+                         const f1dl::String& app_client_id,
+                         const f1dl::Array<f1dl::String> app_scopes,
                          const GetAppAccessTokenCallback& callback) override;
 
   // |AuthProvider|
-  void GetAppIdToken(const fidl::String& credential,
-                     const fidl::String& audience,
+  void GetAppIdToken(const f1dl::String& credential,
+                     const f1dl::String& audience,
                      const GetAppIdTokenCallback& callback) override;
 
   // |AuthProvider|
   void GetAppFirebaseToken(
-      const fidl::String& id_token, const fidl::String& firebase_api_key,
+      const f1dl::String& id_token, const f1dl::String& firebase_api_key,
       const GetAppFirebaseTokenCallback& callback) override;
 
   // |AuthProvider|
   void RevokeAppOrPersistentCredential(
-      const fidl::String& credential,
+      const f1dl::String& credential,
       const RevokeAppOrPersistentCredentialCallback& callback) override;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevAuthProviderImpl);

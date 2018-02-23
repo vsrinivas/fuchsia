@@ -30,7 +30,7 @@ class TestRunContext;
 // forwarded to and handled by TestRunContext.
 class TestRunnerImpl : public TestRunner {
  public:
-  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
+  TestRunnerImpl(f1dl::InterfaceRequest<TestRunner> request,
                  TestRunContext* test_run_context);
 
   const std::string& program_name() const;
@@ -47,12 +47,12 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const fidl::String& program_name,
+  void Identify(const f1dl::String& program_name,
                 const IdentifyCallback& callback) override;
   // |TestRunner|
   void ReportResult(TestResultPtr result) override;
   // |TestRunner|
-  void Fail(const fidl::String& log_message) override;
+  void Fail(const f1dl::String& log_message) override;
   // |TestRunner|
   void Done(const DoneCallback& callback) override;
   // |TestRunner|
@@ -64,7 +64,7 @@ class TestRunnerImpl : public TestRunner {
   // |TestRunner|
   void PassTestPoint() override;
 
-  fidl::Binding<TestRunner> binding_;
+  f1dl::Binding<TestRunner> binding_;
   TestRunContext* const test_run_context_;
   std::string program_name_ = "UNKNOWN";
   bool waiting_for_termination_ = false;
@@ -92,7 +92,7 @@ class TestRunContext {
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
   void ReportResult(TestResultPtr result);
-  void Fail(const fidl::String& log_message);
+  void Fail(const f1dl::String& log_message);
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:

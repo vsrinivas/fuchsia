@@ -21,8 +21,8 @@ namespace mozart {
 struct ViewContext {
   app::ApplicationContext* application_context;
   ViewManagerPtr view_manager;
-  fidl::InterfaceRequest<ViewOwner> view_owner_request;
-  fidl::InterfaceRequest<app::ServiceProvider> outgoing_services;
+  f1dl::InterfaceRequest<ViewOwner> view_owner_request;
+  f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services;
 };
 
 // A callback to create a view in response to a call to
@@ -43,14 +43,14 @@ class ViewProviderService : public ViewProvider {
 
   // |ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> view_services) override;
+      f1dl::InterfaceRequest<ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> view_services) override;
 
  private:
   app::ApplicationContext* application_context_;
   ViewFactory view_factory_;
 
-  fidl::BindingSet<ViewProvider> bindings_;
+  f1dl::BindingSet<ViewProvider> bindings_;
   std::vector<std::unique_ptr<BaseView>> views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderService);

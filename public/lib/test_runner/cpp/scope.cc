@@ -26,7 +26,7 @@ app::ApplicationLauncher* Scope::GetLauncher() {
 
 // |ApplicationEnvironmentHost|:
 void Scope::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
+    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
   service_provider_impl_.AddBinding(std::move(environment_services));
 }
 

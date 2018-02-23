@@ -11,7 +11,7 @@ namespace scenic_lib {
 
 Session::Session(
     scenic::SessionPtr session,
-    fidl::InterfaceRequest<scenic::SessionListener> session_listener)
+    f1dl::InterfaceRequest<scenic::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
   FXL_DCHECK(session_);
   if (session_listener.is_valid())
@@ -109,11 +109,11 @@ void Session::HitTestDeviceRay(
                              std::move(ray_direction_vec), callback);
 }
 
-void Session::OnError(const fidl::String& error) {
+void Session::OnError(const f1dl::String& error) {
   FXL_LOG(ERROR) << "Session error: " << error;
 }
 
-void Session::OnEvent(fidl::Array<scenic::EventPtr> events) {
+void Session::OnEvent(f1dl::Array<scenic::EventPtr> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

@@ -66,7 +66,7 @@ void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
 
 LowEnergyPeripheralServer::LowEnergyPeripheralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<Peripheral> request)
+    f1dl::InterfaceRequest<Peripheral> request)
     : ServerBase(adapter, this, std::move(request)), weak_ptr_factory_(this) {}
 
 LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
@@ -81,7 +81,7 @@ LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
 void LowEnergyPeripheralServer::StartAdvertising(
     AdvertisingDataPtr advertising_data,
     AdvertisingDataPtr scan_result,
-    ::fidl::InterfaceHandle<PeripheralDelegate> delegate,
+    ::f1dl::InterfaceHandle<PeripheralDelegate> delegate,
     uint32_t interval,
     bool anonymous,
     const StartAdvertisingCallback& callback) {
@@ -139,7 +139,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
-    const ::fidl::String& id,
+    const ::f1dl::String& id,
     const StopAdvertisingCallback& callback) {
   if (StopAdvertisingInternal(id)) {
     callback(Status::New());

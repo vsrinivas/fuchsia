@@ -52,6 +52,6 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
   std::unique_ptr<fsl::MessageLoop> owned_loop_;
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
+  f1dl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
   std::unique_ptr<app::ServiceProviderImpl> outgoing_services_;
 };

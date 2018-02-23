@@ -48,12 +48,12 @@ class MdnsImpl : public MdnsResponder {
   void UpdateStatus(MdnsResult result) override;
 
   void GetPublication(bool query,
-                      const fidl::String& subtype,
+                      const f1dl::String& subtype,
                       const GetPublicationCallback& callback) override;
 
   MdnsServicePtr mdns_service_;
   ServiceSubscriber subscriber_;
-  fidl::Binding<MdnsResponder> binding_;
+  f1dl::Binding<MdnsResponder> binding_;
   fsl::FDWaiter fd_waiter_;
 
   uint16_t publication_port_;

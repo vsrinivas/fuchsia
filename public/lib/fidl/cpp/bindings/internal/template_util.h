@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // Types YesType and NoType are guaranteed such that sizeof(YesType) <
@@ -49,6 +49,6 @@ template <template <typename...> class Template, typename... Args>
 struct IsSpecializationOf<Template, Template<Args...>> : std::true_type {};
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_TEMPLATE_UTIL_H_

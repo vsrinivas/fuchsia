@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
 
-namespace fidl {
+namespace f1dl {
 
 // A synchronous version of InterfacePtr. Interface message calls using a
 // SynchronousInterfacePtr will block if a response message is expected. This
@@ -81,10 +81,10 @@ class SynchronousInterfacePtr {
   std::unique_ptr<typename Interface::Synchronous_::Proxy_> proxy_;
 
   SynchronousInterfacePtr(InterfaceHandle<Interface> handle) {
-    fidl::internal::MessageValidatorList validators;
-    validators.push_back(std::unique_ptr<fidl::internal::MessageValidator>(
-        new fidl::internal::MessageHeaderValidator));
-    validators.push_back(std::unique_ptr<fidl::internal::MessageValidator>(
+    f1dl::internal::MessageValidatorList validators;
+    validators.push_back(std::unique_ptr<f1dl::internal::MessageValidator>(
+        new f1dl::internal::MessageHeaderValidator));
+    validators.push_back(std::unique_ptr<f1dl::internal::MessageValidator>(
         new typename Interface::ResponseValidator_));
 
         proxy_.reset(new typename Interface::Synchronous_::Proxy_(
@@ -115,7 +115,7 @@ class SynchronousInterfacePtr {
 //   SynchronousInterfacePtr<Echo> client;
 //   InterfaceRequest<Echo> impl = GetSynchronousProxy(&client);
 //   // .. pass |impl| off to an implementation.
-//   fidl::String out;
+//   f1dl::String out;
 //   client->EchoString("hello!", &out);
 //
 // TODO(abarth): Delete this function in favor of NewRequest().
@@ -128,6 +128,6 @@ InterfaceRequest<Interface> GetSynchronousProxy(
   return retval;
 }
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_SYNCHRONOUS_INTERFACE_PTR_H_

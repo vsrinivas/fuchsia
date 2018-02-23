@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
 
-namespace fidl {
+namespace f1dl {
 
 size_t CopyableType::num_instances_ = 0;
 size_t MoveOnlyType::num_instances_ = 0;
@@ -47,4 +47,4 @@ MoveOnlyType::~MoveOnlyType() {
   num_instances_--;
 }
 
-}  // namespace fidl
+}  // namespace f1dl

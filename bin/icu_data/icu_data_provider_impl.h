@@ -20,14 +20,14 @@ class ICUDataProviderImpl : public ICUDataProvider {
   // Return whether this function was able to successfully load the ICU data
   bool LoadData();
 
-  void AddBinding(fidl::InterfaceRequest<ICUDataProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<ICUDataProvider> request);
 
  private:
   // |ICUData| implementation:
-  void ICUDataWithSha1(const fidl::String& request,
+  void ICUDataWithSha1(const f1dl::String& request,
                        const ICUDataWithSha1Callback& callback) override;
 
-  fidl::BindingSet<ICUDataProvider> bindings_;
+  f1dl::BindingSet<ICUDataProvider> bindings_;
 
   fsl::SizedVmo icu_data_vmo_;
 

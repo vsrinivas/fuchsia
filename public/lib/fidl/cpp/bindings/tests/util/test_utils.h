@@ -9,7 +9,7 @@
 
 #include <zx/channel.h>
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 // Writes a message to |handle| with message data |text|. Returns true on
@@ -26,6 +26,6 @@ bool ReadTextMessage(const zx::channel& handle, std::string* text);
 bool DiscardMessage(const zx::channel& handle);
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_UTIL_TEST_UTILS_H_

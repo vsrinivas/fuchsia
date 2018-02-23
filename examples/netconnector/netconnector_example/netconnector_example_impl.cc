@@ -61,7 +61,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
           application_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-      fidl::InterfaceHandle<app::ServiceProvider> handle;
+      f1dl::InterfaceHandle<app::ServiceProvider> handle;
       application_context_->outgoing_services()->AddBinding(
           handle.NewRequest());
 

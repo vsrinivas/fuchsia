@@ -36,12 +36,12 @@ bool ICUDataProviderImpl::LoadData() {
 }
 
 void ICUDataProviderImpl::AddBinding(
-    fidl::InterfaceRequest<ICUDataProvider> request) {
+    f1dl::InterfaceRequest<ICUDataProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void ICUDataProviderImpl::ICUDataWithSha1(
-    const fidl::String& sha1hash,
+    const f1dl::String& sha1hash,
     const ICUDataWithSha1Callback& callback) {
   if (!icu_data_vmo_) {
     callback(nullptr);

@@ -26,7 +26,7 @@ SceneManagerApp::SceneManagerApp(
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<scenic::SceneManager>(
-      [this](fidl::InterfaceRequest<scenic::SceneManager> request) {
+      [this](f1dl::InterfaceRequest<scenic::SceneManager> request) {
         FXL_VLOG(1) << "Accepting connection to SceneManagerImpl";
         bindings_.AddBinding(scene_manager_.get(), std::move(request));
       });

@@ -7,7 +7,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 #pragma pack(push, 1)
@@ -36,6 +36,6 @@ static_assert(sizeof(MessageData) == sizeof(MessageHeader),
 #pragma pack(pop)
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MESSAGE_INTERNAL_H_

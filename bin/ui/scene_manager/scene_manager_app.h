@@ -44,7 +44,7 @@ class SceneManagerApp {
 
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 
-  fidl::BindingSet<scenic::SceneManager> bindings_;
+  f1dl::BindingSet<scenic::SceneManager> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
 };

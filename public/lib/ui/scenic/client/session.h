@@ -27,15 +27,15 @@ class Session : private scenic::SessionListener {
   using PresentCallback = std::function<void(ui_mozart::PresentationInfoPtr info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(fidl::Array<scenic::HitPtr> hits)>;
+  using HitTestCallback = std::function<void(f1dl::Array<scenic::HitPtr> hits)>;
 
   // Called when session events are received.
-  using EventHandler = std::function<void(fidl::Array<scenic::EventPtr>)>;
+  using EventHandler = std::function<void(f1dl::Array<scenic::EventPtr>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
   explicit Session(scenic::SessionPtr session,
-                   fidl::InterfaceRequest<scenic::SessionListener>
+                   f1dl::InterfaceRequest<scenic::SessionListener>
                        session_listener = nullptr);
 
   // Creates a new session using the provided scene manager and binds the
@@ -102,19 +102,19 @@ class Session : private scenic::SessionListener {
 
  private:
   // |scenic::SessionListener|
-  void OnError(const fidl::String& error) override;
-  void OnEvent(fidl::Array<scenic::EventPtr> events) override;
+  void OnError(const f1dl::String& error) override;
+  void OnEvent(f1dl::Array<scenic::EventPtr> events) override;
 
   scenic::SessionPtr session_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  fidl::Array<scenic::OpPtr> ops_;
-  fidl::Array<zx::event> acquire_fences_;
-  fidl::Array<zx::event> release_fences_;
+  f1dl::Array<scenic::OpPtr> ops_;
+  f1dl::Array<zx::event> acquire_fences_;
+  f1dl::Array<zx::event> release_fences_;
 
   EventHandler event_handler_;
-  fidl::Binding<scenic::SessionListener> session_listener_binding_;
+  f1dl::Binding<scenic::SessionListener> session_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };

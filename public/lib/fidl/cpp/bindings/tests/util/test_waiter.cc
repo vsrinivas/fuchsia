@@ -7,7 +7,7 @@
 
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 void InitAsyncWaiter() {
@@ -27,4 +27,4 @@ void ClearAsyncWaiter() {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

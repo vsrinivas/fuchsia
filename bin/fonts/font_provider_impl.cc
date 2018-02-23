@@ -100,7 +100,7 @@ void FontProviderImpl::Reset() {
 }
 
 void FontProviderImpl::AddBinding(
-    fidl::InterfaceRequest<FontProvider> request) {
+    f1dl::InterfaceRequest<FontProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

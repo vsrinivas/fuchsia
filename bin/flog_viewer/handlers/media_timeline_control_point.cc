@@ -23,7 +23,7 @@ MediaTimelineControlPoint::MediaTimelineControlPoint(const std::string& format)
 
 MediaTimelineControlPoint::~MediaTimelineControlPoint() {}
 
-void MediaTimelineControlPoint::HandleMessage(fidl::Message* message) {
+void MediaTimelineControlPoint::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 

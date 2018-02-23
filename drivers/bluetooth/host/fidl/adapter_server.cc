@@ -23,7 +23,7 @@ namespace bthost {
 
 AdapterServer::AdapterServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<bluetooth::control::Adapter> request)
+    f1dl::InterfaceRequest<bluetooth::control::Adapter> request)
     : ServerBase(adapter, this, std::move(request)),
       requesting_discovery_(false),
       weak_ptr_factory_(this) {}
@@ -35,7 +35,7 @@ void AdapterServer::GetInfo(const GetInfoCallback& callback) {
 }
 
 void AdapterServer::SetDelegate(
-    fidl::InterfaceHandle<AdapterDelegate> delegate) {
+    f1dl::InterfaceHandle<AdapterDelegate> delegate) {
   if (delegate) {
     delegate_ = delegate.Bind();
   } else {
@@ -64,8 +64,8 @@ void AdapterServer::SetDelegate(
   }
 }
 
-void AdapterServer::SetLocalName(const fidl::String& local_name,
-                                 const fidl::String& shortened_local_name,
+void AdapterServer::SetLocalName(const f1dl::String& local_name,
+                                 const f1dl::String& shortened_local_name,
                                  const SetLocalNameCallback& callback) {
   FXL_NOTIMPLEMENTED();
 }

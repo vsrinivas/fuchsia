@@ -3,24 +3,24 @@
 {%- set enum_name = union.name ~ "_Tag" -%}
 
 // static
-{{class_name}}* {{class_name}}::New(::fidl::internal::Buffer* buf) {
+{{class_name}}* {{class_name}}::New(::f1dl::internal::Buffer* buf) {
   return new (buf->Allocate(sizeof({{class_name}}))) {{class_name}}();
 }
 
 {# TODO(vardhan): Set error messages here for the remaining validation
    errors. #}
 // static
-::fidl::internal::ValidationError {{class_name}}::Validate(
+::f1dl::internal::ValidationError {{class_name}}::Validate(
     const void* data,
-    ::fidl::internal::BoundsChecker* bounds_checker,
+    ::f1dl::internal::BoundsChecker* bounds_checker,
     bool inlined,
     std::string* err) {
   if (!data)
-    return ::fidl::internal::ValidationError::NONE;
+    return ::f1dl::internal::ValidationError::NONE;
 
-  if (!::fidl::internal::IsAligned(data)) {
+  if (!::f1dl::internal::IsAligned(data)) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return ::fidl::internal::ValidationError::MISALIGNED_OBJECT;
+    return ::f1dl::internal::ValidationError::MISALIGNED_OBJECT;
   }
 
   // If the union is inlined in another structure its memory was already claimed.
@@ -28,13 +28,13 @@
   // to.
   if (!inlined && !bounds_checker->ClaimMemory(data, sizeof({{class_name}}))) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return ::fidl::internal::ValidationError::ILLEGAL_MEMORY_RANGE;
+    return ::f1dl::internal::ValidationError::ILLEGAL_MEMORY_RANGE;
   }
 
   const {{class_name}}* object = static_cast<const {{class_name}}*>(data);
 
   if (object->is_null())
-    return ::fidl::internal::ValidationError::NONE;
+    return ::f1dl::internal::ValidationError::NONE;
 
   switch (object->tag) {
 {%  for field in union.fields %}
@@ -46,7 +46,7 @@
       // Unknown tags should not cause validation to fail.
       break;
   }
-  return ::fidl::internal::ValidationError::NONE;
+  return ::f1dl::internal::ValidationError::NONE;
 }
 
 void {{class_name}}::set_null() {
@@ -64,12 +64,12 @@ void {{class_name}}::EncodePointersAndHandles(
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {
 {%-   if field.kind|is_object_kind %}
-      ::fidl::internal::Encode(&data.f_{{field.name}}, handles);
+      ::f1dl::internal::Encode(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_any_handle_kind %}
-      ::fidl::internal::EncodeHandle(&data.f_{{field.name}}, handles);
+      ::f1dl::internal::EncodeHandle(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_interface_kind %}
-      ::fidl::internal::EncodeHandle(
-          reinterpret_cast<::fidl::internal::Interface_Data*>(
+      ::f1dl::internal::EncodeHandle(
+          reinterpret_cast<::f1dl::internal::Interface_Data*>(
               &data.f_{{field.name}}), handles);
 {%-   endif %}
       return;
@@ -88,12 +88,12 @@ void {{class_name}}::DecodePointersAndHandles(
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {
 {%-   if field.kind|is_object_kind %}
-      ::fidl::internal::Decode(&data.f_{{field.name}}, handles);
+      ::f1dl::internal::Decode(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_any_handle_kind %}
-      ::fidl::internal::DecodeHandle(&data.f_{{field.name}}, handles);
+      ::f1dl::internal::DecodeHandle(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_interface_kind %}
-      ::fidl::internal::DecodeHandle(
-          reinterpret_cast<::fidl::internal::Interface_Data*>(
+      ::f1dl::internal::DecodeHandle(
+          reinterpret_cast<::f1dl::internal::Interface_Data*>(
               &data.f_{{field.name}}), handles);
 {%-   endif %}
       return;

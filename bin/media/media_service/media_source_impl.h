@@ -26,9 +26,9 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
                         public MediaSource {
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
-      fidl::InterfaceHandle<SeekingReader> reader,
-      const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
-      fidl::InterfaceRequest<MediaSource> request,
+      f1dl::InterfaceHandle<SeekingReader> reader,
+      const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+      f1dl::InterfaceRequest<MediaSource> request,
       MediaServiceImpl* owner);
 
   ~MediaSourceImpl() override;
@@ -38,7 +38,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   void GetPacketProducer(
       uint32_t stream_index,
-      fidl::InterfaceRequest<MediaPacketProducer> request) override;
+      f1dl::InterfaceRequest<MediaPacketProducer> request) override;
 
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
@@ -48,9 +48,9 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   void Seek(int64_t position, const SeekCallback& callback) override;
 
  private:
-  MediaSourceImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                  const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
-                  fidl::InterfaceRequest<MediaSource> request,
+  MediaSourceImpl(f1dl::InterfaceHandle<SeekingReader> reader,
+                  const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+                  f1dl::InterfaceRequest<MediaSource> request,
                   MediaServiceImpl* owner);
 
   class Stream {
@@ -72,7 +72,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     MediaTypePtr media_type() const;
 
     // Gets the producer.
-    void GetPacketProducer(fidl::InterfaceRequest<MediaPacketProducer> request);
+    void GetPacketProducer(f1dl::InterfaceRequest<MediaPacketProducer> request);
 
     bool valid() { return !!producer_getter_; }
 

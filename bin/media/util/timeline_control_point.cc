@@ -57,7 +57,7 @@ TimelineControlPoint::~TimelineControlPoint() {
 }
 
 void TimelineControlPoint::Bind(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
+    f1dl::InterfaceRequest<MediaTimelineControlPoint> request) {
   if (control_point_binding_.is_bound()) {
     control_point_binding_.Unbind();
   }
@@ -133,7 +133,7 @@ void TimelineControlPoint::GetStatus(uint64_t version_last_seen,
 }
 
 void TimelineControlPoint::GetTimelineConsumer(
-    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
+    f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
     consumer_binding_.Unbind();
   }

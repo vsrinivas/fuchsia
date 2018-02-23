@@ -31,7 +31,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
 
   ~VideoFrameSource() override;
 
-  void Bind(fidl::InterfaceRequest<MediaRenderer> media_renderer_request);
+  void Bind(f1dl::InterfaceRequest<MediaRenderer> media_renderer_request);
 
   void RegisterView(mozart::BaseView* view) { views_.insert(view); }
 
@@ -65,10 +65,10 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
 
   void SetMediaType(MediaTypePtr media_type) override;
 
-  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
+  void GetPacketConsumer(f1dl::InterfaceRequest<MediaPacketConsumer>
                              packet_consumer_request) override;
 
-  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
+  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
@@ -81,7 +81,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
   void OnFailure() override;
 
   // Returns the supported media types.
-  fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
   // Discards packets that are older than pts_.
   void DiscardOldPackets();
@@ -96,7 +96,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
     }
   }
 
-  fidl::Binding<MediaRenderer> media_renderer_binding_;
+  f1dl::Binding<MediaRenderer> media_renderer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   std::unique_ptr<SuppliedPacket> held_packet_;
   TimelineFunction current_timeline_function_;

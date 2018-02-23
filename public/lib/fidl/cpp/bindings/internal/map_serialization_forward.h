@@ -8,7 +8,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_SERIALIZATION_FORWARD_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_SERIALIZATION_FORWARD_H_
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 class ArrayValidateParams;
@@ -41,6 +41,6 @@ template <typename MapKey,
 void Deserialize_(internal::Map_Data<DataKey, DataValue>* input,
                   Map<MapKey, MapValue>* output);
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_SERIALIZATION_FORWARD_H_

@@ -10,7 +10,7 @@
 
 namespace escher {
 
-FenceSetListener::FenceSetListener(::fidl::Array<zx::event> fence_listeners)
+FenceSetListener::FenceSetListener(::f1dl::Array<zx::event> fence_listeners)
     : fences_(std::move(fence_listeners)) {}
 
 void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {

@@ -30,7 +30,7 @@ class WavRecorder : public media::AudioCapturerClient {
   void OnQuit();
 
   media::AudioCapturerPtr capturer_;
-  fidl::Binding<AudioCapturerClient> async_binding_;
+  f1dl::Binding<AudioCapturerClient> async_binding_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
 

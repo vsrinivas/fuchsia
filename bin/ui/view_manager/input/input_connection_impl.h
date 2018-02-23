@@ -29,7 +29,7 @@ class InputConnectionImpl : public mozart::InputConnection,
   InputConnectionImpl(ViewInspector* inspector,
                       InputOwner* owner,
                       mozart::ViewTokenPtr view_token,
-                      fidl::InterfaceRequest<mozart::InputConnection> request);
+                      f1dl::InterfaceRequest<mozart::InputConnection> request);
   ~InputConnectionImpl() override;
 
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
@@ -39,13 +39,13 @@ class InputConnectionImpl : public mozart::InputConnection,
 
   // |mozart::InputConnection|
   void SetEventListener(
-      fidl::InterfaceHandle<mozart::InputListener> listener) override;
+      f1dl::InterfaceHandle<mozart::InputListener> listener) override;
   void GetInputMethodEditor(
       mozart::KeyboardType keyboard_type,
       mozart::InputMethodAction action,
       mozart::TextInputStatePtr initial_state,
-      fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-      fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
+      f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+      f1dl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
 
   // |mozart::InputMethodEditor|
   void SetState(mozart::TextInputStatePtr state) override;
@@ -75,14 +75,14 @@ class InputConnectionImpl : public mozart::InputConnection,
   mozart::ViewTokenPtr view_token_;
   mozart::InputListenerPtr event_listener_;
 
-  fidl::Binding<mozart::InputConnection> binding_;
+  f1dl::Binding<mozart::InputConnection> binding_;
 
   // From the test input
-  fidl::Binding<mozart::InputMethodEditor> editor_binding_;
+  f1dl::Binding<mozart::InputMethodEditor> editor_binding_;
   mozart::InputMethodEditorClientPtr client_;
 
   // From the IME service
-  fidl::Binding<mozart::InputMethodEditorClient> client_binding_;
+  f1dl::Binding<mozart::InputMethodEditorClient> client_binding_;
   mozart::InputMethodEditorPtr editor_;
 
   mozart::SoftKeyboardContainerPtr container_;

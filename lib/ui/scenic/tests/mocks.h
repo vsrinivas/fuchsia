@@ -30,14 +30,14 @@ class SessionHandlerForTest : public SessionHandler {
   SessionHandlerForTest(
       Engine* engine,
       SessionId session_id,
-      ::fidl::InterfaceRequest<scenic::Session> request,
-      ::fidl::InterfaceHandle<scenic::SessionListener> listener);
+      ::f1dl::InterfaceRequest<scenic::Session> request,
+      ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
 
   // scenic::Session interface methods.
-  void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
+  void Enqueue(::f1dl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
-               ::fidl::Array<zx::event> acquire_fences,
-               ::fidl::Array<zx::event> release_fences,
+               ::f1dl::Array<zx::event> acquire_fences,
+               ::f1dl::Array<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   // Return the number of Enqueue()/Present()/Connect() messages that have
@@ -75,8 +75,8 @@ class EngineForTest : public Engine {
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
       SessionId id,
-      ::fidl::InterfaceRequest<scenic::Session> request,
-      ::fidl::InterfaceHandle<scenic::SessionListener> listener) override;
+      ::f1dl::InterfaceRequest<scenic::Session> request,
+      ::f1dl::InterfaceHandle<scenic::SessionListener> listener) override;
 };
 
 }  // namespace test

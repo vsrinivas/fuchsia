@@ -14,7 +14,7 @@ class MainService {
   MainService()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<TimeService>(
-        [this](fidl::InterfaceRequest<TimeService> request) {
+        [this](f1dl::InterfaceRequest<TimeService> request) {
           time_svc_.AddBinding(std::move(request));
         });
   }

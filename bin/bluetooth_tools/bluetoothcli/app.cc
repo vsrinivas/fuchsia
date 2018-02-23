@@ -39,7 +39,7 @@ App::App()
 
   // Register with the AdapterManager as its delegate.
   bluetooth::control::AdapterManagerDelegatePtr delegate;
-  fidl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate>
+  f1dl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate>
       delegate_request = delegate.NewRequest();
   manager_delegate_.Bind(std::move(delegate_request));
   adapter_manager_->SetDelegate(std::move(delegate));
@@ -111,7 +111,7 @@ void App::OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) {
   CLI_LOG() << "\n>>>> Adapter added (id=" << adapter->identifier << ")\n";
 }
 
-void App::OnAdapterRemoved(const ::fidl::String& identifier) {
+void App::OnAdapterRemoved(const ::f1dl::String& identifier) {
   CLI_LOG() << "\n>>>> Adapter removed (id=" << identifier << ")\n";
 }
 

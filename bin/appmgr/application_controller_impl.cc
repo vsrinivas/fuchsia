@@ -20,7 +20,7 @@
 namespace app {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
-    fidl::InterfaceRequest<ApplicationController> request,
+    f1dl::InterfaceRequest<ApplicationController> request,
     JobHolder* job_holder,
     std::unique_ptr<archive::FileSystem> fs,
     zx::process process,

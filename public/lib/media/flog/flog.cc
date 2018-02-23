@@ -47,7 +47,7 @@ void Flog::LogChannelCreation(uint32_t channel_id,
 }
 
 // static
-void Flog::LogChannelMessage(uint32_t channel_id, fidl::Message* message) {
+void Flog::LogChannelMessage(uint32_t channel_id, f1dl::Message* message) {
   if (!logger_) {
     return;
   }
@@ -55,8 +55,8 @@ void Flog::LogChannelMessage(uint32_t channel_id, fidl::Message* message) {
   TRACE_INSTANT("motown", "flog message", TRACE_SCOPE_PROCESS, "index",
                 next_entry_index_, "channel_id", channel_id);
 
-  fidl::Array<uint8_t> array =
-      fidl::Array<uint8_t>::New(message->data_num_bytes());
+  f1dl::Array<uint8_t> array =
+      f1dl::Array<uint8_t>::New(message->data_num_bytes());
   memcpy(array.data(), message->data(), message->data_num_bytes());
   logger_->LogChannelMessage(GetTime(), channel_id, std::move(array));
   ++next_entry_index_;
@@ -96,12 +96,12 @@ FlogChannel::~FlogChannel() {
   Flog::LogChannelDeletion(id_);
 }
 
-bool FlogChannel::Accept(fidl::Message* message) {
+bool FlogChannel::Accept(f1dl::Message* message) {
   Flog::LogChannelMessage(id_, message);
   return true;
 }
 
-bool FlogChannel::AcceptWithResponder(fidl::Message* message,
+bool FlogChannel::AcceptWithResponder(f1dl::Message* message,
                                       MessageReceiver* responder) {
   FXL_DCHECK(false) << "Flog doesn't support messages with responses";
   abort();

@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace {
 
 bool UsedPreallocatedBuf(PreallocMessage* message) {
@@ -36,4 +36,4 @@ TEST(PreallocMessageTest, HeapAlloc) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace f1dl

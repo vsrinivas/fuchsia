@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 bool ValidateEncodedPointer(const uint64_t* offset) {
@@ -52,4 +52,4 @@ ValidationError ValidateStructHeaderAndClaimMemory(
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

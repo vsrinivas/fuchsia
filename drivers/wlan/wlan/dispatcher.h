@@ -36,11 +36,11 @@ class Dispatcher {
     zx_status_t HandleMgmtPacket(const Packet* packet);
     zx_status_t HandleEthPacket(const Packet* packet);
     zx_status_t HandleSvcPacket(const Packet* packet);
-    template <typename Message, typename FidlStruct = ::fidl::StructPtr<Message>>
+    template <typename Message, typename FidlStruct = ::f1dl::StructPtr<Message>>
     zx_status_t HandleMlmeMethod(const Packet* packet, Method method);
     template <typename Message>
     zx_status_t HandleMlmeMethodInlinedStruct(const Packet* packet, Method method) {
-        return HandleMlmeMethod<Message, ::fidl::InlinedStructPtr<Message>>(packet, method);
+        return HandleMlmeMethod<Message, ::f1dl::InlinedStructPtr<Message>>(packet, method);
     }
     zx_status_t HandleActionPacket(const Packet* packet, const MgmtFrameHeader* hdr,
                                    const ActionFrame* action, const wlan_rx_info_t* rxinfo);

@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -56,13 +56,13 @@ MultiVersionStructPtr MakeMultiVersionStruct() {
 
 template <typename U, typename T>
 U SerializeAndDeserialize(T input) {
-  typedef typename fidl::internal::WrapperTraits<T>::DataType InputDataType;
-  typedef typename fidl::internal::WrapperTraits<U>::DataType OutputDataType;
+  typedef typename f1dl::internal::WrapperTraits<T>::DataType InputDataType;
+  typedef typename f1dl::internal::WrapperTraits<U>::DataType OutputDataType;
 
   size_t size = GetSerializedSize_(*input);
-  fidl::internal::FixedBufferForTesting buf(size + 32);
+  f1dl::internal::FixedBufferForTesting buf(size + 32);
   InputDataType data;
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(input.get(), &buf, &data));
 
   std::vector<zx_handle_t> handles;
@@ -76,7 +76,7 @@ U SerializeAndDeserialize(T input) {
   OutputDataType output_data = reinterpret_cast<OutputDataType>(data);
   output_data->DecodePointersAndHandles(&handles);
 
-  using RawUType = typename fidl::internal::RemoveStructPtr<U>::type;
+  using RawUType = typename f1dl::internal::RemoveStructPtr<U>::type;
   U output(RawUType::New());
   Deserialize_(output_data, output.get());
   return output;
@@ -147,9 +147,9 @@ TEST(StructTest, Serialization_Basic) {
   size_t size = GetSerializedSize_(*rect);
   EXPECT_EQ(8U + 16U, size);
 
-  fidl::internal::FixedBufferForTesting buf(size);
+  f1dl::internal::FixedBufferForTesting buf(size);
   internal::Rect_Data* data;
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(rect.get(), &buf, &data));
 
   RectPtr rect2(Rect::New());
@@ -181,9 +181,9 @@ TEST(StructTest, Serialization_StructPointers) {
   size_t size = GetSerializedSize_(*pair);
   EXPECT_EQ(8U + 16U + 2 * (8U + 16U), size);
 
-  fidl::internal::FixedBufferForTesting buf(size);
+  f1dl::internal::FixedBufferForTesting buf(size);
   internal::RectPair_Data* data;
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(pair.get(), &buf, &data));
 
   RectPairPtr pair2(RectPair::New());
@@ -213,9 +213,9 @@ TEST(StructTest, Serialization_ArrayPointers) {
                      16U),  // rect payload (four ints)
             size);
 
-  fidl::internal::FixedBufferForTesting buf(size);
+  f1dl::internal::FixedBufferForTesting buf(size);
   internal::NamedRegion_Data* data;
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(region.get(), &buf, &data));
 
   NamedRegionPtr region2(NamedRegion::New());
@@ -240,9 +240,9 @@ TEST(StructTest, Serialization_NullArrayPointers) {
                 8U,   // rects pointer
             size);
 
-  fidl::internal::FixedBufferForTesting buf(size);
+  f1dl::internal::FixedBufferForTesting buf(size);
   internal::NamedRegion_Data* data;
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(region.get(), &buf, &data));
 
   NamedRegionPtr region2(NamedRegion::New());
@@ -261,12 +261,12 @@ TEST(StructTest, Serialization_InterfaceRequest) {
                 + 4U,  // interface request nullable handle
             size);
 
-  fidl::internal::FixedBufferForTesting buf(size * 2);
+  f1dl::internal::FixedBufferForTesting buf(size * 2);
   ContainsInterfaceRequest::Data_* data;
 
 #ifdef NDEBUG // In debug builds serialization failures abort
   // Test failure when non-nullable interface request is null.
-  EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
+  EXPECT_EQ(f1dl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
             Serialize_(&iface_req_struct, &buf, &data));
 #endif
 
@@ -274,7 +274,7 @@ TEST(StructTest, Serialization_InterfaceRequest) {
   iface_req_struct.req = i_ptr.NewRequest();
   EXPECT_TRUE(iface_req_struct.req.is_valid());
 
-  EXPECT_EQ(fidl::internal::ValidationError::NONE,
+  EXPECT_EQ(f1dl::internal::ValidationError::NONE,
             Serialize_(&iface_req_struct, &buf, &data));
   EXPECT_FALSE(iface_req_struct.req.is_valid());
 
@@ -461,4 +461,4 @@ TEST(StructTest, Versioning_NewToOld) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

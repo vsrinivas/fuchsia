@@ -6,7 +6,7 @@
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 
 int main(int argc, char** argv) {
-  fidl::test::InitAsyncWaiter();
+  f1dl::test::InitAsyncWaiter();
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

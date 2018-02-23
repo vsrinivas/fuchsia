@@ -30,12 +30,12 @@ class ShadertoyState : public escher::Resource {
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
       App* app,
-      ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe);
+      ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe);
 
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(
       App* app,
-      ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       bool handle_input_events);
 
   virtual ~ShadertoyState();
@@ -51,7 +51,7 @@ class ShadertoyState : public escher::Resource {
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<scenic::ImagePipe> request);
+                ::f1dl::InterfaceRequest<scenic::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);

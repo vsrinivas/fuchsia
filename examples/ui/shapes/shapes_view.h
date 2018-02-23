@@ -16,7 +16,7 @@ namespace examples {
 class ShapesView : public mozart::BaseView {
  public:
   ShapesView(mozart::ViewManagerPtr view_manager,
-             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+             f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~ShapesView() override;
 

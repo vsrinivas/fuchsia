@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/internal/validation_util.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 namespace {
 
@@ -80,4 +80,4 @@ ValidationError MessageHeaderValidator::Validate(const Message* message,
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

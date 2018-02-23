@@ -26,7 +26,7 @@ class MediaSink : public ChannelHandler, public media::logs::MediaSinkChannel {
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
  private:
   // MediaSinkChannel implementation.
@@ -34,7 +34,7 @@ class MediaSink : public ChannelHandler, public media::logs::MediaSinkChannel {
 
   void Config(media::MediaTypePtr input_type,
               media::MediaTypePtr output_type,
-              fidl::Array<uint64_t> converter_koids,
+              f1dl::Array<uint64_t> converter_koids,
               uint64_t renderer_koid) override;
 
  private:

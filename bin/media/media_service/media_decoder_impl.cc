@@ -12,7 +12,7 @@ namespace media {
 // static
 std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
     MediaTypePtr input_media_type,
-    fidl::InterfaceRequest<MediaTypeConverter> request,
+    f1dl::InterfaceRequest<MediaTypeConverter> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDecoderImpl>(new MediaDecoderImpl(
       std::move(input_media_type), std::move(request), owner));
@@ -20,7 +20,7 @@ std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
 
 MediaDecoderImpl::MediaDecoderImpl(
     MediaTypePtr input_media_type,
-    fidl::InterfaceRequest<MediaTypeConverter> request,
+    f1dl::InterfaceRequest<MediaTypeConverter> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaTypeConverter>(this,
                                                     std::move(request),
@@ -72,13 +72,13 @@ void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
 }
 
 void MediaDecoderImpl::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+    f1dl::InterfaceRequest<MediaPacketConsumer> request) {
   Retain();
   consumer_->Bind(std::move(request), [this]() { Release(); });
 }
 
 void MediaDecoderImpl::GetPacketProducer(
-    fidl::InterfaceRequest<MediaPacketProducer> request) {
+    f1dl::InterfaceRequest<MediaPacketProducer> request) {
   producer_->Bind(std::move(request));
 }
 

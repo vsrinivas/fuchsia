@@ -32,8 +32,8 @@ void ImagePipeImpl::RemoveImage(uint32_t image_id)
 
 void ImagePipeImpl::PresentImage(uint32_t image_id,
                                  uint64_t presentation_time,
-                                 ::fidl::Array<zx::event> acquire_fences,
-                                 ::fidl::Array<zx::event> release_fences,
+                                 ::f1dl::Array<zx::event> acquire_fences,
+                                 ::f1dl::Array<zx::event> release_fences,
                                  const PresentImageCallback& callback) {
   auto i = images_.find(image_id);
   if (i == images_.end()) {
@@ -81,7 +81,7 @@ void ImagePipeImpl::PresentImage(uint32_t image_id,
   callback(std::move(info));
 }
 
-void ImagePipeImpl::AddBinding(fidl::InterfaceRequest<ImagePipe> request)
+void ImagePipeImpl::AddBinding(f1dl::InterfaceRequest<ImagePipe> request)
 {
     bindings_.AddBinding(this, std::move(request));
 }

@@ -35,14 +35,14 @@ class ScenicScanout : public machina::GpuScanout, public mozart::ViewProvider {
 
   // |ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> view_services) override;
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> view_services) override;
 
  private:
   machina::InputDispatcher* input_dispatcher_;
   app::ApplicationContext* application_context_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  fidl::BindingSet<ViewProvider> bindings_;
+  f1dl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;
 };
 
@@ -51,7 +51,7 @@ class GuestView : public mozart::BaseView {
   GuestView(machina::GpuScanout* scanout,
             machina::InputDispatcher* input_dispatcher,
             mozart::ViewManagerPtr view_manager,
-            fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+            f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~GuestView() override;
 

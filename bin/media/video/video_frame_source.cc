@@ -62,7 +62,7 @@ VideoFrameSource::~VideoFrameSource() {
 }
 
 void VideoFrameSource::Bind(
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
   media_renderer_binding_.Bind(std::move(media_renderer_request));
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
   FLOG(log_channel_,
@@ -130,7 +130,7 @@ void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
 }
 
 void VideoFrameSource::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   if (is_bound()) {
     Reset();
   }
@@ -139,11 +139,11 @@ void VideoFrameSource::GetPacketConsumer(
 }
 
 void VideoFrameSource::GetTimelineControlPoint(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   timeline_control_point_.Bind(std::move(control_point_request));
 }
 
-fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
+f1dl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 0;
   video_details->max_width = std::numeric_limits<uint32_t>::max();
@@ -153,10 +153,10 @@ fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = fidl::Array<fidl::String>::New(1);
+  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
   supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  fidl::Array<MediaTypeSetPtr> supported_types =
-      fidl::Array<MediaTypeSetPtr>::New(1);
+  f1dl::Array<MediaTypeSetPtr> supported_types =
+      f1dl::Array<MediaTypeSetPtr>::New(1);
   supported_types[0] = std::move(supported_type);
   return supported_types;
 }

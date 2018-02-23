@@ -23,7 +23,7 @@ namespace bluetooth_service {
 
 AdapterManagerServer::AdapterManagerServer(
     ::bluetooth_service::AdapterManager* adapter_manager,
-    ::fidl::InterfaceRequest<AdapterManager> request,
+    ::f1dl::InterfaceRequest<AdapterManager> request,
     const ConnectionErrorHandler& connection_error_handler)
     : adapter_manager_(adapter_manager),
       binding_(this, std::move(request)),
@@ -65,7 +65,7 @@ void AdapterManagerServer::IsBluetoothAvailable(
 }
 
 void AdapterManagerServer::SetDelegate(
-    ::fidl::InterfaceHandle<AdapterManagerDelegate> delegate) {
+    ::f1dl::InterfaceHandle<AdapterManagerDelegate> delegate) {
   if (!delegate) {
     FXL_VLOG(1) << "bluetooth: Cannot assign a null delegate";
     return;
@@ -97,7 +97,7 @@ void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
     if (!self)
       return;
 
-    fidl::Array<AdapterInfoPtr> adapters;
+    f1dl::Array<AdapterInfoPtr> adapters;
     for (const auto& iter : adapter_map) {
       adapters.push_back(iter.second->info().Clone());
     }
@@ -107,7 +107,7 @@ void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
 }
 
 void AdapterManagerServer::SetActiveAdapter(
-    const ::fidl::String& identifier,
+    const ::f1dl::String& identifier,
     const SetActiveAdapterCallback& callback) {
   auto status = Status::New();
   auto ac =
@@ -121,7 +121,7 @@ void AdapterManagerServer::SetActiveAdapter(
 }
 
 void AdapterManagerServer::GetActiveAdapter(
-    ::fidl::InterfaceRequest<bluetooth::control::Adapter> request) {
+    ::f1dl::InterfaceRequest<bluetooth::control::Adapter> request) {
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter_manager_->GetActiveAdapter(fxl::MakeCopyable(
       [self, request = std::move(request)](auto* adapter) mutable {

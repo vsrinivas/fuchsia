@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 template <typename Key, typename Value, bool kValueIsMoveOnlyType>
@@ -77,6 +77,6 @@ struct MapTraits<Key, zx::object<Value>, true> {
 
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MAP_INTERNAL_H_

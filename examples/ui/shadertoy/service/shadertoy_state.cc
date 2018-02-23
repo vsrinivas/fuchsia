@@ -15,14 +15,14 @@ namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
     App* app,
-    ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
+    ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
   return fxl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
     App* app,
-    ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
@@ -104,7 +104,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 
 void ShadertoyState::SetImage(
     uint32_t channel,
-    ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> request) {
   FXL_CHECK(false) << "unimplemented";
 }
 

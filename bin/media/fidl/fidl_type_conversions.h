@@ -50,7 +50,7 @@ ColorSpace Convert(VideoStreamType::ColorSpace color_space);
 
 }  // namespace media
 
-namespace fidl {
+namespace f1dl {
 
 template <>
 struct TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>> {
@@ -94,9 +94,9 @@ struct TypeConverter<std::unique_ptr<media::Metadata>,
 
 template <>
 struct TypeConverter<
-    fidl::Array<media::MediaTypePtr>,
+    f1dl::Array<media::MediaTypePtr>,
     std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>> {
-  static fidl::Array<media::MediaTypePtr> Convert(
+  static f1dl::Array<media::MediaTypePtr> Convert(
       const std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>&
           input);
 };
@@ -104,16 +104,16 @@ struct TypeConverter<
 template <>
 struct TypeConverter<
     std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>,
-    fidl::Array<media::MediaTypePtr>> {
+    f1dl::Array<media::MediaTypePtr>> {
   static std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>
-  Convert(const fidl::Array<media::MediaTypePtr>& input);
+  Convert(const f1dl::Array<media::MediaTypePtr>& input);
 };
 
 template <>
 struct TypeConverter<
-    fidl::Array<media::MediaTypeSetPtr>,
+    f1dl::Array<media::MediaTypeSetPtr>,
     std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>> {
-  static fidl::Array<media::MediaTypeSetPtr> Convert(
+  static f1dl::Array<media::MediaTypeSetPtr> Convert(
       const std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>&
           input);
 };
@@ -121,21 +121,21 @@ struct TypeConverter<
 template <>
 struct TypeConverter<
     std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>,
-    fidl::Array<media::MediaTypeSetPtr>> {
+    f1dl::Array<media::MediaTypeSetPtr>> {
   static std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>
-  Convert(const fidl::Array<media::MediaTypeSetPtr>& input);
+  Convert(const f1dl::Array<media::MediaTypeSetPtr>& input);
 };
 
 template <>
-struct TypeConverter<fidl::Array<uint8_t>, std::unique_ptr<media::Bytes>> {
-  static fidl::Array<uint8_t> Convert(
+struct TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>> {
+  static f1dl::Array<uint8_t> Convert(
       const std::unique_ptr<media::Bytes>& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media::Bytes>, fidl::Array<uint8_t>> {
+struct TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>> {
   static std::unique_ptr<media::Bytes> Convert(
-      const fidl::Array<uint8_t>& input);
+      const f1dl::Array<uint8_t>& input);
 };
 
-}  // namespace fidl
+}  // namespace f1dl

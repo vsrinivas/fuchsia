@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/map.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // |MapKeyIterator| and |MapValueIterator| are templated interfaces for
@@ -125,6 +125,6 @@ class MapValueIterator {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_ITERATOR_UTIL_H_

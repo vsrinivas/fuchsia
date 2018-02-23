@@ -29,7 +29,7 @@ class ApplicationRunnerHolder {
       ApplicationStartupInfoPtr startup_info,
       std::unique_ptr<archive::FileSystem> file_system,
       fxl::RefPtr<ApplicationNamespace> application_namespace,
-      fidl::InterfaceRequest<ApplicationController> controller);
+      f1dl::InterfaceRequest<ApplicationController> controller);
 
  private:
   Services services_;

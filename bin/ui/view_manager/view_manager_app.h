@@ -28,7 +28,7 @@ class ViewManagerApp {
   std::unique_ptr<app::ApplicationContext> application_context_;
 
   std::unique_ptr<ViewRegistry> registry_;
-  fidl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
+  f1dl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);

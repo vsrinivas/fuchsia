@@ -23,7 +23,7 @@ class App {
   std::unique_ptr<app::ApplicationContext> context_;
   scenic::SceneManagerPtr scene_manager_;
   std::unique_ptr<scenic_lib::Session> session_;
-  fidl::BindingSet<sketchy::Canvas> bindings_;
+  f1dl::BindingSet<sketchy::Canvas> bindings_;
   std::unique_ptr<CanvasImpl> canvas_;
 };
 

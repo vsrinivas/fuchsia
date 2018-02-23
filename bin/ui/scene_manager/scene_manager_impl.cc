@@ -12,8 +12,8 @@ SceneManagerImpl::SceneManagerImpl(std::unique_ptr<Engine> engine)
 SceneManagerImpl::~SceneManagerImpl() = default;
 
 void SceneManagerImpl::CreateSession(
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
   engine_->CreateSession(std::move(request), std::move(listener));
 }
 

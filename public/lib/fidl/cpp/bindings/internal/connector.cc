@@ -8,7 +8,7 @@
 #include <zircon/assert.h>
 #include <zx/time.h>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 namespace {
 
@@ -171,4 +171,4 @@ void Connector::NotifyError() {
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

@@ -30,24 +30,24 @@ class HostServer : public ServerBase<::bluetooth::host::Host> {
   // ::bluetooth::host::Host overrides:
   void GetInfo(const GetInfoCallback& callback) override;
   void RequestControlAdapter(
-      ::fidl::InterfaceRequest<bluetooth::control::Adapter> adapter) override;
+      ::f1dl::InterfaceRequest<bluetooth::control::Adapter> adapter) override;
   void RequestLowEnergyCentral(
-      ::fidl::InterfaceRequest<bluetooth::low_energy::Central> central)
+      ::f1dl::InterfaceRequest<bluetooth::low_energy::Central> central)
       override;
   void RequestLowEnergyPeripheral(
-      ::fidl::InterfaceRequest<bluetooth::low_energy::Peripheral> peripheral)
+      ::f1dl::InterfaceRequest<bluetooth::low_energy::Peripheral> peripheral)
       override;
   void RequestGattServer(
-      ::fidl::InterfaceRequest<bluetooth::gatt::Server> server) override;
+      ::f1dl::InterfaceRequest<bluetooth::gatt::Server> server) override;
   void Close() override;
 
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
 
-  // Helper for binding a fidl::InterfaceRequest to a FIDL server of type
+  // Helper for binding a f1dl::InterfaceRequest to a FIDL server of type
   // ServerType.
   template <typename ServerType, typename InterfaceType>
-  void BindServer(fidl::InterfaceRequest<InterfaceType> request) {
+  void BindServer(f1dl::InterfaceRequest<InterfaceType> request) {
     auto server = std::make_unique<ServerType>(adapter()->AsWeakPtr(),
                                                std::move(request));
     server->set_error_handler(

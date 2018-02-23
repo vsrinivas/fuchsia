@@ -24,7 +24,7 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
   void SetPaused(bool paused) override;
 
   // |Shadertoy|
-  void SetShaderCode(const ::fidl::String& glsl,
+  void SetShaderCode(const ::f1dl::String& glsl,
                      const SetShaderCodeCallback& callback) override;
 
   // |Shadertoy|
@@ -35,7 +35,7 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
 
   // |Shadertoy|
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<scenic::ImagePipe> request) override;
+                ::f1dl::InterfaceRequest<scenic::ImagePipe> request) override;
 
   fxl::RefPtr<ShadertoyState> state_;
 

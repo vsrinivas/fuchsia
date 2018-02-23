@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // BoundsChecker is used to validate object sizes, pointers and handle indices
@@ -58,6 +58,6 @@ class BoundsChecker {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_BOUNDS_CHECKER_H_

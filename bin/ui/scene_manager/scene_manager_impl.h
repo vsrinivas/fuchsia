@@ -23,8 +23,8 @@ class SceneManagerImpl : public scenic::SceneManager {
 
   // scenic::SceneManager interface methods.
   void CreateSession(
-      ::fidl::InterfaceRequest<scenic::Session> request,
-      ::fidl::InterfaceHandle<scenic::SessionListener> listener) override;
+      ::f1dl::InterfaceRequest<scenic::Session> request,
+      ::f1dl::InterfaceHandle<scenic::SessionListener> listener) override;
   void GetDisplayInfo(const GetDisplayInfoCallback& callback) override;
 
  private:

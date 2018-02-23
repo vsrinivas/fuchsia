@@ -23,13 +23,13 @@ class TtsServiceImpl {
  private:
   class Client : public TtsService {
    public:
-    Client(TtsServiceImpl* owner, fidl::InterfaceRequest<TtsService> request);
+    Client(TtsServiceImpl* owner, f1dl::InterfaceRequest<TtsService> request);
     ~Client();
 
     void Shutdown();
 
     // TtsService
-    void Say(const fidl::String& words,
+    void Say(const f1dl::String& words,
              uint64_t token,
              const SayCallback& cbk) override;
 
@@ -39,7 +39,7 @@ class TtsServiceImpl {
                          SayCallback cbk);
 
     TtsServiceImpl* const owner_;
-    fidl::Binding<TtsService> binding_;
+    f1dl::Binding<TtsService> binding_;
     std::set<std::shared_ptr<TtsSpeaker>> active_speakers_;
   };
 

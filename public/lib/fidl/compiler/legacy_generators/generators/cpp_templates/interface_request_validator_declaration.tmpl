@@ -1,6 +1,6 @@
 class {{interface.name}}RequestValidator
-    : public ::fidl::internal::MessageValidator {
+    : public ::f1dl::internal::MessageValidator {
  public:
-  ::fidl::internal::ValidationError Validate(const ::fidl::Message* message,
+  ::f1dl::internal::ValidationError Validate(const ::f1dl::Message* message,
                                            std::string* err) override;
 };

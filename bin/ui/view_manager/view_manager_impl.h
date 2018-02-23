@@ -19,17 +19,17 @@ class ViewManagerImpl : public mozart::ViewManager {
 
  private:
   // |ViewManager|:
-  void GetSceneManager(fidl::InterfaceRequest<scenic::SceneManager>
+  void GetSceneManager(f1dl::InterfaceRequest<scenic::SceneManager>
                            scene_manager_request) override;
-  void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
-                  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                  fidl::InterfaceHandle<mozart::ViewListener> view_listener,
+  void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
+                  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  f1dl::InterfaceHandle<mozart::ViewListener> view_listener,
                   zx::eventpair parent_export_token,
-                  const fidl::String& label) override;
+                  const f1dl::String& label) override;
   void CreateViewTree(
-      fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
-      fidl::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
-      const fidl::String& label) override;
+      f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
+      f1dl::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
+      const f1dl::String& label) override;
 
   ViewRegistry* registry_;
 

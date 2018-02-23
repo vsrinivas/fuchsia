@@ -24,16 +24,16 @@ public:
     void RemoveImage(uint32_t image_id) override;
     void PresentImage(uint32_t image_id,
                       uint64_t presetation_time,
-                      ::fidl::Array<zx::event> acquire_fences,
-                      ::fidl::Array<zx::event> release_fences,
+                      ::f1dl::Array<zx::event> acquire_fences,
+                      ::f1dl::Array<zx::event> release_fences,
                       const PresentImageCallback& callback) override;
 
-    void AddBinding(fidl::InterfaceRequest<ImagePipe> request);
+    void AddBinding(f1dl::InterfaceRequest<ImagePipe> request);
 
 private:
     std::shared_ptr<MagmaConnection> conn_;
     std::unordered_map<uint32_t, std::unique_ptr<Image>> images_;
-    fidl::BindingSet<scenic::ImagePipe> bindings_;
+    f1dl::BindingSet<scenic::ImagePipe> bindings_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
 };

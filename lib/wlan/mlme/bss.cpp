@@ -224,9 +224,9 @@ BeaconHash Bss::GetBeaconSignature(const Beacon* beacon, size_t len) const {
     return hash;
 }
 
-fidl::String Bss::SsidToFidlString() {
+f1dl::String Bss::SsidToFidlString() {
     // TODO(porce): Merge into SSID Element upon IE revamp.
-    return fidl::String(reinterpret_cast<const char*>(ssid_), ssid_len_);
+    return f1dl::String(reinterpret_cast<const char*>(ssid_), ssid_len_);
 }
 
 BSSDescriptionPtr Bss::ToFidl() {
@@ -236,7 +236,7 @@ BSSDescriptionPtr Bss::ToFidl() {
     auto fidl_ptr = BSSDescription::New();
     auto fidl = fidl_ptr.get();
 
-    fidl->bssid = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    fidl->bssid = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     std::memcpy(fidl->bssid.data(), bssid_.byte, common::kMacAddrLen);
 
     fidl->bss_type = GetBssType();
@@ -257,7 +257,7 @@ BSSDescriptionPtr Bss::ToFidl() {
     // RSN
     fidl->rsn.reset();
     if (rsne_len_ > 0) {
-        fidl->rsn = fidl::Array<uint8_t>::New(rsne_len_);
+        fidl->rsn = f1dl::Array<uint8_t>::New(rsne_len_);
         memcpy(fidl->rsn.data(), rsne_.get(), rsne_len_);
     }
 

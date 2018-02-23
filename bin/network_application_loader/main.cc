@@ -121,7 +121,7 @@ class NetworkApplicationLoader : public app::ApplicationLoader {
   NetworkApplicationLoader()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<app::ApplicationLoader>(
-        [this](fidl::InterfaceRequest<app::ApplicationLoader> request) {
+        [this](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
           bindings_.AddBinding(this, std::move(request));
         });
 
@@ -129,7 +129,7 @@ class NetworkApplicationLoader : public app::ApplicationLoader {
   }
 
   void LoadApplication(
-      const fidl::String& url,
+      const f1dl::String& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override {
     network::URLLoaderPtr loader;
     net_->CreateURLLoader(loader.NewRequest());
@@ -144,7 +144,7 @@ class NetworkApplicationLoader : public app::ApplicationLoader {
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
-  fidl::BindingSet<app::ApplicationLoader> bindings_;
+  f1dl::BindingSet<app::ApplicationLoader> bindings_;
 
   network::NetworkServicePtr net_;
   std::unordered_map<RetryingLoader*, std::unique_ptr<RetryingLoader>> loaders_;

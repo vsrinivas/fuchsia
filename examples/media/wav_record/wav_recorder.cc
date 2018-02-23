@@ -273,7 +273,7 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaTypePtr type) {
     FXL_DCHECK(payload_buf_frames_);
     FXL_DCHECK(capture_frames_per_chunk_);
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
-    fidl::InterfaceHandle<AudioCapturerClient> endpoint;
+    f1dl::InterfaceHandle<AudioCapturerClient> endpoint;
     async_binding_.Bind(endpoint.NewRequest());
     async_binding_.set_error_handler([this]() {
       FXL_LOG(ERROR)

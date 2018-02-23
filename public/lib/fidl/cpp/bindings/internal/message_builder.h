@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // These are helper classes for allocating, aligning, and framing a
-// |fidl::Message|. They are mainly used from within the generated C++ bindings.
+// |f1dl::Message|. They are mainly used from within the generated C++ bindings.
 
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_MESSAGE_BUILDER_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_MESSAGE_BUILDER_H_
@@ -14,11 +14,11 @@
 #include "lib/fidl/cpp/bindings/internal/message_internal.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 
 class Message;
 
-// MessageBuilder helps initialize and frame a |fidl::Message| that does not
+// MessageBuilder helps initialize and frame a |f1dl::Message| that does not
 // expect a response message, and therefore does not tag the message with a
 // request id (which may save some bytes).
 //
@@ -27,7 +27,7 @@ class Message;
 // using |MoveFrom()|.
 class MessageBuilder {
  public:
-  // This frames and configures a |fidl::Message| with the given message name.
+  // This frames and configures a |f1dl::Message| with the given message name.
   MessageBuilder(uint32_t name, size_t payload_size);
   ~MessageBuilder();
 
@@ -60,11 +60,11 @@ class MessageWithRequestIDBuilder : public MessageBuilder {
 
 }  // namespace internal
 
-// Builds a |fidl::Message| that is a "request" message that expects a response
+// Builds a |f1dl::Message| that is a "request" message that expects a response
 // message. You can give it a unique |request_id| (with which you can construct
 // a response message) by calling |message()->set_request_id()|.
 //
-// Has the same interface as |fidl::MessageBuilder|.
+// Has the same interface as |f1dl::MessageBuilder|.
 class RequestMessageBuilder : public internal::MessageWithRequestIDBuilder {
  public:
   RequestMessageBuilder(uint32_t name, size_t payload_size)
@@ -74,10 +74,10 @@ class RequestMessageBuilder : public internal::MessageWithRequestIDBuilder {
                                     0) {}
 };
 
-// Builds a |fidl::Message| that is a "response" message which pertains to a
+// Builds a |f1dl::Message| that is a "response" message which pertains to a
 // |request_id|.
 //
-// Has the same interface as |fidl::MessageBuilder|.
+// Has the same interface as |f1dl::MessageBuilder|.
 class ResponseMessageBuilder : public internal::MessageWithRequestIDBuilder {
  public:
   ResponseMessageBuilder(uint32_t name,
@@ -89,6 +89,6 @@ class ResponseMessageBuilder : public internal::MessageWithRequestIDBuilder {
                                     request_id) {}
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_MESSAGE_BUILDER_H_

@@ -7,7 +7,7 @@ namespace mozart {
 InputDeviceImpl::InputDeviceImpl(
     uint32_t id,
     mozart::DeviceDescriptorPtr descriptor,
-    fidl::InterfaceRequest<mozart::InputDevice> input_device_request,
+    f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
     Listener* listener)
     : id_(id),
       descriptor_(std::move(descriptor)),

@@ -27,7 +27,7 @@ void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {
 }
 
 void ReleaseFenceSignaller::AddVulkanReleaseFences(
-    fidl::Array<zx::event> fences) {
+    f1dl::Array<zx::event> fences) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
   FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
   FXL_DCHECK(false);
@@ -50,7 +50,7 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
 }
 
 // Must be called on the same thread that we're submitting frames to Escher.
-void ReleaseFenceSignaller::AddCPUReleaseFences(fidl::Array<zx::event> fences) {
+void ReleaseFenceSignaller::AddCPUReleaseFences(f1dl::Array<zx::event> fences) {
   for (auto& fence : fences) {
     AddCPUReleaseFence(std::move(fence));
   }

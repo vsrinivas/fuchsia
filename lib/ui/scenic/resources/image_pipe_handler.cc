@@ -7,7 +7,7 @@
 namespace scene_manager {
 
 ImagePipeHandler::ImagePipeHandler(
-    ::fidl::InterfaceRequest<scenic::ImagePipe> request,
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> request,
     scene_manager::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
   binding_.set_error_handler([image_pipe] { image_pipe->OnConnectionError(); });
@@ -28,8 +28,8 @@ void ImagePipeHandler::RemoveImage(uint32_t image_id) {
 
 void ImagePipeHandler::PresentImage(uint32_t image_id,
                                     uint64_t presentation_time,
-                                    ::fidl::Array<zx::event> acquire_fences,
-                                    ::fidl::Array<zx::event> release_fences,
+                                    ::f1dl::Array<zx::event> acquire_fences,
+                                    ::f1dl::Array<zx::event> release_fences,
                                     const PresentImageCallback& callback) {
   image_pipe_->PresentImage(image_id, presentation_time,
                             std::move(acquire_fences),

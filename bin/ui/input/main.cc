@@ -366,7 +366,7 @@ class InputApp {
   }
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  fidl::InterfacePtr<mozart::InputDeviceRegistry> registry_;
+  f1dl::InterfacePtr<mozart::InputDeviceRegistry> registry_;
 };
 }  // namespace input
 

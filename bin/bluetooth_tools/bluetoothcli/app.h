@@ -45,7 +45,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
   void OnActiveAdapterChanged(
       bluetooth::control::AdapterInfoPtr active_adapter) override;
   void OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) override;
-  void OnAdapterRemoved(const ::fidl::String& identifier) override;
+  void OnAdapterRemoved(const ::f1dl::String& identifier) override;
 
   // bluetooth::control::AdapterDelegate overrides:
   void OnAdapterStateChanged(
@@ -59,10 +59,10 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
   bluetooth::control::AdapterPtr active_adapter_;
 
   // Local AdapterManagerDelegate binding.
-  fidl::Binding<bluetooth::control::AdapterManagerDelegate> manager_delegate_;
+  f1dl::Binding<bluetooth::control::AdapterManagerDelegate> manager_delegate_;
 
   // Local AdapterDelegate binding.
-  fidl::Binding<bluetooth::control::AdapterDelegate> adapter_delegate_;
+  f1dl::Binding<bluetooth::control::AdapterDelegate> adapter_delegate_;
 
   DeviceMap discovered_devices_;
 

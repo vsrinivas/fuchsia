@@ -47,7 +47,7 @@ class ViewState : public ViewContainerState {
 
   ViewState(ViewRegistry* registry,
             mozart::ViewTokenPtr view_token,
-            fidl::InterfaceRequest<mozart::View> view_request,
+            f1dl::InterfaceRequest<mozart::View> view_request,
             mozart::ViewListenerPtr view_listener,
             scenic_lib::Session* session,
             const std::string& label);
@@ -90,7 +90,7 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void BindOwner(f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();
@@ -110,8 +110,8 @@ class ViewState : public ViewContainerState {
   app::ServiceProvider* GetServiceProviderIfSupports(std::string service_name);
 
   void SetServiceProvider(
-      fidl::InterfaceHandle<app::ServiceProvider> service_provider,
-      fidl::Array<fidl::String> service_names);
+      f1dl::InterfaceHandle<app::ServiceProvider> service_provider,
+      f1dl::Array<f1dl::String> service_names);
 
  private:
   void RebuildFocusChain();
@@ -124,8 +124,8 @@ class ViewState : public ViewContainerState {
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewImpl> impl_;
-  fidl::Binding<mozart::View> view_binding_;
-  fidl::Binding<mozart::ViewOwner> owner_binding_;
+  f1dl::Binding<mozart::View> view_binding_;
+  f1dl::Binding<mozart::ViewOwner> owner_binding_;
 
   ViewStub* view_stub_ = nullptr;
 
@@ -135,7 +135,7 @@ class ViewState : public ViewContainerState {
 
   std::unique_ptr<FocusChain> focus_chain_;
   app::ServiceProviderPtr service_provider_;
-  fidl::Array<fidl::String> service_names_;
+  f1dl::Array<f1dl::String> service_names_;
 
   fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 

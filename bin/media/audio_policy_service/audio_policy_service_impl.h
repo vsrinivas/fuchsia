@@ -63,7 +63,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
   }
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  fidl::BindingSet<AudioPolicyService> bindings_;
+  f1dl::BindingSet<AudioPolicyService> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;
   FidlPublisher<GetStatusCallback> status_publisher_;

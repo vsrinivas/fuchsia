@@ -29,7 +29,7 @@ constexpr float kInitialCaptureGain = 0.0;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     AudioServerImpl* owner,
     bool loopback) {
   return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
@@ -37,7 +37,7 @@ fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     AudioServerImpl* owner,
     bool loopback)
     : AudioObject(Type::Capturer),
@@ -480,7 +480,7 @@ void AudioCapturerImpl::FlushWithCallback(
 }
 
 void AudioCapturerImpl::StartAsyncCapture(
-    fidl::InterfaceHandle<AudioCapturerClient> callback_target,
+    f1dl::InterfaceHandle<AudioCapturerClient> callback_target,
     uint32_t frames_per_packet) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 

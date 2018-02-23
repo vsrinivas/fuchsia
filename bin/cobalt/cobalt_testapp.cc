@@ -30,7 +30,7 @@
 
 using cobalt::ObservationValue;
 using cobalt::ObservationValuePtr;
-using fidl::Array;
+using f1dl::Array;
 
 // Command-line flags
 
@@ -274,10 +274,10 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   });
 
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  services.ConnectToService(fidl::GetSynchronousProxy(&factory));
+  services.ConnectToService(f1dl::GetSynchronousProxy(&factory));
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 
-  services.ConnectToService(fidl::GetSynchronousProxy(&cobalt_controller_));
+  services.ConnectToService(f1dl::GetSynchronousProxy(&cobalt_controller_));
 }
 
 bool CobaltTestApp::RunTestsWithRequestSendSoon() {
@@ -317,7 +317,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&factory));
+  context_->ConnectToEnvironmentService(f1dl::GetSynchronousProxy(&factory));
 
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 

@@ -34,7 +34,7 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::Array<scenic::EventPtr> events) override;
+  void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
 
   // Apply the specified Op, and verify that it succeeds.
   bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }

@@ -27,7 +27,7 @@ class MediaPlayer : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
  private:
   // MediaPlayerChannel implementation.
@@ -36,7 +36,7 @@ class MediaPlayer : public ChannelHandler,
   void CreatedSource(uint64_t related_koid) override;
 
   void ReceivedSourceDescription(
-      fidl::Array<media::MediaTypePtr> stream_types) override;
+      f1dl::Array<media::MediaTypePtr> stream_types) override;
 
   void CreatedSink(uint64_t stream_index, uint64_t related_koid) override;
 
@@ -100,7 +100,7 @@ class MediaPlayerAccumulator : public Accumulator {
   State target_state_ = State::kFlushed;
   int64_t target_position_ = media::kUnspecifiedTime;
   ChildBinding source_;
-  fidl::Array<media::MediaTypePtr> stream_types_;
+  f1dl::Array<media::MediaTypePtr> stream_types_;
   std::vector<ChildBinding> sinks_;
   media::TimelineTransformPtr timeline_transform_;
 

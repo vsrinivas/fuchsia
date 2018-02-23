@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/bindings/message_validator.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // ----------------------------------------------------------------------------
@@ -168,4 +168,4 @@ bool Router::HandleIncomingMessage(Message* message) {
 // ----------------------------------------------------------------------------
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

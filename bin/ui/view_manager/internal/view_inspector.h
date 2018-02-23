@@ -91,13 +91,13 @@ class ViewInspector {
   // in the associated ViewTree
   virtual void GetSoftKeyboardContainer(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) = 0;
+      f1dl::InterfaceRequest<mozart::SoftKeyboardContainer> container) = 0;
 
   // Retrieve the IME Service that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetImeService(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::ImeService> ime_service) = 0;
+      f1dl::InterfaceRequest<mozart::ImeService> ime_service) = 0;
 };
 
 }  // namespace view_manager

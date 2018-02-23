@@ -15,7 +15,7 @@ void ShadertoyImpl::SetPaused(bool paused) {
   state_->SetPaused(paused);
 }
 
-void ShadertoyImpl::SetShaderCode(const ::fidl::String& glsl,
+void ShadertoyImpl::SetShaderCode(const ::f1dl::String& glsl,
                                   const SetShaderCodeCallback& callback) {
   state_->SetShaderCode(std::string(glsl), callback);
 }
@@ -30,7 +30,7 @@ void ShadertoyImpl::SetMouse(scenic::vec4Ptr i_mouse) {
 
 void ShadertoyImpl::SetImage(
     uint32_t channel,
-    ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> request) {
   state_->SetImage(channel, std::move(request));
 }
 

@@ -21,7 +21,7 @@ MediaPacketProducer::MediaPacketProducer(const std::string& format)
 
 MediaPacketProducer::~MediaPacketProducer() {}
 
-void MediaPacketProducer::HandleMessage(fidl::Message* message) {
+void MediaPacketProducer::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 

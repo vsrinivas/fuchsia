@@ -47,7 +47,7 @@ MediaPlayer::MediaPlayer(const std::string& format)
 
 MediaPlayer::~MediaPlayer() {}
 
-void MediaPlayer::HandleMessage(fidl::Message* message) {
+void MediaPlayer::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -75,7 +75,7 @@ void MediaPlayer::CreatedSource(uint64_t related_koid) {
 }
 
 void MediaPlayer::ReceivedSourceDescription(
-    fidl::Array<media::MediaTypePtr> stream_types) {
+    f1dl::Array<media::MediaTypePtr> stream_types) {
   terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPlayer.ReceivedSourceDescription"
               << "\n";

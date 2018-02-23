@@ -17,7 +17,7 @@ namespace netconnector {
 std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
     const std::string& device_name,
     const SocketAddress& address,
-    fidl::InterfaceRequest<app::ServiceProvider> request,
+    f1dl::InterfaceRequest<app::ServiceProvider> request,
     NetConnectorImpl* owner) {
   return std::unique_ptr<DeviceServiceProvider>(new DeviceServiceProvider(
       device_name, address, std::move(request), owner));
@@ -26,7 +26,7 @@ std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
 DeviceServiceProvider::DeviceServiceProvider(
     const std::string& device_name,
     const SocketAddress& address,
-    fidl::InterfaceRequest<app::ServiceProvider> request,
+    f1dl::InterfaceRequest<app::ServiceProvider> request,
     NetConnectorImpl* owner)
     : device_name_(device_name),
       address_(address),
@@ -47,7 +47,7 @@ DeviceServiceProvider::DeviceServiceProvider(
 
 DeviceServiceProvider::~DeviceServiceProvider() {}
 
-void DeviceServiceProvider::ConnectToService(const fidl::String& service_name,
+void DeviceServiceProvider::ConnectToService(const f1dl::String& service_name,
                                              zx::channel channel) {
   std::unique_ptr<RequestorAgent> requestor_agent = RequestorAgent::Create(
       address_, service_name, std::move(channel), owner_);

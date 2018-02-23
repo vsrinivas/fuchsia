@@ -35,7 +35,7 @@ scenic::OpPtr NewCreateImageOp(uint32_t id,
                                uint32_t stride);
 scenic::OpPtr NewCreateImagePipeOp(
     uint32_t id,
-    ::fidl::InterfaceRequest<scenic::ImagePipe> request);
+    ::f1dl::InterfaceRequest<scenic::ImagePipe> request);
 scenic::OpPtr NewCreateBufferOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,

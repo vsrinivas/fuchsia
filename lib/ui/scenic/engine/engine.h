@@ -81,8 +81,8 @@ class Engine : private FrameSchedulerDelegate {
   // a new Image to present.
   void ScheduleUpdate(uint64_t presentation_time);
 
-  void CreateSession(::fidl::InterfaceRequest<scenic::Session> request,
-                     ::fidl::InterfaceHandle<scenic::SessionListener> listener);
+  void CreateSession(::f1dl::InterfaceRequest<scenic::Session> request,
+                     ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
 
   // Create a swapchain for the specified display.  The display must not already
   // be claimed by another swapchain.
@@ -118,8 +118,8 @@ class Engine : private FrameSchedulerDelegate {
   // Allow overriding to support tests.
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       SessionId id,
-      ::fidl::InterfaceRequest<scenic::Session> request,
-      ::fidl::InterfaceHandle<scenic::SessionListener> listener);
+      ::f1dl::InterfaceRequest<scenic::Session> request,
+      ::f1dl::InterfaceHandle<scenic::SessionListener> listener);
 
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);

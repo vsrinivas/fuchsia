@@ -13,7 +13,7 @@ namespace scene_manager {
 class EventReporter {
  public:
   // Flushes enqueued session events to the session listener as a batch.
-  virtual void SendEvents(::fidl::Array<scenic::EventPtr> buffered_events) = 0;
+  virtual void SendEvents(::f1dl::Array<scenic::EventPtr> buffered_events) = 0;
 };
 
 }  // namespace scene_manager

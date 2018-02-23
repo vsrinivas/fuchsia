@@ -31,8 +31,8 @@ class AudioRendererImpl
  public:
   ~AudioRendererImpl() override;
   static fbl::RefPtr<AudioRendererImpl> Create(
-      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       AudioServerImpl* owner);
 
   // Shutdown the audio renderer, unlinking it from all outputs, closing
@@ -64,8 +64,8 @@ class AudioRendererImpl
   friend class AudioPipe;
 
   AudioRendererImpl(
-      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       AudioServerImpl* owner);
 
   // AudioObject overrides.
@@ -80,8 +80,8 @@ class AudioRendererImpl
       const GetSupportedMediaTypesCallback& callback) override;
   void SetMediaType(MediaTypePtr media_type) override;
   void GetPacketConsumer(
-      fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) override;
-  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
+      f1dl::InterfaceRequest<MediaPacketConsumer> consumer_request) override;
+  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // Methods called by our AudioPipe.
@@ -93,11 +93,11 @@ class AudioRendererImpl
   // AudioRendererImpl (just that we implement its interface).
   void OnPacketReceived(AudioPipe::AudioPacketRefPtr packet);
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
-  fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
   AudioServerImpl* owner_;
-  fidl::Binding<AudioRenderer> audio_renderer_binding_;
-  fidl::Binding<MediaRenderer> media_renderer_binding_;
+  f1dl::Binding<AudioRenderer> audio_renderer_binding_;
+  f1dl::Binding<MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;

@@ -14,18 +14,18 @@ namespace echo {
 
 class EchoImpl : public Echo {
  public:
-  void AddBinding(fidl::InterfaceRequest<Echo> request) {
+  void AddBinding(f1dl::InterfaceRequest<Echo> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
-  void EchoString(const fidl::String& value,
+  void EchoString(const f1dl::String& value,
                   const EchoStringCallback& callback) override {
     FXL_LOG(INFO) << "EchoString: " << value;
     callback(value);
   }
 
  private:
-  fidl::BindingSet<Echo> bindings_;
+  f1dl::BindingSet<Echo> bindings_;
 };
 
 class EchoDelegate {
@@ -33,7 +33,7 @@ class EchoDelegate {
   EchoDelegate()
     : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<Echo>(
-      [this](fidl::InterfaceRequest<Echo> request) {
+      [this](f1dl::InterfaceRequest<Echo> request) {
         echo_provider_.AddBinding(std::move(request));
       });
   }

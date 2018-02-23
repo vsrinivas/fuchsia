@@ -10,11 +10,11 @@
 bool TestParserStringInput(std::string string_input) {
   // the lexer needs the last character to be zero
   std::string extended_input = string_input.append(1, 0);
-  fidl::StringView stringview_input = fidl::StringView(extended_input);
+  f1dl::StringView stringview_input = f1dl::StringView(extended_input);
 
-  fidl::IdentifierTable identifier_table;
-  fidl::Lexer lexer(stringview_input, &identifier_table);
-  fidl::Parser parser(&lexer);
+  f1dl::IdentifierTable identifier_table;
+  f1dl::Lexer lexer(stringview_input, &identifier_table);
+  f1dl::Parser parser(&lexer);
 
   auto raw_ast = parser.Parse();
   if (!parser.Ok()) {

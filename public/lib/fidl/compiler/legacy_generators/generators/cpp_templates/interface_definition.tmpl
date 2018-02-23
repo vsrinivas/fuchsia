@@ -34,7 +34,7 @@ p_{{param.name}}
 {%- for method in interface.methods -%}
 {%-   if method.response_parameters != None %}
 class {{class_name}}_{{method.name}}_ForwardToCallback
-    : public ::fidl::MessageReceiver {
+    : public ::f1dl::MessageReceiver {
  public:
   {{class_name}}_{{method.name}}_ForwardToCallback(
       const {{class_name}}::{{method.name}}Callback& callback)
@@ -42,14 +42,14 @@ class {{class_name}}_{{method.name}}_ForwardToCallback
     ZX_DEBUG_ASSERT_MSG(callback_, "Supplied response callback handler must not be "
                              " empty for {{class_name}}.{{method.name}}");
   }
-  bool Accept(::fidl::Message* message) override;
+  bool Accept(::f1dl::Message* message) override;
  private:
   {{class_name}}::{{method.name}}Callback callback_;
   {{class_name}}_{{method.name}}_ForwardToCallback(const {{class_name}}_{{method.name}}_ForwardToCallback&) = delete;
   {{class_name}}_{{method.name}}_ForwardToCallback& operator=(const {{class_name}}_{{method.name}}_ForwardToCallback&) = delete;
 };
 bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
-    ::fidl::Message* message) {
+    ::f1dl::Message* message) {
   internal::{{class_name}}_{{method.name}}_ResponseParams_Data* params =
       reinterpret_cast<internal::{{class_name}}_{{method.name}}_ResponseParams_Data*>(
           message->mutable_payload());
@@ -62,7 +62,7 @@ bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
 {%-   endif %}
 {%- endfor %}
 
-{{proxy_name}}::{{proxy_name}}(::fidl::MessageReceiverWithResponder* receiver)
+{{proxy_name}}::{{proxy_name}}(::f1dl::MessageReceiverWithResponder* receiver)
     : receiver_(receiver) {
 {# receiver_ is unused when there are no generated methods. Silence warnings. #}
   (void)receiver_;
@@ -81,17 +81,17 @@ void {{proxy_name}}::{{method.name}}(
   {{struct_macros.get_serialized_size(params_struct, "in_%s")}}
 
 {%- if method.response_parameters != None %}
-  ::fidl::RequestMessageBuilder builder(
+  ::f1dl::RequestMessageBuilder builder(
       static_cast<uint32_t>({{message_name}}), size);
 {%- else %}
-  ::fidl::MessageBuilder builder(
+  ::f1dl::MessageBuilder builder(
     static_cast<uint32_t>({{message_name}}), size);
 {%- endif %}
 
   {{build_message(params_struct, params_description)}}
 
 {%- if method.response_parameters != None %}
-  ::fidl::MessageReceiver* responder =
+  ::f1dl::MessageReceiver* responder =
       new {{class_name}}_{{method.name}}_ForwardToCallback(callback);
   if (!receiver_->AcceptWithResponder(builder.message(), responder))
     delete responder;
@@ -115,7 +115,7 @@ void {{proxy_name}}::{{method.name}}(
 // This class implements a method's response callback: it serializes the
 // response args into a mojo message and passes it to the MessageReceiver it
 // was created with.
-{# TODO(vardhan): Consider making a ::fidl::internal::Callback wrapper instead of
+{# TODO(vardhan): Consider making a ::f1dl::internal::Callback wrapper instead of
    generating something movable? #}
 class {{class_name}}_{{method.name}}_ProxyToResponder {
  public:
@@ -141,7 +141,7 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
 
   {{class_name}}_{{method.name}}_ProxyToResponder(
       uint64_t request_id,
-      ::fidl::MessageReceiverWithStatus* responder)
+      ::f1dl::MessageReceiverWithStatus* responder)
       : request_id_(request_id),
         responder_(responder) {
   }
@@ -151,7 +151,7 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
 
  private:
   uint64_t request_id_;
-  mutable ::fidl::MessageReceiverWithStatus* responder_;
+  mutable ::f1dl::MessageReceiverWithStatus* responder_;
 
   {{class_name}}_{{method.name}}_ProxyToResponder(const {{class_name}}_{{method.name}}_ProxyToResponder&) = delete;
   {{class_name}}_{{method.name}}_ProxyToResponder& operator=(const {{class_name}}_{{method.name}}_ProxyToResponder&) = delete;
@@ -160,7 +160,7 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
 void {{class_name}}_{{method.name}}_ProxyToResponder::operator()(
     {{interface_macros.declare_params_as_args("in_", method.response_parameters)}}) const {
   {{struct_macros.get_serialized_size(response_params_struct, "in_%s")}}
-  ::fidl::ResponseMessageBuilder builder(
+  ::f1dl::ResponseMessageBuilder builder(
       static_cast<uint32_t>({{message_name}}), size, request_id_);
   {{build_message(response_params_struct, params_description)}}
   bool ok = responder_->Accept(builder.message());
@@ -182,7 +182,7 @@ void {{class_name}}_{{method.name}}_ProxyToResponder::operator()(
 
 {#--- Stub definition #}
 
-bool {{class_name}}Stub::Accept(::fidl::Message* message) {
+bool {{class_name}}Stub::Accept(::f1dl::Message* message) {
 {%- if interface.methods %}
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
@@ -211,7 +211,7 @@ bool {{class_name}}Stub::Accept(::fidl::Message* message) {
 }
 
 bool {{class_name}}Stub::AcceptWithResponder(
-    ::fidl::Message* message, ::fidl::MessageReceiverWithStatus* responder) {
+    ::f1dl::Message* message, ::f1dl::MessageReceiverWithStatus* responder) {
 {%- if interface.methods %}
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);

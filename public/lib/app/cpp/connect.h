@@ -19,10 +19,10 @@ namespace app {
 // a new channel and returns a fully-typed interface pointer (and can use
 // the default interface name).
 template <typename Interface>
-inline fidl::InterfacePtr<Interface> ConnectToService(
+inline f1dl::InterfacePtr<Interface> ConnectToService(
     ServiceProvider* service_provider,
     const std::string& interface_name = Interface::Name_) {
-  fidl::InterfacePtr<Interface> interface_ptr;
+  f1dl::InterfacePtr<Interface> interface_ptr;
   service_provider->ConnectToService(interface_name,
                                      interface_ptr.NewRequest().TakeChannel());
   return interface_ptr;
@@ -33,7 +33,7 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
 template <typename Interface>
 inline void ConnectToService(
     ServiceProvider* service_provider,
-    fidl::InterfaceRequest<Interface> interface_request,
+    f1dl::InterfaceRequest<Interface> interface_request,
     const std::string& interface_name = Interface::Name_) {
   service_provider->ConnectToService(interface_name,
                                      interface_request.TakeChannel());

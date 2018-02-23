@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace validation_util {
 
@@ -33,6 +33,6 @@ std::vector<std::string> GetMatchingTests(const std::string& prefix);
 
 }  // namespace validation_util
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_TESTS_VALIDATION_UTIL_H_

@@ -23,12 +23,12 @@ class FlogServiceImpl : public FactoryServiceBase<FlogServiceImpl>,
   ~FlogServiceImpl() override;
 
   // FlogService implementation.
-  void CreateLogger(fidl::InterfaceRequest<FlogLogger> logger,
-                    const fidl::String& label) override;
+  void CreateLogger(f1dl::InterfaceRequest<FlogLogger> logger,
+                    const f1dl::String& label) override;
 
   void GetLogDescriptions(const GetLogDescriptionsCallback& callback) override;
 
-  void CreateReader(fidl::InterfaceRequest<FlogReader> reader,
+  void CreateReader(f1dl::InterfaceRequest<FlogReader> reader,
                     uint32_t log_id) override;
 
   void DeleteLog(uint32_t log_id) override;
@@ -36,7 +36,7 @@ class FlogServiceImpl : public FactoryServiceBase<FlogServiceImpl>,
   void DeleteAllLogs() override;
 
  private:
-  fidl::BindingSet<FlogService> bindings_;
+  f1dl::BindingSet<FlogService> bindings_;
   Incident ready_;
   uint32_t last_allocated_log_id_ = 0;
   std::unique_ptr<std::map<uint32_t, std::string>> log_labels_by_id_;

@@ -29,7 +29,7 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
 
   // |ApplicationLoader|:
   void LoadApplication(
-      const fidl::String& url,
+      const f1dl::String& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override;
 
  private:

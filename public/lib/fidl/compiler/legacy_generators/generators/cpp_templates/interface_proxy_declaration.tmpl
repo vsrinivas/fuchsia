@@ -2,7 +2,7 @@
 class {{interface.name}}Proxy
     : public {{interface.name}} {
  public:
-  explicit {{interface.name}}Proxy(::fidl::MessageReceiverWithResponder* receiver);
+  explicit {{interface.name}}Proxy(::f1dl::MessageReceiverWithResponder* receiver);
 
 {%- for method in interface.methods %}
   void {{method.name}}(
@@ -14,7 +14,7 @@ class {{interface.name}}Proxy
   {#- TODO(vardhan): Consider moving this common-generated code into a class that
   generated Proxy classes inherit #}
   // Not owned.
-  ::fidl::MessageReceiverWithResponder* receiver_;
+  ::f1dl::MessageReceiverWithResponder* receiver_;
 
   {{interface.name}}Proxy(const {{interface.name}}Proxy&) = delete;
   {{interface.name}}Proxy& operator=(const {{interface.name}}Proxy&) = delete;

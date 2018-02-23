@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/tests/util/iterator_test_util.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 using internal::MapKeyIterator;
@@ -86,4 +86,4 @@ TEST(MapIteratorTest, BidirectionalIteratorConcept) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

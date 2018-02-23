@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
 
-namespace fidl {
+namespace f1dl {
 
 // Represents the binding of an interface implementation to a channel.
 // When the |Binding| object is destroyed, the binding between the channel
@@ -158,6 +158,6 @@ class Binding {
   std::function<void()> connection_error_handler_;
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_BINDING_H_

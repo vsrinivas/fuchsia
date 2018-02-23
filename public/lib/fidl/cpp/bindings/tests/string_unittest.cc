@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/string.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 TEST(StringTest, DefaultIsNull) {
@@ -128,4 +128,4 @@ TEST(StringTest, OutputFormatting) {
 }
 
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

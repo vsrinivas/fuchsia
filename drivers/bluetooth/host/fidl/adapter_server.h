@@ -27,17 +27,17 @@ namespace bthost {
 class AdapterServer : public ServerBase<::bluetooth::control::Adapter> {
  public:
   AdapterServer(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-                fidl::InterfaceRequest<bluetooth::control::Adapter> request);
+                f1dl::InterfaceRequest<bluetooth::control::Adapter> request);
   ~AdapterServer() override;
 
  private:
   // ::bluetooth::control::Adapter overrides:
   void GetInfo(const GetInfoCallback& callback) override;
   void SetDelegate(
-      ::fidl::InterfaceHandle<::bluetooth::control::AdapterDelegate> delegate)
+      ::f1dl::InterfaceHandle<::bluetooth::control::AdapterDelegate> delegate)
       override;
-  void SetLocalName(const ::fidl::String& local_name,
-                    const ::fidl::String& shortened_local_name,
+  void SetLocalName(const ::f1dl::String& local_name,
+                    const ::f1dl::String& shortened_local_name,
                     const SetLocalNameCallback& callback) override;
   void SetPowered(bool powered, const SetPoweredCallback& callback) override;
   void StartDiscovery(const StartDiscoveryCallback& callback) override;

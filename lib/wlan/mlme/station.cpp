@@ -881,7 +881,7 @@ zx_status_t Station::SendJoinResponse() {
 zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     debugfn();
     auto resp = AuthenticateResponse::New();
-    resp->peer_sta_address = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
 
     common::MacAddr bssid(bss_->bssid.data());
     bssid.CopyTo(resp->peer_sta_address.data());
@@ -909,7 +909,7 @@ zx_status_t Station::SendDeauthResponse(const common::MacAddr& peer_sta_addr) {
     debugfn();
 
     auto resp = DeauthenticateResponse::New();
-    resp->peer_sta_address = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     peer_sta_addr.CopyTo(resp->peer_sta_address.data());
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
@@ -964,7 +964,7 @@ zx_status_t Station::SendKeepAliveResponse() {
 zx_status_t Station::SendDeauthIndication(uint16_t code) {
     debugfn();
     auto ind = DeauthenticateIndication::New();
-    ind->peer_sta_address = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     common::MacAddr bssid(bss_->bssid.data());
     bssid.CopyTo(ind->peer_sta_address.data());
     ind->reason_code = code;
@@ -1010,7 +1010,7 @@ zx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
 zx_status_t Station::SendDisassociateIndication(uint16_t code) {
     debugfn();
     auto ind = DisassociateIndication::New();
-    ind->peer_sta_address = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     common::MacAddr bssid(bss_->bssid.data());
     bssid.CopyTo(ind->peer_sta_address.data());
     ind->reason_code = code;
@@ -1181,10 +1181,10 @@ zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const common::
     if (len > 255) { return ZX_OK; }
 
     auto ind = EapolIndication::New();
-    ind->data = ::fidl::Array<uint8_t>::New(len);
+    ind->data = ::f1dl::Array<uint8_t>::New(len);
     std::memcpy(ind->data.data(), eapol, len);
-    ind->src_addr = fidl::Array<uint8_t>::New(common::kMacAddrLen);
-    ind->dst_addr = fidl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->src_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->dst_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     src.CopyTo(ind->src_addr.data());
     dst.CopyTo(ind->dst_addr.data());
 

@@ -24,7 +24,7 @@ const char* StringFromAudioSampleFormat(media::AudioSampleFormat value);
 // The following overloads add newlines.
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value);
+std::ostream& operator<<(std::ostream& os, const f1dl::InterfacePtr<T>& value);
 
 std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value);
 std::ostream& operator<<(std::ostream& os, const media::MediaTypeSetPtr& value);
@@ -78,7 +78,7 @@ struct AsMsTime {
 std::ostream& operator<<(std::ostream& os, AsMsTime value);
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
+std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
   if (!value) {
     return os << "<nullptr>";
   } else if (value.size() == 0) {
@@ -86,7 +86,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
   }
 
   int index = 0;
-  for (T& element : const_cast<fidl::Array<T>&>(value)) {
+  for (T& element : const_cast<f1dl::Array<T>&>(value)) {
     os << "\n" << begl << "[" << index++ << "] " << element;
   }
 
@@ -95,8 +95,8 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
 
 template <typename T>
 struct AsInlineArray {
-  explicit AsInlineArray(const fidl::Array<T>& value) : value_(value) {}
-  const fidl::Array<T>& value_;
+  explicit AsInlineArray(const f1dl::Array<T>& value) : value_(value) {}
+  const f1dl::Array<T>& value_;
 };
 
 template <typename T>
@@ -107,7 +107,7 @@ std::ostream& operator<<(std::ostream& os, AsInlineArray<T> value) {
     return os << "<empty>";
   }
 
-  for (T& element : const_cast<fidl::Array<T>&>(value.value_)) {
+  for (T& element : const_cast<f1dl::Array<T>&>(value.value_)) {
     os << element << ' ';
   }
 

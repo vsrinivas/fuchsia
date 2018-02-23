@@ -22,7 +22,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 namespace {
 
@@ -292,4 +292,4 @@ TEST_F(BindingCallbackTest, DeleteCallbackBeforeBindingDeathTest) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

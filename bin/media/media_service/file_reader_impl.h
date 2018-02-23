@@ -22,7 +22,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
  public:
   static std::shared_ptr<FileReaderImpl> Create(
       zx::channel file_channel,
-      fidl::InterfaceRequest<SeekingReader> request,
+      f1dl::InterfaceRequest<SeekingReader> request,
       MediaServiceImpl* owner);
 
   ~FileReaderImpl() override;
@@ -36,7 +36,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   static constexpr size_t kBufferSize = 8192;
 
   FileReaderImpl(fxl::UniqueFD fd,
-                 fidl::InterfaceRequest<SeekingReader> request,
+                 f1dl::InterfaceRequest<SeekingReader> request,
                  MediaServiceImpl* owner);
 
   // Callback function for WriteToSocket's async wait.

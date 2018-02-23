@@ -88,7 +88,7 @@ class FlogViewer : public ChannelManager {
 
   struct Log {
     FlogReaderPtr reader_;
-    fidl::Array<FlogEntryPtr> entries_;
+    f1dl::Array<FlogEntryPtr> entries_;
     uint32_t first_entry_index_;
     uint32_t entries_consumed_;
     std::unordered_set<uint32_t> enabled_channels_;

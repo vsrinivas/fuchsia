@@ -40,7 +40,7 @@ namespace {{namespace}} {
 {%- set base_name = "internal::%s_Base"|format(interface.name) -%}
 {{interface.name}}_SynchronousProxy::{{interface.name}}_SynchronousProxy(
       ::zx::channel channel,
-      ::fidl::internal::MessageValidatorList&& validators)
+      ::f1dl::internal::MessageValidatorList&& validators)
           : channel_(std::move(channel)), validators_(std::move(validators)) {
 }
 
@@ -61,9 +61,9 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
 
   auto msg_name = static_cast<uint32_t>({{message_name}});
 {%-   if method.response_parameters != None %}
-  ::fidl::RequestMessageBuilder builder(msg_name, size);
+  ::f1dl::RequestMessageBuilder builder(msg_name, size);
 {%-   else %}
-  ::fidl::MessageBuilder builder(msg_name, size);
+  ::f1dl::MessageBuilder builder(msg_name, size);
 {%-   endif %}
 
   {{struct_macros.serialize(params_struct,
@@ -72,21 +72,21 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
   out_params->EncodePointersAndHandles(builder.message()->mutable_handles());
 
 {%-   if method.response_parameters == None %}
-  if (::fidl::WriteMessage(channel_, builder.message()) != ZX_OK)
+  if (::f1dl::WriteMessage(channel_, builder.message()) != ZX_OK)
     return false;
 
 {%-   else %}
-  ::fidl::PreallocMessage response_msg;
-  if (::fidl::CallMessage(channel_, builder.message(), &response_msg)
+  ::f1dl::PreallocMessage response_msg;
+  if (::f1dl::CallMessage(channel_, builder.message(), &response_msg)
       != ZX_OK) {
     return false;
   }
 
   // Validate the incoming message.
   std::string response_err;
-  if (::fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
+  if (::f1dl::internal::RunValidatorsOnMessage(validators_, &response_msg,
                                                &response_err)
-        != ::fidl::internal::ValidationError::NONE) {
+        != ::f1dl::internal::ValidationError::NONE) {
     return false;
   }
 

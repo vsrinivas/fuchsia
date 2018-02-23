@@ -428,11 +428,11 @@ void Builder::Succeed() {
       callback_(
           true,
           [shared_converter_ptr](
-              fidl::InterfaceRequest<MediaPacketConsumer> request) {
+              f1dl::InterfaceRequest<MediaPacketConsumer> request) {
             (*shared_converter_ptr)->GetPacketConsumer(std::move(request));
           },
           [shared_converter_ptr](
-              fidl::InterfaceRequest<MediaPacketProducer> request) {
+              f1dl::InterfaceRequest<MediaPacketProducer> request) {
             (*shared_converter_ptr)->GetPacketProducer(std::move(request));
           },
           std::move(*type_), std::move(converter_koids));
@@ -446,7 +446,7 @@ void Builder::Succeed() {
       // ConsumerGetter to connect a producer later on.
       consumer_getter_to_return =
           fxl::MakeCopyable([converter = std::move(converters_.front())](
-              fidl::InterfaceRequest<MediaPacketConsumer> request) {
+              f1dl::InterfaceRequest<MediaPacketConsumer> request) {
             converter->GetPacketConsumer(std::move(request));
           });
     }
@@ -457,7 +457,7 @@ void Builder::Succeed() {
       // ProducerGetter to connect a consumer later on.
       producer_getter_to_return =
           fxl::MakeCopyable([converter = std::move(converters_.back())](
-              fidl::InterfaceRequest<MediaPacketProducer> request) {
+              f1dl::InterfaceRequest<MediaPacketProducer> request) {
             converter->GetPacketProducer(std::move(request));
           });
     }

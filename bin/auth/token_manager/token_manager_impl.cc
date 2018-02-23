@@ -16,7 +16,7 @@ using auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
     app::ApplicationContext* app_context,
-    fidl::Array<AuthProviderConfigPtr> auth_provider_configs)
+    f1dl::Array<AuthProviderConfigPtr> auth_provider_configs)
     : token_cache_(kMaxCacheSize) {
   FXL_CHECK(app_context);
 
@@ -70,7 +70,7 @@ TokenManagerImpl::~TokenManagerImpl() {}
 
 void TokenManagerImpl::Authorize(
     const auth::AuthProviderType auth_provider_type,
-    fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+    f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
     const AuthorizeCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -79,7 +79,7 @@ void TokenManagerImpl::Authorize(
 
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
-      [this, callback](AuthProviderStatus status, fidl::String credential) {
+      [this, callback](AuthProviderStatus status, f1dl::String credential) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
           callback(Status::INTERNAL_ERROR, nullptr);
           return;
@@ -93,8 +93,8 @@ void TokenManagerImpl::Authorize(
 
 void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
-    const fidl::String& app_client_id,
-    fidl::Array<fidl::String> app_scopes,
+    const f1dl::String& app_client_id,
+    f1dl::Array<f1dl::String> app_scopes,
     const GetAccessTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -102,8 +102,8 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   // TODO: Fetch credential from data store
-  fidl::String credential = "TODO";
-  fidl::String idp_credential_id = "TODO";
+  f1dl::String credential = "TODO";
+  f1dl::String idp_credential_id = "TODO";
 
   auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
   cache::OAuthTokens tokens;
@@ -147,7 +147,7 @@ void TokenManagerImpl::GetAccessToken(
 
 void TokenManagerImpl::GetIdToken(
     const auth::AuthProviderType auth_provider_type,
-    const fidl::String& audience,
+    const f1dl::String& audience,
     const GetIdTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -155,8 +155,8 @@ void TokenManagerImpl::GetIdToken(
   }
 
   // TODO: Fetch credential from data store
-  fidl::String credential = "TODO";
-  fidl::String idp_credential_id = "TODO";
+  f1dl::String credential = "TODO";
+  f1dl::String idp_credential_id = "TODO";
 
   auto cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
   cache::OAuthTokens tokens;
@@ -200,7 +200,7 @@ void TokenManagerImpl::GetIdToken(
 
 void TokenManagerImpl::GetFirebaseToken(
     const auth::AuthProviderType auth_provider_type,
-    const fidl::String& firebase_api_key,
+    const f1dl::String& firebase_api_key,
     const GetFirebaseTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -209,7 +209,7 @@ void TokenManagerImpl::GetFirebaseToken(
   //  TODO: Return from cache if not expired
 
   // TODO: Fetch fresh id_token
-  fidl::String id_token = "TODO";
+  f1dl::String id_token = "TODO";
 
   it->second->GetAppFirebaseToken(
       id_token, firebase_api_key,
@@ -233,8 +233,8 @@ void TokenManagerImpl::DeleteAllTokens(
   }
 
   // TODO: Fetch credential from data store
-  fidl::String credential = "TODO";
-  fidl::String idp_credential_id = "TODO";
+  f1dl::String credential = "TODO";
+  f1dl::String idp_credential_id = "TODO";
   cache::CacheKey cacheKey = GetCacheKey(auth_provider_type, idp_credential_id);
 
   it->second->RevokeAppOrPersistentCredential(
@@ -259,7 +259,7 @@ void TokenManagerImpl::DeleteAllTokens(
 
 const cache::CacheKey TokenManagerImpl::GetCacheKey(
     auth::AuthProviderType identity_provider,
-    const fidl::String& idp_credential_id) {
+    const f1dl::String& idp_credential_id) {
   // TODO: consider replacing the static cast with a string map (more type safe)
   return cache::CacheKey(std::to_string(static_cast<int>(identity_provider)),
                          idp_credential_id.get());

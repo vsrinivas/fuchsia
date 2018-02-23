@@ -47,12 +47,12 @@ class MediaPlayerTester {
                                   {16373, true, 0, 0x0000000000000000}});
 
     SeekingReaderPtr fake_reader_ptr;
-    fidl::InterfaceRequest<SeekingReader> reader_request =
+    f1dl::InterfaceRequest<SeekingReader> reader_request =
         fake_reader_ptr.NewRequest();
     fake_reader_.Bind(std::move(reader_request));
 
     MediaRendererPtr fake_renderer_ptr;
-    fidl::InterfaceRequest<MediaRenderer> renderer_request =
+    f1dl::InterfaceRequest<MediaRenderer> renderer_request =
         fake_renderer_ptr.NewRequest();
     fake_renderer_.Bind(std::move(renderer_request));
 

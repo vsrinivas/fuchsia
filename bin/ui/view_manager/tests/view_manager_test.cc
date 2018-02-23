@@ -43,7 +43,7 @@ TEST_F(ViewManagerTest, CreateAView) {
   // Create and bind a mock view listener
   mozart::ViewListenerPtr view_listener;
   mozart::test::MockViewListener mock_view_listener;
-  fidl::Binding<mozart::ViewListener> view_listener_binding(
+  f1dl::Binding<mozart::ViewListener> view_listener_binding(
       &mock_view_listener, view_listener.NewRequest());
 
   // Create a view
@@ -71,7 +71,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  fidl::Binding<mozart::ViewListener> child_view_listener_binding(
+  f1dl::Binding<mozart::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
@@ -87,7 +87,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a child view
   mozart::ViewListenerPtr child_view_listener;
   mozart::test::MockViewListener child_mock_view_listener;
-  fidl::Binding<mozart::ViewListener> parent_view_listener_binding(
+  f1dl::Binding<mozart::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
@@ -137,7 +137,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   mozart::ViewTreePtr tree;
   mozart::ViewTreeListenerPtr tree_listener;
   mozart::test::MockViewTreeListener mock_tree_view_listener;
-  fidl::Binding<mozart::ViewTreeListener> tree_listener_binding(
+  f1dl::Binding<mozart::ViewTreeListener> tree_listener_binding(
       &mock_tree_view_listener, tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
                                 "test_view_tree");
@@ -147,14 +147,14 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   tree->GetContainer(tree_container.NewRequest());
   mozart::ViewContainerListenerPtr tree_container_listener;
   mozart::test::MockViewContainerListener mock_tree_container_listener;
-  fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding(
+  f1dl::Binding<mozart::ViewContainerListener> tree_container_listener_binding(
       &mock_tree_container_listener, tree_container_listener.NewRequest());
   tree_container->SetListener(std::move(tree_container_listener));
 
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  fidl::Binding<mozart::ViewListener> child_view_listener_binding(
+  f1dl::Binding<mozart::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
@@ -193,7 +193,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
                   invalidation->properties->view_layout->size->height);
         invalidation_count++;
       });
-  fidl::Binding<mozart::ViewListener> parent_view_listener_binding(
+  f1dl::Binding<mozart::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view

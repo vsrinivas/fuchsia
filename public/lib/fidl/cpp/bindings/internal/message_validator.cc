@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/bindings/message_validator.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 ValidationError PassThroughValidator::Validate(const Message* message,
@@ -25,4 +25,4 @@ ValidationError RunValidatorsOnMessage(const MessageValidatorList& validators,
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

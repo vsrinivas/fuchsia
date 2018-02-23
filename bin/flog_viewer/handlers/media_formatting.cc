@@ -10,7 +10,7 @@ namespace flog {
 namespace handlers {
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
+std::ostream& operator<<(std::ostream& os, const f1dl::InterfacePtr<T>& value) {
   if (!value.is_bound()) {
     return os << "<not bound>";
   } else {
@@ -45,7 +45,7 @@ std::ostream& operator<<(std::ostream& os,
   os << indent << "\n";
   os << begl << "medium: " << StringFromMediaTypeMedium(value->medium) << "\n";
   os << begl << "details: " << value->details << "\n";
-  os << begl << "encodings: " << AsInlineArray<fidl::String>(value->encodings);
+  os << begl << "encodings: " << AsInlineArray<f1dl::String>(value->encodings);
   return os << outdent;
 }
 

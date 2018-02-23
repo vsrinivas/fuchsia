@@ -36,7 +36,7 @@ class NetworkServiceImpl::UrlLoaderContainer
     : public URLLoaderImpl::Coordinator {
  public:
   UrlLoaderContainer(URLLoaderImpl::Coordinator* top_coordinator,
-                     fidl::InterfaceRequest<URLLoader> request)
+                     f1dl::InterfaceRequest<URLLoader> request)
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
         main_task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
@@ -115,7 +115,7 @@ class NetworkServiceImpl::UrlLoaderContainer
 
   void StartOnIOThread() {
     url_loader_ = std::make_unique<URLLoaderImpl>(this);
-    binding_ = std::make_unique<fidl::Binding<URLLoader>>(url_loader_.get(),
+    binding_ = std::make_unique<f1dl::Binding<URLLoader>>(url_loader_.get(),
                                                           std::move(request_));
     binding_->set_error_handler([this] { StopOnIOThread(); });
   }
@@ -128,7 +128,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   }
 
   // This is set on the constructor, and then accessed on the io thread.
-  fidl::InterfaceRequest<URLLoader> request_;
+  f1dl::InterfaceRequest<URLLoader> request_;
 
   // These variables can only be accessed on the main thread.
   URLLoaderImpl::Coordinator* top_coordinator_;
@@ -143,7 +143,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
 
   // The binding and the implementation can only be accessed on the io thread.
-  std::unique_ptr<fidl::Binding<URLLoader>> binding_;
+  std::unique_ptr<f1dl::Binding<URLLoader>> binding_;
   std::unique_ptr<URLLoaderImpl> url_loader_;
 
   // Copyable on any thread, but can only be de-referenced on the main thread.
@@ -160,12 +160,12 @@ NetworkServiceImpl::NetworkServiceImpl() : available_slots_(kMaxSlots) {}
 NetworkServiceImpl::~NetworkServiceImpl() = default;
 
 void NetworkServiceImpl::AddBinding(
-    fidl::InterfaceRequest<NetworkService> request) {
+    f1dl::InterfaceRequest<NetworkService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void NetworkServiceImpl::CreateURLLoader(
-    fidl::InterfaceRequest<URLLoader> request) {
+    f1dl::InterfaceRequest<URLLoader> request) {
   loaders_.emplace_back(this, std::move(request));
   UrlLoaderContainer* container = &loaders_.back();
   container->set_on_done([this, container] {

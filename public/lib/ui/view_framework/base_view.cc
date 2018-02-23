@@ -22,7 +22,7 @@ scenic::SceneManagerPtr GetSceneManager(ViewManager* view_manager) {
 }  // namespace
 
 BaseView::BaseView(ViewManagerPtr view_manager,
-                   fidl::InterfaceRequest<ViewOwner> view_owner_request,
+                   f1dl::InterfaceRequest<ViewOwner> view_owner_request,
                    const std::string& label)
     : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -114,7 +114,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
       });
 }
 
-void BaseView::HandleSessionEvents(fidl::Array<scenic::EventPtr> events) {
+void BaseView::HandleSessionEvents(f1dl::Array<scenic::EventPtr> events) {
   scenic::Metrics* new_metrics = nullptr;
   for (const auto& event : events) {
     if (event->is_metrics() &&
@@ -156,7 +156,7 @@ void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 void BaseView::OnSceneInvalidated(
     ui_mozart::PresentationInfoPtr presentation_info) {}
 
-void BaseView::OnSessionEvent(fidl::Array<scenic::EventPtr> events) {}
+void BaseView::OnSessionEvent(f1dl::Array<scenic::EventPtr> events) {}
 
 bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
   return false;

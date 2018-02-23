@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <typename Interface>
 class InterfacePtr;
@@ -107,6 +107,6 @@ class InterfaceHandle {
   FIDL_MOVE_ONLY_TYPE(InterfaceHandle);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERFACE_HANDLE_H_

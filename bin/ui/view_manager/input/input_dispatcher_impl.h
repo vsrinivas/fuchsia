@@ -28,7 +28,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   InputDispatcherImpl(ViewInspector* inspector,
                       InputOwner* owner,
                       mozart::ViewTreeTokenPtr view_tree_token,
-                      fidl::InterfaceRequest<mozart::InputDispatcher> request);
+                      f1dl::InterfaceRequest<mozart::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
   const mozart::ViewTreeToken* view_tree_token() const {
@@ -67,7 +67,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   std::vector<ViewHit> event_path_;
   uint64_t event_path_propagation_id_ = 0;
 
-  fidl::Binding<mozart::InputDispatcher> binding_;
+  f1dl::Binding<mozart::InputDispatcher> binding_;
 
   std::unique_ptr<FocusChain> active_focus_chain_;
 

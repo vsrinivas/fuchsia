@@ -74,7 +74,7 @@ class Presentation : private mozart::ViewTreeListener,
   // presentation.
   void Present(
       mozart::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
       fxl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, mozart::InputReportPtr report);
@@ -117,14 +117,14 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::fidl::Array<scenic::RendererParamPtr> params) override;
+      ::f1dl::Array<scenic::RendererParamPtr> params) override;
 
   // |Presentation|
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
 
   void CreateViewTree(
       mozart::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
       scenic::DisplayInfoPtr display_info);
   void OnEvent(mozart::InputEventPtr event);
 
@@ -184,11 +184,11 @@ class Presentation : private mozart::ViewTreeListener,
 
   mozart::PointF mouse_coordinates_;
 
-  fidl::Binding<mozart::Presentation> presentation_binding_;
-  fidl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
-  fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding_;
-  fidl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
-  fidl::Binding<mozart::ViewListener> view_listener_binding_;
+  f1dl::Binding<mozart::Presentation> presentation_binding_;
+  f1dl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
+  f1dl::Binding<mozart::ViewContainerListener> tree_container_listener_binding_;
+  f1dl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
+  f1dl::Binding<mozart::ViewListener> view_listener_binding_;
 
   mozart::ViewTreePtr tree_;
   mozart::ViewContainerPtr tree_container_;

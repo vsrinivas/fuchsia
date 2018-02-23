@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <>
 struct TypeConverter<int32_t, sample::BarPtr> {
@@ -21,7 +21,7 @@ struct TypeConverter<int32_t, sample::BarPtr> {
   }
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 namespace sample {
 namespace {
@@ -34,7 +34,7 @@ bool g_dump_message_as_text = false;
 
 // Make a sample |Foo|.
 FooPtr MakeFoo() {
-  fidl::String name("foopy");
+  f1dl::String name("foopy");
 
   BarPtr bar(Bar::New());
   bar->alpha = 20;
@@ -42,7 +42,7 @@ FooPtr MakeFoo() {
   bar->gamma = 60;
   bar->type = Bar::Type::VERTICAL;
 
-  auto extra_bars = fidl::Array<BarPtr>::New(3);
+  auto extra_bars = f1dl::Array<BarPtr>::New(3);
   for (size_t i = 0; i < extra_bars.size(); ++i) {
     Bar::Type type = i % 2 == 0 ? Bar::Type::VERTICAL : Bar::Type::HORIZONTAL;
     BarPtr bar(Bar::New());
@@ -54,13 +54,13 @@ FooPtr MakeFoo() {
     extra_bars[i] = std::move(bar);
   }
 
-  auto data = fidl::Array<uint8_t>::New(10);
+  auto data = f1dl::Array<uint8_t>::New(10);
   for (size_t i = 0; i < data.size(); ++i)
     data[i] = static_cast<uint8_t>(data.size() - i);
 
-  auto array_of_array_of_bools = fidl::Array<fidl::Array<bool>>::New(2);
+  auto array_of_array_of_bools = f1dl::Array<f1dl::Array<bool>>::New(2);
   for (size_t i = 0; i < 2; ++i) {
-    auto array_of_bools = fidl::Array<bool>::New(2);
+    auto array_of_bools = f1dl::Array<bool>::New(2);
     for (size_t j = 0; j < 2; ++j)
       array_of_bools[j] = j;
     array_of_array_of_bools[i] = std::move(array_of_bools);
@@ -159,7 +159,7 @@ void Print(int depth,
   std::cout << name << ": 0x" << std::hex << value.get() << std::endl;
 }
 
-void Print(int depth, const char* name, const fidl::String& str) {
+void Print(int depth, const char* name, const f1dl::String& str) {
   PrintSpacer(depth);
   std::cout << name << ": \"" << str.get() << "\"" << std::endl;
 }
@@ -178,7 +178,7 @@ void Print(int depth, const char* name, const BarPtr& bar) {
 }
 
 template <typename T>
-void Print(int depth, const char* name, const fidl::Array<T>& array) {
+void Print(int depth, const char* name, const f1dl::Array<T>& array) {
   PrintSpacer(depth);
   std::cout << name << ":" << std::endl;
   if (!array.is_null()) {
@@ -233,7 +233,7 @@ class ServiceImpl : public Service {
  public:
   void Frobinate(FooPtr foo,
                  BazOptions baz,
-                 fidl::InterfaceHandle<Port> port,
+                 f1dl::InterfaceHandle<Port> port,
                  const Service::FrobinateCallback& callback) override {
     // Users code goes here to handle the incoming Frobinate message.
 
@@ -255,18 +255,18 @@ class ServiceImpl : public Service {
     callback(5);
   }
 
-  void GetPort(fidl::InterfaceRequest<Port> port_request) override {}
+  void GetPort(f1dl::InterfaceRequest<Port> port_request) override {}
 };
 
 class ServiceProxyImpl : public ServiceProxy {
  public:
-  explicit ServiceProxyImpl(fidl::MessageReceiverWithResponder* receiver)
+  explicit ServiceProxyImpl(f1dl::MessageReceiverWithResponder* receiver)
       : ServiceProxy(receiver) {}
 };
 
-class SimpleMessageReceiver : public fidl::MessageReceiverWithResponder {
+class SimpleMessageReceiver : public f1dl::MessageReceiverWithResponder {
  public:
-  bool Accept(fidl::Message* message) override {
+  bool Accept(f1dl::Message* message) override {
     // Imagine some IPC happened here.
 
     if (g_dump_message_as_hex) {
@@ -283,8 +283,8 @@ class SimpleMessageReceiver : public fidl::MessageReceiverWithResponder {
     return stub.Accept(message);
   }
 
-  bool AcceptWithResponder(fidl::Message* message,
-                           fidl::MessageReceiver* responder) override {
+  bool AcceptWithResponder(f1dl::Message* message,
+                           f1dl::MessageReceiver* responder) override {
     return false;
   }
 };

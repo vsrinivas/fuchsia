@@ -5,14 +5,14 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
    if (!input)
     return size;
 
-  ::fidl::internal::UnionAccessor<{{union.name}}> input_acc(input.get());
+  ::f1dl::internal::UnionAccessor<{{union.name}}> input_acc(input.get());
   switch (input->which()) {
 {%  for field in union.fields %}
 {%    if field.kind|is_object_kind %}
     case {{union.name}}::Tag::{{field.name|upper}}:
 {%      if field.kind|is_union_kind %}
       if ((input_acc.data()->{{field.name}})) {
-        //size += sizeof(::fidl::internal::UnionPointer<{{field.kind|get_name_for_kind}}::Data_>);
+        //size += sizeof(::f1dl::internal::UnionPointer<{{field.kind|get_name_for_kind}}::Data_>);
         size += GetSerializedSize_(*(input_acc.data()->{{field.name}}));
       }
 {%      elif field.kind|is_struct_kind %}
@@ -37,13 +37,13 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
             if this union contains another union, we will use |buf| to allocate
             memory and serialize out-of-line.
 #}
-::fidl::internal::ValidationError SerializeUnion_(
+::f1dl::internal::ValidationError SerializeUnion_(
     {{union.name}}* input,
-    ::fidl::internal::Buffer* buf,
+    ::f1dl::internal::Buffer* buf,
     internal::{{union.name}}_Data** output) {
   internal::{{union.name}}_Data* result = *output;
   if (input) {
-    ::fidl::internal::UnionAccessor<{{union.name}}> input_acc(input);
+    ::f1dl::internal::UnionAccessor<{{union.name}}> input_acc(input);
     // TODO(azani): Handle unknown and objects.
     // Set the not-null flag.
     result->size = 16;
@@ -96,14 +96,14 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
               indent_size = 16)|indent(6)}}
 {%-     endif %}
 {%    elif field.kind|is_any_handle_kind %}
-        result->data.f_{{field.name}} = ::fidl::internal::WrappedHandle{
+        result->data.f_{{field.name}} = ::f1dl::internal::WrappedHandle{
           input_acc.data()->{{field.name}}->release()
         };
 {%    elif field.kind|is_interface_kind %}
-        ::fidl::internal::Interface_Data* {{field.name}} =
-            reinterpret_cast<::fidl::internal::Interface_Data*>(
+        ::f1dl::internal::Interface_Data* {{field.name}} =
+            reinterpret_cast<::f1dl::internal::Interface_Data*>(
                 &result->data.f_{{field.name}});
-        ::fidl::internal::InterfaceHandleToData(
+        ::f1dl::internal::InterfaceHandleToData(
             std::move(*(input_acc.data()->{{field.name}})), {{field.name}});
 {%    elif field.kind|is_enum_kind %}
         result->data.f_{{field.name}} =
@@ -122,13 +122,13 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
   } else {
     result->set_null();
   }
-  return ::fidl::internal::ValidationError::NONE;
+  return ::f1dl::internal::ValidationError::NONE;
 }
 
 void Deserialize_(internal::{{union.name}}_Data* input,
                   {{union.name}}* output) {
   if (input && !input->is_null()) {
-    ::fidl::internal::UnionAccessor<{{union.name}}> result_acc(output);
+    ::f1dl::internal::UnionAccessor<{{union.name}}> result_acc(output);
     switch (input->tag) {
 {#- TODO(vardhan):  There is a lot of overlap with struct_macros.deserialize()
     here, is it possible to merge? (currently looks very hairy) #}
@@ -150,10 +150,10 @@ void Deserialize_(internal::{{union.name}}_Data* input,
         output->set_{{field.name}}(std::move(*({{field.name}})));
 {%    elif field.kind|is_interface_kind %}
         {{field.kind|cpp_wrapper_type}} {{field.name}}_out;
-        ::fidl::internal::Interface_Data* {{field.name}}_in =
-            reinterpret_cast<::fidl::internal::Interface_Data*>(
+        ::f1dl::internal::Interface_Data* {{field.name}}_in =
+            reinterpret_cast<::f1dl::internal::Interface_Data*>(
                 &input->data.f_{{field.name}});
-        ::fidl::internal::InterfaceDataToHandle(
+        ::f1dl::internal::InterfaceDataToHandle(
             {{field.name}}_in, &{{field.name}}_out);
         output->set_{{field.name}}(std::move({{field.name}}_out));
 {%    elif field.kind|is_enum_kind %}

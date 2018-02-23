@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // Checks whether decoding the pointer will overflow and produce a pointer
@@ -32,6 +32,6 @@ ValidationError ValidateStructHeaderAndClaimMemory(
     std::string* err);
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATION_UTIL_H_

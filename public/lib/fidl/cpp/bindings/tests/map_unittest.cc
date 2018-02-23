@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fidl/cpp/bindings/map.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/compiler/interfaces/tests/rect.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -10,36 +11,36 @@
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
 #include "lib/fidl/cpp/bindings/internal/map_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
-#include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
 
-namespace fidl {
+namespace f1dl {
 namespace test {
 
 namespace {
 
-using fidl::internal::Array_Data;
-using fidl::internal::ArrayValidateParams;
-using fidl::internal::FixedBufferForTesting;
-using fidl::internal::Map_Data;
-using fidl::internal::String_Data;
-using fidl::internal::ValidationError;
+using f1dl::internal::ArrayValidateParams;
+using f1dl::internal::Array_Data;
+using f1dl::internal::FixedBufferForTesting;
+using f1dl::internal::Map_Data;
+using f1dl::internal::String_Data;
+using f1dl::internal::ValidationError;
 
 struct StringIntData {
   const char* string_data;
   int int_data;
-} kStringIntData[] = {
-    {"one", 1},
-    {"two", 2},
-    {"three", 3},
-    {"four", 4},
+} kStringIntData[] =
+    {
+        {"one", 1},
+        {"two", 2},
+        {"three", 3},
+        {"four", 4},
 },
-kStringIntDataSorted[] = {
-    {"four", 4},
-    {"one", 1},
-    {"three", 3},
-    {"two", 2},
+  kStringIntDataSorted[] = {
+      {"four", 4},
+      {"one", 1},
+      {"three", 3},
+      {"two", 2},
 };
 
 const size_t kStringIntDataSize = 4;
@@ -85,7 +86,7 @@ TEST(MapTest, RangeBasedForLoops) {
     map.insert(kStringIntData[i].string_data, kStringIntData[i].int_data);
 
   size_t idx = 0;
-  for (auto &it : map) {
+  for (auto& it : map) {
     EXPECT_EQ(kStringIntDataSorted[idx].string_data, it.GetKey());
     EXPECT_EQ(kStringIntDataSorted[idx].int_data, it.GetValue());
     idx++;
@@ -93,14 +94,13 @@ TEST(MapTest, RangeBasedForLoops) {
   EXPECT_EQ(idx, map.size());
 
   idx = 0;
-  for (const auto &it : map) {
+  for (const auto& it : map) {
     EXPECT_EQ(kStringIntDataSorted[idx].string_data, it.GetKey());
     EXPECT_EQ(kStringIntDataSorted[idx].int_data, it.GetValue());
     idx++;
   }
   EXPECT_EQ(idx, map.size());
 }
-
 
 TEST(MapTest, TestIndexOperatorAsRValue) {
   Map<String, int> map;
@@ -114,7 +114,7 @@ TEST(MapTest, TestIndexOperatorAsRValue) {
 
 TEST(MapTest, TestIndexOperatorMoveOnly) {
   ASSERT_EQ(0u, MoveOnlyType::num_instances());
-  fidl::Map<fidl::String, fidl::Array<int32_t>> map;
+  f1dl::Map<f1dl::String, f1dl::Array<int32_t>> map;
   std::vector<MoveOnlyType*> value_ptrs;
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
@@ -146,13 +146,13 @@ TEST(MapTest, ConstructedFromArray) {
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
     EXPECT_EQ(kStringIntData[i].int_data,
-              map.at(fidl::String(kStringIntData[i].string_data)));
+              map.at(f1dl::String(kStringIntData[i].string_data)));
   }
 }
 
 TEST(MapTest, Insert_Copyable) {
   ASSERT_EQ(0u, CopyableType::num_instances());
-  fidl::Map<fidl::String, CopyableType> map;
+  f1dl::Map<f1dl::String, CopyableType> map;
   std::vector<CopyableType*> value_ptrs;
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
@@ -178,7 +178,7 @@ TEST(MapTest, Insert_Copyable) {
 
 TEST(MapTest, Insert_MoveOnly) {
   ASSERT_EQ(0u, MoveOnlyType::num_instances());
-  fidl::Map<fidl::String, MoveOnlyType> map;
+  f1dl::Map<f1dl::String, MoveOnlyType> map;
   std::vector<MoveOnlyType*> value_ptrs;
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
@@ -204,7 +204,7 @@ TEST(MapTest, Insert_MoveOnly) {
 
 TEST(MapTest, IndexOperator_MoveOnly) {
   ASSERT_EQ(0u, MoveOnlyType::num_instances());
-  fidl::Map<fidl::String, MoveOnlyType> map;
+  f1dl::Map<f1dl::String, MoveOnlyType> map;
   std::vector<MoveOnlyType*> value_ptrs;
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
@@ -302,8 +302,9 @@ TEST(MapTest, ArrayOfMap) {
     FixedBufferForTesting buf(size);
     Array_Data<Map_Data<String_Data*, Array_Data<bool>*>*>* data = nullptr;
     ArrayValidateParams validate_params(
-        0, false, new ArrayValidateParams(
-                      0, false, new ArrayValidateParams(0, false, nullptr)));
+        0, false,
+        new ArrayValidateParams(0, false,
+                                new ArrayValidateParams(0, false, nullptr)));
     EXPECT_EQ(ValidationError::NONE,
               SerializeArray_(&array, &buf, &data, &validate_params));
 
@@ -325,7 +326,10 @@ TEST(MapTest, Serialization_MapWithScopedEnumKeys) {
     E3,
   };
   static const TestEnum TEST_KEYS[] = {
-      TestEnum::E0, TestEnum::E2, TestEnum::E1, TestEnum::E3,
+      TestEnum::E0,
+      TestEnum::E2,
+      TestEnum::E1,
+      TestEnum::E3,
   };
   static const uint32_t TEST_VALS[] = {17, 29, 5, 61};
 
@@ -366,7 +370,10 @@ TEST(MapTest, Serialization_MapWithScopedEnumVals) {
   };
   static const uint32_t TEST_KEYS[] = {17, 29, 5, 61};
   static const TestEnum TEST_VALS[] = {
-      TestEnum::E0, TestEnum::E2, TestEnum::E1, TestEnum::E3,
+      TestEnum::E0,
+      TestEnum::E2,
+      TestEnum::E1,
+      TestEnum::E3,
   };
 
   Map<uint32_t, TestEnum> test_map;
@@ -421,7 +428,7 @@ TEST(MapTest, Serialization_MapOfNullableStructs) {
                  (8u + 8U + 4 * 4U)),  // 1 Rect value
             size);
 
-#ifdef NDEBUG // In debug builds serialization failures abort
+#ifdef NDEBUG  // In debug builds serialization failures abort
   // 1. Should not be able to serialize null elements.
   {
     FixedBufferForTesting buf(size);
@@ -455,4 +462,4 @@ TEST(MapTest, Serialization_MapOfNullableStructs) {
 
 }  // namespace
 }  // namespace test
-}  // namespace fidl
+}  // namespace f1dl

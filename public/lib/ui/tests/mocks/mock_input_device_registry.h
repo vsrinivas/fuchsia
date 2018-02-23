@@ -26,7 +26,7 @@ class MockInputDeviceRegistry : public mozart::InputDeviceRegistry {
 
   // |InputDeviceRegistry|:
   void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,
-                      fidl::InterfaceRequest<mozart::InputDevice>
+                      f1dl::InterfaceRequest<mozart::InputDevice>
                           input_device_request) override;
 
  private:

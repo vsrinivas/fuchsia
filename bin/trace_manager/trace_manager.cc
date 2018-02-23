@@ -19,7 +19,7 @@ const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(60);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
 static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 
-std::string SanitizeLabel(const fidl::String& label) {
+std::string SanitizeLabel(const f1dl::String& label) {
   std::string result =
       label.get().substr(0, tracing::TraceRegistry::kLabelMaxLength);
   if (result.empty())
@@ -96,12 +96,12 @@ void TraceManager::DumpProvider(uint32_t provider_id, zx::socket output) {
 void TraceManager::GetKnownCategories(
     const GetKnownCategoriesCallback& callback) {
   callback(
-      fidl::Map<fidl::String, fidl::String>::From(config_.known_categories()));
+      f1dl::Map<f1dl::String, f1dl::String>::From(config_.known_categories()));
 }
 
 void TraceManager::GetRegisteredProviders(
     const GetRegisteredProvidersCallback& callback) {
-  fidl::Array<TraceProviderInfoPtr> results;
+  f1dl::Array<TraceProviderInfoPtr> results;
   results.resize(0u);
   for (const auto& provider : providers_) {
     auto info = TraceProviderInfo::New();
@@ -113,8 +113,8 @@ void TraceManager::GetRegisteredProviders(
 }
 
 void TraceManager::RegisterTraceProvider(
-    fidl::InterfaceHandle<TraceProvider> handle,
-    const fidl::String& label) {
+    f1dl::InterfaceHandle<TraceProvider> handle,
+    const f1dl::String& label) {
   FXL_VLOG(1) << "Registering provider with label: " << label;
 
   auto it = providers_.emplace(

@@ -170,7 +170,7 @@ class Flog {
                                  uint64_t subject_address);
 
   // Logs a channel message.
-  static void LogChannelMessage(uint32_t channel_id, fidl::Message* message);
+  static void LogChannelMessage(uint32_t channel_id, f1dl::Message* message);
 
   // Logs the deletion of a channel.
   static void LogChannelDeletion(uint32_t channel_id);
@@ -185,7 +185,7 @@ class Flog {
 };
 
 // Channel backing a FlogProxy.
-class FlogChannel : public fidl::MessageReceiverWithResponder {
+class FlogChannel : public f1dl::MessageReceiverWithResponder {
  public:
   FlogChannel(const char* channel_type_name, uint64_t subject_address);
 
@@ -195,9 +195,9 @@ class FlogChannel : public fidl::MessageReceiverWithResponder {
   uint32_t id() const { return id_; }
 
   // MessageReceiverWithResponder implementation.
-  bool Accept(fidl::Message* message) override;
+  bool Accept(f1dl::Message* message) override;
 
-  bool AcceptWithResponder(fidl::Message* message,
+  bool AcceptWithResponder(f1dl::Message* message,
                            MessageReceiver* responder) override;
 
  private:

@@ -2772,7 +2772,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
         application_context_.get(), [demo](mozart::ViewContext view_context) {
             auto resize_callback = [demo](
                                        float width, float height,
-                                       fidl::InterfaceHandle<scenic::ImagePipe> interface_handle) {
+                                       f1dl::InterfaceHandle<scenic::ImagePipe> interface_handle) {
                 demo->width = width;
                 demo->height = height;
                 demo->fuchsia_state->image_pipe_handle = interface_handle.TakeChannel().release();

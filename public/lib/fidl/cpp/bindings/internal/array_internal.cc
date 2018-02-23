@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 std::string MakeMessageWithArrayIndex(const char* message,
@@ -69,4 +69,4 @@ void ArraySerializationHelper<WrappedHandle, true, false>::
 }
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl

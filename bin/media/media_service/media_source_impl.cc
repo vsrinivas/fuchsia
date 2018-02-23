@@ -16,18 +16,18 @@ namespace media {
 
 // static
 std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
-    fidl::InterfaceRequest<MediaSource> request,
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+    f1dl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
       std::move(reader), allowed_media_types, std::move(request), owner));
 }
 
 MediaSourceImpl::MediaSourceImpl(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
-    fidl::InterfaceRequest<MediaSource> request,
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+    f1dl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
       allowed_stream_types_(
@@ -49,7 +49,7 @@ MediaSourceImpl::MediaSourceImpl(
   FLOG(log_channel_, CreatedDemux(FLOG_PTR_KOID(demux_)));
   HandleDemuxStatusUpdates();
 
-  demux_->Describe([this](fidl::Array<MediaTypePtr> stream_media_types) {
+  demux_->Describe([this](f1dl::Array<MediaTypePtr> stream_media_types) {
     std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
     size_t stream_index = 0;
@@ -61,7 +61,7 @@ MediaSourceImpl::MediaSourceImpl(
 #endif
           media_service_,
           [this,
-           stream_index](fidl::InterfaceRequest<MediaPacketProducer> request) {
+           stream_index](f1dl::InterfaceRequest<MediaPacketProducer> request) {
             demux_->GetPacketProducer(stream_index, std::move(request));
           },
           stream_media_type.To<std::unique_ptr<StreamType>>(),
@@ -90,8 +90,8 @@ MediaSourceImpl::~MediaSourceImpl() {}
 
 void MediaSourceImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
-    fidl::Array<MediaTypePtr> result =
-        fidl::Array<MediaTypePtr>::New(streams_.size());
+    f1dl::Array<MediaTypePtr> result =
+        f1dl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       result[i] = streams_[i]->media_type();
     }
@@ -102,7 +102,7 @@ void MediaSourceImpl::Describe(const DescribeCallback& callback) {
 
 void MediaSourceImpl::GetPacketProducer(
     uint32_t stream_index,
-    fidl::InterfaceRequest<MediaPacketProducer> request) {
+    f1dl::InterfaceRequest<MediaPacketProducer> request) {
   RCHECK(init_complete_.occurred());
 
   if (stream_index >= streams_.size()) {
@@ -163,7 +163,7 @@ MediaSourceImpl::Stream::Stream(
     producer_getter_ = producer_getter;
     FLOG(log_channel, NewStream(static_cast<uint32_t>(stream_index),
                                 MediaType::From(stream_type),
-                                fidl::Array<uint64_t>::New(0)));
+                                f1dl::Array<uint64_t>::New(0)));
     stream_type_ = std::move(stream_type);
     callback();
     return;
@@ -189,7 +189,7 @@ MediaSourceImpl::Stream::Stream(
           FLOG(log_channel,
                NewStream(static_cast<uint32_t>(stream_index),
                          MediaType::From(stream_type),
-                         fidl::Array<uint64_t>::From(converter_koids)));
+                         f1dl::Array<uint64_t>::From(converter_koids)));
         }
         stream_type_ = std::move(stream_type);
         callback();
@@ -203,7 +203,7 @@ MediaTypePtr MediaSourceImpl::Stream::media_type() const {
 }
 
 void MediaSourceImpl::Stream::GetPacketProducer(
-    fidl::InterfaceRequest<MediaPacketProducer> request) {
+    f1dl::InterfaceRequest<MediaPacketProducer> request) {
   FXL_DCHECK(producer_getter_);
   producer_getter_(std::move(request));
 }

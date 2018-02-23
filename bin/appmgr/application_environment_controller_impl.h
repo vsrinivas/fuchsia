@@ -18,7 +18,7 @@ class ApplicationEnvironmentControllerImpl
     : public ApplicationEnvironmentController {
  public:
   ApplicationEnvironmentControllerImpl(
-      fidl::InterfaceRequest<ApplicationEnvironmentController> request,
+      f1dl::InterfaceRequest<ApplicationEnvironmentController> request,
       std::unique_ptr<JobHolder> job_holder);
   ~ApplicationEnvironmentControllerImpl() override;
 
@@ -31,7 +31,7 @@ class ApplicationEnvironmentControllerImpl
   void Detach() override;
 
  private:
-  fidl::Binding<ApplicationEnvironmentController> binding_;
+  f1dl::Binding<ApplicationEnvironmentController> binding_;
   std::unique_ptr<JobHolder> job_holder_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);

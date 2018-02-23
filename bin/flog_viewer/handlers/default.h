@@ -23,7 +23,7 @@ class Default : public ChannelHandler {
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 };
 
 }  // namespace handlers

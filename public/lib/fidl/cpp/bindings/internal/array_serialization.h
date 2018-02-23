@@ -26,7 +26,7 @@
 #include "lib/fidl/cpp/bindings/internal/string_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // The ArraySerializer template contains static methods for serializing |Array|s
@@ -537,6 +537,6 @@ inline void Deserialize_(internal::Array_Data<F>* input, Array<E>* output) {
   }
 }
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_SERIALIZATION_H_

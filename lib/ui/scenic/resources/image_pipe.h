@@ -34,7 +34,7 @@ class ImagePipe : public ImageBase {
   ImagePipe(Session* session, scenic::ResourceId id);
   ImagePipe(Session* session,
             scenic::ResourceId id,
-            ::fidl::InterfaceRequest<scenic::ImagePipe> request);
+            ::f1dl::InterfaceRequest<scenic::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id,
@@ -46,8 +46,8 @@ class ImagePipe : public ImageBase {
 
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    ::fidl::Array<zx::event> acquire_fences,
-                    ::fidl::Array<zx::event> release_fences,
+                    ::f1dl::Array<zx::event> acquire_fences,
+                    ::f1dl::Array<zx::event> release_fences,
                     const scenic::ImagePipe::PresentImageCallback& callback);
 
   void Accept(class ResourceVisitor* visitor) override;
@@ -90,7 +90,7 @@ class ImagePipe : public ImageBase {
     scenic::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::fidl::Array<zx::event> release_fences;
+    ::f1dl::Array<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
@@ -101,7 +101,7 @@ class ImagePipe : public ImageBase {
 
   scenic::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  ::fidl::Array<zx::event> current_release_fences_;
+  ::f1dl::Array<zx::event> current_release_fences_;
 
   ResourceMap images_;
   bool is_valid_ = true;

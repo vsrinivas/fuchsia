@@ -32,13 +32,13 @@ class MediaRenderer : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(fidl::Message* message) override;
+  void HandleMessage(f1dl::Message* message) override;
 
  private:
   // MediaRendererChannel implementation.
   void BoundAs(uint64_t koid) override;
 
-  void Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
+  void Config(f1dl::Array<media::MediaTypeSetPtr> supported_types,
               uint64_t consumer_address,
               uint64_t timeline_control_point_address) override;
 
@@ -80,7 +80,7 @@ class MediaRendererAccumulator : public Accumulator {
   void Print(std::ostream& os) override;
 
  private:
-  fidl::Array<media::MediaTypeSetPtr> supported_types_;
+  f1dl::Array<media::MediaTypeSetPtr> supported_types_;
   std::shared_ptr<Channel> consumer_channel_;
   std::shared_ptr<Channel> timeline_control_point_channel_;
   media::MediaTypePtr type_;

@@ -55,12 +55,12 @@ class NetConnectorImpl : public NetConnector {
 
   // NetConnector implementation.
   void RegisterServiceProvider(
-      const fidl::String& name,
-      fidl::InterfaceHandle<app::ServiceProvider> service_provider) override;
+      const f1dl::String& name,
+      f1dl::InterfaceHandle<app::ServiceProvider> service_provider) override;
 
   void GetDeviceServiceProvider(
-      const fidl::String& device_name,
-      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+      const f1dl::String& device_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
 
   void GetKnownDeviceNames(
       uint64_t version_last_seen,
@@ -81,7 +81,7 @@ class NetConnectorImpl : public NetConnector {
   NetConnectorParams* params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   std::string host_name_;
-  fidl::BindingSet<NetConnector> bindings_;
+  f1dl::BindingSet<NetConnector> bindings_;
   Listener listener_;
   RespondingServiceHost responding_service_host_;
   std::unordered_map<DeviceServiceProvider*,

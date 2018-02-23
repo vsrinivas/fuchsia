@@ -18,7 +18,7 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
                        public FlogLogger {
  public:
   static std::shared_ptr<FlogReaderImpl> Create(
-      fidl::InterfaceRequest<FlogReader> request,
+      f1dl::InterfaceRequest<FlogReader> request,
       uint32_t log_id,
       const std::string& label,
       std::shared_ptr<FlogDirectory> directory,
@@ -34,7 +34,7 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
  private:
   static const size_t kReadBufferSize = 16 * 1024;
 
-  FlogReaderImpl(fidl::InterfaceRequest<FlogReader> request,
+  FlogReaderImpl(f1dl::InterfaceRequest<FlogReader> request,
                  uint32_t log_id,
                  const std::string& label,
                  std::shared_ptr<FlogDirectory> directory,
@@ -60,12 +60,12 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
   // FlogLogger implementation (called by stub_).
   void LogChannelCreation(int64_t time_ns,
                           uint32_t channel_id,
-                          const fidl::String& type_name,
+                          const f1dl::String& type_name,
                           uint64_t subject_address) override;
 
   void LogChannelMessage(int64_t time_ns,
                          uint32_t channel_id,
-                         fidl::Array<uint8_t> data) override;
+                         f1dl::Array<uint8_t> data) override;
 
   void LogChannelDeletion(int64_t time_ns, uint32_t channel_id) override;
 

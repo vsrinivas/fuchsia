@@ -22,7 +22,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_ =
       application_context->ConnectToEnvironmentService<netstack::Netstack>();
 
-  fidl::InterfaceHandle<netstack::NotificationListener> listener_handle;
+  f1dl::InterfaceHandle<netstack::NotificationListener> listener_handle;
 
   binding_.Bind(listener_handle.NewRequest());
   binding_.set_error_handler([this]() {
@@ -34,7 +34,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_->RegisterListener(std::move(listener_handle));
 
   netstack_->GetInterfaces(
-      [this](fidl::Array<netstack::NetInterfacePtr> interfaces) {
+      [this](f1dl::Array<netstack::NetInterfacePtr> interfaces) {
         OnInterfacesChanged(std::move(interfaces));
       });
 }
@@ -57,7 +57,7 @@ FidlInterfaceMonitor::GetInterfaces() {
 }
 
 void FidlInterfaceMonitor::OnInterfacesChanged(
-    fidl::Array<netstack::NetInterfacePtr> interfaces) {
+    f1dl::Array<netstack::NetInterfacePtr> interfaces) {
   bool link_change = false;
 
   for (const auto& if_info : interfaces) {

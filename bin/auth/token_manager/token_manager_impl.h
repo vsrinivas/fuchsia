@@ -28,7 +28,7 @@ constexpr int kMaxCacheSize = 10;
 class TokenManagerImpl : public TokenManager {
  public:
   TokenManagerImpl(app::ApplicationContext* context,
-                   fidl::Array<AuthProviderConfigPtr> auth_provider_configs);
+                   f1dl::Array<AuthProviderConfigPtr> auth_provider_configs);
 
   ~TokenManagerImpl() override;
 
@@ -36,20 +36,20 @@ class TokenManagerImpl : public TokenManager {
   // |TokenManager|
   void Authorize(
       const auth::AuthProviderType identity_provider,
-      const fidl::InterfaceHandle<auth::AuthenticationUIContext> context,
+      const f1dl::InterfaceHandle<auth::AuthenticationUIContext> context,
       const AuthorizeCallback& callback) override;
 
   void GetAccessToken(const auth::AuthProviderType identity_provider,
-                      const fidl::String& app_client_id,
-                      const fidl::Array<fidl::String> app_scopes,
+                      const f1dl::String& app_client_id,
+                      const f1dl::Array<f1dl::String> app_scopes,
                       const GetAccessTokenCallback& callback) override;
 
   void GetIdToken(const auth::AuthProviderType identity_provider,
-                  const fidl::String& audience,
+                  const f1dl::String& audience,
                   const GetIdTokenCallback& callback) override;
 
   void GetFirebaseToken(const auth::AuthProviderType identity_provider,
-                        const fidl::String& firebase_api_key,
+                        const f1dl::String& firebase_api_key,
                         const GetFirebaseTokenCallback& callback) override;
 
   void DeleteAllTokens(const auth::AuthProviderType identity_provider,
@@ -57,7 +57,7 @@ class TokenManagerImpl : public TokenManager {
 
   const cache::CacheKey GetCacheKey(
       const auth::AuthProviderType identity_provider,
-      const fidl::String& idp_credential_id);
+      const f1dl::String& idp_credential_id);
 
   std::map<AuthProviderType, app::ApplicationControllerPtr>
       auth_provider_controllers_;

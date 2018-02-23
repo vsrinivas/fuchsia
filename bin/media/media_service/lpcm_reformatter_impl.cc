@@ -13,7 +13,7 @@ namespace media {
 std::shared_ptr<LpcmReformatterImpl> LpcmReformatterImpl::Create(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
-    fidl::InterfaceRequest<MediaTypeConverter> request,
+    f1dl::InterfaceRequest<MediaTypeConverter> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<LpcmReformatterImpl>(
       new LpcmReformatterImpl(std::move(input_media_type), output_sample_format,
@@ -23,7 +23,7 @@ std::shared_ptr<LpcmReformatterImpl> LpcmReformatterImpl::Create(
 LpcmReformatterImpl::LpcmReformatterImpl(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
-    fidl::InterfaceRequest<MediaTypeConverter> request,
+    f1dl::InterfaceRequest<MediaTypeConverter> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaTypeConverter>(this,
                                                     std::move(request),
@@ -75,13 +75,13 @@ void LpcmReformatterImpl::GetOutputType(const GetOutputTypeCallback& callback) {
 }
 
 void LpcmReformatterImpl::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+    f1dl::InterfaceRequest<MediaPacketConsumer> request) {
   Retain();
   consumer_->Bind(std::move(request), [this]() { Release(); });
 }
 
 void LpcmReformatterImpl::GetPacketProducer(
-    fidl::InterfaceRequest<MediaPacketProducer> request) {
+    f1dl::InterfaceRequest<MediaPacketProducer> request) {
   producer_->Bind(std::move(request));
 }
 

@@ -20,8 +20,8 @@ void SessionForTest::TearDown() {
 SessionHandlerForTest::SessionHandlerForTest(
     Engine* engine,
     SessionId session_id,
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener)
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener)
     : SessionHandler(engine,
                      session_id,
                      std::move(request),
@@ -29,14 +29,14 @@ SessionHandlerForTest::SessionHandlerForTest(
       enqueue_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
+void SessionHandlerForTest::Enqueue(::f1dl::Array<scenic::OpPtr> ops) {
   SessionHandler::Enqueue(std::move(ops));
   ++enqueue_count_;
 }
 
 void SessionHandlerForTest::Present(uint64_t presentation_time,
-                                    ::fidl::Array<zx::event> acquire_fences,
-                                    ::fidl::Array<zx::event> release_fences,
+                                    ::f1dl::Array<zx::event> acquire_fences,
+                                    ::f1dl::Array<zx::event> release_fences,
                                     const PresentCallback& callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
@@ -60,8 +60,8 @@ EngineForTest::EngineForTest(DisplayManager* display_manager,
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
     SessionId session_id,
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener) {
   return std::make_unique<SessionHandlerForTest>(
       this, session_id, std::move(request), std::move(listener));
 }

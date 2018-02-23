@@ -68,7 +68,7 @@ class ChannelHandler {
   void HandleMessage(std::shared_ptr<Channel> channel,
                      uint32_t entry_index,
                      const FlogEntryPtr& entry,
-                     fidl::Message* message);
+                     f1dl::Message* message);
 
   // Gets the accumulator from the handler, if there is one. The default
   // implementation returns a null pointer.
@@ -77,7 +77,7 @@ class ChannelHandler {
  protected:
   ChannelHandler(const std::string& format);
 
-  virtual void HandleMessage(fidl::Message* message) = 0;
+  virtual void HandleMessage(f1dl::Message* message) = 0;
 
   std::ostream& ReportProblem() {
     FXL_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";

@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 
-namespace fidl {
+namespace f1dl {
 class String;
 
 template <typename T>
@@ -323,6 +323,6 @@ struct ValueTraits<InterfaceRequest<I>> {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_INTERNAL_H_

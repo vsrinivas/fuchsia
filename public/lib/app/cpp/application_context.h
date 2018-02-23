@@ -95,9 +95,9 @@ class ApplicationContext {
   // Connects to a service provided by the application's environment,
   // returning an interface pointer.
   template <typename Interface>
-  fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
+  f1dl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
-    fidl::InterfacePtr<Interface> interface_ptr;
+    f1dl::InterfacePtr<Interface> interface_ptr;
     ConnectToEnvironmentService(interface_name,
                                 interface_ptr.NewRequest().TakeChannel());
     return interface_ptr;
@@ -107,7 +107,7 @@ class ApplicationContext {
   // binding the service to an interface request.
   template <typename Interface>
   void ConnectToEnvironmentService(
-      fidl::InterfaceRequest<Interface> request,
+      f1dl::InterfaceRequest<Interface> request,
       const std::string& interface_name = Interface::Name_) {
     ConnectToEnvironmentService(interface_name, request.TakeChannel());
   }

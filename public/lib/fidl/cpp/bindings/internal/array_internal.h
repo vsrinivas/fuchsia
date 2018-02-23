@@ -28,7 +28,7 @@
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
-namespace fidl {
+namespace f1dl {
 template <typename T>
 class Array;
 class String;
@@ -591,6 +591,6 @@ struct WrapperTraits<String, false> {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_ARRAY_INTERNAL_H_

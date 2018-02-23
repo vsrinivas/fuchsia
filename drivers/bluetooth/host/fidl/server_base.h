@@ -31,10 +31,10 @@ class Server {
 template <typename Interface>
 class ServerBase : public Server, public Interface {
  public:
-  // Constructs a FIDL server by binding a fidl::InterfaceRequest.
+  // Constructs a FIDL server by binding a f1dl::InterfaceRequest.
   ServerBase(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
              Interface* impl,
-             fidl::InterfaceRequest<Interface> request)
+             f1dl::InterfaceRequest<Interface> request)
       : ServerBase(adapter, impl, request.PassChannel()) {}
 
   // Constructs a FIDL server by binding a zx::channel.
@@ -57,7 +57,7 @@ class ServerBase : public Server, public Interface {
 
  private:
   // Holds the channel from the FIDL client.
-  ::fidl::Binding<Interface> binding_;
+  ::f1dl::Binding<Interface> binding_;
 
   // The underlying library Adapter.
   fxl::WeakPtr<::btlib::gap::Adapter> adapter_;

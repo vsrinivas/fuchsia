@@ -60,7 +60,7 @@ void App::OnAdapterRemoved(const Adapter& adapter) {
 }
 
 void App::OnAdapterManagerRequest(
-    ::fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request) {
+    ::f1dl::InterfaceRequest<::bluetooth::control::AdapterManager> request) {
   auto impl = std::make_unique<AdapterManagerServer>(
       &adapter_manager_, std::move(request),
       fbl::BindMember(this, &App::OnAdapterManagerServerDisconnected));
@@ -68,7 +68,7 @@ void App::OnAdapterManagerRequest(
 }
 
 void App::OnLowEnergyCentralRequest(
-    ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request) {
+    ::f1dl::InterfaceRequest<::bluetooth::low_energy::Central> request) {
   adapter_manager_.GetActiveAdapter(
       fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
         // Transfer the handle to the active adapter if there is one.
@@ -79,7 +79,7 @@ void App::OnLowEnergyCentralRequest(
 }
 
 void App::OnLowEnergyPeripheralRequest(
-    ::fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request) {
+    ::f1dl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request) {
   adapter_manager_.GetActiveAdapter(
       fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
         // Transfer the handle to the active adapter if there is one.
@@ -90,7 +90,7 @@ void App::OnLowEnergyPeripheralRequest(
 }
 
 void App::OnGattServerRequest(
-    ::fidl::InterfaceRequest<::bluetooth::gatt::Server> request) {
+    ::f1dl::InterfaceRequest<::bluetooth::gatt::Server> request) {
   adapter_manager_.GetActiveAdapter(
       fxl::MakeCopyable([request = std::move(request)](auto* adapter) mutable {
         // Transfer the handle to the active adapter if there is one.

@@ -15,7 +15,7 @@ class SpinningSquareView : public mozart::BaseView {
  public:
   SpinningSquareView(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
   ~SpinningSquareView() override;
 
  private:

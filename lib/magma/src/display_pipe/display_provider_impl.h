@@ -20,12 +20,12 @@ class DisplayProviderImpl : public DisplayProvider {
   ~DisplayProviderImpl() override;
 
   void GetInfo(const GetInfoCallback& callback) override;
-  void BindPipe(::fidl::InterfaceRequest<scenic::ImagePipe> pipe) override;
+  void BindPipe(::f1dl::InterfaceRequest<scenic::ImagePipe> pipe) override;
 
-  void AddBinding(fidl::InterfaceRequest<DisplayProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<DisplayProvider> request);
 
  private:
-  fidl::BindingSet<DisplayProvider> bindings_;
+  f1dl::BindingSet<DisplayProvider> bindings_;
   std::shared_ptr<MagmaConnection> conn_;
   ImagePipeImpl image_pipe_;
 

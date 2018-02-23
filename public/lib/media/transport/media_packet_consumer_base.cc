@@ -60,7 +60,7 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 }
 
 void MediaPacketConsumerBase::Bind(
-    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+    f1dl::InterfaceRequest<MediaPacketConsumer> request) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
   binding_.set_error_handler([this]() { Reset(); });
@@ -69,7 +69,7 @@ void MediaPacketConsumerBase::Bind(
 }
 
 void MediaPacketConsumerBase::Bind(
-    fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
+    f1dl::InterfaceHandle<MediaPacketConsumer>* handle) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(handle->NewRequest());
   binding_.set_error_handler([this]() { Reset(); });

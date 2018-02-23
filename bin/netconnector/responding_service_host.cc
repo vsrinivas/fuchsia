@@ -67,7 +67,7 @@ void RespondingServiceHost::RegisterSingleton(
 
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
-    fidl::InterfaceHandle<app::ServiceProvider> handle) {
+    f1dl::InterfaceHandle<app::ServiceProvider> handle) {
   app::ServiceProviderPtr service_provider = handle.Bind();
 
   service_provider.set_error_handler([this, service_name] {

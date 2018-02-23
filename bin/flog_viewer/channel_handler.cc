@@ -69,7 +69,7 @@ ChannelHandler::~ChannelHandler() {}
 void ChannelHandler::HandleMessage(std::shared_ptr<Channel> channel,
                                    uint32_t entry_index,
                                    const FlogEntryPtr& entry,
-                                   fidl::Message* message) {
+                                   f1dl::Message* message) {
   channel_ = channel;
   entry_index_ = entry_index;
   entry_ = &entry;

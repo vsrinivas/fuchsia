@@ -33,7 +33,7 @@ MediaSource::MediaSource(const std::string& format)
 
 MediaSource::~MediaSource() {}
 
-void MediaSource::HandleMessage(fidl::Message* message) {
+void MediaSource::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -62,7 +62,7 @@ void MediaSource::CreatedDemux(uint64_t related_koid) {
 
 void MediaSource::NewStream(uint32_t index,
                             media::MediaTypePtr output_type,
-                            fidl::Array<uint64_t> converter_koids) {
+                            f1dl::Array<uint64_t> converter_koids) {
   FXL_DCHECK(output_type);
   FXL_DCHECK(converter_koids);
 

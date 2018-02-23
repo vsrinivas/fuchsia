@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 enum class ValidationError {
@@ -105,7 +105,7 @@ class LogMessageVoidify {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 // In a debug build, this will use |ValidationErrorStringStream::stream()| and
 // write to the supplied string if it is not null. In a non-debug + optimized
@@ -119,8 +119,8 @@ class LogMessageVoidify {
 // this macro's use semantically valid.
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
   true ? (void)0                                   \
-       : ::fidl::internal::LogMessageVoidify() &              \
-             ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
+       : ::f1dl::internal::LogMessageVoidify() &              \
+             ::f1dl::internal::ValidationErrorStringStream(err_msg).stream()
 
 #else
 
@@ -130,7 +130,7 @@ class LogMessageVoidify {
     ValidationErrorToString(error), description)
 
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
-  ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
+  ::f1dl::internal::ValidationErrorStringStream(err_msg).stream()
 
 #endif  // NDEBUG
 

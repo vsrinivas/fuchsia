@@ -12,8 +12,8 @@ namespace scene_manager {
 SessionHandler::SessionHandler(
     Engine* engine,
     SessionId session_id,
-    ::fidl::InterfaceRequest<scenic::Session> request,
-    ::fidl::InterfaceHandle<scenic::SessionListener> listener)
+    ::f1dl::InterfaceRequest<scenic::Session> request,
+    ::f1dl::InterfaceHandle<scenic::SessionListener> listener)
     : engine_(engine),
       session_(::fxl::MakeRefCounted<scene_manager::Session>(
           session_id,
@@ -29,24 +29,24 @@ SessionHandler::SessionHandler(
 
 SessionHandler::~SessionHandler() {}
 
-void SessionHandler::SendEvents(::fidl::Array<scenic::EventPtr> events) {
+void SessionHandler::SendEvents(::f1dl::Array<scenic::EventPtr> events) {
   if (listener_) {
     listener_->OnEvent(std::move(events));
   }
 }
 
-void SessionHandler::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
+void SessionHandler::Enqueue(::f1dl::Array<scenic::OpPtr> ops) {
   // TODO: Add them all at once instead of iterating.  The problem
-  // is that ::fidl::Array doesn't support this.  Or, at least reserve
-  // enough space.  But ::fidl::Array doesn't support this, either.
+  // is that ::f1dl::Array doesn't support this.  Or, at least reserve
+  // enough space.  But ::f1dl::Array doesn't support this, either.
   for (auto& op : ops) {
     buffered_ops_.push_back(std::move(op));
   }
 }
 
 void SessionHandler::Present(uint64_t presentation_time,
-                             ::fidl::Array<zx::event> acquire_fences,
-                             ::fidl::Array<zx::event> release_fences,
+                             ::f1dl::Array<zx::event> acquire_fences,
+                             ::f1dl::Array<zx::event> release_fences,
                              const PresentCallback& callback) {
   if (!session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
                                 std::move(acquire_fences),

@@ -39,14 +39,14 @@ FakeRenderer::~FakeRenderer() {
 }
 
 void FakeRenderer::Bind(
-    fidl::InterfaceRequest<MediaRenderer> renderer_request) {
+    f1dl::InterfaceRequest<MediaRenderer> renderer_request) {
   renderer_binding_.Bind(std::move(renderer_request));
 }
 
 void FakeRenderer::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& callback) {
-  fidl::Array<MediaTypeSetPtr> supported_types =
-      fidl::Array<MediaTypeSetPtr>::New(2);
+  f1dl::Array<MediaTypeSetPtr> supported_types =
+      f1dl::Array<MediaTypeSetPtr>::New(2);
 
   AudioMediaTypeSetDetailsPtr audio_details = AudioMediaTypeSetDetails::New();
   audio_details->sample_format = AudioSampleFormat::ANY;
@@ -58,7 +58,7 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type->medium = MediaTypeMedium::AUDIO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_audio(std::move(audio_details));
-  supported_type->encodings = fidl::Array<fidl::String>::New(1);
+  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
   supported_type->encodings[0] = MediaType::kAudioEncodingLpcm;
   supported_types[0] = std::move(supported_type);
 
@@ -71,7 +71,7 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = fidl::Array<fidl::String>::New(1);
+  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
   supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
   supported_types[1] = std::move(supported_type);
 
@@ -97,12 +97,12 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
 }
 
 void FakeRenderer::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
 void FakeRenderer::GetTimelineControlPoint(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   control_point_binding_.Bind(std::move(control_point_request));
 }
 
@@ -190,7 +190,7 @@ void FakeRenderer::GetStatus(uint64_t version_last_seen,
 }
 
 void FakeRenderer::GetTimelineConsumer(
-    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
+    f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
   timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 

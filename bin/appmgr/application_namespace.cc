@@ -22,11 +22,11 @@ ApplicationNamespace::ApplicationNamespace(
   services_.set_backend(std::move(services_backend));
 
   services_.AddService<ApplicationEnvironment>(
-      [this](fidl::InterfaceRequest<ApplicationEnvironment> request) {
+      [this](f1dl::InterfaceRequest<ApplicationEnvironment> request) {
         environment_bindings_.AddBinding(this, std::move(request));
       });
   services_.AddService<ApplicationLauncher>(
-      [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
+      [this](f1dl::InterfaceRequest<ApplicationLauncher> request) {
         launcher_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -46,32 +46,32 @@ ApplicationNamespace::ApplicationNamespace(
 ApplicationNamespace::~ApplicationNamespace() {}
 
 void ApplicationNamespace::AddBinding(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+    f1dl::InterfaceRequest<ApplicationEnvironment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void ApplicationNamespace::CreateNestedEnvironment(
-    fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-    fidl::InterfaceRequest<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
-    const fidl::String& label) {
+    f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+    f1dl::InterfaceRequest<ApplicationEnvironment> environment,
+    f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
+    const f1dl::String& label) {
   job_holder_->CreateNestedJob(std::move(host), std::move(environment),
                                std::move(controller), label);
 }
 
 void ApplicationNamespace::GetApplicationLauncher(
-    fidl::InterfaceRequest<ApplicationLauncher> launcher) {
+    f1dl::InterfaceRequest<ApplicationLauncher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
 void ApplicationNamespace::GetServices(
-    fidl::InterfaceRequest<ServiceProvider> services) {
+    f1dl::InterfaceRequest<ServiceProvider> services) {
   services_.AddBinding(std::move(services));
 }
 
 void ApplicationNamespace::CreateApplication(
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    f1dl::InterfaceRequest<ApplicationController> controller) {
   job_holder_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 

@@ -18,7 +18,7 @@ class App {
     if (!icu_data_.LoadData())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<ICUDataProvider>(
-        [this](fidl::InterfaceRequest<ICUDataProvider> request) {
+        [this](f1dl::InterfaceRequest<ICUDataProvider> request) {
           icu_data_.AddBinding(std::move(request));
         });
   }

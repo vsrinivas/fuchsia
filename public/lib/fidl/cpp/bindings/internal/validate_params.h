@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 class ArrayValidateParams {
@@ -42,6 +42,6 @@ class ArrayValidateParams {
 };
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERNAL_VALIDATE_PARAMS_H_

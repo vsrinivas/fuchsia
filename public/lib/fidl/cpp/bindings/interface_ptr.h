@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 
-namespace fidl {
+namespace f1dl {
 
 template <typename Interface>
 class InterfaceRequest;
@@ -168,6 +168,6 @@ class InterfacePtr {
   FIDL_MOVE_ONLY_TYPE(InterfacePtr);
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_INTERFACE_PTR_H_

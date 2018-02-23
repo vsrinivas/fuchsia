@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/internal/array_internal.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 
-namespace fidl {
+namespace f1dl {
 
 // A UTF-8 encoded character string that can be null. Provides functions that
 // are similar to std::string, along with access to the underlying std::string
@@ -34,7 +34,7 @@ class String {
   }
   String(const char* chars, size_t num_chars)
       : value_(chars, num_chars), is_null_(false) {}
-  String(const fidl::String& str)
+  String(const f1dl::String& str)
       : value_(str.value_), is_null_(str.is_null_) {}
 
   template <size_t N>
@@ -50,7 +50,7 @@ class String {
     return TypeConverter<U, String>::Convert(*this);
   }
 
-  String& operator=(const fidl::String& str) {
+  String& operator=(const f1dl::String& str) {
     value_ = str.value_;
     is_null_ = str.is_null_;
     return *this;
@@ -186,6 +186,6 @@ struct TypeConverter<String, const char*> {
   static String Convert(const char* input) { return String(input); }
 };
 
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_STRING_H_

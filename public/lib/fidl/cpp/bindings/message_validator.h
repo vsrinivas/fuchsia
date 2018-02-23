@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
-namespace fidl {
+namespace f1dl {
 namespace internal {
 
 // This class is the base class for message validators. Subclasses should
@@ -43,6 +43,6 @@ ValidationError RunValidatorsOnMessage(const MessageValidatorList& validators,
                                        std::string* err);
 
 }  // namespace internal
-}  // namespace fidl
+}  // namespace f1dl
 
 #endif  // LIB_FIDL_CPP_BINDINGS_MESSAGE_VALIDATOR_H_

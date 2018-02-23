@@ -22,7 +22,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   ~FidlPacketConsumer() override;
 
   // Binds.
-  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+  void Bind(f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
             const std::function<void()>& connection_error_handler);
 
   // Sets a callback signalling that a flush has been requested from the

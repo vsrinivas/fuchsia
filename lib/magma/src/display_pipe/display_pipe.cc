@@ -28,7 +28,7 @@ class App {
  public:
   App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<DisplayProvider>(
-        [this](fidl::InterfaceRequest<DisplayProvider> request) {
+        [this](f1dl::InterfaceRequest<DisplayProvider> request) {
           display_provider_.AddBinding(std::move(request));
         });
   }

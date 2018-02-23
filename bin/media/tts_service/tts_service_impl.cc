@@ -18,7 +18,7 @@ TtsServiceImpl::TtsServiceImpl(
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<TtsService>(
-      [this](fidl::InterfaceRequest<TtsService> request) {
+      [this](f1dl::InterfaceRequest<TtsService> request) {
         clients_.insert(new Client(this, std::move(request)));
       });
 
@@ -43,7 +43,7 @@ zx_status_t TtsServiceImpl::Init() {
 }
 
 TtsServiceImpl::Client::Client(TtsServiceImpl* owner,
-                               fidl::InterfaceRequest<TtsService> request)
+                               f1dl::InterfaceRequest<TtsService> request)
     : owner_(owner), binding_(this, std::move(request)) {
   binding_.set_error_handler([this] { Shutdown(); });
 }
@@ -63,7 +63,7 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(const fidl::String& words,
+void TtsServiceImpl::Client::Say(const f1dl::String& words,
                                  uint64_t token,
                                  const SayCallback& cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });

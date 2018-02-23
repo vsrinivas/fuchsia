@@ -34,7 +34,7 @@ class ViewTreeState : public ViewContainerState {
 
   ViewTreeState(ViewRegistry* registry,
                 mozart::ViewTreeTokenPtr view_tree_token,
-                fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
+                f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
                 mozart::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
@@ -78,7 +78,7 @@ class ViewTreeState : public ViewContainerState {
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewTreeImpl> impl_;
-  fidl::Binding<mozart::ViewTree> view_tree_binding_;
+  f1dl::Binding<mozart::ViewTree> view_tree_binding_;
 
   uint32_t invalidation_flags_ = 0u;
 

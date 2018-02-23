@@ -27,7 +27,7 @@ class TokenManagerApp {
       : app_context_(std::move(context)),
         factory_impl_(app_context_.get()) {
     app_context_->outgoing_services()->AddService<auth::TokenManagerFactory>(
-        [this](fidl::InterfaceRequest<auth::TokenManagerFactory> request) {
+        [this](f1dl::InterfaceRequest<auth::TokenManagerFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
   }
@@ -36,7 +36,7 @@ class TokenManagerApp {
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   auth::TokenManagerFactoryImpl factory_impl_;
-  fidl::BindingSet<auth::TokenManagerFactory> factory_bindings_;
+  f1dl::BindingSet<auth::TokenManagerFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenManagerApp);
 };

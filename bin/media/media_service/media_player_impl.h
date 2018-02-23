@@ -27,10 +27,10 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
-      fidl::InterfaceHandle<SeekingReader> reader,
-      fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-      fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
-      fidl::InterfaceRequest<MediaPlayer> request,
+      f1dl::InterfaceHandle<SeekingReader> reader,
+      f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+      f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+      f1dl::InterfaceRequest<MediaPlayer> request,
       MediaServiceImpl* owner);
 
   ~MediaPlayerImpl() override;
@@ -45,11 +45,11 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
-  void SetHttpUrl(const fidl::String& http_url) override;
+  void SetHttpUrl(const f1dl::String& http_url) override;
 
   void SetFileChannel(zx::channel file_channel) override;
 
-  void SetReader(fidl::InterfaceHandle<SeekingReader> reader_handle) override;
+  void SetReader(f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
@@ -68,15 +68,15 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // Media for which no renderer was supplied are not represented in
   // |streams_by_medium_|.
   struct Stream {
-    fidl::InterfaceHandle<MediaRenderer> renderer_handle_;
+    f1dl::InterfaceHandle<MediaRenderer> renderer_handle_;
     MediaSinkPtr sink_;
     bool connected_ = false;
   };
 
-  MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader_handle,
-                  fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-                  fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
-                  fidl::InterfaceRequest<MediaPlayer> request,
+  MediaPlayerImpl(f1dl::InterfaceHandle<SeekingReader> reader_handle,
+                  f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+                  f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+                  f1dl::InterfaceRequest<MediaPlayer> request,
                   MediaServiceImpl* owner);
 
   // If |reader_handle_| is set, creates the source and call |ConnectSinks|,
@@ -117,9 +117,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
   MediaServicePtr media_service_;
-  fidl::InterfaceHandle<SeekingReader> reader_handle_;
+  f1dl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
-  fidl::Array<MediaTypePtr> stream_types_;
+  f1dl::Array<MediaTypePtr> stream_types_;
   std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;

@@ -27,7 +27,7 @@ MediaRenderer::MediaRenderer(const std::string& format)
 
 MediaRenderer::~MediaRenderer() {}
 
-void MediaRenderer::HandleMessage(fidl::Message* message) {
+void MediaRenderer::HandleMessage(f1dl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -45,7 +45,7 @@ void MediaRenderer::BoundAs(uint64_t koid) {
   BindAs(koid);
 }
 
-void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
+void MediaRenderer::Config(f1dl::Array<media::MediaTypeSetPtr> supported_types,
                            uint64_t consumer_address,
                            uint64_t timeline_control_point_address) {
   terse_out() << EntryHeader(entry(), entry_index())

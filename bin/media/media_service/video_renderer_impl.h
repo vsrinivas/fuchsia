@@ -23,8 +23,8 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
                           public VideoRenderer {
  public:
   static std::shared_ptr<VideoRendererImpl> Create(
-      fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
+      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaServiceImpl* owner);
 
   ~VideoRendererImpl() override;
@@ -34,13 +34,13 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
                  const GetStatusCallback& callback) override;
 
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
  private:
   class View : public mozart::BaseView {
    public:
     View(mozart::ViewManagerPtr view_manager,
-         fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+         f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
          std::shared_ptr<VideoFrameSource> video_frame_source);
 
     ~View() override;
@@ -59,8 +59,8 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
   };
 
   VideoRendererImpl(
-      fidl::InterfaceRequest<VideoRenderer> video_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
+      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaServiceImpl* owner);
 
   std::shared_ptr<VideoFrameSource> video_frame_source_;

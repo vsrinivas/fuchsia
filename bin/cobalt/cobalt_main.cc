@@ -124,7 +124,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
   void AddStringObservation(
       uint32_t metric_id,
       uint32_t encoding_id,
-      const fidl::String& observation,
+      const f1dl::String& observation,
       const AddStringObservationCallback& callback) override;
 
   void AddIntObservation(uint32_t metric_id,
@@ -151,13 +151,13 @@ class CobaltEncoderImpl : public CobaltEncoder {
 
   void AddMultipartObservation(
       uint32_t metric_id,
-      fidl::Array<ObservationValuePtr> observation,
+      f1dl::Array<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override;
 
   void AddIntBucketDistribution(
       uint32_t metric_id,
       uint32_t encoding_id,
-      fidl::Map<uint32_t, uint64_t> distribution,
+      f1dl::Map<uint32_t, uint64_t> distribution,
       const AddIntBucketDistributionCallback& callback) override;
 
   void SendObservations(const SendObservationsCallback& callback) override;
@@ -198,7 +198,7 @@ void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
 void CobaltEncoderImpl::AddStringObservation(
     uint32_t metric_id,
     uint32_t encoding_id,
-    const fidl::String& observation,
+    const f1dl::String& observation,
     const AddStringObservationCallback& callback) {
   auto result = encoder_.EncodeString(metric_id, encoding_id, observation);
   AddEncodedObservation(&result, callback);
@@ -266,7 +266,7 @@ void CobaltEncoderImpl::AddObservation(uint32_t metric_id,
 
 void CobaltEncoderImpl::AddMultipartObservation(
     uint32_t metric_id,
-    fidl::Array<ObservationValuePtr> observation,
+    f1dl::Array<ObservationValuePtr> observation,
     const AddMultipartObservationCallback& callback) {
   Encoder::Value value;
   for (const auto& obs_val : observation) {
@@ -307,7 +307,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
 void CobaltEncoderImpl::AddIntBucketDistribution(
     uint32_t metric_id,
     uint32_t encoding_id,
-    fidl::Map<uint32_t, uint64_t> distribution,
+    f1dl::Map<uint32_t, uint64_t> distribution,
     const AddIntBucketDistributionCallback& callback) {
   FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
   callback(Status::INTERNAL_ERROR);
@@ -389,12 +389,12 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
 
  private:
   void GetEncoder(int32_t project_id,
-                  fidl::InterfaceRequest<CobaltEncoder> request);
+                  f1dl::InterfaceRequest<CobaltEncoder> request);
 
   std::shared_ptr<MetricRegistry> metric_registry_;
   std::shared_ptr<EncodingRegistry> encoding_registry_;
   ClientSecret client_secret_;
-  fidl::BindingSet<CobaltEncoder, std::unique_ptr<CobaltEncoder>>
+  f1dl::BindingSet<CobaltEncoder, std::unique_ptr<CobaltEncoder>>
       cobalt_encoder_bindings_;
   ShippingManager* shipping_manager_;  // not owned
 
@@ -413,7 +413,7 @@ CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
 
 void CobaltEncoderFactoryImpl::GetEncoder(
     int32_t project_id,
-    fidl::InterfaceRequest<CobaltEncoder> request) {
+    f1dl::InterfaceRequest<CobaltEncoder> request) {
   std::unique_ptr<ProjectContext> project_context(new ProjectContext(
       kFuchsiaCustomerId, project_id, metric_registry_, encoding_registry_));
 
@@ -448,10 +448,10 @@ class CobaltApp {
   std::shared_ptr<EncodingRegistry> encoding_registry_;
 
   std::unique_ptr<CobaltController> controller_impl_;
-  fidl::BindingSet<CobaltController> controller_bindings_;
+  f1dl::BindingSet<CobaltController> controller_bindings_;
 
   std::unique_ptr<CobaltEncoderFactory> factory_impl_;
-  fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
+  f1dl::BindingSet<CobaltEncoderFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };
@@ -517,12 +517,12 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                    getClientSecret(), &shipping_manager_));
 
   context_->outgoing_services()->AddService<CobaltEncoderFactory>(
-      [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
+      [this](f1dl::InterfaceRequest<CobaltEncoderFactory> request) {
         factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
       });
 
   context_->outgoing_services()->AddService<CobaltController>(
-      [this](fidl::InterfaceRequest<CobaltController> request) {
+      [this](f1dl::InterfaceRequest<CobaltController> request) {
         controller_bindings_.AddBinding(controller_impl_.get(),
                                         std::move(request));
       });
