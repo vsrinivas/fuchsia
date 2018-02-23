@@ -597,8 +597,7 @@ static zx_status_t command_loop(int (*get_line)(const char **, void *),
         /* try to match the command */
         const cmd *command = match_command(args[0].str, CMD_AVAIL_NORMAL);
         if (!command) {
-            if (showprompt)
-                printf("command not found\n");
+            printf("command \"%s\" not found\n", args[0].str);
             continue;
         }
 
