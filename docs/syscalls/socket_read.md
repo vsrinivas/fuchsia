@@ -61,8 +61,6 @@ readable.
 
 **ZX_ERR_BAD_STATE**  Reading has been disabled for this socket endpoint.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
-
 ## SEE ALSO
 
 [socket_create](socket_create.md),
