@@ -15,7 +15,9 @@ enum class Result {
   kInternalError,
   kUnsupportedOperation,
   kInvalidArgument,
-  kNotFound
+  kNotFound,
+  kPeerClosed,
+  kCancelled
 };
 
 }  // namespace media

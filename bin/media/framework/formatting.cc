@@ -34,6 +34,10 @@ std::ostream& operator<<(std::ostream& os, Result value) {
       return os << "kInvalidArgument";
     case Result::kNotFound:
       return os << "kNotFound";
+    case Result::kPeerClosed:
+      return os << "kPeerClosed";
+    case Result::kCancelled:
+      return os << "kCancelled";
   }
   return os;
 }

@@ -150,7 +150,10 @@ void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
 void FidlReader::FailReadAt(zx_status_t status) {
   switch (status) {
     case ZX_ERR_PEER_CLOSED:
-      result_ = Result::kInternalError;
+      result_ = Result::kPeerClosed;
+      break;
+    case ZX_ERR_CANCELED:
+      result_ = Result::kCancelled;
       break;
     // TODO(dalesat): Expect more statuses here.
     default:
@@ -174,7 +177,10 @@ void FidlReader::ReadFromSocketStatic(zx_status_t status,
   reader->wait_id_ = 0;
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
+    if (status != ZX_ERR_CANCELED) {
+      FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
+    }
+
     reader->FailReadAt(status);
     return;
   }
