@@ -1,6 +1,7 @@
 {
     "languages": [
-        "rust"
+        "rust",
+        "cpp"
     ],
     "packages": {
         "logger": "//garnet/bin/logger",

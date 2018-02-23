@@ -16,6 +16,19 @@ rust_binary("bin") {
   ]
 }
 
+executable("logger_integration_tests") {
+  testonly = true
+
+  sources = [
+    "test/logger_tests.cc",
+    "test/run_all_tests.cc",
+  ]
+  deps = [
+    "//third_party/gtest",
+    "//zircon/public/lib/syslog",
+  ]
+}
+
 package("logger") {
   deps = [
     ":bin",
@@ -35,11 +48,15 @@ package("logger_tests") {
 
   deps = [
     ":bin",
+    ":logger_integration_tests",
   ]
 
   tests = [
     {
       name = "logger-bin-test"
+    },
+    {
+      name = "logger_integration_tests"
     },
   ]
 }
