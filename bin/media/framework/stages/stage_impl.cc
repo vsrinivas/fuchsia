@@ -20,20 +20,19 @@ void StageImpl::UnprepareOutput(size_t index,
                                 const UpstreamCallback& callback) {}
 
 void StageImpl::ShutDown() {
-  PostTask([shared_this = shared_from_this()]() {
-    {
-      fxl::MutexLocker locker(&shared_this->tasks_mutex_);
-      shared_this->tasks_suspended_ = true;
-      shared_this->purge_tasks_ = true;
+  {
+    fxl::MutexLocker locker(&tasks_mutex_);
+    while (!tasks_.empty()) {
+      tasks_.pop();
     }
+  }
 
-    shared_this->OnShutDown();
+  OnShutDown();
 
-    GenericNode* generic_node = shared_this->GetGenericNode();
-    FXL_DCHECK(generic_node);
+  GenericNode* generic_node = GetGenericNode();
+  FXL_DCHECK(generic_node);
 
-    generic_node->SetGenericStage(nullptr);
-  });
+  generic_node->SetGenericStage(nullptr);
 }
 
 void StageImpl::NeedsUpdate() {
@@ -104,10 +103,6 @@ void StageImpl::PostTask(const fxl::Closure& task) {
 
   {
     fxl::MutexLocker locker(&tasks_mutex_);
-    if (purge_tasks_) {
-      return;
-    }
-
     tasks_.push(task);
     if (tasks_.size() != 1 || tasks_suspended_) {
       // Don't need to run tasks, either because there were already tasks in
@@ -142,12 +137,6 @@ void StageImpl::RunTasks() {
     task = nullptr;
     tasks_mutex_.Lock();
     tasks_.pop();
-  }
-
-  if (purge_tasks_) {
-    while (!tasks_.empty()) {
-      tasks_.pop();
-    }
   }
 
   tasks_mutex_.Unlock();

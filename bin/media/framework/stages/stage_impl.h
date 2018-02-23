@@ -140,8 +140,6 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   std::queue<fxl::Closure> tasks_ FXL_GUARDED_BY(tasks_mutex_);
   // Set to true to suspend task execution.
   bool tasks_suspended_ FXL_GUARDED_BY(tasks_mutex_) = false;
-  // Set to true to purge queued tasks.
-  bool purge_tasks_ FXL_GUARDED_BY(tasks_mutex_) = false;
 };
 
 }  // namespace media

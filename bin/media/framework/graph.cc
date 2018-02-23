@@ -4,6 +4,9 @@
 
 #include "garnet/bin/media/framework/graph.h"
 
+#include "garnet/bin/media/util/threadsafe_callback_joiner.h"
+#include "lib/fsl/tasks/message_loop.h"
+
 namespace media {
 
 Graph::Graph(fxl::RefPtr<fxl::TaskRunner> default_task_runner)
@@ -171,11 +174,22 @@ void Graph::RemoveNodesConnectedToInput(const InputRef& input) {
 void Graph::Reset() {
   sources_.clear();
   sinks_.clear();
-  while (!stages_.empty()) {
-    std::shared_ptr<StageImpl> stage = stages_.front();
-    stages_.pop_front();
-    stage->ShutDown();
+
+  auto joiner = ThreadsafeCallbackJoiner::Create();
+
+  for (auto& stage : stages_) {
+    stage->Acquire(joiner->NewCallback());
   }
+
+  joiner->WhenJoined(
+      fsl::MessageLoop::GetCurrent()->task_runner(), [stages = std::move(
+                                                          stages_)]() mutable {
+        while (!stages.empty()) {
+          std::shared_ptr<StageImpl> stage = stages.front();
+          stages.pop_front();
+          stage->ShutDown();
+        }
+      });
 }
 
 void Graph::Prepare() {
@@ -206,38 +220,21 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
 
 void Graph::PostTask(const fxl::Closure& task,
                      std::initializer_list<NodeRef> nodes) {
+  auto joiner = ThreadsafeCallbackJoiner::Create();
+
   std::vector<StageImpl*> stages;
   for (NodeRef node : nodes) {
+    node.stage_->Acquire(joiner->NewCallback());
     stages.push_back(node.stage_);
   }
 
-  struct PostedTask {
-    PostedTask(const fxl::Closure& task, std::vector<StageImpl*> stages)
-        : task_(task), stages_(std::move(stages)) {
-      unacquired_stage_counter_ = stages_.size();
-    }
-
-    fxl::Closure task_;
-    std::vector<StageImpl*> stages_;
-    std::atomic_uint32_t unacquired_stage_counter_;
-  };
-
-  std::shared_ptr<PostedTask> posted_task =
-      std::make_shared<PostedTask>(task, std::move(stages));
-
-  for (StageImpl* stage : posted_task->stages_) {
-    stage->Acquire([posted_task]() {
-      if (--(posted_task->unacquired_stage_counter_) != 0) {
-        return;
-      }
-
-      posted_task->task_();
-
-      for (StageImpl* stage : posted_task->stages_) {
-        stage->Release();
-      }
-    });
-  }
+  joiner->WhenJoined(fsl::MessageLoop::GetCurrent()->task_runner(),
+                     [ task, stages = std::move(stages) ]() {
+                       task();
+                       for (auto stage : stages) {
+                         stage->Release();
+                       }
+                     });
 }
 
 NodeRef Graph::Add(std::shared_ptr<StageImpl> stage,

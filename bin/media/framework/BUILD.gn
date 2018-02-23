@@ -64,6 +64,7 @@ source_set("framework") {
 
   deps = [
     "//garnet/bin/media/util:host_compatible",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline:host_compatible",
   ]
