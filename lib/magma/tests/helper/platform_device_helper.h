@@ -18,10 +18,6 @@ public:
         g_instance = platform_device;
     }
 
-    // TODO: remove when display tests removed
-    static void SetCoreDevice(void* device) { core_device_ = device; }
-    static void* GetCoreDevice() { return core_device_; }
-
     static bool is_intel_gen(uint16_t device_id)
     {
         switch (device_id) {

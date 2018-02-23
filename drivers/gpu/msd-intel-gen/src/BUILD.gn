@@ -11,6 +11,54 @@ declare_args() {
   msd_intel_print_fps = false
 }
 
+# To be removed
+source_set("core") {
+  public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
+
+  sources = [
+    "address_space.cc",
+    "core/gtt_core.cc",
+    "core/interrupt_manager_core.cc",
+    "core/msd_intel_connection_core.cc",
+    "core/msd_intel_device_core.cc",
+    "core/msd_intel_driver_core.cc",
+    "gpu_mapping.cc",
+    "gpu_mapping_cache.cc",
+    "interrupt_manager_shim.cc",
+    "msd_intel_buffer.cc",
+    "msd_intel_semaphore.cc",
+  ]
+
+  deps = [
+    "$magma_build_root:libmsd",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util:semaphore_port",
+    "$magma_build_root/src/magma_util:thread",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "../include",
+  ]
+
+  defines = []
+
+  if (msd_intel_enable_mapping_cache) {
+    defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
+  }
+  if (msd_intel_wait_for_flip) {
+    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=1" ]
+  } else {
+    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=0" ]
+  }
+  if (msd_intel_print_fps) {
+    defines += [ "MSD_INTEL_PRINT_FPS=1" ]
+  } else {
+    defines += [ "MSD_INTEL_PRINT_FPS=0" ]
+  }
+}
+
 source_set("src") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
 
@@ -21,6 +69,8 @@ source_set("src") {
     "cache_config.h",
     "command_buffer.cc",
     "command_buffer.h",
+    "core/gtt_core.cc",
+    "core/interrupt_manager_core.cc",
     "engine_command_streamer.cc",
     "engine_command_streamer.h",
     "global_context.cc",
@@ -65,17 +115,7 @@ source_set("src") {
     "types.h",
   ]
 
-  # 'Core' functionality contains everything replaced by
-  # the display driver.
-  sources += [
-    "core/gtt_core.cc",
-    "core/interrupt_manager_core.cc",
-    "core/msd_intel_device_core.cc",
-    "core/msd_intel_pci_device_core.cc",
-  ]
-
   deps = [
-    "../include",
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:command_buffer",
@@ -86,28 +126,16 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:trace",
+    "../include",
   ]
 
   defines = []
   if (msd_intel_enable_mapping_cache) {
     defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
   }
-
   if (msd_intel_enable_modesetting) {
     defines += [ "MSD_INTEL_ENABLE_MODESETTING=1" ]
   } else {
     defines += [ "MSD_INTEL_ENABLE_MODESETTING=0" ]
-  }
-
-  if (msd_intel_wait_for_flip) {
-    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=1" ]
-  } else {
-    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=0" ]
-  }
-
-  if (msd_intel_print_fps) {
-    defines += [ "MSD_INTEL_PRINT_FPS=1" ]
-  } else {
-    defines += [ "MSD_INTEL_PRINT_FPS=0" ]
   }
 }

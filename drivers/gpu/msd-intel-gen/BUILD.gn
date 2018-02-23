@@ -7,8 +7,33 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
-INTEL_PCI_VID = "0x8086"
+# Core device; to be replaced by a complete display driver.
+driver_module("msd_intel_core") {
+  output_name = "libmsd_intel_core"
 
+  sources = [
+    "src/core/core_driver_entry.cc",
+  ]
+
+  pci_vendor_id = "0x8086"
+  defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
+
+  deps = [
+    "src:core",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/sys_driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
+  ]
+  libs = [ "zircon" ]
+
+  ldflags = [ "$shared_ldflags" ]
+}
+
+# The gpu device
 driver_module("msd_intel") {
   output_name = "libmsd_intel"
 
@@ -20,6 +45,7 @@ driver_module("msd_intel") {
   ldflags = [ "$shared_ldflags" ]
 }
 
+# The gpu device; runs gtests at startup
 driver_module("msd_intel_test") {
   testonly = true
 
@@ -34,12 +60,11 @@ driver_module("msd_intel_test") {
 }
 
 source_set("msd_intel_entry") {
-  pci_vendor_id = INTEL_PCI_VID
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [
     "src/driver_entry.cc",
   ]
-  defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
+
   deps = [
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
@@ -55,15 +80,11 @@ source_set("msd_intel_entry") {
 source_set("msd_intel_test_entry") {
   testonly = true
 
-  pci_vendor_id = INTEL_PCI_VID
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [
     "src/driver_entry.cc",
   ]
-  defines = [
-    "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id,
-    "MAGMA_TEST_DRIVER=1",
-  ]
+  defines = [ "MAGMA_TEST_DRIVER=1" ]
 
   deps = [
     "//garnet/lib/magma/src/magma_util",

@@ -107,6 +107,8 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
+    ReadDisplaySize();
+
     gtt_ = Gtt::CreateCore(this);
 
     if (!gtt_->Init(gtt_size))
@@ -155,6 +157,18 @@ void MsdIntelDeviceCore::Destroy()
         wait_thread_.join();
         DLOG("joined");
     }
+}
+
+void MsdIntelDeviceCore::ReadDisplaySize()
+{
+    // Read the main display's resolution from the register state, assuming
+    // that the display was set up by some previous modesetting code
+    // (typically the firmware's boot-time modesetting).
+    uint32_t pipe_number = 0;
+    registers::PipeRegs pipe(pipe_number);
+    auto surface_size = pipe.PlaneSurfaceSize().ReadFrom(register_io());
+    display_size_.width = surface_size.width_minus_1().get() + 1;
+    display_size_.height = surface_size.height_minus_1().get() + 1;
 }
 
 void MsdIntelDeviceCore::PresentBuffer(
@@ -460,5 +474,28 @@ magma::Status MsdIntelDeviceCore::ProcessInterrupts(uint64_t interrupt_time_ns,
         ProcessFlipComplete(interrupt_time_ns);
     }
 
+    return MAGMA_STATUS_OK;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
+{
+    // Return a dummy connection.
+    return reinterpret_cast<msd_connection_t*>(0xdeadbeef);
+}
+
+void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDeviceCore::cast(dev); }
+
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
+{
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "msd_device_query not implemented for core");
+}
+
+void msd_device_dump_status(msd_device_t* device) {}
+
+magma_status_t msd_device_display_get_size(msd_device_t* dev, magma_display_size* size_out)
+{
+    *size_out = MsdIntelDeviceCore::cast(dev)->display_size();
     return MAGMA_STATUS_OK;
 }

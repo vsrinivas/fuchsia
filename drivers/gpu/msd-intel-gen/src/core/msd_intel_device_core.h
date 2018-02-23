@@ -19,7 +19,7 @@
 
 // Implements core device functionality;
 // May be replaced with a shim to a different driver.
-class MsdIntelDeviceCore final : public Gtt::Owner, InterruptManager::Owner {
+class MsdIntelDeviceCore final : public msd_device_t, public Gtt::Owner, InterruptManager::Owner {
 public:
     using DeviceRequest = DeviceRequest<MsdIntelDeviceCore>;
 
@@ -45,6 +45,8 @@ public:
 
     Gtt* gtt() { return gtt_.get(); }
 
+    magma_display_size display_size() { return display_size_; }
+
     void PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
@@ -52,14 +54,25 @@ public:
 
     static std::unique_ptr<MsdIntelDeviceCore> Create(void* device_handle);
 
+    static MsdIntelDeviceCore* cast(msd_device_t* dev)
+    {
+        DASSERT(dev);
+        DASSERT(dev->magic_ == kMagic);
+        return static_cast<MsdIntelDeviceCore*>(dev);
+    }
+
 private:
     class FlipRequest;
     class InterruptRequest;
 
-    MsdIntelDeviceCore() {}
+    static constexpr uint32_t kMagic = 0x636f7265; //"core"
+
+    MsdIntelDeviceCore() { magic_ = kMagic; }
 
     bool Init(void* device_handle);
     void Destroy();
+
+    void ReadDisplaySize();
 
     RegisterIo* register_io_for_interrupt() override { return register_io_.get(); }
     RegisterIo* register_io() { return register_io_.get(); }
@@ -111,6 +124,7 @@ private:
     std::unordered_map<uint64_t, std::shared_ptr<GpuMapping>> mappings_;
 
     magma::FpsPrinter fps_printer_;
+    magma_display_size display_size_{};
 };
 
 #endif // MSD_INTEL_DEVICE_CORE_H
