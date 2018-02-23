@@ -59,15 +59,15 @@ class AgentContextImpl : AgentContext, AgentController {
   // point all connections will be forwarded to the agent.
   void NewAgentConnection(
       const std::string& requestor_url,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request);
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when the framework wants to talk to the
   // |EntityProvider| service from this agent. Similar to NewAgentConnection(),
   // this operation will pend until the entity provider agent is initialized.
   void NewEntityProviderConnection(
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request);
+      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when a new task has been scheduled.
   void NewTask(const std::string& task_id);
@@ -78,22 +78,22 @@ class AgentContextImpl : AgentContext, AgentController {
  private:
   // |AgentContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> request) override;
+      f1dl::InterfaceRequest<ComponentContext> request) override;
   // |AgentContext|
   void GetTokenProvider(
-      fidl::InterfaceRequest<auth::TokenProvider> request) override;
+      f1dl::InterfaceRequest<auth::TokenProvider> request) override;
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|
-  void DeleteTask(const fidl::String& task_id) override;
+  void DeleteTask(const f1dl::String& task_id) override;
   // |AgentContext|
   void Done() override;
   // |AgentContext|
   void GetIntelligenceServices(
-      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+      f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   // |AgentContext|
   void GetEntityReferenceFactory(
-      fidl::InterfaceRequest<EntityReferenceFactory> request) override;
+      f1dl::InterfaceRequest<EntityReferenceFactory> request) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -105,8 +105,8 @@ class AgentContextImpl : AgentContext, AgentController {
 
   std::unique_ptr<AppClient<Lifecycle>> app_client_;
   AgentPtr agent_;
-  fidl::BindingSet<AgentContext> agent_context_bindings_;
-  fidl::BindingSet<AgentController> agent_controller_bindings_;
+  f1dl::BindingSet<AgentContext> agent_context_bindings_;
+  f1dl::BindingSet<AgentController> agent_controller_bindings_;
 
   AgentRunner* const agent_runner_;
 

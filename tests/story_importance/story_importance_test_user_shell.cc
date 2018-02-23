@@ -65,7 +65,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  f1dl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
@@ -95,7 +95,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
     continue_();
   }
 
-  fidl::Binding<modular::FocusWatcher> binding_;
+  f1dl::Binding<modular::FocusWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
@@ -104,7 +104,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
 class ContextListenerImpl : maxwell::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
-    handler_ = [](fidl::String, fidl::String) {};
+    handler_ = [](f1dl::String, f1dl::String) {};
   }
 
   ~ContextListenerImpl() override = default;
@@ -124,7 +124,7 @@ class ContextListenerImpl : maxwell::ContextListener {
         [] { FXL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
-  using Handler = std::function<void(fidl::String, fidl::String)>;
+  using Handler = std::function<void(f1dl::String, f1dl::String)>;
 
   void Handle(const Handler& handler) { handler_ = handler; }
 
@@ -144,7 +144,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     }
   }
 
-  fidl::Binding<maxwell::ContextListener> binding_;
+  f1dl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
@@ -168,7 +168,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -194,7 +194,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void SetContextHome() {
     context_listener_.Handle(
-        [this](const fidl::String& key, const fidl::String& value) {
+        [this](const f1dl::String& key, const f1dl::String& value) {
           GetContextHome(key, value);
         });
     context_writer_->WriteEntityTopic(kTopic, "\"home\"");
@@ -203,7 +203,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint get_context_home_{"GetContextHome()"};
 
-  void GetContextHome(const fidl::String& topic, const fidl::String& value) {
+  void GetContextHome(const f1dl::String& topic, const f1dl::String& value) {
     FXL_VLOG(4) << "Context " << topic << " " << value;
     if (topic == kTopic && value == "\"home\"" && !story1_context_) {
       story1_context_ = true;
@@ -216,7 +216,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory1() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const fidl::String& story_id) {
+                                 [this](const f1dl::String& story_id) {
                                    story1_id_ = story_id;
                                    create_story1_.Pass();
                                    StartStory1();
@@ -235,7 +235,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     });
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story1_controller_->Start(story_view.NewRequest());
   }
 
@@ -243,7 +243,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void SetContextWork() {
     context_listener_.Handle(
-        [this](const fidl::String& key, const fidl::String& value) {
+        [this](const f1dl::String& key, const f1dl::String& value) {
           GetContextWork(key, value);
         });
     context_writer_->WriteEntityTopic(kTopic, "\"work\"");
@@ -252,7 +252,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint get_context_work_{"GetContextWork()"};
 
-  void GetContextWork(const fidl::String& topic, const fidl::String& value) {
+  void GetContextWork(const f1dl::String& topic, const f1dl::String& value) {
     if (topic == kTopic && value == "\"work\"" && !story2_context_) {
       story2_context_ = true;
       get_context_work_.Pass();
@@ -264,7 +264,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory2() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const fidl::String& story_id) {
+                                 [this](const f1dl::String& story_id) {
                                    story2_id_ = story_id;
                                    create_story2_.Pass();
                                    StartStory2();
@@ -283,7 +283,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     });
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story2_controller_->Start(story_view.NewRequest());
   }
 
@@ -291,7 +291,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance1() {
     story_provider_->GetImportance(
-        [this](fidl::Map<fidl::String, float> importance) {
+        [this](f1dl::Map<f1dl::String, float> importance) {
           get_importance1_.Pass();
 
           if (importance.find(story1_id_) == importance.end()) {
@@ -337,7 +337,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance2() {
     story_provider_->GetImportance(
-        [this](fidl::Map<fidl::String, float> importance) {
+        [this](f1dl::Map<f1dl::String, float> importance) {
           get_importance2_.Pass();
 
           if (importance.find(story1_id_) == importance.end()) {
@@ -365,12 +365,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   FocusWatcherImpl focus_watcher_;
 
   bool story1_context_{};
-  fidl::String story1_id_;
+  f1dl::String story1_id_;
   modular::StoryControllerPtr story1_controller_;
   StoryWatcherImpl story1_watcher_;
 
   bool story2_context_{};
-  fidl::String story2_id_;
+  f1dl::String story2_id_;
   modular::StoryControllerPtr story2_controller_;
   StoryWatcherImpl story2_watcher_;
 

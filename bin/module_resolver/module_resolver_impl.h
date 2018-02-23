@@ -40,9 +40,9 @@ class ModuleResolverImpl : modular::ModuleResolver,
   void AddSource(std::string name,
                  std::unique_ptr<modular::ModuleManifestSource> repo);
 
-  void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
+  void Connect(f1dl::InterfaceRequest<modular::ModuleResolver> request);
 
-  void BindQueryHandler(fidl::InterfaceRequest<QueryHandler> request);
+  void BindQueryHandler(f1dl::InterfaceRequest<QueryHandler> request);
 
  private:
   class FindModulesCall;
@@ -92,10 +92,10 @@ class ModuleResolverImpl : modular::ModuleResolver,
   //  (type) -> key in |entries_|.
   std::map<std::string, std::set<EntryId>> noun_type_to_entries_;
 
-  fidl::BindingSet<modular::ModuleResolver> bindings_;
-  fidl::Binding<QueryHandler> query_handler_binding_;
+  f1dl::BindingSet<modular::ModuleResolver> bindings_;
+  f1dl::Binding<QueryHandler> query_handler_binding_;
   // These are buffered until AllSourcesAreReady() == true.
-  std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
+  std::vector<f1dl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
   NounTypeInferenceHelper type_helper_;
@@ -105,7 +105,7 @@ class ModuleResolverImpl : modular::ModuleResolver,
   // The context reader that is used to suggest modules compatible with the
   // current context.
   ContextReaderPtr context_reader_;
-  fidl::Binding<ContextListener> context_listener_binding_;
+  f1dl::Binding<ContextListener> context_listener_binding_;
 
   fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);

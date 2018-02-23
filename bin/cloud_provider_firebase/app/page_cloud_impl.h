@@ -27,7 +27,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
                 std::unique_ptr<firebase::Firebase> firebase,
                 std::unique_ptr<gcs::CloudStorage> cloud_storage,
                 std::unique_ptr<PageCloudHandler> handler,
-                fidl::InterfaceRequest<cloud_provider::PageCloud> request);
+                f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
@@ -45,18 +45,18 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   void SendRemoteCommits();
 
   // cloud_provider::PageCloud:
-  void AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+  void AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                   const AddCommitsCallback& callback) override;
-  void GetCommits(fidl::Array<uint8_t> min_position_token,
+  void GetCommits(f1dl::Array<uint8_t> min_position_token,
                   const GetCommitsCallback& callback) override;
-  void AddObject(fidl::Array<uint8_t> id,
+  void AddObject(f1dl::Array<uint8_t> id,
                  fsl::SizedVmoTransportPtr data,
                  const AddObjectCallback& callback) override;
-  void GetObject(fidl::Array<uint8_t> id,
+  void GetObject(f1dl::Array<uint8_t> id,
                  const GetObjectCallback& callback) override;
   void SetWatcher(
-      fidl::Array<uint8_t> min_position_token,
-      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+      f1dl::Array<uint8_t> min_position_token,
+      f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
   void Unregister();
@@ -65,7 +65,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<gcs::CloudStorage> cloud_storage_;
   std::unique_ptr<PageCloudHandler> handler_;
-  fidl::Binding<cloud_provider::PageCloud> binding_;
+  f1dl::Binding<cloud_provider::PageCloud> binding_;
   fxl::Closure on_empty_;
 
   // Remote commits accumulated until the client confirms receiving the previous

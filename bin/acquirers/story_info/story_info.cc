@@ -31,7 +31,7 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
 
   // This ServiceProvider is handed out in Connect().
   agent_services_.AddService<StoryInfoInitializer>(
-      [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
+      [this](f1dl::InterfaceRequest<StoryInfoInitializer> request) {
         FXL_DCHECK(!initializer_binding_.is_bound());
         initializer_binding_.Bind(std::move(request));
       });
@@ -44,12 +44,12 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
 }
 
 void StoryInfoAcquirer::Connect(
-    fidl::InterfaceRequest<app::ServiceProvider> services) {
+    f1dl::InterfaceRequest<app::ServiceProvider> services) {
   agent_services_.AddBinding(std::move(services));
 }
 
 void StoryInfoAcquirer::RunTask(
-    const fidl::String& task_id,
+    const f1dl::String& task_id,
     const modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
 }
@@ -59,9 +59,9 @@ void StoryInfoAcquirer::Terminate(const std::function<void()>& done) {
 }
 
 void StoryInfoAcquirer::Initialize(
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_.Bind(std::move(focus_provider));
@@ -102,7 +102,7 @@ void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
   }
 }
 
-void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
+void StoryInfoAcquirer::OnVisibleStoriesChange(f1dl::Array<f1dl::String> ids) {
   // TODO(thatguy)
 }
 
@@ -121,7 +121,7 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
   it->second->OnStoryStateChange(std::move(info), state);
 }
 
-void StoryInfoAcquirer::OnDelete(const fidl::String& story_id) {
+void StoryInfoAcquirer::OnDelete(const f1dl::String& story_id) {
   const std::string id = story_id.get();
   // TODO(thatguy)
 }

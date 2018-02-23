@@ -20,13 +20,13 @@ class TestSuggestionListener : public maxwell::NextListener,
   void OnInterrupt(maxwell::SuggestionPtr suggestion) override;
 
   // |NextListener|
-  void OnNextResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
+  void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override;
 
   // |NextListener|
   void OnProcessingChange(bool processing) override;
 
   // |QueryListener|
-  void OnQueryResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
+  void OnQueryResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override;
 
   // |QueryListener|
   void OnQueryComplete() override;
@@ -63,7 +63,7 @@ class TestSuggestionListener : public maxwell::NextListener,
   }
 
  private:
-  void OnAnyResults(fidl::Array<maxwell::SuggestionPtr>& suggestions);
+  void OnAnyResults(f1dl::Array<maxwell::SuggestionPtr>& suggestions);
 
   std::map<std::string, maxwell::SuggestionPtr> suggestions_by_id_;
   std::vector<maxwell::Suggestion*> ordered_suggestions_;
@@ -77,7 +77,7 @@ class TestProposalListener {
   int proposal_count() const { return proposals_.size(); }
 
  protected:
-  void UpdateProposals(fidl::Array<maxwell::ProposalSummaryPtr> proposals) {
+  void UpdateProposals(f1dl::Array<maxwell::ProposalSummaryPtr> proposals) {
     proposals_.clear();
     for (auto& proposal : proposals) {
       proposals_.push_back(std::move(proposal));
@@ -90,7 +90,7 @@ class TestDebugNextListener : public maxwell::NextProposalListener,
                               public TestProposalListener {
  public:
   void OnNextUpdate(
-      fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+      f1dl::Array<maxwell::ProposalSummaryPtr> proposals) override {
     FXL_LOG(INFO) << "In OnNextUpdate debug";
     UpdateProposals(std::move(proposals));
   }
@@ -99,8 +99,8 @@ class TestDebugNextListener : public maxwell::NextProposalListener,
 class TestDebugAskListener : public maxwell::AskProposalListener,
                              public TestProposalListener {
  public:
-  void OnAskStart(const fidl::String& query,
-                  fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+  void OnAskStart(const f1dl::String& query,
+                  f1dl::Array<maxwell::ProposalSummaryPtr> proposals) override {
     UpdateProposals(std::move(proposals));
     query_ = query.get();
   }

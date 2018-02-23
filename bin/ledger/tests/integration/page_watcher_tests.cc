@@ -34,7 +34,7 @@ class PageWatcherIntegrationTest : public IntegrationTest {
 
 class Watcher : public ledger::PageWatcher {
  public:
-  Watcher(fidl::InterfaceRequest<PageWatcher> request,
+  Watcher(f1dl::InterfaceRequest<PageWatcher> request,
           fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
@@ -58,7 +58,7 @@ class Watcher : public ledger::PageWatcher {
     change_callback_();
   }
 
-  fidl::Binding<PageWatcher> binding_;
+  f1dl::Binding<PageWatcher> binding_;
   fxl::Closure change_callback_;
 };
 
@@ -332,7 +332,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
-  fidl::Array<ledger::EntryPtr> entries =
+  f1dl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
@@ -380,8 +380,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
 TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  fidl::Array<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+  f1dl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](f1dl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());
@@ -488,8 +488,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
 TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  fidl::Array<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+  f1dl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](f1dl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());
@@ -539,7 +539,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
 class WaitingWatcher : public ledger::PageWatcher {
  public:
-  WaitingWatcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
+  WaitingWatcher(f1dl::InterfaceRequest<ledger::PageWatcher> request,
                  fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
@@ -566,7 +566,7 @@ class WaitingWatcher : public ledger::PageWatcher {
     change_callback_();
   }
 
-  fidl::Binding<ledger::PageWatcher> binding_;
+  f1dl::Binding<ledger::PageWatcher> binding_;
   fxl::Closure change_callback_;
 };
 

@@ -24,10 +24,10 @@ class FactoryImplTest : public gtest::TestWithMessageLoop {
  protected:
   FactoryImpl factory_impl_;
   FactoryPtr factory_;
-  fidl::Binding<Factory> factory_binding_;
+  f1dl::Binding<Factory> factory_binding_;
 
   firebase_auth::TestTokenProvider token_provider_;
-  fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
+  f1dl::Binding<modular::auth::TokenProvider> token_provider_binding_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FactoryImplTest);

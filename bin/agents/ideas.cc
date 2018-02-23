@@ -58,7 +58,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
       } else {
         auto p = Proposal::New();
         p->id = kIdeaId;
-        p->on_selected = fidl::Array<ActionPtr>::New(0);
+        p->on_selected = f1dl::Array<ActionPtr>::New(0);
         auto d = SuggestionDisplay::New();
 
         d->headline = idea;
@@ -75,7 +75,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> binding_;
+  f1dl::Binding<ContextListener> binding_;
   ProposalPublisherPtr out_;
 };
 

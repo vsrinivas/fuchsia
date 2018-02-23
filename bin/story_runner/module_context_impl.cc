@@ -19,7 +19,7 @@ ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     const ModuleData* const module_data,
     ModuleControllerImpl* const module_controller_impl,
-    fidl::InterfaceRequest<app::ServiceProvider> service_provider_request)
+    f1dl::InterfaceRequest<app::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       module_controller_impl_(module_controller_impl),
@@ -30,7 +30,7 @@ ModuleContextImpl::ModuleContextImpl(
                               module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<ModuleContext>(
-      [this](fidl::InterfaceRequest<ModuleContext> request) {
+      [this](f1dl::InterfaceRequest<ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
@@ -38,8 +38,8 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(const fidl::String& name,
-                                fidl::InterfaceRequest<Link> request) {
+void ModuleContextImpl::GetLink(const f1dl::String& name,
+                                f1dl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
   LinkImpl::ConnectionType connection_type{LinkImpl::ConnectionType::Secondary};
   if (name) {
@@ -60,12 +60,12 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
 }
 
 void ModuleContextImpl::StartModule(
-    const fidl::String& name,
-    const fidl::String& query,
-    const fidl::String& link_name,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    const f1dl::String& name,
+    const f1dl::String& query,
+    const f1dl::String& link_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, query, link_name,
       nullptr /* create_chain_info */, std::move(incoming_services),
@@ -74,12 +74,12 @@ void ModuleContextImpl::StartModule(
 }
 
 void ModuleContextImpl::StartDaisy(
-    const fidl::String& name,
+    const f1dl::String& name,
     DaisyPtr daisy,
-    const fidl::String& link_name,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+    const f1dl::String& link_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
     const StartDaisyCallback& callback) {
   story_controller_impl_->StartDaisy(
       module_data_->module_path, name, std::move(daisy),
@@ -88,11 +88,11 @@ void ModuleContextImpl::StartDaisy(
 }
 
 void ModuleContextImpl::StartModuleInShell(
-    const fidl::String& name,
-    const fidl::String& query,
-    const fidl::String& link_name,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
+    const f1dl::String& name,
+    const f1dl::String& query,
+    const f1dl::String& link_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
@@ -103,11 +103,11 @@ void ModuleContextImpl::StartModuleInShell(
 }
 
 void ModuleContextImpl::StartDaisyInShell(
-    const fidl::String& name,
+    const f1dl::String& name,
     DaisyPtr daisy,
-    const fidl::String& link_name,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
+    const f1dl::String& link_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
     const StartDaisyInShellCallback& callback) {
   story_controller_impl_->StartDaisyInShell(
@@ -117,13 +117,13 @@ void ModuleContextImpl::StartDaisyInShell(
 }
 
 void ModuleContextImpl::EmbedModule(
-    const fidl::String& name,
-    const fidl::String& query,
-    const fidl::String& link_name,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    const f1dl::String& name,
+    const f1dl::String& query,
+    const f1dl::String& link_name,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller,
+    f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, query, link_name,
       nullptr /* create_chain_info */, std::move(incoming_services),
@@ -132,12 +132,12 @@ void ModuleContextImpl::EmbedModule(
 }
 
 void ModuleContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> context_request) {
+    f1dl::InterfaceRequest<ComponentContext> context_request) {
   component_context_impl_.Connect(std::move(context_request));
 }
 
 void ModuleContextImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+    f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
   auto module_scope = maxwell::ModuleScope::New();
   module_scope->module_path = module_data_->module_path.Clone();
   module_scope->url = module_data_->module_url;

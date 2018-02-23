@@ -17,8 +17,8 @@ class NullModule {
  public:
   NullModule(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     module_host_->module_context()->Ready();

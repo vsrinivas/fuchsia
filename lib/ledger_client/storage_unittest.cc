@@ -14,7 +14,7 @@ namespace modular {
 namespace {
 
 TEST(Storage, EncodeModulePath) {
-  fidl::Array<fidl::String> fidl_array;
+  f1dl::Array<f1dl::String> fidl_array;
   for (auto s : {"foo", ":bar", "/baz"}) {
     fidl_array.push_back(s);
   }
@@ -22,7 +22,7 @@ TEST(Storage, EncodeModulePath) {
 }
 
 TEST(Storage, EncodeLinkPath) {
-  fidl::Array<fidl::String> fidl_array;
+  f1dl::Array<f1dl::String> fidl_array;
   for (auto s : {"foo", ":bar"}) {
     fidl_array.push_back(s);
   }

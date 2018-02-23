@@ -123,12 +123,12 @@ class PageClient : ledger::PageWatcher {
   virtual void OnPageConflict(Conflict* conflict);
 
   // Replaces the previous page snapshot with a newly requested one.
-  fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
+  f1dl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
 
   // Possibly replaces the previous page snapshot with a new one
   // requested through the result callback of a PageWatcher, depending
   // on the continuation code of the watcher notification.
-  fidl::InterfaceRequest<ledger::PageSnapshot> Update(
+  f1dl::InterfaceRequest<ledger::PageSnapshot> Update(
       ledger::ResultState result_state);
 
   // |PageWatcher|
@@ -136,7 +136,7 @@ class PageClient : ledger::PageWatcher {
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
-  fidl::Binding<ledger::PageWatcher> binding_;
+  f1dl::Binding<ledger::PageWatcher> binding_;
   const std::string context_;
 
   LedgerClient* const ledger_client_;

@@ -81,12 +81,12 @@ class App : public LedgerController {
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(
-            [this](fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
+            [this](f1dl::InterfaceRequest<LedgerRepositoryFactory> request) {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });
     application_context_->outgoing_services()->AddService<LedgerController>(
-        [this](fidl::InterfaceRequest<LedgerController> request) {
+        [this](f1dl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
         });
 
@@ -106,8 +106,8 @@ class App : public LedgerController {
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
-  fidl::BindingSet<LedgerController> controller_bindings_;
+  f1dl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
+  f1dl::BindingSet<LedgerController> controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

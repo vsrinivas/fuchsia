@@ -30,8 +30,8 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services_request*/)
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -39,15 +39,15 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
 
   // |StoryShell|
   void Initialize(
-      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+      f1dl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
     Connect();
   }
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
-                   const fidl::String& /*view_id*/,
-                   const fidl::String& /*parent_id*/,
+  void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+                   const f1dl::String& /*view_id*/,
+                   const f1dl::String& /*parent_id*/,
                    modular::SurfaceRelationPtr /*surface_relation*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
@@ -57,11 +57,11 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void FocusView(const fidl::String& /*view_id*/,
-                 const fidl::String& /*relative_view_id*/) override {}
+  void FocusView(const f1dl::String& /*view_id*/,
+                 const f1dl::String& /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const fidl::String& /*view_id*/,
+  void DefocusView(const f1dl::String& /*view_id*/,
                    const DefocusViewCallback& callback) override {
     callback();
   }
@@ -82,9 +82,9 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   std::unique_ptr<modular::ViewHost> view_;
-  std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
+  std::vector<f1dl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };

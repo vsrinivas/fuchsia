@@ -15,10 +15,10 @@ constexpr char kValidationTestsUrl[] =
 
 ValidationTestsLauncher::ValidationTestsLauncher(
     app::ApplicationContext* application_context,
-    std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory)
+    std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory)
     : application_context_(application_context), factory_(std::move(factory)) {
   service_provider_impl_.AddService<cloud_provider::CloudProvider>(
-      [this](fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+      [this](f1dl::InterfaceRequest<cloud_provider::CloudProvider> request) {
         factory_(std::move(request));
       });
 }

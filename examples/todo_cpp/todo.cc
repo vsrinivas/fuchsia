@@ -37,8 +37,8 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return ret;
 }
 
-fidl::Array<uint8_t> ToArray(const std::string& val) {
-  auto ret = fidl::Array<uint8_t>::New(val.size());
+f1dl::Array<uint8_t> ToArray(const std::string& val) {
+  auto ret = f1dl::Array<uint8_t>::New(val.size());
   memcpy(ret.data(), val.data(), val.size());
   return ret;
 }
@@ -58,7 +58,7 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
 
 void GetEntries(ledger::PageSnapshotPtr snapshot,
                 std::vector<ledger::EntryPtr> entries,
-                fidl::Array<uint8_t> token,
+                f1dl::Array<uint8_t> token,
                 std::function<void(ledger::Status,
                                    std::vector<ledger::EntryPtr>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
@@ -103,15 +103,15 @@ TodoApp::TodoApp()
       module_binding_(this),
       page_watcher_binding_(this) {
   context_->outgoing_services()->AddService<modular::Module>(
-      [this](fidl::InterfaceRequest<modular::Module> request) {
+      [this](f1dl::InterfaceRequest<modular::Module> request) {
         FXL_DCHECK(!module_binding_.is_bound());
         module_binding_.Bind(std::move(request));
       });
 }
 
 void TodoApp::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+    f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+    f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
   module_context_.Bind(std::move(module_context));
   module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),
@@ -162,7 +162,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   });
 }
 
-void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
+void TodoApp::GetKeys(std::function<void(f1dl::Array<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      HandleResponse("GetSnapshot"));
@@ -180,14 +180,14 @@ void TodoApp::AddNew() {
   page_->Put(MakeKey(), ToArray(generator_.Generate()), HandleResponse("Put"));
 }
 
-void TodoApp::DeleteOne(fidl::Array<Key> keys) {
+void TodoApp::DeleteOne(f1dl::Array<Key> keys) {
   FXL_DCHECK(keys.size());
   std::uniform_int_distribution<> distribution(0, keys.size() - 1);
   page_->Delete(std::move(keys[distribution(rng_)]), HandleResponse("Delete"));
 }
 
 void TodoApp::Act() {
-  GetKeys([this](fidl::Array<Key> keys) {
+  GetKeys([this](f1dl::Array<Key> keys) {
     size_t target_size = std::round(size_distribution_(rng_));
     if (keys.size() > std::max(static_cast<size_t>(0), target_size)) {
       DeleteOne(std::move(keys));

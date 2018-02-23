@@ -24,20 +24,20 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetEntries(fidl::Array<uint8_t> key_start,
-                  fidl::Array<uint8_t> token,
+  void GetEntries(f1dl::Array<uint8_t> key_start,
+                  f1dl::Array<uint8_t> token,
                   const GetEntriesCallback& callback) override;
-  void GetEntriesInline(fidl::Array<uint8_t> key_start,
-                        fidl::Array<uint8_t> token,
+  void GetEntriesInline(f1dl::Array<uint8_t> key_start,
+                        f1dl::Array<uint8_t> token,
                         const GetEntriesInlineCallback& callback) override;
-  void GetKeys(fidl::Array<uint8_t> key_start,
-               fidl::Array<uint8_t> token,
+  void GetKeys(f1dl::Array<uint8_t> key_start,
+               f1dl::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
-  void Get(fidl::Array<uint8_t> key, const GetCallback& callback) override;
-  void GetInline(fidl::Array<uint8_t> key,
+  void Get(f1dl::Array<uint8_t> key, const GetCallback& callback) override;
+  void GetInline(f1dl::Array<uint8_t> key,
                  const GetInlineCallback& callback) override;
-  void Fetch(fidl::Array<uint8_t> key, const FetchCallback& callback) override;
-  void FetchPartial(fidl::Array<uint8_t> key,
+  void Fetch(f1dl::Array<uint8_t> key, const FetchCallback& callback) override;
+  void FetchPartial(f1dl::Array<uint8_t> key,
                     int64_t offset,
                     int64_t max_size,
                     const FetchPartialCallback& callback) override;

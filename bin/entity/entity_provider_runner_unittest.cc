@@ -72,8 +72,8 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request)
+      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request)
       override {
     agent_runner_->ConnectToEntityProvider(agent_url,
                                            std::move(entity_provider_request),
@@ -99,13 +99,13 @@ class MyEntityProvider : AgentImpl::Delegate,
                          public testing::MockBase {
  public:
   MyEntityProvider(app::ApplicationLaunchInfoPtr launch_info,
-                   fidl::InterfaceRequest<app::ApplicationController> ctrl)
+                   f1dl::InterfaceRequest<app::ApplicationController> ctrl)
       : app_controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
     FXL_CHECK(!launch_info_.is_null());
     outgoing_services_.AddService<EntityProvider>(
-        [this](fidl::InterfaceRequest<EntityProvider> request) {
+        [this](f1dl::InterfaceRequest<EntityProvider> request) {
           entity_provider_binding_.Bind(std::move(request));
         });
     outgoing_services_.ServeDirectory(std::move(launch_info_->service_request));
@@ -138,26 +138,26 @@ class MyEntityProvider : AgentImpl::Delegate,
 
   // |AgentImpl::Delegate|
   void Connect(
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     ++counts["Connect"];
   }
   // |AgentImpl::Delegate|
-  void RunTask(const fidl::String& task_id,
+  void RunTask(const f1dl::String& task_id,
                const std::function<void()>& done) override {
     ++counts["RunTask"];
     done();
   }
 
   // |EntityProvider|
-  void GetTypes(const fidl::String& cookie,
+  void GetTypes(const f1dl::String& cookie,
                 const GetTypesCallback& callback) override {
     callback(
-        fidl::Array<fidl::String>::From(std::vector<std::string>{"MyType"}));
+        f1dl::Array<f1dl::String>::From(std::vector<std::string>{"MyType"}));
   }
 
   // |EntityProvider|
-  void GetData(const fidl::String& cookie,
-               const fidl::String& type,
+  void GetData(const f1dl::String& cookie,
+               const f1dl::String& type,
                const GetDataCallback& callback) override {
     callback(type.get() + ":MyData");
   }
@@ -167,8 +167,8 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
-  fidl::Binding<app::ApplicationController> app_controller_;
-  fidl::Binding<modular::EntityProvider> entity_provider_binding_;
+  f1dl::Binding<app::ApplicationController> app_controller_;
+  f1dl::Binding<modular::EntityProvider> entity_provider_binding_;
   app::ApplicationLaunchInfoPtr launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
@@ -180,7 +180,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
-                     fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                     f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
       });
@@ -203,10 +203,10 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   // references.
   EntityReferenceFactoryPtr factory;
   dummy_agent->agent_context()->GetEntityReferenceFactory(factory.NewRequest());
-  fidl::String entity_ref;
+  f1dl::String entity_ref;
   factory->CreateReference(
       "my_cookie",
-      [&entity_ref](const fidl::String& retval) { entity_ref = retval; });
+      [&entity_ref](const f1dl::String& retval) { entity_ref = retval; });
 
   RunLoopUntil([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
@@ -218,12 +218,12 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                                 entity.NewRequest());
 
   std::map<std::string, uint32_t> counts;
-  entity->GetTypes([&counts](const fidl::Array<fidl::String>& types) {
+  entity->GetTypes([&counts](const f1dl::Array<f1dl::String>& types) {
     EXPECT_EQ(1u, types.size());
     EXPECT_EQ("MyType", types[0]);
     counts["GetTypes"]++;
   });
-  entity->GetData("MyType", [&counts](const fidl::String& data) {
+  entity->GetData("MyType", [&counts](const f1dl::String& data) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
@@ -234,7 +234,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 }
 
 TEST_F(EntityProviderRunnerTest, DataEntity) {
-  fidl::Map<fidl::String, fidl::String> data;
+  f1dl::Map<f1dl::String, f1dl::String> data;
   data["type1"] = "data1";
 
   auto entity_ref = entity_provider_runner()->CreateReferenceFromData(&data);
@@ -244,8 +244,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EntityPtr entity;
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
-  fidl::Array<fidl::String> output_types;
-  entity->GetTypes([&output_types](fidl::Array<fidl::String> result) {
+  f1dl::Array<f1dl::String> output_types;
+  entity->GetTypes([&output_types](f1dl::Array<f1dl::String> result) {
     output_types = std::move(result);
   });
   RunLoopUntil([&output_types] { return !output_types.is_null(); });
@@ -253,9 +253,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EXPECT_EQ(data.size(), output_types.size());
   EXPECT_EQ("type1", output_types[0]);
 
-  fidl::String output_data;
+  f1dl::String output_data;
   entity->GetData(
-      "type1", [&output_data](fidl::String result) { output_data = result; });
+      "type1", [&output_data](f1dl::String result) { output_data = result; });
   RunLoopUntil([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }

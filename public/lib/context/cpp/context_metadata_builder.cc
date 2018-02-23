@@ -11,7 +11,7 @@ ContextMetadataBuilder::ContextMetadataBuilder(ContextMetadataPtr initial_value)
     : m_(std::move(initial_value)) {}
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
-    const fidl::String& story_id) {
+    const f1dl::String& story_id) {
   StoryMetadata()->id = story_id;
   return *this;
 }
@@ -24,34 +24,34 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
 }
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
-    const fidl::String& url) {
+    const f1dl::String& url) {
   ModuleMetadata()->url = url;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
-    const fidl::Array<fidl::String>& path) {
+    const f1dl::Array<f1dl::String>& path) {
   ModuleMetadata()->path = path.Clone();
   return *this;
 }
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTopic(
-    const fidl::String& topic) {
+    const f1dl::String& topic) {
   EntityMetadata()->topic = topic;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(
-    const fidl::String& type) {
+    const f1dl::String& type) {
   EntityMetadata()->type.push_back(type);
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
-    const fidl::Array<fidl::String>& types) {
+    const f1dl::Array<f1dl::String>& types) {
   EntityMetadata()->type = types.Clone();
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
-    const fidl::Array<fidl::String>& module_path,
-    const fidl::String& name) {
+    const f1dl::Array<f1dl::String>& module_path,
+    const f1dl::String& name) {
   LinkMetadata()->module_path = module_path.Clone();
   LinkMetadata()->name = name;
   return *this;

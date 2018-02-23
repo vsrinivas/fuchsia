@@ -19,7 +19,7 @@ constexpr char kNetstack[] = "net.Netstack";
 ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
     app::ApplicationEnvironment* parent_env) {
   AddService<app::ApplicationLoader>(
-      [parent_env](fidl::InterfaceRequest<app::ApplicationLoader> request) {
+      [parent_env](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
         app::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         app::ConnectToService(services.get(), std::move(request));
@@ -34,7 +34,7 @@ ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
 }
 
 void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
+    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
   AddBinding(std::move(environment_services));
 }
 

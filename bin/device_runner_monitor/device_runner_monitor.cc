@@ -19,7 +19,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
       : app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()) {
     app_context_->outgoing_services()->AddService<DeviceRunnerMonitor>(
-        [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
+        [this](f1dl::InterfaceRequest<DeviceRunnerMonitor> request) {
           bindings_.AddBinding(this, std::move(request));
         });
   }
@@ -31,7 +31,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
-  fidl::BindingSet<DeviceRunnerMonitor> bindings_;
+  f1dl::BindingSet<DeviceRunnerMonitor> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
 };

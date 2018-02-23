@@ -35,15 +35,15 @@ namespace {
 constexpr auto kTimeoutForLE_399 = fxl::TimeDelta::FromSeconds(10);
 
 template <class A>
-bool Equals(const fidl::Array<uint8_t>& a1, const A& a2) {
+bool Equals(const f1dl::Array<uint8_t>& a1, const A& a2) {
   if (a1.size() != a2.size())
     return false;
   return memcmp(a1.data(), a2.data(), a1.size()) == 0;
 }
 
-fidl::Array<uint8_t> TestArray() {
+f1dl::Array<uint8_t> TestArray() {
   std::string value = "value";
-  fidl::Array<uint8_t> result = fidl::Array<uint8_t>::New(value.size());
+  f1dl::Array<uint8_t> result = f1dl::Array<uint8_t>::New(value.size());
   memcpy(&result[0], &value[0], value.size());
   return result;
 }
@@ -76,7 +76,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     });
 
     child_services.ConnectToService(ledger_repository_factory_.NewRequest());
-    child_services.ConnectToService(fidl::GetSynchronousProxy(&controller_));
+    child_services.ConnectToService(f1dl::GetSynchronousProxy(&controller_));
   }
 
   void RegisterShutdownCallback(std::function<void()> callback) {
@@ -85,7 +85,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
 
   ::testing::AssertionResult GetRootPage(
       ledger::LedgerRepositoryPtr* ledger_repository,
-      fidl::Array<uint8_t> ledger_name,
+      f1dl::Array<uint8_t> ledger_name,
       ledger::PagePtr* page) {
     ledger::Status status;
     ledger::LedgerPtr ledger;
@@ -128,8 +128,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
       return ::testing::AssertionFailure()
              << "GetSnapshot failed with status " << status;
     }
-    fidl::Array<ledger::InlinedEntryPtr> entries;
-    fidl::Array<uint8_t> next_token;
+    f1dl::Array<ledger::InlinedEntryPtr> entries;
+    f1dl::Array<uint8_t> next_token;
     snapshot->GetEntriesInline(
         nullptr, nullptr,
         callback::Capture(MakeQuitTask(), &status, &entries, &next_token));
@@ -156,31 +156,31 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
 
  protected:
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
-  fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
+  f1dl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
+  f1dl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
 
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
   ledger::Status status;
-  fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
+  f1dl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), nullptr, fidl::GetSynchronousProxy(&ledger_repository),
+      tmp_dir.path(), nullptr, f1dl::GetSynchronousProxy(&ledger_repository),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
   ASSERT_EQ(ledger::Status::OK, status);
 
-  ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
+  ledger_repository->GetLedger(TestArray(), f1dl::GetSynchronousProxy(&ledger_),
                                &status);
   ASSERT_EQ(ledger::Status::OK, status);
 
-  fidl::SynchronousInterfacePtr<ledger::Page> page;
-  ledger_->GetRootPage(fidl::GetSynchronousProxy(&page), &status);
+  f1dl::SynchronousInterfacePtr<ledger::Page> page;
+  ledger_->GetRootPage(f1dl::GetSynchronousProxy(&page), &status);
   ASSERT_EQ(ledger::Status::OK, status);
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);
-  fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
+  f1dl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(GetSynchronousProxy(&snapshot), nullptr, nullptr, &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fsl::SizedVmoTransportPtr value;
@@ -233,7 +233,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   // initial check.
   ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::YES);
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+  f1dl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
@@ -284,7 +284,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::NO,
                                            ledger::CloudEraseFromWatcher::YES);
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+  f1dl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
@@ -322,7 +322,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
-  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+  f1dl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),

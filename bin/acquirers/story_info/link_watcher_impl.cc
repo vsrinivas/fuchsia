@@ -23,13 +23,13 @@ constexpr char kContextProperty[] = "@context";
 constexpr char kSourceProperty[] = "@source";
 
 struct Context {
-  fidl::String topic;
+  f1dl::String topic;
 };
 
 struct Source {
-  fidl::String story_id;
-  fidl::Array<fidl::String> module_path;
-  fidl::String link_name;
+  f1dl::String story_id;
+  f1dl::Array<f1dl::String> module_path;
+  f1dl::String link_name;
 };
 
 void XdrContext(modular::XdrContext* const xdr, Context* const data) {
@@ -42,7 +42,7 @@ void XdrSource(modular::XdrContext* const xdr, Source* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
-std::string MakeLinkTopic(const fidl::String& base_topic) {
+std::string MakeLinkTopic(const f1dl::String& base_topic) {
   std::stringstream s;
   s << "link/" << base_topic;
   return s.str();
@@ -86,13 +86,13 @@ LinkWatcherImpl::LinkWatcherImpl(
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
-void LinkWatcherImpl::Notify(const fidl::String& json) {
+void LinkWatcherImpl::Notify(const f1dl::String& json) {
   ProcessNewValue(json);
   // TODO(thatguy): Deprecate this method once every Link is a "context link".
   MaybeProcessContextLink(json);
 }
 
-void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
+void LinkWatcherImpl::ProcessNewValue(const f1dl::String& value) {
   // We are looking for the following |value| structures:
   //
   // 1) |value| contains a JSON-style entity:
@@ -171,7 +171,7 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::String& value) {
   }
 }
 
-void LinkWatcherImpl::MaybeProcessContextLink(const fidl::String& value) {
+void LinkWatcherImpl::MaybeProcessContextLink(const f1dl::String& value) {
   modular::JsonDoc doc;
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());

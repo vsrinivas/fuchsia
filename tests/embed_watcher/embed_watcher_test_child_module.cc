@@ -21,8 +21,8 @@ class ChildApp : modular::ModuleWatcher {
  public:
   ChildApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     StartChildModule();
@@ -52,7 +52,7 @@ class ChildApp : modular::ModuleWatcher {
 
   modular::ModuleHost* const module_host_;
   modular::ModuleControllerPtr child_module_;
-  fidl::BindingSet<modular::ModuleWatcher> module_watcher_;
+  f1dl::BindingSet<modular::ModuleWatcher> module_watcher_;
 };
 
 }  // namespace

@@ -17,7 +17,7 @@ class Boundable {
   virtual ~Boundable() = default;
 
   // Binds a single interface request to the object.
-  virtual void Bind(fidl::InterfaceRequest<Interface> request) = 0;
+  virtual void Bind(f1dl::InterfaceRequest<Interface> request) = 0;
 };
 
 // SetBoundable represents an object that can be bound to multiple times.
@@ -25,7 +25,7 @@ template <class Interface>
 class SetBoundable {
  public:
   // Adds a binding to the object.
-  virtual void AddBinding(fidl::InterfaceRequest<Interface> request) = 0;
+  virtual void AddBinding(f1dl::InterfaceRequest<Interface> request) = 0;
 };
 }  // namespace fidl_helpers
 }  // namespace ledger

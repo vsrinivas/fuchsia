@@ -35,7 +35,7 @@ class Module1View : public mozart::BaseView {
   explicit Module1View(
       modular_example::Store* const store,
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  kModuleName),
@@ -138,8 +138,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_ = std::make_unique<Module1View>(
         &store_,
         application_context()
@@ -149,8 +149,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     FXL_CHECK(outgoing_services.is_valid());
 
     module_context_.Bind(std::move(module_context));
@@ -161,7 +161,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
     // Provide services to the recipe module.
     outgoing_services_.AddBinding(std::move(outgoing_services));
     outgoing_services_.AddService<modular::examples::Multiplier>(
-        [this](fidl::InterfaceRequest<modular::examples::Multiplier> req) {
+        [this](f1dl::InterfaceRequest<modular::examples::Multiplier> req) {
           multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
         });
 
@@ -199,7 +199,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
   // This is a ServiceProvider we expose to our parent (recipe) module, to
   // demonstrate the use of a service exchange.
-  fidl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
+  f1dl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
   MultiplierImpl multiplier_service_;
   app::ServiceNamespace outgoing_services_;
 

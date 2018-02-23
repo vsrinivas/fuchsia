@@ -28,7 +28,7 @@ namespace modular {
 // //    |receiver| goes out of scope, messages will no longer be delivered to
 // //    the callback.
 // auto receiver = make_unique<MessageReceiverAdapator>(message_queue.get(),
-//     [] (fidl::String msg, std::function<void> ack){
+//     [] (f1dl::String msg, std::function<void> ack){
 //       ack();  // Acknowledge message receipt. We will continue to have new
 //               // messages delivered to this callback.
 //               // messages to this callback.
@@ -38,7 +38,7 @@ namespace modular {
 class MessageReceiverClient : modular::MessageReader {
  public:
   using MessageReceiverClientCallback =
-      std::function<void(fidl::String, const OnReceiveCallback& ack)>;
+      std::function<void(f1dl::String, const OnReceiveCallback& ack)>;
 
   explicit MessageReceiverClient(modular::MessageQueue* mq,
                                  MessageReceiverClientCallback callback);
@@ -47,11 +47,11 @@ class MessageReceiverClient : modular::MessageReader {
 
  private:
   // |MessageReader|
-  void OnReceive(const fidl::String& message,
+  void OnReceive(const f1dl::String& message,
                  const OnReceiveCallback& ack) override;
 
   MessageReceiverClientCallback callback_;
-  fidl::Binding<modular::MessageReader> receiver_;
+  f1dl::Binding<modular::MessageReader> receiver_;
 };
 
 }  // namespace modular

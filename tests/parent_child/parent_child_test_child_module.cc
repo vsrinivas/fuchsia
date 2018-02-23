@@ -17,8 +17,8 @@ class ChildApp {
  public:
   ChildApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }

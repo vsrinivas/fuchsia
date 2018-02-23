@@ -110,27 +110,27 @@ class LinkImpl : PageClient {
   // Creates a new LinkConnection for the given request. LinkConnection
   // instances are deleted when their connections close, and they are all
   // deleted and close their connections when LinkImpl is destroyed.
-  void Connect(fidl::InterfaceRequest<Link> request,
+  void Connect(f1dl::InterfaceRequest<Link> request,
                ConnectionType connection_type);
 
   // Used by LinkConnection.
-  void SetSchema(const fidl::String& json_schema);
-  void UpdateObject(fidl::Array<fidl::String> path,
-                    const fidl::String& json,
+  void SetSchema(const f1dl::String& json_schema);
+  void UpdateObject(f1dl::Array<f1dl::String> path,
+                    const f1dl::String& json,
                     uint32_t src);
-  void Set(fidl::Array<fidl::String> path,
-           const fidl::String& json,
+  void Set(f1dl::Array<f1dl::String> path,
+           const f1dl::String& json,
            uint32_t src);
-  void Get(fidl::Array<fidl::String> path,
-           const std::function<void(fidl::String)>& callback);
+  void Get(f1dl::Array<f1dl::String> path,
+           const std::function<void(f1dl::String)>& callback);
   void GetEntity(const Link::GetEntityCallback& callback);
-  void SetEntity(const fidl::String& entity_reference, const uint32_t src);
-  void Erase(fidl::Array<fidl::String> path, uint32_t src);
+  void SetEntity(const f1dl::String& entity_reference, const uint32_t src);
+  void Erase(f1dl::Array<f1dl::String> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   void Sync(const std::function<void()>& callback);
-  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher, uint32_t conn);
-  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher);
+  void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher, uint32_t conn);
+  void WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher);
 
   // Used by LinkWatcherConnection.
   void RemoveConnection(LinkWatcherConnection* connection);
@@ -151,7 +151,7 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(fidl::Array<LinkChangePtr> changes);
+  void Replay(f1dl::Array<LinkChangePtr> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
   bool ApplyChange(LinkChange* change);
@@ -161,8 +161,8 @@ class LinkImpl : PageClient {
   void MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done);
   void MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src);
 
-  bool ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json);
-  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const fidl::String& json);
+  bool ApplySetOp(const CrtJsonPointer& ptr, const f1dl::String& json);
+  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const f1dl::String& json);
   bool ApplyEraseOp(const CrtJsonPointer& ptr);
 
   static bool MergeObject(CrtJsonValue& target,
@@ -191,7 +191,7 @@ class LinkImpl : PageClient {
   // We can only accept connection requests once the instance is fully
   // initialized. So we queue connections on |requests_| until |ready_| is true.
   bool ready_{};
-  std::vector<fidl::InterfaceRequest<Link>> requests_;
+  std::vector<f1dl::InterfaceRequest<Link>> requests_;
 
   // Indices within |requests_| of primary connections. There is no default
   // primary connection. These values are translated to connection IDs by the
@@ -277,7 +277,7 @@ class LinkConnection : Link {
   // constructor is therefore private and only accessible from here.
   static void New(LinkImpl* const impl,
                   const uint32_t id,
-                  fidl::InterfaceRequest<Link> request) {
+                  f1dl::InterfaceRequest<Link> request) {
     new LinkConnection(impl, id, std::move(request));
   }
 
@@ -285,24 +285,24 @@ class LinkConnection : Link {
   // Private so it cannot be created on the stack.
   LinkConnection(LinkImpl* impl,
                  uint32_t id,
-                 fidl::InterfaceRequest<Link> link_request);
+                 f1dl::InterfaceRequest<Link> link_request);
 
   // |Link|
-  void SetSchema(const fidl::String& json_schema) override;
-  void UpdateObject(fidl::Array<fidl::String> path,
-                    const fidl::String& json) override;
-  void Set(fidl::Array<fidl::String> path, const fidl::String& json) override;
-  void Get(fidl::Array<fidl::String> path,
+  void SetSchema(const f1dl::String& json_schema) override;
+  void UpdateObject(f1dl::Array<f1dl::String> path,
+                    const f1dl::String& json) override;
+  void Set(f1dl::Array<f1dl::String> path, const f1dl::String& json) override;
+  void Get(f1dl::Array<f1dl::String> path,
            const GetCallback& callback) override;
-  void Erase(fidl::Array<fidl::String> path) override;
+  void Erase(f1dl::Array<f1dl::String> path) override;
   void GetEntity(const GetEntityCallback& callback) override;
-  void SetEntity(const fidl::String& entity_reference) override;
-  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
-  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
+  void SetEntity(const f1dl::String& entity_reference) override;
+  void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
+  void WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
   void Sync(const SyncCallback& callback) override;
 
   LinkImpl* const impl_;
-  fidl::Binding<Link> binding_;
+  f1dl::Binding<Link> binding_;
 
   // The ID is used to identify a LinkConnection during notifications of
   // LinkWatchers about value changes, if a LinkWatcher requests to be notified
@@ -324,7 +324,7 @@ class LinkWatcherConnection {
 
   // Notifies the LinkWatcher in this connection, unless src is the
   // LinkConnection this Watcher was registered on.
-  void Notify(const fidl::String& value, uint32_t src);
+  void Notify(const f1dl::String& value, uint32_t src);
 
  private:
   // The LinkImpl this instance belongs to.

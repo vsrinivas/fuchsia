@@ -23,12 +23,12 @@ class FakeNetConnector : public netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        std::function<void(uint64_t, fidl::Array<fidl::String>)> callback) = 0;
+        std::function<void(uint64_t, f1dl::Array<f1dl::String>)> callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToServiceProvider(
         std::string device_name,
-        fidl::InterfaceRequest<app::ServiceProvider> request) = 0;
+        f1dl::InterfaceRequest<app::ServiceProvider> request) = 0;
   };
 
   FakeNetConnector(Delegate* delegate);
@@ -36,16 +36,16 @@ class FakeNetConnector : public netconnector::NetConnector {
 
   // Connects to the service provider of this (virtual) host
   void ConnectToServiceProvider(
-      fidl::InterfaceRequest<app::ServiceProvider> request);
+      f1dl::InterfaceRequest<app::ServiceProvider> request);
 
  private:
   // NetConnector implementation:
   void RegisterServiceProvider(
-      const fidl::String& name,
-      fidl::InterfaceHandle<app::ServiceProvider> service_provider) override;
+      const f1dl::String& name,
+      f1dl::InterfaceHandle<app::ServiceProvider> service_provider) override;
   void GetDeviceServiceProvider(
-      const fidl::String& device_name,
-      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+      const f1dl::String& device_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
   void GetKnownDeviceNames(
       uint64_t version_last_seen,
       const GetKnownDeviceNamesCallback& callback) override;

@@ -31,7 +31,7 @@ const char kRedirectUrl[] = "http://example.com/redirect";
 // is moved out in ::Start().
 class FakeURLLoader : public network::URLLoader {
  public:
-  FakeURLLoader(fidl::InterfaceRequest<network::URLLoader> request,
+  FakeURLLoader(f1dl::InterfaceRequest<network::URLLoader> request,
                 network::URLResponsePtr response_to_return,
                 network::URLRequestPtr* request_received)
       : binding_(this, std::move(request)),
@@ -52,7 +52,7 @@ class FakeURLLoader : public network::URLLoader {
   void QueryStatus(const QueryStatusCallback& /*callback*/) override {}
 
  private:
-  fidl::Binding<network::URLLoader> binding_;
+  f1dl::Binding<network::URLLoader> binding_;
   network::URLResponsePtr response_to_return_;
   network::URLRequestPtr* request_received_;
 
@@ -65,7 +65,7 @@ class FakeURLLoader : public network::URLLoader {
 // each time.
 class FakeNetworkService : public network::NetworkService {
  public:
-  explicit FakeNetworkService(fidl::InterfaceRequest<NetworkService> request)
+  explicit FakeNetworkService(f1dl::InterfaceRequest<NetworkService> request)
       : binding_(this, std::move(request)) {}
   ~FakeNetworkService() override {}
 
@@ -77,7 +77,7 @@ class FakeNetworkService : public network::NetworkService {
 
   // NetworkService:
   void CreateURLLoader(
-      fidl::InterfaceRequest<network::URLLoader> loader) override {
+      f1dl::InterfaceRequest<network::URLLoader> loader) override {
     FXL_DCHECK(response_to_return_);
     loaders_.push_back(std::make_unique<FakeURLLoader>(
         std::move(loader), std::move(response_to_return_), &request_received_));
@@ -88,7 +88,7 @@ class FakeNetworkService : public network::NetworkService {
   void CreateWebSocket(zx::channel /*socket*/) override { FXL_DCHECK(false); }
 
  private:
-  fidl::Binding<NetworkService> binding_;
+  f1dl::Binding<NetworkService> binding_;
   std::vector<std::unique_ptr<FakeURLLoader>> loaders_;
   network::URLRequestPtr request_received_;
   network::URLResponsePtr response_to_return_;

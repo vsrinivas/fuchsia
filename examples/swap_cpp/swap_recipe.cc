@@ -23,7 +23,7 @@ class RecipeView : public mozart::BaseView {
  public:
   explicit RecipeView(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "RecipeView") {}
@@ -71,8 +71,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_ = std::make_unique<RecipeView>(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
@@ -82,8 +82,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     SwapModule();

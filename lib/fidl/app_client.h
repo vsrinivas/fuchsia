@@ -89,7 +89,7 @@ class AppClient : public AppClientBase {
 
   ~AppClient() override = default;
 
-  fidl::InterfacePtr<Service>& primary_service() { return service_; }
+  f1dl::InterfacePtr<Service>& primary_service() { return service_; }
 
  private:
   void ServiceTerminate(const std::function<void()>& done) override {
@@ -101,7 +101,7 @@ class AppClient : public AppClientBase {
 
   void ServiceUnbind() override { service_.Unbind(); }
 
-  fidl::InterfacePtr<Service> service_;
+  f1dl::InterfacePtr<Service> service_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 

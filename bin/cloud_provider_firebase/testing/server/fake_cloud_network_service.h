@@ -22,16 +22,16 @@ class FakeCloudNetworkService : public network::NetworkService {
 
   // network::NetworkService
   void CreateURLLoader(
-      ::fidl::InterfaceRequest<network::URLLoader> loader) override;
+      ::f1dl::InterfaceRequest<network::URLLoader> loader) override;
   void GetCookieStore(zx::channel cookie_store) override;
   void CreateWebSocket(zx::channel socket) override;
   // Bind a new request to this implementation.
-  void AddBinding(fidl::InterfaceRequest<network::NetworkService> request);
+  void AddBinding(f1dl::InterfaceRequest<network::NetworkService> request);
 
  private:
   FakeCloudURLLoader url_loader_;
-  fidl::BindingSet<network::URLLoader> loader_bindings_;
-  fidl::BindingSet<network::NetworkService> bindings_;
+  f1dl::BindingSet<network::URLLoader> loader_bindings_;
+  f1dl::BindingSet<network::NetworkService> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudNetworkService);
 };

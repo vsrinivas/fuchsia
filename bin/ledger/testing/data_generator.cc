@@ -25,7 +25,7 @@ DataGenerator::DataGenerator(uint64_t seed) : generator_(seed) {}
 
 DataGenerator::~DataGenerator() {}
 
-fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
+f1dl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
   FXL_DCHECK(i_str.size() + 1 <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - 1);
@@ -34,22 +34,22 @@ fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
       fxl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
-fidl::Array<uint8_t> DataGenerator::MakePageId() {
+f1dl::Array<uint8_t> DataGenerator::MakePageId() {
   return MakeValue(kPageIdSize);
 }
 
-fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
-  auto data = fidl::Array<uint8_t>::New(size);
+f1dl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
+  auto data = f1dl::Array<uint8_t>::New(size);
   std::generate(data.begin(), data.end(), std::ref(generator_));
   return data;
 }
 
-std::vector<fidl::Array<uint8_t>> DataGenerator::MakeKeys(
+std::vector<f1dl::Array<uint8_t>> DataGenerator::MakeKeys(
     size_t key_count,
     size_t key_size,
     size_t unique_key_count) {
   FXL_DCHECK(unique_key_count <= key_count);
-  std::vector<fidl::Array<uint8_t>> keys(key_count);
+  std::vector<f1dl::Array<uint8_t>> keys(key_count);
   for (size_t i = 0; i < unique_key_count; i++) {
     keys[i] = MakeKey(i, key_size);
   }

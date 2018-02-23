@@ -16,7 +16,7 @@ ContextHandler::ContextHandler(
 
 ContextHandler::~ContextHandler() = default;
 
-void ContextHandler::SelectTopics(const std::vector<fidl::String>& topics) {
+void ContextHandler::SelectTopics(const std::vector<f1dl::String>& topics) {
   if (binding_.is_bound()) {
     binding_.Unbind();
   }
@@ -40,7 +40,7 @@ void ContextHandler::Watch(const std::function<void()>& watcher) {
 }
 
 void ContextHandler::OnContextUpdate(maxwell::ContextUpdatePtr update) {
-  state_ = fidl::Map<fidl::String, fidl::String>();
+  state_ = f1dl::Map<f1dl::String, f1dl::String>();
   for (const auto& it : update->values) {
     if (it.GetValue().empty())
       continue;

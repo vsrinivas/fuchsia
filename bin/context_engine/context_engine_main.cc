@@ -24,7 +24,7 @@ class ContextEngineApp {
     context_engine_impl_.reset(new ContextEngineImpl(entity_resolver_.get()));
 
     app_context->outgoing_services()->AddService<ContextEngine>(
-        [this](fidl::InterfaceRequest<ContextEngine> request) {
+        [this](f1dl::InterfaceRequest<ContextEngine> request) {
           context_engine_impl_->AddBinding(std::move(request));
         });
   }

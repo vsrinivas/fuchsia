@@ -9,22 +9,22 @@
 namespace cloud_sync {
 
 TestCloudProvider::TestCloudProvider(
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
+    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : binding_(this, std::move(request)), device_set_binding_(&device_set) {}
 
 TestCloudProvider::~TestCloudProvider() {}
 
 void TestCloudProvider::GetDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
+    f1dl::InterfaceRequest<cloud_provider::DeviceSet> request,
     const GetDeviceSetCallback& callback) {
   device_set_binding_.Bind(std::move(request));
   callback(cloud_provider::Status::OK);
 }
 
 void TestCloudProvider::GetPageCloud(
-    fidl::Array<uint8_t> /*app_id*/,
-    fidl::Array<uint8_t> /*page_id*/,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
+    f1dl::Array<uint8_t> /*app_id*/,
+    f1dl::Array<uint8_t> /*page_id*/,
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
     const GetPageCloudCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }

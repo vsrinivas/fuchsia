@@ -38,7 +38,7 @@ PageClient::~PageClient() {
   ledger_client_->DropPageClient(this);
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
+f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_error_handler([this] {
@@ -48,7 +48,7 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   return ret;
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
+f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
     const ledger::ResultState result_state) {
   switch (result_state) {
     case ledger::ResultState::PARTIAL_CONTINUED:

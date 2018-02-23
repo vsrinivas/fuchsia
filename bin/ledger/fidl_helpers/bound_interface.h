@@ -16,7 +16,7 @@ template <class Interface, class Impl>
 class BoundInterface : public Boundable<Interface> {
  public:
   template <class... Args>
-  explicit BoundInterface(fidl::InterfaceRequest<Interface> request,
+  explicit BoundInterface(f1dl::InterfaceRequest<Interface> request,
                           Args&&... args)
       : impl_(std::forward<Args>(args)...),
         binding_(&impl_, std::move(request)) {}
@@ -25,7 +25,7 @@ class BoundInterface : public Boundable<Interface> {
   explicit BoundInterface(Args&&... args)
       : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
 
-  void Bind(fidl::InterfaceRequest<Interface> request) final {
+  void Bind(f1dl::InterfaceRequest<Interface> request) final {
     binding_.Bind(std::move(request));
   }
 
@@ -43,7 +43,7 @@ class BoundInterface : public Boundable<Interface> {
 
  private:
   Impl impl_;
-  fidl::Binding<Interface> binding_;
+  f1dl::Binding<Interface> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
 };

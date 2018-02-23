@@ -33,7 +33,7 @@ void ReportEvent(ModularEvent event) {
 }
 
 void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
- auto parts = fidl::Array<cobalt::ObservationValuePtr>::New(2);
+ auto parts = f1dl::Array<cobalt::ObservationValuePtr>::New(2);
  const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
 
  parts[0] = cobalt::ObservationValue::New();

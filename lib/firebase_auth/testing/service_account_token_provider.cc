@@ -190,7 +190,7 @@ void ServiceAccountTokenProvider::GetIdToken(
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
-    const fidl::String& firebase_api_key,
+    const f1dl::String& firebase_api_key,
     const GetFirebaseAuthTokenCallback& callback) {
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.

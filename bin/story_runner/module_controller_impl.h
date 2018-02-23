@@ -37,13 +37,13 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
       AppConfigPtr module_config,
       const ModuleData* module_data,
       app::ServiceListPtr service_list,
-      fidl::InterfaceHandle<ModuleContext> module_context,
-      fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services);
+      f1dl::InterfaceHandle<ModuleContext> module_context,
+      f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;
 
-  void Connect(fidl::InterfaceRequest<ModuleController> request);
+  void Connect(f1dl::InterfaceRequest<ModuleController> request);
 
   EmbedModuleControllerPtr NewEmbedModuleController();
 
@@ -59,7 +59,7 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
 
  private:
   // |ModuleController|
-  void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
+  void Watch(f1dl::InterfaceHandle<ModuleWatcher> watcher) override;
 
   // |ModuleController| and |EmbedModuleController|
   void Focus() override;
@@ -83,11 +83,11 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   const ModuleData* const module_data_;
 
   // The service provided here.
-  fidl::BindingSet<ModuleController> module_controller_bindings_;
-  fidl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
+  f1dl::BindingSet<ModuleController> module_controller_bindings_;
+  f1dl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
 
   // Watchers of this Module instance.
-  fidl::InterfacePtrSet<ModuleWatcher> watchers_;
+  f1dl::InterfacePtrSet<ModuleWatcher> watchers_;
 
   // The state of this Module instance, stored here to initialize
   // watchers registered in the future to the current state.

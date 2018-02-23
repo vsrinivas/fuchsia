@@ -13,7 +13,7 @@ TimelineStoriesWatcher::TimelineStoriesWatcher(
     modular::StoryProviderPtr* story_provider)
     : binding_(this) {
   // Add ourselves as a watcher to the StoryProvider.
-  fidl::InterfaceHandle<modular::StoryProviderWatcher> handle;
+  f1dl::InterfaceHandle<modular::StoryProviderWatcher> handle;
   binding_.Bind(handle.NewRequest());
   (*story_provider)->Watch(std::move(handle));
 }
@@ -28,7 +28,7 @@ void TimelineStoriesWatcher::OnChange(modular::StoryInfoPtr story_info,
   }
 }
 
-void TimelineStoriesWatcher::OnDelete(const fidl::String& story_id) {
+void TimelineStoriesWatcher::OnDelete(const f1dl::String& story_id) {
   auto it = id_to_url_.find(story_id.get());
   if (it != id_to_url_.end()) {
     // TODO(rosswang): use a multiset for story_urls (for stories with duplicate

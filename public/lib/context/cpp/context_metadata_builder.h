@@ -14,20 +14,20 @@ class ContextMetadataBuilder {
   ContextMetadataBuilder();
   explicit ContextMetadataBuilder(ContextMetadataPtr initial_value);
 
-  ContextMetadataBuilder& SetStoryId(const fidl::String& story_id);
+  ContextMetadataBuilder& SetStoryId(const f1dl::String& story_id);
   ContextMetadataBuilder& SetStoryFocused(bool focused);
 
-  ContextMetadataBuilder& SetModuleUrl(const fidl::String& url);
-  ContextMetadataBuilder& SetModulePath(const fidl::Array<fidl::String>& path);
+  ContextMetadataBuilder& SetModuleUrl(const f1dl::String& url);
+  ContextMetadataBuilder& SetModulePath(const f1dl::Array<f1dl::String>& path);
 
-  ContextMetadataBuilder& SetEntityTopic(const fidl::String& topic);
-  ContextMetadataBuilder& AddEntityType(const fidl::String& type);
+  ContextMetadataBuilder& SetEntityTopic(const f1dl::String& topic);
+  ContextMetadataBuilder& AddEntityType(const f1dl::String& type);
   ContextMetadataBuilder& SetEntityTypes(
-      const fidl::Array<fidl::String>& types);
+      const f1dl::Array<f1dl::String>& types);
 
   ContextMetadataBuilder& SetLinkPath(
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& name);
+      const f1dl::Array<f1dl::String>& module_path,
+      const f1dl::String& name);
 
   // Build() can be called only once, as it moves |m_|.
   ContextMetadataPtr Build();

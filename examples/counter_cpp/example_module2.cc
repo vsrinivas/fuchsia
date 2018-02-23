@@ -31,7 +31,7 @@ class Module2View : public mozart::BaseView {
   explicit Module2View(
       modular_example::Store* const store,
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "Module2Impl"),
@@ -115,8 +115,8 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_ = std::make_unique<Module2View>(
         &store_,
         application_context()
@@ -126,8 +126,8 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
@@ -161,7 +161,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
   }
 
   std::unique_ptr<Module2View> view_;
-  fidl::InterfacePtr<modular::ModuleContext> module_context_;
+  f1dl::InterfacePtr<modular::ModuleContext> module_context_;
   modular_example::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and

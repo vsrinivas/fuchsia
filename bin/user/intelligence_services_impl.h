@@ -23,17 +23,17 @@ class IntelligenceServicesImpl : public IntelligenceServices {
                            SuggestionEngine* suggestion_engine,
                            UserActionLog* user_action_log);
 
-  void GetContextReader(fidl::InterfaceRequest<ContextReader> request) override;
-  void GetContextWriter(fidl::InterfaceRequest<ContextWriter> request) override;
+  void GetContextReader(f1dl::InterfaceRequest<ContextReader> request) override;
+  void GetContextWriter(f1dl::InterfaceRequest<ContextWriter> request) override;
 
   void GetProposalPublisher(
-      fidl::InterfaceRequest<ProposalPublisher> request) override;
+      f1dl::InterfaceRequest<ProposalPublisher> request) override;
 
   void GetActionLog(
-      fidl::InterfaceRequest<ComponentActionLog> request) override;
+      f1dl::InterfaceRequest<ComponentActionLog> request) override;
 
   void RegisterQueryHandler(
-      fidl::InterfaceHandle<QueryHandler> query_handler) override;
+      f1dl::InterfaceHandle<QueryHandler> query_handler) override;
 
  private:
   ComponentScopePtr scope_;

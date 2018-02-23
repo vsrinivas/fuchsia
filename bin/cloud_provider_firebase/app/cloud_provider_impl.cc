@@ -22,7 +22,7 @@ CloudProviderImpl::CloudProviderImpl(
     std::string user_id,
     ConfigPtr config,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
+    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
       network_service_(network_service),
       user_id_(std::move(user_id)),
@@ -48,7 +48,7 @@ CloudProviderImpl::CloudProviderImpl(
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::GetDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+    f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_, GetFirebasePathForUser(user_id_));
@@ -60,9 +60,9 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    fidl::Array<uint8_t> app_id,
-    fidl::Array<uint8_t> page_id,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+    f1dl::Array<uint8_t> app_id,
+    f1dl::Array<uint8_t> page_id,
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
   std::string app_id_str = convert::ToString(app_id);
   std::string page_id_str = convert::ToString(page_id);

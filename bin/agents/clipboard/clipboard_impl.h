@@ -20,11 +20,11 @@ class ClipboardImpl : Clipboard {
   explicit ClipboardImpl(LedgerClient* ledger_client);
   ~ClipboardImpl();
 
-  void Connect(fidl::InterfaceRequest<Clipboard> request);
+  void Connect(f1dl::InterfaceRequest<Clipboard> request);
 
  private:
   // |Clipboard|
-  void Push(const fidl::String& text) override;
+  void Push(const f1dl::String& text) override;
 
   // |Clipboard|
   void Peek(const PeekCallback& callback) override;
@@ -34,7 +34,7 @@ class ClipboardImpl : Clipboard {
 
   // The bindings set containing the outgoing services request from the agent
   // driver.
-  fidl::BindingSet<Clipboard> bindings_;
+  f1dl::BindingSet<Clipboard> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardImpl);
   friend class ClipboardImplTest;

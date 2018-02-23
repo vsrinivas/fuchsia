@@ -34,7 +34,7 @@ class ContextHandler : maxwell::ContextListener {
   //
   // To be notified of updates, register a listener by calling Watch() before
   // calling SelectTopics().
-  void SelectTopics(const std::vector<fidl::String>& topics);
+  void SelectTopics(const std::vector<f1dl::String>& topics);
 
   void Watch(const std::function<void()>& watcher);
 
@@ -44,12 +44,12 @@ class ContextHandler : maxwell::ContextListener {
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override;
 
-  fidl::InterfacePtr<maxwell::ContextReader> context_reader_;
+  f1dl::InterfacePtr<maxwell::ContextReader> context_reader_;
 
   // Current value of the context.
   ContextState state_;
 
-  fidl::Binding<maxwell::ContextListener> binding_;
+  f1dl::Binding<maxwell::ContextListener> binding_;
   std::vector<std::function<void()>> watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextHandler);

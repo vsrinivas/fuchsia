@@ -26,7 +26,7 @@ class AccountProviderImpl : AccountProvider {
  private:
   // |AccountProvider| implementation:
   void Initialize(
-      fidl::InterfaceHandle<AccountProviderContext> provider) override;
+      f1dl::InterfaceHandle<AccountProviderContext> provider) override;
   void Terminate() override;
   void AddAccount(IdentityProvider identity_provider,
                   const AddAccountCallback& callback) override;
@@ -34,14 +34,14 @@ class AccountProviderImpl : AccountProvider {
                      bool revoke_all,
                      const RemoveAccountCallback& callback) override;
   void GetTokenProviderFactory(
-      const fidl::String& account_id,
-      fidl::InterfaceRequest<TokenProviderFactory> request) override;
+      const f1dl::String& account_id,
+      f1dl::InterfaceRequest<TokenProviderFactory> request) override;
 
   std::string GenerateAccountId();
 
   std::shared_ptr<app::ApplicationContext> application_context_;
   AccountProviderContextPtr account_provider_context_;
-  fidl::Binding<AccountProvider> binding_;
+  f1dl::Binding<AccountProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
 };
@@ -50,13 +50,13 @@ AccountProviderImpl::AccountProviderImpl()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
   application_context_->outgoing_services()->AddService<AccountProvider>(
-      [this](fidl::InterfaceRequest<AccountProvider> request) {
+      [this](f1dl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
 }
 
 void AccountProviderImpl::Initialize(
-    fidl::InterfaceHandle<AccountProviderContext> provider) {
+    f1dl::InterfaceHandle<AccountProviderContext> provider) {
   account_provider_context_.Bind(std::move(provider));
 }
 
@@ -98,8 +98,8 @@ void AccountProviderImpl::RemoveAccount(AccountPtr account,
 }
 
 void AccountProviderImpl::GetTokenProviderFactory(
-    const fidl::String& account_id,
-    fidl::InterfaceRequest<TokenProviderFactory> request) {}
+    const f1dl::String& account_id,
+    f1dl::InterfaceRequest<TokenProviderFactory> request) {}
 
 }  // namespace auth
 }  // namespace modular

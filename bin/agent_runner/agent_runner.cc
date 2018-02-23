@@ -42,7 +42,7 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
-void AgentRunner::Connect(fidl::InterfaceRequest<AgentProvider> request) {
+void AgentRunner::Connect(f1dl::InterfaceRequest<AgentProvider> request) {
   agent_provider_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -138,8 +138,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url,
     const std::string& agent_url,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -158,8 +158,8 @@ void AgentRunner::ConnectToAgent(
 
 void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
-    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
+    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -404,7 +404,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
-fidl::Array<fidl::String> AgentRunner::GetAllAgents() {
+f1dl::Array<f1dl::String> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
   std::set<std::string> agents;
   for (auto const& it : running_agents_) {
@@ -417,7 +417,7 @@ fidl::Array<fidl::String> AgentRunner::GetAllAgents() {
     agents.insert(it.first);
   }
 
-  fidl::Array<fidl::String> agent_urls;
+  f1dl::Array<f1dl::String> agent_urls;
   // Initialize the size to force non-null.
   agent_urls.resize(0);
   for (auto const& it : agents) {
@@ -438,7 +438,7 @@ void AgentRunner::UpdateWatchers() {
       });
 }
 
-void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
+void AgentRunner::Watch(f1dl::InterfaceHandle<AgentProviderWatcher> watcher) {
   auto ptr = watcher.Bind();
   // 1. Send this watcher the current list of agents.
   ptr->OnUpdate(GetAllAgents());

@@ -102,7 +102,7 @@ class ContextRepository {
                        ContextListenerPtr listener,
                        SubscriptionDebugInfoPtr debug_info);
 
-  void AddDebugBinding(fidl::InterfaceRequest<ContextDebug> request);
+  void AddDebugBinding(f1dl::InterfaceRequest<ContextDebug> request);
 
  private:
   Id AddInternal(const Id& parent_id, ContextValuePtr value);
@@ -121,7 +121,7 @@ class ContextRepository {
 
   friend class ContextDebugImpl;
   std::unique_ptr<ContextDebugImpl> debug_;
-  fidl::BindingSet<ContextDebug> debug_bindings_;
+  f1dl::BindingSet<ContextDebug> debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };

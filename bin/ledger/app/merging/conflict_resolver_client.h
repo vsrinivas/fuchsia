@@ -46,17 +46,17 @@ class ConflictResolverClient : public MergeResultProvider {
 
   // Performs a diff of the given type on the conflict.
   void GetDiff(diff_utils::DiffType type,
-               fidl::Array<uint8_t> token,
+               f1dl::Array<uint8_t> token,
                const std::function<void(Status,
-                                        fidl::Array<DiffEntryPtr>,
-                                        fidl::Array<uint8_t>)>& callback);
+                                        f1dl::Array<DiffEntryPtr>,
+                                        f1dl::Array<uint8_t>)>& callback);
 
   // MergeResultProvider:
-  void GetFullDiff(fidl::Array<uint8_t> token,
+  void GetFullDiff(f1dl::Array<uint8_t> token,
                    const GetFullDiffCallback& callback) override;
-  void GetConflictingDiff(fidl::Array<uint8_t> token,
+  void GetConflictingDiff(f1dl::Array<uint8_t> token,
                           const GetConflictingDiffCallback& callback) override;
-  void Merge(fidl::Array<MergedValuePtr> merged_values,
+  void Merge(f1dl::Array<MergedValuePtr> merged_values,
              const MergeCallback& callback) override;
   void MergeNonConflictingEntries(
       const MergeNonConflictingEntriesCallback& callback) override;
@@ -91,7 +91,7 @@ class ConflictResolverClient : public MergeResultProvider {
   bool cancelled_ = false;
   callback::OperationSerializer operation_serializer_;
 
-  fidl::Binding<MergeResultProvider> merge_result_provider_binding_;
+  f1dl::Binding<MergeResultProvider> merge_result_provider_binding_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<ConflictResolverClient> weak_factory_;

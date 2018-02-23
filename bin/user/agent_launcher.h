@@ -23,7 +23,7 @@ class AgentLauncher {
  private:
   app::ApplicationEnvironment* environment_;
 
-  fidl::BindingSet<app::ApplicationEnvironmentHost,
+  f1dl::BindingSet<app::ApplicationEnvironmentHost,
                    std::unique_ptr<app::ApplicationEnvironmentHost>>
       agent_host_bindings_;
 };

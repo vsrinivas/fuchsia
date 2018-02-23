@@ -27,14 +27,14 @@ class App {
     auto services = app_context->outgoing_services();
     services->AddService<UserIntelligenceProviderFactory>(
         [this](
-            fidl::InterfaceRequest<UserIntelligenceProviderFactory> request) {
+            f1dl::InterfaceRequest<UserIntelligenceProviderFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
   }
 
  private:
   UserIntelligenceProviderFactoryImpl factory_impl_;
-  fidl::BindingSet<UserIntelligenceProviderFactory> factory_bindings_;
+  f1dl::BindingSet<UserIntelligenceProviderFactory> factory_bindings_;
 };
 
 const char kConfigSchema[] = R"SCHEMA(

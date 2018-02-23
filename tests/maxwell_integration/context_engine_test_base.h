@@ -20,7 +20,7 @@ class ContextEngineTestBase : public MaxwellTestBase {
     auto agent_host =
         std::make_unique<ApplicationEnvironmentHostImpl>(root_environment());
     agent_host->AddService<ContextWriter>(
-        [this, url](fidl::InterfaceRequest<ContextWriter> request) {
+        [this, url](f1dl::InterfaceRequest<ContextWriter> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
           agent_scope->url = url;
@@ -28,7 +28,7 @@ class ContextEngineTestBase : public MaxwellTestBase {
           context_engine_->GetWriter(std::move(scope), std::move(request));
         });
     agent_host->AddService<ContextReader>(
-        [this, url](fidl::InterfaceRequest<ContextReader> request) {
+        [this, url](f1dl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
           agent_scope->url = url;

@@ -134,7 +134,7 @@ class Settings {
 
  private:
   void ParseShellArgs(const std::string& value,
-                      fidl::Array<fidl::String>* args) {
+                      f1dl::Array<f1dl::String>* args) {
     bool escape = false;
     std::string arg;
     for (char i : value) {
@@ -166,8 +166,8 @@ class Settings {
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
-      const fidl::String& user_shell,
-      const fidl::Array<fidl::String>& user_shell_args) {
+      const f1dl::String& user_shell,
+      const f1dl::Array<f1dl::String>& user_shell_args) {
     const std::string kRootModule = "--root_module";
     std::string result = user_shell;
 
@@ -270,8 +270,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // We still need to pass a request for root view to device shell since
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
-    fidl::InterfaceHandle<mozart::ViewOwner> root_view;
-    fidl::InterfaceHandle<mozart::Presentation> presentation;
+    f1dl::InterfaceHandle<mozart::ViewOwner> root_view;
+    f1dl::InterfaceHandle<mozart::Presentation> presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
       app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
@@ -310,7 +310,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   }
 
   // |DeviceShellContext|
-  void GetUserProvider(fidl::InterfaceRequest<UserProvider> request) override {
+  void GetUserProvider(f1dl::InterfaceRequest<UserProvider> request) override {
     user_provider_impl_->Connect(std::move(request));
   }
 
@@ -346,8 +346,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
   // |AccountProviderContext|
   void GetAuthenticationContext(
-      const fidl::String& account_id,
-      fidl::InterfaceRequest<AuthenticationContext> request) override {
+      const f1dl::String& account_id,
+      f1dl::InterfaceRequest<AuthenticationContext> request) override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
@@ -358,8 +358,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   DeviceRunnerMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
-  fidl::Binding<DeviceShellContext> device_shell_context_binding_;
-  fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
+  f1dl::Binding<DeviceShellContext> device_shell_context_binding_;
+  f1dl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
 
   std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<Lifecycle>> device_shell_app_;

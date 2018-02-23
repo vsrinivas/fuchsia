@@ -48,7 +48,7 @@ class HelloAppParent {
 
  private:
   void DoIt(const std::string& request) {
-    hello_->Say(request, [request](const fidl::String& response) {
+    hello_->Say(request, [request](const f1dl::String& response) {
       printf("%s --> %s\n", request.c_str(), response.get().c_str());
     });
   }

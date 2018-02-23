@@ -34,8 +34,8 @@ class EntityProviderRunner : EntityResolver {
 
   void ConnectEntityReferenceFactory(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityReferenceFactory> request);
-  void ConnectEntityResolver(fidl::InterfaceRequest<EntityResolver> request);
+      f1dl::InterfaceRequest<EntityReferenceFactory> request);
+  void ConnectEntityResolver(f1dl::InterfaceRequest<EntityResolver> request);
 
   // Called by an EntityProviderController when the entity provider for a
   // component ID doesn't need to live anymore.
@@ -46,8 +46,8 @@ class EntityProviderRunner : EntityResolver {
   // Given a map of entity type -> entity data, creates an entity reference for
   // it. This data is encoded into the entity reference, and must be within
   // 16KB. If successful, a non-null value is returned.
-  fidl::String CreateReferenceFromData(
-      fidl::Map<fidl::String, fidl::String>* type_to_data);
+  f1dl::String CreateReferenceFromData(
+      f1dl::Map<f1dl::String, f1dl::String>* type_to_data);
 
   // Called by a DataEntity when it has no more |Entity|s it needs to serve for
   // a particular |entity_reference|.
@@ -60,22 +60,22 @@ class EntityProviderRunner : EntityResolver {
   // Called by |EntityReferenceFactoryImpl|.
   void CreateReference(
       const std::string& agent_url,
-      const fidl::String& cookie,
+      const f1dl::String& cookie,
       const EntityReferenceFactory::CreateReferenceCallback& callback);
 
   // |EntityResolver|
-  void ResolveEntity(const fidl::String& entity_reference,
-                     fidl::InterfaceRequest<Entity> entity_request) override;
+  void ResolveEntity(const f1dl::String& entity_reference,
+                     f1dl::InterfaceRequest<Entity> entity_request) override;
 
-  void ResolveDataEntity(const fidl::String& entity_reference,
-                         fidl::InterfaceRequest<Entity> entity_request);
+  void ResolveDataEntity(const f1dl::String& entity_reference,
+                         f1dl::InterfaceRequest<Entity> entity_request);
 
   EntityProviderLauncher* const entity_provider_launcher_;
 
   // component id -> EntityReferenceFactory
   std::map<std::string, std::unique_ptr<EntityReferenceFactoryImpl>>
       entity_reference_factory_bindings_;
-  fidl::BindingSet<EntityResolver> entity_resolver_bindings_;
+  f1dl::BindingSet<EntityResolver> entity_resolver_bindings_;
 
   // These are the running entity providers.
   // component id -> EntityProviderController.

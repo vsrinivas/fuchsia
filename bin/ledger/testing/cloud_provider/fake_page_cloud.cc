@@ -12,13 +12,13 @@ namespace ledger {
 
 namespace {
 
-fidl::Array<uint8_t> PositionToToken(size_t position) {
+f1dl::Array<uint8_t> PositionToToken(size_t position) {
   std::string bytes(
       std::string(reinterpret_cast<char*>(&position), sizeof(position)));
   return convert::ToArray(bytes);
 }
 
-bool TokenToPosition(const fidl::Array<uint8_t>& token, size_t* result) {
+bool TokenToPosition(const f1dl::Array<uint8_t>& token, size_t* result) {
   if (token.is_null()) {
     *result = 0u;
     return true;
@@ -39,7 +39,7 @@ class FakePageCloud::WatcherContainer {
   WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,
                    size_t next_commit_index);
 
-  void SendCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+  void SendCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                    size_t next_commit_index,
                    fxl::Closure on_ack);
 
@@ -69,7 +69,7 @@ FakePageCloud::WatcherContainer::WatcherContainer(
     : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
 
 void FakePageCloud::WatcherContainer::SendCommits(
-    fidl::Array<cloud_provider::CommitPtr> commits,
+    f1dl::Array<cloud_provider::CommitPtr> commits,
     size_t next_commit_index,
     fxl::Closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
@@ -96,7 +96,7 @@ FakePageCloud::FakePageCloud() {
 FakePageCloud::~FakePageCloud() {}
 
 void FakePageCloud::Bind(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -107,7 +107,7 @@ void FakePageCloud::SendPendingCommits() {
       continue;
     }
 
-    fidl::Array<cloud_provider::CommitPtr> commits;
+    f1dl::Array<cloud_provider::CommitPtr> commits;
     for (size_t i = container.NextCommitIndex(); i < commits_.size(); i++) {
       commits.push_back(commits_[i].Clone());
     }
@@ -117,7 +117,7 @@ void FakePageCloud::SendPendingCommits() {
   }
 }
 
-void FakePageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+void FakePageCloud::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
   for (auto& commit : commits) {
     commits_.push_back(std::move(commit));
@@ -126,9 +126,9 @@ void FakePageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetCommits(fidl::Array<uint8_t> min_position_token,
+void FakePageCloud::GetCommits(f1dl::Array<uint8_t> min_position_token,
                                const GetCommitsCallback& callback) {
-  fidl::Array<cloud_provider::CommitPtr> result;
+  f1dl::Array<cloud_provider::CommitPtr> result;
   size_t start = 0u;
   if (!TokenToPosition(min_position_token, &start)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
@@ -138,7 +138,7 @@ void FakePageCloud::GetCommits(fidl::Array<uint8_t> min_position_token,
   for (size_t i = start; i < commits_.size(); i++) {
     result.push_back(commits_[i].Clone());
   }
-  fidl::Array<uint8_t> token;
+  f1dl::Array<uint8_t> token;
   if (!result.empty()) {
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
@@ -148,7 +148,7 @@ void FakePageCloud::GetCommits(fidl::Array<uint8_t> min_position_token,
   callback(cloud_provider::Status::OK, std::move(result), std::move(token));
 }
 
-void FakePageCloud::AddObject(fidl::Array<uint8_t> id,
+void FakePageCloud::AddObject(f1dl::Array<uint8_t> id,
                               fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   std::string bytes;
@@ -161,7 +161,7 @@ void FakePageCloud::AddObject(fidl::Array<uint8_t> id,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetObject(fidl::Array<uint8_t> id,
+void FakePageCloud::GetObject(f1dl::Array<uint8_t> id,
                               const GetObjectCallback& callback) {
   std::string id_str = convert::ToString(id);
   if (!objects_.count(id_str)) {
@@ -174,8 +174,8 @@ void FakePageCloud::GetObject(fidl::Array<uint8_t> id,
 }
 
 void FakePageCloud::SetWatcher(
-    fidl::Array<uint8_t> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+    f1dl::Array<uint8_t> min_position_token,
+    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
   auto watcher_ptr = watcher.Bind();
 

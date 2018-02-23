@@ -23,7 +23,7 @@ class NounTypeInferenceHelper::GetNounTypesCall
  public:
   GetNounTypesCall(modular::OperationContainer* container,
                    modular::EntityResolver* entity_resolver,
-                   const fidl::String& entity_reference,
+                   const f1dl::String& entity_reference,
                    ResultCall result)
       : Operation("NounTypeInferenceHelper::GetNounTypesCall",
                   container,
@@ -35,14 +35,14 @@ class NounTypeInferenceHelper::GetNounTypesCall
 
   void Run() {
     entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
-    entity_->GetTypes([this](const fidl::Array<fidl::String>& types) {
+    entity_->GetTypes([this](const f1dl::Array<f1dl::String>& types) {
       Done(types.To<std::vector<std::string>>());
     });
   }
 
  private:
   modular::EntityResolver* const entity_resolver_;
-  fidl::String const entity_reference_;
+  f1dl::String const entity_reference_;
   modular::EntityPtr entity_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetNounTypesCall);

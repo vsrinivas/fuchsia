@@ -96,7 +96,7 @@ void SyncBenchmark::Run() {
                       std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError(status, "beta ledger");
 
-  fidl::Array<uint8_t> id;
+  f1dl::Array<uint8_t> id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha, nullptr, &alpha_page_, &id);
   QuitOnError(status, "alpha page initialization");
@@ -132,8 +132,8 @@ void SyncBenchmark::RunSingle(size_t i) {
     return;
   }
 
-  fidl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
-  fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
+  f1dl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
+  f1dl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
 
   page_data_generator_.PutEntry(

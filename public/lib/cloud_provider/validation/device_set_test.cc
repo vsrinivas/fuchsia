@@ -90,7 +90,7 @@ TEST_F(DeviceSetTest, WatchMisingFingerprint) {
   DeviceSetPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
   Status status = Status::INTERNAL_ERROR;
-  fidl::Binding<DeviceSetWatcher> binding(this);
+  f1dl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),
@@ -110,7 +110,7 @@ TEST_F(DeviceSetTest, SetAndWatchFingerprint) {
   ASSERT_TRUE(device_set.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
 
-  fidl::Binding<DeviceSetWatcher> binding(this);
+  f1dl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),
@@ -130,7 +130,7 @@ TEST_F(DeviceSetTest, EraseWhileWatching) {
   ASSERT_TRUE(device_set.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
 
-  fidl::Binding<DeviceSetWatcher> binding(this);
+  f1dl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),

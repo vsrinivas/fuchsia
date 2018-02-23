@@ -115,7 +115,7 @@ SyncWatcherSet::SyncWatcherSet() {}
 SyncWatcherSet::~SyncWatcherSet() {}
 
 void SyncWatcherSet::AddSyncWatcher(
-    fidl::InterfaceHandle<SyncWatcher> watcher) {
+    f1dl::InterfaceHandle<SyncWatcher> watcher) {
   SyncWatcherContainer& container = watchers_.emplace(watcher.Bind());
   container.Start(current_);
 }

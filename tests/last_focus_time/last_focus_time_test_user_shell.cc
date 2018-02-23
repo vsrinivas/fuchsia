@@ -103,7 +103,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  f1dl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
@@ -129,7 +129,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
     FXL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
   }
 
-  fidl::Binding<modular::FocusWatcher> binding_;
+  f1dl::Binding<modular::FocusWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
@@ -149,7 +149,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -168,7 +168,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const fidl::String& story_id) {
+                                 [this](const f1dl::String& story_id) {
                                    create_story_.Pass();
                                    story_id_ = story_id;
                                    StartStory();
@@ -182,7 +182,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_watcher_.Watch(story_controller_.get());
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_watcher_.Continue([this] {
@@ -212,7 +212,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryProviderPtr story_provider_;
   StoryProviderWatcherImpl story_provider_watcher_;
 
-  fidl::String story_id_;
+  f1dl::String story_id_;
   modular::StoryControllerPtr story_controller_;
   StoryWatcherImpl story_watcher_;
 

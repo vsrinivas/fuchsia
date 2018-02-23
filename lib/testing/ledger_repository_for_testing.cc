@@ -21,7 +21,7 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
       tmp_dir_("/tmp/" + repository_name) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
-  ledger_config->args = fidl::Array<fidl::String>::New(1);
+  ledger_config->args = f1dl::Array<f1dl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
 
   auto& app_launcher = application_context_->launcher();

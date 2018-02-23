@@ -10,8 +10,8 @@
 namespace convert {
 namespace {
 
-fidl::Array<uint8_t> CreateArray(const char* data, size_t size) {
-  fidl::Array<uint8_t> result;
+f1dl::Array<uint8_t> CreateArray(const char* data, size_t size) {
+  f1dl::Array<uint8_t> result;
   for (size_t i = 0; i < size; ++i) {
     result.push_back(data[i]);
   }
@@ -23,14 +23,14 @@ TEST(Convert, ToSlice) {
   leveldb::Slice slice = ToSlice(str);
   EXPECT_EQ(str, std::string(slice.data(), slice.size()));
 
-  fidl::Array<uint8_t> array = CreateArray(str.data(), str.size());
+  f1dl::Array<uint8_t> array = CreateArray(str.data(), str.size());
   slice = ToSlice(str);
   EXPECT_EQ(str, std::string(slice.data(), slice.size()));
 }
 
 TEST(Convert, ToArray) {
   std::string str = "Hello";
-  fidl::Array<uint8_t> array = ToArray(str);
+  f1dl::Array<uint8_t> array = ToArray(str);
   EXPECT_EQ(str,
             std::string(reinterpret_cast<char*>(array.data()), array.size()));
 
@@ -46,7 +46,7 @@ TEST(Convert, ToString) {
   std::string result = ToString(slice);
   EXPECT_EQ(str, result);
 
-  fidl::Array<uint8_t> array = ToArray(str);
+  f1dl::Array<uint8_t> array = ToArray(str);
   result = ToString(array);
   EXPECT_EQ(str, result);
 }
@@ -57,7 +57,7 @@ TEST(Convert, ToStringView) {
   ExtendedStringView result = slice;
   EXPECT_EQ(str, result.ToString());
 
-  fidl::Array<uint8_t> array = ToArray(str);
+  f1dl::Array<uint8_t> array = ToArray(str);
   result = array;
   EXPECT_EQ(str, result.ToString());
 }

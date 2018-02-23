@@ -26,7 +26,7 @@ class ContextWriterImpl : ContextWriter {
   ContextWriterImpl(const ComponentScopePtr& client_info,
                     ContextRepository* repository,
                     modular::EntityResolver* entity_resolver,
-                    fidl::InterfaceRequest<ContextWriter> request);
+                    f1dl::InterfaceRequest<ContextWriter> request);
   ~ContextWriterImpl() override;
 
   // Takes ownership of |ptr|. Used by ContextWriterImpl and
@@ -42,26 +42,26 @@ class ContextWriterImpl : ContextWriter {
 
   // Used by ContextValueWriterImpl.
   void GetEntityTypesFromEntityReference(
-      const fidl::String& reference,
-      std::function<void(const fidl::Array<fidl::String>&)> done);
+      const f1dl::String& reference,
+      std::function<void(const f1dl::Array<f1dl::String>&)> done);
 
  private:
   // |ContextWriter|
-  void CreateValue(fidl::InterfaceRequest<ContextValueWriter> request,
+  void CreateValue(f1dl::InterfaceRequest<ContextValueWriter> request,
                    ContextValueType type) override;
 
   // |ContextWriter|
-  void WriteEntityTopic(const fidl::String& topic,
-                        const fidl::String& value) override;
+  void WriteEntityTopic(const f1dl::String& topic,
+                        const f1dl::String& value) override;
 
-  fidl::Binding<ContextWriter> binding_;
+  f1dl::Binding<ContextWriter> binding_;
 
   ContextSelectorPtr parent_value_selector_;
   ContextRepository* const repository_;
   modular::EntityResolver* const entity_resolver_;
 
   // Supports WriteEntityTopic.
-  std::map<fidl::String, ContextRepository::Id> topic_value_ids_;
+  std::map<f1dl::String, ContextRepository::Id> topic_value_ids_;
 
   // Supports CreateValue().
   std::vector<std::unique_ptr<ContextValueWriterImpl>> value_writer_storage_;
@@ -83,18 +83,18 @@ class ContextValueWriterImpl : ContextValueWriter {
   ContextValueWriterImpl(ContextWriterImpl* writer,
                          const ContextRepository::Id& parent_id,
                          ContextValueType type,
-                         fidl::InterfaceRequest<ContextValueWriter> request);
+                         f1dl::InterfaceRequest<ContextValueWriter> request);
   ~ContextValueWriterImpl() override;
 
  private:
   // |ContextValueWriter|
-  void CreateChildValue(fidl::InterfaceRequest<ContextValueWriter> request,
+  void CreateChildValue(f1dl::InterfaceRequest<ContextValueWriter> request,
                         ContextValueType type) override;
 
   // |ContextValueWriter|
-  void Set(const fidl::String& content, ContextMetadataPtr metadata) override;
+  void Set(const f1dl::String& content, ContextMetadataPtr metadata) override;
 
-  fidl::Binding<ContextValueWriter> binding_;
+  f1dl::Binding<ContextValueWriter> binding_;
 
   ContextWriterImpl* const writer_;
   const ContextRepository::Id parent_id_;

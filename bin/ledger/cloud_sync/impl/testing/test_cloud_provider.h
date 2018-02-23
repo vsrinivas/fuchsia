@@ -17,24 +17,24 @@ namespace cloud_sync {
 class TestCloudProvider : public cloud_provider::CloudProvider {
  public:
   explicit TestCloudProvider(
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+      f1dl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~TestCloudProvider() override;
 
   TestDeviceSet device_set;
 
  private:
   // cloud_provider::CloudProvider:
-  void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
+  void GetDeviceSet(f1dl::InterfaceRequest<cloud_provider::DeviceSet> request,
                     const GetDeviceSetCallback& callback) override;
 
   void GetPageCloud(
-      fidl::Array<uint8_t> app_id,
-      fidl::Array<uint8_t> page_id,
-      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+      f1dl::Array<uint8_t> app_id,
+      f1dl::Array<uint8_t> page_id,
+      f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
-  fidl::Binding<cloud_provider::CloudProvider> binding_;
-  fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;
+  f1dl::Binding<cloud_provider::CloudProvider> binding_;
+  f1dl::Binding<cloud_provider::DeviceSet> device_set_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestCloudProvider);
 };

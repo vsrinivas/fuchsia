@@ -32,7 +32,7 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
 ComponentContextImpl::~ComponentContextImpl() = default;
 
 void ComponentContextImpl::Connect(
-    fidl::InterfaceRequest<ComponentContext> request) {
+    f1dl::InterfaceRequest<ComponentContext> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -43,46 +43,46 @@ ComponentContextPtr ComponentContextImpl::NewBinding() {
 }
 
 void ComponentContextImpl::GetLedger(
-    fidl::InterfaceRequest<ledger::Ledger> request,
+    f1dl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
   ledger_repository_->GetLedger(to_array(component_url_), std::move(request),
                                 result);
 }
 
 void ComponentContextImpl::ConnectToAgent(
-    const fidl::String& url,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    const f1dl::String& url,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   agent_runner_->ConnectToAgent(component_instance_id_, url,
                                 std::move(incoming_services_request),
                                 std::move(agent_controller_request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    const fidl::String& name,
-    fidl::InterfaceRequest<MessageQueue> request) {
+    const f1dl::String& name,
+    f1dl::InterfaceRequest<MessageQueue> request) {
   message_queue_manager_->ObtainMessageQueue(
       component_namespace_, component_instance_id_, name, std::move(request));
 }
 
-void ComponentContextImpl::DeleteMessageQueue(const fidl::String& name) {
+void ComponentContextImpl::DeleteMessageQueue(const f1dl::String& name) {
   message_queue_manager_->DeleteMessageQueue(component_namespace_,
                                              component_instance_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
-    const fidl::String& queue_token,
-    fidl::InterfaceRequest<MessageSender> request) {
+    const f1dl::String& queue_token,
+    f1dl::InterfaceRequest<MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
 
 void ComponentContextImpl::GetEntityResolver(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    f1dl::InterfaceRequest<EntityResolver> request) {
   entity_provider_runner_->ConnectEntityResolver(std::move(request));
 }
 
 void ComponentContextImpl::CreateEntityWithData(
-    fidl::Map<fidl::String, fidl::String> type_to_data,
+    f1dl::Map<f1dl::String, f1dl::String> type_to_data,
     const CreateEntityWithDataCallback& result) {
   result(entity_provider_runner_->CreateReferenceFromData(&type_to_data));
 }

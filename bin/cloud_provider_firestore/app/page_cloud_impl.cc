@@ -10,7 +10,7 @@
 namespace cloud_provider_firestore {
 
 PageCloudImpl::PageCloudImpl(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> request)
     : binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_error_handler([this] {
@@ -23,34 +23,34 @@ PageCloudImpl::PageCloudImpl(
 PageCloudImpl::~PageCloudImpl() {}
 
 void PageCloudImpl::AddCommits(
-    fidl::Array<cloud_provider::CommitPtr> /*commits*/,
+    f1dl::Array<cloud_provider::CommitPtr> /*commits*/,
     const AddCommitsCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void PageCloudImpl::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
+void PageCloudImpl::GetCommits(f1dl::Array<uint8_t> /*min_position_token*/,
                                const GetCommitsCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
 }
 
-void PageCloudImpl::AddObject(fidl::Array<uint8_t> /*id*/,
+void PageCloudImpl::AddObject(f1dl::Array<uint8_t> /*id*/,
                               fsl::SizedVmoTransportPtr /*data*/,
                               const AddObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void PageCloudImpl::GetObject(fidl::Array<uint8_t> /*id*/,
+void PageCloudImpl::GetObject(f1dl::Array<uint8_t> /*id*/,
                               const GetObjectCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR, 0u, zx::socket());
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::Array<uint8_t> /*min_position_token*/,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
+    f1dl::Array<uint8_t> /*min_position_token*/,
+    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
     const SetWatcherCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);

@@ -25,33 +25,33 @@ namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, PageClient {
  public:
-  FocusHandler(const fidl::String& device_id,
+  FocusHandler(const f1dl::String& device_id,
                LedgerClient* ledger_client,
                LedgerPageId page_id);
   ~FocusHandler() override;
 
-  void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);
-  void AddControllerBinding(fidl::InterfaceRequest<FocusController> request);
+  void AddProviderBinding(f1dl::InterfaceRequest<FocusProvider> request);
+  void AddControllerBinding(f1dl::InterfaceRequest<FocusController> request);
 
  private:
   // |FocusProvider|
   void Query(const QueryCallback& callback) override;
-  void Watch(fidl::InterfaceHandle<FocusWatcher> watcher) override;
-  void Request(const fidl::String& story_id) override;
-  void Duplicate(fidl::InterfaceRequest<FocusProvider> request) override;
+  void Watch(f1dl::InterfaceHandle<FocusWatcher> watcher) override;
+  void Request(const f1dl::String& story_id) override;
+  void Duplicate(f1dl::InterfaceRequest<FocusProvider> request) override;
 
   // |FocusController|
-  void Set(const fidl::String& story_id) override;
+  void Set(const f1dl::String& story_id) override;
   void WatchRequest(
-      fidl::InterfaceHandle<FocusRequestWatcher> watcher) override;
+      f1dl::InterfaceHandle<FocusRequestWatcher> watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
-  const fidl::String device_id_;
+  const f1dl::String device_id_;
 
-  fidl::BindingSet<FocusProvider> provider_bindings_;
-  fidl::BindingSet<FocusController> controller_bindings_;
+  f1dl::BindingSet<FocusProvider> provider_bindings_;
+  f1dl::BindingSet<FocusController> controller_bindings_;
 
   std::vector<FocusWatcherPtr> change_watchers_;
   std::vector<FocusRequestWatcherPtr> request_watchers_;
@@ -70,26 +70,26 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
   ~VisibleStoriesHandler() override;
 
   void AddProviderBinding(
-      fidl::InterfaceRequest<VisibleStoriesProvider> request);
+      f1dl::InterfaceRequest<VisibleStoriesProvider> request);
   void AddControllerBinding(
-      fidl::InterfaceRequest<VisibleStoriesController> request);
+      f1dl::InterfaceRequest<VisibleStoriesController> request);
 
  private:
   // |VisibleStoriesProvider|
   void Query(const QueryCallback& callback) override;
-  void Watch(fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) override;
+  void Watch(f1dl::InterfaceHandle<VisibleStoriesWatcher> watcher) override;
   void Duplicate(
-      fidl::InterfaceRequest<VisibleStoriesProvider> request) override;
+      f1dl::InterfaceRequest<VisibleStoriesProvider> request) override;
 
   // |VisibleStoriesController|
-  void Set(fidl::Array<fidl::String> story_ids) override;
+  void Set(f1dl::Array<f1dl::String> story_ids) override;
 
-  fidl::BindingSet<VisibleStoriesProvider> provider_bindings_;
-  fidl::BindingSet<VisibleStoriesController> controller_bindings_;
+  f1dl::BindingSet<VisibleStoriesProvider> provider_bindings_;
+  f1dl::BindingSet<VisibleStoriesController> controller_bindings_;
 
   std::vector<VisibleStoriesWatcherPtr> change_watchers_;
 
-  fidl::Array<fidl::String> visible_stories_;
+  f1dl::Array<f1dl::String> visible_stories_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VisibleStoriesHandler);
 };

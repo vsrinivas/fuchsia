@@ -34,7 +34,7 @@ class EntitySpan {
   static EntitySpan FromJson(const std::string& json_string);
 
   static std::vector<EntitySpan> FromContextValues(
-      const fidl::Array<ContextValuePtr>& values);
+      const f1dl::Array<ContextValuePtr>& values);
 
   std::string GetContent() const { return content_; }
   std::string GetType() const { return type_; }

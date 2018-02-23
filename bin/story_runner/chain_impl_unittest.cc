@@ -16,12 +16,12 @@ namespace {
 
 class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
-  void Reset(fidl::Array<fidl::String> path,
+  void Reset(f1dl::Array<f1dl::String> path,
              std::map<std::string, std::vector<std::string>> link_map) {
     auto chain_data = ChainData::New();
     for (const auto& entry : link_map) {
       auto link_path = LinkPath::New();
-      link_path->module_path = fidl::Array<fidl::String>::From(entry.second);
+      link_path->module_path = f1dl::Array<f1dl::String>::From(entry.second);
       auto key_link_data = ChainKeyToLinkData::New();
       key_link_data->key = entry.first;
       key_link_data->link_path = std::move(link_path);
@@ -56,12 +56,12 @@ TEST_F(ChainImplTest, GetLinkPath) {
   auto path = impl_->GetLinkPathForKey("key1");
   ASSERT_TRUE(path);
   EXPECT_TRUE(path->module_path.Equals(
-      fidl::Array<fidl::String>{"link", "path1"}));
+      f1dl::Array<f1dl::String>{"link", "path1"}));
 
   path = impl_->GetLinkPathForKey("key2");
   ASSERT_TRUE(path);
   EXPECT_TRUE(path->module_path.Equals(
-      fidl::Array<fidl::String>{"link", "path2"}));
+      f1dl::Array<f1dl::String>{"link", "path2"}));
 
 }
 

@@ -20,7 +20,7 @@ mod ledger;
 use zircon::ClockId;
 use tokio_core::reactor;
 use fuchsia::{ApplicationContext, Launcher, install_panic_backtrace_hook};
-use peridot_public_lib_ledger_fidl::*;
+use peridot_public_lib_ledger_f1dl::*;
 use futures::Future;
 
 pub fn main() {

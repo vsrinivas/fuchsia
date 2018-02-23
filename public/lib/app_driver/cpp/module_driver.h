@@ -38,8 +38,8 @@ class ModuleHost {
 //      // A constructor with the following signature:
 //      Constructor(
 //           modular::ModuleHost* module_host,
-//           fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-//           fidl::InterfaceRequest<app::ServiceProvider> outgoing_services);
+//           f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+//           f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services);
 //
 //   |outgoing_services| must contain the services that this module wants to
 //   expose to the module that created it.
@@ -54,8 +54,8 @@ class ModuleHost {
 //  public:
 //   HelloWorldModule(
 //      modular::ModuleHost* module_host,
-//      fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-//      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
+//      f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+//      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
 //
 //   // Called by ModuleDriver.
 //   void Terminate(const std::function<void()>& done) { done(); }
@@ -84,7 +84,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
     app_context_->outgoing_services()->AddService<mozart::ViewProvider>(
-        [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
+        [this](f1dl::InterfaceRequest<mozart::ViewProvider> request) {
           view_provider_request_ = std::move(request);
           MaybeInstantiateImpl();
         });
@@ -104,8 +104,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
   // |ModuleImpl::Delegate|
   void ModuleInit(
-      fidl::InterfaceHandle<ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      f1dl::InterfaceHandle<ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
     outgoing_module_services_ = std::move(outgoing_services);
     MaybeInstantiateImpl();
@@ -146,8 +146,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
   ModuleContextPtr module_context_;
 
   // The following are only valid until |impl_| is instantiated.
-  fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request_;
-  fidl::InterfaceRequest<app::ServiceProvider> outgoing_module_services_;
+  f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request_;
+  f1dl::InterfaceRequest<app::ServiceProvider> outgoing_module_services_;
 
   std::unique_ptr<Impl> impl_;
 

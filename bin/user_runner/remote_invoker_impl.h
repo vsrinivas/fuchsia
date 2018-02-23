@@ -21,15 +21,15 @@ class RemoteInvokerImpl : RemoteInvoker {
   explicit RemoteInvokerImpl(ledger::Ledger* ledger);
   ~RemoteInvokerImpl() override;
 
-  void Connect(fidl::InterfaceRequest<RemoteInvoker> request);
+  void Connect(f1dl::InterfaceRequest<RemoteInvoker> request);
 
  private:
   // |RemoteInvoker|
-  void StartOnDevice(const fidl::String& device_id,
-                     const fidl::String& story_id,
+  void StartOnDevice(const f1dl::String& device_id,
+                     const f1dl::String& story_id,
                      const StartOnDeviceCallback& callback) override;
 
-  fidl::BindingSet<RemoteInvoker> bindings_;
+  f1dl::BindingSet<RemoteInvoker> bindings_;
   OperationQueue operation_queue_;
   ledger::Ledger* const ledger_;
 

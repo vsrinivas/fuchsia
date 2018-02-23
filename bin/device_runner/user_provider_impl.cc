@@ -87,7 +87,7 @@ UserProviderImpl::UserProviderImpl(
   }
 }
 
-void UserProviderImpl::Connect(fidl::InterfaceRequest<UserProvider> request) {
+void UserProviderImpl::Connect(f1dl::InterfaceRequest<UserProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -164,8 +164,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
-  fidl::Array<auth::AccountPtr> accounts =
-      fidl::Array<auth::AccountPtr>::New(0);
+  f1dl::Array<auth::AccountPtr> accounts =
+      f1dl::Array<auth::AccountPtr>::New(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       accounts.push_back(Convert(user));
@@ -179,7 +179,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
   account_provider_->AddAccount(
       identity_provider,
       [this, identity_provider, callback](auth::AccountPtr account,
-                                          const fidl::String& error_code) {
+                                          const f1dl::String& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
           return;
@@ -236,7 +236,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
       });
 }
 
-void UserProviderImpl::RemoveUser(const fidl::String& account_id,
+void UserProviderImpl::RemoveUser(const f1dl::String& account_id,
                                   const RemoveUserCallback& callback) {
   auth::AccountPtr account;
   if (users_storage_) {

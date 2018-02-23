@@ -19,7 +19,7 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
   explicit BoundInterfaceSet(Args&&... args)
       : impl_(std::forward<Args>(args)...) {}
 
-  void AddBinding(fidl::InterfaceRequest<Interface> request) final {
+  void AddBinding(f1dl::InterfaceRequest<Interface> request) final {
     binding_.AddBinding(&impl_, std::move(request));
   }
 
@@ -35,7 +35,7 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
 
  private:
   Impl impl_;
-  fidl::BindingSet<Interface> binding_;
+  f1dl::BindingSet<Interface> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterfaceSet);
 };

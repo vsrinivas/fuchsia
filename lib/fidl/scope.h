@@ -41,13 +41,13 @@ class Scope : public app::ApplicationEnvironmentHost {
  private:
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
+      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 
   void InitScope(const app::ApplicationEnvironmentPtr& parent_env,
                  const std::string& label);
 
-  fidl::Binding<app::ApplicationEnvironmentHost> binding_;
+  f1dl::Binding<app::ApplicationEnvironmentHost> binding_;
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationLauncherPtr env_launcher_;
   app::ApplicationEnvironmentControllerPtr env_controller_;

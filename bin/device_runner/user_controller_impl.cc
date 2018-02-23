@@ -20,11 +20,11 @@ UserControllerImpl::UserControllerImpl(
     AppConfigPtr user_runner,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
-    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceHandle<app::ServiceProvider> device_shell_services,
-    fidl::InterfaceRequest<UserController> user_controller_request,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceHandle<app::ServiceProvider> device_shell_services,
+    f1dl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
@@ -64,8 +64,8 @@ UserControllerImpl::UserControllerImpl(
 std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
   user_runner_app_->services().ConnectToService(
-      fidl::GetSynchronousProxy(&debug));
-  fidl::String output;
+      f1dl::GetSynchronousProxy(&debug));
+  f1dl::String output;
   debug->DumpState(&output);
   return output;
 }
@@ -97,7 +97,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
 
 // |UserContext|
 void UserControllerImpl::GetPresentation(
-    fidl::InterfaceRequest<mozart::Presentation> presentation) {
+    f1dl::InterfaceRequest<mozart::Presentation> presentation) {
   if (device_shell_services_) {
     device_shell_services_->ConnectToService("mozart.Presentation",
                                              presentation.TakeChannel());
@@ -105,7 +105,7 @@ void UserControllerImpl::GetPresentation(
 }
 
 // |UserController|
-void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
+void UserControllerImpl::Watch(f1dl::InterfaceHandle<UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(watcher.Bind());
 }
 

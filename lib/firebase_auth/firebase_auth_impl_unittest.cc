@@ -37,7 +37,7 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
   }
 
   TestTokenProvider token_provider_;
-  fidl::Binding<modular::auth::TokenProvider> token_provider_binding_;
+  f1dl::Binding<modular::auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
   backoff::TestBackoff* backoff_;
 

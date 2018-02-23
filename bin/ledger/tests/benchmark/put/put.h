@@ -53,15 +53,15 @@ class PutBenchmark : public ledger::PageWatcher {
   // on updating entries, it also adds these keys in the ledger with some
   // initial values.
   void InitializeKeys(
-      std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
+      std::function<void(std::vector<f1dl::Array<uint8_t>>)> on_done);
 
-  void BindWatcher(std::vector<fidl::Array<uint8_t>> keys);
-  void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
+  void BindWatcher(std::vector<f1dl::Array<uint8_t>> keys);
+  void RunSingle(int i, std::vector<f1dl::Array<uint8_t>> keys);
   void CommitAndRunNext(int i,
                         size_t key_number,
-                        std::vector<fidl::Array<uint8_t>> keys);
-  void PutEntry(fidl::Array<uint8_t> key,
-                fidl::Array<uint8_t> value,
+                        std::vector<f1dl::Array<uint8_t>> keys);
+  void PutEntry(f1dl::Array<uint8_t> key,
+                f1dl::Array<uint8_t> value,
                 std::function<void()> on_done);
 
   void ShutDown();
@@ -77,7 +77,7 @@ class PutBenchmark : public ledger::PageWatcher {
   const int value_size_;
   const bool update_;
 
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
   app::ApplicationControllerPtr application_controller_;

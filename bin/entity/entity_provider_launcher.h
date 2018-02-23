@@ -20,8 +20,8 @@ class EntityProviderLauncher {
  public:
   virtual void ConnectToEntityProvider(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request) = 0;
+      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request) = 0;
 
  protected:
   virtual ~EntityProviderLauncher();

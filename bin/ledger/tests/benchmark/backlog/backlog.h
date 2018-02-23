@@ -64,10 +64,10 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void WaitForReaderDownload();
 
   void GetReaderSnapshot();
-  void GetEntriesStep(fidl::Array<uint8_t> token, size_t entries_left);
+  void GetEntriesStep(f1dl::Array<uint8_t> token, size_t entries_left);
   void CheckStatusAndGetMore(ledger::Status status,
                              size_t entries_read,
-                             fidl::Array<uint8_t> next_token);
+                             f1dl::Array<uint8_t> next_token);
 
   void ShutDown();
 
@@ -75,7 +75,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   PageDataGenerator page_data_generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-  fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
+  f1dl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
   const size_t unique_key_count_;
   const size_t value_size_;
   const size_t commit_count_;
@@ -87,7 +87,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   app::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
-  fidl::Array<uint8_t> page_id_;
+  f1dl::Array<uint8_t> page_id_;
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
   ledger::PageSnapshotPtr reader_snapshot_;

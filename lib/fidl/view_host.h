@@ -23,14 +23,14 @@ class ViewHost : public mozart::BaseView {
  public:
   explicit ViewHost(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
   ~ViewHost() override;
 
   // Connects one more view. Calling this method multiple times adds
   // multiple views and lays them out horizontally next to each other.
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner);
+  void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner);
 
  private:
   struct ViewData;

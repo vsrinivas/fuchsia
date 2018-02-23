@@ -50,15 +50,15 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   const int entry_count_;
   const int value_size_;
   std::string server_id_;
-  fidl::Binding<ledger::PageWatcher> alpha_watcher_binding_;
-  fidl::Binding<ledger::PageWatcher> beta_watcher_binding_;
+  f1dl::Binding<ledger::PageWatcher> alpha_watcher_binding_;
+  f1dl::Binding<ledger::PageWatcher> beta_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
   ledger::LedgerPtr alpha_ledger_;
   ledger::LedgerPtr beta_ledger_;
-  fidl::Array<uint8_t> page_id_;
+  f1dl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
   std::multiset<std::string> remaining_keys_;

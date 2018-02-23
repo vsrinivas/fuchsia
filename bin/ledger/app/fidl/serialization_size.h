@@ -17,11 +17,11 @@ namespace fidl_serialization {
 constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 constexpr size_t kMaxMessageHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
 
-const size_t kArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
+const size_t kArrayHeaderSize = sizeof(f1dl::internal::Array_Data<char>);
 const size_t kPointerSize = sizeof(uint64_t);
 const size_t kEnumSize = sizeof(int32_t);
 const size_t kHandleSize = sizeof(int32_t);
-const size_t kStructHeaderSize = sizeof(fidl::internal::StructHeader);
+const size_t kStructHeaderSize = sizeof(f1dl::internal::StructHeader);
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
 // arrays.

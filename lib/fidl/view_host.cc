@@ -18,7 +18,7 @@ struct ViewHost::ViewData {
 };
 
 ViewHost::ViewHost(mozart::ViewManagerPtr view_manager,
-                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "ViewHost"),
@@ -29,7 +29,7 @@ ViewHost::ViewHost(mozart::ViewManagerPtr view_manager,
 ViewHost::~ViewHost() = default;
 
 void ViewHost::ConnectView(
-    fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    f1dl::InterfaceHandle<mozart::ViewOwner> view_owner) {
   const uint32_t child_key = next_child_key_++;
 
   auto view_data = std::make_unique<ViewData>(session());

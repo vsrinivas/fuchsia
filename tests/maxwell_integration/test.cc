@@ -73,10 +73,10 @@ MaxwellTestBase::MaxwellTestBase() {
   test_environment_host_.reset(
       new ApplicationEnvironmentHostImpl(root_environment));
   test_environment_host_binding_.reset(
-      new fidl::Binding<app::ApplicationEnvironmentHost>(
+      new f1dl::Binding<app::ApplicationEnvironmentHost>(
           test_environment_host_.get()));
 
-  fidl::InterfaceHandle<app::ApplicationEnvironmentHost>
+  f1dl::InterfaceHandle<app::ApplicationEnvironmentHost>
       test_environment_host_handle;
   test_environment_host_binding_->Bind(
       test_environment_host_handle.NewRequest());
@@ -88,7 +88,7 @@ MaxwellTestBase::MaxwellTestBase() {
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
 
   child_app_services_.AddService<modular::ComponentContext>(
-      [this](fidl::InterfaceRequest<modular::ComponentContext> request) {
+      [this](f1dl::InterfaceRequest<modular::ComponentContext> request) {
         child_component_context_.Connect(std::move(request));
       });
 }

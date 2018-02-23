@@ -24,7 +24,7 @@ void TestTokenProvider::GetIdToken(const GetIdTokenCallback& /*callback*/) {
 }
 
 void TestTokenProvider::GetFirebaseAuthToken(
-    const fidl::String& /*firebase_api_key*/,
+    const f1dl::String& /*firebase_api_key*/,
     const GetFirebaseAuthTokenCallback& callback) {
   task_runner_->PostTask(fxl::MakeCopyable(
       [token_to_return = token_to_return.Clone(),

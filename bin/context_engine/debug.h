@@ -34,16 +34,16 @@ class ContextDebugImpl : public ContextDebug {
 
  private:
   // |ContextDebug|
-  void Watch(fidl::InterfaceHandle<ContextDebugListener> listener) override;
+  void Watch(f1dl::InterfaceHandle<ContextDebugListener> listener) override;
 
   void DispatchOneValue(ContextDebugValuePtr value);
-  void DispatchValues(fidl::Array<ContextDebugValuePtr> values);
+  void DispatchValues(f1dl::Array<ContextDebugValuePtr> values);
   void DispatchOneSubscription(ContextDebugSubscriptionPtr value);
-  void DispatchSubscriptions(fidl::Array<ContextDebugSubscriptionPtr> values);
+  void DispatchSubscriptions(f1dl::Array<ContextDebugSubscriptionPtr> values);
 
   // Used in order to get a complete state snapshot when Watch() is called.
   const ContextRepository* const repository_;
-  fidl::InterfacePtrSet<ContextDebugListener> listeners_;
+  f1dl::InterfacePtrSet<ContextDebugListener> listeners_;
 };
 
 }  // namespace maxwell

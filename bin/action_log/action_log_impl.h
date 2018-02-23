@@ -27,12 +27,12 @@ class UserActionLogImpl : public UserActionLog {
  private:
   void GetComponentActionLog(
       maxwell::ComponentScopePtr scope,
-      fidl::InterfaceRequest<ComponentActionLog> action_log_request) override;
+      f1dl::InterfaceRequest<ComponentActionLog> action_log_request) override;
 
   void Subscribe(
-      fidl::InterfaceHandle<ActionLogListener> listener_handle) override;
+      f1dl::InterfaceHandle<ActionLogListener> listener_handle) override;
 
-  void Duplicate(fidl::InterfaceRequest<UserActionLog> request) override;
+  void Duplicate(f1dl::InterfaceRequest<UserActionLog> request) override;
 
   void BroadcastToSubscribers(const ActionData& action_data);
 
@@ -42,10 +42,10 @@ class UserActionLogImpl : public UserActionLog {
 
   ActionLogData action_log_;
   ProposalPublisherPtr proposal_publisher_;
-  fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
+  f1dl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;
-  fidl::InterfacePtrSet<ActionLogListener> subscribers_;
-  fidl::BindingSet<UserActionLog> bindings_;
+  f1dl::InterfacePtrSet<ActionLogListener> subscribers_;
+  f1dl::BindingSet<UserActionLog> bindings_;
   std::string last_email_rcpt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
@@ -55,8 +55,8 @@ class ComponentActionLogImpl : public ComponentActionLog {
  public:
   ComponentActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
 
-  void LogAction(const fidl::String& method,
-                 const fidl::String& params) override;
+  void LogAction(const f1dl::String& method,
+                 const f1dl::String& params) override;
 
  private:
   const ActionLogger log_action_;

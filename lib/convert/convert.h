@@ -16,7 +16,7 @@
 
 namespace convert {
 
-// Provides conversions between fidl::Array, leveldb::Slice and std::string
+// Provides conversions between f1dl::Array, leveldb::Slice and std::string
 // representations of a data object.
 //
 // This class doesn't take ownership of the data used to construct it. The data
@@ -28,7 +28,7 @@ namespace convert {
 // implicit conversion is intended.
 class ExtendedStringView : public fxl::StringView {
  public:
-  ExtendedStringView(const fidl::Array<uint8_t>& array)  // NOLINT
+  ExtendedStringView(const f1dl::Array<uint8_t>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array.data()),
                         array.size()) {}
   ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
@@ -53,7 +53,7 @@ class ExtendedStringView : public fxl::StringView {
     return leveldb::Slice(data(), size());
   }
 
-  fidl::Array<uint8_t> ToArray();
+  f1dl::Array<uint8_t> ToArray();
 
   flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
       flatbuffers::FlatBufferBuilder* builder);
@@ -71,8 +71,8 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) {
   return value;
 }
 
-// Returns the fidl::Array representation of the given value.
-fidl::Array<uint8_t> ToArray(ExtendedStringView value);
+// Returns the f1dl::Array representation of the given value.
+f1dl::Array<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);

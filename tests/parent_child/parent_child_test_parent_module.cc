@@ -30,8 +30,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -62,7 +62,7 @@ class ParentApp {
     // Once the module starts, start the same module again, but with a different
     // link. This stops the previous module instance and starts a new one.
     modular::testing::GetStore()->Get(
-        "child_module_init", [this](const fidl::String&) {
+        "child_module_init", [this](const f1dl::String&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
           module_host_->module_context()->StartModuleInShell(
@@ -79,7 +79,7 @@ class ParentApp {
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
     modular::testing::GetStore()->Get(
-        "child_module_stop", [this](const fidl::String&) {
+        "child_module_stop", [this](const f1dl::String&) {
           child_module2_->Stop([this] { OnChildModule2Stopped(); });
         });
   }

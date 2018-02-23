@@ -22,7 +22,7 @@ cloud_provider::CommitPtr MakeTestCommit(
 }
 
 TestPageCloud::TestPageCloud(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> request)
     : binding_(this, std::move(request)) {}
 TestPageCloud::~TestPageCloud() {}
 
@@ -34,7 +34,7 @@ void TestPageCloud::RunPendingCallbacks() {
 }
 
 // cloud_provider::PageCloud:
-void TestPageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+void TestPageCloud::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
   add_commits_calls++;
   for (auto& commit : commits) {
@@ -46,14 +46,14 @@ void TestPageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
   callback(commit_status_to_return);
 }
 
-void TestPageCloud::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
+void TestPageCloud::GetCommits(f1dl::Array<uint8_t> /*min_position_token*/,
                                const GetCommitsCallback& callback) {
   get_commits_calls++;
   callback(status_to_return, std::move(commits_to_return),
            std::move(position_token_to_return));
 }
 
-void TestPageCloud::AddObject(fidl::Array<uint8_t> id,
+void TestPageCloud::AddObject(f1dl::Array<uint8_t> id,
                               fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   add_object_calls++;
@@ -77,7 +77,7 @@ void TestPageCloud::AddObject(fidl::Array<uint8_t> id,
   }
 }
 
-void TestPageCloud::GetObject(fidl::Array<uint8_t> id,
+void TestPageCloud::GetObject(f1dl::Array<uint8_t> id,
                               const GetObjectCallback& callback) {
   get_object_calls++;
   if (status_to_return != cloud_provider::Status::OK) {
@@ -96,8 +96,8 @@ void TestPageCloud::GetObject(fidl::Array<uint8_t> id,
 }
 
 void TestPageCloud::SetWatcher(
-    fidl::Array<uint8_t> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+    f1dl::Array<uint8_t> min_position_token,
+    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
   set_watcher_position_tokens.push_back(convert::ToString(min_position_token));
   set_watcher = watcher.Bind();

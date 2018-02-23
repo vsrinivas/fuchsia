@@ -26,11 +26,11 @@ class App : public modular::Lifecycle {
 
   void Run() {
     application_context_->outgoing_services()->AddService<modular::Lifecycle>(
-        [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
+        [this](f1dl::InterfaceRequest<modular::Lifecycle> request) {
           lifecycle_bindings_.AddBinding(this, std::move(request));
         });
     application_context_->outgoing_services()->AddService<Factory>(
-        [this](fidl::InterfaceRequest<Factory> request) {
+        [this](f1dl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
     loop_.Run();
@@ -46,8 +46,8 @@ class App : public modular::Lifecycle {
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;
-  fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
-  fidl::BindingSet<Factory> factory_bindings_;
+  f1dl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
+  f1dl::BindingSet<Factory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

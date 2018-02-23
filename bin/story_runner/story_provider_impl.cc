@@ -48,7 +48,7 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 
 void MakeGetStoryDataCall(OperationContainer* const container,
                           ledger::Page* const page,
-                          const fidl::String& story_id,
+                          const f1dl::String& story_id,
                           std::function<void(StoryDataPtr)> result_call) {
   new ReadDataCall<StoryData>(container, page, MakeStoryKey(story_id),
                               true /* not_found_is_ok */, XdrStoryData,
@@ -70,7 +70,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
  public:
   MutateStoryDataCall(OperationContainer* const container,
                       ledger::Page* const page,
-                      const fidl::String& story_id,
+                      const f1dl::String& story_id,
                       std::function<bool(StoryData* story_data)> mutate,
                       ResultCall result_call)
       : Operation("StoryProviderImpl::MutateStoryDataCall",
@@ -105,7 +105,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
   }
 
   ledger::Page* const page_;  // not owned
-  const fidl::String story_id_;
+  const f1dl::String story_id_;
   std::function<bool(StoryData* story_data)> mutate_;
 
   OperationQueue operation_queue_;
@@ -118,15 +118,15 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
 //    to the root page.
 // 3. Write a copy of the current context to the story page.
 // 4. Returns the Story ID of the newly created story.
-class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
+class StoryProviderImpl::CreateStoryCall : Operation<f1dl::String> {
  public:
   CreateStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
                   ledger::Page* const root_page,
                   StoryProviderImpl* const story_provider_impl,
-                  const fidl::String& url,
+                  const f1dl::String& url,
                   FidlStringMap extra_info,
-                  fidl::String root_json,
+                  f1dl::String root_json,
                   ResultCall result_call)
       : Operation("StoryProviderImpl::CreateStoryCall",
                   container,
@@ -153,7 +153,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             return;
           }
 
-          story_page_->GetId([this, flow](fidl::Array<uint8_t> id) {
+          story_page_->GetId([this, flow](f1dl::Array<uint8_t> id) {
             story_page_id_ = std::move(id);
 
             // TODO(security), cf. FW-174. This ID is exposed in
@@ -208,18 +208,18 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
-  const fidl::String module_name_;
-  const fidl::String url_;
+  const f1dl::String module_name_;
+  const f1dl::String url_;
   FidlStringMap extra_info_;
-  fidl::String root_json_;
+  f1dl::String root_json_;
   const zx_time_t start_time_;
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;
   std::unique_ptr<StoryControllerImpl> controller_;
 
-  fidl::Array<uint8_t> story_page_id_;
-  fidl::String story_id_;  // This is the result of the Operation.
+  f1dl::Array<uint8_t> story_page_id_;
+  f1dl::String story_id_;  // This is the result of the Operation.
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -235,7 +235,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
 
   DeleteStoryCall(OperationContainer* const container,
                   ledger::Page* const page,
-                  const fidl::String& story_id,
+                  const f1dl::String& story_id,
                   StoryControllerImplMap* const story_controller_impls,
                   MessageQueueManager* const message_queue_manager,
                   const bool already_deleted,
@@ -303,7 +303,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
 
  private:
   ledger::Page* const page_;  // not owned
-  const fidl::String story_id_;
+  const f1dl::String story_id_;
   StoryControllerImplMap* const story_controller_impls_;
   MessageQueueManager* const message_queue_manager_;
   const bool already_deleted_;  // True if called from OnChange();
@@ -323,8 +323,8 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
                     ledger::Page* const page,
                     StoryProviderImpl* const story_provider_impl,
                     StoryControllerImplMap* const story_controller_impls,
-                    const fidl::String& story_id,
-                    fidl::InterfaceRequest<StoryController> request)
+                    const f1dl::String& story_id,
+                    f1dl::InterfaceRequest<StoryController> request)
       : Operation("StoryProviderImpl::GetControllerCall", container, [] {}),
         page_(page),
         story_provider_impl_(story_provider_impl),
@@ -367,8 +367,8 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   ledger::Page* const page_;                      // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
   StoryControllerImplMap* const story_controller_impls_;
-  const fidl::String story_id_;
-  fidl::InterfaceRequest<StoryController> request_;
+  const f1dl::String story_id_;
+  f1dl::InterfaceRequest<StoryController> request_;
 
   StoryDataPtr story_data_;
 
@@ -461,10 +461,10 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
  public:
   GetLinkPeerCall(OperationContainer* const container,
                   StoryProviderImpl* const impl,
-                  const fidl::String& story_id,
-                  fidl::Array<fidl::String> module_path,
-                  const fidl::String& link_name,
-                  fidl::InterfaceRequest<Link> request)
+                  const f1dl::String& story_id,
+                  f1dl::Array<f1dl::String> module_path,
+                  const f1dl::String& link_name,
+                  f1dl::InterfaceRequest<Link> request)
       : Operation("StoryProviderImpl::GetLinkPeerCall", container, [] {}),
         impl_(impl),
         story_id_(story_id),
@@ -510,10 +510,10 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   }
 
   StoryProviderImpl* const impl_;  // not owned
-  const fidl::String story_id_;
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String link_name_;
-  fidl::InterfaceRequest<Link> request_;
+  const f1dl::String story_id_;
+  const f1dl::Array<f1dl::String> module_path_;
+  const f1dl::String link_name_;
+  f1dl::InterfaceRequest<Link> request_;
 
   StoryDataPtr story_data_;
 
@@ -545,7 +545,7 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
                              [this, flow](auto dump) { output_ << dump; });
     new ReadAllDataCall<StoryData>(
         &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
-        XdrStoryData, [this, flow](fidl::Array<StoryDataPtr> data) {
+        XdrStoryData, [this, flow](f1dl::Array<StoryDataPtr> data) {
           for (auto& story_data : data) {
             DumpStoryPage(std::move(story_data), flow);
           }
@@ -623,7 +623,7 @@ StoryProviderImpl::StoryProviderImpl(
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
-void StoryProviderImpl::Connect(fidl::InterfaceRequest<StoryProvider> request) {
+void StoryProviderImpl::Connect(f1dl::InterfaceRequest<StoryProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -638,7 +638,7 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
 
 // |StoryProvider|
 void StoryProviderImpl::Watch(
-    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
+    f1dl::InterfaceHandle<StoryProviderWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_controller_impls_) {
     const auto& container = item.second;
@@ -650,12 +650,12 @@ void StoryProviderImpl::Watch(
 
 // |StoryProvider|
 void StoryProviderImpl::Duplicate(
-    fidl::InterfaceRequest<StoryProvider> request) {
+    f1dl::InterfaceRequest<StoryProvider> request) {
   Connect(std::move(request));
 }
 
 std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
   if (!preloaded_story_shell_) {
     LoadStoryShell();
   }
@@ -693,9 +693,9 @@ void StoryProviderImpl::LoadStoryShell() {
           std::move(story_shell_app), std::move(story_shell_view)});
 }
 
-void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
-                                          const fidl::String& name,
-                                          const fidl::String& value,
+void StoryProviderImpl::SetStoryInfoExtra(const f1dl::String& story_id,
+                                          const f1dl::String& name,
+                                          const f1dl::String& value,
                                           const std::function<void()>& done) {
   auto mutate = [name, value](StoryData* const story_data) {
     story_data->story_info->extra[name] = value;
@@ -712,18 +712,18 @@ void StoryProviderImpl::DumpState(
 }
 
 // |StoryProvider|
-void StoryProviderImpl::CreateStory(const fidl::String& module_url,
+void StoryProviderImpl::CreateStory(const f1dl::String& module_url,
                                     const CreateStoryCallback& callback) {
   FXL_LOG(INFO) << "CreateStory() " << module_url;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
-                      module_url, FidlStringMap(), fidl::String(), callback);
+                      module_url, FidlStringMap(), f1dl::String(), callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStoryWithInfo(
-    const fidl::String& module_url,
+    const f1dl::String& module_url,
     FidlStringMap extra_info,
-    const fidl::String& root_json,
+    const f1dl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
@@ -731,7 +731,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
 }
 
 // |StoryProvider|
-void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
+void StoryProviderImpl::DeleteStory(const f1dl::String& story_id,
                                     const DeleteStoryCallback& callback) {
   new DeleteStoryCall(&operation_queue_, page(), story_id,
                       &story_controller_impls_,
@@ -740,7 +740,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 }
 
 // |StoryProvider|
-void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
+void StoryProviderImpl::GetStoryInfo(const f1dl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
   MakeGetStoryDataCall(
       &operation_queue_, page(), story_id, [callback](StoryDataPtr story_data) {
@@ -749,12 +749,12 @@ void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
-void StoryProviderImpl::RequestStoryFocus(const fidl::String& story_id) {
+void StoryProviderImpl::RequestStoryFocus(const f1dl::String& story_id) {
   FXL_LOG(INFO) << "RequestStoryFocus() " << story_id;
   focus_provider_->Request(story_id);
 }
 
-void StoryProviderImpl::NotifyStoryStateChange(const fidl::String& story_id,
+void StoryProviderImpl::NotifyStoryStateChange(const f1dl::String& story_id,
                                                const StoryState story_state) {
   auto i = story_controller_impls_.find(story_id);
 
@@ -770,8 +770,8 @@ void StoryProviderImpl::NotifyStoryStateChange(const fidl::String& story_id,
 
 // |StoryProvider|
 void StoryProviderImpl::GetController(
-    const fidl::String& story_id,
-    fidl::InterfaceRequest<StoryController> request) {
+    const f1dl::String& story_id,
+    f1dl::InterfaceRequest<StoryController> request) {
   new GetControllerCall(&operation_queue_, page(), this,
                         &story_controller_impls_, story_id, std::move(request));
 }
@@ -781,8 +781,8 @@ void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
   new ReadAllDataCall<StoryData>(
       &operation_queue_, page(), kStoryKeyPrefix, XdrStoryData,
-      [callback](fidl::Array<StoryDataPtr> data) {
-        fidl::Array<fidl::String> result;
+      [callback](f1dl::Array<StoryDataPtr> data) {
+        f1dl::Array<f1dl::String> result;
         result.resize(0);
 
         for (auto& story_data : data) {
@@ -795,7 +795,7 @@ void StoryProviderImpl::PreviousStories(
 
 // |StoryProvider|
 void StoryProviderImpl::RunningStories(const RunningStoriesCallback& callback) {
-  auto stories = fidl::Array<fidl::String>::New(0);
+  auto stories = f1dl::Array<f1dl::String>::New(0);
   for (const auto& impl_container : story_controller_impls_) {
     if (impl_container.second.impl->IsRunning()) {
       stories.push_back(impl_container.second.impl->GetStoryId());
@@ -817,7 +817,7 @@ void StoryProviderImpl::GetImportance(const GetImportanceCallback& callback) {
 
 // |StoryProvider|
 void StoryProviderImpl::WatchImportance(
-    fidl::InterfaceHandle<StoryImportanceWatcher> watcher) {
+    f1dl::InterfaceHandle<StoryImportanceWatcher> watcher) {
   importance_watchers_.AddInterfacePtr(watcher.Bind());
 }
 
@@ -848,7 +848,7 @@ void StoryProviderImpl::OnPageChange(const std::string& /*key*/,
 // |PageClient|
 void StoryProviderImpl::OnPageDelete(const std::string& key) {
   // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
-  const fidl::String story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
+  const f1dl::String story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
 
   watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
     watcher->OnDelete(story_id);
@@ -926,10 +926,10 @@ StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {
   return log_entry;
 }
 
-void StoryProviderImpl::GetLinkPeer(const fidl::String& story_id,
-                                    fidl::Array<fidl::String> module_path,
-                                    const fidl::String& link_name,
-                                    fidl::InterfaceRequest<Link> request) {
+void StoryProviderImpl::GetLinkPeer(const f1dl::String& story_id,
+                                    f1dl::Array<f1dl::String> module_path,
+                                    const f1dl::String& link_name,
+                                    f1dl::InterfaceRequest<Link> request) {
   new GetLinkPeerCall(&operation_queue_, this, story_id, std::move(module_path),
                       link_name, std::move(request));
 }

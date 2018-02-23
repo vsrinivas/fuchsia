@@ -13,7 +13,7 @@ InterruptionsProcessor::~InterruptionsProcessor() = default;
 
 
 void InterruptionsProcessor::RegisterListener(
-    fidl::InterfaceHandle<InterruptionListener> listener) {
+    f1dl::InterfaceHandle<InterruptionListener> listener) {
   listeners_.AddInterfacePtr(listener.Bind());
 }
 

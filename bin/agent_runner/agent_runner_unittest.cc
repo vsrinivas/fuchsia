@@ -75,10 +75,10 @@ class MyDummyAgent : Agent,
                      public testing::MockBase {
  public:
   MyDummyAgent(zx::channel service_request,
-               fidl::InterfaceRequest<app::ApplicationController> ctrl)
+               f1dl::InterfaceRequest<app::ApplicationController> ctrl)
       : app_controller_(this, std::move(ctrl)), agent_binding_(this) {
     outgoing_services_.AddService<Agent>(
-        [this](fidl::InterfaceRequest<Agent> request) {
+        [this](f1dl::InterfaceRequest<Agent> request) {
           agent_binding_.Bind(std::move(request));
         });
     outgoing_services_.ServeDirectory(std::move(service_request));
@@ -98,21 +98,21 @@ class MyDummyAgent : Agent,
 
   // |Agent|
   void Connect(
-      const fidl::String& /*requestor_url*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      const f1dl::String& /*requestor_url*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     ++counts["Connect"];
   }
 
   // |Agent|
-  void RunTask(const fidl::String& /*task_id*/,
+  void RunTask(const f1dl::String& /*task_id*/,
                const RunTaskCallback& /*callback*/) override {
     ++counts["RunTask"];
   }
 
  private:
   app::ServiceNamespace outgoing_services_;
-  fidl::Binding<app::ApplicationController> app_controller_;
-  fidl::Binding<modular::Agent> agent_binding_;
+  f1dl::Binding<app::ApplicationController> app_controller_;
+  f1dl::Binding<modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
@@ -127,7 +127,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
           app::ApplicationLaunchInfoPtr launch_info,
-          fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+          f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->service_request), std::move(ctrl));
         ++agent_launch_count;
@@ -172,7 +172,7 @@ TEST_F(AgentRunnerTest, AgentController) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
-                     fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                     f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->service_request), std::move(ctrl));
       });

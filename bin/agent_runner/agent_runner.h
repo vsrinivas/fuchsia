@@ -51,7 +51,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
               EntityProviderRunner* const entity_provider_runner);
   ~AgentRunner() override;
 
-  void Connect(fidl::InterfaceRequest<AgentProvider> request);
+  void Connect(f1dl::InterfaceRequest<AgentProvider> request);
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
@@ -62,15 +62,15 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   void ConnectToAgent(
       const std::string& requestor_url,
       const std::string& agent_url,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request);
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Connects to an agent (and starts it up if it doesn't exist) through its
   // |EntityProvider| service.
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request);
+      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
   // NOTE: This should NOT take a const reference, since |agent_url| will die
@@ -117,13 +117,13 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
                        const std::string& task_id);
 
   // A set of all agents that are either running or scheduled to be run.
-  fidl::Array<fidl::String> GetAllAgents();
+  f1dl::Array<f1dl::String> GetAllAgents();
 
   // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();
 
   // |AgentProvider|
-  void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
+  void Watch(f1dl::InterfaceHandle<AgentProviderWatcher> watcher) override;
 
   // |AgentRunnerStorage::Delegate|
   void AddedTask(const std::string& key,
@@ -143,8 +143,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // agent is in a terminating state.
   struct PendingAgentConnectionEntry {
     const std::string requestor_url;
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
-    fidl::InterfaceRequest<AgentController> agent_controller_request;
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
+    f1dl::InterfaceRequest<AgentController> agent_controller_request;
   };
   std::map<std::string, std::vector<struct PendingAgentConnectionEntry>>
       pending_agent_connections_;
@@ -153,8 +153,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // This map holds connections to an agents' EntityProvider that we hold onto
   // while the existing agent is in a terminating state.
   struct PendingEntityProviderConnectionEntry {
-    fidl::InterfaceRequest<EntityProvider> entity_provider_request;
-    fidl::InterfaceRequest<AgentController> agent_controller_request;
+    f1dl::InterfaceRequest<EntityProvider> entity_provider_request;
+    f1dl::InterfaceRequest<AgentController> agent_controller_request;
   };
   std::map<std::string, struct PendingEntityProviderConnectionEntry>
       pending_entity_provider_connections_;
@@ -187,8 +187,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;
 
-  fidl::BindingSet<AgentProvider> agent_provider_bindings_;
-  fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
+  f1dl::BindingSet<AgentProvider> agent_provider_bindings_;
+  f1dl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;

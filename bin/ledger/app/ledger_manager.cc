@@ -40,7 +40,7 @@ class LedgerManager::PageManagerContainer {
 
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
-  void BindPage(fidl::InterfaceRequest<Page> page_request,
+  void BindPage(f1dl::InterfaceRequest<Page> page_request,
                 std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
@@ -55,7 +55,7 @@ class LedgerManager::PageManagerContainer {
 
   // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
   // |callback| when a PageManager is available or an error occurs.
-  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
+  void BindPageDebug(f1dl::InterfaceRequest<PageDebug> page_debug,
                      std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
@@ -107,10 +107,10 @@ class LedgerManager::PageManagerContainer {
   std::unique_ptr<PageManager> page_manager_;
   Status status_ = Status::OK;
   std::vector<
-      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
+      std::pair<f1dl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
   std::vector<
-      std::pair<fidl::InterfaceRequest<PageDebug>, std::function<void(Status)>>>
+      std::pair<f1dl::InterfaceRequest<PageDebug>, std::function<void(Status)>>>
       debug_requests_;
   fxl::Closure on_empty_callback_;
 
@@ -135,12 +135,12 @@ LedgerManager::LedgerManager(
 
 LedgerManager::~LedgerManager() {}
 
-void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
+void LedgerManager::BindLedger(f1dl::InterfaceRequest<Ledger> ledger_request) {
   bindings_.AddBinding(&ledger_impl_, std::move(ledger_request));
 }
 
 void LedgerManager::GetPage(convert::ExtendedStringView page_id,
-                            fidl::InterfaceRequest<Page> page_request,
+                            f1dl::InterfaceRequest<Page> page_request,
                             std::function<void(Status)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
   auto it = page_managers_.find(page_id);
@@ -239,27 +239,27 @@ void LedgerManager::CheckEmpty() {
 }
 
 void LedgerManager::SetConflictResolverFactory(
-    fidl::InterfaceHandle<ConflictResolverFactory> factory) {
+    f1dl::InterfaceHandle<ConflictResolverFactory> factory) {
   merge_manager_.SetFactory(std::move(factory));
 }
 
 void LedgerManager::BindLedgerDebug(
-    fidl::InterfaceRequest<LedgerDebug> request) {
+    f1dl::InterfaceRequest<LedgerDebug> request) {
   ledger_debug_bindings_.AddBinding(this, std::move(request));
 }
 
 // TODO(ayaelattar): See LE-370: Inspect ledgers and pages not currently active.
 void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
-  fidl::Array<fidl::Array<uint8_t>> result =
-      fidl::Array<fidl::Array<uint8_t>>::New(0);
+  f1dl::Array<f1dl::Array<uint8_t>> result =
+      f1dl::Array<f1dl::Array<uint8_t>>::New(0);
   for (const auto& key_value : page_managers_) {
     result.push_back(convert::ToArray(key_value.first));
   }
   callback(std::move(result));
 }
 
-void LedgerManager::GetPageDebug(fidl::Array<uint8_t> page_id,
-                                 fidl::InterfaceRequest<PageDebug> page_debug,
+void LedgerManager::GetPageDebug(f1dl::Array<uint8_t> page_id,
+                                 f1dl::InterfaceRequest<PageDebug> page_debug,
                                  const GetPageDebugCallback& callback) {
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {

@@ -25,8 +25,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -41,7 +41,7 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const fidl::String&) { AgentConnected(); });
+        [this](const f1dl::String&) { AgentConnected(); });
 
     // Start a timer to call Story.Done() in case the test agent misbehaves and
     // we time out. If that happens, the module will exit normally through
@@ -64,10 +64,10 @@ class ParentApp {
   void AgentConnected() {
     agent_connected_.Pass();
     agent_service_->GetMessageQueueToken(
-        [this](const fidl::String& token) { ReceivedQueueToken(token); });
+        [this](const f1dl::String& token) { ReceivedQueueToken(token); });
   }
 
-  void ReceivedQueueToken(const fidl::String& token) {
+  void ReceivedQueueToken(const f1dl::String& token) {
     queue_token_ = token;
     received_queue_persistence_token_.Pass();
 
@@ -76,7 +76,7 @@ class ParentApp {
     agent_service_.Unbind();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_stopped",
-        [this](const fidl::String&) { AgentStopped(); });
+        [this](const f1dl::String&) { AgentStopped(); });
   }
 
   void AgentStopped() {
@@ -97,14 +97,14 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const fidl::String&) { AgentConnectedAgain(); });
+        [this](const f1dl::String&) { AgentConnectedAgain(); });
   }
 
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_received_message",
-        [this](const fidl::String&) { AgentReceivedMessage(); });
+        [this](const f1dl::String&) { AgentReceivedMessage(); });
   }
 
   void AgentReceivedMessage() {
@@ -114,7 +114,7 @@ class ParentApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
-                                      [this](const fidl::String&) {
+                                      [this](const f1dl::String&) {
                                         module_host_->module_context()->Done();
                                       });
   }

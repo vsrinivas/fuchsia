@@ -18,7 +18,7 @@ class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
   ~SyncWatcherSet() override;
 
   // Adds a new SyncWatcher.
-  void AddSyncWatcher(fidl::InterfaceHandle<SyncWatcher> watcher);
+  void AddSyncWatcher(f1dl::InterfaceHandle<SyncWatcher> watcher);
 
   // Notify the client watchers of a new state.
   void Notify(SyncStateContainer sync_state) override;

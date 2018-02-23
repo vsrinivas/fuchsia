@@ -25,8 +25,8 @@ class AgentImpl : public Agent {
   class Delegate {
    public:
     virtual void Connect(
-        fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
-    virtual void RunTask(const fidl::String& task_id,
+        f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
+    virtual void RunTask(const f1dl::String& task_id,
                          const std::function<void()>& done) = 0;
   };
 
@@ -35,14 +35,14 @@ class AgentImpl : public Agent {
  private:
   // |Agent|
   void Connect(
-      const fidl::String& requestor_url,
-      fidl::InterfaceRequest<app::ServiceProvider> services_request) override;
+      const f1dl::String& requestor_url,
+      f1dl::InterfaceRequest<app::ServiceProvider> services_request) override;
   // |Agent|
-  void RunTask(const fidl::String& task_id,
+  void RunTask(const f1dl::String& task_id,
                const RunTaskCallback& callback) override;
 
   Delegate* const delegate_;
-  fidl::Binding<Agent> binding_;
+  f1dl::Binding<Agent> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentImpl);
 };

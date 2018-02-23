@@ -13,46 +13,46 @@ ComponentContextFake::ComponentContextFake() {}
 ComponentContextFake::~ComponentContextFake() = default;
 
 void ComponentContextFake::Connect(
-    fidl::InterfaceRequest<ComponentContext> request) {
+    f1dl::InterfaceRequest<ComponentContext> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void ComponentContextFake::GetLedger(
-    fidl::InterfaceRequest<ledger::Ledger> request,
+    f1dl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ConnectToAgent(
-    const fidl::String& url,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    const f1dl::String& url,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ObtainMessageQueue(
-    const fidl::String& name,
-    fidl::InterfaceRequest<MessageQueue> request) {
+    const f1dl::String& name,
+    f1dl::InterfaceRequest<MessageQueue> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::DeleteMessageQueue(const fidl::String& name) {
+void ComponentContextFake::DeleteMessageQueue(const f1dl::String& name) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetMessageSender(
-    const fidl::String& queue_token,
-    fidl::InterfaceRequest<MessageSender> request) {
+    const f1dl::String& queue_token,
+    f1dl::InterfaceRequest<MessageSender> request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetEntityResolver(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    f1dl::InterfaceRequest<EntityResolver> request) {
   entity_resolver_.Connect(std::move(request));
 }
 
 void ComponentContextFake::CreateEntityWithData(
-    fidl::Map<fidl::String, fidl::String> type_to_data,
+    f1dl::Map<f1dl::String, f1dl::String> type_to_data,
     const CreateEntityWithDataCallback& result) {
   FXL_NOTIMPLEMENTED();
 }

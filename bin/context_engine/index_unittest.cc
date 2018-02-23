@@ -48,12 +48,12 @@ TEST(IndexTest, Encode_Differences) {
   meta1->story->focused->state = FocusedState::State::FOCUSED;
   meta1->mod = ModuleMetadata::New();
   meta1->mod->url = "url1";
-  meta1->mod->path = fidl::Array<fidl::String>::New(0);
+  meta1->mod->path = f1dl::Array<f1dl::String>::New(0);
   meta1->mod->path.push_back("1");
   meta1->mod->path.push_back("2");
   meta1->entity = EntityMetadata::New();
   meta1->entity->topic = "topic1";
-  meta1->entity->type = fidl::Array<fidl::String>::New(0);
+  meta1->entity->type = f1dl::Array<f1dl::String>::New(0);
   meta1->entity->type.push_back("type1");
   meta1->entity->type.push_back("type2");
 
@@ -64,11 +64,11 @@ TEST(IndexTest, Encode_Differences) {
   meta2->story->focused->state = FocusedState::State::NOT_FOCUSED;
   meta2->mod = ModuleMetadata::New();
   meta2->mod->url = "url2";
-  meta2->mod->path = fidl::Array<fidl::String>::New(0);
+  meta2->mod->path = f1dl::Array<f1dl::String>::New(0);
   meta2->mod->path.push_back("2");
   meta2->entity = EntityMetadata::New();
   meta2->entity->topic = "topic2";
-  meta2->entity->type = fidl::Array<fidl::String>::New(0);
+  meta2->entity->type = f1dl::Array<f1dl::String>::New(0);
   meta2->entity->type.push_back("type3");
   meta2->entity->type.push_back("type4");
   meta2->entity->type.push_back("type5");
@@ -115,7 +115,7 @@ TEST(IndexTest, AddRemoveQuery) {
   meta1->story->id = "story1";
   meta1->entity = EntityMetadata::New();
   meta1->entity->topic = "topic1";
-  meta1->entity->type = fidl::Array<fidl::String>::New(0);
+  meta1->entity->type = f1dl::Array<f1dl::String>::New(0);
   meta1->entity->type.push_back("type1");
   meta1->entity->type.push_back("type2");
 

@@ -32,25 +32,25 @@ class SuggestionDebugImpl : public SuggestionDebug {
  private:
   // |SuggestionDebug|
   void WatchAskProposals(
-      fidl::InterfaceHandle<AskProposalListener> listener) override;
+      f1dl::InterfaceHandle<AskProposalListener> listener) override;
 
-  fidl::InterfacePtrSet<AskProposalListener> ask_proposal_listeners_;
+  f1dl::InterfacePtrSet<AskProposalListener> ask_proposal_listeners_;
 
   // |SuggestionDebug|
   void WatchInterruptionProposals(
-      fidl::InterfaceHandle<InterruptionProposalListener> listener) override;
+      f1dl::InterfaceHandle<InterruptionProposalListener> listener) override;
 
-  fidl::InterfacePtrSet<InterruptionProposalListener>
+  f1dl::InterfacePtrSet<InterruptionProposalListener>
       interruption_proposal_listeners_;
 
   // |SuggestionDebug|
   void WatchNextProposals(
-      fidl::InterfaceHandle<NextProposalListener> listener) override;
+      f1dl::InterfaceHandle<NextProposalListener> listener) override;
 
-  fidl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
+  f1dl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
 
   // The cached set of next proposals.
-  fidl::Array<ProposalSummaryPtr> cached_next_proposals_;
+  f1dl::Array<ProposalSummaryPtr> cached_next_proposals_;
 };
 
 }  // namespace maxwell

@@ -18,15 +18,15 @@ class ContextReaderImpl : ContextReader {
  public:
   ContextReaderImpl(ComponentScopePtr client,
                     ContextRepository* repository,
-                    fidl::InterfaceRequest<ContextReader> request);
+                    f1dl::InterfaceRequest<ContextReader> request);
   ~ContextReaderImpl() override;
 
  private:
   // |ContextReader|
   void Subscribe(ContextQueryPtr query,
-                 fidl::InterfaceHandle<ContextListener> listener) override;
+                 f1dl::InterfaceHandle<ContextListener> listener) override;
 
-  fidl::Binding<ContextReader> binding_;
+  f1dl::Binding<ContextReader> binding_;
 
   SubscriptionDebugInfoPtr debug_;
   ContextRepository* const repository_;

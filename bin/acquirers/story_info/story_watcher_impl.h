@@ -57,8 +57,8 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
   ContextValueWriterPtr context_value_;
   ContextMetadataPtr context_metadata_;
 
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
-  fidl::Binding<modular::StoryLinksWatcher> story_links_watcher_binding_;
+  f1dl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  f1dl::Binding<modular::StoryLinksWatcher> story_links_watcher_binding_;
 
   std::map<std::string, std::unique_ptr<LinkWatcherImpl>> links_;
   // serialized module path -> context value.

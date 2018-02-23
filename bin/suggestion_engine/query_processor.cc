@@ -18,7 +18,7 @@ constexpr fxl::TimeDelta kQueryTimeout = fxl::TimeDelta::FromSeconds(9);
 }  // namespace
 
 QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
-                               fidl::InterfaceHandle<QueryListener> listener,
+                               f1dl::InterfaceHandle<QueryListener> listener,
                                maxwell::UserInputPtr input,
                                size_t max_results)
     : engine_(engine),
@@ -92,7 +92,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 
     // TODO(rosswang): allow falling back on natural language text response
     // without a spoken response
-    fidl::String text_response = std::move(response->natural_language_response);
+    f1dl::String text_response = std::move(response->natural_language_response);
     if (!text_response)
       text_response = "";
     engine_->speech_listeners_.ForAllPtrs([&](FeedbackListener* listener) {
@@ -156,7 +156,7 @@ void QueryProcessor::TimeOut() {
 void QueryProcessor::NotifyOfResults() {
   const auto& suggestion_vector = engine_->ask_suggestions_->Get();
 
-  fidl::Array<SuggestionPtr> window;
+  f1dl::Array<SuggestionPtr> window;
   for (size_t i = 0; i < max_results_ && i < suggestion_vector.size(); i++) {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }

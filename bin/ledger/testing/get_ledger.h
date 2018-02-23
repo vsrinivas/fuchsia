@@ -39,9 +39,9 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 // created.
 ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
-                                        fidl::Array<uint8_t> requested_id,
+                                        f1dl::Array<uint8_t> requested_id,
                                         ledger::PagePtr* page,
-                                        fidl::Array<uint8_t>* page_id);
+                                        f1dl::Array<uint8_t>* page_id);
 
 }  // namespace test
 

@@ -16,16 +16,16 @@ FakeCloudProvider::FakeCloudProvider(
 FakeCloudProvider::~FakeCloudProvider() {}
 
 void FakeCloudProvider::GetDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+    f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
   device_set_.AddBinding(std::move(device_set));
   callback(cloud_provider::Status::OK);
 }
 
 void FakeCloudProvider::GetPageCloud(
-    fidl::Array<uint8_t> app_id,
-    fidl::Array<uint8_t> page_id,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+    f1dl::Array<uint8_t> app_id,
+    f1dl::Array<uint8_t> page_id,
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
   const std::string key =
       convert::ToString(app_id) + "_" + convert::ToString(page_id);

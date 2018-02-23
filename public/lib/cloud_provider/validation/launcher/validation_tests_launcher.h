@@ -23,7 +23,7 @@ class ValidationTestsLauncher {
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
       app::ApplicationContext* application_context,
-      std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory);
+      std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory);
 
   // Starts the tests.
   //
@@ -35,7 +35,7 @@ class ValidationTestsLauncher {
 
  private:
   app::ApplicationContext* const application_context_;
-  std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory_;
+  std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory_;
   app::ServiceProviderImpl service_provider_impl_;
   app::ApplicationControllerPtr validation_tests_controller_;
   std::function<void(int32_t)> callback_;

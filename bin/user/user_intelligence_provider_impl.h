@@ -27,30 +27,30 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   UserIntelligenceProviderImpl(
       app::ApplicationContext* app_context,
       const Config& config,
-      fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+      f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine,
+      f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+      f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+      f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
           visible_stories_provider);
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
       ComponentScopePtr scope,
-      fidl::InterfaceRequest<IntelligenceServices> request) override;
+      f1dl::InterfaceRequest<IntelligenceServices> request) override;
 
   void GetSuggestionProvider(
-      fidl::InterfaceRequest<SuggestionProvider> request) override;
+      f1dl::InterfaceRequest<SuggestionProvider> request) override;
 
   void GetSpeechToText(
-      fidl::InterfaceRequest<speech::SpeechToText> request) override;
+      f1dl::InterfaceRequest<speech::SpeechToText> request) override;
 
-  void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
+  void GetResolver(f1dl::InterfaceRequest<resolver::Resolver> request) override;
 
-  void StartAgents(fidl::InterfaceHandle<modular::ComponentContext>
+  void StartAgents(f1dl::InterfaceHandle<modular::ComponentContext>
                        component_context) override;
 
   void GetServicesForAgent(
-      const fidl::String& url,
+      const f1dl::String& url,
       const GetServicesForAgentCallback& callback) override;
 
  private:
@@ -60,7 +60,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
-  fidl::Array<fidl::String> AddStandardServices(
+  f1dl::Array<f1dl::String> AddStandardServices(
       const std::string& url,
       app::ServiceNamespace* agent_host);
 
@@ -86,13 +86,13 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   app::ServiceProviderPtr kronk_services_;
   modular::AgentControllerPtr kronk_controller_;
 
-  fidl::BindingSet<IntelligenceServices, std::unique_ptr<IntelligenceServices>>
+  f1dl::BindingSet<IntelligenceServices, std::unique_ptr<IntelligenceServices>>
       intelligence_services_bindings_;
 
-  fidl::InterfacePtr<modular::ComponentContext> component_context_;
-  fidl::InterfacePtr<modular::StoryProvider> story_provider_;
-  fidl::InterfacePtr<modular::FocusProvider> focus_provider_;
-  fidl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
+  f1dl::InterfacePtr<modular::ComponentContext> component_context_;
+  f1dl::InterfacePtr<modular::StoryProvider> story_provider_;
+  f1dl::InterfacePtr<modular::FocusProvider> focus_provider_;
+  f1dl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
 
   // Framework Agent controllers. Hanging onto these tells the Framework we
   // want the Agents to keep running.
@@ -112,12 +112,12 @@ class UserIntelligenceProviderFactoryImpl
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
-      fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+      f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine,
+      f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+      f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+      f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
           visible_stories_provider,
-      fidl::InterfaceRequest<UserIntelligenceProvider>
+      f1dl::InterfaceRequest<UserIntelligenceProvider>
           user_intelligence_provider_request) override;
 
  private:
@@ -127,7 +127,7 @@ class UserIntelligenceProviderFactoryImpl
   // We expect a 1:1 relationship between instances of this Factory and
   // instances of UserIntelligenceProvider.
   std::unique_ptr<UserIntelligenceProviderImpl> impl_;
-  std::unique_ptr<fidl::Binding<UserIntelligenceProvider>> binding_;
+  std::unique_ptr<f1dl::Binding<UserIntelligenceProvider>> binding_;
 };
 
 }  // namespace maxwell

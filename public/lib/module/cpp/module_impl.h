@@ -24,8 +24,8 @@ class ModuleImpl : public Module {
   class Delegate {
    public:
     virtual void ModuleInit(
-        fidl::InterfaceHandle<ModuleContext> module_context,
-        fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
+        f1dl::InterfaceHandle<ModuleContext> module_context,
+        f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
   };
 
   ModuleImpl(app::ServiceNamespace* service_namespace, Delegate* delegate);
@@ -33,11 +33,11 @@ class ModuleImpl : public Module {
  private:
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+      f1dl::InterfaceHandle<ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   Delegate* const delegate_;
-  fidl::Binding<Module> binding_;
+  f1dl::Binding<Module> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleImpl);
 };

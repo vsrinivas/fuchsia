@@ -31,17 +31,17 @@ constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
 template <class T>
-fidl::InterfaceHandle<T> Duplicate(const fidl::InterfacePtr<T>& ptr) {
-  fidl::InterfaceHandle<T> handle;
+f1dl::InterfaceHandle<T> Duplicate(const f1dl::InterfacePtr<T>& ptr) {
+  f1dl::InterfaceHandle<T> handle;
   ptr->Duplicate(handle.NewRequest());
   return handle;
 }
 
 modular::AgentControllerPtr StartStoryInfoAgent(
     modular::ComponentContext* component_context,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider) {
   app::ServiceProviderPtr agent_services;
   modular::AgentControllerPtr controller;
@@ -62,10 +62,10 @@ modular::AgentControllerPtr StartStoryInfoAgent(
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     app::ApplicationContext* app_context,
     const Config& config,
-    fidl::InterfaceHandle<maxwell::ContextEngine> context_engine_handle,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine_handle,
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
+    f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider_handle)
     : app_context_(app_context),
       config_(config),
@@ -82,7 +82,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       suggestion_services_.ConnectToService<maxwell::SuggestionEngine>();
 
   // Generate a ContextWriter to pass to the SuggestionEngine.
-  fidl::InterfaceHandle<ContextWriter> context_writer;
+  f1dl::InterfaceHandle<ContextWriter> context_writer;
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
   context_engine_->GetWriter(std::move(scope), context_writer.NewRequest());
@@ -96,7 +96,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
     ComponentScopePtr scope,
-    fidl::InterfaceRequest<IntelligenceServices> request) {
+    f1dl::InterfaceRequest<IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(
           std::move(scope), context_engine_.get(), suggestion_engine_.get(),
@@ -105,12 +105,12 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
 }
 
 void UserIntelligenceProviderImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<SuggestionProvider> request) {
+    f1dl::InterfaceRequest<SuggestionProvider> request) {
   suggestion_services_.ConnectToService(std::move(request));
 }
 
 void UserIntelligenceProviderImpl::GetSpeechToText(
-    fidl::InterfaceRequest<speech::SpeechToText> request) {
+    f1dl::InterfaceRequest<speech::SpeechToText> request) {
   if (kronk_services_) {
     app::ConnectToService(kronk_services_.get(), std::move(request));
   } else {
@@ -119,13 +119,13 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
 }
 
 void UserIntelligenceProviderImpl::GetResolver(
-    fidl::InterfaceRequest<resolver::Resolver> request) {
+    f1dl::InterfaceRequest<resolver::Resolver> request) {
   // TODO(thatguy): Remove this once the last instances of this are gone from
   // topaz.
 }
 
 void UserIntelligenceProviderImpl::StartAgents(
-    fidl::InterfaceHandle<modular::ComponentContext> component_context_handle) {
+    f1dl::InterfaceHandle<modular::ComponentContext> component_context_handle) {
   component_context_.Bind(std::move(component_context_handle));
 
   if (!config_.kronk.empty()) {
@@ -150,7 +150,7 @@ void UserIntelligenceProviderImpl::StartAgents(
 }
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
-    const fidl::String& url,
+    const f1dl::String& url,
     const GetServicesForAgentCallback& callback) {
   auto service_list = app::ServiceList::New();
   agent_namespaces_.emplace_back(service_list->provider.NewRequest());
@@ -219,46 +219,46 @@ void UserIntelligenceProviderImpl::StartKronk() {
   });
 }
 
-fidl::Array<fidl::String> UserIntelligenceProviderImpl::AddStandardServices(
+f1dl::Array<f1dl::String> UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
     app::ServiceNamespace* agent_host) {
   auto agent_info = ComponentScope::New();
   auto agent_scope = AgentScope::New();
   agent_scope->url = url;
   agent_info->set_agent_scope(std::move(agent_scope));
-  fidl::Array<fidl::String> service_names;
+  f1dl::Array<f1dl::String> service_names;
 
   service_names.push_back(maxwell::ContextWriter::Name_);
   agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
-       url](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+       url](f1dl::InterfaceRequest<maxwell::ContextWriter> request) {
         context_engine_->GetWriter(client_info.Clone(), std::move(request));
       }));
 
   service_names.push_back(maxwell::ContextReader::Name_);
   agent_host->AddService<maxwell::ContextReader>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
-       url](fidl::InterfaceRequest<maxwell::ContextReader> request) {
+       url](f1dl::InterfaceRequest<maxwell::ContextReader> request) {
         context_engine_->GetReader(client_info.Clone(), std::move(request));
       }));
 
   service_names.push_back(maxwell::IntelligenceServices::Name_);
   agent_host->AddService<maxwell::IntelligenceServices>(fxl::MakeCopyable(
       [this, client_info = agent_info.Clone(),
-       url](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+       url](f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
         this->GetComponentIntelligenceServices(client_info.Clone(),
                                                std::move(request));
       }));
 
   service_names.push_back(maxwell::ProposalPublisher::Name_);
   agent_host->AddService<maxwell::ProposalPublisher>(
-      [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+      [this, url](f1dl::InterfaceRequest<maxwell::ProposalPublisher> request) {
         suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
 
   service_names.push_back(modular::VisibleStoriesProvider::Name_);
   agent_host->AddService<modular::VisibleStoriesProvider>(
-      [this](fidl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
+      [this](f1dl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
         visible_stories_provider_->Duplicate(std::move(request));
       });
 
@@ -269,19 +269,19 @@ fidl::Array<fidl::String> UserIntelligenceProviderImpl::AddStandardServices(
   if (url == kMIDashboardUrl) {
     service_names.push_back(maxwell::ContextDebug::Name_);
     agent_host->AddService<maxwell::ContextDebug>(
-        [this](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
+        [this](f1dl::InterfaceRequest<maxwell::ContextDebug> request) {
           context_engine_->GetContextDebug(std::move(request));
         });
 
     service_names.push_back(maxwell::SuggestionDebug::Name_);
     agent_host->AddService<maxwell::SuggestionDebug>(
-        [this](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
+        [this](f1dl::InterfaceRequest<maxwell::SuggestionDebug> request) {
           suggestion_services_.ConnectToService(std::move(request));
         });
 
     service_names.push_back(maxwell::UserActionLog::Name_);
     agent_host->AddService<maxwell::UserActionLog>(
-        [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
+        [this](f1dl::InterfaceRequest<maxwell::UserActionLog> request) {
           user_action_log_->Duplicate(std::move(request));
         });
   }
@@ -297,12 +297,12 @@ UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
     : app_context_(app_context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
-    fidl::InterfaceHandle<maxwell::ContextEngine> context_engine,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine,
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider,
-    fidl::InterfaceRequest<UserIntelligenceProvider>
+    f1dl::InterfaceRequest<UserIntelligenceProvider>
         user_intelligence_provider_request) {
   // Fail if someone has already used this Factory to create an instance of
   // UserIntelligenceProvider.
@@ -311,7 +311,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
       app_context_, config_, std::move(context_engine),
       std::move(story_provider), std::move(focus_provider),
       std::move(visible_stories_provider)));
-  binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));
+  binding_.reset(new f1dl::Binding<UserIntelligenceProvider>(impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));
 }
 

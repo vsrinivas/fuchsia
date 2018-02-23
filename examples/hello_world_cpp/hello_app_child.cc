@@ -20,7 +20,7 @@ class HelloAppChild : public Hello {
  public:
   HelloAppChild(app::ApplicationContext* app_context) {
     app_context->outgoing_services()->AddService<Hello>(
-        [this](fidl::InterfaceRequest<Hello> request) {
+        [this](f1dl::InterfaceRequest<Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
         });
   }
@@ -32,11 +32,11 @@ class HelloAppChild : public Hello {
 
  private:
   // |examples::Hello| implementation:
-  void Say(const fidl::String& request, const SayCallback& callback) override {
+  void Say(const f1dl::String& request, const SayCallback& callback) override {
     callback((request.get() == "hello") ? "hola!" : "adios!");
   }
 
-  fidl::BindingSet<Hello> hello_binding_;
+  f1dl::BindingSet<Hello> hello_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppChild);
 };

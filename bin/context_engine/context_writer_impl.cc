@@ -17,7 +17,7 @@ ContextWriterImpl::ContextWriterImpl(
     const ComponentScopePtr& client_info,
     ContextRepository* const repository,
     modular::EntityResolver* const entity_resolver,
-    fidl::InterfaceRequest<ContextWriter> request)
+    f1dl::InterfaceRequest<ContextWriter> request)
     : binding_(this, std::move(request)),
       repository_(repository),
       entity_resolver_(entity_resolver),
@@ -43,8 +43,8 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-fidl::Array<fidl::String> Deprecated_GetTypesFromJsonEntity(
-    const fidl::String& content) {
+f1dl::Array<f1dl::String> Deprecated_GetTypesFromJsonEntity(
+    const f1dl::String& content) {
   // If the content has the @type attribute, take its contents and populate the
   // EntityMetadata appropriately, overriding whatever is there.
   std::vector<std::string> types;
@@ -55,10 +55,10 @@ fidl::Array<fidl::String> Deprecated_GetTypesFromJsonEntity(
   if (types.empty())
     return {};
 
-  return fidl::Array<fidl::String>::From(types);
+  return f1dl::Array<f1dl::String>::From(types);
 }
 
-void MaybeFillEntityTypeMetadata(const fidl::Array<fidl::String>& types,
+void MaybeFillEntityTypeMetadata(const f1dl::Array<f1dl::String>& types,
                                  ContextValuePtr* value_ptr) {
   auto& value = *value_ptr;
   if (value->type != ContextValueType::ENTITY || !types)
@@ -100,7 +100,7 @@ bool MaybeFindParentValueId(ContextRepository* repository,
 }  // namespace
 
 void ContextWriterImpl::CreateValue(
-    fidl::InterfaceRequest<ContextValueWriter> request,
+    f1dl::InterfaceRequest<ContextValueWriter> request,
     ContextValueType type) {
   ContextRepository::Id parent_id;
   // We ignore the return value - if it returns false |parent_id| will stay
@@ -124,8 +124,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
   value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
-void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
-                                         const fidl::String& value) {
+void ContextWriterImpl::WriteEntityTopic(const f1dl::String& topic,
+                                         const f1dl::String& value) {
   if (!value) {
     // Remove this value.
     auto it = topic_value_ids_.find(topic);
@@ -136,7 +136,7 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
   }
 
   GetEntityTypesFromEntityReference(
-      value, [this, topic, value](const fidl::Array<fidl::String>& types) {
+      value, [this, topic, value](const f1dl::Array<f1dl::String>& types) {
         auto value_ptr = ContextValue::New();
         value_ptr->type = ContextValueType::ENTITY;
         value_ptr->content = value;
@@ -163,8 +163,8 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
 }
 
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
-    const fidl::String& reference,
-    std::function<void(const fidl::Array<fidl::String>&)> done) {
+    const f1dl::String& reference,
+    std::function<void(const f1dl::Array<f1dl::String>&)> done) {
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // to somewhere where other places can reach it.
   std::shared_ptr<modular::EntityPtr> entity(new modular::EntityPtr);
@@ -179,7 +179,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
       });
 
   (*entity)->GetTypes([weak_this = weak_factory_.GetWeakPtr(), entity,
-                       done](const fidl::Array<fidl::String>& types) {
+                       done](const f1dl::Array<f1dl::String>& types) {
     if (!weak_this)
       return;
     done(types);
@@ -190,7 +190,7 @@ ContextValueWriterImpl::ContextValueWriterImpl(
     ContextWriterImpl* writer,
     const ContextRepository::Id& parent_id,
     ContextValueType type,
-    fidl::InterfaceRequest<ContextValueWriter> request)
+    f1dl::InterfaceRequest<ContextValueWriter> request)
     : binding_(this, std::move(request)),
       writer_(writer),
       parent_id_(parent_id),
@@ -209,7 +209,7 @@ ContextValueWriterImpl::~ContextValueWriterImpl() {
 }
 
 void ContextValueWriterImpl::CreateChildValue(
-    fidl::InterfaceRequest<ContextValueWriter> request,
+    f1dl::InterfaceRequest<ContextValueWriter> request,
     ContextValueType type) {
   // We can't create a child value until this value has an ID.
   value_id_.OnValue(
@@ -221,11 +221,11 @@ void ContextValueWriterImpl::CreateChildValue(
       }));
 }
 
-void ContextValueWriterImpl::Set(const fidl::String& content,
+void ContextValueWriterImpl::Set(const f1dl::String& content,
                                  ContextMetadataPtr metadata) {
   auto done_getting_types = [weak_this = weak_factory_.GetWeakPtr(), content,
                              metadata = std::move(metadata)](
-                                const fidl::Array<fidl::String>& entity_types) {
+                                const f1dl::Array<f1dl::String>& entity_types) {
     if (!weak_this)
       return;
     if (!weak_this->value_id_) {

@@ -180,7 +180,7 @@ void UserActionLogImpl::MaybeRecordEmailRecipient(
 
 void UserActionLogImpl::GetComponentActionLog(
     ComponentScopePtr scope,
-    fidl::InterfaceRequest<ComponentActionLog> action_log_request) {
+    f1dl::InterfaceRequest<ComponentActionLog> action_log_request) {
   std::unique_ptr<ComponentActionLogImpl> module_action_log_impl(
       new ComponentActionLogImpl(
           action_log_.GetActionLogger(std::move(scope))));
@@ -190,18 +190,18 @@ void UserActionLogImpl::GetComponentActionLog(
 }
 
 void UserActionLogImpl::Duplicate(
-    fidl::InterfaceRequest<UserActionLog> request) {
+    f1dl::InterfaceRequest<UserActionLog> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void UserActionLogImpl::Subscribe(
-    fidl::InterfaceHandle<ActionLogListener> listener_handle) {
+    f1dl::InterfaceHandle<ActionLogListener> listener_handle) {
   ActionLogListenerPtr listener = listener_handle.Bind();
   subscribers_.AddInterfacePtr(std::move(listener));
 }
 
-void ComponentActionLogImpl::LogAction(const fidl::String& method,
-                                       const fidl::String& json_params) {
+void ComponentActionLogImpl::LogAction(const f1dl::String& method,
+                                       const f1dl::String& json_params) {
   rapidjson::Document params;
   if (params.Parse(json_params.get().c_str()).HasParseError()) {
     FXL_LOG(WARNING) << "Parse error.";

@@ -26,7 +26,7 @@ ComponentScopePtr MakeModuleScope(const std::string& path,
   auto module_scope = ModuleScope::New();
   module_scope->url = path;
   module_scope->story_id = story_id;
-  module_scope->module_path = fidl::Array<fidl::String>::New(1);
+  module_scope->module_path = f1dl::Array<f1dl::String>::New(1);
   module_scope->module_path[0] = path;
   scope->set_module_scope(std::move(module_scope));
   return scope;
@@ -44,14 +44,14 @@ class TestListener : public ContextListener {
     last_update = std::move(update);
   }
 
-  fidl::InterfaceHandle<ContextListener> GetHandle() {
+  f1dl::InterfaceHandle<ContextListener> GetHandle() {
     return binding_.NewBinding();
   }
 
   void Reset() { last_update.reset(); }
 
  private:
-  fidl::Binding<ContextListener> binding_;
+  f1dl::Binding<ContextListener> binding_;
 };
 
 class ContextEngineTest : public ContextEngineTestBase {

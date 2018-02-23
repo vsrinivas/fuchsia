@@ -29,10 +29,10 @@ class ProposalPublisherImpl : public ProposalPublisher {
   ProposalPublisherImpl(SuggestionEngineImpl* engine,
                         const std::string& component_url);
 
-  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request);
+  void AddBinding(f1dl::InterfaceRequest<ProposalPublisher> request);
 
   void Propose(ProposalPtr proposal) override;
-  void Remove(const fidl::String& proposal_id) override;
+  void Remove(const f1dl::String& proposal_id) override;
 
   const std::string component_url() { return component_url_; }
 
@@ -42,7 +42,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
     BindingSet(ProposalPublisherImpl* impl);
 
    protected:
-    void OnConnectionError(fidl::Binding<ProposalPublisher>* binding) override;
+    void OnConnectionError(f1dl::Binding<ProposalPublisher>* binding) override;
 
    private:
     ProposalPublisherImpl* const impl_;

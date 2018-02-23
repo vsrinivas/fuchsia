@@ -21,26 +21,26 @@ class PageImpl : public Page {
   // Page:
   void GetId(const GetIdCallback& callback) override;
 
-  void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   fidl::Array<uint8_t> key_prefix,
-                   fidl::InterfaceHandle<PageWatcher> watcher,
+  void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   f1dl::Array<uint8_t> key_prefix,
+                   f1dl::InterfaceHandle<PageWatcher> watcher,
                    const GetSnapshotCallback& callback) override;
 
-  void Put(fidl::Array<uint8_t> key,
-           fidl::Array<uint8_t> value,
+  void Put(f1dl::Array<uint8_t> key,
+           f1dl::Array<uint8_t> value,
            const PutCallback& callback) override;
 
-  void PutWithPriority(fidl::Array<uint8_t> key,
-                       fidl::Array<uint8_t> value,
+  void PutWithPriority(f1dl::Array<uint8_t> key,
+                       f1dl::Array<uint8_t> value,
                        Priority priority,
                        const PutWithPriorityCallback& callback) override;
 
-  void PutReference(fidl::Array<uint8_t> key,
+  void PutReference(f1dl::Array<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const PutReferenceCallback& callback) override;
 
-  void Delete(fidl::Array<uint8_t> key,
+  void Delete(f1dl::Array<uint8_t> key,
               const DeleteCallback& callback) override;
 
   void CreateReferenceFromSocket(
@@ -59,7 +59,7 @@ class PageImpl : public Page {
   void Rollback(const RollbackCallback& callback) override;
 
   void SetSyncStateWatcher(
-      fidl::InterfaceHandle<SyncWatcher> watcher,
+      f1dl::InterfaceHandle<SyncWatcher> watcher,
       const SetSyncStateWatcherCallback& callback) override;
 
   void WaitForConflictResolution(

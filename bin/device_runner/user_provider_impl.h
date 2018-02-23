@@ -26,7 +26,7 @@ class UserProviderImpl : UserProvider {
                    const AppConfig& story_shell,
                    auth::AccountProvider* account_provider);
 
-  void Connect(fidl::InterfaceRequest<UserProvider> request);
+  void Connect(f1dl::InterfaceRequest<UserProvider> request);
 
   void Teardown(const std::function<void()>& callback);
 
@@ -44,7 +44,7 @@ class UserProviderImpl : UserProvider {
                const AddUserCallback& callback) override;
 
   // |UserProvider|
-  void RemoveUser(const fidl::String& account_id,
+  void RemoveUser(const f1dl::String& account_id,
                   const RemoveUserCallback& callback) override;
 
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
@@ -52,7 +52,7 @@ class UserProviderImpl : UserProvider {
 
   void LoginInternal(auth::AccountPtr account, UserLoginParamsPtr params);
 
-  fidl::BindingSet<UserProvider> bindings_;
+  f1dl::BindingSet<UserProvider> bindings_;
 
   std::shared_ptr<app::ApplicationContext> app_context_;
   const AppConfig& user_runner_;         // Neither owned nor copied.

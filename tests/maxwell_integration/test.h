@@ -107,7 +107,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   app::Services StartServices(const std::string& url);
 
   template <typename Interface>
-  fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
+  f1dl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
     auto services = StartServices(url);
     return services.ConnectToService<Interface>();
   }
@@ -121,7 +121,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
  private:
   std::unique_ptr<app::ApplicationContext> startup_context_;
   std::unique_ptr<ApplicationEnvironmentHostImpl> test_environment_host_;
-  std::unique_ptr<fidl::Binding<app::ApplicationEnvironmentHost>>
+  std::unique_ptr<f1dl::Binding<app::ApplicationEnvironmentHost>>
       test_environment_host_binding_;
   app::ApplicationEnvironmentPtr test_environment_;
   // Hold a controller so that we kill all children when we go out of scope.

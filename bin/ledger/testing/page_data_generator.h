@@ -31,8 +31,8 @@ class PageDataGenerator {
   // reference depending on |ref_strategy| and with priority specified by
   // |priority|.
   void PutEntry(ledger::PagePtr* page,
-                fidl::Array<uint8_t> key,
-                fidl::Array<uint8_t> value,
+                f1dl::Array<uint8_t> key,
+                f1dl::Array<uint8_t> value,
                 ReferenceStrategy ref_strategy,
                 ledger::Priority priority,
                 std::function<void(ledger::Status)> callback);
@@ -41,7 +41,7 @@ class PageDataGenerator {
   // size |value_size|, performing at maximum
   // |transaction_size| Put operations per commit.
   void Populate(ledger::PagePtr* page,
-                std::vector<fidl::Array<uint8_t>> keys,
+                std::vector<f1dl::Array<uint8_t>> keys,
                 size_t value_size,
                 size_t transaction_size,
                 ReferenceStrategy ref_strategy,
@@ -55,7 +55,7 @@ class PageDataGenerator {
   // recursively. Call |callback| with Status::OK once all keys have been put,
   // or with a first encountered status that is different from Status::OK.
   void PutInTransaction(ledger::PagePtr* page,
-                        std::vector<fidl::Array<uint8_t>> keys,
+                        std::vector<f1dl::Array<uint8_t>> keys,
                         size_t current_key_index,
                         size_t value_size,
                         size_t transaction_size,
@@ -66,7 +66,7 @@ class PageDataGenerator {
   // Run PutEntry on all the provided keys in |keys| with random value of size
   // |value_size|.
   void PutMultipleEntries(ledger::PagePtr* page,
-                          std::vector<fidl::Array<uint8_t>> keys,
+                          std::vector<f1dl::Array<uint8_t>> keys,
                           size_t value_size,
                           ReferenceStrategy ref_strategy,
                           ledger::Priority priority,

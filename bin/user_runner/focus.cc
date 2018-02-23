@@ -26,7 +26,7 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 
 }  // namespace
 
-FocusHandler::FocusHandler(const fidl::String& device_id,
+FocusHandler::FocusHandler(const f1dl::String& device_id,
                            LedgerClient* const ledger_client,
                            LedgerPageId page_id)
     : PageClient("FocusHandler",
@@ -38,53 +38,53 @@ FocusHandler::FocusHandler(const fidl::String& device_id,
 FocusHandler::~FocusHandler() = default;
 
 void FocusHandler::AddProviderBinding(
-    fidl::InterfaceRequest<FocusProvider> request) {
+    f1dl::InterfaceRequest<FocusProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void FocusHandler::AddControllerBinding(
-    fidl::InterfaceRequest<FocusController> request) {
+    f1dl::InterfaceRequest<FocusController> request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
 // |FocusProvider|
 void FocusHandler::Query(const QueryCallback& callback) {
-  new ReadAllDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
+  new ReadAllDataCall<FocusInfo, f1dl::InlinedStructPtr<FocusInfo>>(
       &operation_queue_, page(), kFocusKeyPrefix, XdrFocusInfo, callback);
 }
 
 // |FocusProvider|
-void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
+void FocusHandler::Watch(f1dl::InterfaceHandle<FocusWatcher> watcher) {
   change_watchers_.push_back(watcher.Bind());
 }
 
 // |FocusProvider|
-void FocusHandler::Request(const fidl::String& story_id) {
+void FocusHandler::Request(const f1dl::String& story_id) {
   for (const auto& watcher : request_watchers_) {
     watcher->OnFocusRequest(story_id);
   }
 }
 
 // |FocusProvider|
-void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
+void FocusHandler::Duplicate(f1dl::InterfaceRequest<FocusProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
 // |FocusController|
-void FocusHandler::Set(const fidl::String& story_id) {
+void FocusHandler::Set(const f1dl::String& story_id) {
   FocusInfoPtr data = FocusInfo::New();
   data->device_id = device_id_;
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
-  new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
+  new WriteDataCall<FocusInfo, f1dl::InlinedStructPtr<FocusInfo>>(
       &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,
       std::move(data), [] {});
 }
 
 // |FocusController|
 void FocusHandler::WatchRequest(
-    fidl::InterfaceHandle<FocusRequestWatcher> watcher) {
+    f1dl::InterfaceHandle<FocusRequestWatcher> watcher) {
   request_watchers_.push_back(watcher.Bind());
 }
 
@@ -102,17 +102,17 @@ void FocusHandler::OnPageChange(const std::string& /*key*/,
 }
 
 VisibleStoriesHandler::VisibleStoriesHandler()
-    : visible_stories_(fidl::Array<fidl::String>::New(0)) {}
+    : visible_stories_(f1dl::Array<f1dl::String>::New(0)) {}
 
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
 void VisibleStoriesHandler::AddProviderBinding(
-    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+    f1dl::InterfaceRequest<VisibleStoriesProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void VisibleStoriesHandler::AddControllerBinding(
-    fidl::InterfaceRequest<VisibleStoriesController> request) {
+    f1dl::InterfaceRequest<VisibleStoriesController> request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -121,16 +121,16 @@ void VisibleStoriesHandler::Query(const QueryCallback& callback) {
 }
 
 void VisibleStoriesHandler::Watch(
-    fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) {
+    f1dl::InterfaceHandle<VisibleStoriesWatcher> watcher) {
   change_watchers_.push_back(watcher.Bind());
 }
 
 void VisibleStoriesHandler::Duplicate(
-    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+    f1dl::InterfaceRequest<VisibleStoriesProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
-void VisibleStoriesHandler::Set(fidl::Array<fidl::String> story_ids) {
+void VisibleStoriesHandler::Set(f1dl::Array<f1dl::String> story_ids) {
   visible_stories_ = std::move(story_ids);
   for (const auto& watcher : change_watchers_) {
     watcher->OnVisibleStoriesChange(visible_stories_.Clone());

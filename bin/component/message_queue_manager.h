@@ -43,7 +43,7 @@ class MessageQueueManager : PageClient {
   void ObtainMessageQueue(const std::string& component_namespace,
                           const std::string& component_instance_id,
                           const std::string& queue_name,
-                          fidl::InterfaceRequest<MessageQueue> request);
+                          f1dl::InterfaceRequest<MessageQueue> request);
 
   void DeleteMessageQueue(const std::string& component_namespace,
                           const std::string& component_instance_id,
@@ -53,7 +53,7 @@ class MessageQueueManager : PageClient {
                        std::function<void()> done);
 
   void GetMessageSender(const std::string& queue_token,
-                        fidl::InterfaceRequest<MessageSender> request);
+                        f1dl::InterfaceRequest<MessageSender> request);
 
   // Used by AgentRunner to look for new messages on queues which have
   // a trigger associated with it. If a queue corresponding to

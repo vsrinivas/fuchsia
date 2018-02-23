@@ -24,8 +24,8 @@ class ClipboardTestApp {
 
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -34,7 +34,7 @@ class ClipboardTestApp {
 
     const std::string expected_value = "hello there";
     clipboard_->Push(expected_value);
-    clipboard_->Peek([this, expected_value](const fidl::String& text) {
+    clipboard_->Peek([this, expected_value](const f1dl::String& text) {
       if (expected_value == text) {
         successful_peek_.Pass();
       }

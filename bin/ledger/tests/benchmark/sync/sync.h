@@ -58,13 +58,13 @@ class SyncBenchmark : public ledger::PageWatcher {
   const size_t value_size_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
   std::string server_id_;
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
   ledger::LedgerPtr gamma_;
-  fidl::Array<uint8_t> page_id_;
+  f1dl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
 

@@ -26,8 +26,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     ScheduleDone();
@@ -41,7 +41,7 @@ class ParentApp {
  private:
   void ScheduleDone() {
     auto check = [this,
-                  done = std::make_shared<int>(0)](const fidl::String& value) {
+                  done = std::make_shared<int>(0)](const f1dl::String& value) {
       ++*done;
       if (*done == 2) {
         module_host_->module_context()->Done();

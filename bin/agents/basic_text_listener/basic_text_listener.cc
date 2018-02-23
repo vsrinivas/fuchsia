@@ -92,7 +92,7 @@ class BasicTextListener : ContextListener {
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
-  fidl::Binding<ContextListener> binding_;
+  f1dl::Binding<ContextListener> binding_;
 };
 
 }  // namespace maxwell

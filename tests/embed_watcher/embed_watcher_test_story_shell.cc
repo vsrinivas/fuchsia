@@ -34,16 +34,16 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void Initialize(
-      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+      f1dl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
   }
 
   TestPoint connect_view_{"ConnectView root:child:child root"};
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
-                   const fidl::String& view_id,
-                   const fidl::String& anchor_id,
+  void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+                   const f1dl::String& view_id,
+                   const f1dl::String& anchor_id,
                    modular::SurfaceRelationPtr /*surface_relation*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       connect_view_.Pass();
@@ -56,8 +56,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   TestPoint focus_view_{"FocusView root:child:child"};
 
   // |StoryShell|
-  void FocusView(const fidl::String& view_id,
-                 const fidl::String& anchor_id) override {
+  void FocusView(const f1dl::String& view_id,
+                 const f1dl::String& anchor_id) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       focus_view_.Pass();
       modular::testing::GetStore()->Put("story_shell_focus", "1", [] {});
@@ -67,7 +67,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void DefocusView(const fidl::String& /*view_id*/,
+  void DefocusView(const f1dl::String& /*view_id*/,
                    const DefocusViewCallback& callback) override {
     callback();
   }

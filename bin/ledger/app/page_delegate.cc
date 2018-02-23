@@ -26,7 +26,7 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
                            PageManager* manager,
                            storage::PageStorage* storage,
                            MergeResolver* merge_resolver,
-                           fidl::InterfaceRequest<Page> request,
+                           f1dl::InterfaceRequest<Page> request,
                            SyncWatcherSet* watchers)
     : manager_(manager),
       storage_(storage),
@@ -68,9 +68,9 @@ void PageDelegate::GetId(const Page::GetIdCallback& callback) {
 
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageDelegate::GetSnapshot(
-    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    fidl::Array<uint8_t> key_prefix,
-    fidl::InterfaceHandle<PageWatcher> watcher,
+    f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+    f1dl::Array<uint8_t> key_prefix,
+    f1dl::InterfaceHandle<PageWatcher> watcher,
     const Page::GetSnapshotCallback& callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
@@ -108,8 +108,8 @@ void PageDelegate::GetSnapshot(
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
-void PageDelegate::Put(fidl::Array<uint8_t> key,
-                       fidl::Array<uint8_t> value,
+void PageDelegate::Put(f1dl::Array<uint8_t> key,
+                       f1dl::Array<uint8_t> value,
                        const Page::PutCallback& callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
@@ -117,8 +117,8 @@ void PageDelegate::Put(fidl::Array<uint8_t> key,
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
 //   => (Status status);
 void PageDelegate::PutWithPriority(
-    fidl::Array<uint8_t> key,
-    fidl::Array<uint8_t> value,
+    f1dl::Array<uint8_t> key,
+    f1dl::Array<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
   if (key.size() > kMaxKeySize) {
@@ -161,7 +161,7 @@ void PageDelegate::PutWithPriority(
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
-void PageDelegate::PutReference(fidl::Array<uint8_t> key,
+void PageDelegate::PutReference(f1dl::Array<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
@@ -215,7 +215,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
 }
 
 // Delete(array<uint8> key) => (Status status);
-void PageDelegate::Delete(fidl::Array<uint8_t> key,
+void PageDelegate::Delete(f1dl::Array<uint8_t> key,
                           const Page::DeleteCallback& callback) {
   operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([this, key = std::move(key)](
@@ -327,7 +327,7 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
 }
 
 void PageDelegate::SetSyncStateWatcher(
-    fidl::InterfaceHandle<SyncWatcher> watcher,
+    f1dl::InterfaceHandle<SyncWatcher> watcher,
     const Page::SetSyncStateWatcherCallback& callback) {
   SyncWatcherPtr watcher_ptr = watcher.Bind();
   watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
@@ -351,7 +351,7 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
   return journal_parent_commit_;
 }
 
-void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
+void PageDelegate::PutInCommit(f1dl::Array<uint8_t> key,
                                storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
                                std::function<void(Status)> callback) {

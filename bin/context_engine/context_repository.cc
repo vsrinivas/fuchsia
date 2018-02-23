@@ -274,7 +274,7 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
 }
 
 void ContextRepository::AddDebugBinding(
-    fidl::InterfaceRequest<ContextDebug> request) {
+    f1dl::InterfaceRequest<ContextDebug> request) {
   debug_bindings_.AddBinding(debug_.get(), std::move(request));
 }
 
@@ -298,7 +298,7 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
     std::set<ContextIndex::Id> values;
     index_.Query(selector->type, selector->meta, &values);
 
-    update->values[key] = fidl::Array<ContextValuePtr>::New(0);
+    update->values[key] = f1dl::Array<ContextValuePtr>::New(0);
     for (const auto& id : values) {
       auto it = values_.find(id);
       FXL_DCHECK(it != values_.end()) << id;

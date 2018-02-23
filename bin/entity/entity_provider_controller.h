@@ -33,7 +33,7 @@ class EntityProviderController {
   // Called by |EntityProviderRunner| when an |Entity| needs to be provided,
   // usually when an entity reference is being resolved to an |Entity|.
   void ProvideEntity(const std::string& cookie,
-                     fidl::InterfaceRequest<Entity> request);
+                     f1dl::InterfaceRequest<Entity> request);
 
  private:
   // This class manages the lifetime of all |Entity|s for a given cookie.

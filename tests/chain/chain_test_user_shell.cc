@@ -47,7 +47,7 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
 
   // |UserShell|
   void Initialize(
-      fidl::InterfaceHandle<UserShellContext> user_shell_context) override {
+      f1dl::InterfaceHandle<UserShellContext> user_shell_context) override {
     initialize_.Pass();
 
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -72,7 +72,7 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
     // TODO(thatguy): CreateStory() should take a Daisy as well, or not add any
     // Module in the first place.
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const fidl::String& story_id) {
+                                 [this](const f1dl::String& story_id) {
                                    story_id_ = story_id;
                                    create_story_.Pass();
                                    StartStory();
@@ -83,7 +83,7 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     StoryWatcherPtr watcher;
@@ -96,10 +96,10 @@ class TestApp : public testing::ComponentBase<UserShell>, StoryWatcher {
   UserShellContextPtr user_shell_context_;
   StoryProviderPtr story_provider_;
 
-  fidl::String story_id_;
+  f1dl::String story_id_;
   StoryControllerPtr story_controller_;
 
-  fidl::Binding<StoryWatcher> story_watcher_binding_;
+  f1dl::Binding<StoryWatcher> story_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

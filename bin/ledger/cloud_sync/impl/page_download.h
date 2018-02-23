@@ -51,11 +51,11 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
  private:
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(fidl::Array<cloud_provider::CommitPtr> commits,
-                    fidl::Array<uint8_t> position_token,
+  void OnNewCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
+                    f1dl::Array<uint8_t> position_token,
                     const OnNewCommitsCallback& callback) override;
 
-  void OnNewObject(fidl::Array<uint8_t> id,
+  void OnNewObject(f1dl::Array<uint8_t> id,
                    fsl::SizedVmoTransportPtr data,
                    const OnNewObjectCallback& callback) override;
 
@@ -68,8 +68,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
-                     fidl::Array<uint8_t> position_token,
+  void DownloadBatch(f1dl::Array<cloud_provider::CommitPtr> commits,
+                     f1dl::Array<uint8_t> position_token,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
@@ -116,8 +116,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  fidl::Array<cloud_provider::CommitPtr> commits_to_download_;
-  fidl::Array<uint8_t> position_token_;
+  f1dl::Array<cloud_provider::CommitPtr> commits_to_download_;
+  f1dl::Array<uint8_t> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;
 
@@ -126,7 +126,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   DownloadSyncState commit_state_ = DOWNLOAD_STOPPED;
   int current_get_object_calls_ = 0;
 
-  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
+  f1dl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDownload);
 };

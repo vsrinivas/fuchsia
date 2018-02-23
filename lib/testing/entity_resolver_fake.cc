@@ -11,14 +11,14 @@ class EntityResolverFake::EntityImpl : Entity {
   EntityImpl(std::map<std::string, std::string> types_and_data)
       : types_and_data_(types_and_data) {}
 
-  void Connect(fidl::InterfaceRequest<Entity> request) {
+  void Connect(f1dl::InterfaceRequest<Entity> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
  private:
   // |Entity|
   void GetTypes(const GetTypesCallback& callback) override {
-    fidl::Array<fidl::String> types;
+    f1dl::Array<f1dl::String> types;
     for (const auto& entry : types_and_data_) {
       types.push_back(entry.first);
     }
@@ -26,7 +26,7 @@ class EntityResolverFake::EntityImpl : Entity {
   }
 
   // |Entity|
-  void GetData(const fidl::String& type,
+  void GetData(const f1dl::String& type,
                const GetDataCallback& callback) override {
     auto it = types_and_data_.find(type);
     if (it == types_and_data_.end()) {
@@ -38,20 +38,20 @@ class EntityResolverFake::EntityImpl : Entity {
 
   std::map<std::string, std::string> types_and_data_;
 
-  fidl::BindingSet<Entity> bindings_;
+  f1dl::BindingSet<Entity> bindings_;
 };
 
 EntityResolverFake::EntityResolverFake() = default;
 EntityResolverFake::~EntityResolverFake() = default;
 
 void EntityResolverFake::Connect(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    f1dl::InterfaceRequest<EntityResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 // Returns an Entity reference that will resolve to an Entity.
 // |types_and_data| is a map of data type to data bytes.
-fidl::String EntityResolverFake::AddEntity(
+f1dl::String EntityResolverFake::AddEntity(
     std::map<std::string, std::string> types_and_data) {
   const std::string id = std::to_string(next_entity_id_++);
 
@@ -61,8 +61,8 @@ fidl::String EntityResolverFake::AddEntity(
 }
 
 void EntityResolverFake::ResolveEntity(
-    const fidl::String& entity_reference,
-    fidl::InterfaceRequest<Entity> entity_request) {
+    const f1dl::String& entity_reference,
+    f1dl::InterfaceRequest<Entity> entity_request) {
   auto it = entities_.find(entity_reference);
   if (it == entities_.end()) {
     return;  // |entity_request| is reset here.

@@ -149,7 +149,7 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
-  fidl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::Array<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
@@ -193,7 +193,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
-  fidl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::Array<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("42"), [] {});
@@ -201,7 +201,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
 
   // Add two more remote commits, before storage confirms adding the first one.
-  fidl::Array<cloud_provider::CommitPtr> more_commits;
+  f1dl::Array<cloud_provider::CommitPtr> more_commits;
   more_commits.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
   more_commits.push_back(
@@ -261,7 +261,7 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
   EXPECT_TRUE(page_cloud_.set_watcher.is_bound());
 
   storage_.should_fail_add_commit_from_sync = true;
-  fidl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::Array<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("42"), [] {});
@@ -300,7 +300,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  fidl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::Array<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id3", "content3"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});

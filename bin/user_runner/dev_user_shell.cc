@@ -62,14 +62,14 @@ class DevUserShellApp : modular::StoryWatcher,
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -105,13 +105,13 @@ class DevUserShellApp : modular::StoryWatcher,
     if (settings_.story_id.empty()) {
       story_provider_->CreateStory(
           settings_.root_module,
-          [this](const fidl::String& story_id) { StartStoryById(story_id); });
+          [this](const f1dl::String& story_id) { StartStoryById(story_id); });
     } else {
       StartStoryById(settings_.story_id);
     }
   }
 
-  void StartStoryById(const fidl::String& story_id) {
+  void StartStoryById(const f1dl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
@@ -121,11 +121,11 @@ class DevUserShellApp : modular::StoryWatcher,
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
     FXL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
-    fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
     focus_controller_->Set(story_id);
-    auto visible_stories = fidl::Array<fidl::String>::New(0);
+    auto visible_stories = f1dl::Array<f1dl::String>::New(0);
     visible_stories.push_back(story_id);
     visible_stories_controller_->Set(std::move(visible_stories));
 
@@ -155,7 +155,7 @@ class DevUserShellApp : modular::StoryWatcher,
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   // |NextListener|
-  void OnNextResults(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
+  void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "
@@ -177,7 +177,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   const Settings settings_;
 
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
@@ -186,12 +186,12 @@ class DevUserShellApp : modular::StoryWatcher,
   modular::FocusControllerPtr focus_controller_;
   modular::VisibleStoriesControllerPtr visible_stories_controller_;
 
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  f1dl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<maxwell::InterruptionListener>
+  f1dl::BindingSet<maxwell::InterruptionListener>
       interruption_listener_bindings_;
-  fidl::BindingSet<maxwell::NextListener> next_listener_bindings_;
+  f1dl::BindingSet<maxwell::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };

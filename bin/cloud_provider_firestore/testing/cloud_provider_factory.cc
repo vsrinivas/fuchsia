@@ -25,7 +25,7 @@ class CloudProviderFactory::TokenProviderContainer {
       app::ApplicationContext* application_context,
       fxl::RefPtr<fxl::TaskRunner> task_runner,
       std::string credentials_path,
-      fidl::InterfaceRequest<modular::auth::TokenProvider> request)
+      f1dl::InterfaceRequest<modular::auth::TokenProvider> request)
       : application_context_(application_context),
         network_service_(
             std::move(task_runner),
@@ -50,7 +50,7 @@ class CloudProviderFactory::TokenProviderContainer {
   app::ApplicationContext* const application_context_;
   ledger::NetworkServiceImpl network_service_;
   service_account::ServiceAccountTokenProvider token_provider_;
-  fidl::Binding<modular::auth::TokenProvider> binding_;
+  f1dl::Binding<modular::auth::TokenProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderContainer);
 };
@@ -81,7 +81,7 @@ void CloudProviderFactory::Init() {
 void CloudProviderFactory::MakeCloudProvider(
     std::string server_id,
     std::string api_key,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   if (api_key.empty()) {
     FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
                      << "only with unauthenticated server instances.";

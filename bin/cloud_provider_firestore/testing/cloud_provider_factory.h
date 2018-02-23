@@ -34,7 +34,7 @@ class CloudProviderFactory {
   void MakeCloudProvider(
       std::string server_id,
       std::string api_key,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+      f1dl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
   class TokenProviderContainer;

@@ -39,7 +39,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::Array<fidl::String> host_list;
+  f1dl::Array<f1dl::String> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -69,7 +69,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
 
   bool called = false;
   uint64_t version = 0;
-  fidl::Array<fidl::String> host_list;
+  f1dl::Array<f1dl::String> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -129,7 +129,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
-  fidl::InterfaceHandle<app::ServiceProvider> handle;
+  f1dl::InterfaceHandle<app::ServiceProvider> handle;
   app::ServiceProviderImpl service_provider1;
   std::vector<std::unique_ptr<netconnector::MessageRelay>> relays_host1;
   service_provider1.AddBinding(handle.NewRequest());

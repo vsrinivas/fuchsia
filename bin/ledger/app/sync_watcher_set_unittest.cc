@@ -30,7 +30,7 @@ class SyncWatcherSetTest : public gtest::TestWithMessageLoop {
 
 class SyncWatcherImpl : public SyncWatcher {
  public:
-  explicit SyncWatcherImpl(fidl::InterfaceRequest<SyncWatcher> request)
+  explicit SyncWatcherImpl(f1dl::InterfaceRequest<SyncWatcher> request)
       : binding_(this, std::move(request)) {}
   void SyncStateChanged(SyncState download_status,
                         SyncState upload_status,
@@ -45,7 +45,7 @@ class SyncWatcherImpl : public SyncWatcher {
   std::vector<SyncState> upload_states;
 
  private:
-  fidl::Binding<SyncWatcher> binding_;
+  f1dl::Binding<SyncWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };

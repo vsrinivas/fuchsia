@@ -33,7 +33,7 @@ CobaltObservation::CobaltObservation(uint32_t metric_id,
 CobaltObservation::~CobaltObservation() = default;
 
 CobaltObservation::CobaltObservation(
-    uint32_t metric_id, fidl::Array<cobalt::ObservationValuePtr> parts)
+    uint32_t metric_id, f1dl::Array<cobalt::ObservationValuePtr> parts)
     : metric_id_(metric_id), parts_(std::move(parts)) {}
 
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs) :

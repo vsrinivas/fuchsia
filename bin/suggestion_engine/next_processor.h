@@ -27,7 +27,7 @@ class NextProcessor {
   NextProcessor(SuggestionEngineImpl* engine);
   virtual ~NextProcessor();
 
-  void RegisterListener(fidl::InterfaceHandle<NextListener> listener,
+  void RegisterListener(f1dl::InterfaceHandle<NextListener> listener,
                         size_t max_results);
 
   // Add and remove proposals

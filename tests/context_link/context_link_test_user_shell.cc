@@ -73,7 +73,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     }
   }
 
-  fidl::Binding<maxwell::ContextListener> binding_;
+  f1dl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
@@ -95,7 +95,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -118,7 +118,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const fidl::String& story_id) {
+                                 [this](const f1dl::String& story_id) {
                                    story_id_ = story_id;
                                    create_story_.Pass();
                                    StartStory();
@@ -138,7 +138,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     start_story_exit_.Pass();
@@ -260,7 +260,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
 
-  fidl::String story_id_;
+  f1dl::String story_id_;
   modular::StoryControllerPtr story_controller_;
 
   maxwell::ContextReaderPtr context_reader_;

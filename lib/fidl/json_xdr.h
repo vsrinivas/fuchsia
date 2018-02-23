@@ -161,7 +161,7 @@ class XdrContext {
   // key and the value data type.
   template <typename K, typename D, typename V>
   void Field(const char field[],
-             fidl::Map<K, D>* const data,
+             f1dl::Map<K, D>* const data,
              XdrFilterType<K> const key_filter,
              XdrFilterType<V> const value_filter) {
     Field(field).Value(data, key_filter, value_filter);
@@ -212,7 +212,7 @@ class XdrContext {
 
   // A fidl String is mapped to either (i.e., the union type of) JSON
   // null or JSON string.
-  void Value(fidl::String* data);
+  void Value(f1dl::String* data);
 
   // An STL string is mapped to a JSON string.
   void Value(std::string* data);
@@ -230,13 +230,13 @@ class XdrContext {
   // wrapper types for fidl strings, but the code is the same for
   // both.
   template <typename S>
-  void Value(fidl::StructPtr<S>* const data, XdrFilterType<S> const filter) {
+  void Value(f1dl::StructPtr<S>* const data, XdrFilterType<S> const filter) {
     FidlStructPtr(data, filter);
   }
 
   // The second variant of a fidl struct wrapper.
   template <typename S>
-  void Value(fidl::InlinedStructPtr<S>* const data,
+  void Value(f1dl::InlinedStructPtr<S>* const data,
              XdrFilterType<S> const filter) {
     FidlStructPtr(data, filter);
   }
@@ -244,7 +244,7 @@ class XdrContext {
   // A fidl array is mapped to JSON null and JSON Array with a custom
   // filter for the elements.
   template <typename D, typename V>
-  void Value(fidl::Array<D>* const data, const XdrFilterType<V> filter) {
+  void Value(f1dl::Array<D>* const data, const XdrFilterType<V> filter) {
     switch (op_) {
       case XdrOp::TO_JSON:
         if (data->is_null()) {
@@ -291,7 +291,7 @@ class XdrContext {
   // A fidl array with a simple element type can infer its element
   // value filter from the type parameters of the array.
   template <typename V>
-  void Value(fidl::Array<V>* const data) {
+  void Value(f1dl::Array<V>* const data) {
     Value(data, XdrFilter<V>);
   }
 
@@ -305,7 +305,7 @@ class XdrContext {
   // InlineStructPtr<> to the type of the argument of the filter for
   // it.
   template <typename K, typename D, typename V>
-  void Value(fidl::Map<K, D>* const data,
+  void Value(f1dl::Map<K, D>* const data,
              XdrFilterType<K> const key_filter,
              XdrFilterType<V> const value_filter) {
     switch (op_) {
@@ -369,7 +369,7 @@ class XdrContext {
   // A fidl map with only simple values can infer its key value
   // filters from the type parameters of the map.
   template <typename K, typename V>
-  void Value(fidl::Map<K, V>* const data) {
+  void Value(f1dl::Map<K, V>* const data) {
     Value(data, XdrFilter<K>, XdrFilter<V>);
   }
 
@@ -512,8 +512,8 @@ class XdrContext {
 
   // This is factored out of the corresponding Value() methods, because
   // it needs to work for two different kinds of StructPtr, which
-  // however behave exactly the same: fidl::StructPtr<DataType> and
-  // fidl::InlineStructPtr<DataType>. So there is a relationship
+  // however behave exactly the same: f1dl::StructPtr<DataType> and
+  // f1dl::InlineStructPtr<DataType>. So there is a relationship
   // between StructPtr and DataType, which however cannot be simply
   // expressed in template argument expressions (as far as I know). So
   // instead there are two different template specializations of

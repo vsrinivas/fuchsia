@@ -25,22 +25,22 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
   DeviceSetImpl(std::string user_path,
                 CredentialsProvider* credentials_provider,
                 FirestoreService* firestore_service,
-                fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
+                f1dl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(fidl::Array<uint8_t> fingerprint,
+  void CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
                         const CheckFingerprintCallback& callback) override;
 
-  void SetFingerprint(fidl::Array<uint8_t> fingerprint,
+  void SetFingerprint(f1dl::Array<uint8_t> fingerprint,
                       const SetFingerprintCallback& callback) override;
 
   void SetWatcher(
-      fidl::Array<uint8_t> fingerprint,
-      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+      f1dl::Array<uint8_t> fingerprint,
+      f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
   void Erase(const EraseCallback& callback) override;
@@ -49,7 +49,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
   CredentialsProvider* const credentials_provider_;
   FirestoreService* const firestore_service_;
 
-  fidl::Binding<cloud_provider::DeviceSet> binding_;
+  f1dl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImpl);

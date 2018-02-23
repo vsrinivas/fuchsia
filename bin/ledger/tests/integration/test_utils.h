@@ -14,39 +14,39 @@
 namespace test {
 namespace integration {
 
-fidl::Array<uint8_t> RandomArray(size_t size,
+f1dl::Array<uint8_t> RandomArray(size_t size,
                                  const std::vector<uint8_t>& prefix);
 
-fidl::Array<uint8_t> RandomArray(int size);
+f1dl::Array<uint8_t> RandomArray(int size);
 
-fidl::Array<uint8_t> PageGetId(ledger::PagePtr* page);
+f1dl::Array<uint8_t> PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        fidl::Array<uint8_t> prefix = nullptr);
+                                        f1dl::Array<uint8_t> prefix = nullptr);
 
-fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
+f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start);
-fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
+    f1dl::Array<uint8_t> start);
+f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start,
+    f1dl::Array<uint8_t> start,
     int* num_queries);
 
-fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
+f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start);
-fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
+    f1dl::Array<uint8_t> start);
+f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start,
+    f1dl::Array<uint8_t> start,
     int* num_queries);
 
 std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 fidl::Array<uint8_t> key,
+                                 f1dl::Array<uint8_t> key,
                                  int64_t offset,
                                  int64_t max_size);
 
 std::string ToString(const fsl::SizedVmoTransportPtr& vmo);
-fidl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
+f1dl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
 
 }  // namespace integration
 }  // namespace test

@@ -40,9 +40,9 @@ ModuleControllerImpl::ModuleControllerImpl(
     AppConfigPtr module_config,
     const ModuleData* const module_data,
     app::ServiceListPtr service_list,
-    fidl::InterfaceHandle<ModuleContext> module_context,
-    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services)
+    f1dl::InterfaceHandle<ModuleContext> module_context,
+    f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(
           application_launcher,
@@ -70,7 +70,7 @@ ModuleControllerImpl::ModuleControllerImpl(
 ModuleControllerImpl::~ModuleControllerImpl() {}
 
 void ModuleControllerImpl::Connect(
-    fidl::InterfaceRequest<ModuleController> request) {
+    f1dl::InterfaceRequest<ModuleController> request) {
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -146,7 +146,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   }
 }
 
-void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
+void ModuleControllerImpl::Watch(f1dl::InterfaceHandle<ModuleWatcher> watcher) {
   auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));

@@ -22,18 +22,18 @@ IntelligenceServicesImpl::IntelligenceServicesImpl(
       user_action_log_(user_action_log) {}
 
 void IntelligenceServicesImpl::GetContextReader(
-    fidl::InterfaceRequest<ContextReader> request) {
+    f1dl::InterfaceRequest<ContextReader> request) {
   context_engine_->GetReader(scope_.Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextWriter(
-    fidl::InterfaceRequest<ContextWriter> request) {
+    f1dl::InterfaceRequest<ContextWriter> request) {
   context_engine_->GetWriter(scope_.Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(
-    fidl::InterfaceRequest<ProposalPublisher> request) {
-  fidl::String component_id;
+    f1dl::InterfaceRequest<ProposalPublisher> request) {
+  f1dl::String component_id;
   if (scope_->is_agent_scope()) {
     component_id = scope_->get_agent_scope()->url;
   } else if (scope_->is_module_scope()) {
@@ -49,13 +49,13 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 }
 
 void IntelligenceServicesImpl::GetActionLog(
-    fidl::InterfaceRequest<ComponentActionLog> request) {
+    f1dl::InterfaceRequest<ComponentActionLog> request) {
   user_action_log_->GetComponentActionLog(scope_.Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::RegisterQueryHandler(
-    fidl::InterfaceHandle<QueryHandler> query_handler) {
-  fidl::String component_id;
+    f1dl::InterfaceHandle<QueryHandler> query_handler) {
+  f1dl::String component_id;
   if (scope_->is_agent_scope()) {
     component_id = scope_->get_agent_scope()->url;
   } else if (scope_->is_module_scope()) {

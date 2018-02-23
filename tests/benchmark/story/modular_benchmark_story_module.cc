@@ -22,8 +22,8 @@ class NullModule : modular::LinkWatcher {
  public:
   NullModule(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host),
         link_watcher_binding_(this) {
     module_host_->module_context()->Ready();
@@ -49,7 +49,7 @@ class NullModule : modular::LinkWatcher {
   }
 
   // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
+  void Notify(const f1dl::String& json) override {
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
       count_ = 0;
@@ -66,7 +66,7 @@ class NullModule : modular::LinkWatcher {
   modular::ModuleHost* const module_host_;
   modular::TracingWaiter tracing_waiter_;
   modular::LinkPtr link_;
-  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
+  f1dl::Binding<modular::LinkWatcher> link_watcher_binding_;
 
   int count_{-1};
 };

@@ -57,7 +57,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   ~StoryProviderImpl() override;
 
-  void Connect(fidl::InterfaceRequest<StoryProvider> request);
+  void Connect(f1dl::InterfaceRequest<StoryProvider> request);
 
   void Teardown(const std::function<void()>& callback);
 
@@ -88,49 +88,49 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Returns an AppClient rather than taking an interface request
   // as an argument because the application is preloaded.
   std::unique_ptr<AppClient<Lifecycle>> StartStoryShell(
-      fidl::InterfaceRequest<mozart::ViewOwner> request);
+      f1dl::InterfaceRequest<mozart::ViewOwner> request);
 
   // Called by StoryControllerImpl.
-  void SetStoryInfoExtra(const fidl::String& story_id,
-                         const fidl::String& name,
-                         const fidl::String& value,
+  void SetStoryInfoExtra(const f1dl::String& story_id,
+                         const f1dl::String& name,
+                         const f1dl::String& value,
                          const std::function<void()>& done);
 
   // |StoryProvider|, also used by StoryControllerImpl.
-  void GetStoryInfo(const fidl::String& story_id,
+  void GetStoryInfo(const f1dl::String& story_id,
                     const GetStoryInfoCallback& callback) override;
 
   // Called by StoryControllerImpl. Sends request to FocusProvider
-  void RequestStoryFocus(const fidl::String& story_id);
+  void RequestStoryFocus(const f1dl::String& story_id);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(const fidl::String& story_id,
+  void NotifyStoryStateChange(const f1dl::String& story_id,
                               StoryState story_state);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 
  private:
-  using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
-  using ImportanceMap = fidl::Map<fidl::String, float>;
+  using FidlStringMap = f1dl::Map<f1dl::String, f1dl::String>;
+  using ImportanceMap = f1dl::Map<f1dl::String, float>;
 
   // |StoryProvider|
-  void CreateStory(const fidl::String& module_url,
+  void CreateStory(const f1dl::String& module_url,
                    const CreateStoryCallback& callback) override;
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const fidl::String& module_url,
+      const f1dl::String& module_url,
       FidlStringMap extra_info,
-      const fidl::String& root_json,
+      const f1dl::String& root_json,
       const CreateStoryWithInfoCallback& callback) override;
 
   // |StoryProvider|
-  void DeleteStory(const fidl::String& story_id,
+  void DeleteStory(const f1dl::String& story_id,
                    const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
-  void GetController(const fidl::String& story_id,
-                     fidl::InterfaceRequest<StoryController> request) override;
+  void GetController(const f1dl::String& story_id,
+                     f1dl::InterfaceRequest<StoryController> request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
@@ -139,23 +139,23 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void RunningStories(const RunningStoriesCallback& callback) override;
 
   // |StoryProvider|
-  void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
+  void Watch(f1dl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |StoryProvider|
   void GetImportance(const GetImportanceCallback& callback) override;
 
   // |StoryProvider|
   void WatchImportance(
-      fidl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
+      f1dl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
 
   // |StoryProvider|
-  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
+  void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override;
 
   // |StoryProvider|
-  void GetLinkPeer(const fidl::String& story_id,
-                   fidl::Array<fidl::String> module_path,
-                   const fidl::String& link_name,
-                   fidl::InterfaceRequest<Link> request) override;
+  void GetLinkPeer(const f1dl::String& story_id,
+                   f1dl::Array<f1dl::String> module_path,
+                   const f1dl::String& link_name,
+                   f1dl::InterfaceRequest<Link> request) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -187,7 +187,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   LedgerClient* const ledger_client_;
 
   // The bindings for this instance.
-  fidl::BindingSet<StoryProvider> bindings_;
+  f1dl::BindingSet<StoryProvider> bindings_;
 
   // Used to preload story shell before it is requested.
   AppConfigPtr story_shell_;
@@ -204,7 +204,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Holds the story shell view proxies for running story shells.
   ProxySet proxies_;
 
-  fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+  f1dl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.
@@ -234,8 +234,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // stories in the timeline, as determined by the current context.
   ContextHandler context_handler_;
   FocusProviderPtr focus_provider_;
-  fidl::Binding<FocusWatcher> focus_watcher_binding_;
-  fidl::InterfacePtrSet<StoryImportanceWatcher> importance_watchers_;
+  f1dl::Binding<FocusWatcher> focus_watcher_binding_;
+  f1dl::InterfacePtrSet<StoryImportanceWatcher> importance_watchers_;
 
   // Machinery to support StoryProvider.GetLinkPeer().
   struct LinkPeer;

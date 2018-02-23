@@ -29,14 +29,14 @@ class TestAgentApp : modular::QueuePersistenceTestService {
                                            msg_queue_.NewRequest());
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
-        [this](const fidl::String& message, std::function<void()> ack) {
+        [this](const f1dl::String& message, std::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});
         });
 
     services_.AddService<modular::QueuePersistenceTestService>(
-        [this](fidl::InterfaceRequest<modular::QueuePersistenceTestService>
+        [this](f1dl::InterfaceRequest<modular::QueuePersistenceTestService>
                    request) {
           services_bindings_.AddBinding(this, std::move(request));
         });
@@ -45,14 +45,14 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<app::ServiceProvider> services) {
+  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("queue_persistence_test_agent_connected",
                                       "", [] {});
   }
 
   // Called by AgentDriver.
-  void RunTask(const fidl::String& /*task_id*/,
+  void RunTask(const f1dl::String& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   // Called by AgentDriver.
@@ -71,7 +71,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
     msg_queue_->GetToken(
-        [callback](const fidl::String& token) { callback(token); });
+        [callback](const f1dl::String& token) { callback(token); });
   }
 
   TestPoint initialized_{"Queue persistence test agent initialized"};
@@ -82,7 +82,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   app::ServiceNamespace services_;
-  fidl::BindingSet<modular::QueuePersistenceTestService> services_bindings_;
+  f1dl::BindingSet<modular::QueuePersistenceTestService> services_bindings_;
 };
 
 }  // namespace

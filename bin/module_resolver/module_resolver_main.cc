@@ -68,12 +68,12 @@ class ModuleResolverApp {
             "cloud-mods", "" /* prefix */));
 
     // Make |resolver_impl_| a query (ask) handler.
-    fidl::InterfaceHandle<QueryHandler> query_handler;
+    f1dl::InterfaceHandle<QueryHandler> query_handler;
     resolver_impl_->BindQueryHandler(query_handler.NewRequest());
     intelligence_services->RegisterQueryHandler(std::move(query_handler));
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(
-        [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
+        [this](f1dl::InterfaceRequest<modular::ModuleResolver> request) {
           resolver_impl_->Connect(std::move(request));
         });
   }

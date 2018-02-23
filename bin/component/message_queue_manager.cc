@@ -35,7 +35,7 @@ class MessageQueueConnection : public MessageQueue {
 
  private:
   // |MessageQueue|
-  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) override;
+  void RegisterReceiver(f1dl::InterfaceHandle<MessageReader> receiver) override;
 
   // |MessageQueue|
   void GetToken(const GetTokenCallback& callback) override;
@@ -57,7 +57,7 @@ class MessageQueueStorage : MessageSender {
 
   ~MessageQueueStorage() override = default;
 
-  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) {
+  void RegisterReceiver(f1dl::InterfaceHandle<MessageReader> receiver) {
     if (message_receiver_) {
       FXL_DLOG(WARNING) << "Existing MessageReader is being replaced for "
                            "message queue. queue name="
@@ -81,11 +81,11 @@ class MessageQueueStorage : MessageSender {
 
   const std::string& queue_token() const { return queue_token_; }
 
-  void AddMessageSenderBinding(fidl::InterfaceRequest<MessageSender> request) {
+  void AddMessageSenderBinding(f1dl::InterfaceRequest<MessageSender> request) {
     message_sender_bindings_.AddBinding(this, std::move(request));
   }
 
-  void AddMessageQueueBinding(fidl::InterfaceRequest<MessageQueue> request) {
+  void AddMessageQueueBinding(f1dl::InterfaceRequest<MessageQueue> request) {
     message_queue_bindings_.AddBinding(
         std::make_unique<MessageQueueConnection>(this), std::move(request));
   }
@@ -114,7 +114,7 @@ class MessageQueueStorage : MessageSender {
   }
 
   // |MessageSender|
-  void Send(const fidl::String& message) override {
+  void Send(const f1dl::String& message) override {
     queue_data_.Enqueue(message);
     MaybeSendNextMessage();
     if (watcher_) {
@@ -134,10 +134,10 @@ class MessageQueueStorage : MessageSender {
 
   // When a |MessageQueue| connection closes, the corresponding
   // MessageQueueConnection instance gets removed.
-  fidl::BindingSet<MessageQueue, std::unique_ptr<MessageQueueConnection>>
+  f1dl::BindingSet<MessageQueue, std::unique_ptr<MessageQueueConnection>>
       message_queue_bindings_;
 
-  fidl::BindingSet<MessageSender> message_sender_bindings_;
+  f1dl::BindingSet<MessageSender> message_sender_bindings_;
 };
 
 // MessageQueueConnection -----------------------------------------------------
@@ -149,7 +149,7 @@ MessageQueueConnection::MessageQueueConnection(
 MessageQueueConnection::~MessageQueueConnection() = default;
 
 void MessageQueueConnection::RegisterReceiver(
-    fidl::InterfaceHandle<MessageReader> receiver) {
+    f1dl::InterfaceHandle<MessageReader> receiver) {
   queue_storage_->RegisterReceiver(std::move(receiver));
 }
 
@@ -187,7 +187,7 @@ struct MessageQueueManager::MessageQueueInfo {
   }
 };
 
-class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
+class MessageQueueManager::GetQueueTokenCall : Operation<f1dl::String> {
  public:
   GetQueueTokenCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -261,7 +261,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   ledger::PageSnapshotPtr snapshot_;
   std::string key_;
 
-  fidl::String result_;
+  f1dl::String result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
@@ -272,7 +272,7 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
                        MessageQueueManager* const message_queue_manager,
                        ledger::Page* const page,
                        std::string token,
-                       fidl::InterfaceRequest<MessageSender> request)
+                       f1dl::InterfaceRequest<MessageSender> request)
       : Operation("MessageQueueManager::GetMessageSenderCall",
                   container,
                   [] {}),
@@ -339,7 +339,7 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
   MessageQueueManager* const message_queue_manager_;  // not owned
   ledger::Page* const page_;                          // not owned
   const std::string token_;
-  fidl::InterfaceRequest<MessageSender> request_;
+  f1dl::InterfaceRequest<MessageSender> request_;
 
   ledger::PageSnapshotPtr snapshot_;
   std::string key_;
@@ -357,7 +357,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name,
-                         fidl::InterfaceRequest<MessageQueue> request)
+                         f1dl::InterfaceRequest<MessageQueue> request)
       : Operation("MessageQueueManager::ObtainMessageQueueCall",
                   container,
                   [] {},
@@ -378,7 +378,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this, flow](fidl::String token) {
+        message_queue_info_.queue_name, [this, flow](f1dl::String token) {
           if (token) {
             // Queue token was found in the ledger.
             message_queue_info_.queue_token = token.get();
@@ -452,7 +452,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
 
   MessageQueueManager* const message_queue_manager_;  // not owned
   ledger::Page* const page_;                          // not owned
-  fidl::InterfaceRequest<MessageQueue> request_;
+  f1dl::InterfaceRequest<MessageQueue> request_;
 
   MessageQueueInfo message_queue_info_;
   ledger::PageSnapshotPtr snapshot_;
@@ -489,7 +489,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this, flow](fidl::String token) {
+        message_queue_info_.queue_name, [this, flow](f1dl::String token) {
           if (!token) {
             FXL_LOG(WARNING)
                 << trace_name() << " " << message_queue_info_.queue_name << " "
@@ -654,7 +654,7 @@ void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_namespace,
     const std::string& component_instance_id,
     const std::string& queue_name,
-    fidl::InterfaceRequest<MessageQueue> request) {
+    f1dl::InterfaceRequest<MessageQueue> request) {
   new ObtainMessageQueueCall(&operation_collection_, this, page(),
                              component_namespace, component_instance_id,
                              queue_name, std::move(request));
@@ -751,7 +751,7 @@ void MessageQueueManager::DeleteNamespace(
 
 void MessageQueueManager::GetMessageSender(
     const std::string& queue_token,
-    fidl::InterfaceRequest<MessageSender> request) {
+    f1dl::InterfaceRequest<MessageSender> request) {
   const auto& it = message_queues_.find(queue_token);
   if (it != message_queues_.cend()) {
     // Found the message queue already.

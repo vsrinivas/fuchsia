@@ -24,15 +24,15 @@ class SingleServiceApp : protected Service, private mozart::ViewProvider {
  public:
   SingleServiceApp(app::ApplicationContext* const application_context)
       : application_context_(application_context),
-        service_binding_(new fidl::Binding<Service>(this)),
+        service_binding_(new f1dl::Binding<Service>(this)),
         view_provider_binding_(this) {
     application_context_->outgoing_services()->AddService<Service>(
-        [this](fidl::InterfaceRequest<Service> request) {
+        [this](f1dl::InterfaceRequest<Service> request) {
           FXL_DCHECK(!service_binding_->is_bound());
           service_binding_->Bind(std::move(request));
         });
     application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
-        [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
+        [this](f1dl::InterfaceRequest<mozart::ViewProvider> request) {
           FXL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));
         });
@@ -50,12 +50,12 @@ class SingleServiceApp : protected Service, private mozart::ViewProvider {
  private:
   // |ViewProvider| -- Derived classes may override this method.
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
+      f1dl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
 
   app::ApplicationContext* const application_context_;
-  std::unique_ptr<fidl::Binding<Service>> service_binding_;
-  fidl::Binding<mozart::ViewProvider> view_provider_binding_;
+  std::unique_ptr<f1dl::Binding<Service>> service_binding_;
+  f1dl::Binding<mozart::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };

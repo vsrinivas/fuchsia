@@ -57,7 +57,7 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       std::function<void(ledger::Status)> callback) {
   auto cont = fxl::MakeCopyable(
       [result, conflicts, callback = std::move(callback)](
-          ledger::Status status, fidl::Array<ledger::DiffEntryPtr> change_delta,
+          ledger::Status status, f1dl::Array<ledger::DiffEntryPtr> change_delta,
           LedgerPageKey token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
@@ -161,7 +161,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
     for (auto& pair : conflicts_) {
       const PageClient::Conflict& conflict = pair.second;
-      fidl::Array<ledger::MergedValuePtr> merge_changes;
+      f1dl::Array<ledger::MergedValuePtr> merge_changes;
 
       if (conflict.has_left && conflict.has_right) {
         for (PageClient* const page_client : page_clients) {
@@ -418,7 +418,7 @@ void LedgerClient::GetPolicy(LedgerPageId page_id,
 
 void LedgerClient::NewConflictResolver(
     LedgerPageId page_id,
-    fidl::InterfaceRequest<ledger::ConflictResolver> request) {
+    f1dl::InterfaceRequest<ledger::ConflictResolver> request) {
   for (auto& i : resolvers_) {
     if (i->page_id().Equals(page_id)) {
       i->Connect(std::move(request));
@@ -449,15 +449,15 @@ LedgerClient::ConflictResolverImpl::ConflictResolverImpl(
 LedgerClient::ConflictResolverImpl::~ConflictResolverImpl() = default;
 
 void LedgerClient::ConflictResolverImpl::Connect(
-    fidl::InterfaceRequest<ledger::ConflictResolver> request) {
+    f1dl::InterfaceRequest<ledger::ConflictResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void LedgerClient::ConflictResolverImpl::Resolve(
-    fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-    fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-    fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
-    fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
+    f1dl::InterfaceHandle<ledger::PageSnapshot> left_version,
+    f1dl::InterfaceHandle<ledger::PageSnapshot> right_version,
+    f1dl::InterfaceHandle<ledger::PageSnapshot> common_version,
+    f1dl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
   new ResolveCall(&operation_queue_, this, result_provider.Bind(),
                   left_version.Bind(), right_version.Bind(),
                   common_version.Bind());

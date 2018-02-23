@@ -56,7 +56,7 @@ TEST_F(DataSourceTest, String) {
 TEST_F(DataSourceTest, Array) {
   std::string value = "Hello World";
 
-  fidl::Array<uint8_t> array;
+  f1dl::Array<uint8_t> array;
   array.resize(value.size());
   memcpy(&array[0], value.data(), value.size());
 

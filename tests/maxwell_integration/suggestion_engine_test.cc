@@ -43,7 +43,7 @@ class NWriter {
 
 ProposalPtr CreateProposal(const std::string& id,
                            const std::string& headline,
-                           fidl::Array<ActionPtr> actions,
+                           f1dl::Array<ActionPtr> actions,
                            maxwell::AnnoyanceType annoyance) {
   auto p = Proposal::New();
   p->id = id;
@@ -61,7 +61,7 @@ ProposalPtr CreateProposal(const std::string& id,
 class Proposinator {
  public:
   Proposinator(SuggestionEngine* suggestion_engine,
-               const fidl::String& url = "Proposinator") {
+               const f1dl::String& url = "Proposinator") {
     suggestion_engine->RegisterProposalPublisher("Proposinator",
                                                  out_.NewRequest());
   }
@@ -70,7 +70,7 @@ class Proposinator {
 
   void Propose(
       const std::string& id,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
     Propose(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
@@ -78,7 +78,7 @@ class Proposinator {
       const std::string& id,
       const std::string& headline,
       maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
@@ -93,9 +93,9 @@ class Proposinator {
 class AskProposinator : public Proposinator, public QueryHandler {
  public:
   AskProposinator(SuggestionEngine* suggestion_engine,
-                  const fidl::String& url = "AskProposinator")
+                  const f1dl::String& url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
-    fidl::InterfaceHandle<QueryHandler> query_handle;
+    f1dl::InterfaceHandle<QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
@@ -112,10 +112,10 @@ class AskProposinator : public Proposinator, public QueryHandler {
     query_callback_(std::move(response));
   }
 
-  fidl::String query() const { return query_ ? query_->text : nullptr; }
+  f1dl::String query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto actions = fidl::Array<ActionPtr>::New(0);
+    auto actions = f1dl::Array<ActionPtr>::New(0);
     ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
@@ -123,15 +123,15 @@ class AskProposinator : public Proposinator, public QueryHandler {
       const std::string& id,
       const std::string& headline,
       maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
  private:
-  fidl::Binding<QueryHandler> ask_binding_;
+  f1dl::Binding<QueryHandler> ask_binding_;
   UserInputPtr query_;
-  fidl::Array<ProposalPtr> query_proposals_;
+  f1dl::Array<ProposalPtr> query_proposals_;
   OnQueryCallback query_callback_;
 };
 
@@ -169,7 +169,7 @@ class NProposals : public Proposinator, public ContextListener {
 
  private:
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> listener_binding_;
+  f1dl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
 };
@@ -189,14 +189,14 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     suggestion_debug_ = suggestion_services.ConnectToService<SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
     story_provider_binding_.Bind(story_provider_handle.NewRequest());
 
     // Hack to get an unbound FocusController for Initialize().
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
     focus_provider_handle.NewRequest();
 
-    fidl::InterfaceHandle<maxwell::ContextWriter> context_writer_handle;
+    f1dl::InterfaceHandle<maxwell::ContextWriter> context_writer_handle;
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
     context_engine()->GetWriter(std::move(scope),
@@ -222,7 +222,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     auto agent_host =
         std::make_unique<ApplicationEnvironmentHostImpl>(root_environment());
     agent_host->AddService<ContextReader>(
-        [this, url](fidl::InterfaceRequest<ContextReader> request) {
+        [this, url](f1dl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
           agent_scope->url = url;
@@ -230,7 +230,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
           context_engine()->GetReader(std::move(scope), std::move(request));
         });
     agent_host->AddService<ProposalPublisher>(
-        [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {
+        [this, url](f1dl::InterfaceRequest<ProposalPublisher> request) {
           suggestion_engine_->RegisterProposalPublisher(url,
                                                         std::move(request));
         });
@@ -259,7 +259,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
-  fidl::Binding<modular::StoryProvider> story_provider_binding_;
+  f1dl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
 class AskTest : public virtual SuggestionEngineTest {
@@ -312,8 +312,8 @@ class AskTest : public virtual SuggestionEngineTest {
  private:
   TestSuggestionListener listener_;
   TestDebugAskListener debug_listener_;
-  fidl::Binding<QueryListener> listener_binding_;
-  fidl::Binding<AskProposalListener> debug_listener_binding_;
+  f1dl::Binding<QueryListener> listener_binding_;
+  f1dl::Binding<AskProposalListener> debug_listener_binding_;
 };
 
 class InterruptionTest : public virtual SuggestionEngineTest {
@@ -353,8 +353,8 @@ class InterruptionTest : public virtual SuggestionEngineTest {
   TestSuggestionListener listener_;
   TestDebugInterruptionListener debug_listener_;
 
-  fidl::Binding<InterruptionListener> listener_binding_;
-  fidl::Binding<InterruptionProposalListener> debug_listener_binding_;
+  f1dl::Binding<InterruptionListener> listener_binding_;
+  f1dl::Binding<InterruptionProposalListener> debug_listener_binding_;
 };
 
 class NextTest : public virtual SuggestionEngineTest {
@@ -414,8 +414,8 @@ class NextTest : public virtual SuggestionEngineTest {
   TestSuggestionListener listener_;
   TestDebugNextListener debug_listener_;
 
-  fidl::Binding<NextListener> listener_binding_;
-  fidl::Binding<NextProposalListener> debug_listener_binding_;
+  f1dl::Binding<NextListener> listener_binding_;
+  f1dl::Binding<NextProposalListener> debug_listener_binding_;
 };
 
 class ResultCountTest : public NextTest {
@@ -621,7 +621,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -644,7 +644,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   create_story->initial_data = modular::JsonValueToString(doc);
 
   action->set_create_story(std::move(create_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -664,13 +664,13 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   add_module_to_story->story_id = "foo://bar";
   add_module_to_story->module_name = module_id;
   add_module_to_story->module_url = module_id;
-  add_module_to_story->module_path = fidl::Array<fidl::String>::New(0);
+  add_module_to_story->module_path = f1dl::Array<f1dl::String>::New(0);
   add_module_to_story->link_name = "";
   add_module_to_story->surface_relation = modular::SurfaceRelation::New();
 
   auto action = Action::New();
   action->set_add_module_to_story(std::move(add_module_to_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -863,7 +863,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -890,7 +890,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -920,7 +920,7 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<ActionPtr> actions;
+  f1dl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   p.Propose("2");
@@ -945,7 +945,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
     create_story->module_id = "foo://bar";
     auto action = Action::New();
     action->set_create_story(std::move(create_story));
-    fidl::Array<ActionPtr> actions;
+    f1dl::Array<ActionPtr> actions;
     actions.push_back(std::move(action));
 
     p.Propose("1", std::move(actions));

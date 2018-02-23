@@ -27,25 +27,25 @@ class ContextEngineImpl : ContextEngine {
   ContextEngineImpl(modular::EntityResolver* entity_resolver);
   ~ContextEngineImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<ContextEngine> request);
+  void AddBinding(f1dl::InterfaceRequest<ContextEngine> request);
 
  private:
   // |ContextEngine|
   void GetWriter(ComponentScopePtr client_info,
-                 fidl::InterfaceRequest<ContextWriter> request) override;
+                 f1dl::InterfaceRequest<ContextWriter> request) override;
 
   // |ContextEngine|
   void GetReader(ComponentScopePtr client_info,
-                 fidl::InterfaceRequest<ContextReader> request) override;
+                 f1dl::InterfaceRequest<ContextReader> request) override;
 
   // |ContextEngine|
-  void GetContextDebug(fidl::InterfaceRequest<ContextDebug> request) override;
+  void GetContextDebug(f1dl::InterfaceRequest<ContextDebug> request) override;
 
   modular::EntityResolver* const entity_resolver_;
 
   ContextRepository repository_;
 
-  fidl::BindingSet<ContextEngine> bindings_;
+  f1dl::BindingSet<ContextEngine> bindings_;
 
   std::vector<std::unique_ptr<ContextReaderImpl>> readers_;
   std::vector<std::unique_ptr<ContextWriterImpl>> writers_;

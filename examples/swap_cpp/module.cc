@@ -12,7 +12,7 @@ namespace modular_example {
 
 ModuleView::ModuleView(
     mozart::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     uint32_t color)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
@@ -40,15 +40,15 @@ ModuleApp::ModuleApp(app::ApplicationContext* const application_context,
     : SingleServiceApp(application_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<app::ServiceProvider> /*services*/) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) {
   view_.reset(create_(
       application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
       std::move(view_owner_request)));
 }
 
 void ModuleApp::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
-    fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
+    f1dl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
+    f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
 
 }  // namespace modular_example

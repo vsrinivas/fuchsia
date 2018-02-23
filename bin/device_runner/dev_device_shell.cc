@@ -69,15 +69,15 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
 
   // |DeviceShell|
   void Initialize(
-      fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
+      f1dl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
       modular::DeviceShellParamsPtr device_shell_params) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
@@ -87,8 +87,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void GetAuthenticationContext(
-      const fidl::String& /*username*/,
-      fidl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
+      const f1dl::String& /*username*/,
+      f1dl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
       override {
     FXL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
@@ -118,7 +118,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](fidl::Array<modular::auth::AccountPtr> accounts) {
+          [this](f1dl::Array<modular::auth::AccountPtr> accounts) {
             FXL_LOG(INFO) << "Found " << accounts.size()
                           << " users in the user "
                           << "database";
@@ -139,7 +139,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
               user_provider_->AddUser(
                   modular::auth::IdentityProvider::DEV,
                   [this](modular::auth::AccountPtr account,
-                         const fidl::String& status) { Login(account->id); });
+                         const f1dl::String& status) { Login(account->id); });
             } else {
               Login(account_id);
             }
@@ -148,8 +148,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   const Settings settings_;
-  fidl::Binding<modular::UserWatcher> user_watcher_binding_;
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  f1dl::Binding<modular::UserWatcher> user_watcher_binding_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;

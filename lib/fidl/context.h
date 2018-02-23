@@ -15,7 +15,7 @@ namespace modular {
 // data member, so we abbreviate its type to reduce verbosity slightly.
 //
 // The map is from context topic to its json value.
-using ContextState = fidl::Map<fidl::String, fidl::String>;
+using ContextState = f1dl::Map<f1dl::String, f1dl::String>;
 
 }  // namespace modular
 

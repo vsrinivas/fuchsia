@@ -14,9 +14,9 @@ ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
       weak_ptr_factory_(this) {}
 
 void ProposalPublisherImpl::AddBinding(
-    fidl::InterfaceRequest<ProposalPublisher> request) {
+    f1dl::InterfaceRequest<ProposalPublisher> request) {
   bindings_.emplace(
-      new fidl::Binding<ProposalPublisher>(this, std::move(request)));
+      new f1dl::Binding<ProposalPublisher>(this, std::move(request)));
 }
 
 void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
@@ -24,7 +24,7 @@ void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
   engine_->Validate();
 }
 
-void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
+void ProposalPublisherImpl::Remove(const f1dl::String& proposal_id) {
   engine_->RemoveProposal(component_url_, proposal_id);
   engine_->Validate();
 }
@@ -33,7 +33,7 @@ ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)
     : impl_(impl) {}
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
-    fidl::Binding<ProposalPublisher>* binding) {
+    f1dl::Binding<ProposalPublisher>* binding) {
   maxwell::BindingSet<ProposalPublisher>::OnConnectionError(binding);
 
   if (impl_->ShouldEraseSelf())

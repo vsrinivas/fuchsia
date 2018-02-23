@@ -20,7 +20,7 @@ class FakeApplicationLauncher : public app::ApplicationLauncher {
  public:
   using ApplicationConnectorFn =
       std::function<void(app::ApplicationLaunchInfoPtr,
-                         fidl::InterfaceRequest<app::ApplicationController>)>;
+                         f1dl::InterfaceRequest<app::ApplicationController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
@@ -37,7 +37,7 @@ class FakeApplicationLauncher : public app::ApplicationLauncher {
   // |ApplicationLauncher|
   void CreateApplication(
       app::ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<app::ApplicationController> controller) override;
+      f1dl::InterfaceRequest<app::ApplicationController> controller) override;
 
   std::map<std::string, ApplicationConnectorFn> connectors_;
 };

@@ -34,7 +34,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   const std::string& current_device_id() const { return current_device_id_; }
 
-  void Connect(fidl::InterfaceRequest<DeviceMap> request);
+  void Connect(f1dl::InterfaceRequest<DeviceMap> request);
 
  private:
   // |DeviceMap|
@@ -44,10 +44,10 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
 
   // |DeviceMap|
-  void SetCurrentDeviceProfile(const ::fidl::String& profile) override;
+  void SetCurrentDeviceProfile(const ::f1dl::String& profile) override;
 
   // |DeviceMap|
-  void WatchDeviceMap(fidl::InterfaceHandle<DeviceMapWatcher> watcher) override;
+  void WatchDeviceMap(f1dl::InterfaceHandle<DeviceMapWatcher> watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -62,7 +62,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void Notify(const std::string& device_id);
 
   // Clients that have connected to this service.
-  fidl::BindingSet<DeviceMap> bindings_;
+  f1dl::BindingSet<DeviceMap> bindings_;
 
   // All known devices from the Ledger page.
   std::map<std::string, DeviceMapEntryPtr> devices_;
@@ -72,7 +72,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   OperationQueue operation_queue_;
 
-  fidl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
+  f1dl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };

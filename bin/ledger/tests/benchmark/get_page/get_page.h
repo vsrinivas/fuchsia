@@ -36,7 +36,7 @@ class GetPageBenchmark {
   const bool reuse_;
   app::ApplicationControllerPtr application_controller_;
   ledger::LedgerPtr ledger_;
-  fidl::Array<uint8_t> page_id_;
+  f1dl::Array<uint8_t> page_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };

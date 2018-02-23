@@ -42,11 +42,11 @@ class UserControllerImpl : UserController, UserContext {
       AppConfigPtr user_runner,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceHandle<app::ServiceProvider> device_shell_services,
-      fidl::InterfaceRequest<UserController> user_controller_request,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceHandle<app::ServiceProvider> device_shell_services,
+      f1dl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
   std::string DumpState();
@@ -57,23 +57,23 @@ class UserControllerImpl : UserController, UserContext {
 
  private:
   // |UserController|
-  void Watch(fidl::InterfaceHandle<UserWatcher> watcher) override;
+  void Watch(f1dl::InterfaceHandle<UserWatcher> watcher) override;
 
   // |UserContext|
   void Logout() override;
 
   // |UserContext|
   void GetPresentation(
-      fidl::InterfaceRequest<mozart::Presentation> presentation) override;
+      f1dl::InterfaceRequest<mozart::Presentation> presentation) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;
   UserRunnerPtr user_runner_;
 
-  fidl::Binding<UserContext> user_context_binding_;
-  fidl::Binding<UserController> user_controller_binding_;
+  f1dl::Binding<UserContext> user_context_binding_;
+  f1dl::Binding<UserController> user_controller_binding_;
 
-  fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
+  f1dl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 

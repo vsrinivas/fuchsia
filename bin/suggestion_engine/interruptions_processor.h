@@ -12,7 +12,7 @@
 
 namespace maxwell {
 
-// The InterruptionProcessor determines whether a proposal should interrupt 
+// The InterruptionProcessor determines whether a proposal should interrupt
 // the user. If the decision to interrupt is made, this processor also
 // determines when and how the interruption should occur.
 //
@@ -23,7 +23,7 @@ class InterruptionsProcessor {
   InterruptionsProcessor();
   ~InterruptionsProcessor();
 
-  void RegisterListener(fidl::InterfaceHandle<InterruptionListener> listener);
+  void RegisterListener(f1dl::InterfaceHandle<InterruptionListener> listener);
   bool ConsiderSuggestion(const SuggestionPrototype& prototype);
 
  private:
@@ -31,7 +31,7 @@ class InterruptionsProcessor {
   void DispatchInterruption(InterruptionListener* const listener,
                             const SuggestionPrototype& prototype);
 
-  fidl::InterfacePtrSet<InterruptionListener> listeners_;
+  f1dl::InterfacePtrSet<InterruptionListener> listeners_;
 };
 
 }  // namespace maxwell

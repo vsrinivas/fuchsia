@@ -13,7 +13,7 @@ namespace cloud_provider_firebase {
 DeviceSetImpl::DeviceSetImpl(
     firebase_auth::FirebaseAuth* firebase_auth,
     std::unique_ptr<CloudDeviceSet> cloud_device_set,
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
+    f1dl::InterfaceRequest<cloud_provider::DeviceSet> request)
     : firebase_auth_(firebase_auth),
       cloud_device_set_(std::move(cloud_device_set)),
       binding_(this, std::move(request)) {
@@ -28,7 +28,7 @@ DeviceSetImpl::DeviceSetImpl(
 
 DeviceSetImpl::~DeviceSetImpl() {}
 
-void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
   auto request = firebase_auth_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
@@ -59,7 +59,7 @@ void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
   auth_token_requests_.emplace(request);
 }
 
-void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
   auto request = firebase_auth_->GetFirebaseToken(
       [this, fingerprint = convert::ToString(fingerprint), callback](
@@ -92,8 +92,8 @@ void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
 }
 
 void DeviceSetImpl::SetWatcher(
-    fidl::Array<uint8_t> fingerprint,
-    fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+    f1dl::Array<uint8_t> fingerprint,
+    f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
   watcher_ = watcher.Bind();
   set_watcher_callback_called_ = false;

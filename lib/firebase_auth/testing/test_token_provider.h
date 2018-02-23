@@ -26,7 +26,7 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   void GetIdToken(const GetIdTokenCallback& callback) override;
 
   void GetFirebaseAuthToken(
-      const fidl::String& firebase_api_key,
+      const f1dl::String& firebase_api_key,
       const GetFirebaseAuthTokenCallback& callback) override;
 
   void GetClientId(const GetClientIdCallback& /*callback*/) override;

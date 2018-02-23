@@ -17,7 +17,7 @@ class ApplicationEnvironmentHostImpl : public app::ApplicationEnvironmentHost,
  public:
   ApplicationEnvironmentHostImpl(app::ApplicationEnvironment* parent_env);
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
+      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 };
 

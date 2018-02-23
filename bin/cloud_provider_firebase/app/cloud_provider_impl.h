@@ -34,20 +34,20 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       std::string user_id,
       ConfigPtr config,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+      f1dl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   void GetDeviceSet(
-      fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+      f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
       const GetDeviceSetCallback& callback) override;
 
   void GetPageCloud(
-      fidl::Array<uint8_t> app_id,
-      fidl::Array<uint8_t> page_id,
-      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+      f1dl::Array<uint8_t> app_id,
+      f1dl::Array<uint8_t> page_id,
+      f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
@@ -55,7 +55,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   const std::string user_id_;
   const std::string server_id_;
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
-  fidl::Binding<cloud_provider::CloudProvider> binding_;
+  f1dl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;

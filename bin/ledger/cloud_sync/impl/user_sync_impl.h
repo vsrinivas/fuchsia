@@ -72,7 +72,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // been checked.
   bool upload_enabled_ = false;
   cloud_provider::DeviceSetPtr device_set_;
-  fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
+  f1dl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   // Fingerprint of the device in the cloud device list.
   std::string fingerprint_;
   std::set<LedgerSyncImpl*> active_ledger_syncs_;

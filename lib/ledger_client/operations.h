@@ -21,7 +21,7 @@
 namespace modular {
 
 template <typename Data,
-          typename DataPtr = fidl::StructPtr<Data>,
+          typename DataPtr = f1dl::StructPtr<Data>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadDataCall : Operation<DataPtr> {
  public:
@@ -106,8 +106,8 @@ class ReadDataCall : Operation<DataPtr> {
 };
 
 template <typename Data,
-          typename DataPtr = fidl::StructPtr<Data>,
-          typename DataArray = fidl::Array<DataPtr>,
+          typename DataPtr = f1dl::StructPtr<Data>,
+          typename DataArray = f1dl::Array<DataPtr>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadAllDataCall : Operation<DataArray> {
  public:
@@ -190,7 +190,7 @@ class ReadAllDataCall : Operation<DataArray> {
 };
 
 template <typename Data,
-          typename DataPtr = fidl::StructPtr<Data>,
+          typename DataPtr = f1dl::StructPtr<Data>,
           typename DataFilter = XdrFilterType<Data>>
 class WriteDataCall : Operation<> {
  public:

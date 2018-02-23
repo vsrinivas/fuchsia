@@ -1,8 +1,8 @@
-use peridot_public_lib_ledger_fidl::*;
-use peridot_bin_ledger_fidl::*;
+use peridot_public_lib_ledger_f1dl::*;
+use peridot_bin_ledger_f1dl::*;
 use fidl;
 use fuchsia::{Launcher, App};
-use garnet_public_lib_app_fidl::ApplicationController;
+use garnet_public_lib_app_f1dl::ApplicationController;
 use garnet_public_lib_app_fidl_service_provider::ServiceProvider_I;
 use tokio_core::reactor;
 use futures::{future, Future};
@@ -63,7 +63,7 @@ impl Drop for LedgerInstance {
 }
 
 #[allow(non_upper_case_globals)]
-pub fn map_ledger_error(res: Result<Status, fidl::Error>) -> Result<(), LedgerError> {
+pub fn map_ledger_error(res: Result<Status, f1dl::Error>) -> Result<(), LedgerError> {
     match res {
         Ok(Status_Ok) => Ok(()),
         Ok(status) => Err(LedgerError::LedgerFail(status)),
@@ -76,16 +76,16 @@ pub enum LedgerError {
     NeedsFetch,
     LedgerFail(Status),
     Vmo(zircon::Status),
-    FidlError(fidl::Error),
+    FidlError(f1dl::Error),
 }
 
-impl From<fidl::Error> for LedgerError {
-    fn from(err: fidl::Error) -> Self {
+impl From<f1dl::Error> for LedgerError {
+    fn from(err: f1dl::Error) -> Self {
         LedgerError::FidlError(err)
     }
 }
 
-pub fn map_value_result(res: Result<(Status, Option<Vmo>), fidl::Error>)
+pub fn map_value_result(res: Result<(Status, Option<Vmo>), f1dl::Error>)
     -> Result<Option<Vec<u8>>, LedgerError>
 {
     // Rust emits a warning if matched-on constants aren't all-caps

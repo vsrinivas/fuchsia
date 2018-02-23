@@ -79,7 +79,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // |ConflictResolverFactory|
   void NewConflictResolver(
       LedgerPageId page_id,
-      fidl::InterfaceRequest<ledger::ConflictResolver> request) override;
+      f1dl::InterfaceRequest<ledger::ConflictResolver> request) override;
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
@@ -90,7 +90,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // The ledger this is a client of.
   ledger::LedgerPtr ledger_;
 
-  fidl::BindingSet<ledger::ConflictResolverFactory> bindings_;
+  f1dl::BindingSet<ledger::ConflictResolverFactory> bindings_;
   std::vector<std::unique_ptr<ConflictResolverImpl>> resolvers_;
 
   // ledger::Page connections are owned by LedgerClient, and only handed to
@@ -111,16 +111,16 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
   ConflictResolverImpl(LedgerClient* ledger_client, LedgerPageId page_id);
   ~ConflictResolverImpl() override;
 
-  void Connect(fidl::InterfaceRequest<ledger::ConflictResolver> request);
+  void Connect(f1dl::InterfaceRequest<ledger::ConflictResolver> request);
 
   const LedgerPageId& page_id() const { return page_id_; }
 
  private:
   // |ConflictResolver|
-  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
-               fidl::InterfaceHandle<ledger::MergeResultProvider>
+  void Resolve(f1dl::InterfaceHandle<ledger::PageSnapshot> left_version,
+               f1dl::InterfaceHandle<ledger::PageSnapshot> right_version,
+               f1dl::InterfaceHandle<ledger::PageSnapshot> common_version,
+               f1dl::InterfaceHandle<ledger::MergeResultProvider>
                    result_provider) override;
 
   void GetPageClients(std::vector<PageClient*>* page_clients);
@@ -130,7 +130,7 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
   LedgerClient* const ledger_client_;
   const LedgerPageId page_id_;
 
-  fidl::BindingSet<ledger::ConflictResolver> bindings_;
+  f1dl::BindingSet<ledger::ConflictResolver> bindings_;
 
   OperationQueue operation_queue_;
   class ResolveCall;

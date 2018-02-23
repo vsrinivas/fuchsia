@@ -22,10 +22,10 @@ class ResolverTest : public MaxwellTestBase {
 }  // namespace
 
 TEST_F(ResolverTest, ResolveToModule) {
-  fidl::Array<resolver::ModuleInfoPtr> modules;
+  f1dl::Array<resolver::ModuleInfoPtr> modules;
   resolver_->ResolveModules(
       "https://fuchsia-contracts.google.com/hello_contract", nullptr,
-      [&](fidl::Array<resolver::ModuleInfoPtr> modules_) {
+      [&](f1dl::Array<resolver::ModuleInfoPtr> modules_) {
         modules = std::move(modules_);
       });
   ASYNC_EQ(1, modules.size());
@@ -37,7 +37,7 @@ TEST_F(ResolverTest, ResolveWithInvalidData) {
   bool completed = false;
   resolver_->ResolveModules(
       "foo contract", "not valid JSON",
-      [&](fidl::Array<resolver::ModuleInfoPtr> modules_) { completed = true; });
+      [&](f1dl::Array<resolver::ModuleInfoPtr> modules_) { completed = true; });
   ASYNC_CHECK(completed);
 }
 

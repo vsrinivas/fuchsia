@@ -13,7 +13,7 @@ namespace maxwell {
 ContextReaderImpl::ContextReaderImpl(
     ComponentScopePtr client_info,
     ContextRepository* repository,
-    fidl::InterfaceRequest<ContextReader> request)
+    f1dl::InterfaceRequest<ContextReader> request)
     : binding_(this, std::move(request)), repository_(repository) {
   debug_ = SubscriptionDebugInfo::New();
   debug_->client_info = std::move(client_info);
@@ -23,7 +23,7 @@ ContextReaderImpl::~ContextReaderImpl() = default;
 
 void ContextReaderImpl::Subscribe(
     ContextQueryPtr query,
-    fidl::InterfaceHandle<ContextListener> listener) {
+    f1dl::InterfaceHandle<ContextListener> listener) {
   auto listener_ptr = listener.Bind();
   repository_->AddSubscription(std::move(query), std::move(listener_ptr),
                                debug_.Clone());

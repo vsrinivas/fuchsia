@@ -25,28 +25,28 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
  public:
   DeviceSetImpl(firebase_auth::FirebaseAuth* firebase_auth,
                 std::unique_ptr<CloudDeviceSet> cloud_device_set,
-                fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
+                f1dl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
-  void CheckFingerprint(fidl::Array<uint8_t> fingerprint,
+  void CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
                         const CheckFingerprintCallback& callback) override;
 
-  void SetFingerprint(fidl::Array<uint8_t> fingerprint,
+  void SetFingerprint(f1dl::Array<uint8_t> fingerprint,
                       const SetFingerprintCallback& callback) override;
 
   void SetWatcher(
-      fidl::Array<uint8_t> fingerprint,
-      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+      f1dl::Array<uint8_t> fingerprint,
+      f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
   void Erase(const EraseCallback& callback) override;
 
   firebase_auth::FirebaseAuth* const firebase_auth_;
   std::unique_ptr<CloudDeviceSet> cloud_device_set_;
-  fidl::Binding<cloud_provider::DeviceSet> binding_;
+  f1dl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;
 
   // Watcher set by the client.

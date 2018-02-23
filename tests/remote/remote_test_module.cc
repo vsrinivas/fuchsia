@@ -36,8 +36,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -58,7 +58,7 @@ class ParentApp {
     module_host_->module_context()->Ready();
 
     remote_invoker_->StartOnDevice(
-        "test1", "test2", [this](fidl::String page_id) {
+        "test1", "test2", [this](f1dl::String page_id) {
           if (page_id.get().empty()) {
             FXL_LOG(INFO) << "Failed to send rehydrate";
           } else {

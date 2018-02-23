@@ -11,21 +11,21 @@ namespace cloud_sync {
 TestDeviceSet::TestDeviceSet() {}
 TestDeviceSet::~TestDeviceSet() {}
 
-void TestDeviceSet::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
+void TestDeviceSet::CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
   checked_fingerprint = convert::ToString(fingerprint);
   callback(status_to_return);
 }
 
-void TestDeviceSet::SetFingerprint(fidl::Array<uint8_t> fingerprint,
+void TestDeviceSet::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
   set_fingerprint = convert::ToString(fingerprint);
   callback(status_to_return);
 }
 
 void TestDeviceSet::SetWatcher(
-    fidl::Array<uint8_t> fingerprint,
-    fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+    f1dl::Array<uint8_t> fingerprint,
+    f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
   set_watcher_calls++;
   watched_fingerprint = convert::ToString(fingerprint);

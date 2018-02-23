@@ -10,7 +10,7 @@ LifecycleImpl::LifecycleImpl(app::ServiceNamespace* service_namespace,
                              LifecycleImpl::Delegate* delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Lifecycle>(
-      [this](fidl::InterfaceRequest<Lifecycle> request) {
+      [this](f1dl::InterfaceRequest<Lifecycle> request) {
         binding_.Bind(std::move(request));
       });
 }

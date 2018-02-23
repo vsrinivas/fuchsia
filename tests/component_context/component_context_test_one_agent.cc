@@ -24,7 +24,7 @@ class TestAgentApp : modular::ComponentContextTestService {
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     agent_services_.AddService<modular::ComponentContextTestService>(
-        [this](fidl::InterfaceRequest<modular::ComponentContextTestService>
+        [this](f1dl::InterfaceRequest<modular::ComponentContextTestService>
                    request) {
           agent_interface_.AddBinding(this, std::move(request));
         });
@@ -37,13 +37,13 @@ class TestAgentApp : modular::ComponentContextTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<app::ServiceProvider> request) {
+  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> request) {
     agent_services_.AddBinding(std::move(request));
     modular::testing::GetStore()->Put("one_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
-  void RunTask(const fidl::String& /*task_id*/,
+  void RunTask(const f1dl::String& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   TestPoint two_agent_connected_{"Two agent accepted connection"};
@@ -52,7 +52,7 @@ class TestAgentApp : modular::ComponentContextTestService {
   void Terminate(const std::function<void()>& done) {
     // Before reporting that we stop, we wait until two_agent has connected.
     modular::testing::GetStore()->Get(
-        "two_agent_connected", [this, done](const fidl::String&) {
+        "two_agent_connected", [this, done](const f1dl::String&) {
           // Killing the agent controller should stop it.
           two_agent_controller_.Unbind();
           two_agent_connected_.Pass();
@@ -64,8 +64,8 @@ class TestAgentApp : modular::ComponentContextTestService {
 
  private:
   // |Agent1Interface|
-  void SendToMessageQueue(const fidl::String& message_queue_token,
-                          const fidl::String& message_to_send) override {
+  void SendToMessageQueue(const f1dl::String& message_queue_token,
+                          const f1dl::String& message_to_send) override {
     modular::MessageSenderPtr message_sender;
     component_context_->GetMessageSender(message_queue_token,
                                          message_sender.NewRequest());
@@ -77,7 +77,7 @@ class TestAgentApp : modular::ComponentContextTestService {
   modular::AgentControllerPtr two_agent_controller_;
 
   app::ServiceNamespace agent_services_;
-  fidl::BindingSet<modular::ComponentContextTestService> agent_interface_;
+  f1dl::BindingSet<modular::ComponentContextTestService> agent_interface_;
 };
 
 }  // namespace

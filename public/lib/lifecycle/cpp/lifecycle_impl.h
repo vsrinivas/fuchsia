@@ -32,7 +32,7 @@ class LifecycleImpl : Lifecycle {
   void Terminate() override;
 
   Delegate* const delegate_;
-  fidl::Binding<Lifecycle> binding_;
+  f1dl::Binding<Lifecycle> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LifecycleImpl);
 };

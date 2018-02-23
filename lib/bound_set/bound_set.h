@@ -33,7 +33,7 @@ UniqueType Identify(FidlType* binding) {
 
 // "Specialization" (overload) covering InterfacePtr.
 template <typename Interface, typename UniqueType = Interface*>
-UniqueType Identify(fidl::InterfacePtr<Interface>* ip) {
+UniqueType Identify(f1dl::InterfacePtr<Interface>* ip) {
   return ip->get();
 }
 
@@ -122,10 +122,10 @@ class BoundSet {
 // Since InterfacePtr itself is a movable type, the thing that uniquely
 // identifies the InterfacePtr we wish to erase is its Interface*.
 template <typename Interface,
-          typename T = fidl::InterfacePtr<Interface>,
-          fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
+          typename T = f1dl::InterfacePtr<Interface>,
+          f1dl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
 using BoundPtrSet =
-    BoundSet<fidl::InterfacePtr<Interface>, T, GetFidlType, Interface*>;
+    BoundSet<f1dl::InterfacePtr<Interface>, T, GetFidlType, Interface*>;
 
 // Convenience alias of BoundSet to handle non-movable FIDL types, like Bindings
 // (and the mythical StrongBinding).
@@ -139,9 +139,9 @@ using BoundNonMovableSet = BoundSet<FidlType, T, GetFidlType, FidlType*>;
 
 // Convenience alias of BoundSet to handle Binding containers.
 template <typename Interface,
-          typename T = std::unique_ptr<fidl::Binding<Interface>>,
-          fidl::Binding<Interface>* GetFidlType(T*) = GetFidlType>
-using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
+          typename T = std::unique_ptr<f1dl::Binding<Interface>>,
+          f1dl::Binding<Interface>* GetFidlType(T*) = GetFidlType>
+using BindingSet = BoundNonMovableSet<f1dl::Binding<Interface>, T, GetFidlType>;
 
 }  // namespace maxwell
 

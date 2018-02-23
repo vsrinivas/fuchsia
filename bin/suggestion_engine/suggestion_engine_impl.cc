@@ -29,15 +29,15 @@ SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
       next_processor_(new NextProcessor(this)),
       next_suggestions_(new RankedSuggestionsList()) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
-      [this](fidl::InterfaceRequest<SuggestionEngine> request) {
+      [this](f1dl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
       });
   app_context->outgoing_services()->AddService<SuggestionProvider>(
-      [this](fidl::InterfaceRequest<SuggestionProvider> request) {
+      [this](f1dl::InterfaceRequest<SuggestionProvider> request) {
         suggestion_provider_bindings_.AddBinding(this, std::move(request));
       });
   app_context->outgoing_services()->AddService<SuggestionDebug>(
-      [this](fidl::InterfaceRequest<SuggestionDebug> request) {
+      [this](f1dl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(&debug_, std::move(request));
       });
 
@@ -89,7 +89,7 @@ void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
 }
 
 // |SuggestionProvider|
-void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
+void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
                                  UserInputPtr input,
                                  int count) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
@@ -131,26 +131,26 @@ void SuggestionEngineImpl::Validate() {
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
-    fidl::InterfaceHandle<InterruptionListener> listener) {
+    f1dl::InterfaceHandle<InterruptionListener> listener) {
   interruptions_processor_->RegisterListener(std::move(listener));
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
-    fidl::InterfaceHandle<NextListener> listener,
+    f1dl::InterfaceHandle<NextListener> listener,
     int count) {
   next_processor_->RegisterListener(std::move(listener), count);
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::RegisterFeedbackListener(
-    fidl::InterfaceHandle<FeedbackListener> speech_listener) {
+    f1dl::InterfaceHandle<FeedbackListener> speech_listener) {
   speech_listeners_.AddInterfacePtr(speech_listener.Bind());
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::NotifyInteraction(
-    const fidl::String& suggestion_uuid,
+    const f1dl::String& suggestion_uuid,
     InteractionPtr interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
@@ -195,8 +195,8 @@ void SuggestionEngineImpl::NotifyInteraction(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterProposalPublisher(
-    const fidl::String& url,
-    fidl::InterfaceRequest<ProposalPublisher> publisher) {
+    const f1dl::String& url,
+    f1dl::InterfaceRequest<ProposalPublisher> publisher) {
   // Check to see if a ProposalPublisher has already been created for the
   // component with this url. If not, create one.
   std::unique_ptr<ProposalPublisherImpl>& source = proposal_publishers_[url];
@@ -209,17 +209,17 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterQueryHandler(
-    const fidl::String& url,
-    fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
+    const f1dl::String& url,
+    f1dl::InterfaceHandle<QueryHandler> query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
 }
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::Initialize(
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<ContextWriter> context_writer) {
+    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    f1dl::InterfaceHandle<ContextWriter> context_writer) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
   context_writer_.Bind(std::move(context_writer));
@@ -258,7 +258,7 @@ SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
 }
 
 void SuggestionEngineImpl::PerformActions(
-    const fidl::Array<maxwell::ActionPtr>& actions,
+    const f1dl::Array<maxwell::ActionPtr>& actions,
     uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
@@ -271,7 +271,7 @@ void SuggestionEngineImpl::PerformActions(
         if (story_provider_) {
           // TODO(afergan): Make this more robust later. For now, we
           // always assume that there's extra info and that it's a color.
-          fidl::Map<fidl::String, fidl::String> extra_info;
+          f1dl::Map<f1dl::String, f1dl::String> extra_info;
           char hex_color[11];
           sprintf(hex_color, "0x%x", story_color);
           extra_info["color"] = hex_color;
@@ -280,7 +280,7 @@ void SuggestionEngineImpl::PerformActions(
           story_provider_->CreateStoryWithInfo(
               create_story->module_id, std::move(extra_info),
               std::move(initial_data),
-              [this, module_id](const fidl::String& story_id) {
+              [this, module_id](const f1dl::String& story_id) {
                 modular::StoryControllerPtr story_controller;
                 story_provider_->GetController(story_id,
                                                story_controller.NewRequest());
@@ -346,7 +346,7 @@ void SuggestionEngineImpl::PerformActions(
         auto custom_action = action->get_custom_action().Bind();
         custom_action->Execute(fxl::MakeCopyable(
             [this, custom_action = std::move(custom_action),
-             story_color](fidl::Array<maxwell::ActionPtr> actions) {
+             story_color](f1dl::Array<maxwell::ActionPtr> actions) {
               if (actions)
                 PerformActions(std::move(actions), story_color);
             }));
@@ -373,7 +373,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   media_packet_producer_ = media_response->media_packet_producer.Bind();
   media_sink_->ConsumeMediaType(
       std::move(media_response->media_type),
-      [this](fidl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
+      [this](f1dl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
         media_packet_producer_->Connect(consumer.Bind(), [this] {
           time_lord_.Unbind();
           media_timeline_consumer_.Unbind();

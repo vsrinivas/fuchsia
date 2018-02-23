@@ -50,40 +50,40 @@ class ComponentContextImpl : public ComponentContext {
 
   const std::string& component_instance_id() { return component_instance_id_; }
 
-  void Connect(fidl::InterfaceRequest<ComponentContext> request);
+  void Connect(f1dl::InterfaceRequest<ComponentContext> request);
   ComponentContextPtr NewBinding();
 
  private:
   // |ComponentContext|
-  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
+  void GetLedger(f1dl::InterfaceRequest<ledger::Ledger> request,
                  const GetLedgerCallback& result) override;
 
   // |ComponentContext|
   void ConnectToAgent(
-      const fidl::String& url,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request)
+      const f1dl::String& url,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      f1dl::InterfaceRequest<AgentController> agent_controller_request)
       override;
 
   // |ComponentContext|
   void ObtainMessageQueue(
-      const fidl::String& name,
-      fidl::InterfaceRequest<MessageQueue> request) override;
+      const f1dl::String& name,
+      f1dl::InterfaceRequest<MessageQueue> request) override;
 
   // |ComponentContext|
-  void DeleteMessageQueue(const fidl::String& name) override;
+  void DeleteMessageQueue(const f1dl::String& name) override;
 
   // |ComponentContext|
-  void GetMessageSender(const fidl::String& queue_token,
-                        fidl::InterfaceRequest<MessageSender> request) override;
+  void GetMessageSender(const f1dl::String& queue_token,
+                        f1dl::InterfaceRequest<MessageSender> request) override;
 
   // |ComponentContext|
   void GetEntityResolver(
-      fidl::InterfaceRequest<EntityResolver> request) override;
+      f1dl::InterfaceRequest<EntityResolver> request) override;
 
   // |ComponentContext|
   void CreateEntityWithData(
-      fidl::Map<fidl::String, fidl::String> type_to_data,
+      f1dl::Map<f1dl::String, f1dl::String> type_to_data,
       const CreateEntityWithDataCallback& result) override;
 
   MessageQueueManager* const message_queue_manager_;
@@ -95,7 +95,7 @@ class ComponentContextImpl : public ComponentContext {
   const std::string component_instance_id_;
   const std::string component_url_;
 
-  fidl::BindingSet<ComponentContext> bindings_;
+  f1dl::BindingSet<ComponentContext> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

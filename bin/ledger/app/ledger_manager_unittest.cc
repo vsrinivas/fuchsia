@@ -281,7 +281,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   Status status;
 
-  fidl::Array<fidl::Array<uint8_t>> actual_pages_list;
+  f1dl::Array<f1dl::Array<uint8_t>> actual_pages_list;
 
   EXPECT_EQ(0u, actual_pages_list.size());
 

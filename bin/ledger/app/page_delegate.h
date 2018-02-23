@@ -41,7 +41,7 @@ class PageDelegate {
                PageManager* manager,
                storage::PageStorage* storage,
                MergeResolver* merge_resolver,
-               fidl::InterfaceRequest<Page> request,
+               f1dl::InterfaceRequest<Page> request,
                SyncWatcherSet* watchers);
   ~PageDelegate();
 
@@ -54,26 +54,26 @@ class PageDelegate {
   // From Page interface, called by PageImpl:
   void GetId(const Page::GetIdCallback& callback);
 
-  void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   fidl::Array<uint8_t> key_prefix,
-                   fidl::InterfaceHandle<PageWatcher> watcher,
+  void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   f1dl::Array<uint8_t> key_prefix,
+                   f1dl::InterfaceHandle<PageWatcher> watcher,
                    const Page::GetSnapshotCallback& callback);
 
-  void Put(fidl::Array<uint8_t> key,
-           fidl::Array<uint8_t> value,
+  void Put(f1dl::Array<uint8_t> key,
+           f1dl::Array<uint8_t> value,
            const Page::PutCallback& callback);
 
-  void PutWithPriority(fidl::Array<uint8_t> key,
-                       fidl::Array<uint8_t> value,
+  void PutWithPriority(f1dl::Array<uint8_t> key,
+                       f1dl::Array<uint8_t> value,
                        Priority priority,
                        const Page::PutWithPriorityCallback& callback);
 
-  void PutReference(fidl::Array<uint8_t> key,
+  void PutReference(f1dl::Array<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const Page::PutReferenceCallback& callback);
 
-  void Delete(fidl::Array<uint8_t> key, const Page::DeleteCallback& callback);
+  void Delete(f1dl::Array<uint8_t> key, const Page::DeleteCallback& callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
                        std::function<void(Status, ReferencePtr)> callback);
@@ -84,7 +84,7 @@ class PageDelegate {
 
   void Rollback(const Page::RollbackCallback& callback);
 
-  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+  void SetSyncStateWatcher(f1dl::InterfaceHandle<SyncWatcher> watcher,
                            const Page::SetSyncStateWatcherCallback& callback);
 
   void WaitForConflictResolution(
@@ -95,7 +95,7 @@ class PageDelegate {
 
   const storage::CommitId& GetCurrentCommitId();
 
-  void PutInCommit(fidl::Array<uint8_t> key,
+  void PutInCommit(f1dl::Array<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
                    storage::KeyPriority priority,
                    StatusCallback callback);
@@ -120,7 +120,7 @@ class PageDelegate {
   storage::PageStorage* storage_;
   MergeResolver* merge_resolver_;
 
-  fidl::InterfaceRequest<Page> request_;
+  f1dl::InterfaceRequest<Page> request_;
   fidl_helpers::BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 

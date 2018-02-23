@@ -69,7 +69,7 @@ void ModuleResolverImpl::AddSource(
 }
 
 void ModuleResolverImpl::Connect(
-    fidl::InterfaceRequest<modular::ModuleResolver> request) {
+    f1dl::InterfaceRequest<modular::ModuleResolver> request) {
   if (!AllSourcesAreReady()) {
     PeriodicCheckIfSourcesAreReady();
     pending_bindings_.push_back(std::move(request));
@@ -79,7 +79,7 @@ void ModuleResolverImpl::Connect(
 }
 
 void ModuleResolverImpl::BindQueryHandler(
-    fidl::InterfaceRequest<QueryHandler> request) {
+    f1dl::InterfaceRequest<QueryHandler> request) {
   query_handler_binding_.Bind(std::move(request));
 }
 
@@ -265,10 +265,10 @@ class ModuleResolverImpl::FindModulesCall
   //
   // In order for a query to match an entry, it must contain enough nouns to
   // populate each of the entry nouns.
-  fidl::Array<modular::ModuleResolverResultPtr>
+  f1dl::Array<modular::ModuleResolverResultPtr>
   MatchQueryNounsToEntryNounsByType(
       const modular::ModuleManifestSource::Entry& entry) {
-    fidl::Array<modular::ModuleResolverResultPtr> modules;
+    f1dl::Array<modular::ModuleResolverResultPtr> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
     if (query_->noun_constraints.size() < entry.noun_constraints.size()) {
@@ -518,7 +518,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
 
-  fidl::Array<ProposalPtr> proposals = fidl::Array<ProposalPtr>::New(0);
+  f1dl::Array<ProposalPtr> proposals = f1dl::Array<ProposalPtr>::New(0);
   if (query->text.empty()) {
     auto response = QueryResponse::New();
     response->proposals = std::move(proposals);
@@ -658,7 +658,7 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
 }
 
 void ModuleResolverImpl::OnContextUpdate(ContextUpdatePtr update) {
-  const fidl::Array<ContextValuePtr>& values =
+  const f1dl::Array<ContextValuePtr>& values =
       update->values[kContextListenerEntitiesKey];
   if (values.empty()) {
     return;

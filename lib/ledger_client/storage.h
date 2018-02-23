@@ -65,11 +65,11 @@ constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";
 //    key. The set of ID values under each key is defined by the arguments of
 //    factory functions for the keys:
 //
-std::string MakeStoryKey(const fidl::String& story_id);
-std::string MakeDeviceKey(const fidl::String& device_name);
-std::string MakePerDeviceKey(const fidl::String& device_name);
+std::string MakeStoryKey(const f1dl::String& story_id);
+std::string MakeDeviceKey(const f1dl::String& device_name);
+std::string MakePerDeviceKey(const f1dl::String& device_name);
 std::string MakeStoryContextLogKey(StorySignal signal, uint64_t time);
-std::string MakeFocusKey(const fidl::String& device_name);
+std::string MakeFocusKey(const f1dl::String& device_name);
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
@@ -78,7 +78,7 @@ std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
 std::string MakeLinkKey(const LinkPathPtr& link_path);
-std::string MakeModuleKey(const fidl::Array<fidl::String>& module_path);
+std::string MakeModuleKey(const f1dl::Array<f1dl::String>& module_path);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.
@@ -91,7 +91,7 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
-std::string EncodeModulePath(const fidl::Array<fidl::String>& module_path);
+std::string EncodeModulePath(const f1dl::Array<f1dl::String>& module_path);
 std::string EncodeLinkPath(const LinkPathPtr& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 

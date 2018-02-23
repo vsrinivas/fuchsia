@@ -25,7 +25,7 @@ namespace gcs {
 namespace {
 
 network::HttpHeaderPtr GetHeader(
-    const fidl::Array<network::HttpHeaderPtr>& headers,
+    const f1dl::Array<network::HttpHeaderPtr>& headers,
     const std::string& header_name) {
   for (const auto& header : headers.storage()) {
     if (header->name == header_name) {

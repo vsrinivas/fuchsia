@@ -14,16 +14,16 @@ namespace cloud_provider_firebase {
 namespace {
 
 void ConvertRecords(const std::vector<Record>& records,
-                    fidl::Array<cloud_provider::CommitPtr>* out_commits,
-                    fidl::Array<uint8_t>* out_token) {
-  fidl::Array<cloud_provider::CommitPtr> commits;
+                    f1dl::Array<cloud_provider::CommitPtr>* out_commits,
+                    f1dl::Array<uint8_t>* out_token) {
+  f1dl::Array<cloud_provider::CommitPtr> commits;
   for (auto& record : records) {
     cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
     commit->id = convert::ToArray(record.commit.id);
     commit->data = convert::ToArray(record.commit.content);
     commits.push_back(std::move(commit));
   }
-  fidl::Array<uint8_t> token;
+  f1dl::Array<uint8_t> token;
   if (!records.empty()) {
     token = convert::ToArray(records.back().timestamp);
   }
@@ -39,7 +39,7 @@ PageCloudImpl::PageCloudImpl(
     std::unique_ptr<firebase::Firebase> firebase,
     std::unique_ptr<gcs::CloudStorage> cloud_storage,
     std::unique_ptr<PageCloudHandler> handler,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> request)
     : firebase_auth_(firebase_auth),
       firebase_(std::move(firebase)),
       cloud_storage_(std::move(cloud_storage)),
@@ -91,8 +91,8 @@ void PageCloudImpl::SendRemoteCommits() {
     return;
   }
 
-  fidl::Array<cloud_provider::CommitPtr> commits;
-  fidl::Array<uint8_t> position_token;
+  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::Array<uint8_t> position_token;
   ConvertRecords(records_, &commits, &position_token);
   waiting_for_remote_commits_ack_ = true;
   watcher_->OnNewCommits(std::move(commits), std::move(position_token), [this] {
@@ -102,7 +102,7 @@ void PageCloudImpl::SendRemoteCommits() {
   records_.clear();
 }
 
-void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+void PageCloudImpl::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
   auto request = firebase_auth_->GetFirebaseToken(
       fxl::MakeCopyable([this, commits = std::move(commits), callback](
@@ -127,7 +127,7 @@ void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
   auth_token_requests_.emplace(request);
 }
 
-void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
+void PageCloudImpl::GetCommits(f1dl::Array<uint8_t> min_position_token,
                                const GetCommitsCallback& callback) {
   auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable(
       [this, min_timestamp = convert::ToString(min_position_token), callback](
@@ -147,14 +147,14 @@ void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
                 return;
               }
 
-              auto commits = fidl::Array<cloud_provider::CommitPtr>::New(0);
+              auto commits = f1dl::Array<cloud_provider::CommitPtr>::New(0);
               if (records.empty()) {
                 callback(ConvertInternalStatus(status), std::move(commits),
                          nullptr);
                 return;
               }
 
-              fidl::Array<uint8_t> position_token;
+              f1dl::Array<uint8_t> position_token;
               ConvertRecords(records, &commits, &position_token);
               callback(ConvertInternalStatus(status), std::move(commits),
                        std::move(position_token));
@@ -163,7 +163,7 @@ void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
   auth_token_requests_.emplace(request);
 }
 
-void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
+void PageCloudImpl::AddObject(f1dl::Array<uint8_t> id,
                               fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   fsl::SizedVmo vmo;
@@ -189,7 +189,7 @@ void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
   auth_token_requests_.emplace(request);
 }
 
-void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
+void PageCloudImpl::GetObject(f1dl::Array<uint8_t> id,
                               const GetObjectCallback& callback) {
   auto request = firebase_auth_->GetFirebaseToken(
       [this, id = convert::ToString(id), callback](
@@ -211,8 +211,8 @@ void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::Array<uint8_t> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+    f1dl::Array<uint8_t> min_position_token,
+    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
   watcher_ = watcher.Bind();
   watcher_.set_error_handler([this] {

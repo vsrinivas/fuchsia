@@ -28,8 +28,8 @@ class FactoryImpl : public Factory {
   // Factory:
   void GetCloudProvider(
       ConfigPtr config,
-      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
+      f1dl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+      f1dl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       const GetCloudProviderCallback& callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;

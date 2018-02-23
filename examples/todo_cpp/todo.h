@@ -20,7 +20,7 @@
 
 namespace todo {
 
-using Key = fidl::Array<uint8_t>;
+using Key = f1dl::Array<uint8_t>;
 
 class TodoApp : public modular::Module,
                 public ledger::PageWatcher,
@@ -30,8 +30,8 @@ class TodoApp : public modular::Module,
 
   // modular::Module:
   void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   // ledger::PageWatcher:
   void OnChange(ledger::PageChangePtr page_change,
@@ -44,11 +44,11 @@ class TodoApp : public modular::Module,
 
   void List(ledger::PageSnapshotPtr snapshot);
 
-  void GetKeys(std::function<void(fidl::Array<Key>)> callback);
+  void GetKeys(std::function<void(f1dl::Array<Key>)> callback);
 
   void AddNew();
 
-  void DeleteOne(fidl::Array<Key> keys);
+  void DeleteOne(f1dl::Array<Key> keys);
 
   void Act();
 
@@ -57,11 +57,11 @@ class TodoApp : public modular::Module,
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
   std::unique_ptr<app::ApplicationContext> context_;
-  fidl::Binding<modular::Module> module_binding_;
-  fidl::InterfacePtr<modular::ModuleContext> module_context_;
+  f1dl::Binding<modular::Module> module_binding_;
+  f1dl::InterfacePtr<modular::ModuleContext> module_context_;
   modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
   ledger::PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TodoApp);

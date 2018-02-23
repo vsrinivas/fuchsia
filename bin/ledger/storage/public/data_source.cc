@@ -203,8 +203,8 @@ std::unique_ptr<DataSource> DataSource::Create(std::string value) {
   return std::make_unique<StringLikeDataSource<std::string>>(std::move(value));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(fidl::Array<uint8_t> value) {
-  return std::make_unique<StringLikeDataSource<fidl::Array<uint8_t>>>(
+std::unique_ptr<DataSource> DataSource::Create(f1dl::Array<uint8_t> value) {
+  return std::make_unique<StringLikeDataSource<f1dl::Array<uint8_t>>>(
       std::move(value));
 }
 

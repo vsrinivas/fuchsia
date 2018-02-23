@@ -23,7 +23,7 @@ class SuggestionEngineImpl;
 class QueryProcessor {
  public:
   QueryProcessor(SuggestionEngineImpl* engine,
-                 fidl::InterfaceHandle<QueryListener> listener,
+                 f1dl::InterfaceHandle<QueryListener> listener,
                  UserInputPtr input,
                  size_t max_results);
   ~QueryProcessor();

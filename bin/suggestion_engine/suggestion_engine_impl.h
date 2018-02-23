@@ -66,7 +66,7 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 //  a) ProposalPublishers (for Next Suggestions) can be registered via the
 //     RegisterProposalPublisher method.
 //
-//  b) QueryHandlers are currently registered through the 
+//  b) QueryHandlers are currently registered through the
 //     RegisterQueryHandler method.
 //
 // 3) Acts as a SuggestionProvider for those wishing to subscribe to
@@ -94,20 +94,20 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // |SuggestionProvider|
   void SubscribeToInterruptions(
-      fidl::InterfaceHandle<InterruptionListener> listener) override;
+      f1dl::InterfaceHandle<InterruptionListener> listener) override;
 
   // |SuggestionProvider|
-  void SubscribeToNext(fidl::InterfaceHandle<NextListener> listener,
+  void SubscribeToNext(f1dl::InterfaceHandle<NextListener> listener,
                        int count) override;
 
   // |SuggestionProvider|
-  void Query(fidl::InterfaceHandle<QueryListener> listener,
+  void Query(f1dl::InterfaceHandle<QueryListener> listener,
              UserInputPtr input,
              int count) override;
 
   // |SuggestionProvider|
   void RegisterFeedbackListener(
-      fidl::InterfaceHandle<FeedbackListener> speech_listener) override;
+      f1dl::InterfaceHandle<FeedbackListener> speech_listener) override;
 
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
@@ -124,23 +124,23 @@ class SuggestionEngineImpl : public SuggestionEngine,
   //    it came from there.
   //
   // |SuggestionProvider|
-  void NotifyInteraction(const fidl::String& suggestion_uuid,
+  void NotifyInteraction(const f1dl::String& suggestion_uuid,
                          InteractionPtr interaction) override;
 
   // |SuggestionEngine|
   void RegisterProposalPublisher(
-      const fidl::String& url,
-      fidl::InterfaceRequest<ProposalPublisher> publisher) override;
+      const f1dl::String& url,
+      f1dl::InterfaceRequest<ProposalPublisher> publisher) override;
 
   // |SuggestionEngine|
   void RegisterQueryHandler(
-      const fidl::String& url,
-      fidl::InterfaceHandle<QueryHandler> query_handler) override;
+      const f1dl::String& url,
+      f1dl::InterfaceHandle<QueryHandler> query_handler) override;
 
   // |SuggestionEngine|
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-                  fidl::InterfaceHandle<ContextWriter> context_writer) override;
+  void Initialize(f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
+                  f1dl::InterfaceHandle<ContextWriter> context_writer) override;
 
   // re-ranks dirty channels and dispatches updates
   void Validate();
@@ -171,16 +171,16 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
-  void PerformActions(const fidl::Array<maxwell::ActionPtr>& actions,
+  void PerformActions(const f1dl::Array<maxwell::ActionPtr>& actions,
                       uint32_t story_color);
 
   void PlayMediaResponse(MediaResponsePtr media_response);
   void HandleMediaUpdates(uint64_t version,
                           media::MediaTimelineControlPointStatusPtr status);
 
-  fidl::BindingSet<SuggestionEngine> bindings_;
-  fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
-  fidl::BindingSet<SuggestionDebug> debug_bindings_;
+  f1dl::BindingSet<SuggestionEngine> bindings_;
+  f1dl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
+  f1dl::BindingSet<SuggestionDebug> debug_bindings_;
 
   // Both story_provider_ and focus_provider_ptr are used exclusively during
   // Action execution (in the PerformActions call inside NotifyInteraction).
@@ -188,7 +188,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // These are required to create new Stories and interact with the current
   // Story.
   modular::StoryProviderPtr story_provider_;
-  fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
+  f1dl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
 
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that
@@ -238,7 +238,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
   media::MediaTimelineControlPointPtr time_lord_;
   media::TimelineConsumerPtr media_timeline_consumer_;
 
-  fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
+  f1dl::InterfacePtrSet<FeedbackListener> speech_listeners_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;

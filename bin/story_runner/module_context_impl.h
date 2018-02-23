@@ -48,64 +48,64 @@ class ModuleContextImpl : ModuleContext {
       const ModuleContextInfo& info,
       const ModuleData* module_data,
       ModuleControllerImpl* module_controller_impl,
-      fidl::InterfaceRequest<app::ServiceProvider> service_provider_request);
+      f1dl::InterfaceRequest<app::ServiceProvider> service_provider_request);
 
   ~ModuleContextImpl() override;
 
  private:
   // |ModuleContext|
-  void GetLink(const fidl::String& name,
-               fidl::InterfaceRequest<Link> request) override;
+  void GetLink(const f1dl::String& name,
+               f1dl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModule(
-      const fidl::String& name,
-      const fidl::String& query,
-      const fidl::String& link_name,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+      const f1dl::String& name,
+      const f1dl::String& query,
+      const f1dl::String& link_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
   void StartDaisy(
-      const fidl::String& name,
+      const f1dl::String& name,
       DaisyPtr daisy,
-      const fidl::String& link_name,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      const f1dl::String& link_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
       const StartDaisyCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShell(
-      const fidl::String& name,
-      const fidl::String& query,
-      const fidl::String& link_name,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
+      const f1dl::String& name,
+      const f1dl::String& query,
+      const f1dl::String& link_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       bool focus) override;
   // |ModuleContext|
   void StartDaisyInShell(
-      const fidl::String& name,
+      const f1dl::String& name,
       DaisyPtr daisy,
-      const fidl::String& link_name,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
+      const f1dl::String& link_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       const StartDaisyInShellCallback& callback) override;
   // |ModuleContext|
   void EmbedModule(
-      const fidl::String& name,
-      const fidl::String& query,
-      const fidl::String& link_name,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+      const f1dl::String& name,
+      const f1dl::String& query,
+      const f1dl::String& link_name,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller,
+      f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> context_request) override;
+      f1dl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|
   void GetIntelligenceServices(
-      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+      f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   // |ModuleContext|
   void GetStoryId(const GetStoryIdCallback& callback) override;
   // |ModuleContext|
@@ -131,7 +131,7 @@ class ModuleContextImpl : ModuleContext {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
-  fidl::BindingSet<ModuleContext> bindings_;
+  f1dl::BindingSet<ModuleContext> bindings_;
 
   // A service provider that represents the services to be added into an
   // application's namespace.

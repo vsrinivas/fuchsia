@@ -68,7 +68,7 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
 
 DeviceMapImpl::~DeviceMapImpl() = default;
 
-void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
+void DeviceMapImpl::Connect(f1dl::InterfaceRequest<DeviceMap> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -81,7 +81,7 @@ void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
   callback(devices_[current_device_id_].Clone());
 }
 
-void DeviceMapImpl::SetCurrentDeviceProfile(const ::fidl::String& profile) {
+void DeviceMapImpl::SetCurrentDeviceProfile(const ::f1dl::String& profile) {
   devices_[current_device_id_]->profile = profile;
   Notify(current_device_id_);
   SaveCurrentDevice();
@@ -97,7 +97,7 @@ void DeviceMapImpl::SaveCurrentDevice() {
 }
 
 void DeviceMapImpl::WatchDeviceMap(
-    fidl::InterfaceHandle<DeviceMapWatcher> watcher) {
+    f1dl::InterfaceHandle<DeviceMapWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : devices_) {
     const auto& device = item.second;
@@ -123,7 +123,7 @@ void DeviceMapImpl::OnPageChange(const std::string& key,
     return;
   }
 
-  const fidl::String& device_id = device->device_id;
+  const f1dl::String& device_id = device->device_id;
   devices_[device_id] = std::move(device);
   Notify(device_id);
 }

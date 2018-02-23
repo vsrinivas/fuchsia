@@ -16,7 +16,7 @@ constexpr char kEnvironmentLabel[] = "agent";
 app::Services AgentLauncher::StartAgent(
     const std::string& url,
     std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
-  fidl::InterfaceHandle<app::ApplicationEnvironmentHost> agent_host_handle =
+  f1dl::InterfaceHandle<app::ApplicationEnvironmentHost> agent_host_handle =
       agent_host_bindings_.AddBinding(std::move(env_host));
 
   app::ApplicationEnvironmentPtr agent_env;

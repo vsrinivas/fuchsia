@@ -66,7 +66,7 @@ class CarmenSandiegoApp : public ContextListener {
 
   ContextWriterPtr writer_;
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> binding_;
+  f1dl::Binding<ContextListener> binding_;
 };
 
 }  // namespace

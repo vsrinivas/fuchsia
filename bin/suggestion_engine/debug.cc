@@ -18,7 +18,7 @@ void makeProposalSummary(const SuggestionPrototype* suggestion,
 }
 
 void makeProposalSummaries(const RankedSuggestionsList* suggestions,
-                           fidl::Array<ProposalSummaryPtr>* summaries) {
+                           f1dl::Array<ProposalSummaryPtr>* summaries) {
   for (const auto& suggestion : suggestions->Get()) {
     ProposalSummaryPtr summary = ProposalSummary::New();
     makeProposalSummary(suggestion->prototype, &summary);
@@ -30,7 +30,7 @@ void SuggestionDebugImpl::OnAskStart(std::string query,
                                      const RankedSuggestionsList* suggestions) {
   ask_proposal_listeners_.ForAllPtrs(
       [query, suggestions](AskProposalListener* listener) {
-        auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
+        auto proposals = f1dl::Array<ProposalSummaryPtr>::New(0);
         makeProposalSummaries(suggestions, &proposals);
         listener->OnAskStart(query, std::move(proposals));
       });
@@ -63,7 +63,7 @@ void SuggestionDebugImpl::OnInterrupt(
 void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestionsList* suggestions) {
   next_proposal_listeners_.ForAllPtrs(
       [this, suggestions](NextProposalListener* listener) {
-        auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
+        auto proposals = f1dl::Array<ProposalSummaryPtr>::New(0);
         makeProposalSummaries(suggestions, &proposals);
         listener->OnNextUpdate(std::move(proposals));
         cached_next_proposals_ = std::move(proposals);
@@ -71,19 +71,19 @@ void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestionsList* suggestions)
 }
 
 void SuggestionDebugImpl::WatchAskProposals(
-    fidl::InterfaceHandle<AskProposalListener> listener) {
+    f1dl::InterfaceHandle<AskProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   ask_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchInterruptionProposals(
-    fidl::InterfaceHandle<InterruptionProposalListener> listener) {
+    f1dl::InterfaceHandle<InterruptionProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   interruption_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchNextProposals(
-    fidl::InterfaceHandle<NextProposalListener> listener) {
+    f1dl::InterfaceHandle<NextProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   next_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
   if (cached_next_proposals_) {

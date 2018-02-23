@@ -17,7 +17,7 @@ MessageReceiverClient::MessageReceiverClient(
 
 MessageReceiverClient::~MessageReceiverClient() = default;
 
-void MessageReceiverClient::OnReceive(const fidl::String& message,
+void MessageReceiverClient::OnReceive(const f1dl::String& message,
                                       const OnReceiveCallback& ack) {
   callback_(message, ack);
 }

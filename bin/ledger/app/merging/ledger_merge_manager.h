@@ -24,7 +24,7 @@ class LedgerMergeManager {
   explicit LedgerMergeManager(Environment* environment);
   ~LedgerMergeManager();
 
-  void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
+  void SetFactory(f1dl::InterfaceHandle<ConflictResolverFactory> factory);
 
   std::unique_ptr<MergeResolver> GetMergeResolver(
       storage::PageStorage* storage);

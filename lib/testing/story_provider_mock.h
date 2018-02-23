@@ -32,7 +32,7 @@ class StoryProviderMock : public StoryProvider {
 
  private:
   // |StoryProvider|
-  void CreateStory(const fidl::String& url,
+  void CreateStory(const f1dl::String& url,
                    const CreateStoryCallback& callback) override {
     last_created_story_ = url;
     callback("foo");
@@ -40,9 +40,9 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const fidl::String& url,
-      fidl::Map<fidl::String, fidl::String> extra_info,
-      const fidl::String& json,
+      const f1dl::String& url,
+      f1dl::Map<f1dl::String, f1dl::String> extra_info,
+      const f1dl::String& json,
       const CreateStoryWithInfoCallback& callback) override {
     last_created_story_ = url;
     callback("foo");
@@ -50,68 +50,68 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void Watch(
-      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
+      f1dl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());
   }
 
   // |StoryProvider|
-  void DeleteStory(const fidl::String& story_id,
+  void DeleteStory(const f1dl::String& story_id,
                    const DeleteStoryCallback& callback) override {
     callback();
   }
 
   // |StoryProvider|
-  void GetStoryInfo(const fidl::String& story_id,
+  void GetStoryInfo(const f1dl::String& story_id,
                     const GetStoryInfoCallback& callback) override {
     callback(nullptr);
   }
 
   // |StoryProvider|
   void GetController(
-      const fidl::String& story_id,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
+      const f1dl::String& story_id,
+      f1dl::InterfaceRequest<modular::StoryController> story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override {
-    callback(fidl::Array<fidl::String>::New(0));
+    callback(f1dl::Array<f1dl::String>::New(0));
   }
 
   // |StoryProvider|
   void GetImportance(const GetImportanceCallback& callback) override {
-    callback(fidl::Map<fidl::String, float>());
+    callback(f1dl::Map<f1dl::String, float>());
   }
 
   // |StoryProvider|
   void WatchImportance(
-      fidl::InterfaceHandle<modular::StoryImportanceWatcher> watcher) override {
+      f1dl::InterfaceHandle<modular::StoryImportanceWatcher> watcher) override {
     importance_watchers_.AddInterfacePtr(watcher.Bind());
   }
 
   // |StoryProvider|
   void RunningStories(const RunningStoriesCallback& callback) override {
-    callback(fidl::Array<fidl::String>::New(0));
+    callback(f1dl::Array<f1dl::String>::New(0));
   }
 
   // |StoryProvider|
-  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override {
+  void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
   }
 
   // |StoryProvider|
-  void GetLinkPeer(const fidl::String& story_id,
-                   fidl::Array<fidl::String> module_path,
-                   const fidl::String& link_path,
-                   fidl::InterfaceRequest<Link> request) override {
+  void GetLinkPeer(const f1dl::String& story_id,
+                   f1dl::Array<f1dl::String> module_path,
+                   const f1dl::String& link_path,
+                   f1dl::InterfaceRequest<Link> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
   }
 
   std::string last_created_story_;
   modular::StoryControllerMock controller_mock_;
-  fidl::BindingSet<modular::StoryController> binding_set_;
-  fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
-  fidl::InterfacePtrSet<modular::StoryImportanceWatcher> importance_watchers_;
+  f1dl::BindingSet<modular::StoryController> binding_set_;
+  f1dl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
+  f1dl::InterfacePtrSet<modular::StoryImportanceWatcher> importance_watchers_;
 };
 
 }  // namespace modular

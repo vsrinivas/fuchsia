@@ -43,12 +43,12 @@ constexpr char kStoryScopeLabelPrefix[] = "story-";
 
 namespace {
 
-fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
+f1dl::String PathString(const f1dl::Array<f1dl::String>& module_path) {
   return fxl::JoinStrings(module_path, ":");
 }
 
-fidl::Array<fidl::String> ParentModulePath(
-    const fidl::Array<fidl::String>& module_path) {
+f1dl::Array<f1dl::String> ParentModulePath(
+    const f1dl::Array<f1dl::String>& module_path) {
   auto ret = module_path.Clone();
   if (ret.size() > 0) {
     // Root is its own parent.
@@ -119,12 +119,12 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
   StoryMarkerImpl() = default;
   ~StoryMarkerImpl() override = default;
 
-  void Connect(fidl::InterfaceRequest<StoryMarker> request) {
+  void Connect(f1dl::InterfaceRequest<StoryMarker> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
  private:
-  fidl::BindingSet<StoryMarker> bindings_;
+  f1dl::BindingSet<StoryMarker> bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
@@ -192,10 +192,10 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
       ModuleDataPtr module_data,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::GetLedgerNotificationCall",
                   container,
@@ -256,7 +256,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     module_config->url = module_data_->module_url;
 
     mozart::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
+    f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
         view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
@@ -330,10 +330,10 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   ModuleDataPtr module_data_;
-  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
-  fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  f1dl::InterfaceRequest<ModuleController> module_controller_request_;
+  f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
@@ -420,7 +420,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                   LinkImpl::ConnectionType connection_type,
                   CreateLinkInfoPtr create_link_info,
                   bool notify_watchers,
-                  fidl::InterfaceRequest<Link> request,
+                  f1dl::InterfaceRequest<Link> request,
                   ResultCall done)
       : Operation("StoryControllerImpl::ConnectLinkCall",
                   container,
@@ -483,7 +483,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
   LinkImpl::ConnectionType connection_type_;
   CreateLinkInfoPtr create_link_info_;
   const bool notify_watchers_;
-  fidl::InterfaceRequest<Link> request_;
+  f1dl::InterfaceRequest<Link> request_;
 
   std::unique_ptr<LinkImpl> link_impl_;
 
@@ -499,7 +499,7 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
  public:
   InitializeChainCall(OperationContainer* const container,
                       StoryControllerImpl* const story_controller_impl,
-                      fidl::Array<fidl::String> module_path,
+                      f1dl::Array<f1dl::String> module_path,
                       CreateChainInfoPtr create_chain_info,
                       ResultCall result_call)
       : Operation("InitializeChainCall", container, std::move(result_call)),
@@ -557,7 +557,7 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::Array<fidl::String> module_path_;
+  const f1dl::Array<f1dl::String> module_path_;
   const CreateChainInfoPtr create_chain_info_;
 
   OperationQueue operation_queue_;
@@ -572,16 +572,16 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   StartModuleCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& module_url,
-      const fidl::String& link_name,
+      const f1dl::Array<f1dl::String>& module_path,
+      const f1dl::String& module_url,
+      const f1dl::String& link_name,
       CreateChainInfoPtr create_chain_info,
       const ModuleSource module_source,
       SurfaceRelationPtr surface_relation,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::StartModuleCall",
                   container,
@@ -683,16 +683,16 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   // Passed in:
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_url_;
-  const fidl::String link_name_;
+  const f1dl::Array<f1dl::String> module_path_;
+  const f1dl::String module_url_;
+  const f1dl::String link_name_;
   CreateChainInfoPtr create_chain_info_;
   const ModuleSource module_source_;
   const SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
-  fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  f1dl::InterfaceRequest<ModuleController> module_controller_request_;
+  f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
 
   LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
@@ -707,12 +707,12 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   StartModuleInShellCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& module_url,
-      const fidl::String& link_name,
+      const f1dl::Array<f1dl::String>& module_path,
+      const f1dl::String& module_url,
+      const f1dl::String& link_name,
       CreateChainInfoPtr create_chain_info,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       const bool focus,
       ModuleSource module_source,
@@ -793,7 +793,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         std::make_pair(module_path_.Clone(), std::move(view_owner_))));
   }
 
-  void ConnectView(FlowToken flow, const fidl::String& anchor_view_id) {
+  void ConnectView(FlowToken flow, const f1dl::String& anchor_view_id) {
     const auto view_id = PathString(module_path_);
 
     story_controller_impl_->story_shell_->ConnectView(
@@ -809,12 +809,12 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_url_;
-  const fidl::String link_name_;
+  const f1dl::Array<f1dl::String> module_path_;
+  const f1dl::String module_url_;
+  const f1dl::String link_name_;
   CreateChainInfoPtr create_chain_info_;
-  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
-  fidl::InterfaceRequest<ModuleController> module_controller_request_;
+  f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  f1dl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
   const bool focus_;
   const ModuleSource module_source_;
@@ -831,9 +831,9 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryControllerImpl* const story_controller_impl,
-                fidl::Array<fidl::String> module_path,
-                const fidl::String& module_url,
-                const fidl::String& link_name,
+                f1dl::Array<f1dl::String> module_path,
+                const f1dl::String& module_url,
+                const f1dl::String& link_name,
                 SurfaceRelationPtr surface_relation,
                 const ResultCall& done)
       : Operation("StoryControllerImpl::AddModuleCall",
@@ -890,9 +890,9 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_url_;
-  const fidl::String link_name_;
+  const f1dl::Array<f1dl::String> module_path_;
+  const f1dl::String module_url_;
+  const f1dl::String link_name_;
   SurfaceRelationPtr surface_relation_;
 
   LinkPathPtr link_path_;
@@ -907,9 +907,9 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
  public:
   AddForCreateCall(OperationContainer* const container,
                    StoryControllerImpl* const story_controller_impl,
-                   const fidl::String& module_name,
-                   const fidl::String& module_url,
-                   const fidl::String& link_name,
+                   const f1dl::String& module_name,
+                   const f1dl::String& module_url,
+                   const f1dl::String& link_name,
                    CreateLinkInfoPtr create_link_info,
                    const ResultCall& done)
       : Operation("StoryControllerImpl::AddForCreateCall",
@@ -939,7 +939,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       // There is no module path; this link exists outside the scope of a
       // module.
       LinkPathPtr link_path = LinkPath::New();
-      link_path->module_path = fidl::Array<fidl::String>::New(0);
+      link_path->module_path = f1dl::Array<f1dl::String>::New(0);
       link_path->link_name = link_name_;
       new ConnectLinkCall(
           &operation_queue_, story_controller_impl_, std::move(link_path),
@@ -947,7 +947,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
           true /* notify_watchers */, link_.NewRequest(), [flow]{});
     }
 
-    auto module_path = fidl::Array<fidl::String>::New(0);
+    auto module_path = f1dl::Array<f1dl::String>::New(0);
     module_path.push_back(module_name_);
 
     // This is a top level module, which therefore is not embedded. So the
@@ -958,9 +958,9 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::String module_name_;
-  const fidl::String module_url_;
-  const fidl::String link_name_;
+  const f1dl::String module_name_;
+  const f1dl::String module_url_;
+  const f1dl::String link_name_;
   CreateLinkInfoPtr create_link_info_;
 
   LinkPtr link_;
@@ -1095,7 +1095,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
  public:
   StopModuleCall(OperationContainer* const container,
                  StoryControllerImpl* const story_controller_impl,
-                 const fidl::Array<fidl::String>& module_path,
+                 const f1dl::Array<f1dl::String>& module_path,
                  const std::function<void()>& done)
       : Operation("StoryControllerImpl::StopModuleCall", container, done),
         story_controller_impl_(story_controller_impl),
@@ -1170,7 +1170,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
+  const f1dl::Array<f1dl::String> module_path_;
   ModuleDataPtr module_data_;
 
   OperationQueue operation_queue_;
@@ -1213,7 +1213,7 @@ class StoryControllerImpl::StartCall : Operation<> {
  public:
   StartCall(OperationContainer* const container,
             StoryControllerImpl* const story_controller_impl,
-            fidl::InterfaceRequest<mozart::ViewOwner> request)
+            f1dl::InterfaceRequest<mozart::ViewOwner> request)
       : Operation("StoryControllerImpl::StartCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {
@@ -1238,7 +1238,7 @@ class StoryControllerImpl::StartCall : Operation<> {
     // respective links.
     new ReadAllDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
-        XdrModuleData, [this, flow](fidl::Array<ModuleDataPtr> data) {
+        XdrModuleData, [this, flow](f1dl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
             if (module_data->module_source == ModuleSource::EXTERNAL &&
                 !module_data->module_stopped) {
@@ -1259,7 +1259,7 @@ class StoryControllerImpl::StartCall : Operation<> {
   };
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  fidl::InterfaceRequest<mozart::ViewOwner> request_;
+  f1dl::InterfaceRequest<mozart::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
@@ -1287,7 +1287,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
     new ReadAllDataCall<StoryContextLog>(
         &operation_queue_, story_controller_impl_->page(),
         kStoryContextLogKeyPrefix, XdrStoryContextLog,
-        [this, flow](fidl::Array<StoryContextLogPtr> log) {
+        [this, flow](f1dl::Array<StoryContextLogPtr> log) {
           log_ = std::move(log);
           Cont(flow);
         });
@@ -1333,7 +1333,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const ContextState context_state_;
-  fidl::Array<StoryContextLogPtr> log_;
+  f1dl::Array<StoryContextLogPtr> log_;
 
   float result_{0.0};
 
@@ -1397,7 +1397,7 @@ class StoryControllerImpl::FocusCall : Operation<> {
  public:
   FocusCall(OperationContainer* const container,
             StoryControllerImpl* const story_controller_impl,
-            fidl::Array<fidl::String> module_path)
+            f1dl::Array<f1dl::String> module_path)
       : Operation("StoryControllerImpl::FocusCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {
@@ -1428,7 +1428,7 @@ class StoryControllerImpl::FocusCall : Operation<> {
 
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
+  const f1dl::Array<f1dl::String> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusCall);
 };
@@ -1437,7 +1437,7 @@ class StoryControllerImpl::DefocusCall : Operation<> {
  public:
   DefocusCall(OperationContainer* const container,
               StoryControllerImpl* const story_controller_impl,
-              fidl::Array<fidl::String> module_path)
+              f1dl::Array<f1dl::String> module_path)
       : Operation("StoryControllerImpl::DefocusCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {
@@ -1460,7 +1460,7 @@ class StoryControllerImpl::DefocusCall : Operation<> {
 
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
+  const f1dl::Array<f1dl::String> module_path_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
@@ -1475,7 +1475,7 @@ class StoryControllerImpl::ResolveModulesCall
   ResolveModulesCall(OperationContainer* const container,
                      StoryControllerImpl* const story_controller_impl,
                      DaisyPtr daisy,
-                     fidl::Array<fidl::String> requesting_module_path,
+                     f1dl::Array<f1dl::String> requesting_module_path,
                      ResultCall result_call)
       : Operation("StoryControllerImpl::ResolveModulesCall",
                   container,
@@ -1534,7 +1534,7 @@ class StoryControllerImpl::ResolveModulesCall
                   fxl::MakeCopyable([this, name, outstanding_requests, done,
                                      link_path = std::move(link_path),
                                      link = std::move(link)](
-                                        const fidl::String& content) mutable {
+                                        const f1dl::String& content) mutable {
                     auto link_info = ResolverLinkInfo::New();
                     link_info->path = std::move(link_path);
                     link_info->content_snapshot = content;
@@ -1576,7 +1576,7 @@ class StoryControllerImpl::ResolveModulesCall
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   DaisyPtr daisy_;
-  fidl::Array<fidl::String> requesting_module_path_;
+  f1dl::Array<f1dl::String> requesting_module_path_;
 
   ResolverQueryPtr resolver_query_;
 
@@ -1592,7 +1592,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<> {
  public:
   AddDaisyCall(OperationContainer* const container,
                StoryControllerImpl* const story_controller_impl,
-               fidl::Array<fidl::String> requesting_module_path,
+               f1dl::Array<f1dl::String> requesting_module_path,
                const std::string& module_name,
                DaisyPtr daisy,
                SurfaceRelationPtr surface_relation,
@@ -1638,7 +1638,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<> {
 
   OperationQueue operation_queue_;
   StoryControllerImpl* story_controller_impl_ = nullptr;
-  fidl::Array<fidl::String> requesting_module_path_;
+  f1dl::Array<f1dl::String> requesting_module_path_;
   std::string module_name_;
   DaisyPtr daisy_;
   SurfaceRelationPtr surface_relation_;
@@ -1647,7 +1647,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<> {
 };
 
 StoryControllerImpl::StoryControllerImpl(
-    const fidl::String& story_id,
+    const f1dl::String& story_id,
     LedgerClient* const ledger_client,
     LedgerPageId story_page_id,
     StoryProviderImpl* const story_provider_impl)
@@ -1664,7 +1664,7 @@ StoryControllerImpl::StoryControllerImpl(
       story_context_binding_(this),
       story_marker_impl_(new StoryMarkerImpl) {
   story_scope_.AddService<StoryMarker>(
-      [this](fidl::InterfaceRequest<StoryMarker> request) {
+      [this](f1dl::InterfaceRequest<StoryMarker> request) {
         story_marker_impl_->Connect(std::move(request));
       });
 
@@ -1677,7 +1677,7 @@ StoryControllerImpl::StoryControllerImpl(
                                          intelligence_services_.NewRequest());
 
   story_scope_.AddService<maxwell::ContextWriter>(
-      [this](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+      [this](f1dl::InterfaceRequest<maxwell::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));
       });
 }
@@ -1685,7 +1685,7 @@ StoryControllerImpl::StoryControllerImpl(
 StoryControllerImpl::~StoryControllerImpl() = default;
 
 void StoryControllerImpl::Connect(
-    fidl::InterfaceRequest<StoryController> request) {
+    f1dl::InterfaceRequest<StoryController> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -1710,9 +1710,9 @@ void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
   new StopCall(&operation_queue_, this, false /* notify */, done);
 }
 
-void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
-                                       const fidl::String& module_url,
-                                       const fidl::String& link_name,
+void StoryControllerImpl::AddForCreate(const f1dl::String& module_name,
+                                       const f1dl::String& module_url,
+                                       const f1dl::String& link_name,
                                        CreateLinkInfoPtr create_link_info,
                                        const std::function<void()>& done) {
   new AddForCreateCall(&operation_queue_, this, module_name, module_url,
@@ -1741,17 +1741,17 @@ void StoryControllerImpl::GetImportance(
 }
 
 void StoryControllerImpl::FocusModule(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   new FocusCall(&operation_queue_, this, module_path.Clone());
 }
 
 void StoryControllerImpl::DefocusModule(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   new DefocusCall(&operation_queue_, this, module_path.Clone());
 }
 
 void StoryControllerImpl::StopModule(
-    const fidl::Array<fidl::String>& module_path,
+    const f1dl::Array<f1dl::String>& module_path,
     const std::function<void()>& done) {
   new StopModuleCall(&operation_queue_, this, module_path, done);
 }
@@ -1769,7 +1769,7 @@ void StoryControllerImpl::ReleaseModule(
   connections_.erase(f);
 }
 
-const fidl::String& StoryControllerImpl::GetStoryId() const {
+const f1dl::String& StoryControllerImpl::GetStoryId() const {
   return story_id_;
 }
 
@@ -1779,15 +1779,15 @@ void StoryControllerImpl::RequestStoryFocus() {
 
 void StoryControllerImpl::ConnectLinkPath(
     LinkPathPtr link_path, LinkImpl::ConnectionType connection_type,
-    fidl::InterfaceRequest<Link> request) {
+    f1dl::InterfaceRequest<Link> request) {
   new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
                       connection_type, nullptr /* create_link_info */,
                       true /* notify_watchers */, std::move(request), [] {});
 }
 
 LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
-    const fidl::Array<fidl::String>& module_path,
-    const fidl::String& key) {
+    const f1dl::Array<f1dl::String>& module_path,
+    const f1dl::String& key) {
   auto i = std::find_if(chains_.begin(), chains_.end(),
                         [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
                           return ptr->chain_path().Equals(module_path);
@@ -1800,14 +1800,14 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
 }
 
 void StoryControllerImpl::StartModule(
-    const fidl::Array<fidl::String>& parent_module_path,
-    const fidl::String& module_name,
-    const fidl::String& module_url,
-    const fidl::String& link_name,
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& module_name,
+    const f1dl::String& module_url,
+    const f1dl::String& link_name,
     CreateChainInfoPtr create_chain_info,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller_request,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     const ModuleSource module_source) {
   auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
@@ -1820,13 +1820,13 @@ void StoryControllerImpl::StartModule(
 }
 
 void StoryControllerImpl::StartModuleInShell(
-    const fidl::Array<fidl::String>& parent_module_path,
-    const fidl::String& module_name,
-    const fidl::String& module_url,
-    const fidl::String& link_name,
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& module_name,
+    const f1dl::String& module_url,
+    const f1dl::String& link_name,
     CreateChainInfoPtr create_chain_info,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
     const bool focus,
     ModuleSource module_source) {
@@ -1840,12 +1840,12 @@ void StoryControllerImpl::StartModuleInShell(
 }
 
 void StoryControllerImpl::StartDaisy(
-    const fidl::Array<fidl::String>& parent_module_path,
-    const fidl::String& module_name,
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& module_name,
     DaisyPtr daisy,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller_request,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     ModuleSource module_source,
     std::function<void(StartDaisyStatus)> callback) {
   new ResolveModulesCall(
@@ -1878,11 +1878,11 @@ void StoryControllerImpl::StartDaisy(
 }
 
 void StoryControllerImpl::StartDaisyInShell(
-    const fidl::Array<fidl::String>& parent_module_path,
-    const fidl::String& module_name,
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& module_name,
     DaisyPtr daisy,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
     ModuleSource module_source,
     std::function<void(StartDaisyStatus)> callback) {
@@ -1917,16 +1917,16 @@ void StoryControllerImpl::StartDaisyInShell(
 }
 
 void StoryControllerImpl::EmbedModule(
-    const fidl::Array<fidl::String>& parent_module_path,
-    const fidl::String& module_name,
-    const fidl::String& module_url,
-    const fidl::String& link_name,
+    const f1dl::Array<f1dl::String>& parent_module_path,
+    const f1dl::String& module_name,
+    const f1dl::String& module_url,
+    const f1dl::String& link_name,
     CreateChainInfoPtr create_chain_info,
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  fidl::Array<fidl::String> module_path = parent_module_path.Clone();
+    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    f1dl::InterfaceRequest<ModuleController> module_controller_request,
+    f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  f1dl::Array<f1dl::String> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
@@ -1947,7 +1947,7 @@ void StoryControllerImpl::ProcessPendingViews() {
     return;
   }
 
-  std::vector<fidl::String> added_keys;
+  std::vector<f1dl::String> added_keys;
 
   for (auto& kv : pending_views_) {
     auto* const connection = FindConnection(kv.second.first);
@@ -2035,15 +2035,15 @@ void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
 }
 
 // |StoryController|
-void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
-                                       const fidl::String& value,
+void StoryControllerImpl::SetInfoExtra(const f1dl::String& name,
+                                       const f1dl::String& value,
                                        const SetInfoExtraCallback& callback) {
   story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
 }
 
 // |StoryController|
 void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
   new StartCall(&operation_queue_, this, std::move(request));
 }
 
@@ -2053,17 +2053,17 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
 }
 
 // |StoryController|
-void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
+void StoryControllerImpl::Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) {
   auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
 // |StoryController|
-void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
-                                    const fidl::String& module_name,
-                                    const fidl::String& module_url,
-                                    const fidl::String& link_name,
+void StoryControllerImpl::AddModule(f1dl::Array<f1dl::String> module_path,
+                                    const f1dl::String& module_name,
+                                    const f1dl::String& module_url,
+                                    const f1dl::String& link_name,
                                     SurfaceRelationPtr surface_relation) {
   // In the API, a null module path is allowed to represent the empty module
   // path.
@@ -2079,7 +2079,7 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
 
 // |StoryController|
 void StoryControllerImpl::GetActiveModules(
-    fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+    f1dl::InterfaceHandle<StoryModulesWatcher> watcher,
     const GetActiveModulesCallback& callback) {
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a module being created and inserted in the connections collection
@@ -2092,7 +2092,7 @@ void StoryControllerImpl::GetActiveModules(
                        modules_watchers_.AddInterfacePtr(std::move(ptr));
                      }
 
-                     fidl::Array<ModuleDataPtr> result;
+                     f1dl::Array<ModuleDataPtr> result;
                      result.resize(0);
                      for (auto& connection : connections_) {
                        result.push_back(connection.module_data.Clone());
@@ -2109,8 +2109,8 @@ void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
 
 // |StoryController|
 void StoryControllerImpl::GetModuleController(
-    fidl::Array<fidl::String> module_path,
-    fidl::InterfaceRequest<ModuleController> request) {
+    f1dl::Array<f1dl::String> module_path,
+    f1dl::InterfaceRequest<ModuleController> request) {
   new SyncCall(
       &operation_queue_,
       fxl::MakeCopyable([this, module_path = std::move(module_path),
@@ -2129,7 +2129,7 @@ void StoryControllerImpl::GetModuleController(
 
 // |StoryController|
 void StoryControllerImpl::GetActiveLinks(
-    fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+    f1dl::InterfaceHandle<StoryLinksWatcher> watcher,
     const GetActiveLinksCallback& callback) {
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a link being created and inserted in the links collection during
@@ -2148,7 +2148,7 @@ void StoryControllerImpl::GetActiveLinks(
                      // list all links, but this requires some changes to how
                      // links are stored to make it nice. (Right now we need to
                      // parse keys, which we don't want to.)
-                     fidl::Array<LinkPathPtr> result;
+                     f1dl::Array<LinkPathPtr> result;
                      result.resize(0);
                      for (auto& link : links_) {
                        result.push_back(link->link_path().Clone());
@@ -2158,9 +2158,9 @@ void StoryControllerImpl::GetActiveLinks(
 }
 
 // |StoryController|
-void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
-                                  const fidl::String& name,
-                                  fidl::InterfaceRequest<Link> request) {
+void StoryControllerImpl::GetLink(f1dl::Array<f1dl::String> module_path,
+                                  const f1dl::String& name,
+                                  f1dl::InterfaceRequest<Link> request) {
   // In the API, a null module path is allowed to represent the empty module
   // path.
   if (module_path.is_null()) {
@@ -2174,8 +2174,8 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
                   std::move(request));
 }
 
-void StoryControllerImpl::AddDaisy(fidl::Array<fidl::String> parent_module_path,
-                                   const fidl::String& module_name,
+void StoryControllerImpl::AddDaisy(f1dl::Array<f1dl::String> parent_module_path,
+                                   const f1dl::String& module_name,
                                    DaisyPtr daisy,
                                    SurfaceRelationPtr surface_relation) {
   new AddDaisyCall(&operation_queue_, this, std::move(parent_module_path),
@@ -2184,7 +2184,7 @@ void StoryControllerImpl::AddDaisy(fidl::Array<fidl::String> parent_module_path,
 }
 
 void StoryControllerImpl::StartStoryShell(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   story_shell_->Initialize(story_context_binding_.NewBinding());
@@ -2224,12 +2224,12 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
 }
 
 bool StoryControllerImpl::IsRootModule(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   return module_path.size() == 1 && module_path[0] == kRootModuleName;
 }
 
 bool StoryControllerImpl::IsExternalModule(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   auto* const i = FindConnection(module_path);
   if (!i) {
     return false;
@@ -2239,7 +2239,7 @@ bool StoryControllerImpl::IsExternalModule(
 }
 
 void StoryControllerImpl::OnModuleStateChange(
-    const fidl::Array<fidl::String>& module_path,
+    const f1dl::Array<f1dl::String>& module_path,
     const ModuleState state) {
   if (!track_root_module_state_) {
     return;
@@ -2289,7 +2289,7 @@ void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
 }
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   for (auto& c : connections_) {
     if (c.module_data->module_path.Equals(module_path)) {
       return &c;
@@ -2318,7 +2318,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
 }
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindEmbedder(
-    const fidl::Array<fidl::String>& module_path) {
+    const f1dl::Array<f1dl::String>& module_path) {
   // Traverse up until there is an embedder module. We recognize embedder
   // modules by having a non-null EmbedModuleWatcher.
   auto* parent = FindConnection(ParentModulePath(module_path));

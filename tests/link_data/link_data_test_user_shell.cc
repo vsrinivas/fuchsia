@@ -75,7 +75,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
+  void Notify(const f1dl::String& json) override {
     modular_example::Counter counter =
         modular_example::Store::ParseCounterJson(json.get(), "test_link_data");
 
@@ -89,7 +89,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
   int last_continue_count_{};
   std::function<void()> continue_;
-  fidl::Binding<modular::LinkWatcher> binding_;
+  f1dl::Binding<modular::LinkWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
 };
@@ -142,7 +142,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
     }
   }
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  f1dl::Binding<modular::StoryWatcher> binding_;
   std::vector<std::function<void()>> continue_;
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
   bool on_module_added_called_{};
@@ -175,7 +175,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -195,10 +195,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
-    using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+    using FidlStringMap = f1dl::Map<f1dl::String, f1dl::String>;
     story_provider_->CreateStoryWithInfo(url, FidlStringMap(),
                                          modular::JsonValueToString(doc),
-                                         [this](const fidl::String& story_id) {
+                                         [this](const f1dl::String& story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
                                          });
@@ -206,7 +206,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint story1_get_controller_{"Story1 GetController"};
 
-  void TestStory1_GetController(const fidl::String& story_id) {
+  void TestStory1_GetController(const f1dl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
@@ -222,7 +222,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
-    root_link_->Set(fidl::Array<fidl::String>::From(segments),
+    root_link_->Set(f1dl::Array<f1dl::String>::From(segments),
                     modular::JsonValueToString(modular::JsonValue(kTestApp)));
 
     TestStory1_Run(0);
@@ -254,7 +254,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 
@@ -282,7 +282,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
             // Can't use the StoryController here because we closed it
             // in TeardownStoryController().
             story_provider_->RunningStories(
-                [this, round](fidl::Array<fidl::String> story_ids) {
+                [this, round](f1dl::Array<f1dl::String> story_ids) {
                   auto n = count(story_ids.begin(), story_ids.end(),
                                  story_info_->id);
                   FXL_CHECK(n == 0);

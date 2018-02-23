@@ -16,8 +16,8 @@ namespace cloud_sync {
 
 BatchDownload::BatchDownload(storage::PageStorage* storage,
                              encryption::EncryptionService* encryption_service,
-                             fidl::Array<cloud_provider::CommitPtr> commits,
-                             fidl::Array<uint8_t> position_token,
+                             f1dl::Array<cloud_provider::CommitPtr> commits,
+                             f1dl::Array<uint8_t> position_token,
                              fxl::Closure on_done,
                              fxl::Closure on_error)
     : storage_(storage),

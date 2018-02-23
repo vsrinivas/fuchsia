@@ -25,10 +25,10 @@
 namespace test {
 namespace integration {
 
-fidl::Array<uint8_t> RandomArray(size_t size,
+f1dl::Array<uint8_t> RandomArray(size_t size,
                                  const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
-  fidl::Array<uint8_t> array = fidl::Array<uint8_t>::New(size);
+  f1dl::Array<uint8_t> array = f1dl::Array<uint8_t>::New(size);
   for (size_t i = 0; i < prefix.size(); ++i) {
     array[i] = prefix[i];
   }
@@ -42,20 +42,20 @@ fidl::Array<uint8_t> RandomArray(size_t size,
   return array;
 }
 
-fidl::Array<uint8_t> RandomArray(int size) {
+f1dl::Array<uint8_t> RandomArray(int size) {
   return RandomArray(size, std::vector<uint8_t>());
 }
 
-fidl::Array<uint8_t> PageGetId(ledger::PagePtr* page) {
-  fidl::Array<uint8_t> page_id;
+f1dl::Array<uint8_t> PageGetId(ledger::PagePtr* page) {
+  f1dl::Array<uint8_t> page_id;
   (*page)->GetId(
-      [&page_id](fidl::Array<uint8_t> id) { page_id = std::move(id); });
+      [&page_id](f1dl::Array<uint8_t> id) { page_id = std::move(id); });
   EXPECT_TRUE(page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   return page_id;
 }
 
 ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        fidl::Array<uint8_t> prefix) {
+                                        f1dl::Array<uint8_t> prefix) {
   ledger::PageSnapshotPtr snapshot;
   (*page)->GetSnapshot(
       snapshot.NewRequest(), std::move(prefix), nullptr,
@@ -64,19 +64,19 @@ ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
   return snapshot;
 }
 
-fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
+f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start) {
+    f1dl::Array<uint8_t> start) {
   return SnapshotGetKeys(snapshot, std::move(start), nullptr);
 }
 
-fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
+f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start,
+    f1dl::Array<uint8_t> start,
     int* num_queries) {
-  fidl::Array<fidl::Array<uint8_t>> result;
-  fidl::Array<uint8_t> token = nullptr;
-  fidl::Array<uint8_t> next_token = nullptr;
+  f1dl::Array<f1dl::Array<uint8_t>> result;
+  f1dl::Array<uint8_t> token = nullptr;
+  f1dl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
@@ -84,8 +84,8 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
     (*snapshot)->GetKeys(
         start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
-            ledger::Status status, fidl::Array<fidl::Array<uint8_t>> keys,
-            fidl::Array<uint8_t> new_next_token) {
+            ledger::Status status, f1dl::Array<f1dl::Array<uint8_t>> keys,
+            f1dl::Array<uint8_t> new_next_token) {
           EXPECT_TRUE(status == ledger::Status::OK ||
                       status == ledger::Status::PARTIAL_RESULT);
           if (num_queries) {
@@ -103,19 +103,19 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(
   return result;
 }
 
-fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
+f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start) {
+    f1dl::Array<uint8_t> start) {
   return SnapshotGetEntries(snapshot, std::move(start), nullptr);
 }
 
-fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
+f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    fidl::Array<uint8_t> start,
+    f1dl::Array<uint8_t> start,
     int* num_queries) {
-  fidl::Array<ledger::EntryPtr> result;
-  fidl::Array<uint8_t> token = nullptr;
-  fidl::Array<uint8_t> next_token = nullptr;
+  f1dl::Array<ledger::EntryPtr> result;
+  f1dl::Array<uint8_t> token = nullptr;
+  f1dl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
@@ -123,8 +123,8 @@ fidl::Array<ledger::EntryPtr> SnapshotGetEntries(
     (*snapshot)->GetEntries(
         start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
-            ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-            fidl::Array<uint8_t> new_next_token) {
+            ledger::Status status, f1dl::Array<ledger::EntryPtr> entries,
+            f1dl::Array<uint8_t> new_next_token) {
           EXPECT_TRUE(status == ledger::Status::OK ||
                       status == ledger::Status::PARTIAL_RESULT)
               << "Actual status: " << status;
@@ -150,12 +150,12 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return value;
 }
 
-fidl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo) {
+f1dl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
 std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 fidl::Array<uint8_t> key,
+                                 f1dl::Array<uint8_t> key,
                                  int64_t offset,
                                  int64_t max_size) {
   std::string result;

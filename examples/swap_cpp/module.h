@@ -15,7 +15,7 @@ class ModuleView : public mozart::BaseView {
  public:
   explicit ModuleView(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       uint32_t color);
 
  private:
@@ -31,7 +31,7 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
       mozart::ViewManagerPtr,
-      fidl::InterfaceRequest<mozart::ViewOwner>)>;
+      f1dl::InterfaceRequest<mozart::ViewOwner>)>;
 
   explicit ModuleApp(app::ApplicationContext* const application_context,
                      CreateViewCallback create);
@@ -39,13 +39,13 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override;
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      f1dl::InterfaceRequest<app::ServiceProvider> services) override;
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+      f1dl::InterfaceHandle<modular::ModuleContext> moduleContext,
+      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;

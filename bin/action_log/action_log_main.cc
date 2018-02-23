@@ -24,8 +24,8 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
 
  private:
   void GetUserActionLog(
-      fidl::InterfaceHandle<ProposalPublisher> proposal_publisher_handle,
-      fidl::InterfaceRequest<UserActionLog> request) {
+      f1dl::InterfaceHandle<ProposalPublisher> proposal_publisher_handle,
+      f1dl::InterfaceRequest<UserActionLog> request) {
     ProposalPublisherPtr proposal_publisher = proposal_publisher_handle.Bind();
     std::unique_ptr<UserActionLogImpl> user_action_log_impl(
         new UserActionLogImpl(std::move(proposal_publisher)));
@@ -33,7 +33,7 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
                                          std::move(request));
   }
 
-  fidl::BindingSet<UserActionLog, std::unique_ptr<UserActionLog>>
+  f1dl::BindingSet<UserActionLog, std::unique_ptr<UserActionLog>>
       user_action_log_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryImpl);
@@ -49,7 +49,7 @@ class UserActionLogFactoryApp {
 
     // Singleton service
     context_->outgoing_services()->AddService<UserActionLogFactory>(
-        [this](fidl::InterfaceRequest<UserActionLogFactory> request) {
+        [this](f1dl::InterfaceRequest<UserActionLogFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
   }
@@ -57,7 +57,7 @@ class UserActionLogFactoryApp {
  private:
   std::unique_ptr<app::ApplicationContext> context_;
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
-  fidl::BindingSet<UserActionLogFactory> factory_bindings_;
+  f1dl::BindingSet<UserActionLogFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryApp);
 };

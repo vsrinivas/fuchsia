@@ -40,7 +40,7 @@ namespace {
 
 TEST_F(ClipboardImplTest, FirstPeek) {
   bool callback_called = false;
-  Peek([&callback_called](const fidl::String& text) {
+  Peek([&callback_called](const f1dl::String& text) {
     EXPECT_EQ("", text);
     callback_called = true;
   });
@@ -52,7 +52,7 @@ TEST_F(ClipboardImplTest, PushAndPeek) {
   bool callback_called = false;
   std::string expected_value = "a test string";
   Push(expected_value);
-  Peek([&callback_called, expected_value](const fidl::String& text) {
+  Peek([&callback_called, expected_value](const f1dl::String& text) {
     EXPECT_EQ(expected_value, text);
     callback_called = true;
   });
@@ -64,11 +64,11 @@ TEST_F(ClipboardImplTest, PushAndPeekTwice) {
   int callback_called = 0;
   std::string expected_value = "a test string";
   Push(expected_value);
-  Peek([&callback_called, expected_value](const fidl::String& text) {
+  Peek([&callback_called, expected_value](const f1dl::String& text) {
     EXPECT_EQ(expected_value, text);
     callback_called++;
   });
-  Peek([&callback_called, expected_value](const fidl::String& text) {
+  Peek([&callback_called, expected_value](const f1dl::String& text) {
     EXPECT_EQ(expected_value, text);
     callback_called++;
   });

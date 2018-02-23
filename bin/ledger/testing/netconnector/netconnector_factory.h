@@ -26,7 +26,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   // Creates a new virtual host with the given host name, and connects to its
   // NetConnector.
   void AddBinding(std::string host_name,
-                  fidl::InterfaceRequest<netconnector::NetConnector> request);
+                  f1dl::InterfaceRequest<netconnector::NetConnector> request);
 
  private:
   // Holder holds a NetConnector.
@@ -38,16 +38,16 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
 
   // FakeNetConnector::Delegate:
   void GetDevicesNames(uint64_t last_version,
-                       std::function<void(uint64_t, fidl::Array<fidl::String>)>
+                       std::function<void(uint64_t, f1dl::Array<f1dl::String>)>
                            callback) override;
   void ConnectToServiceProvider(
       std::string device_name,
-      fidl::InterfaceRequest<app::ServiceProvider> request) override;
+      f1dl::InterfaceRequest<app::ServiceProvider> request) override;
 
   // Counter incremented each time a NetConnector is added or removed; denotes
   // the version of the current device list.
   uint64_t current_version_ = 0;
-  std::vector<std::function<void(uint64_t, fidl::Array<fidl::String>)>>
+  std::vector<std::function<void(uint64_t, f1dl::Array<f1dl::String>)>>
       pending_device_list_callbacks_;
   callback::AutoCleanableMap<std::string, Holder> net_connectors_;
 

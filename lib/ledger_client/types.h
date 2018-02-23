@@ -10,8 +10,8 @@
 namespace modular {
 
 // TODO(mesch): Not sure how useful that is. These types can lie.
-typedef fidl::Array<uint8_t> LedgerPageId;
-typedef fidl::Array<uint8_t> LedgerPageKey;
+typedef f1dl::Array<uint8_t> LedgerPageId;
+typedef f1dl::Array<uint8_t> LedgerPageKey;
 
 }  // namespace modular
 

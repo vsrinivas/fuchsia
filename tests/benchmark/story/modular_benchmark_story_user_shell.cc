@@ -80,7 +80,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  f1dl::Binding<modular::StoryWatcher> binding_;
 
   modular::StoryState continue_state_{modular::StoryState::DONE};
   std::function<void()> continue_{[] {}};
@@ -105,19 +105,19 @@ class LinkWatcherImpl : modular::LinkWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void(const fidl::String&)> at) {
+  void Continue(std::function<void(const f1dl::String&)> at) {
     continue_ = at;
   }
 
  private:
   // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
+  void Notify(const f1dl::String& json) override {
     continue_(json);
   }
 
-  fidl::Binding<modular::LinkWatcher> binding_;
+  f1dl::Binding<modular::LinkWatcher> binding_;
 
-  std::function<void(const fidl::String&)> continue_{[](const fidl::String&) {}};
+  std::function<void(const f1dl::String&)> continue_{[](const f1dl::String&) {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
@@ -145,7 +145,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
  private:
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -170,13 +170,13 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void StoryCreate() {
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
     story_provider_->CreateStory(
-        settings_.module_url, [this](const fidl::String& story_id) {
+        settings_.module_url, [this](const f1dl::String& story_id) {
           TRACE_ASYNC_END("benchmark", "story/create", 0);
           StoryInfo(story_id);
         });
   }
 
-  void StoryInfo(const fidl::String& story_id) {
+  void StoryInfo(const f1dl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
@@ -190,7 +190,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void Link() {
     story_controller_->GetLink(nullptr, "root", link_.NewRequest());
     link_watcher_.Watch(&link_);
-    link_watcher_.Continue([this](const fidl::String& json) {
+    link_watcher_.Continue([this](const f1dl::String& json) {
         if (json == "") {
           return;
         }
@@ -216,7 +216,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
     story_watcher_.Watch(&story_controller_);
 
-    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

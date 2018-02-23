@@ -10,17 +10,17 @@ namespace {
 const char kHexDigits[] = "0123456789ABCDEF";
 }
 
-fidl::Array<uint8_t> ToArray(const std::string& val) {
-  auto ret = fidl::Array<uint8_t>::New(val.size());
+f1dl::Array<uint8_t> ToArray(const std::string& val) {
+  auto ret = f1dl::Array<uint8_t>::New(val.size());
   memcpy(ret.data(), val.data(), val.size());
   return ret;
 }
 
-std::string ToString(const fidl::Array<uint8_t>& bytes) {
+std::string ToString(const f1dl::Array<uint8_t>& bytes) {
   return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
-std::string ToHex(const fidl::Array<uint8_t>& bytes) {
+std::string ToHex(const f1dl::Array<uint8_t>& bytes) {
   std::string result;
   result.reserve(bytes.size() * 2);
   for (unsigned char c : bytes.storage()) {

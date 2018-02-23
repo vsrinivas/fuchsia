@@ -87,7 +87,7 @@ void ConvergenceBenchmark::Run() {
   QuitOnError(status, "beta ledger");
 
   ledger::PagePtr page;
-  fidl::Array<uint8_t> id;
+  f1dl::Array<uint8_t> id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha_ledger_, nullptr, &page, &id);
   QuitOnError(status, "alpha page initialization");
@@ -122,25 +122,25 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   {
-    fidl::Array<uint8_t> key = generator_.MakeKey(2 * step, kKeySize);
+    f1dl::Array<uint8_t> key = generator_.MakeKey(2 * step, kKeySize);
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
     remaining_keys_.insert(convert::ToString(key));
     remaining_keys_.insert(convert::ToString(key));
-    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
+    f1dl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     alpha_page_->Put(std::move(key), std::move(value),
                      benchmark::QuitOnErrorCallback("Put"));
   }
 
   {
-    fidl::Array<uint8_t> key = generator_.MakeKey(2 * step + 1, kKeySize);
+    f1dl::Array<uint8_t> key = generator_.MakeKey(2 * step + 1, kKeySize);
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
     remaining_keys_.insert(convert::ToString(key));
     remaining_keys_.insert(convert::ToString(key));
-    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
+    f1dl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     beta_page_->Put(std::move(key), std::move(value),
                     benchmark::QuitOnErrorCallback("Put"));
   }

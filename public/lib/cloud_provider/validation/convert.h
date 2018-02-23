@@ -11,11 +11,11 @@
 
 namespace cloud_provider {
 
-fidl::Array<uint8_t> ToArray(const std::string& val);
+f1dl::Array<uint8_t> ToArray(const std::string& val);
 
-std::string ToString(const fidl::Array<uint8_t>& bytes);
+std::string ToString(const f1dl::Array<uint8_t>& bytes);
 
-std::string ToHex(const fidl::Array<uint8_t>& bytes);
+std::string ToHex(const f1dl::Array<uint8_t>& bytes);
 
 }  // namespace cloud_provider
 

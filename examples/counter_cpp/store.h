@@ -54,7 +54,7 @@ class Store : modular::LinkWatcher {
 
   explicit Store(std::string module_name);
 
-  void Initialize(fidl::InterfaceHandle<modular::Link> link);
+  void Initialize(f1dl::InterfaceHandle<modular::Link> link);
 
   void AddCallback(Callback c);
 
@@ -74,7 +74,7 @@ class Store : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const fidl::String& json) override;
+  void Notify(const f1dl::String& json) override;
 
   // Process an update from the Link and write it to our local copy.
   // The update is ignored if:
@@ -88,9 +88,9 @@ class Store : modular::LinkWatcher {
 
   std::vector<Callback> callbacks_;
 
-  fidl::Binding<LinkWatcher> watcher_binding_;
+  f1dl::Binding<LinkWatcher> watcher_binding_;
 
-  fidl::InterfacePtr<modular::Link> link_;
+  f1dl::InterfacePtr<modular::Link> link_;
 
   // True if there is data pending to send to the link, otherwise false.
   bool dirty_{};

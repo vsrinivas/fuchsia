@@ -22,21 +22,21 @@ class EntityResolverFake : public EntityResolver {
   EntityResolverFake();
   ~EntityResolverFake() override;
 
-  void Connect(fidl::InterfaceRequest<EntityResolver> request);
+  void Connect(f1dl::InterfaceRequest<EntityResolver> request);
 
   // Returns an Entity reference that will resolve to an Entity.
   // |types_and_data| is a map of data type to data bytes.
-  fidl::String AddEntity(std::map<std::string, std::string> types_and_data);
+  f1dl::String AddEntity(std::map<std::string, std::string> types_and_data);
 
  private:
   class EntityImpl;
 
-  void ResolveEntity(const fidl::String& entity_reference,
-                     fidl::InterfaceRequest<Entity> entity_request) override;
+  void ResolveEntity(const f1dl::String& entity_reference,
+                     f1dl::InterfaceRequest<Entity> entity_request) override;
 
   int next_entity_id_{0};
   std::map<std::string, std::unique_ptr<EntityImpl>> entities_;
-  fidl::BindingSet<EntityResolver> bindings_;
+  f1dl::BindingSet<EntityResolver> bindings_;
 };
 
 }  // namespace modular

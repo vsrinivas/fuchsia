@@ -40,7 +40,7 @@ void CloudProviderFirebaseFactory::Init() {
 void CloudProviderFirebaseFactory::MakeCloudProvider(
     std::string server_id,
     std::string api_key,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   modular::auth::TokenProviderPtr token_provider;
   services_task_runner_->PostTask(fxl::MakeCopyable(
       [this, request = token_provider.NewRequest()]() mutable {

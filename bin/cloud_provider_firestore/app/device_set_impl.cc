@@ -32,7 +32,7 @@ DeviceSetImpl::DeviceSetImpl(
     std::string user_path,
     CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
+    f1dl::InterfaceRequest<cloud_provider::DeviceSet> request)
     : user_path_(std::move(user_path)),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
@@ -51,7 +51,7 @@ DeviceSetImpl::DeviceSetImpl(
 
 DeviceSetImpl::~DeviceSetImpl() {}
 
-void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(
@@ -76,7 +76,7 @@ void DeviceSetImpl::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
       });
 }
 
-void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
   auto request = google::firestore::v1beta1::CreateDocumentRequest();
   request.set_parent(user_path_);
@@ -105,8 +105,8 @@ void DeviceSetImpl::SetFingerprint(fidl::Array<uint8_t> fingerprint,
 }
 
 void DeviceSetImpl::SetWatcher(
-    fidl::Array<uint8_t> /*fingerprint*/,
-    fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> /*watcher*/,
+    f1dl::Array<uint8_t> /*fingerprint*/,
+    f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> /*watcher*/,
     const SetWatcherCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);

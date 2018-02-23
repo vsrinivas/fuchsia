@@ -25,8 +25,8 @@ class TestApp : public ModuleWatcher {
  public:
   TestApp(
       ModuleHost* module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()),
         module_watcher_binding_(this) {
     module_context_->GetComponentContext(component_context_.NewRequest());
@@ -37,10 +37,10 @@ class TestApp : public ModuleWatcher {
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    fidl::Map<fidl::String, fidl::String> entity_data;
+    f1dl::Map<f1dl::String, f1dl::String> entity_data;
     entity_data["myType"] = "1337";
     component_context_->CreateEntityWithData(
-        std::move(entity_data), [this](const fidl::String& reference) {
+        std::move(entity_data), [this](const f1dl::String& reference) {
           entity_one_reference_ = reference;
           StartDaisy();
         });
@@ -111,13 +111,13 @@ class TestApp : public ModuleWatcher {
   ModuleControllerPtr child_module_;
   mozart::ViewOwnerPtr child_view_;
 
-  fidl::String entity_one_reference_;
+  f1dl::String entity_one_reference_;
   DaisyPtr daisy_;
 
   LinkPtr link_one_;
   LinkPtr link_two_;
 
-  fidl::Binding<ModuleWatcher> module_watcher_binding_;
+  f1dl::Binding<ModuleWatcher> module_watcher_binding_;
 
   TestPoint start_daisy_{"Started child Daisy"};
   TestPoint child_module_stopped_{"Child Module stopped"};

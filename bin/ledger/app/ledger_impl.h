@@ -26,13 +26,13 @@ class LedgerImpl : public Ledger {
     virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id,
-                         fidl::InterfaceRequest<Page> page_request,
+                         f1dl::InterfaceRequest<Page> page_request,
                          std::function<void(Status)> callback) = 0;
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 
     virtual void SetConflictResolverFactory(
-        fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
+        f1dl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
@@ -44,16 +44,16 @@ class LedgerImpl : public Ledger {
 
  private:
   // Ledger:
-  void GetRootPage(fidl::InterfaceRequest<Page> page_request,
+  void GetRootPage(f1dl::InterfaceRequest<Page> page_request,
                    const GetRootPageCallback& callback) override;
-  void GetPage(fidl::Array<uint8_t> id,
-               fidl::InterfaceRequest<Page> page_request,
+  void GetPage(f1dl::Array<uint8_t> id,
+               f1dl::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void DeletePage(fidl::Array<uint8_t> id,
+  void DeletePage(f1dl::Array<uint8_t> id,
                   const DeletePageCallback& callback) override;
 
   void SetConflictResolverFactory(
-      fidl::InterfaceHandle<ConflictResolverFactory> factory,
+      f1dl::InterfaceHandle<ConflictResolverFactory> factory,
       const SetConflictResolverFactoryCallback& callback) override;
 
   Delegate* const delegate_;

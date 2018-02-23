@@ -28,7 +28,7 @@ class TestApplicationController : app::ApplicationController {
  public:
   TestApplicationController() : binding_(this) {}
 
-  void Connect(fidl::InterfaceRequest<app::ApplicationController> request) {
+  void Connect(f1dl::InterfaceRequest<app::ApplicationController> request) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this] { Kill(); });
   }
@@ -42,7 +42,7 @@ class TestApplicationController : app::ApplicationController {
 
   void Wait(const WaitCallback& callback) override {}
 
-  fidl::Binding<app::ApplicationController> binding_;
+  f1dl::Binding<app::ApplicationController> binding_;
 
   bool killed_{};
 
@@ -57,7 +57,7 @@ TEST_F(AppClientTest, BaseRun_Success) {
   launcher.RegisterApplication(
       kTestUrl, [&callback_called](
                     app::ApplicationLaunchInfoPtr launch_info,
-                    fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
       });
@@ -73,7 +73,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   launcher.RegisterApplication(
       kTestUrl, [&callback_called, &controller](
                     app::ApplicationLaunchInfoPtr launch_info,
-                    fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
         controller.Connect(std::move(ctrl));
@@ -101,7 +101,7 @@ TEST_F(AppClientTest, Run_Success) {
   launcher.RegisterApplication(
       kTestUrl, [&callback_called](
                     app::ApplicationLaunchInfoPtr launch_info,
-                    fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
       });
@@ -122,7 +122,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   launcher.RegisterApplication(
       kTestUrl, [&callback_called](
                     app::ApplicationLaunchInfoPtr launch_info,
-                    fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         auto additional_services = std::move(launch_info->additional_services);
         EXPECT_FALSE(additional_services.is_null());

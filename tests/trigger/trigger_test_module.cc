@@ -33,8 +33,8 @@ class ParentApp {
 
   ParentApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -49,17 +49,17 @@ class ParentApp {
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "trigger_test_agent_connected", [this](const fidl::String&) {
+        "trigger_test_agent_connected", [this](const f1dl::String&) {
           agent_connected_.Pass();
           agent_service_->GetMessageQueueToken(
-              [this](const fidl::String& token) {
+              [this](const f1dl::String& token) {
                 received_trigger_token_.Pass();
 
                 // Stop the agent.
                 agent_controller_.Unbind();
                 modular::testing::GetStore()->Get(
                     "trigger_test_agent_stopped",
-                    [this, token](const fidl::String&) {
+                    [this, token](const f1dl::String&) {
                       agent_stopped_.Pass();
 
                       // Send a message to the stopped agent which should
@@ -71,12 +71,12 @@ class ParentApp {
 
                       modular::testing::GetStore()->Get(
                           "trigger_test_agent_run_task",
-                          [this](const fidl::String&) {
+                          [this](const f1dl::String&) {
                             task_triggered_.Pass();
 
                             modular::testing::GetStore()->Get(
                                 "trigger_test_agent_stopped",
-                                [this](const fidl::String&) {
+                                [this](const f1dl::String&) {
                                   module_host_->module_context()->Done();
                                 });
                           });
