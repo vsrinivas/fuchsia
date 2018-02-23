@@ -122,7 +122,7 @@ static inline void ath10k_ce_src_ring_dmax_set(struct ath10k* ar,
         unsigned int n) {
     struct ath10k_hw_ce_ctrl1* ctrl_regs = ar->hw_ce_regs->ctrl1_regs;
     uint32_t ctrl1_addr = ath10k_pci_read32(ar,
-                                       ce_ctrl_addr + ctrl_regs->addr);
+                                            ce_ctrl_addr + ctrl_regs->addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ctrl_regs->addr,
                        (ctrl1_addr &  ~(ctrl_regs->dmax->mask)) |
@@ -219,7 +219,7 @@ static inline void ath10k_ce_copy_complete_inter_enable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_host_ie* host_ie = ar->hw_ce_regs->host_ie;
     uint32_t host_ie_addr = ath10k_pci_read32(ar, ce_ctrl_addr +
-                                         ar->hw_ce_regs->host_ie_addr);
+                                              ar->hw_ce_regs->host_ie_addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ar->hw_ce_regs->host_ie_addr,
                        host_ie_addr | host_ie->copy_complete->mask);
@@ -229,7 +229,7 @@ static inline void ath10k_ce_copy_complete_intr_disable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_host_ie* host_ie = ar->hw_ce_regs->host_ie;
     uint32_t host_ie_addr = ath10k_pci_read32(ar, ce_ctrl_addr +
-                                         ar->hw_ce_regs->host_ie_addr);
+                                              ar->hw_ce_regs->host_ie_addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ar->hw_ce_regs->host_ie_addr,
                        host_ie_addr & ~(host_ie->copy_complete->mask));
@@ -239,7 +239,7 @@ static inline void ath10k_ce_watermark_intr_disable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_host_wm_regs* wm_regs = ar->hw_ce_regs->wm_regs;
     uint32_t host_ie_addr = ath10k_pci_read32(ar, ce_ctrl_addr +
-                                         ar->hw_ce_regs->host_ie_addr);
+                                              ar->hw_ce_regs->host_ie_addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ar->hw_ce_regs->host_ie_addr,
                        host_ie_addr & ~(wm_regs->wm_mask));
@@ -249,7 +249,7 @@ static inline void ath10k_ce_error_intr_enable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_misc_regs* misc_regs = ar->hw_ce_regs->misc_regs;
     uint32_t misc_ie_addr = ath10k_pci_read32(ar, ce_ctrl_addr +
-                                         ar->hw_ce_regs->misc_ie_addr);
+                                              ar->hw_ce_regs->misc_ie_addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ar->hw_ce_regs->misc_ie_addr,
                        misc_ie_addr | misc_regs->err_mask);
@@ -259,7 +259,7 @@ static inline void ath10k_ce_error_intr_disable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_misc_regs* misc_regs = ar->hw_ce_regs->misc_regs;
     uint32_t misc_ie_addr = ath10k_pci_read32(ar, ce_ctrl_addr +
-                                         ar->hw_ce_regs->misc_ie_addr);
+                                              ar->hw_ce_regs->misc_ie_addr);
 
     ath10k_pci_write32(ar, ce_ctrl_addr + ar->hw_ce_regs->misc_ie_addr,
                        misc_ie_addr & ~(misc_regs->err_mask));
@@ -683,8 +683,7 @@ zx_status_t ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
         /* Return data from completed source descriptor */
         *bufferp = desc->addr;
         *nbytesp = desc->nbytes;
-        *transfer_idp = MS(desc->flags,
-                           CE_DESC_FLAGS_META_DATA);
+        *transfer_idp = MS(desc->flags, CE_DESC_FLAGS_META_DATA);
 
         if (per_transfer_contextp)
             *per_transfer_contextp =
@@ -1094,8 +1093,8 @@ zx_status_t ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
     if (attr->dest_nentries) {
         ret = ath10k_ce_alloc_dest_ring(ar, ce_id, attr, &ce_state->dest_ring);
         if (ret != ZX_OK) {
-            ath10k_err("failed to allocate copy engine destination ring %d: %d\n",
-                       ce_id, ret);
+            ath10k_err("failed to allocate copy engine destination ring %d: %s\n",
+                       ce_id, zx_status_get_string(ret));
             ce_state->dest_ring = NULL;
             return ret;
         }
