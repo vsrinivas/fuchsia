@@ -93,6 +93,11 @@ void __stack_chk_fail(void);
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;
 void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
 
+// Hook for extension libraries to return the maximum number of files that
+// a process can have open at any time. Used to answer sysconf(_SC_OPEN_MAX).
+// Returns -1 if the value is unknown.
+int _fd_open_max(void);
+
 extern char** __environ;
 
 #undef weak_alias

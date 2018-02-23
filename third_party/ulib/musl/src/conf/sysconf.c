@@ -20,6 +20,7 @@
 #define JT_AVPHYS_PAGES JT(9)
 #define JT_ZERO JT(10)
 #define JT_CHILD_MAX JT(11)
+#define JT_OPEN_MAX JT(12)
 
 long sysconf(int name) {
     static const short values[] = {
@@ -27,7 +28,7 @@ long sysconf(int name) {
             [_SC_CHILD_MAX] = JT_CHILD_MAX,
             [_SC_CLK_TCK] = 100,
             [_SC_NGROUPS_MAX] = 32,
-            [_SC_OPEN_MAX] = 256,
+            [_SC_OPEN_MAX] = JT_OPEN_MAX,
             [_SC_STREAM_MAX] = -1,
             [_SC_TZNAME_MAX] = TZNAME_MAX,
             [_SC_JOB_CONTROL] = 1,
@@ -206,6 +207,8 @@ long sysconf(int name) {
         return 0;
     case JT_CHILD_MAX & 255:
         return UINT32_MAX;
+    case JT_OPEN_MAX & 255:
+        return _fd_open_max();
     }
     return values[name];
 }

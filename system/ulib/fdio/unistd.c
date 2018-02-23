@@ -2201,3 +2201,7 @@ int statfs(const char* path, struct statfs* buf) {
     close(fd);
     return rv;
 }
+
+int _fd_open_max(void) {
+    return FDIO_MAX_FD;
+}

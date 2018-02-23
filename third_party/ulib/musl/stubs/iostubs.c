@@ -483,3 +483,8 @@ static int stub_uname(struct utsname* uts) {
     return -1;
 }
 weak_alias(stub_uname, uname);
+
+static int stub__fd_open_max(void) {
+    return -1;
+}
+weak_alias (stub__fd_open_max, _fd_open_max);
