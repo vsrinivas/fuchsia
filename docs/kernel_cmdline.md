@@ -54,10 +54,10 @@ otherwise remain at 0.
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
-zircon\_driver\_info, and can be found as the second argument to the
+zircon\_driver\_info, and can be found as the first argument to the
 ZIRCON\_DRIVER\_BEGIN macro.
 
-Example: `driver.usb-audio.disable`
+Example: `driver.usb_audio.disable`
 
 ## driver.\<name>.log=\<flags>
 
@@ -71,7 +71,12 @@ The default log flags for a driver is "error", "warn", and "info".
 Individual drivers may define their own log flags beyond the eight mentioned
 above.
 
-Example: `driver.usb-audio.log=-error,+info,+0x1000`
+Example: `driver.usb_audio.log=-error,+info,+0x1000`
+
+Note again that the name of the driver is the "Driver" argument to the
+ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
+which for some drivers is almost identical, except that the device may be
+named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
 ## gfxconsole.early=\<bool>
 
