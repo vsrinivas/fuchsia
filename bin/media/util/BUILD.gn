@@ -39,6 +39,8 @@ source_set("host_compatible") {
     "thread_aware_shared_ptr.h",
     "priority_queue_of_unique_ptr.h",
     "safe_clone.h",
+    "threadsafe_callback_joiner.cc",
+    "threadsafe_callback_joiner.h",
   ]
 
   deps = [

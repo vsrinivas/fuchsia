@@ -11,7 +11,8 @@
 namespace media {
 
 // CallbackJoiner is used to take action after multiple 'child' operations are
-// completed.
+// completed. CallbackJoiner is not threadsafe and should be used with only
+// one thread.
 //
 // A CallbackJoiner maintains a counter of child operations and will call a
 // callback when the counter is zero. The Spawn method signals the start of a
@@ -49,9 +50,7 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   // Creates a CallbackJoiner and returns a shared pointer to it.
   // CallbackJoiners created in this way can safely create callbacks via the
   // NewCallback method.
-  static std::shared_ptr<CallbackJoiner> Create() {
-    return std::make_shared<CallbackJoiner>();
-  }
+  static std::shared_ptr<CallbackJoiner> Create();
 
   // Constructs a CallbackJoiner. NOTE: CallbackJoiner::NewCallback only works
   // for CallbackJoiners that already have shared pointers to them. The static
@@ -62,55 +61,26 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   ~CallbackJoiner();
 
   // Indicates the initiation of a child operation. Every call to Spawn should
-  // be matched by a subsequent call to Complete.
+  // be matched by a subsequent call to |Complete|.
   void Spawn() { ++counter_; }
 
   // Indicates the completion of a child operation.
-  void Complete() {
-    FXL_DCHECK(counter_ != 0);
-    --counter_;
-    if (counter_ == 0 && join_callback_) {
-      std::function<void()> join_callback;
-      join_callback = join_callback_;
-      join_callback_ = nullptr;
-      join_callback();
-    }
-  }
+  void Complete();
 
   // Calls Spawn and returns a new callback, which calls Complete. THIS METHOD
   // WILL ONLY WORK IF THERE IS ALREADY A SHARED POINTER TO THIS OBJECT.
-  std::function<void()> NewCallback() {
-    Spawn();
-    std::shared_ptr<CallbackJoiner> this_ptr = shared_from_this();
-    FXL_DCHECK(!this_ptr.unique());
-    return [this_ptr]() {
-      FXL_DCHECK(this_ptr);
-      this_ptr->Complete();
-    };
-  }
+  std::function<void()> NewCallback();
 
   // Specifies a callback to be called when all child operations have completed.
   // If no child operations are currently pending, the callback is called
   // immediately. If child operations are pending, the callback is copied. The
-  // copy called later (and reset) when all child oeprations have completed.
+  // copy called later (and reset) when all child operations have completed.
   // Only one callback at a time can be registered with WhenJoined.
-  void WhenJoined(const std::function<void()>& join_callback) {
-    FXL_DCHECK(join_callback);
-    FXL_DCHECK(!join_callback_);
-    if (counter_ == 0) {
-      join_callback();
-    } else {
-      join_callback_ = join_callback;
-    }
-  }
+  void WhenJoined(const std::function<void()>& join_callback);
 
   // Cancels a callback registered with WhenJoined if it hasn't run yet. The
   // return value indicates whether a callback was cancelled.
-  bool Cancel() {
-    bool result = !!join_callback_;
-    join_callback_ = nullptr;
-    return result;
-  }
+  bool Cancel();
 
  private:
   size_t counter_ = 0;
