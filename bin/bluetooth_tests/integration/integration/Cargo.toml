@@ -1,0 +1,11 @@
+[package]
+name = "bluetooth"
+version = "0.1.0"
+authors = ["Benjamin Brittain <bwb@google.com>"]
+
+[dependencies]
+fuchsia-bluetooth = "0.1"
+fuchsia-zircon = "0.3"
+failure = "0.1"
+fdio = "0.2"
+rand = "0.4"

@@ -40,7 +40,8 @@ source_set("testing") {
     # does not depend on any logic from these libraries.
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
-
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
     "//third_party/googletest:gtest",
   ]
 }

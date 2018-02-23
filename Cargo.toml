@@ -10,6 +10,7 @@ members =  [
   "bin/wlantool",
   "bin/xi_core",
   "drivers/wlan/testing/util",
+  "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
