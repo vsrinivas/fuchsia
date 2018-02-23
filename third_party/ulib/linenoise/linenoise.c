@@ -118,7 +118,7 @@
 #include <poll.h>
 
 #ifdef __Fuchsia__
-#include <zircon/device/console.h>
+#include <zircon/device/pty.h>
 #include <fdio/io.h>
 #endif
 
@@ -317,10 +317,9 @@ static int getCursorPosition(int ifd, int ofd) {
  * if it fails. */
 static int getColumns(int ifd, int ofd) {
 #ifdef __Fuchsia__
-    ioctl_console_dimensions_t dims;
-    ssize_t r = fdio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS,NULL, 0, &dims,
-        sizeof(dims));
-    if (r != sizeof(dims)) {
+    pty_window_size_t wsz;
+    ssize_t r = ioctl_pty_get_window_size(0, &wsz);
+    if (r != sizeof(wsz)) {
 #else
     struct winsize ws;
 
@@ -353,7 +352,7 @@ static int getColumns(int ifd, int ofd) {
         return cols;
     } else {
 #ifdef __Fuchsia__
-        return dims.width;
+        return wsz.width;
 #else
         return ws.ws_col;
 #endif

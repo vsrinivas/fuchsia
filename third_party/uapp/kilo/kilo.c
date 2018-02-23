@@ -54,20 +54,20 @@
 #include <fcntl.h>
 
 #ifdef __Fuchsia__
-#include <zircon/device/console.h>
+#include <zircon/device/pty.h>
 
 static time_t time(void* arg) {
     return 0;
 }
 
 static int getConsoleSize(int *rows, int *cols) {
-    ioctl_console_dimensions_t dims;
-    ssize_t r = ioctl_console_get_dimensions(0, &dims);
-    if (r != sizeof(dims)) {
+    pty_window_size_t wsz;
+    ssize_t r = ioctl_pty_get_window_size(0, &wsz);
+    if (r != sizeof(wsz)) {
         return -1;
     }
-    *rows = dims.height;
-    *cols = dims.width;
+    *rows = wsz.height;
+    *cols = wsz.width;
     return 0;
 }
 
