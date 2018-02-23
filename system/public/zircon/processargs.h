@@ -155,9 +155,6 @@ struct zx_proc_args {
 
 // --- Various ---
 
-// Handle types used by the application model
-#define PA_APP_SERVICES          0x43
-
 // Handle types for one-off use and prototyping
 #define PA_USER0                 0xF0
 #define PA_USER1                 0xF1
