@@ -49,6 +49,23 @@ function fx-config-read {
   fi
 }
 
+# if $1 is "-d" or "--device" return
+#   - the netaddr if $2 looks like foo-bar-baz-flarg
+#     OR
+#   - $2 if it doesn't
+function get-device-addr {
+  if [[ "$1" == "-d" || "$1" == "--device" ]]; then
+    shift
+    device=""
+    if [[ "$1" == *"-"* ]]; then
+      device="$(fx-command-run netaddr $1 --fuchsia)"
+    else
+      device="$1"
+    fi
+    shift
+  fi
+}
+
 function fx-command-run {
   local -r command_name="$1"
   local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"

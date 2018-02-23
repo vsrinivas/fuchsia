@@ -11,4 +11,4 @@ fx-config-read
 
 fx-command-run run-update-svr -d
 
-fx-command-run amber-tunnel
+fx-command-run amber-tunnel "$@"
