@@ -7,24 +7,68 @@
 #include <errno.h>
 #include <unittest/unittest.h>
 
-// Returns true iff the given question's domain, qtype and qclass match the given values.
+// Test values.
+const uint8_t kRdata[4] = {0xA, 0xB, 0xC};
+const char kRrName[] = "test_rr";
+
+// Test state manages sample values for testing. It is always initialized the
+// same way.
+//
+// TODO(kjharland): Rector existing tests to use this and reduce boilerplate.
+struct test_data {
+    bool reset() {
+        // Init message.
+        mdns_init_message(&message);
+
+        // Init rr.
+        strcpy(rr.name, kRrName);
+        rr.type = RR_TYPE_AAAA;
+        rr.clazz = RR_CLASS_IN;
+        rr.rdata = (uint8_t*)kRdata;
+        rr.rdlength = sizeof(rr.rdata) / sizeof(uint8_t);
+        rr.ttl = 42;
+        return true;
+    }
+
+    mdns_message message;
+    mdns_rr rr;
+};
+
+// Returns true iff the given question has the given expected properties.
 static bool verify_question(mdns_question* q, char* domain, uint16_t qtype, uint16_t qclass) {
-    EXPECT_STR_EQ(q->domain, domain, "question has incorrect domain");
-    EXPECT_EQ(q->qtype, qtype, "question has incorrect type");
-    EXPECT_EQ(q->qclass, qclass, "question has incorrect class");
+    ASSERT_STR_EQ(q->domain, domain, "question has incorrect domain");
+    ASSERT_EQ(q->qtype, qtype, "question has incorrect type");
+    ASSERT_EQ(q->qclass, qclass, "question has incorrect class");
     return true;
 }
 
+// Returns true iff the given resource record has the given expected properties.
+static bool verify_rr(mdns_rr* rr,
+                      char* name,
+                      uint16_t type,
+                      uint16_t clazz,
+                      uint8_t* rdata,
+                      uint16_t rdlength,
+                      uint32_t ttl) {
+    ASSERT_STR_EQ(rr->name, name, "rr has incorrect name");
+    ASSERT_EQ(rr->type, type, "rr has incorrect type");
+    ASSERT_EQ(rr->clazz, clazz, "rr has incorrect class");
+    ASSERT_EQ(rr->rdlength, rdlength, "rr has incorrect rdlength");
+    ASSERT_EQ(rr->ttl, ttl, "rr has incorrect ttl");
+    return true;
+}
+
+// Returns true iff the given message is zeroed out.
 static bool verify_message_is_zeroed(mdns_message* message) {
-    EXPECT_EQ(message->header.id, 0, "id should be zero");
-    EXPECT_EQ(message->header.flags, 0, "flags should be zero");
-    EXPECT_EQ(message->header.qd_count, 0, "question count should be zero");
-    EXPECT_EQ(message->header.an_count, 0, "answer count should be zero");
-    EXPECT_EQ(message->header.ns_count, 0, "name server count should be zero");
-    EXPECT_EQ(message->header.ar_count, 0, "addition resource count should be zero");
-    EXPECT_NULL(message->questions, "questions should be null");
-    EXPECT_NULL(message->answers, "answers should be null");
-    EXPECT_NULL(message->authorities, "authorities should be null");
+    ASSERT_EQ(message->header.id, 0, "id should be zero");
+    ASSERT_EQ(message->header.flags, 0, "flags should be zero");
+    ASSERT_EQ(message->header.qd_count, 0, "question count should be zero");
+    ASSERT_EQ(message->header.an_count, 0, "answer count should be zero");
+    ASSERT_EQ(message->header.ns_count, 0, "name server count should be zero");
+    ASSERT_EQ(message->header.ar_count, 0, "addition resource count should be zero");
+    ASSERT_NULL(message->questions, "questions should be null");
+    ASSERT_NULL(message->answers, "answers should be null");
+    ASSERT_NULL(message->authorities, "authorities should be null");
     return true;
 }
 
@@ -116,6 +160,88 @@ static bool test_mdns_add_domain_too_long(void) {
     END_TEST;
 }
 
+static bool test_mdns_add_first_answer(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+
+    int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                 t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(retval, 0, "should return zero if no error");
+    EXPECT_NONNULL(t.message.answers, "answer was not added");
+    EXPECT_EQ(t.message.header.an_count, 1, "answer count should be one");
+    EXPECT_TRUE(verify_rr(t.message.answers, t.rr.name, t.rr.type, t.rr.clazz,
+                          t.rr.rdata, t.rr.rdlength, t.rr.ttl));
+
+    END_TEST;
+}
+
+static bool test_mdns_add_nth_answer(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+
+    int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                 t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(retval, 0, "should return zero if no error");
+
+    char other_name[] = "other name";
+    uint16_t other_type = RR_TYPE_A;
+    uint16_t other_clazz = RR_CLASS_IN;
+    uint8_t other_rdata[] = {t.rr.rdata[0]};
+    uint16_t other_rdlength = sizeof(other_rdata) / sizeof(uint8_t);
+    uint32_t other_ttl = t.rr.ttl + 1;
+    retval = mdns_add_answer(&t.message, other_name, other_type, other_clazz,
+                             other_rdata, other_rdlength, other_ttl);
+    EXPECT_NONNULL(t.message.answers, "answer was not added");
+    EXPECT_EQ(t.message.header.an_count, 2, "answer count should be two");
+
+    EXPECT_TRUE(verify_rr(t.message.answers, t.rr.name, t.rr.type, t.rr.clazz,
+                          t.rr.rdata, t.rr.rdlength, t.rr.ttl));
+
+    EXPECT_NONNULL(t.message.answers->next, "second answer was not added");
+    EXPECT_TRUE(verify_rr(t.message.answers->next, other_name, other_type,
+                          other_clazz, other_rdata, other_rdlength, other_ttl));
+    EXPECT_NULL(t.message.answers->next->next,
+                "second answer nextptr should be null");
+
+    END_TEST;
+}
+
+static bool test_mdns_add_answer_bad_rr_type(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+    t.rr.type = (uint16_t)(RR_TYPE_A + 1); // Unsupported record type.
+    int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                 t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(errno, EINVAL, "errno should be EINVAL when given bad rr type");
+    EXPECT_EQ(retval, -1, "should return value < zero on error");
+    EXPECT_NULL(t.message.answers, "should not have added answer to message");
+    EXPECT_EQ(t.message.header.an_count, 0, "answer count should be zero");
+
+    END_TEST;
+}
+
+static bool test_mdns_add_answer_bad_rr_class(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+    t.rr.clazz = (uint16_t)(RR_CLASS_IN + 1); // Unsupported record class.
+    int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                 t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(errno, EINVAL, "errno should be EINVAL when given bad rr class");
+    EXPECT_EQ(retval, -1, "should return value < zero on error");
+    EXPECT_NULL(t.message.answers, "should not have added answer to message");
+    EXPECT_EQ(t.message.header.an_count, 0, "answer count should be zero");
+
+    END_TEST;
+}
+
 static bool test_mdns_free_message(void) {
     BEGIN_TEST;
 
@@ -151,6 +277,13 @@ RUN_TEST(test_mdns_add_first_question)
 RUN_TEST(test_mdns_add_nth_question)
 RUN_TEST(test_mdns_add_domain_too_long)
 END_TEST_CASE(mdns_add_question)
+
+BEGIN_TEST_CASE(mdns_add_answer)
+RUN_TEST(test_mdns_add_first_answer)
+RUN_TEST(test_mdns_add_nth_answer)
+RUN_TEST(test_mdns_add_answer_bad_rr_type)
+RUN_TEST(test_mdns_add_answer_bad_rr_class)
+END_TEST_CASE(mdns_add_answer)
 
 int main(int argc, char* argv[]) {
     return unittest_run_all_tests(argc, argv) ? 0 : -1;

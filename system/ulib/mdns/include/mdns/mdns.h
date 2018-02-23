@@ -23,11 +23,42 @@ extern "C" {
 #define MDNS_IPV6_ADDRESS "ff02::fb";
 
 // The maxinum number of characters in a domain name.
-#define MAX_DOMAIN_LENGTH 253
+#define MAX_DOMAIN_LENGTH 255
 #define MAX_DOMAIN_LABEL 63
 
 // The number of bytes in a DNS message header.
 #define MDNS_HEADER_SIZE 12
+
+/**
+ * Resource record types.
+ *
+ * A record type communicates a given record's intended-use.
+ *
+ * This list is incomplete, since all record types are not necessarily useful to
+ * Zircon. Add to this list as needed.
+ **/
+
+// A records contain 32-bit IPv4 host addresses. They are used to map hostnames
+// to IP addresses of a given host.
+#define RR_TYPE_A 0x01
+
+// AAAA Records contain 128-bit IPv6 host addresses. Used to map hostnames IP
+// addresses of a given host.
+#define RR_TYPE_AAAA 0x1C
+
+/**
+ * Resource record classes.
+ *
+ * These are DNS classes, which are individual namespaces that map to various
+ * DNS Zones.
+ *
+ * This list is incomplete, since all record classes are not necessarily useful
+ * to Zircon. Add to this list as needed.
+ **/
+
+// IN is a class for common DNS records involving internet hostnames, servers
+// or IP addresses.
+#define RR_CLASS_IN 0x0001
 
 // A DNS message header.
 //
@@ -86,7 +117,7 @@ typedef struct mdns_header_t {
 
 // An mDNS question.
 typedef struct mdns_question_t {
-    char domain[MAX_DOMAIN_LENGTH+1];
+    char domain[MAX_DOMAIN_LENGTH + 1];
     uint16_t qtype;
     uint16_t qclass;
     struct mdns_question_t* next;
@@ -94,7 +125,7 @@ typedef struct mdns_question_t {
 
 // An mDNS resource record
 typedef struct mdns_rr_t {
-    char* name;
+    char name[MAX_DOMAIN_LENGTH + 1];
     uint16_t type;
     uint16_t clazz;
     uint32_t ttl;
@@ -125,10 +156,37 @@ void mdns_init_message(mdns_message* message);
 // the actual number of questions in the message.  If memory cannot be
 // allocated for the question, a negative value is returned and errno is set to
 // ENOMEM.
+//
+// Returns 0 on success.
 int mdns_add_question(mdns_message* message,
                       const char* domain,
                       uint16_t qtype,
                       uint16_t qclass);
+
+// Appends an answer resource record to a message.
+//
+// Assumes mdns_init_message(&message) has been called.
+//
+// name is the domain name associated with this resource record, and is expected
+// to be a null-terminated string. Type must be one of the RR_TYPE* constants
+// and specifies the type of rdata. clazz must be one the RR_CLASS* constants
+// and specifies the class of rdata. If type or clazz is invalid, a negative
+// value is returned and errno is set to EINVAL. rdata and rdlenth are the data
+// and its length, respectively. ttl specifies the time interval in seconds that
+// the record may be cached before it should be discarded. A ttl of zero means
+// that the record should not be cached.
+//
+// If memory cannot be allocated for the resource record, a negative value is
+// returned and errno is set to ENOMEM.
+//
+// Returns 0 on success.
+int mdns_add_answer(mdns_message*,
+                    char* name,
+                    uint16_t type,
+                    uint16_t clazz,
+                    uint8_t* rdata,
+                    uint16_t rdlength,
+                    uint32_t ttl);
 
 // Zeroes all pointers and values associated with the given message.
 //
@@ -137,6 +195,5 @@ int mdns_add_question(mdns_message* message,
 void mdns_free_message(mdns_message* message);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
-
