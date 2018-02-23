@@ -496,18 +496,6 @@ TEST(Vulkan, Readback)
     ASSERT_TRUE(test.Readback());
 }
 
-TEST(Vulkan, ReadbackExternalMemoryFD)
-{
-    VkReadbackTest export_app(VkReadbackTest::EXTERNAL_MEMORY_FD);
-    VkReadbackTest import_app(VkReadbackTest::EXTERNAL_MEMORY_FD);
-
-    ASSERT_TRUE(export_app.Initialize());
-    import_app.set_device_memory_handle(export_app.get_device_memory_handle());
-    ASSERT_TRUE(import_app.Initialize());
-    ASSERT_TRUE(export_app.Exec());
-    ASSERT_TRUE(import_app.Readback());
-}
-
 TEST(Vulkan, ReadbackExternalMemoryFuchsia)
 {
     VkReadbackTest export_app(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
