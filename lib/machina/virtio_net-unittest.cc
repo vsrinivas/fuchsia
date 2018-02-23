@@ -52,7 +52,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
   uint32_t count;
   eth_fifo_entry_t entry[fifos_.rx_depth];
   ASSERT_EQ(ZX_OK, net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth,
-                                   fifos_.rx_fifo));
+                                   fifos_.rx_fifo, true));
 
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
@@ -83,7 +83,7 @@ TEST_F(VirtioNetTest, InvalidDesc) {
   eth_fifo_entry_t entry = {};
   ASSERT_EQ(zx_fifo_write(fifo_[1], &entry, sizeof(entry), &count), ZX_OK);
   ASSERT_EQ(count, 1u);
-  ASSERT_EQ(net_.DrainQueue(net_.rx_queue(), QUEUE_SIZE, fifo_[0]),
+  ASSERT_EQ(net_.DrainQueue(net_.rx_queue(), QUEUE_SIZE, fifo_[0], true),
             ZX_ERR_IO_DATA_INTEGRITY);
 }
 
@@ -94,7 +94,7 @@ TEST_F(VirtioNetTest, PeerClosed) {
 
   ASSERT_EQ(zx_handle_close(fifo_[0]), ZX_OK);
   ASSERT_EQ(
-      net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth, fifos_.rx_fifo),
+      net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth, fifos_.rx_fifo, true),
       ZX_ERR_PEER_CLOSED);
 }
 

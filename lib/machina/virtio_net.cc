@@ -177,7 +177,8 @@ zx_status_t VirtioNet::DrainFifo(zx_handle_t fifo,
 
 zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
                                   uint32_t max_entries,
-                                  zx_handle_t fifo) {
+                                  zx_handle_t fifo,
+                                  bool rx) {
   eth_fifo_entry_t entries[max_entries];
 
   // Wait on first descriptor chain to become available.
@@ -200,6 +201,22 @@ zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
     }
 
     auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
+    if (rx) {
+      // Section 5.1.6.4.1 Device Requirements: Processing of Incoming Packets
+
+      // If VIRTIO_NET_F_MRG_RXBUF has not been negotiated, the device MUST
+      // set num_buffers to 1.
+      header->num_buffers = 1;
+
+      // If none of the VIRTIO_NET_F_GUEST_TSO4, TSO6 or UFO options have been
+      // negotiated, the device MUST set gso_type to VIRTIO_NET_HDR_GSO_NONE.
+      header->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+
+      // If VIRTIO_NET_F_GUEST_CSUM is not negotiated, the device MUST set
+      // flags to zero and SHOULD supply a fully checksummed packet to the
+      // driver.
+      header->flags = 0;
+    }
     entries[num_entries] = {
         .offset = static_cast<uint32_t>(
             reinterpret_cast<uintptr_t>(header + 1) - phys_mem().addr()),
@@ -233,7 +250,7 @@ zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
 zx_status_t VirtioNet::ReceiveLoop() {
   zx_status_t status;
   do {
-    status = DrainQueue(rx_queue(), fifos_.rx_depth, fifos_.rx_fifo);
+    status = DrainQueue(rx_queue(), fifos_.rx_depth, fifos_.rx_fifo, true);
   } while (status == ZX_OK);
   return status;
 }
@@ -241,7 +258,7 @@ zx_status_t VirtioNet::ReceiveLoop() {
 zx_status_t VirtioNet::TransmitLoop() {
   zx_status_t status;
   do {
-    status = DrainQueue(tx_queue(), fifos_.tx_depth, fifos_.tx_fifo);
+    status = DrainQueue(tx_queue(), fifos_.tx_depth, fifos_.tx_fifo, false);
   } while (status == ZX_OK);
   return status;
 }

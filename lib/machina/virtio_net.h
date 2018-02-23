@@ -25,7 +25,8 @@ class VirtioNet : public VirtioDevice {
   // Drains a Virtio queue, and passes data to the underlying Ethernet device.
   zx_status_t DrainQueue(VirtioQueue* queue,
                          uint32_t max_entries,
-                         zx_handle_t fifo);
+                         zx_handle_t fifo,
+                         bool rx);
 
   VirtioQueue* rx_queue() { return &queues_[0]; }
   VirtioQueue* tx_queue() { return &queues_[1]; }
