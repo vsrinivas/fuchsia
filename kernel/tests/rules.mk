@@ -33,6 +33,6 @@ MODULE_DEPS += \
     third_party/lib/safeint \
     kernel/lib/unittest \
 
-MODULE_COMPILEFLAGS += -Wno-format -fno-builtin
+MODULE_COMPILEFLAGS += -fno-builtin
 
 include make/module.mk

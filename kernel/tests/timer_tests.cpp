@@ -53,7 +53,7 @@ static void timer_test_all_cpus(void) {
             NULL, name, timer_do_one_thread, NULL,
             DEFAULT_PRIORITY, NULL, NULL, DEFAULT_STACK_SIZE, NULL);
         if (timer_threads[i] == NULL) {
-            printf("failed to create thread for cpu %d\n", i);
+            printf("failed to create thread for cpu %u\n", i);
             return;
         }
         thread_set_cpu_affinity(timer_threads[i], cpu_num_to_mask(i));

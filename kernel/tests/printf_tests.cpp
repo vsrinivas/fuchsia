@@ -30,9 +30,9 @@ static bool test_printf(const char* expected, const char* format, ...) {
     }
     if (length != (int)strlen(expected) ||
         memcmp(buf, expected, length + 1) != 0) {
-        printf("expected: \"%s\" (length %d)\n",
-               expected, (int)strlen(expected));
-        printf("but got:  \"%s\" (length %d) with return value %d)\n",
+        printf("expected: \"%s\" (length %zu)\n",
+               expected, strlen(expected));
+        printf("but got:  \"%s\" (length %zu) with return value %d)\n",
                buf, strlen(buf), length);
         return false;
     }

@@ -123,7 +123,7 @@ static int event_waiter(void* arg) {
         printf("thread %p: waiting on event...\n", get_current_thread());
         zx_status_t err = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
         if (err == ZX_ERR_INTERNAL_INTR_KILLED) {
-            printf("thread %p: killed\n");
+            printf("thread %p: killed\n", get_current_thread());
             return -1;
         } else if (err < 0) {
             printf("thread %p: event_wait() returned error %d\n", get_current_thread(), err);
@@ -380,35 +380,35 @@ static int join_tester_server(void* arg) {
     t = thread_create("join tester", &join_tester, (void*)1, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
     ret = 99;
-    printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
+    printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic, (unsigned)THREAD_MAGIC);
     err = thread_join(t, &ret, ZX_TIME_INFINITE);
     printf("\tthread_join returns err %d, retval %d\n", err, ret);
-    printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
+    printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic);
 
     printf("\tcreating and waiting on thread to exit with thread_join, after thread has exited\n");
     t = thread_create("join tester", &join_tester, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
     thread_sleep_relative(ZX_SEC(1)); // wait until thread is already dead
     ret = 99;
-    printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
+    printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic, (unsigned)THREAD_MAGIC);
     err = thread_join(t, &ret, ZX_TIME_INFINITE);
     printf("\tthread_join returns err %d, retval %d\n", err, ret);
-    printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
+    printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic);
 
     printf("\tcreating a thread, detaching it, let it exit on its own\n");
     t = thread_create("join tester", &join_tester, (void*)3, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_detach(t);
     thread_resume(t);
     thread_sleep_relative(ZX_SEC(1)); // wait until the thread should be dead
-    printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
+    printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic);
 
     printf("\tcreating a thread, detaching it after it should be dead\n");
     t = thread_create("join tester", &join_tester, (void*)4, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
     thread_sleep_relative(ZX_SEC(1)); // wait until thread is already dead
-    printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
+    printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic, (unsigned)THREAD_MAGIC);
     thread_detach(t);
-    printf("\tthread magic is 0x%x\n", t->magic);
+    printf("\tthread magic is 0x%x\n", (unsigned)t->magic);
 
     printf("\texiting join tester server\n");
 
