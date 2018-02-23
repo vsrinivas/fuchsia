@@ -20,11 +20,17 @@ inline float GainScaleToDb(audio::Gain::AScale gain_scale) {
 
 // Numerically compare two buffers of integers.
 template <typename T>
-bool CompareBuffers(const T* actual, const T* expected, uint32_t buf_size);
+bool CompareBuffers(const T* actual,
+                    const T* expected,
+                    uint32_t buf_size,
+                    bool expect_to_pass = true);
 
 // Numerically compare a buffer of integers to a specific value.
 template <typename T>
-bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size);
+bool CompareBufferToVal(const T* buf,
+                        T val,
+                        uint32_t buf_size,
+                        bool expect_to_pass = true);
 
 }  // namespace test
 }  // namespace media

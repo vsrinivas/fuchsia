@@ -72,6 +72,7 @@ class SampleScaler<
     typename std::enable_if<(ScaleType == ScalerType::LT_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
+    // Called extremely frequently: 1 MUL, 1 SHIFT
     // TODO(mpuryear): MTWN-80 Round before shifting down
     return static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
                                 Gain::kFractionalScaleBits);
@@ -93,7 +94,7 @@ class SampleScaler<
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     using Limit = std::numeric_limits<int16_t>;
-
+    // Called extremely frequently: 1 MUL, 1 SHIFT
     // TODO(mpuryear): MTWN-80 Round before shifting down
     val = static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
                                Gain::kFractionalScaleBits);

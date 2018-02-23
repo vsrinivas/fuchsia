@@ -14,6 +14,7 @@ namespace audio {
 
 constexpr unsigned int Gain::kFractionalScaleBits;
 constexpr Gain::AScale Gain::kUnityScale;
+constexpr Gain::AScale Gain::kMaxScale;
 constexpr float Gain::kMinGain;
 constexpr float Gain::kMaxGain;
 
@@ -31,10 +32,11 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
   // TODO(mpuryear): MTWN-71 clamp output_db_gain to 0, instead of kMaxGain?
   db_current_output_gain_ = fbl::clamp(output_db_gain, kMinGain, kMaxGain);
 
+  float effective_gain = fbl::clamp(
+      db_current_rend_gain_ + db_current_output_gain_, kMinGain, kMaxGain);
+
   // If either the renderer, output, or combined gain is at the force mute
   // point, just zero out the amplitude scale and return that.
-  float effective_gain = db_current_rend_gain_ + db_current_output_gain_;
-
   if ((db_current_rend_gain_ <= kMinGain) ||
       (db_current_output_gain_ <= kMinGain) || (effective_gain <= kMinGain)) {
     amplitude_scale_ = 0u;
@@ -42,14 +44,13 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
     // Compute the amplitude scale factor as a double and sanity check before
     // converting to the fixed point representation.
     double amp_scale = pow(10.0, effective_gain / 20.0);
-    // TODO(mpuryear): MTWN-72 Along with the DCHECK, Release builds should
-    // ensure that combined gain does not exceed our 4.28 container.
-    FXL_DCHECK(amp_scale <
-               (1u << ((sizeof(AScale) * 8) - kFractionalScaleBits)));
+    static_assert((kMaxScale) < (std::numeric_limits<uint32_t>::max()),
+                  "kMaxScale exceeds the capacity of our AScale container!");
 
     amp_scale *= static_cast<double>(kUnityScale);
     // TODO(mpuryear): MTWN-73 round amp_scale instead of truncating
     amplitude_scale_ = static_cast<AScale>(amp_scale);
+    FXL_DCHECK(amplitude_scale_ <= kMaxScale);
   }
 
   return amplitude_scale_;

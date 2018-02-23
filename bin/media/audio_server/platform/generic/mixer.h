@@ -77,6 +77,7 @@ class Mixer {
   // distortion.  If this becomes a problem, we should consider switching to
   // some form of (N,M) stepping system where we count by frac_step_size for N
   // output samples, then frac_step_size+1 for M samples, etc...
+  // MTWN-49 represents this work.
   //
   // @param amplitude_scale
   // The scale factor for the amplitude to be applied when mixing.  Currently,
@@ -93,7 +94,7 @@ class Mixer {
   // source buffer and will need more of it in the future.
   //
   // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
-  // src_frames, as number of frames was never intended to be fractional.
+  // src_frames, as number of src_frames was never intended to be fractional.
   virtual bool Mix(int32_t* dst,
                    uint32_t dst_frames,
                    uint32_t* dst_offset,

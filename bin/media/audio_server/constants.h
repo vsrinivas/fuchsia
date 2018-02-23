@@ -18,11 +18,17 @@ namespace audio {
 // units to work with.  At 192KHz, this allows for ~372.7 years of usable range
 // before rollover when starting from a frame counter of 0.
 //
-// With 12 bits of fractional position, we can only specify rates to 244 ppm.
-// Nominally mixing at 48 kHz, this equates to rate increments of ~12 Hz. It
-// also significantly limits our interpolation accuracy: fractional position has
-// an inherent error of 2^-12, so interpolated values have potential worst-case
-// error of [pos_error * max_intersample_delta], or the bottom 4 bits of signal.
+// With 12 bits of fractional position, a mix job's interpolation precision is
+// only +/-122 ppm. Across multiple mixes we stay in sync, but for any single
+// mix this is our granularity. As an example, when resampling a 48 kHz audio
+// packet, the "clicks on the dial" of actual resampling rates are 12 Hz
+// increments. Again, we do correct any positional error at packet boundaries.
+// TODO(mpuryear): MTWN-49 Use rate ratios (not frac_step_size) when resampling.
+//
+// This also affects interpolation accuracy: because fractional position has a
+// potential error of 2^-12, the worst-case error for an interpolated value can
+// be [pos_err * max_intersample_delta] -- or restated, only the top 12 bits of
+// output audio are guaranteed to be accurate.
 // TODO(mpuryear): MTWN-86 Consider increasing our fractional position precision
 constexpr uint32_t kPtsFractionalBits = 12;
 

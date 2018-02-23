@@ -43,12 +43,6 @@ treating Output and Renderer gains identically. This differs from documented
 limits for Master (Output) gain: via the SetMasterGain API, this has a maximum
 value of 0.0 dB.
 
-*   MTWN-72
-
-    Related to the above, Release and Debug builds have divergent behavior for
-combined gains in the range of (24.0824, 48.1648]: Debug builds DCHECK, while
-Release builds rollover into extremely low gain values.
-
 *   MTWN-70
 
     The Gain object contains two functions, through which clients can provide

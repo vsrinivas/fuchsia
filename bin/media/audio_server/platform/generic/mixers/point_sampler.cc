@@ -229,6 +229,10 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
 
       soff += avail * frac_step_size;
       doff += avail;
+      // Note: if "accumulate" is NOT set, we should have cleared the buffer
+      // (but didn't). This likely isn't worth the effort to address, because
+      // StandardOutputBase::Process zeroes buffers before using them to mix.
+      // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
 

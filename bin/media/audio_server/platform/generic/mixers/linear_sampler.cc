@@ -172,8 +172,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       soff += avail * frac_step_size;
       doff += avail;
       // Note: if "accumulate" is NOT set, we should have cleared the buffer
-      // (but didn't). This likely isn't worth our effort- StandardOutputBase::
-      // Process always zeroes a buffer before using it to mix.
+      // (but didn't). This likely isn't worth the effort to address, because
+      // StandardOutputBase::Process zeroes buffers before using them to mix.
       // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
@@ -325,6 +325,10 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
 
       soff += avail * frac_step_size;
       doff += avail;
+      // Note: if "accumulate" is NOT set, we should have cleared the buffer
+      // (but didn't). This likely isn't worth the effort to address, because
+      // StandardOutputBase::Process zeroes buffers before using them to mix.
+      // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
 
@@ -354,6 +358,8 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
     for (size_t D = 0; D < chan_count; ++D) {
       filter_data_u_[D] = SampleNormalizer<SType>::Read(src + S + D);
     }
+    // TODO(mpuryear): MTWN-78 Return TRUE if we complete both dst and src?
+    // Should we hold a buf if we consume its last frame but don't need more?
     return (doff < dst_frames);
   }
 
