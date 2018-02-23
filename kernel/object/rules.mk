@@ -42,6 +42,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/resources.cpp \
     $(LOCAL_DIR)/semaphore.cpp \
     $(LOCAL_DIR)/socket_dispatcher.cpp \
+    $(LOCAL_DIR)/suspend_token_dispatcher.cpp \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
     $(LOCAL_DIR)/timer_dispatcher.cpp \
     $(LOCAL_DIR)/vcpu_dispatcher.cpp \

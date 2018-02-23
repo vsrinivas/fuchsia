@@ -315,6 +315,14 @@ syscall task_resume
     (task_handle: zx_handle_t, options: uint32_t)
     returns (zx_status_t);
 
+syscall task_suspend_token
+    (task_handle: zx_handle_t)
+    returns (zx_status_t, token: zx_handle_t handle_acquire);
+
+syscall task_resume_from_exception
+    (task_handle: zx_handle_t, eport: zx_handle_t, options: uint32_t)
+    returns (zx_status_t);
+
 syscall task_kill
     (task_handle: zx_handle_t)
     returns (zx_status_t);

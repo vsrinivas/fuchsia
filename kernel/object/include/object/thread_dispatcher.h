@@ -130,8 +130,17 @@ public:
                                          const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
                                          ExceptionStatus* out_estatus);
+
     // Called when an exception handler is finished processing the exception.
+    // TODO(brettw) ZX-1072 Remove this when all callers are updated to use
+    // the exception port variant below.
     zx_status_t MarkExceptionHandled(ExceptionStatus estatus);
+
+    // Called when an exception handler is finished processing the exception.
+    // The exception is only continued if the eport corresponds to the current
+    // exception port.
+    zx_status_t MarkExceptionHandled(PortDispatcher* eport, ExceptionStatus status);
+
     // Called when exception port |eport| is removed.
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
@@ -210,6 +219,10 @@ private:
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};
+
+    // Tracks the number of times Suspend() has been called. Resume() will resume this thread
+    // only when this reference count reaches 0.
+    int suspend_count_ = 0;
 
     // Used to protect thread name read/writes
     mutable SpinLock name_lock_;

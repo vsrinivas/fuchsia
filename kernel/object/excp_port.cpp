@@ -221,6 +221,11 @@ void ExceptionPort::OnTargetUnbind() {
     LTRACE_EXIT_OBJ;
 }
 
+bool ExceptionPort::PortMatches(const PortDispatcher *port, bool allow_null) {
+    fbl::AutoLock lock(&lock_);
+    return (allow_null && port_ == nullptr) || port_.get() == port;
+}
+
 zx_status_t ExceptionPort::SendPacketWorker(uint32_t type, zx_koid_t pid, zx_koid_t tid) {
     AutoLock lock(&lock_);
     LTRACEF("%s, type %u, pid %" PRIu64 ", tid %" PRIu64 "\n",

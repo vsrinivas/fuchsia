@@ -367,7 +367,13 @@ zx_status_t ThreadDispatcher::Suspend() {
     if (state_ != State::RUNNING && state_ != State::SUSPENDED)
         return ZX_ERR_BAD_STATE;
 
-    return thread_suspend(&thread_);
+    DEBUG_ASSERT(suspend_count_ >= 0);
+    suspend_count_++;
+    if (suspend_count_ == 1)
+      return thread_suspend(&thread_);
+
+    // It was already suspended.
+    return ZX_OK;
 }
 
 zx_status_t ThreadDispatcher::Resume() {
@@ -379,10 +385,18 @@ zx_status_t ThreadDispatcher::Resume() {
 
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
-    if (state_ != State::RUNNING && state_ != State::SUSPENDED)
+    // TODO(brettw) ZX-1072 :The suspend_count_ == 0 check can be removed and converted to an
+    // assertion when the bug is fixed. In that case, the suspend token shouldn't be calling Resume
+    // unless it's previously suspended it. Currently callers can bypass this invariant using the
+    // legacy suspend/resume API so give a good error.
+    // DEBUG_ASSERT(suspend_count_ > 0)
+    if ((state_ != State::RUNNING && state_ != State::SUSPENDED) || suspend_count_ == 0)
         return ZX_ERR_BAD_STATE;
 
-    thread_resume(&thread_);
+    suspend_count_--;
+    if (suspend_count_ == 0)
+        thread_resume(&thread_);
+    // Otherwise there's still an out-standing Suspend() call so keep it suspended.
     return ZX_OK;
 }
 
@@ -706,6 +720,8 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     return status;
 }
 
+// TODO(brettw) ZX-1072 Remove this when all callers are updated to use
+// the exception port variant below.
 zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
@@ -725,6 +741,38 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     // first, or we might get called a second time for the same exception.
     // It's critical that we don't re-arm the event after the thread wakes up.
     // To keep things simple we take a first-one-wins approach.
+    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
+    if (exception_status_ != ExceptionStatus::UNPROCESSED)
+        return ZX_ERR_BAD_STATE;
+
+    exception_status_ = estatus;
+    event_signal(&exception_event_, true);
+    return ZX_OK;
+}
+
+zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport,
+                                                   ExceptionStatus estatus) {
+    canary_.Assert();
+
+    LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
+    DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
+                 estatus != ExceptionStatus::UNPROCESSED);
+
+    AutoLock lock(get_lock());
+    if (!InExceptionLocked())
+        return ZX_ERR_BAD_STATE;
+
+    // The exception port isn't used directly but is instead proof that the caller has permission to
+    // resume from the exception. So validate that it corresponds to the task being resumed.
+    if (!exception_wait_port_->PortMatches(eport, false))
+        return ZX_ERR_ACCESS_DENIED;
+
+    // The thread can be in several states at this point. Alas this is a bit complicated because
+    // there is a window in the middle of ExceptionHandlerExchange between the thread going to sleep
+    // and after the thread waking up where we can obtain the lock. Things are further complicated
+    // by the fact that OnExceptionPortRemoval could get there first, or we might get called a
+    // second time for the same exception. It's critical that we don't re-arm the event after the
+    // thread wakes up. To keep things simple we take a first-one-wins approach.
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_status_ != ExceptionStatus::UNPROCESSED)
         return ZX_ERR_BAD_STATE;

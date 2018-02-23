@@ -21,6 +21,7 @@
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
+#include <object/suspend_token_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 
@@ -275,7 +276,7 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(teisenbe): Add support for tasks other than threads
+    // TODO(ZX-1840): Add support for tasks other than threads
     fbl::RefPtr<ThreadDispatcher> thread;
     zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE,
                                                      &thread);
@@ -283,6 +284,26 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle) {
         return status;
 
     return thread->Suspend();
+}
+
+zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* token) {
+    LTRACE_ENTRY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(ZX-1840): Add support for tasks other than threads
+    fbl::RefPtr<ThreadDispatcher> thread;
+    zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE,
+                                                     &thread);
+    if (status != ZX_OK)
+        return status;
+
+    fbl::RefPtr<Dispatcher> suspend_token;
+    zx_rights_t rights;
+    status = SuspendTokenDispatcher::Create(fbl::move(thread), &suspend_token, &rights);
+    if (status == ZX_OK)
+        status = token->make(fbl::move(suspend_token), rights);
+    return status;
 }
 
 zx_status_t sys_process_create(zx_handle_t job_handle,

@@ -56,6 +56,9 @@ public:
     // Called by the target when the port is explicitly unbound.
     void OnTargetUnbind();
 
+    // Validates that this eport is associated with the given instance.
+    bool PortMatches(const PortDispatcher* port, bool allow_null);
+
     static void BuildArchReport(zx_exception_report_t* report, uint32_t type,
                                 const arch_exception_context_t* arch_context);
 
@@ -72,15 +75,6 @@ private:
     // Unbinds from the target if bound, and drops the ref to |port_|.
     // Called by |port_| when it reaches zero handles.
     void OnPortZeroHandles();
-
-#if DEBUG_ASSERT_IMPLEMENTED
-    // Lets PortDispatcher assert that this eport is associated
-    // with the right instance.
-    bool PortMatches(const PortDispatcher *port, bool allow_null) {
-        fbl::AutoLock lock(&lock_);
-        return (allow_null && port_ == nullptr) || port_.get() == port;
-    }
-#endif  // if DEBUG_ASSERT_IMPLEMENTED
 
     // Returns true if the ExceptionPort is currently bound to a target.
     bool IsBoundLocked() const TA_REQ(lock_) {

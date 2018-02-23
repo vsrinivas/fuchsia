@@ -33,6 +33,18 @@ void threads_test_wait_detach_fn(void* arg) {
     zx_thread_exit();
 }
 
+void threads_test_wait_trap_infinite_sleep_fn(void* arg) {
+    zx_handle_t event = *(zx_handle_t*)arg;
+    zx_object_wait_one(event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
+
+    // Don't use builtin_trap since the compiler might assume everything after that call can't
+    // execute and will remove the zx_nanosleep below.
+    volatile int* null_int_ptr = NULL;
+    *null_int_ptr = 12345;
+
+    zx_nanosleep(UINT64_MAX);
+}
+
 void threads_test_busy_fn(void* arg) {
     volatile uint64_t i = 0u;
     while (true) {
