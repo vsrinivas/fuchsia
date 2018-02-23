@@ -59,7 +59,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 #ifdef FLOG_ENABLED
            flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
 #endif
-           const MediaServicePtr& media_service,
+           MediaService* media_service,
            const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,
            const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
@@ -87,7 +87,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
       allowed_stream_types_;
-  MediaServicePtr media_service_;
   MediaSourcePtr demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;

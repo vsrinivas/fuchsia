@@ -36,8 +36,8 @@ namespace media {
 class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
                          public MediaService {
  public:
-  MediaServiceImpl(
-      std::unique_ptr<app::ApplicationContext> application_context);
+  MediaServiceImpl(std::unique_ptr<app::ApplicationContext> application_context,
+                   bool transient);
   ~MediaServiceImpl() override;
 
   fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner() {
@@ -101,8 +101,12 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
                                f1dl::InterfaceRequest<SeekingReader> reader);
 
  private:
+  // FactoryServiceBase override.
+  void OnLastProductRemoved() override;
+
   f1dl::BindingSet<MediaService> bindings_;
   fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner_;
+  bool transient_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
 };

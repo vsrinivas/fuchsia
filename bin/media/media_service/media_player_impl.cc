@@ -92,10 +92,8 @@ MediaPlayerImpl::MediaPlayerImpl(
 
   state_ = State::kInactive;
 
-  media_service_ = owner->ConnectToEnvironmentService<MediaService>();
-
   // Create a timeline controller.
-  media_service_->CreateTimelineController(timeline_controller_.NewRequest());
+  owner->CreateTimelineController(timeline_controller_.NewRequest());
   timeline_controller_->GetControlPoint(timeline_control_point_.NewRequest());
   timeline_control_point_->GetTimelineConsumer(timeline_consumer_.NewRequest());
   HandleTimelineControlPointStatusUpdates();
@@ -112,8 +110,8 @@ void MediaPlayerImpl::MaybeCreateSource() {
 
   state_ = State::kWaiting;
 
-  media_service_->CreateSource(std::move(reader_handle_), nullptr,
-                               source_.NewRequest());
+  owner()->CreateSource(std::move(reader_handle_), nullptr,
+                        source_.NewRequest());
   FLOG(log_channel_, CreatedSource(FLOG_PTR_KOID(source_)));
   HandleSourceStatusUpdates();
 
@@ -161,12 +159,10 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     size_t index,
                                     const MediaTypePtr& input_media_type,
                                     const std::function<void()>& callback) {
-  FXL_DCHECK(media_service_);
-
   if (!stream->sink_) {
     FXL_DCHECK(stream->renderer_handle_);
-    media_service_->CreateSink(std::move(stream->renderer_handle_),
-                               stream->sink_.NewRequest());
+    owner()->CreateSink(std::move(stream->renderer_handle_),
+                        stream->sink_.NewRequest());
     FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(stream->sink_)));
 
     MediaTimelineControlPointPtr timeline_control_point;

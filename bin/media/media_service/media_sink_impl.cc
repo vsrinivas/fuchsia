@@ -32,8 +32,6 @@ MediaSinkImpl::MediaSinkImpl(
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
-  media_service_ = owner->ConnectToEnvironmentService<MediaService>();
-
   renderer_->GetSupportedMediaTypes([this](f1dl::Array<MediaTypeSetPtr>
                                                supported_media_types) {
     FXL_DCHECK(supported_media_types);
@@ -71,7 +69,7 @@ void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
 
 void MediaSinkImpl::BuildConversionPipeline() {
   BuildFidlConversionPipeline(
-      media_service_, *supported_stream_types_, nullptr,
+      owner(), *supported_stream_types_, nullptr,
       [this](f1dl::InterfaceRequest<MediaPacketConsumer> request) {
         renderer_->GetPacketConsumer(std::move(request));
       },

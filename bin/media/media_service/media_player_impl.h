@@ -116,7 +116,6 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       uint64_t version = MediaTimelineControlPoint::kInitialStatus,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
-  MediaServicePtr media_service_;
   f1dl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
   f1dl::Array<MediaTypePtr> stream_types_;

@@ -43,9 +43,7 @@ MediaSourceImpl::MediaSourceImpl(
                                         : MediaSourceStatus::New());
       });
 
-  media_service_ = owner->ConnectToEnvironmentService<MediaService>();
-
-  media_service_->CreateDemux(std::move(reader), demux_.NewRequest());
+  owner->CreateDemux(std::move(reader), demux_.NewRequest());
   FLOG(log_channel_, CreatedDemux(FLOG_PTR_KOID(demux_)));
   HandleDemuxStatusUpdates();
 
@@ -59,7 +57,7 @@ MediaSourceImpl::MediaSourceImpl(
 #ifdef FLOG_ENABLED
           log_channel_.get(),
 #endif
-          media_service_,
+          this->owner(),
           [this,
            stream_index](f1dl::InterfaceRequest<MediaPacketProducer> request) {
             demux_->GetPacketProducer(stream_index, std::move(request));
@@ -70,8 +68,6 @@ MediaSourceImpl::MediaSourceImpl(
     }
 
     callback_joiner->WhenJoined([this]() {
-      media_service_.Unbind();
-
       // Remove invalid streams.
       for (auto iter = streams_.begin(); iter != streams_.end();) {
         if ((*iter)->valid()) {
@@ -147,7 +143,7 @@ MediaSourceImpl::Stream::Stream(
 #ifdef FLOG_ENABLED
     flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
 #endif
-    const MediaServicePtr& media_service,
+    MediaService* media_service,
     const ProducerGetter& producer_getter,
     std::unique_ptr<StreamType> stream_type,
     const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&

@@ -34,7 +34,7 @@ class Builder {
   // bool passed to the callback indicates whether the build was successful.
   // The stream type passed to the callback is the converted stream type if
   // the build was successful or |type| if it was not.
-  Builder(const MediaServicePtr& media_service,
+  Builder(MediaService* media_service,
           const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
           const ProducerGetter& producer_getter,
           const ConsumerGetter& consumer_getter,
@@ -100,7 +100,7 @@ class Builder {
   // Calls |callback_| indicating failure and deletes this.
   void Fail();
 
-  const MediaServicePtr& media_service_;
+  MediaService* media_service_;
   const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets_;
   ProducerGetter producer_getter_;
   ConsumerGetter consumer_getter_;
@@ -477,7 +477,7 @@ void Builder::Fail() {
 }  // namespace
 
 void BuildFidlConversionPipeline(
-    const MediaServicePtr& media_service,
+    MediaService* media_service,
     const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
     const ProducerGetter& producer_getter,
     const ConsumerGetter& consumer_getter,

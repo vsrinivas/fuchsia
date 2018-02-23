@@ -135,6 +135,9 @@ class FactoryServiceBase {
     fxl::MutexLocker locker(&mutex_);
     bool erased = products_.erase(product);
     FXL_DCHECK(erased);
+    if (products_.empty()) {
+      OnLastProductRemoved();
+    }
   }
 
   // Creates a new product (by calling |product_creator|) on a new thread. The
@@ -151,6 +154,10 @@ class FactoryServiceBase {
     });
     thread.detach();
   }
+
+  // Called when the number of products transitions from one to zero. The
+  // default implementation does nothing.
+  virtual void OnLastProductRemoved() {}
 
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;

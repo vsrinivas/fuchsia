@@ -29,7 +29,7 @@ using ConsumerGetter =
 // in the |type| argument. In the trivial case in which no converters are
 // required, |callback| is called with the original getter and type.
 void BuildFidlConversionPipeline(
-    const MediaServicePtr& media_service,
+    MediaService* media_service,
     const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
     const ProducerGetter& producer_getter,
     const ConsumerGetter& consumer_getter,

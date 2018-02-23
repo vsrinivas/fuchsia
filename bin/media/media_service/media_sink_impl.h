@@ -44,7 +44,6 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
   // Builds the conversion pipeline.
   void BuildConversionPipeline();
 
-  MediaServicePtr media_service_;
   MediaRendererPtr renderer_;
   ConsumeMediaTypeCallback consume_media_type_callback_;
   MediaTypePtr original_media_type_;

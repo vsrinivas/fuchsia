@@ -17,6 +17,7 @@
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
 #include "garnet/bin/media/util/multiproc_task_runner.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
@@ -24,8 +25,9 @@
 namespace media {
 
 MediaServiceImpl::MediaServiceImpl(
-    std::unique_ptr<app::ApplicationContext> context)
-    : FactoryServiceBase(std::move(context)) {
+    std::unique_ptr<app::ApplicationContext> context,
+    bool transient)
+    : FactoryServiceBase(std::move(context)), transient_(transient) {
   FLOG_INITIALIZE(application_context(), "media_service");
 
   multiproc_task_runner_ =
@@ -178,6 +180,12 @@ void MediaServiceImpl::CreateFileChannelReader(
     return FileReaderImpl::Create(std::move(file_channel), std::move(request),
                                   this);
   }));
+}
+
+void MediaServiceImpl::OnLastProductRemoved() {
+  if (transient_) {
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 }
 
 }  // namespace media
