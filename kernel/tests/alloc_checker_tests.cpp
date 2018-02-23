@@ -74,34 +74,40 @@ static bool alloc_checker_panic(void* context) {
     END_TEST;
 }
 
+struct StructWithCtor {
+    char field = 5;
+};
+static_assert(sizeof(StructWithCtor) == 1, "");
+
 static bool alloc_checker_new(void* context) {
     BEGIN_TEST;
 
+    const int kCount = 128;
     fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> arr(new (&ac) char[128]);
+    fbl::unique_ptr<StructWithCtor[]> arr(new (&ac) StructWithCtor[kCount]);
     EXPECT_EQ(ac.check(), true, "");
+
+    // Check that the constructor got run.
+    for (int i = 0; i < kCount; ++i)
+        EXPECT_EQ(arr[i].field, 5, "");
 
     END_TEST;
 }
 
-struct BigStruct {
-    int x = 5;
-    int y[128 * 1024 * 1024];
-    int z = 0;
-};
-
-static bool alloc_checker_oom(void* context) {
+static bool alloc_checker_new_fails(void* context) {
     BEGIN_TEST;
 
+    // malloc(size_t_max) should fail but currently does not (see
+    // ZX-1760), so use large_size instead, because malloc(large_size)
+    // does fail.
+    size_t size_t_max = ~(size_t)0;
+    size_t large_size = size_t_max >> 1;
+
+    // Use a type with a constructor to check that we are not attempting to
+    // run the constructor when the allocation fails.
     fbl::AllocChecker ac;
-    for (int ix = 0; ix != 100; ++ix) {
-        auto bs = new (&ac) BigStruct;
-        if (!ac.check()) {
-            printf("caught oom in %d loop\n", ix);
-            break;
-        }
-        EXPECT_EQ(bs->x, 5, "");
-    }
+    EXPECT_EQ(new (&ac) StructWithCtor[large_size], nullptr, "");
+    EXPECT_EQ(ac.check(), false, "");
 
     END_TEST;
 }
@@ -111,5 +117,5 @@ UNITTEST("alloc checker ctor & dtor", alloc_checker_ctor)
 UNITTEST("alloc checker basic", alloc_checker_basic)
 UNITTEST("alloc checker panic", alloc_checker_panic)
 UNITTEST("alloc checker new", alloc_checker_new)
-UNITTEST("alloc_checker out of mem", alloc_checker_oom)
+UNITTEST("alloc checker new fails", alloc_checker_new_fails)
 UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker", nullptr, nullptr);
