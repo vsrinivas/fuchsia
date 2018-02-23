@@ -13,6 +13,11 @@ declare_args() {
 #
 # Parameters
 #
+#   sources (optional)
+#     The list of public sources in this library, i.e. Dart files in lib/ but
+#     not in lib/src/. These sources must be within source_dir.
+#     Note: this parameter will soon be mandatory (TO-776).
+#
 #   package_name (optional)
 #     Name of the Dart package. This is used as an identifier in code that
 #     depends on this library.
@@ -54,6 +59,11 @@ declare_args() {
 #
 #   dart_library("baz") {
 #     package_name = "foo.bar.baz"
+#
+#     sources = [
+#       "blah.dart",
+#     ]
+#
 #     deps = [
 #       "//foo/bar/owl"
 #     ]
@@ -71,6 +81,11 @@ template("dart_library") {
   } else {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
+
+  # Ignore this parameter for now.
+  not_needed(invoker, [
+    "sources",
+  ])
 
   dart_deps = []
   if (defined(invoker.deps)) {

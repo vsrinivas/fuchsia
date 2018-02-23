@@ -9,6 +9,10 @@ import("//build/dart/toolchain.gni")
 #
 # Parameters
 #
+#   sources (optional)
+#     The list of test files., which must be within source_dir.
+#     Note: this parameter will soon be mandatory (TO-776).
+#
 #   source_dir (optional)
 #     Directory containing the test sources. Defaults to "test".
 #
@@ -46,6 +50,10 @@ template("dart_test") {
     infer_package_name = true
 
     source_dir = sources_dir
+
+    if (defined(invoker.sources)) {
+      sources = invoker.sources
+    }
   }
 
   dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
