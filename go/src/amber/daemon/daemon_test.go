@@ -157,6 +157,8 @@ func TestDaemon(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		tickers[0].makeTick()
 	}
+	// one final sleep to allow the last request to sneak through
+	time.Sleep(10 * time.Millisecond)
 
 	d.CancelAll()
 
