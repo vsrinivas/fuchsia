@@ -173,6 +173,7 @@ endif
 KERNEL_INCLUDES := $(BUILDDIR) kernel/include
 KERNEL_COMPILEFLAGS := -ffreestanding -include $(KERNEL_CONFIG_HEADER)
 KERNEL_COMPILEFLAGS += -Wformat=2 -Wvla
+# GCC supports "-Wformat-signedness" but Clang currently does not.
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -Wformat-signedness
 endif
