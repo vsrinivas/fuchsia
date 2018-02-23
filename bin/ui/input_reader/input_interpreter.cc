@@ -11,6 +11,7 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
+
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -64,7 +65,7 @@ std::unique_ptr<InputInterpreter> InputInterpreter::Open(
 InputInterpreter::InputInterpreter(std::string name,
                                    int fd,
                                    input::InputDeviceRegistry* registry)
-    : fd_(fd), name_(std::move(name)), registry_(registry) {
+    : registry_(registry), hid_decoder_(std::move(name), fd) {
   memset(acer12_touch_reports_, 0, 2 * sizeof(acer12_touch_t));
 }
 
@@ -72,13 +73,11 @@ InputInterpreter::~InputInterpreter() {}
 
 bool InputInterpreter::Initialize() {
   int protocol;
-  if (!GetProtocol(&protocol)) {
-    FXL_LOG(ERROR) << "Failed to retrieve HID protocol for " << name_;
+  if (!hid_decoder_.Init(&protocol))
     return false;
-  }
 
   if (protocol == INPUT_PROTO_KBD) {
-    FXL_VLOG(2) << "Device " << name_ << " has keyboard";
+    FXL_VLOG(2) << "Device " << name() << " has keyboard";
     has_keyboard_ = true;
     keyboard_descriptor_ = input::KeyboardDescriptor::New();
     keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI -
@@ -91,7 +90,7 @@ bool InputInterpreter::Initialize() {
     keyboard_report_ = input::InputReport::New();
     keyboard_report_->keyboard = input::KeyboardReport::New();
   } else if (protocol == INPUT_PROTO_MOUSE) {
-    FXL_VLOG(2) << "Device " << name_ << " has mouse";
+    FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
     mouse_device_type_ = MouseDeviceType::BOOT;
 
@@ -112,27 +111,15 @@ bool InputInterpreter::Initialize() {
     mouse_report_->mouse = input::MouseReport::New();
   } else if (protocol == INPUT_PROTO_NONE) {
     size_t report_desc_len;
-    if (!GetReportDescriptionLength(&report_desc_len)) {
-      FXL_LOG(ERROR) << "Failed to retrieve HID description length for "
-                     << name_;
+    if (!hid_decoder_.GetReportDescriptionLength(&report_desc_len))
       return false;
-    }
 
     std::vector<uint8_t> desc(report_desc_len);
-    if (!GetReportDescription(desc.data(), desc.size())) {
-      FXL_LOG(ERROR) << "Failed to retrieve HID description for " << name_;
+    if (!hid_decoder_.GetReportDescription(desc.data(), desc.size()))
       return false;
-    }
 
     if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_acer12_touch(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res
-                       << ")";
-        return false;
-      }
-
-      FXL_VLOG(2) << "Device " << name_ << " has stylus";
+      FXL_VLOG(2) << "Device " << name() << " has stylus";
       has_stylus_ = true;
       stylus_descriptor_ = input::StylusDescriptor::New();
 
@@ -151,7 +138,7 @@ bool InputInterpreter::Initialize() {
       stylus_report_ = input::InputReport::New();
       stylus_report_->stylus = input::StylusReport::New();
 
-      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
@@ -171,14 +158,10 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::ACER12;
     } else if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_samsung_touch(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res
-                       << ")";
-        return false;
-      }
+      // TODO(cpu): remove this hack from this layer.
+      hid_decoder_.apply_samsung_touch_hack();
 
-      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
@@ -198,16 +181,9 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::SAMSUNG;
     } else if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_paradise_touch(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
-                       << ")";
-        return false;
-      }
-
       // TODO(cpu): Add support for stylus.
 
-      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
@@ -227,16 +203,7 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::PARADISEv1;
     } else if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_paradise_touch(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
-                       << ")";
-        return false;
-      }
-
-      // TODO(cpu): Add support for stylus.
-
-      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
@@ -256,14 +223,7 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::PARADISEv2;
     } else if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_paradise_touchpad(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad V1 (res "
-                       << setup_res << ")";
-        return true;
-      }
-
-      FXL_VLOG(2) << "Device " << name_ << " has touchpad";
+      FXL_VLOG(2) << "Device " << name() << " has touchpad";
       has_mouse_ = true;
       mouse_device_type_ = MouseDeviceType::PARADISEv1;
 
@@ -282,14 +242,7 @@ bool InputInterpreter::Initialize() {
       mouse_report_ = input::InputReport::New();
       mouse_report_->mouse = input::MouseReport::New();
     } else if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_paradise_touchpad(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad V2 (res "
-                       << setup_res << ")";
-        return true;
-      }
-
-      FXL_VLOG(2) << "Device " << name_ << " has touchpad";
+      FXL_VLOG(2) << "Device " << name() << " has touchpad";
       has_mouse_ = true;
       mouse_device_type_ = MouseDeviceType::PARADISEv2;
 
@@ -308,14 +261,7 @@ bool InputInterpreter::Initialize() {
       mouse_report_ = input::InputReport::New();
       mouse_report_->mouse = input::MouseReport::New();
     } else if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
-      zx_status_t setup_res = setup_egalax_touchscreen(fd_);
-      if (setup_res != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to setup eGalax touch (res " << setup_res
-                       << ")";
-        return false;
-      }
-
-      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
@@ -334,34 +280,20 @@ bool InputInterpreter::Initialize() {
 
       touch_device_type_ = TouchDeviceType::EGALAX;
     } else {
-      FXL_VLOG(2) << "Device " << name_ << " has unsupported HID device";
+      FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
       return false;
     }
   } else {
-    FXL_VLOG(2) << "Device " << name_ << " has unsupported HID protocol";
+    FXL_VLOG(2) << "Device " << name() << " has unsupported HID protocol";
     return false;
   }
 
-  // Get event handle for file descriptor
   zx_handle_t handle;
-  ssize_t rc = ioctl_device_get_event_handle(fd_, &handle);
-  if (rc < 0) {
-    FXL_LOG(ERROR) << "Could not convert file descriptor to handle";
+  if (!hid_decoder_.GetEvent(&handle))
     return false;
-  }
 
   event_.reset(handle);
-
-  if (!GetMaxReportLength(&max_report_len_)) {
-    FXL_LOG(ERROR) << "Failed to retrieve maximum HID report length for "
-                   << name_;
-    return false;
-  }
-
-  report_.reserve(max_report_len_);
-
   NotifyRegistry();
-
   return true;
 }
 
@@ -384,16 +316,20 @@ void InputInterpreter::NotifyRegistry() {
 }
 
 bool InputInterpreter::Read(bool discard) {
-  int rc = read(fd_, report_.data(), max_report_len_);
+  // If positive |rc| is the number of bytes read. If negative the error
+  // while reading.
+  int rc;
+  auto report = hid_decoder_.Read(&rc);
+
   if (rc < 1) {
     FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    // TODO(jpoichet) check whether the device was actually closed or not
+    // TODO(cpu) check whether the device was actually closed or not.
     return false;
   }
 
   TRACE_DURATION("input", "Read");
   if (has_keyboard_) {
-    ParseKeyboardReport(report_.data(), rc);
+    ParseKeyboardReport(report.data(), rc);
     if (!discard) {
       input_device_->DispatchReport(CloneReport(keyboard_report_));
     }
@@ -401,22 +337,20 @@ bool InputInterpreter::Read(bool discard) {
 
   switch (mouse_device_type_) {
     case MouseDeviceType::BOOT:
-      ParseMouseReport(report_.data(), rc);
+      ParseMouseReport(report.data(), rc);
       if (!discard) {
         input_device_->DispatchReport(CloneReport(mouse_report_));
       }
       break;
     case MouseDeviceType::PARADISEv1:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report_.data(),
-                                                              rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report.data(), rc)) {
         if (!discard) {
           input_device_->DispatchReport(CloneReport(mouse_report_));
         }
       }
       break;
     case MouseDeviceType::PARADISEv2:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report_.data(),
-                                                              rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report.data(), rc)) {
         if (!discard) {
           input_device_->DispatchReport(CloneReport(mouse_report_));
         }
@@ -428,14 +362,14 @@ bool InputInterpreter::Read(bool discard) {
 
   switch (touch_device_type_) {
     case TouchDeviceType::ACER12:
-      if (report_[0] == ACER12_RPT_ID_STYLUS) {
-        if (ParseAcer12StylusReport(report_.data(), rc)) {
+      if (report[0] == ACER12_RPT_ID_STYLUS) {
+        if (ParseAcer12StylusReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(stylus_report_));
           }
         }
-      } else if (report_[0] == ACER12_RPT_ID_TOUCH) {
-        if (ParseAcer12TouchscreenReport(report_.data(), rc)) {
+      } else if (report[0] == ACER12_RPT_ID_TOUCH) {
+        if (ParseAcer12TouchscreenReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -444,8 +378,8 @@ bool InputInterpreter::Read(bool discard) {
       break;
 
     case TouchDeviceType::SAMSUNG:
-      if (report_[0] == SAMSUNG_RPT_ID_TOUCH) {
-        if (ParseSamsungTouchscreenReport(report_.data(), rc)) {
+      if (report[0] == SAMSUNG_RPT_ID_TOUCH) {
+        if (ParseSamsungTouchscreenReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -454,9 +388,8 @@ bool InputInterpreter::Read(bool discard) {
       break;
 
     case TouchDeviceType::PARADISEv1:
-      if (report_[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report_.data(),
-                                                             rc)) {
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -464,9 +397,8 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case TouchDeviceType::PARADISEv2:
-      if (report_[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report_.data(),
-                                                                rc)) {
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -474,8 +406,8 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case TouchDeviceType::EGALAX:
-      if (report_[0] == EGALAX_RPT_ID_TOUCH) {
-        if (ParseEGalaxTouchscreenReport(report_.data(), rc)) {
+      if (report[0] == EGALAX_RPT_ID_TOUCH) {
+        if (ParseEGalaxTouchscreenReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -503,7 +435,7 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
     keyboard_report_->keyboard->pressed_keys->at(index) = keycode;
     index++;
   }
-  FXL_VLOG(2) << name_ << " parsed: " << *keyboard_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *keyboard_report_;
 }
 
 void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
@@ -513,7 +445,7 @@ void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
   mouse_report_->mouse->rel_x = report->rel_x;
   mouse_report_->mouse->rel_y = report->rel_y;
   mouse_report_->mouse->pressed_buttons = report->buttons;
-  FXL_VLOG(2) << name_ << " parsed: " << *mouse_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *mouse_report_;
 }
 
 bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
@@ -544,7 +476,7 @@ bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
   if (acer12_stylus_status_barrel(report->status)) {
     stylus_report_->stylus->pressed_buttons |= input::kStylusBarrel;
   }
-  FXL_VLOG(2) << name_ << " parsed: " << *stylus_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *stylus_report_;
 
   return true;
 }
@@ -585,7 +517,7 @@ bool InputInterpreter::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
       touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
     }
   }
-  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *touchscreen_report_;
   return true;
 }
 
@@ -646,7 +578,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
   }
 
-  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *touchscreen_report_;
   return true;
 }
 
@@ -674,7 +606,7 @@ bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t* r, size_t len) {
     touchscreen_report_->touchscreen->touches.resize(0);
   }
 
-  FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  FXL_VLOG(2) << name() << " parsed: " << *touchscreen_report_;
   return true;
 }
 
@@ -716,45 +648,6 @@ bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
   }
 
   return true;
-}
-
-zx_status_t InputInterpreter::GetProtocol(int* out_proto) {
-  ssize_t rc = ioctl_input_get_protocol(fd_, out_proto);
-  if (rc < 0) {
-    FXL_LOG(ERROR) << "hid: could not get protocol from " << name_
-                   << " (status=" << rc << ")";
-  }
-  return rc;
-}
-
-zx_status_t InputInterpreter::GetReportDescriptionLength(
-    size_t* out_report_desc_len) {
-  ssize_t rc = ioctl_input_get_report_desc_size(fd_, out_report_desc_len);
-  if (rc < 0) {
-    FXL_LOG(ERROR) << "hid: could not get report descriptor length from "
-                   << name_ << "  (status=" << rc << ")";
-  }
-  return rc;
-}
-
-zx_status_t InputInterpreter::GetReportDescription(uint8_t* out_buf,
-                                                   size_t out_report_desc_len) {
-  ssize_t rc = ioctl_input_get_report_desc(fd_, out_buf, out_report_desc_len);
-  if (rc < 0) {
-    FXL_LOG(ERROR) << "hid: could not get report descriptor from " << name_
-                   << " (status=" << rc << ")";
-  }
-  return rc;
-}
-
-zx_status_t InputInterpreter::GetMaxReportLength(
-    input_report_size_t* out_max_report_len) {
-  ssize_t rc = ioctl_input_get_max_reportsize(fd_, out_max_report_len);
-  if (rc < 0) {
-    FXL_LOG(ERROR) << "hid: could not get max report size from " << name_
-                   << " (status=" << rc << ")";
-  }
-  return rc;
 }
 
 }  // namespace mozart

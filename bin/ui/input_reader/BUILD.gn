@@ -8,6 +8,8 @@ source_set("input_reader") {
     "input_interpreter.h",
     "input_reader.cc",
     "input_reader.h",
+    "hid_decoder.cc",
+    "hid_decoder.h",
   ]
 
   deps = [
@@ -16,6 +18,7 @@ source_set("input_reader") {
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/zx",
   ]
