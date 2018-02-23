@@ -19,6 +19,7 @@ import 'package:yaml/yaml.dart';
 // ignore_for_file: unawaited_futures
 
 const String _optionServerSnapshot = 'server-snapshot';
+const String _optionSdkDir = 'sdk-dir';
 const String _optionSourceDir = 'source-dir';
 const String _optionShowResults = 'show-results';
 const String _optionCachePath = 'cache-path';
@@ -29,6 +30,7 @@ const String _optionPackageRoot = 'package-root';
 const String _optionLogFile = 'log-file';
 const List<String> _requiredOptions = const [
   _optionServerSnapshot,
+  _optionSdkDir,
   _optionSourceDir,
   _optionCachePath,
   _optionStamp,
@@ -42,6 +44,7 @@ Future<Null> main(List<String> args) async {
   final ArgParser parser = new ArgParser()
     ..addOption(_optionServerSnapshot,
         help: 'Path to the analysis server snapshot')
+    ..addOption(_optionSdkDir, help: 'Path to the Dart SDK')
     ..addOption(_optionPackageRoot, help: 'Path to the package root')
     ..addOption(_optionSourceDir,
         help: 'Path to the source directory relative to the package root')
@@ -72,6 +75,8 @@ Future<Null> main(List<String> args) async {
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
     serverArgs: [
+      '--sdk',
+      path.canonicalize(argResults[_optionSdkDir]),
       '--cache',
       path.canonicalize(argResults[_optionCachePath]),
       '--new-analysis-driver-log',

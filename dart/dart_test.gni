@@ -10,7 +10,7 @@ import("//build/dart/toolchain.gni")
 # Parameters
 #
 #   sources (optional)
-#     The list of test files., which must be within source_dir.
+#     The list of test files, which must be within source_dir.
 #     Note: this parameter will soon be mandatory (TO-776).
 #
 #   source_dir (optional)

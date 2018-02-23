@@ -172,6 +172,71 @@ template("dart_library") {
     args += [ "--deps" ] + dart_deps
   }
 
+  source_target_name = "${target_name}_identify_sources"
+  group_deps += [
+    ":$source_target_name",
+  ]
+  source_file = "$target_gen_dir/$target_name.sources"
+
+  if (defined(invoker.sources)) {
+    gen_snapshot_label = "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)"
+    gen_snapshot_dir = get_label_info(gen_snapshot_label, "root_out_dir")
+    gen_snapshot = "$gen_snapshot_dir/gen_snapshot"
+
+    action(source_target_name) {
+      script = "//build/dart/identify_sources.py"
+
+      outputs = [
+        source_file,
+      ]
+
+      depfile = "$target_gen_dir/$target_name.d"
+
+      args = [
+        "--gen-snapshot",
+        rebase_path(gen_snapshot),
+        "--sources",
+      ] + rebase_path(invoker.sources, "", source_dir) + [
+        "--packages",
+        rebase_path(dot_packages_file),
+        "--source-dir",
+        rebase_path(source_dir),
+        "--output",
+        rebase_path(source_file),
+        "--depfile",
+        rebase_path(depfile),
+        "--depname",
+        rebase_path(source_file, root_build_dir),
+      ]
+
+      deps = [
+        ":$dot_packages_target_name",
+        gen_snapshot_label,
+      ]
+    }
+  } else {
+    action(source_target_name) {
+      script = "//build/dart/naively_identify_sources.py"
+
+      outputs = [
+        source_file,
+      ]
+
+      depfile = "$target_gen_dir/$target_name.d"
+
+      args = [
+        "--source-dir",
+        rebase_path(source_dir),
+        "--output",
+        rebase_path(source_file),
+        "--depfile",
+        rebase_path(depfile),
+        "--depname",
+        rebase_path(source_file, root_build_dir),
+      ]
+    }
+  }
+
   with_analysis =
       !defined(invoker.disable_analysis) || !invoker.disable_analysis
   if (with_analysis) {
@@ -187,6 +252,8 @@ template("dart_library") {
     dart_bin = "$dart_sdk_dir/bin"
     dart_analyzer_binary = "$dart_bin/dartanalyzer"
 
+    # TODO(pylaligand): move these extra sources to the file listing all the
+    # sources.
     extra_sources = []
     if (defined(invoker.extra_analyzer_sources)) {
       foreach(source, invoker.extra_analyzer_sources) {
@@ -201,6 +268,7 @@ template("dart_library") {
 
       deps = [
         ":$dot_packages_target_name",
+        ":$source_target_name",
         dart_sdk_label,
       ]
 
@@ -216,8 +284,8 @@ template("dart_library") {
       args = [
         "--out",
         rebase_path(invocation_file),
-        "--source-dir",
-        rebase_path(source_dir),
+        "--source-file",
+        rebase_path(source_file),
         "--dot-packages",
         rebase_path(dot_packages_file),
         "--dartanalyzer",
@@ -254,7 +322,7 @@ template("dart_library") {
         runner_out_dir = get_label_info(runner_label, "root_out_dir")
         script = "$runner_out_dir/dart-tools/analyzer"
 
-        server_snaphost = "$dart_bin/snapshots/analysis_server.dart.snapshot"
+        server_snapshot = "$dart_bin/snapshots/analysis_server.dart.snapshot"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
@@ -273,13 +341,18 @@ template("dart_library") {
           output_file,
         ]
 
+        # TODO(pylaligand): have the analysis server analyze individual files.
+        # It currently only understands directories.
+
         args = [
           "--package-root",
           rebase_path("."),
           "--source-dir",
           rebase_path(source_dir, "."),
           "--server-snapshot",
-          rebase_path(server_snaphost),
+          rebase_path(server_snapshot),
+          "--sdk-dir",
+          rebase_path(dart_sdk_dir),
           "--stamp",
           rebase_path(output_file),
           "--depname",
@@ -315,8 +388,8 @@ template("dart_library") {
         ]
 
         args = [
-          "--source-dir",
-          rebase_path(source_dir),
+          "--source-file",
+          rebase_path(source_file),
           "--dot-packages",
           rebase_path(dot_packages_file),
           "--dartanalyzer",
@@ -336,6 +409,7 @@ template("dart_library") {
 
         deps = [
           ":$dot_packages_target_name",
+          ":$source_target_name",
           dart_sdk_label,
         ]
       }
