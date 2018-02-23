@@ -192,7 +192,7 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
   for (uint32_t i = 0; i < count; i++) {
     auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
     auto length = entries[i].length + sizeof(virtio_net_hdr_t);
-    virtio_queue_return(rx_queue(), head, length);
+    virtio_queue_return(queue, head, length);
   }
 
   // Notify guest of updates to the queue.
