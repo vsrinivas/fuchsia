@@ -6,12 +6,21 @@ source_set("test") {
   testonly = true
 
   sources = [
+    "fidl_types.cc",
+    "fidl_types.h",
+    "frobinator_impl.cc",
+    "frobinator_impl.h",
+    "frobinator.cc",
+    "frobinator.h",
     "loop_config.cc",
     "loop_config.h",
   ]
 
   public_deps = [
     "//zircon/public/lib/async-loop-cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//third_party/gtest",
+    "//zircon/public/lib/fidl",
   ]
 
   public_configs = [ "//garnet/public:config" ]

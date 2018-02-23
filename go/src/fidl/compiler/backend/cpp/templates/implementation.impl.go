@@ -12,7 +12,7 @@ const Implementation = `
 
 #include "{{ .PrimaryHeader }}"
 
-#include "lib/fidl/cpp/bindings2/internal/implementation.h"
+#include "lib/fidl/cpp/internal/implementation.h"
 
 {{ range $interface := .Interfaces }}
 {{ template "InterfaceDefinition" $interface }}
