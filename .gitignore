@@ -13,6 +13,8 @@
 .project
 .pub
 .pydevproject
+*.sublime-project
+*.sublime-workspace
 .vscode
 .packages
 **/.atom/
