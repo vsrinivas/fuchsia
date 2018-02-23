@@ -140,20 +140,20 @@ struct ce_attr;
  *
  * Implementation note: pushes 1 buffer to Source ring
  */
-int ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
-                   void* per_transfer_send_context,
-                   uint32_t buffer,
-                   unsigned int nbytes,
-                   /* 14 bits */
-                   unsigned int transfer_id,
-                   unsigned int flags);
+zx_status_t ath10k_ce_send(struct ath10k_ce_pipe* ce_state,
+                           void* per_transfer_send_context,
+                           uint32_t buffer,
+                           unsigned int nbytes,
+                           /* 14 bits */
+                           unsigned int transfer_id,
+                           unsigned int flags);
 
-int ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
-                          void* per_transfer_context,
-                          uint32_t buffer,
-                          unsigned int nbytes,
-                          unsigned int transfer_id,
-                          unsigned int flags);
+zx_status_t ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
+                                  void* per_transfer_context,
+                                  uint32_t buffer,
+                                  unsigned int nbytes,
+                                  unsigned int transfer_id,
+                                  unsigned int flags);
 
 void __ath10k_ce_send_revert(struct ath10k_ce_pipe* pipe);
 
@@ -162,8 +162,8 @@ int ath10k_ce_num_free_src_entries(struct ath10k_ce_pipe* pipe);
 /*==================Recv=======================*/
 
 int __ath10k_ce_rx_num_free_bufs(struct ath10k_ce_pipe* pipe);
-int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
-int ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
+zx_status_t __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
+zx_status_t ath10k_ce_rx_post_buf(struct ath10k_ce_pipe* pipe, void* ctx, uint32_t paddr);
 void ath10k_ce_rx_update_write_idx(struct ath10k_ce_pipe* pipe, uint32_t nentries);
 
 /* recv flags */
@@ -174,26 +174,26 @@ void ath10k_ce_rx_update_write_idx(struct ath10k_ce_pipe* pipe, uint32_t nentrie
  * Supply data for the next completed unprocessed receive descriptor.
  * Pops buffer from Dest ring.
  */
-int ath10k_ce_completed_recv_next(struct ath10k_ce_pipe* ce_state,
-                                  void** per_transfer_contextp,
-                                  unsigned int* nbytesp);
+zx_status_t ath10k_ce_completed_recv_next(struct ath10k_ce_pipe* ce_state,
+                                          void** per_transfer_contextp,
+                                          unsigned int* nbytesp);
 /*
  * Supply data for the next completed unprocessed send descriptor.
  * Pops 1 completed send buffer from Source ring.
  */
-int ath10k_ce_completed_send_next(struct ath10k_ce_pipe* ce_state,
-                                  void** per_transfer_contextp);
+zx_status_t ath10k_ce_completed_send_next(struct ath10k_ce_pipe* ce_state,
+                                          void** per_transfer_contextp);
 
-int ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe* ce_state,
-        void** per_transfer_contextp);
+zx_status_t ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe* ce_state,
+                                                 void** per_transfer_contextp);
 
 /*==================CE Engine Initialization=======================*/
 
-int ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id,
-                        const struct ce_attr* attr);
+zx_status_t ath10k_ce_init_pipe(struct ath10k* ar, unsigned int ce_id,
+                                const struct ce_attr* attr);
 void ath10k_ce_deinit_pipe(struct ath10k* ar, unsigned int ce_id);
-int ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
-                         const struct ce_attr* attr);
+zx_status_t ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
+                                 const struct ce_attr* attr);
 void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id);
 
 /*==================CE Engine Shutdown=======================*/
@@ -202,29 +202,29 @@ void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id);
  * receive buffers.  Target DMA must be stopped before using
  * this API.
  */
-int ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
-                               void** per_transfer_contextp,
-                               uint32_t* bufferp);
+zx_status_t ath10k_ce_revoke_recv_next(struct ath10k_ce_pipe* ce_state,
+                                       void** per_transfer_contextp,
+                                       uint32_t* bufferp);
 
-int ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
-        void** per_transfer_contextp,
-        unsigned int* nbytesp);
+zx_status_t ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state,
+                                                 void** per_transfer_contextp,
+                                                 unsigned int* nbytesp);
 
 /*
  * Support clean shutdown by allowing the caller to cancel
  * pending sends.  Target DMA must be stopped before using
  * this API.
  */
-int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
-                               void** per_transfer_contextp,
-                               uint32_t* bufferp,
-                               unsigned int* nbytesp,
-                               unsigned int* transfer_idp);
+zx_status_t ath10k_ce_cancel_send_next(struct ath10k_ce_pipe* ce_state,
+                                       void** per_transfer_contextp,
+                                       uint32_t* bufferp,
+                                       unsigned int* nbytesp,
+                                       unsigned int* transfer_idp);
 
 /*==================CE Interrupt Handlers====================*/
 void ath10k_ce_per_engine_service_any(struct ath10k* ar);
 void ath10k_ce_per_engine_service(struct ath10k* ar, unsigned int ce_id);
-int ath10k_ce_disable_interrupts(struct ath10k* ar);
+zx_status_t ath10k_ce_disable_interrupts(struct ath10k* ar);
 void ath10k_ce_enable_interrupts(struct ath10k* ar);
 void ath10k_ce_dump_registers(struct ath10k* ar,
                               struct ath10k_fw_crash_data* crash_data);
