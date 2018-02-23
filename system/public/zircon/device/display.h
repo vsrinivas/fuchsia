@@ -38,12 +38,6 @@ typedef struct zx_display_info {
 #define IOCTL_DISPLAY_FLUSH_FB_REGION \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 3)
 
-// Set display fullscreen
-//   in: uint32_t
-//   out: none
-#define IOCTL_DISPLAY_SET_FULLSCREEN \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 4)
-
 // Get an event to signal display ownership changes
 // The event will be signaled with USER_SIGNAL_0 when
 // the virtual console takes control of the display,
@@ -52,12 +46,12 @@ typedef struct zx_display_info {
 //  in: none
 //  out: zx_handle_t
 #define IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 5)
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 4)
 
 // in: uint32_t owner
 // out: none
 #define IOCTL_DISPLAY_SET_OWNER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 6)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 5)
 
 typedef struct {
     zx_handle_t vmo;
@@ -79,9 +73,6 @@ IOCTL_WRAPPER(ioctl_display_flush_fb, IOCTL_DISPLAY_FLUSH_FB);
 
 // ssize_t ioctl_display_flush_fb_region(int fd, const ioctl_display_region_t* in);
 IOCTL_WRAPPER_IN(ioctl_display_flush_fb_region, IOCTL_DISPLAY_FLUSH_FB_REGION, ioctl_display_region_t);
-
-// ssize_t ioctl_display_set_fullscreen(int fd, uint32_t in);
-IOCTL_WRAPPER_IN(ioctl_display_set_fullscreen, IOCTL_DISPLAY_SET_FULLSCREEN, uint32_t);
 
 // ssize_t ioctl_display_get_ownership_change_event(int fd, zx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_display_get_ownership_change_event, IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT, zx_handle_t);

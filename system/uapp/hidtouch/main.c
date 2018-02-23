@@ -17,7 +17,6 @@
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
-#include <zircon/device/console.h>
 #include <zircon/device/display.h>
 #include <zircon/device/input.h>
 #include <zircon/process.h>
@@ -403,13 +402,6 @@ next_node:
     if (buf == NULL) {
         printf("no memory!\n");
         return -1;
-    }
-
-    ret = ioctl_console_set_active_vc(vcfd);
-    if (ret < 0) {
-        printf("could not set active console: %zd\n", ret);
-        // not a fatal error
-        printf("press Alt-Tab to switch consoles\n");
     }
 
     clear_screen((void*)fbo, &fb);

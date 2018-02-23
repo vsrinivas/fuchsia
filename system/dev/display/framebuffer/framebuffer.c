@@ -15,7 +15,6 @@
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 
-#include <zircon/device/console.h>
 #include <zircon/device/display.h>
 
 typedef struct fbi fbi_t;
@@ -108,14 +107,6 @@ static zx_status_t fbi_ioctl(void* ctx, uint32_t op,
     }
 
     switch (op) {
-    case IOCTL_DISPLAY_SET_FULLSCREEN:
-        //TODO: remove compat stub once no longer needed
-        return ZX_OK;
-
-    case IOCTL_CONSOLE_SET_ACTIVE_VC:
-        //TODO: remove compat stub once no longer needed
-        return ZX_OK;
-
     case IOCTL_DISPLAY_FLUSH_FB_REGION: {
         if (in_len != sizeof(ioctl_display_region_t)) {
             return ZX_ERR_INVALID_ARGS;
