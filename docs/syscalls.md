@@ -38,9 +38,10 @@
 + [job_set_relative_importance](syscalls/job_set_relative_importance.md) - update a global ordering of jobs
 
 ## Tasks (Thread, Process, or Job)
-+ [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
 + [task_bind_exception_port](syscalls/task_bind_exception_port.md) - attach an exception port to a task
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
++ [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_suspend](syscalls/task_suspend.md) - cause a task to be suspended
 
 ## Channels
 + [channel_call](syscalls/channel_call.md) - synchronously send a message and receive a reply
