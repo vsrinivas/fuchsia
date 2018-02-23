@@ -71,7 +71,7 @@ Where *condition* is one of
   the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVPAIR**,
   **ZX_POL_NEW_PORT**, **ZX_POL_NEW_SOCKET**, **ZX_POL_NEW_FIFO**,
-  **ZX_POL_NEW_GUEST**, and any future ZX_NEW policy. This will include any new
+  and any future ZX_NEW policy. This will include any new
   kernel objects which do not require a parent object for creation.
 
 Where *policy* is either
