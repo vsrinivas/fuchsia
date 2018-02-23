@@ -154,6 +154,29 @@ void AssociatedState::OnEnter() {
     debugbss("[client] [%s] started inactivity timer\n", client_->addr().ToString().c_str());
 }
 
+zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+    if (power_saving_) {
+        // Enqueue ethernet frame and postpone conversion to when the frame is sent to the client.
+        auto status = client_->EnqueueEthernetFrame(frame);
+        if (status == ZX_ERR_NO_RESOURCES) {
+            debugbss("[client] [%s] reached PS buffering limit; dropping frame\n",
+                     client_->addr().ToString().c_str());
+        } else if (status != ZX_OK) {
+            errorf("[client] couldn't enqueue ethernet frame: %d\n", status);
+        }
+        return status;
+    }
+
+    // If the client is awake and not in power saving mode, convert and send frame immediately.
+    fbl::unique_ptr<Packet> out_frame;
+    auto status = client_->ConvertEthernetToDataFrame(frame, &out_frame);
+    if (status != ZX_OK) {
+        errorf("[client] couldn't convert ethernet frame: %d\n", status);
+        return status;
+    }
+    return client_->SendDataFrame(fbl::move(out_frame));
+}
+
 zx_status_t AssociatedState::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
                                                     const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Deauthentication request: %u\n",
@@ -417,6 +440,21 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 
 zx_status_t RemoteClient::SendEthernet(fbl::unique_ptr<Packet> packet) {
     return device_->SendEthernet(fbl::move(packet));
+}
+
+zx_status_t RemoteClient::SendDataFrame(fbl::unique_ptr<Packet> packet) {
+    return device_->SendWlan(fbl::move(packet));
+}
+
+zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+    // TODO(NET-347): Buffer frame to be sent at a later point in time.
+    return ZX_OK;
+}
+
+zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
+                                                     fbl::unique_ptr<Packet>* out_frame) {
+    // TODO(NET-519): Convert ethernet frame.
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 #undef LOG_STATE_TRANSITION

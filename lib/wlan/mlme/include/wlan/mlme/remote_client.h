@@ -47,8 +47,14 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
     zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet);
+    zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet);
 
-    // Note: There can only ever by one timer running at a time.
+    // Enqueues an ethernet frame which can be sent at a later point in time.
+    zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
+    zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
+                                           fbl::unique_ptr<Packet>* out_frame);
+
+    // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
     zx_status_t StartTimer(zx::time deadline);
     zx_status_t CancelTimer();
@@ -130,6 +136,7 @@ class AssociatedState : public BaseState {
 
     void HandleTimeout() override;
 
+    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
@@ -148,7 +155,11 @@ class AssociatedState : public BaseState {
     static constexpr zx_duration_t kInactivityTimeoutTu = 300000;  // 5min
     const uint16_t aid_;
     zx::time inactive_timeout_;
+    // `true` if the client was active during the last inactivity timeout.
     bool active_;
+    // `true` if the client entered power saving mode.
+    // TODO(NET-445): Set power saving field when FC's PS mode bit is set.
+    bool power_saving_;
 };
 
 }  // namespace wlan
