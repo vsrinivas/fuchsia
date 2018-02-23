@@ -1008,14 +1008,14 @@ void ath10k_core_destroy(struct ath10k* ar);
 void ath10k_core_get_fw_features_str(struct ath10k* ar,
                                      char* buf,
                                      size_t max_len);
-int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
-                                     struct ath10k_fw_file* fw_file);
+zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
+                                             struct ath10k_fw_file* fw_file);
 
-int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
-                      const struct ath10k_fw_components* fw_components);
-int ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt);
+zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
+                              const struct ath10k_fw_components* fw_components);
+zx_status_t ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt);
 void ath10k_core_stop(struct ath10k* ar);
-int ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
+zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
 void ath10k_core_unregister(struct ath10k* ar);
 
 #endif /* _CORE_H_ */

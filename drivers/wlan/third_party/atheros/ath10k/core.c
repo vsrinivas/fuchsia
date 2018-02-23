@@ -433,21 +433,21 @@ static void ath10k_init_sdio(struct ath10k* ar) {
     ath10k_bmi_write32(ar, hi_acs_flags, param);
 }
 
-static int ath10k_init_configure_target(struct ath10k* ar) {
+static zx_status_t ath10k_init_configure_target(struct ath10k* ar) {
     uint32_t param_host;
-    int ret;
+    zx_status_t ret;
 
     /* tell target which HTC version it is used*/
     ret = ath10k_bmi_write32(ar, hi_app_host_interest,
                              HTC_PROTOCOL_VERSION);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("settings HTC version failed\n");
         return ret;
     }
 
     /* set the firmware mode to STA/IBSS/AP */
     ret = ath10k_bmi_read32(ar, hi_option_flag, &param_host);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("setting firmware mode (1/2) failed\n");
         return ret;
     }
@@ -466,14 +466,14 @@ static int ath10k_init_configure_target(struct ath10k* ar) {
     param_host |= (0 << HI_OPTION_FW_SUBMODE_SHIFT);
 
     ret = ath10k_bmi_write32(ar, hi_option_flag, param_host);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("setting firmware mode (2/2) failed\n");
         return ret;
     }
 
     /* We do all byte-swapping on the host */
     ret = ath10k_bmi_write32(ar, hi_be, 0);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("setting host CPU BE mode failed\n");
         return ret;
     }
@@ -481,7 +481,7 @@ static int ath10k_init_configure_target(struct ath10k* ar) {
     /* FW descriptor/Data swap flags */
     ret = ath10k_bmi_write32(ar, hi_fw_swap, 0);
 
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("setting FW data/desc swap flags failed\n");
         return ret;
     }
@@ -492,23 +492,23 @@ static int ath10k_init_configure_target(struct ath10k* ar) {
      */
     ret = ath10k_bmi_write32(ar, hi_hci_uart_pwr_mgmt_params_ext,
                              ar->dev_id);
-    if (ret) {
-        ath10k_err("failed to set pwr_mgmt_params: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to set pwr_mgmt_params: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static const struct firmware* ath10k_fetch_fw_file(struct ath10k* ar,
-        const char* dir,
-        const char* file) {
+static zx_status_t ath10k_fetch_fw_file(struct ath10k* ar,
+                                        const char* dir,
+                                        const char* file,
+                                        struct ath10k_firmware* firmware) {
     char filename[100];
-    const struct firmware* fw;
-    int ret;
+    zx_status_t ret;
 
     if (file == NULL) {
-        return ERR_PTR(-ENOENT);
+        return ZX_ERR_NOT_FOUND;
     }
 
     if (dir == NULL) {
@@ -516,28 +516,28 @@ static const struct firmware* ath10k_fetch_fw_file(struct ath10k* ar,
     }
 
     snprintf(filename, sizeof(filename), "%s/%s", dir, file);
-    ret = request_firmware_direct(&fw, filename, ar->dev);
-    ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot fw request '%s': %d\n",
-               filename, ret);
+    ret = request_firmware_direct(firmware, filename, ar->dev);
+    ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot fw request '%s': %s\n",
+               filename, zx_status_get_string(ret));
 
-    if (ret) {
-        return ERR_PTR(ret);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    return fw;
+    return ZX_OK;
 }
 
-static int ath10k_push_board_ext_data(struct ath10k* ar, const void* data,
-                                      size_t data_len) {
+static zx_status_t ath10k_push_board_ext_data(struct ath10k* ar, const void* data,
+                                              size_t data_len) {
     uint32_t board_data_size = ar->hw_params.fw.board_size;
     uint32_t board_ext_data_size = ar->hw_params.fw.board_ext_size;
     uint32_t board_ext_data_addr;
-    int ret;
+    zx_status_t ret;
 
     ret = ath10k_bmi_read32(ar, hi_board_ext_data, &board_ext_data_addr);
-    if (ret) {
-        ath10k_err("could not read board ext data addr (%d)\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not read board ext data addr (%s)\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
@@ -546,63 +546,64 @@ static int ath10k_push_board_ext_data(struct ath10k* ar, const void* data,
                board_ext_data_addr);
 
     if (board_ext_data_addr == 0) {
-        return 0;
+        return ZX_OK;
     }
 
     if (data_len != (board_data_size + board_ext_data_size)) {
         ath10k_err("invalid board (ext) data sizes %zu != %d+%d\n",
                    data_len, board_data_size, board_ext_data_size);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ret = ath10k_bmi_write_memory(ar, board_ext_data_addr,
                                   data + board_data_size,
                                   board_ext_data_size);
-    if (ret) {
-        ath10k_err("could not write board ext data (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write board ext data (%s)\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_bmi_write32(ar, hi_board_ext_data_config,
                              (board_ext_data_size << 16) | 1);
-    if (ret) {
-        ath10k_err("could not write board ext data bit (%d)\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write board ext data bit (%s)\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_download_board_data(struct ath10k* ar, const void* data,
-                                      size_t data_len) {
+static zx_status_t ath10k_download_board_data(struct ath10k* ar, const void* data,
+                                              size_t data_len) {
     uint32_t board_data_size = ar->hw_params.fw.board_size;
     uint32_t address;
-    int ret;
+    zx_status_t ret;
 
     ret = ath10k_push_board_ext_data(ar, data, data_len);
-    if (ret) {
-        ath10k_err("could not push board ext data (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not push board ext data (%s)\n", zx_status_get_string(ret));
         goto exit;
     }
 
     ret = ath10k_bmi_read32(ar, hi_board_data, &address);
-    if (ret) {
-        ath10k_err("could not read board data addr (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not read board data addr (%s)\n", zx_status_get_string(ret));
         goto exit;
     }
 
     ret = ath10k_bmi_write_memory(ar, address, data,
                                   min_t(uint32_t, board_data_size,
                                         data_len));
-    if (ret) {
-        ath10k_err("could not write board data (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write board data (%s)\n", zx_status_get_string(ret));
         goto exit;
     }
 
     ret = ath10k_bmi_write32(ar, hi_board_data_initialized, 1);
-    if (ret) {
-        ath10k_err("could not write board data bit (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write board data bit (%s)\n", zx_status_get_string(ret));
         goto exit;
     }
 
@@ -610,76 +611,73 @@ exit:
     return ret;
 }
 
-static int ath10k_download_cal_file(struct ath10k* ar,
-                                    const struct firmware* file) {
-    int ret;
+static zx_status_t ath10k_download_cal_file(struct ath10k* ar,
+                                            const struct firmware* file) {
+    zx_status_t ret;
 
     if (!file) {
-        return -ENOENT;
-    }
-
-    if (IS_ERR(file)) {
-        return PTR_ERR(file);
+        return ZX_ERR_NOT_FOUND;
     }
 
     ret = ath10k_download_board_data(ar, file->data, file->size);
-    if (ret) {
-        ath10k_err("failed to download cal_file data: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to download cal_file data: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot cal file downloaded\n");
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_download_cal_dt(struct ath10k* ar, const char* dt_name) {
+static zx_status_t ath10k_download_cal_dt(struct ath10k* ar, const char* dt_name) {
     struct device_node* node;
     int data_len;
     void* data;
-    int ret;
+    zx_status_t ret;
 
     node = ar->dev->of_node;
     if (!node) {
         /* Device Tree is optional, don't print any warnings if
          * there's no node for ath10k.
          */
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
 
     if (!of_get_property(node, dt_name, &data_len)) {
         /* The calibration data node is optional */
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
 
     if (data_len != ar->hw_params.cal_data_len) {
         ath10k_warn("invalid calibration data length in DT: %d\n",
                     data_len);
-        ret = -EMSGSIZE;
+        ret = ZX_ERR_OUT_OF_RANGE;
         goto out;
     }
 
     data = kmalloc(data_len, GFP_KERNEL);
     if (!data) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto out;
     }
 
     ret = of_property_read_u8_array(node, dt_name, data, data_len);
-    if (ret) {
-        ath10k_warn("failed to read calibration data from DT: %d\n",
-                    ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to read calibration data from DT: %s\n",
+                    zx_status_get_string(ret));
         goto out_free;
     }
 
     ret = ath10k_download_board_data(ar, data, data_len);
-    if (ret) {
-        ath10k_warn("failed to download calibration data from Device Tree: %d\n",
-                    ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to download calibration data from Device Tree: %s\n",
+                    zx_status_get_string(ret));
         goto out_free;
     }
 
-    ret = 0;
+    ret = ZX_OK;
 
 out_free:
     kfree(data);
@@ -688,27 +686,27 @@ out:
     return ret;
 }
 
-static int ath10k_download_cal_eeprom(struct ath10k* ar) {
+static zx_status_t ath10k_download_cal_eeprom(struct ath10k* ar) {
     size_t data_len;
     void* data = NULL;
-    int ret;
+    zx_status_t ret;
 
     ret = ath10k_hif_fetch_cal_eeprom(ar, &data, &data_len);
-    if (ret) {
-        if (ret != -EOPNOTSUPP)
-            ath10k_warn("failed to read calibration data from EEPROM: %d\n",
-                        ret);
+    if (ret != ZX_OK) {
+        if (ret != ZX_ERR_NOT_SUPPORTED)
+            ath10k_warn("failed to read calibration data from EEPROM: %s\n",
+                        zx_status_get_string(ret));
         goto out_free;
     }
 
     ret = ath10k_download_board_data(ar, data, data_len);
-    if (ret) {
-        ath10k_warn("failed to download calibration data from EEPROM: %d\n",
-                    ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to download calibration data from EEPROM: %s\n",
+                    zx_status_get_string(ret));
         goto out_free;
     }
 
-    ret = 0;
+    ret = ZX_OK;
 
 out_free:
     kfree(data);
@@ -716,17 +714,18 @@ out_free:
     return ret;
 }
 
-static int ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
+static zx_status_t ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
     uint32_t result, address;
     uint8_t board_id, chip_id;
-    int ret, bmi_board_id_param;
+    zx_status_t ret;
+    int bmi_board_id_param;
 
     address = ar->hw_params.patch_load_addr;
 
     if (!ar->normal_mode_fw.fw_file.otp_data ||
             !ar->normal_mode_fw.fw_file.otp_len) {
         ath10k_warn("failed to retrieve board id because of invalid otp\n");
-        return -ENODATA;
+        return ZX_ERR_NOT_FOUND;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
@@ -736,9 +735,9 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
     ret = ath10k_bmi_fast_download(ar, address,
                                    ar->normal_mode_fw.fw_file.otp_data,
                                    ar->normal_mode_fw.fw_file.otp_len);
-    if (ret) {
-        ath10k_err("could not write otp for board id check: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write otp for board id check: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
@@ -750,9 +749,9 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
     }
 
     ret = ath10k_bmi_execute(ar, address, bmi_board_id_param, &result);
-    if (ret) {
-        ath10k_err("could not execute otp for board id check: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not execute otp for board id check: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
@@ -767,14 +766,14 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k* ar) {
             (board_id == 0)) {
         ath10k_dbg(ar, ATH10K_DBG_BOOT,
                    "board id does not exist in otp, ignore it\n");
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     ar->id.bmi_ids_valid = true;
     ar->id.bmi_board_id = board_id;
     ar->id.bmi_chip_id = chip_id;
 
-    return 0;
+    return ZX_OK;
 }
 
 static void ath10k_core_check_bdfext(const struct dmi_header* hdr, void* data) {
@@ -832,27 +831,27 @@ static void ath10k_core_check_bdfext(const struct dmi_header* hdr, void* data) {
                ATH10K_SMBIOS_BDF_EXT_TYPE, bdf_ext);
 }
 
-static int ath10k_core_check_smbios(struct ath10k* ar) {
+static zx_status_t ath10k_core_check_smbios(struct ath10k* ar) {
     ar->id.bdf_ext[0] = '\0';
     dmi_walk(ath10k_core_check_bdfext, ar);
 
     if (ar->id.bdf_ext[0] == '\0') {
-        return -ENODATA;
+        return ZX_ERR_NOT_FOUND;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_download_and_run_otp(struct ath10k* ar) {
+static zx_status_t ath10k_download_and_run_otp(struct ath10k* ar) {
     uint32_t result, address = ar->hw_params.patch_load_addr;
     uint32_t bmi_otp_exe_param = ar->hw_params.otp_exe_param;
-    int ret;
+    zx_status_t ret;
 
     ret = ath10k_download_board_data(ar,
                                      ar->running_fw->board_data,
                                      ar->running_fw->board_len);
-    if (ret) {
-        ath10k_err("failed to download board data: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to download board data: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -863,7 +862,7 @@ static int ath10k_download_and_run_otp(struct ath10k* ar) {
         ath10k_warn("Not running otp, calibration will be incorrect (otp-data %pK otp_len %zd)!\n",
                     ar->running_fw->fw_file.otp_data,
                     ar->running_fw->fw_file.otp_len);
-        return 0;
+        return ZX_OK;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot upload otp to 0x%x len %zd\n",
@@ -872,8 +871,8 @@ static int ath10k_download_and_run_otp(struct ath10k* ar) {
     ret = ath10k_bmi_fast_download(ar, address,
                                    ar->running_fw->fw_file.otp_data,
                                    ar->running_fw->fw_file.otp_len);
-    if (ret) {
-        ath10k_err("could not write otp (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not write otp (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -884,8 +883,8 @@ static int ath10k_download_and_run_otp(struct ath10k* ar) {
     }
 
     ret = ath10k_bmi_execute(ar, address, bmi_otp_exe_param, &result);
-    if (ret) {
-        ath10k_err("could not execute otp (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not execute otp (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -895,16 +894,16 @@ static int ath10k_download_and_run_otp(struct ath10k* ar) {
                                ar->running_fw->fw_file.fw_features)) &&
             result != 0) {
         ath10k_err("otp calibration failed: %d", result);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_download_fw(struct ath10k* ar) {
+static zx_status_t ath10k_download_fw(struct ath10k* ar) {
     uint32_t address, data_len;
     const void* data;
-    int ret;
+    zx_status_t ret;
 
     address = ar->hw_params.patch_load_addr;
 
@@ -912,9 +911,9 @@ static int ath10k_download_fw(struct ath10k* ar) {
     data_len = ar->running_fw->fw_file.firmware_len;
 
     ret = ath10k_swap_code_seg_configure(ar, &ar->running_fw->fw_file);
-    if (ret) {
-        ath10k_err("failed to configure fw code swap: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to configure fw code swap: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
@@ -923,9 +922,9 @@ static int ath10k_download_fw(struct ath10k* ar) {
                data, data_len);
 
     ret = ath10k_bmi_fast_download(ar, address, data, data_len);
-    if (ret) {
-        ath10k_err("failed to download firmware: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to download firmware: %s\n",
+                   zx_status_get_string(ret));
         return ret;
     }
 
@@ -968,15 +967,16 @@ static void ath10k_core_free_firmware_files(struct ath10k* ar) {
     ar->pre_cal_file = NULL;
 }
 
-static int ath10k_fetch_cal_file(struct ath10k* ar) {
+static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
     char filename[100];
+    zx_status_t ret;
 
     /* pre-cal-<bus>-<id>.bin */
     scnprintf(filename, sizeof(filename), "pre-cal-%s-%s.bin",
               ath10k_bus_str(ar->hif.bus), dev_name(ar->dev));
 
-    ar->pre_cal_file = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename);
-    if (!IS_ERR(ar->pre_cal_file)) {
+    ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->pre_cal_file);
+    if (ret == ZX_OK) {
         goto success;
     }
 
@@ -984,44 +984,46 @@ static int ath10k_fetch_cal_file(struct ath10k* ar) {
     scnprintf(filename, sizeof(filename), "cal-%s-%s.bin",
               ath10k_bus_str(ar->hif.bus), dev_name(ar->dev));
 
-    ar->cal_file = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename);
-    if (IS_ERR(ar->cal_file))
-        /* calibration file is optional, don't print any warnings */
+    ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->cal_file);
+    if (ret != ZX_OK)
     {
-        return PTR_ERR(ar->cal_file);
+        /* calibration file is optional, don't print any warnings */
+        return ret;
     }
 success:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "found calibration file %s/%s\n",
                ATH10K_FW_DIR, filename);
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_fetch_board_data_api_1(struct ath10k* ar) {
+static zx_status_t ath10k_core_fetch_board_data_api_1(struct ath10k* ar) {
+    zx_status_t ret;
+
     if (!ar->hw_params.fw.board) {
         ath10k_err("failed to find board file fw entry\n");
-        return -EINVAL;
+        return ZX_ERR_NOT_FOUND;
     }
 
-    ar->normal_mode_fw.board = ath10k_fetch_fw_file(ar,
-                               ar->hw_params.fw.dir,
-                               ar->hw_params.fw.board);
-    if (IS_ERR(ar->normal_mode_fw.board)) {
-        return PTR_ERR(ar->normal_mode_fw.board);
+    ret = ath10k_fetch_fw_file(ar, ar->hw_params.fw.dir, ar->hw_params.fw.board,
+                               &ar->normal_mode_fw.board);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
     ar->normal_mode_fw.board_data = ar->normal_mode_fw.board->data;
     ar->normal_mode_fw.board_len = ar->normal_mode_fw.board->size;
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
-        const void* buf, size_t buf_len,
-        const char* boardname) {
+static zx_status_t ath10k_core_parse_bd_ie_board(struct ath10k* ar,
+                                                 const void* buf, size_t buf_len,
+                                                 const char* boardname) {
     const struct ath10k_fw_ie* hdr;
     bool name_match_found;
-    int ret, board_ie_id;
+    zx_status_t ret;
+    int board_ie_id;
     size_t board_ie_len;
     const void* board_ie_data;
 
@@ -1040,7 +1042,7 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
         if (buf_len < ALIGN(board_ie_len, 4)) {
             ath10k_err("invalid ATH10K_BD_IE_BOARD length: %zu < %zu\n",
                        buf_len, ALIGN(board_ie_len, 4));
-            ret = -EINVAL;
+            ret = ZX_ERR_INVALID_ARGS;
             goto out;
         }
 
@@ -1053,8 +1055,7 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
                 break;
             }
 
-            ret = memcmp(board_ie_data, boardname, strlen(boardname));
-            if (ret) {
+            if (memcmp(board_ie_data, boardname, strlen(boardname))) {
                 break;
             }
 
@@ -1076,7 +1077,7 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
             ar->normal_mode_fw.board_data = board_ie_data;
             ar->normal_mode_fw.board_len = board_ie_len;
 
-            ret = 0;
+            ret = ZX_OK;
             goto out;
         default:
             ath10k_warn("unknown ATH10K_BD_IE_BOARD found: %d\n",
@@ -1092,25 +1093,24 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k* ar,
     }
 
     /* no match found */
-    ret = -ENOENT;
+    ret = ZX_ERR_NOT_FOUND;
 
 out:
     return ret;
 }
 
-static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
-        const char* boardname,
-        const char* filename) {
+static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
+                                                      const char* boardname,
+                                                      const char* filename) {
     size_t len, magic_len, ie_len;
     struct ath10k_fw_ie* hdr;
     const uint8_t* data;
-    int ret, ie_id;
+    zx_status_t ret;
+    int ie_id;
 
-    ar->normal_mode_fw.board = ath10k_fetch_fw_file(ar,
-                               ar->hw_params.fw.dir,
-                               filename);
-    if (IS_ERR(ar->normal_mode_fw.board)) {
-        return PTR_ERR(ar->normal_mode_fw.board);
+    ret = ath10k_fetch_fw_file(ar, ar->hw_params.fw.dir, filename, &ar->normal_mode_fw.board);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
     data = ar->normal_mode_fw.board->data;
@@ -1121,13 +1121,13 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
     if (len < magic_len) {
         ath10k_err("failed to find magic value in %s/%s, file too short: %zu\n",
                    ar->hw_params.fw.dir, filename, len);
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
     if (memcmp(data, ATH10K_BOARD_MAGIC, magic_len)) {
         ath10k_err("found invalid board magic\n");
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
@@ -1136,7 +1136,7 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
     if (len < magic_len) {
         ath10k_err("failed: %s/%s too small to contain board data, len: %zu\n",
                    ar->hw_params.fw.dir, filename, len);
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
@@ -1154,7 +1154,7 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
         if (len < ALIGN(ie_len, 4)) {
             ath10k_err("invalid length for board ie_id %d ie_len %zu len %zu\n",
                        ie_id, ie_len, len);
-            ret = -EINVAL;
+            ret = ZX_ERR_INVALID_ARGS; 
             goto err;
         }
 
@@ -1162,7 +1162,7 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
         case ATH10K_BD_IE_BOARD:
             ret = ath10k_core_parse_bd_ie_board(ar, data, ie_len,
                                                 boardname);
-            if (ret == -ENOENT && ar->id.bdf_ext[0] != '\0') {
+            if (ret == ZX_ERR_NOT_FOUND && ar->id.bdf_ext[0] != '\0') {
                 /* try default bdf if variant was not found */
                 char* s, *v = ",variant=";
                 char boardname2[100];
@@ -1180,11 +1180,11 @@ static int ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
                                                     boardname2);
             }
 
-            if (ret == -ENOENT)
+            if (ret == ZX_ERR_NOT_FOUND)
                 /* no match found, continue */
             {
                 break;
-            } else if (ret)
+            } else if (ret != ZX_OK)
                 /* there was an error, bail out */
             {
                 goto err;
@@ -1205,18 +1205,18 @@ out:
     if (!ar->normal_mode_fw.board_data || !ar->normal_mode_fw.board_len) {
         ath10k_err("failed to fetch board data for %s from %s/%s\n",
                    boardname, ar->hw_params.fw.dir, filename);
-        ret = -ENODATA;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
-    return 0;
+    return ZX_OK;
 
 err:
     ath10k_core_free_board_files(ar);
     return ret;
 }
 
-static int ath10k_core_create_board_name(struct ath10k* ar, char* name,
+static zx_status_t ath10k_core_create_board_name(struct ath10k* ar, char* name,
         size_t name_len) {
     /* strlen(',variant=') + strlen(ar->id.bdf_ext) */
     char variant[9 + ATH10K_SMBIOS_BDF_EXT_STR_LENGTH] = { 0 };
@@ -1242,29 +1242,29 @@ static int ath10k_core_create_board_name(struct ath10k* ar, char* name,
 out:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot using board name '%s'\n", name);
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_fetch_board_file(struct ath10k* ar) {
+static zx_status_t ath10k_core_fetch_board_file(struct ath10k* ar) {
     char boardname[100];
-    int ret;
+    zx_status_t ret;
 
     ret = ath10k_core_create_board_name(ar, boardname, sizeof(boardname));
-    if (ret) {
-        ath10k_err("failed to create board name: %d", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to create board name: %s", zx_status_get_string(ret));
         return ret;
     }
 
     ar->bd_api = 2;
     ret = ath10k_core_fetch_board_data_api_n(ar, boardname,
             ATH10K_BOARD_API2_FILE);
-    if (!ret) {
+    if (ret == ZX_OK) {
         goto success;
     }
 
     ar->bd_api = 1;
     ret = ath10k_core_fetch_board_data_api_1(ar);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("failed to fetch board-2.bin or board.bin from %s\n",
                    ar->hw_params.fw.dir);
         return ret;
@@ -1272,22 +1272,22 @@ static int ath10k_core_fetch_board_file(struct ath10k* ar) {
 
 success:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "using board api %d\n", ar->bd_api);
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
-                                     struct ath10k_fw_file* fw_file) {
+zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
+                                             struct ath10k_fw_file* fw_file) {
     size_t magic_len, len, ie_len;
-    int ie_id, i, index, bit, ret;
+    int ie_id, i, index, bit;
     struct ath10k_fw_ie* hdr;
     const uint8_t* data;
     uint32_t* timestamp, *version;
+    zx_status_t ret;
 
     /* first fetch the firmware file (firmware-*.bin) */
-    fw_file->firmware = ath10k_fetch_fw_file(ar, ar->hw_params.fw.dir,
-                        name);
-    if (IS_ERR(fw_file->firmware)) {
-        return PTR_ERR(fw_file->firmware);
+    ret = ath10k_fetch_fw_file(ar, ar->hw_params.fw.dir, name, &fw_file->firmware);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
     data = fw_file->firmware->data;
@@ -1299,13 +1299,13 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
     if (len < magic_len) {
         ath10k_err("firmware file '%s/%s' too small to contain magic: %zu\n",
                    ar->hw_params.fw.dir, name, len);
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
     if (memcmp(data, ATH10K_FIRMWARE_MAGIC, magic_len) != 0) {
         ath10k_err("invalid firmware magic\n");
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
@@ -1328,7 +1328,7 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
         if (len < ie_len) {
             ath10k_err("invalid length for FW IE %d (%zu < %zu)\n",
                        ie_id, len, ie_len);
-            ret = -EINVAL;
+            ret = ZX_ERR_INVALID_ARGS;
             goto err;
         }
 
@@ -1446,11 +1446,11 @@ int ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
             !fw_file->firmware_len) {
         ath10k_warn("No ATH10K_FW_IE_FW_IMAGE found from '%s/%s', skipping\n",
                     ar->hw_params.fw.dir, name);
-        ret = -ENOMEDIUM;
+        ret = ZX_ERR_NOT_FOUND;
         goto err;
     }
 
-    return 0;
+    return ZX_OK;
 
 err:
     ath10k_core_free_firmware_files(ar);
@@ -1473,8 +1473,9 @@ static void ath10k_core_get_fw_name(struct ath10k* ar, char* fw_name,
     }
 }
 
-static int ath10k_core_fetch_firmware_files(struct ath10k* ar) {
-    int ret, i;
+static zx_status_t ath10k_core_fetch_firmware_files(struct ath10k* ar) {
+    zx_status_t ret;
+    int i;
     char fw_name[100];
 
     /* calibration file is optional, don't check for any errors */
@@ -1488,7 +1489,7 @@ static int ath10k_core_fetch_firmware_files(struct ath10k* ar) {
         ath10k_core_get_fw_name(ar, fw_name, sizeof(fw_name), ar->fw_api);
         ret = ath10k_core_fetch_firmware_api_n(ar, fw_name,
                                                &ar->normal_mode_fw.fw_file);
-        if (!ret) {
+        if (ret == ZX_OK) {
             goto success;
         }
     }
@@ -1504,26 +1505,26 @@ static int ath10k_core_fetch_firmware_files(struct ath10k* ar) {
 success:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "using fw api %d\n", ar->fw_api);
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_pre_cal_download(struct ath10k* ar) {
-    int ret;
+static zx_status_t ath10k_core_pre_cal_download(struct ath10k* ar) {
+    zx_status_t ret;
 
     ret = ath10k_download_cal_file(ar, ar->pre_cal_file);
-    if (ret == 0) {
+    if (ret == ZX_OK) {
         ar->cal_mode = ATH10K_PRE_CAL_MODE_FILE;
         goto success;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "boot did not find a pre calibration file, try DT next: %d\n",
-               ret);
+               "boot did not find a pre calibration file, try DT next: %s\n",
+               zx_status_get_string(ret));
 
     ret = ath10k_download_cal_dt(ar, "qcom,ath10k-pre-calibration-data");
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_dbg(ar, ATH10K_DBG_BOOT,
-                   "unable to load pre cal data from DT: %d\n", ret);
+                   "unable to load pre cal data from DT: %s\n", zx_status_get_string(ret));
         return ret;
     }
     ar->cal_mode = ATH10K_PRE_CAL_MODE_DT;
@@ -1532,82 +1533,82 @@ success:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot using calibration mode %s\n",
                ath10k_cal_mode_str(ar->cal_mode));
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_pre_cal_config(struct ath10k* ar) {
-    int ret;
+static zx_status_t ath10k_core_pre_cal_config(struct ath10k* ar) {
+    zx_status_t ret;
 
     ret = ath10k_core_pre_cal_download(ar);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_dbg(ar, ATH10K_DBG_BOOT,
-                   "failed to load pre cal data: %d\n", ret);
+                   "failed to load pre cal data: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_core_get_board_id_from_otp(ar);
-    if (ret) {
-        ath10k_err("failed to get board id: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to get board id: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_download_and_run_otp(ar);
-    if (ret) {
-        ath10k_err("failed to run otp: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to run otp: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
                "pre cal configuration done successfully\n");
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_download_cal_data(struct ath10k* ar) {
-    int ret;
+static zx_status_t ath10k_download_cal_data(struct ath10k* ar) {
+    zx_status_t ret;
 
     ret = ath10k_core_pre_cal_config(ar);
-    if (ret == 0) {
-        return 0;
+    if (ret == ZX_OK) {
+        return ZX_OK;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "pre cal download procedure failed, try cal file: %d\n",
-               ret);
+               "pre cal download procedure failed, try cal file: %s\n",
+               zx_status_get_string(ret));
 
     ret = ath10k_download_cal_file(ar, ar->cal_file);
-    if (ret == 0) {
+    if (ret == ZX_OK) {
         ar->cal_mode = ATH10K_CAL_MODE_FILE;
         goto done;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "boot did not find a calibration file, try DT next: %d\n",
-               ret);
+               "boot did not find a calibration file, try DT next: %s\n",
+               zx_status_get_string(ret));
 
     ret = ath10k_download_cal_dt(ar, "qcom,ath10k-calibration-data");
-    if (ret == 0) {
+    if (ret == ZX_OK) {
         ar->cal_mode = ATH10K_CAL_MODE_DT;
         goto done;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "boot did not find DT entry, try target EEPROM next: %d\n",
-               ret);
+               "boot did not find DT entry, try target EEPROM next: %s\n",
+               zx_status_get_string(ret));
 
     ret = ath10k_download_cal_eeprom(ar);
-    if (ret == 0) {
+    if (ret == ZX_OK) {
         ar->cal_mode = ATH10K_CAL_MODE_EEPROM;
         goto done;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT,
-               "boot did not find target EEPROM entry, try OTP next: %d\n",
-               ret);
+               "boot did not find target EEPROM entry, try OTP next: %s\n",
+               zx_status_get_string(ret));
 
     ret = ath10k_download_and_run_otp(ar);
-    if (ret) {
-        ath10k_err("failed to run otp: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to run otp: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -1616,50 +1617,52 @@ static int ath10k_download_cal_data(struct ath10k* ar) {
 done:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot using calibration mode %s\n",
                ath10k_cal_mode_str(ar->cal_mode));
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_init_uart(struct ath10k* ar) {
-    int ret;
+static zx_status_t ath10k_init_uart(struct ath10k* ar) {
+    zx_status_t ret;
 
     /*
      * Explicitly setting UART prints to zero as target turns it on
      * based on scratch registers.
      */
     ret = ath10k_bmi_write32(ar, hi_serial_enable, 0);
-    if (ret) {
-        ath10k_warn("could not disable UART prints (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("could not disable UART prints (%s)\n",
+                    zx_status_get_string(ret));
         return ret;
     }
 
     if (!uart_print) {
-        return 0;
+        return ZX_OK;
     }
 
     ret = ath10k_bmi_write32(ar, hi_dbg_uart_txpin, ar->hw_params.uart_pin);
-    if (ret) {
-        ath10k_warn("could not enable UART prints (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("could not enable UART prints (%s)\n",
+                    zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_bmi_write32(ar, hi_serial_enable, 1);
-    if (ret) {
-        ath10k_warn("could not enable UART prints (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("could not enable UART prints (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
     /* Set the UART baud rate to 19200. */
     ret = ath10k_bmi_write32(ar, hi_desired_baud_rate, 19200);
-    if (ret) {
-        ath10k_warn("could not set the baud rate (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("could not set the baud rate (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
     ath10k_trace("UART prints enabled\n");
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_init_hw_params(struct ath10k* ar) {
+static zx_status_t ath10k_init_hw_params(struct ath10k* ar) {
     const struct ath10k_hw_params* uninitialized_var(hw_params);
     int i;
 
@@ -1675,7 +1678,7 @@ static int ath10k_init_hw_params(struct ath10k* ar) {
     if (i == ARRAY_SIZE(ath10k_hw_params_list)) {
         ath10k_err("Unsupported hardware version: 0x%x\n",
                    ar->target_version);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ar->hw_params = *hw_params;
@@ -1683,7 +1686,7 @@ static int ath10k_init_hw_params(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "Hardware name %s version 0x%x\n",
                ar->hw_params.name, ar->target_version);
 
-    return 0;
+    return ZX_OK;
 }
 
 static void ath10k_core_restart(struct work_struct* work) {
@@ -1764,19 +1767,19 @@ static void ath10k_core_set_coverage_class_work(struct work_struct* work) {
     }
 }
 
-static int ath10k_core_init_firmware_features(struct ath10k* ar) {
+static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
     struct ath10k_fw_file* fw_file = &ar->normal_mode_fw.fw_file;
 
     if (test_bit(ATH10K_FW_FEATURE_WMI_10_2, fw_file->fw_features) &&
             !test_bit(ATH10K_FW_FEATURE_WMI_10X, fw_file->fw_features)) {
         ath10k_err("feature bits corrupted: 10.2 feature requires 10.x feature to be set as well");
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (fw_file->wmi_op_version >= ATH10K_FW_WMI_OP_VERSION_MAX) {
         ath10k_err("unsupported WMI OP version (max %d): %d\n",
                    ATH10K_FW_WMI_OP_VERSION_MAX, fw_file->wmi_op_version);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ar->wmi.rx_decap_mode = ATH10K_HW_TXRX_NATIVE_WIFI;
@@ -1789,7 +1792,7 @@ static int ath10k_core_init_firmware_features(struct ath10k* ar) {
         if (!test_bit(ATH10K_FW_FEATURE_RAW_MODE_SUPPORT,
                       fw_file->fw_features)) {
             ath10k_err("cryptmode > 0 requires raw mode support from firmware");
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         set_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags);
@@ -1797,7 +1800,7 @@ static int ath10k_core_init_firmware_features(struct ath10k* ar) {
         break;
     default:
         ath10k_trace("invalid cryptmode: %d\n", ath10k_cryptmode_param);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS; 
     }
 
     ar->htt.max_num_amsdu = ATH10K_HTT_MAX_NUM_AMSDU_DEFAULT;
@@ -1807,7 +1810,7 @@ static int ath10k_core_init_firmware_features(struct ath10k* ar) {
         if (!test_bit(ATH10K_FW_FEATURE_RAW_MODE_SUPPORT,
                       fw_file->fw_features)) {
             ath10k_err("rawmode = 1 requires support from firmware");
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
         set_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags);
     }
@@ -1899,7 +1902,7 @@ static int ath10k_core_init_firmware_features(struct ath10k* ar) {
     case ATH10K_FW_WMI_OP_VERSION_UNSET:
     case ATH10K_FW_WMI_OP_VERSION_MAX:
         WARN_ON(1);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Backwards compatibility for firmwares without
@@ -1922,15 +1925,15 @@ static int ath10k_core_init_firmware_features(struct ath10k* ar) {
         case ATH10K_FW_WMI_OP_VERSION_UNSET:
         case ATH10K_FW_WMI_OP_VERSION_MAX:
             ath10k_err("htt op version not found from fw meta data");
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int ath10k_core_reset_rx_filter(struct ath10k* ar) {
-    int ret;
+static zx_status_t ath10k_core_reset_rx_filter(struct ath10k* ar) {
+    zx_status_t ret;
     int vdev_id;
     int vdev_type;
     int vdev_subtype;
@@ -1943,14 +1946,14 @@ static int ath10k_core_reset_rx_filter(struct ath10k* ar) {
 
     ret = ath10k_wmi_vdev_create(ar, vdev_id, vdev_type, vdev_subtype,
                                  vdev_addr);
-    if (ret) {
-        ath10k_err("failed to create dummy vdev: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to create dummy vdev: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
     ret = ath10k_wmi_vdev_delete(ar, vdev_id);
-    if (ret) {
-        ath10k_err("failed to delete dummy vdev: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to delete dummy vdev: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -1969,17 +1972,17 @@ static int ath10k_core_reset_rx_filter(struct ath10k* ar) {
      * window of opportunity to receive (and Tx ACK) a bunch of frames.
      */
     ret = ath10k_wmi_barrier(ar);
-    if (ret) {
-        ath10k_err("failed to ping firmware: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to ping firmware: %s\n", zx_status_get_string(ret));
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
-                      const struct ath10k_fw_components* fw) {
-    int status;
+zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
+                              const struct ath10k_fw_components* fw) {
+    zx_status_t status;
     uint32_t val;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
@@ -1990,13 +1993,13 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
 
     ath10k_bmi_start(ar);
 
-    if (ath10k_init_configure_target(ar)) {
-        status = -EINVAL;
+    if (ath10k_init_configure_target(ar) != ZX_OK) {
+        status = ZX_ERR_INVALID_ARGS;
         goto err;
     }
 
     status = ath10k_download_cal_data(ar);
-    if (status) {
+    if (status != ZX_OK) {
         goto err;
     }
 
@@ -2009,20 +2012,20 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     if (test_bit(ATH10K_FW_FEATURE_SUPPORTS_SKIP_CLOCK_INIT,
                  ar->running_fw->fw_file.fw_features)) {
         status = ath10k_bmi_write32(ar, hi_skip_clock_init, 1);
-        if (status) {
-            ath10k_err("could not write to skip_clock_init: %d\n",
-                       status);
+        if (status != ZX_OK) {
+            ath10k_err("could not write to skip_clock_init: %s\n",
+                       zx_status_get_string(status));
             goto err;
         }
     }
 
     status = ath10k_download_fw(ar);
-    if (status) {
+    if (status != ZX_OK) {
         goto err;
     }
 
     status = ath10k_init_uart(ar);
-    if (status) {
+    if (status != ZX_OK) {
         goto err;
     }
 
@@ -2034,75 +2037,75 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
         ath10k_send_suspend_complete;
 
     status = ath10k_htc_init(ar);
-    if (status) {
-        ath10k_err("could not init HTC (%d)\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("could not init HTC (%s)\n", zx_status_get_string(status));
         goto err;
     }
 
     status = ath10k_bmi_done(ar);
-    if (status) {
+    if (status != ZX_OK) {
         goto err;
     }
 
     status = ath10k_wmi_attach(ar);
-    if (status) {
-        ath10k_err("WMI attach failed: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("WMI attach failed: %s\n", zx_status_get_string(status));
         goto err;
     }
 
     status = ath10k_htt_init(ar);
-    if (status) {
-        ath10k_err("failed to init htt: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to init htt: %s\n", zx_status_get_string(status));
         goto err_wmi_detach;
     }
 
     status = ath10k_htt_tx_start(&ar->htt);
-    if (status) {
-        ath10k_err("failed to alloc htt tx: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to alloc htt tx: %s\n", zx_status_get_string(status));
         goto err_wmi_detach;
     }
 
     status = ath10k_htt_rx_alloc(&ar->htt);
-    if (status) {
-        ath10k_err("failed to alloc htt rx: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to alloc htt rx: %s\n", zx_status_get_string(status));
         goto err_htt_tx_detach;
     }
 
     status = ath10k_hif_start(ar);
-    if (status) {
-        ath10k_err("could not start HIF: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("could not start HIF: %s\n", zx_status_get_string(status));
         goto err_htt_rx_detach;
     }
 
     status = ath10k_htc_wait_target(&ar->htc);
-    if (status) {
-        ath10k_err("failed to connect to HTC: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to connect to HTC: %s\n", zx_status_get_string(status));
         goto err_hif_stop;
     }
 
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_htt_connect(&ar->htt);
-        if (status) {
-            ath10k_err("failed to connect htt (%d)\n", status);
+        if (status != ZX_OK) {
+            ath10k_err("failed to connect htt (%s)\n", zx_status_get_string(status));
             goto err_hif_stop;
         }
     }
 
     status = ath10k_wmi_connect(ar);
-    if (status) {
-        ath10k_err("could not connect wmi: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("could not connect wmi: %s\n", zx_status_get_string(status));
         goto err_hif_stop;
     }
 
     status = ath10k_htc_start(&ar->htc);
-    if (status) {
-        ath10k_err("failed to start htc: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to start htc: %s\n", zx_status_get_string(status));
         goto err_hif_stop;
     }
 
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_wmi_wait_for_service_ready(ar);
-        if (status) {
+        if (status != ZX_OK) {
             ath10k_warn("wmi service ready event not received");
             goto err_hif_stop;
         }
@@ -2134,22 +2137,22 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
         }
 
         status = ath10k_mac_ext_resource_config(ar, val);
-        if (status) {
-            ath10k_err("failed to send ext resource cfg command : %d\n",
-                       status);
+        if (status != ZX_OK) {
+            ath10k_err("failed to send ext resource cfg command : %s\n",
+                       zx_status_get_string(status));
             goto err_hif_stop;
         }
     }
 
     status = ath10k_wmi_cmd_init(ar);
-    if (status) {
-        ath10k_err("could not send WMI init command (%d)\n",
-                   status);
+    if (status != ZX_OK) {
+        ath10k_err("could not send WMI init command (%s)\n",
+                   zx_status_get_string(status));
         goto err_hif_stop;
     }
 
     status = ath10k_wmi_wait_for_unified_ready(ar);
-    if (status) {
+    if (status != ZX_OK) {
         ath10k_err("wmi unified ready event not received\n");
         goto err_hif_stop;
     }
@@ -2169,8 +2172,8 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
      */
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_core_reset_rx_filter(ar);
-        if (status) {
-            ath10k_err("failed to reset rx filter: %d\n", status);
+        if (status != ZX_OK) {
+            ath10k_err("failed to reset rx filter: %s\n", zx_status_get_string(status));
             goto err_hif_stop;
         }
     }
@@ -2182,8 +2185,8 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
                                             ar->wmi.svc_map));
 
     status = ath10k_htt_rx_ring_refill(ar);
-    if (status) {
-        ath10k_err("failed to refill htt rx ring: %d\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("failed to refill htt rx ring: %s\n", zx_status_get_string(status));
         goto err_hif_stop;
     }
 
@@ -2198,18 +2201,18 @@ int ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     /* we don't care about HTT in UTF mode */
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_htt_setup(&ar->htt);
-        if (status) {
-            ath10k_err("failed to setup htt: %d\n", status);
+        if (status != ZX_OK) {
+            ath10k_err("failed to setup htt: %d\n", zx_status_get_string(status));
             goto err_hif_stop;
         }
     }
 
     status = ath10k_debug_start(ar);
-    if (status) {
+    if (status != ZX_OK) {
         goto err_hif_stop;
     }
 
-    return 0;
+    return ZX_OK;
 
 err_hif_stop:
     ath10k_hif_stop(ar);
@@ -2224,23 +2227,23 @@ err:
 }
 EXPORT_SYMBOL(ath10k_core_start);
 
-int ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
-    int ret;
+zx_status_t ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
+    zx_status_t ret;
 
     completion_reset(&ar->target_suspend);
 
     ret = ath10k_wmi_pdev_suspend_target(ar, suspend_opt);
-    if (ret) {
-        ath10k_warn("could not suspend target (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_warn("could not suspend target (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
     if (completion_wait(&ar->target_suspend, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("suspend timed out - target pause event never came\n");
-        return -ETIMEDOUT;
+        return ZX_ERR_TIMED_OUT;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
 void ath10k_core_stop(struct ath10k* ar) {
@@ -2265,13 +2268,13 @@ EXPORT_SYMBOL(ath10k_core_stop);
  * necessary to load the firmware (and tear it down immediately since start
  * hook will try to init it again) before registering
  */
-static int ath10k_core_probe_fw(struct ath10k* ar) {
+static zx_status_t ath10k_core_probe_fw(struct ath10k* ar) {
     struct bmi_target_info target_info;
-    int ret = 0;
+    zx_status_t ret;
 
     ret = ath10k_hif_power_up(ar);
-    if (ret) {
-        ath10k_err("could not start pci hif (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not start pci hif (%s)\n", zx_status_get_string(ret));
         return ret;
     }
 
@@ -2281,8 +2284,8 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
     } else {
         ret = ath10k_bmi_get_target_info(ar, &target_info);
     }
-    if (ret) {
-        ath10k_err("could not get target info (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not get target info (%s)\n", zx_status_get_string(ret));
         goto err_power_down;
     }
 
@@ -2290,14 +2293,14 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
     ar->hw->wiphy->hw_version = target_info.version;
 
     ret = ath10k_init_hw_params(ar);
-    if (ret) {
-        ath10k_err("could not get hw params (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not get hw params (%s)\n", zx_status_get_string(ret));
         goto err_power_down;
     }
 
     ret = ath10k_core_fetch_firmware_files(ar);
-    if (ret) {
-        ath10k_err("could not fetch firmware files (%d)\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("could not fetch firmware files (%s)\n", zx_status_get_string(ret));
         goto err_power_down;
     }
 
@@ -2309,45 +2312,45 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
     ath10k_debug_print_hwfw_info(ar);
 
     ret = ath10k_core_pre_cal_download(ar);
-    if (ret) {
+    if (ret != ZX_OK) {
         /* pre calibration data download is not necessary
          * for all the chipsets. Ignore failures and continue.
          */
         ath10k_dbg(ar, ATH10K_DBG_BOOT,
-                   "could not load pre cal data: %d\n", ret);
+                   "could not load pre cal data: %s\n", zx_status_get_string(ret));
     }
 
     ret = ath10k_core_get_board_id_from_otp(ar);
-    if (ret && ret != -EOPNOTSUPP) {
-        ath10k_err("failed to get board id from otp: %d\n",
-                   ret);
+    if (ret != ZX_OK && ret != ZX_ERR_NOT_SUPPORTED) {
+        ath10k_err("failed to get board id from otp: %s\n",
+                   zx_status_get_string(ret));
         goto err_free_firmware_files;
     }
 
     ret = ath10k_core_check_smbios(ar);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_dbg(ar, ATH10K_DBG_BOOT, "bdf variant name not set.\n");
     }
 
     ret = ath10k_core_fetch_board_file(ar);
-    if (ret) {
-        ath10k_err("failed to fetch board file: %d\n", ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to fetch board file: %s\n", zx_status_get_string(ret));
         goto err_free_firmware_files;
     }
 
     ath10k_debug_print_board_info(ar);
 
     ret = ath10k_core_init_firmware_features(ar);
-    if (ret) {
-        ath10k_err("fatal problem with firmware features: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("fatal problem with firmware features: %s\n",
+                   zx_status_get_string(ret));
         goto err_free_firmware_files;
     }
 
     ret = ath10k_swap_code_seg_init(ar, &ar->normal_mode_fw.fw_file);
-    if (ret) {
-        ath10k_err("failed to initialize code swap segment: %d\n",
-                   ret);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to initialize code swap segment: %s\n",
+                   zx_status_get_string(ret));
         goto err_free_firmware_files;
     }
 
@@ -2355,7 +2358,7 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
 
     ret = ath10k_core_start(ar, ATH10K_FIRMWARE_MODE_NORMAL,
                             &ar->normal_mode_fw);
-    if (ret) {
+    if (ret != ZX_OK) {
         ath10k_err("could not init core (%d)\n", ret);
         goto err_unlock;
     }
@@ -2366,7 +2369,7 @@ static int ath10k_core_probe_fw(struct ath10k* ar) {
     mtx_unlock(&ar->conf_mutex);
 
     ath10k_hif_power_down(ar);
-    return 0;
+    return ZX_OK;
 
 err_unlock:
     mtx_unlock(&ar->conf_mutex);
@@ -2382,39 +2385,39 @@ err_power_down:
 
 static void ath10k_core_register_work(struct work_struct* work) {
     struct ath10k* ar = container_of(work, struct ath10k, register_work);
-    int status;
+    zx_status_t status;
 
     /* peer stats are enabled by default */
     set_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags);
 
     status = ath10k_core_probe_fw(ar);
-    if (status) {
-        ath10k_err("could not probe fw (%d)\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("could not probe fw (%s)\n", zx_status_get_string(status));
         goto err;
     }
 
     status = ath10k_mac_register(ar);
-    if (status) {
-        ath10k_err("could not register to mac80211 (%d)\n", status);
+    if (status != ZX_OK) {
+        ath10k_err("could not register to mac80211 (%s)\n", zx_status_get_string(status));
         goto err_release_fw;
     }
 
     status = ath10k_debug_register(ar);
-    if (status) {
+    if (status != ZX_OK) {
         ath10k_err("unable to initialize debugfs\n");
         goto err_unregister_mac;
     }
 
     status = ath10k_spectral_create(ar);
-    if (status) {
+    if (status != ZX_OK) {
         ath10k_err("failed to initialize spectral\n");
         goto err_debug_destroy;
     }
 
     status = ath10k_thermal_register(ar);
-    if (status) {
-        ath10k_err("could not register thermal device: %d\n",
-                   status);
+    if (status != ZX_OK) {
+        ath10k_err("could not register thermal device: %s\n",
+                   zx_status_get_string(status));
         goto err_spectral_destroy;
     }
 
@@ -2436,7 +2439,7 @@ err:
     return;
 }
 
-int ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
+zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
     ar->chip_id = chip_id;
     queue_work(ar->workqueue, &ar->register_work);
 
@@ -2478,7 +2481,7 @@ struct ath10k* ath10k_core_create(size_t priv_size, struct device* dev,
                                   enum ath10k_hw_rev hw_rev,
                                   const struct ath10k_hif_ops* hif_ops) {
     struct ath10k* ar;
-    int ret;
+    zx_status_t ret;
 
     ar = ath10k_mac_create(priv_size);
     if (!ar) {
@@ -2524,7 +2527,7 @@ struct ath10k* ath10k_core_create(size_t priv_size, struct device* dev,
     default:
         ath10k_err("unsupported core hardware revision %d\n",
                    hw_rev);
-        ret = -ENOTSUPP;
+        ret = ZX_ERR_NOT_SUPPORTED;
         goto err_free_mac;
     }
 
@@ -2576,7 +2579,7 @@ struct ath10k* ath10k_core_create(size_t priv_size, struct device* dev,
     init_dummy_netdev(&ar->napi_dev);
 
     ret = ath10k_debug_create(ar);
-    if (ret) {
+    if (ret != ZX_OK) {
         goto err_free_aux_wq;
     }
 
