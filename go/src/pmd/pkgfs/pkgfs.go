@@ -73,6 +73,9 @@ func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
 		static:    static,
 		index:     index,
 		blobstore: bm,
+		mountInfo: mountInfo{
+			parentFd: -1,
+		},
 	}
 
 	f.root = &rootDirectory{
@@ -116,6 +119,9 @@ func NewSinglePackage(blob, blobstoreDir string) (*Filesystem, error) {
 		static:    nil,
 		index:     nil,
 		blobstore: bm,
+		mountInfo: mountInfo{
+			parentFd: -1,
+		},
 	}
 
 	pd, err := newPackageDirFromBlob(blob, f)
@@ -1070,6 +1076,20 @@ type mountInfo struct {
 	parentFd     int
 }
 
+// Serve starts a Directory protocol RPC server on the given channel.
+func (f *Filesystem) Serve(c *zx.Channel) error {
+	// rpc.NewServer takes ownership of the Handle and will close it on error.
+	vfs, err := rpc.NewServer(f, c.Handle)
+	if err != nil {
+		return fmt.Errorf("vfs server creation: %s", err)
+	}
+	f.mountInfo.serveChannel = c
+
+	// TODO(raggi): serve has no quit/shutdown path.
+	go vfs.Serve()
+	return nil
+}
+
 // Mount attaches the filesystem host to the given path. If an error occurs
 // during setup, this method returns that error. If an error occurs after
 // serving has started, the error causes a log.Fatal. If the given path does not
@@ -1085,48 +1105,36 @@ func (f *Filesystem) Mount(path string) error {
 		return err
 	}
 
-	var rpcChan *zx.Channel
-	rpcChan, f.mountInfo.serveChannel, err = zx.NewChannel(0)
+	var rpcChan, mountChan *zx.Channel
+	rpcChan, mountChan, err = zx.NewChannel(0)
 	if err != nil {
 		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.parentFd = -1
 		return fmt.Errorf("channel creation: %s", err)
 	}
 
-	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
-		f.mountInfo.serveChannel.Close()
-		f.mountInfo.serveChannel = nil
+	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, mountChan.Handle); err != nil {
+		mountChan.Close()
+		rpcChan.Close()
 		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.parentFd = -1
 		return fmt.Errorf("mount failure: %s", err)
 	}
 
-	vfs, err := rpc.NewServer(f, rpcChan.Handle)
-	if err != nil {
-		f.mountInfo.serveChannel.Close()
-		f.mountInfo.serveChannel = nil
-		syscall.Close(f.mountInfo.parentFd)
-		f.mountInfo.parentFd = -1
-		return fmt.Errorf("vfs server creation: %s", err)
-	}
-
-	// TODO(raggi): handle the exit case more cleanly.
-	go func() {
-		defer f.Unmount()
-		vfs.Serve()
-	}()
-	return nil
+	return f.Serve(rpcChan)
 }
 
 // Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
 func (f *Filesystem) Unmount() {
 	f.mountInfo.unmountOnce.Do(func() {
-		// TODO(raggi): log errors?
-		syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+		// parentFd is -1 in the case where f was just Serve()'d instead of Mount()'d
+		if f.mountInfo.parentFd != -1 {
+			syscall.FDIOForFD(f.mountInfo.parentFd).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+			syscall.Close(f.mountInfo.parentFd)
+			f.mountInfo.parentFd = -1
+		}
 		f.mountInfo.serveChannel.Close()
-		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.serveChannel = nil
-		f.mountInfo.parentFd = -1
 	})
 }
 
