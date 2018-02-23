@@ -1,0 +1,11 @@
+[package]
+name = "bthci-fake-util"
+version = "0.1.0"
+authors = ["Benjamin Brittain <bwb@google.com>"]
+
+[dependencies]
+fdio = "0.2"
+fuchsia-bluetooth = "0.1"
+fuchsia-zircon = "0.3"
+failure = "0.1"
+rand = "0.4"

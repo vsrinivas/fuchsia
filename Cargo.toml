@@ -2,6 +2,7 @@
 # Any crate in the Garnet tree must be listed as a member of this
 # workspace.
 members =  [
+  "bin/bluetooth_tools/bthci_fake_util",
   "bin/device_settings",
   "bin/logger",
   "bin/wlancfg",

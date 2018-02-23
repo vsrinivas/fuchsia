@@ -12,6 +12,7 @@ package("bluetooth_tools") {
     "bt_intel_tool",
     "btsnoop",
     "hcitool",
+    "bthci_fake_util"
   ]
 
   binaries = [
@@ -27,5 +28,8 @@ package("bluetooth_tools") {
     {
       name = "bt-intel-tool"
     },
+    {
+      name = "bthci-fake-util"
+    }
   ]
 }
