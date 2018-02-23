@@ -21,13 +21,20 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/media/fidl/audio_policy_service.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
+#include "lib/svc/cpp/services.h"
 
 namespace media {
+
+//  static
+const std::string MediaServiceImpl::kIsolateUrl = "media_service";
+//  static
+const std::string MediaServiceImpl::kIsolateArgument = "--transient";
 
 MediaServiceImpl::MediaServiceImpl(
     std::unique_ptr<app::ApplicationContext> context,
     bool transient)
-    : FactoryServiceBase(std::move(context)), transient_(transient) {
+    : FactoryServiceBase(std::move(context)),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
   FLOG_INITIALIZE(application_context(), "media_service");
 
   multiproc_task_runner_ =
@@ -37,6 +44,11 @@ MediaServiceImpl::MediaServiceImpl(
       [this](f1dl::InterfaceRequest<MediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
+
+  if (!transient) {
+    application_context()->environment()->GetApplicationLauncher(
+        launcher_.NewRequest());
+  }
 }
 
 MediaServiceImpl::~MediaServiceImpl() {
@@ -48,6 +60,13 @@ void MediaServiceImpl::CreateHttpPlayer(
     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
     f1dl::InterfaceRequest<MediaPlayer> player) {
+  if (launcher_) {
+    CreateIsolate()->CreateHttpPlayer(http_url, std::move(audio_renderer),
+                                      std::move(video_renderer),
+                                      std::move(player));
+    return;
+  }
+
   f1dl::InterfaceHandle<SeekingReader> reader;
   CreateHttpReader(http_url, reader.NewRequest());
   AddProduct(MediaPlayerImpl::Create(
@@ -60,6 +79,13 @@ void MediaServiceImpl::CreateFilePlayer(
     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
     f1dl::InterfaceRequest<MediaPlayer> player) {
+  if (launcher_) {
+    CreateIsolate()->CreateFilePlayer(
+        std::move(file_channel), std::move(audio_renderer),
+        std::move(video_renderer), std::move(player));
+    return;
+  }
+
   f1dl::InterfaceHandle<SeekingReader> reader;
   CreateFileChannelReader(std::move(file_channel), reader.NewRequest());
   AddProduct(MediaPlayerImpl::Create(
@@ -72,6 +98,12 @@ void MediaServiceImpl::CreatePlayer(
     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
     f1dl::InterfaceRequest<MediaPlayer> player) {
+  if (launcher_) {
+    CreateIsolate()->CreatePlayer(std::move(reader), std::move(audio_renderer),
+                                  std::move(video_renderer), std::move(player));
+    return;
+  }
+
   AddProduct(MediaPlayerImpl::Create(
       std::move(reader), std::move(audio_renderer), std::move(video_renderer),
       std::move(player), this));
@@ -183,9 +215,30 @@ void MediaServiceImpl::CreateFileChannelReader(
 }
 
 void MediaServiceImpl::OnLastProductRemoved() {
-  if (transient_) {
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  if (!launcher_) {
+    task_runner_->PostTask(
+        []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   }
+}
+
+MediaServicePtr MediaServiceImpl::CreateIsolate() {
+  auto launch_info = app::ApplicationLaunchInfo::New();
+  launch_info->url = kIsolateUrl;
+  launch_info->arguments = f1dl::Array<f1dl::String>::New(1);
+  launch_info->arguments[0] = kIsolateArgument;
+  app::Services services;
+  launch_info->service_request = services.NewRequest();
+
+  app::ApplicationControllerPtr controller;
+  launcher_->CreateApplication(std::move(launch_info), controller.NewRequest());
+
+  MediaServicePtr isolated_media_service;
+  services.ConnectToService(isolated_media_service.NewRequest(),
+                            MediaService::Name_);
+
+  controller->Detach();
+
+  return isolated_media_service;
 }
 
 }  // namespace media

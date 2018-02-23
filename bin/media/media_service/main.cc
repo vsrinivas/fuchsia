@@ -6,16 +6,21 @@
 
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  bool transient = false;
+  for (int arg_index = 0; arg_index < argc; ++arg_index) {
+    if (argv[arg_index] == media::MediaServiceImpl::kIsolateArgument) {
+      transient = true;
+      break;
+    }
+  }
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
   media::MediaServiceImpl impl(app::ApplicationContext::CreateFromStartupInfo(),
-                               command_line.HasOption("transient"));
+                               transient);
 
   loop.Run();
   return 0;

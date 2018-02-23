@@ -36,6 +36,9 @@ namespace media {
 class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
                          public MediaService {
  public:
+  static const std::string kIsolateUrl;
+  static const std::string kIsolateArgument;
+
   MediaServiceImpl(std::unique_ptr<app::ApplicationContext> application_context,
                    bool transient);
   ~MediaServiceImpl() override;
@@ -104,9 +107,13 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
   // FactoryServiceBase override.
   void OnLastProductRemoved() override;
 
+  // Creates a new transient media_service process.
+  MediaServicePtr CreateIsolate();
+
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   f1dl::BindingSet<MediaService> bindings_;
   fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner_;
-  bool transient_;
+  app::ApplicationLauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
 };
