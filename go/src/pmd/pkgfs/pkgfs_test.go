@@ -230,7 +230,7 @@ func TestAddPackage(t *testing.T) {
 	packageName := "testpackage"
 	packageVersion := "0"
 
-	if _, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName)); err == nil {
+	if _, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName, packageVersion)); err == nil {
 		t.Error("package appeared in the pkgfs package tree before needs fulfilled")
 	}
 

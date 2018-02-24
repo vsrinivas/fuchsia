@@ -218,11 +218,17 @@ func importPackage(fs *Filesystem, root string) {
 
 	contents, err := r.ReadFile("meta/contents")
 	if err != nil {
-		log.Printf("error parsing package contents file: %s", err)
+		log.Printf("pkgfs: error parsing package contents file for %s: %s", p, err)
 		return
 	}
 
+	pkgInstalling := fs.index.InstallingPackageVersionPath(p.Name, p.Version)
+	os.MkdirAll(filepath.Dir(pkgInstalling), os.ModePerm)
+	if err := ioutil.WriteFile(pkgInstalling, []byte(root), os.ModePerm); err != nil {
+		log.Printf("error writing package installing index for %s: %s", p, err)
+	}
 	pkgWaitingDir := fs.index.WaitingPackageVersionPath(p.Name, p.Version)
+	os.MkdirAll(pkgWaitingDir, os.ModePerm)
 
 	files := bytes.Split(contents, []byte{'\n'})
 	var needsCount int
@@ -235,41 +241,26 @@ func importPackage(fs *Filesystem, root string) {
 		root := string(parts[1])
 
 		if fs.blobstore.HasBlob(root) {
-			log.Printf("pkgfs: blob already present %q", root)
+			log.Printf("pkgfs: blob already present for %s: %q", p, root)
 			continue
 		}
 
-		log.Printf("pkgfs: blob needed %q", root)
-
 		needsCount++
-		err = ioutil.WriteFile(fs.index.NeedsBlob(root), []byte{}, os.ModePerm)
-		if err != nil {
-			// XXX(raggi): there are potential deadlock conditions here, we should fail the package write (???)
-			log.Printf("pkgfs: import error, can't create needs index: %s", err)
-		}
-
-		if needsCount == 1 {
-			os.MkdirAll(pkgWaitingDir, os.ModePerm)
-		}
 
 		err = ioutil.WriteFile(filepath.Join(pkgWaitingDir, root), []byte{}, os.ModePerm)
 		if err != nil {
-			log.Printf("pkgfs: import error, can't create needs index: %s", err)
+			log.Printf("pkgfs: import error, can't create waiting index for %s: %s", p, err)
 		}
 
+		err = ioutil.WriteFile(fs.index.NeedsBlob(root), []byte{}, os.ModePerm)
+		if err != nil {
+			// XXX(raggi): there are potential deadlock conditions here, we should fail the package write (???)
+			log.Printf("pkgfs: import error, can't create needs index for %s: %s", p, err)
+		}
+
+		log.Printf("pkgfs: asking amber to fetch blob for %s: %q", p, root)
 		// TODO(jmatt) limit concurrency, send this to a worker routine?
 		go fs.amberPxy.GetBlob(root)
-	}
-
-	// XXX(raggi): there's a potential race here where needs could be fulfilled
-	// before this is written, so this should get re-orgnized to execute before the
-	// needs files are written, and then the move should be done as if checkNeeds
-	// completed.
-	pkgInstalling := fs.index.InstallingPackageVersionPath(p.Name, p.Version)
-	os.MkdirAll(filepath.Dir(pkgInstalling), os.ModePerm)
-
-	if err := ioutil.WriteFile(pkgInstalling, []byte(root), os.ModePerm); err != nil {
-		log.Printf("error writing package installing index for %s/%s: %s", p.Name, p.Version, err)
 	}
 
 	if needsCount == 0 {
@@ -291,6 +282,7 @@ func checkNeeds(fs *Filesystem, root string) {
 		}
 
 		pkgWaitingDir := filepath.Dir(path)
+
 		dir, err := os.Open(pkgWaitingDir)
 		if err != nil {
 			log.Printf("pkgfs: error opening waiting dir: %s: %s", pkgWaitingDir, err)
@@ -320,6 +312,7 @@ func checkNeeds(fs *Filesystem, root string) {
 }
 
 func activatePackage(p pkg.Package, fs *Filesystem) {
+	log.Printf("pkgfs: activating %s", p)
 	from := filepath.Join(fs.index.InstallingDir(), p.Name, p.Version)
 	b, err := ioutil.ReadFile(from)
 	if err != nil {
@@ -340,5 +333,5 @@ func activatePackage(p pkg.Package, fs *Filesystem) {
 			log.Printf("pkgfs: error moving package from installing to packages: %s", err)
 		}
 	}
-
+	os.Remove(filepath.Join(fs.index.WaitingPackageVersionPath(p.Name, p.Version)))
 }
