@@ -528,7 +528,8 @@ template("fidl") {
       generator_label = ":$generator_target_name($target_toolchain)"
 
       package_label = target_label
-      source_dir = get_label_info(generator_label, "target_gen_dir")
+      package_root = get_label_info(generator_label, "target_gen_dir")
+      source_dir = "."
 
       # Disable analysis. FIDL targets in a same build file will share a gen (and
       # therefore source) directory which confuses the analyzer trying to process
