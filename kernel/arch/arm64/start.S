@@ -25,10 +25,7 @@
 tmp                     .req x9
 tmp2                    .req x10
 wtmp2                   .req w10
-index                   .req x11
-index_shift             .req x12
-page_table              .req x13
-new_page_table          .req x14
+page_table              .req x11
 
 cpuid                   .req x19
 page_table0             .req x20
