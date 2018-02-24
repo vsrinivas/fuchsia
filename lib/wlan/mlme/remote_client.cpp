@@ -463,9 +463,39 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
 }
 
 zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
-                                                     fbl::unique_ptr<Packet>* out_frame) {
-    // TODO(NET-519): Convert ethernet frame.
-    return ZX_ERR_NOT_SUPPORTED;
+                                                     fbl::unique_ptr<Packet>* out_packet) {
+    const size_t data_frame_len = kDataPayloadHeader + frame.body_len;
+    auto buffer = GetBuffer(data_frame_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    *out_packet = fbl::make_unique<Packet>(std::move(buffer), data_frame_len);
+    (*out_packet)->set_peer(Packet::Peer::kWlan);
+
+    auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
+    hdr->fc.clear();
+    hdr->fc.set_type(FrameType::kData);
+    hdr->fc.set_subtype(DataSubtype::kDataSubtype);
+    hdr->fc.set_from_ds(1);
+    // TODO(hahnr): Protect outgoing frames when RSNA is established.
+    hdr->sc.set_seq(device_->GetState()->next_seq());
+    hdr->addr1 = frame.hdr->dest;
+    hdr->addr2 = bss_->bssid();
+    hdr->addr3 = frame.hdr->src;
+
+    auto llc = (*out_packet)->mut_field<LlcHeader>(hdr->len());
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = frame.hdr->ether_type;
+    std::memcpy(llc->payload, frame.body, frame.body_len);
+
+    wlan_tx_info_t txinfo = {
+        // TODO(hahnr): Fill wlan_tx_info_t.
+    };
+    (*out_packet)->CopyCtrlFrom(txinfo);
+
+    return ZX_OK;
 }
 
 #undef LOG_STATE_TRANSITION
