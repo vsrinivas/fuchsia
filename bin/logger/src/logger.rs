@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn logger_stream_test() {
         let mut core = reactor::Core::new().unwrap();
-        let (sin, sout) = zircon::Socket::create().unwrap();
+        let (sin, sout) = zircon::Socket::create(zircon::SocketOpts::DATAGRAM).unwrap();
         let buf: [u8; FX_LOG_MAX_DATAGRAM_LEN] = [0; FX_LOG_MAX_DATAGRAM_LEN];
         let c = Rc::new(RefCell::new(buf));
         let mut p: fx_log_packet_t = Default::default();

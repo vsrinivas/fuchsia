@@ -18,22 +18,31 @@ pub struct Socket(Handle);
 impl_handle_based!(Socket);
 impl Peered for Socket {}
 
+
+bitflags! {
+    pub struct SocketOpts: u32 {
+        const STREAM = 0 << 0;
+        const DATAGRAM = 1 << 0;
+        const FLAG_CONTROL = 1 << 1;
+        const FLAG_ACCEPT = 1 << 2;
+    }
+}
+
 impl Socket {
     /// Create a socket, accessed through a pair of endpoints. Data written
     /// into one may be read from the other.
     ///
     /// Wraps
     /// [zx_socket_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_create.md).
-    pub fn create() -> Result<(Socket, Socket), Status> {
+    pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), Status> {
         unsafe {
             let mut out0 = 0;
             let mut out1 = 0;
-            let opts = 0;
-            let status = sys::zx_socket_create(opts, &mut out0, &mut out1);
+            let status = sys::zx_socket_create(sock_opts.bits(), &mut out0, &mut out1);
             ok(status)?;
             Ok((
                 Self::from(Handle::from_raw(out0)),
-                Self::from(Handle::from_raw(out1))
+                Self::from(Handle::from_raw(out1)),
             ))
         }
     }
@@ -47,8 +56,13 @@ impl Socket {
         let mut actual = 0;
         let opts = 0;
         let status = unsafe {
-            sys::zx_socket_write(self.raw_handle(), opts, bytes.as_ptr(), bytes.len(),
-                &mut actual)
+            sys::zx_socket_write(
+                self.raw_handle(),
+                opts,
+                bytes.as_ptr(),
+                bytes.len(),
+                &mut actual,
+            )
         };
         ok(status).map(|()| actual)
     }
@@ -62,8 +76,13 @@ impl Socket {
         let mut actual = 0;
         let opts = 0;
         let status = unsafe {
-            sys::zx_socket_read(self.raw_handle(), opts, bytes.as_mut_ptr(),
-                bytes.len(), &mut actual)
+            sys::zx_socket_read(
+                self.raw_handle(),
+                opts,
+                bytes.as_mut_ptr(),
+                bytes.len(),
+                &mut actual,
+            )
         };
         ok(status)
             .map(|()| actual)
@@ -80,8 +99,15 @@ impl Socket {
     /// Implements the `ZX_SOCKET_HALF_CLOSE` option of
     /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
     pub fn half_close(&self) -> Result<(), Status> {
-        let status = unsafe { sys::zx_socket_write(self.raw_handle(), sys::ZX_SOCKET_HALF_CLOSE,
-            ptr::null(), 0, ptr::null_mut()) };
+        let status = unsafe {
+            sys::zx_socket_write(
+                self.raw_handle(),
+                sys::ZX_SOCKET_HALF_CLOSE,
+                ptr::null(),
+                0,
+                ptr::null_mut(),
+            )
+        };
         ok(status)
     }
 
@@ -98,16 +124,24 @@ impl Socket {
 mod tests {
     use super::*;
 
-    #[test]
-    fn socket_basic() {
-        let (s1, s2) = Socket::create().unwrap();
+    fn socket_basic_helper(opts: SocketOpts) {
+        let (s1, s2) = Socket::create(opts).unwrap();
 
-        // Write in one end and read it back out the other.
+        // Write two packets and read from other end
         assert_eq!(s1.write(b"hello").unwrap(), 5);
+        assert_eq!(s1.write(b"world").unwrap(), 5);
 
-        let mut read_vec = vec![0; 8];
-        assert_eq!(s2.read(&mut read_vec).unwrap(), 5);
-        assert_eq!(&read_vec[0..5], b"hello");
+        let mut read_vec = vec![0; 11];
+        if opts == SocketOpts::DATAGRAM {
+            assert_eq!(s2.read(&mut read_vec).unwrap(), 5);
+            assert_eq!(&read_vec[0..5], b"hello");
+
+            assert_eq!(s2.read(&mut read_vec).unwrap(), 5);
+            assert_eq!(&read_vec[0..5], b"world");
+        } else {
+            assert_eq!(s2.read(&mut read_vec).unwrap(), 10);
+            assert_eq!(&read_vec[0..10], b"helloworld");
+        }
 
         // Try reading when there is nothing to read.
         assert_eq!(s2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
@@ -122,5 +156,11 @@ mod tests {
         assert_eq!(s2.write(b"back").unwrap(), 4);
         assert_eq!(s1.read(&mut read_vec).unwrap(), 4);
         assert_eq!(&read_vec[0..4], b"back");
+    }
+
+    #[test]
+    fn socket_basic() {
+        socket_basic_helper(SocketOpts::STREAM);
+        socket_basic_helper(SocketOpts::DATAGRAM);
     }
 }
