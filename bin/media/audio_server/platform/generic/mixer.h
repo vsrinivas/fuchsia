@@ -6,8 +6,6 @@
 
 #include <memory>
 
-#include "garnet/bin/media/audio_server/audio_pipe.h"
-#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "lib/media/fidl/media_types.fidl.h"

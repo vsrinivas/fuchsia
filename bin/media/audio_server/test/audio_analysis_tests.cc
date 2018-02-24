@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+
 #include "audio_analysis.h"
 #include "gtest/gtest.h"
 

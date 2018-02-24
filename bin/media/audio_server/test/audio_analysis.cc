@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 #include "audio_analysis.h"
-#include <array>
-#include "garnet/bin/media/audio_server/gain.h"
-#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
-#include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
-#include "gtest/gtest.h"
-#include "mixer_tests_shared.h"
+
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace test {

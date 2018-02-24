@@ -8,14 +8,25 @@ source_set("audio_mixer_lib") {
   sources = [
     "gain.cc",
     "platform/generic/mixer.cc",
+    "platform/generic/mixer.h",
     "platform/generic/mixers/linear_sampler.cc",
+    "platform/generic/mixers/linear_sampler.h",
+    "platform/generic/mixers/mixer_utils.h",
     "platform/generic/mixers/no_op.cc",
+    "platform/generic/mixers/no_op.h",
     "platform/generic/mixers/point_sampler.cc",
+    "platform/generic/mixers/point_sampler.h",
     "platform/generic/output_formatter.cc",
+    "platform/generic/output_formatter.h",
   ]
 
   public_deps = [
-    "//garnet/bin/media/fidl",
+    "//garnet/public/lib/media/fidl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/timeline",
   ]
 }
 
@@ -23,30 +34,56 @@ executable("audio_server") {
   sources =
       [
         "audio_capturer_impl.cc",
+        "audio_capturer_impl.h",
         "audio_device.cc",
+        "audio_device.h",
         "audio_device_manager.cc",
+        "audio_device_manager.h",
         "audio_driver.cc",
+        "audio_driver.h",
         "audio_input.cc",
+        "audio_input.h",
         "audio_link.cc",
+        "audio_link.h",
         "audio_link_packet_source.cc",
+        "audio_link_packet_source.h",
         "audio_link_ring_buffer_source.cc",
+        "audio_link_ring_buffer_source.h",
         "audio_object.cc",
+        "audio_object.h",
         "audio_output.cc",
+        "audio_output.h",
         "audio_packet_ref.cc",
+        "audio_packet_ref.h",
         "audio_pipe.cc",
+        "audio_pipe.h",
         "audio_plug_detector.cc",
+        "audio_plug_detector.h",
         "audio_renderer_format_info.cc",
+        "audio_renderer_format_info.h",
         "audio_renderer_impl.cc",
+        "audio_renderer_impl.h",
         "audio_renderer1_impl.cc",
+        "audio_renderer1_impl.h",
         "audio_renderer2_impl.cc",
+        "audio_renderer2_impl.h",
         "audio_server_impl.cc",
+        "audio_server_impl.h",
+        "constants.h",
         "driver_ring_buffer.cc",
+        "driver_ring_buffer.h",
+        "fwd_decls.h",
         "main.cc",
         "pending_flush_token.cc",
+        "pending_flush_token.h",
         "platform/driver_output.cc",
+        "platform/driver_output.h",
         "platform/generic/standard_output_base.cc",
+        "platform/generic/standard_output_base.h",
         "platform/generic/throttle_output.cc",
+        "platform/generic/throttle_output.h",
         "utils.cc",
+        "utils.h",
       ]
 
       public_deps =
@@ -72,7 +109,6 @@ executable("audio_server") {
         "//zircon/public/lib/fbl",
         "//zircon/public/lib/zx",
       ]
-
 }
 
 test("tests") {
@@ -80,7 +116,9 @@ test("tests") {
 
   sources = [
     "test/mixer_tests_shared.cc",
+    "test/mixer_tests_shared.h",
     "test/audio_analysis.cc",
+    "test/audio_analysis.h",
     "test/audio_analysis_tests.cc",
     "test/mixer_transparency_tests.cc",
     "test/mixer_gain_tests.cc",

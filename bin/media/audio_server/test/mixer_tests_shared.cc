@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include "mixer_tests_shared.h"
-#include "garnet/bin/media/audio_server/gain.h"
-#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
-#include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
-#include "gtest/gtest.h"
 
 namespace media {
 namespace test {
