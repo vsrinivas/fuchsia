@@ -82,10 +82,16 @@ func tmain(m *testing.M) int {
 	}
 	defer os.RemoveAll(d)
 
-	pkgfs, err := New(staticPath, indexPath, blobstorePath)
+	pkgfs, err := New(indexPath, blobstorePath)
 	if err != nil {
 		panic(err)
 	}
+	sf, err := os.Open(staticPath)
+	if err != nil {
+		panic(err)
+	}
+	pkgfs.static.LoadFrom(sf)
+	sf.Close()
 	if err := pkgfs.Mount(d); err != nil {
 		panic(err)
 	}
@@ -308,7 +314,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"incoming", "needs", "packages", "metadata"}
+	want := []string{"incoming", "needs", "packages", "system", "metadata"}
 	sort.Strings(names)
 	sort.Strings(want)
 

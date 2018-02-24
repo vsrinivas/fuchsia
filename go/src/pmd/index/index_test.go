@@ -25,10 +25,10 @@ func TestStatic(t *testing.T) {
 	defer os.Remove(f.Name())
 
 	fmt.Fprintf(f, "a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
-	f.Close()
+	f.Seek(0, os.SEEK_SET)
 
 	si := NewStatic()
-	err = si.LoadFrom(f.Name())
+	err = si.LoadFrom(f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,34 +70,6 @@ func TestStatic(t *testing.T) {
 
 }
 
-func TestNewDynamic(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// assert that a pre-existing directory is fine
-	_, err = NewDynamic(d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// assert that a non-existing directory is fine
-	err = os.RemoveAll(d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = NewDynamic(d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(d); err != nil {
-		t.Errorf("expected directory to have been created, got %s", err)
-	}
-}
-
 func TestList(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
 	if err != nil {
@@ -114,7 +86,7 @@ func TestList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := NewDynamic(d)
+	idx := NewDynamic(d)
 	pkgs, err := idx.List()
 	if err != nil {
 		t.Fatal(err)
@@ -170,10 +142,7 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := NewDynamic(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	idx := NewDynamic(d)
 
 	err = idx.Add(pkg.Package{Name: "foo", Version: "0"})
 	if err != nil {
@@ -216,10 +185,7 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx, err := NewDynamic(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	idx := NewDynamic(d)
 
 	packages := []string{
 		"bar/10",

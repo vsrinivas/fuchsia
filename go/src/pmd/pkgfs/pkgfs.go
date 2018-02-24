@@ -31,7 +31,7 @@ import (
 
 // Filesystem is the top level container for a pkgfs server
 type Filesystem struct {
-	root      fs.Directory
+	root      *rootDirectory
 	static    *index.StaticIndex
 	index     *index.DynamicIndex
 	blobstore *blobstore.Manager
@@ -41,30 +41,15 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
-	static := index.NewStatic()
-
-	if _, err := os.Stat(staticIndex); !os.IsNotExist(err) {
-		err := static.LoadFrom(staticIndex)
-		if err != nil {
-			// TODO(raggi): avoid crashing the process in cases like this
-			return nil, err
-		}
-	}
-
-	index, err := index.NewDynamic(indexDir)
-	if err != nil {
-		return nil, err
-	}
-
+func New(indexDir, blobstoreDir string) (*Filesystem, error) {
 	bm, err := blobstore.New(blobstoreDir, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pkgfs: open blobstore: %s", err)
 	}
 
 	f := &Filesystem{
-		static:    static,
-		index:     index,
+		static:    index.NewStatic(),
+		index:     index.NewDynamic(indexDir),
 		blobstore: bm,
 		mountInfo: mountInfo{
 			parentFd: -1,
@@ -88,6 +73,7 @@ func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
 				unsupportedDirectory: unsupportedDirectory("/packages"),
 				fs:                   f,
 			},
+			"system":   unsupportedDirectory("/system"),
 			"metadata": unsupportedDirectory("/metadata"),
 		},
 	}
@@ -100,31 +86,29 @@ func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
 	return f, nil
 }
 
-// NewSinglePackage initializes a new pkgfs filesystem that hosts only a single
-// package.
-func NewSinglePackage(blob, blobstoreDir string) (*Filesystem, error) {
-	bm, err := blobstore.New(blobstoreDir, "")
+// staticIndexPath is the path inside the system package directory that contains the static packages for that system version.
+const staticIndexPath = "data/static_packages"
+
+// SetSystemRoot sets/updates the merkleroot (and static index) that backs the /system partition and static package index.
+func (f *Filesystem) SetSystemRoot(merkleroot string) error {
+	pd, err := newPackageDirFromBlob(merkleroot, f)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	f.root.setDir("system", pd)
+
+	blob, ok := pd.getBlobFor(staticIndexPath)
+	if !ok {
+		return fmt.Errorf("pkgfs: new system root set, but new static index %q not found in %q", staticIndexPath, merkleroot)
 	}
 
-	f := &Filesystem{
-		static:    nil,
-		index:     nil,
-		blobstore: bm,
-		mountInfo: mountInfo{
-			parentFd: -1,
-		},
-	}
-
-	pd, err := newPackageDirFromBlob(blob, f)
+	indexFile, err := f.blobstore.Open(blob)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("pkgfs: could not load static index %q from package %q: %s", staticIndexPath, merkleroot, err)
 	}
+	defer indexFile.Close()
 
-	f.root = pd
-
-	return f, nil
+	return f.static.LoadFrom(indexFile)
 }
 
 func (f *Filesystem) Blockcount() int64 {

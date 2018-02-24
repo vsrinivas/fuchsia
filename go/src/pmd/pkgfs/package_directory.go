@@ -141,6 +141,11 @@ func (d *packageDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
 	return d, nil
 }
 
+func (d *packageDir) getBlobFor(path string) (string, bool) {
+	root, ok := d.contents[path]
+	return root, ok
+}
+
 func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 	debugLog("pkgfs:packagedir:open %q", name)

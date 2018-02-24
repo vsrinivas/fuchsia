@@ -35,14 +35,9 @@ func NewStatic() *StaticIndex {
 
 // LoadFrom reads a static index from `path` and replaces the index in the
 // receiver with the contents.
-func (idx *StaticIndex) LoadFrom(path string) error {
+func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 	roots := map[pkg.Package]string{}
 
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
 	r := bufio.NewReader(f)
 	for {
 		l, err := r.ReadString('\n')
@@ -153,18 +148,11 @@ type DynamicIndex struct {
 	root string
 }
 
-// NewDynamic initializes an DynamicIndex with the given root path. A directory at the
-// given root will be created if it does not exist.
-func NewDynamic(root string) (*DynamicIndex, error) {
-	err := os.MkdirAll(root, os.ModePerm)
-	if err != nil {
-		return nil, err
-	}
-	index := &DynamicIndex{root: root}
-	if err := os.MkdirAll(index.NeedsBlobsDir(), os.ModePerm); err != nil {
-		return nil, err
-	}
-	return index, nil
+// NewDynamic initializes an DynamicIndex with the given root path.
+func NewDynamic(root string) *DynamicIndex {
+	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
+	_ = os.MkdirAll(root, os.ModePerm)
+	return &DynamicIndex{root: root}
 }
 
 // List returns a list of all known packages in byte-lexical order.
@@ -197,46 +185,61 @@ func (idx *DynamicIndex) Remove(p pkg.Package) error {
 }
 
 func (idx *DynamicIndex) PackagePath(name string) string {
-	return filepath.Join(idx.root, "packages", name)
+	return filepath.Join(idx.PackagesDir(), name)
 }
 
 func (idx *DynamicIndex) PackageVersionPath(name, version string) string {
-	return filepath.Join(idx.root, "packages", name, version)
+	return filepath.Join(idx.PackagesDir(), name, version)
 }
 
 // NeedsDir is the root of the needs directory
 func (idx *DynamicIndex) NeedsDir() string {
-	return filepath.Join(idx.root, "needs")
+	dir := filepath.Join(idx.root, "needs")
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	_ = os.MkdirAll(dir, os.ModePerm)
+	return dir
 }
 func (idx *DynamicIndex) InstallingDir() string {
-	return filepath.Join(idx.root, "installing")
+	dir := filepath.Join(idx.root, "installing")
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	_ = os.MkdirAll(dir, os.ModePerm)
+	return dir
 }
 func (idx *DynamicIndex) PackagesDir() string {
-	return filepath.Join(idx.root, "packages")
+	dir := filepath.Join(idx.root, "packages")
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	_ = os.MkdirAll(dir, os.ModePerm)
+	return dir
 }
 
 // NeedsBlob provides the path to an index blob need, given a blob digest root
 func (idx *DynamicIndex) NeedsBlob(root string) string {
-	return filepath.Join(idx.root, "needs", "blobs", root)
+	return filepath.Join(idx.NeedsBlobsDir(), root)
 }
 
 func (idx *DynamicIndex) NeedsFile(name string) string {
-	return filepath.Join(idx.root, "needs", name)
+	return filepath.Join(idx.NeedsDir(), name)
 }
 
 // NeedsBlobsDir provides the location of the index directory of needed blobs
 func (idx *DynamicIndex) NeedsBlobsDir() string {
-	return filepath.Join(idx.root, "needs", "blobs")
+	dir := filepath.Join(idx.root, "needs", "blobs")
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	_ = os.MkdirAll(dir, os.ModePerm)
+	return dir
 }
 
 func (idx *DynamicIndex) WaitingDir() string {
-	return filepath.Join(idx.root, "waiting")
+	dir := filepath.Join(idx.root, "waiting")
+	// TODO(PKG-14): refactor out the initialization logic so that we can do this once, at an appropriate point in the runtime.
+	_ = os.MkdirAll(dir, os.ModePerm)
+	return dir
 }
 
 func (idx *DynamicIndex) WaitingPackageVersionPath(pkg, version string) string {
-	return filepath.Join(idx.root, "waiting", pkg, version)
+	return filepath.Join(idx.WaitingDir(), pkg, version)
 }
 
 func (idx *DynamicIndex) InstallingPackageVersionPath(pkg, version string) string {
-	return filepath.Join(idx.root, "installing", pkg, version)
+	return filepath.Join(idx.InstallingDir(), pkg, version)
 }

@@ -39,7 +39,7 @@ func New(root, tmpDir string) (*Manager, error) {
 
 	rootFDIO, err := syscall.OpenPath(root, 0, 0644)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pkgfs: blobstore: can't open %q: %s", root, err)
 	}
 	defer rootFDIO.Close()
 	rootIO, ok := rootFDIO.(*fdio.RemoteIO)
@@ -48,7 +48,7 @@ func New(root, tmpDir string) (*Manager, error) {
 	}
 	handles, err := rootIO.Clone()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pkgfs: blobstore: can't clone blobstore root handle: %s", err)
 	}
 	for _, h := range handles[1:] {
 		h.Close()
