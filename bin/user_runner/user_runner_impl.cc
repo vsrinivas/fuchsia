@@ -522,6 +522,9 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
 
     auto module_resolver_config = AppConfig::New();
     module_resolver_config->url = kModuleResolverUrl;
+    if (test_) {
+      module_resolver_config->args.push_back("--test");
+    }
     // For now, we want data_origin to be "", which uses our (parent process's)
     // /data. This is appropriate for the module_resolver. We can in the future
     // isolate the data it reads to a subdir of /data and map that in here.

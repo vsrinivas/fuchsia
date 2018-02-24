@@ -9,6 +9,7 @@
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
@@ -26,17 +27,18 @@ namespace {
 
 // NOTE: This must match the path specified in
 // build/module_repository/publish.gni
-constexpr char kROModuleRepositoryPath[] =
+constexpr char kReadOnlyModuleRepositoryPath[] =
     "/system/data/module_manifest_repository";
 
 // NOTE: This must match deploy-module in the SDK.
-constexpr char kRWModuleRepositoryPath[] = "/data/module_manifest_repository";
+constexpr char kReadWriteModuleRepositoryPath[] =
+    "/data/module_manifest_repository";
 
 constexpr char kContextListenerEntitiesKey[] = "entities";
 
 class ModuleResolverApp : ContextListener {
  public:
-  ModuleResolverApp(app::ApplicationContext* const context)
+  ModuleResolverApp(app::ApplicationContext* const context, bool is_test)
       : app_context_(context), context_listener_binding_(this) {
     modular::ComponentContextPtr component_context;
     app_context_->ConnectToEnvironmentService<modular::ComponentContext>(
@@ -53,21 +55,23 @@ class ModuleResolverApp : ContextListener {
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource(
         "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
-                        kROModuleRepositoryPath, false /* create */));
-    resolver_impl_->AddSource(
-        "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
-                        kRWModuleRepositoryPath, true /* create */));
-    resolver_impl_->AddSource(
-        "firebase_mods",
-        std::make_unique<modular::FirebaseModuleManifestSource>(
-            fsl::MessageLoop::GetCurrent()->task_runner(),
-            [context]() {
-              network::NetworkServicePtr network_service;
-              context->ConnectToEnvironmentService(
-                  network_service.NewRequest());
-              return network_service;
-            },
-            "cloud-mods", "" /* prefix */));
+                        kReadOnlyModuleRepositoryPath, false /* create */));
+    if (!is_test) {
+      resolver_impl_->AddSource(
+          "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
+                          kReadWriteModuleRepositoryPath, true /* create */));
+      resolver_impl_->AddSource(
+          "firebase_mods",
+          std::make_unique<modular::FirebaseModuleManifestSource>(
+              fsl::MessageLoop::GetCurrent()->task_runner(),
+              [context]() {
+                network::NetworkServicePtr network_service;
+                context->ConnectToEnvironmentService(
+                    network_service.NewRequest());
+                return network_service;
+              },
+              "cloud-mods", "" /* prefix */));
+    }
 
     // Make |resolver_impl_| a query (ask) handler.
     f1dl::InterfaceHandle<QueryHandler> query_handler;
@@ -247,12 +251,20 @@ class ModuleResolverApp : ContextListener {
 }  // namespace
 }  // namespace maxwell
 
+const char kUsage[] = R"USAGE(%s [--test])USAGE";
+
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (command_line.HasOption("help")) {
+    printf(kUsage, argv[0]);
+    return 0;
+  }
+  auto is_test = command_line.HasOption("test");
   auto context = app::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<maxwell::ModuleResolverApp> driver(
       context->outgoing_services(),
-      std::make_unique<maxwell::ModuleResolverApp>(context.get()),
+      std::make_unique<maxwell::ModuleResolverApp>(context.get(), is_test),
       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

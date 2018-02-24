@@ -38,7 +38,10 @@ void ModuleResolverImpl::AddSource(
     std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
-  repo->Watch(
+  auto ptr = repo.get();
+  sources_.emplace(name, std::move(repo));
+
+  ptr->Watch(
       fsl::MessageLoop::GetCurrent()->task_runner(),
       [this, name]() { OnSourceIdle(name); },
       [this, name](std::string id, const modular::ModuleManifestPtr& entry) {
@@ -47,8 +50,6 @@ void ModuleResolverImpl::AddSource(
       [this, name](std::string id) {
         OnRemoveManifestEntry(name, std::move(id));
       });
-
-  sources_.emplace(name, std::move(repo));
 }
 
 void ModuleResolverImpl::Connect(
