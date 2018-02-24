@@ -37,8 +37,6 @@
 //
 //   Low addr =>
 //     header_t left_sentinel -- Marked as allocated, |left| pointer NULL.
-//                               If created for a large allocation, |left|
-//                               field will have LARGE_ALLOC_BIT set.
 //     free_t memory_area -- Marked as free, with appropriate size,
 //                           and pointed to by a free bucket.
 //     [bulk of usable memory]
@@ -63,9 +61,7 @@
 //   the header. untag(header_t.left) points to the preceding area's header_t.
 //
 //   The low bits of header_t.left hold additional flags about the area:
-//   - FREE_BIT: The area is free, and lives in a free bucket
-//   - LARGE_ALLOC_BIT: The area is the left sentinel of an OS allocation
-//     created by large_alloc()
+//   - FREE_BIT: The area is free, and lives in a free bucket.
 //   These bits shouldn't be checked directly; use the is_tagged_as_*()
 //   functions.
 //
@@ -79,8 +75,7 @@
 //   bucket.
 //
 // Large allocation:
-//   An alloction of more than HEAP_LARGE_ALLOC_BYTES. Won't fit in any free
-//   buckets, so it always creates a new OS allocation.
+//   An alloction of more than HEAP_LARGE_ALLOC_BYTES. This is no longer allowed.
 //
 // Free buckets:
 //   Freelist entries are kept in linked lists with 8 different sizes per binary
@@ -120,6 +115,10 @@
 
 #define LOCAL_TRACE 0
 
+// Use HEAP_ENABLE_TESTS to enable internal testing. The tests are not useful
+// when the target system is up. By that time we have done hundreds of allocations
+// already.
+
 #define ALLOC_FILL 0x99
 #define FREE_FILL 0x77
 #define PADDING_FILL 0x55
@@ -130,8 +129,6 @@
 
 static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 
-// Individual allocations above 4Mbytes are just fetched directly from the
-// block allocator.
 #define HEAP_ALLOC_VIRTUAL_BITS 22
 #define HEAP_LARGE_ALLOC_BYTES (1u << HEAP_ALLOC_VIRTUAL_BITS)
 
@@ -152,19 +149,14 @@ static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES, "");
 // a free bucket.
 #define FREE_BIT (1 << 0)
 
-// If a left sentinel's |left| field has this bit set, it is the start
-// of an OS allocation that was requested by large_alloc().
-#define LARGE_ALLOC_BIT (1 << 1)
-
-#define HEADER_LEFT_BIT_MASK (FREE_BIT | LARGE_ALLOC_BIT)
+#define HEADER_LEFT_BIT_MASK (FREE_BIT)
 
 // All individual memory areas on the heap start with this.
 typedef struct header_struct {
-    // Pointer to the previous area in memory order. The lower two bits are used
-    // to store extra state: see FREE_BIT, LARGE_ALLOC_BIT. The left sentinel
-    // will have NULL in the address portion of this field, and may have
-    // LARGE_ALLOC_BIT set. Left and right sentinels will always be marked as
-    // "allocated" to avoid coalescing.
+    // Pointer to the previous area in memory order. The lower bit is used
+    // to store extra state: see FREE_BIT. The left sentinel will have
+    // NULL in the address portion of this field. Left and right sentinels
+    // will always be marked as "allocated" to avoid coalescing.
     struct header_struct* left;
     // The size of the memory area in bytes, including this header.
     // The right sentinel will have 0 in this field.
@@ -205,7 +197,7 @@ struct heap {
 // Heap static vars.
 static struct heap theheap;
 
-static ssize_t heap_grow(size_t len, free_t** bucket);
+static ssize_t heap_grow(size_t len);
 
 static void lock(void) TA_ACQ(theheap.lock) {
     mutex_acquire(&theheap.lock);
@@ -321,15 +313,6 @@ static inline bool is_tagged_as_free(const header_t* header) {
     return ((uintptr_t)(header->left) & FREE_BIT) != 0;
 }
 
-// Set on the left sentinel of OS allocations created by large_alloc().
-static inline header_t* tag_as_large(const void* left) {
-    return (header_t*)((uintptr_t)left | LARGE_ALLOC_BIT);
-}
-
-static inline bool is_tagged_as_large(const header_t* header) {
-    return ((uintptr_t)(header->left) & LARGE_ALLOC_BIT) != 0;
-}
-
 static inline header_t* untag(const void* left) {
     return (header_t*)((uintptr_t)left & ~HEADER_LEFT_BIT_MASK);
 }
@@ -367,17 +350,15 @@ static bool is_start_of_os_allocation(const header_t* header) {
     return untag(header->left) == untag(NULL);
 }
 
-static void create_free_area(
-    void* address, void* left, size_t size, free_t** bucket) {
-
+static void create_free_area(void* address, void* left, size_t size) {
     free_t* free_area = (free_t*)address;
     free_area->header.size = size;
     free_area->header.left = tag_as_free(left);
-    if (bucket == NULL) {
-        int index = size_to_index_freeing(size - sizeof(header_t));
-        set_free_list_bit(index);
-        bucket = &theheap.free_lists[index];
-    }
+
+    int index = size_to_index_freeing(size - sizeof(header_t));
+    set_free_list_bit(index);
+    free_t** bucket = &theheap.free_lists[index];
+
     free_t* old_head = *bucket;
     if (old_head != NULL) {
         old_head->prev = free_area;
@@ -407,15 +388,14 @@ static void free_to_os(void* ptr, size_t size) {
 // |total_size| is the (page-aligned) number of bytes that were originally
 // allocated from the OS.
 static void possibly_free_to_os(header_t *left_sentinel, size_t total_size) {
-    if (theheap.cached_os_alloc == NULL && !is_tagged_as_large(left_sentinel)) {
+    if (theheap.cached_os_alloc == NULL) {
         LTRACEF("Keeping 0x%zx-byte OS alloc @%p\n", total_size, left_sentinel);
         theheap.cached_os_alloc = left_sentinel;
         theheap.cached_os_alloc->left = NULL;
         theheap.cached_os_alloc->size = total_size;
     } else {
-        LTRACEF("Returning 0x%zx bytes @%p to OS (%s)\n",
-                total_size, left_sentinel,
-                is_tagged_as_large(left_sentinel) ? "large" : "small");
+        LTRACEF("Returning 0x%zx bytes @%p to OS\n",
+                total_size, left_sentinel);
         free_to_os(left_sentinel, total_size);
     }
 }
@@ -438,7 +418,7 @@ static void free_memory(void* address, void* left, size_t size) {
                          ((header_t*)left)->size, sizeof(header_t));
         possibly_free_to_os((header_t*)left, size + 2 * sizeof(header_t));
     } else {
-        create_free_area(address, left, size, NULL);
+        create_free_area(address, left, size);
     }
 }
 
@@ -480,6 +460,24 @@ static void FixLeftPointer(header_t* right, header_t* new_left) {
     int tag = (uintptr_t)right->left & 1;
     right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
+
+static void check_free_fill(void* ptr, size_t size) {
+    // The first 16 bytes of the region won't have free fill due to overlap
+    // with the allocator bookkeeping.
+    const size_t start = sizeof(free_t) - sizeof(header_t);
+    for (size_t i = start; i < size; ++i) {
+        uint8_t byte = ((uint8_t*)ptr)[i];
+        if (byte != FREE_FILL) {
+            platform_panic_start();
+            printf("Heap free fill check fail.  Allocated region:\n");
+            hexdump8(ptr, size);
+            panic("allocating %lu bytes, fill was %02x, offset %lu\n",
+                  size, byte, i);
+        }
+    }
+}
+
+#ifdef HEAP_ENABLE_TESTS
 
 static void WasteFreeMemory(void) {
     while (theheap.remaining != 0) {
@@ -801,54 +799,9 @@ void cmpct_test(void) {
     cmpct_dump(false);
 }
 
-static void check_free_fill(void* ptr, size_t size) {
-    // The first 16 bytes of the region won't have free fill due to overlap
-    // with the allocator bookkeeping.
-    const size_t start = sizeof(free_t) - sizeof(header_t);
-    for (size_t i = start; i < size; ++i) {
-        uint8_t byte = ((uint8_t*)ptr)[i];
-        if (byte != FREE_FILL) {
-            platform_panic_start();
-            printf("Heap free fill check fail.  Allocated region:\n");
-            hexdump8(ptr, size);
-            panic("allocating %lu bytes, fill was %02x, offset %lu\n",
-                  size, byte, i);
-        }
-    }
-}
-
-static void* large_alloc(size_t size) {
-#ifdef CMPCT_DEBUG
-    size_t requested_size = size;
-#endif
-    size = ROUNDUP(size, 8);
-    free_t* free_area = NULL;
-    lock();
-    if (heap_grow(size, &free_area) < 0) {
-        unlock();
-        return NULL;
-    }
-    // Passing a non-null |bucket| value will cause heap_grow() to tag the new
-    // memory's left sentinel as as large allocation.
-    DEBUG_ASSERT(is_tagged_as_large(untag(free_area->header.left)));
-
-    void* result = create_allocation_header(
-        free_area, 0, free_area->header.size, free_area->header.left);
-    // Normally the 'remaining free space' counter would be decremented when we
-    // unlink the free area from its bucket.  However in this case the free
-    // area was too big to go in any bucket and we had it in our own
-    // "free_area" variable so there is no unlinking and we have to adjust the
-    // counter here.
-    theheap.remaining -= free_area->header.size;
-    unlock();
-#ifdef CMPCT_DEBUG
-    check_free_fill(result, requested_size);
-    memset(result, ALLOC_FILL, requested_size);
-    memset((char*)result + requested_size, PADDING_FILL,
-           free_area->header.size - requested_size);
-#endif
-    return result;
-}
+#else
+void cmpct_test(void) {}
+#endif  // HEAP_ENABLE_TESTS
 
 void cmpct_trim(void) {
     // Look at free list entries that are at least as large as one page plus a
@@ -893,7 +846,7 @@ void cmpct_trim(void) {
                     free_area, new_free_size, 0, free_area);
                 // Also puts it in the correct bucket.
                 create_free_area(free_area, untag(free_area->header.left),
-                                 new_free_size, NULL);
+                                 new_free_size);
                 heap_page_free(new_os_allocation_end,
                                freed_up >> PAGE_SIZE_SHIFT);
                 theheap.size -= freed_up;
@@ -931,7 +884,7 @@ void cmpct_trim(void) {
                     char* new_free = new_os_allocation_start + sentinel_size;
                     // Also puts it in the correct bucket.
                     create_free_area(new_free, new_os_allocation_start,
-                                     new_free_size, NULL);
+                                     new_free_size);
                     FixLeftPointer(right, (header_t*)new_free);
                 }
                 heap_page_free(old_os_allocation_start,
@@ -948,13 +901,9 @@ void* cmpct_alloc(size_t size) {
         return NULL;
     }
 
-    // TODO(dbort): Look into the large vs. small threshold. A "small"
-    // allocation of 0x3ff000 and a "large" allocation of 0x400000 will both
-    // allocate 0x401000 bytes from the OS; seems like there should be a sharper
-    // distinction. The problem seems to be that growby is rounded up to a
-    // bucket size, then heap_grow adds 2*header_t and rounds up to a page.
-    if (size + sizeof(header_t) > HEAP_LARGE_ALLOC_BYTES) {
-        return large_alloc(size);
+    // Large allocations are no longer allowed. See ZX-1318 for details.
+    if (size > (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t))) {
+        return NULL;
     }
 
     size_t rounded_up;
@@ -971,7 +920,7 @@ void* cmpct_alloc(size_t size) {
                                 MAX(HEAP_GROW_SIZE, rounded_up)));
         // Try to add a new OS allocation to the heap, reducing the size until
         // we succeed or get too small.
-        while (heap_grow(growby, NULL) < 0) {
+        while (heap_grow(growby) < 0) {
             if (growby <= rounded_up) {
                 unlock();
                 return NULL;
@@ -991,7 +940,7 @@ void* cmpct_alloc(size_t size) {
         header_t* right = right_header(&head->header);
         unlink_free(head, bucket);
         void* free = (char*)head + rounded_up;
-        create_free_area(free, head, left_over, NULL);
+        create_free_area(free, head, left_over);
         FixLeftPointer(right, (header_t*)free);
         head->header.size -= left_over;
     } else {
@@ -1090,23 +1039,17 @@ void* cmpct_realloc(void* payload, size_t size) {
     return new_payload;
 }
 
-static void add_to_heap(void* new_area, size_t size, free_t** bucket) {
+static void add_to_heap(void* new_area, size_t size) {
     void* top = (char*)new_area + size;
-
     // Set up the left sentinel. Its |left| field will not have FREE_BIT set,
     // stopping attempts to coalesce left.
     header_t* left_sentinel = (header_t*)new_area;
     create_allocation_header(left_sentinel, 0, sizeof(header_t), NULL);
-    if (bucket != NULL) {
-        // If a bucket was provided, we were called by large_alloc(). Mark this
-        // OS allocation as large so we can handle it properly when freeing it.
-        left_sentinel->left = tag_as_large(left_sentinel->left);
-    }
 
     // Set up the usable memory area, which will be marked free.
     header_t* new_header = left_sentinel + 1;
     size_t free_size = size - 2 * sizeof(header_t);
-    create_free_area(new_header, left_sentinel, free_size, bucket);
+    create_free_area(new_header, left_sentinel, free_size);
 
     // Set up the right sentinel. Its |left| field will not have FREE_BIT bit
     // set, stopping attempts to coalesce right.
@@ -1116,50 +1059,46 @@ static void add_to_heap(void* new_area, size_t size, free_t** bucket) {
 
 // Create a new free-list entry of at least size bytes (including the
 // allocation header).  Called with the lock, apart from during init.
-static ssize_t heap_grow(size_t size, free_t** bucket) {
+static ssize_t heap_grow(size_t size) {
     // The new free list entry will have a header on each side (the
     // sentinels) so we need to grow the gross heap size by this much more.
     size += 2 * sizeof(header_t);
     size = ROUNDUP(size, PAGE_SIZE);
 
     void* ptr = NULL;
-    if (bucket == NULL) {
-        // This is a non-large allocation request. Try to use a cached OS
-        // allocation if present.
-        header_t* os_alloc = (header_t*)theheap.cached_os_alloc;
-        if (os_alloc != NULL) {
-            if (os_alloc->size >= size) {
-                LTRACEF("Using saved 0x%zx-byte OS alloc @%p (>=0x%zx bytes)\n",
-                        os_alloc->size, os_alloc, size);
-                ptr = os_alloc;
-                size = os_alloc->size;
-                DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr),
-                                 "0x%zx bytes @%p", size, ptr);
-                DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size),
-                                 "0x%zx bytes @%p", size, ptr);
-            } else {
-                // We need to allocate more from the OS. Return the cached OS
-                // allocation, in case we're holding an unusually-small block
-                // that's unlikely to satisfy future calls to heap_grow().
-                LTRACEF("Returning too-small saved 0x%zx-byte OS alloc @%p "
-                        "(<0x%zx bytes)\n",
-                        os_alloc->size, os_alloc, size);
-                free_to_os(os_alloc, os_alloc->size);
-            }
-            theheap.cached_os_alloc = NULL;
+
+    header_t* os_alloc = (header_t*)theheap.cached_os_alloc;
+    if (os_alloc != NULL) {
+        if (os_alloc->size >= size) {
+            LTRACEF("Using saved 0x%zx-byte OS alloc @%p (>=0x%zx bytes)\n",
+                    os_alloc->size, os_alloc, size);
+            ptr = os_alloc;
+            size = os_alloc->size;
+            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr),
+                             "0x%zx bytes @%p", size, ptr);
+            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size),
+                             "0x%zx bytes @%p", size, ptr);
+        } else {
+            // We need to allocate more from the OS. Return the cached OS
+            // allocation, in case we're holding an unusually-small block
+            // that's unlikely to satisfy future calls to heap_grow().
+            LTRACEF("Returning too-small saved 0x%zx-byte OS alloc @%p "
+                    "(<0x%zx bytes)\n",
+                    os_alloc->size, os_alloc, size);
+            free_to_os(os_alloc, os_alloc->size);
         }
+        theheap.cached_os_alloc = NULL;
     }
     if (ptr == NULL) {
         ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
         if (ptr == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
-        LTRACEF("Growing heap by 0x%zx bytes, new ptr %p (%s)\n",
-                size, ptr, bucket ? "large" : "small");
+        LTRACEF("Growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
     }
 
     theheap.size += size;
-    add_to_heap(ptr, size, bucket);
+    add_to_heap(ptr, size);
 
     return size;
 }
@@ -1182,5 +1121,5 @@ void cmpct_init(void) {
 
     theheap.remaining = 0;
 
-    heap_grow(initial_alloc, NULL);
+    heap_grow(initial_alloc);
 }
