@@ -101,17 +101,21 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
         return ZX_ERR_BAD_STATE;
     }
 
-    zxlogf(TRACE, "allocating %d usb requests of size %u\n",
-           MAX_OUTSTANDING_REQS, max_bandwidth);
-
     {
         fbl::AutoLock lock(&lock_);
 
         list_initialize(&free_reqs_);
 
-        zx_status_t status = AllocUsbRequestsLocked(max_bandwidth);
-        if (status != ZX_OK) {
-            return status;
+        // For isochronous transfers we know the maximum payload size to
+        // use for the usb request size.
+        //
+        // For bulk transfers we can't allocate usb requests until we get
+        // the maximum payload size from stream negotiation.
+        if (streaming_ep_type_ == USB_ENDPOINT_ISOCHRONOUS) {
+            zx_status_t status = AllocUsbRequestsLocked(max_bandwidth);
+            if (status != ZX_OK) {
+                return status;
+            }
         }
     }
 
@@ -247,7 +251,22 @@ zx_status_t UsbVideoStream::SetFormat() {
         clock_frequency_hz_ = negotiation_result_.dwClockFrequency;
     }
 
-    send_req_size_ = setting_bandwidth(*cur_streaming_setting_);
+    switch(streaming_ep_type_) {
+    case USB_ENDPOINT_ISOCHRONOUS:
+        // Isochronous payloads will always fit within a single usb request.
+        send_req_size_ = setting_bandwidth(*cur_streaming_setting_);
+        break;
+    case USB_ENDPOINT_BULK: {
+        // If the size of a payload is greater than the max usb request size,
+        // we will have to split it up in multiple requests.
+        send_req_size_ = fbl::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
+            static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
+        break;
+    }
+    default:
+       zxlogf(ERROR, "unknown EP type: %d\n", streaming_ep_type_);
+       return ZX_ERR_BAD_STATE;
+    }
 
     zxlogf(INFO, "configured video: format index %u frame index %u\n",
            cur_format_->index, cur_frame_desc_->index);
@@ -256,7 +275,7 @@ zx_status_t UsbVideoStream::SetFormat() {
            cur_streaming_setting_->max_packet_size,
            cur_streaming_setting_->transactions_per_microframe);
 
-    return ZX_OK;
+    return AllocUsbRequestsLocked(send_req_size_);
 }
 
 zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
@@ -332,7 +351,9 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     // Find a setting that supports the required bandwidth.
     for (const auto& setting : streaming_settings_) {
         uint32_t bandwidth = setting_bandwidth(setting);
-        if (bandwidth >= required_bandwidth) {
+        // For bulk transfers, we use the first (and only) setting.
+        if (setting.ep_type == USB_ENDPOINT_BULK ||
+            bandwidth >= required_bandwidth) {
             best_setting = &setting;
             break;
         }
@@ -697,11 +718,31 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
         return;
     }
 
+    bool is_bulk = streaming_ep_type_ == USB_ENDPOINT_BULK;
     uint32_t header_len = 0;
     // Each isochronous response contains a payload header.
-    zx_status_t status = ParsePayloadHeaderLocked(req, &header_len);
-    if (status != ZX_OK) {
-        return;
+    // For bulk responses, a payload may be split over several requests,
+    // so only parse the header if it's the first request of the payload.
+    if (!is_bulk || bulk_payload_bytes_ == 0) {
+        zx_status_t status = ParsePayloadHeaderLocked(req, &header_len);
+        if (status != ZX_OK) {
+            return;
+        }
+    }
+    // End of payload detection for bulk transfers.
+    // Unlike isochronous transfers, we aren't guaranteed a payload header
+    // per usb response. To detect the end of a payload, we need to check
+    // whether we've read enough bytes.
+    if (is_bulk) {
+        // We need to update the total bytes counter before checking the error field,
+        // otherwise we might return early and start of payload detection will be wrong.
+        bulk_payload_bytes_ += static_cast<uint32_t>(req->response.actual);
+        // A payload is complete when we've received enough bytes to reach the max
+        // payload size, or fewer bytes than what we requested.
+        if (bulk_payload_bytes_ >= negotiation_result_.dwMaxPayloadTransferSize ||
+            req->response.actual < send_req_size_) {
+            bulk_payload_bytes_ = 0;
+        }
     }
 
     if (cur_frame_state_.error) {

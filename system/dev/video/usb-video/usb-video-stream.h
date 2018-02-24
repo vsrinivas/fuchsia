@@ -222,6 +222,12 @@ private:
     // This should be equal or less than allocated_req_size_.
     uint64_t send_req_size_ = 0;
 
+    // Bulk transfer specific fields.
+    // Total bytes received so far for the current payload, including headers.
+    // A bulk payload may be split across multiple usb requests,
+    // whereas for isochronous it is always one payload per usb request.
+    uint32_t bulk_payload_bytes_ = 0;
+
     fbl::Mutex lock_;
 };
 
