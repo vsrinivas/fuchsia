@@ -47,7 +47,7 @@ build_toybox() {
   local sysroot_dir="$2"
 
   make -C "$toybox_src" defconfig
-  CC="gcc" LDFLAGS="--static" make -C "$toybox_src" -j100
+  CROSS_COMPILE="${AC_HOST}-" CC="gcc" LDFLAGS="--static" make -C "$toybox_src" -j100
 
   mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin},dev,tmp}
   PREFIX=$sysroot_dir make -C "$toybox_src" install
@@ -174,11 +174,9 @@ arm64)
   type aarch64-linux-gnu-gcc ||
     { echo "Required package gcc-aarch64-linux-gnu is not installed."
       echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
-  declare -x ARCH=arm64;
-  declare -x AC_HOST="aarch64-linux-gnu";;
+  AC_HOST="aarch64-linux-gnu";;
 x86)
-  declare -x ARCH=x86;
-  declare -x AC_HOST="x86_64-linux-gnu";;
+  AC_HOST="x86_64-linux-gnu";;
 *)
   usage;;
 esac
