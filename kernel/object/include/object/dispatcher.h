@@ -62,9 +62,27 @@ DECLARE_DISPTAG(IommuDispatcher, ZX_OBJ_TYPE_IOMMU)
 
 #undef DECLARE_DISPTAG
 
-class Dispatcher : public fbl::RefCounted<Dispatcher>,
-                   public fbl::Recyclable<Dispatcher> {
+// Base class for all kernel objects that can be exposed to user-mode via
+// the syscall API and referenced by handles.
+//
+// It implements RefCounted because handles are abstractions to a multiple
+// references from user mode or kernel mode that control the lifetime o
+// the object.
+//
+// It implements Recyclable because upon final Release() on the RefPtr
+// it might be necessary to implement a destruction pattern that avoids
+// deep recursion since the kernel stack is very limited.
+//
+// You rarely derive directly from this class; instead consider deriving
+// from SoloDispatcher or PeeredDispatcher.
+class Dispatcher : private fbl::RefCounted<Dispatcher>,
+                   private fbl::Recyclable<Dispatcher> {
 public:
+    using fbl::RefCounted<Dispatcher>::AddRef;
+    using fbl::RefCounted<Dispatcher>::Release;
+    using fbl::RefCounted<Dispatcher>::Adopt;
+    using fbl::RefCounted<Dispatcher>::AddRefMaybeInDestructor;
+
     // At construction, the object's state tracker is asserting
     // |signals|.
     explicit Dispatcher(zx_signals_t signals = 0u);
