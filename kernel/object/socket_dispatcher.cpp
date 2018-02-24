@@ -110,10 +110,10 @@ void SocketDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     AutoLock lock(get_lock());
-    if (other_ == nullptr)
-        return;
-
-    other_->OnPeerZeroHandlesLocked();
+    // Drop our reference to our peer.
+    auto other = fbl::move(other_);
+    if (other != nullptr)
+        other->OnPeerZeroHandlesLocked();
 }
 
 void SocketDispatcher::OnPeerZeroHandlesLocked() {
