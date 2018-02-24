@@ -29,6 +29,10 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Flutter modules][flutter_module] - how to write a graphical module using
  Flutter
 
+## SDK
+
+ - [SDK](sdk/README.md) - information about developing the Fuchsia SDK
+
 ## Hardware
 
 This section covers Fuchsia development hardware targets.
