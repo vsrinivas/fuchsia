@@ -7,7 +7,6 @@
 # intermediate file.
 
 import("//build/config/fuchsia/sdk.gni")
-import("//build/cpp/sdk_source_set.gni")
 import("//build/gn/packages.gni")
 
 declare_args() {
@@ -223,7 +222,7 @@ template("fidl") {
     cpp_deps += [ ":$generator_target_name" ]
   }
 
-  sdk_source_set(target_name) {
+  source_set(target_name) {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
     }
@@ -486,11 +485,10 @@ template("fidl") {
       }
     }
 
-    sdk_source_set(cpp_sources_target_name) {
+    source_set(cpp_sources_target_name) {
       if (defined(invoker.testonly)) {
         testonly = invoker.testonly
       }
-      source_dir = target_gen_dir
       sources = process_file_template(
               invoker.sources,
               [

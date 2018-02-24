@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_source_set.gni")
 import("//garnet/public/build/test.gni")
 
-sdk_source_set("transport") {
+source_set("transport") {
   sources = [
     "fifo_allocator.cc",
     "fifo_allocator.h",
