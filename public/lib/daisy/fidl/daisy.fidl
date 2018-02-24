@@ -25,9 +25,9 @@ struct Daisy {
   //
   // In the cases where this Daisy is used for Module Resolution (see
   // module_resolver.fidl) and |entity| or |text| are set on the Noun, the
-  // value is additionally used to initialize the Entity references on Link to
-  // the Module that is selected after resolution.
-  map<string, Noun> nouns;
+  // value is additionally used to initialize the Entity references on Links
+  // for the Module that is selected after resolution.
+  map<string, Noun>? nouns;
 
   // string json_parameters;
   // array<string> required_services;

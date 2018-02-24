@@ -324,8 +324,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         [this](StoryModulesWatcher* const watcher) {
           watcher->OnNewModule(module_data_.Clone());
         });
-    ReportModuleLaunchTime(
-        module_data_->module_url, zx_clock_get(ZX_CLOCK_UTC) - start_time_);
+    ReportModuleLaunchTime(module_data_->module_url,
+                           zx_clock_get(ZX_CLOCK_UTC) - start_time_);
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1504,14 +1504,15 @@ class StoryControllerImpl::ResolveModulesCall
     resolver_query_ = ResolverQuery::New();
     resolver_query_->verb = daisy->verb;
     resolver_query_->url = daisy->url;
+    resolver_query_->noun_constraints.mark_non_null();
 
     std::shared_ptr<int> outstanding_requests{new int{0}};
     for (const auto& entry : daisy->nouns) {
       const auto& name = entry.GetKey();
       const auto& noun = entry.GetValue();
 
-      auto noun_constraint = ResolverNounConstraint::New();
       if (noun->is_json()) {
+        auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_json(noun->get_json());
         resolver_query_->noun_constraints[name] = std::move(noun_constraint);
       } else if (noun->is_link_name()) {
@@ -1559,9 +1560,11 @@ class StoryControllerImpl::ResolveModulesCall
                   }));
             }));
       } else if (noun->is_entity_type()) {
+        auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_type(noun->get_entity_type().Clone());
         resolver_query_->noun_constraints[name] = std::move(noun_constraint);
       } else if (noun->is_entity_reference()) {
+        auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_reference(noun->get_entity_reference());
         resolver_query_->noun_constraints[name] = std::move(noun_constraint);
       }
@@ -2264,8 +2267,7 @@ void StoryControllerImpl::OnModuleStateChange(
   }
 }
 
-void StoryControllerImpl::UpdateStoryState(
-    const ModuleState state) {
+void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
   switch (state) {
     case ModuleState::STARTING:
       state_ = StoryState::STARTING;

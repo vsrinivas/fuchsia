@@ -6,6 +6,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/daisy/fidl/daisy.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -127,8 +128,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observability of the state transitions.
     //
     // The observability of the STOPPED state, however, is guaranteed.
-    story_controller_->AddModule(nullptr, "module1", kModuleUrl, "root",
-                                 nullptr);
+    auto daisy = modular::Daisy::New();
+    daisy->url = kModuleUrl;
+    story_controller_->AddDaisy(nullptr /* parent_module_path */, "module1",
+                                std::move(daisy),
+                                nullptr /* surface_relation */);
 
     f1dl::Array<f1dl::String> module_path;
     module_path.push_back("module1");
@@ -183,8 +187,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // the story runner handling the Done() request from the module. Instead,
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
-    story_controller_->AddModule(nullptr, "module2", kModuleUrl, "root",
-                                 nullptr);
+    auto daisy = modular::Daisy::New();
+    daisy->url = kModuleUrl;
+    story_controller_->AddDaisy(nullptr /* parent_module_path */, "module2",
+                                std::move(daisy),
+                                nullptr /* surface_relation */);
 
     f1dl::Array<f1dl::String> module_path;
     module_path.push_back("module2");
