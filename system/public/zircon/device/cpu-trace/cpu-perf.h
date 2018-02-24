@@ -5,13 +5,14 @@
 #pragma once
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#include <zircon/types.h>
 
 #ifdef __Fuchsia__
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
-#include <zircon/types.h>
-#include <stddef.h>
 #endif
 
 __BEGIN_CDECLS
@@ -193,6 +194,9 @@ typedef struct {
     uint16_t programmable_counter_width;
 } cpuperf_properties_t;
 
+// The type of the |rate| field of cpuperf_config_t.
+typedef uint32_t cpuperf_rate_t;
+
 // Passed to STAGE_CONFIG to select the data to be collected.
 // Events must be consecutively allocated from the front with no holes.
 // A value of CPUPERF_EVENT_ID_NONE in |events| marks the end.
@@ -211,7 +215,7 @@ typedef struct {
     // The value can be non-zero only for counting based events.
     // This value is ignored if CPUPERF_CONFIG_FLAG_TIMEBASE0 is set.
     // Setting CPUPERF_CONFIG_FLAG_TIMEBASE0 in |flags[0]| is redundant but ok.
-    uint32_t rate[CPUPERF_MAX_EVENTS];
+    cpuperf_rate_t rate[CPUPERF_MAX_EVENTS];
 
     // Flags for each event in |events|.
     // TODO(dje): hypervisor, host/guest os/user
