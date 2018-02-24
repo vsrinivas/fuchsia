@@ -36,6 +36,7 @@ extern zx_status_t usb_audio_sink_create(zx_device_t* device, usb_protocol_t* us
 typedef struct {
     list_node_t node;
     usb_audio_ac_feature_unit_desc* desc;
+    uint8_t intf_num;
 } feature_unit_node_t;
 
 static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
@@ -116,11 +117,38 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                         }
                         // this is a quick and dirty hack to set volume to 100%
                         // otherwise, audio might default to 0%
-                        // TODO - properly support getting and setting stream volumes via ioctls
+                        //
+                        // TODO(johngro): Rework all of this code.  USB audio devices are very much
+                        // like HDA codecs; Internally, they are made up of a graph of nodes
+                        // (terminals and units) with a bunch of different possible topologies.
+                        // Simply setting the volume controls (when present) in each discovered
+                        // Feature Unit to 100% will not guarantee that we will get a useful flow of
+                        // audio through the system.  It is possible that selectors, or mixers (with
+                        // their own gains) will need to be configured in order to properly pass
+                        // audio as well.  In addition, by taking the shotgun approach with the
+                        // Feature Units here, we might end up accidentally looping back microphone
+                        // input into headphone/speaker output at 100% gain.  Normally topologies
+                        // like this are intended to provide an analog sidetone for headsets, which
+                        // we would generally want to be off, or only a small amount of gain when
+                        // sidetone should be enabled.
+                        //
+                        // Moving forward, we should probably put another level into the hierarchy
+                        // of devices published here.  Instead of publishing streams directly, we
+                        // should start by publishing a control node which represents the audio
+                        // control interface discovered here.  This control node device can then
+                        // read the Terminal/Unit descriptors to build the graph which represents
+                        // the device topology.  Then it can identify the paths through the graph
+                        // that we want to expose as input and output streams to the rest of the
+                        // system.  Once that is done, it can publish stream devices as child
+                        // devices based on the discovered paths.  Eventually, we might even make
+                        // this sophisticated enough that we define an interface for the control
+                        // node device so that the system can dynamically reconfigure the graph
+                        // (when appropriate/possible) in ways which might result in
+                        // publishing/unpublishing stream devices.
                         feature_unit_node_t* fu_node;
                         list_for_every_entry(&fu_descs, fu_node, feature_unit_node_t, node) {
                             // this may fail, but we are taking shotgun approach here
-                            usb_audio_set_volume(&usb, intf->bInterfaceNumber, fu_node->desc, 100);
+                            usb_audio_set_volume(&usb, fu_node->intf_num, fu_node->desc, 100);
                         }
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_BULK) {
@@ -176,6 +204,7 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                     feature_unit_node_t* fu_node = malloc(sizeof(feature_unit_node_t));
                     if (fu_node) {
                         fu_node->desc = (usb_audio_ac_feature_unit_desc *)header;
+                        fu_node->intf_num = intf->bInterfaceNumber;
                         list_add_tail(&fu_descs, &fu_node->node);
 #if TRACE
                         usb_audio_dump_feature_unit_caps(&usb,
