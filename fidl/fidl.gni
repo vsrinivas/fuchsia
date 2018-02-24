@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_dart.gni")
+import("//build/dart/toolchain.gni")
 import("//build/cpp/fidl_cpp.gni")
 import("//build/fidl/fidl_library.gni")
 import("//build/fidl/toolchain.gni")
@@ -39,8 +41,14 @@ fidl_cpp(target_name) {
   forward_variables_from(invoker, "*")
 }
 
+} else if (current_toolchain == dart_toolchain) {
+
+fidl_dart(target_name) {
+  forward_variables_from(invoker, "*")
+}
+
 } else {
-  assert(false, "Unable to process FIDL target in toolchain $current_toolchain")
+  assert(false, "Unable to process FIDL target in toolchain $current_toolchain.")
 }
 
 }
