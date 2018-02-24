@@ -27,7 +27,8 @@ func TestStatic(t *testing.T) {
 	fmt.Fprintf(f, "a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
 	f.Close()
 
-	si, err := LoadStaticIndex(f.Name())
+	si := NewStatic()
+	err = si.LoadFrom(f.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +59,8 @@ func TestStatic(t *testing.T) {
 		{"b", "0", ""},
 	}
 	for _, tc := range getPackageCases {
-		if got := si.GetPackage(tc.name, tc.version); got != tc.result {
-			t.Errorf("static.GetPackage(%q, %q) = %q want %q", tc.name, tc.version, got, tc.result)
+		if got, _ := si.Get(pkg.Package{tc.name, tc.version}); got != tc.result {
+			t.Errorf("static.Get(%q, %q) = %q want %q", tc.name, tc.version, got, tc.result)
 		}
 	}
 

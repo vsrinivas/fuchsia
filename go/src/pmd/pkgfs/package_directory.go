@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/far"
+	"fuchsia.googlesource.com/pm/pkg"
 )
 
 type packageDir struct {
@@ -30,12 +31,13 @@ type packageDir struct {
 }
 
 func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, error) {
-	merkleroot := ""
+	var merkleroot string
+	var foundInStatic bool
 	if filesystem.static != nil {
-		merkleroot = filesystem.static.GetPackage(name, version)
+		merkleroot, foundInStatic = filesystem.static.Get(pkg.Package{Name: name, Version: version})
 	}
 
-	if merkleroot == "" {
+	if !foundInStatic {
 		bmerkle, err := ioutil.ReadFile(filesystem.index.PackageVersionPath(name, version))
 		if err != nil {
 			return nil, goErrToFSErr(err)

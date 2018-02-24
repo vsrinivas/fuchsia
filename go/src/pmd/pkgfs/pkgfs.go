@@ -32,7 +32,7 @@ import (
 // Filesystem is the top level container for a pkgfs server
 type Filesystem struct {
 	root      fs.Directory
-	static    index.StaticIndex
+	static    *index.StaticIndex
 	index     *index.DynamicIndex
 	blobstore *blobstore.Manager
 	mountInfo mountInfo
@@ -42,9 +42,10 @@ type Filesystem struct {
 
 // New initializes a new pkgfs filesystem server
 func New(staticIndex, indexDir, blobstoreDir string) (*Filesystem, error) {
-	var static index.StaticIndex
+	static := index.NewStatic()
+
 	if _, err := os.Stat(staticIndex); !os.IsNotExist(err) {
-		static, err = index.LoadStaticIndex(staticIndex)
+		err := static.LoadFrom(staticIndex)
 		if err != nil {
 			// TODO(raggi): avoid crashing the process in cases like this
 			return nil, err

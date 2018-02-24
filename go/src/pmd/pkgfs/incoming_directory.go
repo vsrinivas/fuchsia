@@ -327,8 +327,8 @@ func activatePackage(p pkg.Package, fs *Filesystem) {
 		return
 	}
 	root := string(b)
-	if _, ok := fs.static[p]; ok {
-		fs.static[p] = root
+	if _, ok := fs.static.Get(p); ok {
+		fs.static.Set(p, root)
 		debugLog("package %s ready, updated static index", p)
 		os.Remove(from)
 	} else {
