@@ -77,6 +77,7 @@ def check_licenses(directory, verify=False):
             continue
         license_files = [file for file in os.listdir(subdir)
                          if file.startswith('LICENSE') or
+                         file.startswith('LICENCE') or
                          file.startswith('license')]
         if license_files:
             print 'OK       %s' % subdir
