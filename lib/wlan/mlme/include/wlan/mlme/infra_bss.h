@@ -35,6 +35,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     uint64_t timestamp() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
+    fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) override;
 
    private:
     // FrameHandler implementation

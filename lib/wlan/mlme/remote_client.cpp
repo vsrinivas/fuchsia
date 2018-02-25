@@ -447,7 +447,18 @@ zx_status_t RemoteClient::SendDataFrame(fbl::unique_ptr<Packet> packet) {
 }
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {
-    // TODO(NET-347): Buffer frame to be sent at a later point in time.
+    if (ps_pkt_queue_.size() >= kMaxPowerSavingQueueSize) { return ZX_ERR_NO_RESOURCES; }
+
+    size_t hdr_len = sizeof(EthernetII);
+    size_t frame_len = hdr_len + frame.body_len;
+    auto buffer = bss_->GetPowerSavingBuffer(frame_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    // Copy ethernet frame into buffer acquired from the BSS.
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
+    memcpy(packet->mut_data(), frame.hdr, frame_len);
+
+    ps_pkt_queue_.Enqueue(fbl::move(packet));
     return ZX_OK;
 }
 

@@ -8,6 +8,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/fsm.h>
+#include <wlan/mlme/packet.h>
 #include <wlan/mlme/remote_client_interface.h>
 #include <wlan/mlme/timer.h>
 
@@ -66,12 +67,18 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     const common::MacAddr& addr() { return addr_; }
 
    private:
+    // Maximum amount of packets buffered while the client is in power saving mode.
+    // Use `0` buffers to disable buffering until PS mode is ready
+    static constexpr size_t kMaxPowerSavingQueueSize = 0;
+
     Listener* const listener_;
     DeviceInterface* const device_;
     BssInterface* const bss_;
     const common::MacAddr addr_;
     const fbl::unique_ptr<Timer> timer_;
     uint16_t last_seq_no_ = kMaxSequenceNumber;
+    // Queue which holds buffered `EthernetII` packets while the client is in power saving mode.
+    PacketQueue ps_pkt_queue_;
 };
 
 class BaseState : public fsm::StateInterface, public FrameHandler {

@@ -7,11 +7,14 @@
 #include <wlan/mlme/device_interface.h>
 
 #include <wlan/common/macaddr.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
 #include <chrono>
 
 namespace wlan {
+
+class Buffer;
 
 // TODO(hahnr): Replace with uint64_t.
 namespace bss {
@@ -23,8 +26,16 @@ class BssInterface {
    public:
     virtual const common::MacAddr& bssid() const = 0;
     virtual uint64_t timestamp() = 0;
+
+    // Assigns an AID to the given client. Returns an error if there is no AID available anymore.
     virtual zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) = 0;
+    // Releases the AID associated with the given client. The AID will be available afterwards and
+    // can get assigned to other, newly associated clients.
     virtual zx_status_t ReleaseAid(const common::MacAddr& client) = 0;
+    // Returns a buffer which can be hold onto while a client is in power saving mode and released
+    // once the client leaves power saving mode or explicitly requests transmission of buffered
+    // frames for example by sending PS-POLL frames.
+    virtual fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) = 0;
 };
 
 }  // namespace wlan
