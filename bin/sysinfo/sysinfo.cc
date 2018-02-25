@@ -37,6 +37,8 @@ bool PrintHostname(bool verbose) {
     return false;
   }
 
+  host_name_buffer[sizeof(host_name_buffer) - 1] = '\0';
+
   if (verbose) {
     fprintf(stdout, "Host: \t%s\n", host_name_buffer);
   } else {
