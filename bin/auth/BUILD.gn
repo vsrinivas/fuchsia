@@ -11,10 +11,12 @@ package("token_manager") {
 
   binary = "token_manager"
 
-  meta = [ {
-    path = rebase_path("meta/sandbox")
-    dest = "sandbox"
-  } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("tests") {
@@ -59,9 +61,9 @@ executable("token_manager_unittests") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/fxl:fxl_printers",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/bin/auth/cache:unittests",
     "//garnet/bin/auth/store:unittests",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }

@@ -82,8 +82,8 @@ Status AuthDbFileImpl::Load() {
   // Reserialize existing users.
   std::string serialized_creds;
   if (!files::ReadFileToString(credentials_file_, &serialized_creds)) {
-    FXL_LOG(WARNING) << "Unable to read user credentials file at: "
-                     << credentials_file_;
+    FXL_LOG(ERROR) << "Unable to read user credentials file at: "
+                   << credentials_file_;
     return Status::kOperationFailed;
   }
 

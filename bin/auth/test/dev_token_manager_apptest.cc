@@ -7,6 +7,10 @@
 #include <memory>
 #include <string>
 
+#include "garnet/bin/auth/store/auth_db.h"
+#include "garnet/bin/auth/store/auth_db_file_impl.h"
+#include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
+#include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -44,6 +48,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
  protected:
   // ::testing::Test:
   void SetUp() override {
+    auth::Status status;
     app::Services services;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "token_manager";
@@ -69,9 +74,14 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
     token_mgr_factory_->GetTokenManager(kTestUserId,
                                         std::move(auth_provider_configs_),
                                         token_mgr_.NewRequest());
-  }
 
-  void TearDown() override {}
+    // Make sure the state is clean
+    // TODO: Once namespace for file system is per user, this won't be needed
+    token_mgr_->DeleteAllTokens(kDevAuthProvider, kTestUserProfileId,
+                                callback::Capture(MakeQuitTask(), &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    ASSERT_EQ(auth::Status::OK, status);
+  }
 
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -288,6 +298,68 @@ TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 
   EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
   ASSERT_EQ(access_token.get(), cached_access_token.get());
+}
+
+TEST_F(DevTokenManagerAppTest, GetAndRevokeCredential) {
+  auth::AuthenticationUIContextPtr auth_ui_context;
+  auth::Status status;
+  auth::UserProfileInfoPtr user_info;
+
+  std::string credential;
+  f1dl::String token;
+  auto scopes = f1dl::Array<f1dl::String>::New(0);
+
+  token_mgr_->Authorize(kDevAuthProvider, std::move(auth_ui_context),
+                        callback::Capture(MakeQuitTask(), &status, &user_info));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  f1dl::String user_profile_id = user_info->id;
+
+  // Obtain the stored credential
+  auth::store::AuthDbFileImpl auth_db(auth::kAuthDbPath + kTestUserId +
+                                      auth::kAuthDbPostfix);
+  auto db_status = auth_db.Load();
+  EXPECT_EQ(db_status, auth::store::Status::kOK);
+  db_status = auth_db.GetRefreshToken(
+      auth::store::CredentialIdentifier(user_profile_id,
+                                        auth::store::IdentityProvider::TEST),
+      &credential);
+  EXPECT_EQ(db_status, auth::store::Status::kOK);
+
+  EXPECT_TRUE(credential.find("rt_") != std::string::npos);
+
+  token_mgr_->GetIdToken(kDevAuthProvider, user_profile_id, "",
+                         callback::Capture(MakeQuitTask(), &status, &token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(token.get().find(credential) != std::string::npos);
+
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, user_profile_id, "", std::move(scopes),
+      callback::Capture(MakeQuitTask(), &status, &token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(token.get().find(credential) != std::string::npos);
+
+  token_mgr_->DeleteAllTokens(kDevAuthProvider, user_profile_id,
+                              callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+
+  // The credential should now be revoked
+  token_mgr_->GetIdToken(kDevAuthProvider, user_profile_id, "",
+                         callback::Capture(MakeQuitTask(), &status, &token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(token.get().find(credential) == std::string::npos);
+
+  token_mgr_->GetAccessToken(
+      kDevAuthProvider, user_profile_id, "", std::move(scopes),
+      callback::Capture(MakeQuitTask(), &status, &token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(auth::Status::OK, status);
+  EXPECT_TRUE(token.get().find(credential) == std::string::npos);
 }
 
 }  // namespace

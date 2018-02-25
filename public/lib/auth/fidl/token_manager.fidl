@@ -59,10 +59,7 @@ interface TokenManagerFactory {
   //
   // TODO: AuthproviderConfig should support new custom auth providers added by
   // third party developers.
-  //
-  // TODO: Support multiple users for a single auth provider.
-  GetTokenManager@0(string user_id,
-      array<AuthProviderConfig> auth_provider_configs,
+  GetTokenManager@0(string user_id, array<AuthProviderConfig> auth_provider_configs,
       TokenManager& token_manager);
 };
 

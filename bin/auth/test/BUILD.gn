@@ -18,6 +18,8 @@ executable("e2e_dev") {
   ]
 
   deps = [
+    "//garnet/bin/auth/store:credentials",
+    "//garnet/bin/auth/store:lib",
     "//garnet/lib/callback",
     "//garnet/lib/gtest",
     "//garnet/public/lib/auth/fidl",

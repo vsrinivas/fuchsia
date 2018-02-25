@@ -17,6 +17,11 @@ namespace auth {
 using auth::TokenManager;
 using auth::TokenManagerFactory;
 
+// TODO: once namespacing happens for persistent storage, remove
+const std::string kAuthDbPath = "/data/auth";
+
+const std::string kAuthDbPostfix = "token_store.db";
+
 class TokenManagerFactoryImpl : public TokenManagerFactory {
  public:
   TokenManagerFactoryImpl(app::ApplicationContext* context);

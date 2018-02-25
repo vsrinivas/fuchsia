@@ -8,6 +8,7 @@
 #include <map>
 
 #include "garnet/bin/auth/cache/token_cache.h"
+#include "garnet/bin/auth/store/auth_db.h"
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/auth/fidl/auth_provider.fidl.h"
@@ -28,6 +29,7 @@ constexpr int kMaxCacheSize = 10;
 class TokenManagerImpl : public TokenManager {
  public:
   TokenManagerImpl(app::ApplicationContext* context,
+                   std::unique_ptr<store::AuthDb> auth_db,
                    f1dl::Array<AuthProviderConfigPtr> auth_provider_configs);
 
   ~TokenManagerImpl() override;
@@ -66,6 +68,8 @@ class TokenManagerImpl : public TokenManager {
   std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;
 
   cache::TokenCache token_cache_;
+
+  std::unique_ptr<store::AuthDb> auth_db_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenManagerImpl);
 };

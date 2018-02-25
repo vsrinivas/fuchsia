@@ -29,7 +29,11 @@ DevAuthProviderImpl::~DevAuthProviderImpl() {}
 void DevAuthProviderImpl::GetPersistentCredential(
     f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
     const GetPersistentCredentialCallback& callback) {
-  callback(AuthProviderStatus::OK, GenerateRandomString(), nullptr);
+  auto profile = auth::UserProfileInfo::New();
+  profile->id = GenerateRandomString() + "@example.com";
+
+  callback(AuthProviderStatus::OK, "rt_" + GenerateRandomString(),
+           std::move(profile));
   return;
 }
 
