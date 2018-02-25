@@ -96,7 +96,8 @@ ImagePtr ShadowMapRenderer::GetTransitionedColorImage(
   info.sample_count = 1;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment |
       vk::ImageUsageFlagBits::eSampled |
-      vk::ImageUsageFlagBits::eTransferSrc;
+      vk::ImageUsageFlagBits::eTransferSrc |
+      vk::ImageUsageFlagBits::eStorage;
   auto color_image = escher()->image_cache()->NewImage(info);
   command_buffer->TransitionImageLayout(
       color_image, vk::ImageLayout::eUndefined,

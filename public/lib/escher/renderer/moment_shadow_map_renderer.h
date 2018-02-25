@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "lib/escher/impl/gaussian_3x3f.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 
 namespace escher {
@@ -35,6 +36,8 @@ class MomentShadowMapRenderer final : public ShadowMapRenderer {
                           const impl::ModelRenderPassPtr& model_render_pass);
 
  private:
+  impl::Gaussian3x3f gaussian3x3f_;
+
   FRIEND_MAKE_REF_COUNTED(MomentShadowMapRenderer);
   FRIEND_REF_COUNTED_THREAD_SAFE(MomentShadowMapRenderer);
   FXL_DISALLOW_COPY_AND_ASSIGN(MomentShadowMapRenderer);

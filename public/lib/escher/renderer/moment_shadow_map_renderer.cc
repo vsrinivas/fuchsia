@@ -4,12 +4,32 @@
 
 #include "lib/escher/renderer/moment_shadow_map_renderer.h"
 
-#include "lib/escher/escher.h"
+#include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/model_moment_shadow_map_pass.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/renderer/moment_shadow_map.h"
-#include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/stage.h"
+
+namespace {
+
+// Create an image of the same size and format as the input.
+escher::ImagePtr CreateSimilarImage(escher::Escher* escher,
+                                    escher::impl::CommandBuffer* command_buffer,
+                                    const escher::ImagePtr& input) {
+  escher::ImageInfo info;
+  info.format = input->format();
+  info.width = input->width();
+  info.height = input->height();
+  info.sample_count = 1;
+  info.usage = vk::ImageUsageFlagBits::eSampled |
+               vk::ImageUsageFlagBits::eStorage;
+  auto output = escher->image_cache()->NewImage(info);
+  command_buffer->TransitionImageLayout(
+      output, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+  return output;
+}
+
+}  // namespace
 
 namespace escher {
 
@@ -42,7 +62,8 @@ MomentShadowMapRenderer::MomentShadowMapRenderer(
                         depth_format,
                         model_data,
                         model_renderer,
-                        model_render_pass) {}
+                        model_render_pass),
+      gaussian3x3f_(escher) {}
 
 ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
     const FramePtr& frame,
@@ -63,9 +84,23 @@ ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
   DrawShadowPass(
       command_buffer, shadow_stage, model, camera, color_image, depth_image);
   frame->AddTimestamp("generated moment shadow map");
-  // TODO(ES-67): Apply Gaussian blur on color_image.
+
+  command_buffer->TransitionImageLayout(
+      color_image, vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::eGeneral);
+  frame->AddTimestamp("transitioned layout to eGeneral");
+
+  auto input_texture = fxl::MakeRefCounted<Texture>(
+      escher()->resource_recycler(), color_image, vk::Filter::eNearest);
+  auto blurred_image = CreateSimilarImage(
+      escher(), command_buffer, color_image);
+  auto output_texture = fxl::MakeRefCounted<Texture>(
+      escher()->resource_recycler(), blurred_image, vk::Filter::eNearest);
+  gaussian3x3f_.Apply(command_buffer, input_texture, output_texture);
+  frame->AddTimestamp("applied 3x3 gaussian");
+
   return SubmitPartialFrameAndBuildShadowMap<MomentShadowMap>(
-      frame, camera, color_image, light_color);
+      frame, camera, blurred_image, light_color);
 }
 
 }  // namespace escher
