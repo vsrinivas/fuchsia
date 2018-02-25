@@ -52,7 +52,7 @@ class WaterfallDemo : public Demo {
   // Toggle debug overlays.
   bool show_debug_info_ = false;
 
-  ShadowMode shadow_mode_ = ShadowMode::kShadowMap;
+  ShadowMode shadow_mode_ = ShadowMode::kMomentShadowMap;
   int current_scene_ = 0;
   // True if the Model objects should be binned by pipeline, false if they
   // should be rendered in their natural order.

@@ -13,6 +13,7 @@
 #include "lib/escher/impl/model_depth_pass.h"
 #include "lib/escher/impl/model_display_list.h"
 #include "lib/escher/impl/model_lighting_pass.h"
+#include "lib/escher/impl/model_moment_shadow_map_lighting_pass.h"
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
@@ -235,6 +236,16 @@ void PaperRenderer::UpdateRenderPasses(vk::Format prepass_color_format,
     FXL_VLOG(1) << "PaperRenderer: updating ModelLightingPass.";
     shadow_map_lighting_pass_ =
         fxl::MakeRefCounted<impl::ModelShadowMapLightingPass>(
+            escher()->resource_recycler(), model_data_, prepass_color_format,
+            depth_format_, kLightingPassSampleCount);
+  }
+
+  if (!moment_shadow_map_lighting_pass_ ||
+      moment_shadow_map_lighting_pass_->color_format() !=
+          lighting_pass_color_format) {
+    FXL_VLOG(1) << "PaperRenderer: updating ModelLightingPass.";
+    moment_shadow_map_lighting_pass_ =
+        fxl::MakeRefCounted<impl::ModelMomentShadowMapLightingPass>(
             escher()->resource_recycler(), model_data_, prepass_color_format,
             depth_format_, kLightingPassSampleCount);
   }
@@ -520,16 +531,15 @@ void PaperRenderer::DrawFrameWithMomentShadowMapShadows(
       image_cache_, depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
 
-  // TODO(ES-67): Draw moment shadow map lighting pass
   FramebufferPtr framebuffer = fxl::MakeRefCounted<Framebuffer>(
       escher(), width, height,
       std::vector<ImagePtr>{color_image_out, depth_image},
-      shadow_map_lighting_pass_->vk());
+      moment_shadow_map_lighting_pass_->vk());
 
   DrawLightingPass(frame, kLightingPassSampleCount, framebuffer,
                    shadow_map->texture(), shadow_map->matrix(),
                    stage.fill_light().color(), shadow_map->light_color(),
-                   shadow_map_lighting_pass_, stage, model, camera,
+                   moment_shadow_map_lighting_pass_, stage, model, camera,
                    overlay_model);
 
   frame->AddTimestamp("finished moment shadow map lighting pass");

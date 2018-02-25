@@ -155,6 +155,7 @@ class PaperRenderer : public Renderer {
   impl::ModelRenderPassPtr no_shadow_lighting_pass_;
   impl::ModelRenderPassPtr ssdo_lighting_pass_;
   impl::ModelRenderPassPtr shadow_map_lighting_pass_;
+  impl::ModelRenderPassPtr moment_shadow_map_lighting_pass_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;
   impl::ModelRendererPtr model_renderer_;

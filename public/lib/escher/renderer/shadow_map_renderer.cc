@@ -49,12 +49,7 @@ ShadowMapRenderer::ShadowMapRenderer(
       depth_format_(depth_format),
       model_data_(model_data),
       model_renderer_(model_renderer),
-      shadow_map_pass_(fxl::MakeRefCounted<impl::ModelShadowMapPass>(
-          escher->resource_recycler(),
-          model_data_,
-          shadow_map_format_,
-          depth_format_,
-          1)),
+      shadow_map_pass_(model_render_pass),
       clear_values_(
           {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
            vk::ClearDepthStencilValue(1.f, 0.f)}) {}
@@ -141,7 +136,7 @@ void ShadowMapRenderer::DrawShadowPass(impl::CommandBuffer* command_buffer,
 void ShadowMapRenderer::ComputeShadowStageFromSceneStage(
     const Stage& scene_stage, Stage& shadow_stage) {
   uint32_t shadow_size = static_cast<uint32_t>(
-      std::max(scene_stage.width(), scene_stage.height()));
+      .75f * std::max(scene_stage.width(), scene_stage.height()));
   shadow_stage.set_viewing_volume(
       escher::ViewingVolume(shadow_size, shadow_size,
                             scene_stage.viewing_volume().top(),

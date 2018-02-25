@@ -130,6 +130,8 @@ source_set("escher") {
     "impl/model_display_list_flags.h",
     "impl/model_lighting_pass.cc",
     "impl/model_lighting_pass.h",
+    "impl/model_moment_shadow_map_lighting_pass.cc",
+    "impl/model_moment_shadow_map_lighting_pass.h",
     "impl/model_moment_shadow_map_pass.cc",
     "impl/model_moment_shadow_map_pass.h",
     "impl/model_pipeline.cc",
