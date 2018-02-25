@@ -15,6 +15,8 @@
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
+#include <unordered_set>
+
 namespace wlan {
 
 class ObjectId;
@@ -38,6 +40,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) override;
 
    private:
+    using ClientSet = std::unordered_set<common::MacAddr, common::MacAddrHasher>;
+
     // FrameHandler implementation
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
@@ -49,6 +53,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     // RemoteClient::Listener implementation
     void HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
                                  RemoteClient::StateId to) override;
+    void HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
@@ -57,6 +62,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     DeviceInterface* device_;
     bss::timestamp_t started_at_;
     BssClientMap clients_;
+    ClientSet pwr_saving_clients_;
 };
 
 using InfraBssMap = MacAddrMap<fbl::RefPtr<InfraBss>, macaddr_map_type::kInfraBss>;

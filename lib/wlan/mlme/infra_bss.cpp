@@ -84,6 +84,18 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     }
 }
 
+void InfraBss::HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) {
+    debugfn();
+    ZX_DEBUG_ASSERT(clients_.Has(client));
+    if (!clients_.Has(client)) { return; }
+
+    if (pwr_saving) {
+        pwr_saving_clients_.insert(client);
+    } else {
+        pwr_saving_clients_.erase(client);
+    }
+}
+
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
     debugfn();
     auto status = clients_.AssignAid(client, out_aid);

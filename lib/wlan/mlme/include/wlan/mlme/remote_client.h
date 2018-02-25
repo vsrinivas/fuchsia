@@ -30,6 +30,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     struct Listener {
         virtual void HandleClientStateChange(const common::MacAddr& client, StateId from,
                                              StateId to) = 0;
+        virtual void HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) = 0;
     };
 
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
