@@ -103,19 +103,14 @@ template("dart_library") {
 
   dot_packages_file = "$target_gen_dir/$target_name.packages"
 
-  # TODO(pylaligand): handle package_root and source_dir separately (and use
-  # package_root to locate pubspec.yaml/analysis_options.yaml) once all clients
-  # have been converted.
+  package_root = "."
   if (defined(invoker.package_root)) {
-    source_dir = "${invoker.package_root}/lib"
-    if (defined(invoker.source_dir)) {
-      source_dir = "${invoker.package_root}/${invoker.source_dir}"
-    }
-  } else {
-    source_dir = "lib"
-    if (defined(invoker.source_dir)) {
-      source_dir = invoker.source_dir
-    }
+    package_root = invoker.package_root
+  }
+
+  source_dir = "$package_root/lib"
+  if (defined(invoker.source_dir)) {
+    source_dir = "$package_root/${invoker.source_dir}"
   }
 
   # Dependencies of the umbrella group for the targets in this file.
@@ -131,7 +126,7 @@ template("dart_library") {
 
     deps = dart_deps
     if (defined(invoker.non_dart_deps)) {
-      deps += invoker.non_dart_deps
+      public_deps = invoker.non_dart_deps
     }
 
     inputs = [
@@ -141,7 +136,7 @@ template("dart_library") {
     if (!defined(invoker.generated_code) || !invoker.generated_code) {
       # Require a manifest file, allowing the analysis service to identify the
       # package.
-      inputs += [ "pubspec.yaml" ]
+      inputs += [ "$package_root/pubspec.yaml" ]
     }
 
     outputs = [
@@ -180,7 +175,7 @@ template("dart_library") {
   with_analysis =
       !defined(invoker.disable_analysis) || !invoker.disable_analysis
   if (with_analysis) {
-    options_file = "analysis_options.yaml"
+    options_file = "$package_root/analysis_options.yaml"
     invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
     invocation_target_name = "${target_name}_analysis_runner"
     group_deps += [
