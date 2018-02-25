@@ -110,7 +110,7 @@ int main(int argc, char* const argv[]) {
     /* Network name */
     if (selected_options & DUMP_NODENAME) {
         char hostname[HOST_NAME_MAX + 1];
-        if (gethostname(hostname, sizeof(hostname) == 0)) {
+        if (gethostname(hostname, sizeof(hostname)) == 0) {
             hostname[sizeof(hostname) - 1] = '\0';
             print_string(hostname);
         } else {
