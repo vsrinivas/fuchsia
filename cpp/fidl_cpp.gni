@@ -78,7 +78,7 @@ template("fidl_cpp") {
 
     deps = [
       ":$generation_target_name",
-      "//garnet/public/lib/fidl/cpp/bindings2",
+      "//garnet/public/lib/fidl/cpp",
     ]
   }
 }
