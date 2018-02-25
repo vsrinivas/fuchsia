@@ -6,6 +6,7 @@
 
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/serialize.h>
 
 namespace wlan {
 
@@ -296,7 +297,17 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
 
     // Forward EAPOL frames to SME.
     if (be16toh(llc->protocol_id) == kEapolProtocolId) {
-        // TODO(NET-462): Forward EAPOL frames to Wlanstack.
+        if (frame.body_len < sizeof(EapolFrame)) {
+            warnf("short EAPOL frame; len = %zu", frame.body_len);
+            return ZX_OK;
+        }
+
+        auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
+        uint16_t actual_body_len = frame.body_len;
+        uint16_t expected_body_len = be16toh(eapol->packet_body_length);
+        if (actual_body_len != expected_body_len) {
+            return client_->SendEapolIndication(*eapol, hdr->addr2, hdr->addr3);
+        }
         return ZX_OK;
     }
 
@@ -516,6 +527,40 @@ zx_status_t RemoteClient::SendEthernet(fbl::unique_ptr<Packet> packet) {
 
 zx_status_t RemoteClient::SendDataFrame(fbl::unique_ptr<Packet> packet) {
     return device_->SendWlan(fbl::move(packet));
+}
+
+zx_status_t RemoteClient::SendEapolIndication(const EapolFrame& eapol, const common::MacAddr& src,
+                                              const common::MacAddr& dst) {
+    debugfn();
+
+    // Limit EAPOL packet size. The EAPOL packet's size depends on the link transport protocol and
+    // might exceed 255 octets. However, we don't support EAP yet and EAPOL Key frames are always
+    // shorter.
+    // TODO(hahnr): If necessary, find a better upper bound once we support EAP.
+    size_t len = sizeof(EapolFrame) + be16toh(eapol.packet_body_length);
+    if (len > 255) { return ZX_OK; }
+
+    auto ind = EapolIndication::New();
+    ind->data = ::f1dl::Array<uint8_t>::New(len);
+    std::memcpy(ind->data.data(), &eapol, len);
+    ind->src_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->dst_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    src.CopyTo(ind->src_addr.data());
+    dst.CopyTo(ind->dst_addr.data());
+
+    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    auto status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
+    if (status != ZX_OK) {
+        errorf("could not serialize MLME-Eapol.indication: %d\n", status);
+    } else {
+        status = device_->SendService(fbl::move(packet));
+    }
+    return status;
 }
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {

@@ -51,6 +51,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
     zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet);
     zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet);
+    zx_status_t SendEapolIndication(const EapolFrame& eapol, const common::MacAddr& src,
+                                    const common::MacAddr& dst);
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
     zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
