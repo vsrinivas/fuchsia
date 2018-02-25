@@ -9,6 +9,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -152,6 +153,8 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     }
 
     zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
+
+    zx_status_t AsWlanTxPacket(wlan_tx_packet_t* tx_pkt);
 
     bool has_ext_data() const { return ext_data_ != nullptr; }
     void set_ext_data(ethmac_netbuf_t* netbuf, uint16_t offset) {

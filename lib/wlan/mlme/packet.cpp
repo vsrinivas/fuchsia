@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/packet.h>
 
+#include <fbl/limits.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -29,6 +30,23 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
     if (offset + len > buffer_->capacity()) { return ZX_ERR_BUFFER_TOO_SMALL; }
     std::memcpy(buffer_->data() + offset, src, len);
     len_ = std::max(len_, offset + len);
+    return ZX_OK;
+}
+
+zx_status_t Packet::AsWlanTxPacket(wlan_tx_packet_t* tx_pkt) {
+    ZX_DEBUG_ASSERT(len() <= fbl::numeric_limits<uint16_t>::max());
+    ethmac_netbuf_t netbuf = {
+        .data = mut_data(),
+        .len = static_cast<uint16_t>(len()),
+    };
+    *tx_pkt = {.packet_head = &netbuf};
+    if (has_ext_data()) {
+        tx_pkt->packet_tail = ext_data();
+        tx_pkt->tail_offset = ext_offset();
+    }
+    if (has_ctrl_data<wlan_tx_info_t>()) {
+        std::memcpy(&tx_pkt->info, ctrl_data<wlan_tx_info_t>(), sizeof(tx_pkt->info));
+    }
     return ZX_OK;
 }
 

@@ -352,19 +352,15 @@ zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
 
 zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
     ZX_DEBUG_ASSERT(packet->len() <= fbl::numeric_limits<uint16_t>::max());
-    ethmac_netbuf_t netbuf = {
-        .data = packet->mut_data(),
-        .len = static_cast<uint16_t>(packet->len()),
-    };
-    wlan_tx_packet_t pkt = {.packet_head = &netbuf};
-    if (packet->has_ext_data()) {
-        pkt.packet_tail = packet->ext_data();
-        pkt.tail_offset = packet->ext_offset();
+
+    wlan_tx_packet_t tx_pkt;
+    auto status = packet->AsWlanTxPacket(&tx_pkt);
+    if (status != ZX_OK) {
+        errorf("could not convert packet to wlan_tx_packet when sending wlan frame: %d\n", status);
+        return status;
     }
-    if (packet->has_ctrl_data<wlan_tx_info_t>()) {
-        std::memcpy(&pkt.info, packet->ctrl_data<wlan_tx_info_t>(), sizeof(pkt.info));
-    }
-    zx_status_t status = wlanmac_proxy_.QueueTx(0u, &pkt);
+
+    status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);
     // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow wlanmac drivers to
     // complete transmits asynchronously.
     ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
