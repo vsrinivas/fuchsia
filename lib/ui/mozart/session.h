@@ -70,6 +70,8 @@ class Session final : public ui_mozart::Session,
 
   SessionId id() const { return id_; }
 
+  ErrorReporter* error_reporter() { return this; }
+
  private:
   Mozart* const mozart_;
   const SessionId id_;

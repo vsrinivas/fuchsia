@@ -10,6 +10,7 @@
 declare_args() {
   enable_value_subsystem = false
   enable_scenic_subsystem = true
+  enable_views_subsystem = true
   enable_sketchy_subsystem = false
   enable_dummy_subsystem = true
 }
@@ -30,6 +31,12 @@ executable("mozart") {
     defines += [ "MOZART_ENABLE_SCENIC_SUBSYSTEM" ]
     deps += [ "//garnet/lib/ui/scenic" ]
   }
+
+  if (enable_views_subsystem) {
+    defines += [ "MOZART_ENABLE_VIEWS_SUBSYSTEM" ]
+    deps += [ "//garnet/lib/ui/views" ]
+  }
+
 
   if (enable_dummy_subsystem) {
     defines += [ "MOZART_ENABLE_DUMMY_SUBSYSTEM" ]

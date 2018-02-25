@@ -1,0 +1,35 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module ui_views;
+
+import "lib/app/fidl/service_provider.fidl";
+
+union Command {
+  CreateViewCmd create_view;
+  CreateViewHolderCmd create_view_holder;
+
+  AddChildViewCmd add_child_view;
+  RemoveChildViewCmd remove_child_view;
+};
+
+struct CreateViewCmd {
+  uint32 id;
+  handle<eventpair> token;
+};
+
+struct CreateViewHolderCmd {
+  uint32 id;
+  handle<eventpair> token;
+};
+
+struct AddChildViewCmd {
+  uint32 view_id;
+  uint32 view_holder_id;
+};
+
+struct RemoveChildViewCmd {
+  uint32 view_id;
+  uint32 view_holder_id;
+};

@@ -54,8 +54,9 @@ class System {
  public:
   enum TypeId {
     kScenic = 0,
-    kDummySystem = 1,
-    kMaxSystems = 2,
+    kViews = 1,
+    kDummySystem = 2,
+    kMaxSystems = 3,
   };
 
   using OnInitializedCallback = std::function<void(System* system)>;

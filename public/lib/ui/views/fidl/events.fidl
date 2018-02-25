@@ -1,0 +1,56 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module ui_views;
+
+import "lib/ui/geometry/fidl/geometry.fidl";
+import "lib/ui/scenic/fidl/types.fidl";
+
+union Event {
+  ViewPropertiesChangedEvent view_properties_changed;
+  ChildViewAttachedEvent child_view_attached;
+  ChildViewUnavailableEvent child_view_unavailable;
+};
+
+// |id| identifies the View whose properties have changed.
+//
+// TODO: this corresponds to ViewListener.OnPropertiesChanged(), which has a
+// void return value to notify when the listener has responded to the event.
+// Is this still necessary?
+struct ViewPropertiesChangedEvent {
+  uint32 id;
+
+  // The ratio of the size of a logical pixel to a physical pixel assuming
+  // pixels are square.  This value changes in relation to display
+  // resolution and density.  Must be > 0.
+  float device_pixel_ratio = 1.0;
+
+  // The size of the view in logical pixels.
+  // Must be non-negative.
+  scenic.BoundingBox size;
+
+  // The inset of the view in logical pixels.
+  // Must be non-negative.
+  scenic.vec3 inset;
+};
+
+// Called when a child view is attached.
+struct ChildViewAttachedEvent {
+  uint32 view_holder_id;
+};
+
+// Called when a child view has become unavailable.
+//
+// A child may become unavailable for many reasons such being unregistered
+// by its application, abnormal termination of its application, or
+// cycles being introduced in the view tree.
+//
+// To complete removal of an unavailable child, this view component must
+// call RemoveChild() on its view with |child_key|.
+//
+// The implementation should invoke the callback once the event has
+// been handled.
+struct ChildViewUnavailableEvent {
+  uint32 view_holder_id;
+};

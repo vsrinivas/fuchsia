@@ -51,17 +51,21 @@ bool Session::ApplyCommand(const ui_mozart::CommandPtr& command) {
     case ui_mozart::Command::Tag::SCENIC:
       system_type = System::TypeId::kScenic;
       break;
+    case ui_mozart::Command::Tag::VIEWS:
+      system_type = System::TypeId::kViews;
+      break;
     case ui_mozart::Command::Tag::DUMMY:
       system_type = System::TypeId::kDummySystem;
       break;
     case ui_mozart::Command::Tag::__UNKNOWN__:
-      // TODO: use ErrorHandler
+      error_reporter()->ERROR() << "Session: unknown system type.";
       return false;
   }
   if (auto& dispatcher = dispatchers_[system_type]) {
     return dispatcher->ApplyCommand(command);
   } else {
-    // TODO: use ErrorHandler.
+    error_reporter()->ERROR()
+        << "Session: no dispatcher found for system type: " << system_type;
     return false;
   }
 }

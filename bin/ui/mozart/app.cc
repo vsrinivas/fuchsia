@@ -10,6 +10,10 @@
 #include "garnet/lib/ui/scenic/scenic_system.h"
 #endif
 
+#ifdef MOZART_ENABLE_VIEWS_SUBSYSTEM
+#include "garnet/lib/ui/views/view_system.h"
+#endif
+
 #ifdef MOZART_ENABLE_DUMMY_SUBSYSTEM
 #include "garnet/lib/ui/mozart/tests/dummy_system.h"
 #endif
@@ -22,7 +26,17 @@ App::App(app::ApplicationContext* app_context)
           fsl::MessageLoop::GetCurrent()->task_runner().get(),
           &clock_)) {
 #ifdef MOZART_ENABLE_SCENIC_SUBSYSTEM
-  mozart_->RegisterSystem<scene_manager::ScenicSystem>();
+  auto scenic = mozart_->RegisterSystem<scene_manager::ScenicSystem>();
+  FXL_DCHECK(scenic);
+#endif
+
+#ifdef MOZART_ENABLE_VIEWS_SUBSYSTEM
+#ifdef MOZART_ENABLE_SCENIC_SUBSYSTEM
+  auto views = mozart_->RegisterSystem<mz::ViewSystem>(scenic);
+  FXL_DCHECK(views);
+#else
+#error Mozart Views require Scenic.
+#endif
 #endif
 
 #ifdef MOZART_ENABLE_DUMMY_SUBSYSTEM

@@ -147,6 +147,7 @@ source_set("scenic") {
   public_configs = [ ":common_include_dirs" ]
 
   public_deps = [
+    "//garnet/lib/ui/mozart",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -155,12 +156,11 @@ source_set("scenic") {
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/vulkan",
   ]
 
   deps = [
     "//garnet/lib/magma:libmagma",
-    "//garnet/lib/ui/mozart",
-    "//garnet/public/lib/vulkan",
     "//zircon/public/lib/trace",
   ]
 }

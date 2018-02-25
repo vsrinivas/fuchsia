@@ -16,6 +16,7 @@ fidl("fidl") {
     ":presentation_info",
     "//garnet/public/lib/ui/mozart/fidl/dummy_system:fidl",
     "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl:view_system_fidl",
   ]
 }
 

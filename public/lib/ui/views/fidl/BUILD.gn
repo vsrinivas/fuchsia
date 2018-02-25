@@ -18,9 +18,24 @@ fidl("fidl") {
   public_deps = [
     ":view_token",
     "//garnet/public/lib/app/fidl:service_provider",
-    "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/mozart/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
+  ]
+}
+
+# Separate target created due to conflicts with ":fidl".  This should replace
+# ":fidl" after ViewManager is re-implemented in Mozart.
+fidl("view_system_fidl") {
+  sources = [
+    "commands.fidl",
+    "events.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/fidl:service_provider",
+    "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
