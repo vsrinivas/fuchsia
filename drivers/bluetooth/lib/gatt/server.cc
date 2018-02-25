@@ -133,7 +133,7 @@ void Server::OnExchangeMTU(att::Bearer::TransactionId tid,
   uint16_t server_mtu = att_->preferred_mtu();
 
   auto buffer = common::NewSlabBuffer(sizeof(att::Header) +
-                                      sizeof(att::ExchangeMTURequestParams));
+                                      sizeof(att::ExchangeMTUResponseParams));
   FXL_CHECK(buffer);
 
   att::PacketWriter writer(att::kExchangeMTUResponse, buffer.get());

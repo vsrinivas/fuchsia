@@ -11,6 +11,7 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 
+#include "client.h"
 #include "connection.h"
 #include "server.h"
 

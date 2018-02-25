@@ -4,6 +4,8 @@
 
 static_library("gatt") {
   sources = [
+    "client.cc",
+    "client.h",
     "connection.cc",
     "connection.h",
     "gatt.cc",
@@ -42,6 +44,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "client_unittest.cc",
     "local_service_manager_unittest.cc",
     "server_unittest.cc"
   ]

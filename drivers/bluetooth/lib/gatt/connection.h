@@ -23,6 +23,7 @@ class Database;
 
 namespace gatt {
 
+class Client;
 class Server;
 
 namespace internal {
@@ -48,6 +49,7 @@ class Connection final {
   Server* server() const { return server_.get(); }
 
  private:
+  std::unique_ptr<Client> client_;
   std::unique_ptr<Server> server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Connection);
