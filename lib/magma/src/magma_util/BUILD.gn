@@ -77,6 +77,8 @@ source_set("system") {
 
   sources = [
     "address_space_allocator.h",
+    "retry_allocator.cc",
+    "retry_allocator.h",
     "simple_allocator.cc",
     "simple_allocator.h",
   ]
