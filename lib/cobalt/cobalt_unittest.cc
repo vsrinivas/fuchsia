@@ -70,7 +70,7 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
 
   void AddIntBucketDistribution(
       uint32_t metric_id, uint32_t encoding_id,
-      f1dl::Map<uint32_t, uint64_t> distribution,
+      f1dl::Array<BucketDistributionEntryPtr> distribution,
       const AddIntBucketDistributionCallback& callback) override {}
 
   void AddMultipartObservation(
@@ -247,10 +247,12 @@ TEST_F(CobaltTest, ReportStringObservation) {
 
 TEST_F(CobaltTest, ReportIntBucketObservation) {
   ValuePtr value = Value::New();
-  f1dl::Map<uint32_t, uint64_t> map;
-  map[1] = 2;
-  map[2] = 3;
-  value->set_int_bucket_distribution(std::move(map));
+  auto distribution = f1dl::Array<BucketDistributionEntryPtr>::New(2);
+  distribution[0]->index = 1;
+  distribution[0]->count = 2;
+  distribution[1]->index = 2;
+  distribution[1]->count = 3;
+  value->set_int_bucket_distribution(std::move(distribution));
   CobaltObservation observation(
       kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
   CobaltContext* cobalt_context = nullptr;

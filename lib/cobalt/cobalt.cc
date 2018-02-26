@@ -131,14 +131,14 @@ bool CobaltObservation::CompareObservationValueLess(
     case Value::Tag::INT_BUCKET_DISTRIBUTION: {
       if (value->get_int_bucket_distribution().size() ==
           rhs_value->get_int_bucket_distribution().size()) {
-        auto i = value->get_int_bucket_distribution().cbegin();
-        auto j = rhs_value->get_int_bucket_distribution().cbegin();
-        while (i != value->get_int_bucket_distribution().cend()) {
-          if (i.GetKey() != j.GetKey()) {
-            return i.GetKey() < j.GetKey();
+        auto i = value->get_int_bucket_distribution().begin();
+        auto j = rhs_value->get_int_bucket_distribution().begin();
+        while (i != value->get_int_bucket_distribution().end()) {
+          if ((*i)->index != (*j)->index) {
+            return (*i)->index < (*j)->index;
           }
-          if (i.GetValue() != j.GetValue()) {
-            return i.GetValue() < j.GetValue();
+          if ((*i)->count != (*j)->count) {
+            return (*i)->count < (*j)->count;
           }
           ++i;
           ++j;
