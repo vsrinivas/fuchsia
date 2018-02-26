@@ -373,9 +373,8 @@ static const char* const ath10k_core_fw_feature_str[] = {
     [ATH10K_FW_FEATURE_ALLOWS_MESH_BCAST] = "allows-mesh-bcast",
 };
 
-static unsigned int ath10k_core_get_fw_feature_str(char* buf,
-        size_t buf_len,
-        enum ath10k_fw_features feat) {
+static unsigned int ath10k_core_get_fw_feature_str(char* buf, size_t buf_len,
+                                                   enum ath10k_fw_features feat) {
     /* make sure that ath10k_core_fw_feature_str[] gets updated */
     BUILD_BUG_ON(ARRAY_SIZE(ath10k_core_fw_feature_str) !=
                  ATH10K_FW_FEATURE_COUNT);
@@ -687,9 +686,10 @@ static zx_status_t ath10k_download_cal_eeprom(struct ath10k* ar) {
 
     ret = ath10k_hif_fetch_cal_eeprom(ar, &data, &data_len);
     if (ret != ZX_OK) {
-        if (ret != ZX_ERR_NOT_SUPPORTED)
+        if (ret != ZX_ERR_NOT_SUPPORTED) {
             ath10k_warn("failed to read calibration data from EEPROM: %s\n",
                         zx_status_get_string(ret));
+        }
         goto out_free;
     }
 
@@ -886,8 +886,8 @@ static zx_status_t ath10k_download_and_run_otp(struct ath10k* ar) {
 
     if (!(skip_otp || test_bit(ATH10K_FW_FEATURE_IGNORE_OTP_RESULT,
                                ar->running_fw->fw_file.fw_features)) &&
-            result != 0) {
-        ath10k_err("otp calibration failed: %d", result);
+            result != ZX_OK) {
+        ath10k_err("otp calibration failed: %s", zx_status_get_string(result));
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -979,8 +979,7 @@ static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
               ath10k_bus_str(ar->hif.bus), dev_name(ar->dev));
 
     ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->cal_file);
-    if (ret != ZX_OK)
-    {
+    if (ret != ZX_OK) {
         /* calibration file is optional, don't print any warnings */
         return ret;
     }
@@ -1148,7 +1147,7 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
         if (len < ALIGN(ie_len, 4)) {
             ath10k_err("invalid length for board ie_id %d ie_len %zu len %zu\n",
                        ie_id, ie_len, len);
-            ret = ZX_ERR_INVALID_ARGS; 
+            ret = ZX_ERR_INVALID_ARGS;
             goto err;
         }
 
@@ -1178,9 +1177,8 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar,
                 /* no match found, continue */
             {
                 break;
-            } else if (ret != ZX_OK)
+            } else if (ret != ZX_OK) {
                 /* there was an error, bail out */
-            {
                 goto err;
             }
 
@@ -1358,7 +1356,7 @@ zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name
                 index = i / 8;
                 bit = i % 8;
 
-                if (index == ie_len) {
+                if ((size_t)index == ie_len) {
                     break;
                 }
 
@@ -1657,8 +1655,8 @@ static zx_status_t ath10k_init_uart(struct ath10k* ar) {
 }
 
 static zx_status_t ath10k_init_hw_params(struct ath10k* ar) {
-    const struct ath10k_hw_params* uninitialized_var(hw_params);
-    int i;
+    const struct ath10k_hw_params* hw_params;
+    unsigned int i;
 
     for (i = 0; i < ARRAY_SIZE(ath10k_hw_params_list); i++) {
         hw_params = &ath10k_hw_params_list[i];
@@ -1794,7 +1792,7 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
         break;
     default:
         ath10k_trace("invalid cryptmode: %d\n", ath10k_cryptmode_param);
-        return ZX_ERR_INVALID_ARGS; 
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ar->htt.max_num_amsdu = ATH10K_HTT_MAX_NUM_AMSDU_DEFAULT;
@@ -1803,7 +1801,7 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
     if (rawmode) {
         if (!test_bit(ATH10K_FW_FEATURE_RAW_MODE_SUPPORT,
                       fw_file->fw_features)) {
-            ath10k_err("rawmode = 1 requires support from firmware");
+            ath10k_err("rawmode = 1 requires support from firmware\n");
             return ZX_ERR_INVALID_ARGS;
         }
         set_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags);
@@ -2100,7 +2098,7 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_wmi_wait_for_service_ready(ar);
         if (status != ZX_OK) {
-            ath10k_warn("wmi service ready event not received");
+            ath10k_warn("wmi service ready event not received\n");
             goto err_hif_stop;
         }
     }
@@ -2196,7 +2194,7 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     if (mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         status = ath10k_htt_setup(&ar->htt);
         if (status != ZX_OK) {
-            ath10k_err("failed to setup htt: %d\n", zx_status_get_string(status));
+            ath10k_err("failed to setup htt: %s\n", zx_status_get_string(status));
             goto err_hif_stop;
         }
     }
@@ -2437,7 +2435,7 @@ zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
     ar->chip_id = chip_id;
     queue_work(ar->workqueue, &ar->register_work);
 
-    return 0;
+    return ZX_OK;
 }
 EXPORT_SYMBOL(ath10k_core_register);
 

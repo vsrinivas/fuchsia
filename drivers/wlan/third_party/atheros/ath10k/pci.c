@@ -934,7 +934,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
 
         i = 0;
         while (ath10k_ce_completed_send_next_nolock(ce_diag,
-                NULL) != 0) {
+                NULL) != ZX_OK) {
             mdelay(1);
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
                 ret = ZX_ERR_SHOULD_WAIT;
@@ -946,7 +946,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
         while (ath10k_ce_completed_recv_next_nolock(ce_diag,
                 (void**)&buf,
                 &completed_nbytes)
-                != 0) {
+                != ZX_OK) {
             mdelay(1);
 
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
@@ -955,7 +955,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
             }
         }
 
-        if (nbytes != completed_nbytes) {
+        if ((unsigned int)nbytes != completed_nbytes) {
             ret = ZX_ERR_IO;
             goto done;
         }
@@ -984,13 +984,7 @@ done:
 }
 
 static zx_status_t ath10k_pci_diag_read32(struct ath10k* ar, uint32_t address, uint32_t* value) {
-    uint32_t val = 0;
-    zx_status_t ret;
-
-    ret = ath10k_pci_diag_read_mem(ar, address, &val, sizeof(val));
-    *value = val;
-
-    return ret;
+    return ath10k_pci_diag_read_mem(ar, address, value, sizeof(*value));
 }
 
 static zx_status_t __ath10k_pci_diag_read_hi(struct ath10k* ar, void* dest,
@@ -1117,7 +1111,7 @@ zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
             }
         }
 
-        if (nbytes != completed_nbytes) {
+        if ((unsigned int)nbytes != completed_nbytes) {
             ret = ZX_ERR_IO;
             goto done;
         }
@@ -1138,9 +1132,10 @@ done:
                           ce_data_base);
     }
 
-    if (ret != ZX_OK)
+    if (ret != ZX_OK) {
         ath10k_warn("failed to write diag value at 0x%x: %s\n",
-                    ce_address, zx_status_get_string(ret));
+                    address, zx_status_get_string(ret));
+    }
 
     mtx_unlock(&ar_pci->ce_lock);
 
@@ -1299,7 +1294,7 @@ static void ath10k_pci_htt_tx_cb(struct ath10k_ce_pipe* ce_state) {
     struct ath10k* ar = ce_state->ar;
     struct sk_buff* skb;
 
-    while (ath10k_ce_completed_send_next(ce_state, (void**)&skb) == 0) {
+    while (ath10k_ce_completed_send_next(ce_state, (void**)&skb) == ZX_OK) {
         /* no need to call tx completion for NULL pointers */
         if (!skb) {
             continue;
@@ -1345,7 +1340,7 @@ zx_status_t ath10k_pci_hif_tx_sg(struct ath10k* ar, uint8_t pipe_id,
     write_index = src_ring->write_index;
 
     if (unlikely(CE_RING_DELTA(nentries_mask,
-                               write_index, sw_index - 1) < n_items)) {
+                               write_index, sw_index - 1) < (unsigned)n_items)) {
         err = ZX_ERR_NO_RESOURCES;
         goto err;
     }
@@ -1492,7 +1487,7 @@ void ath10k_pci_hif_send_complete_check(struct ath10k* ar, uint8_t pipe,
          * If at least 50% of the total resources are still available,
          * don't bother checking again yet.
          */
-        if (resources > (host_ce_config_wlan[pipe].src_nentries >> 1)) {
+        if ((unsigned)resources > (host_ce_config_wlan[pipe].src_nentries >> 1)) {
             return;
         }
     }
@@ -1509,7 +1504,7 @@ zx_status_t ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t servi
                                                uint8_t* ul_pipe, uint8_t* dl_pipe) {
     const struct service_to_pipe* entry;
     bool ul_set = false, dl_set = false;
-    int i;
+    unsigned int i;
 
     ath10k_dbg(ar, ATH10K_DBG_PCI, "pci hif map service\n");
 
@@ -1999,7 +1994,7 @@ zx_status_t ath10k_pci_init_config(struct ath10k* ar) {
     uint32_t ealloc_targ_addr;
     uint32_t flag2_value;
     uint32_t flag2_targ_addr;
-    zx_status_t ret = 0;
+    zx_status_t ret = ZX_OK;
 
     /* Download to Target the CE Config and the service-to-CE map */
     interconnect_targ_addr =
@@ -2395,7 +2390,7 @@ static zx_status_t ath10k_pci_qca988x_chip_reset(struct ath10k* ar) {
 
     ret = ath10k_pci_wait_for_target_init(ar);
     if (ret != ZX_OK) {
-        ath10k_warn("failed to wait for target after cold reset: %d\n",
+        ath10k_warn("failed to wait for target after cold reset: %s\n",
                     zx_status_get_string(ret));
         return ret;
     }
@@ -2420,7 +2415,7 @@ static zx_status_t ath10k_pci_qca6174_chip_reset(struct ath10k* ar) {
 
     ret = ath10k_pci_wait_for_target_init(ar);
     if (ret != ZX_OK) {
-        ath10k_warn("failed to wait for target after cold reset: %d\n",
+        ath10k_warn("failed to wait for target after cold reset: %s\n",
                     zx_status_get_string(ret));
         return ret;
     }
@@ -3248,7 +3243,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
 
     ret = ath10k_pci_claim(ar);
     if (ret != ZX_OK) {
-        ath10k_err("failed to claim device: %s\n", zx_status_get_string(ret));
+        ath10k_err("failed to map PCI memory: %s\n", zx_status_get_string(ret));
         goto err_free_pipes;
     }
 
