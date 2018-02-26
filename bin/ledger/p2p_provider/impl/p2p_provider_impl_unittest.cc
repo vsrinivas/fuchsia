@@ -9,6 +9,7 @@
 #include <string>
 
 // gtest matchers are in gmock.
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -16,7 +17,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace p2p_provider {
 namespace {

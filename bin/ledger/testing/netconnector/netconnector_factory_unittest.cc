@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
@@ -13,7 +14,6 @@
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 

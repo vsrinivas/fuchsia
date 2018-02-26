@@ -65,7 +65,7 @@ source_set("unittests") {
 
   deps = [
     ":service_account",
-    "//peridot/lib/gtest",
+    "//garnet/lib/gtest",
     "//peridot/lib/network:fake",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",

@@ -4,11 +4,11 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cobalt {
 

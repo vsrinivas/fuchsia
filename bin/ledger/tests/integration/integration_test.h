@@ -8,12 +8,12 @@
 #include <functional>
 #include <thread>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace test {
 namespace integration {

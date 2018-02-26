@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 
-#include "peridot/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 

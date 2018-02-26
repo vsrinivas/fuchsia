@@ -9,13 +9,13 @@
 
 #include <rapidjson/document.h>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 #include "peridot/lib/network/network_service_impl.h"
 #include "peridot/lib/socket/socket_pair.h"

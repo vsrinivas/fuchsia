@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -21,7 +22,6 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/lib/backoff/exponential_backoff.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {

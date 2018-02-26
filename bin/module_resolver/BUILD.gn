@@ -11,9 +11,11 @@ package("module_resolver") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "module_resolver"
-      } ]
+  binaries = [
+    {
+      name = "module_resolver"
+    },
+  ]
 }
 
 executable("bin") {
@@ -74,10 +76,10 @@ source_set("module_resolver_impl_unittest") {
 
   deps = [
     ":module_resolver_impl",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/gtest",
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/cpp:formatting",

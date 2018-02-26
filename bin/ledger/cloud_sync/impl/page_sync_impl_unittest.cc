@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -24,7 +25,6 @@
 #include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/set_when_called.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 namespace {

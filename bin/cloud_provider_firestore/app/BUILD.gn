@@ -71,6 +71,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//peridot/bin/cloud_provider_firestore/app/testing",
@@ -78,6 +79,5 @@ source_set("unittests") {
     "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
-    "//peridot/lib/gtest",
   ]
 }

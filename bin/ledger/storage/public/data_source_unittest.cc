@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/storage/public/data_source.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace storage {

@@ -28,13 +28,13 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/gtest",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/fidl_helpers",
-    "//peridot/lib/gtest",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",

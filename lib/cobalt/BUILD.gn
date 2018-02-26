@@ -38,6 +38,6 @@ source_set("unittests") {
 
   deps = [
     ":cobalt",
-    "//peridot/lib/gtest",
+    "//garnet/lib/gtest",
   ]
 }

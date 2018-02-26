@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -22,7 +23,6 @@
 #include "peridot/lib/firebase/encoding.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

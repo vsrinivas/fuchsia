@@ -13,9 +13,11 @@ package("device_runner") {
     ":device_runner_bin",
   ]
 
-  binaries = [ {
-        name = "device_runner"
-      } ]
+  binaries = [
+    {
+      name = "device_runner"
+    },
+  ]
 }
 
 package("dev_device_shell") {
@@ -25,9 +27,11 @@ package("dev_device_shell") {
     ":dev_device_shell_bin",
   ]
 
-  binaries = [ {
-        name = "dev_device_shell"
-      } ]
+  binaries = [
+    {
+      name = "dev_device_shell"
+    },
+  ]
 }
 
 flatbuffer("users") {
@@ -126,10 +130,10 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/gtest",
     "//peridot/lib/testing:fake_application_launcher",
     "//third_party/googletest:gtest",
   ]

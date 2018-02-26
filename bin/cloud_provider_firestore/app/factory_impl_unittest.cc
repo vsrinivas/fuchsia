@@ -4,11 +4,11 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 

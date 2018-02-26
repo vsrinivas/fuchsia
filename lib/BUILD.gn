@@ -9,6 +9,7 @@ executable("unittests") {
   output_name = "peridot_lib_unittests"
 
   deps = [
+    "//garnet/lib/gtest:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/backoff:unittests",
     "//peridot/lib/callback:unittests",
@@ -18,7 +19,6 @@ executable("unittests") {
     "//peridot/lib/firebase:unittests",
     "//peridot/lib/firebase_auth:unittests",
     "//peridot/lib/firebase_auth/testing:unittests",
-    "//peridot/lib/gtest:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/module_manifest_source:unittests",
     "//peridot/lib/network:unittests",
@@ -35,8 +35,10 @@ package("peridot_lib_tests") {
     ":unittests",
   ]
 
-  tests = [ {
-        name = "peridot_lib_unittests"
-        dest = "modular_tests/peridot_lib_unittests"
-      } ]
+  tests = [
+    {
+      name = "peridot_lib_unittests"
+      dest = "modular_tests/peridot_lib_unittests"
+    },
+  ]
 }

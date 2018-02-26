@@ -102,10 +102,10 @@ source_set("common") {
   ]
 
   deps = [
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//peridot/bin/user:agent_launcher",
     "//peridot/lib/environment_host",
-    "//peridot/lib/gtest",
     "//peridot/lib/testing:component_context_fake",
     "//peridot/lib/testing:entity_resolver_fake",
   ]

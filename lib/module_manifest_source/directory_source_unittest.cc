@@ -7,9 +7,9 @@
 
 #include <memory>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 

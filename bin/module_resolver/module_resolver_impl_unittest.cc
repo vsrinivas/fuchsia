@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
 #include "lib/module_resolver/cpp/formatting.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
 namespace maxwell {

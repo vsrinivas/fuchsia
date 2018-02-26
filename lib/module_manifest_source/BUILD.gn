@@ -17,8 +17,8 @@ source_set("module_manifest_source") {
 
 source_set("json") {
   sources = [
-    "json.h",
     "json.cc",
+    "json.h",
   ]
 
   deps = [
@@ -63,9 +63,9 @@ source_set("directory_source_unittest") {
 
   deps = [
     ":directory_source",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 }

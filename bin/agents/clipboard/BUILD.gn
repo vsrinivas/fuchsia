@@ -44,9 +44,9 @@ source_set("unittests") {
 
   deps = [
     ":clipboard_sources",
-    "//peridot/public/lib/clipboard/fidl",
-    "//peridot/lib/gtest",
+    "//garnet/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/clipboard/fidl",
     "//third_party/googletest:gtest",
   ]
 }

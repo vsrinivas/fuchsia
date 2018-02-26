@@ -105,9 +105,9 @@ source_set("unittests") {
 
   deps = [
     ":store",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/gtest",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:mock_base",
     "//peridot/public/lib/story/fidl:fidl_cpp_sources",

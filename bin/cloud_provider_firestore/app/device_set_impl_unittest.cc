@@ -4,13 +4,13 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 namespace {

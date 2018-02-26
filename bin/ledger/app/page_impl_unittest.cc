@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/socket/strings.h"
@@ -28,7 +29,6 @@
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {

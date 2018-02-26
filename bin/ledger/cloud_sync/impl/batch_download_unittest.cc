@@ -6,6 +6,7 @@
 
 #include <map>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -15,7 +16,6 @@
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/callback/capture.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_sync {
 

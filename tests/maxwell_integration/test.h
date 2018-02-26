@@ -5,6 +5,7 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -13,7 +14,6 @@
 #include "lib/fxl/time/time_point.h"
 #include "peridot/bin/user/agent_launcher.h"
 #include "peridot/lib/environment_host/application_environment_host_impl.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 

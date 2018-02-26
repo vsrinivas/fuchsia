@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -18,7 +19,6 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/lib/callback/capture.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/network/fake_network_service.h"
 
 namespace gcs {

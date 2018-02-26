@@ -4,9 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 namespace {

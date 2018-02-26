@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -24,7 +25,6 @@
 #include "peridot/lib/callback/cancellable_helper.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/set_when_called.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace ledger {
 namespace {

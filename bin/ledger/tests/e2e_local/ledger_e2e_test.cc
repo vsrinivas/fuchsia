@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_environment.fidl.h"
@@ -23,7 +24,6 @@
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"
 #include "peridot/lib/callback/capture.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 
 namespace test {
 namespace e2e_local {

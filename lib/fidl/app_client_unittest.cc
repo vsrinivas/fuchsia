@@ -4,11 +4,11 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
+#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "peridot/lib/fidl/app_client_unittest.fidl.h"
-#include "peridot/lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {
