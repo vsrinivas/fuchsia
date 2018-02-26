@@ -87,6 +87,71 @@ pub trait Client {
     {{end}}
 }
 
+/// A struct which implements Server by delegating methods to its fields.
+///
+/// This can be used to implement the Server trait without having named return
+/// types from the methods.
+#[derive(Debug, Copy, Clone)]
+pub struct Impl<State,
+	 {{range $message := $interface.Messages}}
+		{{$message.TyName}}: FnMut(&mut State
+				{{- range $index, $field := $message.RequestStruct.Fields -}}
+                , {{$field.Type}}
+            {{- end -}}
+			 ) -> {{$message.TyName}}Fut,
+		{{$message.TyName}}Fut: fidl::ServerFuture<
+		  {{- if ne $message.ResponseStruct.Name "" }}
+				{{template "GenerateResponseType" $message.ResponseStruct}}
+		  {{- else }}
+				()
+		  {{end}}
+		>,
+	{{end}}
+> {
+    pub state: State,
+	 {{range $message := $interface.Messages}}
+		pub {{$message.Name}}: {{$message.TyName}},
+	 {{end}}
+}
+
+impl<State,
+	 {{range $message := $interface.Messages}}
+		{{$message.TyName}}: FnMut(&mut State
+		  {{- range $index, $field := $message.RequestStruct.Fields -}}
+				, {{$field.Type}}
+		  {{- end -}}
+		) -> {{$message.TyName}}Fut,
+		{{$message.TyName}}Fut: fidl::ServerFuture<
+		  {{- if ne $message.ResponseStruct.Name "" }}
+				{{template "GenerateResponseType" $message.ResponseStruct}}
+		  {{- else }}
+				()
+		  {{end}}
+		>,
+	{{end}}
+> Server for Impl<State,
+	{{range $message := $interface.Messages}}
+		{{$message.TyName}},
+		{{$message.TyName}}Fut,
+	{{end}}
+>
+{
+	 {{range $message := $interface.Messages}}
+        type {{$message.TyName}} = {{$message.TyName}}Fut;
+		  fn {{$message.Name}}(&mut self
+            {{- range $index, $field := $message.RequestStruct.Fields -}}
+                , {{$field.Name}}: {{$field.Type}}
+            {{- end -}}
+        ) -> Self::{{$message.TyName}} {
+			 (self.{{$message.Name}})(&mut self.state
+            {{- range $index, $field := $message.RequestStruct.Fields -}}
+                , {{$field.Name}}
+            {{- end -}}
+			 )
+		  }
+    {{end}}
+}
+
 #[derive(Debug)]
 pub struct Dispatcher<T: Server>(pub T);
 

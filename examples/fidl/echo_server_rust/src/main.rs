@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 extern crate failure;
 extern crate fidl;
@@ -22,17 +23,20 @@ use fuchsia_app::server::ServicesServer;
 use futures::future;
 use tokio_core::reactor;
 
-// `EchoServer` is a zero-sized type that implements the `Echo::Server` trait.
-struct EchoServer;
-
-impl Echo::Server for EchoServer {
-    // The concrete type returned by the `echo_string` function.
-    // This type must implement `Future<Item = Option<String>, Error = fidl::CloseChannel>`.
-    type EchoString = future::FutureResult<Option<String>, fidl::CloseChannel>;
-
-    fn echo_string(&mut self, value: Option<String>) -> Self::EchoString
-    {
-        future::ok(value)
+// A function which returns a type implementing the `Echo::Server` trait
+fn echo_server() -> impl Echo::Server {
+    // Create an instance of the `Impl` struct, which implements `Echo::Server`
+    // by delegating each method to one of the struct's fields.
+    Echo::Impl {
+        // State which is stored between successive calls to handler methods.
+        state: (),
+        // The implementation of the `echo_string` method of the `Echo::Server`.
+        // This function has an inferred type of
+        // `FnMut(&mut State, Option<String>) -> impl fidl::ServerFuture<Option<String>>`
+        echo_string: |_state, value| {
+            // return a `Future` type that resolves to an `Option<String>`
+            future::ok(value)
+        }
     }
 }
 
@@ -51,7 +55,7 @@ fn main_res() -> Result<(), Error> {
     // instance upon receiving a `connect_to_service` request.
     let services_server =
         ServicesServer::new()
-            .add_service(|| Echo::Dispatcher(EchoServer))
+            .add_service(|| Echo::Dispatcher(echo_server()))
             .start(&handle)
             .context("Error configuring services server")?;
 
