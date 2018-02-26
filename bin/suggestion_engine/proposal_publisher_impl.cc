@@ -4,6 +4,8 @@
 
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 
+#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
+
 namespace maxwell {
 
 ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,

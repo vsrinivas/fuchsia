@@ -11,7 +11,6 @@
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
-#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
 namespace maxwell {
 

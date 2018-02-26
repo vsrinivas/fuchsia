@@ -4,6 +4,8 @@
 
 #include "peridot/bin/suggestion_engine/next_processor.h"
 
+#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
+
 namespace maxwell {
 
 NextProcessor::NextProcessor(SuggestionEngineImpl* engine)
@@ -42,32 +44,32 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal->id);
 
-  auto suggestion = engine_->CreateSuggestionPrototype(component_url,
-                                                       std::move(proposal));
+  auto suggestion =
+      engine_->CreateSuggestionPrototype(component_url, std::move(proposal));
 
   // TODO(jwnichols): Think more deeply about the intersection between the
   // interruption and next pipelines
-  if (engine_->interruptions_processor_->ConsiderSuggestion(*suggestion)) {
+  if (engine_->interruptions_processor_.ConsiderSuggestion(*suggestion)) {
     engine_->debug_.OnInterrupt(suggestion);
   }
 
-  engine_->next_suggestions_->AddSuggestion(suggestion);
+  engine_->next_suggestions_.AddSuggestion(suggestion);
   dirty_ = true;
 }
 
 void NextProcessor::RemoveProposal(const std::string& component_url,
                                    const std::string& proposal_id) {
   NotifyOfProcessingChange(true);
-  if (engine_->next_suggestions_->RemoveProposal(component_url, proposal_id)) {
+  if (engine_->next_suggestions_.RemoveProposal(component_url, proposal_id)) {
     dirty_ = true;
   }
 }
 
 void NextProcessor::Validate() {
   if (dirty_) {
-    engine_->next_suggestions_->Rank();
+    engine_->next_suggestions_.Rank();
     NotifyAllOfResults();
-    engine_->debug_.OnNextUpdate(engine_->next_suggestions_);
+    engine_->debug_.OnNextUpdate(&engine_->next_suggestions_);
     NotifyOfProcessingChange(false);
     dirty_ = false;
   }
@@ -93,7 +95,7 @@ void NextProcessor::NotifyOfProcessingChange(const bool processing) {
 
 void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
                                     const size_t max_results) {
-  const auto& suggestion_vector = engine_->next_suggestions_->Get();
+  const auto& suggestion_vector = engine_->next_suggestions_.Get();
 
   f1dl::Array<SuggestionPtr> window;
   // Prefer to return an array of size 0 vs. null

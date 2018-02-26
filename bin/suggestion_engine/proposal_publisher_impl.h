@@ -9,7 +9,6 @@
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
 namespace maxwell {

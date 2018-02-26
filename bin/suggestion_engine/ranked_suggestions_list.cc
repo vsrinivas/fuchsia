@@ -39,7 +39,8 @@ RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
   return nullptr;
 }
 
-bool RankedSuggestionsList::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
+bool RankedSuggestionsList::RemoveMatchingSuggestion(
+    MatchPredicate matchFunction) {
   auto remove_iter =
       std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   if (remove_iter == suggestions_.end()) {
@@ -88,7 +89,7 @@ void RankedSuggestionsList::AddSuggestion(SuggestionPrototype* prototype) {
 }
 
 bool RankedSuggestionsList::RemoveProposal(const std::string& component_url,
-                                       const std::string& proposal_id) {
+                                           const std::string& proposal_id) {
   return RemoveMatchingSuggestion(
       GetSuggestionMatcher(component_url, proposal_id));
 }

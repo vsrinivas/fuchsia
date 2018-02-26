@@ -10,7 +10,6 @@
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include <vector>

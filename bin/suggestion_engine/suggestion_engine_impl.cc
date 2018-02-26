@@ -24,10 +24,7 @@
 namespace maxwell {
 
 SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
-    : ask_suggestions_(new RankedSuggestionsList()),
-      interruptions_processor_(new InterruptionsProcessor()),
-      next_processor_(new NextProcessor(this)),
-      next_suggestions_(new RankedSuggestionsList()) {
+    : next_processor_(this) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](f1dl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -59,13 +56,13 @@ SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
   // with a configuration file
 
   // Set up the next ranking features
-  next_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
-  next_suggestions_->AddRankingFeature(-0.1, kronk_feature);
+  next_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
+  next_suggestions_.AddRankingFeature(-0.1, kronk_feature);
 
   // Set up the query ranking features
-  ask_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
-  ask_suggestions_->AddRankingFeature(-0.1, kronk_feature);
-  ask_suggestions_->AddRankingFeature(
+  ask_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
+  ask_suggestions_.AddRankingFeature(-0.1, kronk_feature);
+  ask_suggestions_.AddRankingFeature(
       0, std::make_shared<QueryMatchRankingFeature>());
 }
 
@@ -73,7 +70,7 @@ SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr proposal) {
-  next_processor_->AddProposal(source->component_url(), std::move(proposal));
+  next_processor_.AddProposal(source->component_url(), std::move(proposal));
 }
 
 void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
@@ -83,7 +80,7 @@ void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
   if (toRemove != suggestion_prototypes_.end()) {
     if (active_query_ != nullptr)
       active_query_->RemoveProposal(component_url, proposal_id);
-    next_processor_->RemoveProposal(component_url, proposal_id);
+    next_processor_.RemoveProposal(component_url, proposal_id);
     suggestion_prototypes_.erase(toRemove);
   }
 }
@@ -117,7 +114,7 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface
-    debug_.OnAskStart(query, ask_suggestions_);
+    debug_.OnAskStart(query, &ask_suggestions_);
   }
 
   // Steps 3 - 6
@@ -126,20 +123,20 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
 }
 
 void SuggestionEngineImpl::Validate() {
-  next_processor_->Validate();
+  next_processor_.Validate();
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     f1dl::InterfaceHandle<InterruptionListener> listener) {
-  interruptions_processor_->RegisterListener(std::move(listener));
+  interruptions_processor_.RegisterListener(std::move(listener));
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
     f1dl::InterfaceHandle<NextListener> listener,
     int count) {
-  next_processor_->RegisterListener(std::move(listener), count);
+  next_processor_.RegisterListener(std::move(listener), count);
 }
 
 // |SuggestionProvider|
@@ -155,9 +152,9 @@ void SuggestionEngineImpl::NotifyInteraction(
   // Find the suggestion
   bool suggestion_in_ask = false;
   RankedSuggestion* suggestion =
-      next_suggestions_->GetSuggestion(suggestion_uuid);
+      next_suggestions_.GetSuggestion(suggestion_uuid);
   if (!suggestion) {
-    suggestion = ask_suggestions_->GetSuggestion(suggestion_uuid);
+    suggestion = ask_suggestions_.GetSuggestion(suggestion_uuid);
     suggestion_in_ask = true;
   }
 
@@ -235,12 +232,12 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
   active_query_.reset();
 
   // Clean up the suggestions
-  for (auto& suggestion : ask_suggestions_->Get()) {
+  for (auto& suggestion : ask_suggestions_.Get()) {
     suggestion_prototypes_.erase(
         std::make_pair(suggestion->prototype->source_url,
                        suggestion->prototype->proposal->id));
   }
-  ask_suggestions_->RemoveAllSuggestions();
+  ask_suggestions_.RemoveAllSuggestions();
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
@@ -317,10 +314,10 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
           story_controller->GetInfo(fxl::MakeCopyable(
               // TODO(thatguy): We should not be std::move()ing
               // story_controller *while we're calling it*.
-              [ this, controller = std::move(story_controller) ](
+              [this, controller = std::move(story_controller)](
                   modular::StoryInfoPtr story_info, modular::StoryState state) {
-                FXL_LOG(INFO) << "Requesting focus for story_id "
-                              << story_info->id;
+                FXL_LOG(INFO)
+                    << "Requesting focus for story_id " << story_info->id;
                 focus_provider_ptr_->Request(story_info->id);
               }));
         });
@@ -385,12 +382,12 @@ void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
   auto custom_action = action->get_custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable([
-    this, custom_action = std::move(custom_action), source_url, story_color
-  ](f1dl::Array<maxwell::ActionPtr> actions) {
-    if (actions)
-      PerformActions(std::move(actions), source_url, story_color);
-  }));
+  custom_action->Execute(fxl::MakeCopyable(
+      [this, custom_action = std::move(custom_action), source_url,
+       story_color](f1dl::Array<maxwell::ActionPtr> actions) {
+        if (actions)
+          PerformActions(std::move(actions), source_url, story_color);
+      }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {

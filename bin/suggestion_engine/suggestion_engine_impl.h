@@ -36,8 +36,6 @@
 namespace maxwell {
 
 class ProposalPublisherImpl;
-class NextProcessor;
-class QueryProcessor;
 
 const std::string kQueryContextKey = "/suggestion_engine/current_query";
 
@@ -226,12 +224,12 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // TODO(rosswang): it may be worthwhile to collapse these trios into classes
   // Channels that dispatch outbound suggestions to SuggestionListeners.
-  RankedSuggestionsList* ask_suggestions_;
+  RankedSuggestionsList ask_suggestions_;
 
-  InterruptionsProcessor* interruptions_processor_;
+  InterruptionsProcessor interruptions_processor_;
 
-  NextProcessor* next_processor_;
-  RankedSuggestionsList* next_suggestions_;
+  NextProcessor next_processor_;
+  RankedSuggestionsList next_suggestions_;
 
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).
