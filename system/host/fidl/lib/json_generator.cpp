@@ -153,7 +153,7 @@ void EmitString(std::ostream* file, StringView value) {
         case '\\':
             *file << "\\\\";
             break;
-        // TODO(abarth): Escape more characters.
+        // TODO(TO-824): Escape more characters.
         default:
             *file << c;
             break;
