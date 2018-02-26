@@ -286,7 +286,7 @@ func changeIfReserved(val types.Identifier) string {
 }
 
 type compiler struct {
-	declarations *types.DeclarationMap
+	decls *types.DeclMap
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
@@ -502,7 +502,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(fidlData types.Root) Root {
 	root := Root{}
-	c := compiler{&fidlData.Declarations}
+	c := compiler{&fidlData.Decls}
 
 	for _, v := range fidlData.Enums {
 		root.Enums = append(root.Enums, c.compileEnum(v))

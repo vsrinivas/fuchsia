@@ -273,8 +273,8 @@ type Parameter struct {
 
 // Enum represents a FIDL2 delcaration of an enum.
 type Enum struct {
-	Name    Identifier       `json:"name"`
 	Type    PrimitiveSubtype `json:"type"`
+	Name    Identifier       `json:"name"`
 	Members []EnumMember     `json:"members"`
 }
 
@@ -286,31 +286,32 @@ type EnumMember struct {
 
 // Const represents a FIDL2 declaration of a named constant.
 type Const struct {
-	Name  Identifier `json:"name"`
 	Type  Type       `json:"type"`
+	Name  Identifier `json:"name"`
 	Value Constant   `json:"value"`
 }
 
-type DeclarationType string
+type DeclType string
 
 const (
-	ConstDeclarationType     DeclarationType = "const"
-	EnumDeclarationType                      = "enum"
-	InterfaceDeclarationType                 = "interface"
-	StructDeclarationType                    = "struct"
-	UnionDeclarationType                     = "union"
+	ConstDeclType     DeclType = "const"
+	EnumDeclType               = "enum"
+	InterfaceDeclType          = "interface"
+	StructDeclType             = "struct"
+	UnionDeclType              = "union"
 )
 
-type DeclarationMap map[Identifier]DeclarationType
+type DeclMap map[Identifier]DeclType
 
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Consts       []Const        `json:"const_declarations,omitempty"`
-	Enums        []Enum         `json:"enum_declarations,omitempty"`
-	Interfaces   []Interface    `json:"interface_declarations,omitempty"`
-	Structs      []Struct       `json:"struct_declarations,omitempty"`
-	Unions       []Union        `json:"union_declarations,omitempty"`
-	Declarations DeclarationMap `json:"declarations,omitempty"`
-	Libraries    []Library      `json:"library_dependencies,omitempty"`
+	Consts     []Const      `json:"const_declarations,omitempty"`
+	Enums      []Enum       `json:"enum_declarations,omitempty"`
+	Interfaces []Interface  `json:"interface_declarations,omitempty"`
+	Structs    []Struct     `json:"struct_declarations,omitempty"`
+	Unions     []Union      `json:"union_declarations,omitempty"`
+	DeclOrder  []Identifier `json:"declaration_order,omitempty"`
+	Decls      DeclMap      `json:"declarations,omitempty"`
+	Libraries  []Library    `json:"library_dependencies,omitempty"`
 }

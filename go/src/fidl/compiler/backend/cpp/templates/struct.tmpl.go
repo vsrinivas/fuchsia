@@ -5,16 +5,13 @@
 package templates
 
 const Struct = `
-{{- define "StructForwardDeclaration" -}}
+{{- define "StructForwardDeclaration" }}
 class {{ .Name }};
-{{- end -}}
+{{- end }}
 
 {{- define "StructDeclaration" }}
 class {{ .Name }}  {
  public:
-  // TODO(TO-747): Generate the C headers and depend on them.
-  // using View = {{ .CName }};
-
   {{- range .Members }}
 
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }

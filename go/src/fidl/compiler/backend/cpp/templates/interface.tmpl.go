@@ -5,7 +5,7 @@
 package templates
 
 const Interface = `
-{{- define "InterfaceForwardDeclaration" -}}
+{{- define "InterfaceForwardDeclaration" }}
 class {{ .Name }};
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
@@ -32,7 +32,7 @@ class {{ .StubName }};
   {{- end -}}
 {{ end -}}
 
-{{- define "InterfaceDeclaration" -}}
+{{- define "InterfaceDeclaration" }}
 class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
@@ -79,9 +79,9 @@ class {{ .StubName }} : public ::fidl::internal::Stub {
  private:
   {{ .Name }}* impl_;
 };
-{{end}}
+{{- end }}
 
-{{- define "InterfaceDefinition" -}}
+{{- define "InterfaceDefinition" }}
 namespace {
 {{ range .Methods }}
   {{- if .HasRequest }}
@@ -139,7 +139,8 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::MessageBuilder builder(nullptr);
   builder.header()->ordinal = {{ .OrdinalName }};
     {{- range .Request }}
-  ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
+  // TODO(abarth): Replace with correct serialization routine.
+  // ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
     {{- end -}}
     {{- if .HasResponse }}
   controller_->Send(&builder, std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
@@ -168,7 +169,8 @@ class {{ .ResponderType }} {
     ::fidl::MessageBuilder builder(nullptr);
     builder.header()->ordinal = {{ .OrdinalName }};
       {{- range .Response }}
-    ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
+    // TODO(abarth): Replace with correct serialization routine.
+    // ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
       {{- end }}
     response_.Send(&builder);
   }
@@ -214,5 +216,5 @@ zx_status_t {{ .StubName }}::Dispatch(
   }
   return status;
 }
-{{- end }}
+{{ end }}
 `

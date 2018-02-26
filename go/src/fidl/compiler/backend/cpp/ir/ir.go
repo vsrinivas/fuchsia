@@ -7,17 +7,31 @@ package ir
 import (
 	"fidl/compiler/backend/types"
 	"fmt"
+	"io"
 	"log"
 	"strings"
+	"text/template"
 )
+
+type Decl interface {
+	ForwardDeclaration(*template.Template, io.Writer) error
+	Declaration(*template.Template, io.Writer) error
+	Definition(*template.Template, io.Writer) error
+}
 
 type Type struct {
 	Decl string
 }
 
+type Const struct {
+	Type Type
+	Name  string
+	Value string
+}
+
 type Enum struct {
-	Name    string
 	Type    string
+	Name    string
 	Members []EnumMember
 }
 
@@ -75,10 +89,67 @@ type Parameter struct {
 
 type Root struct {
 	PrimaryHeader string
-	Enums         []Enum
-	Interfaces    []Interface
-	Structs       []Struct
-	Unions        []Union
+	Decls         []Decl
+}
+
+func (c *Const) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "ConstForwardDeclaration", c)
+}
+
+func (c *Const) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "ConstDeclaration", c)
+}
+
+func (c *Const) Definition(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
+func (e *Enum) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "EnumForwardDeclaration", e)
+}
+
+func (e *Enum) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
+func (e *Enum) Definition(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
+func (u *Union) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "UnionForwardDeclaration", u)
+}
+
+func (u *Union) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "UnionDeclaration", u)
+}
+
+func (u *Union) Definition(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "UnionDefinition", u)
+}
+
+func (s *Struct) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "StructForwardDeclaration", s)
+}
+
+func (s *Struct) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "StructDeclaration", s)
+}
+
+func (s *Struct) Definition(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
+func (i *Interface) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "InterfaceForwardDeclaration", i)
+}
+
+func (i *Interface) Declaration(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "InterfaceDeclaration", i)
+}
+
+func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "InterfaceDefinition", i)
 }
 
 var reservedWords = map[string]bool{
@@ -208,7 +279,7 @@ func changeIfReserved(val types.Identifier) string {
 }
 
 type compiler struct {
-	declarations *types.DeclarationMap
+	decls *types.DeclMap
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
@@ -282,27 +353,24 @@ func (c *compiler) compileType(val types.Type) Type {
 		// ability to look up the declaration type for identifiers in other
 		// libraries. For now, just use the first component of the identifier
 		// and assume that the identifier is in this library.
-		declType, ok := (*c.declarations)[val.Identifier[0]]
+		declType, ok := (*c.decls)[val.Identifier[0]]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
 		switch declType {
-		case types.ConstDeclarationType:
+		case types.ConstDeclType:
 			fallthrough
-		case types.EnumDeclarationType:
+		case types.EnumDeclType:
 			fallthrough
-		case types.StructDeclarationType:
+		case types.StructDeclType:
 			fallthrough
-		case types.UnionDeclarationType:
-			// TODO(TO-773): Enable this code once the front-end gives us the
-			// proper declaration order.
-			// if val.Nullable {
-			// 	r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-			// } else {
-			// 	r.Decl = t
-			// }
-			fallthrough
-		case types.InterfaceDeclarationType:
+		case types.UnionDeclType:
+			if val.Nullable {
+				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
+			} else {
+				r.Decl = t
+			}
+		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 		}
 	default:
@@ -311,19 +379,28 @@ func (c *compiler) compileType(val types.Type) Type {
 	return r
 }
 
-func (c *compiler) compileEnum(val types.Enum) Enum {
-	e := Enum{
+func (c *compiler) compileConst(val types.Const) Const {
+	r := Const{
+		c.compileType(val.Type),
 		changeIfReserved(val.Name),
+		c.compileConstant(val.Value),
+	}
+	return r
+}
+
+func (c *compiler) compileEnum(val types.Enum) Enum {
+	r := Enum{
 		c.compilePrimitiveSubtype(val.Type),
+		changeIfReserved(val.Name),
 		[]EnumMember{},
 	}
 	for _, v := range val.Members {
-		e.Members = append(e.Members, EnumMember{
+		r.Members = append(r.Members, EnumMember{
 			changeIfReserved(v.Name),
 			c.compileConstant(v.Value),
 		})
 	}
-	return e
+	return r
 }
 
 func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
@@ -417,24 +494,37 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(fidlData types.Root) Root {
 	root := Root{}
-	c := compiler{&fidlData.Declarations}
+	c := compiler{&fidlData.Decls}
 
-	// TODO(abarth): Constants.
+	decls := map[types.Identifier]Decl{}
+
+	for _, v := range fidlData.Consts {
+		d := c.compileConst(v)
+		decls[v.Name] = &d
+	}
 
 	for _, v := range fidlData.Enums {
-		root.Enums = append(root.Enums, c.compileEnum(v))
+		d := c.compileEnum(v)
+		decls[v.Name] = &d
 	}
 
 	for _, v := range fidlData.Interfaces {
-		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+		d := c.compileInterface(v)
+		decls[v.Name] = &d
 	}
 
 	for _, v := range fidlData.Structs {
-		root.Structs = append(root.Structs, c.compileStruct(v))
+		d := c.compileStruct(v)
+		decls[v.Name] = &d
 	}
 
 	for _, v := range fidlData.Unions {
-		root.Unions = append(root.Unions, c.compileUnion(v))
+		d := c.compileUnion(v)
+		decls[v.Name] = &d
+	}
+
+	for _, v := range fidlData.DeclOrder {
+		root.Decls = append(root.Decls, decls[v])
 	}
 
 	return root

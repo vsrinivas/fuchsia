@@ -4,12 +4,9 @@
 
 package templates
 
-const Enum = `
-{{- define "EnumForwardDeclaration" }}
-enum class {{ .Name }} : {{ .Type }} {
-  {{- range .Members }}
-  {{ .Name }} = {{ .Value }},
-  {{- end }}
-};
+const Const = `
+{{- define "ConstDeclaration" }}
+// TODO(abarth): Enable when we can actually handle constant declarations.
+// constexpr {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
 {{- end }}
 `
