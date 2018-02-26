@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//garnet/bin/*",
-  "//garnet/lib/*",
-  "//peridot/bin/*",
-  "//peridot/lib/*",
-  "//topaz/auth_providers/*",
-]
-
 source_set("network_wrapper") {
   sources = [
     "network_wrapper.h",
@@ -18,10 +10,10 @@ source_set("network_wrapper") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/network/fidl",
     "//garnet/lib/backoff",
     "//garnet/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
     "//zircon/public/lib/zx",
   ]
 }
@@ -53,9 +45,9 @@ source_set("unittests") {
 
   deps = [
     ":network_wrapper",
+    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netstack/fidl:net_address",
-    "//garnet/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 }

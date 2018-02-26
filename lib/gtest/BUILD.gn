@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//garnet/bin/*",
-  "//garnet/lib/*",
-  "//peridot/bin/*",
-  "//peridot/examples/*",
-  "//peridot/lib/*",
-  "//peridot/tests/*",
-  "//topaz/auth_providers/*",
-]
-
 source_set("gtest") {
   testonly = true
 

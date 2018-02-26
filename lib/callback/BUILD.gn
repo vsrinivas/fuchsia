@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//garnet/bin/*",
-  "//garnet/lib/*",
-  "//garnet/tests/*",
-  "//peridot/bin/*",
-  "//peridot/lib/*",
-  "//peridot/tests/*",
-  "//topaz/auth_providers/*",
-]
-
 source_set("callback") {
   sources = [
     "auto_cleanable.h",
