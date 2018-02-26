@@ -85,6 +85,7 @@ void ScenicSystem::Initialize() {
 
 void ScenicSystem::GetDisplayInfo(
     const ui_mozart::Mozart::GetDisplayInfoCallback& callback) {
+  FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 

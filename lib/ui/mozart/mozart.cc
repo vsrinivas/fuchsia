@@ -40,9 +40,9 @@ void Mozart::OnSystemInitialized(System* system) {
 
 void Mozart::CloseSession(Session* session) {
   for (auto& binding : session_bindings_.bindings()) {
-    if (binding->impl().get() == session) {
-      // A Session is only added to the bindings once, so we can return
-      // immediately after finding one and unbinding it.
+    // It's possible that this is called by BindingSet::CloseAndCheckForEmpty.
+    // In that case, binding could be empty, so check for that.
+    if (binding && binding->impl().get() == session) {
       binding->Unbind();
       return;
     }

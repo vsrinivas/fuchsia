@@ -47,11 +47,9 @@ void App::NewViewShadertoy(
 }
 
 void App::CloseShadertoy(ShadertoyState* shadertoy) {
-  auto end = shadertoy_bindings_.bindings().end();
-  for (auto it = shadertoy_bindings_.bindings().begin(); it != end; ++it) {
-    auto impl = static_cast<ShadertoyImpl*>((*it)->impl().get());
-    if (shadertoy == impl->state()) {
-      (*it)->Unbind();
+  for (auto& binding : shadertoy_bindings_.bindings()) {
+    if (binding && shadertoy == binding->impl()->state()) {
+      binding->Unbind();
       return;
     }
   }

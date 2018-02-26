@@ -50,8 +50,7 @@ class App : public mozart::example::ShadertoyFactory {
       bool handle_input_events) override;
 
   f1dl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;
-  f1dl::BindingSet<mozart::example::Shadertoy,
-                   std::unique_ptr<mozart::example::Shadertoy>>
+  f1dl::BindingSet<mozart::example::Shadertoy, std::unique_ptr<ShadertoyImpl>>
       shadertoy_bindings_;
 
   escher::Escher* const escher_;
