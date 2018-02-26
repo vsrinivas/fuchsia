@@ -208,7 +208,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     for (;;) {
         r = io->ops->open(io, ZXRIO_SOCKET_DIR_ACCEPT, ZX_FS_FLAG_DESCRIBE, 0, &io2);
         if (r == ZX_ERR_SHOULD_WAIT) {
-            if (io->flags & FDIO_FLAG_NONBLOCK) {
+            if (io->ioflag & IOFLAG_NONBLOCK) {
                 fdio_release(io);
                 return ERRNO(EWOULDBLOCK);
             }

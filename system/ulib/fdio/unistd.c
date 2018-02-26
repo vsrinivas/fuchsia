@@ -578,7 +578,7 @@ void __libc_extensions_init(uint32_t handle_count,
             // socket objects have a second handle
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
-                fdio_fdtab[arg_fd] = fdio_socket_create(h, handle[n + 1], FDIO_FLAG_SOCKET_CONNECTED);
+                fdio_fdtab[arg_fd] = fdio_socket_create(h, handle[n + 1], IOFLAG_SOCKET_CONNECTED);
                 handle_info[n + 1] = 0;
                 fdio_fdtab[arg_fd]->dupcount++;
                 LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
