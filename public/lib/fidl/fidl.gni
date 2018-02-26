@@ -113,10 +113,7 @@ template("fidl") {
         "//garnet/public/lib/fidl/compiler/legacy_generators(//build/toolchain:host_x64)",
       ]
       if (generate_fidl_for_rust) {
-        deps += [
-          ":$map_target",
-          "//garnet/public/lib/fidl/compiler:fidl-rust(//build/toolchain:host_x64)",
-        ]
+        deps += [ "//garnet/public/lib/fidl/compiler:fidl-rust(//build/toolchain:host_x64)" ]
       }
       if (generate_fidl_for_go) {
         deps += [ "//garnet/public/lib/fidl/compiler:fidl-go(//build/toolchain:host_x64)" ]
@@ -170,6 +167,7 @@ template("fidl") {
           "--gen-arg",
           "map-file=" + rebase_path(map_path, root_build_dir),
         ]
+        deps += [ ":$map_target" ]
       }
 
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
