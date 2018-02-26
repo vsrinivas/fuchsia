@@ -634,7 +634,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
 
   batch_upload->Start();
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
 
