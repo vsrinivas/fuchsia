@@ -108,18 +108,15 @@ private:
     // Requests the device use the given format and frame descriptor,
     // then finds a streaming setting that supports the required
     // data throughput.
-    // If successful, out_result will be populated with the result
-    // of the stream negotiation, and out_setting will be populated
-    // with a pointer to the selected streaming setting.
+    // If successful, sets the initial state of the stream configuration
+    // related fields, and reallocates usb requests if necessary.
     // Otherwise an error will be returned and the caller should try
     // again with a different set of inputs.
     //
     // frame_desc may be NULL for non frame based formats.
-    zx_status_t TryFormat(const UsbVideoFormat* format,
-                          const UsbVideoFrameDesc* frame_desc,
-                          usb_video_vc_probe_and_commit_controls* out_result,
-                          const UsbVideoStreamingSetting** out_setting);
-
+    zx_status_t TryFormatLocked(const UsbVideoFormat* format,
+                                const UsbVideoFrameDesc* frame_desc)
+        __TA_REQUIRES(lock_);
 
     zx_status_t ProcessChannel(dispatcher::Channel* channel);
 
@@ -170,10 +167,16 @@ private:
 
     fbl::Vector<FormatMapping> format_mappings_;
 
+    // Stream configuration.
     usb_video_vc_probe_and_commit_controls negotiation_result_;
+    const UsbVideoStreamingSetting* cur_streaming_setting_;
     const UsbVideoFormat* cur_format_;
     const UsbVideoFrameDesc* cur_frame_desc_;
-    const UsbVideoStreamingSetting* cur_streaming_setting_;
+    uint32_t max_frame_size_ = 0;
+    uint32_t clock_frequency_hz_ = 0;
+    // The number of bytes to request in a USB request to a streaming endpoint.
+    // This should be equal or less than allocated_req_size_.
+    uint64_t send_req_size_ = 0;
 
     int streaming_ep_type_ = USB_ENDPOINT_INVALID;
     uint8_t iface_num_ = 0;
@@ -183,10 +186,7 @@ private:
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
-    uint32_t clock_frequency_hz_ = 0;
-
     // Statistics for frame based formats.
-    uint32_t max_frame_size_;
     // Number of frames encountered.
     uint32_t num_frames_ = 0;
 
@@ -218,9 +218,6 @@ private:
     uint32_t num_allocated_reqs_ = 0;
     // Size of underlying VMO backing the USB request.
     uint64_t allocated_req_size_ = 0;
-    // The number of bytes to request in a USB request to a streaming endpoint.
-    // This should be equal or less than allocated_req_size_.
-    uint64_t send_req_size_ = 0;
 
     // Bulk transfer specific fields.
     // Total bytes received so far for the current payload, including headers.

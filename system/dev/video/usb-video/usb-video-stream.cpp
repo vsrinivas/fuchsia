@@ -219,8 +219,7 @@ zx_status_t UsbVideoStream::SetFormat() {
             return ZX_ERR_INTERNAL;
         }
     }
-    zx_status_t status = TryFormat(format, try_frame, &negotiation_result_,
-                                   &cur_streaming_setting_);
+    zx_status_t status = TryFormatLocked(format, try_frame);
     if (status != ZX_OK) {
         // Negotiation failed. Try a different frame descriptor.
         for (const auto& frame : format->frame_descs) {
@@ -229,8 +228,7 @@ zx_status_t UsbVideoStream::SetFormat() {
                 continue;
             }
             try_frame = &frame;
-            status = TryFormat(format, try_frame, &negotiation_result_,
-                               &cur_streaming_setting_);
+            status = TryFormatLocked(format, try_frame);
             if (status == ZX_OK) {
                 break;
             }
@@ -240,42 +238,7 @@ zx_status_t UsbVideoStream::SetFormat() {
         zxlogf(ERROR, "failed to set format %u: error %d\n", format->index, status);
         return status;
     }
-
-    max_frame_size_ = negotiation_result_.dwMaxVideoFrameSize;
-    cur_format_ = format;
-    cur_frame_desc_ = try_frame;
-
-    if (negotiation_result_.dwClockFrequency != 0) {
-        // This field is optional. If it isn't present, we instead
-        // would use the default value provided in the video control header.
-        clock_frequency_hz_ = negotiation_result_.dwClockFrequency;
-    }
-
-    switch(streaming_ep_type_) {
-    case USB_ENDPOINT_ISOCHRONOUS:
-        // Isochronous payloads will always fit within a single usb request.
-        send_req_size_ = setting_bandwidth(*cur_streaming_setting_);
-        break;
-    case USB_ENDPOINT_BULK: {
-        // If the size of a payload is greater than the max usb request size,
-        // we will have to split it up in multiple requests.
-        send_req_size_ = fbl::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
-            static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
-        break;
-    }
-    default:
-       zxlogf(ERROR, "unknown EP type: %d\n", streaming_ep_type_);
-       return ZX_ERR_BAD_STATE;
-    }
-
-    zxlogf(INFO, "configured video: format index %u frame index %u\n",
-           cur_format_->index, cur_frame_desc_->index);
-    zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
-           cur_streaming_setting_->alt_setting,
-           cur_streaming_setting_->max_packet_size,
-           cur_streaming_setting_->transactions_per_microframe);
-
-    return AllocUsbRequestsLocked(send_req_size_);
+    return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
@@ -317,10 +280,8 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
     return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
-                                      const UsbVideoFrameDesc* frame_desc,
-                                      usb_video_vc_probe_and_commit_controls* out_result,
-                                      const UsbVideoStreamingSetting** out_setting) {
+zx_status_t UsbVideoStream::TryFormatLocked(const UsbVideoFormat* format,
+                                            const UsbVideoFrameDesc* frame_desc) {
     zxlogf(INFO, "trying format %u, frame desc %u\n",
            format->index, frame_desc->index);
 
@@ -371,10 +332,44 @@ zx_status_t UsbVideoStream::TryFormat(const UsbVideoFormat* format,
     }
 
     // Negotiation succeeded, copy the results out.
-    memcpy(out_result, &result, sizeof(usb_video_vc_probe_and_commit_controls));
-    *out_setting = best_setting;
+    memcpy(&negotiation_result_, &result, sizeof(usb_video_vc_probe_and_commit_controls));
+    cur_streaming_setting_ = best_setting;
 
-    return ZX_OK;
+    max_frame_size_ = negotiation_result_.dwMaxVideoFrameSize;
+    cur_format_ = format;
+    cur_frame_desc_ = frame_desc;
+
+    if (negotiation_result_.dwClockFrequency != 0) {
+        // This field is optional. If it isn't present, we instead
+        // would use the default value provided in the video control header.
+        clock_frequency_hz_ = negotiation_result_.dwClockFrequency;
+    }
+
+    switch(streaming_ep_type_) {
+    case USB_ENDPOINT_ISOCHRONOUS:
+        // Isochronous payloads will always fit within a single usb request.
+        send_req_size_ = setting_bandwidth(*cur_streaming_setting_);
+        break;
+    case USB_ENDPOINT_BULK: {
+        // If the size of a payload is greater than the max usb request size,
+        // we will have to split it up in multiple requests.
+        send_req_size_ = fbl::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
+            static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
+        break;
+    }
+    default:
+       zxlogf(ERROR, "unknown EP type: %d\n", streaming_ep_type_);
+       return ZX_ERR_BAD_STATE;
+    }
+
+    zxlogf(INFO, "configured video: format index %u frame index %u\n",
+           cur_format_->index, cur_frame_desc_->index);
+    zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
+           cur_streaming_setting_->alt_setting,
+           cur_streaming_setting_->max_packet_size,
+           cur_streaming_setting_->transactions_per_microframe);
+
+    return AllocUsbRequestsLocked(send_req_size_);
 }
 
 zx_status_t UsbVideoStream::DdkIoctl(uint32_t op,
