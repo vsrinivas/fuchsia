@@ -179,7 +179,7 @@ zx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
 zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     DEBUG_ASSERT(state_ == State::INITIAL);
 
@@ -268,7 +268,7 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     if (state_ != State::INITIALIZED)
         return ZX_ERR_BAD_STATE;
@@ -304,7 +304,7 @@ void ThreadDispatcher::Exit() {
     DEBUG_ASSERT(get_current_thread() == &thread_);
 
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
 
@@ -323,7 +323,7 @@ void ThreadDispatcher::Kill() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     switch (state_) {
         case State::INITIAL:
@@ -360,7 +360,7 @@ zx_status_t ThreadDispatcher::Suspend() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
@@ -375,7 +375,7 @@ zx_status_t ThreadDispatcher::Resume() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
@@ -418,7 +418,7 @@ void ThreadDispatcher::Exiting() {
     // marked dead, and we don't want to have a state where the process is
     // dead but one thread is not.
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
 
         DEBUG_ASSERT(state_ == State::DYING);
 
@@ -457,7 +457,7 @@ void ThreadDispatcher::Suspending() {
     // Update the state before sending any notifications out. We want the
     // receiver to see the new state.
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
         if (state_ == State::RUNNING) {
@@ -474,7 +474,7 @@ void ThreadDispatcher::Resuming() {
     // Update the state before sending any notifications out. We want the
     // receiver to see the new state.
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
 
         DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
         if (state_ == State::SUSPENDED) {
@@ -529,21 +529,19 @@ void ThreadDispatcher::SetStateLocked(State state) {
 
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
 
-    DEBUG_ASSERT(state_lock_.IsHeld());
+    DEBUG_ASSERT(get_lock()->IsHeld());
 
     state_ = state;
 
-    // TODO(dje): This will call UpdateStateLocked() instead of UpdateState()
-    // when state_lock_ is supplanted by lock_.
     switch (state) {
     case State::RUNNING:
-        UpdateState(ZX_THREAD_SUSPENDED, ZX_THREAD_RUNNING);
+        UpdateStateLocked(ZX_THREAD_SUSPENDED, ZX_THREAD_RUNNING);
         break;
     case State::SUSPENDED:
-        UpdateState(ZX_THREAD_RUNNING, ZX_THREAD_SUSPENDED);
+        UpdateStateLocked(ZX_THREAD_RUNNING, ZX_THREAD_SUSPENDED);
         break;
     case State::DEAD:
-        UpdateState(ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED, ZX_THREAD_TERMINATED);
+        UpdateStateLocked(ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED, ZX_THREAD_TERMINATED);
         break;
     default:
         // Nothing to do.
@@ -561,7 +559,7 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
 
     // Lock |state_lock_| to ensure the thread doesn't transition to dead
     // while we're setting the exception handler.
-    AutoLock state_lock(&state_lock_);
+    AutoLock state_lock(get_lock());
     if (state_ == State::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (exception_port_)
@@ -580,7 +578,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     // we don't want it to hit another exception and get back into
     // ExceptionHandlerExchange.
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
         exception_port_.swap(eport);
         if (eport == nullptr) {
             // Attempted to unbind when no exception port is bound.
@@ -615,7 +613,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
 fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     canary_.Assert();
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
     return exception_port_;
 }
 
@@ -632,7 +630,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // that we would notify state tracker observers of, currently.
 
     {
-        AutoLock lock(&state_lock_);
+        AutoLock lock(get_lock());
 
         // Send message, wait for reply.
         // Note that there is a "race" that we need handle: We need to send the
@@ -672,7 +670,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
     } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
 
     // Note: If |status| != ZX_OK, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
@@ -714,7 +712,7 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
                  estatus != ExceptionStatus::UNPROCESSED);
 
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
@@ -739,7 +737,7 @@ void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& 
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
     if (!InExceptionLocked())
         return;
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
@@ -756,7 +754,7 @@ bool ThreadDispatcher::InExceptionLocked() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    DEBUG_ASSERT(state_lock_.IsHeld());
+    DEBUG_ASSERT(get_lock()->IsHeld());
     return thread_stopped_in_exception(&thread_);
 }
 
@@ -773,7 +771,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     // We need to fetch all these values under lock, but once we have them
     // we no longer need the lock.
     {
-        AutoLock state_lock(&state_lock_);
+        AutoLock state_lock(get_lock());
         state = state_;
         lk_state = thread_.state;
         if (InExceptionLocked() &&
@@ -873,7 +871,7 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&state_lock_);
+    AutoLock lock(get_lock());
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
@@ -891,7 +889,7 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    AutoLock state_lock(&state_lock_);
+    AutoLock state_lock(get_lock());
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
@@ -925,7 +923,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    AutoLock state_lock(&state_lock_);
+    AutoLock state_lock(get_lock());
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;

@@ -137,8 +137,8 @@ public:
     // exception processing as if the exception port had not been installed.
     void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
     // Return true if waiting for an exception response.
-    // |state_lock_| must be held.
-    bool InExceptionLocked() TA_REQ(state_lock_);
+    // |get_lock()| must be held.
+    bool InExceptionLocked() TA_REQ(get_lock());
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns ZX_ERR_BAD_STATE if not in an exception.
@@ -178,7 +178,7 @@ private:
     static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);
 
     // change states of the object, do what is appropriate for the state transition
-    void SetStateLocked(State) TA_REQ(state_lock_);
+    void SetStateLocked(State) TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("THRD")> canary_;
 
@@ -194,19 +194,17 @@ private:
     uintptr_t user_arg1_ = 0;
     uintptr_t user_arg2_ = 0;
 
-    // our State
-    State state_ TA_GUARDED(state_lock_) = State::INITIAL;
-    fbl::Mutex state_lock_;
+    State state_ TA_GUARDED(get_lock()) = State::INITIAL;
 
     // A thread-level exception port for this thread.
-    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
 
     // Support for sending an exception to an exception handler and then waiting for a response.
-    ExceptionStatus exception_status_ TA_GUARDED(state_lock_)
+    ExceptionStatus exception_status_ TA_GUARDED(get_lock())
         = ExceptionStatus::IDLE;
     // The exception port of the handler the thread is waiting for a response from.
-    fbl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(state_lock_);
-    const zx_exception_report_t* exception_report_ TA_GUARDED(state_lock_);
+    fbl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(get_lock());
+    const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
     event_t exception_event_ =
         EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
