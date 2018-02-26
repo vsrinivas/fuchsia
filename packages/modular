@@ -19,7 +19,7 @@
             "file": "peridot/tests/benchmark/run_modular_benchmarks.sh"
         },
         {
-            "bootfs_path": "test/run_modular_tests.sh",
+            "bootfs_path": "test/disabled/run_modular_tests.sh",
             "file": "peridot/tests/run_modular_tests.sh"
         }
     ]
