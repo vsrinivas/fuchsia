@@ -10,8 +10,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/media_player.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -23,22 +22,12 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
 
   auto application_context = app::ApplicationContext::CreateFromStartupInfo();
 
-  auto media_service =
-      application_context->ConnectToEnvironmentService<media::MediaService>();
+  auto media_player =
+      application_context->ConnectToEnvironmentService<media::MediaPlayer>();
 
   auto net_media_service =
       application_context
           ->ConnectToEnvironmentService<media::NetMediaService>();
-
-  // Get an audio renderer.
-  media::AudioRendererPtr audio_renderer;
-  media::MediaRendererPtr audio_media_renderer;
-  media_service->CreateAudioRenderer(audio_renderer.NewRequest(),
-                                     audio_media_renderer.NewRequest());
-
-  media::MediaPlayerPtr media_player;
-  media_service->CreatePlayer(nullptr, std::move(audio_media_renderer), nullptr,
-                              media_player.NewRequest());
 
   net_media_service->CreateNetMediaPlayer(
       params.service_name().empty() ? "audio_player" : params.service_name(),

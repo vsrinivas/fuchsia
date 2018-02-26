@@ -12,6 +12,8 @@
 
 namespace media {
 
+class VideoRendererImpl;
+
 // Main media service implementation.
 //
 // |MediaServiceImpl| is a factory for various FIDL media components. Currently,
@@ -48,18 +50,6 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
   }
 
   // MediaService implementation.
-  void CreateFilePlayer(
-      zx::channel file_channel,
-      f1dl::InterfaceHandle<media::MediaRenderer> audio_renderer,
-      f1dl::InterfaceHandle<media::MediaRenderer> video_renderer,
-      f1dl::InterfaceRequest<media::MediaPlayer> player) override;
-
-  void CreateHttpPlayer(
-      const f1dl::String& http_url,
-      f1dl::InterfaceHandle<media::MediaRenderer> audio_renderer,
-      f1dl::InterfaceHandle<media::MediaRenderer> video_renderer,
-      f1dl::InterfaceRequest<media::MediaPlayer> player) override;
-
   void CreatePlayer(f1dl::InterfaceHandle<SeekingReader> reader,
                     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
                     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
@@ -103,12 +93,17 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
   void CreateFileChannelReader(zx::channel file_channel,
                                f1dl::InterfaceRequest<SeekingReader> reader);
 
+  // Creates a video renderer.
+  std::shared_ptr<VideoRendererImpl> CreateVideoRenderer(
+      f1dl::InterfaceRequest<MediaRenderer> media_renderer);
+
  private:
   // FactoryServiceBase override.
   void OnLastProductRemoved() override;
 
-  // Creates a new transient media_service process.
-  MediaServicePtr CreateIsolate();
+  // Connects to the requested service in a media_service isolate.
+  template <typename Interface>
+  void ConnectToIsolate(f1dl::InterfaceRequest<Interface> request);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   f1dl::BindingSet<MediaService> bindings_;

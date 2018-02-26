@@ -20,16 +20,32 @@
 namespace media {
 
 // Fidl agent that renders video.
-class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
+class VideoRendererImpl : public MediaServiceImpl::Product<MediaRenderer>,
                           public MediaRenderer,
                           public VideoRenderer {
  public:
   static std::shared_ptr<VideoRendererImpl> Create(
-      f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
       f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaServiceImpl* owner);
 
   ~VideoRendererImpl() override;
+
+  // Binds the |VideoRenderer| interface.
+  void Bind(f1dl::InterfaceRequest<VideoRenderer> request);
+
+  // Creates a view.
+  void CreateView(f1dl::InterfacePtr<mozart::ViewManager> view_manager,
+                  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+
+  // Sets a callback that's called when the results of |GetSize| and/or
+  // |GetPixelAspectRatio| may have changed.
+  void SetGeometryUpdateCallback(const fxl::Closure& callback);
+
+  // Gets the size of the video.
+  mozart::Size GetSize() const;
+
+  // Gets the pixel aspect ratio of the video.
+  mozart::Size GetPixelAspectRatio() const;
 
  private:
   class View : public mozart::BaseView {
@@ -54,7 +70,6 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
   };
 
   VideoRendererImpl(
-      f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
       f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaServiceImpl* owner);
 
@@ -80,9 +95,10 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
   // Returns the media types supported by this video renderer.
   f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
-  f1dl::Binding<MediaRenderer> media_renderer_binding_;
+  f1dl::Binding<VideoRenderer> video_renderer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   std::shared_ptr<VideoFrameSource> video_frame_source_;
+  fxl::Closure geometry_update_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VideoRendererImpl);
 };

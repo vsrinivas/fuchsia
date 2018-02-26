@@ -16,57 +16,55 @@ import "lib/media/fidl/seeking_reader.fidl";
 import "lib/media/fidl/timeline_controller.fidl";
 import "lib/media/fidl/video_renderer.fidl";
 
+// DEPRECATED.
 // Primary media service definition.
 [ServiceName="media::MediaService"]
 interface MediaService {
-  // Creates a player that reads from an HTTP service specified by URL.
-  CreateHttpPlayer@0(string url,
-                     MediaRenderer? audio_renderer,
-                     MediaRenderer? video_renderer,
-                     MediaPlayer& player);
-
-  // Creates a player that reads from a file specified by channel.
-  CreateFilePlayer@1(handle<channel> file_channel,
-                     MediaRenderer? audio_renderer,
-                     MediaRenderer? video_renderer,
-                     MediaPlayer& player);
-
-  // Creates a player that reads from a seeking reader.
-  CreatePlayer@2(SeekingReader? reader,
+  // DEPRECATED.
+  // TODO(dalesat): Remove after topaz transition.
+  CreatePlayer@9(SeekingReader? reader,
                  MediaRenderer? audio_renderer,
                  MediaRenderer? video_renderer,
                  MediaPlayer& player);
 
+  // DEPRECATED.
   // Creates a source. If allowed_media_types is supplied, conversions will be
   // added to each stream as needed to make the media type of the stream match
   // one of the allowed types. If a stream cannot be converted to one of the
   // allowed types, the source will not expose that stream.
-  CreateSource@3(SeekingReader reader,
+  CreateSource@1(SeekingReader reader,
                  array<MediaTypeSet>? allowed_media_types,
                  MediaSource& source);
 
+  // DEPRECATED.
   // Creates a sink.
-  CreateSink@4(MediaRenderer renderer, MediaSink& sink);
+  CreateSink@2(MediaRenderer renderer, MediaSink& sink);
 
+  // DEPRECATED.
   // Creates a demux.
-  CreateDemux@5(SeekingReader reader, MediaSource& demux);
+  CreateDemux@3(SeekingReader reader, MediaSource& demux);
 
+  // DEPRECATED.
   // Creates a decoder.
-  CreateDecoder@6(MediaType input_media_type, MediaTypeConverter& decoder);
+  CreateDecoder@4(MediaType input_media_type, MediaTypeConverter& decoder);
 
+  // DEPRECATED.
   // Creates an audio renderer.
-  CreateAudioRenderer@7(AudioRenderer& audio_renderer,
+  CreateAudioRenderer@5(AudioRenderer& audio_renderer,
                         MediaRenderer& media_renderer);
 
+  // DEPRECATED.
   // Creates a video renderer.
-  CreateVideoRenderer@8(VideoRenderer& video_renderer,
+  CreateVideoRenderer@6(VideoRenderer& video_renderer,
                         MediaRenderer& media_renderer);
 
+  // DEPRECATED.
   // Creates a timeline controller reader.
-  CreateTimelineController@9(MediaTimelineController& timeline_controller);
+  CreateTimelineController@7(MediaTimelineController& timeline_controller);
 
+  // DEPRECATED.
   // Creates a reformatter for LPCM audio.
-  CreateLpcmReformatter@10(MediaType input_media_type,
+  CreateLpcmReformatter@8(MediaType input_media_type,
                           AudioSampleFormat output_sample_format,
                           MediaTypeConverter& lpcm_reformatter);
 };

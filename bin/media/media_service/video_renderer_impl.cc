@@ -14,39 +14,72 @@ namespace media {
 
 // static
 std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
-    f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
     f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<VideoRendererImpl>(
-      new VideoRendererImpl(std::move(video_renderer_request),
-                            std::move(media_renderer_request), owner));
+      new VideoRendererImpl(std::move(media_renderer_request), owner));
 }
 
 VideoRendererImpl::VideoRendererImpl(
-    f1dl::InterfaceRequest<VideoRenderer> video_renderer_request,
     f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<VideoRenderer>(
+    : MediaServiceImpl::Product<MediaRenderer>(
           this,
-          std::move(video_renderer_request),
+          std::move(media_renderer_request),
           owner),
-      media_renderer_binding_(this, std::move(media_renderer_request)),
+      video_renderer_binding_(this),
       video_frame_source_(std::make_shared<VideoFrameSource>()) {
-  video_frame_source_->SetStreamTypeRevisedCallback(
-      [this]() { status_publisher_.SendUpdates(); });
+  video_frame_source_->SetStreamTypeRevisedCallback([this]() {
+    status_publisher_.SendUpdates();
+    if (geometry_update_callback_) {
+      geometry_update_callback_();
+    }
+  });
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
         VideoRendererStatusPtr status = VideoRendererStatus::New();
-        status->video_size = video_frame_source_->converter().GetSize().Clone();
-        status->pixel_aspect_ratio =
-            video_frame_source_->converter().GetPixelAspectRatio().Clone();
+        status->video_size = GetSize().Clone();
+        status->pixel_aspect_ratio = GetPixelAspectRatio().Clone();
         callback(version, std::move(status));
       });
 }
 
 VideoRendererImpl::~VideoRendererImpl() {
+  if (video_renderer_binding_.is_bound()) {
+    video_renderer_binding_.Unbind();
+  }
+
   video_frame_source_->RemoveAllViews();
+}
+
+void VideoRendererImpl::Bind(f1dl::InterfaceRequest<VideoRenderer> request) {
+  if (video_renderer_binding_.is_bound()) {
+    video_renderer_binding_.Unbind();
+  }
+
+  video_renderer_binding_.Bind(std::move(request));
+}
+
+void VideoRendererImpl::CreateView(
+    f1dl::InterfacePtr<mozart::ViewManager> view_manager,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  FXL_DCHECK(video_frame_source_);
+  new View(std::move(view_manager), std::move(view_owner_request),
+           video_frame_source_);
+}
+
+void VideoRendererImpl::SetGeometryUpdateCallback(
+    const fxl::Closure& callback) {
+  geometry_update_callback_ = callback;
+}
+
+mozart::Size VideoRendererImpl::GetSize() const {
+  return video_frame_source_->converter().GetSize();
+}
+
+mozart::Size VideoRendererImpl::GetPixelAspectRatio() const {
+  return video_frame_source_->converter().GetPixelAspectRatio();
 }
 
 void VideoRendererImpl::GetSupportedMediaTypes(
@@ -57,9 +90,11 @@ void VideoRendererImpl::GetSupportedMediaTypes(
 void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
   if (!media_type || !media_type->details || !media_type->details->is_video()) {
     FXL_LOG(ERROR) << "Invalid argument to SetMediaType call.";
-    if (media_renderer_binding_.is_bound()) {
-      media_renderer_binding_.Unbind();
+    if (video_renderer_binding_.is_bound()) {
+      video_renderer_binding_.Unbind();
     }
+
+    UnbindAndReleaseFromOwner();
 
     return;
   }
@@ -70,6 +105,9 @@ void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
   video_frame_source_->converter().SetStreamType(
       media_type.To<std::unique_ptr<StreamType>>());
   status_publisher_.SendUpdates();
+  if (geometry_update_callback_) {
+    geometry_update_callback_();
+  }
 }
 
 void VideoRendererImpl::GetPacketConsumer(
@@ -90,9 +128,8 @@ void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
 
 void VideoRendererImpl::CreateView(
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FXL_DCHECK(video_frame_source_);
-  new View(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
-           std::move(view_owner_request), video_frame_source_);
+  CreateView(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
+             std::move(view_owner_request));
 }
 
 f1dl::Array<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {

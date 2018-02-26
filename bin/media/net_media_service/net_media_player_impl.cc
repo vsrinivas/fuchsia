@@ -63,10 +63,10 @@ void NetMediaPlayerImpl::SetUrl(const f1dl::String& url_as_string) {
   }
 
   if (url.SchemeIsFile()) {
-    media_player_->SetFileChannel(
+    media_player_->SetFileSource(
         ChannelFromFd(fxl::UniqueFD(open(url.path().c_str(), O_RDONLY))));
   } else {
-    media_player_->SetHttpUrl(url_as_string);
+    media_player_->SetHttpSource(url_as_string);
   }
 }
 

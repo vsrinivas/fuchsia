@@ -25,17 +25,25 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
+      f1dl::InterfaceRequest<MediaPlayer> request,
+      MediaServiceImpl* owner);
+
+  static std::shared_ptr<MediaPlayerImpl> Create(
       f1dl::InterfaceHandle<SeekingReader> reader,
-      f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-      f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+      f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
+      f1dl::InterfaceHandle<MediaRenderer> video_renderer,
       f1dl::InterfaceRequest<MediaPlayer> request,
       MediaServiceImpl* owner);
 
   ~MediaPlayerImpl() override;
 
   // MediaPlayer implementation.
-  void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+  void SetHttpSource(const f1dl::String& http_url) override;
+
+  void SetFileSource(zx::channel file_channel) override;
+
+  void SetReaderSource(
+      f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
 
   void Play() override;
 
@@ -43,9 +51,18 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
-  void SetHttpUrl(const f1dl::String& http_url) override;
+  void GetStatus(uint64_t version_last_seen,
+                 const GetStatusCallback& callback) override;
 
-  void SetFileChannel(zx::channel file_channel) override;
+  void SetGain(float gain) override;
+
+  void CreateView(
+      f1dl::InterfaceHandle<mozart::ViewManager> view_manager,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+
+  void SetAudioRenderer(
+      f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
+      f1dl::InterfaceHandle<MediaRenderer> media_renderer) override;
 
   void SetReader(f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
 
@@ -71,15 +88,19 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
     bool connected_ = false;
   };
 
-  MediaPlayerImpl(f1dl::InterfaceHandle<SeekingReader> reader_handle,
-                  f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-                  f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
-                  f1dl::InterfaceRequest<MediaPlayer> request,
+  MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
                   MediaServiceImpl* owner);
 
-  // If |reader_handle_| is set, creates the source and call |ConnectSinks|,
+  // Sets the video renderer.
+  // TODO(dalesat): Remove after topaz transition.
+  void SetVideoRenderer(f1dl::InterfaceHandle<MediaRenderer> video_renderer);
+
+  // If |reader_handle_| is set, creates the source and calls |ConnectSinks|,
   // otherwise does nothing.
   void MaybeCreateSource();
+
+  // Creates the renderer for |medium| if it doesn't exist already.
+  void MaybeCreateRenderer(MediaTypeMedium medium);
 
   // Creates sinks as needed and connects enabled streams.
   void ConnectSinks();
@@ -122,6 +143,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   MediaTimelineControlPointPtr timeline_control_point_;
   TimelineConsumerPtr timeline_consumer_;
   bool reader_transition_pending_ = false;
+  float gain_ = 1.0f;
+  f1dl::InterfacePtr<AudioRenderer> audio_renderer_;
+  std::shared_ptr<VideoRendererImpl> video_renderer_impl_;
 
   // The state we're currently in.
   State state_ = State::kWaiting;

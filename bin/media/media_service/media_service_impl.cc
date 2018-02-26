@@ -43,6 +43,16 @@ MediaServiceImpl::MediaServiceImpl(
         bindings_.AddBinding(this, std::move(request));
       });
 
+  application_context()->outgoing_services()->AddService<MediaPlayer>(
+      [this](f1dl::InterfaceRequest<MediaPlayer> request) {
+        if (launcher_) {
+          ConnectToIsolate<MediaPlayer>(std::move(request));
+          return;
+        }
+
+        AddProduct(MediaPlayerImpl::Create(std::move(request), this));
+      });
+
   if (!transient) {
     application_context()->environment()->GetApplicationLauncher(
         launcher_.NewRequest());
@@ -51,58 +61,23 @@ MediaServiceImpl::MediaServiceImpl(
 
 MediaServiceImpl::~MediaServiceImpl() {}
 
-void MediaServiceImpl::CreateHttpPlayer(
-    const f1dl::String& http_url,
-    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
-    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
-    f1dl::InterfaceRequest<MediaPlayer> player) {
-  if (launcher_) {
-    CreateIsolate()->CreateHttpPlayer(http_url, std::move(audio_renderer),
-                                      std::move(video_renderer),
-                                      std::move(player));
-    return;
-  }
-
-  f1dl::InterfaceHandle<SeekingReader> reader;
-  CreateHttpReader(http_url, reader.NewRequest());
-  AddProduct(MediaPlayerImpl::Create(
-      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
-      std::move(player), this));
-}
-
-void MediaServiceImpl::CreateFilePlayer(
-    zx::channel file_channel,
-    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
-    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
-    f1dl::InterfaceRequest<MediaPlayer> player) {
-  if (launcher_) {
-    CreateIsolate()->CreateFilePlayer(
-        std::move(file_channel), std::move(audio_renderer),
-        std::move(video_renderer), std::move(player));
-    return;
-  }
-
-  f1dl::InterfaceHandle<SeekingReader> reader;
-  CreateFileChannelReader(std::move(file_channel), reader.NewRequest());
-  AddProduct(MediaPlayerImpl::Create(
-      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
-      std::move(player), this));
-}
-
 void MediaServiceImpl::CreatePlayer(
     f1dl::InterfaceHandle<SeekingReader> reader,
     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
-    f1dl::InterfaceRequest<MediaPlayer> player) {
+    f1dl::InterfaceRequest<MediaPlayer> request) {
   if (launcher_) {
-    CreateIsolate()->CreatePlayer(std::move(reader), std::move(audio_renderer),
-                                  std::move(video_renderer), std::move(player));
+    MediaServicePtr media_service;
+    ConnectToIsolate<MediaService>(media_service.NewRequest());
+    media_service->CreatePlayer(std::move(reader), std::move(audio_renderer),
+                                std::move(video_renderer), std::move(request));
     return;
   }
 
+  // Set reader later, so the player doesn't create renderers for us.
   AddProduct(MediaPlayerImpl::Create(
       std::move(reader), std::move(audio_renderer), std::move(video_renderer),
-      std::move(player), this));
+      std::move(request), this));
 }
 
 void MediaServiceImpl::CreateSource(
@@ -165,8 +140,10 @@ void MediaServiceImpl::CreateVideoRenderer(
     this, video_renderer_request = std::move(video_renderer_request),
     media_renderer_request = std::move(media_renderer_request)
   ]() mutable {
-    return VideoRendererImpl::Create(std::move(video_renderer_request),
-                                     std::move(media_renderer_request), this);
+    auto result =
+        VideoRendererImpl::Create(std::move(media_renderer_request), this);
+    result->Bind(std::move(video_renderer_request));
+    return result;
   }));
 }
 
@@ -210,6 +187,14 @@ void MediaServiceImpl::CreateFileChannelReader(
   }));
 }
 
+std::shared_ptr<VideoRendererImpl> MediaServiceImpl::CreateVideoRenderer(
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+  std::shared_ptr<VideoRendererImpl> result =
+      VideoRendererImpl::Create(std::move(media_renderer_request), this);
+  AddProduct(result);
+  return result;
+}
+
 void MediaServiceImpl::OnLastProductRemoved() {
   if (!launcher_) {
     task_runner_->PostTask(
@@ -217,7 +202,9 @@ void MediaServiceImpl::OnLastProductRemoved() {
   }
 }
 
-MediaServicePtr MediaServiceImpl::CreateIsolate() {
+template <typename Interface>
+void MediaServiceImpl::ConnectToIsolate(
+    f1dl::InterfaceRequest<Interface> request) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kIsolateUrl;
   launch_info->arguments = f1dl::Array<f1dl::String>::New(1);
@@ -228,13 +215,9 @@ MediaServicePtr MediaServiceImpl::CreateIsolate() {
   app::ApplicationControllerPtr controller;
   launcher_->CreateApplication(std::move(launch_info), controller.NewRequest());
 
-  MediaServicePtr isolated_media_service;
-  services.ConnectToService(isolated_media_service.NewRequest(),
-                            MediaService::Name_);
+  services.ConnectToService(std::move(request), Interface::Name_);
 
   controller->Detach();
-
-  return isolated_media_service;
 }
 
 }  // namespace media

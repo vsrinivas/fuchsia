@@ -5,6 +5,7 @@
 #include "garnet/bin/media/media_service/media_player_impl.h"
 
 #include "garnet/bin/media/fidl/fidl_formatting.h"
+#include "garnet/bin/media/media_service/video_renderer_impl.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -16,36 +17,40 @@ namespace media {
 
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    f1dl::InterfaceHandle<SeekingReader> reader_handle,
-    f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-    f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
     f1dl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner) {
-  return std::shared_ptr<MediaPlayerImpl>(new MediaPlayerImpl(
-      std::move(reader_handle), std::move(audio_renderer_handle),
-      std::move(video_renderer_handle), std::move(request), owner));
+  return std::shared_ptr<MediaPlayerImpl>(
+      new MediaPlayerImpl(std::move(request), owner));
 }
 
-MediaPlayerImpl::MediaPlayerImpl(
-    f1dl::InterfaceHandle<SeekingReader> reader_handle,
-    f1dl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-    f1dl::InterfaceHandle<MediaRenderer> video_renderer_handle,
+// static
+std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
     f1dl::InterfaceRequest<MediaPlayer> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
-      reader_handle_(std::move(reader_handle)) {
-  RCHECK(audio_renderer_handle || video_renderer_handle);
+    MediaServiceImpl* owner) {
+  auto player = new MediaPlayerImpl(std::move(request), owner);
+
+  if (audio_renderer) {
+    player->SetAudioRenderer(nullptr, std::move(audio_renderer));
+  }
+
+  if (video_renderer) {
+    player->SetVideoRenderer(std::move(video_renderer));
+  }
+
+  if (reader) {
+    player->SetReaderSource(std::move(reader));
+  }
+
+  return std::shared_ptr<MediaPlayerImpl>(player);
+}
+
+MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
+                                 MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
   FXL_DCHECK(owner);
-
-  if (audio_renderer_handle) {
-    streams_by_medium_[MediaTypeMedium::AUDIO].renderer_handle_ =
-        std::move(audio_renderer_handle);
-  }
-
-  if (video_renderer_handle) {
-    streams_by_medium_[MediaTypeMedium::VIDEO].renderer_handle_ =
-        std::move(video_renderer_handle);
-  }
 
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
                                              uint64_t version) {
@@ -73,6 +78,12 @@ MediaPlayerImpl::MediaPlayerImpl(
       status->video_connected = source_status_->video_connected;
       status->metadata = source_status_->metadata.Clone();
 
+      if (video_renderer_impl_) {
+        status->video_size = video_renderer_impl_->GetSize().Clone();
+        status->pixel_aspect_ratio =
+            video_renderer_impl_->GetPixelAspectRatio().Clone();
+      }
+
       if (source_status_->problem) {
         status->problem = source_status_->problem.Clone();
       } else if (state_ >= State::kFlushed && !status->audio_connected &&
@@ -99,7 +110,11 @@ MediaPlayerImpl::MediaPlayerImpl(
   MaybeCreateSource();
 }
 
-MediaPlayerImpl::~MediaPlayerImpl() {}
+MediaPlayerImpl::~MediaPlayerImpl() {
+  if (video_renderer_impl_) {
+    video_renderer_impl_->SetGeometryUpdateCallback(nullptr);
+  }
+}
 
 void MediaPlayerImpl::MaybeCreateSource() {
   if (!reader_handle_) {
@@ -119,15 +134,51 @@ void MediaPlayerImpl::MaybeCreateSource() {
       }));
 }
 
+void MediaPlayerImpl::MaybeCreateRenderer(MediaTypeMedium medium) {
+  if (streams_by_medium_.find(medium) != streams_by_medium_.end()) {
+    // Renderer already exists.
+    return;
+  }
+
+  auto& stream = streams_by_medium_[medium];
+
+  switch (medium) {
+    case MediaTypeMedium::AUDIO: {
+      f1dl::InterfaceHandle<MediaRenderer> audio_media_renderer;
+      owner()->CreateAudioRenderer(audio_renderer_.NewRequest(),
+                                   audio_media_renderer.NewRequest());
+      stream.renderer_handle_ = std::move(audio_media_renderer);
+      if (gain_ != 1.0f) {
+        audio_renderer_->SetGain(gain_);
+      }
+    } break;
+    case MediaTypeMedium::VIDEO: {
+      f1dl::InterfaceHandle<MediaRenderer> video_media_renderer;
+      video_renderer_impl_ =
+          owner()->CreateVideoRenderer(video_media_renderer.NewRequest());
+      stream.renderer_handle_ = std::move(video_media_renderer);
+      video_renderer_impl_->SetGeometryUpdateCallback(
+          [this]() { status_publisher_.SendUpdates(); });
+    } break;
+    default:
+      FXL_DCHECK(false) << "Only audio and video are currently supported";
+      break;
+  }
+}
+
 void MediaPlayerImpl::ConnectSinks() {
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
   size_t stream_index = 0;
 
   for (MediaTypePtr& stream_type : stream_types_) {
+    MaybeCreateRenderer(stream_type->medium);
+
     auto iter = streams_by_medium_.find(stream_type->medium);
     if (iter != streams_by_medium_.end()) {
-      if (iter->second.connected_) {
+      auto& stream = iter->second;
+
+      if (stream.connected_) {
         // TODO(dalesat): How do we choose the right stream?
         FXL_DLOG(INFO) << "Stream " << stream_index
                        << " redundant, already connected to sink with medium "
@@ -136,7 +187,7 @@ void MediaPlayerImpl::ConnectSinks() {
         continue;
       }
 
-      PrepareStream(&iter->second, stream_index, stream_type,
+      PrepareStream(&stream, stream_index, stream_type,
                     callback_joiner->NewCallback());
     }
 
@@ -444,9 +495,40 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
   return result;
 }
 
-void MediaPlayerImpl::GetStatus(uint64_t version_last_seen,
-                                const GetStatusCallback& callback) {
-  status_publisher_.Get(version_last_seen, callback);
+void MediaPlayerImpl::SetHttpSource(const f1dl::String& http_url) {
+  f1dl::InterfaceHandle<SeekingReader> reader;
+  owner()->CreateHttpReader(http_url, reader.NewRequest());
+  SetReader(std::move(reader));
+}
+
+void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
+  f1dl::InterfaceHandle<SeekingReader> reader;
+  owner()->CreateFileChannelReader(std::move(file_channel),
+                                   reader.NewRequest());
+  SetReader(std::move(reader));
+}
+
+void MediaPlayerImpl::SetReaderSource(
+    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
+  if (!reader_handle && !source_) {
+    // There was already no reader. Nothing to do.
+    return;
+  }
+
+  // Setting reader_transition_pending_ has a similar effect to setting
+  // target_state_ to State::kFlushed. We don't change target_state_ so the
+  // player will respect the client's desires once the reader transition is
+  // complete.
+  reader_transition_pending_ = true;
+  reader_handle_ = std::move(reader_handle);
+
+  // We clear |target_position_| so that a previously-requested seek that's
+  // still pending will not be applied to the new reader. The client can
+  // call |Seek| between this point and when the new graph is set up, and it
+  // will work.
+  target_position_ = kUnspecifiedTime;
+
+  Update();
 }
 
 void MediaPlayerImpl::Play() {
@@ -464,40 +546,63 @@ void MediaPlayerImpl::Seek(int64_t position) {
   Update();
 }
 
-void MediaPlayerImpl::SetHttpUrl(const f1dl::String& http_url) {
-  f1dl::InterfaceHandle<SeekingReader> reader;
-  owner()->CreateHttpReader(http_url, reader.NewRequest());
-  SetReader(std::move(reader));
+void MediaPlayerImpl::GetStatus(uint64_t version_last_seen,
+                                const GetStatusCallback& callback) {
+  status_publisher_.Get(version_last_seen, callback);
 }
 
-void MediaPlayerImpl::SetFileChannel(zx::channel file_channel) {
-  f1dl::InterfaceHandle<SeekingReader> reader;
-  owner()->CreateFileChannelReader(std::move(file_channel),
-                                   reader.NewRequest());
-  SetReader(std::move(reader));
+void MediaPlayerImpl::SetGain(float gain) {
+  if (audio_renderer_) {
+    audio_renderer_->SetGain(gain);
+  } else {
+    gain_ = gain;
+  }
+}
+
+void MediaPlayerImpl::CreateView(
+    f1dl::InterfaceHandle<mozart::ViewManager> view_manager,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  MaybeCreateRenderer(MediaTypeMedium::VIDEO);
+  if (!video_renderer_impl_) {
+    return;
+  }
+
+  video_renderer_impl_->CreateView(view_manager.Bind(),
+                                   std::move(view_owner_request));
+}
+
+void MediaPlayerImpl::SetAudioRenderer(
+    f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+  if (streams_by_medium_.find(MediaTypeMedium::AUDIO) !=
+      streams_by_medium_.end()) {
+    // We already have this renderer. Do nothing.
+    return;
+  }
+
+  streams_by_medium_[MediaTypeMedium::AUDIO].renderer_handle_ =
+      std::move(media_renderer);
+
+  if (audio_renderer) {
+    audio_renderer_.Bind(std::move(audio_renderer));
+  }
 }
 
 void MediaPlayerImpl::SetReader(
     f1dl::InterfaceHandle<SeekingReader> reader_handle) {
-  if (!reader_handle && !source_) {
-    // There was already no reader. Nothing to do.
+  SetReaderSource(std::move(reader_handle));
+}
+
+void MediaPlayerImpl::SetVideoRenderer(
+    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+  if (streams_by_medium_.find(MediaTypeMedium::VIDEO) !=
+      streams_by_medium_.end()) {
+    // We already have this renderer. Do nothing.
     return;
   }
 
-  // Setting reader_transition_pending_ has a similar effect to setting
-  // target_state_ to State::kFlushed. We don't change target_state_ so the
-  // player will respect the client's desires once the reader transition is
-  // complete.
-  reader_transition_pending_ = true;
-  reader_handle_ = std::move(reader_handle);
-
-  // We clear |target_position_| so that a previously-requested seek that's
-  // still pending will not be applied to the new reader. The client can call
-  // |Seek| between this point and when the new graph is set up, and it will
-  // work.
-  target_position_ = kUnspecifiedTime;
-
-  Update();
+  streams_by_medium_[MediaTypeMedium::VIDEO].renderer_handle_ =
+      std::move(media_renderer);
 }
 
 void MediaPlayerImpl::HandleSourceStatusUpdates(uint64_t version,

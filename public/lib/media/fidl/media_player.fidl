@@ -4,40 +4,65 @@
 
 module media;
 
+import "lib/media/fidl/audio_renderer.fidl";
 import "lib/media/fidl/media_metadata.fidl";
+import "lib/media/fidl/media_renderer.fidl";
 import "lib/media/fidl/problem.fidl";
 import "lib/media/fidl/seeking_reader.fidl";
 import "lib/media/fidl/timelines.fidl";
+import "lib/ui/geometry/fidl/geometry.fidl";
+import "lib/ui/views/fidl/view_manager.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // Plays media.
+[ServiceName="media::MediaPlayer"]
 interface MediaPlayer {
   // Special value for GetStatus version_last_seen parameter to get the current
   // status immediately.
   const uint64 kInitialStatus = 0;
 
+  // Sets an HTTP URL to read from.
+  SetHttpSource@0(string http_url);
+
+  // Sets a file channel to read from.
+  SetFileSource@1(handle<channel> file_channel);
+
+  // Sets a reader to read from.
+  SetReaderSource@2(SeekingReader? reader);
+
   // Starts playback.
-  Play@0();
+  Play@3();
 
   // Pauses playback.
-  Pause@1();
+  Pause@4();
 
   // Seeks to the specified position, specified in nanoseconds.
-  Seek@2(int64 position);
+  Seek@5(int64 position);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus@3(uint64 version_last_seen)
+  GetStatus@6(uint64 version_last_seen)
       => (uint64 version, MediaPlayerStatus status);
 
-  // Sets ah HTTP URL to read from.
-  SetHttpUrl@4(string http_url);
+  // See AudioRenderer.SetGain.
+  SetGain@7(float db_gain);
 
-  // Sets a file channel to read from.
-  SetFileChannel@5(handle<channel> file_channel);
+  // Creates a video view.
+  CreateView@8(mozart.ViewManager view_manager, mozart.ViewOwner& view_owner);
 
-  // Sets a reader to read from.
-  SetReader@6(SeekingReader? reader);
+  // DEPRECATED. Used only for testing.
+  // TODO(dalesat): Remove when we can test with dependency injection.
+  // Sets the audio renderer to use. The audio renderer can only be set on a
+  // new player for which none of the SetXxxSource methods or SetAudioRenderer
+  // itself have been called. This method is ignored otherwise. If the
+  // audio_renderer parameter is null, the SetGain method does nothing.
+  SetAudioRenderer@9(AudioRenderer? audio_renderer,
+                     MediaRenderer media_renderer);
+
+  // DEPRECATED.
+  // TODO(dalesat): Remove after topaz transition.
+  SetReader@10(SeekingReader? reader);
 };
 
 // MediaPlayer status information.
@@ -64,6 +89,12 @@ struct MediaPlayerStatus {
   // This value will be false if |content_has_video| is false, if no video
   // renderer was provided, or if the video media type isn't supported.
   bool video_connected;
+
+  // Size of the video currently being displayed.
+  mozart.Size? video_size;
+
+  // Relative dimensions of a video pixel.
+  mozart.Size? pixel_aspect_ratio;
 
   // Describes the media.
   MediaMetadata? metadata;
