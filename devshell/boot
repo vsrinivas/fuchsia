@@ -67,10 +67,8 @@ case "${machine_type}" in
     disks=()
     add_fvm=false
   ;;
-  efi|acer|nuc)
+  cros|pixel|vboot|efi|acer|nuc)
     disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}")
-  ;;
-  cros|pixel|vboot)
     disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
   ;;
   *)
