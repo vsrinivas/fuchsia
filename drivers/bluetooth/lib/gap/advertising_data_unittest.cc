@@ -119,7 +119,10 @@ TEST(GAP_AdvertisingDataTest, ParseFIDL) {
     array[i] = static_cast<uint8_t>(i * 3);
   }
 
-  fidl_ad->service_data.insert(kId1AsString, std::move(array));
+  auto service_data_entry = ::btfidl::low_energy::ServiceDataEntry::New();
+  service_data_entry->uuid = kId1AsString;
+  service_data_entry->data = std::move(array);
+  fidl_ad->service_data.push_back(std::move(service_data_entry));
 
   AdvertisingData data;
 

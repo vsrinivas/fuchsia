@@ -6,6 +6,16 @@ module bluetooth.low_energy;
 
 import "lib/bluetooth/fidl/common.fidl";
 
+struct ServiceDataEntry {
+  string uuid;
+  array<uint8> data;
+};
+
+struct ManufacturerSpecificDataEntry {
+  uint16 company_id;
+  array<uint8> data;
+};
+
 // Represents advertising and scan response data advertised by a broadcaster or peripheral.
 struct AdvertisingData {
   // Name of the device.
@@ -20,12 +30,11 @@ struct AdvertisingData {
   // List of service UUIDs reported in the advertisement.
   array<string>? service_uuids;
 
-  // Service data included in the advertisement. Each key of this dictionary is a 128-bit Bluetooth
-  // service UUID.
-  map<string, array<uint8>>? service_data;
+  // Service data included in the advertisement.
+  array<ServiceDataEntry>? service_data;
 
-  // Manufacturer specific data entries. Each key of this dictionary is a 16-bit company identifier.
-  map<uint16, array<uint8>>? manufacturer_specific_data;
+  // Manufacturer specific data entries.
+  array<ManufacturerSpecificDataEntry>? manufacturer_specific_data;
 
   // Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
   // expose certain services to connect to them using service solicitation.

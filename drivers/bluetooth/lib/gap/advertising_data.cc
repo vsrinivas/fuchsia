@@ -269,13 +269,17 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   }
 
   for (const auto& pair : manufacturer_data_) {
-    fidl_data->manufacturer_specific_data.insert(
-        pair.first, f1dl::Array<unsigned char>::From(pair.second));
+    auto entry = ::btfidl::low_energy::ManufacturerSpecificDataEntry::New();
+    entry->company_id = pair.first;
+    entry->data = f1dl::Array<unsigned char>::From(pair.second);
+    fidl_data->manufacturer_specific_data.push_back(std::move(entry));
   }
 
   for (const auto& pair : service_data_) {
-    fidl_data->service_data.insert(
-        pair.first.ToString(), f1dl::Array<unsigned char>::From(pair.second));
+    auto entry = ::btfidl::low_energy::ServiceDataEntry::New();
+    entry->uuid = pair.first.ToString();
+    entry->data = f1dl::Array<unsigned char>::From(pair.second);
+    fidl_data->service_data.push_back(std::move(entry));
   }
 
   for (const auto& uuid : service_uuids_) {
@@ -306,16 +310,16 @@ void AdvertisingData::FromFidl(
   }
 
   for (const auto& it : fidl_ad->manufacturer_specific_data) {
-    f1dl::Array<uint8_t>& data = it.GetValue();
+    f1dl::Array<uint8_t>& data = it->data;
     common::BufferView manuf_view(data.data(), data.size());
-    out_ad->SetManufacturerData(it.GetKey(), manuf_view);
+    out_ad->SetManufacturerData(it->company_id, manuf_view);
   }
 
   for (const auto& it : fidl_ad->service_data) {
-    f1dl::Array<uint8_t>& data = it.GetValue();
+    f1dl::Array<uint8_t>& data = it->data;
     common::BufferView servdata_view(data.data(), data.size());
     common::UUID servdata_uuid;
-    if (StringToUuid(it.GetKey().get(), &servdata_uuid)) {
+    if (StringToUuid(it->uuid.get(), &servdata_uuid)) {
       out_ad->SetServiceData(servdata_uuid, servdata_view);
     } else {
       FXL_LOG(WARNING) << "FIDL Service Data has malformed UUID";
