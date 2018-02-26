@@ -4,6 +4,11 @@
 
 module tracing;
 
+struct KnownCategory {
+  string name;
+  string description;
+};
+
 // The controller interface used by the trace tool to start/stop tracing.
 [ServiceName="tracing::TraceController"]
 interface TraceController {
@@ -37,8 +42,8 @@ interface TraceController {
   // human-readable form.
   DumpProvider@2(uint32 provider_id, handle<socket> output);
 
-  // Gets the known categories, as a mapping of name -> description.
-  GetKnownCategories@3() => (map<string, string> categories);
+  // Gets the known categories.
+  GetKnownCategories@3() => (array<KnownCategory> categories);
 
   // Gets the list of registered providers.
   GetRegisteredProviders@4() => (array<TraceProviderInfo> providers);

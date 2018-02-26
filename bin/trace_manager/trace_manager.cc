@@ -95,8 +95,14 @@ void TraceManager::DumpProvider(uint32_t provider_id, zx::socket output) {
 
 void TraceManager::GetKnownCategories(
     const GetKnownCategoriesCallback& callback) {
-  callback(
-      f1dl::Map<f1dl::String, f1dl::String>::From(config_.known_categories()));
+  f1dl::Array<KnownCategoryPtr> known_categories;
+  for (const auto& it : config_.known_categories()) {
+    auto known_category = KnownCategory::New();
+    known_category->name = it.first;
+    known_category->description = it.second;
+    known_categories.push_back(std::move(known_category));
+  }
+  callback(std::move(known_categories));
 }
 
 void TraceManager::GetRegisteredProviders(
