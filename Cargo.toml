@@ -11,6 +11,7 @@ members =  [
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*_rust",
   "examples/network/wget-rs",
+  "examples/rust/testing",
   "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",

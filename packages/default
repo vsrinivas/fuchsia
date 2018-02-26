@@ -65,6 +65,7 @@
         "garnet/packages/pmd_tests",
         "garnet/packages/power_manager",
         "garnet/packages/runtime",
+        "garnet/packages/rust",
         "garnet/packages/rust-crates-tests",
         "garnet/packages/sbase",
         "garnet/packages/syslog_cpp_tests",
