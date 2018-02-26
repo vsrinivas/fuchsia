@@ -37,7 +37,7 @@ MomentShadowMapRendererPtr MomentShadowMapRenderer::New(
     Escher* escher,
     const impl::ModelDataPtr& model_data,
     const impl::ModelRendererPtr& model_renderer) {
-  constexpr vk::Format kShadowMapFormat = vk::Format::eR32G32B32A32Sfloat;
+  constexpr vk::Format kShadowMapFormat = vk::Format::eR16G16B16A16Sfloat;
   vk::Format depth_format = ESCHER_CHECKED_VK_RESULT(
       impl::GetSupportedDepthStencilFormat(escher->vk_physical_device()));
   return fxl::MakeRefCounted<MomentShadowMapRenderer>(
@@ -63,7 +63,7 @@ MomentShadowMapRenderer::MomentShadowMapRenderer(
                         model_data,
                         model_renderer,
                         model_render_pass),
-      gaussian3x3f_(escher) {}
+      gaussian3x3f16_(escher) {}
 
 ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
     const FramePtr& frame,
@@ -96,7 +96,7 @@ ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
       escher(), command_buffer, color_image);
   auto output_texture = fxl::MakeRefCounted<Texture>(
       escher()->resource_recycler(), blurred_image, vk::Filter::eNearest);
-  gaussian3x3f_.Apply(command_buffer, input_texture, output_texture);
+  gaussian3x3f16_.Apply(command_buffer, input_texture, output_texture);
   frame->AddTimestamp("applied 3x3 gaussian");
 
   return SubmitPartialFrameAndBuildShadowMap<MomentShadowMap>(

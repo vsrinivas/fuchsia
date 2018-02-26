@@ -65,9 +65,13 @@ vec3 solveLinear(mat3 B, vec3 z) {
 }
 
 float computeVisibility(vec4 moments, float fragLightDist) {
-  const float kMomentBias = 3e-6;
-  const float kDepthBias = 1e-8;
-  vec4 b = mix(moments, vec4(0., .63, 0, .63), kMomentBias);
+  // The magic numbers come from paper
+  // http://cg.cs.uni-bonn.de/aigaion2root/attachments/MomentShadowMapping.pdf
+  // The alpha (kMomentBias here) from paper is 3e-5, but that will cause a lot
+  // shadow acne for us.
+  const float kMomentBias = 4e-4;
+  const float kDepthBias = 1e-6;
+  vec4 b = mix(moments, vec4(.5, .5, .5, .5), kMomentBias);
   mat3 B = mat3(
       1.0, b.x, b.y,
       b.x, b.y, b.z,
@@ -92,11 +96,24 @@ float computeVisibility(vec4 moments, float fragLightDist) {
   }
 }
 
+// The magic weights come from paper
+// http://cg.cs.uni-bonn.de/aigaion2root/attachments/MomentShadowMapping.pdf
+vec4 decode(vec4 y) {
+  const mat4 kWeight = mat4(
+    0.2227744146, 0.1549679261, 0.1451988946, 0.163127443,
+    0.0771972861, 0.1394629426, 0.2120202157, 0.2591432266,
+    0.7926986636, 0.7963415838, 0.7258694464, 0.6539092497,
+    0.0319417555, -0.1722823173, -0.2758014811, -0.3376131734);
+  const vec4 kBias = vec4(0.035955884801, 0., 0., 0.);
+  return kWeight * (y - kBias);
+}
+
 void main() {
   vec4 shadowUV = shadowPos / shadowPos.w;
   float fragLightDist = shadowUV.z;
   vec4 shadowMapSample = texture(shadow_map_tex, shadowUV.xy);
-  float visibility = computeVisibility(shadowMapSample, fragLightDist);
+  vec4 moments = decode(shadowMapSample);
+  float visibility = computeVisibility(moments, fragLightDist);
   visibility = clamp(visibility, 0., 1.);
   vec3 light = ambient_light_intensity + visibility * direct_light_intensity;
   outColor = vec4(light, 1.) * color * texture(material_tex, inUV);

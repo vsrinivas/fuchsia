@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/escher/impl/gaussian_3x3f.h"
+#include "lib/escher/impl/gaussian_3x3f16.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 
 namespace escher {
@@ -12,6 +12,8 @@ namespace escher {
 class MomentShadowMapRenderer;
 typedef fxl::RefPtr<MomentShadowMapRenderer> MomentShadowMapRendererPtr;
 
+// A MomentShadowMapRenderer is used to render moment shadow maps mentioned in
+// http://momentsingraphics.de/?page_id=51
 class MomentShadowMapRenderer final : public ShadowMapRenderer {
  public:
   static MomentShadowMapRendererPtr New(
@@ -36,7 +38,7 @@ class MomentShadowMapRenderer final : public ShadowMapRenderer {
                           const impl::ModelRenderPassPtr& model_render_pass);
 
  private:
-  impl::Gaussian3x3f gaussian3x3f_;
+  impl::Gaussian3x3f16 gaussian3x3f16_;
 
   FRIEND_MAKE_REF_COUNTED(MomentShadowMapRenderer);
   FRIEND_REF_COUNTED_THREAD_SAFE(MomentShadowMapRenderer);
