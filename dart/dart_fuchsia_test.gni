@@ -12,8 +12,12 @@ import("//topaz/runtime/dart_runner/dart_app.gni")
 #
 # Parameters
 #
+#   sources (optional)
+#     The list of test sources. These sources must be within source_dir.
+#
 #   source_dir (optional)
-#     Directory containing the test sources. Defaults to "test".
+#     Directory containing the test sources.
+#     Defaults to "test".
 #
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
@@ -85,7 +89,11 @@ template("dart_fuchsia_test") {
 
     main_dart = generated_test_main
 
-    extra_analyzer_sources = [
+    sources = []
+    if (defined(invoker.sources)) {
+      sources = invoker.sources
+    }
+    sources += [
       generated_test_main,
       test_helper,
     ]

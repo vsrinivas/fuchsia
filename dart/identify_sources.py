@@ -21,8 +21,10 @@ def get_dependencies(args):
             '--packages=' + args.packages,
             '--vm_snapshot_data=/dev/null',
             '--isolate_snapshot_data=/dev/null',
-            source,
         ]
+        for mapping in args.url_mapping:
+          command.append('--url_mapping=%s' % mapping)
+        command.append(source)
         try:
             output = subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
@@ -55,12 +57,20 @@ def main():
     parser.add_argument('--depname',
                         help='Name of the target in the depfile',
                         required=True)
+    parser.add_argument('--url-mapping',
+                        help='Additional mappings for built-in libraries',
+                        nargs='*')
     args = parser.parse_args()
+
+    if not args.sources:
+      raise Exception('No source files given.')
 
     all_deps = get_dependencies(args)
     def is_within_package(dep):
         return os.path.commonprefix([dep, args.source_dir]) == args.source_dir
     local_deps = filter(is_within_package, all_deps)
+    # Add the original sources in case they were not under the source directory.
+    local_deps = list(set(local_deps) | set(args.sources))
     local_deps.sort()
 
     with open(args.output, 'w') as output_file:

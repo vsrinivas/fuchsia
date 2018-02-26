@@ -10,6 +10,10 @@ import("//build/toolchain/clang_toolchain.gni")
 #
 # Parameters
 #
+#   sources (optional)
+#     The list of public sources in this library, i.e. Dart files in lib/ but
+#     not in lib/src/. These sources must be within lib/.
+#
 #   package_name (optional)
 #     Name of the dart package.
 #
@@ -46,8 +50,16 @@ template("dart_tool") {
       infer_package_name = true
     }
 
-    extra_analyzer_sources = [
-      invoker.main_dart,
+    sources = []
+    if (defined(invoker.sources)) {
+      sources += invoker.sources
+    }
+    source_base = "lib"
+    if (defined(invoker.source_dir)) {
+      source_base = invoker.source_dir
+    }
+    sources += [
+      rebase_path(invoker.main_dart, source_base),
     ]
   }
 

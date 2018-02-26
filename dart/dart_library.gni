@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/dart/toolchain.gni")
+import("//third_party/flutter/lib/ui/dart_ui.gni")
+import("//topaz/public/dart-pkg/fuchsia/sdk_ext.gni")
+import("//topaz/public/dart-pkg/zircon/sdk_ext.gni")
+import("//topaz/public/lib/ui/flutter/sdk_ext/sdk_ext.gni")
 
 declare_args() {
   # Whether to use the analysis server instead of the CLI.
@@ -207,6 +211,11 @@ template("dart_library") {
         rebase_path(depfile),
         "--depname",
         rebase_path(source_file, root_build_dir),
+        "--url-mapping",
+        "dart:zircon," + rebase_path(zircon_sdk_ext_lib),
+        "dart:fuchsia," + rebase_path(fuchsia_sdk_ext_lib),
+        "dart:mozart.internal," + rebase_path(mozart_dart_sdk_ext_lib),
+        "dart:ui," + rebase_path(dart_ui_path),
       ]
 
       deps = [
