@@ -20,9 +20,15 @@ import("//build/rust/rust_artifact.gni")
 #     includes things like actions that generate Rust code. It typically doesn't
 #     need to be set.
 #
-#   with_tests (optional)
-#     Builds tests associated with the binary. This will create a
-#     `<name>-bin-test` test file in the output directory.
+#   with_tests (optional) #DEPRECATED
+#   with_unit_tests (optional)
+#     Builds unit tests associated with the binary. This will create a
+#     `<name>-bin-unit-test` test file in the output directory.
+#
+#   with_integration_tests (optional)
+#     Builds integration tests associated with the binary (/tests). This will
+#     create a `<name>-<test-file-name>-bin-integration-test` test file in
+#     the output directory.
 #
 #   output_name (optional)
 #     Name of the output file.
@@ -41,6 +47,8 @@ template("rust_binary") {
                              "output_name",
                              "source_dir",
                              "with_tests",
+                             "with_unit_tests",
+                             "integration_tests",
                            ])
     type = "bin"
   }

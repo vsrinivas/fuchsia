@@ -116,11 +116,29 @@ template("rust_artifact") {
     group_deps += [ ":${target_name}_bin" ]
   }
 
-  if (defined(invoker.with_tests) && invoker.with_tests) {
+  if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
+    (defined(invoker.with_tests) && invoker.with_tests)) {
+    copy("${target_name}_unit_test") {
+      base_out_dir = "$root_build_dir/rust_targets"
+      sources = [
+        "$base_out_dir/$name-$type-unit-test",
+      ]
+
+      outputs = [
+        "$root_out_dir/$name-$type-unit-test",
+      ]
+
+      deps = [
+        ":$build_target_name",
+      ]
+    }
+
+    # for backwards compatability to not break builds
+    # TODO(bwb): remove this after landing dependent CLs
     copy("${target_name}_test") {
       base_out_dir = "$root_build_dir/rust_targets"
       sources = [
-        "$base_out_dir/$name-$type-test",
+        "$base_out_dir/$name-$type-unit-test",
       ]
 
       outputs = [
@@ -132,7 +150,29 @@ template("rust_artifact") {
       ]
     }
 
+    group_deps += [ ":${target_name}_unit_test" ]
     group_deps += [ ":${target_name}_test" ]
+  }
+
+  if ((defined(invoker.integration_tests))) {
+    foreach(test_name, invoker.integration_tests) {
+      copy("${target_name}_${test_name}_integration_test") {
+        base_out_dir = "$root_build_dir/rust_targets"
+        sources = [
+          "$base_out_dir/$name-$test_name-$type-integration-test",
+        ]
+
+        outputs = [
+          "$root_out_dir/$name-$test_name-$type-integration-test",
+        ]
+
+        deps = [
+          ":$build_target_name",
+        ]
+      }
+
+      group_deps += [ ":${target_name}_${test_name}_integration_test" ]
+    }
   }
 
   action(build_target_name) {
@@ -193,10 +233,20 @@ template("rust_artifact") {
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
     ]
 
-    if (defined(invoker.with_tests) && invoker.with_tests) {
+  if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
+    (defined(invoker.with_tests) && invoker.with_tests)) {
       args += [ "--with-tests" ]
 
       outputs += [ "$base_out_dir/$name-$type-test" ]
+      outputs += [ "$base_out_dir/$name-$type-unit-test" ]
+    }
+
+    if (defined(invoker.integration_tests)) {
+      args += [ "--with-tests" ]
+
+      foreach(test_name, invoker.integration_tests) {
+        outputs += [ "$base_out_dir/$name-$test_name-$type-integration-test" ]
+      }
     }
 
     if (use_frozen_with_cargo) {

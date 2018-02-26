@@ -20,9 +20,15 @@ import("//build/rust/rust_artifact.gni")
 #     includes things like actions that generate Rust code. It typically doesn't
 #     need to be set.
 #
-#   with_tests (optional)
+#   with_tests (optional) #DEPRECATED
+#   with_unit_tests (optional)
 #     Builds tests associated with the library. This will create a
-#     `<name>-lib-test` test file in the output directory.
+#     `<name>-lib-unit-test` test file in the output directory.
+#
+#   with_integration_tests (optional)
+#     Builds integration tests associated with the library (/tests). This will
+#     create a `<name>-<test-file-name>-lib-integration-test` test file in
+#     the output directory.
 #
 # Example of usage:
 #
@@ -37,7 +43,9 @@ template("rust_library") {
                              "name",
                              "non_rust_deps",
                              "source_dir",
-                             "with_tests",
+                             "with_tests", # alias for with_unit_tests
+                             "with_unit_tests",
+                             "integration_tests",
                            ])
     type = "lib"
   }

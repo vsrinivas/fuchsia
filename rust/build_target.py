@@ -186,8 +186,8 @@ def main():
 
     if args.with_tests:
         test_args = list(call_args)
-        test_args[1] = "test"
-        test_args.append("--no-run")
+        test_args[1] = "build"
+        test_args.append("--tests")
         test_args.append("--message-format=json")
         retcode, stdout, _ = run_command(test_args, env, args.crate_root)
         if retcode != 0:
@@ -198,19 +198,29 @@ def main():
             print(stdout + stderr)
             return retcode
         generated_test_path = None
+        test_name = None
         for line in stdout.splitlines():
             data = json.loads(line)
             if "profile" in data and data["profile"]["test"]:
               generated_test_path = data["filenames"][0]
-              break
-        if not generated_test_path:
-            print("Unable to locate resulting test file")
-            return 1
-        dest_test_path = os.path.join(args.out_dir,
-                                      "%s-%s-test" % (args.name, args.type))
-        if os.path.islink(dest_test_path):
-            os.unlink(dest_test_path)
-        os.symlink(generated_test_path, dest_test_path)
+              # only integration tests are marked as 'test', unit tests are 'lib'
+              if data["target"]["kind"][0] == "test":
+                test_type = 'integration'
+                if "target" in data and data["target"]["name"]:
+                    test_name = data["target"]["name"]
+              else:
+                test_type = 'unit'
+            if generated_test_path and test_type:
+                if test_name:
+                    dest_test_path = os.path.join(args.out_dir,
+                            "%s-%s-%s-%s-test" % (args.name, test_name, args.type, test_type))
+                else:
+                    # maintain support for unit tests
+                    dest_test_path = os.path.join(args.out_dir,
+                            "%s-%s-%s-test" % (args.name, args.type, test_type))
+                if os.path.islink(dest_test_path):
+                    os.unlink(dest_test_path)
+                os.symlink(generated_test_path, dest_test_path)
 
     return 0
 
