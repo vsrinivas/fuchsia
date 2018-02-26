@@ -58,6 +58,10 @@ class Device {
     // ddk device methods
     void Unbind();
     void Release();
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                        size_t out_len, size_t* out_actual);
+    void MacUnbind();
+    void MacRelease();
 
     // ddk wlanmac_protocol_ops methods
     zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
@@ -107,6 +111,14 @@ class Device {
 
     // Configure RfVal tables
     zx_status_t InitializeRfVal();
+
+    zx_status_t AddPhyDevice();
+    zx_status_t AddMacDevice();
+
+    zx_status_t PhyQuery(uint8_t* buf, size_t len, size_t* actual) const;
+    zx_status_t CreateIface(const void* in_buf, size_t in_len, void* out_buf,
+                            size_t out_len, size_t* out_actual);
+    zx_status_t DestroyIface(const void* in_buf, size_t in_len);
 
     // read and write general registers
     zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
@@ -203,8 +215,9 @@ class Device {
     size_t terminal_pad_len();
     size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
 
-    zx_device_t* zxdev_;
     zx_device_t* parent_;
+    zx_device_t* zxdev_;
+    zx_device_t* wlanmac_dev_;
 
     usb_protocol_t usb_;
     fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
@@ -248,6 +261,7 @@ class Device {
 
     std::mutex lock_;
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
+    uint16_t iface_id_ = 0;
 };
 
 }  // namespace ralink

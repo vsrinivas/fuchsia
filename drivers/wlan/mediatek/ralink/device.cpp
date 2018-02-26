@@ -5,6 +5,9 @@
 #include "device.h"
 #include "ralink.h"
 
+#include "garnet/lib/wlan/fidl/iface.fidl.h"
+#include "garnet/lib/wlan/fidl/phy.fidl.h"
+
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -13,7 +16,9 @@
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/mac.h>
+#include <wlan/protocol/phy.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zx/vmo.h>
@@ -73,7 +78,7 @@ int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
 namespace ralink {
 
 #define DEV(c) static_cast<Device*>(c)
-static zx_protocol_device_t device_ops = {
+static zx_protocol_device_t wlanphy_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open = nullptr,
@@ -84,10 +89,36 @@ static zx_protocol_device_t device_ops = {
     .read = nullptr,
     .write = nullptr,
     .get_size = nullptr,
+    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                size_t out_len, size_t* out_actual) -> zx_status_t {
+                    return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len,
+                            out_actual);
+    },
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+};
+
+static zx_protocol_device_t wlanmac_device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open = nullptr,
+    .open_at = nullptr,
+    .close = nullptr,
+    .unbind = [](void* ctx) { DEV(ctx)->MacUnbind(); },
+    .release = [](void* ctx) { DEV(ctx)->MacRelease(); },
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
     .ioctl = nullptr,
     .suspend = nullptr,
     .resume = nullptr,
     .rxrpc = nullptr,
+
+};
+
+static wlanphy_protocol_ops_t wlanphy_ops = {
+    .reserved = 0,
 };
 
 static wlanmac_protocol_ops_t wlanmac_ops = {
@@ -229,15 +260,7 @@ zx_status_t Device::Bind() {
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "ralink";
-    args.ctx = this;
-    args.ops = &device_ops;
-    args.proto_id = ZX_PROTOCOL_WLANMAC;
-    args.proto_ops = &wlanmac_ops;
-
-    status = device_add(parent_, &args, &zxdev_);
+    status = AddPhyDevice();
     if (status != ZX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
@@ -3234,12 +3257,194 @@ void Device::HandleTxComplete(usb_request_t* request) {
 
 void Device::Unbind() {
     debugfn();
+    device_remove(wlanmac_dev_);
     device_remove(zxdev_);
 }
 
 void Device::Release() {
     debugfn();
     delete this;
+}
+
+zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                          size_t out_len, size_t* out_actual) {
+    debugfn();
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    switch (op) {
+    case IOCTL_WLANPHY_QUERY:
+        status = PhyQuery(static_cast<uint8_t*>(out_buf), out_len, out_actual);
+        break;
+    case IOCTL_WLANPHY_CREATE_IFACE:
+        status = CreateIface(in_buf, in_len, out_buf, out_len, out_actual);
+        break;
+    case IOCTL_WLANPHY_DESTROY_IFACE:
+        status = DestroyIface(in_buf, in_len);
+        *out_actual = 0;
+        break;
+    default:
+        errorf("ioctl unknown: %0x\n", op);
+    }
+    return status;
+}
+
+void Device::MacUnbind() {
+    debugfn();
+    device_remove(wlanmac_dev_);
+}
+
+void Device::MacRelease() {
+    debugfn();
+    // Do not delete this right now, as the wlanmac device shares a context with the wlanphy device.
+    // When the wlanphy is released, then the memory will be freed. We do forget that this device
+    // existed though.
+    std::lock_guard<std::mutex> guard(lock_);
+    wlanmac_dev_ = nullptr;
+    // Bump the iface id in case the phy isn't being released and we want to create another iface.
+    iface_id_++;
+}
+
+zx_status_t Device::AddPhyDevice() {
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ralink";
+    args.ctx = this;
+    args.ops = &wlanphy_device_ops;
+    args.proto_id = ZX_PROTOCOL_WLANPHY;
+    args.proto_ops = &wlanphy_ops;
+
+    return device_add(parent_, &args, &zxdev_);
+}
+
+zx_status_t Device::AddMacDevice() {
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ralink-wlanmac";
+    args.ctx = this;
+    args.ops = &wlanmac_device_ops;
+    args.proto_id = ZX_PROTOCOL_WLANMAC;
+    args.proto_ops = &wlanmac_ops;
+
+    return device_add(zxdev_, &args, &wlanmac_dev_);
+}
+
+zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
+    debugfn();
+    auto info = wlan::phy::WlanPhyInfo::New();
+    info->driver_features = f1dl::Array<wlan::phy::DriverFeature>::New(0);
+
+    info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
+    info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);
+    info->supported_phys.push_back(wlan::phy::SupportedPhy::OFDM);
+    info->supported_phys.push_back(wlan::phy::SupportedPhy::HT);
+
+    info->mac_roles.push_back(wlan::phy::MacRole::CLIENT);
+
+    info->caps.push_back(wlan::phy::Capability::SHORT_PREAMBLE);
+    info->caps.push_back(wlan::phy::Capability::SHORT_SLOT_TIME);
+
+    auto band24 = wlan::phy::BandInfo::New();
+    band24->ht_caps = wlan::phy::HtCapabilities::New();
+    band24->supported_channels = wlan::phy::ChannelList::New();
+    band24->description = "2.4 GHz";
+    band24->ht_caps->ht_capability_info = 0x01fe;
+    band24->ht_caps->supported_mcs_set =
+        f1dl::Array<uint8_t>{
+            0xff, (rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
+    band24->basic_rates = f1dl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+    band24->supported_channels->base_freq = 2417;
+    band24->supported_channels->channels =
+        f1dl::Array<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+
+    info->bands.push_back(std::move(band24));
+
+    if (rt_type_ == RT5592) {
+        auto band5 = wlan::phy::BandInfo::New();
+        band5->ht_caps = wlan::phy::HtCapabilities::New();
+        band5->supported_channels = wlan::phy::ChannelList::New();
+        band5->description = "5 GHz";
+        band5->ht_caps->ht_capability_info = 0x01fe;
+        band5->ht_caps->supported_mcs_set =
+            f1dl::Array<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
+        band5->basic_rates = f1dl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
+        band5->supported_channels->base_freq = 5000;
+        band5->supported_channels->channels =
+            f1dl::Array<uint8_t>{
+                        36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
+                        60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
+                        118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
+                        149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196,
+            };
+
+        info->bands.push_back(std::move(band5));
+    }
+
+    if (len < info->GetSerializedSize()) { return ZX_ERR_BUFFER_TOO_SMALL; }
+    if (!info->Serialize(buf, info->GetSerializedSize(), actual)) { return ZX_ERR_IO; }
+    return ZX_OK;
+}
+
+zx_status_t Device::CreateIface(const void* in_buf, size_t in_len, void* out_buf,
+                                size_t out_len, size_t* out_actual) {
+    debugfn();
+    auto req = wlan::phy::CreateIfaceRequest::New();
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
+        return ZX_ERR_IO;
+    }
+
+    std::lock_guard<std::mutex> guard(lock_);
+    if (wlanmac_dev_ != nullptr) {
+        // Only one interface supported for now.
+        return ZX_ERR_ALREADY_BOUND;
+    }
+
+    if (req->role != wlan::phy::MacRole::CLIENT) {
+        errorf("Only CLIENT role is supported right now\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Build the response now, so if the return buffer is too small, we find out before we create
+    // the device.
+    auto info = wlan::iface::WlanIfaceInfo::New();
+    info->id = iface_id_;
+    if (out_len < info->GetSerializedSize()) { return ZX_ERR_BUFFER_TOO_SMALL; }
+    if (!info->Serialize(out_buf, info->GetSerializedSize(), out_actual)) { return ZX_ERR_IO; }
+
+    zx_status_t status = AddMacDevice();
+    if (status != ZX_OK) {
+        errorf("could not add iface device err=%d\n", status);
+        // Make sure the output buffer isn't misinterpreted by setting the actual size to 0 and
+        // clearing the first few bytes of the buffer.
+        *out_actual = 0;
+        memset(out_buf, 0, std::min<size_t>(out_len, 64));
+    } else {
+        infof("iface added\n");
+    }
+
+    return status;
+}
+
+zx_status_t Device::DestroyIface(const void* in_buf, size_t in_len) {
+    debugfn();
+    auto req = wlan::phy::DestroyIfaceRequest::New();
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
+        return ZX_ERR_IO;
+    }
+
+    std::lock_guard<std::mutex> guard(lock_);
+    if (wlanmac_dev_ == nullptr) {
+        errorf("calling destroy iface when no iface exists\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (req->id != iface_id_) {
+        errorf("unknown iface id: %u (expected: %u)\n", req->id, iface_id_);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    device_remove(wlanmac_dev_);
+    return ZX_OK;
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
