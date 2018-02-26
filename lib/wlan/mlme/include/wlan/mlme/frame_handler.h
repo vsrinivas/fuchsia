@@ -35,6 +35,16 @@
         return Handle##mgmtFrameType(frame, info);                                      \
     }
 
+#define WLAN_DECL_FUNC_HANDLE_CTRL(ctrlFrameType)                                               \
+    WLAN_DECL_VIRT_FUNC_HANDLE(Handle##ctrlFrameType, const ImmutableCtrlFrame<ctrlFrameType>&, \
+                               const wlan_rx_info_t&)
+
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_CTRL(ctrlFrameType)                              \
+    zx_status_t HandleCtrlFrameInternal(const ImmutableCtrlFrame<ctrlFrameType>& frame, \
+                                        const wlan_rx_info_t& info) {                   \
+        return Handle##ctrlFrameType(frame, info);                                      \
+    }
+
 #define WLAN_DECL_VIRT_FUNC_HANDLE_DATA(methodName, BodyType)                           \
     WLAN_DECL_VIRT_FUNC_HANDLE(Handle##methodName, const ImmutableDataFrame<BodyType>&, \
                                const wlan_rx_info_t&)
@@ -163,6 +173,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MGMT(AddBaRequestFrame)
     WLAN_DECL_FUNC_HANDLE_MGMT(AddBaResponseFrame)
 
+    // Control frame handlers.
+    WLAN_DECL_FUNC_HANDLE_CTRL(PsPollFrame)
+
    private:
     // Internal Service Message handlers.
     template <typename Message>
@@ -218,6 +231,14 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(NullDataFrame, NilHeader)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(DataFrame, LlcHeader)
+
+    // Internal Control frame handlers.
+    template <typename Body>
+    zx_status_t HandleFrameInternal(const ImmutableCtrlFrame<Body>& frame,
+                                    const wlan_rx_info_t& info) {
+        return HandleCtrlFrameInternal(frame, info);
+    }
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_CTRL(PsPollFrame)
 
     // Frame target which will only receive the current frame. Will be reset after each frame.
     // TODO(hahnr): This is still not exactly what I fancy but good enough for now.

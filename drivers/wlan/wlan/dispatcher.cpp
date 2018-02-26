@@ -177,8 +177,29 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
 zx_status_t Dispatcher::HandleCtrlPacket(const Packet* packet) {
     debugfn();
 
-    // Currently not used.
-    return ZX_OK;
+    if (packet->len() < sizeof(FrameControl)) {
+        errorf("short control frame len=%zu\n", packet->len());
+        return ZX_OK;
+    }
+
+    auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
+    ZX_DEBUG_ASSERT(rxinfo);
+
+    auto fc = packet->field<FrameControl>(0);
+    switch (fc->subtype()) {
+    case ControlSubtype::kPsPoll: {
+        if (packet->len() != sizeof(PsPollFrame)) {
+            errorf("short ps poll frame len=%zu\n", packet->len());
+            return ZX_OK;
+        }
+        auto ps_poll = reinterpret_cast<const PsPollFrame*>(packet->data());
+        auto frame = ImmutableCtrlFrame<PsPollFrame>(ps_poll, nullptr, 0);
+        return mlme_->HandleFrame(frame, *rxinfo);
+    }
+    default:
+        warnf("unsupported control subtype %02x\n", fc->subtype());
+        return ZX_OK;
+    }
 }
 
 zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {

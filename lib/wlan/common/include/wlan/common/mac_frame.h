@@ -679,6 +679,9 @@ template <typename Header> using ImmutableBaseFrame = ImmutableFrame<Header, Pay
 template <typename T> using MgmtFrame = Frame<MgmtFrameHeader, T>;
 template <typename T> using ImmutableMgmtFrame = ImmutableFrame<MgmtFrameHeader, T>;
 
+template <typename T> using CtrlFrame = BaseFrame<T>;
+template <typename T> using ImmutableCtrlFrame = ImmutableBaseFrame<T>;
+
 template <typename T> using DataFrame = Frame<DataFrameHeader, T>;
 template <typename T> using ImmutableDataFrame = ImmutableFrame<DataFrameHeader, T>;
 
