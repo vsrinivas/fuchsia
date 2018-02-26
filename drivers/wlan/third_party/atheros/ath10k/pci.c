@@ -41,14 +41,9 @@ enum ath10k_pci_reset_mode {
     ATH10K_PCI_RESET_WARM_ONLY = 1,
 };
 
+// MODULE PARAMETERS
 static unsigned int ath10k_pci_irq_mode = ATH10K_PCI_IRQ_AUTO;
 static unsigned int ath10k_pci_reset_mode = ATH10K_PCI_RESET_AUTO;
-
-module_param_named(irq_mode, ath10k_pci_irq_mode, uint, 0644);
-MODULE_PARM_DESC(irq_mode, "0: auto, 1: legacy, 2: msi (default: 0)");
-
-module_param_named(reset_mode, ath10k_pci_reset_mode, uint, 0644);
-MODULE_PARM_DESC(reset_mode, "0: auto, 1: warm only (default: 0)");
 
 /* how long wait to wait for target to initialise, in ms */
 #define ATH10K_PCI_TARGET_WAIT 3000
