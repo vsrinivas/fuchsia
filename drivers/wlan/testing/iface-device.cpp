@@ -43,9 +43,6 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
         return DEV(ctx)->SetChannel(options, chan);
     },
-    .set_bss = [](void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type) -> zx_status_t {
-        return ZX_OK;
-    },
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return ZX_OK;
     },

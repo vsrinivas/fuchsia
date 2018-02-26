@@ -314,10 +314,6 @@ typedef struct wlanmac_protocol_ops {
     // Set the radio channel
     zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
 
-    // Sets the BSS the station is joining
-    // TODO(hahnr): Remove.
-    zx_status_t (*set_bss)(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type);
-
     // Configures a BSS which the STA is either joining or managing.
     zx_status_t (*configure_bss)(void* ctx, uint32_t options, wlan_bss_config_t* config);
 

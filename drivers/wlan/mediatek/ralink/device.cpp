@@ -103,7 +103,6 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
         return DEV(ctx)->WlanmacSetChannel(options, chan);
     },
-    .set_bss = nullptr, // deprecated
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBss(options, config);
     },
@@ -3802,12 +3801,6 @@ setchan_failure:
            wlan::common::ChanStr(cfg_chan_).c_str(), wlan::common::ChanStr(*chan).c_str(), status);
 
     return status;
-}
-
-// TODO(hahnr): Remove.
-zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
-    ZX_DEBUG_ASSERT(false);
-    return ZX_OK;
 }
 
 zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
