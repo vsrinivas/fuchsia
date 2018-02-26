@@ -48,8 +48,7 @@ private:
     Token LexIdentifier();
     Token LexEscapedIdentifier();
     Token LexStringLiteral();
-    Token LexCXXComment();
-    Token LexCComment();
+    Token LexComment();
 
     const SourceFile& source_file_;
     const IdentifierTable* identifier_table_;

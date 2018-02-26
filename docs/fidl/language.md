@@ -36,14 +36,14 @@ Topics for discussion:
 
 #### Comments
 
-FIDL supports C-style single-line and multiline comments. They may contain UTF-8
-content (which is of course ignored).
+FIDL supports C++-style comments. These go from `//` to the end of the
+line. They may contain UTF-8 content (which is of course ignored).
 
 ```
-// this is a single-line comment
-
-/* this is a multi-
- * line comment */
+// this is a comment
+struct Foo { // so is this
+    int32 f; // and this
+}; // last one!
 ```
 
 #### Document Comments

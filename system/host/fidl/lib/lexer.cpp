@@ -122,7 +122,7 @@ Token Lexer::LexStringLiteral() {
     }
 }
 
-Token Lexer::LexCXXComment() {
+Token Lexer::LexComment() {
     // Consume the second /.
     assert(Peek() == '/');
     Consume();
@@ -137,31 +137,6 @@ Token Lexer::LexCXXComment() {
         default:
             Consume();
             continue;
-        }
-    }
-}
-
-Token Lexer::LexCComment() {
-    // Consume the *.
-    assert(Peek() == '*');
-    auto last = Consume();
-
-    // TODO(kulakowski) Commit to either true C-style comments, or
-    // support nesting of /* */.
-
-    // Lexing a C-style /* comment */. Go to the next matching
-    // delimiter.
-    for (;;) {
-        auto next = Consume();
-        switch (next) {
-        case 0:
-            return Finish(Token::Kind::NotAToken);
-        case '/':
-            if (last == '*')
-                return Finish(Token::Kind::Comment);
-        // Fall through.
-        default:
-            last = next;
         }
     }
 }
@@ -287,9 +262,7 @@ Token Lexer::Lex() {
         // Maybe the start of a comment.
         switch (Peek()) {
         case '/':
-            return LexCXXComment();
-        case '*':
-            return LexCComment();
+            return LexComment();
         default:
             return Finish(Token::Kind::NotAToken);
         }
