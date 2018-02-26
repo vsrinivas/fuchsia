@@ -6,7 +6,16 @@ package templates
 
 const Const = `
 {{- define "ConstDeclaration" }}
-// TODO(abarth): Enable when we can actually handle constant declarations.
-// constexpr {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
+{{- if .Extern }}
+extern {{ .Decorator }} {{ .Type.Decl }} {{ .Name }};
+{{- else }}
+{{ .Decorator }} {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
+{{- end }}
+{{- end }}
+
+{{- define "ConstDefinition" }}
+{{- if .Extern }}
+{{ .Decorator }} {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
+{{- end }}
 {{- end }}
 `

@@ -20,13 +20,16 @@ type Decl interface {
 }
 
 type Type struct {
-	Decl string
+	Decl     string
+	DeclType types.DeclType
 }
 
 type Const struct {
-	Type Type
-	Name  string
-	Value string
+	Extern    bool
+	Decorator string
+	Type      Type
+	Name      string
+	Value     string
 }
 
 type Enum struct {
@@ -101,7 +104,7 @@ func (c *Const) Declaration(tmpls *template.Template, wr io.Writer) error {
 }
 
 func (c *Const) Definition(tmpls *template.Template, wr io.Writer) error {
-	return nil
+	return tmpls.ExecuteTemplate(wr, "ConstDefinition", c)
 }
 
 func (e *Enum) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
@@ -293,8 +296,7 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 func (c *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	case types.StringLiteral:
-		// TODO(abarth): Escape more characters (e.g., newline).
-		return fmt.Sprintf("\"%q\"", val.Value)
+		return fmt.Sprintf("%q", val.Value)
 	case types.NumericLiteral:
 		return val.Value
 	case types.TrueLiteral:
@@ -373,6 +375,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 		}
+		r.DeclType = declType
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
@@ -380,12 +383,30 @@ func (c *compiler) compileType(val types.Type) Type {
 }
 
 func (c *compiler) compileConst(val types.Const) Const {
-	r := Const{
-		c.compileType(val.Type),
-		changeIfReserved(val.Name),
-		c.compileConstant(val.Value),
+	if val.Type.Kind == types.StringType {
+		r := Const{
+			true,
+			"const",
+			Type{
+				Decl: "char",
+			},
+			changeIfReserved(val.Name) + "[]",
+			c.compileConstant(val.Value),
+		}
+		return r
+	} else {
+		r := Const{
+			false,
+			"constexpr",
+			c.compileType(val.Type),
+			changeIfReserved(val.Name),
+			c.compileConstant(val.Value),
+		}
+		if r.Type.DeclType == types.EnumDeclType {
+			r.Value = fmt.Sprintf("%s::%s", r.Type.Decl, r.Value)
+		}
+		return r
 	}
-	return r
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
