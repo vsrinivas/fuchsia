@@ -94,7 +94,7 @@ SystemT* Mozart::RegisterSystem(Args... args) {
   if (!system->initialized()) {
     uninitialized_systems_.insert(system);
     system->set_on_initialized_callback(
-        std::bind(&Mozart::OnSystemInitialized, this, std::placeholders::_1));
+        [this](System* system) { Mozart::OnSystemInitialized(system); });
   }
   return system;
 }

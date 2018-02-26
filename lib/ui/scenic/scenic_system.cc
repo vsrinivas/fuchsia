@@ -83,7 +83,7 @@ void ScenicSystem::Initialize() {
   SetToInitialized();
 };
 
-void ScenicSystem::GetDisplayInfo(
+void ScenicSystem::GetDisplayInfoImmediately(
     const ui_mozart::Mozart::GetDisplayInfoCallback& callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
@@ -93,13 +93,16 @@ void ScenicSystem::GetDisplayInfo(
   info->width_in_px = display->width_in_px();
   info->height_in_px = display->height_in_px();
 
+  callback(std::move(info));
+}
+
+void ScenicSystem::GetDisplayInfo(
+    const ui_mozart::Mozart::GetDisplayInfoCallback& callback) {
   if (initialized_) {
-    callback(std::move(info));
+    GetDisplayInfoImmediately(callback);
   } else {
     run_after_initialized_.push_back(
-        fxl::MakeCopyable([info = std::move(info), callback]() mutable {
-          callback(std::move(info));
-        }));
+        [this, callback]() { GetDisplayInfoImmediately(callback); });
   }
 };
 

@@ -32,6 +32,10 @@ class ScenicSystem : public mz::TempSystemDelegate {
   DisplayManager display_manager_;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
+  void GetDisplayInfoImmediately(
+      const ui_mozart::Mozart::GetDisplayInfoCallback& callback);
+
+  // TODO(MZ-452): Remove this when we externalize Displays.
   bool initialized_ = false;
   std::vector<fxl::Closure> run_after_initialized_;
 
