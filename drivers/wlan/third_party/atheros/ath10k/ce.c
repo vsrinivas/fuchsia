@@ -19,6 +19,13 @@
 #include "pci.h"
 #include "ce.h"
 #include "debug.h"
+#include "linuxisms.h"
+
+#include <assert.h>
+#include <limits.h>
+#include <string.h>
+
+#include <zircon/status.h>
 
 /*
  * Support for Copy Engine hardware, which is mainly used for
@@ -65,6 +72,7 @@ ath10k_set_ring_byte(unsigned int offset,
     return ((offset << addr_map->lsb) & addr_map->mask);
 }
 
+__UNUSED
 static inline unsigned int
 ath10k_get_ring_byte(unsigned int offset,
                      struct ath10k_hw_ce_regs_addr_map* addr_map) {
@@ -245,6 +253,7 @@ static inline void ath10k_ce_watermark_intr_disable(struct ath10k* ar,
                        host_ie_addr & ~(wm_regs->wm_mask));
 }
 
+__UNUSED
 static inline void ath10k_ce_error_intr_enable(struct ath10k* ar,
         uint32_t ce_ctrl_addr) {
     struct ath10k_hw_ce_misc_regs* misc_regs = ar->hw_ce_regs->misc_regs;
@@ -902,15 +911,11 @@ ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
                          const struct ce_attr* attr, struct ath10k_ce_ring** src_ring_ptr) {
     *src_ring_ptr = NULL;
     uint32_t nentries = attr->src_nentries;
-    dma_addr_t base_addr;
 
     nentries = roundup_pow_of_two(nentries);
 
     struct ath10k_ce_ring* src_ring =
-        kzalloc(sizeof(*src_ring) +
-                       (nentries *
-                        sizeof(*src_ring->per_transfer_context)),
-                       GFP_KERNEL);
+        calloc(1, sizeof(*src_ring) + (nentries * sizeof(*src_ring->per_transfer_context)));
     if (src_ring == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -918,28 +923,22 @@ ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
     src_ring->nentries = nentries;
     src_ring->nentries_mask = nentries - 1;
 
-    /*
-     * Legacy platforms that do not support cache
-     * coherent DMA are unsupported
-     */
-    src_ring->base_addr_owner_space_unaligned =
-        dma_alloc_coherent(ar->dev,
-                           (nentries * sizeof(struct ce_desc) +
-                            CE_DESC_RING_ALIGN),
-                           &base_addr, GFP_KERNEL);
-    if (!src_ring->base_addr_owner_space_unaligned) {
-        kfree(src_ring);
+    // io_buffer_init_aligned doesn't work with IO_BUFFER_CONTIG yet
+    static_assert(CE_DESC_RING_ALIGN <= PAGE_SIZE,
+                  "insufficient alignment guarantee when using io_buffer_init");
+
+    // Legacy platforms that do not support cache
+    // coherent DMA are unsupported
+    size_t buf_sz = nentries * sizeof(struct ce_desc);
+    zx_status_t ret = io_buffer_init(&src_ring->iobuf, buf_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        free(src_ring);
         return ZX_ERR_NO_MEMORY;
     }
 
-    src_ring->base_addr_ce_space_unaligned = base_addr;
-
-    src_ring->base_addr_owner_space = PTR_ALIGN(
-                                          src_ring->base_addr_owner_space_unaligned,
-                                          CE_DESC_RING_ALIGN);
-    src_ring->base_addr_ce_space = ALIGN(
-                                       src_ring->base_addr_ce_space_unaligned,
-                                       CE_DESC_RING_ALIGN);
+    src_ring->base_addr_owner_space = io_buffer_virt(&src_ring->iobuf);
+    src_ring->base_addr_ce_space = io_buffer_phys(&src_ring->iobuf);
+    ZX_DEBUG_ASSERT(src_ring->base_addr_ce_space + buf_sz <= 0x100000000ULL);
 
     *src_ring_ptr = src_ring;
     return ZX_OK;
@@ -950,15 +949,11 @@ ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_id,
                           const struct ce_attr* attr, struct ath10k_ce_ring** dest_ring_ptr) {
     *dest_ring_ptr = NULL;
     uint32_t nentries;
-    dma_addr_t base_addr;
 
     nentries = roundup_pow_of_two(attr->dest_nentries);
 
     struct ath10k_ce_ring* dest_ring =
-        kzalloc(sizeof(*dest_ring) +
-                        (nentries *
-                         sizeof(*dest_ring->per_transfer_context)),
-                        GFP_KERNEL);
+        calloc(1, sizeof(*dest_ring) + (nentries * sizeof(*dest_ring->per_transfer_context)));
     if (dest_ring == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -966,28 +961,22 @@ ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_id,
     dest_ring->nentries = nentries;
     dest_ring->nentries_mask = nentries - 1;
 
-    /*
-     * Legacy platforms that do not support cache
-     * coherent DMA are unsupported
-     */
-    dest_ring->base_addr_owner_space_unaligned =
-        dma_zalloc_coherent(ar->dev,
-                            (nentries * sizeof(struct ce_desc) +
-                             CE_DESC_RING_ALIGN),
-                            &base_addr, GFP_KERNEL);
-    if (!dest_ring->base_addr_owner_space_unaligned) {
-        kfree(dest_ring);
+    // io_buffer_init_aligned doesn't work with IO_BUFFER_CONTIG yet
+    static_assert(CE_DESC_RING_ALIGN <= PAGE_SIZE,
+                  "insufficient alignment guarantee when using io_buffer_init");
+
+    // Legacy platforms that do not support cache
+    // coherent DMA are unsupported
+    size_t buf_sz = nentries * sizeof(struct ce_desc);
+    zx_status_t ret = io_buffer_init(&dest_ring->iobuf, buf_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        free(dest_ring);
         return ZX_ERR_NO_MEMORY;
     }
 
-    dest_ring->base_addr_ce_space_unaligned = base_addr;
-
-    dest_ring->base_addr_owner_space = PTR_ALIGN(
-                                           dest_ring->base_addr_owner_space_unaligned,
-                                           CE_DESC_RING_ALIGN);
-    dest_ring->base_addr_ce_space = ALIGN(
-                                        dest_ring->base_addr_ce_space_unaligned,
-                                        CE_DESC_RING_ALIGN);
+    dest_ring->base_addr_owner_space = io_buffer_virt(&dest_ring->iobuf);
+    dest_ring->base_addr_ce_space = io_buffer_phys(&dest_ring->iobuf);
+    ZX_DEBUG_ASSERT(dest_ring->base_addr_ce_space + buf_sz <= 0x100000000ULL);
 
     *dest_ring_ptr = dest_ring;
     return ZX_OK;
@@ -1047,24 +1036,24 @@ void ath10k_ce_deinit_pipe(struct ath10k* ar, unsigned int ce_id) {
     ath10k_ce_deinit_dest_ring(ar, ce_id);
 }
 
+/*
+ * Make sure there's enough CE ringbuffer entries for HTT TX to avoid
+ * additional TX locking checks.
+ *
+ * For the lack of a better place do the check here.
+ */
+static_assert(2 * TARGET_NUM_MSDU_DESC <= (CE_HTT_H2T_MSG_SRC_NENTRIES - 1),
+              "Insufficient CE ringbuffer entries to hold MSDU descriptors\n");
+static_assert(2 * TARGET_10_4_NUM_MSDU_DESC_PFC <= (CE_HTT_H2T_MSG_SRC_NENTRIES - 1),
+              "Insufficient CE ringbuffer entries to hold MSDU descriptors (10.4 FW)\n");
+static_assert(2 * TARGET_TLV_NUM_MSDU_DESC <= (CE_HTT_H2T_MSG_SRC_NENTRIES - 1),
+              "Insufficient CE ringbuffer entries to hold MSDU descriptors (TLV FW)\n");
+
 zx_status_t ath10k_ce_alloc_pipe(struct ath10k* ar, int ce_id,
                                  const struct ce_attr* attr) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     struct ath10k_ce_pipe* ce_state = &ar_pci->ce_states[ce_id];
     zx_status_t ret;
-
-    /*
-     * Make sure there's enough CE ringbuffer entries for HTT TX to avoid
-     * additional TX locking checks.
-     *
-     * For the lack of a better place do the check here.
-     */
-    BUILD_BUG_ON(2 * TARGET_NUM_MSDU_DESC >
-                 (CE_HTT_H2T_MSG_SRC_NENTRIES - 1));
-    BUILD_BUG_ON(2 * TARGET_10_4_NUM_MSDU_DESC_PFC >
-                 (CE_HTT_H2T_MSG_SRC_NENTRIES - 1));
-    BUILD_BUG_ON(2 * TARGET_TLV_NUM_MSDU_DESC >
-                 (CE_HTT_H2T_MSG_SRC_NENTRIES - 1));
 
     ce_state->ar = ar;
     ce_state->id = ce_id;
@@ -1108,23 +1097,13 @@ void ath10k_ce_free_pipe(struct ath10k* ar, int ce_id) {
     struct ath10k_ce_pipe* ce_state = &ar_pci->ce_states[ce_id];
 
     if (ce_state->src_ring) {
-        dma_free_coherent(ar->dev,
-                          (ce_state->src_ring->nentries*
-                           sizeof(struct ce_desc) +
-                           CE_DESC_RING_ALIGN),
-                          ce_state->src_ring->base_addr_owner_space,
-                          ce_state->src_ring->base_addr_ce_space);
-        kfree(ce_state->src_ring);
+        io_buffer_release(&ce_state->src_ring->iobuf);
+        free(ce_state->src_ring);
     }
 
     if (ce_state->dest_ring) {
-        dma_free_coherent(ar->dev,
-                          (ce_state->dest_ring->nentries*
-                           sizeof(struct ce_desc) +
-                           CE_DESC_RING_ALIGN),
-                          ce_state->dest_ring->base_addr_owner_space,
-                          ce_state->dest_ring->base_addr_ce_space);
-        kfree(ce_state->dest_ring);
+        io_buffer_release(&ce_state->dest_ring->iobuf);
+        free(ce_state->dest_ring);
     }
 
     ce_state->src_ring = NULL;
@@ -1146,25 +1125,17 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
         addr = ath10k_ce_base_address(ar, id);
         ce.base_addr = addr;
 
-        ce.src_wr_idx =
-            ath10k_ce_src_ring_write_index_get(ar, addr);
-        ce.src_r_idx =
-            ath10k_ce_src_ring_read_index_get(ar, addr);
-        ce.dst_wr_idx =
-            ath10k_ce_dest_ring_write_index_get(ar, addr);
-        ce.dst_r_idx =
-            ath10k_ce_dest_ring_read_index_get(ar, addr);
+        ce.src_wr_idx = ath10k_ce_src_ring_write_index_get(ar, addr);
+        ce.src_r_idx = ath10k_ce_src_ring_read_index_get(ar, addr);
+        ce.dst_wr_idx = ath10k_ce_dest_ring_write_index_get(ar, addr);
+        ce.dst_r_idx = ath10k_ce_dest_ring_read_index_get(ar, addr);
 
         if (crash_data) {
             crash_data->ce_crash_data[id] = ce;
         }
 
         ath10k_err("[%02d]: 0x%08x %3u %3u %3u %3u", id,
-                   ce.base_addr,
-                   ce.src_wr_idx,
-                   ce.src_r_idx,
-                   ce.dst_wr_idx,
-                   ce.dst_r_idx);
+                   ce.base_addr, ce.src_wr_idx, ce.src_r_idx, ce.dst_wr_idx, ce.dst_r_idx);
     }
 
     mtx_unlock(&ar_pci->ce_lock);

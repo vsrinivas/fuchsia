@@ -20,6 +20,8 @@
 
 #include "hif.h"
 
+#include <ddk/io-buffer.h>
+
 #define CE_HTT_H2T_MSG_SRC_NENTRIES 8192
 
 /* Descriptor rings must be aligned to this boundary */
@@ -83,10 +85,7 @@ struct ath10k_ce_ring {
     unsigned int hw_index;
 
     /* Start of DMA-coherent area reserved for descriptors */
-    /* Host address space */
-    void* base_addr_owner_space_unaligned;
-    /* CE address space */
-    uint32_t base_addr_ce_space_unaligned;
+    io_buffer_t iobuf;
 
     /*
      * Actual start of descriptors.
@@ -97,7 +96,7 @@ struct ath10k_ce_ring {
     void* base_addr_owner_space;
 
     /* CE address space */
-    uint32_t base_addr_ce_space;
+    zx_paddr_t base_addr_ce_space;
 
     /* keep last */
     void* per_transfer_context[0];
