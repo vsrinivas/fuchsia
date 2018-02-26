@@ -135,8 +135,20 @@ private:
     // Creates a new video buffer and maps it into our address space.
     // The current streaming state must be StreamingState::STOPPED.
     zx_status_t CreateDataVideoBuffer();
-    zx_status_t StartStreaming();
-    zx_status_t StopStreaming();
+    zx_status_t SetBufferLocked(dispatcher::Channel* channel,
+                                const camera::camera_proto::VideoBufSetBufferReq& req,
+                                zx::handle&& rxed_handle) __TA_REQUIRES(lock_);
+
+    zx_status_t StartStreamingLocked(dispatcher::Channel* channel,
+                                     const camera::camera_proto::VideoBufStartReq& req)
+        __TA_REQUIRES(lock_);
+    zx_status_t StopStreamingLocked(dispatcher::Channel* channel,
+                                    const camera::camera_proto::VideoBufStopReq& req)
+        __TA_REQUIRES(lock_);
+
+    zx_status_t FrameReleaseLocked(dispatcher::Channel* channel,
+                                   const camera::camera_proto::VideoBufFrameReleaseReq& req)
+        __TA_REQUIRES(lock_);
 
     // Populates the free_reqs_ list with usb requests of the specified size.
     // Returns immediately if the list already contains large enough usb

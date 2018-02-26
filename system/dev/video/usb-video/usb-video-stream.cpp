@@ -491,6 +491,40 @@ zx_status_t UsbVideoStream::ProcessStreamChannel(dispatcher::Channel* channel) {
 }
 
 zx_status_t UsbVideoStream::ProcessVideoBufferChannel(dispatcher::Channel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    fbl::AutoLock lock(&lock_);
+
+    union {
+        camera::camera_proto::CmdHdr                  hdr;
+        camera::camera_proto::VideoBufSetBufferReq    set_buffer;
+        camera::camera_proto::VideoBufStartReq        vb_start;
+        camera::camera_proto::VideoBufStopReq         vb_stop;
+        camera::camera_proto::VideoBufFrameReleaseReq frame_release;
+    } req;
+
+    static_assert(sizeof(req) <= 256,
+                  "Request buffer is getting to be too large to hold on the stack!");
+
+    uint32_t req_size;
+    zx::handle out_handle;
+    zx_status_t res = channel->Read(&req, sizeof(req), &req_size, &out_handle);
+    if (res != ZX_OK) {
+        return res;
+    }
+
+    if (req_size < sizeof(req.hdr)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    switch (req.hdr.cmd) {
+    HREQ(CAMERA_VB_CMD_SET_BUFFER,    set_buffer,    SetBufferLocked,     fbl::move(out_handle));
+    HREQ(CAMERA_VB_CMD_START,         vb_start,      StartStreamingLocked);
+    HREQ(CAMERA_VB_CMD_STOP,          vb_stop,       StopStreamingLocked);
+    HREQ(CAMERA_VB_CMD_FRAME_RELEASE, frame_release, FrameReleaseLocked);
+    default:
+        zxlogf(ERROR, "Unrecognized video buffer command 0x%04x\n", req.hdr.cmd);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     return ZX_ERR_NOT_SUPPORTED;
 }
 #undef HREQ
@@ -549,6 +583,12 @@ zx_status_t UsbVideoStream::SetFormatLocked(dispatcher::Channel* channel,
     if (status != ZX_OK) {
         resp.result = status;
         zxlogf(ERROR, "could not find a mapping for the requested format\n");
+        return channel->Write(&resp, sizeof(resp));
+    }
+
+    if (streaming_state_ != StreamingState::STOPPED) {
+        resp.result = ZX_ERR_BAD_STATE;
+        zxlogf(ERROR, "cannot set video format while streaming is not stopped\n");
         return channel->Write(&resp, sizeof(resp));
     }
 
@@ -617,12 +657,21 @@ zx_status_t UsbVideoStream::CreateDataVideoBuffer() {
     return VideoBuffer::Create(fbl::move(vmo), &video_buffer_);
 }
 
-zx_status_t UsbVideoStream::StartStreaming() {
-    fbl::AutoLock lock(&lock_);
+zx_status_t UsbVideoStream::SetBufferLocked(dispatcher::Channel* channel,
+                                            const camera::camera_proto::VideoBufSetBufferReq& req,
+                                            zx::handle&& rxed_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t UsbVideoStream::StartStreamingLocked(dispatcher::Channel* channel,
+                                                 const camera::camera_proto::VideoBufStartReq& req) {
+    camera::camera_proto::VideoBufStartResp resp;
+    resp.hdr = req.hdr;
 
     if (!video_buffer_ || !video_buffer_->virt() ||
         streaming_state_ != StreamingState::STOPPED) {
-        return ZX_ERR_BAD_STATE;
+        resp.result = ZX_ERR_BAD_STATE;
+        return channel->Write(&resp, sizeof(resp));
     }
 
     // Initialize the state.
@@ -636,24 +685,29 @@ zx_status_t UsbVideoStream::StartStreaming() {
     zx_status_t status = usb_set_interface(&usb_, iface_num_,
                                            cur_streaming_setting_->alt_setting);
     if (status != ZX_OK) {
-        return status;
+        resp.result = status;
+        return channel->Write(&resp, sizeof(resp));
     }
     streaming_state_ = StreamingState::STARTED;
 
     while (!list_is_empty(&free_reqs_)) {
         QueueRequestLocked();
     }
-    return ZX_OK;
+    resp.result = ZX_OK;
+    return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbVideoStream::StopStreaming() {
-    fbl::AutoLock lock(&lock_);
-
+zx_status_t UsbVideoStream::StopStreamingLocked(dispatcher::Channel* channel,
+                                                const camera::camera_proto::VideoBufStopReq& req) {
     if (streaming_state_ != StreamingState::STARTED) {
-        return ZX_ERR_BAD_STATE;
+        camera::camera_proto::VideoBufStopResp resp;
+        resp.hdr = req.hdr;
+        resp.result = ZX_ERR_BAD_STATE;
+        return channel->Write(&resp, sizeof(resp));
     }
     // Need to wait for all the in-flight usb requests to complete
     // before we can be completely stopped.
+    // We won't send the stop response until then.
     streaming_state_ = StreamingState::STOPPING;
 
     // Switch to the zero bandwidth alternate setting.
@@ -663,6 +717,12 @@ zx_status_t UsbVideoStream::StopStreaming() {
     }
     return ZX_OK;
 }
+
+zx_status_t UsbVideoStream::FrameReleaseLocked(dispatcher::Channel* channel,
+                                               const camera::camera_proto::VideoBufFrameReleaseReq& req) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 
 void UsbVideoStream::QueueRequestLocked() {
     auto req = list_remove_head_type(&free_reqs_, usb_request_t, node);
@@ -683,6 +743,11 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
             zxlogf(TRACE, "setting video buffer as stopped, got %u frames\n",
                    num_frames_);
             streaming_state_ = StreamingState::STOPPED;
+
+            camera::camera_proto::VideoBufStopResp resp;
+            resp.hdr = { .cmd = CAMERA_VB_CMD_STOP };
+            resp.result = ZX_OK;
+            vb_channel_->Write(&resp, sizeof(resp));
         }
         return;
     }
