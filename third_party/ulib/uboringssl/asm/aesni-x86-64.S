@@ -1002,6 +1002,7 @@ aesni_ccm64_decrypt_blocks:
 .type	aesni_ctr32_encrypt_blocks,@function
 .align	16
 aesni_ctr32_encrypt_blocks:
+.cfi_startproc	
 	cmpq	$1,%rdx
 	jne	.Lctr32_bulk
 
@@ -1032,7 +1033,9 @@ aesni_ctr32_encrypt_blocks:
 .align	16
 .Lctr32_bulk:
 	leaq	(%rsp),%r11
+.cfi_def_cfa_register	%r11
 	pushq	%rbp
+.cfi_offset	%rbp,-16
 	subq	$128,%rsp
 	andq	$-16,%rsp
 
@@ -1567,17 +1570,23 @@ aesni_ctr32_encrypt_blocks:
 	movaps	%xmm0,112(%rsp)
 	pxor	%xmm15,%xmm15
 	movq	-8(%r11),%rbp
+.cfi_restore	%rbp
 	leaq	(%r11),%rsp
+.cfi_def_cfa_register	%rsp
 .Lctr32_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_ctr32_encrypt_blocks,.-aesni_ctr32_encrypt_blocks
 .globl	aesni_xts_encrypt
 .hidden aesni_xts_encrypt
 .type	aesni_xts_encrypt,@function
 .align	16
 aesni_xts_encrypt:
+.cfi_startproc	
 	leaq	(%rsp),%r11
+.cfi_def_cfa_register	%r11
 	pushq	%rbp
+.cfi_offset	%rbp,-16
 	subq	$112,%rsp
 	andq	$-16,%rsp
 	movups	(%r9),%xmm2
@@ -2032,17 +2041,23 @@ aesni_xts_encrypt:
 	pxor	%xmm14,%xmm14
 	pxor	%xmm15,%xmm15
 	movq	-8(%r11),%rbp
+.cfi_restore	%rbp
 	leaq	(%r11),%rsp
+.cfi_def_cfa_register	%rsp
 .Lxts_enc_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_xts_encrypt,.-aesni_xts_encrypt
 .globl	aesni_xts_decrypt
 .hidden aesni_xts_decrypt
 .type	aesni_xts_decrypt,@function
 .align	16
 aesni_xts_decrypt:
+.cfi_startproc	
 	leaq	(%rsp),%r11
+.cfi_def_cfa_register	%r11
 	pushq	%rbp
+.cfi_offset	%rbp,-16
 	subq	$112,%rsp
 	andq	$-16,%rsp
 	movups	(%r9),%xmm2
@@ -2534,21 +2549,35 @@ aesni_xts_decrypt:
 	pxor	%xmm14,%xmm14
 	pxor	%xmm15,%xmm15
 	movq	-8(%r11),%rbp
+.cfi_restore	%rbp
 	leaq	(%r11),%rsp
+.cfi_def_cfa_register	%rsp
 .Lxts_dec_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_xts_decrypt,.-aesni_xts_decrypt
 .globl	aesni_ocb_encrypt
 .hidden aesni_ocb_encrypt
 .type	aesni_ocb_encrypt,@function
 .align	32
 aesni_ocb_encrypt:
+.cfi_startproc	
 	leaq	(%rsp),%rax
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	movq	8(%rax),%rbx
 	movq	8+8(%rax),%rbp
 
@@ -2725,14 +2754,22 @@ aesni_ocb_encrypt:
 	pxor	%xmm14,%xmm14
 	pxor	%xmm15,%xmm15
 	leaq	40(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Locb_enc_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_ocb_encrypt,.-aesni_ocb_encrypt
 
 .type	__ocb_encrypt6,@function
@@ -2946,12 +2983,23 @@ __ocb_encrypt1:
 .type	aesni_ocb_decrypt,@function
 .align	32
 aesni_ocb_decrypt:
+.cfi_startproc	
 	leaq	(%rsp),%rax
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	movq	8(%rax),%rbx
 	movq	8+8(%rax),%rbp
 
@@ -3150,14 +3198,22 @@ aesni_ocb_decrypt:
 	pxor	%xmm14,%xmm14
 	pxor	%xmm15,%xmm15
 	leaq	40(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Locb_dec_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_ocb_decrypt,.-aesni_ocb_decrypt
 
 .type	__ocb_decrypt6,@function
@@ -3359,6 +3415,7 @@ __ocb_decrypt1:
 .type	aesni_cbc_encrypt,@function
 .align	16
 aesni_cbc_encrypt:
+.cfi_startproc	
 	testq	%rdx,%rdx
 	jz	.Lcbc_ret
 
@@ -3452,7 +3509,9 @@ aesni_cbc_encrypt:
 .align	16
 .Lcbc_decrypt_bulk:
 	leaq	(%rsp),%r11
+.cfi_def_cfa_register	%r11
 	pushq	%rbp
+.cfi_offset	%rbp,-16
 	subq	$16,%rsp
 	andq	$-16,%rsp
 	movq	%rcx,%rbp
@@ -3937,16 +3996,21 @@ aesni_cbc_encrypt:
 	xorps	%xmm0,%xmm0
 	pxor	%xmm1,%xmm1
 	movq	-8(%r11),%rbp
+.cfi_restore	%rbp
 	leaq	(%r11),%rsp
+.cfi_def_cfa_register	%rsp
 .Lcbc_ret:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	aesni_cbc_encrypt,.-aesni_cbc_encrypt
 .globl	aesni_set_decrypt_key
 .hidden aesni_set_decrypt_key
 .type	aesni_set_decrypt_key,@function
 .align	16
 aesni_set_decrypt_key:
+.cfi_startproc	
 .byte	0x48,0x83,0xEC,0x08
+.cfi_adjust_cfa_offset	8
 	call	__aesni_set_encrypt_key
 	shll	$4,%esi
 	testl	%eax,%eax
@@ -3979,7 +4043,9 @@ aesni_set_decrypt_key:
 	pxor	%xmm0,%xmm0
 .Ldec_key_ret:
 	addq	$8,%rsp
+.cfi_adjust_cfa_offset	-8
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .LSEH_end_set_decrypt_key:
 .size	aesni_set_decrypt_key,.-aesni_set_decrypt_key
 .globl	aesni_set_encrypt_key
@@ -3988,7 +4054,9 @@ aesni_set_decrypt_key:
 .align	16
 aesni_set_encrypt_key:
 __aesni_set_encrypt_key:
+.cfi_startproc	
 .byte	0x48,0x83,0xEC,0x08
+.cfi_adjust_cfa_offset	8
 	movq	$-1,%rax
 	testq	%rdi,%rdi
 	jz	.Lenc_key_ret
@@ -4282,7 +4350,9 @@ __aesni_set_encrypt_key:
 	pxor	%xmm4,%xmm4
 	pxor	%xmm5,%xmm5
 	addq	$8,%rsp
+.cfi_adjust_cfa_offset	-8
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .LSEH_end_set_encrypt_key:
 
 .align	16
