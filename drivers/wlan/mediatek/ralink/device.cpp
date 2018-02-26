@@ -116,10 +116,7 @@ constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-    : parent_(device),
-      usb_(usb),
-      rx_endpt_(bulk_in),
-      tx_endpts_(std::move(bulk_out)) {
+    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
 
@@ -3152,15 +3149,17 @@ void Device::HandleRxComplete(usb_request_t* request) {
 
     if (request->response.status == ZX_OK) {
         // Total bytes received is (request->response.actual) bytes
+        // request->response.actual := (a) + (b) + (c) + (d) + (e) + (f) + (g) + (h)
+        // rf.info.usb_dma_rx_pkt_len() := (b) + (c) + (d) + (e) + (f) + (g)
 
-        // RxInfo      :   4 bytes
-        // RxWI        :  16 bytes
-        // RxWI-Extra  :   8 bytes // Present only for RT5592
-        // MAC header  : (a) bytes // (a) + (b) is rxwi0.mpdu_total_byte_count()
-        // L2PAD       :   2 bytes // Present only if rx_desc.l2pad() is 1
-        // MAC payload : (b) bytes
-        // Padding     : 0~3 bytes // To align in 4 bytes
-        // RxDesc      :   4 bytes
+        // RxInfo      :   4 bytes // (a).
+        // RxWI        :  16 bytes // (b).
+        // RxWI-Extra  :   8 bytes // (c). Present only for RT5592
+        // MAC header  : (d) bytes // (d). (d) + (f) is rxwi0.mpdu_total_byte_count()
+        // L2PAD       :   2 bytes // (e). Present only if rx_desc.l2pad() is 1
+        // MAC payload : (f) bytes // (f). Start of (f) is 4-byte aligned
+        // Padding     : 0~3 bytes // (g). To align in 4 bytes
+        // RxDesc      :   4 bytes // (h).
 
         size_t rx_hdr_size = (rt_type_ == RT5592) ? 28 : 20;
 
@@ -3192,7 +3191,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
             auto len2 = rx_info.usb_dma_rx_pkt_len();
             auto len3 = rxwi0.mpdu_total_byte_count();
             auto len4 = rx_desc.l2pad() == 1 ? 2 : 0;
-            if (len1 != len2 + 8 || len1 % 4 != 0 || (len3 + len4) % 4 != 0) {
+            if (len1 != len2 + 8 || len1 % 4 != 0) {
                 warnf(
                     "[ralink] USB read size incongruous: response.actual %zu usb_dma_rx_pkt_len "
                     "%u rx_hdr_size %zu mpdu_total_byte_count %u l2pad_len %u\n",
