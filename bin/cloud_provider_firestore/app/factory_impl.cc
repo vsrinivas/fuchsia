@@ -6,10 +6,10 @@
 
 #include <grpc++/grpc++.h>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firestore {
 

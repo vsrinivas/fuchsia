@@ -5,6 +5,7 @@
 #ifndef PERIDOT_LIB_COBALT_COBALT_H_
 #define PERIDOT_LIB_COBALT_COBALT_H_
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/fxl/functional/auto_call.h"
@@ -12,7 +13,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cobalt {
 

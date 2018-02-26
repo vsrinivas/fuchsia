@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 #include "peridot/lib/ledger_client/constants.h"
 

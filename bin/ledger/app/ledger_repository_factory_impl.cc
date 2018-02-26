@@ -6,6 +6,7 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
@@ -16,7 +17,6 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 

@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
@@ -22,7 +23,6 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/capture.h"
 #include "peridot/lib/callback/set_when_called.h"
 

@@ -11,6 +11,7 @@
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -25,7 +26,6 @@
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 

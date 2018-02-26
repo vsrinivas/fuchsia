@@ -15,9 +15,9 @@ source_set("network") {
   ]
 
   public_deps = [
+    "//garnet/lib/backoff",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/lib/backoff",
     "//peridot/lib/callback",
     "//zircon/public/lib/zx",
   ]
@@ -50,10 +50,10 @@ source_set("unittests") {
 
   deps = [
     ":network",
+    "//garnet/lib/backoff/testing",
     "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netstack/fidl:net_address",
-    "//peridot/lib/backoff/testing",
     "//third_party/googletest:gtest",
   ]
 }

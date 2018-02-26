@@ -6,13 +6,13 @@
 
 #include <utility>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firestore {
 namespace {

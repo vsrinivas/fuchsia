@@ -11,9 +11,9 @@
 #include <sys/types.h>
 #include <thread>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/network/network_service_impl.h"

@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
+#include "garnet/lib/backoff/backoff.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
@@ -15,7 +16,6 @@
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
-#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/managed_container.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 

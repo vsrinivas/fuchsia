@@ -48,7 +48,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/lib/backoff",
+    "//garnet/lib/backoff",
     "//peridot/lib/callback",
     "//peridot/lib/convert",
   ]

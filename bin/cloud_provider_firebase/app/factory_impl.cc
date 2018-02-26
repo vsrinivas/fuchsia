@@ -4,9 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firebase {
 

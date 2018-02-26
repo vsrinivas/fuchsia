@@ -12,6 +12,7 @@ executable("app") {
 
   deps = [
     ":lib",
+    "//garnet/lib/backoff",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
@@ -22,7 +23,6 @@ executable("app") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/lib/backoff",
     "//zircon/public/lib/trace-provider",
   ]
 
@@ -117,6 +117,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/lib/backoff/testing",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -129,7 +130,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/lib/backoff/testing",
     "//peridot/lib/convert",
     "//peridot/public/lib/auth/fidl",
     "//third_party/googletest:gtest",

@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 
+#include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/lib/backoff/backoff.h"
 
 namespace ledger {
 namespace test {

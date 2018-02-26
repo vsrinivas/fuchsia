@@ -8,6 +8,7 @@
 #include <functional>
 #include <queue>
 
+#include "garnet/lib/backoff/backoff.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -21,7 +22,6 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {

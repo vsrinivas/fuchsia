@@ -15,8 +15,8 @@ source_set("firebase_auth") {
   ]
 
   public_deps = [
+    "//garnet/lib/backoff",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/backoff",
     "//peridot/lib/callback",
     "//peridot/public/lib/auth/fidl",
   ]
@@ -31,8 +31,8 @@ source_set("unittests") {
 
   deps = [
     ":firebase_auth",
+    "//garnet/lib/backoff/testing",
     "//garnet/lib/gtest",
-    "//peridot/lib/backoff/testing",
     "//peridot/lib/firebase_auth/testing",
   ]
 }

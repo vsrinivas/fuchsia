@@ -49,12 +49,12 @@ source_set("unittests") {
 
   deps = [
     ":impl",
+    "//garnet/lib/backoff/testing",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/netconnector",
-    "//peridot/lib/backoff/testing",
 
     # gtest matchers are in gmock.
     "//third_party/googletest:gmock",

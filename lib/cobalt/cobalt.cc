@@ -6,6 +6,7 @@
 
 #include <set>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
@@ -13,7 +14,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "peridot/lib/backoff/exponential_backoff.h"
 #include "peridot/lib/callback/waiter.h"
 
 namespace cobalt {

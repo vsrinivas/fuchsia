@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 visibility = [
-    "//peridot/bin/device_runner/*",
-    "//peridot/bin/story_runner/*",
-    "//peridot/bin/user_runner/*"
+  "//peridot/bin/device_runner/*",
+  "//peridot/bin/story_runner/*",
+  "//peridot/bin/user_runner/*",
 ]
 
 source_set("cobalt") {
@@ -20,8 +20,8 @@ source_set("cobalt") {
   ]
 
   deps = [
+    "//garnet/lib/backoff",
     "//garnet/public/lib/cobalt/fidl",
-    "//peridot/lib/backoff",
     "//peridot/lib/callback",
     "//peridot/lib/cobalt",
   ]

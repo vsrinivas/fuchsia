@@ -10,6 +10,7 @@
 
 #include <zx/socket.h>
 
+#include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -19,7 +20,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/backoff/testing/test_backoff.h"
 
 namespace ledger {
 namespace {

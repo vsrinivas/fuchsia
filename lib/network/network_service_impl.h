@@ -5,9 +5,9 @@
 #ifndef PERIDOT_LIB_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define PERIDOT_LIB_NETWORK_NETWORK_SERVICE_IMPL_H_
 
+#include "garnet/lib/backoff/backoff.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 #include "peridot/lib/network/network_service.h"

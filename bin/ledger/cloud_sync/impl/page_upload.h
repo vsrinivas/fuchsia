@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "garnet/lib/backoff/backoff.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/lib/backoff/backoff.h"
 #include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
