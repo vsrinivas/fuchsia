@@ -6,8 +6,6 @@
 
 #include <trace/event.h>
 
-#include "garnet/bin/media/fidl/fidl_type_conversions.h"
-
 namespace media {
 
 VideoConverter::VideoConverter() {
@@ -65,21 +63,20 @@ void VideoConverter::BuildColorspaceTable() {
   }
 }
 
-void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
-  FXL_DCHECK(media_type);
-
-  stream_type_ = media_type.To<std::unique_ptr<StreamType>>();
+void VideoConverter::SetStreamType(std::unique_ptr<StreamType> stream_type) {
+  stream_type_ = std::move(stream_type);
   FXL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
   video_stream_type_ = stream_type_->video();
-  FXL_DCHECK(video_stream_type_ != nullptr);
+  FXL_DCHECK(video_stream_type_);
 
   FXL_DCHECK(video_stream_type_->pixel_format() ==
              VideoStreamType::PixelFormat::kYv12)
       << "only YV12 video conversion is currently implemented";
 }
 
-mozart::Size VideoConverter::GetSize() {
+mozart::Size VideoConverter::GetSize() const {
   mozart::Size size;
+
   if (video_stream_type_ != nullptr) {
     size.width = video_stream_type_->width();
     size.height = video_stream_type_->height();
@@ -87,11 +84,13 @@ mozart::Size VideoConverter::GetSize() {
     size.width = 0;
     size.height = 0;
   }
+
   return size;
 }
 
-mozart::Size VideoConverter::GetPixelAspectRatio() {
+mozart::Size VideoConverter::GetPixelAspectRatio() const {
   mozart::Size pixel_aspect_ratio;
+
   if (video_stream_type_ != nullptr) {
     pixel_aspect_ratio.width = video_stream_type_->pixel_aspect_ratio_width();
     pixel_aspect_ratio.height = video_stream_type_->pixel_aspect_ratio_height();
@@ -99,6 +98,7 @@ mozart::Size VideoConverter::GetPixelAspectRatio() {
     pixel_aspect_ratio.width = 1;
     pixel_aspect_ratio.height = 1;
   }
+
   return pixel_aspect_ratio;
 }
 

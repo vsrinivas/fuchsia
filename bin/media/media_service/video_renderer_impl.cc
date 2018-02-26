@@ -6,6 +6,7 @@
 
 #include <trace/event.h>
 
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -29,15 +30,66 @@ VideoRendererImpl::VideoRendererImpl(
           this,
           std::move(video_renderer_request),
           owner),
+      media_renderer_binding_(this, std::move(media_renderer_request)),
       video_frame_source_(std::make_shared<VideoFrameSource>()) {
-  video_frame_source_->Bind(std::move(media_renderer_request));
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
+
+  video_frame_source_->SetStreamTypeRevisedCallback(
+      [this]() { status_publisher_.SendUpdates(); });
+
+  status_publisher_.SetCallbackRunner(
+      [this](const GetStatusCallback& callback, uint64_t version) {
+        VideoRendererStatusPtr status = VideoRendererStatus::New();
+        status->video_size = video_frame_source_->converter().GetSize().Clone();
+        status->pixel_aspect_ratio =
+            video_frame_source_->converter().GetPixelAspectRatio().Clone();
+        callback(version, std::move(status));
+      });
 }
 
-VideoRendererImpl::~VideoRendererImpl() {}
+VideoRendererImpl::~VideoRendererImpl() {
+  video_frame_source_->RemoveAllViews();
+}
+
+void VideoRendererImpl::GetSupportedMediaTypes(
+    const GetSupportedMediaTypesCallback& callback) {
+  callback(SupportedMediaTypes());
+}
+
+void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
+  if (!media_type || !media_type->details || !media_type->details->is_video()) {
+    FXL_LOG(ERROR) << "Invalid argument to SetMediaType call.";
+    if (media_renderer_binding_.is_bound()) {
+      media_renderer_binding_.Unbind();
+    }
+
+    return;
+  }
+
+  const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
+  FXL_DCHECK(details);
+
+  video_frame_source_->converter().SetStreamType(
+      media_type.To<std::unique_ptr<StreamType>>());
+  status_publisher_.SendUpdates();
+
+  FLOG(log_channel_, SetMediaType(std::move(media_type)));
+}
+
+void VideoRendererImpl::GetPacketConsumer(
+    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+  video_frame_source_->BindConsumer(std::move(packet_consumer_request));
+}
+
+void VideoRendererImpl::GetTimelineControlPoint(
+    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+  video_frame_source_->BindTimelineControlPoint(
+      std::move(control_point_request));
+}
 
 void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
                                   const GetStatusCallback& callback) {
-  video_frame_source_->GetStatus(version_last_seen, callback);
+  status_publisher_.Get(version_last_seen, callback);
 }
 
 void VideoRendererImpl::CreateView(
@@ -45,6 +97,24 @@ void VideoRendererImpl::CreateView(
   FXL_DCHECK(video_frame_source_);
   new View(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
            std::move(view_owner_request), video_frame_source_);
+}
+
+f1dl::Array<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
+  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
+  video_details->min_width = 0;
+  video_details->max_width = std::numeric_limits<uint32_t>::max();
+  video_details->min_height = 0;
+  video_details->max_height = std::numeric_limits<uint32_t>::max();
+  MediaTypeSetPtr supported_type = MediaTypeSet::New();
+  supported_type->medium = MediaTypeMedium::VIDEO;
+  supported_type->details = MediaTypeSetDetails::New();
+  supported_type->details->set_video(std::move(video_details));
+  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
+  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
+  f1dl::Array<MediaTypeSetPtr> supported_types =
+      f1dl::Array<MediaTypeSetPtr>::New(1);
+  supported_types[0] = std::move(supported_type);
+  return supported_types;
 }
 
 VideoRendererImpl::View::View(
@@ -56,17 +126,15 @@ VideoRendererImpl::View::View(
                        "Video Renderer"),
       video_frame_source_(video_frame_source),
       image_cycler_(session()) {
+  FXL_DCHECK(video_frame_source_);
+  video_frame_source_->AddView(this);
+
   parent_node().AddChild(image_cycler_);
 
-  FXL_DCHECK(video_frame_source_);
-  video_frame_source_->RegisterView(this);
-
-  SetReleaseHandler([this]() { delete this; });
+  SetReleaseHandler([this]() { video_frame_source_->RemoveView(this); });
 }
 
-VideoRendererImpl::View::~View() {
-  video_frame_source_->UnregisterView(this);
-}
+VideoRendererImpl::View::~View() {}
 
 void VideoRendererImpl::View::OnSceneInvalidated(
     ui_mozart::PresentationInfoPtr presentation_info) {
@@ -75,7 +143,7 @@ void VideoRendererImpl::View::OnSceneInvalidated(
   video_frame_source_->AdvanceReferenceTime(
       presentation_info->presentation_time);
 
-  mozart::Size video_size = video_frame_source_->GetSize();
+  mozart::Size video_size = video_frame_source_->converter().GetSize();
   if (!has_logical_size() || video_size.width == 0 || video_size.height == 0)
     return;
 

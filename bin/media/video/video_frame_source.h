@@ -8,12 +8,9 @@
 #include <queue>
 #include <unordered_set>
 
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/util/timeline_control_point.h"
 #include "garnet/bin/media/video/video_converter.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
-#include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
 #include "lib/media/flog/flog.h"
@@ -24,26 +21,46 @@
 
 namespace media {
 
-// Implements MediaRenderer for an app that wants to show video.
-class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
+// Implements MediaPacketConsumer for an app that wants to show video.
+class VideoFrameSource : public MediaPacketConsumerBase {
  public:
   VideoFrameSource();
 
   ~VideoFrameSource() override;
 
-  void Bind(f1dl::InterfaceRequest<MediaRenderer> media_renderer_request);
+  // Sets a callback that's called when the sink adopts a revised stream type
+  // carried on a packet.
+  void SetStreamTypeRevisedCallback(const fxl::Closure& callback) {
+    stream_type_revised_callback_ = callback;
+  }
 
-  void RegisterView(mozart::BaseView* view) { views_.insert(view); }
+  // Binds the packet consumer.
+  void BindConsumer(f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+    MediaPacketConsumerBase::Bind(std::move(request));
+  }
 
-  void UnregisterView(mozart::BaseView* view) { views_.erase(view); }
+  // Binds the timeline control point.
+  void BindTimelineControlPoint(
+      f1dl::InterfaceRequest<MediaTimelineControlPoint> request) {
+    timeline_control_point_.Bind(std::move(request));
+  }
+
+  // Gets the video converter.
+  VideoConverter& converter() { return converter_; }
+
+  // Adds a view.
+  void AddView(mozart::BaseView* view) { views_.insert(view); }
+
+  // Removes a view.
+  void RemoveView(mozart::BaseView* view) { views_.erase(view); }
+
+  // Removes all views.
+  void RemoveAllViews() { views_.clear(); }
 
   // Advances reference time to the indicated value. This ensures that
   // |GetSize| and |GetRgbaFrame| refer to the video frame appropriate to
   // the specified reference time.
   void AdvanceReferenceTime(int64_t reference_time);
-
-  // Returns the current video size.
-  mozart::Size GetSize() { return converter_.GetSize(); }
 
   // Determines if views should animate because presentation time is
   // progressing.
@@ -58,18 +75,6 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
 
  private:
   static constexpr uint32_t kPacketDemand = 3;
-
-  // MediaRenderer implementation.
-  void GetSupportedMediaTypes(
-      const GetSupportedMediaTypesCallback& callback) override;
-
-  void SetMediaType(MediaTypePtr media_type) override;
-
-  void GetPacketConsumer(f1dl::InterfaceRequest<MediaPacketConsumer>
-                             packet_consumer_request) override;
-
-  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
-                                   control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
   void OnPacketSupplied(
@@ -96,7 +101,6 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
     }
   }
 
-  f1dl::Binding<MediaRenderer> media_renderer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   std::unique_ptr<SuppliedPacket> held_packet_;
   TimelineFunction current_timeline_function_;
@@ -104,8 +108,8 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
   int64_t min_pts_ = kMinTime;
   VideoConverter converter_;
   std::unordered_set<mozart::BaseView*> views_;
-  FidlPublisher<VideoRenderer::GetStatusCallback> status_publisher_;
   MediaTimelineControlPoint::PrimeCallback prime_callback_;
+  fxl::Closure stream_type_revised_callback_;
   TimelineControlPoint timeline_control_point_;
 
   // We don't use FLOG_INSTANCE_CHANNEL, because we don't need to know the

@@ -20,13 +20,13 @@ class VideoConverter {
 
   // Sets the media type of the frames to be converted. 8-bit interleaved
   // RGBA output is assumed.
-  void SetMediaType(const MediaTypePtr& media_type);
+  void SetStreamType(std::unique_ptr<StreamType> stream_type);
 
   // Gets the size of the video.
-  mozart::Size GetSize();
+  mozart::Size GetSize() const;
 
   // Gets the pixel aspect ratio of the video.
-  mozart::Size GetPixelAspectRatio();
+  mozart::Size GetPixelAspectRatio() const;
 
   // Converts the frame in the payload into the provided RGBA buffer.
   void ConvertFrame(uint8_t* rgba_buffer,

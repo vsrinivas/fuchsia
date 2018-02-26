@@ -6,12 +6,13 @@
 
 #include <limits>
 
+#include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 
-VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
+VideoFrameSource::VideoFrameSource() {
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
 
@@ -39,36 +40,12 @@ VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
     held_packet_.reset();
     InvalidateViews();
   });
-
-  status_publisher_.SetCallbackRunner(
-      [this](const VideoRenderer::GetStatusCallback& callback,
-             uint64_t version) {
-        VideoRendererStatusPtr status = VideoRendererStatus::New();
-        status->video_size = converter_.GetSize().Clone();
-        status->pixel_aspect_ratio = converter_.GetPixelAspectRatio().Clone();
-        callback(version, std::move(status));
-      });
 }
 
 VideoFrameSource::~VideoFrameSource() {
   // Close the bindings before members are destroyed so we don't try to
   // destroy any callbacks that are pending on open channels.
-
-  if (media_renderer_binding_.is_bound()) {
-    media_renderer_binding_.Unbind();
-  }
-
   timeline_control_point_.Reset();
-}
-
-void VideoFrameSource::Bind(
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
-  media_renderer_binding_.Bind(std::move(media_renderer_request));
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
-  FLOG(log_channel_,
-       Config(SupportedMediaTypes(),
-              FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(this)),
-              FLOG_ADDRESS(&timeline_control_point_)));
 }
 
 void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
@@ -103,62 +80,6 @@ void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
     memset(rgba_buffer, 0,
            rgba_buffer_size.width * rgba_buffer_size.height * 4);
   }
-}
-
-void VideoFrameSource::GetStatus(
-    uint64_t version_last_seen,
-    const VideoRenderer::GetStatusCallback& callback) {
-  status_publisher_.Get(version_last_seen, callback);
-}
-
-void VideoFrameSource::GetSupportedMediaTypes(
-    const GetSupportedMediaTypesCallback& callback) {
-  callback(SupportedMediaTypes());
-}
-
-void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
-  // TODO(dalesat): Shouldn't DCHECK these...need an RCHECK.
-  FXL_DCHECK(media_type);
-  FXL_DCHECK(media_type->details);
-  const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  FXL_DCHECK(details);
-
-  converter_.SetMediaType(media_type);
-  status_publisher_.SendUpdates();
-
-  FLOG(log_channel_, SetMediaType(std::move(media_type)));
-}
-
-void VideoFrameSource::GetPacketConsumer(
-    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
-  if (is_bound()) {
-    Reset();
-  }
-
-  MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
-}
-
-void VideoFrameSource::GetTimelineControlPoint(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
-  timeline_control_point_.Bind(std::move(control_point_request));
-}
-
-f1dl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
-  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
-  video_details->min_width = 0;
-  video_details->max_width = std::numeric_limits<uint32_t>::max();
-  video_details->min_height = 0;
-  video_details->max_height = std::numeric_limits<uint32_t>::max();
-  MediaTypeSetPtr supported_type = MediaTypeSet::New();
-  supported_type->medium = MediaTypeMedium::VIDEO;
-  supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
-  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  f1dl::Array<MediaTypeSetPtr> supported_types =
-      f1dl::Array<MediaTypeSetPtr>::New(1);
-  supported_types[0] = std::move(supported_type);
-  return supported_types;
 }
 
 void VideoFrameSource::OnPacketSupplied(
@@ -240,10 +161,6 @@ void VideoFrameSource::OnFlushRequested(bool hold_frame,
 }
 
 void VideoFrameSource::OnFailure() {
-  if (media_renderer_binding_.is_bound()) {
-    media_renderer_binding_.Unbind();
-  }
-
   timeline_control_point_.Reset();
 
   MediaPacketConsumerBase::OnFailure();
@@ -269,8 +186,12 @@ void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
 
   if (revised_media_type && revised_media_type->details &&
       revised_media_type->details->get_video()) {
-    converter_.SetMediaType(revised_media_type);
-    status_publisher_.SendUpdates();
+    converter_.SetStreamType(
+        revised_media_type.To<std::unique_ptr<StreamType>>());
+
+    if (stream_type_revised_callback_) {
+      stream_type_revised_callback_();
+    }
   }
 }
 
