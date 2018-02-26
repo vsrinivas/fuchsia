@@ -148,7 +148,7 @@ bool DisplayDevice::Init() {
     Flush();
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    plane_stride.set_linear_stride(info_.stride, info_.format);
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
@@ -167,7 +167,7 @@ bool DisplayDevice::Resume() {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_stride(info_.stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+    plane_stride.set_linear_stride(info_.stride, info_.format);
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <hwreg/bitfields.h>
+#include <zircon/pixelformat.h>
 
 namespace registers {
 
@@ -52,8 +53,17 @@ public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
-    // TODO(ZX-1413): this should be 64 bytes, not 16 4-byte pixels
-    static constexpr uint32_t kLinearStrideChunkSize = 16;
+    void set_linear_stride(uint32_t stride, zx_pixel_format_t format) {
+        set_stride(stride / (kLinearStrideChunkSize / ZX_PIXEL_FORMAT_BYTES(format)));
+    }
+
+    static uint32_t compute_linear_stride(uint32_t width, zx_pixel_format_t format) {
+        ZX_ASSERT(kLinearStrideChunkSize % ZX_PIXEL_FORMAT_BYTES(format) == 0);
+        return fbl::round_up(width, kLinearStrideChunkSize / ZX_PIXEL_FORMAT_BYTES(format));
+    }
+
+private:
+    static constexpr uint32_t kLinearStrideChunkSize = 64;
 };
 
 // PLANE_SIZE

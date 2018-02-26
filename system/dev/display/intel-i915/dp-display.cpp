@@ -941,8 +941,8 @@ bool DpDisplay::QueryDevice(zx_display_info* info) {
     static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
     info->width = timing.horizontal_addressable;
     info->height = timing.vertical_addressable;
-    info->stride = ROUNDUP(info->width, registers::PlaneSurfaceStride::kLinearStrideChunkSize);
     info->format = kPixelFormat;
+    info->stride = registers::PlaneSurfaceStride::compute_linear_stride(info->width, info->format);
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
     return true;

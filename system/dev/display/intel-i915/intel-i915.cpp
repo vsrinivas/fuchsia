@@ -641,7 +641,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
             registers::PipeRegs pipe_regs(display->pipe());
 
             auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
-            plane_stride.set_stride(stride / registers::PlaneSurfaceStride::kLinearStrideChunkSize);
+            plane_stride.set_linear_stride(stride, format);
             plane_stride.WriteTo(mmio_space_.get());
 
             auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());
