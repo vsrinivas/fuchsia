@@ -10,6 +10,8 @@ static_library("console") {
     "command_parser.h",
     "command_utils.cc",
     "command_utils.h",
+    "line_input.cc",
+    "line_input.h",
     "main_loop.cc",
     "main_loop.h",
     "noun_memory.cc",
@@ -22,12 +24,6 @@ static_library("console") {
   public_deps = [
     "//garnet/bin/zxdb/client",
   ]
-
-  if (current_toolchain == host_toolchain) {
-    public_deps += [ ":linenoise" ]
-  } else {
-    public_deps += [ "//zircon/public/lib/linenoise" ]
-  }
 }
 
 source_set("tests") {
@@ -35,26 +31,11 @@ source_set("tests") {
   sources = [
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
+    "line_input_unittest.cc",
   ]
 
   deps = [
     ":console",
     "//third_party/googletest:gtest",
   ]
-}
-
-# Host build of linenoise.
-# TODO(brettw) remove this when host builds of Zircon libraries are
-# available. See ZX-1676.
-if (current_toolchain == host_toolchain) {
-  config("linenoise_config") {
-    include_dirs = [ "//zircon/third_party/ulib/linenoise/include" ]
-  }
-
-  static_library("linenoise") {
-    sources = [
-      "//zircon/third_party/ulib/linenoise/linenoise.c",
-    ]
-    public_configs = [ ":linenoise_config" ]
-  }
 }

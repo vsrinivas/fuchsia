@@ -70,7 +70,7 @@ class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
   // Detaches the exception handler.
   void Detach(zx_koid_t koid);
 
-  // StreamBuffer::Writer implementation.
+  // StreamBuffer::Writer implementation. Sends data to the client.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
 
  private:
