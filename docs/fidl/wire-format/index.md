@@ -581,6 +581,37 @@ supported by the server.
 
 ![drawing](method-result-messages.png)
 
+#### Event Messages
+
+These support sending unsolicited messages from the server back to the client.
+
+```
+interface Calculator {
+    1: Add(int32 a, int32 b) -> (int32 sum);
+    2: Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
+    3: Clear();
+    4: event Error(uint32 status_code);
+};
+```
+
+The implementor of an interface sends unsolicited event messages to the client
+of the interface to indicate that an asynchronous event occurred as specified by
+the interface declaration.
+
+Events may be used to let the client observe significant state changes without
+having to create an additional channel to receive the response.
+
+In the **Calculator** example, we can imagine that an attempt to divide by zero
+would cause the **Error()** event to be sent with a "divide by zero" status code
+prior to the connection being closed. This allows the client to distinguish
+between the connection being closed due to an error as opposed to for other
+reasons (such as the calculator process terminating abnormally).
+
+The body of the message contains the event arguments as if they were packed in a
+**struct**, just as with method result messages.
+
+![drawing](events.png)
+
 #### Control Messages
 
 Control messages support in-band signaling of events other than method calls and
@@ -896,219 +927,6 @@ safety checks:
 *   All padding is filled with zeroes.
 *   All floating point values represent valid IEEE 754 bit patterns.
 *   All bools have the value **0** or **1**.
-
-## Examples
-
-See [FIDL 2.0: I/O Sketch](../io-sketch.md).
-
-## **Future Expansion Ideas**
-
-Grab bag of things we may or may not implement based on demand and experience
-with FIDL.
-
-_These may or may not be good ideas._
-
-### Associative Array Types
-
-#### vector<K, V>
-
-Define a vector with parallel content arrays of same dimension but different
-types. Used to represented unordered associative arrays.
-
-#### map<K, V>
-
-Sorted dictionary. Key must be a primitive type. Lookup via binary search.
-Validation verifies order and uniqueness of keys.
-
-### Envelope
-
-An efficient way to encapsulate uninterpreted FIDL messages.
-
-*   Stores a variable size uninterpreted payload out-of-line.
-*   Payload may contain an arbitrary number of bytes and handles.
-*   Allows for encapsulation of one FIDL message inside of another.
-*   Building block for derived structures such as **Tables**.
-*   Stored as a record consisting of:
-    *   <strong><code>num_bytes</code></strong> : 32-bit unsigned number of
-        bytes in envelope, always a multiple of 8, must be zero if envelope is
-        null
-    *   <strong><code>num_handles</code></strong> : 32-bit unsigned number of
-        handles in envelope, must be zero if envelope is null
-    *   <strong><code>data</code></strong> : 64-bit presence indication or
-        pointer to out-of-line string data
-*   When encoded for transfer, <strong><code>data</code></strong> indicates
-    presence of content:
-    *   <strong><code>0</code></strong> : envelope is null
-    *   <strong><code>UINTPTR_MAX</code></strong> : envelope is non-null, data
-        is the next out-of-line object
-*   When decoded for consumption, <strong><code>data</code></strong> is a
-    pointer to content.
-    *   <strong><code>0</code></strong> : envelope is null
-    *   <strong><code><valid pointer></code></strong> : envelope is non-null,
-        data is at indicated memory address
-*   The envelope reserves storage for the handles immediately following the
-    content. When decoded, assuming <strong><code>data</code></strong> is not
-    null,
-    *   <strong><code>data</code></strong> points to the first byte of data
-    *   <strong><code>data+num_bytes</code></strong> points to the first handle
-*   The envelope is padded to the next 8 byte object alignment.
-
-Envelopes are denoted as follows:
-
-*   <strong><code>envelope</code></strong> : non-nullable envelope (validation
-    error occurs if null <strong><code>data</code></strong> is encountered)
-*   <strong><code>envelope?</code></strong> : nullable envelope
-
-![drawing](envelope.png)
-
-_Note: This could also be represented as a pair containing a vector<uint8> and a
-vector<handle> but that would require a minimum of 32 bytes instead of 16
-bytes._
-
-### Tables
-
-A tagged structure whose fields are all tagged with ordinal indices. New fields
-can be added at any time. Clients and servers can skip over unrecognized fields.
-
-*   Extensible record type consisting of a sequence of tagged fields.
-*   Fields are stored in increasing tag order, lookup can be performed using
-    binary search.
-*   Tables can be extended by declaring new fields with distinct tag values.
-*   Useful for structures where extension is anticipated.
-*   Decoder skips over unrecognized fields and allows them to be transported
-    onwards.
-*   Stored as a record consisting of:
-    *   <strong><code>num_fields</code></strong> : 32-bit unsigned number of
-        fields in table
-    *   <strong><code>data</code></strong> : 64-bit presence indication or
-        pointer to out-of-line table data
-*   Table data consists of <strong>num_fields</strong> 24-byte field information
-    records, each of which is represented as:
-    *   <strong><code>tag</code></strong> : 32-bit unsigned field tag
-    *   <strong><code>flags</code></strong> : 32-bit unsigned flags
-        *   <strong><code>0</code></strong>: indicates that this field's value
-            remains in the form of an envelope (might not have been recognized
-            by the decoder)
-        *   <strong><code>FIDL_TABLE_FIELD_DECODED = 0x00000001</code></strong>:
-            indicates that the field's value has been decoded in place according
-            to the field's type
-    *   <strong><code>value</code></strong> : envelope (16 bytes)
-*   When encoded for transfer, <strong><code>data</code></strong> indicates
-    presence of content:
-    *   <strong><code>0</code></strong> : envelope is null
-    *   <strong><code>UINTPTR_MAX</code></strong> : table is non-null, data is
-        the next out-of-line object
-*   When decoded for consumption, <strong><code>data</code></strong> is a
-    pointer to content.
-    *   <strong><code>0</code></strong> : envelope is null
-    *   <strong><code><valid pointer></code></strong> : table is non-null, data
-        is at indicated memory address
-
-Tables are denoted by their declared name (eg. <strong>Station</strong>) and
-nullability:
-
-*   <strong><code>Station</code></strong> : non-nullable Station
-*   <strong><code>Station?</code></strong> : nullable Station
-
-The following example shows how tables are laid out according to their fields.
-
-```
-table Station {
-    1: string name;
-    3: bool encrypted;
-    2: uint32 channel;
-};
-```
-
-When encoding the table, the field information records for each of its fields
-are stored in increasing tag order and padded to a 8 byte boundary. The actual
-values of the fields are then stored successively following these records. When
-encoding field information records:
-
-*   The **value** of those fields bearing the
-    <strong><code>FIDL_TABLE_FIELD_DECODED</code></strong> flag are encoded
-    in-place according to their type in the form of an encoded envelope, and the
-    flag is cleared.
-*   The <strong>value</strong> of those fields not bearing the
-    <strong><code>FIDL_TABLE_FIELD_DECODED</code></strong> flag are treated as
-    envelopes and encoded accordingly.
-
-When decoding the table, the field information records are processed in order:
-
-*   Those fields whose tag the decoder recognizes (because they were present in
-    the FIDL declaration used at compilation time) are decoded in-place and the
-    <strong><code>FIDL_TABLE_FIELD_DECODED</code></strong> flag is set in their
-    field information records.
-*   Those fields whose tag the decoder did not recognize (because they were not
-    present in the FIDL declaration used at compilation time) are left in their
-    encoded form.
-
-After decoding a table, the consumer of the table can find individual fields by
-performing a binary search upon the field information records to locate the
-field by its tag, ignoring any fields that do not bear the
-<strong><code>FIDL_TABLE_FIELD_DECODED</code></strong> flag. The value of that
-field can then be retrieved from the decoded envelope by dereferencing its value
-pointer.
-
-This representation is optimized for ease of generation and access, not for
-space efficiency.
-
-![drawing](tables.png)
-
-### Optional Primitives
-
-#### bool?, int8?, uint8?, int16?, uint16?, int32?, uint32?, …
-
-Allow primitives to be optionally encoded, either by recording a pointer in
-their place (costly) or by encoding a bool field indicating presence of absence
-(much cheaper, preferred).
-
-### Explicit Out-of-line Storage
-
-#### T*
-
-Whereas T would normally force a struct to be stored in-line, T* forces it to be
-out-of-line and instead encodes a pointer to it. T* is non-optional unlike T?.
-
-### Events
-
-Support sending unsolicited messages from the server back to the client.
-
-```
-interface Calculator {
-    1: Add(int32 a, int32 b) -> (int32 sum);
-    2: Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
-    3: Clear();
-    4: event Error(uint32 status_code);
-};
-```
-
-The implementor of an interface sends unsolicited event messages to the client
-of the interface to indicate that an asynchronous event occurred as specified by
-the FIDL interface declaration.
-
-Events may be used to let the client observe significant state changes without
-having to create an additional channel to receive the response.
-
-In the **Calculator** example, we can imagine that an attempt to divide by zero
-would cause the **Error()** event to be sent with a "divide by zero" status code
-prior to the connection being closed. This allows the client to distinguish
-between the connection being closed due to an error as opposed to for other
-reasons (such as the calculator process terminating abnormally).
-
-TODO: Consider whether a client could acknowledge events with a result, possibly
-just for flow control.
-
-The body of the message contains the event arguments as if they were packed in a
-**struct**.
-
-![drawing](events.png)
-
-### Two-Way Events
-
-It might be useful to provide a way for clients to acknowledge receipt of
-unsolicited event messages so that the implementor can perform flow control.
-However this does add some complexity.
 
 <!-- Footnotes themselves at the bottom. -->
 

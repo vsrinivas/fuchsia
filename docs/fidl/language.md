@@ -48,10 +48,10 @@ content (which is of course ignored).
 
 #### Document Comments
 
-TODO: we should think about how we will generate online documentation from FIDL
-files. Perhaps the compiler can emit document contents together with the
-declarations in a machine-readable FIDL IR format that could be consumed by
-other tools.
+TODO(TO-504): We will generate online documentation from FIDL
+files. Perhaps the compiler can emit document contents together with
+the declarations in a machine-readable FIDL IR format that could be
+consumed by other tools.
 
 #### Reserved Words
 
@@ -565,15 +565,6 @@ interface ScientificCalculator : RealCalculator, Science {
 };
 ```
 
-TODO: Bikeshed away…
-
-*   would be nice if enums and interfaces specified values/ordinals the same way
-*   might need a way to reserve ordinal ranges, or perhaps we could do so
-    implicitly by using interface numbering instead: assign a number to each
-    interface (default 0), construct actual method ordinal given (iface_number
-    << 16 | method_number)
-    *   `interface Foo@5 { Add@2(int32 a, int32 b) -> (int32 result); };`
-
 ##### Use
 
 Interfaces are denoted by their name, directionality of the channel, and
@@ -622,16 +613,12 @@ interface VendingMachine {
 
 ### Constant Expressions
 
-TODO: decide whether we want to support any kind of arithmetic, especially for
-interface ordinals and enum values, maybe defer?
+Constant expressions are either literals or the names of other
+constant expressions.
 
 ## Grammar
 
 [Grammar is here](grammar.md).
-
-## Examples
-
-See also [FIDL 2.0: I/O Sketch](io-sketch.md).
 
 ## Notes
 

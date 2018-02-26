@@ -627,10 +627,6 @@ async waiter
 
 etc…
 
-## Examples
-
-See also [FIDL 2.0: I/O Sketch](io-sketch.md).
-
 ## Suggested API Improvements over FIDL v1
 
 The FIDL v1 API for calling and implementing FIDL interfaces has generally been

@@ -14,7 +14,7 @@ This document is a description of the Fuchsia Interface Definition Language v2.0
 *   [FIDL 2.0: Compiler Specification]
 *   [FIDL 2.0: C Language Bindings]
 *   [FIDL 2.0: C++ Language Bindings]
-*   [FIDL 2.0: I/O Sketch]
+*   [FIDL Examples]: Some small example code used during development
 
 <!-- Reference links because these are used again below. -->
 
@@ -23,7 +23,7 @@ This document is a description of the Fuchsia Interface Definition Language v2.0
 [FIDL 2.0: Compiler Specification]: compiler.md
 [FIDL 2.0: C Language Bindings]: c-language-bindings.md
 [FIDL 2.0: C++ Language Bindings]: c++-language-bindings.md
-[FIDL 2.0: I/O Sketch]: io-sketch.md
+[FIDL Examples]: ../../system/host/fidl/examples
 
 **WORK IN PROGRESS**
 
