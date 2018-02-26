@@ -6,11 +6,11 @@
 
 #include <utility>
 
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
-#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 

@@ -13,8 +13,8 @@ source_set("testing") {
   ]
 
   public_deps = [
+    "//garnet/lib/callback",
     "//peridot/bin/cloud_provider_firestore/app:lib",
-    "//peridot/lib/callback",
     "//third_party/grpc:grpc++",
   ]
 }

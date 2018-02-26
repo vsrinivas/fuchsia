@@ -28,8 +28,8 @@ source_set("testing") {
   ]
 
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/callback",
     "//zircon/public/lib/trace",
   ]
 

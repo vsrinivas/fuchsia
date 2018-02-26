@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {

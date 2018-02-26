@@ -9,6 +9,8 @@
 #include <memory>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -26,8 +28,6 @@
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

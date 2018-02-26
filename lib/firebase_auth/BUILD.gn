@@ -16,8 +16,8 @@ source_set("firebase_auth") {
 
   public_deps = [
     "//garnet/lib/backoff",
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/callback",
     "//peridot/public/lib/auth/fidl",
   ]
 }

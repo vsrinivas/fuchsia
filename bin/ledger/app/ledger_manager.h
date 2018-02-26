@@ -10,6 +10,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -20,7 +21,6 @@
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

@@ -7,8 +7,8 @@
 
 #include <map>
 
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
-#include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/network/network_service.h"
 
 #include "lib/fxl/macros.h"

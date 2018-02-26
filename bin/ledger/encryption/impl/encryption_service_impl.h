@@ -8,11 +8,11 @@
 #include <functional>
 #include <string>
 
+#include "garnet/lib/callback/scoped_task_runner.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/cache/lazy_value.h"
 #include "peridot/bin/ledger/cache/lru_cache.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
-#include "peridot/lib/callback/scoped_task_runner.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace encryption {

@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/callback/auto_cleanable.h"
-#include "peridot/lib/callback/cancellable.h"
+#include "garnet/lib/callback/auto_cleanable.h"
+#include "garnet/lib/callback/cancellable.h"
 #include "peridot/lib/firebase/event_stream.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"

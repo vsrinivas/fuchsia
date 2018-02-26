@@ -16,9 +16,9 @@ source_set("impl") {
 
   deps = [
     ":encrypted_commit",
-    "//peridot/bin/ledger/encryption/primitives",
+    "//garnet/lib/callback",
     "//peridot/bin/ledger/cache",
-    "//peridot/lib/callback",
+    "//peridot/bin/ledger/encryption/primitives",
   ]
 
   public_deps = [
@@ -47,9 +47,9 @@ source_set("unittests") {
 
   deps = [
     ":impl",
+    "//garnet/lib/callback",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/lib/callback",
     "//third_party/googletest:gtest",
   ]
 

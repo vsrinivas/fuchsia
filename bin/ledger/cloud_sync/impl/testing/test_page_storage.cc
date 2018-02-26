@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
 TestPageStorage::TestPageStorage(fsl::MessageLoop* message_loop)

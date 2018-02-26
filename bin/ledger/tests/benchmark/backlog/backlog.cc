@@ -9,6 +9,7 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/callback/waiter.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -20,7 +21,6 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {

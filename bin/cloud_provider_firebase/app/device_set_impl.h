@@ -7,12 +7,12 @@
 
 #include <memory>
 
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
-#include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace cloud_provider_firebase {

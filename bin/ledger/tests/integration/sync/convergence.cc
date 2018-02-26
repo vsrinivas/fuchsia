@@ -7,6 +7,9 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
+#include "garnet/lib/callback/auto_cleanable.h"
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -14,9 +17,6 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
-#include "peridot/lib/callback/auto_cleanable.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

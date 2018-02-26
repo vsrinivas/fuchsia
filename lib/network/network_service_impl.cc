@@ -6,11 +6,11 @@
 
 #include <utility>
 
+#include "garnet/lib/callback/cancellable_helper.h"
+#include "garnet/lib/callback/destruction_sentinel.h"
+#include "garnet/lib/callback/to_function.h"
+#include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/strings/ascii.h"
-#include "peridot/lib/callback/cancellable_helper.h"
-#include "peridot/lib/callback/destruction_sentinel.h"
-#include "peridot/lib/callback/to_function.h"
-#include "peridot/lib/callback/trace_callback.h"
 
 namespace ledger {
 

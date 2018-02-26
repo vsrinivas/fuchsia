@@ -8,6 +8,7 @@
 #include <map>
 #include <utility>
 
+#include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -21,7 +22,6 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
-#include "peridot/lib/callback/capture.h"
 
 namespace cloud_sync {
 namespace {

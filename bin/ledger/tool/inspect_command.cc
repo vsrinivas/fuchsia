@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/eintr_wrapper.h"
@@ -25,7 +26,6 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/tool/convert.h"
-#include "peridot/lib/callback/waiter.h"
 
 #define FILE_CREATE_MODE 0666
 

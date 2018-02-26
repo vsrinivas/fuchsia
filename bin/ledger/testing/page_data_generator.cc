@@ -6,11 +6,11 @@
 
 #include <memory>
 
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
+#include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -12,7 +13,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
-#include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 

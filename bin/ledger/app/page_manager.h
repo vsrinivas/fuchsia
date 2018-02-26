@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include "garnet/lib/callback/auto_cleanable.h"
+#include "garnet/lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/functional/closure.h"
@@ -22,8 +24,6 @@
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
-#include "peridot/lib/callback/auto_cleanable.h"
-#include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 // Manages a ledger page.

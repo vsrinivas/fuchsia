@@ -21,8 +21,8 @@ executable("queue_persistence_test_module") {
   ]
   deps = [
     ":queue_persistence_test_service",
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",

@@ -12,12 +12,12 @@ executable("demo") {
   ]
 
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/firestore",
-    "//peridot/lib/callback",
     "//peridot/public/lib/lifecycle/fidl",
     "//zircon/public/lib/trace-provider",
   ]

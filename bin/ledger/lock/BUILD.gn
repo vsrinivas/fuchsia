@@ -11,9 +11,9 @@ source_set("lock") {
   ]
 
   public_deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/coroutine",
-    "//peridot/lib/callback",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

@@ -6,10 +6,10 @@
 
 #include <map>
 
+#include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "peridot/lib/callback/capture.h"
 
 namespace cloud_provider_firebase {
 namespace {

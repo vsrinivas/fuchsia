@@ -77,6 +77,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -89,7 +90,6 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
     "//peridot/public/lib/auth/fidl",

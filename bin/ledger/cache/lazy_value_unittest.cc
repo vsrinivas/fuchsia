@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/cache/lazy_value.h"
 
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 
 #include "gtest/gtest.h"
 

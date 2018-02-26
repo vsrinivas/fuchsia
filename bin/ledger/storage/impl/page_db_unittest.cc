@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -25,7 +26,6 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
-#include "peridot/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {

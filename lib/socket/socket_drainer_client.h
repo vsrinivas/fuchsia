@@ -9,10 +9,10 @@
 #include <memory>
 #include <string>
 
+#include "garnet/lib/callback/destruction_sentinel.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "peridot/lib/callback/destruction_sentinel.h"
 
 namespace socket {
 

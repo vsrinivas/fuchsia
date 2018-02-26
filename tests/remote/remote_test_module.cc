@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
@@ -14,7 +15,6 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/remote/fidl/remote_invoker.fidl.h"
 #include "lib/user/fidl/device_map.fidl.h"
-#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 

@@ -12,8 +12,8 @@ source_set("coroutine") {
   ]
 
   public_deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/callback",
   ]
 
   deps = [

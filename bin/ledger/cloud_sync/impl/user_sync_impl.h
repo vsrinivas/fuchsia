@@ -11,12 +11,12 @@
 #include <set>
 
 #include "garnet/lib/backoff/backoff.h"
+#include "garnet/lib/callback/scoped_task_runner.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
 

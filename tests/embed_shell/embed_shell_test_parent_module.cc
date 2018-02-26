@@ -4,13 +4,13 @@
 
 #include <iostream>
 
+#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/lib/callback/scoped_callback.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 

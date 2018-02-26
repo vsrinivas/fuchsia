@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -15,7 +16,6 @@
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace storage {

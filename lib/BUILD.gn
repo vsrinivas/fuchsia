@@ -10,9 +10,9 @@ executable("unittests") {
 
   deps = [
     "//garnet/lib/backoff:unittests",
+    "//garnet/lib/callback:unittests",
     "//garnet/lib/gtest:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//peridot/lib/callback:unittests",
     "//peridot/lib/cobalt:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",

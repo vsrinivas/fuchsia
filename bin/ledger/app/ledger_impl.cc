@@ -10,12 +10,12 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
-#include "peridot/lib/callback/trace_callback.h"
 
 namespace ledger {
 

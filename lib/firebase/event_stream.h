@@ -9,10 +9,10 @@
 #include <memory>
 #include <string>
 
+#include "garnet/lib/callback/destruction_sentinel.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/lib/callback/destruction_sentinel.h"
 #include "peridot/lib/firebase/status.h"
 
 namespace firebase {

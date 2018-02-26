@@ -16,9 +16,9 @@ source_set("network") {
 
   public_deps = [
     "//garnet/lib/backoff",
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/lib/callback",
     "//zircon/public/lib/zx",
   ]
 }

@@ -19,9 +19,9 @@ executable("remote_test_module") {
     "remote_test_module.cc",
   ]
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",

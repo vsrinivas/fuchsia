@@ -28,10 +28,10 @@ source_set("firebase") {
   ]
 
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/base64url",
-    "//peridot/lib/callback",
     "//peridot/lib/socket",
   ]
 }

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
+#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,

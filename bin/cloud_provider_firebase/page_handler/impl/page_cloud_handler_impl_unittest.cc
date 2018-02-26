@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
@@ -19,7 +20,6 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
-#include "peridot/lib/callback/capture.h"
 #include "peridot/lib/firebase/encoding.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"

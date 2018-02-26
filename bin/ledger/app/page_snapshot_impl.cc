@@ -10,6 +10,8 @@
 
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 
+#include "garnet/lib/callback/trace_callback.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -18,8 +20,6 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/lib/callback/trace_callback.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

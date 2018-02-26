@@ -18,6 +18,8 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/callback/trace_callback.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -42,8 +44,6 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "peridot/lib/callback/trace_callback.h"
-#include "peridot/lib/callback/waiter.h"
 #include "zx/vmar.h"
 #include "zx/vmo.h"
 

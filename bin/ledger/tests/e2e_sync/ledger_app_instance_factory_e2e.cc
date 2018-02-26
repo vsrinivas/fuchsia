@@ -6,6 +6,7 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
+#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -17,7 +18,6 @@
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
-#include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 

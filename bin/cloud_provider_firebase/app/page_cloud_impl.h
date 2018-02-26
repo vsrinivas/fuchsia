@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -15,7 +16,6 @@
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
-#include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 

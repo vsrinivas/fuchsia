@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
+#include "garnet/lib/callback/destruction_sentinel.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
-#include "peridot/lib/callback/destruction_sentinel.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/watch_client.h"
 

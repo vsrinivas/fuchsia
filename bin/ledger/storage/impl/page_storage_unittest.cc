@@ -12,6 +12,9 @@
 #include <set>
 #include <thread>
 
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
+#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -42,9 +45,6 @@
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
-#include "peridot/lib/callback/synchronous_task.h"
 
 namespace storage {
 

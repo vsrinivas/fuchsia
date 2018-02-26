@@ -7,6 +7,9 @@
 #include <memory>
 #include <string>
 
+#include "garnet/lib/callback/cancellable_helper.h"
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -20,9 +23,6 @@
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/lib/callback/cancellable_helper.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

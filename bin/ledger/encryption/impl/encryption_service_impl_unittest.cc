@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
 
 namespace encryption {
 namespace {

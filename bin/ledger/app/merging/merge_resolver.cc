@@ -10,6 +10,9 @@
 #include <set>
 #include <utility>
 
+#include "garnet/lib/callback/scoped_callback.h"
+#include "garnet/lib/callback/trace_callback.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -19,9 +22,6 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
-#include "peridot/lib/callback/scoped_callback.h"
-#include "peridot/lib/callback/trace_callback.h"
-#include "peridot/lib/callback/waiter.h"
 
 namespace ledger {
 

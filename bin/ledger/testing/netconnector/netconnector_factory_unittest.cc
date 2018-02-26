@@ -6,13 +6,13 @@
 
 #include <memory>
 
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/set_when_called.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

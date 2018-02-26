@@ -13,6 +13,7 @@
 #include <rapidjson/writer.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -20,7 +21,6 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/url/gurl.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"

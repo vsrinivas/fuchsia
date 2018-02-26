@@ -6,11 +6,11 @@
 #define PERIDOT_BIN_LEDGER_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 
 #include <memory>
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 // Strategy for merging commits using a last-one-wins policy for conflicts.

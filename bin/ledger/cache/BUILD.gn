@@ -26,7 +26,7 @@ source_set("unittests") {
 
   deps = [
     ":cache",
-    "//peridot/lib/callback",
+    "//garnet/lib/callback",
     "//third_party/googletest:gtest",
   ]
 

@@ -17,8 +17,8 @@ source_set("socket") {
   ]
 
   public_deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/callback",
     "//zircon/public/lib/zx",
   ]
 }

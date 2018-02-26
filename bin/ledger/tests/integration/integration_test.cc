@@ -6,6 +6,7 @@
 
 #include <thread>
 
+#include "garnet/lib/callback/synchronous_task.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -14,7 +15,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
-#include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"

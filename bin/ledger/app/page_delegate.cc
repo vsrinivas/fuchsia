@@ -10,14 +10,14 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/callback/scoped_callback.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
-#include "peridot/lib/callback/scoped_callback.h"
-#include "peridot/lib/callback/waiter.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

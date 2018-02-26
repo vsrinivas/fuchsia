@@ -10,6 +10,8 @@
 #include <queue>
 #include <set>
 
+#include "garnet/lib/callback/managed_container.h"
+#include "garnet/lib/callback/operation_serializer.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -18,8 +20,6 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
-#include "peridot/lib/callback/managed_container.h"
-#include "peridot/lib/callback/operation_serializer.h"
 #include "peridot/lib/convert/convert.h"
 
 #include <set>

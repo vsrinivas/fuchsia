@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 
+#include "garnet/lib/callback/auto_cleanable.h"
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -14,8 +16,6 @@
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/lib/callback/auto_cleanable.h"
-#include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 #include "peridot/lib/network/network_service.h"

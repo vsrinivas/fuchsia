@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
-#include "peridot/lib/callback/capture.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

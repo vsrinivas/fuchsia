@@ -18,9 +18,9 @@ source_set("cloud_provider") {
   ]
 
   public_deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/lib/callback",
   ]
 
   deps = [

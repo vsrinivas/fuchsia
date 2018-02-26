@@ -8,14 +8,14 @@
 
 #include <utility>
 
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/synchronous_task.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

@@ -18,8 +18,8 @@ executable("suggestion_test_module") {
     "suggestion_test_module.cc",
   ]
   deps = [
+    "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/callback",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",

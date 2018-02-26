@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/public/lib/app/cpp/service_provider_impl.h"
 #include "garnet/public/lib/netconnector/cpp/message_relay.h"
 #include "garnet/public/lib/netconnector/fidl/netconnector.fidl.h"
@@ -16,7 +17,6 @@
 #include "peridot/bin/ledger/p2p_provider/impl/remote_connection.h"
 #include "peridot/bin/ledger/p2p_provider/public/p2p_provider.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_provider {

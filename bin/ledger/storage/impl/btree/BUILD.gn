@@ -36,11 +36,11 @@ source_set("lib") {
   deps = [
     ":internal",
     ":tree_node_storage",
+    "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/public",
-    "//peridot/lib/callback",
     "//peridot/lib/convert",
     "//third_party/murmurhash",
   ]
@@ -86,6 +86,7 @@ source_set("unittests") {
   deps = [
     ":lib",
     ":tree_node_storage",
+    "//garnet/lib/callback",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/fake",
@@ -96,7 +97,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/lib/callback",
     "//third_party/googletest:gtest",
   ]
 

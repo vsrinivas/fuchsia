@@ -10,8 +10,8 @@
 
 #include <grpc++/grpc++.h>
 
+#include "garnet/lib/callback/cancellable.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
-#include "peridot/lib/callback/cancellable.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace cloud_provider_firestore {

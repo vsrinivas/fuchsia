@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
@@ -17,7 +18,6 @@
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

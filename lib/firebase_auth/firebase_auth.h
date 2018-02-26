@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
-#include "peridot/lib/callback/cancellable.h"
 
 namespace firebase_auth {
 

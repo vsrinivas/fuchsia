@@ -6,8 +6,8 @@
 
 #include <utility>
 
+#include "garnet/lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/lib/callback/cancellable_helper.h"
 
 namespace firebase_auth {
 

@@ -6,6 +6,7 @@
 
 #include <thread>
 
+#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/socket/strings.h"
@@ -17,7 +18,6 @@
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
-#include "peridot/lib/callback/synchronous_task.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 

@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
@@ -14,7 +15,6 @@
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "peridot/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 class PageManager;

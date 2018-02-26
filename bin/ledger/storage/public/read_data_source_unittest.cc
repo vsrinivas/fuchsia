@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 
+#include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/scoped_task_runner.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/lib/callback/capture.h"
-#include "peridot/lib/callback/scoped_task_runner.h"
-#include "peridot/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
