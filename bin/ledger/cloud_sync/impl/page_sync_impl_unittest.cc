@@ -330,9 +330,9 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("42"), [] {});
 
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return page_cloud_.set_watcher.encountered_error(); }));
-  EXPECT_TRUE(RunLoopUntil([this] { return error_callback_calls_ == 1; }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(page_cloud_.set_watcher.encountered_error());
+  EXPECT_EQ(1, error_callback_calls_);
 }
 
 // Verifies that the on idle callback is called when there is no download in
@@ -395,8 +395,8 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
 TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // Complete the initial sync.
   StartPageSync();
-  EXPECT_TRUE(
-      RunLoopUntil([this] { return page_cloud_.get_commits_calls > 0u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, page_cloud_.get_commits_calls);
 
   // Create a local commit, but make the upload fail.
   page_cloud_.commit_status_to_return = cloud_provider::Status::SERVER_ERROR;
@@ -405,23 +405,21 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   storage_.watcher_->OnNewCommits(commit1->AsList(),
                                   storage::ChangeSource::LOCAL);
 
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return page_cloud_.add_commits_calls == 1u &&
-           // We need to wait for the callback to be executed on the PageSync
-           // side.
-           upload_backoff_get_next_calls_ == 1;
-  }));
+  // We need to wait for the callback to be executed on the PageSync side.
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, page_cloud_.add_commits_calls);
+  EXPECT_EQ(1, upload_backoff_get_next_calls_);
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
-  EXPECT_EQ(1, upload_backoff_get_next_calls_);
 
   // Let's receive the same commit from the remote side.
   f1dl::Array<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.set_watcher->OnNewCommits(std::move(commits),
                                         convert::ToArray("44"), [] {});
-  EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(page_sync_->IsIdle());
 
   // No additional calls.
   EXPECT_EQ(1u, page_cloud_.add_commits_calls);
