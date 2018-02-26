@@ -16,10 +16,6 @@ namespace fxl {
 class TaskRunner;
 }  // namespace fxl
 
-namespace scenic {
-class Metrics;
-}  // namespace scenic
-
 namespace scene_manager {
 
 class Display;

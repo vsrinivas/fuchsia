@@ -45,7 +45,7 @@ class CommandDispatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
 };
 
-// TODO(MZ-469): Remove this once Scenic's session is refactored away.
+// TODO(MZ-421): Remove this once view manager is another Mozart system.
 class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
