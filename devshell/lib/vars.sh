@@ -53,17 +53,21 @@ function fx-config-read {
 #   - the netaddr if $2 looks like foo-bar-baz-flarg
 #     OR
 #   - $2 if it doesn't
+# else return the results of netaddr --fuchsia
 function get-device-addr {
+  device=""
   if [[ "$1" == "-d" || "$1" == "--device" ]]; then
     shift
-    device=""
     if [[ "$1" == *"-"* ]]; then
       device="$(fx-command-run netaddr $1 --fuchsia)"
     else
       device="$1"
     fi
     shift
+  else
+    device="$(fx-command-run netaddr --fuchsia)"
   fi
+  echo $device
 }
 
 function fx-command-run {
