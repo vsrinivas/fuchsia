@@ -35,6 +35,7 @@
 
 namespace {
 
+using cobalt::BucketDistributionEntryPtr;
 using cobalt::CobaltController;
 using cobalt::CobaltEncoder;
 using cobalt::CobaltEncoderFactory;
@@ -157,7 +158,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
   void AddIntBucketDistribution(
       uint32_t metric_id,
       uint32_t encoding_id,
-      f1dl::Map<uint32_t, uint64_t> distribution,
+      f1dl::Array<BucketDistributionEntryPtr> distribution,
       const AddIntBucketDistributionCallback& callback) override;
 
   void SendObservations(const SendObservationsCallback& callback) override;
@@ -307,7 +308,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
 void CobaltEncoderImpl::AddIntBucketDistribution(
     uint32_t metric_id,
     uint32_t encoding_id,
-    f1dl::Map<uint32_t, uint64_t> distribution,
+    f1dl::Array<BucketDistributionEntryPtr> distribution,
     const AddIntBucketDistributionCallback& callback) {
   FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
   callback(Status::INTERNAL_ERROR);
