@@ -1,6 +1,6 @@
 #include "libc.h"
 #include "zircon_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>

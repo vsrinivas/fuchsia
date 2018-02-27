@@ -1,4 +1,4 @@
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 int pthread_attr_setschedparam(pthread_attr_t* restrict a,
                                const struct sched_param* restrict param) {

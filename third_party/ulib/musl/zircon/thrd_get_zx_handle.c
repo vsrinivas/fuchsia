@@ -3,7 +3,7 @@
 
 #include <runtime/thread.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 zx_handle_t thrd_get_zx_handle(thrd_t t) {
     return zxr_thread_get_handle(&t->zxr_thread);

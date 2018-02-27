@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "zircon_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include "stdio_impl.h"
 
 static const char mmap_vmo_name[] = "mmap-anonymous";

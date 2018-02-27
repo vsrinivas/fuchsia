@@ -1,7 +1,7 @@
 #include <limits.h>
 #include <time.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 clock_t clock(void) {
     struct timespec ts;

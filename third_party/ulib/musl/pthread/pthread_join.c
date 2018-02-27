@@ -1,4 +1,4 @@
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <zircon/process.h>
 
 int __pthread_join(pthread_t t, void** res) {

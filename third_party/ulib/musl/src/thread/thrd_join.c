@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 int thrd_join(thrd_t t, int* res) {
     void* pthread_res;

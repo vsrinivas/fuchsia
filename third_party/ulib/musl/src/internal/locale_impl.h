@@ -1,7 +1,7 @@
 #pragma once
 
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <locale.h>
 #include <stdlib.h>
 

@@ -1,5 +1,5 @@
 #include "futex_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <semaphore.h>
 
 int sem_post(sem_t* sem) {

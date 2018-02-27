@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>

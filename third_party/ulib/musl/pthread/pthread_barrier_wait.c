@@ -1,5 +1,5 @@
 #include "futex_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 struct instance {
     atomic_uint count;

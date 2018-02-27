@@ -3,7 +3,7 @@
 #include <stdatomic.h>
 
 #include "atomic.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 int sem_timedwait(sem_t* restrict sem, const struct timespec* restrict at) {
     if (!sem_trywait(sem))

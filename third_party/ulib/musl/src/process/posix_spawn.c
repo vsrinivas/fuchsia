@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include "fdop.h"
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <fcntl.h>
 #include <sched.h>
 #include <spawn.h>

@@ -2,7 +2,7 @@
 
 #define __NEED_struct_timespec
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 #include <bits/alltypes.h>
 #include <zircon/types.h>

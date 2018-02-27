@@ -1,7 +1,7 @@
 #include "asan_impl.h"
 #include "futex_impl.h"
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include "zircon_impl.h"
 #include "stdio_impl.h"
 

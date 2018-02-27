@@ -6,7 +6,7 @@
 
 #include "futex_impl.h"
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 struct waiter {
     struct waiter *prev, *next;

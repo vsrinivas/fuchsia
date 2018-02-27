@@ -3,7 +3,7 @@
 #include "libc.h"
 #include "asan_impl.h"
 #include "zircon_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include "stdio_impl.h"
 #include <ctype.h>
 #include <dlfcn.h>

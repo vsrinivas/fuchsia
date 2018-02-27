@@ -1,7 +1,7 @@
 #define _ALL_SOURCE
 #include <threads.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 static int thrd_create_internal(thrd_t* thr, thrd_start_t func, void* arg, const char* name) {
     pthread_attr_t attrs = DEFAULT_PTHREAD_ATTR;

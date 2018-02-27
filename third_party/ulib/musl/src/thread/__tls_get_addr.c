@@ -1,5 +1,5 @@
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <stddef.h>
 
 void* __tls_get_addr(size_t* v) {

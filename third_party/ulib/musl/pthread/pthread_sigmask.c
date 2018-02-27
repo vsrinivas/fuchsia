@@ -1,7 +1,7 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 int pthread_sigmask(int how, const sigset_t* restrict set, sigset_t* restrict old) {
     if ((unsigned)how - SIG_BLOCK > 2U)

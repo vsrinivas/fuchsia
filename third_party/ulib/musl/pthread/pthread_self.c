@@ -1,5 +1,5 @@
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include <threads.h>
 
 static pthread_t __pthread_self_internal(void) {

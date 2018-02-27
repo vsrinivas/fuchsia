@@ -1,5 +1,5 @@
 #include "futex_impl.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include "stdio_impl.h"
 
 int __lockfile(FILE* f) {

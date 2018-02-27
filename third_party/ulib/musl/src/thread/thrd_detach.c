@@ -1,6 +1,6 @@
 #include <threads.h>
 
-#include "pthread_impl.h"
+#include "threads_impl.h"
 
 int thrd_detach(thrd_t t) {
     switch (__pthread_detach(t)) {

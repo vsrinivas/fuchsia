@@ -1,5 +1,5 @@
 #include "libc.h"
-#include "pthread_impl.h"
+#include "threads_impl.h"
 #include "setjmp_impl.h"
 #include "zircon_impl.h"
 #include <elf.h>
