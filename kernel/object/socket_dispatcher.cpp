@@ -45,18 +45,18 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     if (flags & ZX_SOCKET_HAS_ACCEPT)
         starting_signals |= ZX_SOCKET_SHARE;
 
-    fbl::unique_ptr<char[]> control0;
-    fbl::unique_ptr<char[]> control1;
+    fbl::unique_ptr<ControlMsg> control0;
+    fbl::unique_ptr<ControlMsg> control1;
 
     // TODO: use mbufs to avoid pinning control buffer memory.
     if (flags & ZX_SOCKET_HAS_CONTROL) {
         starting_signals |= ZX_SOCKET_CONTROL_WRITABLE;
 
-        control0.reset(new (&ac) char[kControlMsgSize]);
+        control0.reset(new (&ac) ControlMsg());
         if (!ac.check())
             return ZX_ERR_NO_MEMORY;
 
-        control1.reset(new (&ac) char[kControlMsgSize]);
+        control1.reset(new (&ac) ControlMsg());
         if (!ac.check())
             return ZX_ERR_NO_MEMORY;
     }
@@ -87,7 +87,7 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
 
 SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
                                    zx_signals_t starting_signals, uint32_t flags,
-                                   fbl::unique_ptr<char[]> control_msg)
+                                   fbl::unique_ptr<ControlMsg> control_msg)
     : PeeredDispatcher(fbl::move(holder), starting_signals),
       flags_(flags),
       control_msg_(fbl::move(control_msg)),
@@ -248,7 +248,7 @@ zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t l
     if (len == 0)
         return ZX_ERR_INVALID_ARGS;
 
-    if (len > kControlMsgSize)
+    if (len > ControlMsg::kSize)
         return ZX_ERR_OUT_OF_RANGE;
 
     AutoLock lock(get_lock());
@@ -265,7 +265,7 @@ zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src
     if (control_msg_len_ != 0)
         return ZX_ERR_SHOULD_WAIT;
 
-    if (src.copy_array_from_user(control_msg_.get(), len) != ZX_OK)
+    if (src.copy_array_from_user(&control_msg_->msg, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS; // Bad user buffer.
 
     control_msg_len_ = static_cast<uint32_t>(len);
@@ -367,7 +367,7 @@ zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
         return ZX_ERR_SHOULD_WAIT;
 
     size_t copy_len = MIN(control_msg_len_, len);
-    if (dst.copy_array_to_user(control_msg_.get(), copy_len) != ZX_OK)
+    if (dst.copy_array_to_user(&control_msg_->msg, copy_len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS; // Invalid user buffer.
 
     control_msg_len_ = 0;

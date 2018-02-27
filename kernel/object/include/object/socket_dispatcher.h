@@ -19,8 +19,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 
-constexpr size_t kControlMsgSize = 1024;
-
 class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher> {
 public:
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -58,12 +56,16 @@ public:
 
     zx_status_t CheckShareable(SocketDispatcher* to_send);
 
+    struct ControlMsg {
+        static constexpr size_t kSize = 1024;
+        char msg[kSize];
+    };
+
 private:
-    // The control_msg must be either nullptr or an allocation of
-    // size kControlMsgSize.
+    // |control_msg| may be null.
     SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
                      zx_signals_t starting_signals, uint32_t flags,
-                     fbl::unique_ptr<char[]> control_msg);
+                     fbl::unique_ptr<ControlMsg> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
     zx_status_t WriteSelfLocked(user_in_ptr<const void> src, size_t len, size_t* nwritten) TA_REQ(get_lock());
     zx_status_t WriteControlSelfLocked(user_in_ptr<const void> src, size_t len) TA_REQ(get_lock());
@@ -76,11 +78,11 @@ private:
 
     fbl::Canary<fbl::magic("SOCK")> canary_;
 
-    uint32_t flags_;
+    const uint32_t flags_;
 
     // The shared |get_lock()| protects all members below.
     MBufChain data_ TA_GUARDED(get_lock());
-    fbl::unique_ptr<char[]> control_msg_ TA_GUARDED(get_lock());
+    fbl::unique_ptr<ControlMsg> control_msg_ TA_GUARDED(get_lock());
     size_t control_msg_len_ TA_GUARDED(get_lock());
     fbl::RefPtr<SocketDispatcher> other_ TA_GUARDED(get_lock());
     HandleOwner accept_queue_ TA_GUARDED(get_lock());
