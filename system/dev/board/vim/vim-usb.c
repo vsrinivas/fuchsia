@@ -40,6 +40,31 @@ static const pbus_dev_t xhci_dev = {
     .irq_count = countof(xhci_irqs),
 };
 
+static const pbus_mmio_t dwc2_mmios[] = {
+    {
+        .base = 0xc9100000,
+        .length = 0x40000,
+    },
+};
+
+static const pbus_irq_t dwc2_irqs[] = {
+    {
+        .irq = 63,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_dev_t dwc2_dev = {
+    .name = "dwc2",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_USB_DWC2,
+    .mmios = dwc2_mmios,
+    .mmio_count = countof(dwc2_mmios),
+    .irqs = dwc2_irqs,
+    .irq_count = countof(dwc2_irqs),
+};
+
 zx_status_t vim_usb_init(vim_bus_t* bus) {
     zx_status_t status;
 
@@ -84,6 +109,11 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
 
     if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init could not add xhci_dev: %d\n", status);
+        return status;
+    }
+
+    if ((status = pbus_device_add(&bus->pbus, &dwc2_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "vim_usb_init could not add dwc2_dev: %d\n", status);
         return status;
     }
 
