@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/mxruntime"
 
 	"fuchsia.googlesource.com/pmd/pkgfs"
 )
@@ -81,27 +82,47 @@ func main() {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
 
-	if err := fs.Mount(*pkgfsPath); err != nil {
-		log.Fatalf("pkgfs: mount failed: %s", err)
+	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
+	if h == zx.HANDLE_INVALID {
+		if err := fs.Mount(*pkgfsPath); err != nil {
+			log.Fatalf("pkgfs: mount failed: %s", err)
+		}
+	} else {
+		if err := fs.Serve(&zx.Channel{h}); err != nil {
+			log.Fatalf("pkgfs: serve failed on startup handle: %s", err)
+		}
 	}
+	log.Printf("pkgfs mounted at %s serving index %s from blobstore %s", *pkgfsPath, *index, *blobstore)
 
 	if sysPkg != "" {
-		fs.SetSystemRoot(sysPkg)
+		var err error
 
-		log.Printf("system: mounting %s at %s", sysPkg, *sysPath)
+		if err = fs.SetSystemRoot(sysPkg); err != nil {
+			log.Printf("system: failed to set system root from blob %q: %s", sysPkg, err)
+		}
+		log.Printf("system: will be served from %s", sysPkg)
 
-		if err := bindMount(filepath.Join(*pkgfsPath, "system"), *sysPath); err != nil {
-			log.Printf("system: failed to bind mount: %s", err)
+		// In the case where we've been given a startup handle, expect the bind to be
+		// done by the fs host cloning from /pkgfs/system instead.
+		if h == zx.HANDLE_INVALID {
+			log.Printf("system: rebinding system %q at %s", sysPkg, *sysPath)
+
+			if err = bindMount(filepath.Join(*pkgfsPath, "system"), *sysPath); err != nil {
+				log.Printf("system: failed to bind mount: %s", err)
+			}
+
+			log.Printf("system: package %s mounted at %s", sysPkg, *sysPath)
 		}
 
-		log.Printf("system: package %s mounted at %s", sysPkg, *sysPath)
-
-		if err := zx.ProcHandle.Signal(zx.SignalNone, zx.SignalUser0); err != nil {
-			log.Printf("system: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
+		// In the case of an error, we don't signal fshost for fuchsia_start, as system won't be readable.
+		if err == nil {
+			if err := zx.ProcHandle.Signal(zx.SignalNone, zx.SignalUser0); err != nil {
+				log.Printf("system: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
+			}
 		}
+	} else {
+		log.Printf("system: no system package blob supplied")
 	}
-
-	log.Printf("pkgfs mounted at %s serving index %s from blobstore %s", *pkgfsPath, *index, *blobstore)
 
 	select {}
 }
