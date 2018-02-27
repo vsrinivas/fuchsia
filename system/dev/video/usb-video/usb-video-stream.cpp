@@ -162,6 +162,36 @@ UsbVideoStream::FormatMapping::FormatMapping(const UsbVideoFormat* format,
     this->frame_desc = frame_desc;
 }
 
+zx_status_t UsbVideoStream::GetMapping(camera::camera_proto::VideoFormat format,
+                                       const UsbVideoFormat** out_format,
+                                       const UsbVideoFrameDesc** out_frame_desc) {
+    const camera::camera_proto::VideoFormat& f1 = format;
+
+    for (const FormatMapping& mapping : format_mappings_) {
+        const camera::camera_proto::VideoFormat& f2 = mapping.proto;
+
+        // Simplify frame rate fractions to a common denominator to check for
+        // equivalence. Both numerator and denominator are 32 bit.
+        bool has_equal_frame_rate =
+            (static_cast<uint64_t>(f1.frames_per_sec_numerator) * f2.frames_per_sec_denominator) ==
+            (static_cast<uint64_t>(f2.frames_per_sec_numerator) * f1.frames_per_sec_denominator);
+
+        if (f1.capture_type == f2.capture_type &&
+            f1.pixel_format == f2.pixel_format &&
+            f1.width == f2.width &&
+            f1.height == f2.height &&
+            f1.stride == f2.stride &&
+            f1.bits_per_pixel == f2.bits_per_pixel &&
+            has_equal_frame_rate) {
+
+            *out_format = mapping.format;
+            *out_frame_desc = mapping.frame_desc;
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
 zx_status_t UsbVideoStream::GenerateFormatMappings() {
     size_t num_mappings = 0;
     for (const auto& format : formats_) {

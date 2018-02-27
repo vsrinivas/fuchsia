@@ -112,6 +112,14 @@ private:
 
     zx_status_t ProcessChannel(dispatcher::Channel* channel);
 
+    // Finds the matching format and frame descriptors for the given
+    // video format proto.
+    // If found returns ZX_OK and populates out_format and out_frame_desc,
+    // else returns an error.
+    zx_status_t GetMapping(camera::camera_proto::VideoFormat format,
+                           const UsbVideoFormat** out_format,
+                           const UsbVideoFrameDesc** out_frame_desc);
+
     // Creates mappings between video format protos and their original
     // format and frame descriptors. The result will be stored in format_mappings_.
     zx_status_t GenerateFormatMappings();
