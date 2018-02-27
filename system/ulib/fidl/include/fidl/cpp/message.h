@@ -109,6 +109,14 @@ public:
     // |Encode| method.
     zx_status_t Decode(const fidl_type_t* type, const char** error_msg_out);
 
+    // Validates the message in-place.
+    //
+    // The message must already be in an encoded state, for example, either by
+    // being read from a zx_channel_t or having been created in that state.
+    //
+    // Does not modify the message.
+    zx_status_t Validate(const fidl_type_t* type, const char** error_msg_out) const;
+
     // Read a message from the given channel.
     //
     // The bytes read from the channel are stored in bytes() and the handles

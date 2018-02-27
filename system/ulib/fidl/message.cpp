@@ -55,6 +55,13 @@ zx_status_t Message::Decode(const fidl_type_t* type,
     return status;
 }
 
+zx_status_t Message::Validate(const fidl_type_t* type,
+                              const char** error_msg_out) const {
+    return fidl_validate(type, bytes_.data(), bytes_.actual(),
+                         handles_.data(), handles_.actual(),
+                         error_msg_out);
+}
+
 zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
