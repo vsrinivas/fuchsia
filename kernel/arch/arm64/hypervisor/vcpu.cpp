@@ -177,8 +177,10 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             gich_active_interrupts(&gich_state_.active_interrupts);
         }
         if (status == ZX_ERR_NEXT) {
-            // We received a physical interrupt, return to the guest.
-            status = ZX_OK;
+            // We received a physical interrupt. If it was due to the thread
+            // being killed, then we should exit with an error, otherwise return
+            // to the guest.
+            status = get_current_thread()->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
         } else if (status == ZX_OK) {
             status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                                     guest_->Traps(), packet);
