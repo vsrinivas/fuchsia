@@ -12,5 +12,6 @@ source_set("launcher") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 }
