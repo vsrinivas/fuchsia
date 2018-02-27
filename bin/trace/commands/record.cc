@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <launchpad/launchpad.h>
+
 #include <fstream>
 #include <iostream>
 #include <unordered_set>
@@ -29,15 +31,64 @@ const char kOutputFile[] = "output-file";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
+const char kLaunchpad[] = "launchpad";
 const char kBufferSize[] = "buffer-size";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
+
+zx_handle_t Launch(const std::vector<std::string>& args) {
+  zx_handle_t subprocess = ZX_HANDLE_INVALID;
+  if (!args.size())
+    return subprocess;
+
+  std::vector<const char*> raw_args;
+  for (const auto& item : args) {
+    raw_args.push_back(item.c_str());
+  }
+
+  launchpad_t* launchpad;
+  launchpad_create(ZX_HANDLE_INVALID, raw_args[0], &launchpad);
+  launchpad_load_from_file(launchpad, args[0].c_str());
+  launchpad_set_args(launchpad, args.size(), raw_args.data());
+
+  launchpad_clone(launchpad, LP_CLONE_ALL);
+
+  const char* error;
+  if (launchpad_go(launchpad, &subprocess, &error) != ZX_OK) {
+    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << error
+                   << "\" Did you provide the full path to the tool?";
+  }
+
+  return subprocess;
+}
+
+bool WaitForExit(zx_handle_t process, int* exit_code) {
+  zx_signals_t signals_observed = 0;
+  zx_status_t status = zx_object_wait_one(process, ZX_TASK_TERMINATED,
+                                          ZX_TIME_INFINITE, &signals_observed);
+
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_wait_one failed, status: " << status;
+    return false;
+  }
+
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info,
+                              sizeof(proc_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
+    return false;
+  }
+
+  *exit_code = proc_info.return_code;
+  return true;
+}
 
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile, kCategories, kAppendArgs, kOutputFile,          kDuration,
-      kDetach,   kDecouple,   kBufferSize, kBenchmarkResultsFile};
+      kSpecFile, kCategories, kAppendArgs, kOutputFile, kDuration,
+      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBenchmarkResultsFile};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -114,6 +165,9 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   // --decouple
   decouple = command_line.HasOption(kDecouple);
 
+  // --launchpad
+  launchpad = command_line.HasOption(kLaunchpad);
+
   // --buffer-size=<megabytes>
   if (command_line.HasOption(kBufferSize, &index)) {
     uint32_t megabytes;
@@ -165,6 +219,9 @@ Command::Info Record::Describe() {
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
+       {"launchpad=[false]",
+        "Use launchpad to run a legacy app. Detach will have no effect when "
+        "using this option"},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
        {"benchmark-results-file=[none]",
@@ -227,7 +284,7 @@ void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
       [](fbl::String error) { err() << error.c_str() << std::endl; },
       [this] {
         if (!options_.app.empty())
-          LaunchApp();
+          options_.launchpad ? LaunchTool() : LaunchApp();
         StartTimer();
       },
       [this] { DoneTrace(); });
@@ -341,6 +398,26 @@ void Record::LaunchApp() {
   if (options_.detach) {
     application_controller_->Detach();
   }
+}
+
+void Record::LaunchTool() {
+  std::vector<std::string> all_args = {options_.app};
+  all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
+  zx_handle_t process = Launch(all_args);
+  if (process == ZX_HANDLE_INVALID) {
+    StopTrace(-1);
+    out() << "Unable to launch " << options_.app << std::endl;
+    return;
+  }
+  out() << "Launching " << options_.app << std::endl;
+
+  int exit_code = -1;
+  if (!WaitForExit(process, &exit_code))
+    out() << "Unable to get return code" << std::endl;
+
+  out() << "Application exited with return code " << exit_code << std::endl;
+  if (!options_.decouple)
+    StopTrace(exit_code);
 }
 
 void Record::StartTimer() {

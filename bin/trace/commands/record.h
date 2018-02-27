@@ -34,6 +34,7 @@ class Record : public CommandWithTraceController {
     fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(10);
     bool detach = false;
     bool decouple = false;
+    bool launchpad = false;
     uint32_t buffer_size_megabytes_hint = 4;
     std::string output_file_name = "/data/trace.json";
     std::string benchmark_results_file;
@@ -51,6 +52,7 @@ class Record : public CommandWithTraceController {
   void ProcessMeasurements(fxl::Closure on_done);
   void DoneTrace();
   void LaunchApp();
+  void LaunchTool();
   void StartTimer();
 
   app::ApplicationControllerPtr application_controller_;
