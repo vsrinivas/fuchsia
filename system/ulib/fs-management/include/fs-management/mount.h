@@ -56,6 +56,7 @@ disk_format_t detect_disk_format(int fd);
 typedef struct mount_options {
     bool readonly;
     bool verbose_mount;
+    bool collect_metrics;
     // Ensures that requests to the mountpoint will be propagated to the underlying FS
     bool wait_until_ready;
     // Create the mountpoint directory if it doesn't already exist.
@@ -66,6 +67,7 @@ typedef struct mount_options {
 static const mount_options_t default_mount_options = {
     .readonly = false,
     .verbose_mount = false,
+    .collect_metrics = false,
     .wait_until_ready = true,
     .create_mountpoint = false,
 };

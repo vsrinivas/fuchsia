@@ -30,8 +30,7 @@ namespace {
 
 typedef struct {
     bool readonly = false;
-    uint64_t data_blocks = blobfs::kStartBlockMinimum; // Account for reserved blocks
-    fbl::Vector<fbl::String> blob_list;
+    bool metrics = false;
 } blob_options_t;
 
 int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
@@ -48,7 +47,7 @@ int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
     }
 
     fbl::RefPtr<blobfs::VnodeBlob> vn;
-    if (blobfs::blobfs_mount(&vn, fbl::move(fd)) < 0) {
+    if (blobfs::blobfs_mount(&vn, fbl::move(fd), options.metrics) != ZX_OK) {
         return -1;
     }
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
@@ -109,6 +108,7 @@ int usage() {
             "usage: blobfs [ <options>* ] <command> [ <arg>* ]\n"
             "\n"
             "options: -r|--readonly  Mount filesystem read-only\n"
+            "         -m|--metrics   Collect filesystem metrics\n"
             "         -h|--help      Display this message\n"
             "\n"
             "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -128,17 +128,21 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
     while (1) {
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
+            {"metrics", no_argument, nullptr, 'm'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "rh", opts, &opt_index);
+        int c = getopt_long(argc, argv, "rmh", opts, &opt_index);
         if (c < 0) {
             break;
         }
         switch (c) {
         case 'r':
             options->readonly = true;
+            break;
+        case 'm':
+            options->metrics = true;
             break;
         case 'h':
         default:

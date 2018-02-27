@@ -168,14 +168,18 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
     // 1. binary
     // 2. (optional) readonly
     // 3. (optional) verbose
-    // 4. command
-    const char* argv[4] = {binary};
+    // 4. (optional) metrics
+    // 5. command
+    const char* argv[5] = {binary};
     int argc = 1;
     if (options.readonly) {
         argv[argc++] = "--readonly";
     }
     if (options.verbose_mount) {
         argv[argc++] = "--verbose";
+    }
+    if (options.collect_metrics) {
+        argv[argc++] = "--metrics";
     }
     argv[argc++] = "mount";
     return LaunchAndMount(cb, options, argv, argc);

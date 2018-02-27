@@ -36,6 +36,7 @@
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
+#include <blobfs/metrics.h>
 #include <blobfs/writeback.h>
 
 namespace blobfs {
@@ -205,24 +206,24 @@ private:
     void* GetData() const;
     void* GetMerkle() const;
 
-    WAVLTreeNodeState type_wavl_state_{};
+    WAVLTreeNodeState type_wavl_state_ = {};
 
     const fbl::RefPtr<Blobfs> blobfs_;
-    BlobFlags flags_{};
+    BlobFlags flags_ = {};
     fbl::atomic_bool syncing_;
 
     // The blob_ here consists of:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
-    fbl::unique_ptr<MappedVmo> blob_{};
-    vmoid_t vmoid_{};
+    fbl::unique_ptr<MappedVmo> blob_ = {};
+    vmoid_t vmoid_ = {};
 
-    zx::event readable_event_{};
-    uint64_t bytes_written_{};
-    uint8_t digest_[Digest::kLength]{};
+    zx::event readable_event_ = {};
+    uint64_t bytes_written_ = {};
+    uint8_t digest_[Digest::kLength] = {};
 
-    uint32_t fd_count_{};
-    size_t map_index_{};
+    uint32_t fd_count_ = {};
+    size_t map_index_ = {};
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
@@ -245,6 +246,10 @@ public:
 
     static zx_status_t Create(fbl::unique_fd blockfd, const blobfs_info_t* info,
                               fbl::RefPtr<Blobfs>* out);
+
+    void CollectMetrics() { collecting_metrics_ = true; }
+    bool CollectingMetrics() const { return collecting_metrics_; }
+    void DisableMetrics() { collecting_metrics_ = false; }
 
     zx_status_t Unmount();
     virtual ~Blobfs();
@@ -318,6 +323,31 @@ public:
     using SyncCallback = fs::Vnode::SyncCallback;
     void Sync(SyncCallback closure);
 
+    // Updates aggregate information about the total number of created
+    // blobs since mounting.
+    void UpdateAllocationMetrics(uint64_t size_data, uint64_t ns);
+
+    // Updates aggregate information about the number of blobs opened
+    // since mounting.
+    void UpdateLookupMetrics(uint64_t size);
+
+    // Updates aggregates information about blobs being written back
+    // to blobfs since mounting.
+    void UpdateClientWriteMetrics(uint64_t data_size, uint64_t merkle_size,
+                                  uint64_t enqueue_ns, uint64_t generate_ns);
+
+    // Updates aggregate information about flushing bits down
+    // to the underlying storage driver.
+    void UpdateWritebackMetrics(uint64_t size, uint64_t ns);
+
+    // Updates aggregate information about reading blobs from storage
+    // since mounting.
+    void UpdateMerkleDiskReadMetrics(uint64_t size, uint64_t read_ns, uint64_t verify_ns);
+
+    // Updates aggregate information about general verification info
+    // since mounting.
+    void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle, uint64_t ns);
+
     blobfs_info_t info_;
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
@@ -384,19 +414,23 @@ private:
     fbl::Mutex hash_lock_;
 
     fbl::unique_fd blockfd_;
-    block_info_t block_info_{};
-    fifo_client_t* fifo_client_{};
+    block_info_t block_info_ = {};
+    fifo_client_t* fifo_client_ = {};
 
-    RawBitmap block_map_{};
-    vmoid_t block_map_vmoid_{};
-    fbl::unique_ptr<MappedVmo> node_map_{};
-    vmoid_t node_map_vmoid_{};
-    fbl::unique_ptr<MappedVmo> info_vmo_{};
-    vmoid_t info_vmoid_{};
-    uint64_t fs_id_{};
+    RawBitmap block_map_ = {};
+    vmoid_t block_map_vmoid_ = {};
+    fbl::unique_ptr<MappedVmo> node_map_ = {};
+    vmoid_t node_map_vmoid_ = {};
+    fbl::unique_ptr<MappedVmo> info_vmo_= {};
+    vmoid_t info_vmoid_= {};
+    uint64_t fs_id_ = {};
+
+    bool collecting_metrics_ = false;
+    BlobfsMetrics metrics_ = {};
 };
 
 zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
 
-zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd, bool metrics);
+
 } // namespace blobfs

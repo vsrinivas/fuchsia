@@ -41,6 +41,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolu
 
 zx_status_t WriteTxn::Flush() {
     ZX_ASSERT(IsReady());
+    Duration duration(bs_->CollectingMetrics());
 
     // Update all the outgoing transactions to be in disk blocks
     block_fifo_request_t blk_reqs[MAX_TXN_MESSAGES];
@@ -56,6 +57,15 @@ zx_status_t WriteTxn::Flush() {
 
     // Actually send the operations to the underlying block device.
     zx_status_t status = bs_->Txn(blk_reqs, count_);
+
+    if (bs_->CollectingMetrics()) {
+        uint64_t sum = 0;
+        for (size_t i = 0; i < count_; i++) {
+            sum += blk_reqs[i].length * kBlobfsBlockSize;
+        }
+        bs_->UpdateWritebackMetrics(sum, duration.ns());
+    }
+
     count_ = 0;
     vmoid_ = VMOID_INVALID;
     return status;

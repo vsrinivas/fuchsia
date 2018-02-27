@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -19,30 +20,54 @@
 
 
 int usage(void) {
-    fprintf(stderr, "usage: mount [ <option>* ] devicepath mountpath\n");
-    fprintf(stderr, " -v  : Verbose mode\n");
-    fprintf(stderr, " -r  : Open the filesystem as read-only\n");
+    fprintf(stderr, "usage: mount [ <option>* ] devicepath mountpath\n"
+                    "options: \n"
+                    " -r|--readonly  : Open the filesystem as read-only\n"
+                    " -m|--metrics   : Collect filesystem metrics\n"
+                    " -v|--verbose   : Verbose mode\n"
+                    " -h|--help      : Display this message\n");
     return -1;
 }
 
 int parse_args(int argc, char** argv, mount_options_t* options,
                char** devicepath, char** mountpath) {
-    while (argc > 1) {
-        if (!strcmp(argv[1], "-v")) {
-            options->verbose_mount = true;
-        } else if (!strcmp(argv[1], "-r")) {
-            options->readonly = true;
-        } else {
+    while (1) {
+        static struct option opts[] = {
+            {"readonly", no_argument, NULL, 'r'},
+            {"metrics", no_argument, NULL, 'm'},
+            {"verbose", no_argument, NULL, 'v'},
+            {"help", no_argument, NULL, 'h'},
+            {NULL, 0, NULL, 0},
+        };
+        int opt_index;
+        int c = getopt_long(argc, argv, "rmvh", opts, &opt_index);
+        if (c < 0) {
             break;
         }
-        argc--;
-        argv++;
+        switch (c) {
+        case 'r':
+            options->readonly = true;
+            break;
+        case 'm':
+            options->collect_metrics = true;
+            break;
+        case 'v':
+            options->verbose_mount = true;
+            break;
+        case 'h':
+        default:
+            return usage();
+        }
     }
-    if (argc < 3) {
+
+    argc -= optind;
+    argv += optind;
+
+    if (argc < 2) {
         return usage();
     }
-    *devicepath = argv[1];
-    *mountpath = argv[2];
+    *devicepath = argv[0];
+    *mountpath = argv[1];
     return 0;
 }
 
