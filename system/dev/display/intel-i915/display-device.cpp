@@ -95,6 +95,9 @@ bool DisplayDevice::ResetDdi() {
 }
 
 bool DisplayDevice::Init() {
+    ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
+    pipe_power_ = controller_->power()->GetPipePowerWellRef(pipe_);
+
     if (!QueryDevice(&info_) || !DefaultModeset()) {
         return false;
     }

@@ -12,6 +12,7 @@
 
 #include "edid.h"
 #include "gtt.h"
+#include "power.h"
 #include "registers-ddi.h"
 #include "registers-dpll.h"
 #include "registers-pipe.h"
@@ -69,6 +70,9 @@ private:
     registers::Dpll dpll_;
     registers::Trans trans_;
     registers::Pipe pipe_;
+
+    PowerWellRef ddi_power_;
+    PowerWellRef pipe_power_;
 
     uintptr_t framebuffer_;
     uint32_t framebuffer_size_;

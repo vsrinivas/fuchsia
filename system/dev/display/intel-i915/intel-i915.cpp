@@ -215,7 +215,7 @@ void Controller::HandleHotplug(registers::Ddi ddi) {
     }
 }
 
-bool Controller::BringUpDisplayEngine() {
+bool Controller::BringUpDisplayEngine(bool resume) {
     // Enable PCH Reset Handshake
     auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space_.get());
     nde_rstwrn_opt.set_rst_pch_handshake_enable(1);
@@ -227,22 +227,10 @@ bool Controller::BringUpDisplayEngine() {
         return false;
     }
 
-    // Enable and wait for Power Well 1 and Misc IO power
-    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get());
-    power_well.set_power_well_1_request(1);
-    power_well.set_misc_io_power_state(1);
-    power_well.WriteTo(mmio_space_.get());
-    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).power_well_1_state(), 10)) {
-        zxlogf(ERROR, "Power Well 1 failed to enable\n");
-        return false;
-    }
-    if (!WAIT_ON_US(registers::PowerWellControl2::Get().ReadFrom(mmio_space_.get()).misc_io_power_state(), 10)) {
-        zxlogf(ERROR, "Misc IO power failed to enable\n");
-        return false;
-    }
-    if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg1_dist_status(), 5)) {
-        zxlogf(ERROR, "Power Well 1 distribution failed\n");
-        return false;
+    if (resume) {
+        power_.Resume();
+    } else {
+        cd_clk_power_well_ = power_.GetCdClockPowerWellRef();
     }
 
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
@@ -335,11 +323,6 @@ bool Controller::BringUpDisplayEngine() {
         auto vga_ctl = registers::VgaCtl::Get().ReadFrom(mmio_space());
         vga_ctl.set_vga_display_disable(1);
         vga_ctl.WriteTo(mmio_space());
-    }
-
-    // TODO(ZX-1413): Only enable power well 2 when necessary.
-    if (!EnablePowerWell2()) {
-        return false;
     }
 
     for (unsigned i = 0; i < registers::kPipeCount; i++) {
@@ -481,27 +464,6 @@ void Controller::AllocDisplayBuffers() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
 }
 
-bool Controller::EnablePowerWell2() {
-    // Enable Power Wells
-    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-    power_well.set_power_well_2_request(1);
-    power_well.WriteTo(mmio_space());
-
-    // Wait for PWR_WELL_CTL Power Well 2 state and distribution status
-    power_well.ReadFrom(mmio_space());
-    if (!WAIT_ON_US(registers::PowerWellControl2
-            ::Get().ReadFrom(mmio_space()).power_well_2_state(), 20)) {
-        zxlogf(ERROR, "i915: failed to enable Power Well 2\n");
-        return false;
-    }
-    if (!WAIT_ON_US(registers::FuseStatus
-            ::Get().ReadFrom(mmio_space()).pg2_dist_status(), 1)) {
-        zxlogf(ERROR, "i915: Power Well 2 distribution failed\n");
-        return false;
-    }
-    return true;
-}
-
 fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     registers::Pipe pipe;
     if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
@@ -537,7 +499,7 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
 
 zx_status_t Controller::InitDisplays() {
     if (ENABLE_MODESETTING && is_gen9(device_id_)) {
-        BringUpDisplayEngine();
+        BringUpDisplayEngine(false);
 
         for (uint32_t i = 0; i < registers::kDdiCount; i++) {
             auto disp_device = InitDisplay(registers::kDdis[i]);
@@ -653,7 +615,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
 }
 
 zx_status_t Controller::DdkResume(uint32_t hint) {
-    BringUpDisplayEngine();
+    BringUpDisplayEngine(true);
 
     registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space_.get());
     registers::PanelPowerOffDelay::Get().FromValue(pp_off_delay_val_).WriteTo(mmio_space_.get());
@@ -778,7 +740,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 }
 
 Controller::Controller(zx_device_t* parent)
-    : DeviceType(parent), irq_(ZX_HANDLE_INVALID) {}
+    : DeviceType(parent), irq_(ZX_HANDLE_INVALID), power_(this) {}
 
 Controller::~Controller() {
     if (irq_ != ZX_HANDLE_INVALID) {

@@ -16,6 +16,7 @@
 #include "display-device.h"
 #include "gtt.h"
 #include "igd.h"
+#include "power.h"
 #include "registers.h"
 #include "registers-ddi.h"
 #include "registers-pipe.h"
@@ -42,6 +43,7 @@ public:
     Gtt* gtt() { return &gtt_; }
     uint16_t device_id() const { return device_id_; }
     const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
+    Power* power() { return &power_; }
 
     int IrqLoop();
 
@@ -56,9 +58,8 @@ private:
     zx_status_t InitDisplays();
     fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi);
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display);
-    bool BringUpDisplayEngine();
+    bool BringUpDisplayEngine(bool resume);
     void AllocDisplayBuffers();
-    bool EnablePowerWell2();
     void HandleHotplug(registers::Ddi ddi);
 
     Gtt gtt_;
@@ -75,6 +76,9 @@ private:
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.
     fbl::Vector<DisplayDevice*> display_devices_;
+
+    Power power_;
+    PowerWellRef cd_clk_power_well_;
 
     uint16_t device_id_;
     uint32_t flags_;
