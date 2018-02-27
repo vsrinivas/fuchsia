@@ -20,7 +20,7 @@ MODULE_LIBS := \
 
 MODULE_HEADER_DEPS := system/ulib/runtime
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+ifeq ($(call TOBOOL,$(USE_CLANG)):$(call TOBOOL,$(USE_ASAN)),true:false)
 MODULE_COMPILEFLAGS += -fsanitize=safe-stack -fstack-protector-all
 endif
 
