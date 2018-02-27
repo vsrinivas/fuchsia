@@ -1,6 +1,6 @@
 library types;
 
-struct this_is_a_struct {};
+struct this_is_a_struct { string s; };
 union this_is_a_union { string s; };
 interface this_is_an_interface {};
 

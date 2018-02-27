@@ -1,4 +1,6 @@
 library example_1;
 
 struct Point {
+    float32 x;
+    float32 y;
 };

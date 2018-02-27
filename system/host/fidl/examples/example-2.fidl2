@@ -1,5 +1,6 @@
 library example_2;
 
 struct Point {
-    // yo
+    float32 x; // yo
+    float32 y;
 };

@@ -786,6 +786,9 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration() {
     if (!Ok())
         Fail();
 
+    if (members.empty())
+        return Fail();
+
     return std::make_unique<raw::StructDeclaration>(std::move(identifier), std::move(const_members),
                                                     std::move(enum_members), std::move(members));
 }
