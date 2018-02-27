@@ -114,8 +114,9 @@ struct Interface : public Decl {
                 : type(std::move(type)), name(std::move(name)) {}
             std::unique_ptr<raw::Type> type;
             std::unique_ptr<raw::Identifier> name;
-            // TODO(TO-758) Compute this.
-            uint64_t offset = 0u;
+            // TODO(TO-758) Compute these.
+            TypeShape typeshape;
+            uint64_t offset = 0;
         };
 
         Method(Method&&) = default;
@@ -134,12 +135,12 @@ struct Interface : public Decl {
         std::unique_ptr<raw::Identifier> name;
         bool has_request;
         std::vector<Parameter> maybe_request;
-        // TODO(TO-758) Compute this.
-        uint64_t maybe_request_size = 0;
+        // TODO(TO-758,TO-825) Compute these.
+        TypeShape maybe_request_typeshape;
         bool has_response;
         std::vector<Parameter> maybe_response;
-        // TODO(TO-758) Compute this.
-        uint64_t maybe_response_size = 0;
+        // TODO(TO-758,TO-825) Compute these.
+        TypeShape maybe_response_typeshape;
     };
 
     Interface(Name name, std::vector<Method> methods)
@@ -157,7 +158,8 @@ struct Struct : public Decl {
         std::unique_ptr<raw::Type> type;
         std::unique_ptr<raw::Identifier> name;
         std::unique_ptr<raw::Constant> maybe_default_value;
-        // TODO(TO-758) Compute this.
+        // TODO(TO-758) Compute these.
+        TypeShape typeshape;
         uint64_t offset = 0;
     };
 
@@ -165,8 +167,9 @@ struct Struct : public Decl {
         : Decl(Kind::kStruct, std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
-    // TODO(TO-758) Compute this.
-    uint64_t size = 8;
+    // TODO(TO-758) Compute these.
+    TypeShape typeshape;
+    uint64_t offset = 0;
 };
 
 struct Union : public Decl {
@@ -175,7 +178,8 @@ struct Union : public Decl {
             : type(std::move(type)), name(std::move(name)) {}
         std::unique_ptr<raw::Type> type;
         std::unique_ptr<raw::Identifier> name;
-        // TODO(TO-758) Compute this.
+        // TODO(TO-758) Compute these.
+        TypeShape typeshape;
         uint64_t offset = 0;
     };
 
@@ -183,8 +187,9 @@ struct Union : public Decl {
         : Decl(Kind::kUnion, std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
-    // TODO(TO-758) Compute this.
-    uint64_t size = 8;
+    // TODO(TO-758) Compute these.
+    TypeShape typeshape;
+    uint64_t offset = 0;
 };
 
 class Library {

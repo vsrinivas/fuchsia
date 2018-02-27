@@ -176,6 +176,9 @@
                 "maybe_request_size": {
                     "$ref": "#/definitions/size"
                 },
+                "maybe_request_alignment": {
+                    "$ref": "#/definitions/size"
+                },
                 "has_response": {
                     "type": "boolean"
                 },
@@ -187,6 +190,9 @@
                 },
                 "maybe_response_size": {
                     "$ref": "#/definitions/size"
+                },
+                "maybe_response_alignment": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
@@ -195,6 +201,8 @@
             "required": [
                 "type",
                 "name",
+                "size",
+                "alignment",
                 "offset"
             ],
             "properties": {
@@ -203,6 +211,12 @@
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
+                },
+                "alignment": {
+                    "$ref": "#/definitions/size"
                 },
                 "offset": {
                     "$ref": "#/definitions/size"
@@ -236,6 +250,8 @@
             "required": [
                 "type",
                 "name",
+                "size",
+                "alignment",
                 "offset"
             ],
             "properties": {
@@ -244,6 +260,12 @@
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
+                },
+                "alignment": {
+                    "$ref": "#/definitions/size"
                 },
                 "offset": {
                     "$ref": "#/definitions/size"
@@ -258,7 +280,8 @@
             "required": [
                 "name",
                 "members",
-                "size"
+                "size",
+                "alignment"
             ],
             "properties": {
                 "name": {
@@ -272,6 +295,9 @@
                 },
                 "size": {
                     "$ref": "#/definitions/size"
+                },
+                "alignment": {
+                    "$ref": "#/definitions/size"
                 }
             }
         },
@@ -280,6 +306,8 @@
             "required": [
                 "type",
                 "name",
+                "size",
+                "alignment",
                 "offset"
             ],
             "properties": {
@@ -288,6 +316,12 @@
                 },
                 "name": {
                     "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "$ref": "#/definitions/size"
+                },
+                "alignment": {
+                    "$ref": "#/definitions/size"
                 },
                 "offset": {
                     "$ref": "#/definitions/size"

@@ -471,12 +471,14 @@ void JSONGenerator::Generate(const flat::Interface::Method& value) {
         GenerateObjectMember("has_request", value.has_request);
         if (value.has_request) {
             GenerateObjectMember("maybe_request", value.maybe_request);
-            GenerateObjectMember("maybe_request_size", value.maybe_request_size);
+            GenerateObjectMember("maybe_request_size", value.maybe_request_typeshape.Size());
+            GenerateObjectMember("maybe_request_alignment", value.maybe_request_typeshape.Alignment());
         }
         GenerateObjectMember("has_response", value.has_response);
         if (value.has_response) {
             GenerateObjectMember("maybe_response", value.maybe_response);
-            GenerateObjectMember("maybe_response_size", value.maybe_response_size);
+            GenerateObjectMember("maybe_response_size", value.maybe_response_typeshape.Size());
+            GenerateObjectMember("maybe_response_alignment", value.maybe_response_typeshape.Alignment());
         }
     });
 }
@@ -485,6 +487,8 @@ void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::First);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
         GenerateObjectMember("offset", value.offset);
     });
 }
@@ -493,7 +497,9 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
         GenerateObjectMember("members", value.members);
-        GenerateObjectMember("size", value.size);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("offset", value.offset);
     });
 }
 
@@ -503,6 +509,8 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
         GenerateObjectMember("name", value.name);
         if (value.maybe_default_value)
             GenerateObjectMember("maybe_default_value", value.maybe_default_value);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
         GenerateObjectMember("offset", value.offset);
     });
 }
@@ -511,7 +519,9 @@ void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
         GenerateObjectMember("members", value.members);
-        GenerateObjectMember("size", value.size);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("offset", value.offset);
     });
 }
 
@@ -519,6 +529,8 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type, Position::First);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
         GenerateObjectMember("offset", value.offset);
     });
 }
