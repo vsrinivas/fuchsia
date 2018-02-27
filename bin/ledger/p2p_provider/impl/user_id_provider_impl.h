@@ -20,7 +20,7 @@ class UserIdProviderImpl : public UserIdProvider {
                      std::string user_directory,
                      modular::auth::TokenProviderPtr token_provider_ptr);
 
-  void GetUserId(std::function<void(std::string, Status)> callback) override;
+  void GetUserId(std::function<void(Status, std::string)> callback) override;
 
  private:
   std::string GetUserIdPath();

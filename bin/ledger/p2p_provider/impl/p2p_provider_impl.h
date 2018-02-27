@@ -70,7 +70,8 @@ class P2PProviderImpl : public P2PProvider {
 
   Client* client_ = nullptr;
 
-  std::string user_token_;
+  // ID of a user, used to ensure all connected Ledgers are for the same user.
+  std::string user_id_;
   // |connection_map_| holds the connections, keyed by the remote host name.
   std::map<std::string, RemoteConnection*, convert::StringViewComparator>
       connection_map_;

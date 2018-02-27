@@ -21,7 +21,7 @@ class UserIdProvider {
   virtual ~UserIdProvider() {}
 
   // GetUserId calls its callback with the user id.
-  virtual void GetUserId(std::function<void(std::string, Status)> callback) = 0;
+  virtual void GetUserId(std::function<void(Status, std::string)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserIdProvider);

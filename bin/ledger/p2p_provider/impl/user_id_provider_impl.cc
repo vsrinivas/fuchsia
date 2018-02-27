@@ -24,28 +24,29 @@ UserIdProviderImpl::UserIdProviderImpl(
 }
 
 void UserIdProviderImpl::GetUserId(
-    std::function<void(std::string, Status)> callback) {
+    std::function<void(Status, std::string)> callback) {
   FXL_DCHECK(callback);
   std::string stored_id;
   if (LoadUserIdFromFile(&stored_id)) {
-    callback(stored_id, Status::OK);
+    callback(Status::OK, stored_id);
     return;
   }
 
-  firebase_auth_->GetFirebaseUserId(
-      [this, callback = std::move(callback)](firebase_auth::AuthStatus status,
-                                             std::string user_id) {
-        if (status != firebase_auth::AuthStatus::OK) {
-          FXL_LOG(ERROR) << "Firebase auth returned an error.";
-          callback("", Status::ERROR);
-          return;
-        }
-        if (!UpdateUserId(user_id)) {
-          FXL_LOG(ERROR) << "Unable to persist the user id for caching.";
-          // We have the user id, we can continue anyway.
-        }
-        callback(user_id, Status::OK);
-      });
+  firebase_auth_->GetFirebaseUserId([this, callback = std::move(callback)](
+                                        firebase_auth::AuthStatus status,
+                                        std::string user_id) {
+    if (status != firebase_auth::AuthStatus::OK) {
+      FXL_LOG(ERROR) << "Firebase auth returned an error.";
+      callback(Status::ERROR, "");
+      return;
+    }
+    if (!UpdateUserId(user_id)) {
+      FXL_LOG(WARNING)
+          << "Unable to persist the user id for caching. Continuing anyway...";
+      // We have the user id, we can continue anyway.
+    }
+    callback(Status::OK, user_id);
+  });
 }
 
 std::string UserIdProviderImpl::GetUserIdPath() {

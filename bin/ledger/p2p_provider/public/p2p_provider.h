@@ -29,6 +29,7 @@ class P2PProvider {
   virtual ~P2PProvider() {}
 
   // Starts participating in the device mesh.
+  // To stop participating, destroy this class instance.
   virtual void Start(Client* client) = 0;
   // Sends the provided message |data| to |destination|. Returns true if the
   // message was sent, false if the destination is not available.

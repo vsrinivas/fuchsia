@@ -17,14 +17,14 @@ namespace {
 constexpr char kRespondingServiceName[] = "ledger-p2p-";
 const uint16_t kCurrentVersion = 0;
 
-bool ValidateHandshake(const Envelope* envelope) {
+bool ValidateHandshake(const Envelope* envelope, const Handshake** message) {
   if (envelope->message_type() != EnvelopeMessage_Handshake) {
     FXL_LOG(ERROR) << "Incorrect message type: " << envelope->message_type();
     return false;
   }
-  const Handshake* message = static_cast<const Handshake*>(envelope->message());
-  if (message->version() != kCurrentVersion) {
-    FXL_LOG(ERROR) << "Incorrect message version: " << message->version();
+  *message = static_cast<const Handshake*>(envelope->message());
+  if ((*message)->version() != kCurrentVersion) {
+    FXL_LOG(ERROR) << "Incorrect message version: " << (*message)->version();
     return false;
   }
   return true;
@@ -47,13 +47,13 @@ void P2PProviderImpl::Start(Client* client) {
   FXL_DCHECK(client);
   client_ = client;
   user_id_provider_->GetUserId(
-      [this](std::string user_id, UserIdProvider::Status status) {
+      [this](UserIdProvider::Status status, std::string user_id) {
         if (status != UserIdProvider::Status::OK) {
           FXL_LOG(ERROR) << "Unable to retrieve the user ID necessary to start "
                             "the peer-to-peer provider.";
           return;
         }
-        user_token_ = user_id;
+        user_id_ = user_id;
         StartService();
       });
 }
@@ -92,8 +92,8 @@ void P2PProviderImpl::StartService() {
             });
         connection.Start(std::move(channel));
       },
-      kRespondingServiceName + user_token_);
-  net_connector_->RegisterServiceProvider(kRespondingServiceName + user_token_,
+      kRespondingServiceName + user_id_);
+  net_connector_->RegisterServiceProvider(kRespondingServiceName + user_id_,
                                           std::move(handle));
 
   ListenForNewDevices(netconnector::NetConnector::kInitialKnownDeviceNames);
@@ -112,13 +112,13 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
     return;
   };
   const Envelope* envelope = GetEnvelope(data.data());
-  if (!ValidateHandshake(envelope)) {
+  const Handshake* message;
+  if (!ValidateHandshake(envelope, &message)) {
     FXL_LOG(ERROR) << "The message received is not valid.";
     connection->Disconnect();
     return;
   }
 
-  const Handshake* message = static_cast<const Handshake*>(envelope->message());
   std::string remote_name(message->host_name()->begin(),
                           message->host_name()->end());
   if (!network_remote_name.empty() && network_remote_name != remote_name) {
@@ -200,7 +200,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
               remote_name, device_service_provider.NewRequest());
 
           device_service_provider->ConnectToService(
-              kRespondingServiceName + user_token_, std::move(remote));
+              kRespondingServiceName + user_id_, std::move(remote));
 
           flatbuffers::FlatBufferBuilder buffer;
           flatbuffers::Offset<Handshake> request =

@@ -26,8 +26,8 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
   explicit FakeUserIdProvider(std::string user_id)
       : user_id_(std::move(user_id)) {}
 
-  void GetUserId(std::function<void(std::string, Status)> callback) override {
-    callback(user_id_, Status::OK);
+  void GetUserId(std::function<void(Status, std::string)> callback) override {
+    callback(Status::OK, user_id_);
   };
 
  private:

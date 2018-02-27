@@ -28,7 +28,6 @@ source_set("impl") {
 
   deps = [
     ":envelope",
-    "//garnet/lib/callback",
     "//peridot/lib/convert",
     "//peridot/lib/ledger_client:constants",
   ]
