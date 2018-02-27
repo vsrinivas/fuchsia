@@ -403,64 +403,68 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
 
 // TODO(TO-702) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
-std::vector<CGenerator::NamedConst> CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
-    std::vector<CGenerator::NamedConst> named_consts;
+std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
+    std::map<const flat::Decl*, NamedConst> named_consts;
     for (const auto& const_info : const_infos) {
-        named_consts.push_back({"", *const_info});
+        named_consts.emplace(const_info.get(), NamedConst{"", *const_info});
     }
     return named_consts;
 }
 
-std::vector<CGenerator::NamedEnum> CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
-    std::vector<CGenerator::NamedEnum> named_enums;
+std::map<const flat::Decl*, CGenerator::NamedEnum> CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
+    std::map<const flat::Decl*, NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
         std::string enum_name = LongName(enum_info->name);
-        named_enums.push_back({std::move(enum_name), *enum_info});
+        named_enums.emplace(enum_info.get(), NamedEnum{std::move(enum_name), *enum_info});
     }
     return named_enums;
 }
 
-std::vector<CGenerator::NamedMessage> CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
-    std::vector<CGenerator::NamedMessage> named_messages;
+std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
+    std::map<const flat::Decl*, NamedInterface> named_interfaces;
     for (const auto& interface_info : interface_infos) {
+        NamedInterface named_interface;
         for (const auto& method : interface_info->methods) {
+            NamedMethod named_method;
             std::string name = LongName(interface_info->name) + ShortName(method.name);
             if (method.has_request) {
                 std::string c_name = name + "Msg";
                 std::string coded_name = name + "ReqCoded";
-                named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_request});
+                named_method.request = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request});
             }
             if (method.has_response) {
                 if (!method.has_request) {
                     std::string c_name = name + "Evt";
                     std::string coded_name = name + "EvtCoded";
-                    named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_response});
+                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response});
                 } else {
                     std::string c_name = name + "Rsp";
                     std::string coded_name = name + "RspCoded";
-                    named_messages.push_back({std::move(c_name), std::move(coded_name), method.maybe_response});
+                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response});
                 }
             }
+            named_interface.methods.push_back(std::move(named_method));
         }
+        named_interfaces.emplace(interface_info.get(), std::move(named_interface));
     }
-    return named_messages;
+    return named_interfaces;
 }
 
-std::vector<CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
-    std::vector<CGenerator::NamedStruct> named_structs;
+std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
+    std::map<const flat::Decl*, NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
         std::string c_name = LongName(struct_info->name);
         std::string coded_name = LongName(struct_info->name) + "Coded";
-        named_structs.push_back({std::move(c_name), std::move(coded_name), *struct_info});
+        named_structs.emplace(struct_info.get(), NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
     }
     return named_structs;
 }
 
-std::vector<CGenerator::NamedUnion> CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
-    std::vector<CGenerator::NamedUnion> named_unions;
+std::map<const flat::Decl*, CGenerator::NamedUnion> CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
+    std::map<const flat::Decl*, NamedUnion> named_unions;
     for (const auto& union_info : union_infos) {
         std::string union_name = LongName(union_info->name);
-        named_unions.push_back({std::move(union_name), *union_info});
+        named_unions.emplace(union_info.get(), NamedUnion{std::move(union_name), *union_info});
     }
     return named_unions;
 }
@@ -483,8 +487,13 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     EmitBlank(&header_file_);
 }
 
-void CGenerator::ProduceMessageForwardDeclaration(const NamedMessage& named_message) {
-    GenerateStructTypedef(named_message.c_name);
+void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
+    for (const auto& method_info : named_interface.methods) {
+        if (method_info.request)
+            GenerateStructTypedef(method_info.request->c_name);
+        if (method_info.response)
+            GenerateStructTypedef(method_info.response->c_name);
+    }
 }
 
 void CGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct) {
@@ -495,8 +504,13 @@ void CGenerator::ProduceUnionForwardDeclaration(const NamedUnion& named_union) {
     GenerateStructTypedef(named_union.name);
 }
 
-void CGenerator::ProduceMessageExternDeclaration(const NamedMessage& named_message) {
-    header_file_ << "extern const fidl_type_t " << named_message.coded_name << ";\n";
+void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_interface) {
+    for (const auto& method_info : named_interface.methods) {
+        if (method_info.request)
+            header_file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
+        if (method_info.response)
+            header_file_ << "extern const fidl_type_t " << method_info.response->coded_name << ";\n";
+    }
 }
 
 void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
@@ -506,19 +520,28 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
     EmitBlank(&header_file_);
 }
 
-void CGenerator::ProduceMessageDeclaration(const NamedMessage& message) {
+void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
     std::vector<CGenerator::Member> members;
-    members.reserve(1 + message.parameters.size());
+    members.reserve(1 + named_message.parameters.size());
     members.push_back(MessageHeader());
-    for (const auto& parameter : message.parameters) {
+    for (const auto& parameter : named_message.parameters) {
         const raw::Type* parameter_type = parameter.type.get();
         auto parameter_name = ShortName(parameter.name);
         members.push_back(CreateMember(library_, parameter_type, parameter_name));
     }
 
-    GenerateStructDeclaration(message.c_name, members);
+    GenerateStructDeclaration(named_message.c_name, members);
 
     EmitBlank(&header_file_);
+}
+
+void CGenerator::ProduceInterfaceDeclaration(const NamedInterface& named_interface) {
+    for (const auto& method_info : named_interface.methods) {
+        if (method_info.request)
+            ProduceMessageDeclaration(*method_info.request);
+        if (method_info.response)
+            ProduceMessageDeclaration(*method_info.response);
+    }
 }
 
 void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
@@ -556,49 +579,77 @@ void CGenerator::ProduceCStructs(std::ostringstream* header_file_out) {
 
     GeneratePrologues();
 
-    std::vector<NamedConst> named_consts = NameConsts(library_->const_declarations_);
-    std::vector<NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
-    std::vector<NamedMessage> named_messages = NameInterfaces(library_->interface_declarations_);
-    std::vector<NamedStruct> named_structs = NameStructs(library_->struct_declarations_);
-    std::vector<NamedUnion> named_unions = NameUnions(library_->union_declarations_);
+    std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations_);
+    std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
+    std::map<const flat::Decl*, NamedInterface> named_interfaces = NameInterfaces(library_->interface_declarations_);
+    std::map<const flat::Decl*, NamedStruct> named_structs = NameStructs(library_->struct_declarations_);
+    std::map<const flat::Decl*, NamedUnion> named_unions = NameUnions(library_->union_declarations_);
 
     header_file_ << "\n// Forward declarations\n\n";
-    for (const auto& named_const : named_consts) {
-        ProduceConstForwardDeclaration(named_const);
-    }
-    for (const auto& named_enum : named_enums) {
-        ProduceEnumForwardDeclaration(named_enum);
-    }
-    for (const auto& named_message : named_messages) {
-        ProduceMessageForwardDeclaration(named_message);
-    }
-    for (const auto& named_struct : named_structs) {
-        ProduceStructForwardDeclaration(named_struct);
-    }
-    for (const auto& named_union : named_unions) {
-        ProduceUnionForwardDeclaration(named_union);
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+            ProduceConstForwardDeclaration(named_consts.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kEnum:
+            ProduceEnumForwardDeclaration(named_enums.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kInterface:
+            ProduceInterfaceForwardDeclaration(named_interfaces.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kStruct:
+            ProduceStructForwardDeclaration(named_structs.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kUnion:
+            ProduceUnionForwardDeclaration(named_unions.find(decl)->second);
+            break;
+        default:
+            abort();
+        }
     }
 
-    // Only messages have extern fidl_type_t declarations.
     header_file_ << "\n// Extern declarations\n\n";
-    for (const auto& named_message : named_messages) {
-        ProduceMessageExternDeclaration(named_message);
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            // Only messages have extern fidl_type_t declarations.
+            break;
+        case flat::Decl::Kind::kInterface:
+            ProduceInterfaceExternDeclaration(named_interfaces.find(decl)->second);
+            break;
+        default:
+            abort();
+        }
     }
 
     header_file_ << "\n// Declarations\n\n";
-    for (const auto& named_const : named_consts) {
-        ProduceConstDeclaration(named_const);
-    }
-    // Enums can be entirely forward declared, as they have no
-    // dependencies other than standard headers.
-    for (const auto& message : named_messages) {
-        ProduceMessageDeclaration(message);
-    }
-    for (const auto& named_struct : named_structs) {
-        ProduceStructDeclaration(named_struct);
-    }
-    for (const auto& named_union : named_unions) {
-        ProduceUnionDeclaration(named_union);
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+            ProduceConstDeclaration(named_consts.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kEnum:
+            // Enums can be entirely forward declared, as they have no
+            // dependencies other than standard headers.
+            break;
+        case flat::Decl::Kind::kInterface:
+            ProduceInterfaceDeclaration(named_interfaces.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kStruct:
+            ProduceStructDeclaration(named_structs.find(decl)->second);
+            break;
+        case flat::Decl::Kind::kUnion:
+            ProduceUnionDeclaration(named_unions.find(decl)->second);
+            break;
+        default:
+            abort();
+        }
     }
 
     GenerateEpilogues();

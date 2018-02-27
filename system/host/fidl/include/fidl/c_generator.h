@@ -68,6 +68,15 @@ public:
         const std::vector<flat::Interface::Method::Parameter>& parameters;
     };
 
+    struct NamedMethod {
+        std::unique_ptr<NamedMessage> request;
+        std::unique_ptr<NamedMessage> response;
+    };
+
+    struct NamedInterface {
+        std::vector<NamedMethod> methods;
+    };
+
     struct NamedStruct {
         std::string c_name;
         std::string coded_name;
@@ -92,22 +101,23 @@ public:
     void MaybeProduceCodingField(std::string field_name, uint32_t offset, const raw::Type* type,
                                  std::vector<coded::Field>* fields);
 
-    std::vector<NamedConst> NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
-    std::vector<NamedEnum> NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
-    std::vector<NamedMessage> NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
-    std::vector<NamedStruct> NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
-    std::vector<NamedUnion> NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
+    std::map<const flat::Decl*, NamedConst> NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
+    std::map<const flat::Decl*, NamedEnum> NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
+    std::map<const flat::Decl*, NamedInterface> NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
+    std::map<const flat::Decl*, NamedStruct> NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
+    std::map<const flat::Decl*, NamedUnion> NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
 
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
-    void ProduceMessageForwardDeclaration(const NamedMessage& named_message);
+    void ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface);
     void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
     void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
 
-    void ProduceMessageExternDeclaration(const NamedMessage& named_message);
+    void ProduceInterfaceExternDeclaration(const NamedInterface& named_interface);
 
     void ProduceConstDeclaration(const NamedConst& named_const);
     void ProduceMessageDeclaration(const NamedMessage& named_message);
+    void ProduceInterfaceDeclaration(const NamedInterface& named_interface);
     void ProduceStructDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
 
