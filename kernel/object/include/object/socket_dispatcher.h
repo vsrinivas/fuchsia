@@ -84,7 +84,6 @@ private:
     MBufChain data_ TA_GUARDED(get_lock());
     fbl::unique_ptr<ControlMsg> control_msg_ TA_GUARDED(get_lock());
     size_t control_msg_len_ TA_GUARDED(get_lock());
-    fbl::RefPtr<SocketDispatcher> other_ TA_GUARDED(get_lock());
     HandleOwner accept_queue_ TA_GUARDED(get_lock());
     bool read_disabled_ TA_GUARDED(get_lock());
 };

@@ -33,6 +33,4 @@ private:
     CookieJar cookie_jar_;
 
     fbl::Canary<fbl::magic("EVPD")> canary_;
-
-    fbl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(get_lock());
 };

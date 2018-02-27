@@ -48,7 +48,6 @@ private:
     const uint32_t elem_size_;
     const uint32_t mask_;
 
-    fbl::RefPtr<FifoDispatcher> other_ TA_GUARDED(get_lock());
     uint32_t head_ TA_GUARDED(get_lock());
     uint32_t tail_ TA_GUARDED(get_lock());
     fbl::unique_ptr<uint8_t[]> data_ TA_GUARDED(get_lock());

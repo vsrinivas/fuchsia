@@ -49,11 +49,11 @@ void EventPairDispatcher::on_zero_handles()
     canary_.Assert();
 
     fbl::AutoLock locker(get_lock());
-    DEBUG_ASSERT(other_);
+    DEBUG_ASSERT(peer_);
 
-    other_->InvalidateCookieLocked(other_->get_cookie_jar());
-    other_->UpdateStateLocked(0u, ZX_EPAIR_PEER_CLOSED);
-    other_.reset();
+    peer_->InvalidateCookieLocked(peer_->get_cookie_jar());
+    peer_->UpdateStateLocked(0u, ZX_EPAIR_PEER_CLOSED);
+    peer_.reset();
 }
 
 zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
@@ -71,9 +71,9 @@ zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
     }
 
     // object_signal() may race with handle_close() on another thread.
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
-    other_->UpdateStateLocked(clear_mask, set_mask);
+    peer_->UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
 }
 
@@ -86,7 +86,7 @@ EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatc
 void EventPairDispatcher::Init(fbl::RefPtr<EventPairDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(other);
     // No need to take |lock_| here.
-    DEBUG_ASSERT(!other_);
+    DEBUG_ASSERT(!peer_);
     peer_koid_ = other->get_koid();
-    other_ = fbl::move(other);
+    peer_ = fbl::move(other);
 }

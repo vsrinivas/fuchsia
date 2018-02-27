@@ -101,8 +101,8 @@ SocketDispatcher::~SocketDispatcher() {
 // This is called before either SocketDispatcher is accessible from threads other than the one
 // initializing the socket, so it does not need locking.
 void SocketDispatcher::Init(fbl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    other_ = fbl::move(other);
-    peer_koid_ = other_->get_koid();
+    peer_ = fbl::move(other);
+    peer_koid_ = peer_->get_koid();
 }
 
 void SocketDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -110,7 +110,7 @@ void SocketDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
 
     AutoLock lock(get_lock());
     // Drop our reference to our peer.
-    auto other = fbl::move(other_);
+    auto other = fbl::move(peer_);
     if (other != nullptr)
         other->OnPeerZeroHandlesLocked();
 }
@@ -118,7 +118,7 @@ void SocketDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
 void SocketDispatcher::OnPeerZeroHandlesLocked() {
     canary_.Assert();
 
-    other_.reset();
+    peer_.reset();
     UpdateStateLocked(ZX_SOCKET_WRITABLE, ZX_SOCKET_PEER_CLOSED);
 }
 
@@ -135,10 +135,10 @@ zx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
     }
 
     AutoLock lock(get_lock());
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
-    return other_->UserSignalSelfLocked(clear_mask, set_mask);
+    return peer_->UserSignalSelfLocked(clear_mask, set_mask);
 }
 
 zx_status_t SocketDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) {
@@ -181,8 +181,8 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) TA_NO_THREAD_SAFETY_ANALYSI
 
     // Our peer already be closed - if so, we've already updated our own bits so we are done. If the
     // peer is done, we need to notify them of the state change.
-    if (other_ != nullptr) {
-        return other_->ShutdownOtherLocked(how);
+    if (peer_ != nullptr) {
+        return peer_->ShutdownOtherLocked(how);
     } else {
         return ZX_OK;
     }
@@ -222,7 +222,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len,
 
     AutoLock lock(get_lock());
 
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
     zx_signals_t signals = GetSignalsStateLocked();
     if (signals & ZX_SOCKET_WRITE_DISABLED)
@@ -235,7 +235,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len,
     if (len != static_cast<size_t>(static_cast<uint32_t>(len)))
         return ZX_ERR_INVALID_ARGS;
 
-    return other_->WriteSelfLocked(src, len, nwritten);
+    return peer_->WriteSelfLocked(src, len, nwritten);
 }
 
 zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t len)
@@ -252,10 +252,10 @@ zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t l
         return ZX_ERR_OUT_OF_RANGE;
 
     AutoLock lock(get_lock());
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
-    return other_->WriteControlSelfLocked(src, len);
+    return peer_->WriteControlSelfLocked(src, len);
 }
 
 zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src,
@@ -271,8 +271,8 @@ zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src
     control_msg_len_ = static_cast<uint32_t>(len);
 
     UpdateStateLocked(0u, ZX_SOCKET_CONTROL_READABLE);
-    if (other_)
-        other_->UpdateStateLocked(ZX_SOCKET_CONTROL_WRITABLE, 0u);
+    if (peer_)
+        peer_->UpdateStateLocked(ZX_SOCKET_CONTROL_WRITABLE, 0u);
 
     return ZX_OK;
 }
@@ -301,8 +301,8 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
             UpdateStateLocked(0u, ZX_SOCKET_READABLE);
     }
 
-    if (other_ && is_full())
-        other_->UpdateStateLocked(ZX_SOCKET_WRITABLE, 0u);
+    if (peer_ && is_full())
+        peer_->UpdateStateLocked(ZX_SOCKET_WRITABLE, 0u);
 
     *written = st;
     return status;
@@ -326,7 +326,7 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
         return ZX_ERR_INVALID_ARGS;
 
     if (is_empty()) {
-        if (!other_)
+        if (!peer_)
             return ZX_ERR_PEER_CLOSED;
         // If reading is disabled on our end and we're empty, we'll never become readable again.
         // Return a different error to let the caller know.
@@ -346,8 +346,8 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
         UpdateStateLocked(ZX_SOCKET_READABLE, set_mask);
     }
 
-    if (other_ && was_full && (st > 0))
-        other_->UpdateStateLocked(0u, ZX_SOCKET_WRITABLE);
+    if (peer_ && was_full && (st > 0))
+        peer_->UpdateStateLocked(0u, ZX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);
     return ZX_OK;
@@ -372,8 +372,8 @@ zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
 
     control_msg_len_ = 0;
     UpdateStateLocked(ZX_SOCKET_CONTROL_READABLE, 0u);
-    if (other_)
-        other_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
+    if (peer_)
+        peer_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
 
     *nread = copy_len;
     return ZX_OK;
@@ -385,7 +385,7 @@ zx_status_t SocketDispatcher::CheckShareable(SocketDispatcher* to_send) {
     // share on, thus preventing loops, etc.
     AutoLock lock(get_lock());
     if ((to_send->flags_ & ZX_SOCKET_HAS_ACCEPT) ||
-        (to_send == this) || (to_send == other_.get()))
+        (to_send == this) || (to_send == peer_.get()))
         return ZX_ERR_BAD_STATE;
     return ZX_OK;
 }
@@ -399,10 +399,10 @@ zx_status_t SocketDispatcher::Share(Handle* h) TA_NO_THREAD_SAFETY_ANALYSIS {
         return ZX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(get_lock());
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
-    return other_->ShareSelfLocked(h);
+    return peer_->ShareSelfLocked(h);
 }
 
 zx_status_t SocketDispatcher::ShareSelfLocked(Handle* h) TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -414,8 +414,8 @@ zx_status_t SocketDispatcher::ShareSelfLocked(Handle* h) TA_NO_THREAD_SAFETY_ANA
     accept_queue_.reset(h);
 
     UpdateStateLocked(0, ZX_SOCKET_ACCEPT);
-    if (other_)
-        other_->UpdateStateLocked(ZX_SOCKET_SHARE, 0);
+    if (peer_)
+        peer_->UpdateStateLocked(ZX_SOCKET_SHARE, 0);
 
     return ZX_OK;
 }
@@ -434,8 +434,8 @@ zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSI
     *h = fbl::move(accept_queue_);
 
     UpdateStateLocked(ZX_SOCKET_ACCEPT, 0);
-    if (other_)
-        other_->UpdateStateLocked(0, ZX_SOCKET_SHARE);
+    if (peer_)
+        peer_->UpdateStateLocked(0, ZX_SOCKET_SHARE);
 
     return ZX_OK;
 }

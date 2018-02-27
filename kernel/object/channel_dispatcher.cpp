@@ -63,8 +63,8 @@ ChannelDispatcher::ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> 
 // This is called before either ChannelDispatcher is accessible from threads other than the one
 // initializing the channel, so it does not need locking.
 void ChannelDispatcher::Init(fbl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    other_ = fbl::move(other);
-    other_koid_ = other_->get_koid();
+    peer_ = fbl::move(other);
+    peer_koid_ = peer_->get_koid();
 }
 
 ChannelDispatcher::~ChannelDispatcher() {
@@ -102,7 +102,7 @@ void ChannelDispatcher::on_zero_handles() {
     AutoLock lock(get_lock());
     // Detach other endpoint
 
-    fbl::RefPtr<ChannelDispatcher> other = fbl::move(other_);
+    fbl::RefPtr<ChannelDispatcher> other = fbl::move(peer_);
 
     // (3A) Abort any waiting Call operations
     // because we've been canceled by reason
@@ -125,7 +125,7 @@ void ChannelDispatcher::on_zero_handles() {
 void ChannelDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    other_.reset();
+    peer_.reset();
     UpdateStateLocked(ZX_CHANNEL_WRITABLE, ZX_CHANNEL_PEER_CLOSED);
     // (3B) Abort any waiting Call operations
     // because we've been canceled by reason
@@ -149,7 +149,7 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     AutoLock lock(get_lock());
 
     if (messages_.is_empty())
-        return other_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+        return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
 
     *msg_size = messages_.front().data_size();
     *msg_handle_count = messages_.front().num_handles();
@@ -173,14 +173,14 @@ zx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     AutoLock lock(get_lock());
-    if (!other_) {
+    if (!peer_) {
         // |msg| will be destroyed but we want to keep the handles alive since
         // the caller should put them back into the process table.
         msg->set_owns_handles(false);
         return ZX_ERR_PEER_CLOSED;
     }
 
-    if (other_->WriteSelf(fbl::move(msg)) > 0)
+    if (peer_->WriteSelf(fbl::move(msg)) > 0)
         thread_reschedule();
 
     return ZX_OK;
@@ -203,7 +203,7 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
     {
         AutoLock lock(get_lock());
 
-        if (!other_) {
+        if (!peer_) {
             // |msg| will be destroyed but we want to keep the handles alive since
             // the caller should put them back into the process table.
             msg->set_owns_handles(false);
@@ -217,7 +217,7 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
         waiters_.push_back(waiter);
 
         // (1) Write outbound message to opposing endpoint.
-        other_->WriteSelf(fbl::move(msg));
+        peer_->WriteSelf(fbl::move(msg));
     }
 
     // Reuse the code from the half-call used for retrying a Call after thread
@@ -297,9 +297,9 @@ zx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mas
     }
 
     AutoLock lock(get_lock());
-    if (!other_)
+    if (!peer_)
         return ZX_ERR_PEER_CLOSED;
-    return other_->UserSignalSelf(clear_mask, set_mask);
+    return peer_->UserSignalSelf(clear_mask, set_mask);
 }
 
 zx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {

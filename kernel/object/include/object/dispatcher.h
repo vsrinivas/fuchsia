@@ -268,9 +268,10 @@ public:
 
 protected:
     zx_koid_t peer_koid_ = 0u;
+    fbl::RefPtr<Self> peer_ TA_GUARDED(get_lock());
 
 private:
-    fbl::RefPtr<PeerHolder<Self>> holder_;
+    const fbl::RefPtr<PeerHolder<Self>> holder_;
 };
 
 // SoloDispatchers stand alone. Since they have no peer to coordinate
