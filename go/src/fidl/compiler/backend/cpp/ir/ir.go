@@ -92,6 +92,8 @@ type Parameter struct {
 
 type Root struct {
 	PrimaryHeader string
+	CHeader       string
+	Namespace     string
 	Decls         []Decl
 }
 
@@ -516,6 +518,8 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func Compile(fidlData types.Root) Root {
 	root := Root{}
 	c := compiler{&fidlData.Decls}
+
+	root.Namespace = changeIfReserved(fidlData.Name)
 
 	decls := map[types.Identifier]Decl{}
 

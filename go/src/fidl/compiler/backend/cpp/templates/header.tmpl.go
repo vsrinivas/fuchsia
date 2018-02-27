@@ -13,7 +13,10 @@ const Header = `
 #pragma once
 
 #include "lib/fidl/cpp/internal/header.h"
+
+namespace {{ .Namespace }} {
 {{ end }}
 {{- define "GenerateHeaderPostamble" -}}
+}  // namespace {{ .Namespace }}
 {{ end }}
 `

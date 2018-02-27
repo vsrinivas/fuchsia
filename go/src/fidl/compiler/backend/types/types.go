@@ -306,6 +306,7 @@ type DeclMap map[Identifier]DeclType
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
+	Name       Identifier   `json:"name,omitempty"`
 	Consts     []Const      `json:"const_declarations,omitempty"`
 	Enums      []Enum       `json:"enum_declarations,omitempty"`
 	Interfaces []Interface  `json:"interface_declarations,omitempty"`
