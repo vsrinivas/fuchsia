@@ -278,7 +278,7 @@ void dlog_serial_write(const char* data, size_t len) {
     // Otherwise we can use a mutex and avoid time under spinlock
     static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
     mutex_acquire(&lock);
-    platform_dputs(data, len);
+    platform_dputs_thread(data, len);
     mutex_release(&lock);
 #endif
 }

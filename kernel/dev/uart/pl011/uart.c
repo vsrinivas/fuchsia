@@ -44,6 +44,26 @@ static uint32_t uart_irq = 0;
 
 static cbuf_t uart_rx_buf;
 
+/*
+ * Tx driven irq:
+ * NOTE: For the pl011, txim is the "ready to transmit" interrupt. So we must
+ * mask it when we no longer care about it and unmask it when we start
+ * xmitting.
+ */
+static bool uart_tx_irq_enabled = false;
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+
+static inline void pl011_mask_tx(void)
+{
+    UARTREG(uart_base, UART_IMSC) &= ~(1<<5);
+}
+
+static inline void pl011_unmask_tx(void)
+{
+    UARTREG(uart_base, UART_IMSC) |= (1<<5);
+}
+
 static void pl011_uart_irq(void *arg)
 {
     /* read interrupt status and mask */
@@ -62,6 +82,16 @@ static void pl011_uart_irq(void *arg)
             cbuf_write_char(&uart_rx_buf, c);
         }
     }
+    spin_lock(&uart_spinlock);
+    if (isr & (1<<5)) {
+        /*
+         * Signal any waiting Tx and mask Tx interrupts once we
+         * wakeup any blocked threads
+         */
+        event_signal(&uart_dputc_event, true);
+        pl011_mask_tx();
+    }
+    spin_unlock(&uart_spinlock);
 }
 
 static void pl011_uart_init(mdi_node_ref_t* node, uint level)
@@ -80,31 +110,29 @@ static void pl011_uart_init(mdi_node_ref_t* node, uint level)
     UARTREG(uart_base, UART_IFLS) = 0; // 1/8 rxfifo, 1/8 txfifo
 
     // enable rx interrupt
-    UARTREG(uart_base, UART_IMSC) = (1 <<4 ) |  //  rxim
-                                    (1 << 6);   //  rtim
+    UARTREG(uart_base, UART_IMSC) = (1 << 4 ) |  //  rxim
+                                    (1 << 6);    //  rtim
 
     // enable receive
     UARTREG(uart_base, UART_CR) |= (1<<9); // rxen
 
     // enable interrupt
     unmask_interrupt(uart_irq);
-}
 
-static int pl011_uart_putc(char c)
-{
-    /* spin while fifo is full */
-    while (UARTREG(uart_base, UART_FR) & (1<<5))
-        ;
-    UARTREG(uart_base, UART_DR) = c;
-
-    return 1;
+#if ENABLE_KERNEL_LL_DEBUG
+    uart_tx_irq_enabled = false;
+#else
+    /* start up tx driven output */
+    printf("UART: started IRQ driven TX\n");
+    uart_tx_irq_enabled = true;
+#endif
 }
 
 static int pl011_uart_getc(bool wait)
 {
     char c;
     if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
-        UARTREG(uart_base, UART_IMSC) = ((1<<4)|(1<<6)); // rxim
+        UARTREG(uart_base, UART_IMSC) |= ((1<<4)|(1<<6)); // rxim
         return c;
     }
 
@@ -131,11 +159,52 @@ static int pl011_uart_pgetc(void)
     }
 }
 
+static void pl011_dputs(const char* str, size_t len,
+                        bool block, bool map_NL)
+{
+    spin_lock_saved_state_t state;
+    bool copied_CR = false;
+
+    if (!uart_tx_irq_enabled)
+        block = false;
+    spin_lock_irqsave(&uart_spinlock, state);
+    while (len > 0) {
+        // Is FIFO Full ?
+        while (UARTREG(uart_base, UART_FR) & (1<<5)) {
+            if (block) {
+                /* Unmask Tx interrupts before we block on the event */
+                pl011_unmask_tx();
+                spin_unlock_irqrestore(&uart_spinlock, state);
+                event_wait(&uart_dputc_event);
+            } else {
+                spin_unlock_irqrestore(&uart_spinlock, state);
+                arch_spinloop_pause();
+            }
+            spin_lock_irqsave(&uart_spinlock, state);
+        }
+        if (!copied_CR && map_NL && *str == '\n') {
+            copied_CR = true;
+            UARTREG(uart_base, UART_DR) = '\r';
+        } else {
+            copied_CR = false;
+            UARTREG(uart_base, UART_DR) = *str++;
+            len--;
+        }
+    }
+    spin_unlock_irqrestore(&uart_spinlock, state);
+}
+
+static void pl011_start_panic(void)
+{
+    uart_tx_irq_enabled = false;
+}
+
 static const struct pdev_uart_ops uart_ops = {
-    .putc = pl011_uart_putc,
     .getc = pl011_uart_getc,
     .pputc = pl011_uart_pputc,
     .pgetc = pl011_uart_pgetc,
+    .start_panic = pl011_start_panic,
+    .dputs = pl011_dputs,
 };
 
 static void pl011_uart_init_early(mdi_node_ref_t* node, uint level) {

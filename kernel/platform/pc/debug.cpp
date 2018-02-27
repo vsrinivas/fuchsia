@@ -5,6 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdarg.h>
+#include <reg.h>
+#include <bits.h>
+#include <stdio.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
+#include <vm/physmap.h>
+#include <lk/init.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <dev/interrupt.h>
@@ -34,6 +43,12 @@ static uint32_t uart_irq = ISA_IRQ_SERIAL1;
 
 cbuf_t console_input_buf;
 static bool output_enabled = false;
+uint32_t uart_fifo_depth;
+
+// tx driven irq
+static bool uart_tx_irq_enabled = false;
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 static uint8_t uart_read(uint8_t reg) {
     if (uart_mem_addr) {
@@ -51,17 +66,48 @@ static void uart_write(uint8_t reg, uint8_t val) {
     }
 }
 
-static void platform_drain_debug_uart_rx(void) {
-    unsigned char c;
+static void uart_irq_handler(void *arg) {
+    spin_lock(&uart_spinlock);
 
-    while (uart_read(5) & (1 << 0)) {
-        c = uart_read(0);
-        cbuf_write_char(&console_input_buf, c);
+    // see why we have gotten an irq
+    for (;;) {
+        uint8_t iir = uart_read(2);
+        if (BIT(iir, 0))
+            break; // no valid interrupt
+
+        // 3 bit identification field
+        uint ident = BITS(iir, 3, 0);
+        switch (ident) {
+        case 0b0100:
+        case 0b1100: {
+            // rx fifo is non empty, drain it
+            unsigned char c = uart_read(0);
+            cbuf_write_char(&console_input_buf, c);
+            break;
+        }
+        case 0b0010:
+            // transmitter is empty, signal any waiting senders
+            event_signal(&uart_dputc_event, true);
+            // disable the tx irq
+            uart_write(1, (1<<0)); // just rx interrupt enable
+            break;
+        case 0b0110: // receiver line status
+            uart_read(5); // read the LSR
+            break;
+        default:
+            spin_unlock(&uart_spinlock);
+            panic("UART: unhandled ident %#x\n", ident);
+        }
     }
+
+    spin_unlock(&uart_spinlock);
 }
 
-static void uart_irq_handler(void* arg) {
-    platform_drain_debug_uart_rx();
+static void platform_drain_debug_uart_rx(void) {
+    while (uart_read(5) & (1<<0)) {
+        unsigned char c = uart_read(0);
+        cbuf_write_char(&console_input_buf, c);
+    }
 }
 
 // for devices where the uart rx interrupt doesn't seem to work
@@ -70,8 +116,7 @@ static void uart_rx_poll(timer_t* t, zx_time_t now, void* arg) {
     platform_drain_debug_uart_rx();
 }
 
-// also called from the pixel2 quirk file
-void platform_debug_start_uart_timer(void);
+void platform_debug_start_uart_timer();
 
 void platform_debug_start_uart_timer(void) {
     static timer_t uart_rx_poll_timer;
@@ -85,7 +130,7 @@ void platform_debug_start_uart_timer(void) {
     }
 }
 
-static void init_uart(void) {
+static void init_uart() {
     /* configure the uart */
     int divisor = 115200 / uart_baud_rate;
 
@@ -95,10 +140,24 @@ static void init_uart(void) {
     uart_write(0, static_cast<uint8_t>(divisor));      // lsb
     uart_write(1, static_cast<uint8_t>(divisor >> 8)); // msb
     uart_write(3, 3);                                  // 8N1
-    uart_write(2, 0xc7);                               // enable FIFO, clear, 14-byte threshold
+    // enable FIFO, rx FIFO reset, tx FIFO reset, 16750 64 byte fifo enable,
+    // Rx FIFO irq trigger level at 14-bytes
+    uart_write(2, 0xe7);
+
+    /* figure out the fifo depth */
+    uint8_t fcr = uart_read(2);
+    if (BITS_SHIFT(fcr, 7, 6) == 3 && BIT(fcr, 5)) {
+        // this is a 16750
+        uart_fifo_depth = 64;
+    } else if (BITS_SHIFT(fcr, 7, 6) == 3) {
+        // this is a 16550A
+        uart_fifo_depth = 16;
+    } else {
+        uart_fifo_depth = 1;
+    }
 }
 
-void pc_init_debug_early(void) {
+void pc_init_debug_early() {
     switch (bootloader.uart.type) {
     case BOOTDATA_UART_PC_PORT:
         uart_io_port = static_cast<uint32_t>(bootloader.uart.base);
@@ -113,9 +172,14 @@ void pc_init_debug_early(void) {
     init_uart();
 
     output_enabled = true;
+
+    dprintf(INFO, "UART: FIFO depth %u\n", uart_fifo_depth);
 }
 
 void pc_init_debug(void) {
+#if !ENABLE_KERNEL_LL_DEBUG
+    bool irq_driven = false;
+#endif
     /* finish uart init to get rx going */
     cbuf_initialize(&console_input_buf, 1024);
 
@@ -128,12 +192,25 @@ void pc_init_debug(void) {
         DEBUG_ASSERT(status == ZX_OK);
         unmask_interrupt(uart_irq);
 
-        uart_write(1, 0x1); // enable receive data available interrupt
+        uart_write(1, (1<<0)); // enable receive data available interrupt
 
         // modem control register: Axiliary Output 2 is another IRQ enable bit
         const uint8_t mcr = uart_read(4);
         uart_write(4, mcr | 0x8);
+        printf("UART: started IRQ driven RX\n");
+#if !ENABLE_KERNEL_LL_DEBUG
+        irq_driven = true;
+#endif
     }
+#if ENABLE_KERNEL_LL_DEBUG
+    uart_tx_irq_enabled = false;
+#else
+    if (irq_driven) {
+        // start up tx driven output
+        printf("UART: started IRQ driven TX\n");
+        uart_tx_irq_enabled = true;
+    }
+#endif
 }
 
 void pc_suspend_debug(void) {
@@ -145,28 +222,110 @@ void pc_resume_debug(void) {
     output_enabled = true;
 }
 
-static void debug_uart_putc(char c) {
-#if WITH_LEGACY_PC_CONSOLE
-    cputc(c);
-#endif
-    if (unlikely(!output_enabled))
-        return;
+/*
+ * This is called when the FIFO is detected to be empty. So we can write an
+ * entire FIFO's worth of bytes. Much more efficient than writing 1 byte
+ * at a time (and then checking for FIFO to drain).
+ */
+static char *debug_platform_tx_FIFO_bytes(const char *str, size_t *len,
+                                          bool *copied_CR,
+                                          size_t *wrote_bytes,
+                                          bool map_NL)
+{
+    size_t i, copy_bytes;;
+    char *s = (char *)str;
 
-    while ((uart_read(5) & (1 << 6)) == 0) {
+    copy_bytes = MIN(uart_fifo_depth, *len);
+    for (i = 0 ; i < copy_bytes ; i++) {
+        if (*s == '\n' && map_NL && !*copied_CR) {
+            uart_write(0, '\r');
+            *copied_CR = true;
+            if (++i == copy_bytes)
+                break;
+            uart_write(0, '\n');
+        } else {
+            uart_write(0, *s);
+            *copied_CR = false;
+        }
+        s++;
+        (*len)--;
+    }
+    if (wrote_bytes != NULL)
+        *wrote_bytes = i;
+    return s;
+}
+
+/*
+ * dputs() Tx is either polling driven (if the caller is non-preemptible
+ * or earlyboot or panic) or blocking (and irq driven).
+ * TODO - buffered Tx support may be a win, (lopri but worth investigating)
+ * When we do that dputs() can be completely asynchronous, and return when
+ * the write has been (atomically) deposited into the buffer, except when
+ * we run out of room in the Tx buffer (rare) - we'd either need to spin
+ * (if non-blocking) or block waiting for space in the Tx buffer (adding
+ * support to optionally block in cbuf_write_char() would be easiest way
+ * to achieve that).
+ *
+ * block : Blocking vs Non-Blocking
+ * map_NL : If true, map a '\n' to '\r'+'\n'
+ */
+static void platform_dputs(const char* str, size_t len,
+                           bool block, bool map_NL) {
+    spin_lock_saved_state_t state;
+    bool copied_CR = false;
+    size_t wrote;
+
+    if (!uart_tx_irq_enabled)
+        block = false;
+    spin_lock_irqsave(&uart_spinlock, state);
+    while (len > 0) {
+        // Is FIFO empty ?
+        while (!(uart_read(5) & (1<<5))) {
+            spin_unlock_irqrestore(&uart_spinlock, state);
+            if (block)
+                event_wait(&uart_dputc_event);
+            else
+                arch_spinloop_pause();
+            spin_lock_irqsave(&uart_spinlock, state);
+        }
+        // Fifo is completely empty now, we can shove an entire
+        // fifo's worth of Tx...
+        str = debug_platform_tx_FIFO_bytes(str, &len, &copied_CR,
+                                           &wrote, map_NL);
+        if (block && wrote > 0)
+            // If blocking/irq driven wakeps, enable rx/tx intrs
+            uart_write(1, (1<<0)|(1<<1)); // rx and tx interrupt enable
+    }
+    spin_unlock_irqrestore(&uart_spinlock, state);
+}
+
+void platform_dputs_thread(const char* str, size_t len) {
+    platform_dputs(str, len, true, true);
+}
+
+void platform_dputs_irq(const char* str, size_t len) {
+    platform_dputs(str, len, false, true);
+}
+
+// polling versions of debug uart read/write
+static int debug_uart_getc_poll(char *c) {
+    // if there is a character available, read it
+    if (uart_read(5) & (1<<0)) {
+        *c = uart_read(0);
+        return 0;
+    }
+
+    return -1;
+}
+
+static void debug_uart_putc_poll(char c) {
+    // while the fifo is non empty, spin
+    while (!(uart_read(5) & (1<<6))) {
         arch_spinloop_pause();
     }
     uart_write(0, c);
 }
 
-void platform_dputs(const char* str, size_t len) {
-    while (len-- > 0) {
-        char c = *str++;
-        if (c == '\n') {
-            debug_uart_putc('\r');
-        }
-        debug_uart_putc(c);
-    }
-}
 
 int platform_dgetc(char* c, bool wait) {
     return static_cast<int>(cbuf_read_char(&console_input_buf, c, wait));
@@ -174,14 +333,20 @@ int platform_dgetc(char* c, bool wait) {
 
 // panic time polling IO for the panic shell
 void platform_pputc(char c) {
-    platform_dputc(c);
+    if (c == '\n')
+        debug_uart_putc_poll('\r');
+    debug_uart_putc_poll(c);
 }
 
-int platform_pgetc(char* c, bool wait) {
-    if (uart_read(5) & (1 << 0)) {
-        *c = uart_read(0);
-        return 0;
-    }
+int platform_pgetc(char *c, bool wait) {
+    return debug_uart_getc_poll(c);
+}
 
-    return -1;
+/*
+ * Called on start of a panic.
+ * When we do Tx buffering, drain the Tx buffer here in polling mode.
+ * Turn off Tx interrupts, so force Tx be polling from this point
+ */
+void platform_debug_panic_start(void) {
+    uart_tx_irq_enabled = false;
 }

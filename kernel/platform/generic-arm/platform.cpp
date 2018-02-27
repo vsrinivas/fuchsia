@@ -616,14 +616,12 @@ static void platform_init_postvm(uint level) {
 
 LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);
 
-void platform_dputs(const char* str, size_t len) {
-    while (len-- > 0) {
-        char c = *str++;
-        if (c == '\n') {
-            uart_putc('\r');
-        }
-        uart_putc(c);
-    }
+void platform_dputs_thread(const char* str, size_t len) {
+    uart_puts(str, len, true, true);
+}
+
+void platform_dputs_irq(const char* str, size_t len) {
+    uart_puts(str, len, false, true);
 }
 
 int platform_dgetc(char* c, bool wait) {

@@ -19,7 +19,7 @@ int putchar(int c) {
 
 int puts(const char *str) {
     int len = strlen(str);
-    platform_dputs(str, len);
+    platform_dputs_thread(str, len);
     return len;
 }
 

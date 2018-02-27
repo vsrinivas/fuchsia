@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tests.cpp \
     $(LOCAL_DIR)/thread_tests.cpp \
     $(LOCAL_DIR)/timer_tests.cpp \
+    $(LOCAL_DIR)/uart_tests.cpp \
 
 
 MODULE_DEPS += \

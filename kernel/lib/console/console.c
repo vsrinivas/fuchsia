@@ -208,7 +208,7 @@ static inline void cputchar(char c) {
     platform_dputc(c);
 }
 static inline void cputs(const char* s) {
-    platform_dputs(s, strlen(s));
+    platform_dputs_thread(s, strlen(s));
 }
 #else
 static inline int cgetchar(void) {

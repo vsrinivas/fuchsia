@@ -45,7 +45,7 @@ void __kernel_serial_write(const char *str, size_t len) {
     spin_lock_saved_state_t state;
     spin_lock_save(&dputc_spin_lock, &state, PRINT_LOCK_FLAGS);
     /* write out the serial port */
-    platform_dputs(str, len);
+    platform_dputs_irq(str, len);
     spin_unlock_restore(&dputc_spin_lock, state, PRINT_LOCK_FLAGS);
 }
 

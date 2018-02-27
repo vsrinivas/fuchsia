@@ -53,6 +53,7 @@ void platform_halt_cpu(void) {
 }
 
 void platform_panic_start(void) {
+    platform_debug_panic_start();
     arch_disable_ints();
 
     if (atomic_swap(&panic_started, 1) == 0) {

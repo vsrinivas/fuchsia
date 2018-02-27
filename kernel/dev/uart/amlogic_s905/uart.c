@@ -84,6 +84,26 @@ static uint32_t s905_uart_irq = 0;
 
 
 
+/*
+ * Tx driven irq:
+ * According to the meson s905 UART spec
+ * https://dn.odroid.com/S905/DataSheet/S905_Public_Datasheet_V1.1.4.pdf
+ * 1) Tx Fifo depth is 64 bytes
+ * 2) The Misc register (aka irq control), by default will
+ * interrupt when the # of bytes in the fifo falls below 32
+ * but this can be changed if necessary (XMIT_IRQ_CNT).
+ * But no need to change this right now.
+ * 3) UART status register (TXCOUNT_MASK) holds the # of bytes
+ * in the Tx FIFO. More usefully, the TXFULL bit tells us when
+ * the Tx FIFO is full. We can use this to continue shoving
+ * data into the FIFO.
+ * 4) Setting TXINTEN will generate an interrupt each time a byte is
+ * read from the Tx FIFO. So we can leave the interrupt unmasked.
+ */
+static bool uart_tx_irq_enabled = false;
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+
 static void uart_irq(void *arg)
 {
     uintptr_t base = (uintptr_t)arg;
@@ -96,6 +116,13 @@ static void uart_irq(void *arg)
         }
         char c = UARTREG(base, S905_UART_RFIFO);
         cbuf_write_char(&uart_rx_buf, c);
+    }
+    if (UARTREG(s905_uart_base,S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
+        spin_lock(&uart_spinlock);
+        if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
+            /* Signal any waiting Tx */
+            event_signal(&uart_dputc_event, true);
+        spin_unlock(&uart_spinlock);
     }
 }
 
@@ -120,6 +147,9 @@ static void s905_uart_init(mdi_node_ref_t* node, uint level)
 
     UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_INVRTS |
                                                  S905_UART_CONTROL_RXINTEN |
+#if !ENABLE_KERNEL_LL_DEBUG
+                                                 S905_UART_CONTROL_TXINTEN |
+#endif
                                                  S905_UART_CONTROL_TWOWIRE;
 
     // Set to interrupt every 1 rx byte
@@ -132,6 +162,14 @@ static void s905_uart_init(mdi_node_ref_t* node, uint level)
     DEBUG_ASSERT(status == ZX_OK);
 
     initialized = true;
+
+#if ENABLE_KERNEL_LL_DEBUG
+    uart_tx_irq_enabled = false;
+#else
+    /* start up tx driven output */
+    printf("UART: started IRQ driven TX\n");
+    uart_tx_irq_enabled = true;
+#endif
 
     // enable interrupt
     unmask_interrupt(s905_uart_irq);
@@ -163,20 +201,6 @@ static int s905_uart_pgetc(void)
     }
 }
 
-
-static int s905_uart_putc(char c)
-{
-    if (!s905_uart_base)
-        return 0;
-
-    /* spin while fifo is full */
-    while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL)
-        ;
-    UARTREG(s905_uart_base, S905_UART_WFIFO) = c;
-
-    return 1;
-}
-
 static int s905_uart_getc(bool wait)
 {
     if (!s905_uart_base)
@@ -195,11 +219,59 @@ static int s905_uart_getc(bool wait)
     }
 }
 
+/*
+ * Keeping this simple for now, we try to write 1 byte at a time
+ * to the Tx FIFO. Blocking or spinning if the Tx FIFO is full.
+ * The event is signaled up from the interrupt handler, when a
+ * byte is read from the Tx FIFO.
+ * (setting TXINTEN results in the generation of an interrupt
+ * each time a byte is read from the Tx FIFO).
+ */
+static void s905_dputs(const char* str, size_t len,
+                       bool block, bool map_NL)
+{
+    spin_lock_saved_state_t state;
+    bool copied_CR = false;
+
+    if (!s905_uart_base)
+        return;
+    if (!uart_tx_irq_enabled)
+        block = false;
+    spin_lock_irqsave(&uart_spinlock, state);
+    while (len > 0) {
+        /* Is FIFO Full ? */
+        while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL) {
+            spin_unlock_irqrestore(&uart_spinlock, state);
+            if (block)
+                event_wait(&uart_dputc_event);
+            else
+                arch_spinloop_pause();
+            spin_lock_irqsave(&uart_spinlock, state);
+        }
+
+        if (*str == '\n' && map_NL && !copied_CR) {
+            copied_CR = true;
+            UARTREG(s905_uart_base, S905_UART_WFIFO) = '\r';
+        } else {
+            copied_CR = false;
+            UARTREG(s905_uart_base, S905_UART_WFIFO) = *str++;
+            len--;
+        }
+    }
+    spin_unlock_irqrestore(&uart_spinlock, state);
+}
+
+static void s905_uart_start_panic(void)
+{
+    uart_tx_irq_enabled = false;
+}
+
 static const struct pdev_uart_ops s905_uart_ops = {
-    .putc = s905_uart_putc,
     .getc = s905_uart_getc,
     .pputc = s905_uart_pputc,
     .pgetc = s905_uart_pgetc,
+    .start_panic = s905_uart_start_panic,
+    .dputs = s905_dputs,
 };
 
 static void s905_uart_init_early(mdi_node_ref_t* node, uint level)

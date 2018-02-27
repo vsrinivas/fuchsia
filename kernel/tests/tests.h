@@ -12,6 +12,7 @@
 
 __BEGIN_CDECLS
 
+void uart_tests(void);
 int thread_tests(void);
 int sleep_tests(void);
 int port_tests(void);

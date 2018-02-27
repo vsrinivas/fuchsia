@@ -14,10 +14,12 @@
 
 __BEGIN_CDECLS
 
-void platform_dputs(const char* str, size_t len);
+void platform_debug_panic_start(void);
+void platform_dputs_thread(const char* str, size_t len);
+void platform_dputs_irq(const char* str, size_t len);
 int platform_dgetc(char *c, bool wait);
 static inline void platform_dputc(char c) {
-    platform_dputs(&c, 1);
+    platform_dputs_thread(&c, 1);
 }
 
 // Should be available even if the system has panicked.
