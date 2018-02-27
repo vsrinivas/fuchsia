@@ -41,7 +41,6 @@ typedef async_wait_result_t(async_wait_handler_t)(async_t* async,
 // to allow the wait context to retain additional state for its handler.
 //
 // See also |async::Task|.
-typedef struct async_wait async_wait_t;
 struct async_wait {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;

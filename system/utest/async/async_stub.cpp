@@ -27,12 +27,17 @@ zx_status_t stub_queue_packet(async_t* async, async_receiver_t* receiver,
     return static_cast<AsyncStub*>(async)->QueuePacket(receiver, data);
 }
 
+zx_status_t stub_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
+    return static_cast<AsyncStub*>(async)->SetGuestBellTrap(trap);
+}
+
 const async_ops_t g_stub_ops = {
     .begin_wait = stub_begin_wait,
     .cancel_wait = stub_cancel_wait,
     .post_task = stub_post_task,
     .cancel_task = stub_cancel_task,
     .queue_packet = stub_queue_packet,
+    .set_guest_bell_trap = stub_set_guest_bell_trap,
 };
 
 } // namespace
@@ -60,5 +65,9 @@ zx_status_t AsyncStub::CancelTask(async_task_t* task) {
 
 zx_status_t AsyncStub::QueuePacket(async_receiver_t* receiver,
                                    const zx_packet_user_t* data) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AsyncStub::SetGuestBellTrap(async_guest_bell_trap_t* trap) {
     return ZX_ERR_NOT_SUPPORTED;
 }

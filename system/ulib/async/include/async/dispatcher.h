@@ -15,6 +15,7 @@ __BEGIN_CDECLS
 typedef struct async_dispatcher async_t;
 
 // Forward declarations for asynchronous operation structures.
+typedef struct async_guest_bell_trap async_guest_bell_trap_t;
 typedef struct async_wait async_wait_t;
 typedef struct async_task async_task_t;
 typedef struct async_receiver async_receiver_t;
@@ -71,6 +72,7 @@ typedef struct async_ops {
     zx_status_t (*cancel_task)(async_t* async, async_task_t* task);
     zx_status_t (*queue_packet)(async_t* async, async_receiver_t* receiver,
                                 const zx_packet_user_t* data);
+    zx_status_t (*set_guest_bell_trap)(async_t* async, async_guest_bell_trap_t* trap);
 } async_ops_t;
 struct async_dispatcher {
     const async_ops_t* ops;

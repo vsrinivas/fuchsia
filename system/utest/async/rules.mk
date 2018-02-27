@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/receiver_tests.cpp \
     $(LOCAL_DIR)/task_tests.cpp \
+    $(LOCAL_DIR)/trap_tests.cpp \
     $(LOCAL_DIR)/wait_tests.cpp \
     $(LOCAL_DIR)/wait_with_timeout_tests.cpp
 

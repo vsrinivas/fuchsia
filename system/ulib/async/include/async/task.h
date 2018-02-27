@@ -31,7 +31,6 @@ typedef enum {
 // The result must be |ASYNC_TASK_FINISHED| if |status| was not |ZX_OK|.
 //
 // It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
-typedef struct async_task async_task_t;
 typedef async_task_result_t(async_task_handler_t)(async_t* async,
                                                   async_task_t* task,
                                                   zx_status_t status);

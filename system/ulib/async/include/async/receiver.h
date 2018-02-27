@@ -16,7 +16,6 @@ __BEGIN_CDECLS
 //
 // It is safe for the handler to destroy itself when there are no remaining
 // packets pending delivery to it.
-typedef struct async_receiver async_receiver_t;
 typedef void(async_receiver_handler_t)(async_t* async,
                                        async_receiver_t* receiver,
                                        zx_status_t status,

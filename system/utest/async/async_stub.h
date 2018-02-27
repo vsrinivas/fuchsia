@@ -17,4 +17,5 @@ public:
     virtual zx_status_t CancelTask(async_task_t* task);
     virtual zx_status_t QueuePacket(async_receiver_t* receiver,
                                     const zx_packet_user_t* data);
+    virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap);
 };
