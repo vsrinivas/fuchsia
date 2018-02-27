@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <camera-proto/camera-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <ddktl/device-internal.h>
@@ -13,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
+#include <zircon/device/camera-proto.h>
 #include <zx/vmo.h>
 
 #include "usb-video.h"

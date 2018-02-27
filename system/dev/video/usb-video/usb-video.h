@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <camera-proto/camera-proto.h>
 #include <ddk/device.h>
 #include <driver/usb.h>
 #include <fbl/vector.h>
 #include <zircon/compiler.h>
+#include <zircon/device/camera-proto.h>
 #include <zircon/hw/usb-video.h>
 #include <zircon/hw/usb.h>
 
