@@ -661,7 +661,7 @@ zx_status_t UsbVideoStream::SetBufferLocked(dispatcher::Channel* channel,
     video_buffer_.reset();
 
     resp.result = VideoBuffer::Create(
-        zx::vmo(fbl::move(rxed_handle)), &video_buffer_);
+        zx::vmo(fbl::move(rxed_handle)), &video_buffer_, max_frame_size_);
 
     zx_status_t res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {
@@ -886,16 +886,14 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
     if (cur_frame_state_.fid != fid) {
         // If the currently stored FID is valid, we've just completed a frame.
         if (cur_frame_state_.fid >= 0) {
-            // Only advance the video buffer position if the frame had no errors.
-            // TODO(jocelyndang): figure out if we should do something else.
-            if (!cur_frame_state_.error) {
-                // TODO(jocelyndang): ask video_buffer_ for the next available
-                // offset rather than just incrementing here.
-                video_buffer_offset_ += max_frame_size_;
-                if (video_buffer_offset_ >= video_buffer_->size()) {
-                    video_buffer_offset_ -= video_buffer_->size();
-                    ZX_DEBUG_ASSERT(video_buffer_offset_ < video_buffer_->size());
+            // Only mark the frame completed if it had no errors and had data stored.
+            // TODO(jocelyndang): send a notification to the client.
+            if (!cur_frame_state_.error && cur_frame_state_.bytes > 0) {
+                zx_status_t status = video_buffer_->FrameCompleted();
+                if (status != ZX_OK) {
+                    zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
                 }
+                has_video_buffer_offset_ = false;
             }
 
             if (clock_frequency_hz_ != 0) {
@@ -913,6 +911,18 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
         cur_frame_state_ = {};
         cur_frame_state_.fid = fid;
         num_frames_++;
+
+        if (!has_video_buffer_offset_) {
+            // Need to find a new frame offset to store the data in.
+            zx_status_t status = video_buffer_->GetNewFrame(&video_buffer_offset_);
+            if (status == ZX_OK) {
+                has_video_buffer_offset_ = true;
+            } else if (status == ZX_ERR_NOT_FOUND) {
+                zxlogf(ERROR, "no available frames, dropping frame #%u\n", num_frames_);
+            } else if (status != ZX_OK) {
+                zxlogf(ERROR, "failed to get new frame, err: %d\n", status);
+            }
+        }
     }
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_ERR) {
         // Only print the error message for the first erroneous payload of the
@@ -970,6 +980,11 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
 
     if (cur_frame_state_.error) {
         zxlogf(TRACE, "skipping payload of invalid frame #%u\n", num_frames_);
+        return;
+    }
+    if (!has_video_buffer_offset_) {
+        // There was no space in the video buffer when the frame's first payload
+        // header was parsed.
         return;
     }
 

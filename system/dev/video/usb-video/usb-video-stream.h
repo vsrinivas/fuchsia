@@ -238,8 +238,12 @@ private:
     FrameState cur_frame_state_;
 
     fbl::unique_ptr<VideoBuffer> video_buffer_ __TA_GUARDED(lock_);
+
+    // Whether a video buffer frame offset has been obtained to store the
+    // data. False if the video buffer was full.
+    bool has_video_buffer_offset_ __TA_GUARDED(lock_);
     // Offset into the video buffer of the current frame we're writing to.
-    uint64_t video_buffer_offset_ __TA_GUARDED(lock_);
+    VideoBuffer::FrameOffset video_buffer_offset_ __TA_GUARDED(lock_);
 
     volatile StreamingState streaming_state_
         __TA_GUARDED(lock_) = StreamingState::STOPPED;
