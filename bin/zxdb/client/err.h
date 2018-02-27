@@ -10,8 +10,19 @@ namespace zxdb {
 
 enum class ErrType {
   kNone,
-  kGeneral,  // Unspecified error type.
-  kInput,  // Some problem getting input from the user (parse error, etc.).
+
+  // Unspecified error type.
+  kGeneral,
+
+  // There is no connection to the debug agent and this operation can't be
+  // completed.
+  kNoConnection,
+
+  // Data was corrupted between us and the debug agent.
+  kCorruptMessage,
+
+  // Some problem getting input from the user (parse error, etc.).
+  kInput,
 };
 
 class Err {

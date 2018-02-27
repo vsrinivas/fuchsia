@@ -11,6 +11,7 @@ namespace zxdb {
 // These functions are implemented in the corresponding noun_* files.
 std::map<Verb, CommandRecord> GetMemoryVerbs();
 std::map<Verb, CommandRecord> GetProcessVerbs();
+std::map<Verb, CommandRecord> GetSystemVerbs();
 std::map<Verb, CommandRecord> GetZxdbVerbs();
 
 const char* NounToString(Noun n) {
@@ -23,6 +24,8 @@ const char* NounToString(Noun n) {
       return "memory";
     case Noun::kProcess:
       return "process";
+    case Noun::kSystem:
+      return "system";
     case Noun::kThread:
       return "thread";
     case Noun::kZxdb:
@@ -33,7 +36,7 @@ const char* NounToString(Noun n) {
       return "";
   }
 
-  static_assert(static_cast<int>(Noun::kLast) == 7,
+  static_assert(static_cast<int>(Noun::kLast) == 8,
                 "Need to update NounToString for noun addition.");
 }
 
@@ -53,6 +56,8 @@ const char* VerbToString(Verb v) {
       return "help";
     case Verb::kList:
       return "list";
+    case Verb::kListProcesses:
+      return "list-processes";
     case Verb::kRead:
       return "read";
     case Verb::kRun:
@@ -79,7 +84,7 @@ const char* VerbToString(Verb v) {
       return "";
   }
 
-  static_assert(static_cast<int>(Verb::kLast) == 19,
+  static_assert(static_cast<int>(Verb::kLast) == 20,
                 "Need to update VerbToString for noun addition.");
 }
 
@@ -88,6 +93,7 @@ const std::map<Noun, std::map<Verb, CommandRecord>>& GetNouns() {
   if (nouns.empty()) {
     nouns[Noun::kMemory] = GetMemoryVerbs();
     nouns[Noun::kProcess] = GetProcessVerbs();
+    nouns[Noun::kSystem] = GetSystemVerbs();
     nouns[Noun::kZxdb] = GetZxdbVerbs();
   }
   return nouns;
@@ -113,14 +119,14 @@ const CommandRecord& GetRecordForCommand(const Command& cmd) {
   return found->second;
 }
 
-Err DispatchCommand(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DispatchCommand(Session* session, const Command& cmd) {
   const CommandRecord& record = GetRecordForCommand(cmd);
   if (!record.exec) {
     return Err(ErrType::kInput,
                "Invalid command \"" + std::string(NounToString(cmd.noun)) + " " +
                VerbToString(cmd.verb) + "\".");
   }
-  return record.exec(session, cmd, out);
+  return record.exec(session, cmd);
 }
 
 }  // namespace zxdb

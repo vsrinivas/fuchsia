@@ -22,7 +22,7 @@ Alias: "pro"
 
     With no argument, prints out the current debugged process information.
     )";
-Err DoProcess(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoProcess(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 
@@ -33,7 +33,7 @@ const char kProcessAttachHelp[] =
 
     Attach to the given process.
     )";
-Err DoProcessAttach(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoProcessAttach(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 
@@ -42,9 +42,9 @@ Err DoProcessAttach(Session* session, const Command& cmd, OutputBuffer* out) {
 const char kProcessListHelp[] =
     R"(process list
 
-    Lists all processes on the system.
+    Lists all debugged processes.
     )";
-Err DoProcessList(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoProcessList(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 
@@ -56,7 +56,7 @@ const char kProcessRunHelp[] =
     Aliases: "run", "r"
     )";
 
-Err DoProcessRun(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoProcessRun(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 

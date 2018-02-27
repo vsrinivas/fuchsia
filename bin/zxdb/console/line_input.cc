@@ -14,6 +14,8 @@
 #include <sys/ioctl.h>
 #endif
 
+#include "garnet/public/lib/fxl/logging.h"
+
 namespace zxdb {
 
 namespace {
@@ -56,6 +58,9 @@ LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {}
 LineInputBase::~LineInputBase() {}
 
 void LineInputBase::BeginReadLine() {
+  FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
+
+  editing_ = true;
   pos_ = 0;
   history_index_ = 0;
   completion_mode_ = false;
@@ -66,6 +71,9 @@ void LineInputBase::BeginReadLine() {
 }
 
 bool LineInputBase::OnInput(char c) {
+  FXL_DCHECK(editing_);  // BeginReadLine not called.
+  FXL_DCHECK(visible_);  // Don't call while hidden.
+
   if (reading_escaped_input_) {
     HandleEscapedInput(c);
     return false;
@@ -121,6 +129,28 @@ bool LineInputBase::OnInput(char c) {
       break;
   }
   return false;
+}
+
+void LineInputBase::Hide() {
+  FXL_DCHECK(visible_);  // Hide() called more than once.
+  visible_ = false;
+
+  if (!editing_)
+    return;
+
+  std::string cmd;
+  cmd += kTermBeginningOfLine;
+  cmd += kTermClearToEnd;
+
+  Write(cmd);
+}
+
+void LineInputBase::Show() {
+  FXL_DCHECK(!visible_);  // Show() called more than once.
+  visible_ = true;
+  if (!editing_)
+    return;
+  RepaintLine();
 }
 
 void LineInputBase::HandleEscapedInput(char c) {
@@ -197,6 +227,7 @@ void LineInputBase::HandleEnter() {
     history_.pop_back();
   std::string new_line = cur_line();
   history_[0] = new_line;
+  editing_ = false;
 }
 
 void LineInputBase::HandleTab() {

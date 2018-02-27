@@ -52,6 +52,16 @@ class LineInputBase {
   // is complete (the user has pressed enter).
   bool OnInput(char c);
 
+  // The input can be hidden and re-shown. Hiding it will erase the current
+  // line and put the cursor at the beginning of the line, but not change
+  // any internal state. Showing it again will repaint the line at the new
+  // cursor position. This allows other output to be printed to the screen
+  // without interfering with the input.
+  //
+  // OnInput() should not be called while hidden.
+  void Hide();
+  void Show();
+
  protected:
   // Abstract output function, overridden by a derived class to output to
   // screen.
@@ -84,6 +94,13 @@ class LineInputBase {
   const std::string prompt_;
   size_t max_cols_ = 0;
   CompletionCallback completion_callback_ = nullptr;
+
+  // Indicates whether the line is currently visible (as controlled by
+  // Show()/Hide()).
+  bool visible_ = true;
+
+  // Indicates whether a line edit is in progress.
+  bool editing_ = false;
 
   // The history is basically the line stack going back in time as indices
   // increase. The currently viewed line is at [history_index_] and this is

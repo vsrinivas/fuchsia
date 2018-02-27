@@ -5,44 +5,64 @@
 #include "garnet/bin/zxdb/console/main_loop.h"
 
 #include <string>
+#include <errno.h>
+#include <unistd.h>
 
+#include "garnet/bin/zxdb/client/agent_connection.h"
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/console/command.h"
-#include "garnet/bin/zxdb/console/command_parser.h"
-#include "garnet/bin/zxdb/console/line_input.h"
-#include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/console.h"
+#include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
 
-namespace {
+MainLoop::MainLoop() = default;
+MainLoop::~MainLoop() = default;
 
-std::vector<std::string> CompletionCallback(const std::string& line) {
-  return GetCommandCompletions(line);
+void MainLoop::Run() {
+  PlatformRun();
 }
 
-}  // namespace
+void MainLoop::StartWatchingConnection(AgentConnection* connection) {
+  size_t this_id = next_connection_id_;
+  next_connection_id_++;
 
-void RunMainLoop(Session* session) {
-  LineInputBlockingStdio line_input("[zxdb] ");
-  line_input.set_completion_callback(&CompletionCallback);
+  connections_[this_id] = connection;
+  PlatformStartWatchingConnection(this_id, connection);
 
-  FileOutputBuffer out(stdout);
-  while (true) {
-    std::string input = line_input.ReadLine();
+  // See comment in the header file for this function.
+  connection->OnNativeHandleReadable();
+}
 
-    Command cmd;
-    Err err = ParseCommand(input, &cmd);
-
-    if (err.has_error()) {
-      out.OutputErr(err);
-    } else if (cmd.noun == Noun::kZxdb && cmd.verb == Verb::kQuit) {
+void MainLoop::StopWatchingConnection(AgentConnection* connection) {
+  for (auto it = connections_.begin(); it != connections_.end(); ++it) {
+    if (it->second == connection) {
+      connections_.erase(it);
+      PlatformStopWatchingConnection(it->first, connection);
       return;
-    } else if (cmd.noun != Noun::kNone) {
-      err = DispatchCommand(session, cmd, &out);
-      if (err.has_error())
-        out.OutputErr(err);
     }
   }
+  FXL_NOTREACHED();
+}
+
+void MainLoop::OnStdinReadable() {
+  constexpr size_t kBufSize = 64;  // Don't expect much data at once.
+  char buf[kBufSize];
+  ssize_t bytes_read = 0;
+  while ((bytes_read = read(STDIN_FILENO, &buf, kBufSize)) > 0) {
+    for (ssize_t i = 0; i < bytes_read; i++) {
+      if (Console::get()->OnInput(buf[i]) == Console::Result::kQuit) {
+        should_quit_ = true;
+        return;
+      }
+    }
+  }
+}
+
+AgentConnection* MainLoop::ConnectionFromID(size_t connection_id) {
+  auto found = connections_.find(connection_id);
+  if (found == connections_.end())
+    return nullptr;
+  return found->second;
 }
 
 }  // namespace zxdb

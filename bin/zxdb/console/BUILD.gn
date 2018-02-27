@@ -10,23 +10,37 @@ static_library("console") {
     "command_parser.h",
     "command_utils.cc",
     "command_utils.h",
+    "console.cc",
+    "console.h",
     "line_input.cc",
     "line_input.h",
     "main_loop.cc",
     "main_loop.h",
     "noun_memory.cc",
     "noun_process.cc",
+    "noun_system.cc",
     "noun_zxdb.cc",
     "output_buffer.cc",
     "output_buffer.h",
   ]
 
+  deps = []
   public_deps = [
     "//garnet/bin/zxdb/client",
   ]
 
-  if (current_toolchain != host_toolchain) {
-    public_deps += [ "//zircon/public/lib/fdio" ]
+  if (current_toolchain == host_toolchain) {
+    # TODO(brettw) add main loop for Posix host systems.
+  } else {
+    sources += [
+      "main_loop_zircon.cc",
+      "main_loop_zircon.h",
+    ]
+    deps += [
+      "//garnet/public/lib/fxl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
   }
 }
 

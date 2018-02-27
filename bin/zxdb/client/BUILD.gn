@@ -4,13 +4,20 @@
 
 static_library("client") {
   sources = [
+    "agent_connection.cc",
+    "agent_connection.h",
+    "client_object.cc",
+    "client_object.h",
     "err.cc",
     "err.h",
     "session.cc",
     "session.h",
+    "system.cc",
+    "system.h",
   ]
 
   deps = [
     "//garnet/lib/debug_ipc:client",
+    "//garnet/public/lib/fxl",
   ]
 }

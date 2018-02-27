@@ -11,44 +11,25 @@ namespace zxdb {
 
 class Err;
 
+// This class collects output from commands so it can be put on the screen in
+// one chunk. It's not just a string because we want to add helper functions
+// and may want to add things like coloring in the future.
 class OutputBuffer {
  public:
-  OutputBuffer() {}
-  virtual ~OutputBuffer() {}
+  OutputBuffer();
+  ~OutputBuffer();
 
-  virtual void Append(const std::string& str) = 0;
+  // Appends a string.
+  void Append(const std::string& str);
 
   // Outputs the given help string, applying help-style formatting.
-  virtual void FormatHelp(const std::string& str) = 0;
+  void FormatHelp(const std::string& str);
 
   // Writes the given error.
-  virtual void OutputErr(const Err& err) = 0;
-};
+  void OutputErr(const Err& err);
 
-class FileOutputBuffer : public OutputBuffer {
- public:
-  FileOutputBuffer(FILE* file);
-  ~FileOutputBuffer();
-
-  void Append(const std::string& str) override;
-  void FormatHelp(const std::string& str) override;
-  void OutputErr(const Err& err) override;
-
- private:
-  FILE* file_;
-};
-
-class StringOutputBuffer : public OutputBuffer {
- public:
-  StringOutputBuffer();
-  ~StringOutputBuffer();
-
-  const std::string& str() const { return str_; }
-  void clear() { str_.clear(); }
-
-  void Append(const std::string& str) override;
-  void FormatHelp(const std::string& str) override;
-  void OutputErr(const Err& err) override;
+  // Writes the current contents of this OutputBuffer to stdout.
+  void WriteToStdout();
 
  private:
   std::string str_;

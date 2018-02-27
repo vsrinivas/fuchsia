@@ -11,7 +11,6 @@
 namespace zxdb {
 
 class Err;
-class OutputBuffer;
 class Session;
 
 // Noun ------------------------------------------------------------------------
@@ -22,6 +21,7 @@ enum class Noun {
   kFrame,
   kMemory,
   kProcess,
+  kSystem,
   kThread,
   kZxdb,
 
@@ -45,6 +45,7 @@ enum class Verb {
   kDown,
   kHelp,
   kList,
+  kListProcesses,
   kRead,
   kQuit,
   kRun,
@@ -99,7 +100,7 @@ struct SwitchRecord {
 // Command dispatch ------------------------------------------------------------
 
 // Type for the callback that runs a command.
-using CommandExecutor = Err (*)(Session*, const Command& cmd, OutputBuffer*);
+using CommandExecutor = Err (*)(Session*, const Command& cmd);
 
 struct CommandRecord {
   CommandRecord() = default;
@@ -120,6 +121,6 @@ const std::map<Verb, CommandRecord>& GetVerbsForNoun(Noun noun);
 const CommandRecord& GetRecordForCommand(const Command& cmd);
 
 // Runs the given command.
-Err DispatchCommand(Session* session, const Command& cmd, OutputBuffer* out);
+Err DispatchCommand(Session* session, const Command& cmd);
 
 }  // namespace zxdb

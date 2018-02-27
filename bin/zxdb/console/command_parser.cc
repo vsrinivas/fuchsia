@@ -37,6 +37,7 @@ const ShortcutMap& GetShortcutMap() {
   map["frame"] = Shortcut(Noun::kFrame);
   map["memory"] = Shortcut(Noun::kMemory);
   map["process"] = Shortcut(Noun::kProcess);
+  map["system"] = Shortcut(Noun::kSystem);
   map["thread"] = Shortcut(Noun::kThread);
   map["zxdb"] = Shortcut(Noun::kZxdb);
 
@@ -62,6 +63,7 @@ const ShortcutMap& GetShortcutMap() {
   map["help"] = Shortcut(Noun::kZxdb, Verb::kHelp);
   map["n"] = Shortcut(Noun::kThread, Verb::kStepOver);
   map["next"] = Shortcut(Noun::kThread, Verb::kStepOver);
+  map["ps"] = Shortcut(Noun::kSystem, Verb::kListProcesses);
   map["q"] = Shortcut(Noun::kZxdb, Verb::kQuit);
   map["quit"] = Shortcut(Noun::kZxdb, Verb::kQuit);
   map["r"] = Shortcut(Noun::kProcess, Verb::kRun);
@@ -72,7 +74,7 @@ const ShortcutMap& GetShortcutMap() {
   map["stepi"] = Shortcut(Noun::kThread, Verb::kStepInst);
   map["up"] = Shortcut(Noun::kFrame, Verb::kUp);
 
-  static_assert(static_cast<int>(Noun::kLast) == 7,
+  static_assert(static_cast<int>(Noun::kLast) == 8,
                 "Need to update GetShortcutMap for noun addition.");
 
   return map;
@@ -93,6 +95,7 @@ const VerbMap& GetVerbMap() {
   map["down"] = Verb::kDown;
   map["help"] = Verb::kHelp;
   map["list"] = Verb::kList;
+  map["list-processes"] = Verb::kListProcesses;
   map["quit"] = Verb::kQuit;
   map["read"] = Verb::kRead;
   map["run"] = Verb::kRun;
@@ -110,9 +113,10 @@ const VerbMap& GetVerbMap() {
   map["del"] = Verb::kDelete;
   map["l"] = Verb::kList;
   map["ls"] = Verb::kList;
+  map["ps"] = Verb::kListProcesses;
   map["set"] = Verb::kSelect;
 
-  static_assert(static_cast<int>(Verb::kLast) == 19,
+  static_assert(static_cast<int>(Verb::kLast) == 20,
                 "Need to update GetVerbMap for noun addition.");
 
   return map;

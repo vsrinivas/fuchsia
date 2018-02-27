@@ -20,6 +20,7 @@ class StreamBuffer {
     virtual size_t ConsumeStreamBufferData(const char* data, size_t len) = 0;
   };
 
+  // You must call set_writer before using.
   StreamBuffer();
   ~StreamBuffer();
 

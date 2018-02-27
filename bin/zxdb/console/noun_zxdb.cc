@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
+#include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
 namespace zxdb {
@@ -32,10 +33,13 @@ std::string GetNounReference() {
   return help;
 }
 
-Err DoZxdbHelp(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoZxdbHelp(Session* session, const Command& cmd) {
+  OutputBuffer out;
+
   if (cmd.args.empty()) {
     // Generic help, list topics and quick reference.
-    out->FormatHelp(GetNounReference() + "\n" + kQuickReference);
+    out.FormatHelp(GetNounReference() + "\n" + kQuickReference);
+    Console::get()->Output(std::move(out));
     return Err();
   }
 
@@ -43,8 +47,9 @@ Err DoZxdbHelp(Session* session, const Command& cmd, OutputBuffer* out) {
   Err err = ParseCommand(cmd.args, &help_on);
   if (err.has_error()) {
     // Command not valid.
-    out->OutputErr(err);
-    out->FormatHelp(GetNounReference());
+    out.OutputErr(err);
+    out.FormatHelp(GetNounReference());
+    Console::get()->Output(std::move(out));
     return Err();
   }
 
@@ -65,7 +70,8 @@ Err DoZxdbHelp(Session* session, const Command& cmd, OutputBuffer* out) {
     }
   }
 
-  out->FormatHelp(help);
+  out.FormatHelp(help);
+  Console::get()->Output(std::move(out));
   return Err();
 }
 
@@ -74,7 +80,7 @@ const char kQuitHelp[] =
 
     Quits the debugger.)";
 
-Err DoZxdbQuit(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoZxdbQuit(Session* session, const Command& cmd) {
   // This command is special-cased by the main loop so it shouldn't get
   // executed.
   return Err();

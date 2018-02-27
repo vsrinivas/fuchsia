@@ -22,13 +22,13 @@ const char kMemoryHelp[] =
 Alias: "mem"
     )";
 
-Err DoMemory(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoMemory(Session* session, const Command& cmd) {
   // "memory" by itself does nothing, print help.
   Command help_cmd;
   help_cmd.noun = Noun::kZxdb;
   help_cmd.verb = Verb::kHelp;
   help_cmd.args.push_back("memory");
-  return DispatchCommand(session, help_cmd, out);
+  return DispatchCommand(session, help_cmd);
 }
 
 // memory read -----------------------------------------------------------------
@@ -42,7 +42,7 @@ const char kMemoryReadHelp[] =
         Byte cound of memory to read. If unspecified it will default to 64.
     )";
 
-Err DoMemoryRead(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoMemoryRead(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 
@@ -54,7 +54,7 @@ const char kMemoryWriteHelp[] =
     Unimplemented.
     )";
 
-Err DoMemoryWrite(Session* session, const Command& cmd, OutputBuffer* out) {
+Err DoMemoryWrite(Session* session, const Command& cmd) {
   return Err("Unimplemented");
 }
 

@@ -4,10 +4,14 @@
 
 #include <stdio.h>
 
+#include <memory>
+
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
+#include "garnet/bin/zxdb/client/agent_connection.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/console/main_loop.h"
+#include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/main_loop_zircon.h"
 
 // Main function for the debugger run on Zircon. This currently runs the
 // debug_agent in-process to avoid IPC.
@@ -32,7 +36,20 @@ int main(int argc, char* argv[]) {
   }
 
   zxdb::Session session;
-  zxdb::RunMainLoop(&session);
+  session.SetAgentConnection(std::make_unique<zxdb::AgentConnection>(
+      &session, client_socket.release()));
+
+  zxdb::Console console(&session);
+  console.Init();
+
+  zxdb::PlatformMainLoop main_loop;
+
+  // TODO(brettw) have a better way to hook this up. Probably the main loop
+  // needs to be more generic and live in client/. Then there can be a global
+  // and the AgentConnection can register and unregister itself.
+  main_loop.StartWatchingConnection(session.agent_connection());
+  main_loop.Run();
+  main_loop.StopWatchingConnection(session.agent_connection());
 
   // Ensure the ExceptionHandler doesn't try to use the sink after it's
   // destroyed (the sink will be destroyed first).

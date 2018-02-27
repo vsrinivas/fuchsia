@@ -179,14 +179,25 @@ void ExceptionHandler::DoThread() {
 }
 
 void ExceptionHandler::OnSocketReadable() {
-  size_t available = 0;
-  zx_status_t status = socket_.read(0, nullptr, 0, &available);
-  if (status != ZX_OK)
-    return;
+  // Messages from the client to the agent are typically small so we don't need
+  // a very large buffer.
+  constexpr size_t kBufSize = 1024;
 
-  std::vector<char> buffer(available);
-  socket_.read(0, &buffer[0], available, &available);
-  socket_buffer_.AddReadData(std::move(buffer));
+  // Add all available data to the socket buffer.
+  while (true) {
+    std::vector<char> buffer;
+    buffer.resize(kBufSize);
+
+    size_t num_read = 0;
+    if (socket_.read(0, &buffer[0], kBufSize, &num_read) == ZX_OK) {
+      buffer.resize(num_read);
+      socket_buffer_.AddReadData(std::move(buffer));
+    } else {
+      break;
+    }
+    // TODO(brettw) it would be nice to yield here after reading "a bunch" of
+    // data so this pipe doesn't starve the entire app.
+  }
 
   sink_->OnStreamData();
 }
