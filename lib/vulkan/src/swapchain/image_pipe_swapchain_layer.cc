@@ -239,9 +239,15 @@ VkResult ImagePipeSwapchain::Initialize(
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
 
+    VkExportMemoryAllocateInfoKHR export_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR
+    };
+
     VkMemoryAllocateInfo alloc_info{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = nullptr,
+        .pNext = &export_allocate_info,
         .allocationSize = memory_requirements.size,
         .memoryTypeIndex = 0,
     };
