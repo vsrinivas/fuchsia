@@ -166,9 +166,6 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_BLOCK_RR_PART: {
-        return device_rebind(ramdev->zxdev);
-    }
     case IOCTL_DEVICE_SYNC: {
         // Wow, we sync so quickly!
         return ZX_OK;

@@ -64,6 +64,8 @@ struct zx_device {
 #define DEV_FLAG_MULTI_BIND     0x00000080  // this device accepts many children
 #define DEV_FLAG_ADDED          0x00000100  // device_add() has been called for this device
 #define DEV_FLAG_INVISIBLE      0x00000200  // device not visible via devfs
+#define DEV_FLAG_UNBOUND        0x00000400  // informed that it should self-delete asap
+#define DEV_FLAG_WANTS_REBIND   0x00000800  // when last child goes, rebind this device
 
 #define DEV_MAGIC 'MDEV'
 

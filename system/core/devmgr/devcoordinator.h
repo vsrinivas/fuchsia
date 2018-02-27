@@ -151,6 +151,7 @@ struct dc_driver {
 zx_status_t devfs_publish(device_t* parent, device_t* dev);
 void devfs_unpublish(device_t* dev);
 void devfs_advertise(device_t* dev);
+void devfs_advertise_modified(device_t* dev);
 
 device_t* coordinator_init(zx_handle_t root_job);
 void coordinator(void);

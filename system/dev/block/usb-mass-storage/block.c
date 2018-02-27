@@ -70,10 +70,6 @@ static zx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_BLOCK_RR_PART: {
-        // rebind to reread the partition table
-        return device_rebind(dev->zxdev);
-    }
     case IOCTL_DEVICE_SYNC: {
         return ZX_OK;
     }

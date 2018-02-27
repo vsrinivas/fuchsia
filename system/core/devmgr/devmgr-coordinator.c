@@ -950,9 +950,15 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
-                break;
+                return ZX_OK;
             }
         }
+    }
+
+    // Notify observers that this device is available again
+    // Needed for non-auto-binding drivers like GPT against block, etc
+    if (autobind) {
+        devfs_advertise_modified(dev);
     }
 
     return ZX_OK;

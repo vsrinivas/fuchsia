@@ -307,6 +307,19 @@ void devfs_advertise(device_t* dev) {
     }
 }
 
+// TODO: generate a MODIFIED event rather than back to back REMOVED and ADDED
+void devfs_advertise_modified(device_t* dev) {
+    if (dev->link) {
+        devnode_t* dir = proto_dir(dev->protocol_id);
+        devfs_notify(dir, dev->link->name, VFS_WATCH_EVT_REMOVED);
+        devfs_notify(dir, dev->link->name, VFS_WATCH_EVT_ADDED);
+    }
+    if (dev->parent && dev->parent->self) {
+        devfs_notify(dev->parent->self, dev->self->name, VFS_WATCH_EVT_REMOVED);
+        devfs_notify(dev->parent->self, dev->self->name, VFS_WATCH_EVT_ADDED);
+    }
+}
+
 zx_status_t devfs_publish(device_t* parent, device_t* dev) {
     if ((parent->self == NULL) || (dev->self != NULL) || (dev->link != NULL)) {
         return ZX_ERR_INTERNAL;

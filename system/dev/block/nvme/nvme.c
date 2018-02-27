@@ -636,10 +636,6 @@ static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         return ZX_ERR_NOT_SUPPORTED;
 #endif
     }
-    case IOCTL_BLOCK_RR_PART: {
-        // rebind to reread the partition table
-        return device_rebind(nvme->zxdev);
-    }
     case IOCTL_DEVICE_SYNC: {
         return ZX_OK;
     }

@@ -193,7 +193,11 @@ static zx_status_t blkdev_fifo_close_locked(blkdev_t* bdev) {
     return ZX_OK;
 }
 
-// implement device protocol:
+static zx_status_t blkdev_rebind(blkdev_t* bdev) {
+    // remove our existing children, ask to bind new children
+    return device_rebind(bdev->zxdev);
+}
+
 
 static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
@@ -213,6 +217,8 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
         mtx_unlock(&blkdev->lock);
         return status;
     }
+    case IOCTL_BLOCK_RR_PART:
+        return blkdev_rebind(blkdev);
     default:
         return device_ioctl(blkdev->parent, op, cmd, cmdlen, reply, max, out_actual);
     }

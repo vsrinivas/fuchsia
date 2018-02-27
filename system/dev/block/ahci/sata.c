@@ -201,10 +201,6 @@ static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         *out_actual = sizeof(*info);
         return ZX_OK;
     }
-    case IOCTL_BLOCK_RR_PART: {
-        // rebind to reread the partition table
-        return device_rebind(device->zxdev);
-    }
     case IOCTL_DEVICE_SYNC: {
         zxlogf(TRACE, "sata: IOCTL_DEVICE_SYNC\n");
         return ZX_OK;

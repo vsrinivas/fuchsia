@@ -392,17 +392,20 @@ static const char* removal_problem(uint32_t flags) {
 }
 
 static void devhost_unbind_child(zx_device_t* child) TA_REQ(&__devhost_api_lock) {
-    // call child's unbind op
-    if (child->ops->unbind) {
+    if (!(child->flags & DEV_FLAG_UNBOUND)) {
+        child->flags |= DEV_FLAG_UNBOUND;
+        // call child's unbind op
+        if (child->ops->unbind) {
 #if TRACE_ADD_REMOVE
-        printf("call unbind child: %p(%s)\n", child, child->name);
+            printf("call unbind child: %p(%s)\n", child, child->name);
 #endif
-        // hold a reference so the child won't get released during its unbind callback.
-        dev_ref_acquire(child);
-        DM_UNLOCK();
-        dev_op_unbind(child);
-        DM_LOCK();
-        dev_ref_release(child);
+            // hold a reference so the child won't get released during its unbind callback.
+            dev_ref_acquire(child);
+            DM_UNLOCK();
+            dev_op_unbind(child);
+            DM_LOCK();
+            dev_ref_release(child);
+        }
     }
 }
 
@@ -442,6 +445,16 @@ zx_status_t devhost_device_remove(zx_device_t* dev) TA_REQ(&__devhost_api_lock) 
     // hook has been called.
     if (dev->parent) {
         list_delete(&dev->node);
+
+        // If the parent wants rebinding when its children are gone,
+        // And the parent is not dead, And this was the last child...
+        if ((dev->parent->flags & DEV_FLAG_WANTS_REBIND) &&
+            (!(dev->parent->flags & DEV_FLAG_DEAD)) &&
+            list_is_empty(&dev->parent->children)) {
+            // Clear the wants rebind flag and request the rebind
+            dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
+            devhost_device_bind(dev->parent, "");
+        }
     }
 
     dev->flags |= DEV_FLAG_VERY_DEAD;
@@ -453,22 +466,12 @@ zx_status_t devhost_device_remove(zx_device_t* dev) TA_REQ(&__devhost_api_lock) 
 }
 
 zx_status_t devhost_device_rebind(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
-    dev->flags |= DEV_FLAG_BUSY;
+    // note that we want to be rebound when our children are all gone
+    dev->flags |= DEV_FLAG_WANTS_REBIND;
 
-    // remove children
-    zx_device_t* child;
-    zx_device_t* temp;
-    list_for_every_entry_safe(&dev->children, child, temp, zx_device_t, node) {
-        devhost_device_remove(child);
-    }
-
-    // notify children that they've been unbound
+    // request that any existing children go away
     devhost_unbind_children(dev);
 
-    dev->flags &= ~DEV_FLAG_BUSY;
-
-    // ask devcoord to find us a driver if it can
-    devhost_device_bind(dev, "");
     return ZX_OK;
 }
 

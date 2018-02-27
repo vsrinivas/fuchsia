@@ -110,10 +110,6 @@ static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
         return ZX_ERR_NOT_SUPPORTED;
 #endif
     }
-    case IOCTL_BLOCK_RR_PART: {
-        sdmmc_device_t* dev = ctx;
-        return device_rebind(dev->zxdev);
-    }
     case IOCTL_DEVICE_SYNC:
         return ZX_OK;
     default:
