@@ -233,12 +233,7 @@ private:
                               TypeShape* out_type_metadata);
     bool ResolveIdentifierType(const raw::IdentifierType& identifier_type,
                                TypeShape* out_type_metadata);
-    bool ResolveType(const raw::Type* type) {
-        TypeShape type_metadata;
-        return ResolveType(type, &type_metadata);
-    }
     bool ResolveType(const raw::Type* type, TypeShape* out_type_metadata);
-    bool ResolveTypeName(const raw::CompoundIdentifier* name);
 
 public:
     // TODO(TO-702) Add a validate literal function. Some things

@@ -57,10 +57,10 @@ TypeShape CStructTypeShape(std::vector<TypeShape> member_typeshapes) {
     size_t size = 0u;
     size_t alignment = 1u;
 
-    for (const auto& type_shape : member_typeshapes) {
-        alignment = std::max(alignment, type_shape.Alignment());
-        size = AlignTo(size, type_shape.Alignment());
-        size += type_shape.Size();
+    for (const auto& typeshape : member_typeshapes) {
+        alignment = std::max(alignment, typeshape.Alignment());
+        size = AlignTo(size, typeshape.Alignment());
+        size += typeshape.Size();
     }
 
     return TypeShape(size, alignment);
@@ -74,9 +74,9 @@ TypeShape FidlStructTypeShape(std::vector<TypeShape> member_typeshapes) {
 TypeShape CUnionTypeShape(std::vector<TypeShape> member_typeshapes) {
     size_t size = 0u;
     size_t alignment = 1u;
-    for (const auto& type_shape : member_typeshapes) {
-        size = std::max(size, type_shape.Size());
-        alignment = std::max(alignment, type_shape.Alignment());
+    for (const auto& typeshape : member_typeshapes) {
+        size = std::max(size, typeshape.Size());
+        alignment = std::max(alignment, typeshape.Alignment());
     }
     size = AlignTo(size, alignment);
     return TypeShape(size, alignment);
@@ -431,7 +431,8 @@ bool Library::SortDeclarations() {
 }
 
 bool Library::ResolveConst(Const* const_declaration) {
-    if (!ResolveType(const_declaration->type.get())) {
+    TypeShape typeshape;
+    if (!ResolveType(const_declaration->type.get(), &typeshape)) {
         return false;
     }
     // TODO(TO-702) Resolve const declarations.
@@ -469,26 +470,26 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
-    for (const auto& method : interface_declaration->methods) {
+    for (auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name->location.data()))
             return false;
         if (!ordinal_scope.Insert(method.ordinal.Value()))
             return false;
         if (method.has_request) {
             Scope<StringView> request_scope;
-            for (const auto& param : method.maybe_request) {
+            for (auto& param : method.maybe_request) {
                 if (!request_scope.Insert(param.name->location.data()))
                     return false;
-                if (!ResolveType(param.type.get()))
+                if (!ResolveType(param.type.get(), &param.typeshape))
                     return false;
             }
         }
         if (method.has_response) {
             Scope<StringView> response_scope;
-            for (const auto& response_param : method.maybe_response) {
-                if (!response_scope.Insert(response_param.name->location.data()))
+            for (auto& param : method.maybe_response) {
+                if (!response_scope.Insert(param.name->location.data()))
                     return false;
-                if (!ResolveType(response_param.type.get()))
+                if (!ResolveType(param.type.get(), &param.typeshape))
                     return false;
             }
         }
@@ -499,13 +500,12 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
 bool Library::ResolveStruct(Struct* struct_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
-    for (const auto& member : struct_declaration->members) {
+    for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
-        TypeShape member_typeshape;
-        if (!ResolveType(member.type.get(), &member_typeshape))
+        if (!ResolveType(member.type.get(), &member.typeshape))
             return false;
-        member_typeshapes.push_back(member_typeshape);
+        member_typeshapes.push_back(member.typeshape);
     }
 
     struct_declaration->typeshape = FidlStructTypeShape(std::move(member_typeshapes));
@@ -516,13 +516,12 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
 bool Library::ResolveUnion(Union* union_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
-    for (const auto& member : union_declaration->members) {
+    for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
-        TypeShape member_typeshape;
-        if (!ResolveType(member.type.get(), &member_typeshape))
+        if (!ResolveType(member.type.get(), &member.typeshape))
             return false;
-        member_typeshapes.push_back(member_typeshape);
+        member_typeshapes.push_back(member.typeshape);
     }
 
     union_declaration->typeshape = FidlUnionTypeShape(std::move(member_typeshapes));
@@ -637,9 +636,10 @@ bool Library::ResolveHandleType(const raw::HandleType& handle_type, TypeShape* o
 }
 
 bool Library::ResolveRequestType(const raw::RequestType& request_type, TypeShape* out_typeshape) {
-    if (!ResolveTypeName(request_type.subtype.get())) {
+    auto named_decl = LookupType(request_type.subtype.get());
+    if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return false;
-    }
+
     *out_typeshape = kHandleTypeShape;
     return true;
 }
@@ -689,8 +689,10 @@ bool Library::ResolvePrimitiveType(const raw::PrimitiveType& primitive_type,
 
 bool Library::ResolveIdentifierType(const raw::IdentifierType& identifier_type,
                                     TypeShape* out_typeshape) {
-    if (!ResolveTypeName(identifier_type.identifier.get()))
+    auto named_decl = LookupType(identifier_type.identifier.get());
+    if (!named_decl)
         return false;
+
     // TODO(TO-702) identifier type shape
     *out_typeshape = TypeShape(184u, 8u);
     return true;
@@ -733,14 +735,6 @@ bool Library::ResolveType(const raw::Type* type, TypeShape* out_typeshape) {
         return ResolveIdentifierType(*identifier_type, out_typeshape);
     }
     }
-}
-
-bool Library::ResolveTypeName(const raw::CompoundIdentifier* name) {
-    // TODO(TO-701) Make this use Names.
-    // assert(name->components.size() == 1);
-    // StringView identifier = name->components[0]->identifier.data();
-    // return registered_types_.find(identifier) != registered_types_.end();
-    return true;
 }
 
 } // namespace flat
