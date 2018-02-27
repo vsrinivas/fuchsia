@@ -82,7 +82,7 @@ struct Decl {
     Decl& operator=(Decl&&) = default;
 
     const Kind kind;
-    Name name;
+    const Name name;
 };
 
 struct Const : public Decl {
@@ -105,6 +105,7 @@ struct Enum : public Decl {
 
     std::unique_ptr<raw::PrimitiveType> type;
     std::vector<Member> members;
+    TypeShape typeshape;
 };
 
 struct Interface : public Decl {
@@ -167,9 +168,7 @@ struct Struct : public Decl {
         : Decl(Kind::kStruct, std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
-    // TODO(TO-758) Compute these.
     TypeShape typeshape;
-    uint64_t offset = 0;
 };
 
 struct Union : public Decl {
@@ -187,9 +186,7 @@ struct Union : public Decl {
         : Decl(Kind::kUnion, std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
-    // TODO(TO-758) Compute these.
     TypeShape typeshape;
-    uint64_t offset = 0;
 };
 
 class Library {
@@ -198,7 +195,7 @@ public:
     bool Resolve();
 
 private:
-    bool RegisterDecl(const Decl* decl);
+    bool RegisterDecl(Decl* decl);
 
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
@@ -211,21 +208,21 @@ private:
     // declaration. For example, if |type| refers to int32 or if it is
     // a struct pointer, this will return null. If it is a struct, it
     // will return a pointer to the declaration of the type.
-    const Decl* LookupType(const raw::Type* type);
+    Decl* LookupType(const raw::Type* type);
 
     // Returns nullptr when the |identifier| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
-    const Decl* LookupType(const raw::CompoundIdentifier* identifier);
+    Decl* LookupType(const raw::CompoundIdentifier* identifier);
 
-    std::set<const Decl*> DeclDependencies(const Decl* decl);
+    std::set<Decl*> DeclDependencies(Decl* decl);
 
     bool SortDeclarations();
 
-    bool ResolveConst(const Const& const_declaration);
-    bool ResolveEnum(const Enum& enum_declaration);
-    bool ResolveInterface(const Interface& interface_declaration);
-    bool ResolveStruct(const Struct& struct_declaration);
-    bool ResolveUnion(const Union& union_declaration);
+    bool ResolveConst(Const* const_declaration);
+    bool ResolveEnum(Enum* enum_declaration);
+    bool ResolveInterface(Interface* interface_declaration);
+    bool ResolveStruct(Struct* struct_declaration);
+    bool ResolveUnion(Union* union_declaration);
 
     bool ResolveArrayType(const raw::ArrayType& array_type, TypeShape* out_type_metadata);
     bool ResolveVectorType(const raw::VectorType& vector_type, TypeShape* out_type_metadata);
@@ -242,10 +239,6 @@ private:
     }
     bool ResolveType(const raw::Type* type, TypeShape* out_type_metadata);
     bool ResolveTypeName(const raw::CompoundIdentifier* name);
-
-    bool RegisterResolvedDecl(const Decl* decl, TypeShape type_metadata);
-
-    bool LookupTypeShape(const Name& name, TypeShape* out_typeshape);
 
 public:
     // TODO(TO-702) Add a validate literal function. Some things
@@ -327,16 +320,12 @@ public:
 
     // All Decl pointers here are non-null and are owned by the
     // various foo_declarations_.
-    std::vector<const Decl*> declaration_order_;
+    std::vector<Decl*> declaration_order_;
 
 private:
     // All Name and Decl pointers here are non-null and are owned by the
     // various foo_declarations_.
-    std::map<const Name*, const Decl*, NamePtrCompare> declarations_;
-
-    // All Name pointers here are non-null and are owned by the
-    // various foo_declarations_.
-    std::map<const Name*, TypeShape, NamePtrCompare> resolved_declarations_;
+    std::map<const Name*, Decl*, NamePtrCompare> declarations_;
 };
 
 } // namespace flat

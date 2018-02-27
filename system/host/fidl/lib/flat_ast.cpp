@@ -113,7 +113,7 @@ TypeShape StringTypeShape(uint64_t count) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
-bool Library::RegisterDecl(const Decl* decl) {
+bool Library::RegisterDecl(Decl* decl) {
     const Name* name = &decl->name;
     auto iter = declarations_.emplace(name, decl);
     return iter.second;
@@ -286,25 +286,10 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     return true;
 }
 
-bool Library::RegisterResolvedDecl(const Decl* decl, TypeShape typeshape) {
-    const Name* name = &decl->name;
-    auto iter = resolved_declarations_.emplace(name, typeshape);
-    return iter.second;
-}
-
-bool Library::LookupTypeShape(const Name& name, TypeShape* out_typeshape) {
-    auto iter = resolved_declarations_.find(&name);
-    if (iter == resolved_declarations_.end()) {
-        return false;
-    }
-    *out_typeshape = iter->second;
-    return true;
-}
-
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-const Decl* Library::LookupType(const raw::Type* type) {
+Decl* Library::LookupType(const raw::Type* type) {
     for (;;) {
         switch (type->kind) {
         case raw::Type::Kind::String:
@@ -328,7 +313,7 @@ const Decl* Library::LookupType(const raw::Type* type) {
     }
 }
 
-const Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
+Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
     // TODO(TO-701) Properly handle using aliases or module imports,
     // which requires actually walking scopes.
     Name name(std::make_unique<raw::Identifier>(identifier->components[0]->location));
@@ -345,8 +330,8 @@ const Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
 //     struct D1 { int32 x; };
 // D1 has an edge pointing to D2. Note that struct and union pointers,
 // unlike inline structs or unions, do not have dependency edges.
-std::set<const Decl*> Library::DeclDependencies(const Decl* decl) {
-    std::set<const Decl*> edges;
+std::set<Decl*> Library::DeclDependencies(Decl* decl) {
+    std::set<Decl*> edges;
     auto maybe_add_decl = [this, &edges](const std::unique_ptr<raw::Type>& type) {
         auto type_decl = LookupType(type.get());
         if (type_decl != nullptr) {
@@ -393,24 +378,24 @@ std::set<const Decl*> Library::DeclDependencies(const Decl* decl) {
 
 bool Library::SortDeclarations() {
     // |degree| is the number of undeclared dependencies for each decl.
-    std::map<const Decl*, uint32_t> degrees;
+    std::map<Decl*, uint32_t> degrees;
     // |inverse_dependencies| records the decls that depend on each decl.
-    std::map<const Decl*, std::vector<const Decl*>> inverse_dependencies;
+    std::map<Decl*, std::vector<Decl*>> inverse_dependencies;
     for (auto& name_and_decl : declarations_) {
-        const Decl* decl = name_and_decl.second;
+        Decl* decl = name_and_decl.second;
         degrees[decl] = 0u;
     }
     for (auto& name_and_decl : declarations_) {
-        const Decl* decl = name_and_decl.second;
+        Decl* decl = name_and_decl.second;
         auto deps = DeclDependencies(decl);
         degrees[decl] += deps.size();
-        for (const Decl* dep : deps) {
+        for (Decl* dep : deps) {
             inverse_dependencies[dep].push_back(decl);
         }
     }
 
     // Start with all decls that have no incoming edges.
-    std::vector<const Decl*> decls_without_deps;
+    std::vector<Decl*> decls_without_deps;
     for (const auto& decl_and_degree : degrees) {
         if (decl_and_degree.second == 0u) {
             decls_without_deps.push_back(decl_and_degree.first);
@@ -427,7 +412,7 @@ bool Library::SortDeclarations() {
         // Decrement the incoming degree of all the other decls it
         // points to.
         auto& inverse_deps = inverse_dependencies[decl];
-        for (const Decl* inverse_dep : inverse_deps) {
+        for (Decl* inverse_dep : inverse_deps) {
             uint32_t& degree = degrees[inverse_dep];
             assert(degree != 0u);
             degree -= 1;
@@ -445,18 +430,16 @@ bool Library::SortDeclarations() {
     return true;
 }
 
-bool Library::ResolveConst(const flat::Const& const_declaration) {
-    if (!ResolveType(const_declaration.type.get())) {
+bool Library::ResolveConst(Const* const_declaration) {
+    if (!ResolveType(const_declaration->type.get())) {
         return false;
     }
     // TODO(TO-702) Resolve const declarations.
     return true;
 }
 
-bool Library::ResolveEnum(const Enum& enum_declaration) {
-    TypeShape typeshape;
-
-    switch (enum_declaration.type->subtype) {
+bool Library::ResolveEnum(Enum* enum_declaration) {
+    switch (enum_declaration->type->subtype) {
     case types::PrimitiveSubtype::Int8:
     case types::PrimitiveSubtype::Int16:
     case types::PrimitiveSubtype::Int32:
@@ -466,7 +449,7 @@ bool Library::ResolveEnum(const Enum& enum_declaration) {
     case types::PrimitiveSubtype::Uint32:
     case types::PrimitiveSubtype::Uint64:
         // These are allowed as enum subtypes. Resolve the size and alignment.
-        if (!ResolveType(enum_declaration.type.get(), &typeshape))
+        if (!ResolveType(enum_declaration->type.get(), &enum_declaration->typeshape))
             return false;
         break;
 
@@ -478,19 +461,15 @@ bool Library::ResolveEnum(const Enum& enum_declaration) {
         return false;
     }
 
-    if (!RegisterResolvedDecl(&enum_declaration, typeshape)) {
-        return false;
-    }
-
     // TODO(TO-702) Validate values.
     return true;
 }
 
-bool Library::ResolveInterface(const Interface& interface_declaration) {
+bool Library::ResolveInterface(Interface* interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
-    for (const auto& method : interface_declaration.methods) {
+    for (const auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name->location.data()))
             return false;
         if (!ordinal_scope.Insert(method.ordinal.Value()))
@@ -517,10 +496,10 @@ bool Library::ResolveInterface(const Interface& interface_declaration) {
     return true;
 }
 
-bool Library::ResolveStruct(const Struct& struct_declaration) {
+bool Library::ResolveStruct(Struct* struct_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
-    for (const auto& member : struct_declaration.members) {
+    for (const auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
         TypeShape member_typeshape;
@@ -529,17 +508,15 @@ bool Library::ResolveStruct(const Struct& struct_declaration) {
         member_typeshapes.push_back(member_typeshape);
     }
 
-    auto type_shape = FidlStructTypeShape(std::move(member_typeshapes));
-    if (!RegisterResolvedDecl(&struct_declaration, type_shape))
-        return false;
+    struct_declaration->typeshape = FidlStructTypeShape(std::move(member_typeshapes));
 
     return true;
 }
 
-bool Library::ResolveUnion(const Union& union_declaration) {
+bool Library::ResolveUnion(Union* union_declaration) {
     Scope<StringView> scope;
     std::vector<TypeShape> member_typeshapes;
-    for (const auto& member : union_declaration.members) {
+    for (const auto& member : union_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
         TypeShape member_typeshape;
@@ -548,9 +525,7 @@ bool Library::ResolveUnion(const Union& union_declaration) {
         member_typeshapes.push_back(member_typeshape);
     }
 
-    auto typeshape = FidlUnionTypeShape(std::move(member_typeshapes));
-    if (!RegisterResolvedDecl(&union_declaration, typeshape))
-        return false;
+    union_declaration->typeshape = FidlUnionTypeShape(std::move(member_typeshapes));
 
     return true;
 }
@@ -563,39 +538,39 @@ bool Library::Resolve() {
     // We process declarations in topologically sorted order. For
     // example, we process a struct member's type before the entire
     // struct.
-    for (const Decl* decl : declaration_order_) {
+    for (Decl* decl : declaration_order_) {
         switch (decl->kind) {
         case Decl::Kind::kConst: {
-            auto const_decl = static_cast<const Const*>(decl);
-            if (!ResolveConst(*const_decl)) {
+            auto const_decl = static_cast<Const*>(decl);
+            if (!ResolveConst(const_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kEnum: {
-            auto enum_decl = static_cast<const Enum*>(decl);
-            if (!ResolveEnum(*enum_decl)) {
+            auto enum_decl = static_cast<Enum*>(decl);
+            if (!ResolveEnum(enum_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kInterface: {
-            auto interface_decl = static_cast<const Interface*>(decl);
-            if (!ResolveInterface(*interface_decl)) {
+            auto interface_decl = static_cast<Interface*>(decl);
+            if (!ResolveInterface(interface_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kStruct: {
-            auto struct_decl = static_cast<const Struct*>(decl);
-            if (!ResolveStruct(*struct_decl)) {
+            auto struct_decl = static_cast<Struct*>(decl);
+            if (!ResolveStruct(struct_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kUnion: {
-            auto union_decl = static_cast<const Union*>(decl);
-            if (!ResolveUnion(*union_decl)) {
+            auto union_decl = static_cast<Union*>(decl);
+            if (!ResolveUnion(union_decl)) {
                 return false;
             }
             break;

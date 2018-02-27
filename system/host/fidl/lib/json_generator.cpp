@@ -499,7 +499,6 @@ void JSONGenerator::Generate(const flat::Struct& value) {
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
-        GenerateObjectMember("offset", value.offset);
     });
 }
 
@@ -521,7 +520,6 @@ void JSONGenerator::Generate(const flat::Union& value) {
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
-        GenerateObjectMember("offset", value.offset);
     });
 }
 
