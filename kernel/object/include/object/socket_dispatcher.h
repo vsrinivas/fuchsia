@@ -30,7 +30,6 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_SOCKET; }
-    zx_koid_t get_related_koid() const final { return peer_koid_; }
     bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
@@ -78,7 +77,6 @@ private:
     fbl::Canary<fbl::magic("SOCK")> canary_;
 
     uint32_t flags_;
-    zx_koid_t peer_koid_;
 
     // The shared |get_lock()| protects all members below.
     MBufChain data_ TA_GUARDED(get_lock());

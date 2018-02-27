@@ -90,7 +90,6 @@ SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> hol
                                    fbl::unique_ptr<char[]> control_msg)
     : PeeredDispatcher(fbl::move(holder), starting_signals),
       flags_(flags),
-      peer_koid_(0u),
       control_msg_(fbl::move(control_msg)),
       control_msg_len_(0),
       read_disabled_(false) {

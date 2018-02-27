@@ -67,7 +67,7 @@ FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
                                fbl::unique_ptr<uint8_t[]> data)
     : PeeredDispatcher(fbl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count), elem_size_(elem_size), mask_(count - 1),
-      peer_koid_(0u), head_(0u), tail_(0u), data_(fbl::move(data)) {
+      head_(0u), tail_(0u), data_(fbl::move(data)) {
 }
 
 FifoDispatcher::~FifoDispatcher() {

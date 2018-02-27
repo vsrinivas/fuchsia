@@ -25,7 +25,6 @@ public:
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     void on_zero_handles() final;
-    zx_koid_t get_related_koid() const final { return other_koid_; }
 
 private:
     explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);
@@ -34,9 +33,6 @@ private:
     CookieJar cookie_jar_;
 
     fbl::Canary<fbl::magic("EVPD")> canary_;
-
-    // Set in Init(); never changes otherwise.
-    zx_koid_t other_koid_;
 
     fbl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(get_lock());
 };

@@ -78,7 +78,7 @@ zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)
-    : PeeredDispatcher(fbl::move(holder)), other_koid_(0ull)
+    : PeeredDispatcher(fbl::move(holder))
 {}
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
@@ -87,6 +87,6 @@ void EventPairDispatcher::Init(fbl::RefPtr<EventPairDispatcher> other) TA_NO_THR
     DEBUG_ASSERT(other);
     // No need to take |lock_| here.
     DEBUG_ASSERT(!other_);
-    other_koid_ = other->get_koid();
+    peer_koid_ = other->get_koid();
     other_ = fbl::move(other);
 }

@@ -30,7 +30,6 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
     bool has_state_tracker() const final { return true; }
     zx_status_t add_observer(StateObserver* observer) final;
-    zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return other_koid_; }
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final TA_NO_THREAD_SAFETY_ANALYSIS;
 
     void on_zero_handles() final;

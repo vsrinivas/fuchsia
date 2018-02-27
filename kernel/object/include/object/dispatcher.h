@@ -262,8 +262,14 @@ public:
           holder_(fbl::move(holder)) {}
     virtual ~PeeredDispatcher() = default;
 
+    zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return peer_koid_; }
+
     fbl::Mutex* get_lock() const override { return holder_->get_lock(); }
 
+protected:
+    zx_koid_t peer_koid_ = 0u;
+
+private:
     fbl::RefPtr<PeerHolder<Self>> holder_;
 };
 
